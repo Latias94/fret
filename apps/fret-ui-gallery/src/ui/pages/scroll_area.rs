@@ -7,6 +7,7 @@ pub(super) fn preview_scroll_area(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
     let demo = snippets::demo::render(cx);
     let drag_baseline = snippets::drag_baseline::render(cx);
     let horizontal = snippets::horizontal::render(cx);
+    let nested_scroll_routing = snippets::nested_scroll_routing::render(cx);
     let rtl = snippets::rtl::render(cx);
 
     let notes = doc_layout::notes(
@@ -33,6 +34,9 @@ pub(super) fn preview_scroll_area(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
             DocSection::new("Horizontal", horizontal)
                 .description("Horizontal rail (fixed-size items) inside a scroll area.")
                 .code_rust_from_file_region(snippets::horizontal::SOURCE, "example"),
+            DocSection::new("Nested scroll routing", nested_scroll_routing)
+                .description("Inner horizontal scroll area should not consume vertical wheel.")
+                .code_rust_from_file_region(snippets::nested_scroll_routing::SOURCE, "example"),
             DocSection::new("RTL", rtl)
                 .description("ScrollArea behavior under an RTL direction provider.")
                 .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),

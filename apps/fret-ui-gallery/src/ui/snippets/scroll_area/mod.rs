@@ -9,4 +9,5 @@
 pub mod demo;
 pub mod drag_baseline;
 pub mod horizontal;
+pub mod nested_scroll_routing;
 pub mod rtl;
