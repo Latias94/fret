@@ -1,0 +1,127 @@
+pub const SOURCE: &str = include_str!("date_of_birth_picker.rs");
+
+// region: example
+use fret_ui_headless::calendar::CalendarMonth;
+use fret_ui_shadcn::{self as shadcn, prelude::*};
+use time::Date;
+
+#[derive(Default)]
+struct Models {
+    open: Option<Model<bool>>,
+    month: Option<Model<CalendarMonth>>,
+    selected: Option<Model<Option<Date>>>,
+}
+
+fn parse_iso_date_ymd(raw: &str) -> Option<Date> {
+    let raw = raw.trim();
+    let (year, rest) = raw.split_once('-')?;
+    let (month, day) = rest.split_once('-')?;
+
+    let year: i32 = year.parse().ok()?;
+    let month: u8 = month.parse().ok()?;
+    let day: u8 = day.parse().ok()?;
+
+    let month = time::Month::try_from(month).ok()?;
+    Date::from_calendar_date(year, month, day).ok()
+}
+
+fn today_from_env_or_now() -> Date {
+    std::env::var("FRET_UI_GALLERY_FIXED_TODAY")
+        .ok()
+        .and_then(|raw| parse_iso_date_ymd(&raw))
+        .unwrap_or_else(|| time::OffsetDateTime::now_utc().date())
+}
+
+fn format_date_locale_short_en_us(date: Date) -> String {
+    let month = u8::from(date.month());
+    format!("{month}/{}/{}", date.day(), date.year())
+}
+
+pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+    let (open, month, selected) = cx.with_state(Models::default, |st| {
+        (st.open.clone(), st.month.clone(), st.selected.clone())
+    });
+
+    let today = today_from_env_or_now();
+
+    let open = match open {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(false);
+            cx.with_state(Models::default, |st| st.open = Some(model.clone()));
+            model
+        }
+    };
+
+    let month = match month {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(CalendarMonth::from_date(today));
+            cx.with_state(Models::default, |st| st.month = Some(model.clone()));
+            model
+        }
+    };
+
+    let selected = match selected {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(None);
+            cx.with_state(Models::default, |st| st.selected = Some(model.clone()));
+            model
+        }
+    };
+
+    let selected_now = cx.app.models().read(&selected, |v| *v).ok().flatten();
+    if let Some(selected_now) = selected_now {
+        let _ = cx
+            .app
+            .models_mut()
+            .update(&month, |m| *m = CalendarMonth::from_date(selected_now));
+    }
+
+    let button_text = selected_now
+        .map(format_date_locale_short_en_us)
+        .unwrap_or_else(|| String::from("Select date"));
+
+    shadcn::Field::new([
+        shadcn::FieldLabel::new("Date of birth").into_element(cx),
+        shadcn::Popover::new(open.clone())
+            .side(shadcn::PopoverSide::Bottom)
+            .align(shadcn::PopoverAlign::Start)
+            .into_element(
+                cx,
+                |cx| {
+                    shadcn::Button::new(button_text)
+                        .variant(shadcn::ButtonVariant::Outline)
+                        .toggle_model(open.clone())
+                        .content_justify(fret_ui_kit::Justify::Between)
+                        .text_weight(fret_core::FontWeight::NORMAL)
+                        .trailing_icon(fret_icons::IconId::new_static("lucide.chevron-down"))
+                        .refine_layout(LayoutRefinement::default().w_px(Px(192.0)))
+                        .into_element(cx)
+                        .test_id("ui-gallery.calendar.dob.trigger")
+                },
+                |cx| {
+                    let calendar = shadcn::Calendar::new(month.clone(), selected.clone())
+                        .caption_layout(shadcn::CalendarCaptionLayout::Dropdown)
+                        .test_id_prefix("ui-gallery.calendar.dob.calendar")
+                        .close_on_select(open.clone())
+                        .into_element(cx)
+                        .test_id("ui-gallery.calendar.dob.calendar");
+
+                    shadcn::PopoverContent::new([calendar])
+                        .refine_style(ChromeRefinement::default().p(Space::N0))
+                        .refine_layout(
+                            LayoutRefinement::default()
+                                .w(fret_ui_kit::LengthRefinement::Auto)
+                                .overflow_hidden(),
+                        )
+                        .into_element(cx)
+                        .test_id("ui-gallery.calendar.dob.content")
+                },
+            ),
+    ])
+    .into_element(cx)
+    .test_id("ui-gallery.calendar.dob")
+}
+// endregion: example
