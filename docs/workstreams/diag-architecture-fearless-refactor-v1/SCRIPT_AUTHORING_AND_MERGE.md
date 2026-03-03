@@ -17,18 +17,18 @@ Merge conflicts scale with file size and "hot" shared files. The easiest win is 
 - Keep scripts short (rule of thumb: ~50–200 steps; split beyond that).
 - Compose large coverage using **suite membership**, not a single mega-script.
 
-Suite membership is curated via redirect stubs:
+Suite membership is curated via suite manifests:
 
-- Add/modify membership under `tools/diag-scripts/suites/<suite-name>/*.json` using `script_redirect`.
+- Add/modify membership under `tools/diag-scripts/suites/<suite-name>/suite.json` using `kind=diag_script_suite_manifest`.
 - Keep canonical scripts under `tools/diag-scripts/**/`.
 
-This makes “add a new scenario” a new file, not an edit to a shared list.
+This is low-noise in the tree, but can increase merge conflicts if many people edit the same suite concurrently.
 
-Optional (lower file-count noise):
+Mitigations:
 
-- For low-churn suites, prefer a single suite manifest:
-  - `tools/diag-scripts/suites/<suite-name>/suite.json` with `kind=diag_script_suite_manifest`.
-  - This is less noisy in the tree, but tends to create more merge conflicts if many people edit the same suite.
+- Keep suites small and focused (split large suites).
+- Prefer adding new scenarios as new scripts and then appending their path to the suite manifest (keep one change per line).
+- When conflicts happen, resolve by re-sorting/normalizing the manifest and regenerating the promoted index (see below).
 
 ## 2) Normalize script formatting before committing
 
@@ -102,3 +102,9 @@ If we still see frequent conflicts in big sweeps, the next step is a tooling-onl
 - This avoids changing the runtime contract while enabling split ownership (one file per page/section).
 
 If we pursue this, it should be proposed via a small design note/ADR first.
+
+## Appendix: bulk migration tool
+
+To migrate suite directories from legacy redirect stubs to suite manifests:
+
+- `python tools/migrate_diag_suites_to_manifest.py --apply`
