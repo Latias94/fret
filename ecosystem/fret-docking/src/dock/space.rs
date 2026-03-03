@@ -759,8 +759,10 @@ impl DockSpace {
         panel: &PanelKey,
     ) -> Option<Size> {
         let info = dock.panel(panel);
-        if let Some(policy) = docking_policy {
-            return policy.panel_min_content_size(panel, info);
+        if let Some(policy) = docking_policy
+            && let Some(size) = policy.panel_min_content_size(panel, info)
+        {
+            return Some(size);
         }
 
         let is_viewport = info.is_some_and(|p| p.viewport.is_some());
