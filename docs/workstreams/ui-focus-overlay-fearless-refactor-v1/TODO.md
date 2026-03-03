@@ -46,7 +46,7 @@ Tracking doc: `docs/workstreams/ui-focus-overlay-fearless-refactor-v1/DESIGN.md`
   - Script: `tools/diag-scripts/ui-gallery/overlay/ui-gallery-hovercard-open.json`
 - [x] Perf probe: snapshot build cost vs frame budget in UI gallery worst-case overlays.
   - Script: `tools/diag-scripts/ui-gallery/perf/ui-gallery-overlay-pointer-move-steady.json`
-  - Suite membership: `tools/diag-scripts/suites/perf-ui-gallery-steady/ui-gallery-overlay-pointer-move-steady.json`
+  - Suite membership: `tools/diag-scripts/suites/perf-ui-gallery-steady/suite.json`
 - [x] Wheel routing gate: pointer occlusion allows wheel, modal barriers block wheel.
   - ADR: `docs/adr/0069-outside-press-and-dismissable-non-modal-overlays.md` (wheel routing precedence)
   - Unit test (modal barrier blocks wheel): `crates/fret-ui/src/tree/tests/pointer_occlusion.rs`
