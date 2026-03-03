@@ -47,7 +47,9 @@ fn drive_navigation_menu_trigger_chevron_motion<H: UiHost>(
         let theme_full = Theme::global(&*cx.app);
         let duration = theme_full
             .duration_ms_by_key("duration.shadcn.motion.navigation_menu.trigger_chevron")
-            .or_else(|| theme_full.duration_ms_by_key("duration.motion.navigation_menu.trigger_chevron"))
+            .or_else(|| {
+                theme_full.duration_ms_by_key("duration.motion.navigation_menu.trigger_chevron")
+            })
             .or_else(|| theme_full.duration_ms_by_key("duration.shadcn.motion.300"))
             .map(|ms| Duration::from_millis(ms as u64))
             .unwrap_or(Duration::from_millis(300));
