@@ -17,6 +17,7 @@ struct Models {
     api_cursor: Option<Model<shadcn::CarouselEventCursor>>,
     cursor_synced: Option<Model<bool>>,
     select_seen: Option<Model<bool>>,
+    reinit_seen: Option<Model<bool>>,
     selected_index: Option<Model<usize>>,
 }
 
@@ -93,6 +94,14 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
             model
         }
     };
+    let reinit_seen = match state.reinit_seen {
+        Some(model) => model,
+        None => {
+            let model: Model<bool> = cx.app.models_mut().insert(false);
+            cx.with_state(Models::default, |st| st.reinit_seen = Some(model.clone()));
+            model
+        }
+    };
     let selected_index = match state.selected_index {
         Some(model) => model,
         None => {
@@ -116,12 +125,18 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
             let _ = cx.app.models_mut().update(&cursor_synced, |v| *v = true);
         } else if !events.is_empty() {
             let mut select_seen_now = cx.watch_model(&select_seen).copied().unwrap_or(false);
+            let mut reinit_seen_now = cx.watch_model(&reinit_seen).copied().unwrap_or(false);
             let mut selected_index_now = cx.watch_model(&selected_index).copied().unwrap_or(0);
 
             for ev in events {
-                if let shadcn::CarouselEvent::Select { selected_index } = ev {
-                    select_seen_now = true;
-                    selected_index_now = selected_index;
+                match ev {
+                    shadcn::CarouselEvent::ReInit => {
+                        reinit_seen_now = true;
+                    }
+                    shadcn::CarouselEvent::Select { selected_index } => {
+                        select_seen_now = true;
+                        selected_index_now = selected_index;
+                    }
                 }
             }
 
@@ -130,6 +145,10 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
                 .app
                 .models_mut()
                 .update(&select_seen, |v| *v = select_seen_now);
+            let _ = cx
+                .app
+                .models_mut()
+                .update(&reinit_seen, |v| *v = reinit_seen_now);
             let _ = cx
                 .app
                 .models_mut()
@@ -158,8 +177,9 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
 
     let status = {
         let text = format!(
-            "select_seen={} • selected_index={}",
+            "select_seen={} • reinit_seen={} • selected_index={}",
             cx.watch_model(&select_seen).copied().unwrap_or(false),
+            cx.watch_model(&reinit_seen).copied().unwrap_or(false),
             cx.watch_model(&selected_index).copied().unwrap_or(0)
         );
         let theme = Theme::global(&*cx.app);
@@ -203,6 +223,17 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
         None
     };
 
+    let reinit_marker = if cx.watch_model(&reinit_seen).copied().unwrap_or(false) {
+        Some(
+            shadcn::Badge::new("ReInit event seen")
+                .variant(shadcn::BadgeVariant::Secondary)
+                .test_id("ui-gallery-carousel-events-reinit-seen")
+                .into_element(cx),
+        )
+    } else {
+        None
+    };
+
     cx.flex(
         FlexProps {
             layout: decl_style::layout_style(
@@ -220,6 +251,9 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
         move |_cx| {
             let mut out = vec![carousel, status];
             if let Some(marker) = seen_marker {
+                out.push(marker);
+            }
+            if let Some(marker) = reinit_marker {
                 out.push(marker);
             }
             out

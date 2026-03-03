@@ -2164,6 +2164,27 @@
       ]
     },
     {
+      "id": "ui-gallery-carousel-events-reinit-gate",
+      "path": "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-events-reinit-gate.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "carousel",
+        "events",
+        "gate",
+        "reInit",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Navigate to the UI gallery Carousel page and scroll to the Events section.",
+        "Expected behavior: resizing the window triggers a ReInit event."
+      ]
+    },
+    {
       "id": "ui-gallery-carousel-rtl-controls-gate",
       "path": "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-rtl-controls-gate.json",
       "required_capabilities": [
