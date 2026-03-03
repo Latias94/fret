@@ -17,6 +17,13 @@ pub(super) const ENTRIES: &[PostRunCheckEntry] = &[
         run: run_wheel_scroll_hit_changes_test_id,
     },
     PostRunCheckEntry {
+        id: "wheel_events_max_per_frame",
+        requires_bundle_artifact: true,
+        requires_screenshots: false,
+        should_run: should_run_wheel_events_max_per_frame,
+        run: run_wheel_events_max_per_frame,
+    },
+    PostRunCheckEntry {
         id: "prepaint_actions_min",
         requires_bundle_artifact: true,
         requires_screenshots: false,
@@ -236,6 +243,24 @@ fn run_wheel_scroll_hit_changes_test_id(
         ctx.bundle_path,
         test_id,
         ctx.warmup_frames,
+    )
+}
+
+fn should_run_wheel_events_max_per_frame(checks: &RunChecks) -> bool {
+    checks.check_wheel_events_max_per_frame.is_some()
+}
+
+fn run_wheel_events_max_per_frame(
+    ctx: PostRunCheckContext<'_>,
+    checks: &RunChecks,
+) -> Result<(), String> {
+    let Some(max_per_frame) = checks.check_wheel_events_max_per_frame else {
+        return Ok(());
+    };
+    crate::stats::check_bundle_for_wheel_events_max_per_frame(
+        ctx.bundle_path,
+        ctx.out_dir,
+        max_per_frame,
     )
 }
 

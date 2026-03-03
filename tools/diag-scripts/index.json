@@ -6494,6 +6494,26 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-wheel-burst-coalescing",
+      "path": "tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-wheel-burst-coalescing.json",
+      "required_capabilities": [
+        "diag.script_v2",
+        "diag.wheel_burst_inject"
+      ],
+      "suite_memberships": [
+        "diag-hardening-smoke"
+      ],
+      "tags": [
+        "coalescing",
+        "regression_pack",
+        "runner",
+        "scroll",
+        "ui_gallery",
+        "wheel"
+      ],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-window-resize-drag-jitter-steady",
       "path": "tools/diag-scripts/ui-gallery/perf/ui-gallery-window-resize-drag-jitter-steady.json",
       "required_capabilities": [

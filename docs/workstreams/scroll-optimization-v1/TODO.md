@@ -10,6 +10,7 @@ Status: Draft
   - [x] `ui-gallery-scrollbar-drag-baseline-content-growth` (bundle: `target/fret-diag/1772498133742-scrollbar-drag-baseline-content-growth`, 2026-03-03)
   - [x] `ui-gallery-scroll-area-wheel-torture` (bundle: `target/fret-diag/1772498149599-scroll-area-wheel-torture`, 2026-03-03)
   - [x] `ui-gallery-scroll-area-nested-scroll-routing` (bundle: `target/fret-diag-scroll-nested-debug6/sessions/1772508480737-75452/1772508483614-scroll-area-nested-scroll-routing`, 2026-03-03)
+  - [ ] `ui-gallery-wheel-burst-coalescing` (new gate: wheel events per frame ≤ 1; suite: `diag-hardening-smoke`)
   - [x] `ui-gallery-virtual-list-wheel-torture` (bundle: `target/fret-diag-vlist-wheel/sessions/1772508526189-62940/1772508528623-virtual-list-wheel-torture`, 2026-03-03)
   - [x] `ui-gallery-scroll-area-toggle-code-tabs` (bundle: `target/fret-diag-underflow-check/sessions/1772500876247-61448/1772500879851-scroll-area-toggle-code-tabs`, 2026-03-03)
   - [x] `diag perf perf-ui-gallery-scroll-area` (bundle: `target/fret-perf-scroll-area/sessions/1772501734226-65632/1772501741770`, 2026-03-03)
@@ -42,6 +43,10 @@ Status: Draft
 - [x] Implement frame-boundary buffering in the desktop runner (deliver ≤ 1 wheel per frame when enabled):
   - `crates/fret-launch/src/runner/desktop/runner/app_handler.rs`
   - `crates/fret-launch/src/runner/desktop/runner/window.rs`
+- [x] Add a runner-level “same-frame wheel burst” regression gate:
+  - Script: `tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-wheel-burst-coalescing.json`
+  - Suite redirect: `tools/diag-scripts/suites/diag-hardening-smoke/ui-gallery-wheel-burst-coalescing.json`
+  - Post-run check: `check.wheel_events_max_per_frame.json`
 - [x] Collect repeatable perf evidence (repeat=11, warmup=10):
   - `perf-ui-gallery-scroll-area` (script: `ui-gallery-scroll-area-wheel-torture`)
     - OFF (`FRET_WINIT_COALESCE_WHEEL=0`):
