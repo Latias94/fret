@@ -143,8 +143,6 @@ pub(crate) fn apply_post_run_checks(
     let check_drag_cache_root_paint_only_test_id =
         checks.check_drag_cache_root_paint_only_test_id.as_deref();
     let check_hover_layout_max = checks.check_hover_layout_max;
-    let check_notify_hotspot_file_max: &[(String, u64)] =
-        checks.check_notify_hotspot_file_max.as_slice();
     let check_view_cache_reuse_stable_min = checks.check_view_cache_reuse_stable_min;
     let check_view_cache_reuse_min = checks.check_view_cache_reuse_min;
     let check_overlay_synthesis_min = checks.check_overlay_synthesis_min;
@@ -751,14 +749,6 @@ pub(crate) fn apply_post_run_checks(
         },
         checks,
     )?;
-    for (file, max) in check_notify_hotspot_file_max {
-        stats::check_bundle_for_notify_hotspot_file_max(
-            bundle_path,
-            file.as_str(),
-            *max,
-            warmup_frames,
-        )?;
-    }
     if !check_triage_hint_absent_codes.is_empty() {
         let sort = BundleStatsSort::Invalidation;
         let report =

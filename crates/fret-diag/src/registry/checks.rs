@@ -60,11 +60,18 @@ impl CheckRegistry {
     }
 }
 
-const BUILTIN_POST_RUN_CHECKS: &[PostRunCheckEntry] = &[PostRunCheckEntry {
-    id: "gc_sweep_liveness",
-    should_run: should_run_gc_sweep_liveness,
-    run: run_gc_sweep_liveness,
-}];
+const BUILTIN_POST_RUN_CHECKS: &[PostRunCheckEntry] = &[
+    PostRunCheckEntry {
+        id: "gc_sweep_liveness",
+        should_run: should_run_gc_sweep_liveness,
+        run: run_gc_sweep_liveness,
+    },
+    PostRunCheckEntry {
+        id: "notify_hotspot_file_max",
+        should_run: should_run_notify_hotspot_file_max,
+        run: run_notify_hotspot_file_max,
+    },
+];
 
 fn should_run_gc_sweep_liveness(checks: &RunChecks) -> bool {
     checks.check_gc_sweep_liveness
@@ -72,4 +79,23 @@ fn should_run_gc_sweep_liveness(checks: &RunChecks) -> bool {
 
 fn run_gc_sweep_liveness(ctx: PostRunCheckContext<'_>, _checks: &RunChecks) -> Result<(), String> {
     crate::stats::check_bundle_for_gc_sweep_liveness(ctx.bundle_path, ctx.warmup_frames)
+}
+
+fn should_run_notify_hotspot_file_max(checks: &RunChecks) -> bool {
+    !checks.check_notify_hotspot_file_max.is_empty()
+}
+
+fn run_notify_hotspot_file_max(
+    ctx: PostRunCheckContext<'_>,
+    checks: &RunChecks,
+) -> Result<(), String> {
+    for (file, max) in checks.check_notify_hotspot_file_max.iter() {
+        crate::stats::check_bundle_for_notify_hotspot_file_max(
+            ctx.bundle_path,
+            file.as_str(),
+            *max,
+            ctx.warmup_frames,
+        )?;
+    }
+    Ok(())
 }
