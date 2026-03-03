@@ -1,7 +1,7 @@
 # Action-First Authoring + View Runtime (Fearless Refactor v1) — TODO
 
 Status: Active
-Last updated: 2026-03-02
+Last updated: 2026-03-03
 
 Related:
 
@@ -65,7 +65,7 @@ ID format:
   - keymap resolution → action id,
   - availability gating outcome,
   - dispatch path resolution.
-  - Status (as of 2026-03-02):
+  - Status (as of 2026-03-03):
     - Implemented (keymap → action id): `crates/fret-runtime/src/shortcut_routing_diagnostics.rs` +
       `ecosystem/fret-bootstrap/src/ui_diagnostics/service.rs` (`UiShortcutRoutingTraceEntryV1.command`)
     - Implemented (availability gating outcome): `ecosystem/fret-bootstrap/src/ui_diagnostics/command_gating_trace.rs`
@@ -175,7 +175,7 @@ ID format:
 
 - [x] AFA-adopt-040 Migrate 2–3 cookbook demos to the new View + actions path.
   - Suggested: `apps/fret-cookbook/examples/hello.rs`, `overlay_basics.rs`, `commands_keymap_basics.rs`.
-  - Status (as of 2026-03-02):
+  - Status (as of 2026-03-03):
     - View runtime + action-first adoption landed for `commands_keymap_basics`:
       `apps/fret-cookbook/examples/commands_keymap_basics.rs`
     - View runtime + action-first adoption landed for `hello`:
@@ -184,6 +184,8 @@ ID format:
       `apps/fret-cookbook/examples/overlay_basics.rs`
     - View runtime + action-first adoption landed for `hello_counter`:
       `apps/fret-cookbook/examples/hello_counter.rs`
+    - View runtime + action-first adoption landed for `text_input_basics`:
+      `apps/fret-cookbook/examples/text_input_basics.rs`
 - [x] AFA-adopt-041 Add at least one ui-gallery page/snippet using actions + view runtime.
   - Evidence:
     - `apps/fret-ui-gallery/src/ui/snippets/command/action_first_view.rs`

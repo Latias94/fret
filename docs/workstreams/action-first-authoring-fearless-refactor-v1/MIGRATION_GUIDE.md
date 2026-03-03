@@ -1,6 +1,6 @@
 # Action-First Authoring + View Runtime (Fearless Refactor v1) — Migration Guide
 
-Last updated: 2026-03-02
+Last updated: 2026-03-03
 
 This guide is intentionally practical: it describes how to migrate in-tree demos and ecosystem code
 in small, reviewable slices.
