@@ -407,6 +407,143 @@ fn dock_split_handle_drag_respects_panel_min_size_policy() {
 }
 
 #[test]
+fn dock_split_handle_drag_uses_default_viewport_min_size_even_with_policy_installed() {
+    struct DropTargetOnlyPolicy;
+
+    impl DockingPolicy for DropTargetOnlyPolicy {
+        fn allow_dock_drop_target(
+            &self,
+            _window: AppWindowId,
+            _layout_root: fret_core::DockNodeId,
+            _tabs: fret_core::DockNodeId,
+            _zone: DropZone,
+            _outer: bool,
+        ) -> bool {
+            true
+        }
+    }
+
+    let window = AppWindowId::default();
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let root = ui.create_node_retained(DockSpace::new(window));
+    ui.set_root(root);
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    app.with_global_mut(DockingPolicyService::default, |svc, _app| {
+        svc.set(Arc::new(DropTargetOnlyPolicy));
+    });
+
+    app.with_global_mut(DockManager::default, |dock, _app| {
+        let left_panel = PanelKey::new("core.left");
+        let right_panel = PanelKey::new("core.right");
+
+        dock.ensure_panel(&left_panel, || DockPanel {
+            title: "Left".to_string(),
+            color: Color::TRANSPARENT,
+            viewport: Some(ViewportPanel {
+                target: RenderTargetId::from(KeyData::from_ffi(1)),
+                target_px_size: (1, 1),
+                fit: ViewportFit::Stretch,
+                context_menu_enabled: false,
+            }),
+        });
+        dock.ensure_panel(&right_panel, || DockPanel {
+            title: "Right".to_string(),
+            color: Color::TRANSPARENT,
+            viewport: Some(ViewportPanel {
+                target: RenderTargetId::from(KeyData::from_ffi(2)),
+                target_px_size: (1, 1),
+                fit: ViewportFit::Stretch,
+                context_menu_enabled: false,
+            }),
+        });
+
+        let left = dock.graph.insert_node(DockNode::Tabs {
+            tabs: vec![left_panel],
+            active: 0,
+        });
+        let right = dock.graph.insert_node(DockNode::Tabs {
+            tabs: vec![right_panel],
+            active: 0,
+        });
+        let split = dock.graph.insert_node(DockNode::Split {
+            axis: fret_core::Axis::Horizontal,
+            children: vec![left, right],
+            fractions: vec![0.5, 0.5],
+        });
+        dock.graph.set_window_root(window, split);
+    });
+
+    let mut text = FakeTextService;
+    let size = Size::new(Px(800.0), Px(600.0));
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), size);
+    let _ = ui.layout(&mut app, &mut text, root, size, 1.0);
+
+    let (_chrome, dock_bounds) = dock_space_regions(bounds);
+    let handle_pos = Point::new(
+        Px(dock_bounds.origin.x.0 + dock_bounds.size.width.0 * 0.5),
+        Px(dock_bounds.origin.y.0 + 10.0),
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut text,
+        &Event::Pointer(fret_core::PointerEvent::Down {
+            position: handle_pos,
+            button: fret_core::MouseButton::Left,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut text,
+        &Event::Pointer(fret_core::PointerEvent::Move {
+            position: Point::new(Px(handle_pos.x.0 + 2400.0), handle_pos.y),
+            buttons: fret_core::MouseButtons::default(),
+            modifiers: Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    let fractions = app
+        .global::<DockManager>()
+        .and_then(|dock| {
+            let root = dock.graph.window_root(window)?;
+            let DockNode::Split { fractions, .. } = dock.graph.node(root)? else {
+                return None;
+            };
+            Some(fractions.clone())
+        })
+        .expect("expected split root with fractions");
+
+    let settings = fret_runtime::DockingInteractionSettings::default();
+    let computed = resizable::compute_layout(
+        fret_core::Axis::Horizontal,
+        dock_bounds,
+        2,
+        &fractions,
+        settings.split_handle_gap,
+        settings.split_handle_hit_thickness,
+        &[],
+    );
+
+    assert!(
+        computed.sizes[1] >= 240.0 - 0.01,
+        "expected viewport panel clamped to default min width, got sizes={:?}, fractions={fractions:?}",
+        computed.sizes
+    );
+}
+
+#[test]
 fn dock_nary_split_handle_drag_updates_only_adjacent_and_respects_min_size_policy() {
     struct MinSizePolicy;
 

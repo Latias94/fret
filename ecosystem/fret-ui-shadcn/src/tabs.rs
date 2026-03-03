@@ -1564,11 +1564,17 @@ impl Tabs {
             padding_px: list_padding,
             trigger_row_gap_px: trigger_row_gap,
         } = tabs_list_variants(&theme, list_variant);
-        let mut list_props = decl_style::container_props(
-            &theme,
-            list_chrome,
-            LayoutRefinement::default().h_px(list_height),
-        );
+        // shadcn new-york-v4:
+        // - horizontal: `group-data-[orientation=horizontal]/tabs:h-9`
+        // - vertical: `group-data-[orientation=vertical]/tabs:h-fit`
+        //
+        // The horizontal list has a fixed height so the active pill can be vertically centered.
+        // In vertical orientation, the list must grow to fit all triggers.
+        let list_layout = match orientation {
+            TabsOrientation::Horizontal => LayoutRefinement::default().h_px(list_height),
+            TabsOrientation::Vertical => LayoutRefinement::default(),
+        };
+        let mut list_props = decl_style::container_props(&theme, list_chrome, list_layout);
         list_props.padding = Edges::all(list_padding).into();
         if list_full_width {
             list_props.layout.size.width = Length::Fill;
@@ -1690,7 +1696,10 @@ impl Tabs {
                                         // Without this, the trigger row shrink-wraps to `trigger_h` and is
                                         // top-aligned in the list content box, producing a 1px off-center
                                         // active highlight (bottom gap only).
-                                        layout.size.height = Length::Fill;
+                                        layout.size.height = match orientation {
+                                            TabsOrientation::Horizontal => Length::Fill,
+                                            TabsOrientation::Vertical => Length::Auto,
+                                        };
                                         if list_full_width {
                                             layout.size.width = Length::Fill;
                                         }
@@ -1709,7 +1718,10 @@ impl Tabs {
                                     // `justify-start` matches shadcn for `flex-1` triggers while
                                     // avoiding negative positions in shrink-wrapped lists.
                                     justify: MainAlign::Start,
-                                    align: CrossAlign::Center,
+                                    align: match orientation {
+                                        TabsOrientation::Horizontal => CrossAlign::Center,
+                                        TabsOrientation::Vertical => CrossAlign::Stretch,
+                                    },
                                     wrap: false,
                                     ..Default::default()
                                 },
@@ -1998,7 +2010,7 @@ impl Tabs {
                                             a11y.test_id = Some(test_id.clone());
                                         }
 
-                                        let props = PressableProps {
+                                        let mut props = PressableProps {
                                             layout: trigger_layout,
                                             enabled: !item_disabled,
                                             focusable: tab_stop || st.focused,
@@ -2007,7 +2019,14 @@ impl Tabs {
                                             ..Default::default()
                                         };
 
-                                        let chrome = ContainerProps {
+                                        if orientation == TabsOrientation::Vertical {
+                                            // shadcn new-york-v4: `TabsTrigger` uses `w-full` for vertical tabs so
+                                            // inactive triggers still occupy the full list width (defined by the
+                                            // widest trigger).
+                                            props.layout.flex.align_self = Some(CrossAlign::Stretch);
+                                        }
+
+                                        let mut chrome = ContainerProps {
                                             padding: Edges {
                                                 top: pad_y,
                                                 right: pad_x,
@@ -2021,6 +2040,9 @@ impl Tabs {
                                             corner_radii: Corners::all(radius),
                                             ..Default::default()
                                         };
+                                        if orientation == TabsOrientation::Vertical {
+                                            chrome.layout.size.width = Length::Fill;
+                                        }
 
                                         let mut trigger_children = trigger_children;
                                         let content = move |cx: &mut ElementContext<'_, H>| {
@@ -2086,14 +2108,33 @@ impl Tabs {
                                                             layout: {
                                                                 let mut layout =
                                                                     LayoutStyle::default();
-                                                                layout.size.width = Length::Fill;
+                                                                // Avoid `width: Fill` in shrink-wrapped trigger chrome:
+                                                                // some layout backends (Taffy) can resolve percent sizing
+                                                                // against an auto-sized containing block as 0px, causing the
+                                                                // trigger background to collapse while its children overflow.
+                                                                //
+                                                                // Only opt into fill sizing when the trigger itself is
+                                                                // expected to have a definite width (e.g. `list_full_width`
+                                                                // `flex-1` triggers).
+                                                                layout.size.width = if list_full_width {
+                                                                    Length::Fill
+                                                                } else {
+                                                                    Length::Auto
+                                                                };
                                                                 layout.size.height = Length::Fill;
                                                                 layout
                                                             },
                                                             direction: fret_core::Axis::Horizontal,
                                                             gap: Px(6.0).into(),
                                                             padding: Edges::all(Px(0.0)).into(),
-                                                            justify: MainAlign::Center,
+                                                            justify: match orientation {
+                                                                TabsOrientation::Horizontal => {
+                                                                    MainAlign::Center
+                                                                }
+                                                                TabsOrientation::Vertical => {
+                                                                    MainAlign::Start
+                                                                }
+                                                            },
                                                             align: CrossAlign::Center,
                                                             wrap: false,
                                                         },
@@ -2483,6 +2524,98 @@ mod tests {
         assert!(
             diff <= 0.51,
             "selected tab should be vertically centered in tablist: top_margin={top_margin:.3}, bottom_margin={bottom_margin:.3}, diff={diff:.3}"
+        );
+    }
+
+    #[test]
+    fn tabs_vertical_orientation_does_not_clip_triggers() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let model = app.models_mut().insert(Some(Arc::from("preview")));
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "tabs-vertical-no-clip",
+            |cx| {
+                vec![
+                    Tabs::new(model.clone())
+                        .orientation(TabsOrientation::Vertical)
+                        .items([
+                            TabsItem::new("preview", "Preview", Vec::<AnyElement>::new()),
+                            TabsItem::new("code", "Code", Vec::<AnyElement>::new()),
+                        ])
+                        .into_element(cx),
+                ]
+            },
+        );
+
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let tab_list = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::TabList)
+            .expect("tablist node");
+        let mut tabs: Vec<_> = snap
+            .nodes
+            .iter()
+            .filter(|n| n.role == SemanticsRole::Tab)
+            .collect();
+        assert_eq!(tabs.len(), 2, "expected two tab triggers");
+
+        tabs.sort_by(|a, b| {
+            a.bounds
+                .origin
+                .y
+                .0
+                .partial_cmp(&b.bounds.origin.y.0)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
+
+        let list_top = tab_list.bounds.origin.y.0;
+        let list_bottom = tab_list.bounds.origin.y.0 + tab_list.bounds.size.height.0;
+        let eps = 0.51;
+        for tab in tabs.iter() {
+            let top = tab.bounds.origin.y.0;
+            let bottom = tab.bounds.origin.y.0 + tab.bounds.size.height.0;
+            assert!(
+                top >= list_top - eps,
+                "tab should be within tablist: tab_top={top:.3}, list_top={list_top:.3}"
+            );
+            assert!(
+                bottom <= list_bottom + eps,
+                "tab should be within tablist: tab_bottom={bottom:.3}, list_bottom={list_bottom:.3}"
+            );
+        }
+
+        let first_top = tabs[0].bounds.origin.y.0;
+        let second_top = tabs[1].bounds.origin.y.0;
+        assert!(
+            second_top > first_top + 1.0,
+            "expected vertical stacking: first_top={first_top:.3}, second_top={second_top:.3}"
+        );
+
+        let w0 = tabs[0].bounds.size.width.0;
+        let w1 = tabs[1].bounds.size.width.0;
+        let wdiff = (w0 - w1).abs();
+        assert!(
+            wdiff <= 0.51,
+            "expected vertical triggers to share list width: w0={w0:.3}, w1={w1:.3}, diff={wdiff:.3}"
         );
     }
 

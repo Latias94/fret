@@ -96,6 +96,12 @@ pub struct UiTreeDebugSnapshotV1 {
     /// that do not want to parse the entire element runtime snapshot payload.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub environment: Option<ElementEnvironmentSnapshotV1>,
+    /// Best-effort ecosystem extensions map (bounded and additive).
+    ///
+    /// This is the primary in-snapshot extension seam for UI diagnostics. Payloads must remain
+    /// small and debug-oriented; larger dumps should use bundle-scoped sidecars instead.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub extensions: Option<std::collections::BTreeMap<String, serde_json::Value>>,
     /// Best-effort window insets snapshot (safe-area + occlusion) from `WindowMetricsService`.
     ///
     /// Unlike `debug.environment`, this does not require the element runtime snapshot to be

@@ -486,6 +486,7 @@ pub(crate) fn generate_ai_packet_dir_sidecars_only(
 
     copy_optional_sidecar("window.map.json")?;
     copy_optional_sidecar("dock.routing.json")?;
+    copy_optional_sidecar("layout.taffy.v1.json")?;
 
     let bundle_path_for_schema2 = bundle_path
         .map(|p| p.to_path_buf())

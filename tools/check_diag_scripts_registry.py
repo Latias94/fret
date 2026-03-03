@@ -6,7 +6,8 @@ This is intentionally dependency-free (stdlib only) so it can run in CI.
 
 Registry scope (v1):
 - "Promoted" scripts that are reachable from in-tree suites:
-  - tools/diag-scripts/suites/**.json (script_redirect stubs)
+  - tools/diag-scripts/suites/<suite>/**.json (script_redirect stubs), or
+  - tools/diag-scripts/suites/<suite>/suite.json (suite manifest)
 - Preludes:
   - tools/diag-scripts/_prelude/*.json
 
@@ -28,6 +29,7 @@ SCRIPTS_DIR = Path("tools/diag-scripts")
 REGISTRY_PATH = SCRIPTS_DIR / "index.json"
 SUITES_DIR = SCRIPTS_DIR / "suites"
 PRELUDE_DIR = SCRIPTS_DIR / "_prelude"
+SUITE_MANIFEST_FILENAMES = ["suite.json", "_suite.json"]
 
 
 def find_repo_root(start: Path) -> Path:
@@ -49,6 +51,27 @@ def read_json(path: Path) -> Any:
 
 def is_redirect_stub(obj: Any) -> bool:
     return isinstance(obj, dict) and obj.get("kind") == "script_redirect"
+
+
+def is_suite_manifest(obj: Any) -> bool:
+    return isinstance(obj, dict) and obj.get("kind") == "diag_script_suite_manifest"
+
+
+def suite_manifest_script_paths(obj: Any) -> list[str]:
+    if not is_suite_manifest(obj):
+        return []
+    scripts = obj.get("scripts")
+    if not isinstance(scripts, list):
+        raise SystemExit("error: invalid suite manifest (expected list field: scripts)")
+    out: list[str] = []
+    for item in scripts:
+        if isinstance(item, str) and item.strip():
+            out.append(item.strip())
+        else:
+            raise SystemExit(
+                "error: invalid suite manifest (scripts entries must be non-empty strings)"
+            )
+    return out
 
 
 def resolve_redirect_path(repo_root: Path, path: Path, *, max_hops: int = 16) -> Path:
@@ -110,11 +133,51 @@ def build_registry(repo_root: Path) -> dict[str, Any]:
 
     canonical_to_suites: dict[Path, set[str]] = {}
 
-    # 1) Suites: stubs under tools/diag-scripts/suites/<suite>/**/*.json
+    # 1) Suites: either stubs under tools/diag-scripts/suites/<suite>/**/*.json,
+    # or a single suite manifest under tools/diag-scripts/suites/<suite>/suite.json.
     for suite_dir in sorted((repo_root / SUITES_DIR).iterdir()):
         if not suite_dir.is_dir():
             continue
         suite_name = suite_dir.name
+
+        manifest_path = None
+        for name in SUITE_MANIFEST_FILENAMES:
+            candidate = suite_dir / name
+            if candidate.is_file():
+                manifest_path = candidate
+                break
+
+        if manifest_path is not None:
+            # Do not allow mixing manifest + legacy stubs: it makes membership ambiguous.
+            other_json = [p for p in suite_dir.rglob("*.json") if p.resolve() != manifest_path.resolve()]
+            if other_json:
+                shown = "\n".join(
+                    f"  - {p.relative_to(repo_root).as_posix()}" for p in other_json[:10]
+                )
+                raise SystemExit(
+                    "error: suite directory mixes suite manifest with legacy *.json stubs:\n"
+                    f"- suite: {suite_name}\n"
+                    f"- manifest: {manifest_path.relative_to(repo_root).as_posix()}\n"
+                    f"- other json files (first 10):\n{shown}\n"
+                    "hint: delete legacy stubs or remove the manifest"
+                )
+
+            manifest_obj = read_json(manifest_path)
+            if not is_suite_manifest(manifest_obj):
+                raise SystemExit(
+                    "error: suite manifest must have kind=diag_script_suite_manifest: "
+                    f"{manifest_path}"
+                )
+            script_paths = suite_manifest_script_paths(manifest_obj)
+            if not script_paths:
+                raise SystemExit(
+                    f"error: suite manifest contains no scripts: {manifest_path}"
+                )
+            for to in script_paths:
+                canonical = resolve_redirect_path(repo_root, repo_root / Path(to))
+                canonical_to_suites.setdefault(canonical, set()).add(suite_name)
+            continue
+
         for stub in sorted(suite_dir.rglob("*.json")):
             stub_obj = read_json(stub)
             if not is_redirect_stub(stub_obj):

@@ -1,6 +1,6 @@
 # Diagnostics Architecture (Fearless Refactor v1) — Evidence and Gates
 
-Last updated: 2026-03-02
+Last updated: 2026-03-03
 
 This file defines what “done” means for this workstream beyond subjective UX.
 
@@ -14,6 +14,7 @@ Contracts and foundations:
 
 - ADR (bundles + scripts): `docs/adr/0159-ui-diagnostics-snapshot-and-scripted-interaction-tests.md`
 - ADR (semantics): `docs/adr/0033-semantics-tree-and-accessibility-bridge.md`
+- ADR (debug extensions): `docs/adr/0310-ui-diagnostics-debug-extensions-v1.md`
 - Bundle + script workflow: `docs/ui-diagnostics-and-scripted-tests.md`
 - Inspect/pick workflow: `docs/debugging-ui-with-inspector-and-scripts.md`
 
@@ -35,6 +36,13 @@ Protocol (stable serde types):
 Tooling engine (CLI/GUI shared):
 
 - `crates/fret-diag/src/lib.rs`
+- Artifacts seam: `crates/fret-diag/src/artifact_store.rs`
+- Suite resolution seam: `crates/fret-diag/src/registry/suites.rs`
+- Checks seam (post-run): `crates/fret-diag/src/registry/checks/mod.rs`
+- Layout sidecar viewer affordance (CLI): `crates/fret-diag/src/commands/layout_sidecar.rs`
+- Builtin post-run checks: `crates/fret-diag/src/registry/checks/builtin_post_run/mod.rs`
+- UI gallery post-run checks (legacy order preserved): `crates/fret-diag/src/registry/checks/builtin_post_run/ui_gallery/mod.rs`
+- Builtin suite mapping: `crates/fret-diag/src/diag_suite.rs` (`resolve_builtin_suite_scripts`)
 - CLI wrapper: `apps/fretboard/src/cli.rs`
 
 WS transport:
@@ -46,11 +54,14 @@ Runtime capture/export + script executor + inspector:
 
 - `ecosystem/fret-bootstrap/src/ui_diagnostics.rs`
 - `ecosystem/fret-bootstrap/src/ui_diagnostics/script_engine.rs`
+- Runtime snapshot extensions registry: `ecosystem/fret-bootstrap/src/ui_diagnostics/extensions.rs`
 
 Layout deep debug escape hatch (Taffy dump):
 
 - `crates/fret-ui/src/tree/layout/taffy_debug.rs`
 - env wiring: `crates/fret-ui/src/runtime_config.rs`
+- Script step (bundle-scoped layout sidecar): `crates/fret-diag-protocol/src/lib.rs` (`UiActionStepV2::CaptureLayoutSidecar`)
+- Runtime capture (writes `layout.taffy.v1.json`): `ecosystem/fret-bootstrap/src/ui_diagnostics/script_steps.rs` (`handle_capture_layout_sidecar_step`)
 
 ---
 
@@ -72,7 +83,8 @@ These are invariants for `fretboard diag run/suite/repro/perf`:
 
 ### 4.1 Format + compile (baseline)
 
-- `cargo fmt`
+- Prefer scoped formatting on Windows worktrees (avoid `os error 206` path length failures):
+  - `cargo fmt --manifest-path crates/fret-diag/Cargo.toml`
 - `cargo check -p fret-diag -p fret-diag-protocol -p fret-diag-ws`
 
 Notes:
@@ -106,6 +118,8 @@ Recommended starting suites (native):
 Recommended perf gates (native):
 
 - `cargo run -p fretboard -- diag perf ui-gallery --repeat 5 --warmup-frames 5 --sort time --launch -- cargo run -p fret-ui-gallery --release`
+- Layout-heavy preset:
+  - `cargo run -p fretboard -- diag perf ui-gallery-layout-steady --repeat 7 --warmup-frames 5 --sort time --launch -- cargo run -p fret-ui-gallery --release`
 
 ### 4.5 Layout correctness gates (semantics-first)
 
@@ -144,4 +158,3 @@ $env:FRET_DIAG_SCRIPT_DUMP_MAX_SNAPSHOTS=20
 - New evidence fields are bounded and clipping is reported.
 - New runtime diagnostics capture does not introduce per-frame allocation cliffs.
 - Any new ecosystem extension path is capability-gated and does not weaken layering.
-

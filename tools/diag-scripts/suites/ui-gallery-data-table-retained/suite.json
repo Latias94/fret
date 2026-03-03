@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "kind": "diag_script_suite_manifest",
+  "scripts": [
+    "tools/diag-scripts/ui-gallery-data-table-retained-column-actions-menu.json",
+    "tools/diag-scripts/ui-gallery-data-table-retained-column-filter.json",
+    "tools/diag-scripts/ui-gallery-data-table-retained-column-pinning-sticky-scroll.json",
+    "tools/diag-scripts/ui-gallery-data-table-retained-column-pinning-toggle.json",
+    "tools/diag-scripts/ui-gallery-data-table-retained-faceted-filter.json",
+    "tools/diag-scripts/ui-gallery-data-table-retained-global-filter.json",
+    "tools/diag-scripts/ui-gallery-data-table-retained-multi-sort-shift-click.json",
+    "tools/diag-scripts/ui-gallery-data-table-retained-reset-filters.json",
+    "tools/diag-scripts/ui-gallery-data-table-retained-sort-select-scroll.json",
+    "tools/diag-scripts/ui-gallery-data-table-retained-visibility-toggle.json",
+    "tools/diag-scripts/ui-gallery-data-table-window-boundary-scroll-retained.json"
+  ]
+}

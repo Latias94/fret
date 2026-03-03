@@ -271,8 +271,8 @@ Not implemented / not applicable (expected gaps for native retained UI):
     - `ecosystem/fret-ui-shadcn/src/carousel.rs` (`watch_focus`, Tab watcher)
     - Gate: `ecosystem/fret-ui-shadcn/tests/carousel_focus_watch_tab_scrolls.rs`
 - [x] CAR2-420 A11y: role/roledescription + slide semantics parity audit (with known gaps).
-  - Note: we currently stamp role/label/orientation, but do not yet have a portable
-    `aria-roledescription` equivalent in core semantics.
+  - Note: core semantics now exposes a portable `role_description` field (AccessKit-mapped) to
+    model `aria-roledescription` outcomes for shadcn parity.
   - Evidence:
     - `ecosystem/fret-ui-shadcn/src/carousel.rs` (Region root + slide labels)
     - Gate: `ecosystem/fret-ui-shadcn/tests/carousel_a11y_semantics.rs`

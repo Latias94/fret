@@ -553,6 +553,8 @@ pub enum UiActionStepV2 {
         target: UiSelectorV1,
         #[serde(default)]
         button: UiMouseButtonV1,
+        #[serde(default = "default_true")]
+        clamp_to_window_bounds: bool,
         delta_x: f32,
         delta_y: f32,
         #[serde(default = "default_drag_steps")]
@@ -650,6 +652,7 @@ pub enum UiActionStepV2 {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         window: Option<UiWindowTargetV1>,
         predicate: UiPredicateV1,
+        #[serde(default = "default_action_timeout_frames")]
         timeout_frames: u32,
     },
     /// Wait until the shortcut routing diagnostics trace contains an entry matching `query`.
@@ -694,6 +697,20 @@ pub enum UiActionStepV2 {
         label: Option<String>,
         #[serde(default = "default_capture_screenshot_timeout_frames")]
         timeout_frames: u32,
+    },
+    /// Capture a layout sidecar (native-only, best-effort).
+    ///
+    /// This is intended to make layout regressions explainable via a bundle-scoped sidecar file
+    /// (e.g. `layout.taffy.v1.json`) rather than ad-hoc debug UI in demos.
+    ///
+    /// Tooling should treat missing sidecars as warnings, not failures.
+    CaptureLayoutSidecar {
+        /// Optional label used to name the bundle directory for this capture step.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        label: Option<String>,
+        /// Optional debug label filter for selecting a subtree root before dumping.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        root_label_filter: Option<String>,
     },
 
     // v2 intent-level steps
@@ -1094,6 +1111,7 @@ impl From<UiActionStepV1> for UiActionStepV2 {
                 pointer_kind: None,
                 target,
                 button,
+                clamp_to_window_bounds: true,
                 delta_x,
                 delta_y,
                 steps,
@@ -1749,6 +1767,14 @@ pub enum UiPredicateV1 {
     /// matches `window`.
     DockDragCurrentWindowIs {
         window: UiWindowTargetV1,
+    },
+    /// True when the latest diagnostics report an active dock drag whose drag kind matches `kind`.
+    ///
+    /// Supported kinds:
+    /// - `dock_panel`
+    /// - `dock_tabs`
+    DockDragKindIs {
+        drag_kind: String,
     },
     /// True when the latest docking diagnostics report an active dock drag whose runner-owned
     /// moving window matches `window`.
@@ -3467,6 +3493,34 @@ mod tests {
                 assert_eq!(timeout_frames, default_action_timeout_frames());
             }
             _ => panic!("expected inspect_help_tree_lock_best_match_and_copy_selector"),
+        }
+    }
+
+    #[test]
+    fn step_wait_until_deserializes_with_default_timeout_frames() {
+        let value = serde_json::json!({
+            "type": "wait_until",
+            "predicate": {
+                "kind": "exists",
+                "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+            }
+        });
+
+        let step: UiActionStepV2 = serde_json::from_value(value).unwrap();
+        match step {
+            UiActionStepV2::WaitUntil {
+                window,
+                predicate,
+                timeout_frames,
+            } => {
+                assert!(window.is_none());
+                assert!(
+                    matches!(predicate, UiPredicateV1::Exists { .. }),
+                    "expected exists predicate"
+                );
+                assert_eq!(timeout_frames, default_action_timeout_frames());
+            }
+            _ => panic!("expected wait_until"),
         }
     }
 }

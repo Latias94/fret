@@ -74,6 +74,15 @@ Post-merge verification (2026-03-03):
   - `fretboard diag repeat` is green 7x with:
     - `--timeout-ms 60000 --reuse-launch --compare-ignore-bounds --compare-ignore-scene-fingerprint`
     - summary: `target/fret-diag-chained-repeat1/repeat.summary.json`
+- Dock tab titles no longer disappear after a short idle delay (~2s) during diagnostics runs:
+  - Symptom: tab labels vanish while SVG close icons remain (retained docking tabs caching text blobs across frames).
+  - Root cause: `DockSpace` cached prepared tab titles but did not rebuild when `TextFontStackKey` changed (system font
+    rescan / font stack stabilization), so cached `TextBlobId`s became stale.
+  - Fix: include `TextFontStackKey` in the tab-title rebuild cache key.
+    - implementation: `ecosystem/fret-docking/src/dock/space.rs`
+    - evidence repro: `tools/diag-scripts/docking/arbitration/local-debug/docking-arbitration-demo-tab-text-disappears-after-2s-single-window.json`
+      - before: run id `1772532891331` (idle t2s screenshot missing titles)
+      - after: run id `1772534011243` (idle t2s screenshot retains titles)
 
 Hover peek-behind hardening (2026-03-02):
 
@@ -111,6 +120,16 @@ Stage gates for merge-back correctness (2026-03-03):
     open-window semantics consistently across cycles.
   - Repeat check is green 20x with `--reuse-launch --compare-ignore-bounds --compare-ignore-scene-fingerprint`:
     `target/fret-diag-docking-loop-repeat2`.
+
+Suite progress notes (2026-03-03):
+
+- `docking-arbitration-demo-nary-repeated-edge-dock-no-deepen` is unblocked by tightening inner hint-pad center picking
+  (avoid “sticky center” just outside the center rect) and by preventing the “pending cancel drag” escape hatch from
+  canceling future drags.
+  - PASS: `target/fret-diag-codex-nary-edge2` (run id `1772531513128`)
+- `docking-arbitration-demo-nary-splitter-drag-clamps-to-viewport-min-size` is unblocked by restoring the default
+  viewport min size behavior even when a `DockingPolicy` is installed for unrelated hooks (e.g. drop-zone masking).
+  - PASS: `target/fret-diag-codex-splitter-min` (run id `1772532241288`)
 
 ## M1.4 — Rebuild reliability for docking demos (Windows/MSVC)
 

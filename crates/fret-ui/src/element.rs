@@ -639,6 +639,14 @@ pub struct ContainerProps {
     pub border_dash: Option<fret_core::scene::DashPatternV1>,
     /// Optional focus-visible ring decoration.
     pub focus_ring: Option<RingStyle>,
+    /// When true, paint the focus ring even when the element is not focused.
+    ///
+    /// This is intended for component-layer animation parity with CSS `transition` outcomes
+    /// (e.g. `transition-[color,box-shadow]`), where the focus ring can animate out after focus
+    /// moves away.
+    ///
+    /// When `false` (default), the focus ring is painted only while focus-visible is active.
+    pub focus_ring_always_paint: bool,
     /// Optional border-color override applied when focus-visible is active.
     ///
     /// This is primarily used for shadcn-style `focus-visible:border-ring` outcomes without
@@ -664,6 +672,7 @@ impl Default for ContainerProps {
             border_paint: None,
             border_dash: None,
             focus_ring: None,
+            focus_ring_always_paint: false,
             focus_border_color: None,
             focus_within: false,
             corner_radii: Corners::all(Px(0.0)),
@@ -693,6 +702,8 @@ impl Default for ContainerProps {
 pub struct SemanticsDecoration {
     pub role: Option<SemanticsRole>,
     pub label: Option<Arc<str>>,
+    /// Optional role description override (ARIA `aria-roledescription`-like outcome).
+    pub role_description: Option<Arc<str>>,
     /// Debug/test-only identifier for deterministic automation.
     ///
     /// This MUST NOT be mapped into platform accessibility name/label fields by default.
@@ -750,6 +761,7 @@ impl SemanticsDecoration {
         Self {
             role: other.role.or(self.role),
             label: other.label.or(self.label),
+            role_description: other.role_description.or(self.role_description),
             test_id: other.test_id.or(self.test_id),
             value: other.value.or(self.value),
             disabled: other.disabled.or(self.disabled),
@@ -795,6 +807,11 @@ impl SemanticsDecoration {
 
     pub fn label(mut self, label: impl Into<Arc<str>>) -> Self {
         self.label = Some(label.into());
+        self
+    }
+
+    pub fn role_description(mut self, role_description: impl Into<Arc<str>>) -> Self {
+        self.role_description = Some(role_description.into());
         self
     }
 
@@ -1408,6 +1425,14 @@ pub struct PressableProps {
     /// but it is skipped by the default focus traversal.
     pub focusable: bool,
     pub focus_ring: Option<RingStyle>,
+    /// When true, paint the focus ring even when the pressable is not focused.
+    ///
+    /// This is intended for component-layer animation parity with CSS `transition` outcomes where
+    /// focus ring (box-shadow-like) decorations can animate out after focus changes.
+    ///
+    /// When `false` (default), the focus ring is painted only while focus-visible is active on the
+    /// pressable.
+    pub focus_ring_always_paint: bool,
     /// Optional override for the bounds used when painting the focus ring.
     ///
     /// Coordinates are **local** to the pressable's origin (i.e. `0,0` is the pressable's top-left),
@@ -1428,6 +1453,7 @@ impl std::fmt::Debug for PressableProps {
             .field("focusable", &self.focusable);
 
         out.field("focus_ring", &self.focus_ring)
+            .field("focus_ring_always_paint", &self.focus_ring_always_paint)
             .field("focus_ring_bounds", &self.focus_ring_bounds)
             .field("key_activation", &self.key_activation)
             .field("a11y", &self.a11y)
@@ -1442,6 +1468,7 @@ impl Default for PressableProps {
             enabled: true,
             focusable: true,
             focus_ring: None,
+            focus_ring_always_paint: false,
             focus_ring_bounds: None,
             key_activation: PressableKeyActivation::default(),
             a11y: PressableA11y::default(),

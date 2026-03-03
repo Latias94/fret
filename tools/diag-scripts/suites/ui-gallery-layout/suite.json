@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "kind": "diag_script_suite_manifest",
+  "scripts": [
+    "tools/diag-scripts/ui-gallery-chrome-torture-layout.json",
+    "tools/diag-scripts/ui-gallery-hover-layout-torture.json",
+    "tools/diag-scripts/ui-gallery-layout-sweep-core.json",
+    "tools/diag-scripts/ui-gallery-layout-sweep-extended-chrome.json",
+    "tools/diag-scripts/ui-gallery-layout-sweep-extended.json",
+    "tools/diag-scripts/ui-gallery-layout-sweep-torture.json"
+  ]
+}

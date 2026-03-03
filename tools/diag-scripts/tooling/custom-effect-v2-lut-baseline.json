@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "steps": [
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 5 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "custom-effect-v2-lut-web.enabled" }
+      },
+      "timeout_frames": 360
+    },
+    { "type": "wait_frames", "n": 60 },
+    { "type": "capture_bundle", "label": "customv2-lut-baseline" },
+    { "type": "capture_screenshot", "label": "customv2-lut-baseline" }
+  ]
+}
+

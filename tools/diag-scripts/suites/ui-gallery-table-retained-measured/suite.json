@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "kind": "diag_script_suite_manifest",
+  "scripts": [
+    "tools/diag-scripts/ui-gallery-table-retained-keyboard-typeahead.json",
+    "tools/diag-scripts/ui-gallery-table-retained-multi-sort-shift-click.json",
+    "tools/diag-scripts/ui-gallery-table-retained-row-pinning-keep-pinned-false.json",
+    "tools/diag-scripts/ui-gallery-table-retained-row-pinning-keep-pinned-true.json",
+    "tools/diag-scripts/ui-gallery-table-retained-sort-desc.json",
+    "tools/diag-scripts/ui-gallery-table-retained-sort-select-scroll.json",
+    "tools/diag-scripts/ui-gallery-table-retained-window-boundary-scroll.json"
+  ]
+}

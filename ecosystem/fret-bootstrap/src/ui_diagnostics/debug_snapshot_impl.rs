@@ -357,6 +357,7 @@ impl UiTreeDebugSnapshotV1 {
                 .map(UiOverlayPolicyDecisionV1::from_decision)
                 .collect(),
             environment,
+            extensions: None,
             window_insets,
             text_input,
             runner_surface_lifecycle,

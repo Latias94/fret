@@ -198,7 +198,7 @@ fn render_column_actions_menu<H: UiHost>(
                         .a11y_label(trigger_label.clone())
                         .variant(ButtonVariant::Ghost)
                         .size(ButtonSize::IconXs)
-                        .icon(fret_icons::IconId::new_static("lucide.ellipsis"))
+                        .icon(fret_icons::ids::ui::MORE_HORIZONTAL)
                         .into_element(cx)
                 },
                 move |cx| {
@@ -481,6 +481,7 @@ impl DataTable {
             view_props.enable_column_grouping = false;
             view_props.enable_column_resizing = false;
             view_props.draw_frame = false;
+            view_props.optimize_grid_lines = true;
 
             let row_key_at = Arc::new(move |d: &TData, index: usize| (get_row_key)(d, index, None));
 
@@ -664,6 +665,7 @@ impl DataTable {
             view_props.enable_column_grouping = false;
             view_props.enable_column_resizing = true;
             view_props.draw_frame = false;
+            view_props.optimize_grid_lines = true;
 
             let row_key_at = move |d: &TData, index: usize| (get_row_key)(d, index, None);
 

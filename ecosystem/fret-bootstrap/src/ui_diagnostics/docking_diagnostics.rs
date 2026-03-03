@@ -360,12 +360,22 @@ pub struct UiDockDragDiagnosticsV1 {
     pub pointer_id: u64,
     pub source_window: u64,
     pub current_window: u64,
+    #[serde(default)]
+    pub kind: String,
     pub dragging: bool,
     pub cross_window_hover: bool,
     #[serde(default)]
     pub transparent_payload_applied: bool,
     #[serde(default)]
+    pub transparent_payload_mouse_passthrough_applied: bool,
+    #[serde(default)]
     pub window_under_cursor_source: String,
+    #[serde(default)]
+    pub moving_window: Option<u64>,
+    #[serde(default)]
+    pub window_under_moving_window: Option<u64>,
+    #[serde(default)]
+    pub window_under_moving_window_source: String,
 }
 
 impl UiDockDragDiagnosticsV1 {
@@ -374,15 +384,34 @@ impl UiDockDragDiagnosticsV1 {
             pointer_id: snapshot.pointer_id.0,
             source_window: snapshot.source_window.data().as_ffi(),
             current_window: snapshot.current_window.data().as_ffi(),
+            kind: dock_drag_kind_label(snapshot.kind).to_string(),
             dragging: snapshot.dragging,
             cross_window_hover: snapshot.cross_window_hover,
             transparent_payload_applied: snapshot.transparent_payload_applied,
+            transparent_payload_mouse_passthrough_applied: snapshot
+                .transparent_payload_mouse_passthrough_applied,
             window_under_cursor_source: dock_drag_window_under_cursor_source_label(
                 snapshot.window_under_cursor_source,
             )
             .to_string(),
+            moving_window: snapshot.moving_window.map(|w| w.data().as_ffi()),
+            window_under_moving_window: snapshot.window_under_moving_window.map(|w| w.data().as_ffi()),
+            window_under_moving_window_source: dock_drag_window_under_cursor_source_label(
+                snapshot.window_under_moving_window_source,
+            )
+            .to_string(),
         }
     }
+}
+
+fn dock_drag_kind_label(kind: fret_runtime::DragKindId) -> &'static str {
+    if kind == fret_runtime::DRAG_KIND_DOCK_PANEL {
+        return "dock_panel";
+    }
+    if kind == fret_runtime::DRAG_KIND_DOCK_TABS {
+        return "dock_tabs";
+    }
+    "unknown"
 }
 
 fn dock_drag_window_under_cursor_source_label(

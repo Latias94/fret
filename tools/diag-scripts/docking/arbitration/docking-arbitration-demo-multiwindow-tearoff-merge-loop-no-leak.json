@@ -54,6 +54,7 @@
       "type": "drag_pointer",
       "window": { "kind": "first_seen" },
       "target": { "kind": "test_id", "id": "dock-arb-tab-drag-anchor-right" },
+      "clamp_to_window_bounds": false,
       "delta_x": 2400.0,
       "delta_y": 0.0,
       "steps": 140
@@ -87,9 +88,9 @@
       "predicate": { "kind": "dock_drag_current_window_is", "window": { "kind": "first_seen" } },
       "timeout_frames": 240
     },
-    { "type": "pointer_up", "window": { "kind": "first_seen" } },
     { "type": "wait_until", "predicate": { "kind": "dock_drop_resolved_is_some", "some": true }, "timeout_frames": 240 },
     { "type": "assert", "window": { "kind": "first_seen" }, "predicate": { "kind": "dock_drop_resolved_zone_is", "zone": "right" } },
+    { "type": "pointer_up", "window": { "kind": "first_seen" } },
     { "type": "wait_until", "predicate": { "kind": "dock_drag_active_is", "active": false }, "timeout_frames": 240 },
 
     {
@@ -124,6 +125,7 @@
       "type": "drag_pointer",
       "window": { "kind": "first_seen" },
       "target": { "kind": "test_id", "id": "dock-arb-tab-drag-anchor-right" },
+      "clamp_to_window_bounds": false,
       "delta_x": 2400.0,
       "delta_y": 0.0,
       "steps": 140
@@ -157,9 +159,9 @@
       "predicate": { "kind": "dock_drag_current_window_is", "window": { "kind": "first_seen" } },
       "timeout_frames": 240
     },
-    { "type": "pointer_up", "window": { "kind": "first_seen" } },
     { "type": "wait_until", "predicate": { "kind": "dock_drop_resolved_is_some", "some": true }, "timeout_frames": 240 },
     { "type": "assert", "window": { "kind": "first_seen" }, "predicate": { "kind": "dock_drop_resolved_zone_is", "zone": "right" } },
+    { "type": "pointer_up", "window": { "kind": "first_seen" } },
     { "type": "wait_until", "predicate": { "kind": "dock_drag_active_is", "active": false }, "timeout_frames": 240 },
 
     {
@@ -194,6 +196,7 @@
       "type": "drag_pointer",
       "window": { "kind": "first_seen" },
       "target": { "kind": "test_id", "id": "dock-arb-tab-drag-anchor-right" },
+      "clamp_to_window_bounds": false,
       "delta_x": 2400.0,
       "delta_y": 0.0,
       "steps": 140
@@ -227,9 +230,9 @@
       "predicate": { "kind": "dock_drag_current_window_is", "window": { "kind": "first_seen" } },
       "timeout_frames": 240
     },
-    { "type": "pointer_up", "window": { "kind": "first_seen" } },
     { "type": "wait_until", "predicate": { "kind": "dock_drop_resolved_is_some", "some": true }, "timeout_frames": 240 },
     { "type": "assert", "window": { "kind": "first_seen" }, "predicate": { "kind": "dock_drop_resolved_zone_is", "zone": "right" } },
+    { "type": "pointer_up", "window": { "kind": "first_seen" } },
     { "type": "wait_until", "predicate": { "kind": "dock_drag_active_is", "active": false }, "timeout_frames": 240 },
 
     { "type": "capture_bundle", "label": "loop-cycle3-drop" },

@@ -38,6 +38,7 @@ impl Default for RunnerWindowStyleEffectiveSnapshotV1 {
 #[derive(Debug, Default)]
 pub struct RunnerWindowStyleDiagnosticsStore {
     effective: HashMap<AppWindowId, RunnerWindowStyleEffectiveSnapshotV1>,
+    transparent_explicit: HashMap<AppWindowId, Option<bool>>,
 }
 
 impl RunnerWindowStyleDiagnosticsStore {
@@ -55,6 +56,8 @@ impl RunnerWindowStyleDiagnosticsStore {
         caps: &PlatformCapabilities,
     ) {
         let mut next = RunnerWindowStyleEffectiveSnapshotV1::default();
+        self.transparent_explicit
+            .insert(window, requested.transparent);
 
         if caps.ui.window_decorations {
             if let Some(decorations) = requested.decorations {
@@ -66,14 +69,27 @@ impl RunnerWindowStyleDiagnosticsStore {
                 next.resizable = resizable;
             }
         }
+        if let Some(material) = requested.background_material {
+            let clamped = clamp_background_material_request(material, caps);
+            next.background_material = clamped;
+        }
+
         if caps.ui.window_transparent {
             if let Some(transparent) = requested.transparent {
                 next.transparent = transparent;
+            } else if next.background_material != WindowBackgroundMaterialRequest::None {
+                // Background materials may require a composited alpha surface. If the caller did
+                // not explicitly request `transparent`, runners may implicitly treat it as true
+                // once a non-None material is effectively applied. See ADR 0310.
+                next.transparent = true;
             }
         }
-
-        if let Some(material) = requested.background_material {
-            next.background_material = clamp_background_material(material, caps);
+        if !next.transparent {
+            // Background materials generally require a composited alpha window surface (ADR 0310).
+            // If the effective style is not composited (either due to capability gating or an
+            // explicit `transparent=false` request), degrade any background material request to
+            // None so the effective snapshot remains achievable.
+            next.background_material = WindowBackgroundMaterialRequest::None;
         }
 
         if let Some(taskbar) = requested.taskbar {
@@ -114,6 +130,7 @@ impl RunnerWindowStyleDiagnosticsStore {
 
     pub fn record_window_close(&mut self, window: AppWindowId) {
         self.effective.remove(&window);
+        self.transparent_explicit.remove(&window);
     }
 
     pub fn apply_style_patch(
@@ -130,7 +147,25 @@ impl RunnerWindowStyleDiagnosticsStore {
         // See ADR 0139 for patchability rules.
 
         if let Some(material) = patch.background_material {
-            current.background_material = clamp_background_material(material, caps);
+            let next_material = clamp_background_material_request(material, caps);
+
+            // Background materials generally require a composited alpha window surface (ADR 0310).
+            // Since `transparent` is treated as create-time in the runner, degrade non-None
+            // material requests when the window is not already composited.
+            current.background_material =
+                if next_material != WindowBackgroundMaterialRequest::None && !current.transparent {
+                    WindowBackgroundMaterialRequest::None
+                } else {
+                    next_material
+                };
+
+            // Keep transparency create-time. If the window was created composited (explicitly or
+            // implied by a prior material request), keep it sticky for the window lifetime.
+            if caps.ui.window_transparent
+                && let Some(explicit) = self.transparent_explicit.get(&window).copied().flatten()
+            {
+                current.transparent = explicit;
+            }
         }
 
         if let Some(taskbar) = patch.taskbar {
@@ -166,7 +201,7 @@ impl RunnerWindowStyleDiagnosticsStore {
     }
 }
 
-fn clamp_background_material(
+pub fn clamp_background_material_request(
     requested: WindowBackgroundMaterialRequest,
     caps: &PlatformCapabilities,
 ) -> WindowBackgroundMaterialRequest {
@@ -178,5 +213,82 @@ fn clamp_background_material(
         Acrylic if caps.ui.window_background_material_acrylic => Acrylic,
         Vibrancy if caps.ui.window_background_material_vibrancy => Vibrancy,
         _ => None,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use slotmap::KeyData;
+
+    fn window(id: u64) -> AppWindowId {
+        AppWindowId::from(KeyData::from_ffi(id))
+    }
+
+    #[test]
+    fn implied_transparency_stays_sticky_when_material_cleared() {
+        let caps = PlatformCapabilities::default();
+        let mut store = RunnerWindowStyleDiagnosticsStore::default();
+        let w = window(1);
+
+        store.record_window_open(
+            w,
+            WindowStyleRequest {
+                background_material: Some(WindowBackgroundMaterialRequest::Mica),
+                ..Default::default()
+            },
+            &caps,
+        );
+        let before = store.effective_snapshot(w).unwrap();
+        assert!(before.transparent);
+        assert_eq!(
+            before.background_material,
+            WindowBackgroundMaterialRequest::Mica
+        );
+
+        store.apply_style_patch(
+            w,
+            WindowStyleRequest {
+                background_material: Some(WindowBackgroundMaterialRequest::None),
+                ..Default::default()
+            },
+            &caps,
+        );
+        let after = store.effective_snapshot(w).unwrap();
+        assert!(after.transparent);
+        assert_eq!(
+            after.background_material,
+            WindowBackgroundMaterialRequest::None
+        );
+    }
+
+    #[test]
+    fn material_request_degrades_when_window_not_composited() {
+        let caps = PlatformCapabilities::default();
+        let mut store = RunnerWindowStyleDiagnosticsStore::default();
+        let w = window(2);
+
+        store.record_window_open(w, WindowStyleRequest::default(), &caps);
+        let before = store.effective_snapshot(w).unwrap();
+        assert!(!before.transparent);
+        assert_eq!(
+            before.background_material,
+            WindowBackgroundMaterialRequest::None
+        );
+
+        store.apply_style_patch(
+            w,
+            WindowStyleRequest {
+                background_material: Some(WindowBackgroundMaterialRequest::Mica),
+                ..Default::default()
+            },
+            &caps,
+        );
+        let after = store.effective_snapshot(w).unwrap();
+        assert!(!after.transparent);
+        assert_eq!(
+            after.background_material,
+            WindowBackgroundMaterialRequest::None
+        );
     }
 }

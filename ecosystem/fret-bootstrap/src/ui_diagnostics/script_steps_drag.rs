@@ -6,27 +6,38 @@ fn clamp_point_to_rect(pos: Point, bounds: Rect) -> Point {
     let x1 = bounds.origin.x.0 + bounds.size.width.0;
     let y1 = bounds.origin.y.0 + bounds.size.height.0;
 
-    // Hit-testing treats rect maxima as exclusive in several places. Keep synthesized pointer
-    // positions slightly inside the window bounds so we don't end up with `hit=null` at `x==x1`.
-    // Use a slightly larger epsilon than the minimum needed for half-open bounds, because some
-    // UIs reserve a 1px border/inset inside the window bounds. Keeping the pointer a couple
-    // pixels inside avoids "hover misses" for edge-driven policies (like pane split previews).
+    // Keep synthesized pointer positions slightly inside the window bounds when the coordinates
+    // are still within the window. However, for docking tear-off flows, scripts intentionally
+    // move outside window bounds; preserve OOB coordinates (bounded by a reasonable guard band)
+    // so tear-off can be gated via "pointer outside window bounds" routing.
     const EDGE_EPS_PX: f32 = 2.0;
+    const OOB_GUARD_BAND_PX: f32 = 4096.0;
 
     let mut x = pos.x.0;
     let mut y = pos.y.0;
+
     if x.is_finite() {
         let min_x = x0.min(x1);
         let max_x = x0.max(x1);
-        let max_x = (max_x - EDGE_EPS_PX).max(min_x);
-        x = x.clamp(min_x, max_x);
+        if (min_x..=max_x).contains(&x) {
+            let max_inside_x = (max_x - EDGE_EPS_PX).max(min_x);
+            x = x.clamp(min_x, max_inside_x);
+        } else {
+            x = x.clamp(min_x - OOB_GUARD_BAND_PX, max_x + OOB_GUARD_BAND_PX);
+        }
     }
+
     if y.is_finite() {
         let min_y = y0.min(y1);
         let max_y = y0.max(y1);
-        let max_y = (max_y - EDGE_EPS_PX).max(min_y);
-        y = y.clamp(min_y, max_y);
+        if (min_y..=max_y).contains(&y) {
+            let max_inside_y = (max_y - EDGE_EPS_PX).max(min_y);
+            y = y.clamp(min_y, max_inside_y);
+        } else {
+            y = y.clamp(min_y - OOB_GUARD_BAND_PX, max_y + OOB_GUARD_BAND_PX);
+        }
     }
+
     Point::new(Px(x), Px(y))
 }
 
@@ -53,6 +64,7 @@ pub(super) fn handle_drag_pointer_step(
         pointer_kind,
         target,
         button,
+        clamp_to_window_bounds,
         delta_x,
         delta_y,
         steps,
@@ -211,7 +223,11 @@ pub(super) fn handle_drag_pointer_step(
                     fret_core::Px(start.x.0 + delta_x),
                     fret_core::Px(start.y.0 + delta_y),
                 );
-                let end = clamp_point_to_rect(end, window_bounds);
+                let end = if clamp_to_window_bounds {
+                    clamp_point_to_rect(end, window_bounds)
+                } else {
+                    end
+                };
                 V2DragPointerState {
                     step_index,
                     window,
@@ -718,7 +734,15 @@ pub(super) fn handle_drag_pointer_until_step(
                                 fret_core::Px(start.x.0 + delta_x),
                                 fret_core::Px(start.y.0 + delta_y),
                             );
-                            end = clamp_point_to_rect(end, window_bounds);
+                            let allow_outside_window_bounds = matches!(
+                                &state.predicate,
+                                UiPredicateV1::KnownWindowCountGe { .. }
+                                    | UiPredicateV1::KnownWindowCountIs { .. }
+                                    | UiPredicateV1::DockDragCurrentWindowIs { .. }
+                            );
+                            if !allow_outside_window_bounds {
+                                end = clamp_point_to_rect(end, window_bounds);
+                            }
                             state.playback.start = start;
                             state.playback.end = end;
                         } else {

@@ -1,4 +1,5 @@
 use std::sync::Arc;
+use std::time::Duration;
 
 use fret_core::{
     Color, Corners, Edges, FontId, FontWeight, Px, SemanticsRole, TextFontAxisSetting,
@@ -13,6 +14,7 @@ use fret_ui_kit::command::ElementCommandGatingExt as _;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
 use fret_ui_kit::declarative::current_color;
+use fret_ui_kit::declarative::motion::drive_tween_color_for_element;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::typography;
 use fret_ui_kit::{
@@ -20,6 +22,8 @@ use fret_ui_kit::{
     ShadowPreset, Size as ComponentSize, Space, WidgetStateProperty, WidgetStates,
     resolve_override_slot, ui,
 };
+
+use crate::overlay_motion;
 
 #[derive(Debug, Clone, Default)]
 pub struct ButtonStyle {
@@ -142,6 +146,11 @@ pub(crate) struct ButtonVariantStyle {
 
 fn token(key: &'static str, fallback: ColorFallback) -> ColorRef {
     ColorRef::Token { key, fallback }
+}
+
+fn tailwind_transition_ease_in_out(t: f32) -> f32 {
+    // Tailwind default `ease-in-out`: cubic-bezier(0.4, 0, 0.2, 1)
+    fret_ui_kit::headless::easing::CubicBezier::new(0.4, 0.0, 0.2, 1.0).sample(t)
 }
 
 pub(crate) fn variant_style(variant: ButtonVariant) -> ButtonVariantStyle {
@@ -869,6 +878,36 @@ impl Button {
                     states,
                 );
 
+                let duration = overlay_motion::shadcn_motion_duration_150(cx);
+                let bg_motion = drive_tween_color_for_element(
+                    cx,
+                    _id,
+                    "button.chrome.bg",
+                    bg.resolve(&theme),
+                    duration,
+                    tailwind_transition_ease_in_out,
+                );
+                let fg_motion = drive_tween_color_for_element(
+                    cx,
+                    _id,
+                    "button.content.fg",
+                    fg.resolve(&theme),
+                    duration,
+                    tailwind_transition_ease_in_out,
+                );
+                let border_motion = drive_tween_color_for_element(
+                    cx,
+                    _id,
+                    "button.chrome.border",
+                    border_color.resolve(&theme),
+                    duration,
+                    tailwind_transition_ease_in_out,
+                );
+
+                let bg = ColorRef::Color(bg_motion.value);
+                let fg = ColorRef::Color(fg_motion.value);
+                let border_color = ColorRef::Color(border_motion.value);
+
                 let padding = if is_icon {
                     ChromeRefinement::default()
                 } else {
@@ -1115,6 +1154,13 @@ mod tests {
         let l2 = relative_luminance(b);
         let (hi, lo) = if l1 >= l2 { (l1, l2) } else { (l2, l1) };
         (hi + 0.05) / (lo + 0.05)
+    }
+
+    fn color_eq_eps(a: Color, b: Color, eps: f32) -> bool {
+        (a.r - b.r).abs() <= eps
+            && (a.g - b.g).abs() <= eps
+            && (a.b - b.b).abs() <= eps
+            && (a.a - b.a).abs() <= eps
     }
 
     struct FakeServices;
@@ -1527,6 +1573,7 @@ mod tests {
 
         use fret_runtime::FrameId;
         use fret_ui::elements::GlobalElementId;
+        use fret_ui_kit::declarative::transition::ticks_60hz_for_duration;
 
         let window = AppWindowId::default();
         let mut app = App::new();
@@ -1540,8 +1587,13 @@ mod tests {
         let mut services = FakeServices;
 
         let ring = Theme::global(&app).snapshot().color_token("ring");
+        let base_border = variant_style(ButtonVariant::Outline)
+            .border_color
+            .resolve(WidgetStates::empty())
+            .resolve(&Theme::global(&app).snapshot());
 
         let id_out: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
+        let border_color_out: Rc<Cell<Option<Color>>> = Rc::new(Cell::new(None));
 
         fn render_outline_frame(
             ui: &mut UiTree<App>,
@@ -1550,7 +1602,7 @@ mod tests {
             window: AppWindowId,
             bounds: Rect,
             id_out: Rc<Cell<Option<GlobalElementId>>>,
-            expect_border_color: Option<Color>,
+            border_color_out: Rc<Cell<Option<Color>>>,
         ) {
             // Keep the render closure's callsite stable across frames so element identity is
             // stable under `#[track_caller]`-anchored IDs.
@@ -1566,16 +1618,14 @@ mod tests {
                         .variant(ButtonVariant::Outline)
                         .into_element(cx);
                     id_out.set(Some(el.id));
-                    if let Some(ring) = expect_border_color {
-                        let chrome = el
-                            .children
-                            .first()
-                            .expect("expected pressable to contain chrome container");
-                        let ElementKind::Container(props) = &chrome.kind else {
-                            panic!("expected chrome container element");
-                        };
-                        assert_eq!(props.border_color, Some(ring));
-                    }
+                    let chrome = el
+                        .children
+                        .first()
+                        .expect("expected pressable to contain chrome container");
+                    let ElementKind::Container(props) = &chrome.kind else {
+                        panic!("expected chrome container element");
+                    };
+                    border_color_out.set(props.border_color);
                     vec![el]
                 },
             );
@@ -1591,7 +1641,7 @@ mod tests {
             window,
             bounds,
             id_out.clone(),
-            None,
+            border_color_out.clone(),
         );
         ui.layout_all(&mut app, &mut services, bounds, 1.0);
 
@@ -1609,7 +1659,7 @@ mod tests {
             },
         );
 
-        // Second frame: re-render with focus applied and capture the element tree.
+        // Second frame: re-render with focus-visible applied and ensure the border is transitioning.
         app.set_frame_id(FrameId(2));
         render_outline_frame(
             &mut ui,
@@ -1618,9 +1668,37 @@ mod tests {
             window,
             bounds,
             id_out.clone(),
-            Some(ring),
+            border_color_out.clone(),
         );
         ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let border1 = border_color_out.get().expect("border color");
+        assert!(
+            !color_eq_eps(border1, base_border, 1e-6) && !color_eq_eps(border1, ring, 1e-6),
+            "expected outline focus border to tween (intermediate), got border={border1:?} base={base_border:?} ring={ring:?}"
+        );
+
+        // Advance frames until the default 150ms transition settles.
+        let settle = ticks_60hz_for_duration(Duration::from_millis(150)) + 2;
+        for i in 0..settle {
+            app.set_frame_id(FrameId(3 + i));
+            render_outline_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                id_out.clone(),
+                border_color_out.clone(),
+            );
+            ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        }
+
+        let border_final = border_color_out.get().expect("border_final");
+        assert!(
+            color_eq_eps(border_final, ring, 1e-4),
+            "expected outline focus border to settle to ring; got border={border_final:?} ring={ring:?}"
+        );
     }
 
     #[test]
@@ -1674,6 +1752,165 @@ mod tests {
             .find(|n| n.test_id.as_deref() == Some("disabled-button"))
             .expect("expected a semantics node for the button test_id");
         assert!(node.flags.disabled);
+    }
+
+    #[test]
+    fn button_hover_background_tweens_instead_of_snapping() {
+        use std::cell::Cell;
+        use std::rc::Rc;
+
+        use fret_runtime::FrameId;
+        use fret_ui::elements::GlobalElementId;
+        use fret_ui_kit::declarative::transition::ticks_60hz_for_duration;
+
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(240.0), Px(160.0)),
+        );
+        let mut services = FakeServices;
+
+        let button_id: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
+        let bg_out: Rc<Cell<Option<Color>>> = Rc::new(Cell::new(None));
+
+        fn render_frame(
+            ui: &mut UiTree<App>,
+            app: &mut App,
+            services: &mut dyn fret_core::UiServices,
+            window: AppWindowId,
+            bounds: Rect,
+            button_id: Rc<Cell<Option<GlobalElementId>>>,
+            bg_out: Rc<Cell<Option<Color>>>,
+        ) {
+            let root = fret_ui::declarative::render_root(
+                ui,
+                app,
+                services,
+                window,
+                bounds,
+                "button-hover-bg-tween",
+                move |cx| {
+                    let el = Button::new("Hello")
+                        .variant(ButtonVariant::Default)
+                        .test_id("test-button-hover-bg-tween")
+                        .into_element(cx);
+                    button_id.set(Some(el.id));
+
+                    let chrome = el
+                        .children
+                        .first()
+                        .expect("expected pressable to contain chrome container");
+                    let ElementKind::Container(props) = &chrome.kind else {
+                        panic!("expected chrome container element");
+                    };
+                    let bg = props
+                        .background
+                        .as_ref()
+                        .copied()
+                        .unwrap_or(Color::TRANSPARENT);
+                    bg_out.set(Some(bg));
+
+                    vec![el]
+                },
+            );
+            ui.set_root(root);
+        }
+
+        let theme = Theme::global(&app).snapshot();
+        let style = variant_style(ButtonVariant::Default);
+        let base_bg = style
+            .background
+            .resolve(WidgetStates::empty())
+            .resolve(&theme);
+        let hover_bg = style
+            .background
+            .resolve(WidgetStates::HOVERED)
+            .resolve(&theme);
+
+        // Frame 1: baseline render.
+        app.set_frame_id(FrameId(1));
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            button_id.clone(),
+            bg_out.clone(),
+        );
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let bg0 = bg_out.get().expect("bg0");
+        assert!(
+            color_eq_eps(bg0, base_bg, 1e-6),
+            "expected base background to match; got bg0={bg0:?} base={base_bg:?}"
+        );
+
+        let id = button_id.get().expect("button id");
+        let node = elements::node_for_element(&mut app, window, id).expect("button node");
+        let b = ui.debug_node_bounds(node).expect("button bounds");
+        let center = Point::new(
+            Px(b.origin.x.0 + b.size.width.0 * 0.5),
+            Px(b.origin.y.0 + b.size.height.0 * 0.5),
+        );
+
+        // Hover to retarget the transition.
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+                pointer_id: fret_core::PointerId(0),
+                position: center,
+                buttons: MouseButtons::default(),
+                modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+
+        // Frame 2: hover is applied; the background should be in-between (not snapped).
+        app.set_frame_id(FrameId(2));
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            button_id.clone(),
+            bg_out.clone(),
+        );
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let bg1 = bg_out.get().expect("bg1");
+        assert!(
+            !color_eq_eps(bg1, base_bg, 1e-6) && !color_eq_eps(bg1, hover_bg, 1e-6),
+            "expected hover background to tween (intermediate), got bg1={bg1:?} base={base_bg:?} hover={hover_bg:?}"
+        );
+
+        // Advance frames until the default 150ms transition settles.
+        let settle = ticks_60hz_for_duration(Duration::from_millis(150)) + 2;
+        for i in 0..settle {
+            app.set_frame_id(FrameId(3 + i));
+            render_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                button_id.clone(),
+                bg_out.clone(),
+            );
+            ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        }
+
+        let bg_final = bg_out.get().expect("bg_final");
+        assert!(
+            color_eq_eps(bg_final, hover_bg, 1e-4),
+            "expected hover background to settle; got bg={bg_final:?} hover={hover_bg:?}"
+        );
     }
 
     #[test]

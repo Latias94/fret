@@ -40,14 +40,17 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
                 .p_1()
                 .into_element(cx)
         })
-        .map(shadcn::CarouselItem::new)
+        .map(|slide| {
+            shadcn::CarouselItem::new(slide)
+                // Upstream demo: `md:basis-1/2` (web goldens use a 1440px viewport, so `md` is active).
+                .refine_layout(LayoutRefinement::default().basis_fraction(0.5))
+        })
         .collect::<Vec<_>>();
 
     shadcn::Carousel::default()
         .orientation(shadcn::CarouselOrientation::Vertical)
         .opts(shadcn::CarouselOptions::new().align(shadcn::CarouselAlign::Start))
-        .item_basis_main_px(Px(100.0))
-        .refine_viewport_layout(LayoutRefinement::default().h_px(Px(200.0)))
+        .refine_viewport_layout(LayoutRefinement::default().h_px(Px(196.0)))
         .refine_track_layout(LayoutRefinement::default().h_px(Px(200.0)))
         .track_start_neg_margin(Space::N1)
         .item_padding_start(Space::N1)

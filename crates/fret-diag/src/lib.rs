@@ -22,6 +22,7 @@ use fret_diag_protocol::{
 
 pub mod api;
 mod artifact_lint;
+mod artifact_store;
 pub mod artifacts;
 mod bundle_index;
 mod cli;
@@ -51,6 +52,7 @@ mod json_bundle;
 mod json_stream;
 mod latest;
 mod launch_env_policy;
+mod layout_perf_summary;
 mod lint;
 mod math;
 mod pack_zip;
@@ -58,6 +60,8 @@ mod paths;
 mod perf_hint_gate;
 mod perf_seed_policy;
 mod post_run_checks;
+mod promoted_registry_builder;
+mod registry;
 mod run_artifacts;
 mod script_execution;
 mod script_registry;
@@ -94,6 +98,7 @@ pub(crate) use paths::{
     wait_for_bundle_artifact_in_dir,
 };
 
+use artifact_store::{RunArtifactStore, run_id_artifact_dir};
 use compare::{
     CompareOptions, CompareReport, PerfThresholdAggregate, PerfThresholds, RenderdocDumpAttempt,
     apply_perf_baseline_floor, apply_perf_baseline_headroom, cargo_run_inject_feature,
@@ -109,18 +114,10 @@ use gates::{
 };
 use lint::{LintOptions, lint_bundle_from_path};
 use perf_seed_policy::{PerfBaselineSeed, PerfSeedMetric, ResolvedPerfBaselineSeedPolicy};
-use run_artifacts::{
-    refresh_run_id_manifest_file_index, run_id_artifact_dir, write_run_id_bundle_json,
-    write_run_id_script_result,
-};
 
 use stats::{
     BundleStatsOptions, BundleStatsReport, BundleStatsSort, ScriptResultSummary,
     bundle_stats_diff_from_paths, bundle_stats_from_path,
-    check_out_dir_for_ui_gallery_text_fallback_policy_key_bumps_on_locale_change,
-    check_out_dir_for_ui_gallery_text_fallback_policy_key_bumps_on_settings_change,
-    check_out_dir_for_ui_gallery_text_mixed_script_bundled_fallback_conformance,
-    check_out_dir_for_ui_gallery_text_rescan_system_fonts_font_stack_key_bumps,
     check_report_for_hover_layout_invalidations, clear_script_result_files, report_result_and_exit,
     run_script_and_wait, wait_for_failure_dump_bundle,
 };
@@ -345,6 +342,9 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut hotspots_out: Option<PathBuf> = None;
     let mut bundle_v2_out: Option<PathBuf> = None;
     let mut query_out: Option<PathBuf> = None;
+    let mut layout_sidecar_out: Option<PathBuf> = None;
+    let mut extensions_out: Option<PathBuf> = None;
+    let mut layout_perf_summary_out: Option<PathBuf> = None;
     let mut slice_out: Option<PathBuf> = None;
     let mut ai_packet_out: Option<PathBuf> = None;
     let mut script_path: Option<PathBuf> = None;
@@ -840,6 +840,9 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 hotspots_out = Some(p.clone());
                 bundle_v2_out = Some(p.clone());
                 query_out = Some(p.clone());
+                layout_sidecar_out = Some(p.clone());
+                extensions_out = Some(p.clone());
+                layout_perf_summary_out = Some(p.clone());
                 slice_out = Some(p.clone());
                 ai_packet_out = Some(p.clone());
                 test_ids_out = Some(p);
@@ -3047,6 +3050,30 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             &resolved_inspect_trigger_path,
             inspect_consume_clicks,
         ),
+        "extensions" => commands::extensions::cmd_extensions(
+            &rest,
+            &resolved_out_dir,
+            &workspace_root,
+            warmup_frames,
+            stats_json,
+            extensions_out.as_deref(),
+        ),
+        "layout-perf-summary" | "layout_perf_summary" => commands::layout_perf_summary::cmd_layout_perf_summary(
+            &rest,
+            &resolved_out_dir,
+            &workspace_root,
+            warmup_frames,
+            stats_json,
+            layout_perf_summary_out.as_deref(),
+        ),
+        "layout-sidecar" | "layout_sidecar" => commands::layout_sidecar::cmd_layout_sidecar(
+            &rest,
+            &resolved_out_dir,
+            &workspace_root,
+            stats_json,
+            layout_sidecar_out.as_deref(),
+        ),
+        "registry" => commands::registry::cmd_registry(&rest, &workspace_root, stats_json),
         "config" => commands::config::cmd_config(commands::config::ConfigCmdContext {
             rest: rest.clone(),
             workspace_root: workspace_root.clone(),
@@ -4085,7 +4112,7 @@ fn run_script_over_transport(
                 script_result_path,
                 &serde_json::to_value(&parsed).unwrap_or_else(|_| serde_json::json!({})),
             );
-            write_run_id_script_result(out_dir, parsed.run_id, &parsed);
+            RunArtifactStore::new(out_dir, parsed.run_id).write_script_result(&parsed);
 
             if matches!(
                 parsed.stage,
@@ -4190,9 +4217,10 @@ fn run_script_over_transport(
                 return Err(err);
             }
         };
-        write_run_id_bundle_json(out_dir, result.run_id, &bundle_path);
+        let run_artifacts = RunArtifactStore::new(out_dir, result.run_id);
+        run_artifacts.write_bundle_artifact(&bundle_path);
         if trace_chrome {
-            let run_dir = run_id_artifact_dir(out_dir, result.run_id);
+            let run_dir = run_artifacts.run_dir();
             let stable_bundle_path = crate::resolve_bundle_artifact_path(&run_dir);
             let src = if stable_bundle_path.is_file() {
                 stable_bundle_path
@@ -4203,7 +4231,7 @@ fn run_script_over_transport(
             if let Err(err) = crate::trace::write_chrome_trace_from_bundle_path(&src, &trace_path) {
                 push_tooling_event_log_entry(&mut result, "tooling_trace_chrome_failed", Some(err));
             } else {
-                refresh_run_id_manifest_file_index(out_dir, result.run_id);
+                run_artifacts.refresh_manifest_file_index();
             }
         }
         result.last_bundle_dir = Some(devtools_sanitize_export_dir_name(&dumped.dir));

@@ -343,6 +343,7 @@ pub fn container_props(
         border_paint: None,
         border_dash: chrome.border_dash,
         focus_ring: None,
+        focus_ring_always_paint: false,
         focus_border_color: None,
         focus_within: false,
         corner_radii,

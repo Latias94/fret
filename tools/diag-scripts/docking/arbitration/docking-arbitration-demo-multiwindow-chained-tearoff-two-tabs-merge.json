@@ -53,7 +53,7 @@
       "type": "drag_pointer",
       "window": { "kind": "first_seen" },
       "target": { "kind": "test_id", "id": "dock-arb-tab-drag-anchor-left" },
-      "release_on_success": false,
+      "clamp_to_window_bounds": false,
       "delta_x": -2400.0,
       "delta_y": 0.0,
       "steps": 160
@@ -80,7 +80,7 @@
       "type": "drag_pointer",
       "window": { "kind": "first_seen" },
       "target": { "kind": "test_id", "id": "dock-arb-tab-drag-anchor-right" },
-      "release_on_success": false,
+      "clamp_to_window_bounds": false,
       "delta_x": 2400.0,
       "delta_y": 0.0,
       "steps": 160
@@ -138,6 +138,17 @@
       "target": { "kind": "test_id", "id": "dock-arb-dock-space" }
     },
     { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wait_until",
+      "window": { "kind": "first_seen" },
+      "predicate": {
+        "kind": "bounds_min_size",
+        "target": { "kind": "test_id", "id": "dock-arb-hint-inner-top" },
+        "min_w_px": 20.0,
+        "min_h_px": 20.0
+      },
+      "timeout_frames": 240
+    },
     {
       "type": "move_pointer",
       "window": { "kind": "first_seen" },

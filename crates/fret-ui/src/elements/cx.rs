@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use std::hash::Hash;
 use std::panic::Location;
 use std::sync::Arc;
+use std::time::Duration;
 
 use smallvec::SmallVec;
 
@@ -11,7 +12,7 @@ use fret_core::window::{ColorScheme, ContrastPreference, ForcedColorsMode};
 use fret_core::{
     AppWindowId, Color, Edges, EffectChain, EffectMode, EffectQuality, NodeId, Px, Rect,
 };
-use fret_runtime::{Effect, FrameId, Model, ModelId, ModelUpdateError};
+use fret_runtime::{Effect, FrameId, Model, ModelId, ModelUpdateError, TimerToken};
 
 use crate::action::OnHoverChange;
 use crate::action::{
@@ -373,6 +374,35 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         let lease = self.window_state.begin_continuous_frames();
         self.request_animation_frame();
         lease
+    }
+
+    /// Request a one-shot timer event routed to the given element.
+    ///
+    /// This records the timer target in the current window element runtime, enabling
+    /// `Event::Timer { token }` to be dispatched to the element's `on_timer` hook.
+    pub fn set_timer_for(&mut self, element: GlobalElementId, token: TimerToken, after: Duration) {
+        self.window_state.timer_targets.insert(
+            token,
+            crate::elements::runtime::TimerTarget::Element(element),
+        );
+        self.app.push_effect(Effect::SetTimer {
+            window: Some(self.window),
+            token,
+            after,
+            repeat: None,
+        });
+    }
+
+    /// Request a one-shot timer event routed to the current element.
+    pub fn set_timer(&mut self, token: TimerToken, after: Duration) {
+        let element = self.root_id();
+        self.set_timer_for(element, token, after);
+    }
+
+    /// Cancel a previously requested timer and clear its routing entry for this window.
+    pub fn cancel_timer(&mut self, token: TimerToken) {
+        self.window_state.timer_targets.remove(&token);
+        self.app.push_effect(Effect::CancelTimer { token });
     }
 
     #[track_caller]

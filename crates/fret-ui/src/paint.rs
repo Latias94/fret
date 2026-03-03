@@ -141,6 +141,10 @@ pub fn paint_focus_ring(scene: &mut Scene, order: DrawOrder, bounds: Rect, ring:
     }
     let offset = Px(ring.offset.0.max(0.0));
     let color = ring.color;
+    let offset_alpha = ring.offset_color.map(|c| c.a).unwrap_or(0.0);
+    if color.a <= 0.0 && offset_alpha <= 0.0 {
+        return;
+    }
 
     match ring.placement {
         RingPlacement::Inset => {

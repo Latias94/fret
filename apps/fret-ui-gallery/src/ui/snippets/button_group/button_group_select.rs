@@ -111,6 +111,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             .max_w(Px(760.0)),
     )
     .into_element(cx)
+    .test_id("ui-gallery-button-group-select")
 }
 
 // endregion: example

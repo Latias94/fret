@@ -731,6 +731,21 @@ fn script_v2_roundtrip_dock_drag_moving_window_is_predicate() {
 }
 
 #[test]
+fn script_v2_roundtrip_dock_drag_kind_is_predicate() {
+    assert_script_v2_roundtrip(
+        r#"{
+  "schema_version": 2,
+  "steps": [
+    {
+      "type": "assert",
+      "predicate": { "kind": "dock_drag_kind_is", "drag_kind": "dock_panel" }
+    }
+  ]
+}"#,
+    );
+}
+
+#[test]
 fn script_v2_roundtrip_dock_drag_window_under_moving_window_is_predicate() {
     assert_script_v2_roundtrip(
         r#"{

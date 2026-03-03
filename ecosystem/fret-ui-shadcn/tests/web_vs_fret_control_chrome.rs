@@ -803,9 +803,7 @@ fn web_vs_fret_button_group_split_chrome_matches() {
             fret_ui_shadcn::Button::new("Button")
                 .variant(fret_ui_shadcn::ButtonVariant::Secondary)
                 .into(),
-            fret_ui_shadcn::Separator::new()
-                .orientation(fret_ui_shadcn::SeparatorOrientation::Vertical)
-                .into(),
+            fret_ui_shadcn::ButtonGroupSeparator::new().into(),
             fret_ui_shadcn::Button::new("Menu")
                 .variant(fret_ui_shadcn::ButtonVariant::Secondary)
                 .size(fret_ui_shadcn::ButtonSize::Icon)
@@ -1338,9 +1336,7 @@ fn web_vs_fret_button_group_separator_geometry_and_chrome_match() {
                 .variant(fret_ui_shadcn::ButtonVariant::Secondary)
                 .size(fret_ui_shadcn::ButtonSize::Sm)
                 .into(),
-            fret_ui_shadcn::Separator::new()
-                .orientation(fret_ui_shadcn::SeparatorOrientation::Vertical)
-                .into(),
+            fret_ui_shadcn::ButtonGroupSeparator::new().into(),
             fret_ui_shadcn::Button::new("Paste")
                 .variant(fret_ui_shadcn::ButtonVariant::Secondary)
                 .size(fret_ui_shadcn::ButtonSize::Sm)

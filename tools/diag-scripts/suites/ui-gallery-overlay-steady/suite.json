@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "kind": "diag_script_suite_manifest",
+  "scripts": [
+    "tools/diag-scripts/ui-gallery-context-menu-keyboard-escape-focus-restore.json",
+    "tools/diag-scripts/ui-gallery-context-menu-occlusion-wheel-pass-through.json",
+    "tools/diag-scripts/ui-gallery-context-menu-right-click-steady.json",
+    "tools/diag-scripts/ui-gallery-dialog-escape-focus-restore-steady.json",
+    "tools/diag-scripts/ui-gallery-dropdown-nonmodal-outside-press-focus-underlay.json",
+    "tools/diag-scripts/ui-gallery-dropdown-open-select-steady.json",
+    "tools/diag-scripts/ui-gallery/perf/ui-gallery-inspector-help-lock-match-copy-selector-steady.json",
+    "tools/diag-scripts/ui-gallery/perf/ui-gallery-inspector-help-tree-lock-match-copy-selector-steady.json",
+    "tools/diag-scripts/ui-gallery-modal-barrier-focus-restore.json",
+    "tools/diag-scripts/ui-gallery-modal-barrier-wheel-block.json",
+    "tools/diag-scripts/ui-gallery-overlay-torture-steady.json"
+  ]
+}

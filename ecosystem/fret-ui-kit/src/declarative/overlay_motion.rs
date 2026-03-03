@@ -20,11 +20,13 @@ use fret_ui::{ElementContext, Theme, UiHost};
 pub const SHADCN_SLIDE_PX: Px = Px(8.0);
 
 pub const SHADCN_MOTION_DURATION_100: Duration = Duration::from_millis(100);
+pub const SHADCN_MOTION_DURATION_150: Duration = Duration::from_millis(150);
 pub const SHADCN_MOTION_DURATION_200: Duration = Duration::from_millis(200);
 pub const SHADCN_MOTION_DURATION_300: Duration = Duration::from_millis(300);
 pub const SHADCN_MOTION_DURATION_500: Duration = Duration::from_millis(500);
 
 const THEME_DURATION_SHADCN_MOTION_100: &str = "duration.shadcn.motion.100";
+const THEME_DURATION_SHADCN_MOTION_150: &str = "duration.shadcn.motion.150";
 const THEME_DURATION_SHADCN_MOTION_200: &str = "duration.shadcn.motion.200";
 const THEME_DURATION_SHADCN_MOTION_300: &str = "duration.shadcn.motion.300";
 const THEME_DURATION_SHADCN_MOTION_500: &str = "duration.shadcn.motion.500";
@@ -69,6 +71,12 @@ fn theme_duration_ms_by_keys<H: UiHost>(
 pub fn shadcn_motion_duration_100<H: UiHost>(cx: &ElementContext<'_, H>) -> Duration {
     theme_duration_ms_by_key(cx, THEME_DURATION_SHADCN_MOTION_100)
         .unwrap_or(SHADCN_MOTION_DURATION_100)
+}
+
+/// shadcn duration token (150ms).
+pub fn shadcn_motion_duration_150<H: UiHost>(cx: &ElementContext<'_, H>) -> Duration {
+    theme_duration_ms_by_key(cx, THEME_DURATION_SHADCN_MOTION_150)
+        .unwrap_or(SHADCN_MOTION_DURATION_150)
 }
 
 /// shadcn overlay duration token (200ms).

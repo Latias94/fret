@@ -218,8 +218,25 @@ fn default_wgpu_backends_for_target() -> wgpu::Backends {
 }
 
 fn create_wgpu_instance_with_backends(backends: wgpu::Backends) -> wgpu::Instance {
+    // On Windows/DX12, wgpu defaults to `DxgiFromHwnd`, which does not support transparent
+    // windows (and therefore prevents OS-backed background materials like Mica/Acrylic from
+    // being visible behind transparent clears).
+    //
+    // Prefer `DxgiFromVisual` so frameless/utility windows can be composited correctly.
+    // Developers can override via `WGPU_DX12_PRESENTATION_SYSTEM=hwnd` when needed (e.g. RenderDoc).
+    let mut backend_options = wgpu::BackendOptions::default();
+    #[cfg(target_os = "windows")]
+    {
+        backend_options.dx12 = wgpu::Dx12BackendOptions {
+            presentation_system: wgpu::Dx12SwapchainKind::DxgiFromVisual,
+            ..Default::default()
+        };
+    }
+    backend_options = backend_options.with_env();
+
     wgpu::Instance::new(&wgpu::InstanceDescriptor {
         backends,
+        backend_options,
         ..Default::default()
     })
 }

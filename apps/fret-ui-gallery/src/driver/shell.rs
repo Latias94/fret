@@ -1,6 +1,6 @@
 use fret_app::{App, Model};
 use fret_core::Px;
-use fret_ui::element::{AnyElement, LayoutStyle, Length, ViewCacheProps};
+use fret_ui::element::{AnyElement, ContainerProps, LayoutStyle, Length, ViewCacheProps};
 use fret_ui::{ElementContext, Invalidation};
 use fret_ui_shadcn::{decl_style, prelude::*};
 use std::sync::Arc;
@@ -160,6 +160,10 @@ pub(super) fn content_view(
                 let mut layout = LayoutStyle::default();
                 layout.size.width = Length::Fill;
                 layout.size.height = Length::Fill;
+                // Match web flexbox behavior (`min-w-0`) so the content pane can shrink when the
+                // sidebar or window constraints get tight (prevents horizontal overflow in narrow
+                // screenshots/diag runs).
+                layout.size.min_width = Some(Length::Px(Px(0.0)));
                 layout.flex.grow = 1.0;
                 ViewCacheProps {
                     layout,
@@ -192,7 +196,7 @@ pub(super) fn content_view(
             },
         )
     } else {
-        cx.keyed("ui_gallery.content_root", |cx| {
+        let body = cx.keyed("ui_gallery.content_root", |cx| {
             cx.keyed(("ui_gallery.content", selected.as_ref()), |cx| {
                 if (bisect & BISECT_SIMPLE_CONTENT) != 0 {
                     cx.container(
@@ -209,6 +213,20 @@ pub(super) fn content_view(
                     ui::content_view(cx, theme, selected.as_ref(), models)
                 }
             })
-        })
+        });
+
+        // Ensure this subtree acts like a shrinkable flex item (`min-w-0`).
+        let mut layout = LayoutStyle::default();
+        layout.size.width = Length::Fill;
+        layout.size.height = Length::Fill;
+        layout.size.min_width = Some(Length::Px(Px(0.0)));
+        layout.flex.grow = 1.0;
+        cx.container(
+            ContainerProps {
+                layout,
+                ..Default::default()
+            },
+            |_cx| [body],
+        )
     }
 }

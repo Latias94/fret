@@ -5,6 +5,8 @@ with special focus on multi-window tear-off + drag-back sequences.
 
 ## Immediate TODOs (next)
 
+- Re-run `fretboard diag suite docking-arbitration` after the 2026-03-03 fixes below and record the new first failure
+  (if any) in this workstream.
 - Prioritize “timebase decoupling” so docking scripts cannot hang on occlusion/idle (root cause class):
   - Workstream: `docs/workstreams/ui-diagnostics-timebase-decoupling-v1/README.md`
   - Goal: scripted runs always progress or fail with `reason_code=timeout.no_frames` (never a tooling timeout).
@@ -69,9 +71,34 @@ with special focus on multi-window tear-off + drag-back sequences.
 
 - Script termination hardening: avoid trailing `wait_frames` after a final `capture_bundle` in multi-window docking
   scripts, because the last remaining window can be occluded/idle and stop producing redraw callbacks (tooling timeout).
+- `drag_pointer_until` hardening: allow out-of-window cursor motion when waiting on window-count predicates
+  (`known_window_count_*`) so tear-off creation scripts can drive the cursor beyond the active window bounds.
+- Diagnostics protocol: allow `drag_pointer` steps to opt out of clamping the end position to the active window bounds
+  (`clamp_to_window_bounds=false`) so tear-off drags can deterministically leave the window.
+- Script runner: `set_cursor_in_window_logical` updates the in-memory pointer session position when targeting the active
+  window (prevents stale `dock_drop_resolve` position during docking gates).
+- Script runner: when a cross-window dock drag is active, `move_pointer` injects `InternalDrag::Over` (instead of
+  `PointerMove`) to refresh docking hover/resolve without relying on per-window pointer broadcasting.
+- Docking UI: `dock_hint_pick_zone` keeps `Center` tightly coupled to the visual center rect (avoids “sticky center”
+  picks just outside the center pad; unblocks `dock_drop_preview_kind_is(insert_into_split)` gates).
+- Script runner: pending “cross-window drag cancel” escape hatch clears immediately when the pointer has no active drag,
+  preventing accidental cancellation of later drags started within the retry window.
+- Docking policy: `panel_min_content_size=None` now falls back to the default viewport min size (240×160 logical px) even
+  when a `DockingPolicy` is installed for other hooks (e.g. drop-zone masking); unblocks splitter-drag min-size gates.
 - Runtime hardening: while a diagnostics script is active, arm a keepalive timer that can advance a conservative subset
   of script steps (and fail with `timeout.no_frames`) even if redraw callbacks stop (occlusion/idle).
 - Runtime hardening: allow a small “burst” of frame-independent tail steps so scripts do not require an additional frame
   to run a final `capture_bundle` after the last semantic assertion (reduces tooling timeouts at tight `--timeout-ms`).
 - Docs: clarify window-count and docking drop resolve predicate semantics in the main diagnostics reference:
   `docs/ui-diagnostics-and-scripted-tests.md`.
+- Runtime hardening: include `serde_json` parse error details in `script.result.json.reason` for
+  `reason_code=script.parse_failed` (schema v1/v2), so suite failures are actionable without opening logs.
+- Script hardening: make schema v2 `wait_until` tolerate missing `timeout_frames` and avoid treating tab order as a
+  contract in `docking-arbitration-demo-tab-bar-drop-end-insert-index-two-tabs` (assert both panels exist instead of a
+  specific ordering).
+- Diagnostics input synthesis: allow scripted drags to move outside window bounds (tear-off requires OOB routing)
+  without clamping the end position back inside the window client rect.
+  - implementation: `ecosystem/fret-bootstrap/src/ui_diagnostics/script_steps_drag.rs`
+- Docking UI: include `TextFontStackKey` in the retained tab-title cache key so tab labels do not disappear after a
+  system font rescan / font stack stabilization.
+  - implementation: `ecosystem/fret-docking/src/dock/space.rs`

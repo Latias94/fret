@@ -252,7 +252,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             };
 
             let size = state.window.surface_size();
-            let surface_state = match SurfaceState::new_with_usage(
+            let mut surface_state = match SurfaceState::new_with_usage(
                 &context.adapter,
                 &context.device,
                 surface,
@@ -270,6 +270,18 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                     continue;
                 }
             };
+
+            let want_transparent = self
+                .app
+                .global::<fret_runtime::RunnerWindowStyleDiagnosticsStore>()
+                .and_then(|s| s.effective_snapshot(app_window))
+                .is_some_and(|s| s.transparent);
+            super::window_lifecycle::configure_surface_alpha_mode_for_composited_window(
+                &context.adapter,
+                &context.device,
+                &mut surface_state,
+                want_transparent,
+            );
 
             state.surface = Some(surface_state);
             state.window.request_redraw();
@@ -490,7 +502,12 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                 #[cfg(feature = "dev-state")]
                 self.dev_state.apply_main_window_spec(&mut spec);
                 let style = self.config.main_window_style.clone();
-                let window = match self.create_os_window(event_loop, spec, style, None) {
+                let caps = self
+                    .app
+                    .global::<fret_runtime::PlatformCapabilities>()
+                    .cloned()
+                    .unwrap_or_default();
+                let window = match self.create_os_window(event_loop, spec, style, None, &caps) {
                     Ok(w) => w,
                     Err(e) => {
                         error!(error = ?e, "failed to create main window");
@@ -498,18 +515,13 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                     }
                 };
 
-                let main_window = match self.insert_window(window.0, window.1, None) {
+                let main_window = match self.insert_window(window.0, window.1, None, style) {
                     Ok(id) => id,
                     Err(e) => {
                         error!(error = ?e, "failed to insert main window runtime");
                         return;
                     }
                 };
-                let caps = self
-                    .app
-                    .global::<fret_runtime::PlatformCapabilities>()
-                    .cloned()
-                    .unwrap_or_default();
                 self.app.with_global_mut(
                     fret_runtime::RunnerWindowStyleDiagnosticsStore::default,
                     |svc, _app| {
@@ -692,7 +704,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                         }
                     };
                     let size = state.window.surface_size();
-                    let surface_state = match SurfaceState::new_with_usage(
+                    let mut surface_state = match SurfaceState::new_with_usage(
                         &context.adapter,
                         &context.device,
                         surface,
@@ -710,6 +722,18 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                             return;
                         }
                     };
+
+                    let want_transparent = self
+                        .app
+                        .global::<fret_runtime::RunnerWindowStyleDiagnosticsStore>()
+                        .and_then(|s| s.effective_snapshot(main_window))
+                        .is_some_and(|s| s.transparent);
+                    super::window_lifecycle::configure_surface_alpha_mode_for_composited_window(
+                        &context.adapter,
+                        &context.device,
+                        &mut surface_state,
+                        want_transparent,
+                    );
                     state.surface = Some(surface_state);
                 }
 
@@ -748,7 +772,12 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                 spec
             };
             let style = self.config.main_window_style.clone();
-            let window = match self.create_os_window(event_loop, spec, style, None) {
+            let caps = self
+                .app
+                .global::<fret_runtime::PlatformCapabilities>()
+                .cloned()
+                .unwrap_or_default();
+            let window = match self.create_os_window(event_loop, spec, style, None, &caps) {
                 Ok(w) => w,
                 Err(e) => {
                     error!(error = ?e, "failed to create main window");
@@ -880,7 +909,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                 self.driver.gpu_ready(&mut self.app, context, renderer);
             }
 
-            let main_window = match self.insert_window(window.0, window.1, Some(surface)) {
+            let main_window = match self.insert_window(window.0, window.1, Some(surface), style) {
                 Ok(id) => id,
                 Err(e) => {
                     error!(error = ?e, "failed to insert main window runtime");
@@ -1785,6 +1814,16 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
 
                         let render_scene_span = tracing::info_span!("fret.runner.render_scene");
                         let _render_scene_guard = render_scene_span.enter();
+                        let want_transparent = self
+                            .app
+                            .global::<fret_runtime::RunnerWindowStyleDiagnosticsStore>()
+                            .and_then(|s| s.effective_snapshot(app_window))
+                            .is_some_and(|s| s.transparent);
+                        let clear_color = if want_transparent {
+                            fret_render::ClearColor(wgpu::Color::TRANSPARENT)
+                        } else {
+                            self.config.clear_color
+                        };
                         let ui_cmd = renderer.render_scene(
                             &context.device,
                             &context.queue,
@@ -1792,7 +1831,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                                 format: surface.format(),
                                 target_view: &view,
                                 scene: &state.scene,
-                                clear: self.config.clear_color,
+                                clear: clear_color,
                                 scale_factor,
                                 viewport_size: surface.size(),
                             },

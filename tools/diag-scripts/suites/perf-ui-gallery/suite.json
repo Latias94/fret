@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "kind": "diag_script_suite_manifest",
+  "scripts": [
+    "tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-right-click.json",
+    "tools/diag-scripts/ui-gallery/overlay/ui-gallery-dialog-escape-focus-restore.json",
+    "tools/diag-scripts/ui-gallery/dropdown/ui-gallery-dropdown-open-select.json",
+    "tools/diag-scripts/ui-gallery/perf/ui-gallery-material3-tabs-switch-perf.json",
+    "tools/diag-scripts/ui-gallery/menubar/ui-gallery-menubar-keyboard-nav.json",
+    "tools/diag-scripts/ui-gallery/perf/ui-gallery-overlay-torture.json",
+    "tools/diag-scripts/ui-gallery/perf/ui-gallery-view-cache-toggle-perf.json",
+    "tools/diag-scripts/ui-gallery/perf/ui-gallery-virtual-list-torture.json",
+    "tools/diag-scripts/ui-gallery/perf/ui-gallery-window-resize-stress.json"
+  ]
+}

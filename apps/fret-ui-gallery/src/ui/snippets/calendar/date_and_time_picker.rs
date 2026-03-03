@@ -7,6 +7,8 @@ use fret_ui_kit::declarative::stack;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 use time::Date;
 
+const FIELD_W_PX: Px = Px(128.0);
+
 #[derive(Default)]
 struct Models {
     open: Option<Model<bool>>,
@@ -120,7 +122,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                     .content_justify(fret_ui_kit::Justify::Between)
                     .text_weight(fret_core::FontWeight::NORMAL)
                     .trailing_icon(fret_icons::IconId::new_static("lucide.chevron-down"))
-                    .refine_layout(LayoutRefinement::default().w_px(Px(128.0)))
+                    .refine_layout(LayoutRefinement::default().w_px(FIELD_W_PX))
                     .into_element(cx)
                     .test_id("ui-gallery.calendar.time.date-trigger");
 
@@ -141,13 +143,19 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
 
     let date_column = stack::vstack(
         cx,
-        stack::VStackProps::default().gap(Space::N3).items_start(),
+        stack::VStackProps::default()
+            .gap(Space::N3)
+            .items_start()
+            .layout(LayoutRefinement::default().w_px(FIELD_W_PX)),
         |cx| vec![shadcn::FieldLabel::new("Date").into_element(cx), popover],
     );
 
     let time_column = stack::vstack(
         cx,
-        stack::VStackProps::default().gap(Space::N3).items_start(),
+        stack::VStackProps::default()
+            .gap(Space::N3)
+            .items_start()
+            .layout(LayoutRefinement::default().w_px(FIELD_W_PX)),
         |cx| {
             vec![
                 shadcn::FieldLabel::new("Time").into_element(cx),
@@ -159,9 +167,14 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         },
     );
 
-    stack::hstack(cx, stack::HStackProps::default().gap(Space::N4), |_cx| {
-        vec![date_column, time_column]
-    })
+    stack::hstack(
+        cx,
+        stack::HStackProps::default()
+            .gap(Space::N4)
+            .items_start()
+            .layout(LayoutRefinement::default().w_full().max_w(Px(320.0))),
+        |_cx| vec![date_column, time_column],
+    )
     .test_id("ui-gallery.calendar.time.picker")
 }
 // endregion: example

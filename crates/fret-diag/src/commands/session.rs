@@ -2,7 +2,7 @@ use std::path::{Path, PathBuf};
 
 use fret_diag_protocol::{UiScriptResultV1, UiScriptStageV1};
 
-use crate::run_artifacts::{write_run_id_bundle_json, write_run_id_script_result};
+use crate::artifact_store::RunArtifactStore;
 use crate::util::{now_unix_ms, touch};
 
 use super::args::resolve_latest_bundle_dir_path;
@@ -138,8 +138,9 @@ pub(crate) fn cmd_poke(
         last_bundle_artifact: None,
     };
 
-    write_run_id_script_result(out_dir, run_id, &result);
-    write_run_id_bundle_json(out_dir, run_id, &bundle_artifact_path);
+    let run_artifacts = RunArtifactStore::new(out_dir, run_id);
+    run_artifacts.write_script_result(&result);
+    run_artifacts.write_bundle_artifact(&bundle_artifact_path);
 
     let run_dir = out_dir.join(run_id.to_string());
     println!("{}", run_dir.display());

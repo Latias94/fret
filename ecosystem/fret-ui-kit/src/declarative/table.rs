@@ -2756,11 +2756,19 @@ where
 
                                         cx.container(
                                             ContainerProps {
-                                                border: Edges {
-                                                    right: Px(1.0),
-                                                    ..Default::default()
+                                                border: if props.optimize_grid_lines {
+                                                    Edges::default()
+                                                } else {
+                                                    Edges {
+                                                        right: Px(1.0),
+                                                        ..Default::default()
+                                                    }
                                                 },
-                                                border_color: Some(border),
+                                                border_color: if props.optimize_grid_lines {
+                                                    None
+                                                } else {
+                                                    Some(border)
+                                                },
                                                 layout: LayoutStyle {
                                                     size: fret_ui::element::SizeStyle {
                                                         width: Length::Px(col_w),
@@ -3305,11 +3313,23 @@ where
 
                                                                 let cell = cx.container(
                                                                     ContainerProps {
-                                                                        border: Edges {
-                                                                            right: Px(1.0),
-                                                                            ..Default::default()
+                                                                        border: if props
+                                                                            .optimize_grid_lines
+                                                                        {
+                                                                            Edges::default()
+                                                                        } else {
+                                                                            Edges {
+                                                                                right: Px(1.0),
+                                                                                ..Default::default()
+                                                                            }
                                                                         },
-                                                                        border_color: Some(border),
+                                                                        border_color: if props
+                                                                            .optimize_grid_lines
+                                                                        {
+                                                                            None
+                                                                        } else {
+                                                                            Some(border)
+                                                                        },
                                                                         padding: Edges::symmetric(
                                                                             cell_px, cell_py,
                                                                         )
@@ -4846,17 +4866,26 @@ where
 
                                                                     let cell_props = ContainerProps {
                                                                         padding: Edges::all(Px(0.0)).into(),
-                                                                        border: Edges {
-                                                                            right: if props.enable_column_resizing
-                                                                                && col.enable_resizing
-                                                                            {
-                                                                                Px(0.0)
-                                                                            } else {
-                                                                                Px(1.0)
-                                                                            },
-                                                                            ..Default::default()
+                                                                        border: if props.optimize_grid_lines {
+                                                                            Edges::default()
+                                                                        } else {
+                                                                            Edges {
+                                                                                right: if props
+                                                                                    .enable_column_resizing
+                                                                                    && col.enable_resizing
+                                                                                {
+                                                                                    Px(0.0)
+                                                                                } else {
+                                                                                    Px(1.0)
+                                                                                },
+                                                                                ..Default::default()
+                                                                            }
                                                                         },
-                                                                        border_color: Some(border),
+                                                                        border_color: if props.optimize_grid_lines {
+                                                                            None
+                                                                        } else {
+                                                                            Some(border)
+                                                                        },
                                                                         layout: LayoutStyle {
                                                                             size: fret_ui::element::SizeStyle {
                                                                                 width: Length::Px(col_w),
@@ -6375,7 +6404,19 @@ where
                                                                                                                 ..Default::default()
                                                                                                             },
                                                                                                             |cx| {
-                                                                                                                render_cell(cx, &data_row, col)
+                                                                                                                vec![stack::hstack(
+                                                                                                                    cx,
+                                                                                                                    stack::HStackProps::default()
+                                                                                                                        .gap_x(Space::N0)
+                                                                                                                        .justify(Justify::Start)
+                                                                                                                        .items(Items::Center)
+                                                                                                                        .layout(
+                                                                                                                            LayoutRefinement::default()
+                                                                                                                                .w_full()
+                                                                                                                                .h_full(),
+                                                                                                                        ),
+                                                                                                                    |cx| render_cell(cx, &data_row, col),
+                                                                                                                )]
                                                                                                             },
                                                                                                         )
                                                                                                     })
@@ -6426,6 +6467,7 @@ where
                                                                                                            width: Length::Px(col_w),
                                                                                                             min_width: Some(Length::Px(col_w)),
                                                                                                             max_width: Some(Length::Px(col_w)),
+                                                                                                           height: Length::Fill,
                                                                                                            ..Default::default()
                                                                                                        },
                                                                                                    overflow: Overflow::Clip,
@@ -6438,7 +6480,19 @@ where
                                                                                                 ..Default::default()
                                                                                             },
                                                                                             |cx| {
-                                                                                                render_cell(cx, &data_row, col)
+                                                                                                vec![stack::hstack(
+                                                                                                    cx,
+                                                                                                    stack::HStackProps::default()
+                                                                                                        .gap_x(Space::N0)
+                                                                                                        .justify(Justify::Start)
+                                                                                                        .items(Items::Center)
+                                                                                                        .layout(
+                                                                                                            LayoutRefinement::default()
+                                                                                                                .w_full()
+                                                                                                                .h_full(),
+                                                                                                        ),
+                                                                                                    |cx| render_cell(cx, &data_row, col),
+                                                                                                )]
                                                                                             },
                                                                                         )
                                                                                     })

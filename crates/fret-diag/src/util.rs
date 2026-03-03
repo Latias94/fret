@@ -44,7 +44,66 @@ pub(crate) fn write_json_value(path: &Path, v: &serde_json::Value) -> Result<(),
         std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
     }
     let bytes = serde_json::to_vec_pretty(v).map_err(|e| e.to_string())?;
-    std::fs::write(path, bytes).map_err(|e| e.to_string())
+
+    // Write atomically (best-effort) to avoid readers observing partial JSON while the file is
+    // being updated. This matters for the filesystem diagnostics transport, where the app reads
+    // `script.json` concurrently with tooling that updates it.
+    write_bytes_atomic(path, &bytes)
+}
+
+fn write_bytes_atomic(path: &Path, bytes: &[u8]) -> Result<(), String> {
+    use std::io::Write as _;
+
+    let Some(parent) = path.parent() else {
+        return Err(format!("invalid path (missing parent): {}", path.display()));
+    };
+    let Some(file_name) = path.file_name().and_then(|v| v.to_str()) else {
+        return Err(format!(
+            "invalid path (missing UTF-8 file name): {}",
+            path.display()
+        ));
+    };
+
+    let pid = std::process::id();
+    let mut attempt: u32 = 0;
+    let tmp_path = loop {
+        let candidate = parent.join(format!(".{file_name}.tmp.{pid}.{attempt}"));
+        match std::fs::OpenOptions::new()
+            .create_new(true)
+            .write(true)
+            .open(&candidate)
+        {
+            Ok(mut f) => {
+                f.write_all(bytes).map_err(|e| e.to_string())?;
+                let _ = f.flush();
+                let _ = f.sync_all();
+                drop(f);
+                break candidate;
+            }
+            Err(err) if err.kind() == std::io::ErrorKind::AlreadyExists => {
+                attempt = attempt.saturating_add(1);
+                continue;
+            }
+            Err(err) => return Err(err.to_string()),
+        }
+    };
+
+    #[cfg(windows)]
+    {
+        // `rename` fails if the destination exists on Windows. Prefer removing the destination
+        // before renaming so readers never observe a partially-written file.
+        if std::fs::rename(&tmp_path, path).is_err() {
+            let _ = std::fs::remove_file(path);
+            std::fs::rename(&tmp_path, path).map_err(|e| e.to_string())?;
+        }
+        Ok(())
+    }
+
+    #[cfg(not(windows))]
+    {
+        std::fs::rename(&tmp_path, path).map_err(|e| e.to_string())?;
+        Ok(())
+    }
 }
 
 pub(crate) fn touch(path: &Path) -> Result<(), String> {

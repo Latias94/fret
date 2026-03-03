@@ -1,0 +1,71 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "Workstream: launcher utility window materials (Windows)",
+    "tags": ["workstream", "launcher", "utility_window", "materials", "windows"],
+    "required_capabilities": [
+      "diag.script_v2",
+      "diag.window_style_snapshot",
+      "diag.window_background_material_snapshot"
+    ],
+    "target_hints": [
+      "Windows-only: exercises Mica/Acrylic via DWMWA_SYSTEMBACKDROP_TYPE (Win11 22H2+).",
+      "Asserts effective/clamped material via diagnostics snapshot.",
+      "Captures a bundle for evidence."
+    ]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "utility-window.materials.root" }
+      },
+      "timeout_frames": 900
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "window_style_effective_is",
+        "window": { "kind": "first_seen" },
+        "style": {
+          "decorations": "none",
+          "resizable": true,
+          "transparent": true,
+          "z_level": "normal"
+        }
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "window_background_material_effective_is",
+        "window": { "kind": "first_seen" },
+        "material": "mica"
+      }
+    },
+    { "type": "click_stable", "target": { "kind": "test_id", "id": "utility-window.materials.to_acrylic" } },
+    { "type": "wait_frames", "n": 10 },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "window_background_material_effective_is",
+        "window": { "kind": "first_seen" },
+        "material": "acrylic"
+      }
+    },
+    { "type": "click_stable", "target": { "kind": "test_id", "id": "utility-window.materials.to_none" } },
+    { "type": "wait_frames", "n": 10 },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "window_background_material_effective_is",
+        "window": { "kind": "first_seen" },
+        "material": "none"
+      }
+    },
+    { "type": "capture_bundle", "label": "launcher-utility-window-materials-windows" }
+  ]
+}
+

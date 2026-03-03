@@ -116,6 +116,8 @@ pub mod imui_shadcn_adapter_demo;
 pub mod inf_lines_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod launcher_utility_window_demo;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod launcher_utility_window_materials_demo;
 pub mod linked_cursor_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod liquid_glass_demo;

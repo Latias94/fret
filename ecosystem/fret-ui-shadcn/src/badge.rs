@@ -100,6 +100,7 @@ pub struct Badge {
     label_features_override: Vec<TextFontFeatureSetting>,
     label_axes_override: Vec<TextFontAxisSetting>,
     children: Vec<AnyElement>,
+    trailing_children: Vec<AnyElement>,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
 }
@@ -134,6 +135,7 @@ impl Badge {
             label_features_override: Vec::new(),
             label_axes_override: Vec::new(),
             children: Vec::new(),
+            trailing_children: Vec::new(),
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
         }
@@ -170,6 +172,15 @@ impl Badge {
 
     pub fn children(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {
         self.children = children.into_iter().collect();
+        self
+    }
+
+    /// Adds extra inline content rendered after the badge label.
+    ///
+    /// This is useful for matching shadcn patterns like `Spinner data-icon="inline-end"` where the
+    /// trailing affordance is not a static icon.
+    pub fn trailing_children(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {
+        self.trailing_children = children.into_iter().collect();
         self
     }
 
@@ -225,6 +236,7 @@ impl Badge {
             self.label_features_override,
             self.label_axes_override,
             self.children,
+            self.trailing_children,
             self.chrome,
             self.layout,
         )
@@ -366,6 +378,7 @@ pub fn badge<H: UiHost>(
         Vec::new(),
         Vec::new(),
         Vec::new(),
+        Vec::new(),
         ChromeRefinement::default(),
         LayoutRefinement::default(),
     )
@@ -385,6 +398,7 @@ fn badge_with_patch<H: UiHost>(
     label_features_override: Vec<TextFontFeatureSetting>,
     label_axes_override: Vec<TextFontAxisSetting>,
     children: Vec<AnyElement>,
+    trailing_children: Vec<AnyElement>,
     chrome_override: ChromeRefinement,
     layout_override: LayoutRefinement,
 ) -> AnyElement {
@@ -399,30 +413,19 @@ fn badge_with_patch<H: UiHost>(
     // - relies on `shrink-0` so badges don't collapse inside constrained flex rows.
     let pressable_layout = decl_style::layout_style(
         &theme,
-        LayoutRefinement::default()
-            .flex_shrink_0()
+        badge_variants(&theme, variant)
+            .layout
             .merge(layout_override),
     );
 
-    let mut chrome = ChromeRefinement::default()
-        .px(Space::N2)
-        .py(Space::N0p5)
-        .rounded(Radius::Full)
-        .border_1();
-    if let Some(bg) = bg_for(&theme, variant) {
-        chrome = chrome.bg(ColorRef::Color(bg));
-    }
-    let chrome = match variant {
-        BadgeVariant::Outline => chrome.border_color(ColorRef::Color(border_color(&theme))),
-        BadgeVariant::Default
-        | BadgeVariant::Secondary
-        | BadgeVariant::Destructive
-        | BadgeVariant::Ghost
-        | BadgeVariant::Link => chrome.border_color(ColorRef::Color(Color::TRANSPARENT)),
-    };
-    let chrome = chrome.merge(chrome_override);
+    let mut chrome = badge_variants(&theme, variant).chrome;
+    chrome = chrome.merge(chrome_override);
 
-    let fg = fg_for(&theme, variant);
+    let fg_ref = chrome
+        .text_color
+        .clone()
+        .unwrap_or_else(|| ColorRef::Color(fg_for(&theme, variant)));
+    let fg = fg_ref.resolve(&theme);
     let theme_fg = theme.color_token("foreground");
     let theme_muted_fg = theme.color_by_key("muted-foreground").unwrap_or(theme_fg);
 
@@ -441,14 +444,14 @@ fn badge_with_patch<H: UiHost>(
         .unwrap_or_else(|| theme.metric_token("font.line_height"));
 
     let content_children = move |cx: &mut ElementContext<'_, H>| {
-        current_color::scope_children(cx, ColorRef::Color(fg), |cx| {
+        current_color::scope_children(cx, fg_ref.clone(), |cx| {
             let mut label = ui::text(cx, label_for_content.clone())
                 .text_size_px(text_px)
                 .fixed_line_box_px(line_height)
                 .line_box_in_bounds()
                 .font_medium()
                 .nowrap()
-                .text_color(ColorRef::Color(fg));
+                .text_color(fg_ref.clone());
 
             if let Some(font) = label_font_override {
                 label = label.font(font);
@@ -477,6 +480,13 @@ fn badge_with_patch<H: UiHost>(
                 .collect::<Vec<_>>();
             content.extend(children);
             content.push(label);
+
+            let trailing_children = trailing_children
+                .into_iter()
+                .map(|child| apply_badge_child_icon_size(child, icon_px))
+                .map(|child| apply_badge_inherited_fg(child, fg, theme_fg, theme_muted_fg))
+                .collect::<Vec<_>>();
+            content.extend(trailing_children);
 
             if let Some(icon) = trailing_icon.clone() {
                 content.push(decl_icon::icon_with(cx, icon, Some(icon_px), None));

@@ -512,6 +512,14 @@ impl UiDiagnosticsService {
             return;
         };
 
+        // If the pointer has no active drag anymore, clear the escape hatch immediately.
+        //
+        // This avoids accidentally canceling *future* drags that start within the retry window
+        // (see `PendingCancelCrossWindowDrag` docs).
+        if app.drag(pending.pointer_id).is_none() {
+            return;
+        }
+
         pending.remaining_frames = pending.remaining_frames.saturating_sub(1);
         if pending.remaining_frames > 0 {
             active.pending_cancel_cross_window_drag = Some(pending);
@@ -551,57 +559,8 @@ impl UiDiagnosticsService {
         }
 
         if !canceled_any {
-            // Fallback: cancel any active dock drags. Some scripted sequences migrate across
-            // windows while a captured-pointer gesture is active; if the release is delivered
-            // to a different window, the original drag session can remain stuck. Prefer
-            // deterministically clearing dock drag state over hanging the suite.
-            let mut canceled: Vec<PointerId> = Vec::new();
-            while let Some(id) = app.find_drag_pointer_id(|d| {
-                d.kind == fret_runtime::DRAG_KIND_DOCK_PANEL
-                    || d.kind == fret_runtime::DRAG_KIND_DOCK_TABS
-            }) {
-                app.cancel_drag(id);
-                canceled.push(id);
-            }
-
-            push_script_event_log(
-                active,
-                &self.cfg,
-                UiScriptEventLogEntryV1 {
-                    unix_ms: unix_ms_now(),
-                    kind: if canceled.is_empty() {
-                        "diag.cancel_drag.skip".to_string()
-                    } else {
-                        "diag.cancel_drag.fallback".to_string()
-                    },
-                    step_index: Some(step_index),
-                    note: Some(format!(
-                        "pointer_id={} drag_present={} canceled={:?}",
-                        pointer_id.0,
-                        app.drag(pointer_id).is_some(),
-                        canceled.iter().map(|id| id.0).collect::<Vec<_>>(),
-                    )),
-                    bundle_dir: None,
-                    window: Some(window.data().as_ffi()),
-                    tick_id: Some(app.tick_id().0),
-                    frame_id: Some(app.frame_id().0),
-                    window_snapshot_seq: None,
-                },
-            );
-
-            canceled_any = !canceled.is_empty();
-        }
-
-        // Retry cancellation for a bounded number of frames. Some runners update drag session
-        // state after input dispatch; a one-shot cancel can miss the window where the drag
-        // becomes visible.
-        if canceled_any {
-            // Keep cleared.
-        } else {
-            pending.remaining_frames = pending.remaining_frames.saturating_sub(1);
-            if pending.remaining_frames > 0 {
-                active.pending_cancel_cross_window_drag = Some(pending);
-            }
+            // Keep cleared: if we reach the cancel window and still can't cancel anything,
+            // prefer avoiding future-drag cancellation over extended retries.
         }
     }
 

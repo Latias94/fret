@@ -154,6 +154,9 @@ fn perf_suite_membership_name(name: &str) -> Option<&'static str> {
     match name {
         "ui-gallery" | "perf-ui-gallery" => Some("perf-ui-gallery"),
         "ui-gallery-steady" | "perf-ui-gallery-steady" => Some("perf-ui-gallery-steady"),
+        "ui-gallery-layout-steady" | "perf-ui-gallery-layout-steady" => {
+            Some("perf-ui-gallery-layout-steady")
+        }
         "ui-gallery-scroll-area" | "perf-ui-gallery-scroll-area" => {
             Some("perf-ui-gallery-scroll-area")
         }
@@ -214,7 +217,7 @@ pub(crate) fn scripts_for_perf_suite_name(
     if out.is_empty() {
         return Err(format!(
             "perf suite resolved to no scripts in promoted registry: suite={name:?} membership={membership:?}\n\
-hint: ensure tools/diag-scripts/suites/{membership}/*.json exists and regenerate tools/diag-scripts/index.json via `python tools/check_diag_scripts_registry.py --write`"
+hint: ensure tools/diag-scripts/suites/{membership}/*.json exists and regenerate tools/diag-scripts/index.json via `cargo run -p fretboard -- diag registry write`"
         ));
     }
     Ok(Some(out))

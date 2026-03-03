@@ -27,6 +27,6 @@ pub use rect_index::RectDroppableIndex;
 pub use registry::{DndItemId, Draggable, Droppable, RegistrySnapshot};
 pub use scroll::{
     AutoScrollConfig, AutoScrollRequest, compute_autoscroll, compute_autoscroll_x,
-    compute_autoscroll_y,
+    compute_autoscroll_x_clamped, compute_autoscroll_y,
 };
 pub use sortable::{InsertionSide, insertion_side_for_pointer, sortable_insertion};

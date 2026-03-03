@@ -7,6 +7,37 @@ use std::{
     sync::{Arc, Mutex},
 };
 
+pub(super) fn diag_dock_drag_trace(args: std::fmt::Arguments<'_>) {
+    use std::{
+        io::Write as _,
+        sync::{Mutex as StdMutex, OnceLock},
+    };
+
+    if std::env::var_os("FRET_DOCK_DRAG_TRACE").is_none() {
+        return;
+    }
+
+    static LOG_FILE: OnceLock<StdMutex<std::fs::File>> = OnceLock::new();
+    let file = LOG_FILE.get_or_init(|| {
+        let out_dir = std::env::var_os("FRET_DIAG_DIR")
+            .filter(|v| !v.is_empty())
+            .map(std::path::PathBuf::from)
+            .unwrap_or_else(|| std::path::PathBuf::from("target").join("fret-diag"));
+        let _ = std::fs::create_dir_all(&out_dir);
+        let path = out_dir.join("dock_drag_runtime_trace.log");
+        let file = std::fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(path)
+            .expect("open dock_drag_runtime_trace.log");
+        StdMutex::new(file)
+    });
+    let Ok(mut file) = file.lock() else {
+        return;
+    };
+    let _ = writeln!(file, "{}", args);
+}
+
 #[cfg(feature = "hotpatch-subsecond")]
 mod hotpatch;
 
@@ -314,6 +345,27 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             caps.ui.window_background_material_mica = false;
             caps.ui.window_background_material_acrylic = false;
             caps.ui.window_background_material_vibrancy = false;
+
+            #[cfg(target_os = "windows")]
+            {
+                // Windows 11 22H2+ supports `DWMWA_SYSTEMBACKDROP_TYPE` (Mica/Acrylic best-effort).
+                // Keep this conservative: only advertise support once we have a stable end-to-end
+                // mapping and deterministic clamping + diagnostics.
+                if win32::supports_dwm_system_backdrop() {
+                    caps.ui.window_background_material_system_default = true;
+                    caps.ui.window_background_material_mica = true;
+                    caps.ui.window_background_material_acrylic = true;
+                }
+            }
+
+            #[cfg(target_os = "macos")]
+            {
+                // macOS supports `NSVisualEffectView`-backed vibrancy behind transparent windows.
+                // Treat this as best-effort and keep it capability-gated so scripts can degrade
+                // deterministically.
+                caps.ui.window_background_material_system_default = true;
+                caps.ui.window_background_material_vibrancy = true;
+            }
 
             // Non-portable escape hatch remains opt-in and backend-defined.
             caps.ui.native_window_handle = false;

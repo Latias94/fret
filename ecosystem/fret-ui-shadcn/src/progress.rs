@@ -7,10 +7,20 @@ use fret_ui::element::{
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
+use fret_ui_kit::declarative::motion as decl_motion;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::direction as direction_prim;
 use fret_ui_kit::primitives::progress as radix_progress;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius};
+
+use crate::overlay_motion;
+
+const SHADCN_PROGRESS_TRANSITION_EASE: fret_ui_kit::headless::easing::CubicBezier =
+    fret_ui_kit::headless::easing::CubicBezier::new(0.4, 0.0, 0.2, 1.0);
+
+fn shadcn_progress_transition_ease(t: f32) -> f32 {
+    SHADCN_PROGRESS_TRANSITION_EASE.sample(t)
+}
 
 #[derive(Clone)]
 enum ProgressModel {
@@ -121,107 +131,129 @@ impl Progress {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        cx.scope(|cx| {
-            let mirror_in_rtl = self.mirror_in_rtl;
-            let a11y_label = self.a11y_label.clone();
-            let theme = Theme::global(&*cx.app).snapshot();
-            let height = theme
-                .metric_by_key("component.progress.height")
-                .unwrap_or(Px(8.0));
-            let radius = theme
-                .metric_by_key("component.progress.radius")
-                .unwrap_or_else(|| MetricRef::radius(Radius::Full).resolve(&theme));
-            let radius = Px(radius.0.min(height.0 * 0.5));
+        let motion_key = match &self.model {
+            ProgressModel::Determinate(model) => model.id(),
+            ProgressModel::Optional(model) => model.id(),
+            ProgressModel::ValuesFirst(model) => model.id(),
+        };
 
-            // shadcn v4 Progress uses `bg-primary/20` for the track.
-            let mut track_bg = theme.color_token("primary");
-            track_bg.a *= 0.2;
-            let fill = theme.color_token("primary");
+        cx.keyed(("shadcn-progress", motion_key), |cx| {
+            cx.scope(|cx| {
+                let mirror_in_rtl = self.mirror_in_rtl;
+                let a11y_label = self.a11y_label.clone();
+                let theme = Theme::global(&*cx.app).snapshot();
+                let height = theme
+                    .metric_by_key("component.progress.height")
+                    .unwrap_or(Px(8.0));
+                let radius = theme
+                    .metric_by_key("component.progress.radius")
+                    .unwrap_or_else(|| MetricRef::radius(Radius::Full).resolve(&theme));
+                let radius = Px(radius.0.min(height.0 * 0.5));
 
-            let v = self.value(cx);
-            let t = v
-                .map(|v| radix_progress::normalize_progress(v, self.min, self.max))
-                .unwrap_or(0.0);
+                // shadcn v4 Progress uses `bg-primary/20` for the track.
+                let mut track_bg = theme.color_token("primary");
+                track_bg.a *= 0.2;
+                let fill = theme.color_token("primary");
 
-            let base_layout = LayoutRefinement::default()
-                .w_full()
-                .h_px(height)
-                .overflow_hidden()
-                .merge(self.layout);
+                let v = self.value(cx);
+                let t = v
+                    .map(|v| radix_progress::normalize_progress(v, self.min, self.max))
+                    .unwrap_or(0.0);
 
-            let mut track_props = decl_style::container_props(
-                &theme,
-                ChromeRefinement::default()
-                    .bg(ColorRef::Color(track_bg))
-                    .rounded(Radius::Full)
-                    .merge(self.chrome),
-                base_layout,
-            );
+                let base_layout = LayoutRefinement::default()
+                    .w_full()
+                    .h_px(height)
+                    .overflow_hidden()
+                    .merge(self.layout);
 
-            // `container_props` uses a resolved radius; override with `component.progress.radius` if present.
-            track_props.corner_radii = fret_core::Corners::all(radius);
+                let mut track_props = decl_style::container_props(
+                    &theme,
+                    ChromeRefinement::default()
+                        .bg(ColorRef::Color(track_bg))
+                        .rounded(Radius::Full)
+                        .merge(self.chrome),
+                    base_layout,
+                );
 
-            let mut out = cx.container(track_props, move |cx| {
-                // Match the upstream DOM structure:
-                // - the indicator is full-width (`w-full`)
-                // - it is shifted with a translate so the left edge is clipped by the track's
-                //   `overflow-hidden`, keeping the right edge rounded.
-                let dir = direction_prim::use_direction_in_scope(cx, None);
-                let translate_x_fraction =
-                    if mirror_in_rtl && dir == direction_prim::LayoutDirection::Rtl {
-                        1.0 - t
-                    } else {
-                        t - 1.0
-                    };
+                // `container_props` uses a resolved radius; override with `component.progress.radius` if present.
+                track_props.corner_radii = fret_core::Corners::all(radius);
 
-                let mut transform_layout = LayoutStyle::default();
-                transform_layout.size.width = Length::Fill;
-                transform_layout.size.height = Length::Fill;
+                let mut out = cx.container(track_props, move |cx| {
+                    // Match the upstream DOM structure:
+                    // - the indicator is full-width (`w-full`)
+                    // - it is shifted with a translate so the left edge is clipped by the track's
+                    //   `overflow-hidden`, keeping the right edge rounded.
+                    let motion_owner = cx.root_id();
+                    let dir = direction_prim::use_direction_in_scope(cx, None);
+                    let translate_x_fraction_target =
+                        if mirror_in_rtl && dir == direction_prim::LayoutDirection::Rtl {
+                            1.0 - t
+                        } else {
+                            t - 1.0
+                        };
 
-                vec![cx.fractional_render_transform_props(
-                    FractionalRenderTransformProps {
-                        layout: transform_layout,
-                        translate_x_fraction,
-                        translate_y_fraction: 0.0,
-                    },
-                    move |cx| {
-                        let mut fill_layout = LayoutStyle::default();
-                        fill_layout.size.width = Length::Fill;
-                        fill_layout.size.height = Length::Fill;
+                    // Upstream shadcn/ui uses `transition-all` on the indicator, so value changes
+                    // animate the translate transform (Tailwind default easing/duration).
+                    let duration = overlay_motion::shadcn_motion_duration_150(cx);
+                    let translate_x_fraction = decl_motion::drive_tween_f32_for_element(
+                        cx,
+                        motion_owner,
+                        "indicator-translate-x",
+                        translate_x_fraction_target,
+                        duration,
+                        shadcn_progress_transition_ease,
+                    )
+                    .value;
 
-                        vec![cx.container(
-                            fret_ui::element::ContainerProps {
-                                layout: fill_layout,
-                                padding: Edges::all(Px(0.0)).into(),
-                                background: Some(fill),
-                                shadow: None,
-                                border: Edges::all(Px(0.0)),
-                                border_color: None,
-                                corner_radii: fret_core::Corners::all(radius),
-                                ..Default::default()
-                            },
-                            |_cx| Vec::new(),
-                        )]
-                    },
-                )]
-            });
+                    let mut transform_layout = LayoutStyle::default();
+                    transform_layout.size.width = Length::Fill;
+                    transform_layout.size.height = Length::Fill;
 
-            let mut semantics = SemanticsDecoration::default()
-                .role(SemanticsRole::ProgressBar)
-                .orientation(SemanticsOrientation::Horizontal);
-            if let Some(label) = a11y_label {
-                semantics = semantics.label(label);
-            }
-            if self.min.is_finite() && self.max.is_finite() {
-                semantics = semantics.numeric_range(self.min as f64, self.max as f64);
-            }
-            if let Some(value) = v
-                && value.is_finite()
-            {
-                semantics = semantics.numeric_value(value as f64);
-            }
-            out = out.attach_semantics(semantics);
-            out
+                    vec![cx.fractional_render_transform_props(
+                        FractionalRenderTransformProps {
+                            layout: transform_layout,
+                            translate_x_fraction,
+                            translate_y_fraction: 0.0,
+                        },
+                        move |cx| {
+                            let mut fill_layout = LayoutStyle::default();
+                            fill_layout.size.width = Length::Fill;
+                            fill_layout.size.height = Length::Fill;
+
+                            vec![cx.container(
+                                fret_ui::element::ContainerProps {
+                                    layout: fill_layout,
+                                    padding: Edges::all(Px(0.0)).into(),
+                                    background: Some(fill),
+                                    shadow: None,
+                                    border: Edges::all(Px(0.0)),
+                                    border_color: None,
+                                    corner_radii: fret_core::Corners::all(radius),
+                                    ..Default::default()
+                                },
+                                |_cx| Vec::new(),
+                            )]
+                        },
+                    )]
+                });
+
+                let mut semantics = SemanticsDecoration::default()
+                    .role(SemanticsRole::ProgressBar)
+                    .orientation(SemanticsOrientation::Horizontal);
+                if let Some(label) = a11y_label {
+                    semantics = semantics.label(label);
+                }
+                if self.min.is_finite() && self.max.is_finite() {
+                    semantics = semantics.numeric_range(self.min as f64, self.max as f64);
+                }
+                if let Some(value) = v
+                    && value.is_finite()
+                {
+                    semantics = semantics.numeric_value(value as f64);
+                }
+                out = out.attach_semantics(semantics);
+                out
+            })
         })
     }
 }
@@ -235,7 +267,8 @@ mod tests {
     use super::*;
 
     use fret_app::App;
-    use fret_core::{AppWindowId, Point, Px, Rect, Size};
+    use fret_core::{AppWindowId, Point, Px, Rect, Size, WindowFrameClockService};
+    use fret_runtime::{FrameId, TickId};
     use fret_ui::element::ElementKind;
     use fret_ui_kit::primitives::direction as direction_prim;
 
@@ -331,5 +364,91 @@ mod tests {
             let tx = find_translate_x_fraction(&el).expect("translate_x_fraction (rtl)");
             assert!((tx - 0.75).abs() <= 1e-6);
         });
+    }
+
+    #[test]
+    fn progress_translate_animates_on_value_change() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let model = app.models_mut().insert(0.0f32);
+
+        app.with_global_mut(WindowFrameClockService::default, |svc, _app| {
+            svc.set_fixed_delta(window, Some(std::time::Duration::from_millis(16)));
+        });
+        for fid in [FrameId(1), FrameId(2)] {
+            app.set_frame_id(fid);
+            app.with_global_mut(WindowFrameClockService::default, |svc, app| {
+                svc.record_frame(window, app.frame_id());
+            });
+        }
+
+        fn render_progress(app: &mut App, window: AppWindowId, model: Model<f32>) -> AnyElement {
+            fret_ui::elements::with_element_cx(app, window, bounds(), "p_anim", |cx| {
+                Progress::new(model).into_element(cx)
+            })
+        }
+
+        app.set_tick_id(TickId(1));
+        app.set_frame_id(FrameId(1));
+        app.with_global_mut(WindowFrameClockService::default, |svc, app| {
+            svc.record_frame(window, app.frame_id());
+        });
+        let el0 = render_progress(&mut app, window, model.clone());
+        let tx0 = find_translate_x_fraction(&el0).expect("translate_x_fraction");
+        assert!((tx0 + 1.0).abs() <= 1e-6, "expected tx=-1.0, got {tx0}");
+
+        let _ = app.models_mut().update(&model, |v| *v = 100.0);
+
+        // First render after retarget: tween has not advanced yet (advances at most once per
+        // frame). In the headless authoring harness, `with_element_cx` constructs a full frame
+        // context, so the tween will advance on the first post-retarget frame; assert we see
+        // intermediate motion instead of snapping.
+        app.set_tick_id(TickId(2));
+        app.set_frame_id(FrameId(2));
+        app.with_global_mut(WindowFrameClockService::default, |svc, app| {
+            svc.record_frame(window, app.frame_id());
+        });
+        let el1 = render_progress(&mut app, window, model.clone());
+        let tx1 = find_translate_x_fraction(&el1).expect("translate_x_fraction after retarget");
+        assert!(
+            tx1 > tx0 + 1e-6 && tx1 < -1e-3,
+            "expected tx to advance without snapping; start={tx0} now={tx1}"
+        );
+
+        let mut seen_mid = false;
+        let mut tx_last = tx1;
+        for i in 0..40u64 {
+            app.set_tick_id(TickId(3 + i));
+            app.set_frame_id(FrameId(3 + i));
+            app.with_global_mut(WindowFrameClockService::default, |svc, app| {
+                svc.record_frame(window, app.frame_id());
+            });
+            let el = render_progress(&mut app, window, model.clone());
+            let tx = find_translate_x_fraction(&el).expect("translate_x_fraction during tween");
+
+            if tx > -0.99 && tx < -0.01 {
+                seen_mid = true;
+            }
+
+            // Should progress towards 0.0 (less negative) without oscillation.
+            assert!(
+                tx + 0.05 >= tx_last,
+                "expected monotonic tx; last={tx_last} now={tx}"
+            );
+            tx_last = tx;
+
+            if (tx - 0.0).abs() <= 1e-3 {
+                break;
+            }
+        }
+
+        assert!(
+            seen_mid,
+            "expected to observe intermediate translate values"
+        );
+        assert!(
+            (tx_last - 0.0).abs() <= 1e-3,
+            "expected to settle at tx=0, got {tx_last}"
+        );
     }
 }

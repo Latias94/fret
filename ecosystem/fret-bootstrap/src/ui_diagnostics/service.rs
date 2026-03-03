@@ -29,6 +29,7 @@ pub struct UiDiagnosticsService {
     script_keepalive_timer_token: Option<fret_core::TimerToken>,
     app_snapshot_provider:
         Option<Arc<dyn Fn(&App, AppWindowId) -> Option<serde_json::Value> + 'static>>,
+    debug_extensions: Option<extensions::DebugExtensionsRegistryV1>,
     #[cfg(feature = "diagnostics-ws")]
     pending_devtools_screenshot:
         Option<ui_diagnostics_devtools_ws::PendingDevtoolsScreenshotRequest>,
@@ -90,6 +91,20 @@ fn infer_pointer_source_test_id_from_semantics(
 }
 
 impl UiDiagnosticsService {
+    fn debug_extensions_registry_mut(&mut self) -> &mut extensions::DebugExtensionsRegistryV1 {
+        self.debug_extensions
+            .get_or_insert_with(extensions::default_debug_extensions_registry_v1)
+    }
+
+    pub fn register_debug_extension_best_effort(
+        &mut self,
+        key: String,
+        writer: UiDebugExtensionWriterV1,
+    ) {
+        self.debug_extensions_registry_mut()
+            .register_best_effort(key, writer);
+    }
+
     pub(super) fn allocate_clipboard_token(&mut self) -> fret_core::ClipboardToken {
         let next = self.next_clipboard_token.max(1);
         self.next_clipboard_token = next.saturating_add(1);
@@ -346,6 +361,7 @@ impl UiDiagnosticsService {
                 | UiPredicateV1::WindowStyleEffectiveIs { .. }
                 | UiPredicateV1::WindowBackgroundMaterialEffectiveIs { .. }
                 | UiPredicateV1::DockDragCurrentWindowIs { .. }
+                | UiPredicateV1::DockDragKindIs { .. }
                 | UiPredicateV1::DockDragMovingWindowIs { .. }
                 | UiPredicateV1::DockDragWindowUnderMovingWindowIs { .. }
                 | UiPredicateV1::DockDragActiveIs { .. }
@@ -822,7 +838,43 @@ impl UiDiagnosticsService {
     pub fn clear_window(&mut self, window: AppWindowId) {
         self.per_window.remove(&window);
         self.known_windows.retain(|w| *w != window);
-        self.active_scripts.remove(&window);
+        if let Some(mut active) = self.active_scripts.remove(&window) {
+            // If the window owning the active script closes (common in multi-window tear-off
+            // sequences), keep the script alive by migrating it to a remaining window instead of
+            // silently dropping it and letting tooling time out.
+            let fallback = if active.anchor_window != window
+                && self.known_windows.iter().any(|w| *w == active.anchor_window)
+            {
+                Some(active.anchor_window)
+            } else {
+                self.known_windows.first().copied()
+            };
+
+            if let Some(fallback) = fallback {
+                if active.anchor_window == window {
+                    active.anchor_window = fallback;
+                }
+                self.active_scripts.insert(fallback, active);
+            } else {
+                // No windows remain; fail the script so tooling can exit cleanly.
+                self.write_script_result(UiScriptResultV1 {
+                    schema_version: 1,
+                    run_id: active.run_id,
+                    updated_unix_ms: unix_ms_now(),
+                    window: None,
+                    stage: UiScriptStageV1::Failed,
+                    step_index: Some(active.next_step.min(u32::MAX as usize) as u32),
+                    reason_code: Some("window.closed".to_string()),
+                    reason: Some("active script window closed and no fallback window exists".to_string()),
+                    evidence: None,
+                    last_bundle_dir: self
+                        .last_dump_dir
+                        .as_ref()
+                        .map(|p| display_path(&self.cfg.out_dir, p)),
+                    last_bundle_artifact: self.last_dump_artifact_stats.clone(),
+                });
+            }
+        }
         self.inspector.clear_for_window(window);
     }
 
@@ -935,6 +987,11 @@ impl UiDiagnosticsService {
             self.note_window_seen(window);
             return;
         }
+
+        let extensions = {
+            let captured = self.debug_extensions_registry_mut().capture(app, window);
+            (!captured.is_empty()).then_some(captured)
+        };
 
         // Keep `known_windows` aligned to currently-open windows so window targets like
         // `last_seen` do not get stuck pointing at a window that has already been closed (common
@@ -1062,6 +1119,7 @@ impl UiDiagnosticsService {
             self.cfg.max_debug_string_bytes,
         );
         debug.viewport_input = viewport_input;
+        debug.extensions = extensions;
 
         let app_snapshot = self
             .app_snapshot_provider

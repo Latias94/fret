@@ -4,11 +4,21 @@ pub const SOURCE: &str = include_str!("plugin_autoplay.rs");
 use fret_app::App;
 use fret_core::Edges;
 use fret_ui::Theme;
-use fret_ui::element::{CrossAlign, FlexProps, MainAlign};
+use fret_ui::element::{CrossAlign, FlexProps, HoverRegionProps, MainAlign};
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::ui;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 use std::time::Duration;
+
+#[derive(Default, Clone)]
+struct Models {
+    autoplay_api: Option<Model<Option<shadcn::CarouselAutoplayApi>>>,
+}
+
+#[derive(Default)]
+struct HoverState {
+    hovered: bool,
+}
 
 #[derive(Debug, Clone, Copy)]
 struct SlideVisual {
@@ -55,6 +65,17 @@ fn slide(cx: &mut ElementContext<'_, App>, idx: usize, visual: SlideVisual) -> A
 pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
     let max_w_xs = Px(320.0);
 
+    let state = cx.with_state(Models::default, |st| st.clone());
+    let autoplay_api = match state.autoplay_api {
+        Some(model) => model,
+        None => {
+            let model: Model<Option<shadcn::CarouselAutoplayApi>> =
+                cx.app.models_mut().insert(None);
+            cx.with_state(Models::default, |st| st.autoplay_api = Some(model.clone()));
+            model
+        }
+    };
+
     let visual = SlideVisual {
         text_px: Px(36.0),
         line_height_px: Px(40.0),
@@ -63,22 +84,71 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
         .map(|idx| shadcn::CarouselItem::new(slide(cx, idx, visual)))
         .collect::<Vec<_>>();
 
-    shadcn::Carousel::default()
-        .autoplay(shadcn::CarouselAutoplayConfig::new(Duration::from_millis(
-            2000,
-        )))
-        .refine_layout(
-            LayoutRefinement::default()
-                .w_full()
-                .max_w(max_w_xs)
-                .mx_auto(),
-        )
+    let carousel = shadcn::Carousel::default()
+        .plugins([shadcn::CarouselPlugin::Autoplay(
+            shadcn::CarouselAutoplayConfig::new(Duration::from_millis(2000))
+                .pause_on_hover(false)
+                .reset_on_hover_leave(false),
+        )])
+        .autoplay_api_handle_model(autoplay_api.clone())
+        .refine_layout(LayoutRefinement::default().w_full())
         .test_id("ui-gallery-carousel-plugin")
         .into_element_parts(
             cx,
             |_cx| shadcn::CarouselContent::new(items),
             shadcn::CarouselPrevious::new(),
             shadcn::CarouselNext::new(),
+        );
+
+    let hover_overlay = {
+        let autoplay_api = autoplay_api.clone();
+        cx.hover_region(
+            HoverRegionProps {
+                layout: decl_style::layout_style(
+                    &Theme::global(&*cx.app).clone(),
+                    LayoutRefinement::default()
+                        .absolute()
+                        .top(Space::N0)
+                        .right(Space::N0)
+                        .bottom(Space::N0)
+                        .left(Space::N0),
+                ),
+            },
+            move |cx, hovered| {
+                let changed = cx.with_state(HoverState::default, |st| {
+                    let changed = st.hovered != hovered;
+                    st.hovered = hovered;
+                    changed
+                });
+                if !changed {
+                    return Vec::new();
+                }
+
+                let api = cx
+                    .app
+                    .models_mut()
+                    .read(&autoplay_api, |v| v.clone())
+                    .ok()
+                    .flatten();
+                if let Some(api) = api {
+                    if hovered {
+                        api.stop_store(cx.app.models_mut());
+                    } else {
+                        api.reset_store(cx.app.models_mut());
+                    }
+                    cx.request_frame();
+                }
+
+                Vec::new()
+            },
         )
+    };
+
+    ui::container(cx, move |_cx| vec![carousel, hover_overlay])
+        .w_full()
+        .max_w(max_w_xs)
+        .mx_auto()
+        .relative()
+        .into_element(cx)
 }
 // endregion: example
