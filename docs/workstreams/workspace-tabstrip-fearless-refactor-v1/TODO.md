@@ -96,6 +96,9 @@ ID format:
   - Diag gates:
     - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-dirty-is-blocked-smoke.json`
     - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-dirty-shows-prompt-and-discard-closes-smoke.json`
+- [x] WTS-editor-034 Tabstrip focus restore on close (editor-grade):
+  - Evidence: `ecosystem/fret-workspace/src/tab_strip/utils.rs` (`predict_next_active_tab_after_close`) and `ecosystem/fret-workspace/src/tab_strip/mod.rs` (close-focus hook)
+  - Diag gate: `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tabstrip-close-keeps-focus-smoke.json`
 
 ## E. Cleanup + Convergence
 
