@@ -358,6 +358,15 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 }
             }
 
+            #[cfg(target_os = "macos")]
+            {
+                // macOS supports `NSVisualEffectView`-backed vibrancy behind transparent windows.
+                // Treat this as best-effort and keep it capability-gated so scripts can degrade
+                // deterministically.
+                caps.ui.window_background_material_system_default = true;
+                caps.ui.window_background_material_vibrancy = true;
+            }
+
             // Non-portable escape hatch remains opt-in and backend-defined.
             caps.ui.native_window_handle = false;
 

@@ -391,6 +391,247 @@ pub(super) fn set_window_background_material(
     super::win32::set_dwm_system_backdrop_type(hwnd, ty)
 }
 
+#[cfg(target_os = "macos")]
+pub(super) fn set_window_background_material(
+    window: &dyn Window,
+    material: fret_runtime::WindowBackgroundMaterialRequest,
+) -> bool {
+    use objc::runtime::{Class, Object};
+    use objc::{msg_send, sel, sel_impl};
+    use winit::raw_window_handle::HasWindowHandle as _;
+
+    // We implement "Vibrancy" using an `NSVisualEffectView` behind winit's view.
+    //
+    // This is intentionally best-effort:
+    // - we do not use private APIs for older macOS versions,
+    // - we avoid hardcoding `NSVisualEffectMaterial` values and rely on defaults.
+    const IDENT: &str = "fret.vibrancy.background.v1";
+
+    #[repr(C)]
+    #[derive(Clone, Copy, Debug, Default)]
+    struct NsPoint {
+        x: f64,
+        y: f64,
+    }
+
+    #[repr(C)]
+    #[derive(Clone, Copy, Debug, Default)]
+    struct NsSize {
+        width: f64,
+        height: f64,
+    }
+
+    #[repr(C)]
+    #[derive(Clone, Copy, Debug, Default)]
+    struct NsRect {
+        origin: NsPoint,
+        size: NsSize,
+    }
+
+    fn ns_string(s: &str) -> *mut Object {
+        let Some(cls) = Class::get("NSString") else {
+            return std::ptr::null_mut();
+        };
+        let Ok(cstr) = std::ffi::CString::new(s) else {
+            return std::ptr::null_mut();
+        };
+        // SAFETY: `stringWithUTF8String:` copies the bytes immediately.
+        unsafe { msg_send![cls, stringWithUTF8String: cstr.as_ptr()] }
+    }
+
+    let (ns_view, ns_window): (*mut Object, *mut Object) = match window.window_handle() {
+        Ok(handle) => match handle.as_raw() {
+            winit::raw_window_handle::RawWindowHandle::AppKit(h) => {
+                let ns_view: *mut Object = h.ns_view.as_ptr() as *mut Object;
+                if ns_view.is_null() {
+                    (std::ptr::null_mut(), std::ptr::null_mut())
+                } else {
+                    let ns_window: *mut Object = unsafe { msg_send![ns_view, window] };
+                    (ns_view, ns_window)
+                }
+            }
+            _ => (std::ptr::null_mut(), std::ptr::null_mut()),
+        },
+        Err(_) => (std::ptr::null_mut(), std::ptr::null_mut()),
+    };
+    if ns_view.is_null() || ns_window.is_null() {
+        return false;
+    }
+
+    // SAFETY: these Objective-C calls are best-effort and return `nil` on failure.
+    unsafe {
+        let content_view: *mut Object = msg_send![ns_window, contentView];
+        if content_view.is_null() {
+            return false;
+        }
+        // IMPORTANT: winit's AppKit handle is the *view* that hosts the GPU surface. If we add an
+        // `NSVisualEffectView` as a subview *inside* that view, it will sit above the surface and
+        // can cover the UI (manifesting as a solid/blurred "white block").
+        //
+        // Therefore we must attach the effect view as a *sibling* below winit's view:
+        // - If `ns_view` already has a superview, use it as the container.
+        // - If `ns_view` is the window's content view, we create a wrapper `NSView` content view,
+        //   move `ns_view` into it, and then attach the effect view to the wrapper.
+        let mut container_view: *mut Object = msg_send![ns_view, superview];
+        let mut wrapped_content_view = false;
+        if container_view.is_null() {
+            let is_content_view: bool = ns_view == content_view;
+            if !is_content_view {
+                container_view = content_view;
+            } else {
+                let Some(ns_view_cls) = Class::get("NSView") else {
+                    return false;
+                };
+                let frame: NsRect = msg_send![content_view, bounds];
+
+                let wrapper: *mut Object = msg_send![ns_view_cls, alloc];
+                let wrapper: *mut Object = msg_send![wrapper, initWithFrame: frame];
+                if wrapper.is_null() {
+                    return false;
+                }
+                // NSViewWidthSizable (2) | NSViewHeightSizable (16)
+                let _: () = msg_send![wrapper, setAutoresizingMask: 18u64];
+                wrapped_content_view = true;
+
+                // Retain winit's view across `setContentView:` to avoid any unexpected lifetime
+                // transitions while we reparent it.
+                let retained_ns_view: *mut Object = msg_send![ns_view, retain];
+                let _: () = msg_send![ns_window, setContentView: wrapper];
+
+                let wrapper_bounds: NsRect = msg_send![wrapper, bounds];
+                let _: () = msg_send![retained_ns_view, setFrame: wrapper_bounds];
+                // Keep winit's view resizing with the window.
+                let _: () = msg_send![retained_ns_view, setAutoresizingMask: 18u64];
+                let _: () = msg_send![wrapper, addSubview: retained_ns_view];
+                let _: () = msg_send![retained_ns_view, release];
+
+                container_view = wrapper;
+            }
+        }
+
+        super::macos_window_log(format_args!(
+            "[bg-material] winit={:?} material={:?} ns_view={:p} content_view={:p} container_view={:p} wrapped={}",
+            window.id(),
+            material,
+            ns_view as *const std::ffi::c_void,
+            content_view as *const std::ffi::c_void,
+            container_view as *const std::ffi::c_void,
+            wrapped_content_view,
+        ));
+
+        let subviews: *mut Object = msg_send![container_view, subviews];
+        let count: usize = if subviews.is_null() {
+            0
+        } else {
+            msg_send![subviews, count]
+        };
+
+        let wanted_ident = ns_string(IDENT);
+        let mut existing: *mut Object = std::ptr::null_mut();
+        if !wanted_ident.is_null() {
+            for i in 0..count {
+                let v: *mut Object = msg_send![subviews, objectAtIndex: i];
+                if v.is_null() {
+                    continue;
+                }
+                let has_identifier: bool = msg_send![v, respondsToSelector: sel!(identifier)];
+                if !has_identifier {
+                    continue;
+                }
+                let ident: *mut Object = msg_send![v, identifier];
+                if !ident.is_null() {
+                    let is_eq: bool = msg_send![ident, isEqualToString: wanted_ident];
+                    if is_eq {
+                        existing = v;
+                        break;
+                    }
+                }
+            }
+        }
+
+        let enable = matches!(
+            material,
+            fret_runtime::WindowBackgroundMaterialRequest::Vibrancy
+                | fret_runtime::WindowBackgroundMaterialRequest::SystemDefault
+        );
+        if !enable {
+            if !existing.is_null() {
+                let _: () = msg_send![existing, removeFromSuperview];
+            }
+            return matches!(
+                material,
+                fret_runtime::WindowBackgroundMaterialRequest::None
+            );
+        }
+
+        let container_bounds: NsRect = msg_send![container_view, bounds];
+
+        if existing.is_null() {
+            let Some(cls) = Class::get("NSVisualEffectView") else {
+                return false;
+            };
+            let frame: NsRect = container_bounds;
+            let view: *mut Object = msg_send![cls, alloc];
+            let view: *mut Object = msg_send![view, initWithFrame: frame];
+            if view.is_null() {
+                return false;
+            }
+
+            // `NSVisualEffectView` should resize with the content view.
+            //
+            // NSViewWidthSizable (2) | NSViewHeightSizable (16)
+            let _: () = msg_send![view, setAutoresizingMask: 18u64];
+            if !wanted_ident.is_null() {
+                let _: () = msg_send![view, setIdentifier: wanted_ident];
+            }
+
+            // Prefer a behind-window effect so we get true desktop/backdrop blur.
+            // NSVisualEffectBlendingModeBehindWindow (0)
+            let _: () = msg_send![view, setBlendingMode: 0u64];
+            // NSVisualEffectStateActive (1)
+            let _: () = msg_send![view, setState: 1u64];
+
+            // Insert below winit's view so input continues to flow to the UI.
+            //
+            // NSWindowOrderingModeBelow (-1)
+            let _: () = msg_send![
+                container_view,
+                addSubview: view
+                positioned: -1i64
+                relativeTo: ns_view
+            ];
+            super::macos_window_log(format_args!(
+                "[bg-material-attach] winit={:?} effect_view={:p} action=create",
+                window.id(),
+                view as *const std::ffi::c_void,
+            ));
+        } else {
+            // If the view already exists, keep it sized and ensure it stays *behind* winit's view.
+            //
+            // We reinsert it because some view-tree mutations (or initial attachment as a subview
+            // of `ns_view`) can accidentally place it above the GPU surface.
+            let _: () = msg_send![existing, setFrame: container_bounds];
+            let _: () = msg_send![existing, setAutoresizingMask: 18u64];
+            let _: () = msg_send![existing, removeFromSuperview];
+            let _: () = msg_send![
+                container_view,
+                addSubview: existing
+                positioned: -1i64
+                relativeTo: ns_view
+            ];
+            let _: () = msg_send![existing, setBlendingMode: 0u64];
+            let _: () = msg_send![existing, setState: 1u64];
+            super::macos_window_log(format_args!(
+                "[bg-material-attach] winit={:?} effect_view={:p} action=reinsert",
+                window.id(),
+                existing as *const std::ffi::c_void,
+            ));
+        }
+
+        true
+    }
+}
+
 #[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
 pub(super) fn set_window_opacity(_window: &dyn Window, _opacity: f32) -> bool {
     false
@@ -401,7 +642,7 @@ pub(super) fn set_window_mouse_passthrough(_window: &dyn Window, _enabled: bool)
     false
 }
 
-#[cfg(not(target_os = "windows"))]
+#[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
 pub(super) fn set_window_background_material(
     _window: &dyn Window,
     _material: fret_runtime::WindowBackgroundMaterialRequest,

@@ -13,6 +13,7 @@ use fret_runtime::{
 const CMD_TO_NONE: &str = "cookbook.utility_window_materials.to_none.v1";
 const CMD_TO_MICA: &str = "cookbook.utility_window_materials.to_mica.v1";
 const CMD_TO_ACRYLIC: &str = "cookbook.utility_window_materials.to_acrylic.v1";
+const CMD_TO_VIBRANCY: &str = "cookbook.utility_window_materials.to_vibrancy.v1";
 const CMD_QUIT: &str = "cookbook.utility_window_materials.quit.v1";
 
 // Intentionally matches the workstream gate test IDs (so scripts can be reused).
@@ -20,6 +21,7 @@ const TEST_ID_ROOT: &str = "utility-window.materials.root";
 const TEST_ID_TO_NONE: &str = "utility-window.materials.to_none";
 const TEST_ID_TO_MICA: &str = "utility-window.materials.to_mica";
 const TEST_ID_TO_ACRYLIC: &str = "utility-window.materials.to_acrylic";
+const TEST_ID_TO_VIBRANCY: &str = "utility-window.materials.to_vibrancy";
 const TEST_ID_STYLE_TEXT: &str = "utility-window.materials.style_effective";
 const TEST_ID_PLATFORM_TEXT: &str = "utility-window.materials.platform";
 
@@ -54,6 +56,7 @@ fn on_command(
         CMD_TO_NONE => WindowBackgroundMaterialRequest::None,
         CMD_TO_MICA => WindowBackgroundMaterialRequest::Mica,
         CMD_TO_ACRYLIC => WindowBackgroundMaterialRequest::Acrylic,
+        CMD_TO_VIBRANCY => WindowBackgroundMaterialRequest::Vibrancy,
         CMD_QUIT => {
             app.push_effect(Effect::QuitApp);
             return;
@@ -127,12 +130,12 @@ fn view(cx: &mut fret_ui::ElementContext<'_, fret_app::App>, st: &mut State) -> 
     });
 
     let platform_text: Arc<str> = Arc::from(if is_windows {
-        "platform: windows (background materials + implied transparency)".to_string()
+        "platform: windows (mica/acrylic + implied transparency)".to_string()
     } else if is_macos {
-        "platform: macos (frameless + transparent; materials not implemented yet)".to_string()
+        "platform: macos (vibrancy + implied transparency)".to_string()
     } else {
         format!(
-            "platform: {} (materials demo is Windows-only)",
+            "platform: {} (window materials best-effort)",
             std::env::consts::OS
         )
     });
@@ -140,7 +143,7 @@ fn view(cx: &mut fret_ui::ElementContext<'_, fret_app::App>, st: &mut State) -> 
     let title = if is_windows {
         "Utility window materials + transparency (Windows)"
     } else if is_macos {
-        "Utility window transparency (macOS)"
+        "Utility window vibrancy + transparency (macOS)"
     } else {
         "Utility window style diagnostics"
     };
@@ -148,7 +151,7 @@ fn view(cx: &mut fret_ui::ElementContext<'_, fret_app::App>, st: &mut State) -> 
     let description = if is_windows {
         "Requests Mica/Acrylic via WindowStyleRequest and asserts effective/clamped results via diagnostics."
     } else if is_macos {
-        "Creates a frameless transparent window and reports effective style via diagnostics."
+        "Requests Vibrancy via WindowStyleRequest and asserts effective/clamped results via diagnostics."
     } else {
         "Reports effective/clamped window style via diagnostics."
     };
@@ -206,6 +209,26 @@ fn view(cx: &mut fret_ui::ElementContext<'_, fret_app::App>, st: &mut State) -> 
                         .size(shadcn::ButtonSize::Sm)
                         .on_click(CommandId::from(CMD_TO_ACRYLIC))
                         .test_id(TEST_ID_TO_ACRYLIC)
+                        .into_element(cx),
+                    shadcn::Button::new("Quit")
+                        .variant(shadcn::ButtonVariant::Destructive)
+                        .size(shadcn::ButtonSize::Sm)
+                        .on_click(CommandId::from(CMD_QUIT))
+                        .into_element(cx),
+                ]
+            } else if is_macos {
+                vec![
+                    shadcn::Button::new("None")
+                        .variant(shadcn::ButtonVariant::Secondary)
+                        .size(shadcn::ButtonSize::Sm)
+                        .on_click(CommandId::from(CMD_TO_NONE))
+                        .test_id(TEST_ID_TO_NONE)
+                        .into_element(cx),
+                    shadcn::Button::new("Vibrancy")
+                        .variant(shadcn::ButtonVariant::Secondary)
+                        .size(shadcn::ButtonSize::Sm)
+                        .on_click(CommandId::from(CMD_TO_VIBRANCY))
+                        .test_id(TEST_ID_TO_VIBRANCY)
                         .into_element(cx),
                     shadcn::Button::new("Quit")
                         .variant(shadcn::ButtonVariant::Destructive)
@@ -285,9 +308,9 @@ fn main() -> anyhow::Result<()> {
             // composited OS material is effectively applied.
             style.background_material = Some(WindowBackgroundMaterialRequest::Mica);
         } else if cfg!(target_os = "macos") {
-            // On macOS, this demo currently focuses on frameless + transparent windows.
-            // (Vibrancy materials are not implemented yet.)
-            style.transparent = Some(true);
+            // Intentionally omit `transparent`: allow ADR 0310 implicit transparency once a
+            // non-None material is effectively applied.
+            style.background_material = Some(WindowBackgroundMaterialRequest::Vibrancy);
         }
 
         config.main_window_style = style;
@@ -308,6 +331,15 @@ fn main() -> anyhow::Result<()> {
             app.commands_mut().register(
                 CommandId::from(CMD_TO_ACRYLIC),
                 CommandMeta::new("Background material: Acrylic"),
+            );
+        } else if cfg!(target_os = "macos") {
+            app.commands_mut().register(
+                CommandId::from(CMD_TO_NONE),
+                CommandMeta::new("Background material: None"),
+            );
+            app.commands_mut().register(
+                CommandId::from(CMD_TO_VIBRANCY),
+                CommandMeta::new("Background material: Vibrancy"),
             );
         }
         app.commands_mut()
