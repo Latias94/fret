@@ -66,6 +66,9 @@ Diagnostics scripts:
 - `tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scroll-area-wheel-torture.json`
   - Repeated wheel input for perf/robustness evidence (captures a bundle; no perf threshold gate yet).
   - Suite: `tools/diag-scripts/suites/perf-ui-gallery-scroll-area/`.
+- `tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scroll-area-toggle-code-tabs.json`
+  - Toggles doc section `Preview`/`Code` tabs for the scroll-area page (smoke coverage for subtree bookkeeping).
+  - Suite: `tools/diag-scripts/suites/ui-gallery-scroll-area/`.
 
 Unit / integration tests (non-exhaustive):
 

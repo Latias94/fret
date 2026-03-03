@@ -9,6 +9,7 @@ Status: Draft
   - [x] `ui-gallery-scroll-area-wheel-scroll` (bundle: `target/fret-diag/1772468071457-scroll-area-wheel-scroll`, 2026-03-02)
   - [x] `ui-gallery-scrollbar-drag-baseline-content-growth` (bundle: `target/fret-diag/1772498133742-scrollbar-drag-baseline-content-growth`, 2026-03-03)
   - [x] `ui-gallery-scroll-area-wheel-torture` (bundle: `target/fret-diag/1772498149599-scroll-area-wheel-torture`, 2026-03-03)
+  - [x] `ui-gallery-scroll-area-toggle-code-tabs` (bundle: `target/fret-diag-underflow-check/sessions/1772500876247-61448/1772500879851-scroll-area-toggle-code-tabs`, 2026-03-03)
 
 ## Mechanism hardening
 
