@@ -2913,6 +2913,7 @@ impl Carousel {
                             let item = item.attach_semantics(
                                 SemanticsDecoration::default()
                                     .role(SemanticsRole::Group)
+                                    .role_description("slide")
                                     .label(Arc::from(format!("Slide {} of {}", idx + 1, items_len)))
                                     .test_id(test_id),
                             );
@@ -4116,7 +4117,8 @@ impl Carousel {
             };
             root.attach_semantics(
                 SemanticsDecoration::default()
-                    .role(SemanticsRole::Panel)
+                    .role(SemanticsRole::Region)
+                    .role_description("carousel")
                     .label("Carousel")
                     .orientation(orientation_semantics)
                     .test_id(root_test_id),
