@@ -20,6 +20,7 @@ Start here:
 - Layout sidecars v1 (design): `docs/workstreams/diag-architecture-fearless-refactor-v1/LAYOUT_SIDECARS_V1.md`
 - Layout perf summary v1 (tooling): `docs/workstreams/diag-architecture-fearless-refactor-v1/LAYOUT_PERF_SUMMARY_V1.md`
 - Debug extensions v1 (design): `docs/workstreams/diag-architecture-fearless-refactor-v1/DEBUG_EXTENSIONS_V1.md`
+- Script authoring + merge strategy: `docs/workstreams/diag-architecture-fearless-refactor-v1/SCRIPT_AUTHORING_AND_MERGE.md`
 - Parity matrix (FS/WS + CLI/GUI): `docs/workstreams/diag-architecture-fearless-refactor-v1/PARITY_MATRIX.md`
 - Risk matrix: `docs/workstreams/diag-architecture-fearless-refactor-v1/RISK_MATRIX.md`
 - Open questions: `docs/workstreams/diag-architecture-fearless-refactor-v1/OPEN_QUESTIONS.md`
