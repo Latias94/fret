@@ -34,6 +34,7 @@ Gates (examples):
   - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tabstrip-close-keeps-focus-smoke.json`
 - keyboard roving + Escape:
   - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tabstrip-keyboard-roving-smoke.json`
+  - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tabstrip-keyboard-reveal-hidden-smoke.json`
   - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tabstrip-escape-restores-content-focus-smoke.json`
 - pinned (anchors + cross-boundary discipline):
   - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-pinned-boundary-toggle-smoke.json`

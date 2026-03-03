@@ -119,3 +119,5 @@ ID format:
 - [x] WTS-a11y-070 Tabstrip keyboard roving and Escape gates exist:
   - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tabstrip-keyboard-roving-smoke.json`
   - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tabstrip-escape-restores-content-focus-smoke.json`
+- [x] WTS-a11y-071 Keyboard activation reveals overflowed active tab:
+  - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tabstrip-keyboard-reveal-hidden-smoke.json`
