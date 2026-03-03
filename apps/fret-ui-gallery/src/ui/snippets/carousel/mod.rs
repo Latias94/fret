@@ -6,6 +6,7 @@ pub mod expandable;
 pub mod focus_watch;
 pub mod loop_carousel;
 pub mod loop_downgrade_cannot_loop;
+pub mod options;
 pub mod orientation_vertical;
 pub mod parts;
 pub mod plugin_autoplay;

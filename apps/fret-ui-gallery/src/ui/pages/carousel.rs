@@ -15,6 +15,7 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
         let spacing = snippets::spacing::render(cx);
         let spacing_responsive = snippets::spacing_responsive::render(cx);
         let duration = snippets::duration_embla::render(cx);
+        let options = snippets::options::render(cx);
         let api = snippets::api::render(cx);
         let plugin = snippets::plugin_autoplay::render(cx);
         let plugin_controlled = snippets::plugin_autoplay_controlled::render(cx);
@@ -100,6 +101,12 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
 
                     .test_id_prefix("ui-gallery-carousel-duration")
                     .code_rust_from_file_region(snippets::duration_embla::SOURCE, "example"),
+                DocSection::new("Options", options)
+                    .description(
+                        "Pass options via `opts` (Embla-style): `align=start`, `loop=true`.",
+                    )
+                    .test_id_prefix("ui-gallery-carousel-options")
+                    .code_rust_from_file_region(snippets::options::SOURCE, "example"),
                 DocSection::new("API", api)
                     .description("A carousel with a slide counter (shadcn `setApi`-style outcome).")
 
