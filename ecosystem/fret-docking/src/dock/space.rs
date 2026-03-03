@@ -1373,6 +1373,7 @@ impl DockSpace {
         tab_count: usize,
         font_size: Px,
         position: Point,
+        dragged_tab_for_drop: Option<(DockNodeId, usize)>,
         frame_id: fret_runtime::FrameId,
     ) -> bool {
         if tab_count == 0
@@ -1383,7 +1384,8 @@ impl DockSpace {
             return false;
         }
         let tabs = hover.tabs;
-        let (geom, _overflow) = self.tab_bar_geometry_for_node(theme, tabs, tab_bar, tab_count);
+        let (geom, _overflow) =
+            self.tab_bar_geometry_for_node(theme.clone(), tabs, tab_bar, tab_count);
         if !tab_bar.contains(position) {
             return false;
         }
@@ -1425,7 +1427,17 @@ impl DockSpace {
 
         self.set_tab_scroll_for(tabs, next_scroll);
 
-        hover.insert_index = Some(geom.compute_insert_index(position, next_scroll));
+        let dragged_tab_index = dragged_tab_for_drop
+            .and_then(|(source_tabs, index)| (source_tabs == tabs).then_some(index));
+        hover.insert_index = super::tab_bar_drop_target::tab_bar_insert_index_for_drop(
+            theme,
+            tab_bar,
+            tab_count,
+            self.tab_widths.get(&tabs),
+            next_scroll,
+            position,
+            dragged_tab_index,
+        );
         true
     }
 
@@ -5966,6 +5978,15 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                                             tabs.len(),
                                                             font_size,
                                                             position,
+                                                            match drag {
+                                                                DockDragSnapshot::Panel(drag) => {
+                                                                    dock.graph.find_panel_in_window(
+                                                                        drag.source_window,
+                                                                        &drag.panel,
+                                                                    )
+                                                                }
+                                                                DockDragSnapshot::Tabs(_) => None,
+                                                            },
                                                             now_frame,
                                                         ) {
                                                             pending_redraws.push(self.window);
@@ -6948,6 +6969,12 @@ impl<H: UiHost> Widget<H> for DockSpace {
                     tabs.len(),
                     font_size,
                     pos,
+                    dock_drag_panel
+                        .as_ref()
+                        .zip(dock_drag_source_window)
+                        .and_then(|(panel, source_window)| {
+                            dock.graph.find_panel_in_window(source_window, panel)
+                        }),
                     frame_id,
                 );
             }

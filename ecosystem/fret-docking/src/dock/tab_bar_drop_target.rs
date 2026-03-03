@@ -105,7 +105,7 @@ mod tests {
     }
 
     #[test]
-    fn overflow_header_space_is_explicit_end_drop_surface() {
+    fn overflow_header_space_is_drop_surface() {
         let theme = test_theme();
         let tab_bar = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(120.0), Px(24.0)));
         let widths: Arc<[Px]> = Arc::from([Px(80.0), Px(80.0), Px(80.0)].as_slice());

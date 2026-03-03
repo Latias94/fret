@@ -15,7 +15,6 @@ pub(super) struct TabBarOverflowCandidateGeometry {
     pub(super) strip_rect: Rect,
     pub(super) geom: TabBarGeometry,
     pub(super) overflow_button_rect: Rect,
-    pub(super) reserved_header_space_rect: Rect,
     pub(super) overflows: bool,
 }
 
@@ -32,24 +31,12 @@ pub(super) fn compute_tab_bar_overflow_candidate_geometry(
         .unwrap_or_else(|| TabBarGeometry::fixed(strip_rect, tab_count));
     let overflows = geom.max_scroll().0 > 0.0;
     let overflow_button_rect = tab_overflow_button_rect(theme, tab_bar);
-    let reserved_header_space_rect = reserved_tab_bar_header_space_rect(tab_bar, strip_rect);
     TabBarOverflowCandidateGeometry {
         strip_rect,
         geom,
         overflow_button_rect,
-        reserved_header_space_rect,
         overflows,
     }
-}
-
-pub(super) fn reserved_tab_bar_header_space_rect(tab_bar: Rect, strip_candidate: Rect) -> Rect {
-    let x0 = strip_candidate.origin.x.0 + strip_candidate.size.width.0;
-    let x1 = tab_bar.origin.x.0 + tab_bar.size.width.0;
-    let w = (x1 - x0).max(0.0);
-    Rect::new(
-        Point::new(Px(x0), tab_bar.origin.y),
-        Size::new(Px(w), tab_bar.size.height),
-    )
 }
 
 pub(super) fn tab_overflow_button_rect(theme: ThemeSnapshot, tab_bar: Rect) -> Rect {
@@ -103,11 +90,25 @@ pub(super) fn resolve_tab_bar_drop(
         compute_tab_bar_overflow_candidate_geometry(theme.clone(), tab_bar, tab_count, tab_widths);
     let dragged_tab_index = dragged_tab_index.filter(|ix| *ix < tab_count);
     if candidate.overflows {
+        // Docking tab bars reserve space for an overflow button. We still want right-edge
+        // auto-scroll to work, so only the *gap* between the strip and the overflow button is an
+        // explicit "end drop" surface; the trailing padding to the right of the button remains a
+        // viewport drop surface.
+        let end_drop_rect = {
+            let strip_end = candidate.strip_rect.origin.x.0 + candidate.strip_rect.size.width.0;
+            let button_start = candidate.overflow_button_rect.origin.x.0;
+            let w = (button_start - strip_end).max(0.0);
+            (w > 0.0).then_some(Rect::new(
+                Point::new(Px(strip_end), tab_bar.origin.y),
+                Size::new(Px(w), tab_bar.size.height),
+            ))
+        };
+
         let surface = classify_tab_strip_surface_no_tabs(
             position,
             None,
-            Some(candidate.reserved_header_space_rect),
-            Some(candidate.strip_rect),
+            end_drop_rect,
+            Some(tab_bar),
             Some(candidate.overflow_button_rect),
             None,
             None,
@@ -120,8 +121,8 @@ pub(super) fn resolve_tab_bar_drop(
             |ix| candidate.geom.tab_rect(*ix, scroll),
             |ix| dragged_tab_index.is_some_and(|dragged| *ix == dragged),
             None,
-            Some(candidate.reserved_header_space_rect),
-            Some(candidate.strip_rect),
+            end_drop_rect,
+            Some(tab_bar),
             Some(candidate.overflow_button_rect),
             None,
             None,
@@ -277,7 +278,7 @@ mod tests {
     }
 
     #[test]
-    fn resolve_tab_bar_drop_treats_overflow_header_space_as_end_drop() {
+    fn resolve_tab_bar_drop_treats_reserved_overflow_header_space_as_end_drop() {
         let theme = test_theme();
         let tab_bar = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(120.0), Px(24.0)));
         let widths: Arc<[Px]> = Arc::from([Px(80.0), Px(80.0), Px(80.0)].as_slice());
