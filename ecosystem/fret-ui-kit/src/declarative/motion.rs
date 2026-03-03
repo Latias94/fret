@@ -121,7 +121,7 @@ fn clamp_frame_delta(dt: Duration) -> Duration {
     dt.min(MAX_FRAME_DELTA)
 }
 
-pub(crate) fn effective_frame_delta_for_cx<H: UiHost>(cx: &ElementContext<'_, H>) -> Duration {
+pub fn effective_frame_delta_for_cx<H: UiHost>(cx: &ElementContext<'_, H>) -> Duration {
     let Some(svc) = cx.app.global::<WindowFrameClockService>() else {
         return REFERENCE_FRAME_DELTA_60HZ;
     };
@@ -952,8 +952,14 @@ mod tests {
             drive_loop_progress_keyed(cx, "loop_progress", true, Duration::from_secs(2)).progress
         });
 
-        assert!(p1 > p0, "expected loop progress to advance (p0={p0} p1={p1})");
-        assert!(p1 < 1.0, "expected loop progress to remain normalized (p1={p1})");
+        assert!(
+            p1 > p0,
+            "expected loop progress to advance (p0={p0} p1={p1})"
+        );
+        assert!(
+            p1 < 1.0,
+            "expected loop progress to remain normalized (p1={p1})"
+        );
     }
 
     #[test]
