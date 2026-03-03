@@ -63,3 +63,5 @@ with special focus on multi-window tear-off + drag-back sequences.
 
 - Script termination hardening: avoid trailing `wait_frames` after a final `capture_bundle` in multi-window docking
   scripts, because the last remaining window can be occluded/idle and stop producing redraw callbacks (tooling timeout).
+- Runtime hardening: while a diagnostics script is active, arm a keepalive timer that can advance a conservative subset
+  of script steps (and fail with `timeout.no_frames`) even if redraw callbacks stop (occlusion/idle).

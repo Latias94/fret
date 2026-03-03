@@ -86,6 +86,9 @@ Stage gates for merge-back correctness (2026-03-03):
 - Chained tear-off: removed trailing `wait_frames` after the final `capture_bundle` to avoid “script.result timeout”
   when the last remaining window is occluded/idle and stops producing redraw callbacks.
   - PASS: run id `1772495444909` (`target/fret-diag-chained-check2`)
+- Diagnostics runtime: arm a keepalive timer while scripts are active so `wait_frames` / `wait_until` can progress (or
+  fail with `timeout.no_frames`) even when redraw callbacks stop (occlusion/idle).
+  - PASS: run id `1772497918062` (`target/fret-diag-chained-postfix`)
 
 ## M1.4 — Rebuild reliability for docking demos (Windows/MSVC)
 
