@@ -4,6 +4,7 @@
 //! During the fearless refactor we move the large per-frame script driver here in small steps.
 
 use super::*;
+use fret_core::Size;
 
 fn append_diag_script_handoff_trace(out_dir: &std::path::Path, line: &str) {
     if std::env::var_os("FRET_DIAG_SCRIPT_MIGRATION_TRACE").is_none() {
@@ -1704,7 +1705,7 @@ impl UiDiagnosticsService {
     const SCRIPT_NO_FRAME_DRIVE_STALL_THRESHOLD_MS: u64 = 750;
     const SCRIPT_NO_FRAME_DRIVE_HARD_TIMEOUT_MS: u64 = 15_000;
 
-    fn sync_script_keepalive_timer(&mut self, app: &mut App) {
+    pub(super) fn sync_script_keepalive_timer(&mut self, app: &mut App) {
         let should_run = self.cfg.script_keepalive || self.any_script_running();
 
         match (should_run, self.script_keepalive_timer_token) {
@@ -2078,6 +2079,9 @@ impl UiDiagnosticsService {
 
         self.ensure_ready_file();
         self.poll_script_trigger();
+        if self.poll_exit_trigger() {
+            app.push_effect(Effect::QuitApp);
+        }
         self.sync_script_keepalive_timer(app);
 
         let devtools_request_redraw =
