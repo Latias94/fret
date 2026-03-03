@@ -87,11 +87,29 @@ impl<H: UiHost> Widget<H> for TextInput {
             selection_utf16: Some((anchor_u16, focus_u16)),
             marked_utf16,
             ime_cursor_area: self.last_sent_cursor,
-            surrounding_text: Some(fret_runtime::WindowImeSurroundingText::best_effort_for_str(
-                self.text.as_str(),
-                caret,
-                selection_anchor,
-            )),
+            surrounding_text: Some({
+                let key = super::ImeSurroundingTextCacheKey {
+                    text_revision: self.base_text_revision,
+                    caret,
+                    selection_anchor,
+                };
+
+                let mut cache = self.ime_surrounding_text_cache.borrow_mut();
+                if cache.key == Some(key)
+                    && let Some(cached) = cache.value.as_ref()
+                {
+                    cached.clone()
+                } else {
+                    let surrounding = fret_runtime::WindowImeSurroundingText::best_effort_for_str(
+                        self.text.as_str(),
+                        caret,
+                        selection_anchor,
+                    );
+                    cache.key = Some(key);
+                    cache.value = Some(surrounding.clone());
+                    surrounding
+                }
+            }),
         })
     }
 
@@ -372,7 +390,11 @@ impl<H: UiHost> Widget<H> for TextInput {
 
         let mut edit = self.edit_state();
         edit.set_selection_grapheme_clamped(start_base, end_base);
-        edit.replace_selection(&insert)
+        let changed = edit.replace_selection(&insert);
+        if changed {
+            self.bump_base_text_revision();
+        }
+        changed
     }
 
     fn platform_text_input_replace_and_mark_text_in_range_utf16(
@@ -395,7 +417,10 @@ impl<H: UiHost> Widget<H> for TextInput {
             let (start, end) = this.ime_replace_range.unwrap_or((this.caret, this.caret));
             let mut edit = this.edit_state();
             edit.set_selection_grapheme_clamped(start, end);
-            let _ = edit.replace_selection(insert);
+            let changed = edit.replace_selection(insert);
+            if changed {
+                this.bump_base_text_revision();
+            }
             true
         };
 
@@ -541,6 +566,8 @@ impl<H: UiHost> Widget<H> for TextInput {
                     return;
                 }
 
+                self.reset_caret_blink(cx);
+
                 let mut anchor = *anchor as usize;
                 let mut focus = *focus as usize;
                 if self.is_ime_composing() {
@@ -570,6 +597,7 @@ impl<H: UiHost> Widget<H> for TextInput {
             }) => match *button {
                 MouseButton::Left => {
                     cx.request_focus(cx.node);
+                    self.reset_caret_blink(cx);
                     cx.capture_pointer(cx.node);
                     self.last_sent_cursor = None;
                     self.selection_dragging = true;
@@ -632,6 +660,7 @@ impl<H: UiHost> Widget<H> for TextInput {
                         return;
                     }
                     cx.request_focus(cx.node);
+                    self.reset_caret_blink(cx);
                     self.last_sent_cursor = None;
 
                     // Avoid mutating selection/caret during IME composition; a context menu should
@@ -691,6 +720,7 @@ impl<H: UiHost> Widget<H> for TextInput {
                     };
 
                     cx.request_focus(cx.node);
+                    self.reset_caret_blink(cx);
                     self.last_sent_cursor = None;
 
                     let padding = self.chrome_style.padding.left;
@@ -825,13 +855,13 @@ impl<H: UiHost> Widget<H> for TextInput {
                 if !self.is_ime_composing() {
                     match key {
                         fret_core::KeyCode::Backspace => {
+                            self.reset_caret_blink(cx);
                             let command = if modifiers.ctrl || modifiers.alt {
                                 "text.delete_word_backward"
                             } else {
                                 "text.delete_backward"
                             };
-                            let outcome = crate::text_edit::commands::apply_basic(
-                                &mut self.edit_state(),
+                            let outcome = self.apply_basic_command(
                                 command,
                                 false,
                                 cx.input_ctx.text_boundary_mode,
@@ -841,13 +871,13 @@ impl<H: UiHost> Widget<H> for TextInput {
                             self.apply_singleline_ui_delta(cx, delta);
                         }
                         fret_core::KeyCode::Delete => {
+                            self.reset_caret_blink(cx);
                             let command = if modifiers.ctrl || modifiers.alt {
                                 "text.delete_word_forward"
                             } else {
                                 "text.delete_forward"
                             };
-                            let outcome = crate::text_edit::commands::apply_basic(
-                                &mut self.edit_state(),
+                            let outcome = self.apply_basic_command(
                                 command,
                                 false,
                                 cx.input_ctx.text_boundary_mode,
@@ -857,6 +887,7 @@ impl<H: UiHost> Widget<H> for TextInput {
                             self.apply_singleline_ui_delta(cx, delta);
                         }
                         fret_core::KeyCode::ArrowLeft => {
+                            self.reset_caret_blink(cx);
                             let word = modifiers.ctrl || modifiers.alt;
                             let command = match (modifiers.shift, word) {
                                 (true, true) => "text.select_word_left",
@@ -864,8 +895,7 @@ impl<H: UiHost> Widget<H> for TextInput {
                                 (false, true) => "text.move_word_left",
                                 (false, false) => "text.move_left",
                             };
-                            let outcome = crate::text_edit::commands::apply_basic(
-                                &mut self.edit_state(),
+                            let outcome = self.apply_basic_command(
                                 command,
                                 false,
                                 cx.input_ctx.text_boundary_mode,
@@ -875,6 +905,7 @@ impl<H: UiHost> Widget<H> for TextInput {
                             self.apply_singleline_ui_delta(cx, delta);
                         }
                         fret_core::KeyCode::ArrowRight => {
+                            self.reset_caret_blink(cx);
                             let word = modifiers.ctrl || modifiers.alt;
                             let command = match (modifiers.shift, word) {
                                 (true, true) => "text.select_word_right",
@@ -882,8 +913,7 @@ impl<H: UiHost> Widget<H> for TextInput {
                                 (false, true) => "text.move_word_right",
                                 (false, false) => "text.move_right",
                             };
-                            let outcome = crate::text_edit::commands::apply_basic(
-                                &mut self.edit_state(),
+                            let outcome = self.apply_basic_command(
                                 command,
                                 false,
                                 cx.input_ctx.text_boundary_mode,
@@ -893,13 +923,13 @@ impl<H: UiHost> Widget<H> for TextInput {
                             self.apply_singleline_ui_delta(cx, delta);
                         }
                         fret_core::KeyCode::Home => {
+                            self.reset_caret_blink(cx);
                             let command = if modifiers.shift {
                                 "text.select_home"
                             } else {
                                 "text.move_home"
                             };
-                            let outcome = crate::text_edit::commands::apply_basic(
-                                &mut self.edit_state(),
+                            let outcome = self.apply_basic_command(
                                 command,
                                 false,
                                 cx.input_ctx.text_boundary_mode,
@@ -909,13 +939,13 @@ impl<H: UiHost> Widget<H> for TextInput {
                             self.apply_singleline_ui_delta(cx, delta);
                         }
                         fret_core::KeyCode::End => {
+                            self.reset_caret_blink(cx);
                             let command = if modifiers.shift {
                                 "text.select_end"
                             } else {
                                 "text.move_end"
                             };
-                            let outcome = crate::text_edit::commands::apply_basic(
-                                &mut self.edit_state(),
+                            let outcome = self.apply_basic_command(
                                 command,
                                 false,
                                 cx.input_ctx.text_boundary_mode,
@@ -942,6 +972,7 @@ impl<H: UiHost> Widget<H> for TextInput {
                 self.ime_deduper.record_text_input(tick, text.as_str());
 
                 if !self.is_ime_composing() {
+                    self.reset_caret_blink(cx);
                     let changed = self.replace_selection_changed(text.as_str());
                     let outcome = crate::text_edit::commands::Outcome {
                         handled: true,
@@ -965,6 +996,8 @@ impl<H: UiHost> Widget<H> for TextInput {
                 }
                 self.pending_clipboard_token = None;
 
+                self.reset_caret_blink(cx);
+
                 let outcome = crate::text_edit::commands::apply_clipboard_text(
                     &mut self.edit_state(),
                     crate::text_edit::commands::ClipboardTextPolicy::SingleLine,
@@ -972,6 +1005,7 @@ impl<H: UiHost> Widget<H> for TextInput {
                 );
                 if outcome.invalidate_layout {
                     self.mark_text_blobs_dirty();
+                    self.bump_base_text_revision();
                     cx.invalidate_self(Invalidation::Layout);
                     cx.request_redraw();
                 }
@@ -993,6 +1027,8 @@ impl<H: UiHost> Widget<H> for TextInput {
                 }
                 self.pending_primary_selection_token = None;
 
+                self.reset_caret_blink(cx);
+
                 let outcome = crate::text_edit::commands::apply_clipboard_text(
                     &mut self.edit_state(),
                     crate::text_edit::commands::ClipboardTextPolicy::SingleLine,
@@ -1000,6 +1036,7 @@ impl<H: UiHost> Widget<H> for TextInput {
                 );
                 if outcome.invalidate_layout {
                     self.mark_text_blobs_dirty();
+                    self.bump_base_text_revision();
                     cx.invalidate_self(Invalidation::Layout);
                     cx.request_redraw();
                 }
@@ -1013,6 +1050,7 @@ impl<H: UiHost> Widget<H> for TextInput {
                 if !focused {
                     return;
                 }
+                self.reset_caret_blink(cx);
                 let tick = cx.app.tick_id();
                 let result = crate::text_edit::ime::apply_event(
                     ime,
@@ -1026,6 +1064,13 @@ impl<H: UiHost> Widget<H> for TextInput {
                     &mut self.preedit_cursor,
                     &mut self.ime_replace_range,
                 );
+                if matches!(
+                    result,
+                    crate::text_edit::ime::ApplyResult::CommitApplied
+                        | crate::text_edit::ime::ApplyResult::DeleteSurroundingApplied
+                ) {
+                    self.bump_base_text_revision();
+                }
                 if result != crate::text_edit::ime::ApplyResult::Noop {
                     self.mark_text_blobs_dirty();
                     cx.invalidate_self(Invalidation::Layout);
@@ -1033,6 +1078,21 @@ impl<H: UiHost> Widget<H> for TextInput {
                 }
             }
             Event::Timer { token } => {
+                if self.caret_blink_timer == Some(*token) {
+                    self.caret_blink_timer = None;
+                    self.caret_blink_visible = !self.caret_blink_visible;
+
+                    if let Some(window) = cx.window {
+                        crate::elements::clear_timer_target(cx.app, window, *token);
+                        cx.app.push_effect(Effect::CancelTimer { token: *token });
+                    }
+
+                    cx.invalidate_self(Invalidation::Paint);
+                    cx.request_redraw();
+
+                    cx.stop_propagation();
+                    return;
+                }
                 if self.selection_autoscroll_timer != Some(*token) {
                     return;
                 }
@@ -1084,6 +1144,7 @@ impl<H: UiHost> Widget<H> for TextInput {
         match cmd {
             "text.clear" => {
                 self.text.clear();
+                self.bump_base_text_revision();
                 self.clear_ime_composition();
                 self.caret = 0;
                 self.selection_anchor = 0;
@@ -1123,6 +1184,9 @@ impl<H: UiHost> Widget<H> for TextInput {
                     cx.app.push_effect(Effect::ClipboardSetText { text });
                 }
 
+                if result.outcome.invalidate_layout {
+                    self.bump_base_text_revision();
+                }
                 let delta = crate::text_edit::commands::singleline_ui_delta(cmd, result.outcome);
                 self.apply_singleline_ui_delta(cx, delta);
                 true
@@ -1150,8 +1214,7 @@ impl<H: UiHost> Widget<H> for TextInput {
             }
             "text.move_up" => {
                 let is_ime_composing = self.is_ime_composing();
-                let outcome = crate::text_edit::commands::apply_basic(
-                    &mut self.edit_state(),
+                let outcome = self.apply_basic_command(
                     "text.move_home",
                     is_ime_composing,
                     cx.input_ctx.text_boundary_mode,
@@ -1162,8 +1225,7 @@ impl<H: UiHost> Widget<H> for TextInput {
             }
             "text.move_down" => {
                 let is_ime_composing = self.is_ime_composing();
-                let outcome = crate::text_edit::commands::apply_basic(
-                    &mut self.edit_state(),
+                let outcome = self.apply_basic_command(
                     "text.move_end",
                     is_ime_composing,
                     cx.input_ctx.text_boundary_mode,
@@ -1174,8 +1236,7 @@ impl<H: UiHost> Widget<H> for TextInput {
             }
             "text.select_up" => {
                 let is_ime_composing = self.is_ime_composing();
-                let outcome = crate::text_edit::commands::apply_basic(
-                    &mut self.edit_state(),
+                let outcome = self.apply_basic_command(
                     "text.select_home",
                     is_ime_composing,
                     cx.input_ctx.text_boundary_mode,
@@ -1186,8 +1247,7 @@ impl<H: UiHost> Widget<H> for TextInput {
             }
             "text.select_down" => {
                 let is_ime_composing = self.is_ime_composing();
-                let outcome = crate::text_edit::commands::apply_basic(
-                    &mut self.edit_state(),
+                let outcome = self.apply_basic_command(
                     "text.select_end",
                     is_ime_composing,
                     cx.input_ctx.text_boundary_mode,
@@ -1198,8 +1258,7 @@ impl<H: UiHost> Widget<H> for TextInput {
             }
             _ => {
                 let is_ime_composing = self.is_ime_composing();
-                let outcome = crate::text_edit::commands::apply_basic(
-                    &mut self.edit_state(),
+                let outcome = self.apply_basic_command(
                     cmd,
                     is_ime_composing,
                     cx.input_ctx.text_boundary_mode,
@@ -1333,6 +1392,36 @@ impl<H: UiHost> Widget<H> for TextInput {
         self.sync_chrome_from_theme(theme.clone());
         self.sync_text_style_from_theme(theme.clone());
         let focused = cx.focus == Some(cx.node);
+        let caret_blink_interval = cx
+            .app
+            .global::<fret_runtime::TextInteractionSettings>()
+            .copied()
+            .and_then(|s| {
+                if !s.caret_blink {
+                    return None;
+                }
+                let ms = u64::from(s.caret_blink_interval_ms.max(16));
+                Some(Duration::from_millis(ms))
+            });
+        if focused
+            && let Some(interval) = caret_blink_interval
+            && self.caret_blink_timer.is_none()
+        {
+            let token = cx.app.next_timer_token();
+            self.caret_blink_timer = Some(token);
+            crate::elements::record_timer_target_node(cx.app, window, token, cx.node);
+            cx.app.push_effect(Effect::SetTimer {
+                window: Some(window),
+                token,
+                after: interval,
+                repeat: None,
+            });
+        } else if (!focused || caret_blink_interval.is_none()) && self.caret_blink_timer.is_some() {
+            let token = self.caret_blink_timer.take().expect("checked is_some");
+            crate::elements::clear_timer_target(cx.app, window, token);
+            cx.app.push_effect(Effect::CancelTimer { token });
+            self.caret_blink_visible = true;
+        }
         let focus_visible = focused && crate::focus_visible::is_focus_visible(cx.app, cx.window);
         if !focused && self.is_ime_composing() {
             self.clear_ime_composition();
@@ -1608,7 +1697,7 @@ impl<H: UiHost> Widget<H> for TextInput {
                 background: Paint::Solid(selection_color).into(),
                 border: fret_core::geometry::Edges::all(Px(0.0)),
                 border_paint: Paint::Solid(Color::TRANSPARENT).into(),
-                corner_radii: self.chrome_style.corner_radii,
+                corner_radii: fret_core::geometry::Corners::all(Px(0.0)),
             });
         }
         let base_origin = fret_core::geometry::Point::new(
@@ -1789,15 +1878,16 @@ impl<H: UiHost> Widget<H> for TextInput {
             });
         }
 
-        // Draw caret as a thin quad (always visible in MVP).
-        cx.scene.push(SceneOp::Quad {
-            order: DrawOrder(0),
-            rect: caret,
-            background: Paint::Solid(self.chrome_style.caret_color).into(),
-            border: fret_core::geometry::Edges::all(Px(0.0)),
-            border_paint: Paint::Solid(Color::TRANSPARENT).into(),
-            corner_radii: fret_core::geometry::Corners::all(Px(1.0)),
-        });
+        if focused && (caret_blink_interval.is_none() || self.caret_blink_visible) {
+            cx.scene.push(SceneOp::Quad {
+                order: DrawOrder(0),
+                rect: caret,
+                background: Paint::Solid(self.chrome_style.caret_color).into(),
+                border: fret_core::geometry::Edges::all(Px(0.0)),
+                border_paint: Paint::Solid(Color::TRANSPARENT).into(),
+                corner_radii: fret_core::geometry::Corners::all(Px(1.0)),
+            });
+        }
 
         cx.scene.push(SceneOp::PopClip);
     }
@@ -1823,6 +1913,39 @@ impl TextInput {
             window: Some(window),
             token,
             after: Self::SELECTION_AUTOSCROLL_TICK,
+            repeat: None,
+        });
+    }
+
+    fn reset_caret_blink<H: UiHost>(&mut self, cx: &mut EventCx<'_, H>) {
+        self.caret_blink_visible = true;
+        let Some(window) = cx.window else {
+            return;
+        };
+        let Some(settings) = cx
+            .app
+            .global::<fret_runtime::TextInteractionSettings>()
+            .copied()
+        else {
+            return;
+        };
+        if !settings.caret_blink {
+            return;
+        }
+
+        if let Some(token) = self.caret_blink_timer.take() {
+            crate::elements::clear_timer_target(cx.app, window, token);
+            cx.app.push_effect(Effect::CancelTimer { token });
+        }
+
+        let interval = Duration::from_millis(u64::from(settings.caret_blink_interval_ms.max(16)));
+        let token = cx.app.next_timer_token();
+        self.caret_blink_timer = Some(token);
+        crate::elements::record_timer_target_node(cx.app, window, token, cx.node);
+        cx.app.push_effect(Effect::SetTimer {
+            window: Some(window),
+            token,
+            after: interval,
             repeat: None,
         });
     }

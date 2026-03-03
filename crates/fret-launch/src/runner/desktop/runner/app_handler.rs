@@ -1,7 +1,7 @@
 //! Winit `ApplicationHandler` integration.
 
 use super::*;
-use std::sync::{Mutex, OnceLock};
+use std::sync::{Arc, Mutex, OnceLock};
 
 use fret_core::time::Instant;
 use fret_platform::external_drop::ExternalDropProvider as _;
@@ -1546,9 +1546,9 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                         if snapshot.focus_is_text_input {
                             let surrounding = snapshot.surrounding_text.as_ref().map(|s| {
                                 fret_runner_winit::ImeSurroundingTextUpdate {
-                                    text: s.text.to_string(),
-                                    cursor: usize::try_from(s.cursor).unwrap_or(usize::MAX),
-                                    anchor: usize::try_from(s.anchor).unwrap_or(usize::MAX),
+                                    text: Arc::clone(&s.text),
+                                    cursor: s.cursor,
+                                    anchor: s.anchor,
                                 }
                             });
                             dirty |= state.platform.set_ime_surrounding_text(surrounding);

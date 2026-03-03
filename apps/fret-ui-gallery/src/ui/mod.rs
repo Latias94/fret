@@ -18,7 +18,6 @@
     clippy::useless_format
 )]
 
-use fret::prelude::ModelWatchExt as _;
 use fret_app::{App, CommandId, Model};
 use fret_code_editor as code_editor;
 use fret_code_editor_view as code_editor_view;
@@ -29,7 +28,7 @@ use fret_core::{
 };
 use fret_markdown as markdown;
 use fret_ui::Theme;
-use fret_ui::element::{CanvasProps, SemanticsDecoration, StackProps};
+use fret_ui::element::{CanvasProps, SemanticsDecoration};
 use fret_ui::elements::ContinuousFrames;
 use fret_ui::scroll::VirtualListScrollHandle;
 use fret_ui_ai as ui_ai;
