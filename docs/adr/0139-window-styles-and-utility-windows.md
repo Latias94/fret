@@ -134,9 +134,40 @@ Future extensions (explicitly out of scope for v1):
 
 - `AlwaysOnBottom` / “desktop level” semantics.
 - Per-pixel hit testing / shaped windows.
-- Runtime style mutation (`WindowRequest::SetStyle`), beyond runner-internal temporary overrides.
 - OS-provided background materials (blur/mica/vibrancy) as portable style facets. These typically
-  require renderer + platform coordination and should be capability-gated behind a separate ADR.
+  require renderer + platform coordination and are defined in a separate ADR:
+  `docs/adr/0310-window-background-materials-v1.md`.
+
+#### Runtime patching (`WindowRequest::SetStyle`) is a v1 feature
+
+Fret **does** support runtime style patch requests in v1 via:
+
+- `Effect::Window(WindowRequest::SetStyle { window, style })`
+
+This is a patch mechanism: each `Some(...)` facet updates that aspect; `None` leaves it unchanged.
+Unsupported facets may be ignored based on capability gating and/or platform constraints.
+
+Patchability (normative):
+
+- Create-time only (best-effort if requested at runtime; runners may ignore):
+  - `decorations`
+  - `resizable`
+  - `transparent`
+- Runtime patchable (best-effort):
+  - `z_level`
+  - `taskbar`
+  - `activation`
+  - `mouse`
+  - `opacity`
+
+Additional style facets may be introduced by follow-up ADRs (e.g. window background materials);
+those ADRs must explicitly define patchability and capability keys for the added facets.
+
+Rationale:
+
+- Docking and utility-window UX require temporary posture changes (always-on-top, opacity, mouse passthrough).
+- “Hard” window topology facets (decorations/transparent/resizable) tend to be create-time-only on many
+  platforms and should not be relied on as dynamic knobs.
 
 ### 4) Runtime capability gating for each style facet (ADR 0054)
 
@@ -164,6 +195,11 @@ In addition to capability gating, this contract requires **observability**:
 - The runner may choose the mechanism (log line on create, debug HUD entry, or a window-scoped
   runtime service), but the information must be visible without requiring native handle access.
 
+Diagnostics recommendation (non-normative):
+
+- Expose the requested/base and effective/clamped style facets as a stable diagnostics snapshot so
+  scripted tests can assert style outcomes without relying on pixels/screenshots.
+
 Style precedence and runner overrides:
 
 - The requested `WindowStyleRequest` is the *base policy* for the window.
@@ -171,6 +207,12 @@ Style precedence and runner overrides:
   window on top” during drag), but must restore the base policy when the temporary condition ends.
 - If an override conflicts with the requested base policy, the override wins for the duration of
   the temporary condition.
+
+Note: runners should preserve enough information for diagnostics to distinguish:
+
+- requested base style (as specified by the app/policy layer),
+- temporary runner override style (transient),
+- effective/clamped style (what the OS/backend actually applied).
 
 Input and focus semantics (v1):
 
