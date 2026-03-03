@@ -260,7 +260,7 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
         check_drag_cache_root_paint_only_test_id,
         check_gc_sweep_liveness: _,
         check_hover_layout_max,
-        check_idle_no_paint_min,
+        check_idle_no_paint_min: _,
         check_layout_fast_path_min,
         check_node_graph_cull_window_shifts_max,
         check_node_graph_cull_window_shifts_min,
@@ -276,9 +276,9 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
         check_retained_vlist_reconcile_no_notify_min,
         check_semantics_changed_repainted,
         check_stale_paint_eps: _,
-        check_stale_paint_test_id,
+        check_stale_paint_test_id: _,
         check_stale_scene_eps: _,
-        check_stale_scene_test_id,
+        check_stale_scene_test_id: _,
         check_ui_gallery_code_editor_a11y_composition,
         check_ui_gallery_code_editor_a11y_composition_drag: _,
         check_ui_gallery_code_editor_a11y_composition_wrap,
@@ -388,10 +388,7 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
     let check_registry = crate::registry::checks::CheckRegistry::builtin();
     let wants_registered_post_run_checks =
         check_registry.wants_post_run_checks(&checks_for_post_run);
-    let wants_ad_hoc_post_run_checks = check_stale_paint_test_id.is_some()
-        || check_stale_scene_test_id.is_some()
-        || check_idle_no_paint_min.is_some()
-        || check_ui_gallery_code_editor_torture_marker_present
+    let wants_ad_hoc_post_run_checks = check_ui_gallery_code_editor_torture_marker_present
         || check_ui_gallery_code_editor_torture_undo_redo
         || check_ui_gallery_code_editor_torture_geom_fallbacks_low
         || check_ui_gallery_code_editor_torture_read_only_blocks_edits

@@ -8,11 +8,6 @@ pub(crate) fn apply_post_run_checks(
     checks: &diag_run::RunChecks,
     warmup_frames: u64,
 ) -> Result<(), String> {
-    let check_idle_no_paint_min = checks.check_idle_no_paint_min;
-    let check_stale_paint_test_id = checks.check_stale_paint_test_id.as_deref();
-    let check_stale_paint_eps = checks.check_stale_paint_eps;
-    let check_stale_scene_test_id = checks.check_stale_scene_test_id.as_deref();
-    let check_stale_scene_eps = checks.check_stale_scene_eps;
     let check_ui_gallery_code_editor_torture_marker_present =
         checks.check_ui_gallery_code_editor_torture_marker_present;
     let check_ui_gallery_code_editor_torture_undo_redo =
@@ -234,15 +229,6 @@ pub(crate) fn apply_post_run_checks(
     };
     let bundle_path = bundle_path_for_checks.as_path();
 
-    if let Some(test_id) = check_stale_paint_test_id {
-        stats::check_bundle_for_stale_paint(bundle_path, test_id, check_stale_paint_eps)?;
-    }
-    if let Some(test_id) = check_stale_scene_test_id {
-        stats::check_bundle_for_stale_scene(bundle_path, test_id, check_stale_scene_eps)?;
-    }
-    if let Some(min) = check_idle_no_paint_min {
-        stats::check_bundle_for_idle_no_paint_min(bundle_path, out_dir, min, warmup_frames)?;
-    }
     if check_ui_gallery_code_editor_torture_marker_present {
         stats::check_bundle_for_ui_gallery_code_editor_torture_marker_present(
             bundle_path,
