@@ -432,6 +432,13 @@ const BUILTIN_POST_RUN_CHECKS: &[PostRunCheckEntry] = &[
         run: run_ui_gallery_markdown_editor_source_disabled_blocks_edits,
     },
     PostRunCheckEntry {
+        id: "semantics_changed_repainted",
+        requires_bundle_artifact: true,
+        requires_screenshots: false,
+        should_run: should_run_semantics_changed_repainted,
+        run: run_semantics_changed_repainted,
+    },
+    PostRunCheckEntry {
         id: "notify_hotspot_file_max",
         requires_bundle_artifact: true,
         requires_screenshots: false,
@@ -1211,6 +1218,21 @@ fn run_ui_gallery_markdown_editor_source_disabled_blocks_edits(
     crate::stats::check_bundle_for_ui_gallery_markdown_editor_source_disabled_blocks_edits(
         ctx.bundle_path,
         ctx.warmup_frames,
+    )
+}
+
+fn should_run_semantics_changed_repainted(checks: &RunChecks) -> bool {
+    checks.check_semantics_changed_repainted
+}
+
+fn run_semantics_changed_repainted(
+    ctx: PostRunCheckContext<'_>,
+    checks: &RunChecks,
+) -> Result<(), String> {
+    crate::stats::check_bundle_for_semantics_changed_repainted(
+        ctx.bundle_path,
+        ctx.warmup_frames,
+        checks.dump_semantics_changed_repainted_json,
     )
 }
 

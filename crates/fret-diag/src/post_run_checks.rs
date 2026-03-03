@@ -16,8 +16,6 @@ pub(crate) fn apply_post_run_checks(
         checks.check_ui_gallery_text_fallback_policy_key_bumps_on_locale_change;
     let check_ui_gallery_text_mixed_script_bundled_fallback_conformance =
         checks.check_ui_gallery_text_mixed_script_bundled_fallback_conformance;
-    let check_semantics_changed_repainted = checks.check_semantics_changed_repainted;
-    let dump_semantics_changed_repainted_json = checks.dump_semantics_changed_repainted_json;
     let check_wheel_scroll_test_id = checks.check_wheel_scroll_test_id.as_deref();
     let check_wheel_scroll_hit_changes_test_id =
         checks.check_wheel_scroll_hit_changes_test_id.as_deref();
@@ -148,13 +146,6 @@ pub(crate) fn apply_post_run_checks(
     }
     if check_ui_gallery_text_mixed_script_bundled_fallback_conformance {
         check_out_dir_for_ui_gallery_text_mixed_script_bundled_fallback_conformance(out_dir)?;
-    }
-    if check_semantics_changed_repainted {
-        stats::check_bundle_for_semantics_changed_repainted(
-            bundle_path,
-            warmup_frames,
-            dump_semantics_changed_repainted_json,
-        )?;
     }
     if let Some(test_id) = check_wheel_scroll_test_id {
         stats::check_bundle_for_wheel_scroll(bundle_path, test_id, warmup_frames)?;

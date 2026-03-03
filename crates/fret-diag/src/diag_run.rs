@@ -274,7 +274,7 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
         check_retained_vlist_keep_alive_budget,
         check_retained_vlist_keep_alive_reuse_min,
         check_retained_vlist_reconcile_no_notify_min,
-        check_semantics_changed_repainted,
+        check_semantics_changed_repainted: _,
         check_stale_paint_eps: _,
         check_stale_paint_test_id: _,
         check_stale_scene_eps: _,
@@ -399,7 +399,6 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
             || check_ui_gallery_text_fallback_policy_key_bumps_on_settings_change
             || check_ui_gallery_text_fallback_policy_key_bumps_on_locale_change
             || check_ui_gallery_text_mixed_script_bundled_fallback_conformance
-            || check_semantics_changed_repainted
             || check_wheel_scroll_test_id.is_some()
             || check_wheel_scroll_hit_changes_test_id.is_some()
             || check_prepaint_actions_min.is_some()
