@@ -129,7 +129,13 @@ pub(in crate::ui) fn render_doc_page(
     intro: Option<&'static str>,
     sections: Vec<DocSection>,
 ) -> AnyElement {
-    stack::vstack(
+    let max_section_w = sections
+        .iter()
+        .map(|s| s.max_w)
+        .fold(Px(0.0), |a, b| Px(a.0.max(b.0)));
+    let page_max_w = Px(Px(820.0).0.max(max_section_w.0));
+
+    let body = stack::vstack(
         cx,
         stack::VStackProps::default()
             .gap(Space::N6)
@@ -146,6 +152,19 @@ pub(in crate::ui) fn render_doc_page(
                     .map(|section| render_section(cx, section)),
             );
             out
+        },
+    );
+
+    stack::hstack(
+        cx,
+        stack::HStackProps::default()
+            .layout(LayoutRefinement::default().w_full().min_w_0())
+            .justify_center(),
+        move |cx| {
+            [ui::container(cx, move |_cx| vec![body])
+                .w_full()
+                .max_w(page_max_w)
+                .into_element(cx)]
         },
     )
 }
@@ -506,17 +525,7 @@ fn render_section(cx: &mut ElementContext<'_, App>, section: DocSection) -> AnyE
         },
     );
 
-    centered(cx, section_body)
-}
-
-fn centered(cx: &mut ElementContext<'_, App>, body: AnyElement) -> AnyElement {
-    stack::hstack(
-        cx,
-        stack::HStackProps::default()
-            .layout(LayoutRefinement::default().w_full().min_w_0())
-            .justify_center(),
-        move |_cx| [body],
-    )
+    section_body
 }
 
 fn demo_shell(cx: &mut ElementContext<'_, App>, max_w: Px, body: AnyElement) -> AnyElement {
