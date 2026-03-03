@@ -1,4 +1,4 @@
-pub const SOURCE: &str = include_str!("plugin_autoplay.rs");
+pub const SOURCE: &str = include_str!("plugin_wheel_gestures.rs");
 
 // region: example
 use fret_app::App;
@@ -8,7 +8,6 @@ use fret_ui::element::{CrossAlign, FlexProps, MainAlign};
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::ui;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
-use std::time::Duration;
 
 #[derive(Debug, Clone, Copy)]
 struct SlideVisual {
@@ -64,8 +63,8 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
         .collect::<Vec<_>>();
 
     shadcn::Carousel::default()
-        .plugins([shadcn::CarouselPlugin::Autoplay(
-            shadcn::CarouselAutoplayConfig::new(Duration::from_millis(2000)),
+        .plugins([shadcn::CarouselPlugin::WheelGestures(
+            shadcn::CarouselWheelGesturesConfig::new(),
         )])
         .refine_layout(
             LayoutRefinement::default()
@@ -73,7 +72,7 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
                 .max_w(max_w_xs)
                 .mx_auto(),
         )
-        .test_id("ui-gallery-carousel-plugin")
+        .test_id("ui-gallery-carousel-plugin-wheel")
         .into_element_parts(
             cx,
             |_cx| shadcn::CarouselContent::new(items),

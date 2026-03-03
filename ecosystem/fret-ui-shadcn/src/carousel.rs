@@ -6,7 +6,9 @@ use fret_core::{
 };
 use fret_icons::ids;
 use fret_runtime::{Effect, Model, ModelHost, ModelStore, TimerToken};
-use fret_ui::action::{ActionCx, ActivateReason, KeyDownCx, OnKeyDown, UiActionHost};
+use fret_ui::action::{
+    ActionCx, ActivateReason, KeyDownCx, OnKeyDown, OnWheel, UiActionHost, WheelCx,
+};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, ElementKind, FlexProps, HoverRegionProps, LayoutStyle,
     MainAlign, PointerRegionProps, RenderTransformProps, SemanticsDecoration, VisualTransformProps,
@@ -301,6 +303,107 @@ impl CarouselAutoplayConfig {
     pub fn reset_on_hover_leave(mut self, reset_on_hover_leave: bool) -> Self {
         self.reset_on_hover_leave = reset_on_hover_leave;
         self
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct CarouselWheelGesturesConfig {
+    /// Amount of accumulated wheel delta in the carousel main axis required to trigger a single
+    /// snap step.
+    pub step_threshold_px: Px,
+    /// Maximum number of snap steps to apply per wheel event.
+    pub max_steps_per_event: usize,
+    /// When true, ignore wheel deltas that are not dominant on the carousel main axis.
+    ///
+    /// This avoids accidentally intercepting vertical page scrolling when a horizontal carousel
+    /// is hovered.
+    pub require_main_axis_dominant: bool,
+    /// When true, allow `Shift` to swap the wheel axes (typical desktop "horizontal scroll" UX).
+    pub allow_shift_to_swap_axes: bool,
+}
+
+impl Default for CarouselWheelGesturesConfig {
+    fn default() -> Self {
+        Self {
+            // Tailwind `-left-12` / `-right-12` is 48px; use it as a conservative default step.
+            step_threshold_px: Px(48.0),
+            max_steps_per_event: 1,
+            require_main_axis_dominant: true,
+            allow_shift_to_swap_axes: true,
+        }
+    }
+}
+
+impl CarouselWheelGesturesConfig {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn step_threshold_px(mut self, threshold: Px) -> Self {
+        self.step_threshold_px = threshold;
+        self
+    }
+
+    pub fn max_steps_per_event(mut self, max: usize) -> Self {
+        self.max_steps_per_event = max;
+        self
+    }
+
+    pub fn require_main_axis_dominant(mut self, enabled: bool) -> Self {
+        self.require_main_axis_dominant = enabled;
+        self
+    }
+
+    pub fn allow_shift_to_swap_axes(mut self, enabled: bool) -> Self {
+        self.allow_shift_to_swap_axes = enabled;
+        self
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum CarouselPlugin {
+    Autoplay(CarouselAutoplayConfig),
+    WheelGestures(CarouselWheelGesturesConfig),
+}
+
+fn wheel_delta_main_axis(
+    orientation: CarouselOrientation,
+    wheel: WheelCx,
+    config: CarouselWheelGesturesConfig,
+) -> Option<f32> {
+    let dx = wheel.delta.x.0;
+    let dy = wheel.delta.y.0;
+    if !dx.is_finite() || !dy.is_finite() {
+        return None;
+    }
+
+    match orientation {
+        CarouselOrientation::Horizontal => {
+            let mut main = dx;
+            if config.allow_shift_to_swap_axes && wheel.modifiers.shift && main.abs() <= 0.001 {
+                main = dy;
+            }
+            if config.require_main_axis_dominant && dy.abs() > main.abs() {
+                return None;
+            }
+            if main.abs() <= 0.001 {
+                return None;
+            }
+            Some(main)
+        }
+        CarouselOrientation::Vertical => {
+            let mut main = dy;
+            if config.allow_shift_to_swap_axes && wheel.modifiers.shift && main.abs() <= 0.001 {
+                main = dx;
+            }
+            if config.require_main_axis_dominant && dx.abs() > main.abs() {
+                return None;
+            }
+            if main.abs() <= 0.001 {
+                return None;
+            }
+            Some(main)
+        }
     }
 }
 
@@ -635,7 +738,7 @@ pub struct Carousel {
     api_snapshot: Option<Model<CarouselApiSnapshot>>,
     api_handle: Option<Model<Option<CarouselApi>>>,
     slides_in_view_snapshot: Option<Model<CarouselSlidesInViewSnapshot>>,
-    autoplay: Option<CarouselAutoplayConfig>,
+    plugins: Vec<CarouselPlugin>,
     controls: CarouselControls,
     test_id: Option<Arc<str>>,
 }
@@ -646,6 +749,7 @@ struct CarouselRuntime {
     settling: bool,
     embla_settling: bool,
     prevent_click: bool,
+    wheel_accum_main_px: f32,
     settle_from: Px,
     settle_to: Px,
     settle_generation: u64,
@@ -670,6 +774,7 @@ impl Default for CarouselRuntime {
             settling: false,
             embla_settling: false,
             prevent_click: false,
+            wheel_accum_main_px: 0.0,
             settle_from: Px(0.0),
             settle_to: Px(0.0),
             settle_generation: 0,
@@ -934,7 +1039,7 @@ impl Carousel {
             api_snapshot: None,
             api_handle: None,
             slides_in_view_snapshot: None,
-            autoplay: None,
+            plugins: Vec::new(),
             controls: CarouselControls::BuiltIn,
             test_id: None,
         }
@@ -1031,10 +1136,25 @@ impl Carousel {
         self
     }
 
-    /// Adds an Embla-style autoplay policy surface (shadcn `carousel-plugin` outcome).
-    pub fn autoplay(mut self, config: CarouselAutoplayConfig) -> Self {
-        self.autoplay = Some(config);
+    /// Embla-style plugin surface aligned with shadcn/ui `plugins`.
+    pub fn plugin(mut self, plugin: CarouselPlugin) -> Self {
+        self.plugins.push(plugin);
         self
+    }
+
+    pub fn plugins(mut self, plugins: impl IntoIterator<Item = CarouselPlugin>) -> Self {
+        self.plugins.extend(plugins);
+        self
+    }
+
+    /// Adds an Embla-style autoplay policy surface (shadcn `carousel-plugin` outcome).
+    pub fn autoplay(self, config: CarouselAutoplayConfig) -> Self {
+        self.plugin(CarouselPlugin::Autoplay(config))
+    }
+
+    /// Adds wheel/trackpad gesture navigation (Embla wheel-gestures-style outcome).
+    pub fn wheel_gestures(self, config: CarouselWheelGesturesConfig) -> Self {
+        self.plugin(CarouselPlugin::WheelGestures(config))
     }
 
     pub fn track_start_neg_margin(mut self, margin: Space) -> Self {
@@ -1138,7 +1258,15 @@ impl Carousel {
             let orientation = self.orientation;
             let options_base = self.options;
             let breakpoints = self.breakpoints;
-            let autoplay_cfg = self.autoplay;
+            let plugins = self.plugins;
+            let mut autoplay_cfg: Option<CarouselAutoplayConfig> = None;
+            let mut wheel_cfg: Option<CarouselWheelGesturesConfig> = None;
+            for plugin in plugins {
+                match plugin {
+                    CarouselPlugin::Autoplay(cfg) => autoplay_cfg = Some(cfg),
+                    CarouselPlugin::WheelGestures(cfg) => wheel_cfg = Some(cfg),
+                }
+            }
             let autoplay_stop_on_interaction =
                 autoplay_cfg.is_some_and(|cfg| cfg.stop_on_interaction);
             let root_test_id = self.test_id.unwrap_or_else(|| Arc::from("carousel"));
@@ -2826,11 +2954,75 @@ impl Carousel {
             let pointer_layout =
                 decl_style::layout_style(&theme, LayoutRefinement::default().size_full());
 
+            let on_wheel: Option<OnWheel> = wheel_cfg.map(|cfg| {
+                let snaps_for_wheel = snaps_model.clone();
+                let runtime_for_wheel = runtime_model.clone();
+                let on_prev_for_wheel = on_prev.clone();
+                let on_next_for_wheel = on_next.clone();
+                let handler: OnWheel = Arc::new(
+                    move |host: &mut dyn fret_ui::action::UiPointerActionHost,
+                          cx: ActionCx,
+                          wheel: WheelCx| {
+                        let snaps_len = host
+                            .models_mut()
+                            .read(&snaps_for_wheel, |v: &Arc<[Px]>| v.len())
+                            .ok()
+                            .unwrap_or(0);
+                        if snaps_len <= 1 {
+                            return false;
+                        }
+
+                        let Some(delta_main) = wheel_delta_main_axis(orientation, wheel, cfg) else {
+                            return false;
+                        };
+
+                        let threshold = cfg.step_threshold_px.0.max(1.0);
+                        let max_steps = cfg.max_steps_per_event.max(1).min(8);
+
+                        let (prev_steps, next_steps) = host
+                            .models_mut()
+                            .update(&runtime_for_wheel, |st| {
+                                let mut accum = st.wheel_accum_main_px;
+                                if accum != 0.0 && accum.signum() != delta_main.signum() {
+                                    accum = 0.0;
+                                }
+                                accum += delta_main;
+
+                                let mut prev = 0usize;
+                                let mut next = 0usize;
+                                while accum >= threshold && prev < max_steps {
+                                    prev = prev.saturating_add(1);
+                                    accum -= threshold;
+                                }
+                                while accum <= -threshold && next < max_steps {
+                                    next = next.saturating_add(1);
+                                    accum += threshold;
+                                }
+
+                                st.wheel_accum_main_px = accum;
+                                (prev, next)
+                            })
+                            .unwrap_or((0usize, 0usize));
+
+                        let host_action: &mut dyn UiActionHost = host;
+                        for _ in 0..prev_steps {
+                            on_prev_for_wheel(host_action, cx, ActivateReason::Pointer);
+                        }
+                        for _ in 0..next_steps {
+                            on_next_for_wheel(host_action, cx, ActivateReason::Pointer);
+                        }
+
+                        true
+                    },
+                );
+                handler
+            });
+
             let drag_enabled = items_len > 1 && options.draggable;
             let pointer_region = cx.pointer_region(
                 PointerRegionProps {
                     layout: pointer_layout,
-                    enabled: drag_enabled,
+                    enabled: drag_enabled || on_wheel.is_some(),
                     capture_phase_pointer_moves: true,
                 },
                 move |cx| {
@@ -2838,6 +3030,9 @@ impl Carousel {
                     cx.pointer_region_on_pointer_move(on_move);
                     cx.pointer_region_on_pointer_up(on_up);
                     cx.pointer_region_on_pointer_cancel(on_cancel);
+                    if let Some(on_wheel) = on_wheel.clone() {
+                        cx.pointer_region_on_wheel(on_wheel);
+                    }
                     vec![track]
                 },
             );

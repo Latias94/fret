@@ -9,5 +9,6 @@ pub mod loop_downgrade_cannot_loop;
 pub mod orientation_vertical;
 pub mod parts;
 pub mod plugin_autoplay;
+pub mod plugin_wheel_gestures;
 pub mod sizes;
 pub mod spacing;
