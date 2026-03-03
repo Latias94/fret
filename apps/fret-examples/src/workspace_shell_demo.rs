@@ -1186,7 +1186,7 @@ pub fn run() -> anyhow::Result<()> {
 
     let config = WinitRunnerConfig {
         main_window_title: "fret-demo workspace_shell_demo".to_string(),
-        main_window_size: fret_launch::WindowLogicalSize::new(1080.0, 720.0),
+        main_window_size: fret_launch::WindowLogicalSize::new(1280.0, 720.0),
         ..Default::default()
     };
 
