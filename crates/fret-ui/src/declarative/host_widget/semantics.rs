@@ -552,6 +552,9 @@ impl ElementHostWidget {
             {
                 cx.push_controlled(node);
             }
+            if let Some(invokable) = decoration.invokable {
+                cx.set_invokable(invokable);
+            }
         }
     }
 }
