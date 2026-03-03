@@ -77,9 +77,7 @@ fn extract_dock_graph_report(bundle: &Value, bundle_path: &Path) -> Result<Value
         let frame_id = last.get("frame_id").and_then(|v| v.as_u64());
         let tick_id = last.get("tick_id").and_then(|v| v.as_u64());
         let window_snapshot_seq = last.get("window_snapshot_seq").and_then(|v| v.as_u64());
-        let docking = last
-            .get("debug")
-            .and_then(|v| v.get("docking_interaction"));
+        let docking = last.get("debug").and_then(|v| v.get("docking_interaction"));
         let signature = docking
             .and_then(|v| v.get("dock_graph_signature"))
             .and_then(|v| v.get("signature"))
@@ -91,14 +89,24 @@ fn extract_dock_graph_report(bundle: &Value, bundle_path: &Path) -> Result<Value
             .and_then(|v| v.as_u64());
 
         let stats = docking.and_then(|v| v.get("dock_graph_stats"));
-        let canonical_ok = stats.and_then(|v| v.get("canonical_ok")).and_then(|v| v.as_bool());
-        let node_count = stats.and_then(|v| v.get("node_count")).and_then(|v| v.as_u64());
-        let tabs_count = stats.and_then(|v| v.get("tabs_count")).and_then(|v| v.as_u64());
-        let split_count = stats.and_then(|v| v.get("split_count")).and_then(|v| v.as_u64());
+        let canonical_ok = stats
+            .and_then(|v| v.get("canonical_ok"))
+            .and_then(|v| v.as_bool());
+        let node_count = stats
+            .and_then(|v| v.get("node_count"))
+            .and_then(|v| v.as_u64());
+        let tabs_count = stats
+            .and_then(|v| v.get("tabs_count"))
+            .and_then(|v| v.as_u64());
+        let split_count = stats
+            .and_then(|v| v.get("split_count"))
+            .and_then(|v| v.as_u64());
         let floating_count = stats
             .and_then(|v| v.get("floating_count"))
             .and_then(|v| v.as_u64());
-        let max_depth = stats.and_then(|v| v.get("max_depth")).and_then(|v| v.as_u64());
+        let max_depth = stats
+            .and_then(|v| v.get("max_depth"))
+            .and_then(|v| v.as_u64());
 
         out_windows.push(serde_json::json!({
             "window": window_id,
@@ -150,7 +158,10 @@ fn print_dock_graph_report(report: &Value) {
         let win = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
         let frame_id = w.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
         let graph = w.get("dock_graph").unwrap_or(&Value::Null);
-        let fingerprint64 = graph.get("fingerprint64").and_then(|v| v.as_u64()).unwrap_or(0);
+        let fingerprint64 = graph
+            .get("fingerprint64")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0);
         let canonical_ok = graph
             .get("canonical_ok")
             .and_then(|v| v.as_bool())
@@ -163,9 +174,18 @@ fn print_dock_graph_report(report: &Value) {
         if let Some(sig) = graph.get("signature").and_then(|v| v.as_str()) {
             println!("    signature: {}", sig);
         }
-        let node_count = graph.get("node_count").and_then(|v| v.as_u64()).unwrap_or(0);
-        let tabs_count = graph.get("tabs_count").and_then(|v| v.as_u64()).unwrap_or(0);
-        let split_count = graph.get("split_count").and_then(|v| v.as_u64()).unwrap_or(0);
+        let node_count = graph
+            .get("node_count")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0);
+        let tabs_count = graph
+            .get("tabs_count")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0);
+        let split_count = graph
+            .get("split_count")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0);
         let floating_count = graph
             .get("floating_count")
             .and_then(|v| v.as_u64())
@@ -177,4 +197,3 @@ fn print_dock_graph_report(report: &Value) {
         );
     }
 }
-
