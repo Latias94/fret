@@ -2395,6 +2395,88 @@ mod tests {
         app.set_frame_id(FrameId(app.frame_id().0.saturating_add(1)));
     }
 
+    #[test]
+    fn trigger_chevron_motion_advances_and_settles_like_a_300ms_transition() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(240.0)),
+        );
+
+        app.set_tick_id(TickId(1));
+        app.set_frame_id(FrameId(1));
+        let closed = fret_ui::elements::with_element_cx(&mut app, window, bounds, "nav-menu", |cx| {
+            drive_navigation_menu_trigger_chevron_motion(cx, Arc::<str>::from("alpha"), false)
+        });
+        assert!(!closed.present);
+        assert_eq!(closed.progress, 0.0);
+        assert!(!closed.animating);
+
+        let expected_ticks = ticks_60hz_for_duration(Duration::from_millis(300));
+        let mut frames = 0u64;
+        let mut last_progress = 0.0f32;
+        loop {
+            frames += 1;
+            app.set_tick_id(TickId(1 + frames));
+            app.set_frame_id(FrameId(1 + frames));
+
+            let out = fret_ui::elements::with_element_cx(&mut app, window, bounds, "nav-menu", |cx| {
+                drive_navigation_menu_trigger_chevron_motion(cx, Arc::<str>::from("alpha"), true)
+            });
+
+            assert!(out.present, "expected chevron transition to be present while open=true");
+            assert!(
+                out.progress + 1e-6 >= last_progress,
+                "expected chevron progress to be monotonic (last={last_progress} now={})",
+                out.progress
+            );
+            last_progress = out.progress;
+
+            if !out.animating {
+                assert!(
+                    (out.progress - 1.0).abs() <= 1e-3,
+                    "expected chevron to settle at progress=1 (got {})",
+                    out.progress
+                );
+                break;
+            }
+
+            assert!(
+                frames <= expected_ticks + 12,
+                "expected chevron transition to settle near 300ms (ticks={expected_ticks}, frames={frames})"
+            );
+        }
+
+        // Closing should animate back toward 0 and settle deterministically.
+        let mut frames = 0u64;
+        loop {
+            frames += 1;
+            app.set_tick_id(TickId(10_000 + frames));
+            app.set_frame_id(FrameId(10_000 + frames));
+
+            let out = fret_ui::elements::with_element_cx(&mut app, window, bounds, "nav-menu", |cx| {
+                drive_navigation_menu_trigger_chevron_motion(cx, Arc::<str>::from("alpha"), false)
+            });
+
+            if !out.animating {
+                assert!(!out.present);
+                assert!(
+                    out.progress.abs() <= 1e-3,
+                    "expected chevron to settle at progress=0 (got {})",
+                    out.progress
+                );
+                break;
+            }
+
+            assert!(
+                frames <= expected_ticks + 12,
+                "expected chevron close transition to settle near 300ms (ticks={expected_ticks}, frames={frames})"
+            );
+        }
+    }
+
     fn assert_align_start_for_desired_width(
         dir: LayoutDirection,
         anchor: Rect,

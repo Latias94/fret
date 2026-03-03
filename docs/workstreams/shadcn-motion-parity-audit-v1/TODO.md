@@ -4,8 +4,8 @@ Last updated: 2026-03-03.
 
 ## P0 (high-signal, low-risk)
 
-- Add a minimal deterministic gate for NavigationMenu trigger chevron rotation
-  (`--fixed-frame-delta-ms 16`) to prevent regressions.
+- Landed: unit test gate for NavigationMenu trigger chevron rotation transition.
+- Optional: add a fixed-delta diag screenshot pair (`--fixed-frame-delta-ms 16`) for visual review.
 
 ## P1 (timebase correctness: eliminate 60Hz coupling)
 
