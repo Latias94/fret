@@ -53,6 +53,8 @@ This TODO is organized by milestones (see `MILESTONES.md`). Keep tasks **small a
 - [ ] Standardize perf suite tags for layout-heavy scenarios (UI gallery sweep subset).
 - [x] Add a bounded “layout perf summary” viewer (top frame solves + hotspots).
   - CLI: `fretboard diag layout-perf-summary ...`
+- [x] Attach a worst-run layout perf summary to perf gate evidence outputs (bounded).
+  - Files: `layout.perf.summary.v1.json`, `check.perf_thresholds.json`, `check.perf_hints.json`
 - [ ] Add one CI-friendly perf gate preset (doc + example command).
 
 ## M5 — Frontend UX (optional / later)

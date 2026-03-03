@@ -51,6 +51,21 @@ Options:
 
 ---
 
+## Produced by `diag perf`
+
+When running `fretboard diag perf ...`, tooling will best-effort materialize a worst-run summary:
+
+- `layout.perf.summary.v1.json` under the perf `out_dir`
+
+And the perf gate evidence JSONs may include:
+
+- `layout_perf_summary` (inline bounded object)
+- `layout_perf_summary_path` (path to the standalone summary file)
+
+This is intended to make perf failures self-explaining without a second CLI invocation.
+
+---
+
 ## Output payload shape (v1)
 
 Top-level object:
@@ -130,4 +145,3 @@ Each entry is derived from `debug.widget_measure_hotspots`:
 - Not a runtime schema contract (no new on-wire fields required).
 - Not a perf gate by itself (gating remains in `diag perf` thresholds/baselines).
 - Not a “perfect correlation” tool: semantics ↔ layout-node correlation is best-effort.
-
