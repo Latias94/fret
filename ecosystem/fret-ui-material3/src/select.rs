@@ -915,6 +915,7 @@ fn select_trigger_element<H: UiHost>(
                 l
             },
             focus_ring: None,
+            focus_ring_always_paint: false,
             focus_ring_bounds: None,
         };
 
@@ -1957,6 +1958,7 @@ fn select_list_item<H: UiHost>(
                 l
             },
             focus_ring: None,
+            focus_ring_always_paint: false,
             focus_ring_bounds: None,
         };
 

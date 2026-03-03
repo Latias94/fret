@@ -673,12 +673,13 @@ impl NavigationMenuLink {
             pressable.enabled = !disabled;
             pressable.focusable = !disabled;
             pressable.focus_ring = Some(ring);
+            pressable.key_activation = PressableKeyActivation::EnterOnly;
             pressable.layout = decl_style::layout_style(
                 &theme,
                 LayoutRefinement::default().w_full().min_w_0().merge(layout),
             );
             pressable.a11y = PressableA11y {
-                role: Some(SemanticsRole::Button),
+                role: Some(SemanticsRole::Link),
                 label: label.clone(),
                 test_id: test_id.clone(),
                 ..Default::default()
@@ -3172,14 +3173,14 @@ mod tests {
         ui.layout_all(&mut app, &mut services, bounds, 1.0);
 
         let snap = ui.semantics_snapshot().expect("semantics snapshot");
-        let go_btn = snap
+        let go_link = snap
             .nodes
             .iter()
-            .find(|n| n.role == SemanticsRole::Button && n.label.as_deref() == Some("Go"))
-            .expect("Go button semantics");
+            .find(|n| n.role == SemanticsRole::Link && n.label.as_deref() == Some("Go"))
+            .expect("Go link semantics");
         let pos = Point::new(
-            Px(go_btn.bounds.origin.x.0 + go_btn.bounds.size.width.0 * 0.5),
-            Px(go_btn.bounds.origin.y.0 + go_btn.bounds.size.height.0 * 0.5),
+            Px(go_link.bounds.origin.x.0 + go_link.bounds.size.width.0 * 0.5),
+            Px(go_link.bounds.origin.y.0 + go_link.bounds.size.height.0 * 0.5),
         );
 
         ui.dispatch_event(

@@ -4428,6 +4428,7 @@ fn select_impl<H: UiHost>(
                         layout: {
                             let mut layout = LayoutStyle::default();
                             layout.size.width = content_width;
+                            layout.size.height = Length::Fill;
                             layout
                         },
                         direction: fret_core::Axis::Horizontal,

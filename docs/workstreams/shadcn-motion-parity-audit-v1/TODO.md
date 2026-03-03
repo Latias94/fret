@@ -23,9 +23,10 @@ Last updated: 2026-03-03.
 - Landed: `Toggle` focus ring transitions ease in/out and have a unit test gate.
 - Landed: `Item` hover background transition eases (~100ms, `duration-100`) and has a unit test gate.
 - Gap: common primitives should ease hover/focus style changes (`transition-*` parity), not snap. Suggested ordering:
-  - P0: Input / Textarea / Toggle / TabsTrigger / SelectTrigger + NativeSelect / Checkbox + RadioGroup / Slider thumb.
+  - P0: Input / Textarea / TabsTrigger / SelectTrigger + NativeSelect / Checkbox + RadioGroup / Slider thumb.
   - P1: Badge / BreadcrumbLink / Table rows / ScrollArea viewport + scrollbar.
   - P1: Add a gate for Accordion content measured-height motion (`animate-accordion-{down,up}` outcome).
+- Gap: audit `Drawer` parity vs Vaul (define concrete drag + inertia outcomes; add a fixed-delta diag + a unit test for settle).
 
 ## P2 (API + token cleanup)
 

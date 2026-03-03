@@ -142,7 +142,10 @@ pub fn tabs_list_variants(theme: &ThemeSnapshot, variant: TabsListVariant) -> Ta
             chrome: ChromeRefinement::default()
                 .bg(ColorRef::Color(Color::TRANSPARENT))
                 .text_color(ColorRef::Color(tabs_list_fg_muted(theme))),
-            padding_px: Px(0.0),
+            // Upstream (radix-* registry variants) keeps `p-[3px]` even for `variant=line`.
+            // Keeping the padding preserves the same trigger inset as the default variant while
+            // switching the "active" affordance from a pill to a shared line indicator.
+            padding_px: tabs_list_padding(theme),
             trigger_row_gap_px: Px(4.0),
         },
     }
@@ -345,6 +348,7 @@ fn tabs_shared_indicator<H: UiHost>(
             shadow,
             radius,
             spring,
+            line_thickness,
         ) = {
             let theme = Theme::global(&*cx.app).snapshot();
 
@@ -441,6 +445,7 @@ fn tabs_shared_indicator<H: UiHost>(
                 border_w,
                 shadow,
                 radius,
+                line_thickness,
             ) = match kind {
                 TabsSharedIndicatorKind::Pill => (
                     target_x,
@@ -453,6 +458,7 @@ fn tabs_shared_indicator<H: UiHost>(
                     (!disabled && selected_idx.is_some())
                         .then(|| decl_style::shadow_sm(&theme, radius)),
                     radius,
+                    0.0,
                 ),
                 TabsSharedIndicatorKind::Line => {
                     let thickness = theme
@@ -462,18 +468,12 @@ fn tabs_shared_indicator<H: UiHost>(
                         .max(0.0);
                     let (target_x, target_y, target_width, target_height) = if thickness > 0.0 {
                         match orientation {
-                            TabsOrientation::Horizontal => (
-                                target_x,
-                                (container_bounds.size.height.0 - thickness).max(0.0),
-                                target_width,
-                                thickness,
-                            ),
-                            TabsOrientation::Vertical => (
-                                (container_bounds.size.width.0 - thickness).max(0.0),
-                                target_y,
-                                thickness,
-                                target_height,
-                            ),
+                            TabsOrientation::Horizontal => {
+                                (target_x, target_y, target_width, thickness)
+                            }
+                            TabsOrientation::Vertical => {
+                                (target_x, target_y, thickness, target_height)
+                            }
                         }
                     } else {
                         (target_x, target_y, target_width, target_height)
@@ -494,6 +494,7 @@ fn tabs_shared_indicator<H: UiHost>(
                         Px(0.0),
                         None,
                         Px(0.0),
+                        thickness,
                     )
                 }
             };
@@ -509,6 +510,7 @@ fn tabs_shared_indicator<H: UiHost>(
                 shadow,
                 radius,
                 spring,
+                line_thickness,
             )
         };
 
@@ -561,12 +563,23 @@ fn tabs_shared_indicator<H: UiHost>(
         props.layout.inset.right = Some(Px(0.0)).into();
         props.layout.inset.bottom = Some(Px(0.0)).into();
         props.layout.inset.left = Some(Px(0.0)).into();
+        if kind == TabsSharedIndicatorKind::Line {
+            // shadcn v4 draws the line "outside" the trigger via negative offsets:
+            // - horizontal: `bottom-[-5px]`
+            // - vertical: `-right-1` (4px)
+            //
+            // Extend the indicator canvas so we can paint into that extra area.
+            match orientation {
+                TabsOrientation::Horizontal => {
+                    props.layout.inset.bottom = Some(Px(-5.0)).into();
+                }
+                TabsOrientation::Vertical => {
+                    props.layout.inset.right = Some(Px(-4.0)).into();
+                }
+            }
+        }
 
         let mut indicator = cx.canvas(props, move |p| {
-            if height.value <= 0.0 || width.value <= 0.0 || bg.a <= 0.0 {
-                return;
-            }
-
             let bounds = p.bounds();
             // The shared indicator targets trigger bounds tracked relative to the *list container*
             // element (`container_bounds`). Depending on how absolute-positioned children are
@@ -576,12 +589,45 @@ fn tabs_shared_indicator<H: UiHost>(
             let dx = container_bounds.origin.x.0 - bounds.origin.x.0;
             let dy = container_bounds.origin.y.0 - bounds.origin.y.0;
 
-            let x_px = (x.value + dx).clamp(0.0, bounds.size.width.0);
-            let y_px = (y.value + dy).clamp(0.0, bounds.size.height.0);
-            let max_width = (bounds.size.width.0 - x_px).max(0.0);
-            let max_height = (bounds.size.height.0 - y_px).max(0.0);
-            let width_px = width.value.clamp(0.0, max_width);
-            let height_px = height.value.clamp(0.0, max_height);
+            let x_base = (x.value + dx).clamp(0.0, bounds.size.width.0);
+            let y_base = (y.value + dy).clamp(0.0, bounds.size.height.0);
+            let max_width_base = (bounds.size.width.0 - x_base).max(0.0);
+            let max_height_base = (bounds.size.height.0 - y_base).max(0.0);
+
+            let (x_px, y_px, width_px, height_px) = match kind {
+                TabsSharedIndicatorKind::Line => {
+                    let thickness = line_thickness.max(0.0);
+                    if thickness <= 0.0 {
+                        return;
+                    }
+
+                    match orientation {
+                        TabsOrientation::Horizontal => {
+                            let y_px = (bounds.size.height.0 - thickness).max(0.0);
+                            let max_height = (bounds.size.height.0 - y_px).max(0.0);
+                            let height_px = thickness.clamp(0.0, max_height);
+                            let width_px = width.value.clamp(0.0, max_width_base);
+                            (x_base, y_px, width_px, height_px)
+                        }
+                        TabsOrientation::Vertical => {
+                            let x_px = (bounds.size.width.0 - thickness).max(0.0);
+                            let max_width = (bounds.size.width.0 - x_px).max(0.0);
+                            let width_px = thickness.clamp(0.0, max_width);
+                            let height_px = height.value.clamp(0.0, max_height_base);
+                            (x_px, y_base, width_px, height_px)
+                        }
+                    }
+                }
+                TabsSharedIndicatorKind::Pill => {
+                    let width_px = width.value.clamp(0.0, max_width_base);
+                    let height_px = height.value.clamp(0.0, max_height_base);
+                    (x_base, y_base, width_px, height_px)
+                }
+            };
+
+            if height_px <= 0.0 || width_px <= 0.0 || bg.a <= 0.0 {
+                return;
+            }
 
             let outer = fret_core::Rect::new(
                 fret_core::Point::new(Px(bounds.origin.x.0 + x_px), Px(bounds.origin.y.0 + y_px)),
@@ -1668,7 +1714,10 @@ impl Tabs {
                         } else {
                             None
                         };
-                        if let Some(indicator_kind) = indicator_kind {
+                        if let Some(indicator_kind) = indicator_kind
+                            && indicator_kind != TabsSharedIndicatorKind::Line
+                        {
+                            // Pill highlight should paint under the triggers.
                             list_children.push(tabs_shared_indicator(
                                 cx,
                                 list_container_id,
@@ -1676,11 +1725,36 @@ impl Tabs {
                                 indicator_kind,
                                 items_len,
                                 active_idx,
-                                indicator_test_id,
+                                indicator_test_id.clone(),
                                 tabs_disabled,
                                 &style_override,
                             ));
                         }
+
+                        // Vertical tabs should keep triggers at a shared width (shadcn's `w-full`
+                        // outcome relative to the widest trigger). Our layout engine does not
+                        // fully match CSS percentage sizing in shrink-to-fit containers, so we
+                        // stabilize this by reusing the previous frame's measured trigger width.
+                        let vertical_trigger_width_px: Option<Px> =
+                            if orientation == TabsOrientation::Vertical {
+                                let trigger_ids = cx.with_state_for(
+                                    list_container_id,
+                                    TabsListLayoutRuntime::default,
+                                    |rt| rt.triggers.clone(),
+                                );
+                                let mut max_w: Option<f32> = None;
+                                for id in trigger_ids {
+                                    if let Some(bounds) = cx.last_bounds_for_element(id) {
+                                        max_w = Some(
+                                            max_w
+                                                .map_or(bounds.size.width.0, |w| w.max(bounds.size.width.0)),
+                                        );
+                                    }
+                                }
+                                max_w.map(Px)
+                            } else {
+                                None
+                            };
 
                         list_children.push(cx.roving_flex(
                             RovingFlexProps {
@@ -2020,9 +2094,9 @@ impl Tabs {
                                         };
 
                                         if orientation == TabsOrientation::Vertical {
-                                            // shadcn new-york-v4: `TabsTrigger` uses `w-full` for vertical tabs so
-                                            // inactive triggers still occupy the full list width (defined by the
-                                            // widest trigger).
+                                            if let Some(w) = vertical_trigger_width_px {
+                                                props.layout.size.width = Length::Px(w);
+                                            }
                                             props.layout.flex.align_self = Some(CrossAlign::Stretch);
                                         }
 
@@ -2148,9 +2222,26 @@ impl Tabs {
                                         })
                                      }));
                                  }
-                                 out
-                             },
+                             out
+                         },
                         ));
+                        if let Some(indicator_kind) = indicator_kind
+                            && indicator_kind == TabsSharedIndicatorKind::Line
+                        {
+                            // shadcn's line indicator is visually "above" the triggers.
+                            // Keep it last in the list so it paints on top.
+                            list_children.push(tabs_shared_indicator(
+                                cx,
+                                list_container_id,
+                                orientation,
+                                indicator_kind,
+                                items_len,
+                                active_idx,
+                                indicator_test_id,
+                                tabs_disabled,
+                                &style_override,
+                            ));
+                        }
                         list_children
                     })]
             }));
@@ -2409,7 +2500,7 @@ mod tests {
         }
 
         let line = tabs_list_variants(&theme, TabsListVariant::Line);
-        assert_eq!(line.padding_px, Px(0.0));
+        assert!(line.padding_px.0 > 0.0);
         assert_eq!(line.trigger_row_gap_px, Px(4.0));
         match line.chrome.background {
             Some(ColorRef::Color(c)) => assert_eq!(c, Color::TRANSPARENT),
@@ -2616,6 +2707,77 @@ mod tests {
         assert!(
             wdiff <= 0.51,
             "expected vertical triggers to share list width: w0={w0:.3}, w1={w1:.3}, diff={wdiff:.3}"
+        );
+    }
+
+    #[test]
+    fn tabs_vertical_line_variant_stretches_triggers_to_shared_width() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let model = app.models_mut().insert(Some(Arc::from("preview")));
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let mut render = || {
+            let root = fret_ui::declarative::render_root(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                "tabs-vertical-line-stretch",
+                |cx| {
+                    vec![
+                        Tabs::new(model.clone())
+                            .orientation(TabsOrientation::Vertical)
+                            .list_variant(TabsListVariant::Line)
+                            .items([
+                                TabsItem::new("preview", "Preview", Vec::<AnyElement>::new()),
+                                TabsItem::new("code", "Code", Vec::<AnyElement>::new()),
+                            ])
+                            .into_element(cx),
+                    ]
+                },
+            );
+            ui.set_root(root);
+            ui.request_semantics_snapshot();
+            ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        };
+
+        // Two frames so the vertical width stabilization can reuse the previous frame's measured
+        // trigger widths.
+        render();
+        render();
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let mut tabs: Vec<_> = snap
+            .nodes
+            .iter()
+            .filter(|n| n.role == SemanticsRole::Tab)
+            .collect();
+        assert_eq!(tabs.len(), 2, "expected two tab triggers");
+
+        tabs.sort_by(|a, b| {
+            a.bounds
+                .origin
+                .y
+                .0
+                .partial_cmp(&b.bounds.origin.y.0)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
+
+        let w0 = tabs[0].bounds.size.width.0;
+        let w1 = tabs[1].bounds.size.width.0;
+        let wdiff = (w0 - w1).abs();
+        assert!(
+            wdiff <= 0.51,
+            "expected vertical line variant triggers to share width: w0={w0:.3}, w1={w1:.3}, diff={wdiff:.3}"
         );
     }
 

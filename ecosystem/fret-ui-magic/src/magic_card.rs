@@ -167,6 +167,7 @@ where
                     border_paint: Some(border_paint),
                     border_dash: None,
                     focus_ring: None,
+                    focus_ring_always_paint: false,
                     focus_border_color: None,
                     focus_within: false,
                     corner_radii: props.corner_radii,

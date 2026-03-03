@@ -7,7 +7,8 @@
     "target_hints": [
       "Navigates to the Tabs page.",
       "Scrolls the Vertical + Vertical (Line) examples into view.",
-      "Asserts the vertical tab list grows to show multiple triggers (no clipping)."
+      "Asserts the vertical tab list grows to show multiple triggers (no clipping).",
+      "Captures screenshots for both sections for quick visual triage."
     ]
   },
   "steps": [
@@ -113,8 +114,8 @@
         "eps_px": 1.0
       }
     },
+    { "type": "capture_screenshot", "label": "ui-gallery-tabs-vertical-line-list-grows", "timeout_frames": 240 },
 
     { "type": "capture_bundle", "label": "ui-gallery-tabs-vertical-list-grows" }
   ]
 }
-
