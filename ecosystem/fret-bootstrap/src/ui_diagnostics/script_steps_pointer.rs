@@ -2111,6 +2111,26 @@ pub(super) fn handle_move_pointer_step(
     });
     if !cross_window_dock_drag_active {
         output.events.push(move_pointer_event(pos, pointer_type));
+    } else {
+        // Cross-window dock drags rely on `InternalDrag::Over` to keep the docking hover target
+        // refreshed even when pointer move events are suppressed.
+        //
+        // This keeps `move_pointer` useful for scripted docking flows without requiring scripts to
+        // switch to a delta-driven `pointer_move` step purely to update docking arbitration.
+        let modifiers = active
+            .pointer_session
+            .as_ref()
+            .filter(|session| session.window == window)
+            .map(|session| session.modifiers)
+            .unwrap_or_default();
+        output
+            .events
+            .push(Event::InternalDrag(fret_core::InternalDragEvent {
+                pointer_id: fret_core::PointerId(0),
+                position: pos,
+                kind: fret_core::InternalDragKind::Over,
+                modifiers,
+            }));
     }
     let _ = write_cursor_override_window_client_logical(&svc.cfg.out_dir, window, pos.x.0, pos.y.0);
     active.last_explicit_cursor_override = Some(CursorOverrideTarget::WindowClientLogical(window));

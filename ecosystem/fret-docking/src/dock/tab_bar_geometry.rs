@@ -4,6 +4,7 @@
 
 use super::prelude_core::*;
 use fret_ui::ThemeSnapshot;
+use fret_ui_headless::tab_strip_scroll::ensure_range_visible_x;
 
 #[derive(Debug, Clone)]
 enum TabWidthModel {
@@ -128,19 +129,14 @@ impl TabBarGeometry {
         if self.tab_count() == 0 {
             return Px(0.0);
         }
-        let scroll = self.clamp_scroll(scroll);
-        let tab_start = self.tab_start_x_unscrolled(tab_index).0;
-        let tab_end = self.tab_end_x_unscrolled(tab_index).0;
-        let view_start = scroll.0;
-        let view_end = scroll.0 + self.tab_bar.size.width.0;
-        let next = if tab_start < view_start {
-            Px(tab_start)
-        } else if tab_end > view_end {
-            Px((tab_end - self.tab_bar.size.width.0).max(0.0))
-        } else {
-            scroll
-        };
-        self.clamp_scroll(next)
+        ensure_range_visible_x(
+            self.clamp_scroll(scroll),
+            self.max_scroll(),
+            self.tab_bar.size.width,
+            self.tab_start_x_unscrolled(tab_index),
+            self.tab_end_x_unscrolled(tab_index),
+            Px(0.0),
+        )
     }
 
     pub(super) fn hit_test_tab_index(&self, position: Point, scroll: Px) -> Option<usize> {

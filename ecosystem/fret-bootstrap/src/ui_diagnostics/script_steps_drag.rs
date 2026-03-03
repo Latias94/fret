@@ -64,6 +64,7 @@ pub(super) fn handle_drag_pointer_step(
         pointer_kind,
         target,
         button,
+        clamp_to_window_bounds,
         delta_x,
         delta_y,
         steps,
@@ -222,7 +223,11 @@ pub(super) fn handle_drag_pointer_step(
                     fret_core::Px(start.x.0 + delta_x),
                     fret_core::Px(start.y.0 + delta_y),
                 );
-                let end = clamp_point_to_rect(end, window_bounds);
+                let end = if clamp_to_window_bounds {
+                    clamp_point_to_rect(end, window_bounds)
+                } else {
+                    end
+                };
                 V2DragPointerState {
                     step_index,
                     window,
@@ -729,7 +734,15 @@ pub(super) fn handle_drag_pointer_until_step(
                                 fret_core::Px(start.x.0 + delta_x),
                                 fret_core::Px(start.y.0 + delta_y),
                             );
-                            end = clamp_point_to_rect(end, window_bounds);
+                            let allow_outside_window_bounds = matches!(
+                                &state.predicate,
+                                UiPredicateV1::KnownWindowCountGe { .. }
+                                    | UiPredicateV1::KnownWindowCountIs { .. }
+                                    | UiPredicateV1::DockDragCurrentWindowIs { .. }
+                            );
+                            if !allow_outside_window_bounds {
+                                end = clamp_point_to_rect(end, window_bounds);
+                            }
                             state.playback.start = start;
                             state.playback.end = end;
                         } else {

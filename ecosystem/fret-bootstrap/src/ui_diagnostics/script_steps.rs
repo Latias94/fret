@@ -182,6 +182,11 @@ pub(super) fn handle_window_effect_steps(
                         x_px,
                         y_px,
                     });
+                    if let Some(session) = active.pointer_session.as_mut()
+                        && session.window == target_window
+                    {
+                        session.position = Point::new(Px(x_px), Px(y_px));
+                    }
                     active.wait_until = None;
                     active.screenshot_wait = None;
                     active.next_step = active.next_step.saturating_add(1);

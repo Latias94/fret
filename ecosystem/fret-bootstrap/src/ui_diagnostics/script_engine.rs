@@ -2267,29 +2267,32 @@ impl UiDiagnosticsService {
                     debug_assert!(handled);
                     DriveScriptStepDispatchOutcome::Continue
                 }
-                _ => dispatch_drive_script_step(
-                    self,
-                    app,
-                    window,
-                    window_bounds,
-                    anchor_window,
-                    step_index,
-                    step,
-                    scale_factor,
-                    app.global::<ElementRuntime>(),
-                    semantics_snapshot,
-                    &mut ui,
-                    text_font_stack_key_stable_frames,
-                    font_catalog_populated,
-                    system_font_rescan_idle,
-                    &mut active,
-                    &mut output,
-                    &mut force_dump_label,
-                    &mut force_dump_max_snapshots,
-                    &mut handoff_to,
-                    &mut stop_script,
-                    &mut failure_reason,
-                ),
+                _ => {
+                    let element_runtime = app.global::<ElementRuntime>();
+                    dispatch_drive_script_step(
+                        self,
+                        app,
+                        window,
+                        window_bounds,
+                        anchor_window,
+                        step_index,
+                        step,
+                        scale_factor,
+                        element_runtime,
+                        semantics_snapshot,
+                        &mut ui,
+                        text_font_stack_key_stable_frames,
+                        font_catalog_populated,
+                        system_font_rescan_idle,
+                        &mut active,
+                        &mut output,
+                        &mut force_dump_label,
+                        &mut force_dump_max_snapshots,
+                        &mut handoff_to,
+                        &mut stop_script,
+                        &mut failure_reason,
+                    )
+                }
             };
 
             match outcome {
@@ -2314,13 +2317,29 @@ impl UiDiagnosticsService {
                 || active.wait_overlay_placement_trace.is_some()
                 || active.screenshot_wait.is_some();
 
+            let next_step_is_capture_bundle = active
+                .steps
+                .get(active.next_step)
+                .is_some_and(|s| matches!(s, UiActionStepV2::CaptureBundle { .. }));
+
+            // Allow chaining into a final frame-independent `capture_bundle` even if the previous
+            // step wrote redraw effects (commonly from off-window docking predicates). This avoids
+            // requiring an extra delivered redraw callback in tight/occluded multi-window runs.
+            let can_chain_into_capture_bundle = next_step_is_capture_bundle
+                && !stop_script
+                && handoff_to.is_none()
+                && force_dump_label.is_none()
+                && advanced
+                && !wrote_events
+                && !entered_wait_state;
+
             if stop_script
                 || handoff_to.is_some()
                 || force_dump_label.is_some()
                 || !advanced
-                || wrote_effects
                 || wrote_events
                 || entered_wait_state
+                || (wrote_effects && !can_chain_into_capture_bundle)
             {
                 break;
             }

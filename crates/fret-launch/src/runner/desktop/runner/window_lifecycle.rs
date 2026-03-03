@@ -36,19 +36,22 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 m, caps,
             )
         });
-        if let Some(transparent) = style.transparent {
-            attrs = attrs.with_transparent(transparent);
-        } else if caps.ui.window_transparent
-            && effective_background_material
-                .is_some_and(|m| m != fret_runtime::WindowBackgroundMaterialRequest::None)
-        {
-            // Background materials may require a composited alpha surface (ADR 0310). If the caller
-            // did not explicitly request `transparent`, treat it as implied once a non-None
-            // material is effectively applied.
-            //
+
+        let effective_transparent = if caps.ui.window_transparent {
+            if let Some(transparent) = style.transparent {
+                transparent
+            } else {
+                effective_background_material
+                    .is_some_and(|m| m != fret_runtime::WindowBackgroundMaterialRequest::None)
+            }
+        } else {
+            false
+        };
+
+        if caps.ui.window_transparent {
             // NOTE: `transparent` is a create-time property in winit; we may keep the window
             // composited for its lifetime even if the material is later set to None at runtime.
-            attrs = attrs.with_transparent(true);
+            attrs = attrs.with_transparent(effective_transparent);
         }
         if let Some(policy) = style.activation {
             let active = matches!(policy, ActivationPolicy::Activates);
@@ -105,7 +108,10 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             });
         }
 
-        if let Some(material) = effective_background_material {
+        if effective_transparent
+            && let Some(material) = effective_background_material
+            && material != fret_runtime::WindowBackgroundMaterialRequest::None
+        {
             let _ = super::window::set_window_background_material(window.as_ref(), material);
         }
 

@@ -1305,8 +1305,8 @@ impl NavigationMenu {
             let motion = OverlayController::transition_with_durations_and_cubic_bezier_duration(
                 cx,
                 open_for_motion,
-                overlay_motion::shadcn_motion_duration_100(cx),
-                overlay_motion::shadcn_motion_duration_100(cx),
+                overlay_motion::shadcn_motion_duration_200(cx),
+                overlay_motion::shadcn_motion_duration_200(cx),
                 overlay_motion::shadcn_motion_ease_bezier(cx),
             );
             let opacity = motion.progress;

@@ -346,7 +346,9 @@ fn view(
                 .disabled(preset == 2)
                 .into_element(cx)
                 .test_id(TEST_ID_SIZE_1280),
-            shadcn::Separator::new().orientation(shadcn::SeparatorOrientation::Vertical),
+            shadcn::Separator::new()
+                .orientation(shadcn::SeparatorOrientation::Vertical)
+                .into_element(cx),
             shadcn::Button::new("Fit: Contain")
                 .variant(shadcn::ButtonVariant::Secondary)
                 .on_click(CMD_FIT_CONTAIN)

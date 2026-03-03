@@ -43,6 +43,12 @@
       "timeout_frames": 240
     },
     {
+      "type": "wheel",
+      "target": { "kind": "test_id", "id": "dock-arb-tab-drag-anchor-left" },
+      "delta_y": 1200.0
+    },
+    { "type": "wait_frames", "n": 2 },
+    {
       "type": "wait_until",
       "predicate": { "kind": "dock_tab_strip_active_scroll_px_le", "px": 0.1 },
       "timeout_frames": 240

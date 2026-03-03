@@ -3,8 +3,8 @@ use std::collections::HashMap;
 use fret_core::geometry::{Point, Rect};
 use fret_core::{AppWindowId, Axis, DockNodeId, DropZone, PointerId, RenderTargetId};
 
-use crate::FrameId;
 use crate::DragKindId;
+use crate::FrameId;
 use crate::WindowUnderCursorSource;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

@@ -466,25 +466,28 @@ impl UiDiagnosticsService {
                     });
                     return;
                 }
-                let Ok(script) = serde_json::from_slice::<UiActionScriptV1>(&bytes) else {
-                    self.pending_script_run_id = None;
-                    self.write_script_result(UiScriptResultV1 {
-                        schema_version: 1,
-                        run_id,
-                        updated_unix_ms: unix_ms_now(),
-                        window: None,
-                        stage: UiScriptStageV1::Failed,
-                        step_index: None,
-                        reason_code: Some("script.parse_failed".to_string()),
-                        reason: Some("failed to parse script as schema v1".to_string()),
-                        evidence: None,
-                        last_bundle_dir: self
-                            .last_dump_dir
-                            .as_ref()
-                            .map(|p| display_path(&self.cfg.out_dir, p)),
-                        last_bundle_artifact: self.last_dump_artifact_stats.clone(),
-                    });
-                    return;
+                let script = match serde_json::from_slice::<UiActionScriptV1>(&bytes) {
+                    Ok(script) => script,
+                    Err(err) => {
+                        self.pending_script_run_id = None;
+                        self.write_script_result(UiScriptResultV1 {
+                            schema_version: 1,
+                            run_id,
+                            updated_unix_ms: unix_ms_now(),
+                            window: None,
+                            stage: UiScriptStageV1::Failed,
+                            step_index: None,
+                            reason_code: Some("script.parse_failed".to_string()),
+                            reason: Some(format!("failed to parse script as schema v1: {err}")),
+                            evidence: None,
+                            last_bundle_dir: self
+                                .last_dump_dir
+                                .as_ref()
+                                .map(|p| display_path(&self.cfg.out_dir, p)),
+                            last_bundle_artifact: self.last_dump_artifact_stats.clone(),
+                        });
+                        return;
+                    }
                 };
                 let Some(script) = PendingScript::from_v1(script) else {
                     self.pending_script_run_id = None;
@@ -509,25 +512,28 @@ impl UiDiagnosticsService {
                 script
             }
             2 => {
-                let Ok(script) = serde_json::from_slice::<UiActionScriptV2>(&bytes) else {
-                    self.pending_script_run_id = None;
-                    self.write_script_result(UiScriptResultV1 {
-                        schema_version: 1,
-                        run_id,
-                        updated_unix_ms: unix_ms_now(),
-                        window: None,
-                        stage: UiScriptStageV1::Failed,
-                        step_index: None,
-                        reason_code: Some("script.parse_failed".to_string()),
-                        reason: Some("failed to parse script as schema v2".to_string()),
-                        evidence: None,
-                        last_bundle_dir: self
-                            .last_dump_dir
-                            .as_ref()
-                            .map(|p| display_path(&self.cfg.out_dir, p)),
-                        last_bundle_artifact: self.last_dump_artifact_stats.clone(),
-                    });
-                    return;
+                let script = match serde_json::from_slice::<UiActionScriptV2>(&bytes) {
+                    Ok(script) => script,
+                    Err(err) => {
+                        self.pending_script_run_id = None;
+                        self.write_script_result(UiScriptResultV1 {
+                            schema_version: 1,
+                            run_id,
+                            updated_unix_ms: unix_ms_now(),
+                            window: None,
+                            stage: UiScriptStageV1::Failed,
+                            step_index: None,
+                            reason_code: Some("script.parse_failed".to_string()),
+                            reason: Some(format!("failed to parse script as schema v2: {err}")),
+                            evidence: None,
+                            last_bundle_dir: self
+                                .last_dump_dir
+                                .as_ref()
+                                .map(|p| display_path(&self.cfg.out_dir, p)),
+                            last_bundle_artifact: self.last_dump_artifact_stats.clone(),
+                        });
+                        return;
+                    }
                 };
                 let Some(script) = PendingScript::from_v2(script) else {
                     self.pending_script_run_id = None;

@@ -1750,18 +1750,12 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
                                     .global::<PlatformCapabilities>()
                                     .cloned()
                                     .unwrap_or_default();
+                                let requested_background_material = style.background_material;
                                 if let Some(level) = style.z_level {
                                     window_handle.set_window_level(match level {
                                         WindowZLevel::Normal => WindowLevel::Normal,
                                         WindowZLevel::AlwaysOnTop => WindowLevel::AlwaysOnTop,
                                     });
-                                }
-                                if let Some(material) = style.background_material {
-                                    let material = fret_runtime::runner_window_style_diagnostics::clamp_background_material_request(material, &caps);
-                                    let _ = super::window::set_window_background_material(
-                                        window_handle.as_ref(),
-                                        material,
-                                    );
                                 }
                                 if let Some(mouse) = style.mouse {
                                     let passthrough =
@@ -1797,12 +1791,31 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
                                     },
                                 );
 
+                                let effective_style = self
+                                    .app
+                                    .global::<fret_runtime::RunnerWindowStyleDiagnosticsStore>()
+                                    .and_then(|s| s.effective_snapshot(window));
+
+                                if requested_background_material.is_some() {
+                                    let material = effective_style
+                                        .map(|s| s.background_material)
+                                        .unwrap_or_else(|| {
+                                            fret_runtime::runner_window_style_diagnostics::clamp_background_material_request(
+                                                requested_background_material.unwrap_or(
+                                                    fret_runtime::WindowBackgroundMaterialRequest::None,
+                                                ),
+                                                &caps,
+                                            )
+                                        });
+                                    let _ = super::window::set_window_background_material(
+                                        window_handle.as_ref(),
+                                        material,
+                                    );
+                                }
+
                                 if let Some(context) = self.context.as_ref() {
-                                    let want_transparent = self
-                                        .app
-                                        .global::<fret_runtime::RunnerWindowStyleDiagnosticsStore>()
-                                        .and_then(|s| s.effective_snapshot(window))
-                                        .is_some_and(|s| s.transparent);
+                                    let want_transparent =
+                                        effective_style.is_some_and(|s| s.transparent);
                                     if let Some(state) = self.windows.get_mut(window)
                                         && let Some(surface) = state.surface.as_mut()
                                     {
