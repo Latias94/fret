@@ -87,13 +87,23 @@ impl<H: UiHost> UiTree<H> {
         );
     }
 
-    fn command_is_enabled(
-        app: &H,
-        window: Option<fret_core::AppWindowId>,
+    fn command_is_enabled_for_shortcut_dispatch(
+        &mut self,
+        app: &mut H,
         fallback_input_ctx: &InputContext,
         command: &CommandId,
     ) -> bool {
-        let Some(window) = window else {
+        // Prefer evaluating widget-scoped command availability against the current UI tree state
+        // instead of relying on the last published window gating snapshot.
+        //
+        // Rationale: modal barrier transitions can invalidate availability between frames, and
+        // shortcuts should not get stuck reporting `command_disabled` after an overlay closes.
+        let scope = app.commands().get(command.clone()).map(|m| m.scope);
+        if matches!(scope, Some(fret_runtime::CommandScope::Widget)) {
+            return self.is_command_available(app, command);
+        }
+
+        let Some(window) = self.window else {
             return true;
         };
         fret_runtime::command_is_enabled_for_window_with_input_ctx_fallback(
@@ -224,7 +234,11 @@ impl<H: UiHost> UiTree<H> {
                         .get(command.clone())
                         .is_some_and(|m| m.repeatable)
                 {
-                    if Self::command_is_enabled(app, self.window, params.input_ctx, &command) {
+                    if self.command_is_enabled_for_shortcut_dispatch(
+                        app,
+                        params.input_ctx,
+                        &command,
+                    ) {
                         #[cfg(feature = "diagnostics")]
                         self.record_shortcut_routing_decision(
                             app,
@@ -352,7 +366,7 @@ impl<H: UiHost> UiTree<H> {
             }
 
             if let Some(Some(command)) = matched.exact {
-                if Self::command_is_enabled(app, self.window, params.input_ctx, &command) {
+                if self.command_is_enabled_for_shortcut_dispatch(app, params.input_ctx, &command) {
                     #[cfg(feature = "diagnostics")]
                     self.record_shortcut_routing_decision(
                         app,
@@ -462,7 +476,7 @@ impl<H: UiHost> UiTree<H> {
         }
 
         if let Some(command) = service.keymap.resolve(params.input_ctx, chord) {
-            if Self::command_is_enabled(app, self.window, params.input_ctx, &command) {
+            if self.command_is_enabled_for_shortcut_dispatch(app, params.input_ctx, &command) {
                 #[cfg(feature = "diagnostics")]
                 self.record_shortcut_routing_decision(
                     app,
@@ -576,7 +590,7 @@ impl<H: UiHost> UiTree<H> {
             if let Some(service) = app.global::<KeymapService>()
                 && let Some(command) = service.keymap.resolve(ctx, stroke.chord)
             {
-                if Self::command_is_enabled(app, self.window, ctx, &command) {
+                if self.command_is_enabled_for_shortcut_dispatch(app, ctx, &command) {
                     app.push_effect(Effect::Command {
                         window: self.window,
                         command,

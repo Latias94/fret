@@ -1,6 +1,6 @@
 # Action-First Authoring + View Runtime (Fearless Refactor v1) — Design
 
-Status: Draft (workstream note; ADRs remain the source of truth)
+Status: Landed (v1 implementation is in-tree; ADRs remain the source of truth)
 Last updated: 2026-03-03
 
 This workstream refactors Fret’s **user-facing authoring story** to close the ergonomics + correctness gap vs

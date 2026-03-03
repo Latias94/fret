@@ -194,6 +194,13 @@ pub(super) fn handle_click_step(
             modifiers,
             pointer_type,
         ));
+        let injected_step_index = step_index.min(u32::MAX as usize) as u32;
+        active.last_injected_step = Some(injected_step_index);
+        active.last_injected_pointer_source_step = Some(injected_step_index);
+        active.last_injected_pointer_source_test_id = match &target {
+            UiSelectorV1::TestId { id, .. } => Some(id.clone()),
+            _ => node.test_id.clone(),
+        };
 
         active.wait_until = None;
         active.screenshot_wait = None;
@@ -381,6 +388,13 @@ pub(super) fn handle_tap_step(
             modifiers,
             pointer_type,
         ));
+        let injected_step_index = step_index.min(u32::MAX as usize) as u32;
+        active.last_injected_step = Some(injected_step_index);
+        active.last_injected_pointer_source_step = Some(injected_step_index);
+        active.last_injected_pointer_source_test_id = match &target {
+            UiSelectorV1::TestId { id, .. } => Some(id.clone()),
+            _ => node.test_id.clone(),
+        };
 
         active.wait_until = None;
         active.screenshot_wait = None;
@@ -1277,8 +1291,13 @@ pub(super) fn handle_click_stable_step(
                                 click_modifiers,
                                 pointer_type,
                             ));
-                            active.last_injected_step =
-                                Some(step_index.min(u32::MAX as usize) as u32);
+                            let injected_step_index = step_index.min(u32::MAX as usize) as u32;
+                            active.last_injected_step = Some(injected_step_index);
+                            active.last_injected_pointer_source_step = Some(injected_step_index);
+                            active.last_injected_pointer_source_test_id = match &target {
+                                UiSelectorV1::TestId { id, .. } => Some(id.clone()),
+                                _ => node.test_id.clone(),
+                            };
                             active.wait_until = None;
                             active.screenshot_wait = None;
                             active.next_step = active.next_step.saturating_add(1);
@@ -1297,7 +1316,13 @@ pub(super) fn handle_click_stable_step(
                             click_modifiers,
                             pointer_type,
                         ));
-                        active.last_injected_step = Some(step_index.min(u32::MAX as usize) as u32);
+                        let injected_step_index = step_index.min(u32::MAX as usize) as u32;
+                        active.last_injected_step = Some(injected_step_index);
+                        active.last_injected_pointer_source_step = Some(injected_step_index);
+                        active.last_injected_pointer_source_test_id = match &target {
+                            UiSelectorV1::TestId { id, .. } => Some(id.clone()),
+                            _ => node.test_id.clone(),
+                        };
                         active.wait_until = None;
                         active.screenshot_wait = None;
                         active.next_step = active.next_step.saturating_add(1);

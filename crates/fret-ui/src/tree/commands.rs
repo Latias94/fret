@@ -90,7 +90,6 @@ impl<H: UiHost> UiTree<H> {
         let default_root = barrier_root.unwrap_or(base_root);
         let focus = self.focus;
         let focus_in_default_root = focus.is_some_and(|n| self.is_descendant(default_root, n));
-
         let start = focus.unwrap_or(default_root);
         let mut availability = self.command_availability_from_node(app, &input_ctx, start, command);
         if availability == CommandAvailability::NotHandled
@@ -142,23 +141,6 @@ impl<H: UiHost> UiTree<H> {
         }
     }
 
-    fn command_availability_start_node(
-        &mut self,
-        base_root: NodeId,
-        dispatch_snapshot: &UiDispatchSnapshot,
-        barrier_root: Option<NodeId>,
-    ) -> Option<NodeId> {
-        if self
-            .focus
-            .is_some_and(|n| dispatch_snapshot.pre.get(n).is_none())
-        {
-            self.set_focus_unchecked(None, "commands: focus missing from dispatch snapshot");
-        }
-
-        let default_root = barrier_root.unwrap_or(base_root);
-        self.focus.or(Some(default_root))
-    }
-
     #[stacksafe::stacksafe]
     fn command_availability_from_node(
         &mut self,
@@ -204,8 +186,12 @@ impl<H: UiHost> UiTree<H> {
     ///
     /// This is a data-only integration seam for runner/platform and UI-kit layers (menus, command
     /// palette, shortcut help). Most apps should prefer publishing a filtered snapshot (e.g. only
-    /// menu/palette command sets) at the app-driver layer. This retained-runtime helper exists for
-    /// callers that want the "all widget commands" baseline behavior.
+    /// menu/palette command sets) at the app-driver layer.
+    ///
+    /// Notes:
+    /// - This retained-runtime helper publishes a conservative baseline: for each widget-scoped
+    ///   command in the registry, `NotHandled` is treated as "unavailable" (`false`) so
+    ///   cross-surface gating behaves consistently.
     pub fn publish_window_command_action_availability_snapshot(
         &mut self,
         app: &mut H,
@@ -229,11 +215,17 @@ impl<H: UiHost> UiTree<H> {
             active_focus_layers.as_slice(),
             barrier_root,
         );
-        let Some(start) =
-            self.command_availability_start_node(base_root, &dispatch_snapshot, barrier_root)
-        else {
-            return;
-        };
+        if self
+            .focus
+            .is_some_and(|n| dispatch_snapshot.pre.get(n).is_none())
+        {
+            self.set_focus_unchecked(None, "commands: focus missing from dispatch snapshot");
+        }
+
+        let default_root = barrier_root.unwrap_or(base_root);
+        let focus = self.focus;
+        let focus_in_default_root = focus.is_some_and(|n| self.is_descendant(default_root, n));
+        let start = focus.unwrap_or(default_root);
 
         let mut snapshot: HashMap<CommandId, bool> = HashMap::new();
         let widget_commands: Vec<CommandId> = app
@@ -252,6 +244,14 @@ impl<H: UiHost> UiTree<H> {
             }
 
             let mut availability = self.command_availability_from_node(app, input_ctx, start, &id);
+            if availability == CommandAvailability::NotHandled
+                && focus.is_some()
+                && !focus_in_default_root
+                && start != default_root
+            {
+                availability =
+                    self.command_availability_from_node(app, input_ctx, default_root, &id);
+            }
             if availability == CommandAvailability::NotHandled
                 && matches!(id.as_str(), "focus.next" | "focus.previous")
             {

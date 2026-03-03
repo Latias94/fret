@@ -1,6 +1,6 @@
 # Action-First Authoring + View Runtime (Fearless Refactor v1) — TODO
 
-Status: Active
+Status: Landed (v1)
 Last updated: 2026-03-03
 
 Related:
@@ -81,9 +81,17 @@ ID format:
       `ecosystem/fret-bootstrap/src/ui_diagnostics/script_steps_wait.rs` (`handle_wait_command_dispatch_trace_step`) +
       `tools/diag-scripts/cookbook/imui-action-basics/cookbook-imui-action-basics-cross-frontend.json`
     - Implemented (pointer → stable selector): command dispatch trace entries can include `source_test_id`
-      for pointer-triggered dispatch (populated from the hit-test trace for injected steps).
+      for pointer-triggered dispatch (best-effort).
+      - Scripted pointer injection: stamps the selector `test_id` as the `source_test_id` and records
+        it alongside the injected step.
+      - Fallback: derives `source_test_id` from the hit-test trace when available.
     - Gated (scripted): `tools/diag-scripts/cookbook/hello/cookbook-hello-click-count.json` asserts
       `source_test_id == cookbook.hello.button` for `cookbook.hello.click.v1`.
+    - Implemented (script determinism): the golden-path driver flushes `Effect::Command` after
+      script-injected input so `wait_command_dispatch_trace` can observe dispatch decisions without
+      depending on runner-level effect timing.
+    - Implemented (shortcut correctness): widget-scoped shortcut gating prefers live UI-tree
+      availability to avoid stale `command_disabled` decisions after modal barriers close.
 - [x] AFA-actions-015 Converge command palette/menu invocation with action dispatch.
   - Goal: palette/menu triggers and pointer triggers share the same action pipeline.
   - Evidence:
