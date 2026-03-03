@@ -37,7 +37,7 @@ Goal: new suites/checks should plug in without growing a central match statement
 - `crates/fret-diag/src/registry/suites.rs`
   - `SuiteRegistry` (suite name → suite definition)
   - `SuiteResolver` (suite name → scripts; promoted suites + suite-dir suites)
-- `crates/fret-diag/src/registry/checks.rs`
+- `crates/fret-diag/src/registry/checks/mod.rs`
   - `CheckRegistry` scaffolding (seam only; first real migration pending)
 
 ## 4) Protocol types (portable schema)
@@ -69,4 +69,3 @@ There is already a “best-effort” layout dump path (native-focused):
 
 Workstream direction (later milestones): connect this to `diag` artifacts via a bounded sidecar
 contract so layout issues can be debugged without ad-hoc UI changes.
-

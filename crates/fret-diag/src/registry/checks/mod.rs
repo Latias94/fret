@@ -73,7 +73,8 @@ impl CheckRegistry {
     ) -> Result<(), String> {
         for entry in self.post_run_checks {
             if (entry.should_run)(checks) {
-                (entry.run)(ctx, checks)?;
+                (entry.run)(ctx, checks)
+                    .map_err(|err| format!("post-run check `{}` failed: {}", entry.id, err))?;
             }
         }
         Ok(())
@@ -2149,4 +2150,42 @@ fn run_pixels_unchanged_test_id(
         return Ok(());
     };
     crate::stats::check_out_dir_for_pixels_unchanged(ctx.out_dir, test_id, ctx.warmup_frames)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn apply_post_run_checks_includes_check_id_in_error() {
+        fn should_run(_checks: &RunChecks) -> bool {
+            true
+        }
+
+        fn run(_ctx: PostRunCheckContext<'_>, _checks: &RunChecks) -> Result<(), String> {
+            Err("boom".to_string())
+        }
+
+        let registry = CheckRegistry {
+            post_run_checks: &[PostRunCheckEntry {
+                id: "test_check",
+                requires_bundle_artifact: false,
+                requires_screenshots: false,
+                should_run,
+                run,
+            }],
+        };
+
+        let checks = RunChecks::default();
+
+        let ctx = PostRunCheckContext {
+            bundle_path: Path::new("bundle.json"),
+            out_dir: Path::new("out"),
+            warmup_frames: 0,
+        };
+
+        let err = registry.apply_post_run_checks(ctx, &checks).unwrap_err();
+        assert!(err.contains("test_check"), "{err}");
+        assert!(err.contains("boom"), "{err}");
+    }
 }
