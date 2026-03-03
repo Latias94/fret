@@ -49,31 +49,24 @@ pub(super) fn preview_forms(
         vec![
             DocSection::new("Form Demo", upstream_demo)
                 .description("Aligned with shadcn/ui `form-demo.tsx` (new-york-v4).")
-                .max_w(Px(840.0))
                 .code_rust_from_file_region(snippets::upstream_demo::SOURCE, "example"),
             DocSection::new("Demo", demo)
                 .description("FieldSet + FieldGroup recipe with multiple controls.")
-                .max_w(Px(840.0))
                 .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
             DocSection::new("Input", input)
                 .description("A model-bound input control.")
-                .max_w(Px(840.0))
                 .code_rust_from_file_region(snippets::input::SOURCE, "example"),
             DocSection::new("Textarea", textarea)
                 .description("A model-bound textarea control with fixed height.")
-                .max_w(Px(840.0))
                 .code_rust_from_file_region(snippets::textarea::SOURCE, "example"),
             DocSection::new("Checkbox + Switch", controls)
                 .description("Basic checkbox + switch controls with labels.")
-                .max_w(Px(840.0))
                 .code_rust_from_file_region(snippets::controls::SOURCE, "example"),
             DocSection::new("Fieldset", fieldset)
                 .description("FieldSet recipe with grouped fields and action row.")
-                .max_w(Px(840.0))
                 .code_rust_from_file_region(snippets::fieldset::SOURCE, "example"),
             DocSection::new("RTL", rtl)
                 .description("Form composition under an RTL direction provider.")
-                .max_w(Px(840.0))
                 .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
             DocSection::new("Notes", notes)
                 .description("API reference pointers and authoring notes.")
