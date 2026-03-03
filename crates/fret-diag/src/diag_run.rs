@@ -255,25 +255,25 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
     let checks_for_post_run = checks.clone();
 
     let RunChecks {
-        check_chart_sampling_window_shifts_min,
-        check_dock_drag_min,
-        check_drag_cache_root_paint_only_test_id,
+        check_chart_sampling_window_shifts_min: _,
+        check_dock_drag_min: _,
+        check_drag_cache_root_paint_only_test_id: _,
         check_gc_sweep_liveness: _,
-        check_hover_layout_max,
+        check_hover_layout_max: _,
         check_idle_no_paint_min: _,
-        check_layout_fast_path_min,
-        check_node_graph_cull_window_shifts_max,
-        check_node_graph_cull_window_shifts_min,
+        check_layout_fast_path_min: _,
+        check_node_graph_cull_window_shifts_max: _,
+        check_node_graph_cull_window_shifts_min: _,
         check_notify_hotspot_file_max: _,
         check_triage_hint_absent_codes: _,
-        check_overlay_synthesis_min,
+        check_overlay_synthesis_min: _,
         check_pixels_changed_test_id: _,
         check_pixels_unchanged_test_id: _,
-        check_prepaint_actions_min,
-        check_retained_vlist_attach_detach_max,
-        check_retained_vlist_keep_alive_budget,
-        check_retained_vlist_keep_alive_reuse_min,
-        check_retained_vlist_reconcile_no_notify_min,
+        check_prepaint_actions_min: _,
+        check_retained_vlist_attach_detach_max: _,
+        check_retained_vlist_keep_alive_budget: _,
+        check_retained_vlist_keep_alive_reuse_min: _,
+        check_retained_vlist_reconcile_no_notify_min: _,
         check_semantics_changed_repainted: _,
         check_stale_paint_eps: _,
         check_stale_paint_test_id: _,
@@ -337,21 +337,21 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
         check_ui_gallery_web_ime_bridge_enabled: _,
         check_view_cache_reuse_min,
         check_view_cache_reuse_stable_min,
-        check_viewport_capture_min,
-        check_viewport_input_min,
-        check_vlist_policy_key_stable,
-        check_vlist_visible_range_refreshes_max,
-        check_vlist_visible_range_refreshes_min,
-        check_vlist_window_shifts_escape_max,
-        check_vlist_window_shifts_explainable,
-        check_vlist_window_shifts_have_prepaint_actions,
-        check_vlist_window_shifts_non_retained_max,
-        check_vlist_window_shifts_prefetch_max,
-        check_wheel_scroll_hit_changes_test_id,
-        check_wheel_scroll_test_id,
+        check_viewport_capture_min: _,
+        check_viewport_input_min: _,
+        check_vlist_policy_key_stable: _,
+        check_vlist_visible_range_refreshes_max: _,
+        check_vlist_visible_range_refreshes_min: _,
+        check_vlist_window_shifts_escape_max: _,
+        check_vlist_window_shifts_explainable: _,
+        check_vlist_window_shifts_have_prepaint_actions: _,
+        check_vlist_window_shifts_non_retained_max: _,
+        check_vlist_window_shifts_prefetch_max: _,
+        check_wheel_scroll_hit_changes_test_id: _,
+        check_wheel_scroll_test_id: _,
         check_windowed_rows_offset_changes_eps: _,
-        check_windowed_rows_offset_changes_min,
-        check_windowed_rows_visible_start_changes_repainted,
+        check_windowed_rows_offset_changes_min: _,
+        check_windowed_rows_visible_start_changes_repainted: _,
         dump_semantics_changed_repainted_json: _,
     } = checks;
 
@@ -392,42 +392,10 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
         || pack_include_screenshots;
     let wants_post_run_bundle = wants_pack_zip || ensure_ai_packet;
     let check_registry = crate::registry::checks::CheckRegistry::builtin();
-    let wants_registered_post_run_checks =
-        check_registry.wants_post_run_checks(&checks_for_post_run);
-    let wants_ad_hoc_post_run_checks = check_wheel_scroll_test_id.is_some()
-        || check_wheel_scroll_hit_changes_test_id.is_some()
-        || check_prepaint_actions_min.is_some()
-        || check_chart_sampling_window_shifts_min.is_some()
-        || check_node_graph_cull_window_shifts_min.is_some()
-        || check_node_graph_cull_window_shifts_max.is_some()
-        || check_vlist_visible_range_refreshes_min.is_some()
-        || check_vlist_visible_range_refreshes_max.is_some()
-        || check_vlist_window_shifts_explainable
-        || check_vlist_window_shifts_have_prepaint_actions
-        || check_vlist_window_shifts_non_retained_max.is_some()
-        || check_vlist_window_shifts_prefetch_max.is_some()
-        || check_vlist_window_shifts_escape_max.is_some()
-        || check_vlist_policy_key_stable
-        || check_windowed_rows_offset_changes_min.is_some()
-        || check_windowed_rows_visible_start_changes_repainted
-        || check_layout_fast_path_min.is_some()
-        || check_drag_cache_root_paint_only_test_id.is_some()
-        || check_hover_layout_max.is_some()
-        || check_view_cache_reuse_min.is_some()
-        || check_view_cache_reuse_stable_min.is_some()
-        || check_overlay_synthesis_min.is_some()
-        || check_viewport_input_min.is_some()
-        || check_dock_drag_min.is_some()
-        || check_viewport_capture_min.is_some()
-        || check_retained_vlist_reconcile_no_notify_min.is_some()
-        || check_retained_vlist_attach_detach_max.is_some()
-        || check_retained_vlist_keep_alive_reuse_min.is_some()
-        || check_retained_vlist_keep_alive_budget.is_some();
-    let wants_post_run_checks = wants_registered_post_run_checks || wants_ad_hoc_post_run_checks;
+    let wants_post_run_checks = check_registry.wants_post_run_checks(&checks_for_post_run);
 
-    let wants_bundle_artifact = wants_post_run_bundle
-        || wants_ad_hoc_post_run_checks
-        || check_registry.wants_bundle_artifact(&checks_for_post_run);
+    let wants_bundle_artifact =
+        wants_post_run_bundle || check_registry.wants_bundle_artifact(&checks_for_post_run);
 
     let mut pack_defaults = (
         pack_include_root_artifacts,

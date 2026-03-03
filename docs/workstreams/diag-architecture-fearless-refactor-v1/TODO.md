@@ -24,6 +24,7 @@ This TODO is organized by milestones (see `MILESTONES.md`). Keep tasks **small a
 - [x] Migrate `diag suite` promoted-suite resolution to `SuiteRegistry` (remove duplicate loading logic).
 - [x] Centralize builtin suite script resolution + env defaults in `resolve_builtin_suite_scripts` (reduce `diag_suite.rs` churn).
 - [x] Split “artifact materialization + integrity” into one focused module boundary with stable APIs (`artifact_store`).
+- [x] Migrate remaining ad-hoc post-run checks from `post_run_checks.rs` into `CheckRegistry` (leave only bundle path selection).
 - [ ] Remove any remaining “global state by convention” patterns in favor of explicit context objects.
 
 ## M2 — Runtime extensibility (ecosystem contributions)
