@@ -1115,9 +1115,14 @@ impl Carousel {
         let api_handle = self.api_handle.clone().unwrap_or(default_api_handle);
         let api_snapshot = self.api_snapshot.clone().unwrap_or(default_api_snapshot);
         let content = content(cx);
+        let track_start_neg_margin = content.track_start_neg_margin;
 
-        self.items(content.items)
-            .refine_viewport_layout(content.viewport_layout)
+        let mut this = self.items(content.items);
+        if let Some(margin) = track_start_neg_margin {
+            this = this.track_start_neg_margin(margin);
+        }
+
+        this.refine_viewport_layout(content.viewport_layout)
             .refine_track_layout(content.track_layout)
             .refine_item_layout(content.item_layout)
             .api_handle_model(api_handle)
@@ -1237,7 +1242,7 @@ impl Carousel {
             };
             let track_layout = decl_style::layout_style(&theme, track_layout);
 
-            let item_pad = decl_style::space(&theme, self.item_padding_start);
+            let item_pad_default_space = self.item_padding_start;
 
             let (track_direction, button_axis) = match orientation {
                 CarouselOrientation::Horizontal => {
@@ -2695,6 +2700,10 @@ impl Carousel {
                                 .and_then(|f| f.basis.as_ref())
                                 .is_some();
 
+                            let item_pad_space =
+                                item.padding_start.unwrap_or(item_pad_default_space);
+                            let item_pad = decl_style::space(&theme_for_items, item_pad_space);
+
                             let content = item.child;
                             slide_content_ids_ref.push(content.id);
 
@@ -3915,6 +3924,7 @@ pub struct CarouselContent {
     viewport_layout: LayoutRefinement,
     track_layout: LayoutRefinement,
     item_layout: LayoutRefinement,
+    track_start_neg_margin: Option<Space>,
 }
 
 impl CarouselContent {
@@ -3924,6 +3934,7 @@ impl CarouselContent {
             viewport_layout: LayoutRefinement::default(),
             track_layout: LayoutRefinement::default(),
             item_layout: LayoutRefinement::default(),
+            track_start_neg_margin: None,
         }
     }
 
@@ -3941,6 +3952,14 @@ impl CarouselContent {
         self.item_layout = self.item_layout.merge(layout);
         self
     }
+
+    /// Match shadcn's `CarouselContent className="-ml-4"` / `"-mt-4"` spacing approach.
+    ///
+    /// This is a convenience surface that maps to [`Carousel::track_start_neg_margin`].
+    pub fn track_start_neg_margin(mut self, margin: Space) -> Self {
+        self.track_start_neg_margin = Some(margin);
+        self
+    }
 }
 
 /// shadcn/ui `CarouselItem` (v4).
@@ -3948,6 +3967,7 @@ impl CarouselContent {
 pub struct CarouselItem {
     child: AnyElement,
     layout: LayoutRefinement,
+    padding_start: Option<Space>,
 }
 
 impl CarouselItem {
@@ -3955,12 +3975,21 @@ impl CarouselItem {
         Self {
             child,
             layout: LayoutRefinement::default(),
+            padding_start: None,
         }
     }
 
     /// Matches shadcn's per-item `className` surface (e.g. `md:basis-1/2`).
     pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
         self.layout = self.layout.merge(layout);
+        self
+    }
+
+    /// Matches shadcn's per-item `className="pl-4"` / `pt-4` spacing approach.
+    ///
+    /// This is a convenience surface that maps to the recipe's start padding for each slide.
+    pub fn padding_start(mut self, padding: Space) -> Self {
+        self.padding_start = Some(padding);
         self
     }
 }
