@@ -245,6 +245,7 @@ mod scroll_invalidation;
 mod semantics_focus_shortcuts;
 mod semantics_slider_set_value_gate;
 mod stack_safety;
+mod subtree_layout_dirty_underflow_repair;
 mod transforms;
 mod view_cache;
 mod window_command_action_availability_snapshot;

@@ -287,7 +287,9 @@ fn scroll_wheel_bubbles_to_ancestor_when_axis_mismatch() {
     let outer_scroll_node = ui.children(root)[0];
     let outer_column_node = ui.children(outer_scroll_node)[0];
     let inner_scroll_node = ui.children(outer_column_node)[6];
-    let inner_bounds = ui.debug_node_bounds(inner_scroll_node).expect("inner bounds");
+    let inner_bounds = ui
+        .debug_node_bounds(inner_scroll_node)
+        .expect("inner bounds");
     let wheel_pos = fret_core::Point::new(
         Px(inner_bounds.origin.x.0 + 5.0),
         Px(inner_bounds.origin.y.0 + 5.0),
