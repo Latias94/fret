@@ -93,7 +93,9 @@ ID format:
     - [x] `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-right-keeps-pinned-smoke.json`
 - [x] WTS-editor-032 Dirty close confirmation hooks (workspace-level, not tab mechanism).
   - Evidence: `ecosystem/fret-workspace/src/close_policy.rs` and `ecosystem/fret-workspace/src/tabs.rs` (`apply_command_with_close_policy`)
-  - Diag gate: `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-dirty-is-blocked-smoke.json`
+  - Diag gates:
+    - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-dirty-is-blocked-smoke.json`
+    - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-dirty-shows-prompt-and-discard-closes-smoke.json`
 
 ## E. Cleanup + Convergence
 

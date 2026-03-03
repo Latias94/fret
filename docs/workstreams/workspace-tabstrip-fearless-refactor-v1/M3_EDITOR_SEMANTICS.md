@@ -25,3 +25,6 @@ mechanism-level regression gates.
 - Dirty close policy:
   - close action path consults policy, not tab mechanism
   - Evidence: `ecosystem/fret-workspace/src/close_policy.rs` and `ecosystem/fret-workspace/src/tabs.rs`
+  - Demo-only prompt (optional UX proof):
+    - `apps/fret-examples/src/workspace_shell_demo.rs`
+    - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-dirty-shows-prompt-and-discard-closes-smoke.json`

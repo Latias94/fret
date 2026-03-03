@@ -4842,8 +4842,32 @@
       ],
       "target_hints": [
         "Marks doc-a-2 dirty via demo debug button.",
-        "Attempts to close doc-a-2 via the close button.",
+        "Attempts to close doc-a-2 via the demo debug Close active (pane-a) button.",
         "Asserts the tab still exists (close blocked by policy)."
+      ]
+    },
+    {
+      "id": "workspace-shell-demo-tab-close-dirty-shows-prompt-and-discard-closes-smoke",
+      "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-dirty-shows-prompt-and-discard-closes-smoke.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "diag-hardening-smoke-workspace"
+      ],
+      "tags": [
+        "close",
+        "dirty",
+        "gate",
+        "prompt",
+        "smoke",
+        "tabstrip",
+        "workspace"
+      ],
+      "target_hints": [
+        "Marks doc-a-2 dirty via demo debug button.",
+        "Attempts to close doc-a-2 via the demo debug Close active (pane-a) button (blocked by policy).",
+        "Asserts the dirty-close prompt is shown, then discards and closes the tab."
       ]
     },
     {

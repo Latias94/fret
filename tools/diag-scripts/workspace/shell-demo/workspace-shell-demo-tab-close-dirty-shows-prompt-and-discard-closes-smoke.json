@@ -1,8 +1,8 @@
 {
   "schema_version": 2,
   "meta": {
-    "name": "Workspace shell demo: dirty close is blocked by policy (smoke)",
-    "tags": ["workspace", "tabstrip", "dirty", "close", "smoke", "gate"],
+    "name": "Workspace shell demo: dirty close shows prompt and discard closes (smoke)",
+    "tags": ["workspace", "tabstrip", "dirty", "close", "prompt", "smoke", "gate"],
     "required_capabilities": ["diag.script_v2"],
     "env_defaults": {
       "FRET_WORKSPACE_SHELL_DEBUG_PREVIEW": "1",
@@ -10,8 +10,8 @@
     },
     "target_hints": [
       "Marks the active tab as dirty via demo debug button.",
-      "Attempts to close the tab via the demo debug Close active (pane-a) button.",
-      "Asserts the tab still exists (policy blocked the close)."
+      "Attempts to close the tab via the demo debug Close active (pane-a) button (blocked by policy).",
+      "Asserts a dirty-close prompt is shown, then discards and closes the tab."
     ]
   },
   "steps": [
@@ -40,12 +40,22 @@
 
     { "type": "click", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-debug-close-active" } },
     { "type": "wait_frames", "n": 10 },
+
     {
       "type": "wait_until",
-      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-2" } },
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "workspace-shell-dirty-close-prompt" } },
       "timeout_frames": 240
     },
 
-    { "type": "capture_bundle", "label": "workspace-shell-demo-tab-close-dirty-is-blocked-smoke" }
+    { "type": "click", "target": { "kind": "test_id", "id": "workspace-shell-dirty-close-prompt.discard" } },
+    { "type": "wait_frames", "n": 10 },
+
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "not_exists", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-2" } },
+      "timeout_frames": 240
+    },
+
+    { "type": "capture_bundle", "label": "workspace-shell-demo-tab-close-dirty-shows-prompt-and-discard-closes-smoke" }
   ]
 }
