@@ -13,8 +13,18 @@ pub(super) fn tab_bar_insert_index_for_drop(
     tab_widths: Option<&Arc<[Px]>>,
     scroll: Px,
     position: Point,
+    dragged_tab_index: Option<usize>,
 ) -> Option<usize> {
-    resolve_tab_bar_drop(theme, tab_bar, tab_count, tab_widths, scroll, position).insert_index
+    resolve_tab_bar_drop(
+        theme,
+        tab_bar,
+        tab_count,
+        tab_widths,
+        scroll,
+        position,
+        dragged_tab_index,
+    )
+    .insert_index
 }
 
 #[cfg(test)]
@@ -89,7 +99,7 @@ mod tests {
             Px(button.origin.y.0 + button.size.height.0 * 0.5),
         );
         assert_eq!(
-            tab_bar_insert_index_for_drop(theme, tab_bar, 3, Some(&widths), Px(0.0), pos),
+            tab_bar_insert_index_for_drop(theme, tab_bar, 3, Some(&widths), Px(0.0), pos, None),
             None
         );
     }
@@ -109,7 +119,7 @@ mod tests {
         let pos = Point::new(x, y);
 
         assert_eq!(
-            tab_bar_insert_index_for_drop(theme, tab_bar, 3, Some(&widths), Px(0.0), pos),
+            tab_bar_insert_index_for_drop(theme, tab_bar, 3, Some(&widths), Px(0.0), pos, None),
             Some(3)
         );
     }

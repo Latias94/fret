@@ -2375,6 +2375,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
             hint_font_size_inner: Px,
             hint_font_size_outer: Px,
             position: Point,
+            dragged_tab_for_drop: Option<(DockNodeId, usize)>,
             mut candidates: Option<&mut Vec<fret_runtime::DockDropCandidateRectDiagnostics>>,
         ) -> Option<(HoverTarget, fret_runtime::DockDropResolveSource)> {
             fn leaf_tabs_node_at_pos(
@@ -2453,6 +2454,8 @@ impl<H: UiHost> Widget<H> for DockSpace {
                         }
                     }
                     let scroll = tab_scroll_for_node(tab_scroll, tabs_node);
+                    let dragged_tab_index = dragged_tab_for_drop
+                        .and_then(|(source_tabs, index)| (source_tabs == tabs_node).then_some(index));
                     let insert_index = super::tab_bar_drop_target::tab_bar_insert_index_for_drop(
                         theme.clone(),
                         tab_bar,
@@ -2460,6 +2463,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                         tab_widths.get(&tabs_node),
                         scroll,
                         position,
+                        dragged_tab_index,
                     )?;
                     return Some((
                         HoverTarget {
@@ -2625,6 +2629,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
             split_handle_gap: Px,
             split_handle_hit_thickness: Px,
             position: Point,
+            dragged_tab_for_drop: Option<(DockNodeId, usize)>,
             mut candidates: Option<&mut Vec<fret_runtime::DockDropCandidateRectDiagnostics>>,
         ) -> (Option<DockDropTarget>, fret_runtime::DockDropResolveSource) {
             fn clamp_point_inside_rect(rect: Rect, point: Point) -> Point {
@@ -2790,6 +2795,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                 hint_font_size_inner,
                 hint_font_size_outer,
                 effective_position,
+                dragged_tab_for_drop,
                 candidates,
             )
             .map(|(target, source)| (Some(DockDropTarget::Dock(target)), source))
@@ -2814,6 +2820,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
             split_handle_gap: Px,
             split_handle_hit_thickness: Px,
             position: Point,
+            dragged_tab_for_drop: Option<(DockNodeId, usize)>,
             candidates: Option<&mut Vec<fret_runtime::DockDropCandidateRectDiagnostics>>,
         ) -> (Option<DockDropTarget>, fret_runtime::DockDropResolveSource) {
             if invert_docking {
@@ -2842,6 +2849,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                     split_handle_gap,
                     split_handle_hit_thickness,
                     position,
+                    dragged_tab_for_drop,
                     candidates,
                 )
             };
@@ -5829,6 +5837,12 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                         if !requested_tear_off {
                                             let mut candidates =
                                                 Vec::<fret_runtime::DockDropCandidateRectDiagnostics>::new();
+                                            let dragged_tab_for_drop = match drag {
+                                                DockDragSnapshot::Panel(drag) => dock
+                                                    .graph
+                                                    .find_panel_in_window(drag.source_window, &drag.panel),
+                                                DockDragSnapshot::Tabs(_) => None,
+                                            };
 	                                            let (hover, source) = resolve_dock_drop_target(
 	                                                None,
 	                                                invert_docking,
@@ -5846,6 +5860,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
 	                                                split_handle_gap,
 	                                                split_handle_hit_thickness,
 	                                                position,
+	                                                dragged_tab_for_drop,
 	                                                diagnostics_enabled.then_some(&mut candidates),
 	                                            );
                                             dock.hover = hover;
@@ -6042,6 +6057,12 @@ impl<H: UiHost> Widget<H> for DockSpace {
 	                                            split_handle_gap,
 	                                            split_handle_hit_thickness,
 	                                            position,
+	                                            match drag {
+	                                                DockDragSnapshot::Panel(drag) => dock
+	                                                    .graph
+	                                                    .find_panel_in_window(drag.source_window, &drag.panel),
+	                                                DockDragSnapshot::Tabs(_) => None,
+	                                            },
 	                                            diagnostics_enabled.then_some(&mut candidates),
                                         );
                                         if diagnostics_enabled {
