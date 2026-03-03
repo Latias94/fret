@@ -40,6 +40,7 @@ Any remaining legacy surfaces that embed raw Rust code strings are tracked via t
 - [x] Forbid snippet files from importing UI Gallery internals (`crate::ui`, `crate::spec`) (`apps/fret-ui-gallery/tests/ui_snippets_deny_gallery_internal_imports.rs`).
 - [x] Require every snippet file to export a `SOURCE` const (`apps/fret-ui-gallery/tests/ui_snippets_require_source_const.rs`).
 - [x] Add a small “drift audit” doc section in UI Gallery (optional) to list remaining legacy sections (`apps/fret-ui-gallery/build.rs`, `apps/fret-ui-gallery/src/ui/previews/pages/harness/intro.rs`).
+- [x] Prevent ContextMenu Escape dismissal from restoring focus (ensures focus is cleared when the overlay closes): `ecosystem/fret-ui-kit/src/primitives/menu/root.rs`, `ecosystem/fret-ui-shadcn/src/context_menu.rs`, `ecosystem/fret-ui-shadcn/tests/context_menu_escape_dismiss_focus_clears.rs`.
 
 ### Next (post-migration)
 

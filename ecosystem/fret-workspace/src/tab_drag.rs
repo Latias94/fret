@@ -3,7 +3,9 @@ use std::sync::Arc;
 use crate::layout::SplitSide;
 use fret_core::{AppWindowId, Axis, Point, PointerId, Px, Rect};
 use fret_runtime::DragKindId;
-use fret_ui_headless::tab_strip_drop_target::{TabInsertionSide, compute_tab_drop_target_midpoint};
+use fret_ui_headless::tab_strip_drop_target::compute_tab_drop_target_midpoint;
+
+pub use fret_ui_headless::tab_strip_drop_target::TabInsertionSide as WorkspaceTabInsertionSide;
 
 /// Drag kind for cross-pane workspace tab drags.
 pub const DRAG_KIND_WORKSPACE_TAB: DragKindId = DragKindId(0x57535F544142); // "WS_TAB"
@@ -15,12 +17,6 @@ pub enum WorkspaceTabDropZone {
     Right,
     Up,
     Down,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum WorkspaceTabInsertionSide {
-    Before,
-    After,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -137,10 +133,6 @@ pub fn compute_tab_drop_target(
     )?;
 
     let target = rects.get(target_ix)?.id.clone();
-    let side = match side {
-        TabInsertionSide::Before => WorkspaceTabInsertionSide::Before,
-        TabInsertionSide::After => WorkspaceTabInsertionSide::After,
-    };
     Some((target, side))
 }
 

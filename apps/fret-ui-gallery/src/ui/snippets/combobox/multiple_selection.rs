@@ -41,8 +41,6 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
 
     let combo = shadcn::ComboboxChips::new(values.clone(), open.clone())
         .a11y_label("Combobox multiple selection")
-        .width(Px(260.0))
-        .placeholder("Select frameworks")
         .query_model(query.clone())
         .trigger_test_id("ui-gallery-combobox-multiple-trigger")
         .test_id_prefix("ui-gallery-combobox-multiple")
@@ -53,7 +51,14 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
             shadcn::ComboboxItem::new("remix", "Remix"),
             shadcn::ComboboxItem::new("astro", "Astro"),
         ])
-        .into_element(cx);
+        .into_element_parts(cx, |_cx| {
+            vec![
+                shadcn::ComboboxTrigger::new().width_px(Px(260.0)).into(),
+                shadcn::ComboboxChipsInput::new()
+                    .placeholder("Select frameworks")
+                    .into(),
+            ]
+        });
 
     stack::vstack(
         cx,

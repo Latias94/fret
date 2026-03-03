@@ -1701,8 +1701,17 @@ impl<H: UiHost> UiTree<H> {
                 }
             }
         } else if matches!(event, Event::KeyDown { .. } | Event::KeyUp { .. }) {
+            // Key events must be scoped to the active focus layers (including focus barriers that
+            // do not block pointer input). When no focused node is available, default to the
+            // combined barrier root instead of the underlay base root.
+            let key_start = self
+                .focus
+                .filter(|&n| dispatch_cx.node_in_active_focus_layers(n))
+                .or(dispatch_cx.barrier_root)
+                .unwrap_or(node_id);
+
             let mut chain: Vec<NodeId> = Vec::new();
-            let mut cur = Some(node_id);
+            let mut cur = Some(key_start);
             while let Some(id) = cur {
                 chain.push(id);
                 if dispatch_cx.focus_snapshot.pre.get(id).is_none() {

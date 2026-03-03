@@ -91,16 +91,6 @@ pub fn toggle_variants(
     ToggleVariants { chrome, layout }
 }
 
-/// Upstream shadcn/ui compat alias for copy/paste parity.
-#[allow(non_snake_case)]
-pub fn toggleVariants(
-    theme: &ThemeSnapshot,
-    variant: ToggleVariant,
-    size: ToggleSize,
-) -> ToggleVariants {
-    toggle_variants(theme, variant, size)
-}
-
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
     c.a = (c.a * mul).clamp(0.0, 1.0);
     c

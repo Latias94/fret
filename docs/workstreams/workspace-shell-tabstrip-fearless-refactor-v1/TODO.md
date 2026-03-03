@@ -47,6 +47,8 @@ This file is an execution checklist for the design in `DESIGN.md`.
     - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-left-keeps-pinned-smoke.json`
   - [x] diag: "close others" keeps pinned
     - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-others-keeps-pinned-smoke.json`
+  - [x] diag: "close right" keeps pinned
+    - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-right-keeps-pinned-smoke.json`
 
 ## M3 — Preview tabs
 
