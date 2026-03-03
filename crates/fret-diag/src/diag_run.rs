@@ -258,13 +258,13 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
         check_chart_sampling_window_shifts_min,
         check_dock_drag_min,
         check_drag_cache_root_paint_only_test_id,
-        check_gc_sweep_liveness,
+        check_gc_sweep_liveness: _,
         check_hover_layout_max,
         check_idle_no_paint_min,
         check_layout_fast_path_min,
         check_node_graph_cull_window_shifts_max,
         check_node_graph_cull_window_shifts_min,
-        check_notify_hotspot_file_max,
+        check_notify_hotspot_file_max: _,
         check_triage_hint_absent_codes: _,
         check_overlay_synthesis_min,
         check_pixels_changed_test_id,
@@ -385,6 +385,91 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
         || pack_include_triage
         || pack_include_screenshots;
     let wants_post_run_bundle = wants_pack_zip || ensure_ai_packet;
+    let wants_registered_post_run_checks = crate::registry::checks::CheckRegistry::builtin()
+        .wants_post_run_checks(&checks_for_post_run);
+    let wants_post_run_checks = wants_registered_post_run_checks
+        || check_stale_paint_test_id.is_some()
+        || check_stale_scene_test_id.is_some()
+        || check_idle_no_paint_min.is_some()
+        || check_ui_gallery_code_editor_torture_marker_present
+        || check_ui_gallery_code_editor_torture_undo_redo
+        || check_ui_gallery_code_editor_torture_geom_fallbacks_low
+        || check_ui_gallery_code_editor_torture_read_only_blocks_edits
+        || check_ui_gallery_markdown_editor_source_read_only_blocks_edits
+        || check_ui_gallery_markdown_editor_source_disabled_blocks_edits
+        || check_ui_gallery_markdown_editor_source_soft_wrap_toggle_stable
+        || check_ui_gallery_markdown_editor_source_word_boundary
+        || check_ui_gallery_web_ime_bridge_enabled
+        || check_ui_gallery_text_rescan_system_fonts_font_stack_key_bumps
+        || check_ui_gallery_text_fallback_policy_key_bumps_on_settings_change
+        || check_ui_gallery_text_fallback_policy_key_bumps_on_locale_change
+        || check_ui_gallery_text_mixed_script_bundled_fallback_conformance
+        || check_ui_gallery_markdown_editor_source_line_boundary_triple_click
+        || check_ui_gallery_markdown_editor_source_a11y_composition
+        || check_ui_gallery_markdown_editor_source_a11y_composition_soft_wrap
+        || check_ui_gallery_markdown_editor_source_soft_wrap_editing_selection_wrap_stable
+        || check_ui_gallery_markdown_editor_source_folds_toggle_stable
+        || check_ui_gallery_markdown_editor_source_folds_clamp_selection_out_of_folds
+        || check_ui_gallery_markdown_editor_source_folds_placeholder_present
+        || check_ui_gallery_markdown_editor_source_folds_placeholder_present_under_soft_wrap
+        || check_ui_gallery_markdown_editor_source_folds_placeholder_absent_under_inline_preedit
+        || check_ui_gallery_markdown_editor_source_inlays_toggle_stable
+        || check_ui_gallery_markdown_editor_source_inlays_caret_navigation_stable
+        || check_ui_gallery_markdown_editor_source_inlays_present
+        || check_ui_gallery_markdown_editor_source_inlays_present_under_soft_wrap
+        || check_ui_gallery_markdown_editor_source_inlays_absent_under_inline_preedit
+        || check_ui_gallery_code_editor_torture_folds_placeholder_absent_under_inline_preedit
+        || check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_unwrapped
+        || check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations
+        || check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations_composed
+        || check_ui_gallery_code_editor_torture_decorations_toggle_stable_under_inline_preedit_composed
+        || check_ui_gallery_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed
+        || check_ui_gallery_code_editor_torture_composed_preedit_stable_after_wheel_scroll
+        || check_ui_gallery_code_editor_torture_composed_preedit_cancels_on_drag_selection
+        || check_ui_gallery_code_editor_torture_folds_placeholder_present
+        || check_ui_gallery_code_editor_torture_folds_placeholder_present_under_soft_wrap
+        || check_ui_gallery_code_editor_torture_inlays_present
+        || check_ui_gallery_code_editor_torture_inlays_absent_under_inline_preedit
+        || check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_unwrapped
+        || check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations
+        || check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations_composed
+        || check_ui_gallery_code_editor_torture_inlays_present_under_soft_wrap
+        || check_ui_gallery_code_editor_word_boundary
+        || check_ui_gallery_code_editor_a11y_selection
+        || check_ui_gallery_code_editor_a11y_composition
+        || check_ui_gallery_code_editor_a11y_selection_wrap
+        || check_ui_gallery_code_editor_a11y_composition_wrap
+        || check_ui_gallery_code_editor_a11y_composition_wrap_scroll
+        || check_semantics_changed_repainted
+        || check_wheel_scroll_test_id.is_some()
+        || check_wheel_scroll_hit_changes_test_id.is_some()
+        || check_prepaint_actions_min.is_some()
+        || check_chart_sampling_window_shifts_min.is_some()
+        || check_node_graph_cull_window_shifts_min.is_some()
+        || check_node_graph_cull_window_shifts_max.is_some()
+        || check_vlist_visible_range_refreshes_min.is_some()
+        || check_vlist_visible_range_refreshes_max.is_some()
+        || check_vlist_window_shifts_explainable
+        || check_vlist_window_shifts_have_prepaint_actions
+        || check_vlist_window_shifts_non_retained_max.is_some()
+        || check_vlist_window_shifts_prefetch_max.is_some()
+        || check_vlist_window_shifts_escape_max.is_some()
+        || check_vlist_policy_key_stable
+        || check_windowed_rows_offset_changes_min.is_some()
+        || check_windowed_rows_visible_start_changes_repainted
+        || check_layout_fast_path_min.is_some()
+        || check_drag_cache_root_paint_only_test_id.is_some()
+        || check_hover_layout_max.is_some()
+        || check_view_cache_reuse_min.is_some()
+        || check_view_cache_reuse_stable_min.is_some()
+        || check_overlay_synthesis_min.is_some()
+        || check_viewport_input_min.is_some()
+        || check_dock_drag_min.is_some()
+        || check_viewport_capture_min.is_some()
+        || check_retained_vlist_reconcile_no_notify_min.is_some()
+        || check_retained_vlist_attach_detach_max.is_some()
+        || check_retained_vlist_keep_alive_reuse_min.is_some()
+        || check_retained_vlist_keep_alive_budget.is_some();
 
     let mut pack_defaults = (
         pack_include_root_artifacts,
@@ -429,93 +514,6 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
                 src.display()
             );
         }
-
-        let wants_post_run_checks = check_stale_paint_test_id.is_some()
-            || check_stale_scene_test_id.is_some()
-            || check_idle_no_paint_min.is_some()
-            || check_pixels_changed_test_id.is_some()
-            || check_pixels_unchanged_test_id.is_some()
-            || check_ui_gallery_code_editor_torture_marker_present
-            || check_ui_gallery_code_editor_torture_undo_redo
-            || check_ui_gallery_code_editor_torture_geom_fallbacks_low
-            || check_ui_gallery_code_editor_torture_read_only_blocks_edits
-            || check_ui_gallery_markdown_editor_source_read_only_blocks_edits
-            || check_ui_gallery_markdown_editor_source_disabled_blocks_edits
-            || check_ui_gallery_markdown_editor_source_soft_wrap_toggle_stable
-            || check_ui_gallery_markdown_editor_source_word_boundary
-            || check_ui_gallery_web_ime_bridge_enabled
-            || check_ui_gallery_text_rescan_system_fonts_font_stack_key_bumps
-            || check_ui_gallery_text_fallback_policy_key_bumps_on_settings_change
-            || check_ui_gallery_text_fallback_policy_key_bumps_on_locale_change
-            || check_ui_gallery_text_mixed_script_bundled_fallback_conformance
-            || check_ui_gallery_markdown_editor_source_line_boundary_triple_click
-            || check_ui_gallery_markdown_editor_source_a11y_composition
-            || check_ui_gallery_markdown_editor_source_a11y_composition_soft_wrap
-            || check_ui_gallery_markdown_editor_source_soft_wrap_editing_selection_wrap_stable
-            || check_ui_gallery_markdown_editor_source_folds_toggle_stable
-            || check_ui_gallery_markdown_editor_source_folds_clamp_selection_out_of_folds
-            || check_ui_gallery_markdown_editor_source_folds_placeholder_present
-            || check_ui_gallery_markdown_editor_source_folds_placeholder_present_under_soft_wrap
-            || check_ui_gallery_markdown_editor_source_folds_placeholder_absent_under_inline_preedit
-            || check_ui_gallery_markdown_editor_source_inlays_toggle_stable
-            || check_ui_gallery_markdown_editor_source_inlays_caret_navigation_stable
-            || check_ui_gallery_markdown_editor_source_inlays_present
-            || check_ui_gallery_markdown_editor_source_inlays_present_under_soft_wrap
-            || check_ui_gallery_markdown_editor_source_inlays_absent_under_inline_preedit
-            || check_ui_gallery_code_editor_torture_folds_placeholder_absent_under_inline_preedit
-            || check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_unwrapped
-            || check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations
-            || check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations_composed
-            || check_ui_gallery_code_editor_torture_decorations_toggle_stable_under_inline_preedit_composed
-            || check_ui_gallery_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed
-            || check_ui_gallery_code_editor_torture_composed_preedit_stable_after_wheel_scroll
-            || check_ui_gallery_code_editor_torture_composed_preedit_cancels_on_drag_selection
-            || check_ui_gallery_code_editor_torture_folds_placeholder_present
-            || check_ui_gallery_code_editor_torture_folds_placeholder_present_under_soft_wrap
-            || check_ui_gallery_code_editor_torture_inlays_present
-            || check_ui_gallery_code_editor_torture_inlays_absent_under_inline_preedit
-            || check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_unwrapped
-            || check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations
-            || check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations_composed
-            || check_ui_gallery_code_editor_torture_inlays_present_under_soft_wrap
-            || check_ui_gallery_code_editor_word_boundary
-            || check_ui_gallery_code_editor_a11y_selection
-            || check_ui_gallery_code_editor_a11y_composition
-            || check_ui_gallery_code_editor_a11y_selection_wrap
-            || check_ui_gallery_code_editor_a11y_composition_wrap
-            || check_ui_gallery_code_editor_a11y_composition_wrap_scroll
-            || check_semantics_changed_repainted
-            || check_wheel_scroll_test_id.is_some()
-            || check_wheel_scroll_hit_changes_test_id.is_some()
-            || check_prepaint_actions_min.is_some()
-            || check_chart_sampling_window_shifts_min.is_some()
-            || check_node_graph_cull_window_shifts_min.is_some()
-            || check_node_graph_cull_window_shifts_max.is_some()
-            || check_vlist_visible_range_refreshes_min.is_some()
-            || check_vlist_visible_range_refreshes_max.is_some()
-            || check_vlist_window_shifts_explainable
-            || check_vlist_window_shifts_have_prepaint_actions
-            || check_vlist_window_shifts_non_retained_max.is_some()
-            || check_vlist_window_shifts_prefetch_max.is_some()
-            || check_vlist_window_shifts_escape_max.is_some()
-            || check_vlist_policy_key_stable
-            || check_windowed_rows_offset_changes_min.is_some()
-            || check_windowed_rows_visible_start_changes_repainted
-            || check_layout_fast_path_min.is_some()
-            || check_drag_cache_root_paint_only_test_id.is_some()
-            || check_hover_layout_max.is_some()
-            || check_gc_sweep_liveness
-            || !check_notify_hotspot_file_max.is_empty()
-            || check_view_cache_reuse_min.is_some()
-            || check_view_cache_reuse_stable_min.is_some()
-            || check_overlay_synthesis_min.is_some()
-            || check_viewport_input_min.is_some()
-            || check_dock_drag_min.is_some()
-            || check_viewport_capture_min.is_some()
-            || check_retained_vlist_reconcile_no_notify_min.is_some()
-            || check_retained_vlist_attach_detach_max.is_some()
-            || check_retained_vlist_keep_alive_reuse_min.is_some()
-            || check_retained_vlist_keep_alive_budget.is_some();
 
         let _ = write_json_value(&resolved_script_path, &script_json);
 
@@ -825,109 +823,30 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
     }
 
     let mut bundle_doctor_ran: bool = false;
-    if result.stage.as_deref() == Some("passed")
-        && (check_stale_paint_test_id.is_some()
-            || check_stale_scene_test_id.is_some()
-            || check_idle_no_paint_min.is_some()
-            || check_pixels_changed_test_id.is_some()
-            || check_pixels_unchanged_test_id.is_some()
-            || check_ui_gallery_code_editor_torture_marker_present
-            || check_ui_gallery_code_editor_torture_undo_redo
-            || check_ui_gallery_code_editor_torture_geom_fallbacks_low
-            || check_ui_gallery_code_editor_torture_read_only_blocks_edits
-            || check_ui_gallery_markdown_editor_source_read_only_blocks_edits
-            || check_ui_gallery_markdown_editor_source_disabled_blocks_edits
-            || check_ui_gallery_markdown_editor_source_soft_wrap_toggle_stable
-            || check_ui_gallery_markdown_editor_source_word_boundary
-            || check_ui_gallery_web_ime_bridge_enabled
-            || check_ui_gallery_markdown_editor_source_line_boundary_triple_click
-            || check_ui_gallery_markdown_editor_source_a11y_composition
-            || check_ui_gallery_markdown_editor_source_a11y_composition_soft_wrap
-            || check_ui_gallery_markdown_editor_source_soft_wrap_editing_selection_wrap_stable
-            || check_ui_gallery_markdown_editor_source_folds_toggle_stable
-            || check_ui_gallery_markdown_editor_source_folds_clamp_selection_out_of_folds
-            || check_ui_gallery_markdown_editor_source_folds_placeholder_present
-            || check_ui_gallery_markdown_editor_source_folds_placeholder_present_under_soft_wrap
-            || check_ui_gallery_markdown_editor_source_folds_placeholder_absent_under_inline_preedit
-            || check_ui_gallery_markdown_editor_source_inlays_toggle_stable
-            || check_ui_gallery_markdown_editor_source_inlays_caret_navigation_stable
-            || check_ui_gallery_markdown_editor_source_inlays_present
-            || check_ui_gallery_markdown_editor_source_inlays_present_under_soft_wrap
-            || check_ui_gallery_markdown_editor_source_inlays_absent_under_inline_preedit
-            || check_ui_gallery_code_editor_torture_folds_placeholder_absent_under_inline_preedit
-            || check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_unwrapped
-            || check_ui_gallery_code_editor_torture_folds_placeholder_present
-            || check_ui_gallery_code_editor_torture_folds_placeholder_present_under_soft_wrap
-            || check_ui_gallery_code_editor_torture_inlays_present
-            || check_ui_gallery_code_editor_torture_inlays_absent_under_inline_preedit
-            || check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_unwrapped
-            || check_ui_gallery_code_editor_torture_inlays_present_under_soft_wrap
-            || check_ui_gallery_code_editor_word_boundary
-            || check_ui_gallery_code_editor_a11y_selection
-            || check_ui_gallery_code_editor_a11y_composition
-            || check_ui_gallery_code_editor_a11y_selection_wrap
-            || check_ui_gallery_code_editor_a11y_composition_wrap
-            || check_ui_gallery_code_editor_a11y_composition_wrap_scroll
-            || check_semantics_changed_repainted
-            || check_wheel_scroll_test_id.is_some()
-            || check_wheel_scroll_hit_changes_test_id.is_some()
-            || check_prepaint_actions_min.is_some()
-            || check_chart_sampling_window_shifts_min.is_some()
-            || check_node_graph_cull_window_shifts_min.is_some()
-            || check_node_graph_cull_window_shifts_max.is_some()
-            || check_vlist_visible_range_refreshes_min.is_some()
-            || check_vlist_visible_range_refreshes_max.is_some()
-            || check_vlist_window_shifts_explainable
-            || check_vlist_window_shifts_have_prepaint_actions
-            || check_vlist_window_shifts_non_retained_max.is_some()
-            || check_vlist_window_shifts_prefetch_max.is_some()
-            || check_vlist_window_shifts_escape_max.is_some()
-            || check_vlist_policy_key_stable
-            || check_windowed_rows_offset_changes_min.is_some()
-            || check_windowed_rows_visible_start_changes_repainted
-            || check_layout_fast_path_min.is_some()
-            || check_drag_cache_root_paint_only_test_id.is_some()
-            || check_hover_layout_max.is_some()
-            || check_gc_sweep_liveness
-            || !check_notify_hotspot_file_max.is_empty()
-            || check_view_cache_reuse_min.is_some()
-            || check_view_cache_reuse_stable_min.is_some()
-            || check_overlay_synthesis_min.is_some()
-            || check_viewport_input_min.is_some()
-            || check_dock_drag_min.is_some()
-            || check_viewport_capture_min.is_some()
-            || check_retained_vlist_reconcile_no_notify_min.is_some()
-            || check_retained_vlist_attach_detach_max.is_some()
-            || check_retained_vlist_keep_alive_reuse_min.is_some()
-            || check_retained_vlist_keep_alive_budget.is_some())
-        {
-            let bundle_path = wait_for_bundle_artifact_from_script_result(
-                &resolved_out_dir,
-                &result,
-                timeout_ms,
-                poll_ms,
-            )
-            .ok_or_else(|| {
-                "script passed but no bundle artifact was found (required for post-run checks)"
-                    .to_string()
-            })?;
+    if result.stage.as_deref() == Some("passed") && wants_post_run_checks {
+        let bundle_path = wait_for_bundle_artifact_from_script_result(
+            &resolved_out_dir,
+            &result,
+            timeout_ms,
+            poll_ms,
+        )
+        .ok_or_else(|| {
+            "script passed but no bundle artifact was found (required for post-run checks)"
+                .to_string()
+        })?;
 
-            if bundle_doctor_mode != BundleDoctorMode::Off {
-                run_bundle_doctor_for_bundle_path(
-                    &bundle_path,
-                    bundle_doctor_mode,
-                    warmup_frames,
-                )?;
-                bundle_doctor_ran = true;
-            }
-
-            apply_post_run_checks(
-                &bundle_path,
-                &resolved_out_dir,
-                &checks_for_post_run,
-                warmup_frames,
-            )?;
+        if bundle_doctor_mode != BundleDoctorMode::Off {
+            run_bundle_doctor_for_bundle_path(&bundle_path, bundle_doctor_mode, warmup_frames)?;
+            bundle_doctor_ran = true;
         }
+
+        apply_post_run_checks(
+            &bundle_path,
+            &resolved_out_dir,
+            &checks_for_post_run,
+            warmup_frames,
+        )?;
+    }
 
     if wants_post_run_bundle {
         let mut bundle_path = wait_for_bundle_artifact_from_script_result(

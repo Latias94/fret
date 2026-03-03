@@ -46,6 +46,12 @@ impl CheckRegistry {
         }
     }
 
+    pub(crate) fn wants_post_run_checks(&self, checks: &RunChecks) -> bool {
+        self.post_run_checks
+            .iter()
+            .any(|entry| (entry.should_run)(checks))
+    }
+
     pub(crate) fn apply_post_run_checks(
         &self,
         ctx: PostRunCheckContext<'_>,

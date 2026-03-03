@@ -365,7 +365,7 @@ pub(crate) fn cmd_suite(ctx: SuiteCmdContext) -> Result<(), String> {
         check_chart_sampling_window_shifts_min,
         check_dock_drag_min,
         check_drag_cache_root_paint_only_test_id,
-        check_gc_sweep_liveness,
+        check_gc_sweep_liveness: _,
         check_hover_layout_max,
         check_idle_no_paint_min,
         check_layout_fast_path_min,
@@ -455,6 +455,9 @@ pub(crate) fn cmd_suite(ctx: SuiteCmdContext) -> Result<(), String> {
         check_windowed_rows_visible_start_changes_repainted,
         dump_semantics_changed_repainted_json: _,
     } = checks;
+
+    let wants_registered_post_run_checks = crate::registry::checks::CheckRegistry::builtin()
+        .wants_post_run_checks(&checks_for_post_run_template);
 
     // Tool-launched suites default to *not* redacting text to keep authoring/debugging ergonomic.
     //
@@ -1331,11 +1334,10 @@ hint: list promoted scripts via `fretboard diag list scripts --contains {name}`"
             check_vlist_window_shifts_non_retained_max.filter(|_| {
                 diag_policy::ui_gallery_script_requires_retained_vlist_reconcile_gate(&src)
             });
-        let wants_post_run_checks_for_script = check_stale_paint_test_id.is_some()
+        let wants_post_run_checks_for_script = wants_registered_post_run_checks
+            || check_stale_paint_test_id.is_some()
             || check_stale_scene_test_id.is_some()
             || check_idle_no_paint_min.is_some()
-            || check_pixels_changed_test_id.is_some()
-            || check_pixels_unchanged_test_id.is_some()
             || check_ui_gallery_web_ime_bridge_enabled
             || check_ui_gallery_text_rescan_system_fonts_font_stack_key_bumps
             || check_ui_gallery_text_fallback_policy_key_bumps_on_settings_change
@@ -1382,8 +1384,6 @@ hint: list promoted scripts via `fretboard diag list scripts --contains {name}`"
             || check_windowed_rows_visible_start_changes_repainted
             || check_layout_fast_path_min.is_some()
             || check_hover_layout_max.is_some()
-            || check_gc_sweep_liveness
-            || !check_notify_hotspot_file_max.is_empty()
             || check_view_cache_reuse_min.is_some()
             || check_view_cache_reuse_stable_min.is_some()
             || check_overlay_synthesis_min.is_some()
