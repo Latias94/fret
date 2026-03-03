@@ -53,6 +53,11 @@ Recommendation:
   4) tab activation (content)
   5) non-tabstrip affordances in the same corner (e.g. float-zone)
 
+Additional note:
+- Dockview prevents default on the close affordance `pointerdown` to suppress tab drag/activation
+  when the intent is "close without activation". Fret adapters should implement an equivalent
+  arbitration rule and lock it with a diag gate.
+
 ## Q6: Where should shared tabstrip controller code live?
 
 Options:

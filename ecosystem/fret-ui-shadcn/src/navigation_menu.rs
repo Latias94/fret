@@ -13,8 +13,9 @@ use fret_runtime::{
 };
 use fret_ui::element::{
     AnyElement, ContainerProps, ElementKind, Elements, FlexProps, LayoutQueryRegionProps,
-    LayoutStyle, Length, MainAlign, PointerRegionProps, PressableA11y, PressableProps,
-    RenderTransformProps, SemanticsDecoration, SizeStyle, StackProps, VisualTransformProps,
+    LayoutStyle, Length, MainAlign, PointerRegionProps, PressableA11y, PressableKeyActivation,
+    PressableProps, RenderTransformProps, SemanticsDecoration, SizeStyle, StackProps,
+    VisualTransformProps,
 };
 use fret_ui::overlay_placement::{Align, Side};
 use fret_ui::{ElementContext, GlobalElementId, Invalidation, Theme, ThemeSnapshot, UiHost};
@@ -672,12 +673,13 @@ impl NavigationMenuLink {
             pressable.enabled = !disabled;
             pressable.focusable = !disabled;
             pressable.focus_ring = Some(ring);
+            pressable.key_activation = PressableKeyActivation::EnterOnly;
             pressable.layout = decl_style::layout_style(
                 &theme,
                 LayoutRefinement::default().w_full().min_w_0().merge(layout),
             );
             pressable.a11y = PressableA11y {
-                role: Some(SemanticsRole::Button),
+                role: Some(SemanticsRole::Link),
                 label: label.clone(),
                 test_id: test_id.clone(),
                 ..Default::default()
@@ -768,6 +770,7 @@ pub struct NavigationMenuItem {
     content: Vec<AnyElement>,
     trigger: Option<Vec<AnyElement>>,
     trigger_test_id: Option<Arc<str>>,
+    command: Option<CommandId>,
     disabled: bool,
 }
 
@@ -784,12 +787,18 @@ impl NavigationMenuItem {
             content,
             trigger: None,
             trigger_test_id: None,
+            command: None,
             disabled: false,
         }
     }
 
     pub fn trigger_test_id(mut self, test_id: impl Into<Arc<str>>) -> Self {
         self.trigger_test_id = Some(test_id.into());
+        self
+    }
+
+    pub fn on_click(mut self, command: impl Into<CommandId>) -> Self {
+        self.command = Some(command.into());
         self
     }
 
@@ -1373,6 +1382,7 @@ impl NavigationMenu {
 
             let items_for_children = &mut items;
             let value_for_viewport = value_model.clone();
+            let value_for_viewport_for_list = value_for_viewport.clone();
             let trigger_text_style_for_list = trigger_text_style.clone();
             let nav_ctx_for_list = nav_ctx.clone();
             let theme_for_list = theme.clone();
@@ -1397,10 +1407,12 @@ impl NavigationMenu {
                         let default_trigger_bg = default_trigger_bg_for_list.clone();
                         let default_trigger_fg = default_trigger_fg_for_list.clone();
                         let style_override = style_for_list.clone();
+                        let value_for_viewport = value_for_viewport_for_list.clone();
 
                         let trigger_children = item.trigger.take();
                         let content_is_empty = item.content.is_empty();
                         let item_label = item.label.clone();
+                        let command = item.command.clone();
                         cx.keyed(item_value.clone(), move |cx| {
                             let trigger_text_style = trigger_text_style_for_item.clone();
 
@@ -1430,6 +1442,27 @@ impl NavigationMenu {
                                 // These should behave like a link (no chevron, no open/close).
                                 let trigger_text_style = trigger_text_style.clone();
                                 let trigger_children = trigger_children;
+                                let command = command.clone();
+                                let model_for_activate = value_for_viewport.clone();
+
+                                pressable.a11y.role = Some(SemanticsRole::Link);
+                                pressable.key_activation = PressableKeyActivation::EnterOnly;
+                                pressable.focus_ring =
+                                    Some(decl_style::focus_ring(&theme_for_item, trigger_radius));
+
+                                cx.pressable_add_on_activate(Arc::new(
+                                    move |host, action_cx, _reason| {
+                                        if disabled {
+                                            return;
+                                        }
+
+                                        if let Some(command) = command.as_ref() {
+                                            host.dispatch_command(Some(action_cx.window), command.clone());
+                                        }
+
+                                        let _ = host.models_mut().update(&model_for_activate, |v| *v = None);
+                                    },
+                                ));
 
                                 return cx.pressable(pressable, move |cx, st| {
                                     let hovered = st.hovered && !st.pressed;
@@ -2131,6 +2164,7 @@ impl NavigationMenu {
                                         enabled: true,
                                         focusable: false,
                                         focus_ring: None,
+                                        focus_ring_always_paint: false,
                                         focus_ring_bounds: None,
                                         key_activation: Default::default(),
                                         a11y: PressableA11y::default(),
@@ -3139,14 +3173,14 @@ mod tests {
         ui.layout_all(&mut app, &mut services, bounds, 1.0);
 
         let snap = ui.semantics_snapshot().expect("semantics snapshot");
-        let go_btn = snap
+        let go_link = snap
             .nodes
             .iter()
-            .find(|n| n.role == SemanticsRole::Button && n.label.as_deref() == Some("Go"))
-            .expect("Go button semantics");
+            .find(|n| n.role == SemanticsRole::Link && n.label.as_deref() == Some("Go"))
+            .expect("Go link semantics");
         let pos = Point::new(
-            Px(go_btn.bounds.origin.x.0 + go_btn.bounds.size.width.0 * 0.5),
-            Px(go_btn.bounds.origin.y.0 + go_btn.bounds.size.height.0 * 0.5),
+            Px(go_link.bounds.origin.x.0 + go_link.bounds.size.width.0 * 0.5),
+            Px(go_link.bounds.origin.y.0 + go_link.bounds.size.height.0 * 0.5),
         );
 
         ui.dispatch_event(

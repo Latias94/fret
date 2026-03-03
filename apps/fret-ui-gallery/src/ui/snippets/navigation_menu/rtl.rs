@@ -3,8 +3,10 @@ pub const SOURCE: &str = include_str!("rtl.rs");
 // region: example
 use fret_app::App;
 use fret_core::{FontId, FontWeight, Px, TextOverflow, TextStyle, TextWrap};
+use fret_runtime::Model;
+use fret_ui::Invalidation;
 use fret_ui::element::TextProps;
-use fret_ui_kit::declarative::{ElementContextThemeExt as _, ModelWatchExt as _};
+use fret_ui_kit::declarative::ElementContextThemeExt as _;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 use std::sync::Arc;
 
@@ -15,7 +17,6 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
     #[derive(Default, Clone)]
     struct NavigationMenuModels {
         rtl_value: Option<Model<Option<Arc<str>>>>,
-        md_breakpoint_query_uses_container: Option<Model<bool>>,
     }
 
     let muted_foreground = cx.with_theme(|theme| theme.color_token("muted-foreground"));
@@ -32,26 +33,13 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
         }
     };
 
-    let md_breakpoint_query_uses_container = match state.md_breakpoint_query_uses_container {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(false);
-            cx.with_state(NavigationMenuModels::default, |st| {
-                st.md_breakpoint_query_uses_container = Some(model.clone())
-            });
-            model
-        }
-    };
-
-    let md_breakpoint_query = if cx
-        .watch_model(&md_breakpoint_query_uses_container)
-        .cloned()
-        .unwrap_or(false)
-    {
-        shadcn::navigation_menu::NavigationMenuMdBreakpointQuery::Container
-    } else {
-        shadcn::navigation_menu::NavigationMenuMdBreakpointQuery::Viewport
-    };
+    let md_breakpoint = fret_ui_kit::declarative::viewport_width_at_least(
+        cx,
+        Invalidation::Layout,
+        fret_ui_kit::declarative::viewport_tailwind::MD,
+        fret_ui_kit::declarative::ViewportQueryHysteresis::default(),
+    );
+    let is_mobile = !md_breakpoint;
 
     let list_item = |cx: &mut ElementContext<'_, App>,
                      model: Model<Option<Arc<str>>>,
@@ -130,16 +118,6 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
     };
 
     shadcn::DirectionProvider::new(shadcn::LayoutDirection::Rtl).into_element(cx, |cx| {
-        let region_props = fret_ui::element::LayoutQueryRegionProps {
-            layout: cx.with_theme(|theme| {
-                fret_ui_kit::declarative::style::layout_style(
-                    theme,
-                    LayoutRefinement::default().w_px(Px(640.0)).min_w_0(),
-                )
-            }),
-            name: None,
-        };
-
         let getting_started = shadcn::NavigationMenuItem::new(
             "getting_started",
             "البدء",
@@ -305,28 +283,20 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
         .trigger_test_id("ui-gallery-navigation-menu-rtl-trigger-with-icon");
 
         let docs = shadcn::NavigationMenuItem::new("docs", "الوثائق", std::iter::empty())
-            .trigger_test_id("ui-gallery-navigation-menu-rtl-trigger-docs");
+            .trigger_test_id("ui-gallery-navigation-menu-rtl-trigger-docs")
+            .on_click(CMD_APP_OPEN);
 
-        fret_ui_kit::declarative::container_query_region_with_id(
-            cx,
-            "ui-gallery.navigation_menu.rtl",
-            region_props,
-            move |cx, region_id| {
-                vec![
-                    shadcn::NavigationMenu::new(rtl_value.clone())
-                        .md_breakpoint_query(md_breakpoint_query)
-                        .container_query_region(region_id)
-                        .list(shadcn::NavigationMenuList::new([
-                            getting_started,
-                            components,
-                            with_icon,
-                            docs,
-                        ]))
-                        .viewport_test_id("ui-gallery-navigation-menu-rtl-viewport")
-                        .into_element(cx),
-                ]
-            },
-        )
+        let mut items = vec![getting_started, components, docs];
+        if md_breakpoint {
+            items.push(with_icon);
+        }
+
+        shadcn::NavigationMenu::new(rtl_value.clone())
+            .viewport(is_mobile)
+            .list(shadcn::NavigationMenuList::new(items))
+            .viewport_test_id("ui-gallery-navigation-menu-rtl-viewport")
+            .into_element(cx)
+            .test_id("ui-gallery-navigation-menu-rtl")
     })
 }
 // endregion: example

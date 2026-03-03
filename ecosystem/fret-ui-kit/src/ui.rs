@@ -1249,9 +1249,9 @@ pub fn raw_text<H: UiHost>(
 mod tests {
     use super::*;
     use crate::UiExt;
-    use crate::declarative::semantics::UiIntoElementTestIdExt as _;
     use crate::{LengthRefinement, MetricRef};
     use fret_app::App;
+    use fret_core::SemanticsRole;
     use fret_core::{AppWindowId, Point, Rect, Size};
     use fret_ui::element::ElementKind;
 
@@ -1283,6 +1283,18 @@ mod tests {
     fn h_flex_accepts_ui_builder_children<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         h_flex(cx, |cx| [text(cx, "a"), text(cx, "b")])
             .gap(Space::N2)
+            .into_element(cx)
+    }
+
+    // Compile-only: ensure layout constructor roots can be decorated on the builder path without
+    // early landing, mirroring common cookbook usage (`test_id`, role).
+    #[allow(dead_code)]
+    fn h_flex_root_accepts_semantics_decorators<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+    ) -> AnyElement {
+        h_flex(cx, |cx| [text(cx, "a"), text(cx, "b")])
+            .test_id("root")
+            .a11y_role(SemanticsRole::Group)
             .into_element(cx)
     }
 
