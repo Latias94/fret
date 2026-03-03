@@ -4,9 +4,9 @@ pub const SOURCE: &str = include_str!("basic_demo.rs");
 use fret_app::App;
 use fret_core::Px;
 use fret_runtime::{CommandId, Model};
+use fret_ui::Theme;
 use fret_ui::action::OnActivate;
 use fret_ui::element::AnyElement;
-use fret_ui::Theme;
 use fret_ui_headless::table::{ColumnDef, RowKey, Table, TableState};
 use fret_ui_kit::declarative::ModelWatchExt as _;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
@@ -405,11 +405,13 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
                 };
                 let _ = cx.app.models_mut().update(&model, |v| *v = checked);
 
-                Some(vec![shadcn::Checkbox::new_optional(model)
-                    .a11y_label("Select all")
-                    .test_id("ui-gallery-data-table-basic-select-all")
-                    .on_click(CommandId::new(CMD_SELECT_ALL_PAGE))
-                    .into_element(cx)])
+                Some(vec![
+                    shadcn::Checkbox::new_optional(model)
+                        .a11y_label("Select all")
+                        .test_id("ui-gallery-data-table-basic-select-all")
+                        .on_click(CommandId::new(CMD_SELECT_ALL_PAGE))
+                        .into_element(cx),
+                ])
             },
             move |cx, col, row| match col.id.as_ref() {
                 "select" => {
@@ -488,10 +490,9 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
                         )))
                         .icon(fret_icons::ids::ui::MORE_HORIZONTAL)
                         .into_element(cx);
-                    let trigger = align_end(cx, trigger);
 
                     let payment_id = row.id.clone();
-                    shadcn::DropdownMenu::new(open)
+                    let menu = shadcn::DropdownMenu::new(open)
                         .align(shadcn::DropdownMenuAlign::End)
                         .side(shadcn::DropdownMenuSide::Bottom)
                         .into_element(
@@ -526,7 +527,9 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
                                     ),
                                 ]
                             },
-                        )
+                        );
+
+                    align_end(cx, menu)
                 }),
                 _ => cx.text("?"),
             },
