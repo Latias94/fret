@@ -22,38 +22,22 @@ pub(crate) fn apply_post_run_checks(
         checks.check_ui_gallery_text_fallback_policy_key_bumps_on_locale_change;
     let check_ui_gallery_text_mixed_script_bundled_fallback_conformance =
         checks.check_ui_gallery_text_mixed_script_bundled_fallback_conformance;
-    let check_ui_gallery_code_editor_torture_folds_placeholder_absent_under_inline_preedit =
-        checks.check_ui_gallery_code_editor_torture_folds_placeholder_absent_under_inline_preedit;
     let check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_unwrapped =
         checks.check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_unwrapped;
     let check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations =
         checks.check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations;
     let check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations_composed =
         checks.check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations_composed;
-    let check_ui_gallery_code_editor_torture_decorations_toggle_stable_under_inline_preedit_composed =
-        checks.check_ui_gallery_code_editor_torture_decorations_toggle_stable_under_inline_preedit_composed;
-    let check_ui_gallery_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed =
-        checks.check_ui_gallery_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed;
     let check_ui_gallery_code_editor_torture_composed_preedit_stable_after_wheel_scroll =
         checks.check_ui_gallery_code_editor_torture_composed_preedit_stable_after_wheel_scroll;
     let check_ui_gallery_code_editor_torture_composed_preedit_cancels_on_drag_selection =
         checks.check_ui_gallery_code_editor_torture_composed_preedit_cancels_on_drag_selection;
-    let check_ui_gallery_code_editor_torture_folds_placeholder_present =
-        checks.check_ui_gallery_code_editor_torture_folds_placeholder_present;
-    let check_ui_gallery_code_editor_torture_folds_placeholder_present_under_soft_wrap =
-        checks.check_ui_gallery_code_editor_torture_folds_placeholder_present_under_soft_wrap;
-    let check_ui_gallery_code_editor_torture_inlays_present =
-        checks.check_ui_gallery_code_editor_torture_inlays_present;
-    let check_ui_gallery_code_editor_torture_inlays_absent_under_inline_preedit =
-        checks.check_ui_gallery_code_editor_torture_inlays_absent_under_inline_preedit;
     let check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_unwrapped =
         checks.check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_unwrapped;
     let check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations =
         checks.check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations;
     let check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations_composed =
         checks.check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations_composed;
-    let check_ui_gallery_code_editor_torture_inlays_present_under_soft_wrap =
-        checks.check_ui_gallery_code_editor_torture_inlays_present_under_soft_wrap;
     let check_ui_gallery_code_editor_word_boundary =
         checks.check_ui_gallery_code_editor_word_boundary;
     let check_ui_gallery_code_editor_a11y_selection =
@@ -219,12 +203,6 @@ pub(crate) fn apply_post_run_checks(
     if check_ui_gallery_text_mixed_script_bundled_fallback_conformance {
         check_out_dir_for_ui_gallery_text_mixed_script_bundled_fallback_conformance(out_dir)?;
     }
-    if check_ui_gallery_code_editor_torture_folds_placeholder_absent_under_inline_preedit {
-        stats::check_bundle_for_ui_gallery_code_editor_torture_folds_placeholder_absent_under_inline_preedit(
-            bundle_path,
-            warmup_frames,
-        )?;
-    }
     if check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_unwrapped
     {
         stats::check_bundle_for_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_unwrapped(
@@ -246,20 +224,6 @@ pub(crate) fn apply_post_run_checks(
             warmup_frames,
         )?;
     }
-    if check_ui_gallery_code_editor_torture_decorations_toggle_stable_under_inline_preedit_composed
-    {
-        stats::check_bundle_for_ui_gallery_code_editor_torture_decorations_toggle_stable_under_inline_preedit_composed(
-            bundle_path,
-            warmup_frames,
-        )?;
-    }
-    if check_ui_gallery_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed
-    {
-        stats::check_bundle_for_ui_gallery_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed(
-            bundle_path,
-            warmup_frames,
-        )?;
-    }
     if check_ui_gallery_code_editor_torture_composed_preedit_stable_after_wheel_scroll {
         stats::check_bundle_for_ui_gallery_code_editor_torture_composed_preedit_stable_after_wheel_scroll(
             bundle_path,
@@ -268,30 +232,6 @@ pub(crate) fn apply_post_run_checks(
     }
     if check_ui_gallery_code_editor_torture_composed_preedit_cancels_on_drag_selection {
         stats::check_bundle_for_ui_gallery_code_editor_torture_composed_preedit_cancels_on_drag_selection(
-            bundle_path,
-            warmup_frames,
-        )?;
-    }
-    if check_ui_gallery_code_editor_torture_folds_placeholder_present {
-        stats::check_bundle_for_ui_gallery_code_editor_torture_folds_placeholder_present(
-            bundle_path,
-            warmup_frames,
-        )?;
-    }
-    if check_ui_gallery_code_editor_torture_folds_placeholder_present_under_soft_wrap {
-        stats::check_bundle_for_ui_gallery_code_editor_torture_folds_placeholder_present_under_soft_wrap(
-            bundle_path,
-            warmup_frames,
-        )?;
-    }
-    if check_ui_gallery_code_editor_torture_inlays_present {
-        stats::check_bundle_for_ui_gallery_code_editor_torture_inlays_present(
-            bundle_path,
-            warmup_frames,
-        )?;
-    }
-    if check_ui_gallery_code_editor_torture_inlays_absent_under_inline_preedit {
-        stats::check_bundle_for_ui_gallery_code_editor_torture_inlays_absent_under_inline_preedit(
             bundle_path,
             warmup_frames,
         )?;
@@ -310,12 +250,6 @@ pub(crate) fn apply_post_run_checks(
     }
     if check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations_composed {
         stats::check_bundle_for_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations_composed(
-            bundle_path,
-            warmup_frames,
-        )?;
-    }
-    if check_ui_gallery_code_editor_torture_inlays_present_under_soft_wrap {
-        stats::check_bundle_for_ui_gallery_code_editor_torture_inlays_present_under_soft_wrap(
             bundle_path,
             warmup_frames,
         )?;

@@ -287,21 +287,23 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
         check_ui_gallery_code_editor_a11y_selection_wrap,
         check_ui_gallery_code_editor_torture_composed_preedit_cancels_on_drag_selection,
         check_ui_gallery_code_editor_torture_composed_preedit_stable_after_wheel_scroll,
-        check_ui_gallery_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed,
-        check_ui_gallery_code_editor_torture_decorations_toggle_stable_under_inline_preedit_composed,
-        check_ui_gallery_code_editor_torture_folds_placeholder_absent_under_inline_preedit,
-        check_ui_gallery_code_editor_torture_folds_placeholder_present,
+        check_ui_gallery_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed:
+            _,
+        check_ui_gallery_code_editor_torture_decorations_toggle_stable_under_inline_preedit_composed:
+            _,
+        check_ui_gallery_code_editor_torture_folds_placeholder_absent_under_inline_preedit: _,
+        check_ui_gallery_code_editor_torture_folds_placeholder_present: _,
         check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_unwrapped,
         check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations,
         check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations_composed,
-        check_ui_gallery_code_editor_torture_folds_placeholder_present_under_soft_wrap,
+        check_ui_gallery_code_editor_torture_folds_placeholder_present_under_soft_wrap: _,
         check_ui_gallery_code_editor_torture_geom_fallbacks_low: _,
-        check_ui_gallery_code_editor_torture_inlays_absent_under_inline_preedit,
-        check_ui_gallery_code_editor_torture_inlays_present,
+        check_ui_gallery_code_editor_torture_inlays_absent_under_inline_preedit: _,
+        check_ui_gallery_code_editor_torture_inlays_present: _,
         check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_unwrapped,
         check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations,
         check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations_composed,
-        check_ui_gallery_code_editor_torture_inlays_present_under_soft_wrap,
+        check_ui_gallery_code_editor_torture_inlays_present_under_soft_wrap: _,
         check_ui_gallery_code_editor_torture_marker_present: _,
         check_ui_gallery_code_editor_torture_read_only_blocks_edits,
         check_ui_gallery_code_editor_torture_undo_redo: _,
@@ -395,22 +397,14 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
         || check_ui_gallery_text_fallback_policy_key_bumps_on_settings_change
         || check_ui_gallery_text_fallback_policy_key_bumps_on_locale_change
         || check_ui_gallery_text_mixed_script_bundled_fallback_conformance
-        || check_ui_gallery_code_editor_torture_folds_placeholder_absent_under_inline_preedit
         || check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_unwrapped
         || check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations
         || check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations_composed
-        || check_ui_gallery_code_editor_torture_decorations_toggle_stable_under_inline_preedit_composed
-        || check_ui_gallery_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed
         || check_ui_gallery_code_editor_torture_composed_preedit_stable_after_wheel_scroll
         || check_ui_gallery_code_editor_torture_composed_preedit_cancels_on_drag_selection
-        || check_ui_gallery_code_editor_torture_folds_placeholder_present
-        || check_ui_gallery_code_editor_torture_folds_placeholder_present_under_soft_wrap
-        || check_ui_gallery_code_editor_torture_inlays_present
-        || check_ui_gallery_code_editor_torture_inlays_absent_under_inline_preedit
         || check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_unwrapped
         || check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations
         || check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations_composed
-        || check_ui_gallery_code_editor_torture_inlays_present_under_soft_wrap
         || check_ui_gallery_code_editor_word_boundary
         || check_ui_gallery_code_editor_a11y_selection
         || check_ui_gallery_code_editor_a11y_composition
