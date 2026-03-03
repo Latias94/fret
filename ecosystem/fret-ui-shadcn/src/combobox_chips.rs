@@ -408,6 +408,21 @@ mod tests {
         assert_eq!(chips.groups[0].items.len(), 1);
         assert_eq!(chips.groups[0].items[0].value.as_ref(), "b");
     }
+
+    #[test]
+    fn combobox_chips_parts_patch_maps_trigger_width() {
+        let mut app = App::new();
+        let values = app.models_mut().insert(Vec::<Arc<str>>::new());
+        let open = app.models_mut().insert(false);
+        let mut chips = ComboboxChips::new(values, open);
+
+        apply_parts_patch_to_chips(
+            &mut chips,
+            vec![ComboboxTrigger::new().width_px(Px(320.0)).into()],
+        );
+
+        assert_eq!(chips.width, Some(Px(320.0)));
+    }
 }
 
 #[allow(clippy::too_many_arguments)]
