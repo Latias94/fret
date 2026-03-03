@@ -177,6 +177,87 @@ impl<H: UiHost> UiTree<H> {
         self.apply_subtree_layout_dirty_delta_to_ancestors(root_parent, delta);
     }
 
+    pub(in crate::tree) fn repair_subtree_layout_dirty_counts_from(&mut self, root: NodeId) {
+        if !self.subtree_layout_dirty_aggregation_enabled() {
+            return;
+        }
+
+        // Step 1: rebuild the subtree rooted at `root` (post-order) so descendants become
+        // internally consistent with their invalidation flags and child lists.
+        let mut stack: Vec<(NodeId, bool)> = Vec::new();
+        stack.push((root, false));
+        let mut rebuilt_nodes: u32 = 0;
+        while let Some((id, children_pushed)) = stack.pop() {
+            let Some(n) = self.nodes.get(id) else {
+                continue;
+            };
+            if !children_pushed {
+                stack.push((id, true));
+                for &child in &n.children {
+                    stack.push((child, false));
+                }
+                continue;
+            }
+
+            let mut sum: u32 = if n.invalidation.layout { 1 } else { 0 };
+            for &child in &n.children {
+                sum = sum.saturating_add(
+                    self.nodes
+                        .get(child)
+                        .map(|c| c.subtree_layout_dirty_count)
+                        .unwrap_or(0),
+                );
+            }
+            if let Some(n) = self.nodes.get_mut(id) {
+                n.subtree_layout_dirty_count = sum;
+            }
+            rebuilt_nodes = rebuilt_nodes.saturating_add(1);
+        }
+
+        // Step 2: recompute exact counts on ancestors so drift cannot linger above `root` even if
+        // the previously stored `root` count (used by delta propagation) was already incorrect.
+        let mut walked_nodes: u32 = 0;
+        let mut current = self.nodes.get(root).and_then(|n| n.parent);
+        while let Some(id) = current {
+            let (next_parent, expected) = {
+                let Some(n) = self.nodes.get(id) else {
+                    break;
+                };
+                let mut sum: u32 = if n.invalidation.layout { 1 } else { 0 };
+                for &child in &n.children {
+                    sum = sum.saturating_add(
+                        self.nodes
+                            .get(child)
+                            .map(|c| c.subtree_layout_dirty_count)
+                            .unwrap_or(0),
+                    );
+                }
+                (n.parent, sum)
+            };
+
+            if let Some(n) = self.nodes.get_mut(id) {
+                n.subtree_layout_dirty_count = expected;
+            }
+
+            walked_nodes = walked_nodes.saturating_add(1);
+            if walked_nodes > 4096 {
+                tracing::warn!(
+                    node = ?id,
+                    "repair_subtree_layout_dirty_counts_from: aborting ancestor walk (cycle or corrupt parent pointers?)"
+                );
+                break;
+            }
+            current = next_parent;
+        }
+
+        if self.debug_enabled {
+            self.debug_stats.layout_subtree_dirty_agg_rebuild_nodes = self
+                .debug_stats
+                .layout_subtree_dirty_agg_rebuild_nodes
+                .saturating_add(rebuilt_nodes);
+        }
+    }
+
     pub(in crate::tree) fn apply_subtree_layout_dirty_delta_to_node_and_ancestors(
         &mut self,
         node: NodeId,
@@ -204,7 +285,7 @@ impl<H: UiHost> UiTree<H> {
                     delta,
                     "subtree layout dirty count underflow"
                 );
-                self.rebuild_subtree_layout_dirty_counts_and_propagate(id);
+                self.repair_subtree_layout_dirty_counts_from(id);
                 break;
             }
             walked_nodes = walked_nodes.saturating_add(1);

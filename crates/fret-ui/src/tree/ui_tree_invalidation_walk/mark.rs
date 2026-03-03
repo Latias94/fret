@@ -237,7 +237,7 @@ impl<H: UiHost> UiTree<H> {
             }
 
             if rebuild_subtree_layout_dirty {
-                self.rebuild_subtree_layout_dirty_counts_and_propagate(id);
+                self.repair_subtree_layout_dirty_counts_from(id);
             }
 
             if agg_enabled {
@@ -478,7 +478,7 @@ impl<H: UiHost> UiTree<H> {
             };
 
             if rebuild_subtree_layout_dirty {
-                self.rebuild_subtree_layout_dirty_counts_and_propagate(id);
+                self.repair_subtree_layout_dirty_counts_from(id);
             }
 
             if did_stop {

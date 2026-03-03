@@ -4141,6 +4141,86 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-scroll-area-nested-scroll-routing",
+      "path": "tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scroll-area-nested-scroll-routing.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "diag-hardening-smoke",
+        "ui-gallery-scroll-area"
+      ],
+      "tags": [
+        "nested_scroll",
+        "regression_pack",
+        "scroll",
+        "ui_gallery"
+      ],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-scroll-area-toggle-code-tabs",
+      "path": "tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scroll-area-toggle-code-tabs.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-scroll-area"
+      ],
+      "tags": [
+        "regression_pack",
+        "scroll",
+        "ui_gallery"
+      ],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-scroll-area-wheel-scroll",
+      "path": "tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scroll-area-wheel-scroll.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-scroll-area"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-scroll-area-wheel-torture",
+      "path": "tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scroll-area-wheel-torture.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "perf-ui-gallery-scroll-area"
+      ],
+      "tags": [
+        "perf",
+        "scroll",
+        "ui_gallery",
+        "wheel"
+      ],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-scrollbar-drag-baseline-content-growth",
+      "path": "tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scrollbar-drag-baseline-content-growth.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-scroll-area"
+      ],
+      "tags": [
+        "regression_pack",
+        "scroll",
+        "scrollbar",
+        "ui_gallery"
+      ],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-scroll-into-view-padding-is-soft",
       "path": "tools/diag-scripts/ui-gallery/card/ui-gallery-scroll-into-view-padding-is-soft.json",
       "required_capabilities": [],
@@ -4859,6 +4939,25 @@
         "perf-ui-gallery-complex-typical"
       ],
       "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-virtual-list-wheel-torture",
+      "path": "tools/diag-scripts/ui-gallery/virtual-list/ui-gallery-virtual-list-wheel-torture.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "perf-ui-gallery-virtual-list",
+        "ui-gallery-virtual-list"
+      ],
+      "tags": [
+        "perf",
+        "scroll",
+        "ui_gallery",
+        "virtual_list",
+        "wheel"
+      ],
       "target_hints": []
     },
     {
