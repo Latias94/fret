@@ -127,10 +127,15 @@ pub(super) fn handle_scroll_into_view_step(
             .unwrap_or(node.bounds)
     });
 
+    // `padding_px` / `padding_insets_px` is a *scroll margin preference* (how much breathing room we
+    // try to maintain while scrolling), not a hard correctness requirement.
+    //
+    // Treat "require fully within window/container" as a strict visibility requirement against the
+    // raw bounds. This avoids pathological loops where the target is already fully visible, but
+    // cannot satisfy the padded inset at a scroll boundary (leading to `stuck_no_progress`).
     let visible_ok = target_bounds.is_some_and(|bounds| {
         if require_fully_within_window {
-            let inner_window = rect_inset(window_bounds, insets);
-            rect_fully_contains(inner_window, bounds)
+            rect_fully_contains(window_bounds, bounds)
         } else {
             rect_intersection(bounds, window_bounds).is_some()
         }
@@ -139,8 +144,7 @@ pub(super) fn handle_scroll_into_view_step(
         container_bounds
             .zip(target_bounds)
             .is_some_and(|(container_bounds, target_bounds)| {
-                let inner = rect_inset(container_bounds, insets);
-                rect_fully_contains(inner, target_bounds)
+                rect_fully_contains(container_bounds, target_bounds)
             })
     } else {
         true
@@ -172,14 +176,13 @@ pub(super) fn handle_scroll_into_view_step(
             let target_bounds_opt = target_bounds;
             if let Some(target_bounds) = target_bounds_opt {
                 if require_fully_within_window {
-                    let inner_window = rect_inset(window_bounds, insets);
                     let target_w = target_bounds.size.width.0.max(0.0);
                     let target_h = target_bounds.size.height.0.max(0.0);
-                    let inner_w = inner_window.size.width.0.max(0.0);
-                    let inner_h = inner_window.size.height.0.max(0.0);
-                    if inner_w > 1.0
-                        && inner_h > 1.0
-                        && (target_w > inner_w + 0.5 || target_h > inner_h + 0.5)
+                    let window_w = window_bounds.size.width.0.max(0.0);
+                    let window_h = window_bounds.size.height.0.max(0.0);
+                    if window_w > 1.0
+                        && window_h > 1.0
+                        && (target_w > window_w + 0.5 || target_h > window_h + 0.5)
                     {
                         *force_dump_label = Some(format!(
                             "script-step-{step_index:04}-scroll_into_view-impossible-oversized"
@@ -194,14 +197,13 @@ pub(super) fn handle_scroll_into_view_step(
                 }
 
                 if require_fully_within_container {
-                    let inner_container = rect_inset(container_bounds, insets);
                     let target_w = target_bounds.size.width.0.max(0.0);
                     let target_h = target_bounds.size.height.0.max(0.0);
-                    let inner_w = inner_container.size.width.0.max(0.0);
-                    let inner_h = inner_container.size.height.0.max(0.0);
-                    if inner_w > 1.0
-                        && inner_h > 1.0
-                        && (target_w > inner_w + 0.5 || target_h > inner_h + 0.5)
+                    let container_w = container_bounds.size.width.0.max(0.0);
+                    let container_h = container_bounds.size.height.0.max(0.0);
+                    if container_w > 1.0
+                        && container_h > 1.0
+                        && (target_w > container_w + 0.5 || target_h > container_h + 0.5)
                     {
                         *force_dump_label = Some(format!(
                             "script-step-{step_index:04}-scroll_into_view-impossible-oversized"

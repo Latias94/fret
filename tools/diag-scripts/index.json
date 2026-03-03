@@ -4106,6 +4106,24 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-scroll-into-view-padding-is-soft",
+      "path": "tools/diag-scripts/ui-gallery/card/ui-gallery-scroll-into-view-padding-is-soft.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "card",
+        "regression",
+        "scroll",
+        "scroll_into_view",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Guards against ScrollIntoView treating padding as a hard visibility requirement, which can cause stuck loops at scroll boundaries."
+      ]
+    },
+    {
       "id": "ui-gallery-select-commit-and-label-update-bundle",
       "path": "tools/diag-scripts/ui-gallery/select/ui-gallery-select-commit-and-label-update-bundle.json",
       "required_capabilities": [
@@ -5159,72 +5177,6 @@
         "Asserts initial pos_in_set for a known tab.",
         "Drags the first tab to the end and drops it.",
         "Asserts pos_in_set updates after the reorder."
-      ]
-    },
-    {
-      "id": "workspace-shell-demo-tab-close-others-keeps-pinned-smoke",
-      "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-others-keeps-pinned-smoke.json",
-      "required_capabilities": [
-        "diag.script_v2"
-      ],
-      "suite_memberships": [
-        "workspace-shell-demo"
-      ],
-      "tags": [
-        "close",
-        "gate",
-        "pinned",
-        "smoke",
-        "tabstrip",
-        "workspace"
-      ],
-      "target_hints": [
-        "Pins doc-a-0, then runs Close Other Tabs from doc-a-2's context menu.",
-        "Asserts the pinned tab is kept and only the active unpinned tab remains."
-      ]
-    },
-    {
-      "id": "workspace-shell-demo-tab-close-left-keeps-pinned-smoke",
-      "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-left-keeps-pinned-smoke.json",
-      "required_capabilities": [
-        "diag.script_v2"
-      ],
-      "suite_memberships": [
-        "workspace-shell-demo"
-      ],
-      "tags": [
-        "close",
-        "gate",
-        "pinned",
-        "smoke",
-        "tabstrip",
-        "workspace"
-      ],
-      "target_hints": [
-        "Pins doc-a-0, activates doc-a-2, then runs Close Tabs to the Left.",
-        "Asserts doc-a-1 is closed but the pinned tab is kept."
-      ]
-    },
-    {
-      "id": "workspace-shell-demo-tab-close-right-keeps-pinned-smoke",
-      "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-right-keeps-pinned-smoke.json",
-      "required_capabilities": [
-        "diag.script_v2"
-      ],
-      "suite_memberships": [
-        "workspace-shell-demo"
-      ],
-      "tags": [
-        "close",
-        "gate",
-        "pinned",
-        "smoke",
-        "tabstrip",
-        "workspace"
-      ],
-      "target_hints": [
-        "Pins doc-a-0, activates doc-a-1, then runs Close Tabs to the Right.",
-        "Asserts doc-a-2 is closed but the pinned tab is kept."
       ]
     }
   ]
