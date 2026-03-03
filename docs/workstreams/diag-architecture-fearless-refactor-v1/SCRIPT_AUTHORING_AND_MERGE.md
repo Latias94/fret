@@ -69,11 +69,11 @@ Some files are derived and should not be manually merged:
 If it conflicts:
 
 - resolve by rerunning:
-  - `python tools/check_diag_scripts_registry.py --write`
+  - `cargo run -p fretboard -- diag registry write`
 
 Then re-run:
 
-- `python tools/check_diag_scripts_registry.py`
+- `cargo run -p fretboard -- diag registry check`
 
 ## 5) For large matrices, generate scripts (do not edit by hand)
 

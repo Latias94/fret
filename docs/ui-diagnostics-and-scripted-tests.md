@@ -1308,13 +1308,13 @@ Note:
 
 - The script library is modularized via a taxonomy plus a minimal, generated registry for “promoted” scripts
   (`tools/diag-scripts/index.json`, scope: suite-reachable + `_prelude`; regenerate via
-  `python tools/check_diag_scripts_registry.py --write`).
+  `cargo run -p fretboard -- diag registry write`).
   `fretboard diag run` accepts either an explicit path or a promoted `script_id` from this registry.
   For discoverability, use `fretboard diag list scripts` to print `script_id -> path` mappings.
   Use `fretboard diag list suites` to print known suites (derived from promoted registry `suite_memberships`).
   To detect taxonomy/registry drift without grepping, use `fretboard diag doctor scripts` (read-only;
   suggests repair commands like `migrate-script-library.py --apply --write-redirects` and
-  `check_diag_scripts_registry.py --write`). Use `--strict` to fail when promoted scripts drift back to schema v1.
+  `diag registry write`). Use `--strict` to fail when promoted scripts drift back to schema v1.
   Prefer directory- and glob-based inputs (`--script-dir`, `--glob`) for ad-hoc runs, and avoid assuming scripts live
   only at the top-level. See: `docs/workstreams/diag-v2-hardening-and-switches-v1/README.md`.
 - Built-in suites are defined as curated directory inputs under `tools/diag-scripts/suites/<suite-name>/`.

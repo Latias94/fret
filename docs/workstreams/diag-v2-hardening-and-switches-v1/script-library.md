@@ -102,7 +102,7 @@ Tip (maintenance):
   - `cargo run -p fret-diag-scriptgen -- check-suite ui-gallery-combobox`
   - `cargo run -p fret-diag-scriptgen -- check-suite ui-gallery-text-ime`
 - Registry stays in sync:
-  - `python tools/check_diag_scripts_registry.py`
+  - `cargo run -p fretboard -- diag registry check`
 
 4) Normalize scripts (stable diffs):
 

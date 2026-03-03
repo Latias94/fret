@@ -143,7 +143,7 @@ Planned outcomes:
 - [x] Ensure capability inference resolves `script_redirect` stubs (screenshots / required caps / env defaults).
 - [x] Add a script registry file (v1, generated; scope: suites + `_prelude`):
   - [x] file: `tools/diag-scripts/index.json`
-  - [x] generator/check: `python tools/check_diag_scripts_registry.py [--write]` (stdlib-only; suitable for CI)
+  - [x] generator/check: `cargo run -p fretboard -- diag registry <check|write>` (legacy: `python tools/check_diag_scripts_registry.py [--write]`)
   - [x] fields: `id`, `path`, `tags`, `target_hints`, `required_capabilities`, `suite_memberships`
 - [x] CI guardrail: `.github/workflows/consistency-checks.yml`
 - [x] Allow `diag run` to accept a promoted `script_id` from `tools/diag-scripts/index.json` (in addition to explicit paths),

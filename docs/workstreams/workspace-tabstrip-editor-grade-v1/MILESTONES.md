@@ -23,7 +23,7 @@ Outcomes:
     - `workspace-shell-demo-tab-overflow-activate-hidden-smoke`
 
 Acceptance:
-- `python3 tools/check_diag_scripts_registry.py` passes.
+- `cargo run -p fretboard -- diag registry check` passes.
 - `cargo run -p fretboard -- diag run ... --launch -- <workspace shell demo>` passes reliably.
 
 ## M2 — Editor-grade behaviors (Zed-style expectations)

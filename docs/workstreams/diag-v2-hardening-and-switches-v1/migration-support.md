@@ -61,7 +61,7 @@ The canonical script library is taxonomy-based (product area + intent). Use redi
 3) Validate suite closure + registry drift:
 
 - `cargo run -p fretboard -- diag doctor scripts`
-- `python tools/check_diag_scripts_registry.py`
+- `cargo run -p fretboard -- diag registry check`
 
 ## Suites
 

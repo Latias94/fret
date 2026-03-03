@@ -48,7 +48,8 @@ Notes:
 - `diag perf` suite membership is also expressed via suite directories (typically `tools/diag-scripts/suites/perf-*/`),
   and is materialized into the promoted registry as `suite_memberships`.
 - A minimal, generated registry exists at `tools/diag-scripts/index.json` (scope: suite-reachable scripts + `_prelude`)
-  and is validated in CI via `python tools/check_diag_scripts_registry.py`.
+  and is validated in CI via `cargo run -p fretboard -- diag registry check` (or the legacy Python validator
+  `python tools/check_diag_scripts_registry.py`).
 
 Editing a suite safely:
 

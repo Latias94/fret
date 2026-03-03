@@ -82,7 +82,7 @@ Exit criteria:
 Evidence anchors:
 
 - Tooling: `crates/fret-diag/src/commands/ai_packet.rs`, `crates/fret-diag/src/pack_zip.rs`
-- Scripts: `tools/diag-scripts/index.json`, `tools/check_diag_scripts_registry.py`
+- Scripts: `tools/diag-scripts/index.json`, `fretboard diag registry` (`crates/fret-diag/src/commands/registry.rs`, legacy: `python tools/check_diag_scripts_registry.py`)
 - Workstream: `docs/workstreams/diag-ai-agent-debugging-v1.md`
 
 ## M3: Compatibility logic boxed (P2)

@@ -53,16 +53,15 @@ $scripts | ForEach-Object { Write-Host ("  - {0}" -f $_) }
 Invoke-NormalizeScripts -Scripts $scripts
 
 if (-not $NoIndex) {
-  & python tools/check_diag_scripts_registry.py --write
+  & cargo run -p fretboard --quiet -- diag registry write
   if ($LASTEXITCODE -ne 0) {
-    throw "check_diag_scripts_registry.py --write failed"
+    throw "diag registry write failed"
   }
 
-  & python tools/check_diag_scripts_registry.py
+  & cargo run -p fretboard --quiet -- diag registry check
   if ($LASTEXITCODE -ne 0) {
-    throw "check_diag_scripts_registry.py failed"
+    throw "diag registry check failed"
   }
 }
 
 Write-Host "ok"
-

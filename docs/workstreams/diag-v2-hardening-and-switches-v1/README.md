@@ -125,7 +125,7 @@ required, inconsistent semantics, or transport divergence). Each item includes e
 - Evidence:
   - perf entrypoint: `crates/fret-diag/src/diag_perf.rs`
   - suite membership resolver: `crates/fret-diag/src/perf_seed_policy.rs`
-  - promoted registry: `tools/diag-scripts/index.json`, `tools/check_diag_scripts_registry.py`
+  - promoted registry: `tools/diag-scripts/index.json`, `fretboard diag registry` (`crates/fret-diag/src/commands/registry.rs`)
   - suites: `tools/diag-scripts/suites/perf-*/`
 
 8) Pointer kind (“mouse/touch/pen”) is supported, but needs a single canonical doc section
@@ -425,7 +425,7 @@ Notes:
 
 `tools/diag-scripts/index.json` is generated (do not edit by hand) via:
 
-- `python tools/check_diag_scripts_registry.py --write`
+- `cargo run -p fretboard -- diag registry write`
 
 Design constraints (v1):
 
