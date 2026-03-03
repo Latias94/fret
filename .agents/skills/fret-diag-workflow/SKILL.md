@@ -22,6 +22,7 @@ Use `fret-ui-review` when the goal is an architecture/UX audit rather than produ
 - Prefer bounded tooling queries:
   - `fretboard diag meta ...`
   - `fretboard diag windows ...`
+  - `fretboard diag dock-graph ...`
   - `fretboard diag dock-routing ...`
   - `fretboard diag screenshots ...`
   - `fretboard diag resolve latest ...`
