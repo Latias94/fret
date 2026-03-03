@@ -9,8 +9,8 @@ use fret_core::{
 };
 use fret_runtime::{CommandId, Effect, Model};
 use fret_ui::action::{
-    OnActivate, OnInternalDrag, OnPressablePointerMove, OnPressablePointerUp, OnWheel,
-    PressablePointerUpResult,
+    ActivateReason, OnActivate, OnInternalDrag, OnPressablePointerMove, OnPressablePointerUp,
+    OnWheel, PressablePointerUpResult,
 };
 use fret_ui::element::ElementKind;
 use fret_ui::element::{
@@ -69,10 +69,11 @@ use layouts::{
     fill_grow_layout, fill_layout, row_layout, tab_list_semantics_layout,
     tab_strip_scroll_content_layout,
 };
-use state::{WorkspaceTabStripState, get_focus_restore_model};
+use state::{WorkspaceTabStripState, get_focus_restore_model, get_reveal_hint_model};
 use theme::WorkspaceTabStripTheme;
 use utils::{
-    dnd_scope_for_pane, resolve_end_drop_target_in_canonical_order, scroll_rect_into_view_x,
+    dnd_scope_for_pane, resolve_end_drop_target_in_canonical_order,
+    scroll_rect_into_view_x_with_margin,
 };
 use widgets::{
     tab_close_button, tab_dirty_indicator, tab_strip_scroll_button, tab_trailing_slot_placeholder,
@@ -332,6 +333,8 @@ impl WorkspaceTabStrip {
 
                 let tab_element_registry = workspace_tab_element_registry_model(cx);
                 let focus_restore_model = get_focus_restore_model(cx);
+                let reveal_hint_model = get_reveal_hint_model(cx, pane_id.as_ref());
+                cx.observe_model(&reveal_hint_model, Invalidation::Paint);
 
                 let (
                     scroll_handle,
@@ -449,8 +452,25 @@ impl WorkspaceTabStrip {
                                         cx.roving_nav_apg();
                                         let pane_activate_cmd_for_roving = pane_activate_cmd.clone();
                                         let tab_commands_for_roving = roving_tab_commands.clone();
+                                        let canonical_tab_order_for_roving =
+                                            canonical_tab_order.clone();
+                                        let reveal_hint_model_for_roving =
+                                            reveal_hint_model.clone();
                                         cx.roving_on_active_change(Arc::new(
                                             move |host, acx, idx| {
+                                                let tab_id = canonical_tab_order_for_roving
+                                                    .get(idx)
+                                                    .cloned();
+                                                if let Some(tab_id) = tab_id {
+                                                    let _ = host.models_mut().update(
+                                                        &reveal_hint_model_for_roving,
+                                                        |st| {
+                                                            st.tab_id = Some(tab_id);
+                                                            st.reason =
+                                                                Some(ActivateReason::Keyboard);
+                                                        },
+                                                    );
+                                                }
                                                 if let Some(cmd) =
                                                     pane_activate_cmd_for_roving.clone()
                                                 {
@@ -658,8 +678,22 @@ impl WorkspaceTabStrip {
                                                             tab_activate_command.clone();
                                                         let pane_activate_cmd_for_activate_handler =
                                                             pane_activate_cmd_for_activate.clone();
+                                                        let reveal_hint_model_for_activate =
+                                                            reveal_hint_model.clone();
+                                                        let tab_id_for_activate =
+                                                            tab_id.clone();
                                                         let handler: OnActivate = Arc::new(
-                                                            move |host, acx, _reason| {
+                                                            move |host, acx, reason| {
+                                                                let _ = host.models_mut().update(
+                                                                    &reveal_hint_model_for_activate,
+                                                                    |st| {
+                                                                        st.tab_id = Some(
+                                                                            tab_id_for_activate
+                                                                                .clone(),
+                                                                        );
+                                                                        st.reason = Some(reason);
+                                                                    },
+                                                                );
                                                                 if let Some(cmd) =
                                                                     pane_activate_cmd_for_activate_handler
                                                                         .clone()
@@ -1966,6 +2000,7 @@ impl WorkspaceTabStrip {
                                     tab_rects,
                                     viewport,
                                     is_overflowing,
+                                    reveal_hint_model.clone(),
                                     text_style.clone(),
                                     inactive_fg,
                                 );
@@ -2381,7 +2416,48 @@ impl WorkspaceTabStrip {
                                 cx.last_bounds_for_element(scroll_id),
                                 cx.last_bounds_for_element(tab_id),
                             ) {
-                                scroll_rect_into_view_x(&scroll_handle, viewport, tab_rect);
+                                let hint = cx
+                                    .app
+                                    .models_mut()
+                                    .read(&reveal_hint_model, |st| st.clone())
+                                    .ok();
+
+                                let hint_matches_active = hint
+                                    .as_ref()
+                                    .and_then(|st| st.tab_id.as_ref())
+                                    .zip(active.as_ref())
+                                    .is_some_and(|(hint_id, active_id)| {
+                                        hint_id.as_ref() == active_id.as_ref()
+                                    });
+
+                                let margin = if hint_matches_active
+                                    && hint
+                                        .as_ref()
+                                        .and_then(|st| st.reason)
+                                        == Some(ActivateReason::Keyboard)
+                                {
+                                    Px(12.0)
+                                } else {
+                                    Px(0.0)
+                                };
+
+                                scroll_rect_into_view_x_with_margin(
+                                    &scroll_handle,
+                                    viewport,
+                                    tab_rect,
+                                    margin,
+                                );
+
+                                if hint.is_some_and(|st| st.tab_id.is_some() || st.reason.is_some())
+                                {
+                                    let _ = cx.app.models_mut().update(
+                                        &reveal_hint_model,
+                                        |st| {
+                                            st.tab_id = None;
+                                            st.reason = None;
+                                        },
+                                    );
+                                }
                             }
                         }
                     }
@@ -2475,6 +2551,7 @@ impl WorkspaceTabStrip {
                         let focus_restore_model_for_timer = focus_restore_model.clone();
                         let tab_element_registry_for_command = tab_element_registry.clone();
                         let focus_restore_model_for_command = focus_restore_model.clone();
+                        let reveal_hint_model_for_command = reveal_hint_model.clone();
 
                         cx.timer_on_timer_for(
                             root.id,
@@ -2589,6 +2666,14 @@ impl WorkspaceTabStrip {
                                 );
 
                                 if let Some(next_id) = next {
+                                    let _ = host.models_mut().update(
+                                        &reveal_hint_model_for_command,
+                                        |st| {
+                                            st.tab_id = Some(next_id.clone());
+                                            st.reason = Some(ActivateReason::Keyboard);
+                                        },
+                                    );
+
                                     // Drop the closing tab entry (best-effort) so the registry
                                     // doesn't grow unbounded in long sessions.
                                     let closing_key = WorkspaceTabElementKey {

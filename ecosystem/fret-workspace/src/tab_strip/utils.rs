@@ -19,9 +19,12 @@ pub(super) fn tab_text_style(theme: &Theme) -> TextStyle {
     }
 }
 
-pub(super) fn scroll_rect_into_view_x(handle: &ScrollHandle, viewport: Rect, child: Rect) {
-    let margin = Px(12.0);
-
+pub(super) fn scroll_rect_into_view_x_with_margin(
+    handle: &ScrollHandle,
+    viewport: Rect,
+    child: Rect,
+    margin: Px,
+) {
     let current = handle.offset();
     let view_left = viewport.origin.x;
     let view_right = Px(viewport.origin.x.0 + viewport.size.width.0);

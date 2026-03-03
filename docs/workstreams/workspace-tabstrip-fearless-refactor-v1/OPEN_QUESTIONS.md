@@ -88,6 +88,13 @@ Recommendation:
 - Keep the mechanism layer limited to: "given tab rects + viewport, compute the scroll delta needed
   to reveal the active tab".
 
+Update (2026-03-03):
+
+- Workspace now records a best-effort reveal hint (`Pointer` vs `Keyboard`) and uses it to choose a
+  tight vs comfortable reveal margin when the active tab changes.
+  - Evidence: `ecosystem/fret-workspace/src/tab_strip/state.rs` (`WorkspaceTabStripRevealHint`)
+  - Evidence: `ecosystem/fret-workspace/src/tab_strip/mod.rs` (active-change reveal policy)
+
 ## Keyboard + a11y semantics (APG tablist)
 
 - Do we want full APG-style tablist semantics (roving focus, tab/tabpanel roles, Home/End)?
