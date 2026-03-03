@@ -66,14 +66,25 @@ impl RunnerWindowStyleDiagnosticsStore {
                 next.resizable = resizable;
             }
         }
+        if let Some(material) = requested.background_material {
+            let clamped = clamp_background_material_request(material, caps);
+            next.background_material = clamped;
+
+            // Background materials may require a composited alpha surface. If the caller did not
+            // explicitly request `transparent`, runners may implicitly treat it as true once a
+            // non-None material is effectively applied. See ADR 0310.
+            if next.background_material != WindowBackgroundMaterialRequest::None
+                && caps.ui.window_transparent
+                && requested.transparent.is_none()
+            {
+                next.transparent = true;
+            }
+        }
+
         if caps.ui.window_transparent {
             if let Some(transparent) = requested.transparent {
                 next.transparent = transparent;
             }
-        }
-
-        if let Some(material) = requested.background_material {
-            next.background_material = clamp_background_material(material, caps);
         }
 
         if let Some(taskbar) = requested.taskbar {
@@ -130,7 +141,7 @@ impl RunnerWindowStyleDiagnosticsStore {
         // See ADR 0139 for patchability rules.
 
         if let Some(material) = patch.background_material {
-            current.background_material = clamp_background_material(material, caps);
+            current.background_material = clamp_background_material_request(material, caps);
         }
 
         if let Some(taskbar) = patch.taskbar {
@@ -166,7 +177,7 @@ impl RunnerWindowStyleDiagnosticsStore {
     }
 }
 
-fn clamp_background_material(
+pub fn clamp_background_material_request(
     requested: WindowBackgroundMaterialRequest,
     caps: &PlatformCapabilities,
 ) -> WindowBackgroundMaterialRequest {

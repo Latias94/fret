@@ -351,6 +351,46 @@ pub(super) fn set_window_mouse_passthrough(window: &dyn Window, enabled: bool) -
     true
 }
 
+#[cfg(target_os = "windows")]
+pub(super) fn set_window_background_material(
+    window: &dyn Window,
+    material: fret_runtime::WindowBackgroundMaterialRequest,
+) -> bool {
+    use winit::raw_window_handle::HasWindowHandle as _;
+
+    let hwnd: isize = match window.window_handle() {
+        Ok(handle) => match handle.as_raw() {
+            winit::raw_window_handle::RawWindowHandle::Win32(h) => h.hwnd.get() as isize,
+            _ => 0,
+        },
+        Err(_) => 0,
+    };
+    if hwnd == 0 {
+        return false;
+    }
+
+    let ty = match material {
+        fret_runtime::WindowBackgroundMaterialRequest::None => {
+            super::win32::dwm_system_backdrop_type_for_none()
+        }
+        fret_runtime::WindowBackgroundMaterialRequest::SystemDefault => {
+            super::win32::dwm_system_backdrop_type_for_system_default()
+        }
+        fret_runtime::WindowBackgroundMaterialRequest::Mica => {
+            super::win32::dwm_system_backdrop_type_for_mica()
+        }
+        fret_runtime::WindowBackgroundMaterialRequest::Acrylic => {
+            super::win32::dwm_system_backdrop_type_for_acrylic()
+        }
+        fret_runtime::WindowBackgroundMaterialRequest::Vibrancy => {
+            // macOS-only; should have been clamped by capabilities.
+            return false;
+        }
+    };
+
+    super::win32::set_dwm_system_backdrop_type(hwnd, ty)
+}
+
 #[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
 pub(super) fn set_window_opacity(_window: &dyn Window, _opacity: f32) -> bool {
     false
@@ -358,6 +398,14 @@ pub(super) fn set_window_opacity(_window: &dyn Window, _opacity: f32) -> bool {
 
 #[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
 pub(super) fn set_window_mouse_passthrough(_window: &dyn Window, _enabled: bool) -> bool {
+    false
+}
+
+#[cfg(not(target_os = "windows"))]
+pub(super) fn set_window_background_material(
+    _window: &dyn Window,
+    _material: fret_runtime::WindowBackgroundMaterialRequest,
+) -> bool {
     false
 }
 

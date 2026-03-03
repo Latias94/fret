@@ -1744,11 +1744,23 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
                         }
                         WindowRequest::SetStyle { window, style } => {
                             if let Some(state) = self.windows.get(window) {
+                                let caps = self
+                                    .app
+                                    .global::<PlatformCapabilities>()
+                                    .cloned()
+                                    .unwrap_or_default();
                                 if let Some(level) = style.z_level {
                                     state.window.set_window_level(match level {
                                         WindowZLevel::Normal => WindowLevel::Normal,
                                         WindowZLevel::AlwaysOnTop => WindowLevel::AlwaysOnTop,
                                     });
+                                }
+                                if let Some(material) = style.background_material {
+                                    let material = fret_runtime::runner_window_style_diagnostics::clamp_background_material_request(material, &caps);
+                                    let _ = super::window::set_window_background_material(
+                                        state.window.as_ref(),
+                                        material,
+                                    );
                                 }
                                 if let Some(mouse) = style.mouse {
                                     let passthrough =
@@ -1777,11 +1789,6 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
                                         opacity.as_f32(),
                                     );
                                 }
-                                let caps = self
-                                    .app
-                                    .global::<PlatformCapabilities>()
-                                    .cloned()
-                                    .unwrap_or_default();
                                 self.app.with_global_mut(
                                     fret_runtime::RunnerWindowStyleDiagnosticsStore::default,
                                     |svc, _app| {

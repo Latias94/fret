@@ -1,6 +1,8 @@
 use super::window::MonitorRectF64;
 use winit::dpi::PhysicalPosition;
 
+use std::ffi::c_void;
+
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default)]
 struct Point {
@@ -70,6 +72,115 @@ const SWP_NOMOVE: u32 = 0x0002;
 const SWP_NOSIZE: u32 = 0x0001;
 const SWP_NOZORDER: u32 = 0x0004;
 const SWP_SHOWWINDOW: u32 = 0x0040;
+
+// DWM system backdrop (Windows 11 22H2+).
+//
+// We intentionally keep this best-effort: use the stable `DWMWA_SYSTEMBACKDROP_TYPE` attribute
+// when available and clamp otherwise.
+//
+// References:
+// - DWMWA_SYSTEMBACKDROP_TYPE (38)
+// - DWM_SYSTEMBACKDROP_TYPE (AUTO/NONE/MAINWINDOW/TRANSIENTWINDOW/TABBEDWINDOW)
+const DWMWA_SYSTEMBACKDROP_TYPE: u32 = 38;
+const DWMSBT_AUTO: u32 = 0;
+const DWMSBT_NONE: u32 = 1;
+const DWMSBT_MAINWINDOW: u32 = 2;
+const DWMSBT_TRANSIENTWINDOW: u32 = 3;
+
+#[link(name = "dwmapi")]
+unsafe extern "system" {
+    fn DwmSetWindowAttribute(
+        hwnd: isize,
+        dw_attribute: u32,
+        pv_attribute: *const c_void,
+        cb_attribute: u32,
+    ) -> i32;
+}
+
+#[repr(C)]
+#[derive(Clone, Copy)]
+struct OsVersionInfoExW {
+    dw_os_version_info_size: u32,
+    dw_major_version: u32,
+    dw_minor_version: u32,
+    dw_build_number: u32,
+    dw_platform_id: u32,
+    sz_csd_version: [u16; 128],
+    w_service_pack_major: u16,
+    w_service_pack_minor: u16,
+    w_suite_mask: u16,
+    w_product_type: u8,
+    w_reserved: u8,
+}
+
+#[link(name = "ntdll")]
+unsafe extern "system" {
+    fn RtlGetVersion(info: *mut OsVersionInfoExW) -> i32;
+}
+
+pub(super) fn windows_build_number() -> Option<u32> {
+    let mut info = OsVersionInfoExW {
+        dw_os_version_info_size: std::mem::size_of::<OsVersionInfoExW>() as u32,
+        dw_major_version: 0,
+        dw_minor_version: 0,
+        dw_build_number: 0,
+        dw_platform_id: 0,
+        sz_csd_version: [0u16; 128],
+        w_service_pack_major: 0,
+        w_service_pack_minor: 0,
+        w_suite_mask: 0,
+        w_product_type: 0,
+        w_reserved: 0,
+    };
+    // SAFETY: `info` is a valid, properly sized struct for the duration of the call.
+    let status = unsafe { RtlGetVersion(&mut info) };
+    if status != 0 {
+        return None;
+    }
+    Some(info.dw_build_number)
+}
+
+pub(super) fn supports_dwm_system_backdrop() -> bool {
+    // `DWMWA_SYSTEMBACKDROP_TYPE` is officially supported on Windows 11 22H2 (build 22621) and up.
+    // We keep this conservative to avoid "capabilities lie".
+    windows_build_number().is_some_and(|b| b >= 22621)
+}
+
+pub(super) fn set_dwm_system_backdrop_type(hwnd: isize, ty: u32) -> bool {
+    if hwnd == 0 {
+        return false;
+    }
+    if !supports_dwm_system_backdrop() {
+        return false;
+    }
+
+    // SAFETY: `DwmSetWindowAttribute` reads `cb_attribute` bytes from `pv_attribute` synchronously.
+    let hr = unsafe {
+        DwmSetWindowAttribute(
+            hwnd,
+            DWMWA_SYSTEMBACKDROP_TYPE,
+            &ty as *const u32 as *const c_void,
+            std::mem::size_of::<u32>() as u32,
+        )
+    };
+    hr >= 0
+}
+
+pub(super) fn dwm_system_backdrop_type_for_none() -> u32 {
+    DWMSBT_NONE
+}
+
+pub(super) fn dwm_system_backdrop_type_for_system_default() -> u32 {
+    DWMSBT_AUTO
+}
+
+pub(super) fn dwm_system_backdrop_type_for_mica() -> u32 {
+    DWMSBT_MAINWINDOW
+}
+
+pub(super) fn dwm_system_backdrop_type_for_acrylic() -> u32 {
+    DWMSBT_TRANSIENTWINDOW
+}
 
 pub(super) fn cursor_pos_physical() -> Option<PhysicalPosition<f64>> {
     let mut p = Point::default();
