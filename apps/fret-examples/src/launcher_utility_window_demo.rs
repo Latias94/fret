@@ -104,7 +104,7 @@ fn on_command(
             st.blink_timer = Some(token);
             let _ = app
                 .models_mut()
-                .update(&st.status, |v| *v = Arc::from("Blink: hide…"));
+                .update(&st.status, |v| *v = Arc::from("Blink: hide"));
 
             app.push_effect(Effect::Window(WindowRequest::SetVisible {
                 window,

@@ -914,6 +914,7 @@ Recent additions:
 - `dock_graph_node_count_le` / `dock_graph_max_split_depth_le` (assert dock graph size/depth stays bounded after repeated operations)
 - `known_window_count_ge` / `known_window_count_is` (assert number of currently open windows as best-effort reported by the runner; backed by the runner-owned window lifecycle diagnostics store when available, falling back to the input context service)
 - `dock_drag_current_window_is` (assert that a dock drag session is active and its `current_window` matches a window target)
+- `dock_drag_kind_is` (assert the active dock drag kind: `dock_panel` vs `dock_tabs`)
 - `dock_drag_moving_window_is` (assert the runner-reported moving window for a dock drag; ImGui-style “follow window”)
 - `dock_drag_window_under_moving_window_is` (assert the best-effort “window under moving window” selection during a dock drag)
 - `dock_drag_window_under_moving_window_source_is` (assert which mechanism selected the “window under moving window”: platform vs heuristic)
@@ -934,6 +935,7 @@ Notes:
   - Optional `max_snapshots` caps how many snapshots are included in this export (clamped to `FRET_DIAG_MAX_SNAPSHOTS`).
 - `capture_screenshot` requests a screenshot for the **most recent bundle directory** (`last_dump_dir`) and waits for completion (up to `timeout_frames`, default 300). If no bundle exists yet, the harness creates one first.
 - `drag_pointer` runs over multiple frames so diagnostics bundles can capture and gate frame-to-frame behavior (prepaint outputs, paint-only invalidations, drag indicators). Roughly: 1 frame for `move+down`, `steps` frames of `move`, then 1 frame for `up`.
+  - Pointer synthesis keeps positions slightly inside window bounds when the requested coordinates are still within the window (avoids edge hit-testing misses), but preserves intentionally out-of-bounds positions for tear-off / cross-window docking routes.
 
 ## Script schema v2 (intent-level steps)
 

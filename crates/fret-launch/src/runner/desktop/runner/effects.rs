@@ -1744,18 +1744,31 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
                         }
                         WindowRequest::SetStyle { window, style } => {
                             if let Some(state) = self.windows.get(window) {
+                                let window_handle = state.window.clone();
+                                let caps = self
+                                    .app
+                                    .global::<PlatformCapabilities>()
+                                    .cloned()
+                                    .unwrap_or_default();
                                 if let Some(level) = style.z_level {
-                                    state.window.set_window_level(match level {
+                                    window_handle.set_window_level(match level {
                                         WindowZLevel::Normal => WindowLevel::Normal,
                                         WindowZLevel::AlwaysOnTop => WindowLevel::AlwaysOnTop,
                                     });
+                                }
+                                if let Some(material) = style.background_material {
+                                    let material = fret_runtime::runner_window_style_diagnostics::clamp_background_material_request(material, &caps);
+                                    let _ = super::window::set_window_background_material(
+                                        window_handle.as_ref(),
+                                        material,
+                                    );
                                 }
                                 if let Some(mouse) = style.mouse {
                                     let passthrough =
                                         matches!(mouse, fret_runtime::MousePolicy::Passthrough);
                                     let dock_drag_pointer_id = self.dock_drag_pointer_id();
                                     let applied = super::window::set_window_mouse_passthrough(
-                                        state.window.as_ref(),
+                                        window_handle.as_ref(),
                                         passthrough,
                                     );
                                     if let Some(follow) = self.dock_tearoff_follow.as_mut()
@@ -1773,22 +1786,36 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
                                 }
                                 if let Some(opacity) = style.opacity {
                                     let _ = super::window::set_window_opacity(
-                                        state.window.as_ref(),
+                                        window_handle.as_ref(),
                                         opacity.as_f32(),
                                     );
                                 }
-                                let caps = self
-                                    .app
-                                    .global::<PlatformCapabilities>()
-                                    .cloned()
-                                    .unwrap_or_default();
                                 self.app.with_global_mut(
                                     fret_runtime::RunnerWindowStyleDiagnosticsStore::default,
                                     |svc, _app| {
                                         svc.apply_style_patch(window, style, &caps);
                                     },
                                 );
-                                state.window.request_redraw();
+
+                                if let Some(context) = self.context.as_ref() {
+                                    let want_transparent = self
+                                        .app
+                                        .global::<fret_runtime::RunnerWindowStyleDiagnosticsStore>()
+                                        .and_then(|s| s.effective_snapshot(window))
+                                        .is_some_and(|s| s.transparent);
+                                    if let Some(state) = self.windows.get_mut(window)
+                                        && let Some(surface) = state.surface.as_mut()
+                                    {
+                                        super::window_lifecycle::configure_surface_alpha_mode_for_composited_window(
+                                            &context.adapter,
+                                            &context.device,
+                                            surface,
+                                            want_transparent,
+                                        );
+                                    }
+                                }
+
+                                window_handle.request_redraw();
                             }
                         }
                     },

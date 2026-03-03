@@ -281,6 +281,14 @@ For evidence-first triage (reason codes + bounded traces), see: `references/evid
     main event handler, not only for script-injected events.
   - Recommended: use `fret_bootstrap::ui_diagnostics::maybe_consume_event(app, window, event)` to keep ordering
     consistent (ignore external input → record event → intercept pick/inspect).
+- “dock tab titles disappear after a short idle delay (~2s)”
+  - Symptom: tab labels vanish while SVG close icons remain.
+  - Likely cause: retained docking tabs cache prepared text blobs without rebuilding when `TextFontStackKey` changes
+    (system font rescan / font stack stabilization), so cached `TextBlobId`s become stale.
+  - Evidence: repro via a tiny script that waits idle and captures a screenshot/bundle; then inspect `dock_graph_signature`
+    and the screenshot to confirm “chrome ok, text missing”.
+  - Fix: include `TextFontStackKey` in the tab-title rebuild cache key in the docking UI layer (e.g.
+    `ecosystem/fret-docking/src/dock/space.rs`).
 
 ## Performance gates (when the issue is a hitch)
 

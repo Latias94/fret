@@ -150,7 +150,18 @@ fn web_vs_fret_layout_carousel_orientation_geometry_matches_web() {
         ],
         |cx| {
             let slides = (1..=5)
-                .map(|i| carousel_slide(cx, i, Px(30.0), Px(36.0), false, true))
+                .map(|i| {
+                    fret_ui_shadcn::CarouselItem::new(carousel_slide(
+                        cx,
+                        i,
+                        Px(30.0),
+                        Px(36.0),
+                        false,
+                        true,
+                    ))
+                    // Upstream demo: `md:basis-1/2` (web goldens use a 1440px viewport, so `md` is active).
+                    .refine_layout(LayoutRefinement::default().basis_fraction(0.5))
+                })
                 .collect::<Vec<_>>();
 
             fret_ui_shadcn::Carousel::new(slides)

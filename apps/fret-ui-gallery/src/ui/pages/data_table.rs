@@ -9,6 +9,7 @@ pub(super) fn preview_data_table(
 ) -> Vec<AnyElement> {
     let basic_demo = snippets::basic_demo::render(cx);
     let demo = snippets::guide_demo::render(cx, state);
+    let rtl_demo = snippets::rtl_demo::render(cx);
 
     let notes_stack = doc_layout::notes(
         cx,
@@ -34,6 +35,9 @@ pub(super) fn preview_data_table(
             DocSection::new("Guide Demo", demo)
                 .max_w(Px(980.0))
                 .code_rust_from_file_region(snippets::guide_demo::SOURCE, "example"),
+            DocSection::new("RTL", rtl_demo)
+                .max_w(Px(980.0))
+                .code_rust_from_file_region(snippets::rtl_demo::SOURCE, "example"),
             DocSection::new("Code", code_preview)
                 .max_w(Px(980.0))
                 .test_id_prefix("ui-gallery-data-table-code")

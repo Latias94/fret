@@ -184,6 +184,8 @@ pub struct SemanticsScroll {
 pub struct SemanticsNodeExtra {
     pub placeholder: Option<String>,
     pub url: Option<String>,
+    /// Optional role description override (ARIA `aria-roledescription`-like outcome).
+    pub role_description: Option<String>,
     /// Optional hierarchy level for outline/tree semantics (1-based).
     pub level: Option<u32>,
     pub orientation: Option<SemanticsOrientation>,

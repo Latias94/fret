@@ -5,7 +5,8 @@
     "tags": ["docking", "multiwindow", "gate", "windows"],
     "required_capabilities": ["diag.script_v2", "diag.multi_window", "diag.mouse_buttons_override"],
     "env_defaults": {
-      "FRET_DOCK_ALLOW_MULTI_WINDOW_TEAR_OFF": "1"
+      "FRET_DOCK_ALLOW_MULTI_WINDOW_TEAR_OFF": "1",
+      "FRET_DIAG_ISOLATE_POINTER_INPUT": "0"
     },
     "target_hints": [
       "This script gates a Windows-specific fallback: finishing a cross-window dock drag when the left mouse release is not delivered to any window.",

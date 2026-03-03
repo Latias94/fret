@@ -160,6 +160,7 @@ pub use runner_window_lifecycle_diagnostics::{
 };
 pub use runner_window_style_diagnostics::{
     RunnerWindowStyleDiagnosticsStore, RunnerWindowStyleEffectiveSnapshotV1,
+    clamp_background_material_request,
 };
 pub use shortcut_routing_diagnostics::{
     ShortcutRoutingDecision, ShortcutRoutingOutcome, ShortcutRoutingPhase,

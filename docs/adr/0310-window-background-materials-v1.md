@@ -78,6 +78,9 @@ Window background materials generally require compositor-backed alpha compositio
 
 - If `background_material` is `Some(...)` and the backend requires an alpha/composited window, the
   runner may implicitly treat `transparent` as `true` for the purposes of *effective style*.
+- Runners may keep this implied composited transparency **sticky** for the lifetime of the window,
+  even if the background material is later set back to `None`, because some backends treat window
+  transparency as a create-time-only attribute.
 - If the backend cannot provide a composited alpha surface, it must clamp the request to
   `background_material=None` and report the effective result via diagnostics.
 
@@ -167,4 +170,3 @@ Recommended validation:
 - Capability gating: `docs/adr/0054-platform-capabilities-and-portability-matrix.md`
 - Renderer effect substrate (in-window backdrop filters): `docs/adr/0116-renderer-architecture-v3-render-plan-and-postprocessing-substrate.md`,
   `docs/adr/0117-effect-layers-and-backdrop-filters-scene-semantics-v1.md`
-

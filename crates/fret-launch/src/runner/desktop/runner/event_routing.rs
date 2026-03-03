@@ -1,36 +1,4 @@
 use super::*;
-use std::fmt;
-
-fn diag_dock_drag_trace(args: fmt::Arguments<'_>) {
-    use std::{
-        io::Write as _,
-        sync::{Mutex, OnceLock},
-    };
-
-    if std::env::var_os("FRET_DOCK_DRAG_TRACE").is_none() {
-        return;
-    }
-
-    static LOG_FILE: OnceLock<Mutex<std::fs::File>> = OnceLock::new();
-    let file = LOG_FILE.get_or_init(|| {
-        let out_dir = std::env::var_os("FRET_DIAG_DIR")
-            .filter(|v| !v.is_empty())
-            .map(std::path::PathBuf::from)
-            .unwrap_or_else(|| std::path::PathBuf::from("target").join("fret-diag"));
-        let _ = std::fs::create_dir_all(&out_dir);
-        let path = out_dir.join("dock_drag_runtime_trace.log");
-        let file = std::fs::OpenOptions::new()
-            .create(true)
-            .append(true)
-            .open(path)
-            .expect("open dock_drag_runtime_trace.log");
-        Mutex::new(file)
-    });
-    let Ok(mut file) = file.lock() else {
-        return;
-    };
-    let _ = writeln!(file, "{}", args);
-}
 
 impl<D: WinitAppDriver> WinitRunner<D> {
     pub(super) fn internal_drag_routing_pointer_id(&self) -> Option<fret_core::PointerId> {

@@ -1764,6 +1764,14 @@ pub enum UiPredicateV1 {
     DockDragCurrentWindowIs {
         window: UiWindowTargetV1,
     },
+    /// True when the latest diagnostics report an active dock drag whose drag kind matches `kind`.
+    ///
+    /// Supported kinds:
+    /// - `dock_panel`
+    /// - `dock_tabs`
+    DockDragKindIs {
+        drag_kind: String,
+    },
     /// True when the latest docking diagnostics report an active dock drag whose runner-owned
     /// moving window matches `window`.
     ///

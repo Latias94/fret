@@ -81,12 +81,14 @@ fn carousel_publishes_panel_and_slide_group_labels() {
     }
 
     let snap = ui.semantics_snapshot_arc().expect("semantics snapshot");
-    let root = find_by_test_id(&snap, SemanticsRole::Panel, "carousel-a11y");
+    let root = find_by_test_id(&snap, SemanticsRole::Region, "carousel-a11y");
+    assert_eq!(root.extra.role_description.as_deref(), Some("carousel"));
     assert_eq!(root.label.as_deref(), Some("Carousel"));
 
     for idx in 1..=5 {
         let test_id = format!("carousel-a11y-item-{idx}");
         let slide = find_by_test_id(&snap, SemanticsRole::Group, &test_id);
+        assert_eq!(slide.extra.role_description.as_deref(), Some("slide"));
         let expected = format!("Slide {idx} of 5");
         assert_eq!(
             slide.label.as_deref(),

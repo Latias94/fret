@@ -161,8 +161,8 @@ pub use carousel::{
     Carousel, CarouselAlign, CarouselApi, CarouselApiSnapshot, CarouselAutoplayConfig,
     CarouselBreakpoint, CarouselContainScroll, CarouselContent, CarouselContext, CarouselEvent,
     CarouselEventCursor, CarouselItem, CarouselNext, CarouselOptions, CarouselOptionsPatch,
-    CarouselOrientation, CarouselPrevious, CarouselSlidesInViewSnapshot, CarouselSlidesToScroll,
-    carousel_context, use_carousel,
+    CarouselOrientation, CarouselPlugin, CarouselPrevious, CarouselSlidesInViewSnapshot,
+    CarouselSlidesToScroll, CarouselWheelGesturesConfig, carousel_context, use_carousel,
 };
 pub use chart::{
     ChartConfig, ChartConfigItem, ChartContainer, ChartContext, ChartLegend, ChartLegendContent,

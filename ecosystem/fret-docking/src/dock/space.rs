@@ -303,6 +303,7 @@ pub struct DockSpace {
     last_tab_context_menu_scale_factor: Option<f32>,
     last_tab_context_menu_theme_revision: Option<u64>,
     last_tab_text_scale_factor: Option<f32>,
+    last_text_font_stack_key: Option<u64>,
     last_theme_revision: Option<u64>,
     last_active_tabs: Option<DockNodeId>,
     hovered_float_zone: bool,
@@ -477,6 +478,7 @@ impl DockSpace {
             last_tab_context_menu_scale_factor: None,
             last_tab_context_menu_theme_revision: None,
             last_tab_text_scale_factor: None,
+            last_text_font_stack_key: None,
             last_theme_revision: None,
             last_active_tabs: None,
             hovered_float_zone: false,
@@ -974,6 +976,7 @@ impl DockSpace {
         services: &mut dyn fret_core::UiServices,
         theme: fret_ui::ThemeSnapshot,
         scale_factor: f32,
+        text_font_stack_key: Option<u64>,
         dock: &DockManager,
         layout: &std::collections::HashMap<DockNodeId, Rect>,
         drag_panel: Option<&PanelKey>,
@@ -1013,6 +1016,7 @@ impl DockSpace {
         if same_tabs
             && self.last_theme_revision == Some(theme.revision)
             && self.last_tab_text_scale_factor == Some(scale_factor)
+            && self.last_text_font_stack_key == text_font_stack_key
         {
             let titles_unchanged = visible_set.iter().all(|panel| {
                 let title = dock
@@ -1030,6 +1034,7 @@ impl DockSpace {
         }
         self.last_theme_revision = Some(theme.revision);
         self.last_tab_text_scale_factor = Some(scale_factor);
+        self.last_text_font_stack_key = text_font_stack_key;
 
         for (_, title) in self.tab_titles.drain() {
             services.text().release(title.blob);
@@ -2223,10 +2228,16 @@ impl<H: UiHost> Widget<H> for DockSpace {
                     pointer_id,
                     source_window: drag.source_window,
                     current_window: drag.current_window,
+                    kind: drag.kind,
                     dragging: drag.dragging,
                     cross_window_hover: drag.cross_window_hover,
                     transparent_payload_applied: drag.transparent_payload_applied,
+                    transparent_payload_mouse_passthrough_applied: drag
+                        .transparent_payload_mouse_passthrough_applied,
                     window_under_cursor_source: drag.window_under_cursor_source,
+                    moving_window: drag.moving_window,
+                    window_under_moving_window: drag.window_under_moving_window,
+                    window_under_moving_window_source: drag.window_under_moving_window_source,
                 })
             });
             let floating_drag =
@@ -6478,10 +6489,16 @@ impl<H: UiHost> Widget<H> for DockSpace {
                     pointer_id,
                     source_window: drag.source_window,
                     current_window: drag.current_window,
+                    kind: drag.kind,
                     dragging: drag.dragging,
                     cross_window_hover: drag.cross_window_hover,
                     transparent_payload_applied: drag.transparent_payload_applied,
+                    transparent_payload_mouse_passthrough_applied: drag
+                        .transparent_payload_mouse_passthrough_applied,
                     window_under_cursor_source: drag.window_under_cursor_source,
+                    moving_window: drag.moving_window,
+                    window_under_moving_window: drag.window_under_moving_window,
+                    window_under_moving_window_source: drag.window_under_moving_window_source,
                 })
             });
             let floating_drag =
@@ -6729,7 +6746,8 @@ impl<H: UiHost> Widget<H> for DockSpace {
         {
             let frame_id = cx.app.frame_id();
             let dock_drag_pointer_id = cx.app.find_drag_pointer_id(|d| {
-                d.kind == fret_runtime::DRAG_KIND_DOCK_PANEL
+                (d.kind == fret_runtime::DRAG_KIND_DOCK_PANEL
+                    || d.kind == fret_runtime::DRAG_KIND_DOCK_TABS)
                     && (d.source_window == self.window || d.current_window == self.window)
             });
             let dock_drag = dock_drag_pointer_id.and_then(|pointer_id| {
@@ -6738,10 +6756,16 @@ impl<H: UiHost> Widget<H> for DockSpace {
                     pointer_id,
                     source_window: drag.source_window,
                     current_window: drag.current_window,
+                    kind: drag.kind,
                     dragging: drag.dragging,
                     cross_window_hover: drag.cross_window_hover,
                     transparent_payload_applied: drag.transparent_payload_applied,
+                    transparent_payload_mouse_passthrough_applied: drag
+                        .transparent_payload_mouse_passthrough_applied,
                     window_under_cursor_source: drag.window_under_cursor_source,
+                    moving_window: drag.moving_window,
+                    window_under_moving_window: drag.window_under_moving_window,
+                    window_under_moving_window_source: drag.window_under_moving_window_source,
                 })
             });
             let floating_drag =
@@ -6902,6 +6926,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
             .and_then(|pointer_id| app.drag(pointer_id))
             .and_then(|drag| drag.payload::<DockTabsDragPayload>())
             .map(|payload| payload.source_tabs);
+        let text_font_stack_key = app.global::<fret_runtime::TextFontStackKey>().map(|k| k.0);
 
         let caps = app
             .global::<fret_runtime::PlatformCapabilities>()
@@ -6987,6 +7012,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                 services,
                 theme.clone(),
                 scale_factor,
+                text_font_stack_key,
                 &*dock,
                 &layout_all,
                 dock_drag_panel.as_ref(),

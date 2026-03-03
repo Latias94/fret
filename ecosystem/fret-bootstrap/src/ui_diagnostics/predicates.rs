@@ -36,6 +36,14 @@ fn dock_drag_window_under_cursor_source_is(
     }
 }
 
+fn dock_drag_kind_is(have: fret_runtime::DragKindId, want: &str) -> bool {
+    match want {
+        "dock_panel" => have == fret_runtime::DRAG_KIND_DOCK_PANEL,
+        "dock_tabs" => have == fret_runtime::DRAG_KIND_DOCK_TABS,
+        _ => false,
+    }
+}
+
 fn eval_predicate_without_semantics(
     window: AppWindowId,
     known_windows: &[AppWindowId],
@@ -81,6 +89,9 @@ fn eval_predicate_without_semantics(
                     .is_some_and(|drag| drag.dragging && drag.current_window == target_window),
             )
         }
+        UiPredicateV1::DockDragKindIs { drag_kind } => Some(dock_drag_runtime.is_some_and(|drag| {
+            drag.dragging && dock_drag_kind_is(drag.kind, drag_kind)
+        })),
         UiPredicateV1::DockDragMovingWindowIs {
             window: target_window,
         } => {
@@ -1128,6 +1139,12 @@ fn eval_predicate(
             };
             dock_drag_runtime
                 .is_some_and(|drag| drag.dragging && drag.current_window == target_window)
+        }
+        UiPredicateV1::DockDragKindIs { drag_kind } => {
+            let Some(drag) = dock_drag_runtime else {
+                return false;
+            };
+            drag.dragging && dock_drag_kind_is(drag.kind, drag_kind.as_str())
         }
         UiPredicateV1::DockDragMovingWindowIs {
             window: target_window,

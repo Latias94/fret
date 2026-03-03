@@ -344,6 +344,7 @@ impl UiDiagnosticsService {
                 | UiPredicateV1::WindowStyleEffectiveIs { .. }
                 | UiPredicateV1::WindowBackgroundMaterialEffectiveIs { .. }
                 | UiPredicateV1::DockDragCurrentWindowIs { .. }
+                | UiPredicateV1::DockDragKindIs { .. }
                 | UiPredicateV1::DockDragMovingWindowIs { .. }
                 | UiPredicateV1::DockDragWindowUnderMovingWindowIs { .. }
                 | UiPredicateV1::DockDragActiveIs { .. }

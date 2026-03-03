@@ -4,6 +4,7 @@ use fret_core::geometry::{Point, Rect};
 use fret_core::{AppWindowId, Axis, DockNodeId, DropZone, PointerId, RenderTargetId};
 
 use crate::FrameId;
+use crate::DragKindId;
 use crate::WindowUnderCursorSource;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -11,14 +12,28 @@ pub struct DockDragDiagnostics {
     pub pointer_id: PointerId,
     pub source_window: AppWindowId,
     pub current_window: AppWindowId,
+    /// The drag kind for the active dock drag session.
+    pub kind: DragKindId,
     pub dragging: bool,
     pub cross_window_hover: bool,
     /// True when the runner has applied an ImGui-style "transparent payload" treatment to the
     /// moving dock window (e.g. click-through/NoInputs while following the cursor).
     pub transparent_payload_applied: bool,
+    /// Best-effort diagnostics hint: true when the runner successfully applied click-through mouse
+    /// passthrough to the moving dock window while transparent payload is enabled.
+    pub transparent_payload_mouse_passthrough_applied: bool,
     /// Best-effort diagnostics hint: which mechanism was used to select the hovered window during
     /// cross-window drag routing (OS-backed vs heuristic).
     pub window_under_cursor_source: WindowUnderCursorSource,
+    /// Best-effort diagnostics hint: OS window currently being moved by the runner for this drag
+    /// session (ImGui-style "follow window" multi-viewport behavior).
+    pub moving_window: Option<AppWindowId>,
+    /// Best-effort diagnostics hint: when [`Self::moving_window`] is set, the window considered
+    /// "under" the moving window at the current cursor position.
+    pub window_under_moving_window: Option<AppWindowId>,
+    /// Best-effort diagnostics hint: which mechanism was used to select
+    /// [`Self::window_under_moving_window`].
+    pub window_under_moving_window_source: WindowUnderCursorSource,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

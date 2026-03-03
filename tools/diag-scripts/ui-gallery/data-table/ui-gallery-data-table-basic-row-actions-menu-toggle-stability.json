@@ -1,0 +1,103 @@
+{
+  "schema_version": 2,
+  "steps": [
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
+    {
+      "type": "press_key",
+      "key": "a",
+      "modifiers": { "ctrl": true, "meta": false, "shift": false, "alt": false },
+      "repeat": false
+    },
+    {
+      "type": "press_key",
+      "key": "backspace",
+      "modifiers": { "ctrl": false, "meta": false, "shift": false, "alt": false },
+      "repeat": false
+    },
+    { "type": "type_text", "text": "datatable" },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-data-table" },
+        "padding_px": 8.0,
+        "eps_px": 0.0
+      },
+      "timeout_frames": 240
+    },
+    { "type": "click_stable", "target": { "kind": "test_id", "id": "ui-gallery-nav-data-table" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-data-table-basic-root" }
+      },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-data-table-basic-row-actions-open-1"
+        }
+      },
+      "timeout_frames": 240
+    },
+
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-data-table-basic-row-actions-open-1" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "role_and_name", "role": "menu_item", "name": "Copy payment ID" }
+      },
+      "timeout_frames": 240
+    },
+
+    { "type": "press_key", "key": "escape", "modifiers": { "ctrl": false, "meta": false, "shift": false, "alt": false }, "repeat": false },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "not_exists",
+        "target": { "kind": "role_and_name", "role": "menu_item", "name": "Copy payment ID" }
+      }
+    },
+
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-data-table-basic-row-actions-open-1" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "role_and_name", "role": "menu_item", "name": "Copy payment ID" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "wait_frames", "n": 8 },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "role_and_name", "role": "menu_item", "name": "Copy payment ID" }
+      }
+    },
+
+    {
+      "type": "capture_bundle",
+      "label": "ui-gallery-data-table-basic-row-actions-menu-toggle-stability"
+    }
+  ]
+}
+

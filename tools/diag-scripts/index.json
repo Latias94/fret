@@ -2910,6 +2910,16 @@
       ]
     },
     {
+      "id": "ui-gallery-data-table-basic-row-actions-menu-toggle-stability",
+      "path": "tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-basic-row-actions-menu-toggle-stability.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-data-table"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-data-table-guide-demo-checkbox-only-selection",
       "path": "tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-guide-demo-checkbox-only-selection.json",
       "required_capabilities": [],
@@ -4679,6 +4689,30 @@
         "Navigates to the Tabs page.",
         "Sets window width=1280px to avoid sidebar clipping in the native gallery shell.",
         "Captures a screenshot + bundle close to the Demo tab triggers for centering triage."
+      ]
+    },
+    {
+      "id": "ui-gallery-tabs-vertical-list-grows",
+      "path": "tools/diag-scripts/ui-gallery/tabs/ui-gallery-tabs-vertical-list-grows.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "layout",
+        "screenshot",
+        "shadcn",
+        "tabs",
+        "ui_gallery",
+        "vertical"
+      ],
+      "target_hints": [
+        "Navigates to the Tabs page.",
+        "Scrolls the Vertical + Vertical (Line) examples into view.",
+        "Asserts the vertical tab list grows to show multiple triggers (no clipping)."
       ]
     },
     {

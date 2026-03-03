@@ -131,6 +131,7 @@ struct DockingArbitrationHarnessRoot {
     dock_space: fret_core::NodeId,
     left_anchor: fret_core::NodeId,
     right_anchor: fret_core::NodeId,
+    right_tabs_group_anchor: fret_core::NodeId,
     extra_anchors: Vec<fret_core::NodeId>,
     float_zone_anchor: fret_core::NodeId,
     viewport_split_handle_anchor: fret_core::NodeId,
@@ -183,6 +184,7 @@ impl<H: fret_ui::UiHost> Widget<H> for DockingArbitrationHarnessRoot {
         let fallback_pad_x = 48.0_f32.min((bounds.size.width.0 * 0.25).max(0.0));
         let mut left_anchor_pos = (bounds.origin.x.0 + fallback_pad_x, fallback_y);
         let mut right_anchor_pos = (fallback_mid_x + fallback_pad_x, fallback_y);
+        let mut right_tabs_group_anchor_pos = (right_anchor_pos.0 + 96.0, fallback_y);
         let mut extra_anchor_pos: Vec<(f32, f32)> = (0..self.extra_anchors.len())
             .map(|ix| (bounds.origin.x.0 + 24.0 + (ix as f32 * 4.0), fallback_y))
             .collect();
@@ -300,6 +302,64 @@ impl<H: fret_ui::UiHost> Widget<H> for DockingArbitrationHarnessRoot {
                 None
             }
 
+            fn tab_bar_tabs_group_anchor_for_panel(
+                dock: &DockManager,
+                window: AppWindowId,
+                bounds: Rect,
+                split_handle_gap: Px,
+                split_handle_hit_thickness: Px,
+                panel: &PanelKey,
+            ) -> Option<(f32, f32)> {
+                let anchor_for_rect = |tabs_rect: Rect, floating: bool| {
+                    let (x0, y0) = if floating {
+                        (
+                            tabs_rect.origin.x.0 + DOCKING_ARBITRATION_FLOATING_BORDER_PX,
+                            tabs_rect.origin.y.0
+                                + DOCKING_ARBITRATION_FLOATING_BORDER_PX
+                                + DOCKING_ARBITRATION_FLOATING_TITLE_H_PX,
+                        )
+                    } else {
+                        (tabs_rect.origin.x.0, tabs_rect.origin.y.0)
+                    };
+
+                    let x1 = x0 + tabs_rect.size.width.0;
+
+                    // Intentionally aim for empty tab-bar space so docking interprets this as a
+                    // "tabs group" drag (rather than a single tab/panel drag).
+                    let x = (x1 - 40.0).max(x0 + 8.0);
+                    let y = y0 + (DOCKING_ARBITRATION_TAB_BAR_H.0 * 0.5);
+                    (x, y)
+                };
+
+                if let Some(root) = dock.graph.window_root(window) {
+                    if let Some(tabs_rect) = tabs_rect_for_panel(
+                        &dock.graph,
+                        root,
+                        bounds,
+                        split_handle_gap,
+                        split_handle_hit_thickness,
+                        panel,
+                    ) {
+                        return Some(anchor_for_rect(tabs_rect, false));
+                    }
+                }
+
+                for floating in dock.graph.floating_windows(window) {
+                    if let Some(tabs_rect) = tabs_rect_for_panel(
+                        &dock.graph,
+                        floating.floating,
+                        floating.rect,
+                        split_handle_gap,
+                        split_handle_hit_thickness,
+                        panel,
+                    ) {
+                        return Some(anchor_for_rect(tabs_rect, true));
+                    }
+                }
+
+                None
+            }
+
             let viewport_left = PanelKey::new("demo.viewport.left");
             let viewport_right = PanelKey::new("demo.viewport.right");
             if let Some(p) = tab_bar_anchor_for_panel(
@@ -322,6 +382,16 @@ impl<H: fret_ui::UiHost> Widget<H> for DockingArbitrationHarnessRoot {
             ) {
                 right_anchor_pos = p;
             }
+            if let Some(p) = tab_bar_tabs_group_anchor_for_panel(
+                dock,
+                self.window,
+                bounds,
+                split_handle_gap,
+                split_handle_hit_thickness,
+                &viewport_right,
+            ) {
+                right_tabs_group_anchor_pos = p;
+            }
 
             for (ix, pos) in extra_anchor_pos.iter_mut().enumerate() {
                 let panel = PanelKey::new(format!("demo.viewport.extra.{ix}"));
@@ -342,6 +412,10 @@ impl<H: fret_ui::UiHost> Widget<H> for DockingArbitrationHarnessRoot {
         let _ = cx.layout_in(
             self.right_anchor,
             rect(right_anchor_pos.0, right_anchor_pos.1),
+        );
+        let _ = cx.layout_in(
+            self.right_tabs_group_anchor,
+            rect(right_tabs_group_anchor_pos.0, right_tabs_group_anchor_pos.1),
         );
         for (anchor, (x, y)) in self
             .extra_anchors
@@ -2169,6 +2243,12 @@ impl DockingArbitrationDriver {
                 .create_node_retained(DockingArbitrationDragAnchor::new(
                     "dock-arb-tab-drag-anchor-right",
                 ));
+            let right_tabs_group_anchor =
+                state
+                    .ui
+                    .create_node_retained(DockingArbitrationDragAnchor::new(
+                        "dock-arb-tabs-group-drag-anchor-right",
+                    ));
             let extra_anchors: Vec<fret_core::NodeId> = (0..10)
                 .map(|ix| {
                     state
@@ -2262,6 +2342,7 @@ impl DockingArbitrationDriver {
                     dock_space: *dock_space,
                     left_anchor,
                     right_anchor,
+                    right_tabs_group_anchor,
                     extra_anchors: extra_anchors.clone(),
                     float_zone_anchor,
                     viewport_split_handle_anchor,
@@ -2281,6 +2362,7 @@ impl DockingArbitrationDriver {
             let children: Vec<fret_core::NodeId> = std::iter::once(*dock_space)
                 .chain(std::iter::once(left_anchor))
                 .chain(std::iter::once(right_anchor))
+                .chain(std::iter::once(right_tabs_group_anchor))
                 .chain(extra_anchors.iter().copied())
                 .chain(std::iter::once(float_zone_anchor))
                 .chain(std::iter::once(viewport_split_handle_anchor))

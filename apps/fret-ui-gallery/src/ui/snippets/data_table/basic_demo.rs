@@ -4,9 +4,9 @@ pub const SOURCE: &str = include_str!("basic_demo.rs");
 use fret_app::App;
 use fret_core::Px;
 use fret_runtime::{CommandId, Model};
-use fret_ui::Theme;
 use fret_ui::action::OnActivate;
 use fret_ui::element::AnyElement;
+use fret_ui::Theme;
 use fret_ui_headless::table::{ColumnDef, RowKey, Table, TableState};
 use fret_ui_kit::declarative::ModelWatchExt as _;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
@@ -315,10 +315,55 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
             state.clone(),
             assets.1.clone(),
             |row, _index, _parent| RowKey(row.key),
-            |col| col.id.clone(),
-            move |cx, col, _sort_state| {
+            |col| match col.id.as_ref() {
+                // shadcn docs: title-cased headers.
+                "status" => Arc::<str>::from("Status"),
+                "email" => Arc::<str>::from("Email"),
+                "amount" => Arc::<str>::from("Amount"),
+                // shadcn docs: the row-actions column uses an icon-only trigger and no header label.
+                "actions" => Arc::<str>::from(""),
+                // The select column header is overridden by a checkbox header cell.
+                "select" => Arc::<str>::from(""),
+                _ => col.id.clone(),
+            },
+            move |cx, col, sort_state| {
                 if col.id.as_ref() != "select" {
-                    return None;
+                    if col.id.as_ref() != "amount" {
+                        return None;
+                    }
+
+                    let theme = Theme::global(&*cx.app).snapshot();
+                    let sort_fg = theme.color_token("muted-foreground");
+                    let icon_id = match sort_state {
+                        Some(true) => "lucide.arrow-down",
+                        Some(false) => "lucide.arrow-up",
+                        None => "lucide.chevrons-up-down",
+                    };
+
+                    let header = stack::hstack(
+                        cx,
+                        stack::HStackProps::default()
+                            .layout(LayoutRefinement::default().w_full().h_full())
+                            .justify_end()
+                            .items_center()
+                            .gap_x(Space::N2),
+                        move |cx| {
+                            vec![
+                                ui::label(cx, Arc::<str>::from("Amount"))
+                                    .text_sm()
+                                    .nowrap()
+                                    .into_element(cx),
+                                fret_ui_kit::declarative::icon::icon_with(
+                                    cx,
+                                    fret_icons::IconId::new_static(icon_id),
+                                    Some(Px(16.0)),
+                                    Some(ColorRef::Color(sort_fg)),
+                                ),
+                            ]
+                        },
+                    );
+
+                    return Some(vec![header]);
                 }
 
                 let state_value = cx
@@ -360,13 +405,11 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
                 };
                 let _ = cx.app.models_mut().update(&model, |v| *v = checked);
 
-                Some(vec![
-                    shadcn::Checkbox::new_optional(model)
-                        .a11y_label("Select all")
-                        .test_id("ui-gallery-data-table-basic-select-all")
-                        .on_click(CommandId::new(CMD_SELECT_ALL_PAGE))
-                        .into_element(cx),
-                ])
+                Some(vec![shadcn::Checkbox::new_optional(model)
+                    .a11y_label("Select all")
+                    .test_id("ui-gallery-data-table-basic-select-all")
+                    .on_click(CommandId::new(CMD_SELECT_ALL_PAGE))
+                    .into_element(cx)])
             },
             move |cx, col, row| match col.id.as_ref() {
                 "select" => {
@@ -416,62 +459,64 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
                         .into_element(cx);
                     align_end(cx, amount_text)
                 }
-                "actions" => {
-                    cx.keyed(("ui-gallery-data-table-basic-row-actions", row.key), |cx| {
-                        let open = cx.with_state(|| None::<Model<bool>>, |st| st.clone());
-                        let open = match open {
-                            Some(m) => m,
-                            None => {
-                                let m = cx.app.models_mut().insert(false);
-                                let m_for_state = m.clone();
-                                cx.with_state(
-                                    || None::<Model<bool>>,
-                                    move |st| {
-                                        if st.is_none() {
-                                            *st = Some(m_for_state);
-                                        }
-                                    },
-                                );
-                                m
-                            }
-                        };
+                "actions" => cx.keyed(("ui-gallery-data-table-basic-row-actions", row.key), |cx| {
+                    let open = cx.with_state(|| None::<Model<bool>>, |st| st.clone());
+                    let open = match open {
+                        Some(m) => m,
+                        None => {
+                            let m = cx.app.models_mut().insert(false);
+                            let m_for_state = m.clone();
+                            cx.with_state(
+                                || None::<Model<bool>>,
+                                move |st| {
+                                    if st.is_none() {
+                                        *st = Some(m_for_state);
+                                    }
+                                },
+                            );
+                            m
+                        }
+                    };
 
-                        let trigger = shadcn::Button::new("")
-                            .a11y_label("Open menu")
-                            .variant(shadcn::ButtonVariant::Ghost)
-                            .size(shadcn::ButtonSize::IconXs)
-                            .test_id(Arc::<str>::from(format!(
-                                "ui-gallery-data-table-basic-row-actions-open-{}",
-                                row.key
-                            )))
-                            .icon(fret_icons::IconId::new_static("lucide.ellipsis"))
-                            .into_element(cx);
+                    let trigger = shadcn::Button::new("")
+                        .a11y_label("Open menu")
+                        .variant(shadcn::ButtonVariant::Ghost)
+                        .size(shadcn::ButtonSize::IconXs)
+                        .test_id(Arc::<str>::from(format!(
+                            "ui-gallery-data-table-basic-row-actions-open-{}",
+                            row.key
+                        )))
+                        .icon(fret_icons::ids::ui::MORE_HORIZONTAL)
+                        .into_element(cx);
+                    let trigger = align_end(cx, trigger);
 
-                        let payment_id = row.id.clone();
-                        shadcn::DropdownMenu::new(open)
-                            .align(shadcn::DropdownMenuAlign::End)
-                            .side(shadcn::DropdownMenuSide::Bottom)
-                            .into_element(
-                                cx,
-                                move |_cx| trigger,
-                                move |_cx| {
-                                    vec![
+                    let payment_id = row.id.clone();
+                    shadcn::DropdownMenu::new(open)
+                        .align(shadcn::DropdownMenuAlign::End)
+                        .side(shadcn::DropdownMenuSide::Bottom)
+                        .into_element(
+                            cx,
+                            move |_cx| trigger,
+                            move |_cx| {
+                                vec![
                                     shadcn::DropdownMenuEntry::Label(
-                                        shadcn::DropdownMenuLabel::new("Actions")
+                                        shadcn::DropdownMenuLabel::new("Actions"),
                                     ),
                                     shadcn::DropdownMenuEntry::Item(
-                                        shadcn::DropdownMenuItem::new("Copy payment ID")
-                                            .on_select(CommandId::new(Arc::<str>::from(format!(
+                                        shadcn::DropdownMenuItem::new("Copy payment ID").on_select(
+                                            CommandId::new(Arc::<str>::from(format!(
                                                 "ui_gallery.data_table.basic.copy_payment_id.{}",
                                                 payment_id
-                                            )))),
+                                            ))),
+                                        ),
                                     ),
                                     shadcn::DropdownMenuEntry::Separator,
                                     shadcn::DropdownMenuEntry::Item(
-                                        shadcn::DropdownMenuItem::new("View customer")
-                                            .on_select(CommandId::new(
+                                        shadcn::DropdownMenuItem::new("View customer").on_select(
+                                            CommandId::new(
                                                 "ui_gallery.data_table.basic.view_customer",
-                                            )),
+                                            ),
+                                        ),
                                     ),
                                     shadcn::DropdownMenuEntry::Item(
                                         shadcn::DropdownMenuItem::new("View payment details")
@@ -480,10 +525,9 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
                                             )),
                                     ),
                                 ]
-                                },
-                            )
-                    })
-                }
+                            },
+                        )
+                }),
                 _ => cx.text("?"),
             },
         )
