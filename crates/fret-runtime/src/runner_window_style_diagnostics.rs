@@ -145,7 +145,15 @@ impl RunnerWindowStyleDiagnosticsStore {
                 let explicit = self.transparent_explicit.get(&window).copied().flatten();
                 current.transparent = match explicit {
                     Some(v) => v,
-                    None => current.background_material != WindowBackgroundMaterialRequest::None,
+                    None => {
+                        // Best-effort: keep composited transparency "sticky" once it has been
+                        // implied by a background material request.
+                        //
+                        // Rationale: transparency is create-time in winit, so runners can't
+                        // reliably toggle it off once a window has been created composited.
+                        current.transparent
+                            || current.background_material != WindowBackgroundMaterialRequest::None
+                    }
                 };
             }
         }
