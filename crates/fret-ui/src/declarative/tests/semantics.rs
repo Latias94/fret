@@ -802,6 +802,7 @@ fn declarative_text_input_region_platform_replace_hook_can_handle_replace_and_ma
         fret_runtime::Utf16Range,
         String,
         Option<fret_runtime::Utf16Range>,
+        Option<fret_runtime::Utf16Range>,
     )>::new()));
 
     let root = render_root(
@@ -831,8 +832,11 @@ fn declarative_text_input_region_platform_replace_hook_can_handle_replace_and_ma
                               _props,
                               range,
                               text,
-                              marked| {
-                            called.borrow_mut().push((range, text.to_string(), marked));
+                              marked,
+                              selected| {
+                            called
+                                .borrow_mut()
+                                .push((range, text.to_string(), marked, selected));
                             true
                         },
                     ),
@@ -857,14 +861,16 @@ fn declarative_text_input_region_platform_replace_hook_can_handle_replace_and_ma
         1.0,
         fret_runtime::Utf16Range::new(0, 0),
         "X",
-        Some(fret_runtime::Utf16Range::new(0, 1))
+        Some(fret_runtime::Utf16Range::new(0, 1)),
+        None
     ));
     assert_eq!(
         called.borrow().as_slice(),
         &[(
             fret_runtime::Utf16Range::new(0, 0),
             "X".to_string(),
-            Some(fret_runtime::Utf16Range::new(0, 1))
+            Some(fret_runtime::Utf16Range::new(0, 1)),
+            None
         )]
     );
 }

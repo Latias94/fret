@@ -229,6 +229,7 @@ impl<H: UiHost> Widget<H> for BoundTextInput {
         range: fret_runtime::Utf16Range,
         text: &str,
         marked: Option<fret_runtime::Utf16Range>,
+        selected: Option<fret_runtime::Utf16Range>,
     ) -> bool {
         let before = self.input.text().to_string();
         let changed =
@@ -238,6 +239,7 @@ impl<H: UiHost> Widget<H> for BoundTextInput {
                 range,
                 text,
                 marked,
+                selected,
             );
         if changed && self.input.text() != before {
             self.dirty_since_sync = true;

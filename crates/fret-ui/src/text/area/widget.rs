@@ -29,8 +29,14 @@ impl<H: UiHost> Widget<H> for TextArea {
         let is_composing = self.is_ime_composing();
 
         let (display_anchor, display_focus) = if is_composing {
-            let caret_display = self.caret_display_index();
-            (caret_display, caret_display)
+            let (cursor_start, cursor_end) = self
+                .preedit_cursor
+                .map(|(start, end)| (start.min(preedit_len), end.min(preedit_len)))
+                .unwrap_or((preedit_len, preedit_len));
+            (
+                caret.saturating_add(cursor_start),
+                caret.saturating_add(cursor_end),
+            )
         } else {
             (
                 crate::text_edit::ime::base_to_display_index(caret, preedit_len, selection_anchor),
@@ -70,6 +76,11 @@ impl<H: UiHost> Widget<H> for TextArea {
             selection_utf16: Some((anchor_u16, focus_u16)),
             marked_utf16,
             ime_cursor_area: self.last_sent_cursor,
+            surrounding_text: Some(fret_runtime::WindowImeSurroundingText::best_effort_for_str(
+                self.text.as_str(),
+                caret,
+                selection_anchor,
+            )),
         })
     }
 
@@ -82,8 +93,14 @@ impl<H: UiHost> Widget<H> for TextArea {
         let is_composing = self.is_ime_composing();
 
         let (display_anchor, display_focus) = if is_composing {
-            let caret_display = self.caret_display_index();
-            (caret_display, caret_display)
+            let (cursor_start, cursor_end) = self
+                .preedit_cursor
+                .map(|(start, end)| (start.min(preedit_len), end.min(preedit_len)))
+                .unwrap_or((preedit_len, preedit_len));
+            (
+                caret.saturating_add(cursor_start),
+                caret.saturating_add(cursor_end),
+            )
         } else {
             (
                 crate::text_edit::ime::base_to_display_index(caret, preedit_len, selection_anchor),
@@ -389,6 +406,7 @@ impl<H: UiHost> Widget<H> for TextArea {
         range: fret_runtime::Utf16Range,
         text: &str,
         marked: Option<fret_runtime::Utf16Range>,
+        selected: Option<fret_runtime::Utf16Range>,
     ) -> bool {
         let insert = if text.contains('\r') {
             crate::text_edit::normalize::newlines_to_lf(text)
@@ -455,7 +473,40 @@ impl<H: UiHost> Widget<H> for TextArea {
 
         self.preedit = insert;
         let preedit_len = self.preedit.len();
-        self.preedit_cursor = Some((preedit_len, preedit_len));
+        self.preedit_cursor = selected
+            .map(|selected| {
+                let composed = crate::text_edit::ime::compose_text_at_caret(
+                    self.text.as_str(),
+                    self.caret,
+                    self.preedit.as_str(),
+                )
+                .unwrap_or_else(|| self.text.clone());
+                let selected = selected.normalized();
+                let (bs, be) = fret_core::utf::utf16_range_to_utf8_byte_range(
+                    composed.as_str(),
+                    usize::try_from(selected.start).unwrap_or(usize::MAX),
+                    usize::try_from(selected.end).unwrap_or(usize::MAX),
+                );
+                let caret = self.caret;
+                let preedit_end = caret.saturating_add(preedit_len);
+
+                let rel = |idx: usize| -> usize {
+                    if idx <= caret {
+                        0
+                    } else if idx >= preedit_end {
+                        preedit_len
+                    } else {
+                        idx.saturating_sub(caret).min(preedit_len)
+                    }
+                };
+
+                let start_rel =
+                    crate::text_edit::utf8::clamp_to_char_boundary(self.preedit.as_str(), rel(bs));
+                let end_rel =
+                    crate::text_edit::utf8::clamp_to_char_boundary(self.preedit.as_str(), rel(be));
+                (start_rel, end_rel)
+            })
+            .or_else(|| Some((preedit_len, preedit_len)));
         self.affinity = fret_core::CaretAffinity::Downstream;
         self.text_dirty = true;
         self.ensure_caret_visible = true;

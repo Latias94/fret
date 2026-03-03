@@ -406,6 +406,8 @@ The code editor implements a best-effort v1 surface:
    into the current a11y window and then into buffer byte indices.
 - `replace_and_mark_text_in_range_utf16` is supported for caret-only composition (`range` empty),
    updating the editor preedit state without mutating the base buffer with the composing string.
+   When the platform provides an explicit `selected` UTF-16 range, the editor treats it as the
+   preedit cursor/selection within the composing string (best-effort).
 
 In addition, when a composing operation specifies a non-empty range (selection replacement), the
 editor applies a best-effort behavior:
