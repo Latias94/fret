@@ -74,3 +74,27 @@ Recommendation:
 Recommendation:
 
 - Keep pinned/preview as workspace policy-layer semantics (do not extend `fret-ui` contracts).
+
+## Ensure-visible / scroll-to-active policy
+
+- When activating a tab (click, keyboard, MRU fallback after close), should the strip always scroll
+  so the active tab is visible?
+
+Recommendation:
+
+- Treat "ensure active is visible" as **workspace policy**, not mechanism.
+- Default to ensuring visibility for non-pointer activations (keyboard commands, programmatic MRU
+  fallback), and make pointer activation a no-op if the tab is already visible.
+- Keep the mechanism layer limited to: "given tab rects + viewport, compute the scroll delta needed
+  to reveal the active tab".
+
+## Keyboard + a11y semantics (APG tablist)
+
+- Do we want full APG-style tablist semantics (roving focus, tab/tabpanel roles, Home/End)?
+
+Recommendation:
+
+- Yes, but track it as a dedicated follow-up milestone (M3), because it touches:
+  - focus model (roving index vs per-tab focus),
+  - close button focusability (policy: close is reachable, but should not break tab roving),
+  - semantics export (stable roles/selected state).
