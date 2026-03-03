@@ -12,6 +12,8 @@ Status: Draft
 
 ## Mechanism hardening
 
+- [x] Fix view-cache contained relayout bookkeeping (layout invalidation clears must keep subtree aggregation in sync):
+  - `crates/fret-ui/src/tree/layout/entrypoints.rs`
 - [ ] Audit all barrier-related paths that can affect scroll surfaces:
   - [ ] child list mutation helpers,
   - [ ] contained relayout scheduling,
