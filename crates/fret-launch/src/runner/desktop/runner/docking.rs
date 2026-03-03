@@ -81,9 +81,6 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         let Some(pointer_id) = self.dock_drag_pointer_id() else {
             return false;
         };
-        if self.diag_mouse_buttons_override_active {
-            return false;
-        }
         // Scripted diagnostics inject pointer events without a real OS mouse button state. When
         // pointer input isolation is active, avoid OS polling heuristics to terminate the drag;
         // scripts will deliver an explicit `PointerUp`.
@@ -144,18 +141,25 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         let Some(pointer_id) = self.dock_drag_pointer_id() else {
             return false;
         };
-        if self.diag_mouse_buttons_override_active {
-            return false;
-        }
         // Scripted diagnostics inject pointer events without a real OS mouse button state. When
         // pointer input isolation is active, avoid OS polling heuristics to terminate the drag;
         // scripts will deliver an explicit `PointerUp`.
         if self.diag_pointer_input_isolation_active() {
+            diag_dock_drag_trace(format_args!(
+                "[poll-up-win32-skip] tick={} pointer={:?} reason=diag_pointer_input_isolation_active",
+                self.tick_id.0, pointer_id
+            ));
             return false;
         }
 
+        let os_left_down = win32::is_left_mouse_down();
+        let saw_release_this_turn = self.saw_left_mouse_release_this_turn;
         let (source_window, current_window, dragging) = {
             let Some(drag) = self.app.drag(pointer_id) else {
+                diag_dock_drag_trace(format_args!(
+                    "[poll-up-win32-skip] tick={} pointer={:?} reason=no_drag",
+                    self.tick_id.0, pointer_id
+                ));
                 return false;
             };
             if !drag.cross_window_hover
@@ -165,9 +169,19 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 // events (bypassing OS button state): only run when the runner believes the left
                 // button is currently down for the drag's source window.
                 || !self.is_left_mouse_down_for_window(drag.source_window)
-                || win32::is_left_mouse_down()
-                || self.saw_left_mouse_release_this_turn
+                || os_left_down
+                || saw_release_this_turn
             {
+                diag_dock_drag_trace(format_args!(
+                    "[poll-up-win32-skip] tick={} pointer={:?} cross_window_hover={} kind={:?} runner_left_down={} os_left_down={} saw_release_this_turn={}",
+                    self.tick_id.0,
+                    pointer_id,
+                    drag.cross_window_hover,
+                    drag.kind,
+                    self.is_left_mouse_down_for_window(drag.source_window),
+                    os_left_down,
+                    saw_release_this_turn,
+                ));
                 return false;
             }
             (drag.source_window, drag.current_window, drag.dragging)
@@ -182,9 +196,14 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             self.cursor_screen_pos = Some(p);
         }
 
-        dock_tearoff_log(format_args!(
-            "[poll-up-win32] pointer={:?} source={:?} current={:?} screen_pos={:?} dragging={}",
-            pointer_id, source_window, current_window, self.cursor_screen_pos, dragging
+        diag_dock_drag_trace(format_args!(
+            "[poll-up-win32] tick={} pointer={:?} source={:?} current={:?} screen_pos={:?} dragging={}",
+            self.tick_id.0,
+            pointer_id,
+            source_window,
+            current_window,
+            self.cursor_screen_pos,
+            dragging
         ));
 
         // If the release was not delivered as a window-scoped `MouseInput`, finish the drag using
@@ -197,9 +216,9 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         }
 
         self.route_internal_drag_drop_from_cursor();
-        dock_tearoff_log(format_args!(
-            "[poll-drop-win32] dispatched target={:?}",
-            source_window
+        diag_dock_drag_trace(format_args!(
+            "[poll-drop-win32] tick={} pointer={:?} ok=true",
+            self.tick_id.0, pointer_id
         ));
 
         if self
