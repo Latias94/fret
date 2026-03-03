@@ -58,6 +58,7 @@ Pointer-trigger authoring integration (v1 still dispatches through the command p
 - `crates/fret-ui/src/tree/commands.rs` (command dispatch bubbles from focus when available; otherwise uses pending source element metadata to start bubbling without requiring focus-steal; falls back from overlay roots to the window default root)
 - `crates/fret-ui/src/tree/tests/command_availability.rs` (cross-layer fallback tests)
 - `ecosystem/fret-bootstrap/src/ui_diagnostics/service.rs` (infers `source_test_id` for pointer-triggered command dispatch trace entries from the current semantics snapshot when possible; retains script/hit-test fallbacks)
+- `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (unit test: `command_dispatch_trace_infers_pointer_source_test_id_from_semantics_snapshot`)
 - `ecosystem/fret-ui-shadcn/src/button.rs` (`Button::action`)
 - `ecosystem/fret-ui-kit/src/command.rs` (`action_is_enabled`, `dispatch_action_if_enabled`)
 - `ecosystem/fret-ui-kit/src/declarative/action_hooks.rs` (`pressable_dispatch_action_if_enabled`)
@@ -140,7 +141,7 @@ Notes:
 Current scripts (as of 2026-03-03):
 
 - `tools/diag-scripts/cookbook/commands-keymap-basics/cookbook-commands-keymap-basics-shortcut-and-gating.json`
-- `tools/diag-scripts/cookbook/hello/cookbook-hello-click-count.json`
+- `tools/diag-scripts/cookbook/hello/cookbook-hello-click-count.json` (clicks the button via `role_and_name`, but still gates `source_test_id` attribution)
 - `tools/diag-scripts/cookbook/hello/cookbook-hello-view-cache-reuse-and-handler-keepalive.json`
 - `tools/diag-scripts/cookbook/text-input-basics/cookbook-text-input-basics-submit-and-clear.json`
 - `tools/diag-scripts/cookbook/simple-todo/cookbook-simple-todo-smoke.json`

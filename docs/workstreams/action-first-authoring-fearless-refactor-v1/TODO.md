@@ -313,6 +313,9 @@ practical steps:
   - Status (as of 2026-03-03): `debug.command_dispatch_trace[*].source_test_id` is inferred from the
     current semantics snapshot when `source_element` is available (fallbacks remain for cases where
     semantics/test IDs are unavailable).
+  - Evidence:
+    - `ecosystem/fret-bootstrap/src/ui_diagnostics/service.rs` (`infer_pointer_source_test_id_from_semantics`)
+    - `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (`command_dispatch_trace_infers_pointer_source_test_id_from_semantics_snapshot`)
 - View runtime ergonomics: reduce `on_action` handler boilerplate (`request_redraw` + `notify`) without weakening
   determinism or layering (ecosystem-only).
 - Payload actions (v2+), behind strict determinism + validation rules.
