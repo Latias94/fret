@@ -5,6 +5,7 @@ pub(crate) mod artifact;
 pub(crate) mod artifacts;
 pub(crate) mod bundle_v2;
 pub(crate) mod config;
+pub(crate) mod dock_graph;
 pub(crate) mod dock_routing;
 pub(crate) mod doctor;
 pub(crate) mod doctor_scripts;
