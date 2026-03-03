@@ -110,6 +110,24 @@
       "predicate": { "kind": "dock_drag_current_window_is", "window": { "kind": "first_seen" } },
       "timeout_frames": 240
     },
+    {
+      "type": "wait_until",
+      "window": { "kind": "first_seen" },
+      "predicate": { "kind": "dock_drop_resolve_source_is", "source": "inner_hint_rect" },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "window": { "kind": "first_seen" },
+      "predicate": { "kind": "dock_drop_resolved_is_some", "some": true },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "window": { "kind": "first_seen" },
+      "predicate": { "kind": "dock_drop_resolved_zone_is", "zone": "center" },
+      "timeout_frames": 240
+    },
 
     { "type": "pointer_up", "window": { "kind": "first_seen" } },
     {
