@@ -72,6 +72,23 @@ thread_local! {
     static SCRIPT_INJECTION_SCOPE: std::cell::Cell<bool> = std::cell::Cell::new(false);
 }
 
+fn infer_pointer_source_test_id_from_semantics(
+    window: AppWindowId,
+    source_element: Option<u64>,
+    semantics_snapshot: Option<&fret_core::SemanticsSnapshot>,
+    element_runtime: Option<&ElementRuntime>,
+) -> Option<String> {
+    let element_runtime = element_runtime?;
+    let semantics = semantics_snapshot?;
+    let element = fret_ui::elements::GlobalElementId(source_element?);
+    let node = element_runtime.node_for_element(window, element)?;
+    semantics
+        .nodes
+        .iter()
+        .find(|n| n.id == node)
+        .and_then(|n| n.test_id.clone())
+}
+
 impl UiDiagnosticsService {
     pub(super) fn allocate_clipboard_token(&mut self) -> fret_core::ClipboardToken {
         let next = self.next_clipboard_token.max(1);
@@ -1286,17 +1303,12 @@ impl UiDiagnosticsService {
                 fret_runtime::CommandDispatchSourceKindV1::Programmatic => "programmatic",
             };
 
-            let inferred_source_test_id: Option<String> = decision.source.element.and_then(|raw| {
-                let element_runtime = element_runtime?;
-                let semantics = semantics_snapshot?;
-                let element = fret_ui::elements::GlobalElementId(raw);
-                let node = element_runtime.node_for_element(window, element)?;
-                semantics
-                    .nodes
-                    .iter()
-                    .find(|n| n.id == node)
-                    .and_then(|n| n.test_id.clone())
-            });
+            let inferred_source_test_id = infer_pointer_source_test_id_from_semantics(
+                window,
+                decision.source.element,
+                semantics_snapshot,
+                element_runtime,
+            );
 
             let source_test_id = match decision.source.kind {
                 fret_runtime::CommandDispatchSourceKindV1::Pointer => {
@@ -1360,3 +1372,6 @@ impl UiDiagnosticsService {
         id
     }
 }
+
+// Unit tests for pointer-source attribution live in `ui_diagnostics.rs` so they can share
+// existing helpers without introducing additional `mod tests` fragments in include files.

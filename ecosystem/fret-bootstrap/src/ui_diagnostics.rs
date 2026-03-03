@@ -1070,6 +1070,7 @@ mod tests {
             known_windows,
             known_windows.len().min(u32::MAX as usize) as u32,
             None,
+            None,
             docking,
             None,
             None,
@@ -1229,6 +1230,126 @@ mod tests {
             controls: Vec::new(),
             inline_spans: Vec::new(),
         }
+    }
+
+    #[derive(Default)]
+    struct FakeUiServices;
+
+    impl fret_core::TextService for FakeUiServices {
+        fn prepare(
+            &mut self,
+            _input: &fret_core::TextInput,
+            _constraints: fret_core::TextConstraints,
+        ) -> (fret_core::TextBlobId, fret_core::TextMetrics) {
+            (
+                fret_core::TextBlobId::default(),
+                fret_core::TextMetrics {
+                    size: Size::new(Px(10.0), Px(10.0)),
+                    baseline: Px(8.0),
+                },
+            )
+        }
+
+        fn release(&mut self, _blob: fret_core::TextBlobId) {}
+    }
+
+    impl fret_core::PathService for FakeUiServices {
+        fn prepare(
+            &mut self,
+            _commands: &[fret_core::PathCommand],
+            _style: fret_core::PathStyle,
+            _constraints: fret_core::PathConstraints,
+        ) -> (fret_core::PathId, fret_core::PathMetrics) {
+            (
+                fret_core::PathId::default(),
+                fret_core::PathMetrics::default(),
+            )
+        }
+
+        fn release(&mut self, _path: fret_core::PathId) {}
+    }
+
+    impl fret_core::SvgService for FakeUiServices {
+        fn register_svg(&mut self, _bytes: &[u8]) -> fret_core::SvgId {
+            fret_core::SvgId::default()
+        }
+
+        fn unregister_svg(&mut self, _svg: fret_core::SvgId) -> bool {
+            false
+        }
+    }
+
+    impl fret_core::MaterialService for FakeUiServices {
+        fn register_material(
+            &mut self,
+            _desc: fret_core::MaterialDescriptor,
+        ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+            Err(fret_core::MaterialRegistrationError::Unsupported)
+        }
+
+        fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
+            false
+        }
+    }
+
+    #[test]
+    fn command_dispatch_trace_infers_pointer_source_test_id_from_semantics_snapshot() {
+        use fret_ui::elements::GlobalElementId;
+
+        let mut app = fret_app::App::new();
+        app.set_global(fret_runtime::PlatformCapabilities::default());
+
+        let window = AppWindowId::default();
+        let mut ui: fret_ui::UiTree<fret_app::App> = fret_ui::UiTree::new();
+        ui.set_window(window);
+
+        let mut services = FakeUiServices::default();
+        let bounds = rect(0.0, 0.0, 200.0, 100.0);
+
+        let mut source_element: Option<GlobalElementId> = None;
+        fret_ui::frame_pipeline::render_base_root_with_changes(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "diag-test",
+            &[],
+            &[],
+            |cx| {
+                vec![cx.semantics_with_id(
+                    fret_ui::element::SemanticsProps {
+                        role: SemanticsRole::Button,
+                        test_id: Some(std::sync::Arc::<str>::from("test.pointer.source")),
+                        ..Default::default()
+                    },
+                    |cx, id| {
+                        source_element = Some(id);
+                        vec![cx.spacer(Default::default())]
+                    },
+                )]
+            },
+        );
+
+        ui.request_semantics_snapshot();
+        let mut scene = fret_core::Scene::default();
+        let mut frame =
+            fret_ui::UiFrameCx::new(&mut ui, &mut app, &mut services, window, bounds, 1.0);
+        frame.layout_all();
+        frame.paint_all(&mut scene);
+
+        let semantics = ui.semantics_snapshot().expect("semantics snapshot");
+        let element_runtime = app
+            .global::<ElementRuntime>()
+            .expect("element runtime must exist after rendering");
+
+        let inferred = infer_pointer_source_test_id_from_semantics(
+            window,
+            source_element.map(|e| e.0),
+            Some(semantics),
+            Some(element_runtime),
+        );
+        assert_eq!(inferred.as_deref(), Some("test.pointer.source"));
     }
 
     #[cfg(feature = "diagnostics-ws")]
