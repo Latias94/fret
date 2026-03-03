@@ -25,6 +25,7 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+from typing import Optional
 
 
 REPO_ROOT_SENTINEL = "Cargo.toml"
@@ -76,7 +77,7 @@ class SuiteMigrationPlan:
     delete_paths: list[Path]
 
 
-def plan_suite(repo_root: Path, suite_dir: Path) -> SuiteMigrationPlan | None:
+def plan_suite(repo_root: Path, suite_dir: Path) -> Optional[SuiteMigrationPlan]:
     if not suite_dir.is_dir():
         return None
 
@@ -231,4 +232,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
