@@ -41,10 +41,7 @@ fn eval_docking_predicate_from_recent_debug_snapshot(
             Some(have == source.as_str())
         }
         UiPredicateV1::DockDropResolvedIsSome { some } => Some(
-            docking
-                .dock_drop_resolve
-                .as_ref()
-                .is_some_and(|d| d.resolved.is_some() == *some),
+            docking.dock_drop_resolve.as_ref()?.resolved.is_some() == *some,
         ),
         UiPredicateV1::DockDropResolvedZoneIs { zone } => {
             let resolved = docking.dock_drop_resolve.as_ref()?.resolved.as_ref()?;

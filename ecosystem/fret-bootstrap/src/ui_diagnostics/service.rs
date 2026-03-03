@@ -499,6 +499,17 @@ impl UiDiagnosticsService {
                 _ => {}
             }
 
+            // `move_pointer` / `move_pointer_sweep` can be executed from any window and may need
+            // to act on occluded targets during cross-window dock drags. Avoid pinning execution
+            // to either `first_seen` or an active pointer-session window; the step handler can
+            // still hand off when it truly needs a live semantics snapshot.
+            if matches!(
+                step,
+                UiActionStepV2::MovePointer { .. } | UiActionStepV2::MovePointerSweep { .. }
+            ) {
+                return None;
+            }
+
             // Prefer preserving captured-pointer continuity over window-target pinning. During
             // cross-window drags, the runner may temporarily starve the "under" window of redraw
             // callbacks; pinning to `first_seen` in that state can stall scripts indefinitely.
@@ -516,16 +527,6 @@ impl UiDiagnosticsService {
                     }
                     _ => {}
                 }
-            }
-
-            // Avoid pinning `move_pointer` / `move_pointer_sweep` to a specific window before any
-            // per-window step state is established. Cross-window dock drags often need to
-            // reposition the cursor relative to an occluded window; forcing a migration to that
-            // window can stall scripts indefinitely. The step handler can still hand off when it
-            // truly needs a live semantics snapshot.
-            if matches!(step, UiActionStepV2::MovePointer { .. } | UiActionStepV2::MovePointerSweep { .. })
-            {
-                return None;
             }
 
             // Before a step caches any per-window state (pointer session / v2 step state), we may
