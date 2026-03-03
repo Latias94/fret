@@ -678,8 +678,10 @@ pub(super) fn configure_surface_alpha_mode_for_composited_window(
         [
             wgpu::CompositeAlphaMode::PreMultiplied,
             wgpu::CompositeAlphaMode::PostMultiplied,
-            wgpu::CompositeAlphaMode::Auto,
             wgpu::CompositeAlphaMode::Inherit,
+            // `Auto` may pick an opaque path even for transparent windows on some backends.
+            // Prefer `Inherit` first so the platform can select the appropriate compositing mode.
+            wgpu::CompositeAlphaMode::Auto,
         ]
         .into_iter()
         .find(|m| capabilities.alpha_modes.contains(m))
