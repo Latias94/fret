@@ -4593,6 +4593,30 @@
       ]
     },
     {
+      "id": "ui-gallery-tabs-vertical-list-grows",
+      "path": "tools/diag-scripts/ui-gallery/tabs/ui-gallery-tabs-vertical-list-grows.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "layout",
+        "screenshot",
+        "shadcn",
+        "tabs",
+        "ui_gallery",
+        "vertical"
+      ],
+      "target_hints": [
+        "Navigates to the Tabs page.",
+        "Scrolls the Vertical + Vertical (Line) examples into view.",
+        "Asserts the vertical tab list grows to show multiple triggers (no clipping)."
+      ]
+    },
+    {
       "id": "ui-gallery-tabs-wrap-and-baseline-screenshots",
       "path": "tools/diag-scripts/ui-gallery/text-wrap/ui-gallery-tabs-wrap-and-baseline-screenshots.json",
       "required_capabilities": [

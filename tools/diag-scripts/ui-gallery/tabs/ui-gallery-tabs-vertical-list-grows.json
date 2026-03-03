@@ -1,0 +1,120 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "ui-gallery-tabs-vertical-list-grows",
+    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
+    "tags": ["ui_gallery", "shadcn", "tabs", "vertical", "layout", "screenshot"],
+    "target_hints": [
+      "Navigates to the Tabs page.",
+      "Scrolls the Vertical + Vertical (Line) examples into view.",
+      "Asserts the vertical tab list grows to show multiple triggers (no clipping)."
+    ]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-nav-scroll" } },
+      "timeout_frames": 600
+    },
+
+    { "type": "set_window_inner_size", "width_px": 1280.0, "height_px": 720.0 },
+    { "type": "wait_frames", "n": 15 },
+
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
+    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
+    { "type": "press_key", "key": "backspace" },
+    { "type": "type_text", "text": "tabs" },
+    { "type": "wait_frames", "n": 2 },
+
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-nav-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-nav-tabs" },
+      "delta_y": -240.0,
+      "timeout_frames": 600
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-tabs" } },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-page-tabs" } },
+      "timeout_frames": 600
+    },
+
+    { "type": "wait_until", "predicate": { "kind": "font_catalog_populated" }, "timeout_frames": 1800 },
+    { "type": "wait_until", "predicate": { "kind": "system_font_rescan_idle" }, "timeout_frames": 1800 },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "text_font_stack_key_stable", "stable_frames": 120 },
+      "timeout_frames": 900
+    },
+
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-content-scroll" } },
+      "timeout_frames": 600
+    },
+
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-tabs-vertical" },
+      "delta_y": -240.0,
+      "require_fully_within_window": true,
+      "padding_px": 12.0,
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "bounds_within_window", "target": { "kind": "test_id", "id": "ui-gallery-tabs-vertical" }, "padding_px": 8.0, "eps_px": 1.0 },
+      "timeout_frames": 600
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_min_size",
+        "target": { "kind": "test_id", "id": "ui-gallery-tabs-vertical" },
+        "min_w_px": 120.0,
+        "min_h_px": 50.0,
+        "eps_px": 1.0
+      }
+    },
+    { "type": "capture_screenshot", "label": "ui-gallery-tabs-vertical-list-grows", "timeout_frames": 240 },
+
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-tabs-vertical-line" },
+      "delta_y": -240.0,
+      "require_fully_within_window": true,
+      "padding_px": 12.0,
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "bounds_within_window", "target": { "kind": "test_id", "id": "ui-gallery-tabs-vertical-line" }, "padding_px": 8.0, "eps_px": 1.0 },
+      "timeout_frames": 600
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_min_size",
+        "target": { "kind": "test_id", "id": "ui-gallery-tabs-vertical-line" },
+        "min_w_px": 120.0,
+        "min_h_px": 50.0,
+        "eps_px": 1.0
+      }
+    },
+
+    { "type": "capture_bundle", "label": "ui-gallery-tabs-vertical-list-grows" }
+  ]
+}
+
