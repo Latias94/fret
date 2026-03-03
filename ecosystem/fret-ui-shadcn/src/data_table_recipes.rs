@@ -18,10 +18,11 @@ use serde_json::Value;
 
 use crate::button::{Button, ButtonSize, ButtonVariant};
 use crate::dropdown_menu::{
-    DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuEntry, DropdownMenuLabel,
+    DropdownMenu, DropdownMenuAlign, DropdownMenuCheckboxItem, DropdownMenuEntry, DropdownMenuLabel,
     DropdownMenuRadioGroup, DropdownMenuRadioItemSpec,
 };
 use crate::input::Input;
+use crate::direction::{LayoutDirection, use_direction};
 use crate::{
     CommandEntry, CommandGroup, CommandItem, CommandPalette, CommandSeparator, Popover,
     PopoverAlign, PopoverContent, PopoverTrigger,
@@ -486,6 +487,11 @@ impl<TData> DataTableToolbar<TData> {
             "shadcn.data_table.toolbar",
             region_props,
             move |cx, toolbar_region_id| {
+                let dir = use_direction(cx, None);
+                let is_rtl = dir == LayoutDirection::Rtl;
+                let menu_align_inline_end =
+                    if is_rtl { DropdownMenuAlign::Start } else { DropdownMenuAlign::End };
+
                 let state_value = cx
                     .watch_model(&self.state)
                     .layout()
@@ -888,7 +894,9 @@ impl<TData> DataTableToolbar<TData> {
 
                 let columns_button_label = self.columns_button_label.clone();
                 let cols_menu = self.show_columns_menu.then(|| {
-                    DropdownMenu::new(columns_open.clone()).into_element(
+                    DropdownMenu::new(columns_open.clone())
+                        .align(menu_align_inline_end)
+                        .into_element(
                         cx,
                         move |cx| {
                             Button::new(columns_button_label.clone())
@@ -948,7 +956,9 @@ impl<TData> DataTableToolbar<TData> {
 
                 let pinning_button_label = self.pinning_button_label.clone();
                 let pin_menu = self.show_pinning_menu.then(|| {
-                    DropdownMenu::new(pinning_open.clone()).into_element(
+                    DropdownMenu::new(pinning_open.clone())
+                        .align(menu_align_inline_end)
+                        .into_element(
                         cx,
                         move |cx| {
                             Button::new(pinning_button_label.clone())
@@ -1502,7 +1512,13 @@ impl<TData> DataTableToolbar<TData> {
                         .items_center()
                         .justify_between()
                         .gap_x(Space::N2),
-                    move |_cx| vec![left_group, right_group],
+                    move |_cx| {
+                        if is_rtl {
+                            vec![right_group, left_group]
+                        } else {
+                            vec![left_group, right_group]
+                        }
+                    },
                 )]
             },
         )
