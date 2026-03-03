@@ -107,8 +107,8 @@ required, inconsistent semantics, or transport divergence). Each item includes e
   A minimal, generated registry exists at `tools/diag-scripts/index.json` (scope: scripts reachable from in-tree suites
   + `_prelude`) and is validated in CI.
 - Evidence:
-  - built-in suites are curated directory inputs via redirect stubs: `tools/diag-scripts/suites/` and
-    `crates/fret-diag/src/diag_suite_scripts.rs`
+  - built-in suites are curated directory inputs via suite manifests: `tools/diag-scripts/suites/` and
+    `crates/fret-diag/src/registry/suites.rs`
   - `diag suite` no longer hard-codes script file lists; specialized harness suites are also directory-driven via
     `tools/diag-scripts/suites/<suite-name>/`: `crates/fret-diag/src/diag_suite.rs`
 
@@ -119,6 +119,7 @@ required, inconsistent semantics, or transport divergence). Each item includes e
 - Status (2026-02-27): **closed**. `diag perf` suite expansion and perf baseline seed scoping are both derived from the
   **promoted script registry** (`tools/diag-scripts/index.json`) via `suite_memberships`.
   - Perf suites are expressed as curated `script_redirect` stubs under `tools/diag-scripts/suites/perf-*/`.
+    (In-tree suites now prefer a single `suite.json` manifest per suite directory.)
   - Tooling resolves redirects and generates the promoted registry; Rust-side suite name expansion reads the registry and
     selects scripts by suite membership, with deterministic ordering.
 - Evidence:
@@ -485,7 +486,8 @@ Rules:
 
 - Redirect resolution MUST be loop-safe (depth cap + visited set).
 - Tooling SHOULD normalize the final resolved script JSON before pushing/writing.
-- Script tooling (`diag script validate|lint|normalize`) SHOULD resolve redirect stubs before operating, and `--write` SHOULD
+- Script tooling (`diag script validate|lint|normalize`) resolves redirect stubs before operating, and also expands suite
+  manifests when they appear in script inputs (so `suite.json` is never treated as a script).
   update the resolved target script (not the stub).
 
 Option B: “big bang” path updates

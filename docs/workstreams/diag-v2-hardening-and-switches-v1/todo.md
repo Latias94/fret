@@ -129,14 +129,14 @@ Planned outcomes:
 - [x] Define a folder taxonomy for `tools/diag-scripts/` (by product area + suite intent). See: `docs/workstreams/diag-v2-hardening-and-switches-v1/script-library.md`.
 - [x] Decide whether suites should be:
   - [ ] registry-driven (preferred), or
-  - [x] glob-driven (acceptable for small sets, but brittle long-term). (v1 decision: curated suite directories + redirect stubs)
+  - [x] directory-driven (v1 decision: curated suite directories + suite manifests)
 - [x] As an intermediate step, switch built-in suite definitions away from Rust-side hard-coded file lists:
-  - `diag suite`: curated suite directories + deterministic `**/*.json` expansion,
+  - `diag suite`: curated suite directories + suite manifests (tooling-only) + deterministic expansion,
   - `diag perf`: suite membership resolved via the promoted registry (`tools/diag-scripts/index.json` `suite_memberships`).
 - [x] De-duplicate `diag perf` suite script lists by using a single source of truth:
   - `perf_seed_policy::scripts_for_perf_suite_name` is now used by `diag perf` for suite name expansion.
 - [x] Move `diag suite` specialized harnesses off Rust-side hard-coded script lists:
-  - scripts now live under `tools/diag-scripts/suites/<suite-name>/` and are expanded deterministically at runtime.
+  - suites now live under `tools/diag-scripts/suites/<suite-name>/suite.json` and are expanded deterministically by tooling.
 - [x] Allow `diag suite <suite-name>` to run any `tools/diag-scripts/suites/<suite-name>/` directory even when the suite
   name was not added to a Rust-side allowlist (suite-specific env defaults remain opt-in).
 - [x] Normalize `perf_seed_policy` suite script paths to canonical taxonomy (keep compatibility for redirect-stub scopes in preset files).

@@ -22,8 +22,8 @@ It exists to make removals safe: when we delete a compat path, we update this ma
 | Item | Tooling support | Runtime support | Notes / exit plan |
 | --- | --- | --- | --- |
 | Script schema v2 (`UiActionScriptV2`) | Yes (default) | Yes (preferred) | This is the mainline. New scripts should be v2. |
-| Script schema v1 (`UiActionScriptV1`) | Yes (manual-only; tooling can upgrade) | Yes (guarded by `allow_script_schema_v1`) | Tool-launched runs (`--launch`/`--reuse-launch`) reject v1. Exit plan: migrate in-repo scripts to v2 (redirect stubs stay v1). |
-| `script_redirect` stubs (`kind: script_redirect`) | Yes (tooling resolves; loop detection) | No (should never reach runtime) | Used for fearless path moves and suite curation. |
+| Script schema v1 (`UiActionScriptV1`) | Yes (manual-only; tooling can upgrade) | Yes (guarded by `allow_script_schema_v1`) | Tool-launched runs (`--launch`/`--reuse-launch`) reject v1. Exit plan: migrate in-repo scripts to v2 (legacy `script_redirect` stubs may remain v1). |
+| `script_redirect` stubs (`kind: script_redirect`) | Yes (tooling resolves; loop detection) | No (should never reach runtime) | Used for fearless path moves (tooling-only). Suites are expressed via suite manifests. |
 
 ## Artifact / bundle schema compatibility
 
@@ -50,4 +50,3 @@ It exists to make removals safe: when we delete a compat path, we update this ma
 | `diag.screenshot_png` | runtime can write PNG screenshots for `capture_screenshot` | tooling infers from steps; runtime requires screenshots enabled |
 | `diag.pointer_kind_touch`, `diag.pointer_kind_pen` | pointer-kind injection support | tooling infers from steps; runtime synthesizes pointer events |
 | `diag.multi_window` | multi-window targeting supported | tooling gates when `window` targets require it |
-

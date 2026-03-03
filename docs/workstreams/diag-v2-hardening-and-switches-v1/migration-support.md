@@ -65,7 +65,8 @@ The canonical script library is taxonomy-based (product area + intent). Use redi
 
 Suites are curated directory inputs:
 
-- `tools/diag-scripts/suites/<suite-name>/` contains redirect stubs.
+- `tools/diag-scripts/suites/<suite-name>/suite.json` is a tooling-only suite manifest.
+  (Legacy `script_redirect` suite stubs are still supported by tooling, but not preferred in-tree.)
 
 Discoverability:
 
