@@ -35,6 +35,7 @@ cargo run -p fretboard -- dev native --example simple_todo
 Recommended starting points (action-first + view runtime):
 
 - `hello`, `simple_todo`, `hello_counter`
+- `virtual_list_basics` (virtualization + keyed identity + reordering)
 - `commands_keymap_basics`, `overlay_basics`, `text_input_basics`
 - `imui_action_basics` (cross-frontend action dispatch)
 
