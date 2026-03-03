@@ -55,6 +55,9 @@ fn main() -> anyhow::Result<()> {
         "launcher_utility_window_demo" | "launcher-utility-window-demo" => {
             fret_examples::launcher_utility_window_demo::run()
         }
+        "launcher_utility_window_materials_demo" | "launcher-utility-window-materials-demo" => {
+            fret_examples::launcher_utility_window_materials_demo::run()
+        }
         "liquid_glass_demo" | "liquid-glass-demo" => fret_examples::liquid_glass_demo::run(),
         "custom_effect_v1_demo" | "custom-effect-v1-demo" => {
             fret_examples::custom_effect_v1_demo::run()
