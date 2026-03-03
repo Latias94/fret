@@ -19,6 +19,7 @@ This TODO is organized by milestones (see `MILESTONES.md`). Keep tasks **small a
 - [x] Migrate additional post-run checks to validate registry flexibility (`notify_hotspot_file_max`, `triage_hint_absent_codes`).
 - [x] Migrate pixel post-run gates (`--check-pixels-changed`, `--check-pixels-unchanged`) into `CheckRegistry`.
 - [x] Centralize “do we need post-run checks?” planning via `CheckRegistry::wants_post_run_checks` (reduce orchestration duplication).
+- [x] Centralize “do we need screenshots?” planning via `CheckRegistry::wants_screenshots` (reduce launch wiring duplication).
 - [x] Migrate `diag suite` promoted-suite resolution to `SuiteRegistry` (remove duplicate loading logic).
 - [x] Centralize builtin suite script resolution + env defaults in `resolve_builtin_suite_scripts` (reduce `diag_suite.rs` churn).
 - [x] Split “artifact materialization + integrity” into one focused module boundary with stable APIs (`artifact_store`).

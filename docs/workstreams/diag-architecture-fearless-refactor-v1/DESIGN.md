@@ -218,6 +218,7 @@ Status (as of 2026-03-03):
   - `crates/fret-diag/src/diag_suite.rs` centralizes builtin suite resolution + default env injection via `resolve_builtin_suite_scripts` (table-driven match).
   - `crates/fret-diag/src/post_run_checks.rs` begins routing post-run gates via `CheckRegistry` (starting with `gc_sweep_liveness`, `notify_hotspot_file_max`, `triage_hint_absent_codes`, and pixel gates).
   - `crates/fret-diag/src/registry/checks.rs` exposes `CheckRegistry::wants_post_run_checks` so orchestration can decide whether to require bundle artifacts without duplicating check-specific logic.
+  - `crates/fret-diag/src/registry/checks.rs` exposes `CheckRegistry::wants_screenshots` so launch wiring can enable screenshots without hard-coding per-check conditions.
   - Artifacts boundary: `crates/fret-diag/src/artifact_store.rs` (`RunArtifactStore`) routes per-run artifact writes/materialization behind a focused API.
 
 ## Plan (phased)

@@ -267,8 +267,8 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
         check_notify_hotspot_file_max: _,
         check_triage_hint_absent_codes: _,
         check_overlay_synthesis_min,
-        check_pixels_changed_test_id,
-        check_pixels_unchanged_test_id,
+        check_pixels_changed_test_id: _,
+        check_pixels_unchanged_test_id: _,
         check_prepaint_actions_min,
         check_retained_vlist_attach_detach_max,
         check_retained_vlist_keep_alive_budget,
@@ -712,8 +712,8 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
         &resolved_exit_path,
         &fs_transport_cfg,
         pack_defaults.2
-            || check_pixels_changed_test_id.is_some()
-            || check_pixels_unchanged_test_id.is_some()
+            || crate::registry::checks::CheckRegistry::builtin()
+                .wants_screenshots(&checks_for_post_run)
             || script_wants_screenshots,
         launch_write_bundle_json,
         timeout_ms,

@@ -567,8 +567,8 @@ hint: list promoted scripts via `fretboard diag list scripts --contains {name}`"
     }
 
     let suite_wants_screenshots = pack_include_screenshots
-        || check_pixels_changed_test_id.is_some()
-        || check_pixels_unchanged_test_id.is_some()
+        || crate::registry::checks::CheckRegistry::builtin()
+            .wants_screenshots(&checks_for_post_run_template)
         || (check_pixels_changed_test_id.is_none()
             && check_pixels_unchanged_test_id.is_none()
             && scripts
