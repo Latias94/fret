@@ -340,6 +340,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut hotspots_out: Option<PathBuf> = None;
     let mut bundle_v2_out: Option<PathBuf> = None;
     let mut query_out: Option<PathBuf> = None;
+    let mut layout_sidecar_out: Option<PathBuf> = None;
     let mut slice_out: Option<PathBuf> = None;
     let mut ai_packet_out: Option<PathBuf> = None;
     let mut script_path: Option<PathBuf> = None;
@@ -835,6 +836,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 hotspots_out = Some(p.clone());
                 bundle_v2_out = Some(p.clone());
                 query_out = Some(p.clone());
+                layout_sidecar_out = Some(p.clone());
                 slice_out = Some(p.clone());
                 ai_packet_out = Some(p.clone());
                 test_ids_out = Some(p);
@@ -3041,6 +3043,13 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             &resolved_inspect_path,
             &resolved_inspect_trigger_path,
             inspect_consume_clicks,
+        ),
+        "layout-sidecar" | "layout_sidecar" => commands::layout_sidecar::cmd_layout_sidecar(
+            &rest,
+            &resolved_out_dir,
+            &workspace_root,
+            stats_json,
+            layout_sidecar_out.as_deref(),
         ),
         "config" => commands::config::cmd_config(commands::config::ConfigCmdContext {
             rest: rest.clone(),
