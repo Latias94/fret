@@ -7,6 +7,7 @@ pub(super) fn preview_data_table(
     cx: &mut ElementContext<'_, App>,
     state: Model<fret_ui_headless::table::TableState>,
 ) -> Vec<AnyElement> {
+    let basic_demo = snippets::basic_demo::render(cx);
     let demo = snippets::guide_demo::render(cx, state);
 
     let notes_stack = doc_layout::notes(
@@ -27,6 +28,9 @@ pub(super) fn preview_data_table(
             "shadcn Data Table is a guide recipe (TanStack + Table primitives). This page renders a guide-aligned demo backed by Fret's headless engine.",
         ),
         vec![
+            DocSection::new("Basic Demo", basic_demo)
+                .max_w(Px(900.0))
+                .code_rust_from_file_region(snippets::basic_demo::SOURCE, "example"),
             DocSection::new("Guide Demo", demo)
                 .max_w(Px(900.0))
                 .code_rust_from_file_region(snippets::guide_demo::SOURCE, "example"),
