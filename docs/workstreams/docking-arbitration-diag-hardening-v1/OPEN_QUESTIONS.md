@@ -173,3 +173,24 @@ Recommendation:
 
 - Define an explicit priority order (documented + tested), and include `dock_drop_resolve` evidence in bundles so scripts
   can assert the resolved zone deterministically.
+
+## 8) What does `DockingPolicy::panel_min_content_size == None` mean?
+
+Context:
+
+- The docking layer has a default editor feel for viewport panels (240×160 logical px). Apps often install a
+  `DockingPolicy` for unrelated hooks (e.g. drop-zone masking) and do not override `panel_min_content_size`.
+- If `None` is interpreted as “no min size”, splitter drags can collapse viewports and invalidate min-size regression
+  gates.
+
+Options:
+
+- Treat `None` as “use defaults” (viewport panels clamp to the default min size unless explicitly overridden).
+- Treat `None` as “no min size” (apps must return `Some(default)` to opt in).
+- Add an explicit policy switch (e.g. `use_default_viewport_min_content_size`) to avoid overloading `None`.
+
+Recommendation:
+
+- Treat `None` as “use defaults” for viewport panels.
+- If an app truly wants to disable the default clamp, it can return `Some(Size::new(Px(0.0), Px(0.0)))` (or we can add
+  an explicit switch later if that becomes ambiguous in practice).
