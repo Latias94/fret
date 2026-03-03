@@ -205,37 +205,37 @@ impl Progress {
                     )
                     .value;
 
-                let mut transform_layout = LayoutStyle::default();
-                transform_layout.size.width = Length::Fill;
-                transform_layout.size.height = Length::Fill;
+                    let mut transform_layout = LayoutStyle::default();
+                    transform_layout.size.width = Length::Fill;
+                    transform_layout.size.height = Length::Fill;
 
-                vec![cx.fractional_render_transform_props(
-                    FractionalRenderTransformProps {
-                        layout: transform_layout,
-                        translate_x_fraction,
-                        translate_y_fraction: 0.0,
-                    },
-                    move |cx| {
-                        let mut fill_layout = LayoutStyle::default();
-                        fill_layout.size.width = Length::Fill;
-                        fill_layout.size.height = Length::Fill;
+                    vec![cx.fractional_render_transform_props(
+                        FractionalRenderTransformProps {
+                            layout: transform_layout,
+                            translate_x_fraction,
+                            translate_y_fraction: 0.0,
+                        },
+                        move |cx| {
+                            let mut fill_layout = LayoutStyle::default();
+                            fill_layout.size.width = Length::Fill;
+                            fill_layout.size.height = Length::Fill;
 
-                        vec![cx.container(
-                            fret_ui::element::ContainerProps {
-                                layout: fill_layout,
-                                padding: Edges::all(Px(0.0)).into(),
-                                background: Some(fill),
-                                shadow: None,
-                                border: Edges::all(Px(0.0)),
-                                border_color: None,
-                                corner_radii: fret_core::Corners::all(radius),
-                                ..Default::default()
-                            },
-                            |_cx| Vec::new(),
-                        )]
-                    },
-                )]
-            });
+                            vec![cx.container(
+                                fret_ui::element::ContainerProps {
+                                    layout: fill_layout,
+                                    padding: Edges::all(Px(0.0)).into(),
+                                    background: Some(fill),
+                                    shadow: None,
+                                    border: Edges::all(Px(0.0)),
+                                    border_color: None,
+                                    corner_radii: fret_core::Corners::all(radius),
+                                    ..Default::default()
+                                },
+                                |_cx| Vec::new(),
+                            )]
+                        },
+                    )]
+                });
 
                 let mut semantics = SemanticsDecoration::default()
                     .role(SemanticsRole::ProgressBar)
@@ -246,7 +246,9 @@ impl Progress {
                 if self.min.is_finite() && self.max.is_finite() {
                     semantics = semantics.numeric_range(self.min as f64, self.max as f64);
                 }
-                if let Some(value) = v && value.is_finite() {
+                if let Some(value) = v
+                    && value.is_finite()
+                {
                     semantics = semantics.numeric_value(value as f64);
                 }
                 out = out.attach_semantics(semantics);
@@ -429,7 +431,10 @@ mod tests {
             }
 
             // Should progress towards 0.0 (less negative) without oscillation.
-            assert!(tx + 0.05 >= tx_last, "expected monotonic tx; last={tx_last} now={tx}");
+            assert!(
+                tx + 0.05 >= tx_last,
+                "expected monotonic tx; last={tx_last} now={tx}"
+            );
             tx_last = tx;
 
             if (tx - 0.0).abs() <= 1e-3 {
@@ -437,7 +442,13 @@ mod tests {
             }
         }
 
-        assert!(seen_mid, "expected to observe intermediate translate values");
-        assert!((tx_last - 0.0).abs() <= 1e-3, "expected to settle at tx=0, got {tx_last}");
+        assert!(
+            seen_mid,
+            "expected to observe intermediate translate values"
+        );
+        assert!(
+            (tx_last - 0.0).abs() <= 1e-3,
+            "expected to settle at tx=0, got {tx_last}"
+        );
     }
 }

@@ -27,6 +27,7 @@ use fret_ui_kit::{
     resolve_override_slot, ui,
 };
 
+use crate::overlay_motion;
 use crate::test_id::test_id_slug;
 use crate::{
     CommandEntry, CommandGroup, CommandItem, CommandList, CommandPalette, CommandSeparator, Drawer,
@@ -2156,6 +2157,10 @@ fn combobox_with_patch<H: UiHost>(
         let mut popover = Popover::new(open.clone())
             .auto_focus(true)
             .consume_outside_pointer_events(consume_outside_pointer_events)
+            .motion_durations(
+                overlay_motion::shadcn_motion_duration_100(cx),
+                overlay_motion::shadcn_motion_duration_100(cx),
+            )
             .side(match content_side {
                 popper::Side::Top => PopoverSide::Top,
                 popper::Side::Right => PopoverSide::Right,
