@@ -87,11 +87,29 @@ impl<H: UiHost> Widget<H> for TextInput {
             selection_utf16: Some((anchor_u16, focus_u16)),
             marked_utf16,
             ime_cursor_area: self.last_sent_cursor,
-            surrounding_text: Some(fret_runtime::WindowImeSurroundingText::best_effort_for_str(
-                self.text.as_str(),
-                caret,
-                selection_anchor,
-            )),
+            surrounding_text: Some({
+                let key = super::ImeSurroundingTextCacheKey {
+                    text_revision: self.base_text_revision,
+                    caret,
+                    selection_anchor,
+                };
+
+                let mut cache = self.ime_surrounding_text_cache.borrow_mut();
+                if cache.key == Some(key)
+                    && let Some(cached) = cache.value.as_ref()
+                {
+                    cached.clone()
+                } else {
+                    let surrounding = fret_runtime::WindowImeSurroundingText::best_effort_for_str(
+                        self.text.as_str(),
+                        caret,
+                        selection_anchor,
+                    );
+                    cache.key = Some(key);
+                    cache.value = Some(surrounding.clone());
+                    surrounding
+                }
+            }),
         })
     }
 
@@ -372,7 +390,11 @@ impl<H: UiHost> Widget<H> for TextInput {
 
         let mut edit = self.edit_state();
         edit.set_selection_grapheme_clamped(start_base, end_base);
-        edit.replace_selection(&insert)
+        let changed = edit.replace_selection(&insert);
+        if changed {
+            self.bump_base_text_revision();
+        }
+        changed
     }
 
     fn platform_text_input_replace_and_mark_text_in_range_utf16(
@@ -395,7 +417,10 @@ impl<H: UiHost> Widget<H> for TextInput {
             let (start, end) = this.ime_replace_range.unwrap_or((this.caret, this.caret));
             let mut edit = this.edit_state();
             edit.set_selection_grapheme_clamped(start, end);
-            let _ = edit.replace_selection(insert);
+            let changed = edit.replace_selection(insert);
+            if changed {
+                this.bump_base_text_revision();
+            }
             true
         };
 
@@ -830,8 +855,7 @@ impl<H: UiHost> Widget<H> for TextInput {
                             } else {
                                 "text.delete_backward"
                             };
-                            let outcome = crate::text_edit::commands::apply_basic(
-                                &mut self.edit_state(),
+                            let outcome = self.apply_basic_command(
                                 command,
                                 false,
                                 cx.input_ctx.text_boundary_mode,
@@ -846,8 +870,7 @@ impl<H: UiHost> Widget<H> for TextInput {
                             } else {
                                 "text.delete_forward"
                             };
-                            let outcome = crate::text_edit::commands::apply_basic(
-                                &mut self.edit_state(),
+                            let outcome = self.apply_basic_command(
                                 command,
                                 false,
                                 cx.input_ctx.text_boundary_mode,
@@ -864,8 +887,7 @@ impl<H: UiHost> Widget<H> for TextInput {
                                 (false, true) => "text.move_word_left",
                                 (false, false) => "text.move_left",
                             };
-                            let outcome = crate::text_edit::commands::apply_basic(
-                                &mut self.edit_state(),
+                            let outcome = self.apply_basic_command(
                                 command,
                                 false,
                                 cx.input_ctx.text_boundary_mode,
@@ -882,8 +904,7 @@ impl<H: UiHost> Widget<H> for TextInput {
                                 (false, true) => "text.move_word_right",
                                 (false, false) => "text.move_right",
                             };
-                            let outcome = crate::text_edit::commands::apply_basic(
-                                &mut self.edit_state(),
+                            let outcome = self.apply_basic_command(
                                 command,
                                 false,
                                 cx.input_ctx.text_boundary_mode,
@@ -898,8 +919,7 @@ impl<H: UiHost> Widget<H> for TextInput {
                             } else {
                                 "text.move_home"
                             };
-                            let outcome = crate::text_edit::commands::apply_basic(
-                                &mut self.edit_state(),
+                            let outcome = self.apply_basic_command(
                                 command,
                                 false,
                                 cx.input_ctx.text_boundary_mode,
@@ -914,8 +934,7 @@ impl<H: UiHost> Widget<H> for TextInput {
                             } else {
                                 "text.move_end"
                             };
-                            let outcome = crate::text_edit::commands::apply_basic(
-                                &mut self.edit_state(),
+                            let outcome = self.apply_basic_command(
                                 command,
                                 false,
                                 cx.input_ctx.text_boundary_mode,
@@ -972,6 +991,7 @@ impl<H: UiHost> Widget<H> for TextInput {
                 );
                 if outcome.invalidate_layout {
                     self.mark_text_blobs_dirty();
+                    self.bump_base_text_revision();
                     cx.invalidate_self(Invalidation::Layout);
                     cx.request_redraw();
                 }
@@ -1000,6 +1020,7 @@ impl<H: UiHost> Widget<H> for TextInput {
                 );
                 if outcome.invalidate_layout {
                     self.mark_text_blobs_dirty();
+                    self.bump_base_text_revision();
                     cx.invalidate_self(Invalidation::Layout);
                     cx.request_redraw();
                 }
@@ -1026,6 +1047,13 @@ impl<H: UiHost> Widget<H> for TextInput {
                     &mut self.preedit_cursor,
                     &mut self.ime_replace_range,
                 );
+                if matches!(
+                    result,
+                    crate::text_edit::ime::ApplyResult::CommitApplied
+                        | crate::text_edit::ime::ApplyResult::DeleteSurroundingApplied
+                ) {
+                    self.bump_base_text_revision();
+                }
                 if result != crate::text_edit::ime::ApplyResult::Noop {
                     self.mark_text_blobs_dirty();
                     cx.invalidate_self(Invalidation::Layout);
@@ -1084,6 +1112,7 @@ impl<H: UiHost> Widget<H> for TextInput {
         match cmd {
             "text.clear" => {
                 self.text.clear();
+                self.bump_base_text_revision();
                 self.clear_ime_composition();
                 self.caret = 0;
                 self.selection_anchor = 0;
@@ -1123,6 +1152,9 @@ impl<H: UiHost> Widget<H> for TextInput {
                     cx.app.push_effect(Effect::ClipboardSetText { text });
                 }
 
+                if result.outcome.invalidate_layout {
+                    self.bump_base_text_revision();
+                }
                 let delta = crate::text_edit::commands::singleline_ui_delta(cmd, result.outcome);
                 self.apply_singleline_ui_delta(cx, delta);
                 true
@@ -1150,8 +1182,7 @@ impl<H: UiHost> Widget<H> for TextInput {
             }
             "text.move_up" => {
                 let is_ime_composing = self.is_ime_composing();
-                let outcome = crate::text_edit::commands::apply_basic(
-                    &mut self.edit_state(),
+                let outcome = self.apply_basic_command(
                     "text.move_home",
                     is_ime_composing,
                     cx.input_ctx.text_boundary_mode,
@@ -1162,8 +1193,7 @@ impl<H: UiHost> Widget<H> for TextInput {
             }
             "text.move_down" => {
                 let is_ime_composing = self.is_ime_composing();
-                let outcome = crate::text_edit::commands::apply_basic(
-                    &mut self.edit_state(),
+                let outcome = self.apply_basic_command(
                     "text.move_end",
                     is_ime_composing,
                     cx.input_ctx.text_boundary_mode,
@@ -1174,8 +1204,7 @@ impl<H: UiHost> Widget<H> for TextInput {
             }
             "text.select_up" => {
                 let is_ime_composing = self.is_ime_composing();
-                let outcome = crate::text_edit::commands::apply_basic(
-                    &mut self.edit_state(),
+                let outcome = self.apply_basic_command(
                     "text.select_home",
                     is_ime_composing,
                     cx.input_ctx.text_boundary_mode,
@@ -1186,8 +1215,7 @@ impl<H: UiHost> Widget<H> for TextInput {
             }
             "text.select_down" => {
                 let is_ime_composing = self.is_ime_composing();
-                let outcome = crate::text_edit::commands::apply_basic(
-                    &mut self.edit_state(),
+                let outcome = self.apply_basic_command(
                     "text.select_end",
                     is_ime_composing,
                     cx.input_ctx.text_boundary_mode,
@@ -1198,8 +1226,7 @@ impl<H: UiHost> Widget<H> for TextInput {
             }
             _ => {
                 let is_ime_composing = self.is_ime_composing();
-                let outcome = crate::text_edit::commands::apply_basic(
-                    &mut self.edit_state(),
+                let outcome = self.apply_basic_command(
                     cmd,
                     is_ime_composing,
                     cx.input_ctx.text_boundary_mode,

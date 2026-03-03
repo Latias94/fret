@@ -76,11 +76,29 @@ impl<H: UiHost> Widget<H> for TextArea {
             selection_utf16: Some((anchor_u16, focus_u16)),
             marked_utf16,
             ime_cursor_area: self.last_sent_cursor,
-            surrounding_text: Some(fret_runtime::WindowImeSurroundingText::best_effort_for_str(
-                self.text.as_str(),
-                caret,
-                selection_anchor,
-            )),
+            surrounding_text: Some({
+                let key = super::ImeSurroundingTextCacheKey {
+                    text_revision: self.base_text_revision,
+                    caret,
+                    selection_anchor,
+                };
+
+                let mut cache = self.ime_surrounding_text_cache.borrow_mut();
+                if cache.key == Some(key)
+                    && let Some(cached) = cache.value.as_ref()
+                {
+                    cached.clone()
+                } else {
+                    let surrounding = fret_runtime::WindowImeSurroundingText::best_effort_for_str(
+                        self.text.as_str(),
+                        caret,
+                        selection_anchor,
+                    );
+                    cache.key = Some(key);
+                    cache.value = Some(surrounding.clone());
+                    surrounding
+                }
+            }),
         })
     }
 
@@ -425,7 +443,10 @@ impl<H: UiHost> Widget<H> for TextArea {
             let (start, end) = this.ime_replace_range.unwrap_or((this.caret, this.caret));
             let mut edit = this.edit_state();
             edit.set_selection_grapheme_clamped(start, end);
-            let _ = edit.replace_selection(insert);
+            let changed = edit.replace_selection(insert);
+            if changed {
+                this.bump_base_text_revision();
+            }
 
             this.affinity = fret_core::CaretAffinity::Downstream;
             this.text_dirty = true;
@@ -947,7 +968,7 @@ impl<H: UiHost> Widget<H> for TextArea {
 
                 match key {
                     fret_core::KeyCode::Enter | fret_core::KeyCode::NumpadEnter => {
-                        let changed = self.edit_state().replace_selection("\n");
+                        let changed = self.replace_selection_changed("\n");
                         let outcome = crate::text_edit::commands::Outcome {
                             handled: true,
                             invalidate_paint: false,
@@ -959,7 +980,7 @@ impl<H: UiHost> Widget<H> for TextArea {
                         cx.stop_propagation();
                     }
                     fret_core::KeyCode::Tab => {
-                        let changed = self.edit_state().replace_selection("\t");
+                        let changed = self.replace_selection_changed("\t");
                         let outcome = crate::text_edit::commands::Outcome {
                             handled: true,
                             invalidate_paint: false,
@@ -972,8 +993,7 @@ impl<H: UiHost> Widget<H> for TextArea {
                     }
                     fret_core::KeyCode::Backspace => {
                         let command = "text.delete_backward";
-                        let outcome = crate::text_edit::commands::apply_basic(
-                            &mut self.edit_state(),
+                        let outcome = self.apply_basic_command(
                             command,
                             false,
                             cx.input_ctx.text_boundary_mode,
@@ -985,8 +1005,7 @@ impl<H: UiHost> Widget<H> for TextArea {
                     }
                     fret_core::KeyCode::Delete => {
                         let command = "text.delete_forward";
-                        let outcome = crate::text_edit::commands::apply_basic(
-                            &mut self.edit_state(),
+                        let outcome = self.apply_basic_command(
                             command,
                             false,
                             cx.input_ctx.text_boundary_mode,
@@ -1015,7 +1034,7 @@ impl<H: UiHost> Widget<H> for TextArea {
                 }
                 self.ime_deduper.record_text_input(tick, text.as_str());
 
-                let changed = self.edit_state().replace_selection(text.as_str());
+                let changed = self.replace_selection_changed(text.as_str());
                 let outcome = crate::text_edit::commands::Outcome {
                     handled: true,
                     invalidate_paint: false,
@@ -1039,6 +1058,9 @@ impl<H: UiHost> Widget<H> for TextArea {
                     crate::text_edit::commands::ClipboardTextPolicy::Multiline,
                     text.as_str(),
                 );
+                if outcome.invalidate_layout {
+                    self.bump_base_text_revision();
+                }
                 let mut delta =
                     crate::text_edit::commands::multiline_ui_delta("text.clipboard_text", outcome);
                 if had_preedit {
@@ -1073,6 +1095,9 @@ impl<H: UiHost> Widget<H> for TextArea {
                     crate::text_edit::commands::ClipboardTextPolicy::Multiline,
                     text.as_str(),
                 );
+                if outcome.invalidate_layout {
+                    self.bump_base_text_revision();
+                }
                 let mut delta = crate::text_edit::commands::multiline_ui_delta(
                     "text.primary_selection_text",
                     outcome,
@@ -1108,6 +1133,13 @@ impl<H: UiHost> Widget<H> for TextArea {
                     &mut self.preedit_cursor,
                     &mut self.ime_replace_range,
                 );
+                if matches!(
+                    result,
+                    crate::text_edit::ime::ApplyResult::CommitApplied
+                        | crate::text_edit::ime::ApplyResult::DeleteSurroundingApplied
+                ) {
+                    self.bump_base_text_revision();
+                }
                 if result != crate::text_edit::ime::ApplyResult::Noop {
                     self.apply_multiline_ui_delta(cx, Self::edit_layout_delta(false));
                 }
@@ -1185,6 +1217,7 @@ impl<H: UiHost> Widget<H> for TextArea {
         match cmd {
             "text.clear" => {
                 self.text.clear();
+                self.bump_base_text_revision();
                 self.caret = 0;
                 self.selection_anchor = 0;
                 self.apply_multiline_ui_delta(cx, Self::edit_layout_delta(true));
@@ -1219,6 +1252,9 @@ impl<H: UiHost> Widget<H> for TextArea {
                     result.request
                 {
                     cx.app.push_effect(Effect::ClipboardSetText { text });
+                }
+                if result.outcome.invalidate_layout {
+                    self.bump_base_text_revision();
                 }
                 let delta = crate::text_edit::commands::multiline_ui_delta(cmd, result.outcome);
                 self.apply_multiline_ui_delta(cx, delta);
@@ -1283,8 +1319,7 @@ impl<H: UiHost> Widget<H> for TextArea {
             }
             _ => {
                 let is_ime_composing = self.is_ime_composing();
-                let outcome = crate::text_edit::commands::apply_basic(
-                    &mut self.edit_state(),
+                let outcome = self.apply_basic_command(
                     cmd,
                     is_ime_composing,
                     cx.input_ctx.text_boundary_mode,

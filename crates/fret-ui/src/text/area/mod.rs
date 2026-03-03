@@ -52,6 +52,19 @@ struct PreparedKey {
     font_stack_key: u64,
 }
 
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+struct ImeSurroundingTextCacheKey {
+    text_revision: u64,
+    caret: usize,
+    selection_anchor: usize,
+}
+
+#[derive(Debug, Default, Clone)]
+struct ImeSurroundingTextCache {
+    key: Option<ImeSurroundingTextCacheKey>,
+    value: Option<fret_runtime::WindowImeSurroundingText>,
+}
+
 #[derive(Debug, Clone)]
 pub struct TextAreaStyle {
     pub padding_x: Px,
@@ -141,6 +154,8 @@ pub struct TextArea {
     enabled: bool,
     focusable: bool,
     text: String,
+    base_text_revision: u64,
+    ime_surrounding_text_cache: std::cell::RefCell<ImeSurroundingTextCache>,
     placeholder: Option<std::sync::Arc<str>>,
     text_style: TextStyle,
     wrap: TextWrap,
@@ -199,6 +214,8 @@ impl Default for TextArea {
             enabled: true,
             focusable: true,
             text: String::new(),
+            base_text_revision: 0,
+            ime_surrounding_text_cache: std::cell::RefCell::default(),
             placeholder: None,
             text_style: TextStyle {
                 font: fret_core::FontId::default(),
@@ -283,6 +300,7 @@ impl TextArea {
             return;
         }
         self.text = next;
+        self.base_text_revision = self.base_text_revision.wrapping_add(1);
         self.caret = self.text.len();
         self.selection_anchor = self.caret;
         self.ensure_caret_visible = true;
@@ -471,10 +489,27 @@ impl TextArea {
         )
     }
 
+    fn bump_base_text_revision(&mut self) {
+        self.base_text_revision = self.base_text_revision.wrapping_add(1);
+    }
+
     fn delete_selection_if_any(&mut self) -> bool {
         if !self.edit_state().delete_selection_if_any() {
             return false;
         }
+        self.bump_base_text_revision();
+        self.clear_preedit();
+        self.affinity = CaretAffinity::Downstream;
+        self.text_dirty = true;
+        true
+    }
+
+    fn replace_selection_changed(&mut self, insert: &str) -> bool {
+        let changed = self.edit_state().replace_selection(insert);
+        if !changed {
+            return false;
+        }
+        self.bump_base_text_revision();
         self.clear_preedit();
         self.affinity = CaretAffinity::Downstream;
         self.text_dirty = true;
@@ -482,10 +517,7 @@ impl TextArea {
     }
 
     fn replace_selection(&mut self, insert: &str) {
-        let _ = self.edit_state().replace_selection(insert);
-        self.clear_preedit();
-        self.affinity = CaretAffinity::Downstream;
-        self.text_dirty = true;
+        let _ = self.replace_selection_changed(insert);
     }
 
     fn queue_release_blob(&mut self) {
@@ -538,6 +570,24 @@ impl TextArea {
     fn clamp_offset(&mut self, content_height: Px, viewport_height: Px) {
         let max = Px((content_height.0 - viewport_height.0).max(0.0));
         self.offset_y = Px(self.offset_y.0.clamp(0.0, max.0));
+    }
+
+    fn apply_basic_command(
+        &mut self,
+        command: &str,
+        is_ime_composing: bool,
+        boundary_mode: fret_runtime::TextBoundaryMode,
+    ) -> crate::text_edit::commands::Outcome {
+        let outcome = crate::text_edit::commands::apply_basic(
+            &mut self.edit_state(),
+            command,
+            is_ime_composing,
+            boundary_mode,
+        );
+        if outcome.invalidate_layout {
+            self.bump_base_text_revision();
+        }
+        outcome
     }
 
     fn apply_multiline_ui_delta(

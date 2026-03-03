@@ -10,12 +10,27 @@ use crate::TextInputStyle;
 
 pub use bound::BoundTextInput;
 
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+struct ImeSurroundingTextCacheKey {
+    text_revision: u64,
+    caret: usize,
+    selection_anchor: usize,
+}
+
+#[derive(Debug, Default, Clone)]
+struct ImeSurroundingTextCache {
+    key: Option<ImeSurroundingTextCacheKey>,
+    value: Option<fret_runtime::WindowImeSurroundingText>,
+}
+
 #[derive(Debug)]
 pub struct TextInput {
     a11y_role: SemanticsRole,
     enabled: bool,
     focusable: bool,
     text: String,
+    base_text_revision: u64,
+    ime_surrounding_text_cache: std::cell::RefCell<ImeSurroundingTextCache>,
     caret: usize,
     selection_anchor: usize,
     offset_x: Px,
