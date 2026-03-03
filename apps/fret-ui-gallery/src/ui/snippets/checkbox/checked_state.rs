@@ -3,11 +3,28 @@ pub const SOURCE: &str = include_str!("checked_state.rs");
 // region: example
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 
-pub fn render<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    checked_controlled: Model<bool>,
-    checked_optional: Model<Option<bool>>,
-) -> AnyElement {
+#[derive(Default)]
+struct Models {
+    checked_controlled: Option<Model<bool>>,
+    checked_optional: Option<Model<Option<bool>>>,
+}
+
+pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+    let (checked_controlled, checked_optional) =
+        cx.with_state(Models::default, |st| (st.checked_controlled.clone(), st.checked_optional.clone()));
+    let (checked_controlled, checked_optional) = match (checked_controlled, checked_optional) {
+        (Some(checked_controlled), Some(checked_optional)) => (checked_controlled, checked_optional),
+        _ => {
+            let checked_controlled = cx.app.models_mut().insert(true);
+            let checked_optional = cx.app.models_mut().insert(None::<bool>);
+            cx.with_state(Models::default, |st| {
+                st.checked_controlled = Some(checked_controlled.clone());
+                st.checked_optional = Some(checked_optional.clone());
+            });
+            (checked_controlled, checked_optional)
+        }
+    };
+
     stack::vstack(
         cx,
         stack::VStackProps::default()
