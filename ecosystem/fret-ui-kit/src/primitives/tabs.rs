@@ -8,7 +8,7 @@
 
 use std::sync::Arc;
 
-use fret_core::{Modifiers, MouseButton, PointerType, SemanticsRole};
+use fret_core::{Modifiers, MouseButton, PointerType, SemanticsOrientation, SemanticsRole};
 use fret_runtime::Model;
 use fret_ui::element::{
     AnyElement, LayoutStyle, PressableA11y, PressableProps, RovingFlexProps, RovingFocusProps,
@@ -115,10 +115,17 @@ pub fn tab_a11y_with_collection(
 }
 
 /// A11y metadata for a `TabsList` container.
-pub fn tab_list_semantics_props(layout: LayoutStyle) -> SemanticsProps {
+pub fn tab_list_semantics_props(
+    layout: LayoutStyle,
+    orientation: TabsOrientation,
+) -> SemanticsProps {
     SemanticsProps {
         layout,
         role: SemanticsRole::TabList,
+        orientation: Some(match orientation {
+            TabsOrientation::Horizontal => SemanticsOrientation::Horizontal,
+            TabsOrientation::Vertical => SemanticsOrientation::Vertical,
+        }),
         ..Default::default()
     }
 }
@@ -145,6 +152,9 @@ pub fn tab_panel_semantics_props(
         role: SemanticsRole::TabPanel,
         label,
         labelled_by_element,
+        // Radix `TabsContent` uses `tabIndex={0}` on the active tab panel. Express that outcome as a
+        // focusable semantics node in Fret.
+        focusable: true,
         ..Default::default()
     }
 }
@@ -317,15 +327,18 @@ impl TabsList {
         };
 
         let layout = self.layout;
-        cx.semantics(tab_list_semantics_props(layout), move |cx| {
-            vec![cx.roving_flex(props, move |cx| {
-                cx.roving_nav_apg();
-                if activation_mode == TabsActivationMode::Automatic {
-                    cx.roving_select_option_arc_str(&model, values_for_roving.clone());
-                }
-                f(cx)
-            })]
-        })
+        cx.semantics(
+            tab_list_semantics_props(layout, self.root.orientation),
+            move |cx| {
+                vec![cx.roving_flex(props, move |cx| {
+                    cx.roving_nav_apg();
+                    if activation_mode == TabsActivationMode::Automatic {
+                        cx.roving_select_option_arc_str(&model, values_for_roving.clone());
+                    }
+                    f(cx)
+                })]
+            },
+        )
     }
 }
 
@@ -595,5 +608,19 @@ mod tests {
         assert_eq!(props.role, SemanticsRole::TabPanel);
         assert_eq!(props.label.as_deref(), Some("Panel"));
         assert_eq!(props.labelled_by_element, Some(123));
+        assert!(
+            props.focusable,
+            "tabpanel should be focusable like Radix tabIndex=0"
+        );
+    }
+
+    #[test]
+    fn tab_list_semantics_props_sets_role_and_orientation() {
+        let props = tab_list_semantics_props(LayoutStyle::default(), TabsOrientation::Vertical);
+        assert_eq!(props.role, SemanticsRole::TabList);
+        assert_eq!(
+            props.orientation,
+            Some(fret_core::SemanticsOrientation::Vertical)
+        );
     }
 }
