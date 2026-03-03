@@ -50,6 +50,7 @@ impl UiDiagnosticsService {
             steps: script.steps,
             run_id,
             anchor_window,
+            started_unix_ms: unix_ms_now(),
             next_step: 0,
             base_ref: None,
             event_log: Vec::new(),

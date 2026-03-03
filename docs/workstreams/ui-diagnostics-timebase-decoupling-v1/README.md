@@ -50,6 +50,13 @@ the diagnostics runtime can:
 This avoids the worst failure mode (“tooling timeout waiting for `script.result`”) and keeps evidence bounded and
 portable.
 
+Timeout semantics (v1 contract):
+
+- `timeout_frames` and `wait_frames` are *frame-based when frames exist*.
+- When a window stops producing frames, a runner-backed keepalive timer may advance a conservative subset of steps
+  (including decrementing `timeout_frames` / `wait_frames`) so runs do not hang.
+- If progress is impossible without frames, fail with `reason_code=timeout.no_frames` after a bounded wall time.
+
 Evidence anchors:
 
 - Timer arming/cancel: `ecosystem/fret-bootstrap/src/ui_diagnostics/script_engine.rs`
@@ -88,4 +95,3 @@ snapshots), or keep it minimal and rely on bounded failure + evidence.
 
 - Docking suite hardening: `docs/workstreams/docking-arbitration-diag-hardening-v1/`
 - Diag v2 hardening + switches: `docs/workstreams/diag-v2-hardening-and-switches-v1/`
-

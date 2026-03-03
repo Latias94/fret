@@ -1705,7 +1705,7 @@ impl UiDiagnosticsService {
     const SCRIPT_NO_FRAME_DRIVE_HARD_TIMEOUT_MS: u64 = 15_000;
 
     fn sync_script_keepalive_timer(&mut self, app: &mut App) {
-        let should_run = !self.active_scripts.is_empty();
+        let should_run = self.cfg.script_keepalive || self.any_script_running();
 
         match (should_run, self.script_keepalive_timer_token) {
             (true, None) => {
@@ -1742,6 +1742,11 @@ impl UiDiagnosticsService {
             return true;
         }
 
+        self.poll_script_trigger();
+        self.poll_pick_trigger();
+        self.poll_inspect_trigger();
+        self.maybe_start_pending_script(app, _window);
+
         let now_unix_ms = unix_ms_now();
 
         let windows: Vec<AppWindowId> = self.active_scripts.keys().copied().collect();
@@ -1758,13 +1763,15 @@ impl UiDiagnosticsService {
                     )
                 })
                 .unwrap_or_else(|| {
+                    let started_unix_ms = self
+                        .active_scripts
+                        .get(&window)
+                        .map(|a| a.started_unix_ms)
+                        .unwrap_or(now_unix_ms);
                     (
-                        Rect::new(
-                            Point::new(Px(0.0), Px(0.0)),
-                            Size::new(Px(0.0), Px(0.0)),
-                        ),
+                        Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(0.0), Px(0.0))),
                         1.0,
-                        u64::MAX,
+                        now_unix_ms.saturating_sub(started_unix_ms),
                     )
                 });
 
@@ -2071,6 +2078,7 @@ impl UiDiagnosticsService {
 
         self.ensure_ready_file();
         self.poll_script_trigger();
+        self.sync_script_keepalive_timer(app);
 
         let devtools_request_redraw =
             self.drive_devtools_requests_for_window(app, window, scale_factor, ui.as_deref());

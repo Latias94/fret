@@ -676,6 +676,9 @@ fn tool_launched_diag_config(
         // step is useful during script authoring but is too explosive for suites.
         script_auto_dump: Some(false),
         pick_auto_dump: Some(false),
+        // Keep the diagnostics runtime alive between frames so filesystem-triggered scripts
+        // can be observed and started even if the app goes idle between runs.
+        script_keepalive: Some(true),
         // Bound the length of exported debug strings (paths, etc).
         max_debug_string_bytes: Some(2048),
         // Keep tool-launched scripted runs deterministic even if the user moves/clicks the real

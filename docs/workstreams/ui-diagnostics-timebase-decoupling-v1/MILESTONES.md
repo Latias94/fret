@@ -19,6 +19,7 @@ Evidence:
 - Runtime keepalive + no-frame drive: `ecosystem/fret-bootstrap/src/ui_diagnostics/script_engine.rs`
 - Timer event hook: `ecosystem/fret-bootstrap/src/ui_app_driver.rs`
 - Reason code mapping: `ecosystem/fret-bootstrap/src/ui_diagnostics/labels.rs`
+- Tool launch config default keepalive: `crates/fret-diag/src/compare.rs`
 
 ## M1 — Pending-script liveness (start without frames)
 
@@ -46,4 +47,3 @@ Deliverables:
 
 - A reviewed list of which steps/predicates are allowed to advance off the no-frame path.
 - Evidence that the expanded set remains deterministic and bounded (no output explosion).
-
