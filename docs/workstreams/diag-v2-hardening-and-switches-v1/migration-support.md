@@ -55,6 +55,8 @@ The canonical script library is taxonomy-based (product area + intent). Use redi
 2) Apply moves (recommended) and write redirect stubs:
 
 - `python tools/diag-scripts/migrate-script-library.py --apply --write-redirects`
+  - Note: suite manifests (`tools/diag-scripts/suites/**/suite.json`) are rewritten to point at the canonical
+    (post-move) paths.
 
 3) Validate suite closure + registry drift:
 

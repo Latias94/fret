@@ -1326,6 +1326,8 @@ Note:
 - Migration helper (dry-run by default): `python tools/diag-scripts/migrate-script-library.py`.
 - During migration, legacy script paths may be left behind as small `script_redirect` JSON stubs. Tooling resolves these
   stubs before pushing scripts to the runtime, so redirects never become part of the runtime contract surface.
+- When applying moves, suite manifests (`tools/diag-scripts/suites/**/suite.json`) are rewritten to reference the
+  canonical (post-move) script paths, avoiding indirect dependencies on redirect stubs.
 
 For component-focused conformance scripts (built-in suites), run:
 

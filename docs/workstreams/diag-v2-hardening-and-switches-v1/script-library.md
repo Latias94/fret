@@ -74,6 +74,8 @@ Long-term:
 2) Apply moves with redirects (recommended):
 
 - `python tools/diag-scripts/migrate-script-library.py --apply --write-redirects`
+  - Suite manifests (`tools/diag-scripts/suites/**/suite.json`) are rewritten to point at the canonical (post-move)
+    paths.
 
 Tip (maintenance):
 
