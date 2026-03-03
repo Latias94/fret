@@ -25,4 +25,5 @@ Last updated: 2026-03-03.
 - For each motion change, add at least one:
   - unit test (reduced motion + progression invariants), and/or
   - diag script gate (fixed delta; stable `test_id`).
+- Landed: unit test gates exist for NavigationMenu chevron, Spinner, Skeleton pulse, and InputOtp caret blink.
 - Keep `PARITY_MATRIX.md` updated with evidence anchors (file paths + tests/scripts).
