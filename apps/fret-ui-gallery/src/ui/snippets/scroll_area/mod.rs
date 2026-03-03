@@ -7,5 +7,6 @@
 //! Keep `ui-gallery-scroll-area-*` `test_id`s stable: diag scripts depend on them.
 
 pub mod demo;
+pub mod drag_baseline;
 pub mod horizontal;
 pub mod rtl;

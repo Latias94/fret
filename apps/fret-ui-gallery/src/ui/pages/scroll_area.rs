@@ -5,6 +5,7 @@ use crate::ui::snippets::scroll_area as snippets;
 
 pub(super) fn preview_scroll_area(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     let demo = snippets::demo::render(cx);
+    let drag_baseline = snippets::drag_baseline::render(cx);
     let horizontal = snippets::horizontal::render(cx);
     let rtl = snippets::rtl::render(cx);
 
@@ -24,6 +25,11 @@ pub(super) fn preview_scroll_area(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
             DocSection::new("Demo", demo)
                 .description("Vertical scroll region with tags and separators.")
                 .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
+            DocSection::new("Scrollbar drag baseline", drag_baseline)
+                .description(
+                    "Diagnostics harness: content grows mid-drag (thumb math should stay stable).",
+                )
+                .code_rust_from_file_region(snippets::drag_baseline::SOURCE, "example"),
             DocSection::new("Horizontal", horizontal)
                 .description("Horizontal rail (fixed-size items) inside a scroll area.")
                 .code_rust_from_file_region(snippets::horizontal::SOURCE, "example"),
