@@ -1,6 +1,6 @@
 # Scroll Optimization Workstream (v1)
 
-Date: 2026-03-02  
+Date: 2026-03-03  
 Status: Draft (planning + gates-first)
 
 ## Motivation
@@ -59,6 +59,13 @@ Diagnostics scripts:
   - Asserts semantics scroll max is finite and wheel moves offset for both axes.
   - Self-contained navigation via `ui-gallery-nav-search` -> `ui-gallery-nav-scroll-area`.
   - Suite: `tools/diag-scripts/suites/ui-gallery-scroll-area/` (run: `cargo run -p fretboard -- diag suite ui-gallery-scroll-area --launch -- cargo run -p fret-ui-gallery --release`).
+- `tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scrollbar-drag-baseline-content-growth.json`
+  - Starts a scrollbar thumb drag, triggers content growth mid-drag, and asserts scrollbar semantics `y` stays stable.
+  - Harness snippet (keep `test_id`s stable): `apps/fret-ui-gallery/src/ui/snippets/scroll_area/drag_baseline.rs`.
+  - Suite: `tools/diag-scripts/suites/ui-gallery-scroll-area/`.
+- `tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scroll-area-wheel-torture.json`
+  - Repeated wheel input for perf/robustness evidence (captures a bundle; no perf threshold gate yet).
+  - Suite: `tools/diag-scripts/suites/perf-ui-gallery-scroll-area/`.
 
 Unit / integration tests (non-exhaustive):
 
@@ -132,10 +139,9 @@ Current implementation (native, opt-in):
 
 Evidence gate:
 
-- Add a perf-oriented diag script that wheels repeatedly and asserts:
-  - no layout solves are forced,
-  - scroll offset changes monotonically,
-  - frame time stays under a target threshold (optional, separate perf gate).
+- A perf-oriented diag script wheels repeatedly and captures a bundle for later perf regression gating:
+  - `tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scroll-area-wheel-torture.json`
+  - Suite: `tools/diag-scripts/suites/perf-ui-gallery-scroll-area/`
 
 ### B) Scrollbar drag baseline lock (correctness/UX)
 
@@ -158,10 +164,11 @@ Current implementation (mechanism-only):
 
 Evidence gate:
 
-- Add a diag script that:
+- A diag script that:
   - starts thumb drag,
-  - triggers content growth (e.g. expand a collapsible in a scroll area),
-  - asserts the thumb does not jump away from the pointer beyond an epsilon.
+  - triggers content growth (timer-driven for determinism),
+  - asserts scrollbar semantics remain within an epsilon of the baseline max offset:
+    - `tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scrollbar-drag-baseline-content-growth.json`
 
 ### C) Consolidate barrier invalidation helpers (hardening)
 
