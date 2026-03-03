@@ -30,13 +30,16 @@ Evidence anchors:
 
 - Demo: `apps/fret-examples/src/launcher_utility_window_demo.rs`
 - Script: `tools/diag-scripts/launcher-utility-window-mvp.json`
+ - Demo (materials): `apps/fret-examples/src/launcher_utility_window_materials_demo.rs`
+ - Script (materials): `tools/diag-scripts/launcher-utility-window-materials-windows.json`
 
 ## Next (M3) — OS materials (Windows/macOS best-effort)
 
-- [ ] Windows: implement DWM system backdrop mapping (Mica/Acrylic):
-  - [ ] define backend mapping and version gating (Win11+ where applicable),
-  - [ ] update capabilities to truthfully advertise supported variants,
-  - [ ] ensure transparency + backdrop interaction is deterministic and recorded.
+- [x] Windows: implement DWM system backdrop mapping (Mica/Acrylic):
+  - [x] define backend mapping and version gating (Win11 22H2+ / build >= 22621),
+  - [x] update capabilities to truthfully advertise supported variants,
+  - [x] ensure transparency + backdrop interaction is deterministic and recorded.
+  - [x] add a materials demo + diag script gate.
 - [ ] macOS: implement Vibrancy mapping:
   - [ ] pick the minimal stable API surface (titlebar/toolbar interactions),
   - [ ] capability gating + diagnostics evidence.
