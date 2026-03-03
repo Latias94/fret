@@ -46,6 +46,36 @@ pub fn compute_autoscroll_x(
     (dx != 0.0).then_some(Px(dx))
 }
 
+/// Compute an x-axis auto-scroll delta, clamped to `[0..max_offset_x]` bounds.
+///
+/// This is a convenience wrapper used by scrollable tab strips and other draggable surfaces:
+/// - returns `Px(0.0)` when the pointer is outside the container,
+/// - returns `Px(0.0)` when the container is not scrollable (`max_offset_x <= 0`),
+/// - returns `Px(0.0)` when the delta would scroll past the bounds.
+pub fn compute_autoscroll_x_clamped(
+    config: AutoScrollConfig,
+    container: Rect,
+    pointer: Point,
+    current_offset_x: Px,
+    max_offset_x: Px,
+) -> Px {
+    if max_offset_x.0 <= 0.5 {
+        return Px(0.0);
+    }
+    if !container.contains(pointer) {
+        return Px(0.0);
+    }
+
+    let dx = compute_autoscroll_x(config, container, pointer).unwrap_or(Px(0.0));
+    if dx.0 < 0.0 && current_offset_x.0 <= 0.5 {
+        return Px(0.0);
+    }
+    if dx.0 > 0.0 && (current_offset_x.0 + 0.5) >= max_offset_x.0 {
+        return Px(0.0);
+    }
+    dx
+}
+
 pub fn compute_autoscroll_y(
     config: AutoScrollConfig,
     container: Rect,
@@ -183,5 +213,28 @@ mod tests {
         .expect("should scroll inside the margin");
         assert!(dx.0 < 0.0);
         assert!(dx.0.abs() >= 5.0);
+    }
+
+    #[test]
+    fn clamped_autoscroll_returns_zero_when_at_scroll_bounds() {
+        let cfg = AutoScrollConfig {
+            margin_px: 10.0,
+            min_speed_px_per_tick: 0.0,
+            max_speed_px_per_tick: 10.0,
+        };
+        let container = rect(0.0, 0.0, 100.0, 20.0);
+        let pointer_left = Point::new(Px(1.0), Px(10.0));
+        let pointer_right = Point::new(Px(99.0), Px(10.0));
+
+        assert_eq!(
+            compute_autoscroll_x_clamped(cfg, container, pointer_left, Px(0.0), Px(300.0)),
+            Px(0.0),
+            "should not scroll left when already at 0"
+        );
+        assert_eq!(
+            compute_autoscroll_x_clamped(cfg, container, pointer_right, Px(300.0), Px(300.0)),
+            Px(0.0),
+            "should not scroll right when already at max"
+        );
     }
 }

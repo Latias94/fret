@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use fret_core::{Point, Px, Rect};
-use fret_dnd::{AutoScrollConfig, compute_autoscroll_x};
+use fret_dnd::{AutoScrollConfig, compute_autoscroll_x_clamped};
 use fret_ui_headless::tab_strip_drop_target::{
     TabStripDropTarget as HeadlessTabStripDropTarget, compute_tab_strip_drop_target_midpoint,
 };
@@ -78,27 +78,12 @@ pub(crate) fn compute_tab_strip_edge_auto_scroll_delta_x(
     current_offset_x: Px,
     max_offset_x: Px,
 ) -> Px {
-    if max_offset_x.0 <= 0.5 {
-        return Px(0.0);
-    }
-
-    if !viewport.contains(pointer) {
-        return Px(0.0);
-    }
-
     let cfg = AutoScrollConfig {
         margin_px: 24.0,
         min_speed_px_per_tick: 0.0,
         max_speed_px_per_tick: 18.0,
     };
-    let dx = compute_autoscroll_x(cfg, viewport, pointer).unwrap_or(Px(0.0));
-    if dx.0 < 0.0 && current_offset_x.0 <= 0.5 {
-        return Px(0.0);
-    }
-    if dx.0 > 0.0 && (current_offset_x.0 + 0.5) >= max_offset_x.0 {
-        return Px(0.0);
-    }
-    dx
+    compute_autoscroll_x_clamped(cfg, viewport, pointer, current_offset_x, max_offset_x)
 }
 
 #[cfg(test)]

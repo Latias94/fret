@@ -74,6 +74,11 @@ struct TweenF32StateMap {
     entries: HashMap<u64, TweenF32State>,
 }
 
+#[derive(Debug, Default)]
+struct TweenColorStateMap {
+    entries: HashMap<u64, TweenColorState>,
+}
+
 #[derive(Debug, Clone, Copy)]
 struct TweenColorState {
     initialized: bool,
@@ -495,6 +500,89 @@ pub fn drive_tween_color<H: UiHost>(
             out
         },
     )
+}
+
+#[track_caller]
+pub fn drive_tween_color_for_element<H: UiHost, K: Hash>(
+    cx: &mut ElementContext<'_, H>,
+    element: GlobalElementId,
+    key: K,
+    target: Color,
+    duration: Duration,
+    ease: fn(f32) -> f32,
+) -> DrivenMotionColor {
+    let reduced_motion = super::prefers_reduced_motion(cx, Invalidation::Paint, false);
+    if reduced_motion {
+        set_continuous_frames(cx, false);
+        return DrivenMotionColor {
+            value: target,
+            animating: false,
+        };
+    }
+
+    let mut hasher = std::collections::hash_map::DefaultHasher::new();
+    ("drive_tween_color_for_element").hash(&mut hasher);
+    key.hash(&mut hasher);
+    let entry_key = hasher.finish();
+
+    cx.keyed(("drive_tween_color_for_element", entry_key), |cx| {
+        let frame_id = cx.frame_id.0;
+        let dt = effective_frame_delta_for_cx(cx);
+
+        let out = cx.with_state_for(element, TweenColorStateMap::default, |map| {
+            let st = map
+                .entries
+                .entry(entry_key)
+                .or_insert_with(TweenColorState::default);
+
+            if !st.initialized {
+                st.initialized = true;
+                st.last_frame_id = frame_id;
+                st.start = target;
+                st.target = target;
+                st.value = target;
+                st.elapsed = Duration::ZERO;
+                st.duration = duration;
+                st.ease = ease;
+                st.animating = false;
+            }
+
+            // Retarget.
+            if target != st.target || st.duration != duration || st.ease as usize != ease as usize {
+                st.start = st.value;
+                st.target = target;
+                st.duration = duration;
+                st.ease = ease;
+                st.elapsed = Duration::ZERO;
+                st.animating = true;
+            }
+
+            // Advance at most once per frame.
+            if st.animating && st.last_frame_id != frame_id {
+                st.last_frame_id = frame_id;
+                st.elapsed = st.elapsed.saturating_add(dt);
+
+                st.value = tween_color_at(st.start, st.target, st.duration, st.ease, st.elapsed);
+                if st.elapsed >= st.duration {
+                    st.value = st.target;
+                    st.animating = false;
+                }
+            } else if st.last_frame_id == 0 {
+                st.last_frame_id = frame_id;
+            }
+
+            DrivenMotionColor {
+                value: st.value,
+                animating: st.animating,
+            }
+        });
+
+        set_continuous_frames(cx, out.animating);
+        if out.animating {
+            cx.notify_for_animation_frame();
+        }
+        out
+    })
 }
 
 #[track_caller]
@@ -1245,6 +1333,95 @@ mod tests {
             out.value
         );
         assert!(out.animating, "expected tween to still be animating");
+    }
+
+    #[test]
+    fn color_tween_for_element_advances_without_snapping_on_retarget() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        app.with_global_mut(WindowFrameClockService::default, |svc, _app| {
+            svc.set_fixed_delta(window, Some(Duration::from_millis(16)));
+        });
+
+        for fid in [FrameId(1), FrameId(2)] {
+            app.set_frame_id(fid);
+            app.with_global_mut(WindowFrameClockService::default, |svc, app| {
+                svc.record_frame(window, app.frame_id());
+            });
+        }
+
+        let ease = |t: f32| crate::headless::easing::CubicBezier::new(0.4, 0.0, 0.2, 1.0).sample(t);
+
+        app.set_tick_id(TickId(1));
+        app.set_frame_id(FrameId(2));
+        let anchor = with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "tween_color_for_element",
+            |cx| cx.keyed("anchor", |cx| cx.root_id()),
+        );
+
+        let c0 = Color {
+            r: 0.0,
+            g: 0.0,
+            b: 0.0,
+            a: 1.0,
+        };
+        let c1 = Color {
+            r: 1.0,
+            g: 0.0,
+            b: 0.0,
+            a: 1.0,
+        };
+
+        let _ = with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "tween_color_for_element",
+            |cx| {
+                drive_tween_color_for_element(
+                    cx,
+                    anchor,
+                    "value",
+                    c0,
+                    Duration::from_millis(150),
+                    ease,
+                )
+            },
+        );
+
+        app.set_tick_id(TickId(2));
+        app.set_frame_id(FrameId(3));
+        app.with_global_mut(WindowFrameClockService::default, |svc, app| {
+            svc.record_frame(window, app.frame_id());
+        });
+
+        let out = with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "tween_color_for_element",
+            |cx| {
+                drive_tween_color_for_element(
+                    cx,
+                    anchor,
+                    "value",
+                    c1,
+                    Duration::from_millis(150),
+                    ease,
+                )
+            },
+        );
+
+        assert!(
+            out.value != c0 && out.value != c1,
+            "expected color tween to advance but not snap; got value={:?}",
+            out.value
+        );
+        assert!(out.animating, "expected color tween to still be animating");
     }
 
     #[test]

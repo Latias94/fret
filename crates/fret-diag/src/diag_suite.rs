@@ -464,6 +464,9 @@ pub(crate) fn cmd_suite(ctx: SuiteCmdContext) -> Result<(), String> {
     // Privacy-sensitive workflows (pack/share/CI) should explicitly opt back into redaction via:
     // `--env FRET_DIAG_REDACT_TEXT=1` (or by inheriting it from the parent environment).
     push_env_if_missing(&mut launch_env, "FRET_DIAG_REDACT_TEXT", "0");
+    // Match `diag run` launch defaults: keep the app actively rendering so fixed-delta script
+    // timeouts and keepalive timers remain reliable under OS occlusion/throttling.
+    push_env_if_missing(&mut launch_env, "FRET_DIAG_RENDERER_PERF", "1");
 
     if pack_after_run {
         return Err("--pack is only supported with `diag run`".to_string());

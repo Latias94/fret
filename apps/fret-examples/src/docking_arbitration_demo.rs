@@ -24,7 +24,7 @@ use fret_ui::retained_bridge::resizable_panel_group as resizable;
 use fret_ui::retained_bridge::{LayoutCx, PaintCx, SemanticsCx, UiTreeRetainedExt as _, Widget};
 use fret_ui::{Invalidation, Theme, UiTree};
 use fret_ui_kit::OverlayController;
-use fret_ui_kit::declarative::stack::{VStackProps, vstack};
+use fret_ui_kit::declarative::stack::{HStackProps, VStackProps, hstack, vstack};
 use fret_ui_kit::{LayoutRefinement, Space};
 use fret_ui_shadcn as shadcn;
 use serde_json::json;
@@ -732,8 +732,36 @@ impl<H: fret_ui::UiHost> Widget<H> for DockingArbitrationHarnessRoot {
                             &[],
                         );
                         if *axis == desired_axis {
-                            if let Some(handle) = computed.handle_hit_rects.first().copied() {
-                                return Some(handle);
+                            // Prefer deriving a stable "handle center" from panel rect adjacency
+                            // instead of relying on hit-rect specifics. This keeps the diagnostics
+                            // anchor aligned with the visible split boundary (and therefore
+                            // reliably draggable in scripts), even if handle hit thickness / gap
+                            // policies evolve.
+                            if computed.panel_rects.len() >= 2 {
+                                let a = computed.panel_rects[0];
+                                let b = computed.panel_rects[1];
+                                let ax1 = a.origin.x.0 + a.size.width.0;
+                                let bx0 = b.origin.x.0;
+                                let cx = (ax1 + bx0) * 0.5;
+
+                                let ay0 = a.origin.y.0;
+                                let ay1 = a.origin.y.0 + a.size.height.0;
+                                let by0 = b.origin.y.0;
+                                let by1 = b.origin.y.0 + b.size.height.0;
+                                let y0 = ay0.max(by0);
+                                let y1 = ay1.min(by1);
+                                let cy = if y1 > y0 {
+                                    (y0 + y1) * 0.5
+                                } else {
+                                    (ay0 + ay1) * 0.5
+                                };
+
+                                if cx.is_finite() && cy.is_finite() {
+                                    return Some(Rect::new(
+                                        Point::new(Px(cx), Px(cy)),
+                                        Size::new(Px(0.0), Px(0.0)),
+                                    ));
+                                }
                             }
                         }
                         for (&child, &rect) in children.iter().zip(computed.panel_rects.iter()) {
@@ -1253,103 +1281,142 @@ impl DockPanelRegistry<App> for DockingArbitrationDockPanelRegistry {
                     .size(shadcn::CardSize::Sm)
                     .into_element(cx);
 
-                    let actions_card = shadcn::Card::new(vec![
-                        shadcn::CardContent::new(vec![vstack(
-                            cx,
-                            VStackProps::default()
-                                .gap(Space::N1)
-                                .layout(LayoutRefinement::default().w_full()),
-                            |cx| {
-                                vec![
-                                    cx.keyed("dock-arb-action-close-left", |cx| {
-                                        shadcn::Button::new("Close viewport left (panel)")
-                                            .variant(shadcn::ButtonVariant::Outline)
-                                            .test_id("dock-arb-close-viewport-left")
-                                            .on_activate(Arc::new(
-                                                move |host, action_cx, _reason| {
-                                                    host.push_effect(Effect::Dock(
-                                                        fret_core::DockOp::ClosePanel {
-                                                            window: action_cx.window,
-                                                            panel: fret_core::PanelKey::new(
-                                                                "demo.viewport.left",
-                                                            ),
-                                                        },
-                                                    ));
-                                                    host.request_redraw(action_cx.window);
-                                                },
-                                            ))
-                                            .into_element(cx)
-                                    }),
-                                    cx.keyed("dock-arb-action-close-right", |cx| {
-                                        shadcn::Button::new("Close viewport right (panel)")
-                                            .variant(shadcn::ButtonVariant::Outline)
-                                            .test_id("dock-arb-close-viewport-right")
-                                            .on_activate(Arc::new(
-                                                move |host, action_cx, _reason| {
-                                                    host.push_effect(Effect::Dock(
-                                                        fret_core::DockOp::ClosePanel {
-                                                            window: action_cx.window,
-                                                            panel: fret_core::PanelKey::new(
-                                                                "demo.viewport.right",
-                                                            ),
-                                                        },
-                                                    ));
-                                                    host.request_redraw(action_cx.window);
-                                                },
-                                            ))
-                                            .into_element(cx)
-                                    }),
-                                    cx.keyed("dock-arb-action-close-controls", |cx| {
-                                        shadcn::Button::new("Close controls (panel)")
-                                            .variant(shadcn::ButtonVariant::Outline)
-                                            .test_id("dock-arb-close-controls")
-                                            .on_activate(Arc::new(
-                                                move |host, action_cx, _reason| {
-                                                    host.push_effect(Effect::Dock(
-                                                        fret_core::DockOp::ClosePanel {
-                                                            window: action_cx.window,
-                                                            panel: fret_core::PanelKey::new(
-                                                                "demo.controls",
-                                                            ),
-                                                        },
-                                                    ));
-                                                    host.request_redraw(action_cx.window);
-                                                },
-                                            ))
-                                            .into_element(cx)
-                                    }),
-                                    cx.keyed("dock-arb-action-drop-mask", |cx| {
-                                        shadcn::Button::new("Toggle drop mask (left edge)")
-                                            .variant(shadcn::ButtonVariant::Outline)
-                                            .test_id("dock-arb-toggle-drop-mask-left-edge")
-                                            .on_activate(Arc::new(move |host, _action_cx, _reason| {
-                                                let mut next = false;
-                                                let _ = host.models_mut().update(
-                                                    &drop_mask_disallow_left_edge,
-                                                    |v| {
-                                                        *v = !*v;
-                                                        next = *v;
-                                                    },
-                                                );
-                                                disallow_left_flag.store(next, Ordering::Relaxed);
-                                            }))
-                                            .into_element(cx)
-                                    }),
-                                    cx.keyed("dock-arb-action-popover", |_cx| popover),
-                                    cx.keyed("dock-arb-action-dialog", |_cx| dialog),
-                                    cx.keyed("dock-arb-action-underlay", |cx| {
-                                        shadcn::Button::new("Underlay (modal barrier target)")
-                                            .variant(shadcn::ButtonVariant::Secondary)
-                                            .test_id("dock-arb-underlay-probe")
-                                            .into_element(cx)
-                                    }),
-                                ]
-                            },
-                        )])
-                        .into_element(cx),
-                    ])
-                    .size(shadcn::CardSize::Sm)
-                    .into_element(cx);
+	                let actions_card = shadcn::Card::new(vec![
+	                    shadcn::CardContent::new(vec![hstack(
+	                        cx,
+	                        HStackProps::default()
+	                            .gap(Space::N2)
+	                            .layout(LayoutRefinement::default().w_full().min_w_0()),
+	                        |cx| {
+	                            vec![
+	                                vstack(
+	                                    cx,
+	                                    VStackProps::default()
+	                                        .gap(Space::N1)
+	                                        .layout(
+	                                            LayoutRefinement::default()
+	                                                .flex_1()
+	                                                .min_w_0()
+	                                                .w_full(),
+	                                        ),
+	                                    |cx| {
+	                                        vec![
+	                                            cx.keyed("dock-arb-action-close-left", |cx| {
+	                                                shadcn::Button::new("Close viewport left (panel)")
+	                                                    .variant(shadcn::ButtonVariant::Outline)
+	                                                    .test_id("dock-arb-close-viewport-left")
+	                                                    .on_activate(Arc::new(
+	                                                        move |host, action_cx, _reason| {
+	                                                            host.push_effect(Effect::Dock(
+	                                                                fret_core::DockOp::ClosePanel {
+	                                                                    window: action_cx.window,
+	                                                                    panel: fret_core::PanelKey::new(
+	                                                                        "demo.viewport.left",
+	                                                                    ),
+	                                                                },
+	                                                            ));
+	                                                            host.request_redraw(action_cx.window);
+	                                                        },
+	                                                    ))
+	                                                    .into_element(cx)
+	                                            }),
+	                                            cx.keyed("dock-arb-action-close-right", |cx| {
+	                                                shadcn::Button::new(
+	                                                    "Close viewport right (panel)",
+	                                                )
+	                                                .variant(shadcn::ButtonVariant::Outline)
+	                                                .test_id("dock-arb-close-viewport-right")
+	                                                .on_activate(Arc::new(
+	                                                    move |host, action_cx, _reason| {
+	                                                        host.push_effect(Effect::Dock(
+	                                                            fret_core::DockOp::ClosePanel {
+	                                                                window: action_cx.window,
+	                                                                panel: fret_core::PanelKey::new(
+	                                                                    "demo.viewport.right",
+	                                                                ),
+	                                                            },
+	                                                        ));
+	                                                        host.request_redraw(action_cx.window);
+	                                                    },
+	                                                ))
+	                                                .into_element(cx)
+	                                            }),
+	                                            cx.keyed("dock-arb-action-close-controls", |cx| {
+	                                                shadcn::Button::new("Close controls (panel)")
+	                                                    .variant(shadcn::ButtonVariant::Outline)
+	                                                    .test_id("dock-arb-close-controls")
+	                                                    .on_activate(Arc::new(
+	                                                        move |host, action_cx, _reason| {
+	                                                            host.push_effect(Effect::Dock(
+	                                                                fret_core::DockOp::ClosePanel {
+	                                                                    window: action_cx.window,
+	                                                                    panel: fret_core::PanelKey::new(
+	                                                                        "demo.controls",
+	                                                                    ),
+	                                                                },
+	                                                            ));
+	                                                            host.request_redraw(action_cx.window);
+	                                                        },
+	                                                    ))
+	                                                    .into_element(cx)
+	                                            }),
+	                                            cx.keyed("dock-arb-action-drop-mask", |cx| {
+	                                                shadcn::Button::new(
+	                                                    "Toggle drop mask (left edge)",
+	                                                )
+	                                                .variant(shadcn::ButtonVariant::Outline)
+	                                                .test_id("dock-arb-toggle-drop-mask-left-edge")
+	                                                .on_activate(Arc::new(
+	                                                    move |host, _action_cx, _reason| {
+	                                                        let mut next = false;
+	                                                        let _ = host.models_mut().update(
+	                                                            &drop_mask_disallow_left_edge,
+	                                                            |v| {
+	                                                                *v = !*v;
+	                                                                next = *v;
+	                                                            },
+	                                                        );
+	                                                        disallow_left_flag
+	                                                            .store(next, Ordering::Relaxed);
+	                                                    },
+	                                                ))
+	                                                .into_element(cx)
+	                                            }),
+	                                        ]
+	                                    },
+	                                ),
+	                                vstack(
+	                                    cx,
+	                                    VStackProps::default()
+	                                        .gap(Space::N1)
+	                                        .layout(
+	                                            LayoutRefinement::default()
+	                                                .flex_1()
+	                                                .min_w_0()
+	                                                .w_full(),
+	                                        ),
+	                                    |cx| {
+	                                        vec![
+	                                            cx.keyed("dock-arb-action-popover", |_cx| popover),
+	                                            cx.keyed("dock-arb-action-dialog", |_cx| dialog),
+	                                            cx.keyed("dock-arb-action-underlay", |cx| {
+	                                                shadcn::Button::new(
+	                                                    "Underlay (modal barrier target)",
+	                                                )
+	                                                .variant(shadcn::ButtonVariant::Secondary)
+	                                                .test_id("dock-arb-underlay-probe")
+	                                                .into_element(cx)
+	                                            }),
+	                                        ]
+	                                    },
+	                                ),
+	                            ]
+	                        },
+	                    )])
+	                        .into_element(cx),
+	                    ])
+	                    .size(shadcn::CardSize::Sm)
+	                    .into_element(cx);
 
                     let debug_layers_card = shadcn::Card::new(vec![
                         shadcn::CardHeader::new(vec![
