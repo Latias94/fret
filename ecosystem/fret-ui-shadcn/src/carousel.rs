@@ -1261,6 +1261,7 @@ impl Carousel {
             let items = self.items;
             let theme_for_items = theme.clone();
             let root_test_id_for_items = root_test_id.clone();
+            let viewport_width_for_item_breakpoints = view_width_for_breakpoints;
 
             let index_now = cx.watch_model(&index_model).copied().unwrap_or(0);
             let offset_now = cx.watch_model(&offset_model).copied().unwrap_or(Px(0.0));
@@ -2693,7 +2694,12 @@ impl Carousel {
                         .into_iter()
                         .enumerate()
                         .map(|(idx, item)| {
-                            let per_item_layout_patch = item.layout;
+                            let per_item_layout_patch = item.layout.merge(
+                                resolve_item_layout_breakpoints(
+                                    viewport_width_for_item_breakpoints,
+                                    &item.layout_breakpoints,
+                                ),
+                            );
                             let per_item_basis = per_item_layout_patch
                                 .flex_item
                                 .as_ref()
@@ -2708,7 +2714,8 @@ impl Carousel {
                             slide_content_ids_ref.push(content.id);
 
                             let mut item_layout = LayoutRefinement::default()
-                                .flex_none()
+                                .flex_grow(0.0)
+                                .flex_shrink(0.0)
                                 .min_w(MetricRef::Px(Px(0.0)))
                                 .merge(item_layout_patch.clone())
                                 .merge(per_item_layout_patch);
@@ -3968,6 +3975,7 @@ pub struct CarouselItem {
     child: AnyElement,
     layout: LayoutRefinement,
     padding_start: Option<Space>,
+    layout_breakpoints: Vec<CarouselItemLayoutBreakpoint>,
 }
 
 impl CarouselItem {
@@ -3976,12 +3984,42 @@ impl CarouselItem {
             child,
             layout: LayoutRefinement::default(),
             padding_start: None,
+            layout_breakpoints: Vec::new(),
         }
     }
 
     /// Matches shadcn's per-item `className` surface (e.g. `md:basis-1/2`).
     pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
         self.layout = self.layout.merge(layout);
+        self
+    }
+
+    /// Breakpoint-based layout patches for the carousel viewport width (container-query style).
+    ///
+    /// This mirrors shadcn's `md:` / `lg:` class patterns, but uses explicit pixel thresholds and
+    /// typed layout patches instead of Tailwind strings.
+    ///
+    /// Note: breakpoints are evaluated against the measured carousel viewport width. The value is
+    /// frame-lagged (ADR 0231). On initial mount, the carousel viewport width is discovered after
+    /// the first layout pass, so breakpoint patches may apply starting from the third frame.
+    pub fn layout_breakpoint(mut self, min_width_px: Px, patch: LayoutRefinement) -> Self {
+        self.layout_breakpoints.push(CarouselItemLayoutBreakpoint {
+            min_width_px,
+            patch,
+        });
+        self.layout_breakpoints
+            .sort_by(|a, b| a.min_width_px.0.total_cmp(&b.min_width_px.0));
+        self
+    }
+
+    pub fn layout_breakpoints(
+        mut self,
+        breakpoints: impl IntoIterator<Item = CarouselItemLayoutBreakpoint>,
+    ) -> Self {
+        self.layout_breakpoints
+            .extend(breakpoints.into_iter().collect::<Vec<_>>());
+        self.layout_breakpoints
+            .sort_by(|a, b| a.min_width_px.0.total_cmp(&b.min_width_px.0));
         self
     }
 
@@ -3998,6 +4036,25 @@ impl From<AnyElement> for CarouselItem {
     fn from(child: AnyElement) -> Self {
         Self::new(child)
     }
+}
+
+#[derive(Debug, Clone)]
+pub struct CarouselItemLayoutBreakpoint {
+    pub min_width_px: Px,
+    pub patch: LayoutRefinement,
+}
+
+fn resolve_item_layout_breakpoints(
+    viewport_width_px: Px,
+    breakpoints: &[CarouselItemLayoutBreakpoint],
+) -> LayoutRefinement {
+    let mut patch = LayoutRefinement::default();
+    for bp in breakpoints {
+        if viewport_width_px.0 >= bp.min_width_px.0 {
+            patch = patch.merge(bp.patch.clone());
+        }
+    }
+    patch
 }
 
 /// shadcn/ui `CarouselPrevious` (v4).
