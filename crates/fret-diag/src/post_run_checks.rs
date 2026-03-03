@@ -8,14 +8,6 @@ pub(crate) fn apply_post_run_checks(
     checks: &diag_run::RunChecks,
     warmup_frames: u64,
 ) -> Result<(), String> {
-    let check_ui_gallery_text_rescan_system_fonts_font_stack_key_bumps =
-        checks.check_ui_gallery_text_rescan_system_fonts_font_stack_key_bumps;
-    let check_ui_gallery_text_fallback_policy_key_bumps_on_settings_change =
-        checks.check_ui_gallery_text_fallback_policy_key_bumps_on_settings_change;
-    let check_ui_gallery_text_fallback_policy_key_bumps_on_locale_change =
-        checks.check_ui_gallery_text_fallback_policy_key_bumps_on_locale_change;
-    let check_ui_gallery_text_mixed_script_bundled_fallback_conformance =
-        checks.check_ui_gallery_text_mixed_script_bundled_fallback_conformance;
     let check_wheel_scroll_test_id = checks.check_wheel_scroll_test_id.as_deref();
     let check_wheel_scroll_hit_changes_test_id =
         checks.check_wheel_scroll_hit_changes_test_id.as_deref();
@@ -135,18 +127,6 @@ pub(crate) fn apply_post_run_checks(
     };
     let bundle_path = bundle_path_for_checks.as_path();
 
-    if check_ui_gallery_text_rescan_system_fonts_font_stack_key_bumps {
-        check_out_dir_for_ui_gallery_text_rescan_system_fonts_font_stack_key_bumps(out_dir)?;
-    }
-    if check_ui_gallery_text_fallback_policy_key_bumps_on_settings_change {
-        check_out_dir_for_ui_gallery_text_fallback_policy_key_bumps_on_settings_change(out_dir)?;
-    }
-    if check_ui_gallery_text_fallback_policy_key_bumps_on_locale_change {
-        check_out_dir_for_ui_gallery_text_fallback_policy_key_bumps_on_locale_change(out_dir)?;
-    }
-    if check_ui_gallery_text_mixed_script_bundled_fallback_conformance {
-        check_out_dir_for_ui_gallery_text_mixed_script_bundled_fallback_conformance(out_dir)?;
-    }
     if let Some(test_id) = check_wheel_scroll_test_id {
         stats::check_bundle_for_wheel_scroll(bundle_path, test_id, warmup_frames)?;
     }

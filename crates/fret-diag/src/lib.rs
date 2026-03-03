@@ -116,10 +116,6 @@ use perf_seed_policy::{PerfBaselineSeed, PerfSeedMetric, ResolvedPerfBaselineSee
 use stats::{
     BundleStatsOptions, BundleStatsReport, BundleStatsSort, ScriptResultSummary,
     bundle_stats_diff_from_paths, bundle_stats_from_path,
-    check_out_dir_for_ui_gallery_text_fallback_policy_key_bumps_on_locale_change,
-    check_out_dir_for_ui_gallery_text_fallback_policy_key_bumps_on_settings_change,
-    check_out_dir_for_ui_gallery_text_mixed_script_bundled_fallback_conformance,
-    check_out_dir_for_ui_gallery_text_rescan_system_fonts_font_stack_key_bumps,
     check_report_for_hover_layout_invalidations, clear_script_result_files, report_result_and_exit,
     run_script_and_wait, wait_for_failure_dump_bundle,
 };
