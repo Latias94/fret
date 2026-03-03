@@ -1230,14 +1230,20 @@ impl UiDiagnosticsService {
             .unwrap_or_else(|| active.next_step.min(u32::MAX as usize) as u32);
 
         let pointer_source_test_id_for_step: Option<String> = active
-            .hit_test_trace
-            .iter()
-            .rev()
-            .find(|e| e.step_index == step_index)
-            .and_then(|e| {
-                e.hit_semantics_test_id
-                    .clone()
-                    .or_else(|| e.intended_test_id.clone())
+            .last_injected_pointer_source_test_id
+            .clone()
+            .filter(|_| active.last_injected_pointer_source_step == Some(step_index))
+            .or_else(|| {
+                active
+                    .hit_test_trace
+                    .iter()
+                    .rev()
+                    .find(|e| e.step_index == step_index)
+                    .and_then(|e| {
+                        e.hit_semantics_test_id
+                            .clone()
+                            .or_else(|| e.intended_test_id.clone())
+                    })
             });
 
         let max_entries = MAX_SHORTCUT_ROUTING_TRACE_ENTRIES;

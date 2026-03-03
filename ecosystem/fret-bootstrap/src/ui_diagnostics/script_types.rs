@@ -17,6 +17,8 @@ pub(super) struct ActiveScript {
     pub(super) event_log_dropped: u64,
     pub(super) event_log_active_step: Option<u32>,
     pub(super) last_injected_step: Option<u32>,
+    pub(super) last_injected_pointer_source_step: Option<u32>,
+    pub(super) last_injected_pointer_source_test_id: Option<String>,
     pub(super) wait_frames_remaining: u32,
     pub(super) wait_until: Option<WaitUntilState>,
     pub(super) wait_shortcut_routing_trace: Option<WaitShortcutRoutingTraceState>,

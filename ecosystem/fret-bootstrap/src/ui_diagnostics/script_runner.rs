@@ -57,6 +57,8 @@ impl UiDiagnosticsService {
             event_log_dropped: 0,
             event_log_active_step: None,
             last_injected_step: None,
+            last_injected_pointer_source_step: None,
+            last_injected_pointer_source_test_id: None,
             wait_frames_remaining: 0,
             wait_until: None,
             wait_shortcut_routing_trace: None,
