@@ -1,0 +1,17 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "diag-no-frame-timeout-no-frames",
+    "required_capabilities": ["diag.script_v2"],
+    "tags": ["diag", "liveness", "no-frame", "regression"]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    {
+      "type": "move_pointer",
+      "window": { "kind": "first_seen" },
+      "target": { "kind": "test_id", "id": "hello-counter.root" }
+    }
+  ]
+}
+

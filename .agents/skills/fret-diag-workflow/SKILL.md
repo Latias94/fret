@@ -22,6 +22,7 @@ Use `fret-ui-review` when the goal is an architecture/UX audit rather than produ
 - Prefer bounded tooling queries:
   - `fretboard diag meta ...`
   - `fretboard diag windows ...`
+  - `fretboard diag dock-graph ...`
   - `fretboard diag dock-routing ...`
   - `fretboard diag screenshots ...`
   - `fretboard diag resolve latest ...`
@@ -39,6 +40,10 @@ Use `fret-ui-review` when the goal is an architecture/UX audit rather than produ
 ## Best practices (repeatable habits)
 
 - Prefer `--launch` for determinism; avoid relying on parent-shell `FRET_DIAG_*` for tool-launched runs.
+- For tool-launched runs, use `resource.footprint.json` as the “shutdown outcome” hint:
+  - `killed=false` typically means the app observed `exit.touch` and exited cleanly.
+  - `killed=true` means tooling had to force-kill the demo after a grace window (often indicates exit trigger not
+    observed, a deadlock, or a no-frame stall).
 - Treat `--dir` (`FRET_DIAG_DIR`) as a **session boundary**:
   - Do not share the same out dir between multiple concurrent runs (multiple terminals, multiple AI agents, or multiple
     demos at once). The filesystem transport uses shared control-plane files (`*.touch`, `script.json`, `script.result.json`,
@@ -73,6 +78,19 @@ Use `fret-ui-review` when the goal is an architecture/UX audit rather than produ
     avoid accidental human interference.
   - Multi-window docking scripts may also use runner cursor overrides (`set_cursor_in_window_logical`) to drive
     window-hover routing; this updates the runner's internal cursor model and does **not** warp the OS cursor.
+- Docking / multi-window scripts: prefer *deterministic termination*:
+  - Avoid trailing `wait_frames` as the last step (especially after an end-of-script `capture_bundle`).
+    - If the remaining window becomes occluded/idle (or throttled), redraw callbacks may stop and a `wait_frames`
+      step will never complete, leaving the tooling waiting for `script.result.json` indefinitely.
+  - If you need a “settle”, prefer `wait_until` on a semantic predicate (e.g. `dock_graph_canonical_is`,
+    `known_window_count_is`) and then `capture_bundle` as the final step.
+  - When in doubt: `... -> assert/wait_until -> capture_bundle (last)` (no steps after).
+  - Prefer stage-gate bundles for correctness debugging:
+    - Capture once at *drop* (immediately after `dock_drop_resolved_*` + `dock_drag_active_is=false`).
+    - Capture once after auto-close/cleanup (right after `known_window_count_is` falls back to the expected value).
+    - Compare “drop vs after-close” evidence to decide where to refactor:
+      - if it is already wrong at drop: likely docking resolve/apply (`fret-docking`),
+      - if drop is correct but after-close is wrong: likely window close / cleanup (`fret-core` / lifecycle glue).
 - When triaging: prefer `diag meta/query/slice` over searching JSON.
 - When a script is flaky: replace sleeps with stabilization (`click_stable`, `wait_until`, bounds-stable), and shrink.
 - Always leave behind the 3-pack: repro script + bounded evidence bundle + regression gate (suite/check/test).
@@ -234,6 +252,13 @@ For evidence-first triage (reason codes + bounded traces), see: `references/evid
 - “timeout”
   - Replace sleeps with `wait_until`, `wait_bounds_stable`, and `click_stable`.
   - Add an intermediate `capture_bundle` close to the suspected failure point.
+- “timeout waiting for script result” but bundles exist and `script.result.json` stays `stage=running`
+  - Common cause in docking/multi-window scripts: the last remaining window becomes occluded/idle and stops producing
+    redraw callbacks, so `wait_frames`/timeouts do not progress.
+  - Fix: remove trailing `wait_frames`, or rewrite it into a semantic `wait_until` (then end with `capture_bundle`).
+  - If this happens right after a `capture_bundle`, ensure that `capture_bundle` is the final step.
+  - If `script_keepalive` is enabled, prefer expecting a stable failure with `reason_code=timeout.no_frames` instead of
+    a tooling timeout.
 - “artifacts are unexpectedly huge”
   - Quick self-check (launch policy): `fretboard diag config doctor --mode launch --print-launch-policy`
   - Run `fretboard diag config doctor --mode launch` to spot output-explosion risks before rerunning.
@@ -319,6 +344,18 @@ When adding or refactoring a diagnostics entrypoint that supports `--launch`:
   `FRET_DIAG_CONFIG_PATH` wiring stays consistent across `run/suite/repro/perf`.
 - Plumb `--launch-write-bundle-json` through the same path (never reintroduce a silent fallback to raw `bundle.json`).
 - On tooling failures, write a bounded `script.result.json` with a stable `reason_code` (e.g. `tooling.launch.failed`).
+
+## Root-cause hardening ideas (when docking runs keep finding new ways to hang)
+
+These are implementation-level fixes (not just workflow tips). Consider them if you keep seeing “no frames → no
+timeout progress” classes of failures:
+
+- Script timebase independence: make `wait_frames`/timeouts advance off a monotonic timer (or runner tick), not only
+  off redraw callbacks.
+- “Final step” semantics: provide a first-class `finalize` / `end` step, or explicitly flush the last `capture_bundle`
+  and mark the script `passed` without requiring any additional redraw callback.
+- Stronger transport heartbeats: ensure the tooling can observe forward progress (or detect dead states) even when the
+  target window is not producing redraw events.
 
 ## Evidence anchors
 

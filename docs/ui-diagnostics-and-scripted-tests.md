@@ -112,11 +112,64 @@ On native filesystem dumps, the runtime also writes bounded sidecars next to the
 
 These sidecars are intended to speed up CLI queries and AI triage without opening or grepping a full `bundle.json`.
 
+## Termination semantics (tool-launched runs)
+
+When using `--launch`, tooling requests the demo to exit by touching `exit.touch` in the session out dir.
+
+Tooling waits for a graceful exit (best effort). If the demo does not exit within a grace window, tooling will
+force-kill the process to avoid leaving orphaned demos behind.
+
+Tooling writes `resource.footprint.json` (in the same out dir) with a `killed: bool` field so you can distinguish:
+
+- the script **finished** (`script.result.json: stage=passed`) but the demo still needed to be killed (`killed=true`), vs
+- the script **never finished** (`script.result.json: stage=running` or missing) and the tool likely timed out or aborted.
+
+If `killed=true`, treat it as a diagnostics/runtime issue (e.g. exit trigger not observed, deadlock, no-frame stall) and
+prefer capturing a bounded failure bundle plus a stable `reason_code` so it can be triaged deterministically.
+
+Tooling note:
+
+- Launch-mode script runs treat `killed=true` as a failure and will report `reason_code=tooling.demo_exit.killed` (even
+  if the script itself reported `stage=passed`).
+
+## No-frame liveness (script keepalive)
+
+Some script steps historically only progressed when a window produced redraw callbacks. In multi-window scenarios
+(especially docking tear-off + overlap + z-order churn), a relevant window can become fully occluded or idle/throttled
+and stop producing redraw callbacks. If your script tail still depends on additional frames (e.g. trailing
+`wait_frames`), this can leave `script.result.json` stuck at `stage=running` and push the failure into tooling timeouts.
+
+Launch-mode tooling mitigations (recommended):
+
+- Tool-launched `--launch` runs write `script_keepalive=true` into the per-run `diag.config.json`.
+- When enabled, the in-app diagnostics runtime arms a repeating timer while scripts are pending/active. On each tick it
+  polls triggers and can advance a conservative subset of steps even if no window is producing redraw callbacks.
+- If the next step cannot safely progress without frames for a bounded wall time, the script fails with
+  `reason_code=timeout.no_frames` (instead of hanging).
+
+Manual runs (escape hatch):
+
+- Set `FRET_DIAG_SCRIPT_KEEPALIVE=1` (or set `script_keepalive=true` in the config file) when authoring/triaging
+  occlusion-heavy scripts that might otherwise hang.
+
+Deterministic repro hook (debug-only):
+
+- Set `FRET_DIAG_SIMULATE_NO_FRAMES=1` to skip snapshot recording and frame-driven script advancement, forcing the
+  keepalive/no-frame path to either make progress or fail with `reason_code=timeout.no_frames`.
+  - Recommended regression script: `tools/diag-scripts/diag/no-frame/diag-no-frame-timeout-no-frames.json`
+
+Important limitation:
+
+- Keepalive ticks are intentionally conservative: pointer-dispatch steps and semantics-dependent selector resolution
+   still require real UI frames/snapshots. Keepalive is a liveness safety net, not a “renderless UI simulator”.
+
 Footgun / recommendation:
 
 - Avoid running `rg`/`grep` directly on `bundle.json` dumps (they can be huge and can easily explode your terminal output).
 - Prefer bounded tooling commands that use sidecars and/or schema2 views:
   - `fretboard diag meta <bundle_dir|bundle.json|bundle.schema2.json> --json`
+  - `fretboard diag dock-graph <bundle_dir|bundle.json|bundle.schema2.json>`
+  - `fretboard diag dock-routing <bundle_dir|bundle.json|bundle.schema2.json>`
   - `fretboard diag query test-id <bundle_dir|bundle.json|bundle.schema2.json> <pattern> --top 50`
   - `fretboard diag slice <bundle_dir|bundle.json|bundle.schema2.json> --test-id <test_id>`
   - `fretboard diag ai-packet <bundle_dir|bundle.json|bundle.schema2.json> --packet-out <dir>`

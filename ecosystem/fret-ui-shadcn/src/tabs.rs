@@ -1645,7 +1645,8 @@ impl Tabs {
                 .as_ref()
                 .map(|id| Arc::<str>::from(format!("{id}-content-stage")));
 
-            let tab_list_semantics = radix_tabs::tab_list_semantics_props(list_props.layout);
+            let tab_list_semantics =
+                radix_tabs::tab_list_semantics_props(list_props.layout, orientation);
             children.push(cx.semantics(tab_list_semantics, |cx| {
                 vec![cx.container(list_props, |cx| {
                         let list_container_id = cx.root_id();
