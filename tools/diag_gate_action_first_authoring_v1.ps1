@@ -43,6 +43,21 @@ try {
 
     $profileDir = if ($Release) { "release" } else { "debug" }
 
+    # Build fretboard once and invoke the built exe directly.
+    #
+    # Rationale: `cargo run -p fretboard` can dominate gate runtime (and make timeouts flaky)
+    # even when the diagnostics scripts themselves are fast.
+    $fretboardBuildArgs = @("build", "-j", "1", "-p", "fretboard")
+    if ($Release) {
+        $fretboardBuildArgs += "--release"
+    }
+    Invoke-Checked "cargo build -p fretboard" "cargo" $fretboardBuildArgs
+
+    $fretboardExe = Join-Path $workspaceRoot (Join-Path "target" (Join-Path $profileDir "fretboard.exe"))
+    if (!(Test-Path $fretboardExe)) {
+        throw "fretboard exe not found: $fretboardExe"
+    }
+
     $gates = @(
         @{
             Name = "cookbook-hello-click-count"
@@ -107,13 +122,7 @@ try {
         }
 
         $scriptOutDir = Join-Path $runOutDir $gateName
-        Invoke-Checked "fretboard diag run $gateName" "cargo" @(
-            "run",
-            "-j",
-            "1",
-            "-p",
-            "fretboard",
-            "--",
+        Invoke-Checked "fretboard diag run $gateName" $fretboardExe @(
             "diag",
             "run",
             $scriptPath,
