@@ -148,12 +148,6 @@ pub fn tabs_list_variants(theme: &ThemeSnapshot, variant: TabsListVariant) -> Ta
     }
 }
 
-/// Upstream shadcn/ui compat alias for copy/paste parity.
-#[allow(non_snake_case)]
-pub fn tabsListVariants(theme: &ThemeSnapshot, variant: TabsListVariant) -> TabsListVariants {
-    tabs_list_variants(theme, variant)
-}
-
 fn tabs_trigger_text_style(theme: &ThemeSnapshot) -> TextStyle {
     let px = theme
         .metric_by_key("component.tabs.trigger.text_px")

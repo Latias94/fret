@@ -364,16 +364,6 @@ pub fn button_variants(
     ButtonVariants { chrome, layout }
 }
 
-/// Upstream shadcn/ui compat alias for copy/paste parity.
-#[allow(non_snake_case)]
-pub fn buttonVariants(
-    theme: &ThemeSnapshot,
-    variant: ButtonVariant,
-    size: ButtonSize,
-) -> ButtonVariants {
-    button_variants(theme, variant, size)
-}
-
 pub(crate) fn variant_colors(
     theme: &Theme,
     variant: ButtonVariant,

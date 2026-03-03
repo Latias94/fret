@@ -1642,6 +1642,16 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-accordion-extras-rtl-trigger-non-overlap",
+      "path": "tools/diag-scripts/ui-gallery/accordion/ui-gallery-accordion-extras-rtl-trigger-non-overlap.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-accordion-faq-toggle-fixed-frame-delta",
       "path": "tools/diag-scripts/ui-gallery/accordion/ui-gallery-accordion-faq-toggle-fixed-frame-delta.json",
       "required_capabilities": [],
@@ -1761,6 +1771,23 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-breadcrumb-demo-ellipsis-dropdown",
+      "path": "tools/diag-scripts/ui-gallery/breadcrumb/ui-gallery-breadcrumb-demo-ellipsis-dropdown.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "breadcrumb",
+        "dropdown_menu",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-breadcrumb-dot-separator-single-line",
       "path": "tools/diag-scripts/ui-gallery/breadcrumb/ui-gallery-breadcrumb-dot-separator-single-line.json",
       "required_capabilities": [],
@@ -1783,6 +1810,25 @@
         "breadcrumb",
         "link",
         "semantics",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-breadcrumb-responsive-toggle",
+      "path": "tools/diag-scripts/ui-gallery/breadcrumb/ui-gallery-breadcrumb-responsive-toggle.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "breadcrumb",
+        "drawer",
+        "dropdown_menu",
+        "responsive",
         "shadcn",
         "ui_gallery"
       ],
@@ -1857,6 +1903,25 @@
         "ui-gallery-shadcn-conformance"
       ],
       "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-card-demo-screenshot",
+      "path": "tools/diag-scripts/ui-gallery/card/ui-gallery-card-demo-screenshot.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "card",
+        "docs-parity",
+        "screenshot",
+        "shadcn",
+        "ui-gallery"
+      ],
       "target_hints": []
     },
     {
@@ -2743,6 +2808,7 @@
         "shadcn",
         "ui_gallery"
       ],
+      "target_hints": []
     },
     {
       "id": "ui-gallery-context-menu-keyboard-escape-focus-restore",
@@ -3134,6 +3200,7 @@
         "shadcn",
         "ui_gallery"
       ],
+      "target_hints": []
     },
     {
       "id": "ui-gallery-dropdown-nonmodal-outside-press-focus-underlay",
@@ -4039,6 +4106,24 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-scroll-into-view-padding-is-soft",
+      "path": "tools/diag-scripts/ui-gallery/card/ui-gallery-scroll-into-view-padding-is-soft.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "card",
+        "regression",
+        "scroll",
+        "scroll_into_view",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Guards against ScrollIntoView treating padding as a hard visibility requirement, which can cause stuck loops at scroll boundaries."
+      ]
+    },
+    {
       "id": "ui-gallery-select-commit-and-label-update-bundle",
       "path": "tools/diag-scripts/ui-gallery/select/ui-gallery-select-commit-and-label-update-bundle.json",
       "required_capabilities": [
@@ -4789,77 +4874,33 @@
         "Asserts the tab is removed from the UI tree."
       ]
     },
-	    {
-	      "id": "workspace-shell-demo-tab-close-mru-fallback-smoke",
-	      "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-mru-fallback-smoke.json",
-	      "required_capabilities": [
-	        "diag.script_v2"
-	      ],
-	      "suite_memberships": [
-	        "diag-hardening-smoke-workspace"
-	      ],
-	      "tags": [
-	        "close",
-	        "gate",
-	        "smoke",
-	        "tabstrip",
-	        "workspace"
-	      ],
-	      "target_hints": [
-	        "Activates doc-a-1 (pane A) so MRU is deterministic.",
-	        "Closes doc-a-1 via the close button.",
-	        "Asserts doc-a-1 is removed and selection falls back to doc-a-2 (MRU fallback)."
-	      ]
-	    },
-	    {
-	      "id": "workspace-shell-demo-tab-close-others-keeps-pinned-smoke",
-	      "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-others-keeps-pinned-smoke.json",
-	      "required_capabilities": [
-	        "diag.script_v2"
-	      ],
-	      "suite_memberships": [
-	        "workspace-shell-demo"
-	      ],
-	      "tags": [
-	        "close",
-	        "gate",
-	        "pinned",
-	        "smoke",
-	        "tabstrip",
-	        "workspace"
-	      ],
-	      "target_hints": [
-	        "Pins doc-a-0, then runs Close Other Tabs from doc-a-2's context menu.",
-	        "Asserts the pinned tab is kept and only the active unpinned tab remains."
-	      ]
-	    },
-	    {
-	      "id": "workspace-shell-demo-tab-close-left-keeps-pinned-smoke",
-	      "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-left-keeps-pinned-smoke.json",
-	      "required_capabilities": [
-	        "diag.script_v2"
-	      ],
-	      "suite_memberships": [
-	        "workspace-shell-demo"
-	      ],
-	      "tags": [
-	        "close",
-	        "gate",
-	        "pinned",
-	        "smoke",
-	        "tabstrip",
-	        "workspace"
-	      ],
-	      "target_hints": [
-	        "Pins doc-a-0, activates doc-a-2, then runs Close Tabs to the Left.",
-	        "Asserts doc-a-1 is closed but the pinned tab is kept."
-	      ]
-	    },
-	    {
-	      "id": "workspace-shell-demo-tab-cross-pane-move-to-end",
-	      "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-cross-pane-move-to-end.json",
-	      "required_capabilities": [
-	        "diag.script_v2"
+    {
+      "id": "workspace-shell-demo-tab-close-mru-fallback-smoke",
+      "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-mru-fallback-smoke.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "diag-hardening-smoke-workspace"
+      ],
+      "tags": [
+        "close",
+        "gate",
+        "smoke",
+        "tabstrip",
+        "workspace"
+      ],
+      "target_hints": [
+        "Activates doc-a-1 (pane A) so MRU is deterministic.",
+        "Closes doc-a-1 via the close button.",
+        "Asserts doc-a-1 is removed and selection falls back to doc-a-2 (MRU fallback)."
+      ]
+    },
+    {
+      "id": "workspace-shell-demo-tab-cross-pane-move-to-end",
+      "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-cross-pane-move-to-end.json",
+      "required_capabilities": [
+        "diag.script_v2"
       ],
       "suite_memberships": [
         "workspace-shell-demo"
@@ -5027,10 +5068,7 @@
         "tabstrip",
         "workspace"
       ],
-      "target_hints": [
-        "Pins doc-a-0 via context menu, then drags it onto the pinned boundary to unpin.",
-        "Asserts the tab's .pinned anchor toggles off after the boundary drop."
-      ]
+      "target_hints": []
     },
     {
       "id": "workspace-shell-demo-tab-pinned-cross-boundary-drop-does-not-pin-smoke",

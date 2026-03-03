@@ -79,18 +79,18 @@ ComboboxInput::new()
     .show_clear(true)
 ```
 
-## Anchor override (`useComboboxAnchor`)
+## Anchor override (`use_combobox_anchor`)
 
 Upstream v4 uses `useComboboxAnchor()` (a DOM ref) and passes it to `ComboboxContent` as
 `anchor={anchor}` (Base UI `Positioner.anchor`) to control popup positioning.
 
-In Fret, we model the same outcome via a layout-only wrapper (`useComboboxAnchor(child)`) that
+In Fret, we model the same outcome via a layout-only wrapper (`use_combobox_anchor(child)`) that
 exposes a stable element ID. Pass the ID to `ComboboxContent::anchor_element_id(...)`:
 
 ```rust
-use fret_ui_shadcn::{ComboboxContent, useComboboxAnchor};
+use fret_ui_shadcn::{ComboboxContent, use_combobox_anchor};
 
-let anchor = useComboboxAnchor(cx.text("anchor"));
+let anchor = use_combobox_anchor(cx.text("anchor"));
 let anchor_id = anchor.element_id();
 let _anchor_el = anchor.into_element(cx);
 
@@ -177,7 +177,9 @@ Upstream uses a single `Combobox` root with `multiple`, `ComboboxChips`, `Combob
 In Fret, multi-select is currently modeled as a dedicated recipe: `ComboboxChips`. The part adapter
 is available as `ComboboxChips::into_element_parts(...)` and supports:
 
-- `ComboboxChipsInput::placeholder(...)` → mapped to the overlay search input placeholder.
+- `ComboboxChipsInput::placeholder(...)` → mapped to both the trigger placeholder (when no chips
+  are selected) and the overlay search input placeholder.
+- `ComboboxTrigger::width_px(...)` → mapped to the recipe width override.
 - `ComboboxChip::show_remove(false)` → disables the recipe’s chip remove affordance.
 - `ComboboxContent(Empty/List/Group/Item...)` → overrides `empty_text` and (optionally) items/groups.
 
@@ -225,5 +227,5 @@ pub fn example_combobox_multiple(cx: &mut ElementContext<'_, App>) -> AnyElement
 - Render-prop ergonomics are not modeled; lists are provided explicitly.
 - `ComboboxInput.show_trigger(false)` hides the default trigger icon (the trigger control still
   toggles the overlay).
-- Base UI anchor refs (`useComboboxAnchor()`) are modeled via `useComboboxAnchor(child)` +
+- Base UI anchor refs (`useComboboxAnchor()`) are modeled via `use_combobox_anchor(child)` +
   `ComboboxContent::anchor_element_id(...)` (element ID), not a DOM ref.

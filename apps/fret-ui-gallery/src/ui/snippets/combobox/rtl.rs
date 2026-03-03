@@ -50,8 +50,6 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
             vec![with_direction_provider(cx, LayoutDirection::Rtl, |cx| {
                 shadcn::Combobox::new(value.clone(), open.clone())
                     .a11y_label("Combobox RTL")
-                    .width(Px(260.0))
-                    .placeholder("ابحث عن إطار عمل")
                     .query_model(query.clone())
                     .test_id_prefix("ui-gallery-combobox-rtl")
                     .trigger_test_id("ui-gallery-combobox-rtl-trigger")
@@ -60,7 +58,16 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
                         shadcn::ComboboxItem::new("nuxt", "Nuxt.js"),
                         shadcn::ComboboxItem::new("svelte", "SvelteKit"),
                     ])
-                    .into_element(cx)
+                    .into_element_parts(cx, |_cx| {
+                        vec![
+                            shadcn::ComboboxPart::from(
+                                shadcn::ComboboxTrigger::new().width_px(Px(260.0)),
+                            ),
+                            shadcn::ComboboxPart::from(
+                                shadcn::ComboboxInput::new().placeholder("ابحث عن إطار عمل"),
+                            ),
+                        ]
+                    })
             })]
         },
     )

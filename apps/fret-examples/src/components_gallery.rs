@@ -481,7 +481,10 @@ impl ComponentsGalleryDriver {
                                                     .a11y_label(
                                                         "Demo theme preset (shadcn new-york-v4)",
                                                     )
-                                                    .placeholder("Pick a theme")
+                                                    .value(
+                                                        shadcn::SelectValue::new()
+                                                            .placeholder("Pick a theme"),
+                                                    )
                                                     .refine_layout(
                                                         LayoutRefinement::default()
                                                             .w_px(Px(260.0)),
@@ -728,8 +731,11 @@ impl ComponentsGalleryDriver {
                                                                     ui_font_override.clone(),
                                                                     ui_font_override_open.clone(),
                                                                 )
-                                                                .placeholder(
-                                                                    "Force UI font (optional)",
+                                                                .value(
+                                                                    shadcn::SelectValue::new()
+                                                                        .placeholder(
+                                                                            "Force UI font (optional)",
+                                                                        ),
                                                                 )
                                                                 .refine_layout(
                                                                     LayoutRefinement::default()
@@ -741,8 +747,11 @@ impl ComponentsGalleryDriver {
                                                                     emoji_font_override.clone(),
                                                                     emoji_font_override_open.clone(),
                                                                 )
-                                                                .placeholder(
-                                                                    "Force emoji font (optional)",
+                                                                .value(
+                                                                    shadcn::SelectValue::new()
+                                                                        .placeholder(
+                                                                            "Force emoji font (optional)",
+                                                                        ),
                                                                 )
                                                                 .refine_layout(
                                                                     LayoutRefinement::default()

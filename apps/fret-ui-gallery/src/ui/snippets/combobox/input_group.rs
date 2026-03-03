@@ -88,8 +88,6 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
 
     let combo = shadcn::Combobox::new(value.clone(), open.clone())
         .a11y_label("Combobox input group")
-        .width(Px(220.0))
-        .placeholder("Search command")
         .query_model(query.clone())
         .test_id_prefix("ui-gallery-combobox-input-group")
         .trigger_test_id("ui-gallery-combobox-input-group-trigger")
@@ -98,7 +96,14 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
             shadcn::ComboboxItem::new("open-file", "Open File"),
             shadcn::ComboboxItem::new("save-all", "Save All"),
         ])
-        .into_element(cx);
+        .into_element_parts(cx, |_cx| {
+            vec![
+                shadcn::ComboboxPart::from(shadcn::ComboboxTrigger::new().width_px(Px(220.0))),
+                shadcn::ComboboxPart::from(
+                    shadcn::ComboboxInput::new().placeholder("Search command"),
+                ),
+            ]
+        });
 
     stack::vstack(
         cx,

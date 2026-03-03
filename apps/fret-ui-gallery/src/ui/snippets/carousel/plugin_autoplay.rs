@@ -60,10 +60,10 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
         line_height_px: Px(40.0),
     };
     let items = (1..=5)
-        .map(|idx| slide(cx, idx, visual))
+        .map(|idx| shadcn::CarouselItem::new(slide(cx, idx, visual)))
         .collect::<Vec<_>>();
 
-    shadcn::Carousel::new(items)
+    shadcn::Carousel::default()
         .autoplay(shadcn::CarouselAutoplayConfig::new(Duration::from_millis(
             2000,
         )))
@@ -74,6 +74,11 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
                 .mx_auto(),
         )
         .test_id("ui-gallery-carousel-plugin")
-        .into_element(cx)
+        .into_element_parts(
+            cx,
+            |_cx| shadcn::CarouselContent::new(items),
+            shadcn::CarouselPrevious::new(),
+            shadcn::CarouselNext::new(),
+        )
 }
 // endregion: example

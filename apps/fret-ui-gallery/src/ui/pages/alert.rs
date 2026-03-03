@@ -24,7 +24,7 @@ pub(super) fn preview_alert(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview follows shadcn Alert docs order: Demo, Basic, Destructive, Action, Custom Colors, RTL.",
+            "Preview follows shadcn Alert docs order: Demo, Basic (docs example), Destructive, Action, Custom Colors, RTL.",
         ),
         vec![
             DocSection::new("Demo", demo)
@@ -33,7 +33,7 @@ pub(super) fn preview_alert(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
                 .test_id_prefix("ui-gallery-alert")
                 .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
             DocSection::new("Basic", basic)
-                .description("Default variant for neutral info.")
+                .description("Upstream shadcn docs example (icon + title + description).")
                 .max_w(Px(720.0))
                 .code_rust_from_file_region(snippets::basic::SOURCE, "example"),
             DocSection::new("Destructive", destructive)

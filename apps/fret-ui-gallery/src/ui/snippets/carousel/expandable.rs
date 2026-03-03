@@ -50,7 +50,7 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
         ) as fret_ui::action::OnActivate
     };
 
-    let expandable_items = (1..=5)
+    let items = (1..=5)
         .map(|idx| {
             let expanded = expandable_selected_now == Some(idx);
             let height = if expanded { Px(260.0) } else { Px(140.0) };
@@ -122,9 +122,10 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
                 .p_1()
                 .into_element(cx)
         })
+        .map(shadcn::CarouselItem::new)
         .collect::<Vec<_>>();
 
-    shadcn::Carousel::new(expandable_items)
+    shadcn::Carousel::default()
         .refine_layout(
             LayoutRefinement::default()
                 .w_full()
@@ -132,6 +133,11 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
                 .mx_auto(),
         )
         .test_id("ui-gallery-carousel-expandable")
-        .into_element(cx)
+        .into_element_parts(
+            cx,
+            |_cx| shadcn::CarouselContent::new(items),
+            shadcn::CarouselPrevious::new(),
+            shadcn::CarouselNext::new(),
+        )
 }
 // endregion: example

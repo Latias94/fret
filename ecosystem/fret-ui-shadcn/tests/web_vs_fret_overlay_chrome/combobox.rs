@@ -20,7 +20,10 @@ fn build_shadcn_combobox_demo_page(
 
     Combobox::new(value, open.clone())
         .a11y_label("Select a fruit")
-        .width(Px(200.0))
         .items(items)
-        .into_element(cx)
+        .into_element_parts(cx, |_cx| {
+            vec![fret_ui_shadcn::ComboboxPart::from(
+                fret_ui_shadcn::ComboboxTrigger::new().width_px(Px(200.0)),
+            )]
+        })
 }

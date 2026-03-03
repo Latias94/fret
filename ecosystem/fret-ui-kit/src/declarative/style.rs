@@ -275,7 +275,20 @@ pub fn container_props(
         .as_ref()
         .map(|m| m.resolve(theme))
         .unwrap_or(Px(0.0));
-    let border_color = chrome.border_color.as_ref().map(|c| c.resolve(theme));
+    let border_color = chrome
+        .border_color
+        .as_ref()
+        .map(|c| c.resolve(theme))
+        .or_else(|| {
+            if border_width.0 <= 0.0 {
+                return None;
+            }
+
+            theme
+                .color_by_key("border")
+                .or_else(|| theme.color_by_key("input"))
+                .or_else(|| theme.color_by_key("foreground"))
+        });
 
     let uniform_radius = chrome
         .radius
