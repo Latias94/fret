@@ -45,6 +45,9 @@ This file is a short, append-only log of landings and decisions for this workstr
   - Workspace gate: `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-button-does-not-start-drag.json`
 - Hardened docking close arbitration gate to assert no dock drag is started while pressing close.
   - Docking gate: `tools/diag-scripts/docking/arbitration/docking-arbitration-demo-tab-close-button-does-not-activate.json`
+- Extracted a shared “tab close pointer-down hit test” helper into `fret-ui-kit` to reduce adapter drift.
+  - Code: `ecosystem/fret-ui-kit/src/headless/tab_strip_arbitration.rs`
+  - Wired in: `ecosystem/fret-workspace/src/tab_strip/interaction.rs`
 
 ## Next (proposed)
 
