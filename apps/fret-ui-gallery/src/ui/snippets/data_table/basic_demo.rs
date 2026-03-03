@@ -326,9 +326,44 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
                 "select" => Arc::<str>::from(""),
                 _ => col.id.clone(),
             },
-            move |cx, col, _sort_state| {
+            move |cx, col, sort_state| {
                 if col.id.as_ref() != "select" {
-                    return None;
+                    if col.id.as_ref() != "amount" {
+                        return None;
+                    }
+
+                    let theme = Theme::global(&*cx.app).snapshot();
+                    let sort_fg = theme.color_token("muted-foreground");
+                    let icon_id = match sort_state {
+                        Some(true) => "lucide.arrow-down",
+                        Some(false) => "lucide.arrow-up",
+                        None => "lucide.chevrons-up-down",
+                    };
+
+                    let header = stack::hstack(
+                        cx,
+                        stack::HStackProps::default()
+                            .layout(LayoutRefinement::default().w_full().h_full())
+                            .justify_end()
+                            .items_center()
+                            .gap_x(Space::N2),
+                        move |cx| {
+                            vec![
+                                ui::label(cx, Arc::<str>::from("Amount"))
+                                    .text_sm()
+                                    .nowrap()
+                                    .into_element(cx),
+                                fret_ui_kit::declarative::icon::icon_with(
+                                    cx,
+                                    fret_icons::IconId::new_static(icon_id),
+                                    Some(Px(16.0)),
+                                    Some(ColorRef::Color(sort_fg)),
+                                ),
+                            ]
+                        },
+                    );
+
+                    return Some(vec![header]);
                 }
 
                 let state_value = cx
@@ -454,8 +489,9 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
                                 "ui-gallery-data-table-basic-row-actions-open-{}",
                                 row.key
                             )))
-                            .icon(fret_icons::IconId::new_static("lucide.ellipsis"))
+                            .icon(fret_icons::ids::ui::MORE_HORIZONTAL)
                             .into_element(cx);
+                        let trigger = align_end(cx, trigger);
 
                         let payment_id = row.id.clone();
                         shadcn::DropdownMenu::new(open)
