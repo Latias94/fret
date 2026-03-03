@@ -2,8 +2,11 @@ use std::sync::Arc;
 
 use fret_core::{Point, Px, Rect};
 use fret_dnd::{AutoScrollConfig, compute_autoscroll_x};
+use fret_ui_headless::tab_strip_drop_target::{
+    TabStripDropTarget as HeadlessTabStripDropTarget, compute_tab_strip_drop_target_midpoint,
+};
 
-use crate::tab_drag::{WorkspaceTabHitRect, WorkspaceTabInsertionSide, compute_tab_drop_target};
+use crate::tab_drag::{WorkspaceTabHitRect, WorkspaceTabInsertionSide};
 
 use super::surface::{WorkspaceTabStripSurface, classify_workspace_tab_strip_surface};
 
@@ -39,17 +42,33 @@ pub(crate) fn compute_workspace_tab_strip_drop_target(
         scroll_right_control_rect,
     );
 
-    match surface {
-        WorkspaceTabStripSurface::Outside
-        | WorkspaceTabStripSurface::OverflowControl
-        | WorkspaceTabStripSurface::ScrollControls => WorkspaceTabStripDropTarget::None,
-        WorkspaceTabStripSurface::PinnedBoundary => WorkspaceTabStripDropTarget::PinnedBoundary,
-        WorkspaceTabStripSurface::HeaderSpace => WorkspaceTabStripDropTarget::End,
-        WorkspaceTabStripSurface::TabsViewport => {
-            compute_tab_drop_target(position, dragged_tab_id, tab_rects)
-                .map(|(target, side)| WorkspaceTabStripDropTarget::Tab(target, side))
-                .unwrap_or(WorkspaceTabStripDropTarget::None)
-        }
+    // Use the shared headless helper for the "tab vs boundary vs end" drop target.
+    //
+    // Note: We still surface `WorkspaceTabStripSurface` separately so other code can reason about
+    // e.g. `ScrollControls` explicitly when needed.
+    match compute_tab_strip_drop_target_midpoint(
+        position,
+        tab_rects,
+        |r| r.rect,
+        |r| r.id.as_ref() == dragged_tab_id,
+        pinned_boundary_rect,
+        end_drop_target_rect,
+        scroll_viewport_rect,
+        overflow_control_rect,
+        scroll_left_control_rect,
+        scroll_right_control_rect,
+    ) {
+        HeadlessTabStripDropTarget::None => match surface {
+            WorkspaceTabStripSurface::PinnedBoundary => WorkspaceTabStripDropTarget::PinnedBoundary,
+            WorkspaceTabStripSurface::HeaderSpace => WorkspaceTabStripDropTarget::End,
+            _ => WorkspaceTabStripDropTarget::None,
+        },
+        HeadlessTabStripDropTarget::PinnedBoundary => WorkspaceTabStripDropTarget::PinnedBoundary,
+        HeadlessTabStripDropTarget::End => WorkspaceTabStripDropTarget::End,
+        HeadlessTabStripDropTarget::Tab { index, side } => tab_rects
+            .get(index)
+            .map(|r| WorkspaceTabStripDropTarget::Tab(r.id.clone(), side))
+            .unwrap_or(WorkspaceTabStripDropTarget::None),
     }
 }
 

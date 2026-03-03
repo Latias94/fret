@@ -220,6 +220,7 @@ impl MediaImage {
             };
 
             AspectRatio::new(ratio, inner)
+                .overflow(Overflow::Clip)
                 .refine_style(chrome)
                 .refine_layout(layout)
                 .into_element(cx)

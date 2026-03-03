@@ -1,0 +1,113 @@
+{
+  "meta": {
+    "name": "Workspace shell demo: tabstrip Escape restores pane content focus (smoke)",
+    "required_capabilities": [
+      "diag.script_v2"
+    ],
+    "tags": [
+      "workspace",
+      "tabstrip",
+      "keyboard",
+      "focus",
+      "smoke",
+      "gate"
+    ],
+    "target_hints": [
+      "Enters the tab strip (Ctrl+F6) from pane content.",
+      "Presses Escape to restore focus to pane content.",
+      "Asserts content focus is restored."
+    ]
+  },
+  "schema_version": 2,
+  "steps": [
+    {
+      "height_px": 720.0,
+      "type": "set_window_inner_size",
+      "width_px": 1280.0
+    },
+    {
+      "n": 10,
+      "type": "wait_frames"
+    },
+    {
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "id": "workspace-shell-pane-pane-a-content",
+          "kind": "test_id"
+        }
+      },
+      "timeout_frames": 240,
+      "type": "wait_until"
+    },
+    {
+      "target": {
+        "id": "workspace-shell-pane-pane-a-content",
+        "kind": "test_id"
+      },
+      "type": "click"
+    },
+    {
+      "n": 6,
+      "type": "wait_frames"
+    },
+    {
+      "predicate": {
+        "kind": "focus_is",
+        "target": {
+          "id": "workspace-shell-pane-pane-a-content",
+          "kind": "test_id"
+        }
+      },
+      "timeout_frames": 240,
+      "type": "wait_until"
+    },
+    {
+      "key": "f6",
+      "modifiers": {
+        "ctrl": true
+      },
+      "repeat": false,
+      "type": "press_key"
+    },
+    {
+      "n": 6,
+      "type": "wait_frames"
+    },
+    {
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "id": "workspace-shell-pane-pane-a-tab-doc-a-2",
+          "kind": "test_id"
+        }
+      },
+      "timeout_frames": 240,
+      "type": "wait_until"
+    },
+    {
+      "key": "escape",
+      "repeat": false,
+      "type": "press_key"
+    },
+    {
+      "n": 6,
+      "type": "wait_frames"
+    },
+    {
+      "predicate": {
+        "kind": "focus_is",
+        "target": {
+          "id": "workspace-shell-pane-pane-a-content",
+          "kind": "test_id"
+        }
+      },
+      "timeout_frames": 240,
+      "type": "wait_until"
+    },
+    {
+      "label": "workspace-shell-demo-tabstrip-escape-restores-content-focus-smoke",
+      "type": "capture_bundle"
+    }
+  ]
+}

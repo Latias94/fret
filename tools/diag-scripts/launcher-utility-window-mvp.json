@@ -1,0 +1,6 @@
+{
+  "schema_version": 1,
+  "kind": "script_redirect",
+  "to": "tools/diag-scripts/workstreams/launcher-utility-windows-v1/launcher-utility-window-mvp.json"
+}
+

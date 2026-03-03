@@ -306,6 +306,10 @@ impl UiDiagnosticsService {
         caps.push("diag.shortcut_routing_trace".to_string());
         caps.push("diag.command_dispatch_trace".to_string());
         caps.push("diag.overlay_placement_trace".to_string());
+        if !cfg!(target_arch = "wasm32") {
+            caps.push("diag.window_style_snapshot".to_string());
+            caps.push("diag.window_background_material_snapshot".to_string());
+        }
         caps.push("diag.window_insets_override".to_string());
         caps.push("diag.clipboard_force_unavailable".to_string());
         if !cfg!(target_arch = "wasm32") {

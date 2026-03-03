@@ -736,25 +736,35 @@ where
             match drag.kind {
                 InternalDragKind::Over | InternalDragKind::Enter => {
                     let mut handled = false;
+                    let mut stop_propagation = false;
                     let _ = host.models_mut().update(&tab_drag_model, |st| {
                         if st.pointer != Some(drag.pointer_id)
                             || st.source_window != Some(session_source_window)
                         {
                             return;
                         }
+                        // This pane-level region is responsible for "owning" workspace-tab drag
+                        // hover while the pointer is inside it. Mark the event as handled even
+                        // when the hovered pane/zone does not change so ancestor regions (like
+                        // the workspace root clear-hover region) do not clear state on steady
+                        // `Over` events.
+                        stop_propagation = true;
                         let geom = st
                             .pane_geometry
                             .iter()
                             .find(|(id, _)| id.as_ref() == pane_id.as_ref())
                             .map(|(_, g)| *g);
-                        let mut next_zone = geom
-                            .map(|geom| {
-                                compute_drop_zone_for_position(geom, drag.position, st.hovered_zone)
-                            })
-                            .unwrap_or(WorkspaceTabDropZone::Center);
+                        let pointer_pos_window = drag.position_window.unwrap_or(drag.position);
+                        let mut next_zone = geom.map_or(WorkspaceTabDropZone::Center, |geom| {
+                            compute_drop_zone_for_position(
+                                geom,
+                                pointer_pos_window,
+                                st.hovered_zone,
+                            )
+                        });
                         if next_zone != WorkspaceTabDropZone::Center
                             && tab_strip_row_contains_pointer(
-                                drag.position,
+                                pointer_pos_window,
                                 &st.hovered_pane_tab_rects,
                             )
                         {
@@ -776,7 +786,7 @@ where
                     if handled {
                         host.request_redraw(acx.window);
                     }
-                    handled
+                    stop_propagation
                 }
                 InternalDragKind::Leave => {
                     let mut cleared = false;
@@ -833,22 +843,27 @@ where
                             .iter()
                             .find(|(id, _)| id.as_ref() == pane_id.as_ref())
                             .map(|(_, g)| *g);
-                        let zone = geom
-                            .map(|geom| {
-                                compute_drop_zone_for_position(geom, drag.position, st.hovered_zone)
-                            })
-                            .unwrap_or_else(|| {
-                                st.hovered_zone.unwrap_or(WorkspaceTabDropZone::Center)
-                            });
-                        let zone = if zone != WorkspaceTabDropZone::Center
-                            && tab_strip_row_contains_pointer(
-                                drag.position,
-                                &st.hovered_pane_tab_rects,
-                            ) {
-                            WorkspaceTabDropZone::Center
-                        } else {
-                            zone
-                        };
+                        let pointer_pos_window = drag.position_window.unwrap_or(drag.position);
+                        let zone = geom.map_or_else(
+                            || st.hovered_zone.unwrap_or(WorkspaceTabDropZone::Center),
+                            |geom| {
+                                let zone = compute_drop_zone_for_position(
+                                    geom,
+                                    pointer_pos_window,
+                                    st.hovered_zone,
+                                );
+                                if zone != WorkspaceTabDropZone::Center
+                                    && tab_strip_row_contains_pointer(
+                                        pointer_pos_window,
+                                        &st.hovered_pane_tab_rects,
+                                    )
+                                {
+                                    WorkspaceTabDropZone::Center
+                                } else {
+                                    zone
+                                }
+                            },
+                        );
 
                         intent = resolve_workspace_tab_drop_intent(st, &pane_id, zone);
 

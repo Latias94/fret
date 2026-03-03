@@ -164,6 +164,7 @@ impl TabBarGeometry {
         }
     }
 
+    #[allow(dead_code)]
     pub(super) fn compute_insert_index(&self, position: Point, scroll: Px) -> usize {
         let tab_count = self.tab_count();
         if tab_count == 0 {

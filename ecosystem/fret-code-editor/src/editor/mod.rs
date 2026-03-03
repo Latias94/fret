@@ -910,7 +910,9 @@ impl CodeEditorState {
         }
     }
 
-    fn ime_surrounding_text_best_effort_cached(&mut self) -> fret_runtime::WindowImeSurroundingText {
+    fn ime_surrounding_text_best_effort_cached(
+        &mut self,
+    ) -> fret_runtime::WindowImeSurroundingText {
         let revision = self.buffer.revision();
         let selection = self.selection;
         if let Some(cache) = self.ime_surrounding_text_cache.as_ref()

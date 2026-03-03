@@ -1,6 +1,6 @@
 use fret_diag_protocol::{
     UiActionScriptV1, UiActionScriptV2, UiActionStepV1, UiActionStepV2, UiPointerKindV1,
-    UiWindowTargetV1,
+    UiPredicateV1, UiWindowTargetV1,
 };
 use serde_json::Value;
 use std::collections::BTreeSet;
@@ -386,20 +386,45 @@ fn infer_required_capabilities_v1(script: &UiActionScriptV1) -> Vec<String> {
         if matches!(step, UiActionStepV1::CaptureScreenshot { .. }) {
             push_cap(&mut caps, "diag.screenshot_png");
         }
+        match step {
+            UiActionStepV1::WaitUntil { predicate, .. } | UiActionStepV1::Assert { predicate } => {
+                infer_required_capabilities_from_predicate(&mut caps, predicate);
+            }
+            _ => {}
+        }
     }
     caps
 }
 
+fn window_target_requires_multi_window(window: &UiWindowTargetV1) -> bool {
+    matches!(
+        window,
+        UiWindowTargetV1::FirstSeenOther
+            | UiWindowTargetV1::LastSeenOther
+            | UiWindowTargetV1::WindowFfi { .. }
+    )
+}
+
+fn infer_required_capabilities_from_predicate(caps: &mut Vec<String>, predicate: &UiPredicateV1) {
+    match predicate {
+        UiPredicateV1::WindowStyleEffectiveIs { window, .. } => {
+            push_cap(caps, "diag.window_style_snapshot");
+            if window_target_requires_multi_window(window) {
+                push_cap(caps, "diag.multi_window");
+            }
+        }
+        UiPredicateV1::WindowBackgroundMaterialEffectiveIs { window, .. } => {
+            push_cap(caps, "diag.window_background_material_snapshot");
+            if window_target_requires_multi_window(window) {
+                push_cap(caps, "diag.multi_window");
+            }
+        }
+        _ => {}
+    }
+}
+
 fn infer_required_capabilities_v2(script: &UiActionScriptV2) -> Vec<String> {
     let mut caps: Vec<String> = Vec::new();
-    fn window_target_requires_multi_window(window: &UiWindowTargetV1) -> bool {
-        matches!(
-            window,
-            UiWindowTargetV1::FirstSeenOther
-                | UiWindowTargetV1::LastSeenOther
-                | UiWindowTargetV1::WindowFfi { .. }
-        )
-    }
     fn step_window_target(step: &UiActionStepV2) -> Option<&UiWindowTargetV1> {
         match step {
             UiActionStepV2::Click { window, .. }
@@ -431,6 +456,14 @@ fn infer_required_capabilities_v2(script: &UiActionScriptV2) -> Vec<String> {
             | UiActionStepV2::SetMouseButtons { window, .. }
             | UiActionStepV2::RaiseWindow { window, .. }
             | UiActionStepV2::DragPointerUntil { window, .. } => window.as_ref(),
+            _ => None,
+        }
+    }
+    fn step_predicate(step: &UiActionStepV2) -> Option<&UiPredicateV1> {
+        match step {
+            UiActionStepV2::WaitUntil { predicate, .. }
+            | UiActionStepV2::Assert { predicate, .. }
+            | UiActionStepV2::DragPointerUntil { predicate, .. } => Some(predicate),
             _ => None,
         }
     }
@@ -466,6 +499,9 @@ fn infer_required_capabilities_v2(script: &UiActionScriptV2) -> Vec<String> {
             && window_target_requires_multi_window(window)
         {
             push_cap(&mut caps, "diag.multi_window");
+        }
+        if let Some(predicate) = step_predicate(step) {
+            infer_required_capabilities_from_predicate(&mut caps, predicate);
         }
         if matches!(step, UiActionStepV2::CaptureScreenshot { .. }) {
             push_cap(&mut caps, "diag.screenshot_png");

@@ -1276,6 +1276,71 @@ impl UiKeyModifiersV1 {
     }
 }
 
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum UiWindowDecorationsRequestV1 {
+    System,
+    None,
+    Server,
+    Client,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum UiTaskbarVisibilityV1 {
+    Show,
+    Hide,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum UiActivationPolicyV1 {
+    Activates,
+    NonActivating,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum UiWindowZLevelV1 {
+    Normal,
+    AlwaysOnTop,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum UiMousePolicyV1 {
+    Normal,
+    Passthrough,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum UiWindowBackgroundMaterialRequestV1 {
+    None,
+    SystemDefault,
+    Mica,
+    Acrylic,
+    Vibrancy,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct UiWindowStyleMatchV1 {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub decorations: Option<UiWindowDecorationsRequestV1>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub resizable: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub transparent: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub taskbar: Option<UiTaskbarVisibilityV1>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub activation: Option<UiActivationPolicyV1>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub z_level: Option<UiWindowZLevelV1>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub mouse: Option<UiMousePolicyV1>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum UiPredicateV1 {
@@ -1664,6 +1729,22 @@ pub enum UiPredicateV1 {
     PlatformUiWindowHoverDetectionIs {
         quality: String,
     },
+    /// True when the effective (clamped) OS window style for `window` matches the provided facets.
+    ///
+    /// This predicate is capability-gated and intended for non-pixel regression gates for utility
+    /// windows (frameless/transparent/always-on-top posture).
+    WindowStyleEffectiveIs {
+        window: UiWindowTargetV1,
+        style: UiWindowStyleMatchV1,
+    },
+    /// True when the effective (clamped) OS window background material for `window` matches `material`.
+    ///
+    /// This predicate is capability-gated and intended to gate deterministic degradation paths
+    /// when OS materials are unsupported.
+    WindowBackgroundMaterialEffectiveIs {
+        window: UiWindowTargetV1,
+        material: UiWindowBackgroundMaterialRequestV1,
+    },
     /// True when the latest docking diagnostics report an active dock drag whose `current_window`
     /// matches `window`.
     DockDragCurrentWindowIs {
@@ -1842,6 +1923,24 @@ pub enum UiPredicateV1 {
     /// "selecting a tab (including via overflow menu) must scroll it into view".
     WorkspaceTabStripActiveVisibleIs {
         visible: bool,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        pane_id: Option<String>,
+    },
+    /// True when the latest workspace diagnostics report `tab_strip_active_visibility.scroll_x >= px`.
+    ///
+    /// This predicate reads the best-effort `workspace_interaction.tab_strip_active_visibility`
+    /// snapshot recorded into `WindowInteractionDiagnosticsStore`.
+    WorkspaceTabStripActiveScrollPxGe {
+        px: f32,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        pane_id: Option<String>,
+    },
+    /// True when the latest workspace diagnostics report `tab_strip_active_visibility.scroll_x <= px`.
+    ///
+    /// This predicate reads the best-effort `workspace_interaction.tab_strip_active_visibility`
+    /// snapshot recorded into `WindowInteractionDiagnosticsStore`.
+    WorkspaceTabStripActiveScrollPxLe {
+        px: f32,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         pane_id: Option<String>,
     },
@@ -3065,6 +3164,46 @@ mod tests {
         assert!(matches!(
             roundtrip,
             UiPredicateV1::DockTabStripActiveScrollPxLe { .. }
+        ));
+    }
+
+    #[test]
+    fn predicate_workspace_tab_strip_scroll_predicates_serialize_and_deserialize() {
+        let value = serde_json::to_value(UiPredicateV1::WorkspaceTabStripActiveScrollPxGe {
+            px: 12.0,
+            pane_id: None,
+        })
+        .unwrap();
+        assert_eq!(
+            value,
+            serde_json::json!({
+                "kind": "workspace_tab_strip_active_scroll_px_ge",
+                "px": 12.0
+            })
+        );
+        let roundtrip: UiPredicateV1 = serde_json::from_value(value).unwrap();
+        assert!(matches!(
+            roundtrip,
+            UiPredicateV1::WorkspaceTabStripActiveScrollPxGe { .. }
+        ));
+
+        let value = serde_json::to_value(UiPredicateV1::WorkspaceTabStripActiveScrollPxLe {
+            px: 0.0,
+            pane_id: Some("pane-a".to_string()),
+        })
+        .unwrap();
+        assert_eq!(
+            value,
+            serde_json::json!({
+                "kind": "workspace_tab_strip_active_scroll_px_le",
+                "px": 0.0,
+                "pane_id": "pane-a",
+            })
+        );
+        let roundtrip: UiPredicateV1 = serde_json::from_value(value).unwrap();
+        assert!(matches!(
+            roundtrip,
+            UiPredicateV1::WorkspaceTabStripActiveScrollPxLe { .. }
         ));
     }
 

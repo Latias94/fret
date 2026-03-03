@@ -326,6 +326,8 @@ impl UiDiagnosticsService {
             UiPredicateV1::KnownWindowCountGe { .. }
                 | UiPredicateV1::KnownWindowCountIs { .. }
                 | UiPredicateV1::PlatformUiWindowHoverDetectionIs { .. }
+                | UiPredicateV1::WindowStyleEffectiveIs { .. }
+                | UiPredicateV1::WindowBackgroundMaterialEffectiveIs { .. }
                 | UiPredicateV1::DockDragCurrentWindowIs { .. }
                 | UiPredicateV1::DockDragMovingWindowIs { .. }
                 | UiPredicateV1::DockDragWindowUnderMovingWindowIs { .. }
@@ -495,6 +497,17 @@ impl UiDiagnosticsService {
                     ..
                 } => return None,
                 _ => {}
+            }
+
+            // `move_pointer` / `move_pointer_sweep` can be executed from any window and may need
+            // to act on occluded targets during cross-window dock drags. Avoid pinning execution
+            // to either `first_seen` or an active pointer-session window; the step handler can
+            // still hand off when it truly needs a live semantics snapshot.
+            if matches!(
+                step,
+                UiActionStepV2::MovePointer { .. } | UiActionStepV2::MovePointerSweep { .. }
+            ) {
+                return None;
             }
 
             // Prefer preserving captured-pointer continuity over window-target pinning. During
@@ -996,7 +1009,9 @@ impl UiDiagnosticsService {
                 ring.test_id_bounds_fingerprint = Some(fingerprint);
             }
         } else {
-            ring.test_id_bounds.clear();
+            // Keep the last known `test_id` bounds even when a semantics snapshot is unavailable
+            // (e.g. an occluded window that stops producing frames). Cross-window diagnostics
+            // steps rely on these cached bounds to avoid deadlocking on forced handoffs.
             ring.test_id_bounds_fingerprint = None;
         }
         let viewport_input = std::mem::take(&mut ring.viewport_input_this_frame);

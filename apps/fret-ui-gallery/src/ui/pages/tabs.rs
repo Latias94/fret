@@ -3,10 +3,7 @@ use super::super::*;
 use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::tabs as snippets;
 
-pub(super) fn preview_tabs(
-    cx: &mut ElementContext<'_, App>,
-    _value: Model<Option<Arc<str>>>,
-) -> Vec<AnyElement> {
+pub(super) fn preview_tabs(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     let demo = snippets::demo::render(cx);
     let list = snippets::list::render(cx);
     let disabled = snippets::disabled::render(cx);

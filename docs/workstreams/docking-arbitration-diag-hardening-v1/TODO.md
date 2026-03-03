@@ -73,3 +73,5 @@ with special focus on multi-window tear-off + drag-back sequences.
   of script steps (and fail with `timeout.no_frames`) even if redraw callbacks stop (occlusion/idle).
 - Runtime hardening: allow a small “burst” of frame-independent tail steps so scripts do not require an additional frame
   to run a final `capture_bundle` after the last semantic assertion (reduces tooling timeouts at tight `--timeout-ms`).
+- Docs: clarify window-count and docking drop resolve predicate semantics in the main diagnostics reference:
+  `docs/ui-diagnostics-and-scripted-tests.md`.

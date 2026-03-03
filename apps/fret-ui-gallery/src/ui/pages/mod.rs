@@ -565,15 +565,17 @@ pub(super) fn preview_calendar(
     calendar::preview_calendar(cx, month, selected)
 }
 
-pub(super) fn preview_alert_dialog(
-    cx: &mut ElementContext<'_, App>,
-    open: Model<bool>,
-) -> Vec<AnyElement> {
-    alert_dialog::preview_alert_dialog(cx, open)
+pub(super) fn preview_alert_dialog(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    alert_dialog::preview_alert_dialog(cx)
 }
 
-pub(super) fn preview_aspect_ratio(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
-    aspect_ratio::preview_aspect_ratio(cx)
+pub(super) fn preview_aspect_ratio(
+    cx: &mut ElementContext<'_, App>,
+    wide_image: Option<Model<Option<ImageId>>>,
+    tall_image: Option<Model<Option<ImageId>>>,
+    square_image: Option<Model<Option<ImageId>>>,
+) -> Vec<AnyElement> {
+    aspect_ratio::preview_aspect_ratio(cx, wide_image, tall_image, square_image)
 }
 
 pub(super) fn preview_card(
@@ -609,16 +611,11 @@ pub(super) fn preview_badge(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
     badge::preview_badge(cx)
 }
 
-pub(super) fn preview_breadcrumb(
-    cx: &mut ElementContext<'_, App>,
-    last_action: Model<Arc<str>>,
-) -> Vec<AnyElement> {
-    breadcrumb::preview_breadcrumb(cx, last_action)
+pub(super) fn preview_breadcrumb(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    breadcrumb::preview_breadcrumb(cx)
 }
 
-pub(super) fn preview_checkbox(
-    cx: &mut ElementContext<'_, App>,
-) -> Vec<AnyElement> {
+pub(super) fn preview_checkbox(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     checkbox::preview_checkbox(cx)
 }
 
@@ -650,16 +647,11 @@ pub(super) fn preview_command_palette(
     command::preview_command_palette(cx, last_action)
 }
 
-pub(super) fn preview_toast(
-    cx: &mut ElementContext<'_, App>,
-    last_action: Model<Arc<str>>,
-) -> Vec<AnyElement> {
-    toast::preview_toast(cx, last_action)
+pub(super) fn preview_toast(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    toast::preview_toast(cx)
 }
 
-pub(super) fn preview_context_menu(
-    cx: &mut ElementContext<'_, App>,
-) -> Vec<AnyElement> {
+pub(super) fn preview_context_menu(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     context_menu::preview_context_menu(cx)
 }
 
@@ -678,27 +670,19 @@ pub(super) fn preview_date_picker(
     date_picker::preview_date_picker(cx, open, month, selected)
 }
 
-pub(super) fn preview_dialog(
-    cx: &mut ElementContext<'_, App>,
-) -> Vec<AnyElement> {
+pub(super) fn preview_dialog(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     dialog::preview_dialog(cx)
 }
 
-pub(super) fn preview_popover(
-    cx: &mut ElementContext<'_, App>,
-) -> Vec<AnyElement> {
+pub(super) fn preview_popover(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     popover::preview_popover(cx)
 }
 
-pub(super) fn preview_progress(
-    cx: &mut ElementContext<'_, App>,
-) -> Vec<AnyElement> {
+pub(super) fn preview_progress(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     progress::preview_progress(cx)
 }
 
-pub(super) fn preview_sheet(
-    cx: &mut ElementContext<'_, App>,
-) -> Vec<AnyElement> {
+pub(super) fn preview_sheet(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     sheet::preview_sheet(cx)
 }
 
@@ -706,23 +690,15 @@ pub(super) fn preview_field(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
     field::preview_field(cx)
 }
 
-pub(super) fn preview_forms(
-    cx: &mut ElementContext<'_, App>,
-    text_input: Model<String>,
-    text_area: Model<String>,
-    checkbox: Model<bool>,
-    switch: Model<bool>,
-) -> Vec<AnyElement> {
-    form::preview_forms(cx, text_input, text_area, checkbox, switch)
+pub(super) fn preview_forms(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    form::preview_forms(cx)
 }
 
 pub(super) fn preview_hover_card(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     hover_card::preview_hover_card(cx)
 }
 
-pub(super) fn preview_input(
-    cx: &mut ElementContext<'_, App>,
-) -> Vec<AnyElement> {
+pub(super) fn preview_input(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     input::preview_input(cx)
 }
 
@@ -826,11 +802,8 @@ pub(super) fn preview_sonner(
     sonner::preview_sonner(cx, last_action, sonner_position)
 }
 
-pub(super) fn preview_tabs(
-    cx: &mut ElementContext<'_, App>,
-    value: Model<Option<Arc<str>>>,
-) -> Vec<AnyElement> {
-    tabs::preview_tabs(cx, value)
+pub(super) fn preview_tabs(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    tabs::preview_tabs(cx)
 }
 
 pub(super) fn preview_table(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
@@ -841,16 +814,11 @@ pub(super) fn preview_spinner(cx: &mut ElementContext<'_, App>) -> Vec<AnyElemen
     spinner::preview_spinner(cx)
 }
 
-pub(super) fn preview_switch(
-    cx: &mut ElementContext<'_, App>,
-    model: Model<bool>,
-) -> Vec<AnyElement> {
-    switch::preview_switch(cx, model)
+pub(super) fn preview_switch(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    switch::preview_switch(cx)
 }
 
-pub(super) fn preview_textarea(
-    cx: &mut ElementContext<'_, App>,
-) -> Vec<AnyElement> {
+pub(super) fn preview_textarea(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     textarea::preview_textarea(cx)
 }
 
@@ -858,9 +826,7 @@ pub(super) fn preview_drawer(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
     drawer::preview_drawer(cx)
 }
 
-pub(super) fn preview_dropdown_menu(
-    cx: &mut ElementContext<'_, App>,
-) -> Vec<AnyElement> {
+pub(super) fn preview_dropdown_menu(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     dropdown_menu::preview_dropdown_menu(cx)
 }
 

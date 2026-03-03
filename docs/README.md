@@ -6,6 +6,7 @@ contracts early to avoid large rewrites later.
 New to the repo? Start with:
 
 - First hour onboarding (native): `docs/first-hour.md`
+- Setup (native: toolchain + OS deps + fast builds): `docs/setup.md`
 - Examples index (templates + cookbook + gallery + labs): `docs/examples/README.md`
 
 ## Sources of Truth
@@ -43,6 +44,8 @@ New to the repo? Start with:
 - Viewport panels (engine/video): `docs/viewport-panels.md`
 - Gizmo + viewport integration: `docs/gizmo-viewport-integration.md`
 - Docking multi-window parity (ImGui-style tear-off): `docs/workstreams/docking-multiwindow-imgui-parity.md` (macOS: `docs/workstreams/macos-docking-multiwindow-imgui-parity.md`)
+- Docking diagnostics hardening (multi-window arbitration scripts + bounded evidence): `docs/workstreams/docking-arbitration-diag-hardening-v1/`
+- UI diagnostics timebase decoupling v1 (no-frame liveness + `reason_code=timeout.no_frames`): `docs/workstreams/ui-diagnostics-timebase-decoupling-v1/README.md`
 - Localization/i18n v1 tracker: `docs/workstreams/localization-i18n-v1.md` and `docs/workstreams/localization-i18n-v1-todo.md`
 - Contracts: `docs/adr/`
 - Audit notes index (non-authoritative): `docs/audits/README.md`

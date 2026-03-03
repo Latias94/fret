@@ -1,9 +1,16 @@
 {
-  "schema_version": 2,
   "meta": {
     "name": "Workspace shell demo: overflow menu activates hidden tab (smoke)",
-    "tags": ["workspace", "tabstrip", "overflow", "smoke", "gate"],
-    "required_capabilities": ["diag.script_v2"],
+    "required_capabilities": [
+      "diag.script_v2"
+    ],
+    "tags": [
+      "workspace",
+      "tabstrip",
+      "overflow",
+      "smoke",
+      "gate"
+    ],
     "target_hints": [
       "Shrinks the window to force tab strip overflow.",
       "Opens the overflow menu.",
@@ -11,84 +18,126 @@
       "Asserts the tab becomes selected."
     ]
   },
+  "schema_version": 2,
   "steps": [
-    { "type": "set_window_inner_size", "width_px": 420.0, "height_px": 720.0 },
-    { "type": "wait_frames", "n": 10 },
-
     {
-      "type": "wait_until",
+      "height_px": 720.0,
+      "type": "set_window_inner_size",
+      "width_px": 420.0
+    },
+    {
+      "n": 10,
+      "type": "wait_frames"
+    },
+    {
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-strip.overflow_button" }
+        "target": {
+          "id": "workspace-shell-pane-pane-a-tab-strip.overflow_button",
+          "kind": "test_id"
+        }
       },
-      "timeout_frames": 240
+      "timeout_frames": 240,
+      "type": "wait_until"
     },
-
     {
-      "type": "click",
-      "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-0" }
+      "target": {
+        "id": "workspace-shell-pane-pane-a-tab-doc-a-0",
+        "kind": "test_id"
+      },
+      "type": "click"
     },
-    { "type": "wait_frames", "n": 10 },
     {
-      "type": "wait_until",
+      "n": 10,
+      "type": "wait_frames"
+    },
+    {
       "predicate": {
         "kind": "selected_is",
-        "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-0" },
-        "selected": true
+        "selected": true,
+        "target": {
+          "id": "workspace-shell-pane-pane-a-tab-doc-a-0",
+          "kind": "test_id"
+        }
       },
-      "timeout_frames": 240
+      "timeout_frames": 240,
+      "type": "wait_until"
     },
-
     {
-      "type": "click",
-      "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-strip.overflow_button" }
+      "target": {
+        "id": "workspace-shell-pane-pane-a-tab-strip.overflow_button",
+        "kind": "test_id"
+      },
+      "type": "click"
     },
-    { "type": "wait_frames", "n": 20 },
-
     {
-      "type": "wait_until",
+      "n": 20,
+      "type": "wait_frames"
+    },
+    {
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-strip.overflow_entry.doc-a-2" }
+        "target": {
+          "id": "workspace-shell-pane-pane-a-tab-strip.overflow_entry.doc-a-2",
+          "kind": "test_id"
+        }
       },
-      "timeout_frames": 240
+      "timeout_frames": 240,
+      "type": "wait_until"
     },
-
     {
-      "type": "click",
-      "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-strip.overflow_entry.doc-a-2" }
+      "target": {
+        "id": "workspace-shell-pane-pane-a-tab-strip.overflow_entry.doc-a-2",
+        "kind": "test_id"
+      },
+      "type": "click"
     },
-    { "type": "wait_frames", "n": 20 },
-
     {
-      "type": "wait_until",
+      "n": 20,
+      "type": "wait_frames"
+    },
+    {
       "predicate": {
         "kind": "selected_is",
-        "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-2" },
-        "selected": true
+        "selected": true,
+        "target": {
+          "id": "workspace-shell-pane-pane-a-tab-doc-a-2",
+          "kind": "test_id"
+        }
       },
-      "timeout_frames": 240
+      "timeout_frames": 240,
+      "type": "wait_until"
     },
-
     {
-      "type": "wait_until",
       "predicate": {
         "kind": "workspace_tab_strip_active_overflow_is",
         "overflow": true,
         "pane_id": "pane-a"
       },
-      "timeout_frames": 240
+      "timeout_frames": 240,
+      "type": "wait_until"
     },
     {
-      "type": "wait_until",
       "predicate": {
         "kind": "workspace_tab_strip_active_visible_is",
-        "visible": true,
-        "pane_id": "pane-a"
+        "pane_id": "pane-a",
+        "visible": true
       },
-      "timeout_frames": 240
+      "timeout_frames": 240,
+      "type": "wait_until"
     },
-
-    { "type": "capture_bundle", "label": "workspace-shell-demo-tab-overflow-activate-hidden-smoke" }
+    {
+      "predicate": {
+        "kind": "workspace_tab_strip_active_scroll_px_ge",
+        "pane_id": "pane-a",
+        "px": 1.0
+      },
+      "timeout_frames": 240,
+      "type": "wait_until"
+    },
+    {
+      "label": "workspace-shell-demo-tab-overflow-activate-hidden-smoke",
+      "type": "capture_bundle"
+    }
   ]
 }

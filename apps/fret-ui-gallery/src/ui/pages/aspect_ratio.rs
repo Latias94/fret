@@ -3,11 +3,16 @@ use super::super::*;
 use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::aspect_ratio as snippets;
 
-pub(super) fn preview_aspect_ratio(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
-    let demo = snippets::demo::render(cx);
-    let square = snippets::square::render(cx);
-    let portrait = snippets::portrait::render(cx);
-    let rtl = snippets::rtl::render(cx);
+pub(super) fn preview_aspect_ratio(
+    cx: &mut ElementContext<'_, App>,
+    wide_image: Option<Model<Option<ImageId>>>,
+    tall_image: Option<Model<Option<ImageId>>>,
+    square_image: Option<Model<Option<ImageId>>>,
+) -> Vec<AnyElement> {
+    let demo = snippets::demo::render_preview(cx, wide_image.clone());
+    let square = snippets::square::render_preview(cx, square_image);
+    let portrait = snippets::portrait::render_preview(cx, tall_image);
+    let rtl = snippets::rtl::render_preview(cx, wide_image);
 
     let notes = doc_layout::notes(
         cx,
@@ -25,7 +30,7 @@ pub(super) fn preview_aspect_ratio(cx: &mut ElementContext<'_, App>) -> Vec<AnyE
         Some("Preview follows shadcn Aspect Ratio docs order: Demo, Square, Portrait, RTL."),
         vec![
             DocSection::new("Demo", demo)
-                .description("16:9 landscape media frame with an inline caption.")
+                .description("16:9 landscape media frame (image `object-cover` style).")
                 .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
             DocSection::new("Square", square)
                 .description("1:1 square media for avatars/thumbnails.")

@@ -1,5 +1,7 @@
 use std::time::Duration;
 
+use crate::window_chrome::WindowResizeDirection;
+use crate::window_style::{WindowRole, WindowStyleRequest};
 use crate::{
     ClipboardToken, ExternalDropToken, FileDialogToken, ImageUpdateToken, ImageUploadToken,
     IncomingOpenToken, ShareSheetToken, TimerToken,
@@ -366,6 +368,11 @@ pub enum Effect {
 pub enum WindowRequest {
     Create(CreateWindowRequest),
     Close(AppWindowId),
+    /// Request showing or hiding an OS window without destroying it (best-effort).
+    SetVisible {
+        window: AppWindowId,
+        visible: bool,
+    },
     SetInnerSize {
         window: AppWindowId,
         size: fret_core::Size,
@@ -382,6 +389,15 @@ pub enum WindowRequest {
         window: AppWindowId,
         sender: Option<AppWindowId>,
     },
+    /// Begin an OS-native interactive window drag (best-effort).
+    BeginDrag {
+        window: AppWindowId,
+    },
+    /// Begin an OS-native interactive window resize (best-effort).
+    BeginResize {
+        window: AppWindowId,
+        direction: WindowResizeDirection,
+    },
     /// Best-effort request to update OS window style facets at runtime.
     ///
     /// Semantics:
@@ -392,69 +408,6 @@ pub enum WindowRequest {
         window: AppWindowId,
         style: WindowStyleRequest,
     },
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub enum WindowRole {
-    Main,
-    #[default]
-    Auxiliary,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum TaskbarVisibility {
-    Show,
-    Hide,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ActivationPolicy {
-    Activates,
-    NonActivating,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum WindowZLevel {
-    Normal,
-    AlwaysOnTop,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum MousePolicy {
-    Normal,
-    /// Request click-through / mouse passthrough behavior for the OS window (best-effort).
-    Passthrough,
-}
-
-/// Global window opacity hint (best-effort).
-///
-/// This is not per-pixel transparency. The value is expressed as an 8-bit alpha where:
-/// - `0` = fully transparent (may be treated as hidden on some platforms),
-/// - `255` = fully opaque.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub struct WindowOpacity(pub u8);
-
-impl WindowOpacity {
-    pub fn from_f32(opacity: f32) -> Self {
-        let a = opacity.clamp(0.0, 1.0);
-        let byte = (255.0 * a).round().clamp(0.0, 255.0) as u8;
-        Self(byte)
-    }
-
-    pub fn as_f32(self) -> f32 {
-        (self.0 as f32) / 255.0
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub struct WindowStyleRequest {
-    pub taskbar: Option<TaskbarVisibility>,
-    pub activation: Option<ActivationPolicy>,
-    pub z_level: Option<WindowZLevel>,
-    /// Request click-through / mouse passthrough behavior for the OS window (best-effort).
-    pub mouse: Option<MousePolicy>,
-    /// Request global window opacity (not per-pixel transparency), best-effort.
-    pub opacity: Option<WindowOpacity>,
 }
 
 #[derive(Debug, Clone, PartialEq)]

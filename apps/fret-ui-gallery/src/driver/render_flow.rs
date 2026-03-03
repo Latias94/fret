@@ -39,6 +39,7 @@ pub(super) struct PreparedFrame {
     pub(super) inspector_status: Option<status_bar::InspectorStatus>,
     pub(super) show_debug_hud: bool,
     pub(super) debug_hud_lines: Vec<Arc<str>>,
+    pub(super) show_status_bar: bool,
     pub(super) layout_time_us: u128,
     pub(super) paint_time_us: u128,
 }
@@ -135,6 +136,10 @@ pub(super) fn begin_frame(
     if hud_on {
         app.request_redraw(window);
     }
+    let show_status_bar = std::env::var_os("FRET_UI_GALLERY_STATUS_BAR")
+        .is_some_and(|v| !v.is_empty())
+        || hud_on
+        || diag_enabled;
 
     UiGalleryDriver::sync_shadcn_theme(app, state);
     UiGalleryDriver::sync_motion_preset(app, state);
@@ -172,6 +177,7 @@ pub(super) fn begin_frame(
         inspector_status: debug_hud.inspector_status,
         show_debug_hud: debug_hud.show,
         debug_hud_lines: debug_hud.lines,
+        show_status_bar,
         layout_time_us: last_debug_stats.layout_time.as_micros(),
         paint_time_us: last_debug_stats.paint_time.as_micros(),
     }
@@ -247,14 +253,6 @@ fn render_root_contents(
 
     let top_bar = chrome::top_bar_view(cx, in_window_menu_bar, tab_strip);
 
-    let status_bar = status_bar::status_bar_view(
-        cx,
-        frame.content_models.as_ref(),
-        frame.inspector_status.as_ref(),
-        frame.layout_time_us,
-        frame.paint_time_us,
-    );
-
     let mut center_layout = fret_ui::element::LayoutStyle::default();
     center_layout.size.width = fret_ui::element::Length::Fill;
     center_layout.size.height = fret_ui::element::Length::Fill;
@@ -269,10 +267,18 @@ fn render_root_contents(
         |_cx| vec![sidebar, content],
     );
 
-    let frame_el = WorkspaceFrame::new(center)
-        .top(top_bar)
-        .bottom(status_bar)
-        .into_element(cx);
+    let mut frame_el = WorkspaceFrame::new(center).top(top_bar);
+    if frame.show_status_bar {
+        let status_bar = status_bar::status_bar_view(
+            cx,
+            frame.content_models.as_ref(),
+            frame.inspector_status.as_ref(),
+            frame.layout_time_us,
+            frame.paint_time_us,
+        );
+        frame_el = frame_el.bottom(status_bar);
+    }
+    let frame_el = frame_el.into_element(cx);
 
     let panel = frame_el.attach_semantics(
         SemanticsDecoration::default()

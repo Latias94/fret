@@ -879,12 +879,16 @@ mod tests {
     use fret_app::App;
     use fret_core::window::ColorScheme;
     use fret_core::{
-        AppWindowId, Point, Rect, TextBlobId, TextConstraints, TextMetrics, TextService,
+        AppWindowId, NodeId, Point, Rect, TextBlobId, TextConstraints, TextMetrics, TextService,
+        WindowFrameClockService,
     };
     use fret_core::{PathCommand, SvgId, SvgService};
     use fret_core::{PathConstraints, PathId, PathMetrics, PathService, PathStyle};
+    use fret_runtime::{FrameId, TickId};
+    use fret_ui::elements::ElementRuntime;
     use fret_ui::ThemeConfig;
     use fret_ui::tree::UiTree;
+    use std::time::Duration;
 
     #[derive(Default)]
     struct FakeServices;
@@ -993,10 +997,37 @@ mod tests {
 
         let root =
             fret_ui::declarative::render_root(ui, app, services, window, bounds, "otp", |cx| {
-                vec![InputOtp::new(model).length(6).into_element(cx)]
+                vec![
+                    InputOtp::new(model)
+                        .length(6)
+                        .test_id_prefix("otp")
+                        .into_element(cx),
+                ]
             });
         ui.set_root(root);
         ui.layout_all(app, services, bounds, 1.0);
+    }
+
+    fn node_id_by_test_id(snap: &fret_core::SemanticsSnapshot, id: &str) -> NodeId {
+        snap.nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some(id))
+            .unwrap_or_else(|| panic!("expected semantics node with test_id={id:?}"))
+            .id
+    }
+
+    fn slot_descendant_has_caret_like_1px_bar(ui: &UiTree<App>, slot: NodeId) -> bool {
+        let mut stack = ui.children(slot);
+        while let Some(node) = stack.pop() {
+            if let Some(bounds) = ui.debug_node_bounds(node)
+                && (bounds.size.width.0 - 1.0).abs() <= 0.6
+                && bounds.size.height.0 >= 8.0
+            {
+                return true;
+            }
+            stack.extend(ui.children(node));
+        }
+        false
     }
 
     #[test]
@@ -1009,6 +1040,72 @@ mod tests {
         render(&mut ui, &mut app, &mut services, model.clone());
 
         assert_eq!(app.models().get_cloned(&model).as_deref(), Some("123456"));
+    }
+
+    #[test]
+    fn input_otp_fake_caret_blinks_on_a_1000ms_cycle_under_fixed_delta() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        let mut services = FakeServices::default();
+
+        app.with_global_mut(WindowFrameClockService::default, |svc, _app| {
+            svc.set_fixed_delta(window, Some(Duration::from_millis(16)));
+        });
+
+        let model = app.models_mut().insert(String::new());
+
+        app.set_tick_id(TickId(1));
+        app.set_frame_id(FrameId(1));
+        ui.request_semantics_snapshot();
+        render(&mut ui, &mut app, &mut services, model.clone());
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let input = node_id_by_test_id(&snap, "otp.input");
+        ui.set_focus(Some(input));
+
+        // Focused: caret should be visible near t=0.
+        app.set_tick_id(TickId(2));
+        app.set_frame_id(FrameId(2));
+        ui.request_semantics_snapshot();
+        render(&mut ui, &mut app, &mut services, model.clone());
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let slot0 = node_id_by_test_id(&snap, "otp.slot.0");
+        assert!(
+            slot_descendant_has_caret_like_1px_bar(&ui, slot0),
+            "expected focused input otp slot 0 to render the fake caret near the start of the blink cycle"
+        );
+
+        // After ~640ms (40 frames @ 16ms), caret should be hidden (progress >= 0.5).
+        for n in 3..=42 {
+            app.set_tick_id(TickId(n));
+            app.set_frame_id(FrameId(n as u64));
+            ui.request_semantics_snapshot();
+            render(&mut ui, &mut app, &mut services, model.clone());
+        }
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let slot0 = node_id_by_test_id(&snap, "otp.slot.0");
+        assert!(
+            !slot_descendant_has_caret_like_1px_bar(&ui, slot0),
+            "expected caret to blink off mid-cycle under fixed delta"
+        );
+
+        // Reduced motion: caret should stop blinking (remain visible).
+        app.with_global_mut(ElementRuntime::new, |rt, _app| {
+            rt.set_window_prefers_reduced_motion(window, Some(true));
+        });
+        for n in 43..=120 {
+            app.set_tick_id(TickId(n));
+            app.set_frame_id(FrameId(n as u64));
+            ui.request_semantics_snapshot();
+            render(&mut ui, &mut app, &mut services, model.clone());
+        }
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let slot0 = node_id_by_test_id(&snap, "otp.slot.0");
+        assert!(
+            slot_descendant_has_caret_like_1px_bar(&ui, slot0),
+            "expected reduced motion to disable the blink (caret remains visible)"
+        );
     }
 
     #[test]

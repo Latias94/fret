@@ -1,4 +1,5 @@
 use std::sync::Arc;
+use std::time::Duration;
 
 use fret_core::{ImageId, Px, ViewportFit};
 use fret_runtime::Model;
@@ -658,7 +659,7 @@ impl AvatarImage {
 pub struct AvatarFallback {
     text: Arc<str>,
     show_when_image_missing: Option<AvatarImageSource>,
-    delay_frames: Option<u64>,
+    delay: Option<Duration>,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
 }
@@ -668,7 +669,7 @@ impl AvatarFallback {
         Self {
             text: text.into(),
             show_when_image_missing: None,
-            delay_frames: None,
+            delay: None,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
         }
@@ -688,14 +689,17 @@ impl AvatarFallback {
 
     /// Delay rendering fallback by a number of frames (60fps-ish ticks).
     pub fn delay_frames(mut self, frames: u64) -> Self {
-        self.delay_frames = Some(frames);
+        const NS_PER_TICK_60HZ: u64 = 1_000_000_000 / 60;
+        let nanos = (frames as u128)
+            .saturating_mul(NS_PER_TICK_60HZ as u128)
+            .min(u64::MAX as u128) as u64;
+        self.delay = Some(Duration::from_nanos(nanos));
         self
     }
 
-    /// Delay rendering fallback by a best-effort millisecond value (converted to frames).
+    /// Delay rendering fallback by a millisecond duration (Radix `delayMs` outcome).
     pub fn delay_ms(mut self, ms: u64) -> Self {
-        let frames = ms.saturating_mul(60).saturating_add(999) / 1000;
-        self.delay_frames = Some(frames);
+        self.delay = Some(Duration::from_millis(ms));
         self
     }
 
@@ -731,14 +735,16 @@ impl AvatarFallback {
                 None => true,
             };
 
-            let now_frame = cx.app.frame_id().0;
+            let frame_id = cx.frame_id.0;
+            let dt = fret_ui_kit::declarative::motion::effective_frame_delta_for_cx(cx);
+            let delay = self.delay;
             let delay_ready =
                 cx.with_state_for(id, radix_avatar::AvatarFallbackDelay::default, |gate| {
-                    gate.drive(now_frame, self.delay_frames, want_render)
+                    gate.drive(frame_id, dt, delay, want_render)
                 });
             scheduling::set_continuous_frames(
                 cx,
-                want_render && self.delay_frames.is_some() && !delay_ready,
+                want_render && self.delay.is_some() && !delay_ready,
             );
 
             let present = if self.show_when_image_missing.is_some() {
@@ -822,11 +828,13 @@ impl AvatarFallback {
 mod tests {
     use super::*;
 
+    use std::time::Duration;
+
     use fret_app::App;
     use fret_core::{
         AppWindowId, PathCommand, PathConstraints, PathId, PathMetrics, PathService, PathStyle,
         Point, Px, Rect, SemanticsRole, Size as CoreSize, SvgId, SvgService, TextBlobId,
-        TextConstraints, TextMetrics, TextService,
+        TextConstraints, TextMetrics, TextService, WindowFrameClockService,
     };
     use fret_runtime::{Effect, FrameId};
     use fret_ui::element::ElementKind;
@@ -896,14 +904,14 @@ mod tests {
         window: AppWindowId,
         bounds: Rect,
         image: Model<Option<ImageId>>,
-        delay_frames: u64,
+        delay_ms: u64,
     ) {
         let root =
             fret_ui::declarative::render_root(ui, app, services, window, bounds, "test", |cx| {
                 let image_el = AvatarImage::model(image.clone()).into_element(cx);
                 let fallback_el = AvatarFallback::new("JD")
                     .when_image_missing_model(image.clone())
-                    .delay_frames(delay_frames)
+                    .delay_ms(delay_ms)
                     .into_element(cx);
                 vec![Avatar::new(vec![image_el, fallback_el]).into_element(cx)]
             });
@@ -990,6 +998,10 @@ mod tests {
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
 
+        app.with_global_mut(WindowFrameClockService::default, |svc, _app| {
+            svc.set_fixed_delta(window, Some(Duration::from_millis(16)));
+        });
+
         let image = app.models_mut().insert(None::<ImageId>);
 
         let mut services = FakeServices::default();
@@ -998,6 +1010,7 @@ mod tests {
             fret_core::Size::new(Px(200.0), Px(120.0)),
         );
 
+        let delay_ms = 32;
         for frame in 1..=3 {
             app.set_frame_id(FrameId(frame));
             render_frame(
@@ -1007,7 +1020,7 @@ mod tests {
                 window,
                 bounds,
                 image.clone(),
-                2,
+                delay_ms,
             );
             ui.request_semantics_snapshot();
             ui.layout_all(&mut app, &mut services, bounds, 1.0);
@@ -1024,6 +1037,10 @@ mod tests {
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
 
+        app.with_global_mut(WindowFrameClockService::default, |svc, _app| {
+            svc.set_fixed_delta(window, Some(Duration::from_millis(16)));
+        });
+
         let image = app.models_mut().insert(None::<ImageId>);
 
         let mut services = FakeServices::default();
@@ -1033,6 +1050,7 @@ mod tests {
         );
 
         // Let the delay elapse so fallback becomes visible.
+        let delay_ms = 32;
         for frame in 1..=3 {
             app.set_frame_id(FrameId(frame));
             render_frame(
@@ -1042,7 +1060,7 @@ mod tests {
                 window,
                 bounds,
                 image.clone(),
-                2,
+                delay_ms,
             );
             ui.request_semantics_snapshot();
             ui.layout_all(&mut app, &mut services, bounds, 1.0);
@@ -1064,7 +1082,7 @@ mod tests {
             window,
             bounds,
             image.clone(),
-            2,
+            delay_ms,
         );
         ui.request_semantics_snapshot();
         ui.layout_all(&mut app, &mut services, bounds, 1.0);

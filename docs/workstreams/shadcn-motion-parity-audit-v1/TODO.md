@@ -4,18 +4,14 @@ Last updated: 2026-03-03.
 
 ## P0 (high-signal, low-risk)
 
-- Add a transition driver for NavigationMenu trigger chevron rotation (upstream has
-  `transition duration-300 ... rotate-180`).
-- Add a minimal deterministic gate for the chevron rotation (`--fixed-frame-delta-ms 16`) to
-  prevent regressions.
+- Landed: unit test gate for NavigationMenu trigger chevron rotation transition.
+- Optional: add a fixed-delta diag screenshot pair (`--fixed-frame-delta-ms 16`) for visual review.
 
 ## P1 (timebase correctness: eliminate 60Hz coupling)
 
-- Refactor shadcn `Spinner` away from `frame_id * speed` and toward a duration-driven rotation.
-  - Ensure reduced motion stops requesting frames and snaps/settles deterministically.
-- Refactor shadcn `Skeleton` pulse away from `frame_id`-driven `sin()` toward a duration-driven
-  pulse.
-- Refactor shadcn `InputOtp` caret blink away from `frame_id` modulo toward a 1000ms cycle.
+- Landed: `Spinner` / `Skeleton` / `InputOtp` continuous animations are duration-driven.
+- Landed: `AvatarFallback` delay is duration-driven (`delay_ms` matches Radix `delayMs`).
+- Landed: shadcn extras `Marquee` uses a duration-driven timebase (no `frame_id` delta coupling).
 
 ## P2 (API + token cleanup)
 
@@ -29,5 +25,5 @@ Last updated: 2026-03-03.
 - For each motion change, add at least one:
   - unit test (reduced motion + progression invariants), and/or
   - diag script gate (fixed delta; stable `test_id`).
+- Landed: unit test gates exist for NavigationMenu chevron, Spinner, Skeleton pulse, and InputOtp caret blink.
 - Keep `PARITY_MATRIX.md` updated with evidence anchors (file paths + tests/scripts).
-

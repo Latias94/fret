@@ -3,6 +3,10 @@ use std::sync::Arc;
 
 use fret_runtime::CommandId;
 
+use crate::close_policy::{
+    WorkspaceCloseReason, WorkspaceDirtyCloseDecision, WorkspaceDirtyClosePolicy,
+    WorkspaceDirtyCloseRequest,
+};
 use crate::commands::{
     CMD_WORKSPACE_TAB_ACTIVATE_PREFIX, CMD_WORKSPACE_TAB_CLOSE, CMD_WORKSPACE_TAB_CLOSE_LEFT,
     CMD_WORKSPACE_TAB_CLOSE_OTHERS, CMD_WORKSPACE_TAB_CLOSE_PREFIX, CMD_WORKSPACE_TAB_CLOSE_RIGHT,
@@ -46,6 +50,28 @@ pub struct WorkspaceTabs {
     preview_tab_id: Option<Arc<str>>,
     preview_enabled: bool,
     cycle_mode: TabCycleMode,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct WorkspaceApplyCommandOutcome {
+    pub applied: bool,
+    pub blocked_dirty_close: Option<WorkspaceDirtyCloseRequest>,
+}
+
+impl WorkspaceApplyCommandOutcome {
+    pub(crate) fn applied(applied: bool) -> Self {
+        Self {
+            applied,
+            blocked_dirty_close: None,
+        }
+    }
+
+    pub(crate) fn blocked(request: WorkspaceDirtyCloseRequest) -> Self {
+        Self {
+            applied: false,
+            blocked_dirty_close: Some(request),
+        }
+    }
 }
 
 impl Default for WorkspaceTabs {
@@ -622,35 +648,185 @@ impl WorkspaceTabs {
     }
 
     pub fn apply_command(&mut self, command: &CommandId) -> bool {
+        self.apply_command_with_close_policy(command, None).applied
+    }
+
+    pub fn apply_command_with_close_policy(
+        &mut self,
+        command: &CommandId,
+        mut policy: Option<&mut dyn WorkspaceDirtyClosePolicy>,
+    ) -> WorkspaceApplyCommandOutcome {
+        let mut maybe_block = |this: &WorkspaceTabs,
+                               reason: WorkspaceCloseReason,
+                               target_tabs_in_order: Vec<Arc<str>>|
+         -> Option<WorkspaceDirtyCloseRequest> {
+            let Some(policy) = policy.as_deref_mut() else {
+                return None;
+            };
+
+            let dirty_tabs_in_order: Vec<Arc<str>> = target_tabs_in_order
+                .iter()
+                .filter(|t| this.is_dirty(t.as_ref()))
+                .cloned()
+                .collect();
+            if dirty_tabs_in_order.is_empty() {
+                return None;
+            }
+
+            let request = WorkspaceDirtyCloseRequest {
+                reason,
+                target_tabs_in_order,
+                dirty_tabs_in_order,
+                active_tab_id: this.active.clone(),
+            };
+
+            match policy.decide_dirty_close(&request) {
+                WorkspaceDirtyCloseDecision::Allow => None,
+                WorkspaceDirtyCloseDecision::Block => Some(request),
+            }
+        };
+
         match command.as_str() {
-            CMD_WORKSPACE_TAB_NEXT => return self.next(),
-            CMD_WORKSPACE_TAB_PREV => return self.prev(),
+            CMD_WORKSPACE_TAB_NEXT => return WorkspaceApplyCommandOutcome::applied(self.next()),
+            CMD_WORKSPACE_TAB_PREV => return WorkspaceApplyCommandOutcome::applied(self.prev()),
             CMD_WORKSPACE_TAB_COMMIT_PREVIEW => {
                 let Some(active) = self.active.clone() else {
-                    return false;
+                    return WorkspaceApplyCommandOutcome::applied(false);
                 };
-                return self.commit_preview(active.as_ref());
+                return WorkspaceApplyCommandOutcome::applied(self.commit_preview(active.as_ref()));
             }
             CMD_WORKSPACE_TAB_TOGGLE_PIN => {
                 let Some(active) = self.active.clone() else {
-                    return false;
+                    return WorkspaceApplyCommandOutcome::applied(false);
                 };
-                if self.is_tab_pinned(active.as_ref()) {
-                    return self.unpin_tab(active.as_ref());
-                }
-                return self.pin_tab(active.as_ref());
+                let applied = if self.is_tab_pinned(active.as_ref()) {
+                    self.unpin_tab(active.as_ref())
+                } else {
+                    self.pin_tab(active.as_ref())
+                };
+                return WorkspaceApplyCommandOutcome::applied(applied);
             }
             CMD_WORKSPACE_TAB_CLOSE => {
                 let Some(active) = self.active.clone() else {
-                    return false;
+                    return WorkspaceApplyCommandOutcome::applied(false);
                 };
-                return self.close(active.as_ref());
+                if let Some(blocked) = maybe_block(
+                    self,
+                    WorkspaceCloseReason::CloseActive,
+                    vec![active.clone()],
+                ) {
+                    return WorkspaceApplyCommandOutcome::blocked(blocked);
+                }
+                return WorkspaceApplyCommandOutcome::applied(self.close(active.as_ref()));
             }
-            CMD_WORKSPACE_TAB_CLOSE_OTHERS => return self.close_others(),
-            CMD_WORKSPACE_TAB_CLOSE_LEFT => return self.close_left_of_active(),
-            CMD_WORKSPACE_TAB_CLOSE_RIGHT => return self.close_right_of_active(),
-            CMD_WORKSPACE_TAB_MOVE_LEFT => return self.move_active_by(-1),
-            CMD_WORKSPACE_TAB_MOVE_RIGHT => return self.move_active_by(1),
+            CMD_WORKSPACE_TAB_CLOSE_OTHERS => {
+                let Some(active) = self.active.clone() else {
+                    return WorkspaceApplyCommandOutcome::applied(false);
+                };
+                if self.tabs.len() <= 1 {
+                    return WorkspaceApplyCommandOutcome::applied(false);
+                }
+
+                let pinned_count = self.pinned_count();
+                let target_tabs_in_order: Vec<Arc<str>> = self
+                    .tabs
+                    .iter()
+                    .enumerate()
+                    .filter_map(|(ix, id)| {
+                        let is_pinned = ix < pinned_count;
+                        if is_pinned || id.as_ref() == active.as_ref() {
+                            None
+                        } else {
+                            Some(id.clone())
+                        }
+                    })
+                    .collect();
+                if target_tabs_in_order.is_empty() {
+                    return WorkspaceApplyCommandOutcome::applied(false);
+                }
+                if let Some(blocked) = maybe_block(
+                    self,
+                    WorkspaceCloseReason::CloseOthers,
+                    target_tabs_in_order,
+                ) {
+                    return WorkspaceApplyCommandOutcome::blocked(blocked);
+                }
+
+                return WorkspaceApplyCommandOutcome::applied(self.close_others());
+            }
+            CMD_WORKSPACE_TAB_CLOSE_LEFT => {
+                let Some(active) = self.active.clone() else {
+                    return WorkspaceApplyCommandOutcome::applied(false);
+                };
+                let Some(index) = self.tabs.iter().position(|t| t.as_ref() == active.as_ref())
+                else {
+                    return WorkspaceApplyCommandOutcome::applied(false);
+                };
+                if index == 0 {
+                    return WorkspaceApplyCommandOutcome::applied(false);
+                }
+
+                let pinned_count = self.pinned_count();
+                if index < pinned_count {
+                    return WorkspaceApplyCommandOutcome::applied(false);
+                }
+                let keep_from = pinned_count;
+                if keep_from >= index {
+                    return WorkspaceApplyCommandOutcome::applied(false);
+                }
+
+                let target_tabs_in_order: Vec<Arc<str>> =
+                    self.tabs[keep_from..index].iter().cloned().collect();
+                if let Some(blocked) = maybe_block(
+                    self,
+                    WorkspaceCloseReason::CloseLeftOfActive,
+                    target_tabs_in_order,
+                ) {
+                    return WorkspaceApplyCommandOutcome::blocked(blocked);
+                }
+
+                return WorkspaceApplyCommandOutcome::applied(self.close_left_of_active());
+            }
+            CMD_WORKSPACE_TAB_CLOSE_RIGHT => {
+                let Some(active) = self.active.clone() else {
+                    return WorkspaceApplyCommandOutcome::applied(false);
+                };
+                let Some(index) = self.tabs.iter().position(|t| t.as_ref() == active.as_ref())
+                else {
+                    return WorkspaceApplyCommandOutcome::applied(false);
+                };
+                if index + 1 >= self.tabs.len() {
+                    return WorkspaceApplyCommandOutcome::applied(false);
+                }
+
+                let pinned_count = self.pinned_count();
+                let keep_to = if index < pinned_count {
+                    pinned_count
+                } else {
+                    index + 1
+                };
+                if keep_to >= self.tabs.len() {
+                    return WorkspaceApplyCommandOutcome::applied(false);
+                }
+
+                let target_tabs_in_order: Vec<Arc<str>> =
+                    self.tabs[keep_to..].iter().cloned().collect();
+                if let Some(blocked) = maybe_block(
+                    self,
+                    WorkspaceCloseReason::CloseRightOfActive,
+                    target_tabs_in_order,
+                ) {
+                    return WorkspaceApplyCommandOutcome::blocked(blocked);
+                }
+
+                return WorkspaceApplyCommandOutcome::applied(self.close_right_of_active());
+            }
+            CMD_WORKSPACE_TAB_MOVE_LEFT => {
+                return WorkspaceApplyCommandOutcome::applied(self.move_active_by(-1));
+            }
+            CMD_WORKSPACE_TAB_MOVE_RIGHT => {
+                return WorkspaceApplyCommandOutcome::applied(self.move_active_by(1));
+            }
             _ => {}
         }
 
@@ -660,9 +836,9 @@ impl WorkspaceTabs {
         {
             let id = id.trim();
             if id.is_empty() {
-                return false;
+                return WorkspaceApplyCommandOutcome::applied(false);
             }
-            return self.move_active_relative_to(id, false);
+            return WorkspaceApplyCommandOutcome::applied(self.move_active_relative_to(id, false));
         }
 
         if let Some(id) = command
@@ -671,9 +847,9 @@ impl WorkspaceTabs {
         {
             let id = id.trim();
             if id.is_empty() {
-                return false;
+                return WorkspaceApplyCommandOutcome::applied(false);
             }
-            return self.move_active_relative_to(id, true);
+            return WorkspaceApplyCommandOutcome::applied(self.move_active_relative_to(id, true));
         }
 
         if let Some(id) = command
@@ -682,9 +858,11 @@ impl WorkspaceTabs {
         {
             let id = id.trim();
             if id.is_empty() {
-                return false;
+                return WorkspaceApplyCommandOutcome::applied(false);
             }
-            return self.open_preview_and_activate(Arc::<str>::from(id));
+            return WorkspaceApplyCommandOutcome::applied(
+                self.open_preview_and_activate(Arc::<str>::from(id)),
+            );
         }
 
         if let Some(id) = command
@@ -693,9 +871,9 @@ impl WorkspaceTabs {
         {
             let id = id.trim();
             if id.is_empty() {
-                return false;
+                return WorkspaceApplyCommandOutcome::applied(false);
             }
-            return self.activate_str(id);
+            return WorkspaceApplyCommandOutcome::applied(self.activate_str(id));
         }
 
         if let Some(id) = command
@@ -704,17 +882,27 @@ impl WorkspaceTabs {
         {
             let id = id.trim();
             if id.is_empty() {
-                return false;
+                return WorkspaceApplyCommandOutcome::applied(false);
             }
-            return self.close(id);
+            let Some(existing) = self.tabs.iter().find(|t| t.as_ref() == id).cloned() else {
+                return WorkspaceApplyCommandOutcome::applied(false);
+            };
+            if let Some(blocked) = maybe_block(
+                self,
+                WorkspaceCloseReason::CloseById,
+                vec![existing.clone()],
+            ) {
+                return WorkspaceApplyCommandOutcome::blocked(blocked);
+            }
+            return WorkspaceApplyCommandOutcome::applied(self.close(existing.as_ref()));
         }
 
         if let Some(id) = command.as_str().strip_prefix(CMD_WORKSPACE_TAB_PIN_PREFIX) {
             let id = id.trim();
             if id.is_empty() {
-                return false;
+                return WorkspaceApplyCommandOutcome::applied(false);
             }
-            return self.pin_tab(id);
+            return WorkspaceApplyCommandOutcome::applied(self.pin_tab(id));
         }
 
         if let Some(id) = command
@@ -723,12 +911,12 @@ impl WorkspaceTabs {
         {
             let id = id.trim();
             if id.is_empty() {
-                return false;
+                return WorkspaceApplyCommandOutcome::applied(false);
             }
-            return self.unpin_tab(id);
+            return WorkspaceApplyCommandOutcome::applied(self.unpin_tab(id));
         }
 
-        false
+        WorkspaceApplyCommandOutcome::applied(false)
     }
 
     fn move_active_relative_to(&mut self, target_id: &str, after: bool) -> bool {
@@ -855,6 +1043,18 @@ mod tests {
         ids.iter().map(|s| Arc::<str>::from(*s)).collect()
     }
 
+    #[derive(Default)]
+    struct BlockDirtyClosePolicy;
+
+    impl WorkspaceDirtyClosePolicy for BlockDirtyClosePolicy {
+        fn decide_dirty_close(
+            &mut self,
+            _request: &WorkspaceDirtyCloseRequest,
+        ) -> WorkspaceDirtyCloseDecision {
+            WorkspaceDirtyCloseDecision::Block
+        }
+    }
+
     #[test]
     fn mru_next_toggles_between_two_most_recent() {
         let mut state = WorkspaceTabs::new().with_cycle_mode(TabCycleMode::Mru);
@@ -887,6 +1087,27 @@ mod tests {
         assert!(state.apply_command(&CommandId::from(CMD_WORKSPACE_TAB_CLOSE)));
         assert_eq!(state.active().unwrap().as_ref(), "a");
         assert_eq!(state.tabs().len(), 2);
+    }
+
+    #[test]
+    fn dirty_close_policy_can_block_close_active() {
+        let mut state = WorkspaceTabs::new().with_cycle_mode(TabCycleMode::Mru);
+        for id in tabs(&["a", "b"]) {
+            state.open_and_activate(id);
+        }
+        assert_eq!(state.active().unwrap().as_ref(), "b");
+        state.set_dirty(Arc::<str>::from("b"), true);
+        assert!(state.is_dirty("b"));
+
+        let mut policy = BlockDirtyClosePolicy::default();
+        let outcome = state.apply_command_with_close_policy(
+            &CommandId::from(CMD_WORKSPACE_TAB_CLOSE),
+            Some(&mut policy),
+        );
+        assert!(!outcome.applied);
+        assert!(outcome.blocked_dirty_close.is_some());
+        assert_eq!(state.tabs().len(), 2);
+        assert!(state.tabs().iter().any(|t| t.as_ref() == "b"));
     }
 
     #[test]

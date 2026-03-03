@@ -41,6 +41,7 @@ fn eval_predicate_without_semantics(
     known_windows: &[AppWindowId],
     open_window_count: u32,
     platform_caps: Option<&fret_runtime::PlatformCapabilities>,
+    window_style: Option<&fret_runtime::RunnerWindowStyleDiagnosticsStore>,
     docking: Option<&fret_runtime::DockingInteractionDiagnostics>,
     workspace: Option<&fret_runtime::WorkspaceInteractionDiagnostics>,
     dock_drag_runtime: Option<&DockDragRuntimeState>,
@@ -52,6 +53,24 @@ fn eval_predicate_without_semantics(
         UiPredicateV1::PlatformUiWindowHoverDetectionIs { quality } => Some(
             platform_caps.is_some_and(|c| c.ui.window_hover_detection.as_str() == quality.as_str()),
         ),
+        UiPredicateV1::WindowStyleEffectiveIs {
+            window: target_window,
+            style,
+        } => {
+            let target_window =
+                resolve_window_target_from_known_windows(window, known_windows, *target_window)?;
+            let have = window_style?.effective_snapshot(target_window)?;
+            Some(window_style_effective_matches(&have, style))
+        }
+        UiPredicateV1::WindowBackgroundMaterialEffectiveIs {
+            window: target_window,
+            material,
+        } => {
+            let target_window =
+                resolve_window_target_from_known_windows(window, known_windows, *target_window)?;
+            let have = window_style?.effective_snapshot(target_window)?;
+            Some(window_background_material_matches(have.background_material, *material))
+        }
         UiPredicateV1::DockDragCurrentWindowIs {
             window: target_window,
         } => {
@@ -257,6 +276,122 @@ fn eval_predicate_without_semantics(
     }
 }
 
+fn window_style_effective_matches(
+    have: &fret_runtime::RunnerWindowStyleEffectiveSnapshotV1,
+    want: &UiWindowStyleMatchV1,
+) -> bool {
+    if let Some(decorations) = want.decorations
+        && !window_decorations_match(have.decorations, decorations)
+    {
+        return false;
+    }
+    if let Some(resizable) = want.resizable
+        && have.resizable != resizable
+    {
+        return false;
+    }
+    if let Some(transparent) = want.transparent
+        && have.transparent != transparent
+    {
+        return false;
+    }
+    if let Some(taskbar) = want.taskbar
+        && !taskbar_visibility_match(have.taskbar, taskbar)
+    {
+        return false;
+    }
+    if let Some(activation) = want.activation
+        && !activation_policy_match(have.activation, activation)
+    {
+        return false;
+    }
+    if let Some(z_level) = want.z_level
+        && !window_z_level_match(have.z_level, z_level)
+    {
+        return false;
+    }
+    if let Some(mouse) = want.mouse
+        && !mouse_policy_match(have.mouse, mouse)
+    {
+        return false;
+    }
+    true
+}
+
+fn window_background_material_matches(
+    have: fret_runtime::WindowBackgroundMaterialRequest,
+    want: UiWindowBackgroundMaterialRequestV1,
+) -> bool {
+    use fret_runtime::WindowBackgroundMaterialRequest as H;
+    use UiWindowBackgroundMaterialRequestV1 as W;
+    match (have, want) {
+        (H::None, W::None) => true,
+        (H::SystemDefault, W::SystemDefault) => true,
+        (H::Mica, W::Mica) => true,
+        (H::Acrylic, W::Acrylic) => true,
+        (H::Vibrancy, W::Vibrancy) => true,
+        _ => false,
+    }
+}
+
+fn window_decorations_match(
+    have: fret_runtime::WindowDecorationsRequest,
+    want: UiWindowDecorationsRequestV1,
+) -> bool {
+    use fret_runtime::WindowDecorationsRequest as H;
+    use UiWindowDecorationsRequestV1 as W;
+    match (have, want) {
+        (H::System, W::System) => true,
+        (H::None, W::None) => true,
+        (H::Server, W::Server) => true,
+        (H::Client, W::Client) => true,
+        _ => false,
+    }
+}
+
+fn taskbar_visibility_match(
+    have: fret_runtime::TaskbarVisibility,
+    want: UiTaskbarVisibilityV1,
+) -> bool {
+    use fret_runtime::TaskbarVisibility as H;
+    use UiTaskbarVisibilityV1 as W;
+    match (have, want) {
+        (H::Show, W::Show) => true,
+        (H::Hide, W::Hide) => true,
+        _ => false,
+    }
+}
+
+fn activation_policy_match(have: fret_runtime::ActivationPolicy, want: UiActivationPolicyV1) -> bool {
+    use fret_runtime::ActivationPolicy as H;
+    use UiActivationPolicyV1 as W;
+    match (have, want) {
+        (H::Activates, W::Activates) => true,
+        (H::NonActivating, W::NonActivating) => true,
+        _ => false,
+    }
+}
+
+fn window_z_level_match(have: fret_runtime::WindowZLevel, want: UiWindowZLevelV1) -> bool {
+    use fret_runtime::WindowZLevel as H;
+    use UiWindowZLevelV1 as W;
+    match (have, want) {
+        (H::Normal, W::Normal) => true,
+        (H::AlwaysOnTop, W::AlwaysOnTop) => true,
+        _ => false,
+    }
+}
+
+fn mouse_policy_match(have: fret_runtime::MousePolicy, want: UiMousePolicyV1) -> bool {
+    use fret_runtime::MousePolicy as H;
+    use UiMousePolicyV1 as W;
+    match (have, want) {
+        (H::Normal, W::Normal) => true,
+        (H::Passthrough, W::Passthrough) => true,
+        _ => false,
+    }
+}
+
 fn eval_predicate(
     snapshot: &fret_core::SemanticsSnapshot,
     window_bounds: Rect,
@@ -270,6 +405,7 @@ fn eval_predicate(
     known_windows: &[AppWindowId],
     open_window_count: u32,
     platform_caps: Option<&fret_runtime::PlatformCapabilities>,
+    window_style: Option<&fret_runtime::RunnerWindowStyleDiagnosticsStore>,
     docking: Option<&fret_runtime::DockingInteractionDiagnostics>,
     workspace: Option<&fret_runtime::WorkspaceInteractionDiagnostics>,
     dock_drag_runtime: Option<&DockDragRuntimeState>,
@@ -954,6 +1090,34 @@ fn eval_predicate(
                     .is_some_and(|c| c.ui.window_hover_detection.as_str() == quality.as_str())
             }
         }
+        UiPredicateV1::WindowStyleEffectiveIs {
+            window: target_window,
+            style,
+        } => {
+            let Some(target_window) =
+                resolve_window_target_from_known_windows(window, known_windows, *target_window)
+            else {
+                return false;
+            };
+            let Some(have) = window_style.and_then(|s| s.effective_snapshot(target_window)) else {
+                return false;
+            };
+            window_style_effective_matches(&have, style)
+        }
+        UiPredicateV1::WindowBackgroundMaterialEffectiveIs {
+            window: target_window,
+            material,
+        } => {
+            let Some(target_window) =
+                resolve_window_target_from_known_windows(window, known_windows, *target_window)
+            else {
+                return false;
+            };
+            let Some(have) = window_style.and_then(|s| s.effective_snapshot(target_window)) else {
+                return false;
+            };
+            window_background_material_matches(have.background_material, *material)
+        }
         UiPredicateV1::DockDragCurrentWindowIs {
             window: target_window,
         } => {
@@ -1120,6 +1284,26 @@ fn eval_predicate(
                 })
             })
             .is_some_and(|s| s.active_visible == *visible),
+        UiPredicateV1::WorkspaceTabStripActiveScrollPxGe { px, pane_id } => workspace
+            .and_then(|w| {
+                w.tab_strip_active_visibility.iter().rev().find(|s| {
+                    s.status == fret_runtime::WorkspaceTabStripActiveVisibilityStatusDiagnostics::Ok
+                        && pane_id.as_ref().is_none_or(|id| {
+                            s.pane_id.as_ref().is_some_and(|p| p.as_ref() == id.as_str())
+                        })
+                })
+            })
+            .is_some_and(|s| s.scroll_x.0 >= *px),
+        UiPredicateV1::WorkspaceTabStripActiveScrollPxLe { px, pane_id } => workspace
+            .and_then(|w| {
+                w.tab_strip_active_visibility.iter().rev().find(|s| {
+                    s.status == fret_runtime::WorkspaceTabStripActiveVisibilityStatusDiagnostics::Ok
+                        && pane_id.as_ref().is_none_or(|id| {
+                            s.pane_id.as_ref().is_some_and(|p| p.as_ref() == id.as_str())
+                        })
+                })
+            })
+            .is_some_and(|s| s.scroll_x.0 <= *px),
         UiPredicateV1::DockGraphCanonicalIs { canonical } => docking
             .and_then(|d| d.dock_graph_stats)
             .is_some_and(|s| s.canonical_ok == *canonical),

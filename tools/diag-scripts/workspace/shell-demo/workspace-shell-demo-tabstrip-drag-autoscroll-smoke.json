@@ -1,0 +1,105 @@
+{
+  "meta": {
+    "name": "Workspace shell demo: dragging a tab autoscrolls the tabstrip (smoke)",
+    "required_capabilities": [
+      "diag.script_v2"
+    ],
+    "tags": [
+      "workspace",
+      "tabstrip",
+      "drag",
+      "scroll",
+      "smoke",
+      "gate"
+    ],
+    "target_hints": [
+      "Shrinks the window to force tab strip overflow.",
+      "Selects the first tab so diagnostics track its active scroll.",
+      "Drags the tab far to the right to trigger horizontal autoscroll.",
+      "Asserts tabstrip scroll_x increased."
+    ]
+  },
+  "schema_version": 2,
+  "steps": [
+    {
+      "height_px": 720.0,
+      "type": "set_window_inner_size",
+      "width_px": 420.0
+    },
+    {
+      "n": 10,
+      "type": "wait_frames"
+    },
+    {
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "id": "workspace-shell-pane-pane-a-tab-strip.overflow_button",
+          "kind": "test_id"
+        }
+      },
+      "timeout_frames": 240,
+      "type": "wait_until"
+    },
+    {
+      "target": {
+        "id": "workspace-shell-pane-pane-a-tab-doc-a-0",
+        "kind": "test_id"
+      },
+      "type": "click"
+    },
+    {
+      "n": 6,
+      "type": "wait_frames"
+    },
+    {
+      "predicate": {
+        "kind": "selected_is",
+        "selected": true,
+        "target": {
+          "id": "workspace-shell-pane-pane-a-tab-doc-a-0",
+          "kind": "test_id"
+        }
+      },
+      "timeout_frames": 240,
+      "type": "wait_until"
+    },
+    {
+      "button": "left",
+      "delta_x": 900.0,
+      "delta_y": 0.0,
+      "steps": 180,
+      "target": {
+        "id": "workspace-shell-pane-pane-a-tab-doc-a-0",
+        "kind": "test_id"
+      },
+      "type": "drag_pointer"
+    },
+    {
+      "n": 12,
+      "type": "wait_frames"
+    },
+    {
+      "predicate": {
+        "kind": "workspace_tab_strip_active_visible_is",
+        "pane_id": "pane-a",
+        "visible": true
+      },
+      "timeout_frames": 240,
+      "type": "wait_until"
+    },
+    {
+      "predicate": {
+        "kind": "workspace_tab_strip_active_scroll_px_ge",
+        "pane_id": "pane-a",
+        "px": 1.0
+      },
+      "timeout_frames": 240,
+      "type": "wait_until"
+    },
+    {
+      "label": "workspace-shell-demo-tabstrip-drag-autoscroll-smoke",
+      "type": "capture_bundle"
+    }
+  ]
+}

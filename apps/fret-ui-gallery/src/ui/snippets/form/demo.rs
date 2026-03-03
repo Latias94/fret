@@ -12,15 +12,14 @@ struct Models {
 }
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let (text_input, text_area, checkbox, switch) =
-        cx.with_state(Models::default, |st| {
-            (
-                st.text_input.clone(),
-                st.text_area.clone(),
-                st.checkbox.clone(),
-                st.switch.clone(),
-            )
-        });
+    let (text_input, text_area, checkbox, switch) = cx.with_state(Models::default, |st| {
+        (
+            st.text_input.clone(),
+            st.text_area.clone(),
+            st.checkbox.clone(),
+            st.switch.clone(),
+        )
+    });
 
     let (text_input, text_area, checkbox, switch) = match (text_input, text_area, checkbox, switch)
     {
@@ -42,7 +41,10 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         }
     };
 
-    let max_w_md = LayoutRefinement::default().w_full().min_w_0().max_w(Px(520.0));
+    let max_w_md = LayoutRefinement::default()
+        .w_full()
+        .min_w_0()
+        .max_w(Px(520.0));
 
     shadcn::FieldSet::new([
         shadcn::FieldLegend::new("Contact").into_element(cx),

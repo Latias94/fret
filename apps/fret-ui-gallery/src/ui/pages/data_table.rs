@@ -29,16 +29,16 @@ pub(super) fn preview_data_table(
         ),
         vec![
             DocSection::new("Basic Demo", basic_demo)
-                .max_w(Px(900.0))
+                .max_w(Px(980.0))
                 .code_rust_from_file_region(snippets::basic_demo::SOURCE, "example"),
             DocSection::new("Guide Demo", demo)
-                .max_w(Px(900.0))
+                .max_w(Px(980.0))
                 .code_rust_from_file_region(snippets::guide_demo::SOURCE, "example"),
             DocSection::new("Code", code_preview)
-                .max_w(Px(900.0))
+                .max_w(Px(980.0))
                 .test_id_prefix("ui-gallery-data-table-code")
                 .code_rust_from_file_region(snippets::code_outline::SOURCE, "example"),
-            DocSection::new("Notes", notes_stack).max_w(Px(900.0)),
+            DocSection::new("Notes", notes_stack).max_w(Px(980.0)),
         ],
     );
 

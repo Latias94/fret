@@ -3,9 +3,7 @@ use super::super::*;
 use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::progress as snippets;
 
-pub(super) fn preview_progress(
-    cx: &mut ElementContext<'_, App>,
-) -> Vec<AnyElement> {
+pub(super) fn preview_progress(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     let demo = snippets::demo::render(cx);
     let rtl = snippets::rtl::render(cx);
     let extras = snippets::extras::render(cx);

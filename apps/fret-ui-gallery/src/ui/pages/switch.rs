@@ -3,10 +3,7 @@ use super::super::*;
 use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::switch as snippets;
 
-pub(super) fn preview_switch(
-    cx: &mut ElementContext<'_, App>,
-    _model: Model<bool>,
-) -> Vec<AnyElement> {
+pub(super) fn preview_switch(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     let sizes = snippets::sizes::render(cx);
     let airplane_mode = snippets::airplane_mode::render(cx);
     let bluetooth = snippets::bluetooth::render(cx);
