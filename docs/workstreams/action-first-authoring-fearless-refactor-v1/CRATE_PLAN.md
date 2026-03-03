@@ -1,6 +1,6 @@
 # Action-First Authoring + View Runtime (Fearless Refactor v1) — Crate Plan
 
-Last updated: 2026-03-01
+Last updated: 2026-03-03
 
 This document describes the **crate boundary plan** for the refactor:
 
@@ -10,6 +10,14 @@ This document describes the **crate boundary plan** for the refactor:
 - and which parts are explicitly out of scope.
 
 This is a workstream note. Hard boundaries must be backed by ADRs.
+
+---
+
+## Status (as of 2026-03-03)
+
+- v1 landed without introducing new crates (Option A).
+- `ActionId == CommandId` is implemented in `crates/fret-runtime/src/action.rs`.
+- View runtime v1 lives under `ecosystem/fret/src/view.rs` and is used by cookbook/templates.
 
 ---
 

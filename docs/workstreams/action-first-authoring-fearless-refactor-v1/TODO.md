@@ -292,3 +292,14 @@ This phase is intentionally last.
     - `ecosystem/fret/src/legacy.rs` (explicit legacy prelude)
     - `apps/fret-examples/src/todo_demo.rs` (example: legacy prelude import)
     - `tools/gate_no_mvu_in_cookbook.ps1`
+
+---
+
+## Post-v1 follow-ups (tracked separately)
+
+These are intentionally *not* part of the v1 milestone closure, but they are likely the next
+practical steps:
+
+- Key context stack + diagnostics-visible context naming/stacking rules.
+- Pointer-triggered explainability: stable selector → action mapping without relying on script stamping.
+- Payload actions (v2+), behind strict determinism + validation rules.

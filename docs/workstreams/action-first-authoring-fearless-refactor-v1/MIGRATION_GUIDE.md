@@ -31,9 +31,8 @@ Migration steps:
 1) Introduce action IDs for the existing command IDs (prefer keeping the same string).
 2) Update UI widgets to bind `.action(...)` rather than `.on_click(cmd_id)` where appropriate.
 3) Update handler registration:
-   - v1: keep using the existing command dispatch pipeline (`on_command`) while we land the
-     view/runtime-level handler table work.
-   - later (post-M1/M2): converge toward `on_action` hooks backed by an action handler table.
+   - v1: prefer `on_action` hooks backed by the action handler table (authoring-level).
+   - compat: keep `on_command` for legacy MVU demos while migrating incrementally.
 
 ### 2.1 Typed unit action IDs (recommended v1 authoring style)
 

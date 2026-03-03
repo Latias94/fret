@@ -1,6 +1,6 @@
 # Action-First Authoring + View Runtime (Fearless Refactor v1) — Cleanup Plan
 
-Last updated: 2026-03-01
+Last updated: 2026-03-03
 
 This document exists to prevent a common failure mode of fearless refactors:
 
@@ -8,6 +8,19 @@ This document exists to prevent a common failure mode of fearless refactors:
 > the repo now teaches three different ways to do the same thing.”
 
 This workstream is only “done” if we leave a **clean architecture** behind.
+
+---
+
+## Status (as of 2026-03-03)
+
+v1 landed and the repo golden path is converged on **View runtime + typed actions**:
+
+- Templates: `fretboard new` scaffolds generate View+actions by default.
+- Cookbook: view runtime + actions; MVU is gated out (`pwsh tools/gate_no_mvu_in_cookbook.ps1`).
+- Diagnostics gates: action-first scripted gates exist (`pwsh tools/diag_gate_action_first_authoring_v1.ps1`).
+- MVU remains available as an explicit compat surface: `fret::legacy::prelude::*`.
+
+This plan remains relevant as a “don’t drift back” checklist and as guidance for future deletions.
 
 ---
 
@@ -96,4 +109,3 @@ Only after M6 exit criteria:
 - Remove/quarantine legacy modules not used by any in-tree code.
 - Remove obsolete docs and keep a single “Start here” path.
 - Update CI grep gates / check scripts to enforce the new golden path.
-
