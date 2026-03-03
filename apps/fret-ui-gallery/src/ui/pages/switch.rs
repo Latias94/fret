@@ -5,14 +5,14 @@ use crate::ui::snippets::switch as snippets;
 
 pub(super) fn preview_switch(
     cx: &mut ElementContext<'_, App>,
-    model: Model<bool>,
+    _model: Model<bool>,
 ) -> Vec<AnyElement> {
     let sizes = snippets::sizes::render(cx);
-    let airplane_mode = snippets::airplane_mode::render(cx, model.clone());
+    let airplane_mode = snippets::airplane_mode::render(cx);
     let bluetooth = snippets::bluetooth::render(cx);
     let label_card = snippets::label_card::render(cx);
     let rtl = snippets::rtl::render(cx);
-    let extras = snippets::extras::render(cx, model.clone());
+    let extras = snippets::extras::render(cx);
 
     let notes = doc_layout::notes(
         cx,
