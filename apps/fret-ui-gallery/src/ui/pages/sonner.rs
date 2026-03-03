@@ -34,7 +34,6 @@ pub(super) fn preview_sonner(
                 .code_rust_from_file_region(snippets::position::SOURCE, "example"),
             DocSection::new("Extras", extras)
                 .description("Pinned + swipe-dismiss toasts.")
-                .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-sonner-extras")
                 .code_rust_from_file_region(snippets::extras::SOURCE, "example"),
             DocSection::new("Notes", notes)

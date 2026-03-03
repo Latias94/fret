@@ -59,7 +59,6 @@ pub(super) fn preview_button_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyE
                 .test_id_prefix("ui-gallery-button-group-flex1")
                 .code_rust_from_file_region(snippets::flex_1_items::SOURCE, "example"),
             DocSection::new("Input", input)
-                .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-button-group-input")
                 .code_rust_from_file_region(snippets::input::SOURCE, "example"),
             DocSection::new("Input Group", input_group)

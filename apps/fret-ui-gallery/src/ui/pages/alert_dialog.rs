@@ -42,48 +42,38 @@ pub(super) fn preview_alert_dialog(
             DocSection::new("Demo", demo)
                 .description("Default-sized modal alert dialog.")
                 .test_id_prefix("ui-gallery-alert-dialog-demo-docsec")
-                .code_rust_from_file_region(snippets::demo::SOURCE, "example")
-                .max_w(Px(760.0)),
+                .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
             DocSection::new("Basic", basic)
                 .description("A minimal alert dialog with default buttons.")
-                .code_rust_from_file_region(snippets::basic::SOURCE, "example")
-                .max_w(Px(760.0)),
+                .code_rust_from_file_region(snippets::basic::SOURCE, "example"),
             DocSection::new("Small", small)
                 .description("Compact dialog size for short copy.")
                 .test_id_prefix("ui-gallery-alert-dialog-small-docsec")
-                .code_rust_from_file_region(snippets::small::SOURCE, "example")
-                .max_w(Px(760.0)),
+                .code_rust_from_file_region(snippets::small::SOURCE, "example"),
             DocSection::new("Media", media)
                 .description("Dialogs can optionally show a leading media/icon in the header.")
                 .test_id_prefix("ui-gallery-alert-dialog-media-docsec")
-                .code_rust_from_file_region(snippets::media::SOURCE, "example")
-                .max_w(Px(760.0)),
+                .code_rust_from_file_region(snippets::media::SOURCE, "example"),
             DocSection::new("Small with Media", small_with_media)
                 .description("Small size + media variant.")
-                .code_rust_from_file_region(snippets::small_with_media::SOURCE, "example")
-                .max_w(Px(760.0)),
+                .code_rust_from_file_region(snippets::small_with_media::SOURCE, "example"),
             DocSection::new("Destructive", destructive)
                 .description("Destructive styling for irreversible actions.")
                 .test_id_prefix("ui-gallery-alert-dialog-destructive-docsec")
-                .code_rust_from_file_region(snippets::destructive::SOURCE, "example")
-                .max_w(Px(760.0)),
+                .code_rust_from_file_region(snippets::destructive::SOURCE, "example"),
             DocSection::new("Parts", parts)
                 .description("Part surface adapters for shadcn-style call sites.")
                 .test_id_prefix("ui-gallery-alert-dialog-parts-docsec")
-                .code_rust_from_file_region(snippets::parts::SOURCE, "example")
-                .max_w(Px(760.0)),
+                .code_rust_from_file_region(snippets::parts::SOURCE, "example"),
             DocSection::new("RTL", rtl)
                 .description("All shadcn components should work under an RTL direction provider.")
-                .code_rust_from_file_region(snippets::rtl::SOURCE, "example")
-                .max_w(Px(760.0)),
+                .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
             DocSection::new("Usage", usage)
                 .title_test_id("ui-gallery-section-usage-title")
-                .description("Quick reference for composing an alert dialog.")
-                .max_w(Px(760.0)),
+                .description("Quick reference for composing an alert dialog."),
             DocSection::new("Notes", notes)
                 .title_test_id("ui-gallery-section-notes-title")
-                .description("Guidelines and best practices for alert dialogs.")
-                .max_w(Px(760.0)),
+                .description("Guidelines and best practices for alert dialogs."),
         ],
     );
 

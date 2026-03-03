@@ -25,11 +25,9 @@ pub(super) fn preview_progress(
         Some("Preview follows shadcn Progress demo: value update after 500ms."),
         vec![
             DocSection::new("Demo", demo)
-                .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-progress-demo")
                 .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
             DocSection::new("RTL", rtl)
-                .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-progress-rtl")
                 .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
             DocSection::new("Extras", extras)

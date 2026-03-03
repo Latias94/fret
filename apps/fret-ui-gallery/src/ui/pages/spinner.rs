@@ -36,7 +36,6 @@ pub(super) fn preview_spinner(cx: &mut ElementContext<'_, App>) -> Vec<AnyElemen
                 .test_id_prefix("ui-gallery-spinner-badges")
                 .code_rust_from_file_region(snippets::badges::SOURCE, "example"),
             DocSection::new("Input Group", input_group)
-                .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-spinner-input-group")
                 .code_rust_from_file_region(snippets::input_group::SOURCE, "example"),
             DocSection::new("Empty", empty)
@@ -44,7 +43,6 @@ pub(super) fn preview_spinner(cx: &mut ElementContext<'_, App>) -> Vec<AnyElemen
                 .test_id_prefix("ui-gallery-spinner-empty")
                 .code_rust_from_file_region(snippets::empty::SOURCE, "example"),
             DocSection::new("RTL", rtl)
-                .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-spinner-rtl")
                 .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
             DocSection::new("Extras", extras)

@@ -30,15 +30,12 @@ pub(super) fn preview_switch(
         ),
         vec![
             DocSection::new("Sizes", sizes)
-                .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-switch-sizes")
                 .code_rust_from_file_region(snippets::sizes::SOURCE, "example"),
             DocSection::new("Airplane Mode", airplane_mode)
-                .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-switch-airplane")
                 .code_rust_from_file_region(snippets::airplane_mode::SOURCE, "example"),
             DocSection::new("Bluetooth", bluetooth)
-                .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-switch-bluetooth")
                 .code_rust_from_file_region(snippets::bluetooth::SOURCE, "example"),
             DocSection::new("Label Card", label_card)
@@ -46,7 +43,6 @@ pub(super) fn preview_switch(
                 .test_id_prefix("ui-gallery-switch-label-card")
                 .code_rust_from_file_region(snippets::label_card::SOURCE, "example"),
             DocSection::new("RTL", rtl)
-                .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-switch-rtl")
                 .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
             DocSection::new("Extras", extras)
