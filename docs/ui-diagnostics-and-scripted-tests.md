@@ -934,6 +934,7 @@ Notes:
   - Optional `max_snapshots` caps how many snapshots are included in this export (clamped to `FRET_DIAG_MAX_SNAPSHOTS`).
 - `capture_screenshot` requests a screenshot for the **most recent bundle directory** (`last_dump_dir`) and waits for completion (up to `timeout_frames`, default 300). If no bundle exists yet, the harness creates one first.
 - `drag_pointer` runs over multiple frames so diagnostics bundles can capture and gate frame-to-frame behavior (prepaint outputs, paint-only invalidations, drag indicators). Roughly: 1 frame for `move+down`, `steps` frames of `move`, then 1 frame for `up`.
+  - Pointer synthesis keeps positions slightly inside window bounds when the requested coordinates are still within the window (avoids edge hit-testing misses), but preserves intentionally out-of-bounds positions for tear-off / cross-window docking routes.
 
 ## Script schema v2 (intent-level steps)
 

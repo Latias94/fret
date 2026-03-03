@@ -75,3 +75,9 @@ with special focus on multi-window tear-off + drag-back sequences.
   to run a final `capture_bundle` after the last semantic assertion (reduces tooling timeouts at tight `--timeout-ms`).
 - Docs: clarify window-count and docking drop resolve predicate semantics in the main diagnostics reference:
   `docs/ui-diagnostics-and-scripted-tests.md`.
+- Diagnostics input synthesis: allow scripted drags to move outside window bounds (tear-off requires OOB routing) without
+  clamping the end position back inside the window client rect.
+  - implementation: `ecosystem/fret-bootstrap/src/ui_diagnostics/script_steps_drag.rs`
+- Docking UI: include `TextFontStackKey` in the retained tab-title cache key so tab labels do not disappear after a
+  system font rescan / font stack stabilization.
+  - implementation: `ecosystem/fret-docking/src/dock/space.rs`
