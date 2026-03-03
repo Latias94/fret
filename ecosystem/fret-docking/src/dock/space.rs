@@ -2466,8 +2466,10 @@ impl<H: UiHost> Widget<H> for DockSpace {
                         }
                     }
                     let scroll = tab_scroll_for_node(tab_scroll, tabs_node);
-                    let dragged_tab_index = dragged_tab_for_drop
-                        .and_then(|(source_tabs, index)| (source_tabs == tabs_node).then_some(index));
+                    let dragged_tab_index =
+                        dragged_tab_for_drop.and_then(|(source_tabs, index)| {
+                            (source_tabs == tabs_node).then_some(index)
+                        });
                     let insert_index = super::tab_bar_drop_target::tab_bar_insert_index_for_drop(
                         theme.clone(),
                         tab_bar,
