@@ -52,6 +52,9 @@ Any remaining legacy surfaces that embed raw Rust code strings are tracked via t
     windowed CodeBlock VirtualList scroll handle even when wrapped by an X-scroll container.
 - [x] Remove unused routed model params from snippet-backed pages (avoid misleading signatures).
   - Evidence: `apps/fret-ui-gallery/src/ui/pages/mod.rs`, `apps/fret-ui-gallery/src/ui/content.rs`.
+- [x] Simplify debug UI chrome (hide StatusBar by default; compact Debug HUD output).
+  - Evidence: `apps/fret-ui-gallery/src/driver/render_flow.rs`, `apps/fret-ui-gallery/src/driver/status_bar.rs`,
+    `apps/fret-ui-gallery/src/driver/debug_stats.rs`, `apps/fret-ui-gallery/src/driver/debug_hud.rs`.
 - [ ] Normalize DocSection chrome/layout (max widths, padding, “Notes” shell usage) across pages.
   - [x] Remove redundant centering wrappers so Preview/Code tabs share consistent left padding.
   - [x] Center doc pages once (page-level max width) so sections align to the same left gutter.
