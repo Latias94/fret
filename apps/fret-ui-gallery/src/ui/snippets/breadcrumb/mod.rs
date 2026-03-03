@@ -12,4 +12,5 @@ pub mod custom_separator;
 pub mod demo;
 pub mod dropdown;
 pub mod link_component;
+pub mod responsive;
 pub mod rtl;
