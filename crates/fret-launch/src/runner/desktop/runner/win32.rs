@@ -95,6 +95,16 @@ unsafe extern "system" {
         pv_attribute: *const c_void,
         cb_attribute: u32,
     ) -> i32;
+    fn DwmExtendFrameIntoClientArea(hwnd: isize, margins: *const DwmMargins) -> i32;
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default)]
+struct DwmMargins {
+    left: i32,
+    right: i32,
+    top: i32,
+    bottom: i32,
 }
 
 #[repr(C)]
@@ -146,6 +156,29 @@ pub(super) fn supports_dwm_system_backdrop() -> bool {
     windows_build_number().is_some_and(|b| b >= 22621)
 }
 
+pub(super) fn set_dwm_extended_frame(hwnd: isize, enabled: bool) -> bool {
+    if hwnd == 0 {
+        return false;
+    }
+
+    // -1 is the documented "extend to entire client area" sentinel.
+    // https://learn.microsoft.com/windows/win32/api/dwmapi/nf-dwmapi-dwmextendframeintoclientarea
+    let margins = if enabled {
+        DwmMargins {
+            left: -1,
+            right: -1,
+            top: -1,
+            bottom: -1,
+        }
+    } else {
+        DwmMargins::default()
+    };
+
+    // SAFETY: `margins` is a valid POD passed by pointer and read synchronously.
+    let hr = unsafe { DwmExtendFrameIntoClientArea(hwnd, &margins as *const DwmMargins) };
+    hr >= 0
+}
+
 pub(super) fn set_dwm_system_backdrop_type(hwnd: isize, ty: u32) -> bool {
     if hwnd == 0 {
         return false;
@@ -153,6 +186,14 @@ pub(super) fn set_dwm_system_backdrop_type(hwnd: isize, ty: u32) -> bool {
     if !supports_dwm_system_backdrop() {
         return false;
     }
+
+    // Best-effort: ensure the DWM frame is extended into the client area so backdrop materials are
+    // visible behind transparent clears (common for GPU-rendered UIs).
+    //
+    // When the backdrop is set to `NONE`, disable the extension to avoid leaving the window in a
+    // "glass" configuration unexpectedly.
+    let want_frame = ty != dwm_system_backdrop_type_for_none();
+    let _ = set_dwm_extended_frame(hwnd, want_frame);
 
     // SAFETY: `DwmSetWindowAttribute` reads `cb_attribute` bytes from `pv_attribute` synchronously.
     let hr = unsafe {
