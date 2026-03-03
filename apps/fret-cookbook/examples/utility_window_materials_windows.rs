@@ -21,6 +21,7 @@ const TEST_ID_TO_NONE: &str = "utility-window.materials.to_none";
 const TEST_ID_TO_MICA: &str = "utility-window.materials.to_mica";
 const TEST_ID_TO_ACRYLIC: &str = "utility-window.materials.to_acrylic";
 const TEST_ID_STYLE_TEXT: &str = "utility-window.materials.style_effective";
+const TEST_ID_PLATFORM_TEXT: &str = "utility-window.materials.platform";
 
 #[derive(Debug)]
 struct State {
@@ -75,6 +76,9 @@ fn on_command(
 }
 
 fn view(cx: &mut fret_ui::ElementContext<'_, fret_app::App>, st: &mut State) -> ViewElements {
+    let is_windows = cfg!(target_os = "windows");
+    let is_macos = cfg!(target_os = "macos");
+
     let theme = cx.theme().snapshot();
     let color_muted_foreground = theme.color_token("muted-foreground");
 
@@ -86,19 +90,27 @@ fn view(cx: &mut fret_ui::ElementContext<'_, fret_app::App>, st: &mut State) -> 
 
     let caps = cx.app.global::<PlatformCapabilities>().cloned();
     let caps_text: Arc<str> = Arc::from(match caps {
-        Some(caps) => format!(
+        Some(caps) if is_windows => format!(
             "caps: mica={} acrylic={} system_default={} transparent={}",
             caps.ui.window_background_material_mica,
             caps.ui.window_background_material_acrylic,
             caps.ui.window_background_material_system_default,
             caps.ui.window_transparent,
         ),
+        Some(caps) if is_macos => format!(
+            "caps: vibrancy={} transparent={}",
+            caps.ui.window_background_material_vibrancy, caps.ui.window_transparent,
+        ),
+        Some(caps) => format!("caps: transparent={}", caps.ui.window_transparent),
         None => "caps: <unavailable>".to_string(),
     });
 
     let wgpu = cx.app.global::<WgpuAdapterSelectionSnapshot>().cloned();
     let wgpu_text: Arc<str> = Arc::from(match wgpu {
-        Some(s) => format!("wgpu: backend={} adapter={}", s.selected_backend, s.adapter_name),
+        Some(s) => format!(
+            "wgpu: backend={} adapter={}",
+            s.selected_backend, s.adapter_name
+        ),
         None => "wgpu: <unavailable>".to_string(),
     });
 
@@ -114,16 +126,46 @@ fn view(cx: &mut fret_ui::ElementContext<'_, fret_app::App>, st: &mut State) -> 
         None => "effective: <unavailable>".to_string(),
     });
 
-    let header = shadcn::CardHeader::new(vec![
-        shadcn::CardTitle::new("Utility window materials (Windows)").into_element(cx),
-        shadcn::CardDescription::new(
-            "Requests Mica/Acrylic via WindowStyleRequest and asserts effective/clamped results via diagnostics.",
+    let platform_text: Arc<str> = Arc::from(if is_windows {
+        "platform: windows (background materials + implied transparency)".to_string()
+    } else if is_macos {
+        "platform: macos (frameless + transparent; materials not implemented yet)".to_string()
+    } else {
+        format!(
+            "platform: {} (materials demo is Windows-only)",
+            std::env::consts::OS
         )
-        .into_element(cx),
+    });
+
+    let title = if is_windows {
+        "Utility window materials + transparency (Windows)"
+    } else if is_macos {
+        "Utility window transparency (macOS)"
+    } else {
+        "Utility window style diagnostics"
+    };
+
+    let description = if is_windows {
+        "Requests Mica/Acrylic via WindowStyleRequest and asserts effective/clamped results via diagnostics."
+    } else if is_macos {
+        "Creates a frameless transparent window and reports effective style via diagnostics."
+    } else {
+        "Reports effective/clamped window style via diagnostics."
+    };
+
+    let header = shadcn::CardHeader::new(vec![
+        shadcn::CardTitle::new(title).into_element(cx),
+        shadcn::CardDescription::new(description).into_element(cx),
     ])
     .into_element(cx);
 
     let content = ui::v_flex(cx, |cx| {
+        let platform_line = ui::text(cx, platform_text)
+            .font_monospace()
+            .text_sm()
+            .text_color(ColorRef::Color(color_muted_foreground))
+            .into_element(cx)
+            .test_id(TEST_ID_PLATFORM_TEXT);
         let style_line = ui::text(cx, style_text)
             .font_monospace()
             .text_sm()
@@ -145,36 +187,53 @@ fn view(cx: &mut fret_ui::ElementContext<'_, fret_app::App>, st: &mut State) -> 
             .into_element(cx);
 
         let buttons = ui::h_flex(cx, |cx| {
-            [
-                shadcn::Button::new("None")
-                    .variant(shadcn::ButtonVariant::Secondary)
-                    .size(shadcn::ButtonSize::Sm)
-                    .on_click(CommandId::from(CMD_TO_NONE))
-                    .test_id(TEST_ID_TO_NONE)
-                    .into_element(cx),
-                shadcn::Button::new("Mica")
-                    .variant(shadcn::ButtonVariant::Secondary)
-                    .size(shadcn::ButtonSize::Sm)
-                    .on_click(CommandId::from(CMD_TO_MICA))
-                    .test_id(TEST_ID_TO_MICA)
-                    .into_element(cx),
-                shadcn::Button::new("Acrylic")
-                    .variant(shadcn::ButtonVariant::Secondary)
-                    .size(shadcn::ButtonSize::Sm)
-                    .on_click(CommandId::from(CMD_TO_ACRYLIC))
-                    .test_id(TEST_ID_TO_ACRYLIC)
-                    .into_element(cx),
-                shadcn::Button::new("Quit")
-                    .variant(shadcn::ButtonVariant::Destructive)
-                    .size(shadcn::ButtonSize::Sm)
-                    .on_click(CommandId::from(CMD_QUIT))
-                    .into_element(cx),
-            ]
+            if is_windows {
+                vec![
+                    shadcn::Button::new("None")
+                        .variant(shadcn::ButtonVariant::Secondary)
+                        .size(shadcn::ButtonSize::Sm)
+                        .on_click(CommandId::from(CMD_TO_NONE))
+                        .test_id(TEST_ID_TO_NONE)
+                        .into_element(cx),
+                    shadcn::Button::new("Mica")
+                        .variant(shadcn::ButtonVariant::Secondary)
+                        .size(shadcn::ButtonSize::Sm)
+                        .on_click(CommandId::from(CMD_TO_MICA))
+                        .test_id(TEST_ID_TO_MICA)
+                        .into_element(cx),
+                    shadcn::Button::new("Acrylic")
+                        .variant(shadcn::ButtonVariant::Secondary)
+                        .size(shadcn::ButtonSize::Sm)
+                        .on_click(CommandId::from(CMD_TO_ACRYLIC))
+                        .test_id(TEST_ID_TO_ACRYLIC)
+                        .into_element(cx),
+                    shadcn::Button::new("Quit")
+                        .variant(shadcn::ButtonVariant::Destructive)
+                        .size(shadcn::ButtonSize::Sm)
+                        .on_click(CommandId::from(CMD_QUIT))
+                        .into_element(cx),
+                ]
+            } else {
+                vec![
+                    shadcn::Button::new("Quit")
+                        .variant(shadcn::ButtonVariant::Destructive)
+                        .size(shadcn::ButtonSize::Sm)
+                        .on_click(CommandId::from(CMD_QUIT))
+                        .into_element(cx),
+                ]
+            }
         })
         .gap(Space::N2)
         .into_element(cx);
 
-        [style_line, caps_line, wgpu_line, status_line, buttons]
+        [
+            platform_line,
+            style_line,
+            caps_line,
+            wgpu_line,
+            status_line,
+            buttons,
+        ]
     })
     .gap(Space::N3)
     .into_element(cx);
@@ -215,31 +274,42 @@ fn main() -> anyhow::Result<()> {
     .with_default_diagnostics()
     .with_main_window("utility_window_materials_windows", (760.0, 520.0))
     .configure(|config| {
-        config.main_window_style = WindowStyleRequest {
+        let mut style = WindowStyleRequest {
             decorations: Some(WindowDecorationsRequest::None),
             resizable: Some(true),
-            // Intentionally omit `transparent`: allow ADR 0310 implicit transparency when a
-            // composited OS material is effectively applied.
-            background_material: Some(WindowBackgroundMaterialRequest::Mica),
             ..Default::default()
         };
+
+        if cfg!(target_os = "windows") {
+            // Intentionally omit `transparent`: allow ADR 0310 implicit transparency when a
+            // composited OS material is effectively applied.
+            style.background_material = Some(WindowBackgroundMaterialRequest::Mica);
+        } else if cfg!(target_os = "macos") {
+            // On macOS, this demo currently focuses on frameless + transparent windows.
+            // (Vibrancy materials are not implemented yet.)
+            style.transparent = Some(true);
+        }
+
+        config.main_window_style = style;
     })
     .init_app(|app| {
         // Keep a consistent cookbook look (tokens, typography).
         fret_cookbook::install_cookbook_defaults(app);
 
-        app.commands_mut().register(
-            CommandId::from(CMD_TO_NONE),
-            CommandMeta::new("Background material: None"),
-        );
-        app.commands_mut().register(
-            CommandId::from(CMD_TO_MICA),
-            CommandMeta::new("Background material: Mica"),
-        );
-        app.commands_mut().register(
-            CommandId::from(CMD_TO_ACRYLIC),
-            CommandMeta::new("Background material: Acrylic"),
-        );
+        if cfg!(target_os = "windows") {
+            app.commands_mut().register(
+                CommandId::from(CMD_TO_NONE),
+                CommandMeta::new("Background material: None"),
+            );
+            app.commands_mut().register(
+                CommandId::from(CMD_TO_MICA),
+                CommandMeta::new("Background material: Mica"),
+            );
+            app.commands_mut().register(
+                CommandId::from(CMD_TO_ACRYLIC),
+                CommandMeta::new("Background material: Acrylic"),
+            );
+        }
         app.commands_mut()
             .register(CommandId::from(CMD_QUIT), CommandMeta::new("Quit"));
     })
