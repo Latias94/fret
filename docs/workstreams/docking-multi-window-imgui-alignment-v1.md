@@ -58,7 +58,11 @@ For v1, we intentionally gate *in-window floating* title-bar docking (which is f
   - `crates/fret-launch/src/runner/desktop/runner/event_routing.rs`
 - Follow-window movement during dock drags:
   - `crates/fret-launch/src/runner/desktop/runner/docking.rs`
-  - When `FRET_DOCK_TEAROFF_TRANSPARENT_PAYLOAD=1` (or `DockingInteractionSettings.transparent_payload_during_follow`), the runner applies opacity to the moving window and updates drag diagnostics (`transparent_payload_applied`).
+  - `FRET_DOCK_TEAROFF_TRANSPARENT_PAYLOAD` is a boolean env flag:
+    - values `0/false/off/no` disable it,
+    - any other present value enables it.
+  - When enabled (or when `DockingInteractionSettings.transparent_payload_during_follow` is true), the runner applies opacity/passthrough to the moving window and updates drag diagnostics (`transparent_payload_applied`).
+  - The runner only force-enables follow for windows that are already dock-floating (tear-off OS windows); forcing follow for normal app windows prevents out-of-bounds tear-off heuristics from stabilizing.
 
 ### Diagnostics/script injection integration
 
@@ -209,6 +213,9 @@ This is a practical checklist for editor-grade parity. It intentionally mixes UX
 - Undock whole node (tabs-group tear-off):
   - Delivered (2026-03-03): tearing off a whole tab stack via tabs-group drag is gated:
     - `tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-tearoff-tabs-group-two-tabs.json`
+- Tear-off + merge back (tabs-group):
+  - Delivered (2026-03-03): tearing off the whole tab stack into a new OS window, then docking it back into the main window (tabs-group title-bar drag) and asserting auto-close + no floatings:
+    - `tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-tearoff-tabs-group-two-tabs-merge-back.json`
 - Multi-monitor “hand off” feel: ImGui viewports are routinely dragged across monitors with changing DPI. We should
   validate (and gate) that tear-off windows preserve expected DPI/scale behavior when crossing monitors (where supported).
 

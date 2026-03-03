@@ -744,6 +744,31 @@
       ]
     },
     {
+      "id": "docking-arbitration-demo-multiwindow-tearoff-tabs-group-two-tabs-merge-back",
+      "path": "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-tearoff-tabs-group-two-tabs-merge-back.json",
+      "required_capabilities": [
+        "diag.multi_window",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "diag-hardening-smoke-docking",
+        "docking-arbitration"
+      ],
+      "tags": [
+        "docking",
+        "drag",
+        "gate",
+        "merge",
+        "multiwindow",
+        "tearoff",
+        "titlebar"
+      ],
+      "target_hints": [
+        "Merges two viewports into one tab strip, tears off the whole tab stack via a tabs-group drag, then docks it back into the main window via a title-bar (tabs-group) drag.",
+        "Asserts the floating OS window auto-closes after drop, and the main window still contains the baseline panels with no floatings."
+      ]
+    },
+    {
       "id": "docking-arbitration-demo-multiwindow-drag-tab-back-to-main",
       "path": "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-drag-tab-back-to-main.json",
       "required_capabilities": [
