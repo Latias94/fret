@@ -51,6 +51,8 @@ The goal is to provide a smooth, general-purpose application framework that scal
 
 ## Quick Start
 
+Need help setting up your toolchain or speeding up local builds? See `docs/setup.md`.
+
 Create a new native app scaffold (recommended: `simple-todo` first):
 
 ```bash

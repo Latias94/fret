@@ -17,6 +17,7 @@ Non-goals:
 
 - Rust toolchain pinned by this repo (`rust-toolchain.toml`).
 - A working desktop GPU stack (wgpu/Winit).
+- For OS setup and faster local builds, see: `docs/setup.md`.
 
 ## 1) Generate a runnable app (recommended: `simple-todo`)
 
