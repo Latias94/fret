@@ -292,3 +292,23 @@ This phase is intentionally last.
     - `ecosystem/fret/src/legacy.rs` (explicit legacy prelude)
     - `apps/fret-examples/src/todo_demo.rs` (example: legacy prelude import)
     - `tools/gate_no_mvu_in_cookbook.ps1`
+
+---
+
+## Post-v1 follow-ups (tracked separately)
+
+These are intentionally *not* part of the v1 milestone closure, but they are likely the next
+practical steps:
+
+- Key context stack + diagnostics-visible context naming/stacking rules.
+- Reduce authoring noise:
+  - `test_id` late landing is available for `UiIntoElement` via `UiIntoElementTestIdExt`:
+    `ecosystem/fret-ui-kit/src/declarative/semantics.rs` (tracked as `AUE-semantics-120`).
+  - builder-level semantics decorators (beyond `test_id`) to avoid “decorate-only” `.into_element(cx)` calls:
+    `docs/workstreams/authoring-ergonomics-fluent-builder-todo.md` (`AUE-semantics-121`…)
+  - unify builder terminals + late-landing decorator coverage:
+    `docs/workstreams/unified-authoring-builder-v1-todo.md` (MVP3)
+- Pointer-triggered explainability: stable selector → action mapping without relying on script stamping.
+- View runtime ergonomics: reduce `on_action` handler boilerplate (`request_redraw` + `notify`) without weakening
+  determinism or layering (ecosystem-only).
+- Payload actions (v2+), behind strict determinism + validation rules.
