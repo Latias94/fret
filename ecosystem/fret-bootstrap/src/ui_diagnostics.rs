@@ -56,6 +56,7 @@ mod bundle_index;
 mod bundle_dump;
 mod bundle_dump_policy;
 mod bundle_sidecars;
+mod extensions;
 mod fs_triggers;
 mod inspect;
 mod inspect_controller;
@@ -127,12 +128,38 @@ mod ui_diagnostics_devtools_ws;
 use snapshot_types::WindowRing;
 pub use snapshot_types::*;
 
+/// Writer for `debug.extensions` entries (best-effort, bounded).
+///
+/// This is an ecosystem-facing seam: external crates can register closures that publish small,
+/// debug-oriented JSON values into the exported diagnostics snapshots.
+pub type UiDebugExtensionWriterV1 =
+    Arc<dyn Fn(&App, AppWindowId) -> Option<serde_json::Value> + 'static>;
+
 #[cfg(feature = "diagnostics")]
 pub(crate) use inspect_overlay::render_diag_inspect_overlay;
 
 mod config;
 pub use config::UiDiagnosticsConfig;
 include!("ui_diagnostics/service.rs");
+
+/// Register a best-effort diagnostics debug extension writer.
+///
+/// This writes into `UiDiagnosticsSnapshotV1.debug.extensions` under `key` (if enabled).
+///
+/// Notes:
+/// - unknown keys are ignored by tooling (future-proofing),
+/// - payloads are bounded and may be clipped,
+/// - keys must be lowercase, dot-separated, and end with `.vN` (e.g. `dock.graph.v1`).
+pub fn register_debug_extension_best_effort(
+    app: &mut App,
+    key: impl Into<String>,
+    writer: UiDebugExtensionWriterV1,
+) {
+    let key = key.into();
+    app.with_global_mut_untracked(UiDiagnosticsService::default, move |svc, _app| {
+        svc.register_debug_extension_best_effort(key, writer);
+    });
+}
 
 /// Returns `true` when UI diagnostics consumed the event (ignore/intercept).
 ///

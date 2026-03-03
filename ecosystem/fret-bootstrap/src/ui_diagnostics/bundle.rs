@@ -288,6 +288,7 @@ impl UiDiagnosticsEnvFingerprintV1 {
         if svc.cfg.screenshots_enabled {
             capabilities.push("diag.screenshot_png".to_string());
         }
+        capabilities.push("diag.debug_extensions_v1".to_string());
         capabilities.push("diag.pointer_kind_touch".to_string());
         capabilities.push("diag.pointer_kind_pen".to_string());
         capabilities.push("diag.gesture_tap".to_string());
