@@ -33,7 +33,6 @@ pub(super) fn preview_popover(
                 .test_id_prefix("ui-gallery-popover-basic")
                 .code_rust_from_file_region(snippets::basic::SOURCE, "example"),
             DocSection::new("Align", align)
-                .max_w(Px(980.0))
                 .test_id_prefix("ui-gallery-popover-align")
                 .code_rust_from_file_region(snippets::align::SOURCE, "example"),
             DocSection::new("With Form", with_form)

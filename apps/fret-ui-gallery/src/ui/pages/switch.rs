@@ -39,14 +39,12 @@ pub(super) fn preview_switch(
                 .test_id_prefix("ui-gallery-switch-bluetooth")
                 .code_rust_from_file_region(snippets::bluetooth::SOURCE, "example"),
             DocSection::new("Label Card", label_card)
-                .max_w(Px(980.0))
                 .test_id_prefix("ui-gallery-switch-label-card")
                 .code_rust_from_file_region(snippets::label_card::SOURCE, "example"),
             DocSection::new("RTL", rtl)
                 .test_id_prefix("ui-gallery-switch-rtl")
                 .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
             DocSection::new("Extras", extras)
-                .max_w(Px(980.0))
                 .test_id_prefix("ui-gallery-switch-extras")
                 .code_rust_from_file_region(snippets::extras::SOURCE, "example"),
             DocSection::new("Notes", notes),

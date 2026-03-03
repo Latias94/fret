@@ -59,7 +59,6 @@ pub(super) fn preview_tabs(
                 .code_rust_from_file_region(snippets::vertical_line::SOURCE, "example"),
             DocSection::new("Extras", extras)
                 .description("Fret-specific regression gates (flex-1 triggers + RTL).")
-                .max_w(Px(980.0))
                 .test_id_prefix("ui-gallery-tabs-extras")
                 .code_rust_from_file_region(snippets::extras::SOURCE, "example"),
             DocSection::new("Notes", notes).description("Parity notes and references."),

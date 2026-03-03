@@ -54,7 +54,8 @@ Any remaining legacy surfaces that embed raw Rust code strings are tracked via t
   - [ ] Audit remaining max-width and padding inconsistencies across pages.
   - [x] Add a coarse `.max_w` audit report: `docs/workstreams/ui-gallery-fearless-refactor/layout-audit.generated.md` (regen via `tools/ui_gallery_layout_audit.py`).
   - [x] Remove redundant `.max_w(Px(820.0))` overrides (default width) in `apps/fret-ui-gallery/src/ui/pages/**` so future diffs stay focused.
-- [ ] Optional: align page taxonomy + section ordering to upstream shadcn MDX navigation.
+  - [x] Remove redundant `.max_w(Px(980.0))` overrides on non-wide pages (keep 980 only for wide surfaces like Card/Calendar/Sheet/Sidebar where it improves the demo).
+  - [ ] Optional: align page taxonomy + section ordering to upstream shadcn MDX navigation.
 
 Notes:
 
