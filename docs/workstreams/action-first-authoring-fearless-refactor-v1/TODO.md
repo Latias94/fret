@@ -218,11 +218,13 @@ ID format:
     - `apps/fret-ui-gallery/src/ui/pages/command.rs`
 - [x] AFA-adopt-042 Add one editor-grade harness adoption:
   - docking/workspace shell uses actions for tab/command semantics (where appropriate).
-  - Status (as of 2026-03-02):
+  - Status (as of 2026-03-03):
     - Workspace tab strip pointer-triggered dispatches record a command dispatch trace source:
       - `ecosystem/fret-workspace/src/tab_strip/mod.rs` (tab activate)
+      - `ecosystem/fret-workspace/src/tab_strip/state.rs` (one-shot reveal of the active tab on first layout, to stabilize hit targets for scripts and users)
       - `ecosystem/fret-workspace/src/tab_strip/widgets.rs` (tab close button)
       - `ecosystem/fret-workspace/src/tab_strip/interaction.rs` (right/middle click behaviors)
+      - `ecosystem/fret-workspace/src/command_scope.rs` (workspace-level command scope fallback for `workspace.*` commands)
     - Scripted diagnostics gate:
       - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-button-closes-tab-smoke.json` (asserts `source_kind=pointer` for the close command)
       - `tools/diag_gate_action_first_authoring_v1.ps1` (includes workspace shell demo gate)
