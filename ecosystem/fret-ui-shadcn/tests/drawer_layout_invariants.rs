@@ -109,7 +109,7 @@ fn render_open_drawer_and_get_content_bounds(
     ui.set_window(window);
     let mut services = FakeServices;
 
-    shadcn_themes::apply_shadcn_new_york_v4(
+    shadcn_themes::apply_shadcn_new_york(
         &mut app,
         shadcn_themes::ShadcnBaseColor::Neutral,
         shadcn_themes::ShadcnColorScheme::Light,

@@ -16,7 +16,7 @@
   },
   "steps": [
     { "type": "press_key", "window": { "kind": "first_seen" }, "key": "escape" },
-    { "type": "wait_frames", "n": 2 },
+    { "type": "wait_frames", "window": { "kind": "first_seen" }, "n": 2 },
     {
       "type": "wait_until",
       "predicate": { "kind": "platform_ui_window_hover_detection_is", "quality": "reliable" },
@@ -25,7 +25,7 @@
 
     { "type": "set_window_outer_position", "window": { "kind": "first_seen" }, "x_px": 120.0, "y_px": 120.0 },
     { "type": "set_window_inner_size", "window": { "kind": "first_seen" }, "width_px": 1600.0, "height_px": 900.0 },
-    { "type": "wait_frames", "n": 2 },
+    { "type": "wait_frames", "window": { "kind": "first_seen" }, "n": 2 },
 
     {
       "type": "wait_until",
@@ -105,7 +105,6 @@
     },
 
     { "type": "raise_window", "window": { "kind": "first_seen" } },
-    { "type": "wait_frames", "n": 2 },
     {
       "type": "wait_until",
       "window": { "kind": "first_seen" },
@@ -114,7 +113,6 @@
     },
 
     { "type": "raise_window", "window": { "kind": "last_seen" } },
-    { "type": "wait_frames", "n": 2 },
     {
       "type": "wait_until",
       "window": { "kind": "last_seen" },

@@ -22,9 +22,11 @@ As of 2026-03-02, UI Gallery pages in `apps/fret-ui-gallery/src/ui/pages/**` are
 
 AI Elements gallery demos are also snippet-backed (see `ai-elements-tracker.md`).
 
-Material 3 pages are **not** snippet-backed yet: they currently live under
-`apps/fret-ui-gallery/src/ui/previews/material3/**` as legacy preview functions (no drift-free code
-tabs). A dedicated tracker exists at `material3-tracker.md`.
+Material 3 pages are now **snippet-backed (Preview ≡ Code)** and routed through
+`apps/fret-ui-gallery/src/ui/pages/material3/mod.rs`. The legacy preview layer under
+`apps/fret-ui-gallery/src/ui/previews/material3/**` still exists and should be deleted
+incrementally once local edits are cleared. The dedicated tracker at `material3-tracker.md`
+records the remaining cleanup steps.
 
 ## Goals
 

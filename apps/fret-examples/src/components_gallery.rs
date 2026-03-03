@@ -220,7 +220,7 @@ impl ComponentsGalleryDriver {
             _ => return,
         };
 
-        shadcn::shadcn_themes::apply_shadcn_new_york_v4(app, base, scheme);
+        shadcn::shadcn_themes::apply_shadcn_new_york(app, base, scheme);
         state.applied_theme_preset = Some(preset);
     }
 
@@ -481,7 +481,10 @@ impl ComponentsGalleryDriver {
                                                     .a11y_label(
                                                         "Demo theme preset (shadcn new-york-v4)",
                                                     )
-                                                    .placeholder("Pick a theme")
+                                                    .value(
+                                                        shadcn::SelectValue::new()
+                                                            .placeholder("Pick a theme"),
+                                                    )
                                                     .refine_layout(
                                                         LayoutRefinement::default()
                                                             .w_px(Px(260.0)),
@@ -728,8 +731,11 @@ impl ComponentsGalleryDriver {
                                                                     ui_font_override.clone(),
                                                                     ui_font_override_open.clone(),
                                                                 )
-                                                                .placeholder(
-                                                                    "Force UI font (optional)",
+                                                                .value(
+                                                                    shadcn::SelectValue::new()
+                                                                        .placeholder(
+                                                                            "Force UI font (optional)",
+                                                                        ),
                                                                 )
                                                                 .refine_layout(
                                                                     LayoutRefinement::default()
@@ -741,8 +747,11 @@ impl ComponentsGalleryDriver {
                                                                     emoji_font_override.clone(),
                                                                     emoji_font_override_open.clone(),
                                                                 )
-                                                                .placeholder(
-                                                                    "Force emoji font (optional)",
+                                                                .value(
+                                                                    shadcn::SelectValue::new()
+                                                                        .placeholder(
+                                                                            "Force emoji font (optional)",
+                                                                        ),
                                                                 )
                                                                 .refine_layout(
                                                                     LayoutRefinement::default()
@@ -973,15 +982,18 @@ impl ComponentsGalleryDriver {
                                             .unwrap_or("<none>")
                                             .to_owned();
 
-                                        vec![
-                                            shadcn::Select::new(select, select_open)
-                                                .a11y_label("Demo select")
-                                                    .placeholder("Pick a fruit")
-                                                .items([
-                                                    shadcn::SelectItem::new("apple", "Apple"),
-                                                    shadcn::SelectItem::new("banana", "Banana"),
-                                                    shadcn::SelectItem::new("cherry", "Cherry"),
-                                                ])
+	                                        vec![
+	                                            shadcn::Select::new(select, select_open)
+	                                                .a11y_label("Demo select")
+	                                                .value(
+	                                                    shadcn::SelectValue::new()
+	                                                        .placeholder("Pick a fruit"),
+	                                                )
+	                                                .items([
+	                                                    shadcn::SelectItem::new("apple", "Apple"),
+	                                                    shadcn::SelectItem::new("banana", "Banana"),
+	                                                    shadcn::SelectItem::new("cherry", "Cherry"),
+	                                                ])
                                                 .into_element(cx),
                                             cx.text(format!("select: {value}")),
                                         ]
@@ -2083,7 +2095,7 @@ impl WinitAppDriver for ComponentsGalleryDriver {
 pub fn build_app() -> App {
     let mut app = App::new();
     app.set_global(PlatformCapabilities::default());
-    shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+    shadcn::shadcn_themes::apply_shadcn_new_york(
         &mut app,
         shadcn::shadcn_themes::ShadcnBaseColor::Zinc,
         shadcn::shadcn_themes::ShadcnColorScheme::Dark,

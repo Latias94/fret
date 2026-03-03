@@ -1,3 +1,5 @@
+#[cfg(feature = "shadcn-context-menu")]
+use std::collections::HashMap;
 use std::sync::Arc;
 
 use fret_core::Rect;
@@ -51,23 +53,25 @@ pub(super) fn get_focus_restore_model<H: UiHost>(
 #[cfg(feature = "shadcn-context-menu")]
 #[derive(Debug, Default)]
 struct WorkspaceTabStripContextMenuState {
-    open: Option<Model<bool>>,
+    open_by_tab: HashMap<Arc<str>, Model<bool>>,
 }
 
 #[cfg(feature = "shadcn-context-menu")]
 pub(super) fn get_context_menu_open_model<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
+    tab_id: &Arc<str>,
 ) -> Model<bool> {
     let existing = cx.with_state(WorkspaceTabStripContextMenuState::default, |st| {
-        st.open.clone()
+        st.open_by_tab.get(tab_id).cloned()
     });
     if let Some(m) = existing {
         return m;
     }
 
     let model = cx.app.models_mut().insert(false);
+    let tab_id = tab_id.clone();
     cx.with_state(WorkspaceTabStripContextMenuState::default, |st| {
-        st.open = Some(model.clone());
+        st.open_by_tab.insert(tab_id, model.clone());
     });
     model
 }

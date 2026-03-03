@@ -1,7 +1,7 @@
 use super::*;
 
 pub(crate) fn setup_app_with_shadcn_theme(app: &mut App) {
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
         app,
         fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
         fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
@@ -12,7 +12,7 @@ pub(crate) fn setup_app_with_shadcn_theme_scheme(
     app: &mut App,
     scheme: fret_ui_shadcn::shadcn_themes::ShadcnColorScheme,
 ) {
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
         app,
         fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
         scheme,

@@ -9,6 +9,7 @@ mechanism-level regression gates.
 
 - Pinned region model and reorder rules.
 - Single preview slot (Zed-style) and commit/replace rules.
+- Bulk-close commands (close left/right/others) with pinned protection.
 - Dirty close confirmation policy hooks (workspace-level).
 
 ## Exit criteria
@@ -19,5 +20,7 @@ mechanism-level regression gates.
 - Preview:
   - opening a new preview replaces previous preview unless committed
   - committing converts preview → normal tab
+- Bulk close:
+  - close-left/close-right/close-others do not close pinned tabs
 - Dirty close policy:
   - close action path consults policy, not tab mechanism

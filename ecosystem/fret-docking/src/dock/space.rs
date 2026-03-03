@@ -6214,9 +6214,14 @@ impl<H: UiHost> Widget<H> for DockSpace {
                         }
                         if dock_drag.is_some() {
                             dock.hover = None;
-                            end_dock_drag = true;
                             invalidate_paint = true;
                             pending_redraws.push(self.window);
+                            // `PointerCancel` is used to clear per-window pointer/capture state
+                            // when the cursor leaves a window. For multi-window dock drags, the
+                            // runner may also synthesize cancels to release stale state in windows
+                            // that are no longer receiving `PointerUp`. Do not cancel the global
+                            // dock drag session here; rely on explicit cancel (e.g. Escape) or a
+                            // drop (`PointerUp` / internal drop routing) instead.
                         }
                     }
                     _ => {}

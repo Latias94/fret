@@ -177,10 +177,10 @@ impl UiDiagnosticsService {
         let step = other_active.steps.get(other_active.next_step);
         let step_window_target = Self::active_step_window_target(other_active);
         let other_step_index = other_active.next_step;
-        let step_allows_off_window_cached_test_id_predicate = step.is_some_and(|step| match step {
-            UiActionStepV2::WaitUntil { predicate, .. }
-            | UiActionStepV2::Assert { predicate, .. } => {
+        let step_allows_off_window_eval = step.is_some_and(|step| match step {
+            UiActionStepV2::WaitUntil { predicate, .. } | UiActionStepV2::Assert { predicate, .. } => {
                 UiDiagnosticsService::predicate_can_eval_from_cached_test_id_bounds(predicate)
+                    || UiDiagnosticsService::predicate_can_eval_off_window(predicate)
             }
             _ => false,
         });
@@ -244,7 +244,7 @@ impl UiDiagnosticsService {
         // Exception: during an active dock drag, allow migration to follow the runner-owned drag
         // source window (ImGui-style tear-off), since the captured drag itself can be remapped.
         let test_id_hint = step.and_then(Self::step_test_id_hint);
-        if !step_allows_off_window_cached_test_id_predicate
+        if !step_allows_off_window_eval
             && !allow_migrate_for_dock_drag
             && let Some(step_window_target) = step_window_target.as_ref()
             && let Some(resolved) = self.resolve_window_target_for_active_step_with_test_id_hint(

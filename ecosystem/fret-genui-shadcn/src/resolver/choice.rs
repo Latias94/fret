@@ -224,7 +224,7 @@ impl ShadcnResolver {
             .disabled(disabled)
             .refine_layout(layout);
         if let Some(placeholder) = placeholder {
-            select = select.placeholder(placeholder);
+            select = select.value(fret_ui_shadcn::SelectValue::new().placeholder(placeholder));
         }
         select = select.aria_invalid(aria_invalid);
 

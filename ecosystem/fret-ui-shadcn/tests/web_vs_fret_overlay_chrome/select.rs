@@ -24,7 +24,7 @@ fn build_shadcn_select_demo_page(
 
     fret_ui_shadcn::Select::new(value, open.clone())
         .a11y_label("Select")
-        .placeholder("Select a fruit")
+        .value(fret_ui_shadcn::SelectValue::new().placeholder("Select a fruit"))
         .refine_layout(
             fret_ui_kit::LayoutRefinement::default().w_px(fret_ui_kit::MetricRef::Px(Px(180.0))),
         )
@@ -91,7 +91,7 @@ fn build_shadcn_select_scrollable_page(
 
     fret_ui_shadcn::Select::new(value, open.clone())
         .a11y_label("Select")
-        .placeholder("Select a timezone")
+        .value(fret_ui_shadcn::SelectValue::new().placeholder("Select a timezone"))
         .refine_layout(
             fret_ui_kit::LayoutRefinement::default().w_px(fret_ui_kit::MetricRef::Px(Px(280.0))),
         )

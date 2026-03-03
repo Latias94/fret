@@ -412,21 +412,40 @@ impl WorkspaceTabs {
             return false;
         }
 
-        let active_was_preview = self.is_tab_preview(active.as_ref());
-        let active_was_pinned = self.is_tab_pinned(active.as_ref());
+        // Editor policy: pinned tabs are not closed by "close others".
         let before = self.tabs.len();
-        self.tabs.retain(|t| t.as_ref() == active.as_ref());
-        self.dirty.retain(|t| t.as_ref() == active.as_ref());
-        self.mru.retain(|t| t.as_ref() == active.as_ref());
-        self.mru = vec![active.clone()];
-        self.active = Some(active);
-        self.pinned_tab_count = if active_was_pinned { 1 } else { 0 };
-        self.preview_tab_id = if active_was_preview {
-            self.active.clone()
-        } else {
-            None
-        };
-        self.tabs.len() != before
+        let pinned_count = self.pinned_count();
+        let mut kept: Vec<Arc<str>> = Vec::new();
+        for (ix, id) in self.tabs.iter().enumerate() {
+            let is_pinned = ix < pinned_count;
+            if is_pinned || id.as_ref() == active.as_ref() {
+                kept.push(id.clone());
+            }
+        }
+        if kept.len() == before {
+            return false;
+        }
+
+        self.tabs = kept;
+        self.pinned_tab_count = self.pinned_count().min(self.tabs.len());
+
+        self.dirty
+            .retain(|t| self.tabs.iter().any(|k| k.as_ref() == t.as_ref()));
+        self.mru
+            .retain(|t| self.tabs.iter().any(|k| k.as_ref() == t.as_ref()));
+
+        self.active = Some(active.clone());
+        // Ensure active is first in MRU, even if it is pinned.
+        self.mru.retain(|t| t.as_ref() != active.as_ref());
+        self.mru.insert(0, active);
+
+        if let Some(preview) = self.preview_tab_id.clone()
+            && !self.tabs.iter().any(|t| t.as_ref() == preview.as_ref())
+        {
+            self.preview_tab_id = None;
+        }
+
+        true
     }
 
     pub fn close_left_of_active(&mut self) -> bool {
@@ -440,14 +459,20 @@ impl WorkspaceTabs {
             return false;
         }
 
-        let keep_from = index;
-        let removed: Vec<Arc<str>> = self.tabs[..keep_from].to_vec();
-        self.tabs = self.tabs[keep_from..].to_vec();
         let pinned_count = self.pinned_count();
-        let removed_pinned = keep_from.min(pinned_count);
-        self.pinned_tab_count = pinned_count
-            .saturating_sub(removed_pinned)
-            .min(self.tabs.len());
+        if index < pinned_count {
+            // Editor policy: pinned tabs are protected from bulk-close operations.
+            return false;
+        }
+        let keep_from = pinned_count;
+        if keep_from >= index {
+            return false;
+        }
+
+        let removed: Vec<Arc<str>> = self.tabs[keep_from..index].to_vec();
+        self.tabs
+            .splice(keep_from..index, std::iter::empty::<Arc<str>>());
+        self.pinned_tab_count = pinned_count.min(self.tabs.len());
 
         for r in &removed {
             self.dirty.remove(r);
@@ -485,10 +510,19 @@ impl WorkspaceTabs {
             return false;
         }
 
-        let keep_to = index + 1;
+        let pinned_count = self.pinned_count();
+        let keep_to = if index < pinned_count {
+            // Editor policy: keep pinned tabs.
+            pinned_count
+        } else {
+            index + 1
+        };
+        if keep_to >= self.tabs.len() {
+            return false;
+        }
         let removed: Vec<Arc<str>> = self.tabs[keep_to..].to_vec();
         self.tabs.truncate(keep_to);
-        self.pinned_tab_count = self.pinned_tab_count.min(self.tabs.len());
+        self.pinned_tab_count = pinned_count.min(self.tabs.len());
 
         for r in &removed {
             self.dirty.remove(r);
@@ -895,6 +929,34 @@ mod tests {
     }
 
     #[test]
+    fn close_others_keeps_pinned_tabs() {
+        let mut state = WorkspaceTabs::new().with_cycle_mode(TabCycleMode::Mru);
+        for id in tabs(&["p0", "a", "b", "c"]) {
+            state.open_and_activate(id);
+        }
+        state.set_pinned_count(2);
+        assert!(state.is_tab_pinned("p0"));
+        assert!(state.is_tab_pinned("a"));
+
+        assert!(state.activate(Arc::<str>::from("c")));
+        state.set_dirty(Arc::<str>::from("p0"), true);
+        state.set_dirty(Arc::<str>::from("a"), true);
+        state.set_dirty(Arc::<str>::from("c"), true);
+
+        assert!(state.apply_command(&CommandId::from(CMD_WORKSPACE_TAB_CLOSE_OTHERS)));
+        assert_eq!(
+            state.tabs().iter().map(|t| t.as_ref()).collect::<Vec<_>>(),
+            vec!["p0", "a", "c"]
+        );
+        assert_eq!(state.pinned_count(), 2);
+        assert_eq!(state.active().unwrap().as_ref(), "c");
+        assert!(state.is_dirty("p0"));
+        assert!(state.is_dirty("a"));
+        assert!(state.is_dirty("c"));
+        assert!(!state.is_dirty("b"));
+    }
+
+    #[test]
     fn close_left_of_active_removes_tabs_and_dirty_left_of_active() {
         let mut state = WorkspaceTabs::new().with_cycle_mode(TabCycleMode::Mru);
         for id in tabs(&["a", "b", "c", "d"]) {
@@ -922,6 +984,40 @@ mod tests {
     }
 
     #[test]
+    fn close_left_of_active_keeps_pinned_tabs() {
+        let mut state = WorkspaceTabs::new().with_cycle_mode(TabCycleMode::Mru);
+        for id in tabs(&["p0", "a", "b", "c"]) {
+            state.open_and_activate(id);
+        }
+        state.set_pinned_count(1);
+        assert!(state.activate(Arc::<str>::from("c")));
+
+        assert!(state.apply_command(&CommandId::from(CMD_WORKSPACE_TAB_CLOSE_LEFT)));
+        assert_eq!(
+            state.tabs().iter().map(|t| t.as_ref()).collect::<Vec<_>>(),
+            vec!["p0", "c"]
+        );
+        assert_eq!(state.pinned_count(), 1);
+        assert_eq!(state.active().unwrap().as_ref(), "c");
+    }
+
+    #[test]
+    fn close_left_of_active_is_noop_when_active_is_pinned() {
+        let mut state = WorkspaceTabs::new().with_cycle_mode(TabCycleMode::Mru);
+        for id in tabs(&["p0", "p1", "a"]) {
+            state.open_and_activate(id);
+        }
+        state.set_pinned_count(2);
+        assert!(state.activate(Arc::<str>::from("p0")));
+
+        assert!(!state.apply_command(&CommandId::from(CMD_WORKSPACE_TAB_CLOSE_LEFT)));
+        assert_eq!(
+            state.tabs().iter().map(|t| t.as_ref()).collect::<Vec<_>>(),
+            vec!["p0", "p1", "a"]
+        );
+    }
+
+    #[test]
     fn close_right_of_active_removes_tabs_and_dirty_right_of_active() {
         let mut state = WorkspaceTabs::new().with_cycle_mode(TabCycleMode::Mru);
         for id in tabs(&["a", "b", "c", "d"]) {
@@ -944,6 +1040,24 @@ mod tests {
         );
         assert!(state.is_dirty("b"));
         assert!(!state.is_dirty("d"));
+    }
+
+    #[test]
+    fn close_right_of_active_keeps_pinned_tabs() {
+        let mut state = WorkspaceTabs::new().with_cycle_mode(TabCycleMode::Mru);
+        for id in tabs(&["p0", "p1", "a", "b"]) {
+            state.open_and_activate(id);
+        }
+        state.set_pinned_count(2);
+        assert!(state.activate(Arc::<str>::from("p0")));
+
+        assert!(state.apply_command(&CommandId::from(CMD_WORKSPACE_TAB_CLOSE_RIGHT)));
+        assert_eq!(
+            state.tabs().iter().map(|t| t.as_ref()).collect::<Vec<_>>(),
+            vec!["p0", "p1"]
+        );
+        assert_eq!(state.pinned_count(), 2);
+        assert_eq!(state.active().unwrap().as_ref(), "p0");
     }
 
     #[test]

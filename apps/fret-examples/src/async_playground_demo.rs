@@ -77,7 +77,7 @@ fn install_tokio_spawner(app: &mut App) {
 }
 
 fn apply_theme(app: &mut App, dark: bool) {
-    shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+    shadcn::shadcn_themes::apply_shadcn_new_york(
         app,
         shadcn::shadcn_themes::ShadcnBaseColor::Zinc,
         if dark {
@@ -699,7 +699,7 @@ fn policy_editor(
         config.cancel_mode.open.clone(),
     )
     .a11y_label("Cancel mode")
-    .placeholder("Cancel mode")
+    .value(shadcn::SelectValue::new().placeholder("Cancel mode"))
     .items([
         shadcn::SelectItem::new("cancel", "Cancel inflight"),
         shadcn::SelectItem::new("keep", "Keep inflight"),

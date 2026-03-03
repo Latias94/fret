@@ -130,7 +130,7 @@ fn combobox_v4_parts_produce_listbox_semantics_when_open() {
     ui.set_window(window);
     let mut services = FakeServices;
 
-    shadcn_themes::apply_shadcn_new_york_v4(
+    shadcn_themes::apply_shadcn_new_york(
         &mut app,
         shadcn_themes::ShadcnBaseColor::Neutral,
         shadcn_themes::ShadcnColorScheme::Light,
@@ -229,7 +229,7 @@ fn combobox_chips_v4_parts_produce_listbox_semantics_when_open() {
     ui.set_window(window);
     let mut services = FakeServices;
 
-    shadcn_themes::apply_shadcn_new_york_v4(
+    shadcn_themes::apply_shadcn_new_york(
         &mut app,
         shadcn_themes::ShadcnBaseColor::Neutral,
         shadcn_themes::ShadcnColorScheme::Light,

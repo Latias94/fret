@@ -2367,7 +2367,7 @@ impl UiGalleryDriver {
             _ => return,
         };
 
-        shadcn::shadcn_themes::apply_shadcn_new_york_v4(app, base, scheme);
+        shadcn::shadcn_themes::apply_shadcn_new_york(app, base, scheme);
 
         // Inject Material 3 v30 motion/state/typography tokens on top of the active theme preset.
         //
@@ -2539,7 +2539,7 @@ pub fn build_app() -> App {
     caps.shell.incoming_open = true;
     app.set_global(caps);
     app.set_global(UiGalleryRecentItemsService::default());
-    shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+    shadcn::shadcn_themes::apply_shadcn_new_york(
         &mut app,
         shadcn::shadcn_themes::ShadcnBaseColor::Zinc,
         shadcn::shadcn_themes::ShadcnColorScheme::Light,

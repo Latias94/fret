@@ -161,15 +161,18 @@ impl EmojiConformanceDriver {
 
                 let controls = ui::h_flex(cx, |cx| {
                     [
-                        shadcn::Select::new(
-                            emoji_font_override.clone(),
-                            emoji_font_override_open.clone(),
-                        )
-                        .placeholder("Force emoji font (optional)")
-                        .items(items)
-                        .ui()
-                        .w_px(Px(280.0))
-                        .into_element(cx),
+	                        shadcn::Select::new(
+	                            emoji_font_override.clone(),
+	                            emoji_font_override_open.clone(),
+	                        )
+	                        .value(
+	                            shadcn::SelectValue::new()
+	                                .placeholder("Force emoji font (optional)"),
+	                        )
+	                        .items(items)
+	                        .ui()
+	                        .w_px(Px(280.0))
+	                        .into_element(cx),
                         shadcn::Button::new("Reset")
                             .variant(shadcn::ButtonVariant::Outline)
                             .on_click(CommandId::new(CMD_EMOJI_FONT_RESET))
@@ -398,7 +401,7 @@ impl WinitAppDriver for EmojiConformanceDriver {
 pub fn build_app() -> App {
     let mut app = App::new();
     app.set_global(PlatformCapabilities::default());
-    shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+    shadcn::shadcn_themes::apply_shadcn_new_york(
         &mut app,
         shadcn::shadcn_themes::ShadcnBaseColor::Zinc,
         shadcn::shadcn_themes::ShadcnColorScheme::Dark,

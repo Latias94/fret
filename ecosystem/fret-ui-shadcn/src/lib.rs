@@ -307,7 +307,7 @@ pub use select::{
     Select, SelectAlign, SelectContent, SelectEntry, SelectGroup, SelectItem, SelectItemIndicator,
     SelectItemText, SelectLabel, SelectScrollButtons, SelectScrollDownButton, SelectScrollUpButton,
     SelectSeparator, SelectSide, SelectTextRun, SelectTextTone, SelectTrigger,
-    SelectTriggerLabelPolicy, SelectTriggerSize, SelectValue, select,
+    SelectTriggerLabelPolicy, SelectTriggerSize, SelectValue,
 };
 pub use separator::{Separator, SeparatorOrientation, separator};
 pub use sheet::{

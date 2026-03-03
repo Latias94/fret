@@ -316,9 +316,12 @@ impl WorkspaceShellDemoDriver {
                                                     content,
                                                 )
                                                 .into_element(cx);
-                                                let debug_preview =
-                                                    env_bool("FRET_WORKSPACE_SHELL_DEBUG_PREVIEW", false)
-                                                        && pane.id.as_ref() == "pane-a";
+                                                let debug_preview = (env_bool(
+                                                    "FRET_WORKSPACE_SHELL_DEBUG_PREVIEW",
+                                                    false,
+                                                ) || env_bool("FRET_DIAG", false)
+                                                    || env_bool("FRET_DIAG_DIR", false))
+                                                    && pane.id.as_ref() == "pane-a";
                                                 let mut children = vec![strip];
                                                 if debug_preview {
                                                     let button = |cx: &mut fret_ui::ElementContext<'_, App>,
@@ -378,6 +381,18 @@ impl WorkspaceShellDemoDriver {
                                                     let commit = CommandId::new(Arc::<str>::from(
                                                         "workspace.tab.commit_preview",
                                                     ));
+                                                    let toggle_pin = CommandId::new(Arc::<str>::from(
+                                                        "workspace.tab.toggle_pin",
+                                                    ));
+                                                    let close_others = CommandId::new(Arc::<str>::from(
+                                                        "workspace.tab.close.others",
+                                                    ));
+                                                    let close_left = CommandId::new(Arc::<str>::from(
+                                                        "workspace.tab.close.left",
+                                                    ));
+                                                    let close_right = CommandId::new(Arc::<str>::from(
+                                                        "workspace.tab.close.right",
+                                                    ));
 
                                                     let bar = cx.flex(
                                                         FlexProps {
@@ -418,6 +433,30 @@ impl WorkspaceShellDemoDriver {
                                                                     "workspace-shell-pane-pane-a-debug-commit-preview",
                                                                     "Commit preview",
                                                                     commit.clone(),
+                                                                ),
+                                                                button(
+                                                                    cx,
+                                                                    "workspace-shell-pane-pane-a-debug-toggle-pin",
+                                                                    "Toggle pin",
+                                                                    toggle_pin.clone(),
+                                                                ),
+                                                                button(
+                                                                    cx,
+                                                                    "workspace-shell-pane-pane-a-debug-close-others",
+                                                                    "Close others",
+                                                                    close_others.clone(),
+                                                                ),
+                                                                button(
+                                                                    cx,
+                                                                    "workspace-shell-pane-pane-a-debug-close-left",
+                                                                    "Close left",
+                                                                    close_left.clone(),
+                                                                ),
+                                                                button(
+                                                                    cx,
+                                                                    "workspace-shell-pane-pane-a-debug-close-right",
+                                                                    "Close right",
+                                                                    close_right.clone(),
                                                                 ),
                                                             ]
                                                         },
@@ -495,15 +534,14 @@ impl WinitAppDriver for WorkspaceShellDemoDriver {
             state,
         } = context;
 
-        if state.ui.dispatch_command(app, services, &command) {
-            return;
-        }
-
         if command.as_str() == "window.close" {
             app.push_effect(Effect::Window(WindowRequest::Close(window)));
             return;
         }
 
+        // Important: for "app model" commands (e.g. workspace tab operations), we still want to
+        // apply the command even if some UI subtree reports it as handled (e.g. a context menu
+        // item dispatching the command while focused inside the menu overlay).
         let did_apply = app
             .models_mut()
             .update(
@@ -512,7 +550,9 @@ impl WinitAppDriver for WorkspaceShellDemoDriver {
             )
             .unwrap_or(false);
 
-        if did_apply {
+        let did_dispatch_ui = state.ui.dispatch_command(app, services, &command);
+
+        if did_apply || did_dispatch_ui {
             app.request_redraw(window);
         }
     }
