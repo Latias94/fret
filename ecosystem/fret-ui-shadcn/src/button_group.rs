@@ -227,7 +227,9 @@ impl ButtonGroupSeparator {
         Self {
             orientation: SeparatorOrientation::Vertical,
             thickness: None,
-            layout: LayoutRefinement::default(),
+            // Match shadcn/ui v4 `Separator` defaults (`shrink-0`) so the divider does not collapse
+            // under tight horizontal constraints.
+            layout: LayoutRefinement::default().flex_shrink_0(),
             test_id: None,
         }
     }
@@ -265,17 +267,7 @@ impl ButtonGroupSeparator {
                     .metric_by_key("component.separator.px")
                     .unwrap_or(Px(1.0))
             });
-            let mut layout_refinement = self.layout;
-            if layout_refinement.margin.is_none() {
-                // Match shadcn/ui `mx-px` / `my-px` defaults: shorten the line so it doesn't
-                // touch the outer rounded corners.
-                layout_refinement = match self.orientation {
-                    SeparatorOrientation::Horizontal => layout_refinement.mx_px(Px(1.0)),
-                    SeparatorOrientation::Vertical => layout_refinement.my_px(Px(1.0)),
-                };
-            }
-
-            let layout = decl_style::layout_style(theme, layout_refinement);
+            let layout = decl_style::layout_style(theme, self.layout);
 
             (bg, thickness, layout)
         };
@@ -951,7 +943,7 @@ mod tests {
     }
 
     #[test]
-    fn button_group_separator_defaults_to_px_margins_based_on_orientation() {
+    fn button_group_separator_defaults_to_zero_margins() {
         let window = AppWindowId::default();
         let mut app = App::new();
         apply_theme(&mut app);
@@ -963,8 +955,8 @@ mod tests {
         let ElementKind::Container(props) = &vertical.kind else {
             panic!("expected ButtonGroupSeparator to render a container");
         };
-        assert_eq!(props.layout.margin.top, MarginEdge::Px(Px(1.0)));
-        assert_eq!(props.layout.margin.bottom, MarginEdge::Px(Px(1.0)));
+        assert_eq!(props.layout.margin.top, MarginEdge::Px(Px(0.0)));
+        assert_eq!(props.layout.margin.bottom, MarginEdge::Px(Px(0.0)));
 
         let horizontal =
             fret_ui::elements::with_element_cx(&mut app, window, bounds_320x240(), "test", |cx| {
@@ -975,7 +967,7 @@ mod tests {
         let ElementKind::Container(props) = &horizontal.kind else {
             panic!("expected ButtonGroupSeparator(horizontal) to render a container");
         };
-        assert_eq!(props.layout.margin.left, MarginEdge::Px(Px(1.0)));
-        assert_eq!(props.layout.margin.right, MarginEdge::Px(Px(1.0)));
+        assert_eq!(props.layout.margin.left, MarginEdge::Px(Px(0.0)));
+        assert_eq!(props.layout.margin.right, MarginEdge::Px(Px(0.0)));
     }
 }
