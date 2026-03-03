@@ -809,6 +809,66 @@ fn surrounding_text_snapshot_is_cached_across_frames() {
     assert_eq!(t3.anchor, t4.anchor);
 }
 
+#[test]
+fn text_input_selection_highlight_uses_square_corners() {
+    let window = AppWindowId::default();
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(240.0), Px(80.0)));
+
+    let mut ui = UiTree::new();
+    ui.set_window(window);
+
+    let selection_color = fret_core::Color {
+        r: 0.05,
+        g: 0.95,
+        b: 0.25,
+        a: 0.85,
+    };
+    let chrome = TextInputStyle {
+        corner_radii: fret_core::Corners::all(Px(12.0)),
+        selection_color,
+        ..Default::default()
+    };
+
+    let mut input = TextInput::new().with_text("hello world");
+    input.selection_anchor = 0;
+    input.caret = 5;
+    input.set_chrome_style(chrome);
+
+    let root = ui.create_node(input);
+    ui.set_root(root);
+    ui.set_focus(Some(root));
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    let mut text = ImeTextService::default();
+
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let mut scene = fret_core::Scene::default();
+    ui.paint(&mut app, &mut text, root, bounds, &mut scene, 1.0);
+
+    let selection_quad = scene.ops().iter().find_map(|op| match op {
+        fret_core::SceneOp::Quad {
+            background,
+            corner_radii,
+            rect,
+            ..
+        } if *background == fret_core::Paint::Solid(selection_color).into()
+            && rect.size.width.0 > 0.0
+            && rect.size.height.0 > 0.0 =>
+        {
+            Some(*corner_radii)
+        }
+        _ => None,
+    });
+
+    assert_eq!(
+        selection_quad,
+        Some(fret_core::Corners::all(Px(0.0))),
+        "expected selection highlight to not inherit the input corner radius"
+    );
+}
+
 #[derive(Default)]
 struct ImeTextService {}
 

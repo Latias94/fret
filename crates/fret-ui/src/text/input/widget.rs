@@ -1635,7 +1635,7 @@ impl<H: UiHost> Widget<H> for TextInput {
                 background: Paint::Solid(selection_color).into(),
                 border: fret_core::geometry::Edges::all(Px(0.0)),
                 border_paint: Paint::Solid(Color::TRANSPARENT).into(),
-                corner_radii: self.chrome_style.corner_radii,
+                corner_radii: fret_core::geometry::Corners::all(Px(0.0)),
             });
         }
         let base_origin = fret_core::geometry::Point::new(
