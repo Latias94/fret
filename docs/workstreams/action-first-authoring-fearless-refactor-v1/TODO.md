@@ -46,7 +46,7 @@ ID format:
 
 - [x] AFA-actions-010 Define the `ActionId` type and metadata surface.
   - Evidence: `docs/adr/0307-action-registry-and-typed-action-dispatch-v1.md`
-  - Status (as of 2026-03-02):
+  - Status (as of 2026-03-03):
     - Implemented: `ActionId` portable identity (`crates/fret-runtime/src/action.rs`)
     - Implemented: action metadata aliases (`ActionMeta` / `ActionRegistry`) reuse the command registry surface (`crates/fret-runtime/src/action.rs`)
     - Implemented: command palette uses host command registry (`ecosystem/fret-ui-shadcn/src/command.rs`)
@@ -182,6 +182,8 @@ ID format:
       `apps/fret-cookbook/examples/hello.rs`
     - View runtime + action-first adoption landed for `overlay_basics`:
       `apps/fret-cookbook/examples/overlay_basics.rs`
+    - View runtime + action-first adoption landed for `hello_counter`:
+      `apps/fret-cookbook/examples/hello_counter.rs`
 - [x] AFA-adopt-041 Add at least one ui-gallery page/snippet using actions + view runtime.
   - Evidence:
     - `apps/fret-ui-gallery/src/ui/snippets/command/action_first_view.rs`

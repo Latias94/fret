@@ -24,6 +24,8 @@ Scope:
   - `apps/fretboard/src/scaffold/templates.rs` (`hello_template_main_rs`, `simple_todo_template_main_rs`, `todo_template_main_rs`)
 - Docs index points to action-first authoring as available now:
   - `docs/README.md`
+- Cookbook example migrated to view runtime + actions:
+  - `apps/fret-cookbook/examples/hello_counter.rs`
 
 ## Remaining legacy MVU usage (as of 2026-03-03)
 
@@ -34,7 +36,6 @@ These examples implement `MvuProgram` and/or use `MessageRouter`:
 - `apps/fret-cookbook/examples/async_inbox_basics.rs`
 - `apps/fret-cookbook/examples/canvas_pan_zoom_basics.rs`
 - `apps/fret-cookbook/examples/effects_layer_basics.rs`
-- `apps/fret-cookbook/examples/hello_counter.rs`
 - `apps/fret-cookbook/examples/icons_and_assets_basics.rs`
 - `apps/fret-cookbook/examples/markdown_and_code_basics.rs`
 - `apps/fret-cookbook/examples/simple_todo.rs`
@@ -102,4 +103,3 @@ Recommendation:
 2) For cookbook: migrate 1–2 of the most frequently copied MVU examples to view+actions (optional),
    and explicitly label the remaining MVU pages as legacy.
 3) For ui-gallery: keep legacy pages in a clearly named module/file to avoid “accidental reuse”.
-
