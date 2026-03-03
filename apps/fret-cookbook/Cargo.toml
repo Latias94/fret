@@ -28,14 +28,39 @@ fret-imui = { path = "../../ecosystem/fret-imui" }
 fret-genui-core = { path = "../../ecosystem/fret-genui-core" }
 fret-genui-shadcn = { path = "../../ecosystem/fret-genui-shadcn" }
 serde_json.workspace = true
-fret-markdown = { path = "../../ecosystem/fret-markdown", default-features = false, features = ["ui", "syntax-rust"] }
-fret-code-view = { path = "../../ecosystem/fret-code-view", default-features = false }
 fret-undo = { path = "../../ecosystem/fret-undo" }
-fret-canvas = { path = "../../ecosystem/fret-canvas", default-features = false, features = ["ui"] }
 fret-docking = { path = "../../ecosystem/fret-docking", default-features = false, features = ["ui"] }
 fret-bootstrap = { path = "../../ecosystem/fret-bootstrap", default-features = false, features = ["ui-app-driver", "diagnostics", "ui-assets", "icons-ui-semantic-lucide"] }
-fret-chart = { path = "../../ecosystem/fret-chart" }
-delinea = { path = "../../ecosystem/delinea" }
-fret-gizmo = { path = "../../ecosystem/fret-gizmo" }
 glam.workspace = true
 wgpu.workspace = true
+
+# Advanced/optional example dependencies (kept behind features to reduce cold compile time).
+fret-markdown = { path = "../../ecosystem/fret-markdown", default-features = false, features = ["ui", "syntax-rust"], optional = true }
+fret-code-view = { path = "../../ecosystem/fret-code-view", default-features = false, optional = true }
+fret-canvas = { path = "../../ecosystem/fret-canvas", default-features = false, features = ["ui"], optional = true }
+fret-chart = { path = "../../ecosystem/fret-chart", optional = true }
+delinea = { path = "../../ecosystem/delinea", optional = true }
+fret-gizmo = { path = "../../ecosystem/fret-gizmo", optional = true }
+
+[features]
+default = []
+cookbook-markdown = ["dep:fret-markdown", "dep:fret-code-view"]
+cookbook-canvas = ["dep:fret-canvas"]
+cookbook-chart = ["dep:fret-chart", "dep:delinea"]
+cookbook-gizmo = ["dep:fret-gizmo"]
+
+[[example]]
+name = "markdown_and_code_basics"
+required-features = ["cookbook-markdown"]
+
+[[example]]
+name = "canvas_pan_zoom_basics"
+required-features = ["cookbook-canvas"]
+
+[[example]]
+name = "chart_interactions_basics"
+required-features = ["cookbook-chart"]
+
+[[example]]
+name = "gizmo_basics"
+required-features = ["cookbook-gizmo"]
