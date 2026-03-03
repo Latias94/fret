@@ -10,7 +10,7 @@
 
 [CmdletBinding()]
 param(
-    [string] $OutDir = "target/fret-diag-action-first-authoring-v1",
+    [string] $OutDir = "target/fret-diag-afa-v1",
     [int] $TimeoutMs = 180000,
     [int] $PollMs = 50,
     [switch] $Release
@@ -61,26 +61,31 @@ try {
     $gates = @(
         @{
             Name = "cookbook-hello-click-count"
+            DirName = "g01-hello"
             ScriptPath = "tools/diag-scripts/cookbook/hello/cookbook-hello-click-count.json"
             ExampleName = "hello"
         },
         @{
             Name = "cookbook-commands-keymap-basics-shortcut-and-gating"
+            DirName = "g02-commands"
             ScriptPath = "tools/diag-scripts/cookbook/commands-keymap-basics/cookbook-commands-keymap-basics-shortcut-and-gating.json"
             ExampleName = "commands_keymap_basics"
         },
         @{
             Name = "cookbook-overlay-basics-modal-barrier-shortcut-gating"
+            DirName = "g03-overlays"
             ScriptPath = "tools/diag-scripts/cookbook/overlay-basics/cookbook-overlay-basics-modal-barrier-shortcut-gating.json"
             ExampleName = "overlay_basics"
         },
         @{
             Name = "cookbook-imui-action-basics-cross-frontend"
+            DirName = "g04-imui"
             ScriptPath = "tools/diag-scripts/cookbook/imui-action-basics/cookbook-imui-action-basics-cross-frontend.json"
             ExampleName = "imui_action_basics"
         },
         @{
             Name = "workspace-shell-demo-tab-close-button-command-dispatch-trace"
+            DirName = "g05-workspace"
             ScriptPath = "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-button-closes-tab-smoke.json"
             PackageName = "fret-demo"
             BinName = "workspace_shell_demo"
@@ -121,7 +126,8 @@ try {
             throw "Invalid gate entry (missing ExampleName or (PackageName + BinName)): $($gateName)"
         }
 
-        $scriptOutDir = Join-Path $runOutDir $gateName
+        # Keep directory names short to avoid Windows path-length issues when bundles are dumped.
+        $scriptOutDir = Join-Path $runOutDir $gate.DirName
         Invoke-Checked "fretboard diag run $gateName" $fretboardExe @(
             "diag",
             "run",

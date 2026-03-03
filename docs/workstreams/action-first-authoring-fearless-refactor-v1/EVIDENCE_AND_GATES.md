@@ -82,6 +82,7 @@ Keymap/availability explainability (diagnostics traces):
 - `crates/fret-runtime/src/shortcut_routing_diagnostics.rs` (`WindowShortcutRoutingDiagnosticsStore`)
 - `ecosystem/fret-bootstrap/src/ui_diagnostics/service.rs` (`record_shortcut_routing_trace_for_window`, `UiShortcutRoutingTraceEntryV1`)
 - `ecosystem/fret-bootstrap/src/ui_diagnostics/command_gating_trace.rs` (`debug.command_gating_trace[*]`)
+- `crates/fret-ui/src/tree/shortcuts.rs` (widget-scoped shortcut gating uses live UI-tree availability to avoid stale `command_disabled` after modal barrier transitions)
 
 Dispatch path explainability (diagnostics traces):
 
@@ -93,6 +94,7 @@ Dispatch path explainability (diagnostics traces):
 - `crates/fret-ui/src/tree/commands.rs` (records dispatch outcome + handled-by element)
 - `crates/fret-ui/src/tree/tests/command_dispatch_source_trace.rs` (unit tests: pending pointer source consumption + programmatic default)
 - `ecosystem/fret-bootstrap/src/ui_app_driver.rs` (records driver-handled dispatch outcomes to the same trace store, including handler scope classification)
+- `ecosystem/fret-bootstrap/src/ui_app_driver.rs` (flushes `Effect::Command` after script-injected input so scripted `wait_command_dispatch_trace` does not depend on runner effect timing)
 - `ecosystem/fret-bootstrap/src/ui_diagnostics/debug_snapshot_types.rs` (`debug.command_dispatch_trace[*]`)
 - `ecosystem/fret-bootstrap/src/ui_diagnostics/script_steps_wait.rs` (`handle_wait_command_dispatch_trace_step` gate runner used by scripted diagnostics)
 - `crates/fret-diag-protocol/src/lib.rs` (`UiActionStepV2::WaitCommandDispatchTrace`, `UiCommandDispatchTraceQueryV1`)
@@ -152,6 +154,10 @@ Notes:
 - The cross-frontend script gates both widget-handled and driver-handled dispatch trace entries:
   - `app.command_palette` must record `handled_by_driver=true` when the palette is opened via shortcut,
   - `cookbook.imui_action_basics.inc.v1` must record pointer-triggered widget handling across frontends.
+
+Gate runner:
+
+- `pwsh tools/diag_gate_action_first_authoring_v1.ps1` (default output: `target/fret-diag-afa-v1/`)
 
 ### 2.3 wasm smoke (build-only)
 
