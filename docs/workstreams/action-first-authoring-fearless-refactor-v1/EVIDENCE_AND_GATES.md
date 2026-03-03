@@ -15,7 +15,7 @@ small, deterministic gates (tests and scripted diagnostics), not just manual QA.
 - ADR (view runtime): `docs/adr/0308-view-authoring-runtime-and-hooks-v1.md`
 - Workstream: `docs/workstreams/action-first-authoring-fearless-refactor-v1/DESIGN.md`
 
-### Implementation anchors (as of 2026-03-02)
+### Implementation anchors (as of 2026-03-03)
 
 Action identity + typed unit actions:
 
@@ -64,6 +64,8 @@ Pointer-trigger authoring integration (v1 still dispatches through the command p
 - `apps/fret-cookbook/examples/text_input_basics.rs` (example adoption: view runtime + action-first submit/clear actions + command-backed Enter/Escape)
 - `apps/fret-cookbook/examples/imui_action_basics.rs` (example adoption: shared action handler across declarative + GenUI + imui)
 - `apps/fret-cookbook/examples/overlay_basics.rs` (example adoption: view runtime + modal barrier gate)
+- Cookbook migration inventory (tracks remaining legacy MVU usage):
+  - `docs/workstreams/action-first-authoring-fearless-refactor-v1/LEGACY_MVU_INVENTORY.md`
 
 Command palette integration (must dispatch through the same pipeline):
 
@@ -130,6 +132,13 @@ Current scripts (as of 2026-03-03):
 - `tools/diag-scripts/cookbook/hello/cookbook-hello-click-count.json`
 - `tools/diag-scripts/cookbook/hello/cookbook-hello-view-cache-reuse-and-handler-keepalive.json`
 - `tools/diag-scripts/cookbook/text-input-basics/cookbook-text-input-basics-submit-and-clear.json`
+- `tools/diag-scripts/cookbook/simple-todo/cookbook-simple-todo-smoke.json`
+- `tools/diag-scripts/cookbook/virtual-list-basics/cookbook-virtual-list-basics-smoke.json`
+- `tools/diag-scripts/cookbook/icons-and-assets-basics/cookbook-icons-and-assets-basics-smoke.json`
+- `tools/diag-scripts/cookbook/effects-layer-basics/cookbook-effects-layer-basics-screenshots.json`
+- `tools/diag-scripts/cookbook/markdown-and-code-basics/cookbook-markdown-and-code-basics-smoke.json`
+- `tools/diag-scripts/cookbook/canvas-pan-zoom-basics/cookbook-canvas-pan-zoom-basics-smoke.json`
+- `tools/diag-scripts/cookbook/undo-basics/cookbook-undo-basics-smoke.json`
 - `tools/diag-scripts/cookbook/imui-action-basics/cookbook-imui-action-basics-cross-frontend.json`
 - `tools/diag-scripts/cookbook/overlay-basics/cookbook-overlay-basics-modal-barrier-shortcut-gating.json`
 

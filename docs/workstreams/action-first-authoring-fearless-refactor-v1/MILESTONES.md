@@ -9,7 +9,7 @@ Related:
 
 ---
 
-## Current status snapshot (as of 2026-03-02)
+## Current status snapshot (as of 2026-03-03)
 
 - **M0**: Met (ADRs 0307/0308 are accepted; ADR index jump table is updated).
 - **M1**: Met (ActionId identity + typed unit actions + converged metadata via command registry; dispatch diagnostics include handler scope and driver-handled classification).
@@ -17,6 +17,7 @@ Related:
 - **M3**: Met (Declarative + imui + GenUI converge on the same ActionId dispatch and stable selectors; cross-frontend diag gate exists).
 - **M4**: Met (ui-gallery includes an action-first view runtime snippet; templates + docs converge on View+actions).
 - **M5**: Met (workspace shell demo tab strip uses action-first pointer dispatch hooks; scripted diag gate asserts pointer dispatch trace exists).
+- **M6**: In progress (cookbook is fully migrated to view runtime + typed actions; remaining work is quarantine/delete of legacy MVU surfaces once the broader in-tree adoption is sufficient).
 
 ---
 

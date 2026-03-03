@@ -188,6 +188,17 @@ ID format:
       `apps/fret-cookbook/examples/hello_counter.rs`
     - View runtime + action-first adoption landed for `text_input_basics`:
       `apps/fret-cookbook/examples/text_input_basics.rs`
+    - Additional cookbook migrations landed (now fully converged on view runtime + typed actions):
+      - `apps/fret-cookbook/examples/simple_todo.rs`
+      - `apps/fret-cookbook/examples/theme_switching_basics.rs`
+      - `apps/fret-cookbook/examples/undo_basics.rs`
+      - `apps/fret-cookbook/examples/async_inbox_basics.rs`
+      - `apps/fret-cookbook/examples/virtual_list_basics.rs`
+      - `apps/fret-cookbook/examples/icons_and_assets_basics.rs`
+      - `apps/fret-cookbook/examples/effects_layer_basics.rs`
+      - `apps/fret-cookbook/examples/markdown_and_code_basics.rs`
+      - `apps/fret-cookbook/examples/canvas_pan_zoom_basics.rs`
+    - Inventory: `docs/workstreams/action-first-authoring-fearless-refactor-v1/LEGACY_MVU_INVENTORY.md`
 - [x] AFA-adopt-041 Add at least one ui-gallery page/snippet using actions + view runtime.
   - Evidence:
     - `apps/fret-ui-gallery/src/ui/snippets/command/action_first_view.rs`
