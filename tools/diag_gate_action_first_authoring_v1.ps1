@@ -45,6 +45,11 @@ try {
 
     $gates = @(
         @{
+            Name = "cookbook-hello-click-count"
+            ScriptPath = "tools/diag-scripts/cookbook/hello/cookbook-hello-click-count.json"
+            ExampleName = "hello"
+        },
+        @{
             Name = "cookbook-commands-keymap-basics-shortcut-and-gating"
             ScriptPath = "tools/diag-scripts/cookbook/commands-keymap-basics/cookbook-commands-keymap-basics-shortcut-and-gating.json"
             ExampleName = "commands_keymap_basics"

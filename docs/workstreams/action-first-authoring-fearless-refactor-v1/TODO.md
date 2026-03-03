@@ -61,7 +61,7 @@ ID format:
     - `ecosystem/fret/src/actions.rs` (`ActionHandlerTable`, `build()` adapters)
 - [ ] AFA-actions-013 Integrate action availability queries with input dispatch v2 semantics.
   - Evidence: `docs/adr/0218-input-dispatch-phases-prevent-default-and-action-availability-v2.md`
-- [~] AFA-actions-014 Add diagnostics traces for:
+- [x] AFA-actions-014 Add diagnostics traces for:
   - keymap resolution → action id,
   - availability gating outcome,
   - dispatch path resolution.
@@ -77,8 +77,10 @@ ID format:
     - Gated (scripted): `crates/fret-diag-protocol/src/lib.rs` (`UiActionStepV2::WaitCommandDispatchTrace`) +
       `ecosystem/fret-bootstrap/src/ui_diagnostics/script_steps_wait.rs` (`handle_wait_command_dispatch_trace_step`) +
       `tools/diag-scripts/cookbook/imui-action-basics/cookbook-imui-action-basics-cross-frontend.json`
-    - Pending: a first-class pointer-triggered mapping from stable selectors (`test_id`) → dispatched `ActionId`
-      (today the dispatch trace records `GlobalElementId.0`, which can be correlated via element runtime/semantics snapshots).
+    - Implemented (pointer → stable selector): command dispatch trace entries can include `source_test_id`
+      for pointer-triggered dispatch (populated from the hit-test trace for injected steps).
+    - Gated (scripted): `tools/diag-scripts/cookbook/hello/cookbook-hello-click-count.json` asserts
+      `source_test_id == cookbook.hello.button` for `cookbook.hello.click.v1`.
 - [x] AFA-actions-015 Converge command palette/menu invocation with action dispatch.
   - Goal: palette/menu triggers and pointer triggers share the same action pipeline.
   - Evidence:

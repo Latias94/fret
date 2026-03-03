@@ -2521,8 +2521,23 @@ pub struct UiCommandDispatchTraceEntryV1 {
     pub source_kind: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub source_element: Option<u64>,
+    /// Best-effort stable selector attribution for pointer-triggered dispatch.
+    ///
+    /// This is intended to help scripted diagnostics answer:
+    /// “which `test_id` caused this command to dispatch?”
+    ///
+    /// Notes:
+    /// - This is a best-effort hint (additive). Tooling should fall back to correlating
+    ///   `source_element` with the semantics snapshot if needed.
+    /// - When available, this is usually populated from the hit-test trace recorded for the
+    ///   injected pointer step.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub source_test_id: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub handled_by_element: Option<u64>,
+    /// Best-effort stable selector attribution for the first widget that handled the command.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub handled_by_test_id: Option<String>,
     #[serde(default)]
     pub started_from_focus: bool,
     #[serde(default)]
@@ -2536,11 +2551,15 @@ pub struct UiCommandDispatchTraceQueryV1 {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub source_kind: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub source_test_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub handled: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub handled_by_scope: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub handled_by_driver: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub handled_by_test_id: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub started_from_focus: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
