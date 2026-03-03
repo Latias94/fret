@@ -24,6 +24,8 @@ Gates (examples):
   - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-overflow-close-does-not-activate.json`
 - cross-pane move to end:
   - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-cross-pane-move-to-end.json`
+- drag autoscroll:
+  - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tabstrip-drag-autoscroll-smoke.json`
 - preview (commit/replace):
   - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-preview-replaces-existing-smoke.json`
   - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-preview-commit-keeps-old-tab-smoke.json`

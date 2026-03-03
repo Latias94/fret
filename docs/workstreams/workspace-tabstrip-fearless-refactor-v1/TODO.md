@@ -70,6 +70,8 @@ ID format:
   - `ecosystem/fret-workspace/src/tab_strip/kernel.rs`
   - `ecosystem/fret-workspace/src/tab_strip/utils.rs`
   - `ecosystem/fret-workspace/src/tab_strip/overflow.rs`
+- [x] WTS-gates-023 Drag autoscroll gate exists:
+  - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tabstrip-drag-autoscroll-smoke.json`
 
 ## D. Editor Semantics (Policy Layer)
 

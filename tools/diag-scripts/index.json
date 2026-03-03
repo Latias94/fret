@@ -5019,6 +5019,30 @@
       "target_hints": []
     },
     {
+      "id": "workspace-shell-demo-tabstrip-drag-autoscroll-smoke",
+      "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tabstrip-drag-autoscroll-smoke.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "diag-hardening-smoke-workspace"
+      ],
+      "tags": [
+        "drag",
+        "gate",
+        "scroll",
+        "smoke",
+        "tabstrip",
+        "workspace"
+      ],
+      "target_hints": [
+        "Shrinks the window to force tab strip overflow.",
+        "Selects the first tab so diagnostics track its active scroll.",
+        "Drags the tab far to the right to trigger horizontal autoscroll.",
+        "Asserts tabstrip scroll_x increased."
+      ]
+    },
+    {
       "id": "workspace-shell-demo-tab-drag-to-split-right",
       "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-drag-to-split-right.json",
       "required_capabilities": [
