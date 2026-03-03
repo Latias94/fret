@@ -128,10 +128,15 @@ v1 viewer can be extremely small:
 DevTools GUI integration is a later milestone; CLI should still provide `diag query` affordances to
 locate and open the sidecar path.
 
+CLI affordance (v1):
+
+- `fretboard diag layout-sidecar <base_or_session_out_dir|bundle_dir|bundle.json|bundle.schema2.json> [--print] [--json] [--out <path>]`
+
 ## Next steps
 
 1. Add one deterministic layout gate script that:
    - asserts semantics bounds,
    - on failure, points to the sidecar file as additional evidence.
 2. Add a minimal viewer affordance (raw JSON ok) in tooling.
+   - Done (v1): `fretboard diag layout-sidecar ...`
 3. Add clipping/budget controls (`max_nodes`/`max_bytes`) once we have real-world size data.

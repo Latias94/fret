@@ -41,7 +41,8 @@ This TODO is organized by milestones (see `MILESTONES.md`). Keep tasks **small a
 - [x] Write down the layout sidecar v1 contract (file naming, JSON shape, clipping rules).
 - [x] Add a script-level “layout sidecar request” concept (design first, then implement).
 - [x] Tie a Taffy dump into bundle directories as a sidecar (native only, best-effort).
-- [ ] Add a viewer affordance to load/render the sidecar (ok to start as raw JSON view).
+- [x] Add a viewer affordance to load/render the sidecar (ok to start as raw JSON view).
+  - CLI: `fretboard diag layout-sidecar ...` (prints path by default; `--print` and `--json` supported)
 - [x] Add one deterministic layout gate script in `tools/diag-scripts/` that uses semantics bounds.
   - `tools/diag-scripts/ui-gallery/layout/ui-gallery-empty-outline-layout-sidecar.json`
 
