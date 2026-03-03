@@ -4760,6 +4760,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                                 grab_offset: pending.grab_offset,
                                                 start_tick: pending.start_tick,
                                                 tear_off_requested: false,
+                                                tear_off_requested_at_tick: None,
                                                 tear_off_oob_start_frame: None,
                                                 dock_previews_enabled: wants_dock_previews,
                                             },
@@ -4813,6 +4814,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                                 grab_offset: pending.grab_offset,
                                                 start_tick: pending.start_tick,
                                                 tear_off_requested: false,
+                                                tear_off_requested_at_tick: None,
                                                 tear_off_oob_start_frame: None,
                                                 dock_previews_enabled: wants_dock_previews,
                                             },
@@ -6518,28 +6520,87 @@ impl<H: UiHost> Widget<H> for DockSpace {
             }
         }
 
-        if let Some((position, dragging)) = update_drag
-            && let Some(drag) = cx.app.drag_mut(pointer_id)
-            && (drag.payload::<DockPanelDragPayload>().is_some()
-                || drag.payload::<DockTabsDragPayload>().is_some())
-        {
-            drag.position = position;
-            drag.dragging = dragging;
-            if let Some(payload) = drag.payload_mut::<DockPanelDragPayload>() {
-                if mark_drag_tear_off_requested {
-                    payload.tear_off_requested = true;
-                    payload.tear_off_oob_start_frame = None;
-                }
-                if let Some(next) = set_drag_tear_off_oob_start_frame {
-                    payload.tear_off_oob_start_frame = next;
-                }
-            } else if let Some(payload) = drag.payload_mut::<DockTabsDragPayload>() {
-                if mark_drag_tear_off_requested {
-                    payload.tear_off_requested = true;
-                    payload.tear_off_oob_start_frame = None;
-                }
-                if let Some(next) = set_drag_tear_off_oob_start_frame {
-                    payload.tear_off_oob_start_frame = next;
+        if let Some((position, dragging)) = update_drag {
+            #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+            enum TearOffRetryTarget {
+                Panel,
+                Tabs,
+            }
+
+            let tear_off_retry_target = (!mark_drag_tear_off_requested
+                && !window_bounds.contains(position))
+                .then(|| {
+                    let drag = cx.app.drag(pointer_id)?;
+                    if drag.source_window != self.window {
+                        return None;
+                    }
+                    if let Some(p) = drag.payload::<DockPanelDragPayload>() {
+                        let requested_at = p.tear_off_requested_at_tick?;
+                        if !p.tear_off_requested || now_tick.0.saturating_sub(requested_at.0) <= 600
+                        {
+                            return None;
+                        }
+                        let dock = cx.app.global::<DockManager>()?;
+                        dock.graph
+                            .find_panel_in_window(drag.source_window, &p.panel)
+                            .is_some()
+                            .then_some(TearOffRetryTarget::Panel)
+                    } else if let Some(p) = drag.payload::<DockTabsDragPayload>() {
+                        let requested_at = p.tear_off_requested_at_tick?;
+                        let panel = p.tabs.get(p.active).or(p.tabs.first())?;
+                        if !p.tear_off_requested || now_tick.0.saturating_sub(requested_at.0) <= 600
+                        {
+                            return None;
+                        }
+                        let dock = cx.app.global::<DockManager>()?;
+                        dock.graph
+                            .find_panel_in_window(drag.source_window, panel)
+                            .is_some()
+                            .then_some(TearOffRetryTarget::Tabs)
+                    } else {
+                        None
+                    }
+                })
+                .flatten();
+
+            if let Some(drag) = cx.app.drag_mut(pointer_id)
+                && (drag.payload::<DockPanelDragPayload>().is_some()
+                    || drag.payload::<DockTabsDragPayload>().is_some())
+            {
+                drag.position = position;
+                drag.dragging = dragging;
+                if let Some(payload) = drag.payload_mut::<DockPanelDragPayload>() {
+                    if tear_off_retry_target == Some(TearOffRetryTarget::Panel) {
+                        // Tear-off creation is mediated by a runtime-layer idempotency machine.
+                        // If a request is dropped (or fails) we can get stuck "oob, but already
+                        // requested" for the remainder of the drag session. Allow a bounded retry
+                        // while the drag remains outside the source window.
+                        payload.tear_off_requested = false;
+                        payload.tear_off_requested_at_tick = None;
+                        payload.tear_off_oob_start_frame = None;
+                    }
+                    if mark_drag_tear_off_requested {
+                        payload.tear_off_requested = true;
+                        payload.tear_off_requested_at_tick = Some(now_tick);
+                        payload.tear_off_oob_start_frame = None;
+                    }
+                    if let Some(next) = set_drag_tear_off_oob_start_frame {
+                        payload.tear_off_oob_start_frame = next;
+                    }
+                } else if let Some(payload) = drag.payload_mut::<DockTabsDragPayload>() {
+                    if tear_off_retry_target == Some(TearOffRetryTarget::Tabs) {
+                        payload.tear_off_requested = false;
+                        payload.tear_off_requested_at_tick = None;
+                        payload.tear_off_oob_start_frame = None;
+                    }
+                    if mark_drag_tear_off_requested {
+                        payload.tear_off_requested = true;
+                        payload.tear_off_requested_at_tick = Some(now_tick);
+                        payload.tear_off_oob_start_frame = None;
+                    }
+                    if let Some(next) = set_drag_tear_off_oob_start_frame {
+                        payload.tear_off_oob_start_frame = next;
+                    }
                 }
             }
         }
