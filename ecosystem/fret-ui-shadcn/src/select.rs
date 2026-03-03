@@ -3102,18 +3102,28 @@ fn select_impl<H: UiHost>(
                                 .lock()
                                 .unwrap_or_else(|e| e.into_inner());
 
-                             if is_open {
-                                 if !state.was_open {
-                                     state.was_open = true;
-                                     state.content.reset_on_open(initial_active_row);
-                                     state.trigger.reset_typeahead_buffer();
-                                     state.pending_active_align_top_scroll = !state.opened_by_pointer;
-                                 }
-                             } else {
-                                 state.was_open = false;
-                                 state.content.set_active_row(None);
-                                 state.pending_active_align_top_scroll = false;
-                                 state.last_item_aligned_layout = None;
+                            if is_open {
+                                if !state.was_open {
+                                    state.was_open = true;
+
+                                    // Radix Select does not pre-highlight an option when opened via
+                                    // pointer interaction; items become highlighted as the pointer
+                                    // moves (or via keyboard navigation).
+                                    let initial_active_row = if state.opened_by_pointer {
+                                        None
+                                    } else {
+                                        initial_active_row
+                                    };
+
+                                    state.content.reset_on_open(initial_active_row);
+                                    state.trigger.reset_typeahead_buffer();
+                                    state.pending_active_align_top_scroll = !state.opened_by_pointer;
+                                }
+                            } else {
+                                state.was_open = false;
+                                state.content.set_active_row(None);
+                                state.pending_active_align_top_scroll = false;
+                                state.last_item_aligned_layout = None;
                                 state.opened_by_pointer = false;
                                 state.opened_by_touch = false;
                             }
