@@ -92,6 +92,16 @@ fn wire_selection_commands<H: UiHost + 'static>(
     );
 }
 
+fn align_end(cx: &mut ElementContext<'_, App>, child: AnyElement) -> AnyElement {
+    stack::hstack(
+        cx,
+        stack::HStackProps::default()
+            .layout(LayoutRefinement::default().w_full())
+            .justify_end(),
+        move |_cx| [child],
+    )
+}
+
 fn legacy_demo_content(
     cx: &mut ElementContext<'_, App>,
     state: Model<fret_ui_headless::table::TableState>,
@@ -483,8 +493,9 @@ fn legacy_demo_content(
                                 "ui-gallery-data-table-row-actions-open-{}",
                                 row.id
                             )))
-                            .icon(fret_icons::IconId::new_static("lucide.ellipsis"))
+                            .icon(fret_icons::ids::ui::MORE_HORIZONTAL)
                             .into_element(cx);
+                        let trigger = align_end(cx, trigger);
 
                         shadcn::DropdownMenu::new(open)
                             .align(shadcn::DropdownMenuAlign::End)
