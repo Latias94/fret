@@ -22,6 +22,9 @@ workstream follows the repo’s ADR-driven approach.
   - create-time facets: `decorations/resizable/transparent`,
   - runtime actions: `set_visible/begin_drag/begin_resize` (best-effort; capability-gated),
   - diagnostics predicates for effective window style/material, with fail-fast capability inference.
+- MVP demo + scripted gate landed:
+  - Demo: `launcher_utility_window_demo` (frameless main window, drag region, resize handle, blink).
+  - Script: `tools/diag-scripts/launcher-utility-window-mvp.json`.
 - OS background materials are still “request + clamp + diagnostics” only (M3 is not implemented).
 
 ## Related ADRs (decision gates)
