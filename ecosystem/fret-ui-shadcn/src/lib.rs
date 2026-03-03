@@ -137,7 +137,7 @@ pub use avatar::{
     avatar_sized,
 };
 pub use badge::{
-    Badge, BadgeRender, BadgeVariant, BadgeVariants, badge, badge_variants, badgeVariants,
+    Badge, BadgeRender, BadgeVariant, BadgeVariants, badge, badge_variants,
 };
 pub use breadcrumb::primitives::{
     Breadcrumb as BreadcrumbRoot, BreadcrumbEllipsis, BreadcrumbItem as BreadcrumbItemPart,
@@ -146,11 +146,10 @@ pub use breadcrumb::primitives::{
 pub use breadcrumb::{Breadcrumb, BreadcrumbItem, BreadcrumbSeparator};
 pub use button::{
     Button, ButtonRender, ButtonSize, ButtonVariant, ButtonVariants, button_variants,
-    buttonVariants,
 };
 pub use button_group::{
     ButtonGroup, ButtonGroupItem, ButtonGroupOrientation, ButtonGroupSeparator, ButtonGroupText,
-    ButtonGroupVariants, button_group_variants, buttonGroupVariants,
+    ButtonGroupVariants, button_group_variants,
 };
 pub use calendar::{Calendar, CalendarCaptionLayout, CalendarDayButton};
 pub use calendar_hijri::CalendarHijri;
@@ -165,7 +164,7 @@ pub use carousel::{
     CarouselBreakpoint, CarouselContainScroll, CarouselContent, CarouselContext, CarouselEvent,
     CarouselEventCursor, CarouselItem, CarouselNext, CarouselOptions, CarouselOptionsPatch,
     CarouselOrientation, CarouselPrevious, CarouselSlidesInViewSnapshot, CarouselSlidesToScroll,
-    carousel_context, use_carousel, useCarousel,
+    carousel_context, use_carousel,
 };
 pub use chart::{
     ChartConfig, ChartConfigItem, ChartContainer, ChartContext, ChartLegend, ChartLegendContent,
@@ -226,7 +225,7 @@ pub use dialog::{
     Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader,
     DialogOverlay, DialogPortal, DialogTitle, DialogTrigger,
 };
-pub use direction::{DirectionProvider, LayoutDirection, use_direction, useDirection};
+pub use direction::{DirectionProvider, LayoutDirection, use_direction};
 pub use drawer::{
     Drawer, DrawerClose, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader,
     DrawerOverlay, DrawerPortal, DrawerSide, DrawerSnapPoint, DrawerTitle, DrawerTrigger, drawer,
@@ -282,7 +281,7 @@ pub use navigation_menu::{
     NavigationMenu, NavigationMenuContent, NavigationMenuIndicator, NavigationMenuItem,
     NavigationMenuLink, NavigationMenuList, NavigationMenuRoot, NavigationMenuTrigger,
     NavigationMenuTriggerStyle, NavigationMenuViewport, navigation_menu, navigation_menu_list,
-    navigation_menu_trigger_style, navigation_menu_uncontrolled, navigationMenuTriggerStyle,
+    navigation_menu_trigger_style, navigation_menu_uncontrolled,
 };
 pub use pagination::{
     Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationLink,
@@ -321,7 +320,7 @@ pub use sidebar::{
     SidebarMenuAction, SidebarMenuBadge, SidebarMenuButton, SidebarMenuButtonVariant,
     SidebarMenuItem, SidebarMenuSkeleton, SidebarMenuSub, SidebarMenuSubButton,
     SidebarMenuSubButtonSize, SidebarMenuSubItem, SidebarProvider, SidebarRail, SidebarSeparator,
-    SidebarSide, SidebarTrigger, SidebarVariant, use_sidebar, useSidebar,
+    SidebarSide, SidebarTrigger, SidebarVariant, use_sidebar,
 };
 pub use skeleton::Skeleton;
 pub use slider::{Slider, slider};
@@ -337,12 +336,12 @@ pub use table::{
 };
 pub use tabs::{
     Tabs, TabsContent, TabsItem, TabsList, TabsListVariant, TabsListVariants, TabsRoot,
-    TabsTrigger, tabs, tabs_list_variants, tabs_uncontrolled, tabsListVariants,
+    TabsTrigger, tabs, tabs_list_variants, tabs_uncontrolled,
 };
 pub use textarea::{Textarea, textarea};
 pub use toggle::{
     Toggle, ToggleRoot, ToggleSize, ToggleVariant, ToggleVariants, toggle, toggle_uncontrolled,
-    toggle_variants, toggleVariants,
+    toggle_variants,
 };
 pub use toggle_group::{
     ToggleGroup, ToggleGroupItem, ToggleGroupKind, toggle_group_multiple,

@@ -64,12 +64,6 @@ pub fn badge_variants(theme: &ThemeSnapshot, variant: BadgeVariant) -> BadgeVari
     BadgeVariants { chrome, layout }
 }
 
-/// Upstream shadcn/ui compat alias for copy/paste parity.
-#[allow(non_snake_case)]
-pub fn badgeVariants(theme: &ThemeSnapshot, variant: BadgeVariant) -> BadgeVariants {
-    badge_variants(theme, variant)
-}
-
 #[derive(Debug, Clone)]
 pub enum BadgeRender {
     Link {

@@ -235,12 +235,6 @@ pub fn navigation_menu_trigger_style(_theme: &ThemeSnapshot) -> NavigationMenuTr
     }
 }
 
-/// Upstream shadcn/ui compat alias for copy/paste parity.
-#[allow(non_snake_case)]
-pub fn navigationMenuTriggerStyle(theme: &ThemeSnapshot) -> NavigationMenuTriggerStyle {
-    navigation_menu_trigger_style(theme)
-}
-
 fn nav_menu_viewport_bg(theme: &ThemeSnapshot) -> Color {
     theme.color_token("popover")
 }
