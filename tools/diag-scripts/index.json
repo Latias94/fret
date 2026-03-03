@@ -721,6 +721,29 @@
       ]
     },
     {
+      "id": "docking-arbitration-demo-multiwindow-tearoff-tabs-group-two-tabs",
+      "path": "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-tearoff-tabs-group-two-tabs.json",
+      "required_capabilities": [
+        "diag.multi_window",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "docking-arbitration"
+      ],
+      "tags": [
+        "docking",
+        "drag",
+        "gate",
+        "multiwindow",
+        "tearoff",
+        "tabbar"
+      ],
+      "target_hints": [
+        "Merges two viewports into one tab strip, then starts a tabs-group drag from empty tab-bar space and tears off out-of-bounds.",
+        "Asserts the whole tab stack moves into a new OS window (ImGui-style undock-whole-node gesture)."
+      ]
+    },
+    {
       "id": "docking-arbitration-demo-multiwindow-drag-tab-back-to-main",
       "path": "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-drag-tab-back-to-main.json",
       "required_capabilities": [
