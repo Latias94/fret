@@ -103,7 +103,9 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
         .into_element_parts(cx, |_cx| {
             vec![
                 shadcn::ComboboxPart::from(shadcn::ComboboxTrigger::new().width_px(Px(320.0))),
-                shadcn::ComboboxPart::from(shadcn::ComboboxInput::new().placeholder("Pick an item")),
+                shadcn::ComboboxPart::from(
+                    shadcn::ComboboxInput::new().placeholder("Pick an item"),
+                ),
             ]
         });
 

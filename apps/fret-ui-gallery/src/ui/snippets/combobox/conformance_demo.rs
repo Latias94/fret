@@ -30,7 +30,9 @@ pub fn render(
         .into_element_parts(cx, |_cx| {
             vec![
                 shadcn::ComboboxPart::from(shadcn::ComboboxTrigger::new().width_px(Px(260.0))),
-                shadcn::ComboboxPart::from(shadcn::ComboboxInput::new().placeholder("Select a fruit")),
+                shadcn::ComboboxPart::from(
+                    shadcn::ComboboxInput::new().placeholder("Select a fruit"),
+                ),
             ]
         })
 }

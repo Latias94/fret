@@ -110,7 +110,12 @@ pub(in crate::ui) fn preview_material3_gallery(
         material3_text_field_error,
     );
 
-    render_material3_demo_page(cx, Some(MATERIAL3_INTRO), demo, snippets::material3::gallery::SOURCE)
+    render_material3_demo_page(
+        cx,
+        Some(MATERIAL3_INTRO),
+        demo,
+        snippets::material3::gallery::SOURCE,
+    )
 }
 
 pub(in crate::ui) fn preview_material3_state_matrix(
@@ -217,7 +222,12 @@ pub(in crate::ui) fn preview_material3_switch(
 ) -> Vec<AnyElement> {
     let demo = snippets::material3::switch::render(cx, selected);
 
-    render_material3_demo_page(cx, Some(MATERIAL3_INTRO), demo, snippets::material3::switch::SOURCE)
+    render_material3_demo_page(
+        cx,
+        Some(MATERIAL3_INTRO),
+        demo,
+        snippets::material3::switch::SOURCE,
+    )
 }
 
 pub(in crate::ui) fn preview_material3_slider(
@@ -226,7 +236,12 @@ pub(in crate::ui) fn preview_material3_slider(
 ) -> Vec<AnyElement> {
     let demo = snippets::material3::slider::render(cx, value);
 
-    render_material3_demo_page(cx, Some(MATERIAL3_INTRO), demo, snippets::material3::slider::SOURCE)
+    render_material3_demo_page(
+        cx,
+        Some(MATERIAL3_INTRO),
+        demo,
+        snippets::material3::slider::SOURCE,
+    )
 }
 
 pub(in crate::ui) fn preview_material3_radio(
@@ -235,13 +250,23 @@ pub(in crate::ui) fn preview_material3_radio(
 ) -> Vec<AnyElement> {
     let demo = snippets::material3::radio::render(cx, group_value);
 
-    render_material3_demo_page(cx, Some(MATERIAL3_INTRO), demo, snippets::material3::radio::SOURCE)
+    render_material3_demo_page(
+        cx,
+        Some(MATERIAL3_INTRO),
+        demo,
+        snippets::material3::radio::SOURCE,
+    )
 }
 
 pub(in crate::ui) fn preview_material3_badge(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     let demo = snippets::material3::badge::render(cx);
 
-    render_material3_demo_page(cx, Some(MATERIAL3_INTRO), demo, snippets::material3::badge::SOURCE)
+    render_material3_demo_page(
+        cx,
+        Some(MATERIAL3_INTRO),
+        demo,
+        snippets::material3::badge::SOURCE,
+    )
 }
 
 pub(in crate::ui) fn preview_material3_top_app_bar(
@@ -318,7 +343,12 @@ pub(in crate::ui) fn preview_material3_segmented_button(
 pub(in crate::ui) fn preview_material3_select(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     let demo = snippets::material3::select::render(cx);
 
-    render_material3_demo_page(cx, Some(MATERIAL3_INTRO), demo, snippets::material3::select::SOURCE)
+    render_material3_demo_page(
+        cx,
+        Some(MATERIAL3_INTRO),
+        demo,
+        snippets::material3::select::SOURCE,
+    )
 }
 
 pub(in crate::ui) fn preview_material3_autocomplete(
@@ -360,7 +390,12 @@ pub(in crate::ui) fn preview_material3_tabs(
 ) -> Vec<AnyElement> {
     let demo = snippets::material3::tabs::render(cx, value);
 
-    render_material3_demo_page(cx, Some(MATERIAL3_INTRO), demo, snippets::material3::tabs::SOURCE)
+    render_material3_demo_page(
+        cx,
+        Some(MATERIAL3_INTRO),
+        demo,
+        snippets::material3::tabs::SOURCE,
+    )
 }
 
 pub(in crate::ui) fn preview_material3_list(
@@ -369,7 +404,12 @@ pub(in crate::ui) fn preview_material3_list(
 ) -> Vec<AnyElement> {
     let demo = snippets::material3::list::render(cx, value);
 
-    render_material3_demo_page(cx, Some(MATERIAL3_INTRO), demo, snippets::material3::list::SOURCE)
+    render_material3_demo_page(
+        cx,
+        Some(MATERIAL3_INTRO),
+        demo,
+        snippets::material3::list::SOURCE,
+    )
 }
 
 pub(in crate::ui) fn preview_material3_navigation_bar(
@@ -436,7 +476,12 @@ pub(in crate::ui) fn preview_material3_dialog(
 ) -> Vec<AnyElement> {
     let demo = snippets::material3::dialog::render(cx, open, last_action);
 
-    render_material3_demo_page(cx, Some(MATERIAL3_INTRO), demo, snippets::material3::dialog::SOURCE)
+    render_material3_demo_page(
+        cx,
+        Some(MATERIAL3_INTRO),
+        demo,
+        snippets::material3::dialog::SOURCE,
+    )
 }
 
 pub(in crate::ui) fn preview_material3_menu(
@@ -446,7 +491,12 @@ pub(in crate::ui) fn preview_material3_menu(
 ) -> Vec<AnyElement> {
     let demo = snippets::material3::menu::render(cx, open, last_action);
 
-    render_material3_demo_page(cx, Some(MATERIAL3_INTRO), demo, snippets::material3::menu::SOURCE)
+    render_material3_demo_page(
+        cx,
+        Some(MATERIAL3_INTRO),
+        demo,
+        snippets::material3::menu::SOURCE,
+    )
 }
 
 pub(in crate::ui) fn preview_material3_snackbar(

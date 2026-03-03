@@ -136,9 +136,7 @@ pub use avatar::{
     Avatar, AvatarBadge, AvatarFallback, AvatarGroup, AvatarGroupCount, AvatarImage, AvatarSize,
     avatar_sized,
 };
-pub use badge::{
-    Badge, BadgeRender, BadgeVariant, BadgeVariants, badge, badge_variants,
-};
+pub use badge::{Badge, BadgeRender, BadgeVariant, BadgeVariants, badge, badge_variants};
 pub use breadcrumb::primitives::{
     Breadcrumb as BreadcrumbRoot, BreadcrumbEllipsis, BreadcrumbItem as BreadcrumbItemPart,
     BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator as BreadcrumbSeparatorPart,
