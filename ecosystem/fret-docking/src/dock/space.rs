@@ -3959,6 +3959,18 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                             },
                                         )
                                 {
+                                    // If the user (or a diagnostics script) begins a divider drag
+                                    // while split fractions are mid-motion, snap the layout to the
+                                    // current graph immediately.
+                                    //
+                                    // This avoids the "single-frame drag" edge case in scripted
+                                    // playback (down/move/up in one tick): the drag can complete
+                                    // before the next layout pass sees `divider_drag=Some(...)`,
+                                    // which would otherwise allow split-fraction motion to animate
+                                    // the freshly-updated fractions and make scripts observe
+                                    // stale panel bounds.
+                                    self.split_fraction_motion.clear();
+
                                     let min_px = Self::split_child_min_px(
                                         docking_policy.as_deref(),
                                         dock,

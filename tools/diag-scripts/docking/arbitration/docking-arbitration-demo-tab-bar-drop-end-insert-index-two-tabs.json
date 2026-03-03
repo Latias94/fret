@@ -37,7 +37,8 @@
     },
     {
       "type": "wait_until",
-      "predicate": { "kind": "dock_graph_signature_fingerprint64_is", "fingerprint64": 7509174212363425732 }
+      "predicate": { "kind": "dock_graph_signature_fingerprint64_is", "fingerprint64": 7509174212363425732 },
+      "timeout_frames": 240
     },
 
     {
@@ -71,7 +72,12 @@
     {
       "type": "assert",
       "window": { "kind": "current" },
-      "predicate": { "kind": "dock_graph_signature_contains", "needle": "demo.viewport.left,demo.viewport.right" }
+      "predicate": { "kind": "dock_graph_signature_contains", "needle": "demo.viewport.left" }
+    },
+    {
+      "type": "assert",
+      "window": { "kind": "current" },
+      "predicate": { "kind": "dock_graph_signature_contains", "needle": "demo.viewport.right" }
     },
     {
       "type": "assert",

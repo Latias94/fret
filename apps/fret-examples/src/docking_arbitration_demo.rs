@@ -658,8 +658,36 @@ impl<H: fret_ui::UiHost> Widget<H> for DockingArbitrationHarnessRoot {
                             &[],
                         );
                         if *axis == desired_axis {
-                            if let Some(handle) = computed.handle_hit_rects.first().copied() {
-                                return Some(handle);
+                            // Prefer deriving a stable "handle center" from panel rect adjacency
+                            // instead of relying on hit-rect specifics. This keeps the diagnostics
+                            // anchor aligned with the visible split boundary (and therefore
+                            // reliably draggable in scripts), even if handle hit thickness / gap
+                            // policies evolve.
+                            if computed.panel_rects.len() >= 2 {
+                                let a = computed.panel_rects[0];
+                                let b = computed.panel_rects[1];
+                                let ax1 = a.origin.x.0 + a.size.width.0;
+                                let bx0 = b.origin.x.0;
+                                let cx = (ax1 + bx0) * 0.5;
+
+                                let ay0 = a.origin.y.0;
+                                let ay1 = a.origin.y.0 + a.size.height.0;
+                                let by0 = b.origin.y.0;
+                                let by1 = b.origin.y.0 + b.size.height.0;
+                                let y0 = ay0.max(by0);
+                                let y1 = ay1.min(by1);
+                                let cy = if y1 > y0 {
+                                    (y0 + y1) * 0.5
+                                } else {
+                                    (ay0 + ay1) * 0.5
+                                };
+
+                                if cx.is_finite() && cy.is_finite() {
+                                    return Some(Rect::new(
+                                        Point::new(Px(cx), Px(cy)),
+                                        Size::new(Px(0.0), Px(0.0)),
+                                    ));
+                                }
                             }
                         }
                         for (&child, &rect) in children.iter().zip(computed.panel_rects.iter()) {
