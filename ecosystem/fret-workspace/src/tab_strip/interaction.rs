@@ -12,6 +12,7 @@ use fret_ui_kit::dnd as ui_dnd;
 use crate::tab_drag::DRAG_KIND_WORKSPACE_TAB;
 
 use super::drag_state::WorkspaceTabStripDragState;
+use super::consts::{TAB_CHROME_PAD_RIGHT, TAB_CLOSE_SIZE};
 use super::intent::{WorkspaceTabStripIntent, dispatch_intent};
 use super::kernel::WorkspaceTabStripDropTarget;
 
@@ -39,8 +40,8 @@ pub(super) fn tab_pointer_down_handler(
                 // targets the nested close button pressable, leading to accidental activation or
                 // DnD capture when the intent is "close without activation".
                 let bounds = host.bounds();
-                let close_size = Px(18.0);
-                let padding_right = Px(6.0);
+                let close_size = TAB_CLOSE_SIZE;
+                let padding_right = TAB_CHROME_PAD_RIGHT;
                 let close_x0 = Px(bounds.size.width.0 - padding_right.0 - close_size.0);
                 let close_y0 = Px((bounds.size.height.0 - close_size.0) * 0.5);
                 let p = down.position_local;

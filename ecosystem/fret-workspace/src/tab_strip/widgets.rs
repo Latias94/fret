@@ -14,6 +14,7 @@ use fret_ui::scroll::ScrollHandle;
 use fret_ui::{ElementContext, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 
+use super::consts::TAB_CLOSE_SIZE;
 use super::layouts::{centered_row, fill_layout, fixed_square_layout};
 
 pub(super) fn tab_close_button<H: UiHost>(
@@ -27,7 +28,7 @@ pub(super) fn tab_close_button<H: UiHost>(
 ) -> AnyElement {
     cx.pressable(
         PressableProps {
-            layout: fixed_square_layout(Px(18.0)),
+            layout: fixed_square_layout(TAB_CLOSE_SIZE),
             focusable: false,
             a11y: PressableA11y {
                 role: Some(SemanticsRole::Button),
@@ -80,7 +81,7 @@ pub(super) fn overflow_menu_close_slot<H: UiHost>(
 ) -> AnyElement {
     let mut el = cx.container(
         ContainerProps {
-            layout: fixed_square_layout(Px(18.0)),
+            layout: fixed_square_layout(TAB_CLOSE_SIZE),
             corner_radii: Corners::all(Px(4.0)),
             ..Default::default()
         },

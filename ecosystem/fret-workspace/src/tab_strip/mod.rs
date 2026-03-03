@@ -39,6 +39,7 @@ use crate::tab_drag::{
 };
 
 mod drag_state;
+mod consts;
 mod geometry;
 mod intent;
 mod interaction;
@@ -69,6 +70,7 @@ use layouts::{
     fill_grow_layout, fill_layout, row_layout, tab_list_semantics_layout,
     tab_strip_scroll_content_layout,
 };
+use consts::TAB_CHROME_PAD_RIGHT;
 use state::{WorkspaceTabStripState, get_focus_restore_model, get_reveal_hint_model};
 use theme::WorkspaceTabStripTheme;
 use utils::{
@@ -1434,7 +1436,7 @@ impl WorkspaceTabStrip {
                                                                         },
                                                                         padding: Edges {
                                                                             left: Px(10.0),
-                                                                            right: Px(6.0),
+                                                                            right: TAB_CHROME_PAD_RIGHT,
                                                                             top: Px(4.0),
                                                                             bottom: Px(4.0),
                                                                         }
