@@ -11,7 +11,7 @@ This workstream is gated by a small set of unit tests and `fretboard diag` scrip
 
 Suite:
 
-- `cargo run -p fretboard -- diag suite workspace-shell-demo --launch -- cargo run -p fret-examples --bin workspace_shell_demo --release`
+- `cargo run -p fretboard -- diag suite workspace-shell-demo --launch -- cargo run -p fret-demo --bin workspace_shell_demo --release`
 
 Gates (examples):
 
@@ -24,9 +24,24 @@ Gates (examples):
   - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-overflow-close-does-not-activate.json`
 - cross-pane move to end:
   - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-cross-pane-move-to-end.json`
+- drag-to-split (pane edge preview):
+  - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-drag-to-split-right.json`
+  - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-drag-to-split-right-drop-preview-screenshot.json`
+- drag autoscroll:
+  - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tabstrip-drag-autoscroll-smoke.json`
 - preview (commit/replace):
   - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-preview-replaces-existing-smoke.json`
   - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-preview-commit-keeps-old-tab-smoke.json`
+- dirty close (policy hook):
+  - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-dirty-is-blocked-smoke.json`
+  - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-dirty-shows-prompt-and-discard-closes-smoke.json`
+- focus restore on close:
+  - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tabstrip-close-keeps-focus-smoke.json`
+- keyboard roving + Escape:
+  - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tabstrip-keyboard-roving-smoke.json`
+  - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tabstrip-keyboard-reveal-hidden-smoke.json`
+  - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tabstrip-keyboard-reveal-home-restores-scroll-smoke.json`
+  - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tabstrip-escape-restores-content-focus-smoke.json`
 - pinned (anchors + cross-boundary discipline):
   - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-pinned-boundary-toggle-smoke.json`
   - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-pinned-cross-boundary-drop-does-not-pin-smoke.json`
@@ -34,7 +49,18 @@ Gates (examples):
 
 Harness:
 
-- `apps/fret-examples/src/workspace_shell_demo.rs`
+- Demo entry: `apps/fret-demo/src/bin/workspace_shell_demo.rs`
+- UI implementation: `apps/fret-examples/src/workspace_shell_demo.rs`
+- Runner resize convergence: `crates/fret-launch/src/runner/desktop/runner/effects.rs`
+
+Stability notes (important for CI + scripted diagnostics):
+
+- Some platforms may apply `set_window_inner_size` without emitting a resize event. Tool-launched
+  scripts rely on the runner queuing the applied surface size so the next redraw reconfigures
+  the surface and updates window metrics.
+- Scripts should not assume the active tab is visible in a horizontally scrollable strip.
+  Prefer activating a known in-view tab (or otherwise ensuring visibility) before clicking
+  tab-scoped affordances like close buttons.
 
 ## Evidence bundles (fill in after running locally)
 

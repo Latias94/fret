@@ -127,6 +127,7 @@ pub(super) fn handle_internal_drag_region<H: UiHost>(
     let internal = action::InternalDragCx {
         pointer_id: e.pointer_id,
         position: e.position,
+        position_window: cx.event_window_position,
         tick_id: cx.app.tick_id(),
         kind: e.kind,
         modifiers: e.modifiers,

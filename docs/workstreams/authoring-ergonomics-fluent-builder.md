@@ -130,6 +130,20 @@ Fret today:
   gap/alignment shorthands), and can be re-exported by shadcn prelude for app code.
 - `fret-ui-kit::ui::stack` exists for overlay/layer composition (patchable builder).
 
+### 4.5 “Late landing” decorators gap (semantics / diagnostics)
+
+gpui-component style chains let authors keep refining until the end.
+
+Fret today:
+
+- Many callsites still need to call `.into_element(cx)` early just to attach a `test_id` or a small
+  semantics decorator (e.g. role), which adds noise in small demos and in component recipe glue.
+
+v1 direction:
+
+- Prefer a builder-level decorator surface (ecosystem-only) that defers stamping until the terminal,
+  while keeping selectors deterministic and data-oriented for future frontends.
+
 ---
 
 ## 5. Suggested v1 Direction (Aligned with Fret Design)
@@ -171,6 +185,8 @@ Execute the TODO tracker in small, reviewable slices:
 
 - Start with **helpers** (edges, debug helpers, per-corner radii).
 - Then expand the **layout constructors** surface (e.g. `ui::stack`, `ui::grid`, plus more shorthands).
+- Add **late-landing decorators** (`test_id`, minimal semantics) on the fluent path to reduce “decorate-only”
+  `.into_element(cx)` calls in cookbook-style code.
 - Keep `docs/shadcn-declarative-progress.md` updated when the authoring surface changes.
 
 ---

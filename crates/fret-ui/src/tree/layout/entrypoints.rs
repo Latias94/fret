@@ -1347,9 +1347,29 @@ impl<H: UiHost> UiTree<H> {
                 pass_kind,
                 viewport_cursor,
             );
-            if let Some(node) = self.nodes.get_mut(root) {
+            let layout_transition = self.nodes.get_mut(root).map(|node| {
                 node.view_cache_needs_rerender = true;
+                let prev = node.invalidation;
+                let layout_before = node.invalidation.layout;
                 node.invalidation.layout = false;
+                let next = node.invalidation;
+                let layout_after = node.invalidation.layout;
+                (prev, next, layout_before, layout_after)
+            });
+            if let Some((prev, next, layout_before, layout_after)) = layout_transition
+                && layout_before != layout_after
+            {
+                record_layout_invalidation_transition(
+                    &mut self.layout_invalidations_count,
+                    layout_before,
+                    layout_after,
+                );
+                self.note_layout_invalidation_transition_for_subtree_aggregation(
+                    root,
+                    layout_before,
+                    layout_after,
+                );
+                self.update_invalidation_counters(prev, next);
             }
         }
     }

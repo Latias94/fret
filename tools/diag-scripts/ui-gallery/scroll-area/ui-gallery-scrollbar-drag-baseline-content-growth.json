@@ -1,0 +1,155 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "ui-gallery-scrollbar-drag-baseline-content-growth",
+    "required_capabilities": ["diag.script_v2"],
+    "tags": ["scroll", "scrollbar", "ui_gallery", "regression_pack"]
+  },
+  "steps": [
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+      },
+      "timeout_frames": 600
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
+    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
+    { "type": "press_key", "key": "backspace" },
+    { "type": "type_text", "text": "scroll area" },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-scroll-area" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-nav-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-nav-scroll-area" },
+      "delta_y": -240.0,
+      "timeout_frames": 600
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-scroll-area" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-page-scroll-area" }
+      },
+      "timeout_frames": 600
+    },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-scroll-area-drag-baseline-arm-grow"
+        }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-scroll-area-drag-baseline-arm-grow"
+      },
+      "delta_y": -240.0,
+      "timeout_frames": 600,
+      "require_fully_within_container": true,
+      "require_fully_within_window": true,
+      "padding_px": 4.0
+    },
+    {
+      "type": "click",
+      "target": { "kind": "test_id", "id": "ui-gallery-scroll-area-drag-baseline-arm-grow" }
+    },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-scroll-area-drag-baseline-armed" }
+      },
+      "timeout_frames": 600
+    },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-scroll-area-drag-baseline-y-scrollbar"
+        }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-scroll-area-drag-baseline-y-scrollbar"
+      },
+      "delta_y": -240.0,
+      "timeout_frames": 600,
+      "require_fully_within_container": true,
+      "require_fully_within_window": true,
+      "padding_px": 4.0
+    },
+    {
+      "type": "pointer_down",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-scroll-area-drag-baseline-y-scrollbar"
+      },
+      "button": "left"
+    },
+    {
+      "type": "pointer_move",
+      "delta_x": 0.0,
+      "delta_y": 40.0,
+      "steps": 12
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-scroll-area-drag-baseline-grown" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "pointer_move",
+      "delta_x": 0.0,
+      "delta_y": 40.0,
+      "steps": 12
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "semantics_scroll_approx_eq",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-scroll-area-drag-baseline-y-scrollbar"
+        },
+        "field": "y",
+        "value": 20.0,
+        "eps": 0.75
+      }
+    },
+    { "type": "pointer_up" },
+    { "type": "capture_bundle", "label": "scrollbar-drag-baseline-content-growth" }
+  ]
+}

@@ -1,8 +1,14 @@
 # Action-First Authoring + View Runtime (Fearless Refactor v1) — Open Questions
 
-Last updated: 2026-03-01
+Last updated: 2026-03-03
 
-This file lists decisions intentionally deferred while we draft the v1 contracts.
+This file tracks decisions intentionally deferred **past the v1 landing**.
+
+For v1 locked decisions, see:
+
+- ADRs: `docs/adr/0307-action-registry-and-typed-action-dispatch-v1.md`,
+  `docs/adr/0308-view-authoring-runtime-and-hooks-v1.md`
+- Workstream decision snapshot: `docs/workstreams/action-first-authoring-fearless-refactor-v1/DESIGN.md` (“Decision Snapshot”)
 
 ---
 
@@ -61,6 +67,7 @@ Recommendation:
 Decision (v1):
 
 - Land the view runtime in `ecosystem/fret` (golden path). Defer a split crate until after M2/M3 adoption.
+- MVU is quarantined as a compat surface under `fret::legacy::prelude::*` and is gated out of the cookbook/templates.
 
 ---
 
@@ -76,3 +83,8 @@ This must stay aligned with:
 
 - ADR 0159 (selectors + scripted interaction),
 - ADR 0213 (cache roots).
+
+Status (as of 2026-03-03):
+
+- The v1 view-cache + action-first gates are green (`pwsh tools/diag_gate_action_first_authoring_v1.ps1`).
+- Inspection/picking may still affect reuse decisions; gaps should be documented as explicit reuse reasons in cache-root diagnostics.

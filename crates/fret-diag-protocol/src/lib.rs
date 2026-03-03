@@ -1926,6 +1926,24 @@ pub enum UiPredicateV1 {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         pane_id: Option<String>,
     },
+    /// True when the latest workspace diagnostics report `tab_strip_active_visibility.scroll_x >= px`.
+    ///
+    /// This predicate reads the best-effort `workspace_interaction.tab_strip_active_visibility`
+    /// snapshot recorded into `WindowInteractionDiagnosticsStore`.
+    WorkspaceTabStripActiveScrollPxGe {
+        px: f32,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        pane_id: Option<String>,
+    },
+    /// True when the latest workspace diagnostics report `tab_strip_active_visibility.scroll_x <= px`.
+    ///
+    /// This predicate reads the best-effort `workspace_interaction.tab_strip_active_visibility`
+    /// snapshot recorded into `WindowInteractionDiagnosticsStore`.
+    WorkspaceTabStripActiveScrollPxLe {
+        px: f32,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        pane_id: Option<String>,
+    },
     /// True when the latest dock graph stats snapshot reports a canonical-form layout.
     DockGraphCanonicalIs {
         canonical: bool,
@@ -3146,6 +3164,46 @@ mod tests {
         assert!(matches!(
             roundtrip,
             UiPredicateV1::DockTabStripActiveScrollPxLe { .. }
+        ));
+    }
+
+    #[test]
+    fn predicate_workspace_tab_strip_scroll_predicates_serialize_and_deserialize() {
+        let value = serde_json::to_value(UiPredicateV1::WorkspaceTabStripActiveScrollPxGe {
+            px: 12.0,
+            pane_id: None,
+        })
+        .unwrap();
+        assert_eq!(
+            value,
+            serde_json::json!({
+                "kind": "workspace_tab_strip_active_scroll_px_ge",
+                "px": 12.0
+            })
+        );
+        let roundtrip: UiPredicateV1 = serde_json::from_value(value).unwrap();
+        assert!(matches!(
+            roundtrip,
+            UiPredicateV1::WorkspaceTabStripActiveScrollPxGe { .. }
+        ));
+
+        let value = serde_json::to_value(UiPredicateV1::WorkspaceTabStripActiveScrollPxLe {
+            px: 0.0,
+            pane_id: Some("pane-a".to_string()),
+        })
+        .unwrap();
+        assert_eq!(
+            value,
+            serde_json::json!({
+                "kind": "workspace_tab_strip_active_scroll_px_le",
+                "px": 0.0,
+                "pane_id": "pane-a",
+            })
+        );
+        let roundtrip: UiPredicateV1 = serde_json::from_value(value).unwrap();
+        assert!(matches!(
+            roundtrip,
+            UiPredicateV1::WorkspaceTabStripActiveScrollPxLe { .. }
         ));
     }
 

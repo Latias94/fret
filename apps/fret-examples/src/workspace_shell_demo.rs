@@ -12,11 +12,15 @@ use fret_ui::element::{
     ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, Overflow, PressableA11y,
     PressableProps, SemanticsProps, ViewCacheProps,
 };
+use fret_ui::elements::GlobalElementId;
 use fret_ui::{Invalidation, UiTree, VirtualListScrollHandle};
-use fret_ui_kit::OverlayController;
 use fret_ui_kit::declarative::ElementContextThemeExt as _;
 use fret_ui_kit::declarative::file_tree::{FileTreeViewProps, file_tree_view_retained_v0};
+use fret_ui_kit::{OverlayController, OverlayPresence, OverlayRequest};
 use fret_ui_kit::{TreeItem, TreeState};
+use fret_workspace::close_policy::{
+    WorkspaceDirtyCloseDecision, WorkspaceDirtyClosePolicy, WorkspaceDirtyCloseRequest,
+};
 use fret_workspace::layout::{WorkspacePaneTree, WorkspaceWindowLayout};
 use fret_workspace::{
     WorkspaceCommandScope, WorkspaceFrame, WorkspacePaneContentFocusTarget, WorkspaceTabStrip,
@@ -101,6 +105,8 @@ struct WorkspaceShellWindowState {
     ui: UiTree<App>,
     view_cache_shell: bool,
     window_layout: fret_app::Model<WorkspaceWindowLayout>,
+    dirty_close_prompt_open: fret_app::Model<bool>,
+    dirty_close_prompt: fret_app::Model<Option<WorkspaceShellDirtyClosePrompt>>,
     file_tree_items: fret_app::Model<Vec<TreeItem>>,
     file_tree_state: fret_app::Model<TreeState>,
     file_tree_scroll: VirtualListScrollHandle,
@@ -108,6 +114,42 @@ struct WorkspaceShellWindowState {
 
 #[derive(Default)]
 struct WorkspaceShellDemoDriver;
+
+const CMD_WORKSPACE_SHELL_DEMO_SET_ACTIVE_DIRTY: &str = "workspace.shell_demo.set_active_dirty";
+const CMD_WORKSPACE_SHELL_DEMO_CLEAR_ACTIVE_DIRTY: &str = "workspace.shell_demo.clear_active_dirty";
+const CMD_WORKSPACE_SHELL_DEMO_DEBUG_CLOSE_ACTIVE_PANE_A: &str =
+    "workspace.shell_demo.debug_close_active_in_pane_a";
+const CMD_WORKSPACE_SHELL_DEMO_DIRTY_CLOSE_CANCEL: &str = "workspace.shell_demo.dirty_close.cancel";
+const CMD_WORKSPACE_SHELL_DEMO_DIRTY_CLOSE_DISCARD: &str =
+    "workspace.shell_demo.dirty_close.discard";
+const CMD_WORKSPACE_SHELL_DEMO_DIRTY_CLOSE_SAVE_AND_CLOSE: &str =
+    "workspace.shell_demo.dirty_close.save_and_close";
+
+const DIRTY_CLOSE_PROMPT_OVERLAY_ID: GlobalElementId = GlobalElementId(0x6a4e_5c1f_8f3b_1c20);
+
+#[derive(Debug, Clone)]
+struct WorkspaceShellDirtyClosePrompt {
+    pane_id: Arc<str>,
+    command: CommandId,
+    request: WorkspaceDirtyCloseRequest,
+}
+
+struct WorkspaceShellDemoDirtyClosePolicy {
+    block: bool,
+}
+
+impl WorkspaceDirtyClosePolicy for WorkspaceShellDemoDirtyClosePolicy {
+    fn decide_dirty_close(
+        &mut self,
+        _request: &WorkspaceDirtyCloseRequest,
+    ) -> WorkspaceDirtyCloseDecision {
+        if self.block {
+            WorkspaceDirtyCloseDecision::Block
+        } else {
+            WorkspaceDirtyCloseDecision::Allow
+        }
+    }
+}
 
 impl WorkspaceShellDemoDriver {
     fn build_ui(app: &mut App, window: AppWindowId) -> WorkspaceShellWindowState {
@@ -139,6 +181,8 @@ impl WorkspaceShellDemoDriver {
         }
 
         let window_layout = app.models_mut().insert(window_layout);
+        let dirty_close_prompt_open = app.models_mut().insert(false);
+        let dirty_close_prompt = app.models_mut().insert(None);
 
         let (items_value, state_value) = build_file_tree_items();
         let file_tree_items = app.models_mut().insert(items_value);
@@ -148,6 +192,8 @@ impl WorkspaceShellDemoDriver {
             ui,
             view_cache_shell,
             window_layout,
+            dirty_close_prompt_open,
+            dirty_close_prompt,
             file_tree_items,
             file_tree_state,
             file_tree_scroll: VirtualListScrollHandle::new(),
@@ -163,6 +209,8 @@ impl WorkspaceShellDemoDriver {
     ) {
         let view_cache_shell = state.view_cache_shell;
         let window_layout = state.window_layout.clone();
+        let dirty_close_prompt_open = state.dirty_close_prompt_open.clone();
+        let dirty_close_prompt = state.dirty_close_prompt.clone();
         let file_tree_items = state.file_tree_items.clone();
         let file_tree_state = state.file_tree_state.clone();
         let file_tree_scroll = state.file_tree_scroll.clone();
@@ -171,11 +219,242 @@ impl WorkspaceShellDemoDriver {
             declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds)
                 .render_root("workspace-shell-demo", move |cx| {
                     cx.observe_model(&window_layout, Invalidation::Layout);
+                    cx.observe_model(&dirty_close_prompt_open, Invalidation::Layout);
+                    cx.observe_model(&dirty_close_prompt, Invalidation::Layout);
                     cx.observe_model(&file_tree_items, Invalidation::Layout);
                     cx.observe_model(&file_tree_state, Invalidation::Layout);
 
                     let theme = cx.theme_snapshot();
                     let bg = Some(theme.color_token("background"));
+                    let prompt_open = cx
+                        .get_model_cloned(&dirty_close_prompt_open, Invalidation::Layout)
+                        .unwrap_or(false);
+                    if prompt_open {
+                        let prompt = cx
+                            .get_model_cloned(&dirty_close_prompt, Invalidation::Layout)
+                            .unwrap_or(None);
+
+                        let (reason, dirty_list, active_tab, close_count) = prompt
+                            .as_ref()
+                            .map(|p| {
+                                let reason = Arc::<str>::from(format!("{:?}", p.request.reason));
+                                let dirty_list = Arc::<str>::from(
+                                    p.request
+                                        .dirty_tabs_in_order
+                                        .iter()
+                                        .map(|t| t.as_ref())
+                                        .collect::<Vec<_>>()
+                                        .join(", "),
+                                );
+                                let active_tab = p
+                                    .request
+                                    .active_tab_id
+                                    .as_ref()
+                                    .map(|t| Arc::<str>::from(t.as_ref()))
+                                    .unwrap_or_else(|| Arc::from("<none>"));
+                                let close_count = p.request.target_tabs_in_order.len();
+                                (reason, dirty_list, active_tab, close_count)
+                            })
+                            .unwrap_or_else(|| {
+                                (
+                                    Arc::from("<unknown>"),
+                                    Arc::from("<unknown>"),
+                                    Arc::from("<none>"),
+                                    0,
+                                )
+                            });
+
+                        let dim_bg = Some(theme.color_token("muted"));
+                        let dialog_bg = Some(theme.color_token("card"));
+                        let border = Some(theme.color_token("border"));
+
+                        let open_model = dirty_close_prompt_open.clone();
+                        let prompt_model = dirty_close_prompt.clone();
+
+                        let cancel_cmd =
+                            CommandId::new(Arc::<str>::from(CMD_WORKSPACE_SHELL_DEMO_DIRTY_CLOSE_CANCEL));
+                        let discard_cmd =
+                            CommandId::new(Arc::<str>::from(CMD_WORKSPACE_SHELL_DEMO_DIRTY_CLOSE_DISCARD));
+                        let save_cmd = CommandId::new(Arc::<str>::from(
+                            CMD_WORKSPACE_SHELL_DEMO_DIRTY_CLOSE_SAVE_AND_CLOSE,
+                        ));
+
+                        let overlay_root = cx.container(
+                            ContainerProps {
+                                layout: fill_layout(),
+                                ..Default::default()
+                            },
+                            move |cx| {
+                                let button = |cx: &mut fret_ui::ElementContext<'_, App>,
+                                              test_id: &str,
+                                              label: &str,
+                                              cmd: CommandId| {
+                                    let test_id: Arc<str> = Arc::from(test_id);
+                                    let label: Arc<str> = Arc::from(label);
+                                    cx.pressable(
+                                        PressableProps {
+                                            layout: {
+                                                let mut layout = LayoutStyle::default();
+                                                layout.size.width = Length::Auto;
+                                                layout.size.height = Length::Px(Px(28.0));
+                                                layout
+                                            },
+                                            enabled: true,
+                                            focusable: false,
+                                            a11y: PressableA11y {
+                                                role: Some(SemanticsRole::Button),
+                                                label: Some(label.clone()),
+                                                test_id: Some(test_id),
+                                                ..Default::default()
+                                            },
+                                            ..Default::default()
+                                        },
+                                        move |cx, _state| {
+                                            cx.pressable_add_on_activate(Arc::new(
+                                                move |host, acx, _reason| {
+                                                    host.dispatch_command(Some(acx.window), cmd.clone());
+                                                },
+                                            ));
+                                            vec![cx.container(
+                                                ContainerProps {
+                                                    layout: fill_layout(),
+                                                    padding: Edges::all(Px(8.0)).into(),
+                                                    ..Default::default()
+                                                },
+                                                move |cx| vec![cx.text(label.clone())],
+                                            )]
+                                        },
+                                    )
+                                };
+
+                                let mut center = FlexProps {
+                                    layout: fill_layout(),
+                                    direction: Axis::Vertical,
+                                    gap: fret_ui::element::SpacingLength::Px(Px(12.0)),
+                                    justify: MainAlign::Center,
+                                    align: CrossAlign::Center,
+                                    wrap: false,
+                                    ..Default::default()
+                                };
+                                center.layout.size.width = Length::Fill;
+                                center.layout.size.height = Length::Fill;
+
+                                let mut dialog_container_layout = LayoutStyle::default();
+                                dialog_container_layout.size.width = Length::Px(Px(520.0));
+                                dialog_container_layout.size.height = Length::Auto;
+
+                                let dialog = cx.container(
+                                    ContainerProps {
+                                        layout: dialog_container_layout,
+                                        background: dialog_bg,
+                                        border: Edges::all(Px(1.0)),
+                                        border_color: border,
+                                        padding: Edges::all(Px(16.0)).into(),
+                                        ..Default::default()
+                                    },
+                                    move |cx| {
+                                        vec![cx.semantics(
+                                            SemanticsProps {
+                                                layout: fill_layout(),
+                                                role: SemanticsRole::Dialog,
+                                                test_id: Some(Arc::from(
+                                                    "workspace-shell-dirty-close-prompt",
+                                                )),
+                                                ..Default::default()
+                                            },
+                                            move |cx| {
+                                                vec![
+                                                    cx.text(Arc::<str>::from(
+                                                        "Dirty close confirmation",
+                                                    )),
+                                                    cx.text(Arc::<str>::from(format!(
+                                                        "reason={reason} active={active_tab} close_count={close_count}"
+                                                    ))),
+                                                    cx.text(Arc::<str>::from(format!(
+                                                        "dirty=[{dirty_list}]"
+                                                    ))),
+                                                    cx.flex(
+                                                        FlexProps {
+                                                            layout: {
+                                                                let mut layout =
+                                                                    LayoutStyle::default();
+                                                                layout.size.width = Length::Fill;
+                                                                layout.size.height = Length::Auto;
+                                                                layout
+                                                            },
+                                                            direction: Axis::Horizontal,
+                                                            gap:
+                                                                fret_ui::element::SpacingLength::Px(
+                                                                    Px(12.0),
+                                                                ),
+                                                            justify: MainAlign::End,
+                                                            align: CrossAlign::Center,
+                                                            wrap: false,
+                                                            ..Default::default()
+                                                        },
+                                                        move |cx| {
+                                                            vec![
+                                                                button(
+                                                                    cx,
+                                                                    "workspace-shell-dirty-close-prompt.cancel",
+                                                                    "Cancel",
+                                                                    cancel_cmd.clone(),
+                                                                ),
+                                                                button(
+                                                                    cx,
+                                                                    "workspace-shell-dirty-close-prompt.discard",
+                                                                    "Discard && Close",
+                                                                    discard_cmd.clone(),
+                                                                ),
+                                                                button(
+                                                                    cx,
+                                                                    "workspace-shell-dirty-close-prompt.save_and_close",
+                                                                    "Save && Close",
+                                                                    save_cmd.clone(),
+                                                                ),
+                                                            ]
+                                                        },
+                                                    ),
+                                                ]
+                                            },
+                                        )]
+                                    },
+                                );
+
+                                vec![cx.container(
+                                    ContainerProps {
+                                        layout: fill_layout(),
+                                        background: dim_bg,
+                                        ..Default::default()
+                                    },
+                                    move |cx| {
+                                        vec![cx.flex(center, move |_cx| {
+                                            vec![dialog]
+                                        })]
+                                    },
+                                )]
+                            },
+                        );
+
+                        let dismiss_handler: fret_ui::action::OnDismissRequest =
+                            Arc::new(move |host, _acx, _req| {
+                            let _ = host.models_mut().update(&prompt_model, |p| *p = None);
+                            let _ = host.models_mut().update(&open_model, |v| *v = false);
+                        });
+
+                        let mut req = OverlayRequest::modal(
+                            DIRTY_CLOSE_PROMPT_OVERLAY_ID,
+                            None,
+                            dirty_close_prompt_open.clone(),
+                            OverlayPresence::instant(true),
+                            vec![overlay_root],
+                        );
+                        req.root_name = Some(OverlayController::modal_root_name(
+                            DIRTY_CLOSE_PROMPT_OVERLAY_ID,
+                        ));
+                        req.dismissible_on_dismiss_request = Some(dismiss_handler);
+                        OverlayController::request(cx, req);
+                    }
 
                     let theme_for_left = theme.clone();
                     let left = cx.keyed("workspace_shell.left", move |cx| {
@@ -384,23 +663,32 @@ impl WorkspaceShellDemoDriver {
                                                     let toggle_pin = CommandId::new(Arc::<str>::from(
                                                         "workspace.tab.toggle_pin",
                                                     ));
-                                                    let close_others = CommandId::new(Arc::<str>::from(
-                                                        "workspace.tab.close.others",
+                                                    let set_dirty = CommandId::new(Arc::<str>::from(
+                                                        CMD_WORKSPACE_SHELL_DEMO_SET_ACTIVE_DIRTY,
                                                     ));
-                                                    let close_left = CommandId::new(Arc::<str>::from(
-                                                        "workspace.tab.close.left",
+                                                    let clear_dirty = CommandId::new(Arc::<str>::from(
+                                                        CMD_WORKSPACE_SHELL_DEMO_CLEAR_ACTIVE_DIRTY,
                                                     ));
-                                                    let close_right = CommandId::new(Arc::<str>::from(
-                                                        "workspace.tab.close.right",
+	                                                    let close_others = CommandId::new(Arc::<str>::from(
+	                                                        "workspace.tab.close.others",
+	                                                    ));
+	                                                    let close_active = CommandId::new(Arc::<str>::from(
+	                                                        CMD_WORKSPACE_SHELL_DEMO_DEBUG_CLOSE_ACTIVE_PANE_A,
+	                                                    ));
+	                                                    let close_left = CommandId::new(Arc::<str>::from(
+	                                                        "workspace.tab.close.left",
+	                                                    ));
+	                                                    let close_right = CommandId::new(Arc::<str>::from(
+	                                                        "workspace.tab.close.right",
                                                     ));
 
-                                                    let bar = cx.flex(
-                                                        FlexProps {
-                                                            layout: {
-                                                                let mut layout =
-                                                                    LayoutStyle::default();
-                                                                layout.size.width = Length::Fill;
-                                                                layout.size.height =
+	                                                    let bar_primary = cx.flex(
+	                                                        FlexProps {
+	                                                            layout: {
+	                                                                let mut layout =
+	                                                                    LayoutStyle::default();
+	                                                                layout.size.width = Length::Fill;
+	                                                                layout.size.height =
                                                                     Length::Px(Px(28.0));
                                                                 layout.flex.shrink = 0.0;
                                                                 layout
@@ -412,61 +700,105 @@ impl WorkspaceShellDemoDriver {
                                                             justify: MainAlign::Start,
                                                             align: CrossAlign::Center,
                                                             wrap: false,
-                                                            ..Default::default()
-                                                        },
-                                                        move |cx| {
-                                                            vec![
-                                                                button(
-                                                                    cx,
-                                                                    "workspace-shell-pane-pane-a-debug-open-preview-a",
-                                                                    "Open preview A",
-                                                                    open_a.clone(),
+	                                                            ..Default::default()
+	                                                        },
+	                                                        move |cx| {
+	                                                            vec![
+	                                                                button(
+	                                                                    cx,
+	                                                                    "workspace-shell-pane-pane-a-debug-mark-dirty",
+	                                                                    "Mark dirty",
+                                                                    set_dirty.clone(),
                                                                 ),
                                                                 button(
                                                                     cx,
-                                                                    "workspace-shell-pane-pane-a-debug-open-preview-b",
-                                                                    "Open preview B",
-                                                                    open_b.clone(),
+                                                                    "workspace-shell-pane-pane-a-debug-clear-dirty",
+                                                                    "Clear dirty",
+                                                                    clear_dirty.clone(),
                                                                 ),
-                                                                button(
-                                                                    cx,
-                                                                    "workspace-shell-pane-pane-a-debug-commit-preview",
-                                                                    "Commit preview",
-                                                                    commit.clone(),
-                                                                ),
-                                                                button(
-                                                                    cx,
-                                                                    "workspace-shell-pane-pane-a-debug-toggle-pin",
-                                                                    "Toggle pin",
-                                                                    toggle_pin.clone(),
-                                                                ),
-                                                                button(
-                                                                    cx,
-                                                                    "workspace-shell-pane-pane-a-debug-close-others",
-                                                                    "Close others",
-                                                                    close_others.clone(),
-                                                                ),
-                                                                button(
-                                                                    cx,
-                                                                    "workspace-shell-pane-pane-a-debug-close-left",
-                                                                    "Close left",
-                                                                    close_left.clone(),
-                                                                ),
-                                                                button(
-                                                                    cx,
-                                                                    "workspace-shell-pane-pane-a-debug-close-right",
-                                                                    "Close right",
-                                                                    close_right.clone(),
-                                                                ),
-                                                            ]
-                                                        },
-                                                    );
-                                                    children.push(bar);
-                                                }
-                                                children.push(content);
-                                                children
-                                            },
-                                        )]
+	                                                                button(
+	                                                                    cx,
+	                                                                    "workspace-shell-pane-pane-a-debug-close-active",
+	                                                                    "Close active (pane-a)",
+	                                                                    close_active.clone(),
+	                                                                ),
+	                                                            ]
+	                                                        },
+	                                                    );
+	                                                    let bar_secondary = cx.flex(
+	                                                        FlexProps {
+	                                                            layout: {
+	                                                                let mut layout =
+	                                                                    LayoutStyle::default();
+	                                                                layout.size.width = Length::Fill;
+	                                                                layout.size.height =
+	                                                                    Length::Px(Px(28.0));
+	                                                                layout.flex.shrink = 0.0;
+	                                                                layout
+	                                                            },
+	                                                            direction: Axis::Horizontal,
+	                                                            gap: fret_ui::element::SpacingLength::Px(
+	                                                                Px(8.0),
+	                                                            ),
+	                                                            justify: MainAlign::Start,
+	                                                            align: CrossAlign::Center,
+	                                                            wrap: false,
+	                                                            ..Default::default()
+	                                                        },
+	                                                        move |cx| {
+	                                                            vec![
+	                                                                button(
+	                                                                    cx,
+	                                                                    "workspace-shell-pane-pane-a-debug-open-preview-a",
+	                                                                    "Open preview A",
+	                                                                    open_a.clone(),
+	                                                                ),
+	                                                                button(
+	                                                                    cx,
+	                                                                    "workspace-shell-pane-pane-a-debug-open-preview-b",
+	                                                                    "Open preview B",
+	                                                                    open_b.clone(),
+	                                                                ),
+	                                                                button(
+	                                                                    cx,
+	                                                                    "workspace-shell-pane-pane-a-debug-commit-preview",
+	                                                                    "Commit preview",
+	                                                                    commit.clone(),
+	                                                                ),
+	                                                                button(
+	                                                                    cx,
+	                                                                    "workspace-shell-pane-pane-a-debug-toggle-pin",
+	                                                                    "Toggle pin",
+	                                                                    toggle_pin.clone(),
+	                                                                ),
+	                                                                button(
+	                                                                    cx,
+	                                                                    "workspace-shell-pane-pane-a-debug-close-others",
+	                                                                    "Close others",
+	                                                                    close_others.clone(),
+	                                                                ),
+	                                                                button(
+	                                                                    cx,
+	                                                                    "workspace-shell-pane-pane-a-debug-close-left",
+	                                                                    "Close left",
+	                                                                    close_left.clone(),
+	                                                                ),
+	                                                                button(
+	                                                                    cx,
+	                                                                    "workspace-shell-pane-pane-a-debug-close-right",
+	                                                                    "Close right",
+	                                                                    close_right.clone(),
+	                                                                ),
+	                                                            ]
+	                                                        },
+	                                                    );
+	                                                    children.push(bar_primary);
+	                                                    children.push(bar_secondary);
+	                                                }
+	                                                children.push(content);
+	                                                children
+	                                            },
+	                                        )]
                                     },
                                 )
                             };
@@ -534,25 +866,171 @@ impl WinitAppDriver for WorkspaceShellDemoDriver {
             state,
         } = context;
 
+        if matches!(
+            command.as_str(),
+            CMD_WORKSPACE_SHELL_DEMO_DIRTY_CLOSE_CANCEL
+                | CMD_WORKSPACE_SHELL_DEMO_DIRTY_CLOSE_DISCARD
+                | CMD_WORKSPACE_SHELL_DEMO_DIRTY_CLOSE_SAVE_AND_CLOSE
+        ) {
+            let prompt = app.models().get_cloned(&state.dirty_close_prompt).flatten();
+            let do_discard = command.as_str() == CMD_WORKSPACE_SHELL_DEMO_DIRTY_CLOSE_DISCARD;
+            let do_save = command.as_str() == CMD_WORKSPACE_SHELL_DEMO_DIRTY_CLOSE_SAVE_AND_CLOSE;
+
+            if (do_discard || do_save) && prompt.is_some() {
+                let prompt = prompt.unwrap();
+                let _ = app.models_mut().update(
+                    &state.window_layout,
+                    |layout: &mut WorkspaceWindowLayout| {
+                        layout.active_pane = Some(prompt.pane_id.clone());
+                        let Some(pane) = layout.pane_tree.find_pane_mut(prompt.pane_id.as_ref())
+                        else {
+                            return;
+                        };
+                        if let Some(active) = prompt.request.active_tab_id.clone() {
+                            let _ = pane.tabs.activate(active);
+                        }
+                        if do_save {
+                            for id in prompt.request.dirty_tabs_in_order.clone() {
+                                pane.tabs.set_dirty(id, false);
+                            }
+                        }
+                        let _ = pane.tabs.apply_command(&prompt.command);
+                    },
+                );
+            }
+
+            let _ = app
+                .models_mut()
+                .update(&state.dirty_close_prompt, |p| *p = None);
+            let _ = app
+                .models_mut()
+                .update(&state.dirty_close_prompt_open, |v| *v = false);
+            app.request_redraw(window);
+            return;
+        }
+
         if command.as_str() == "window.close" {
             app.push_effect(Effect::Window(WindowRequest::Close(window)));
+            return;
+        }
+
+        if matches!(
+            command.as_str(),
+            CMD_WORKSPACE_SHELL_DEMO_SET_ACTIVE_DIRTY | CMD_WORKSPACE_SHELL_DEMO_CLEAR_ACTIVE_DIRTY
+        ) {
+            let dirty = command.as_str() == CMD_WORKSPACE_SHELL_DEMO_SET_ACTIVE_DIRTY;
+            let did_apply = app
+                .models_mut()
+                .update(
+                    &state.window_layout,
+                    |layout: &mut WorkspaceWindowLayout| {
+                        let Some(pane) = layout.pane_tree.find_pane_mut("pane-a") else {
+                            return false;
+                        };
+                        let Some(active) = pane
+                            .tabs
+                            .active()
+                            .cloned()
+                            .or_else(|| pane.tabs.tabs().first().cloned())
+                        else {
+                            return false;
+                        };
+                        let _ = pane.tabs.activate(active.clone());
+                        pane.tabs.set_dirty(active, dirty);
+                        true
+                    },
+                )
+                .unwrap_or(false);
+            if did_apply {
+                app.request_redraw(window);
+            }
+            return;
+        }
+
+        if command.as_str() == CMD_WORKSPACE_SHELL_DEMO_DEBUG_CLOSE_ACTIVE_PANE_A {
+            let close_cmd = CommandId::new(Arc::<str>::from("workspace.tab.close"));
+
+            let block_dirty_close =
+                env_bool("FRET_WORKSPACE_SHELL_DEBUG_DIRTY_CLOSE_POLICY", false);
+            let mut dirty_close_policy = WorkspaceShellDemoDirtyClosePolicy {
+                block: block_dirty_close,
+            };
+
+            let update = app.models_mut().update(
+                &state.window_layout,
+                |layout: &mut WorkspaceWindowLayout| {
+                    layout.active_pane = Some(Arc::from("pane-a"));
+                    layout
+                        .apply_command_with_close_policy(&close_cmd, Some(&mut dirty_close_policy))
+                },
+            );
+            let outcome = update.unwrap_or(fret_workspace::tabs::WorkspaceApplyCommandOutcome {
+                applied: false,
+                blocked_dirty_close: None,
+            });
+
+            if let Some(req) = outcome.blocked_dirty_close.clone() {
+                let _ = app.models_mut().update(&state.dirty_close_prompt, |p| {
+                    *p = Some(WorkspaceShellDirtyClosePrompt {
+                        pane_id: Arc::from("pane-a"),
+                        command: close_cmd.clone(),
+                        request: req,
+                    });
+                });
+                let _ = app
+                    .models_mut()
+                    .update(&state.dirty_close_prompt_open, |v| *v = true);
+            }
+
+            if outcome.applied || outcome.blocked_dirty_close.is_some() {
+                app.request_redraw(window);
+            }
             return;
         }
 
         // Important: for "app model" commands (e.g. workspace tab operations), we still want to
         // apply the command even if some UI subtree reports it as handled (e.g. a context menu
         // item dispatching the command while focused inside the menu overlay).
-        let did_apply = app
-            .models_mut()
-            .update(
-                &state.window_layout,
-                |layout: &mut WorkspaceWindowLayout| layout.apply_command(&command),
-            )
-            .unwrap_or(false);
+        let block_dirty_close = env_bool("FRET_WORKSPACE_SHELL_DEBUG_DIRTY_CLOSE_POLICY", false);
+        let mut dirty_close_policy = WorkspaceShellDemoDirtyClosePolicy {
+            block: block_dirty_close,
+        };
+        let update = app.models_mut().update(
+            &state.window_layout,
+            |layout: &mut WorkspaceWindowLayout| {
+                let active_pane_id = layout.active_pane.clone();
+                (
+                    layout.apply_command_with_close_policy(&command, Some(&mut dirty_close_policy)),
+                    active_pane_id,
+                )
+            },
+        );
+        let (outcome, active_pane_id) = update.unwrap_or((
+            fret_workspace::tabs::WorkspaceApplyCommandOutcome {
+                applied: false,
+                blocked_dirty_close: None,
+            },
+            None,
+        ));
 
         let did_dispatch_ui = state.ui.dispatch_command(app, services, &command);
 
-        if did_apply || did_dispatch_ui {
+        if let Some(req) = outcome.blocked_dirty_close.clone() {
+            if let Some(pane_id) = active_pane_id {
+                let _ = app.models_mut().update(&state.dirty_close_prompt, |p| {
+                    *p = Some(WorkspaceShellDirtyClosePrompt {
+                        pane_id,
+                        command: command.clone(),
+                        request: req,
+                    });
+                });
+                let _ = app
+                    .models_mut()
+                    .update(&state.dirty_close_prompt_open, |v| *v = true);
+            }
+        }
+
+        if outcome.applied || did_dispatch_ui {
             app.request_redraw(window);
         }
     }
@@ -708,7 +1186,7 @@ pub fn run() -> anyhow::Result<()> {
 
     let config = WinitRunnerConfig {
         main_window_title: "fret-demo workspace_shell_demo".to_string(),
-        main_window_size: fret_launch::WindowLogicalSize::new(1080.0, 720.0),
+        main_window_size: fret_launch::WindowLogicalSize::new(1280.0, 720.0),
         ..Default::default()
     };
 

@@ -5,6 +5,9 @@
 use super::prelude_core::*;
 use super::tab_bar_geometry::TabBarGeometry;
 use fret_ui::ThemeSnapshot;
+use fret_ui_headless::tab_strip_drop_target::{
+    TabInsertionSide, TabStripDropTarget, compute_tab_strip_drop_target_midpoint,
+};
 use fret_ui_headless::tab_strip_surface::{TabStripSurface, classify_tab_strip_surface_no_tabs};
 
 #[derive(Debug, Clone)]
@@ -12,7 +15,6 @@ pub(super) struct TabBarOverflowCandidateGeometry {
     pub(super) strip_rect: Rect,
     pub(super) geom: TabBarGeometry,
     pub(super) overflow_button_rect: Rect,
-    pub(super) reserved_header_space_rect: Rect,
     pub(super) overflows: bool,
 }
 
@@ -29,24 +31,12 @@ pub(super) fn compute_tab_bar_overflow_candidate_geometry(
         .unwrap_or_else(|| TabBarGeometry::fixed(strip_rect, tab_count));
     let overflows = geom.max_scroll().0 > 0.0;
     let overflow_button_rect = tab_overflow_button_rect(theme, tab_bar);
-    let reserved_header_space_rect = reserved_tab_bar_header_space_rect(tab_bar, strip_rect);
     TabBarOverflowCandidateGeometry {
         strip_rect,
         geom,
         overflow_button_rect,
-        reserved_header_space_rect,
         overflows,
     }
-}
-
-pub(super) fn reserved_tab_bar_header_space_rect(tab_bar: Rect, strip_candidate: Rect) -> Rect {
-    let x0 = strip_candidate.origin.x.0 + strip_candidate.size.width.0;
-    let x1 = tab_bar.origin.x.0 + tab_bar.size.width.0;
-    let w = (x1 - x0).max(0.0);
-    Rect::new(
-        Point::new(Px(x0), tab_bar.origin.y),
-        Size::new(Px(w), tab_bar.size.height),
-    )
 }
 
 pub(super) fn tab_overflow_button_rect(theme: ThemeSnapshot, tab_bar: Rect) -> Rect {
@@ -81,6 +71,7 @@ pub(super) fn resolve_tab_bar_drop(
     tab_widths: Option<&Arc<[Px]>>,
     scroll: Px,
     position: Point,
+    dragged_tab_index: Option<usize>,
 ) -> TabBarDropResolution {
     if tab_count == 0 {
         return TabBarDropResolution {
@@ -97,25 +88,55 @@ pub(super) fn resolve_tab_bar_drop(
 
     let candidate =
         compute_tab_bar_overflow_candidate_geometry(theme.clone(), tab_bar, tab_count, tab_widths);
+    let dragged_tab_index = dragged_tab_index.filter(|ix| *ix < tab_count);
     if candidate.overflows {
+        // Docking tab bars reserve space for an overflow button. We still want right-edge
+        // auto-scroll to work, so only the *gap* between the strip and the overflow button is an
+        // explicit "end drop" surface; the trailing padding to the right of the button remains a
+        // viewport drop surface.
+        let end_drop_rect = {
+            let strip_end = candidate.strip_rect.origin.x.0 + candidate.strip_rect.size.width.0;
+            let button_start = candidate.overflow_button_rect.origin.x.0;
+            let w = (button_start - strip_end).max(0.0);
+            (w > 0.0).then_some(Rect::new(
+                Point::new(Px(strip_end), tab_bar.origin.y),
+                Size::new(Px(w), tab_bar.size.height),
+            ))
+        };
+
         let surface = classify_tab_strip_surface_no_tabs(
             position,
             None,
-            Some(candidate.reserved_header_space_rect),
-            Some(candidate.strip_rect),
+            end_drop_rect,
+            Some(tab_bar),
             Some(candidate.overflow_button_rect),
             None,
             None,
         );
-        let insert_index = match surface {
-            TabStripSurface::TabsViewport => {
-                Some(candidate.geom.compute_insert_index(position, scroll))
-            }
-            TabStripSurface::HeaderSpace => Some(tab_count),
-            TabStripSurface::OverflowControl
-            | TabStripSurface::Outside
-            | TabStripSurface::ScrollControls
-            | TabStripSurface::PinnedBoundary => None,
+
+        let indices: Vec<usize> = (0..tab_count).collect();
+        let drop = compute_tab_strip_drop_target_midpoint(
+            position,
+            &indices,
+            |ix| candidate.geom.tab_rect(*ix, scroll),
+            |ix| dragged_tab_index.is_some_and(|dragged| *ix == dragged),
+            None,
+            end_drop_rect,
+            Some(tab_bar),
+            Some(candidate.overflow_button_rect),
+            None,
+            None,
+        );
+        let insert_index = match drop {
+            TabStripDropTarget::None | TabStripDropTarget::PinnedBoundary => None,
+            TabStripDropTarget::End => Some(tab_count),
+            TabStripDropTarget::Tab { index, side } => Some(
+                index
+                    + match side {
+                        TabInsertionSide::Before => 0,
+                        TabInsertionSide::After => 1,
+                    },
+            ),
         };
         return TabBarDropResolution {
             surface,
@@ -127,9 +148,35 @@ pub(super) fn resolve_tab_bar_drop(
         .filter(|w| w.len() == tab_count)
         .map(|w| TabBarGeometry::variable(tab_bar, (*w).clone()))
         .unwrap_or_else(|| TabBarGeometry::fixed(tab_bar, tab_count));
+
+    let indices: Vec<usize> = (0..tab_count).collect();
+    let drop = compute_tab_strip_drop_target_midpoint(
+        position,
+        &indices,
+        |ix| geom_full.tab_rect(*ix, scroll),
+        |ix| dragged_tab_index.is_some_and(|dragged| *ix == dragged),
+        None,
+        None,
+        Some(tab_bar),
+        None,
+        None,
+        None,
+    );
+    let insert_index = match drop {
+        TabStripDropTarget::None | TabStripDropTarget::PinnedBoundary => None,
+        TabStripDropTarget::End => Some(tab_count),
+        TabStripDropTarget::Tab { index, side } => Some(
+            index
+                + match side {
+                    TabInsertionSide::Before => 0,
+                    TabInsertionSide::After => 1,
+                },
+        ),
+    };
+
     TabBarDropResolution {
         surface: TabStripSurface::TabsViewport,
-        insert_index: Some(geom_full.compute_insert_index(position, scroll)),
+        insert_index,
     }
 }
 
@@ -196,7 +243,7 @@ mod tests {
         let theme = test_theme();
         let tab_bar = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(120.0), Px(24.0)));
         let pos = Point::new(Px(240.0), Px(12.0));
-        let resolved = resolve_tab_bar_drop(theme, tab_bar, 3, None, Px(0.0), pos);
+        let resolved = resolve_tab_bar_drop(theme, tab_bar, 3, None, Px(0.0), pos, None);
         assert_eq!(resolved.surface, TabStripSurface::Outside);
         assert_eq!(resolved.insert_index, None);
     }
@@ -208,17 +255,30 @@ mod tests {
         let y = Px(tab_bar.origin.y.0 + tab_bar.size.height.0 * 0.5);
         let pos = Point::new(Px(tab_bar.origin.x.0 + tab_bar.size.width.0 - 1.0), y);
 
-        let resolved_1 = resolve_tab_bar_drop(theme.clone(), tab_bar, 1, None, Px(0.0), pos);
+        let resolved_1 = resolve_tab_bar_drop(theme.clone(), tab_bar, 1, None, Px(0.0), pos, None);
         assert_eq!(resolved_1.surface, TabStripSurface::TabsViewport);
         assert_eq!(resolved_1.insert_index, Some(1));
 
-        let resolved_2 = resolve_tab_bar_drop(theme, tab_bar, 2, None, Px(0.0), pos);
+        let resolved_2 = resolve_tab_bar_drop(theme, tab_bar, 2, None, Px(0.0), pos, None);
         assert_eq!(resolved_2.surface, TabStripSurface::TabsViewport);
         assert_eq!(resolved_2.insert_index, Some(2));
     }
 
     #[test]
-    fn resolve_tab_bar_drop_treats_overflow_header_space_as_end_drop() {
+    fn resolve_tab_bar_drop_excludes_dragged_tab_from_candidates() {
+        let theme = test_theme();
+        let tab_bar = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(400.0), Px(24.0)));
+        let y = Px(tab_bar.origin.y.0 + tab_bar.size.height.0 * 0.5);
+        // Drag the last tab (index 2). A position that would normally resolve "before tab 2"
+        // should instead resolve as an end-drop when the dragged tab is excluded.
+        let pos = Point::new(Px(260.0), y);
+
+        let resolved = resolve_tab_bar_drop(theme, tab_bar, 3, None, Px(0.0), pos, Some(2));
+        assert_eq!(resolved.insert_index, Some(3));
+    }
+
+    #[test]
+    fn resolve_tab_bar_drop_treats_reserved_overflow_header_space_as_end_drop() {
         let theme = test_theme();
         let tab_bar = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(120.0), Px(24.0)));
         let widths: Arc<[Px]> = Arc::from([Px(80.0), Px(80.0), Px(80.0)].as_slice());
@@ -235,7 +295,7 @@ mod tests {
         let y = Px(tab_bar.origin.y.0 + tab_bar.size.height.0 * 0.5);
         let pos = Point::new(x, y);
 
-        let resolved = resolve_tab_bar_drop(theme, tab_bar, 3, Some(&widths), Px(0.0), pos);
+        let resolved = resolve_tab_bar_drop(theme, tab_bar, 3, Some(&widths), Px(0.0), pos, None);
         assert_eq!(resolved.surface, TabStripSurface::HeaderSpace);
         assert_eq!(resolved.insert_index, Some(3));
     }
@@ -256,7 +316,7 @@ mod tests {
             + candidate.overflow_button_rect.size.height.0 * 0.5);
         let pos = Point::new(x, y);
 
-        let resolved = resolve_tab_bar_drop(theme, tab_bar, 3, Some(&widths), Px(0.0), pos);
+        let resolved = resolve_tab_bar_drop(theme, tab_bar, 3, Some(&widths), Px(0.0), pos, None);
         assert_eq!(resolved.surface, TabStripSurface::OverflowControl);
         assert_eq!(resolved.insert_index, None);
     }

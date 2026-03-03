@@ -1284,6 +1284,26 @@ fn eval_predicate(
                 })
             })
             .is_some_and(|s| s.active_visible == *visible),
+        UiPredicateV1::WorkspaceTabStripActiveScrollPxGe { px, pane_id } => workspace
+            .and_then(|w| {
+                w.tab_strip_active_visibility.iter().rev().find(|s| {
+                    s.status == fret_runtime::WorkspaceTabStripActiveVisibilityStatusDiagnostics::Ok
+                        && pane_id.as_ref().is_none_or(|id| {
+                            s.pane_id.as_ref().is_some_and(|p| p.as_ref() == id.as_str())
+                        })
+                })
+            })
+            .is_some_and(|s| s.scroll_x.0 >= *px),
+        UiPredicateV1::WorkspaceTabStripActiveScrollPxLe { px, pane_id } => workspace
+            .and_then(|w| {
+                w.tab_strip_active_visibility.iter().rev().find(|s| {
+                    s.status == fret_runtime::WorkspaceTabStripActiveVisibilityStatusDiagnostics::Ok
+                        && pane_id.as_ref().is_none_or(|id| {
+                            s.pane_id.as_ref().is_some_and(|p| p.as_ref() == id.as_str())
+                        })
+                })
+            })
+            .is_some_and(|s| s.scroll_x.0 <= *px),
         UiPredicateV1::DockGraphCanonicalIs { canonical } => docking
             .and_then(|d| d.dock_graph_stats)
             .is_some_and(|s| s.canonical_ok == *canonical),

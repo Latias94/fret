@@ -4,8 +4,8 @@ Last updated: 2026-03-03.
 
 ## P0 (high-signal, low-risk)
 
-- Add a minimal deterministic gate for NavigationMenu trigger chevron rotation
-  (`--fixed-frame-delta-ms 16`) to prevent regressions.
+- Landed: unit test gate for NavigationMenu trigger chevron rotation transition.
+- Optional: add a fixed-delta diag screenshot pair (`--fixed-frame-delta-ms 16`) for visual review.
 
 ## P1 (timebase correctness: eliminate 60Hz coupling)
 
@@ -25,4 +25,5 @@ Last updated: 2026-03-03.
 - For each motion change, add at least one:
   - unit test (reduced motion + progression invariants), and/or
   - diag script gate (fixed delta; stable `test_id`).
+- Landed: unit test gates exist for NavigationMenu chevron, Spinner, Skeleton pulse, and InputOtp caret blink.
 - Keep `PARITY_MATRIX.md` updated with evidence anchors (file paths + tests/scripts).
