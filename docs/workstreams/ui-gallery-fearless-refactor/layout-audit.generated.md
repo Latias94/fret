@@ -14,11 +14,6 @@
 | `apps/fret-ui-gallery/src/ui/pages/icons.rs` | 980.0 |
 | `apps/fret-ui-gallery/src/ui/pages/image_object_fit.rs` | 980.0 |
 | `apps/fret-ui-gallery/src/ui/pages/item.rs` | 640.0, 720.0, 980.0, 1100.0 |
-| `apps/fret-ui-gallery/src/ui/pages/menubar.rs` | 520.0 |
-| `apps/fret-ui-gallery/src/ui/pages/select.rs` | 540.0, 620.0 |
 | `apps/fret-ui-gallery/src/ui/pages/shadcn_extras.rs` | 860.0 |
 | `apps/fret-ui-gallery/src/ui/pages/sheet.rs` | 980.0 |
 | `apps/fret-ui-gallery/src/ui/pages/sidebar.rs` | 980.0 |
-| `apps/fret-ui-gallery/src/ui/pages/slider.rs` | 520.0 |
-| `apps/fret-ui-gallery/src/ui/pages/toggle.rs` | 480.0 |
-| `apps/fret-ui-gallery/src/ui/pages/toggle_group.rs` | 560.0 |

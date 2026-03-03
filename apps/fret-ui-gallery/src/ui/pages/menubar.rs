@@ -29,31 +29,24 @@ pub(super) fn preview_menubar(cx: &mut ElementContext<'_, App>) -> Vec<AnyElemen
         ),
         vec![
             DocSection::new("Demo", demo)
-                .max_w(Px(520.0))
                 .test_id_prefix("ui-gallery-menubar-demo")
                 .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
             DocSection::new("Checkbox", checkbox)
-                .max_w(Px(520.0))
                 .test_id_prefix("ui-gallery-menubar-checkbox")
                 .code_rust_from_file_region(snippets::checkbox::SOURCE, "example"),
             DocSection::new("Radio", radio)
-                .max_w(Px(520.0))
                 .test_id_prefix("ui-gallery-menubar-radio")
                 .code_rust_from_file_region(snippets::radio::SOURCE, "example"),
             DocSection::new("Submenu", submenu)
-                .max_w(Px(520.0))
                 .test_id_prefix("ui-gallery-menubar-submenu")
                 .code_rust_from_file_region(snippets::submenu::SOURCE, "example"),
             DocSection::new("With Icons", with_icons)
-                .max_w(Px(520.0))
                 .test_id_prefix("ui-gallery-menubar-with-icons")
                 .code_rust_from_file_region(snippets::with_icons::SOURCE, "example"),
             DocSection::new("RTL", rtl)
-                .max_w(Px(520.0))
                 .test_id_prefix("ui-gallery-menubar-rtl")
                 .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
             DocSection::new("Parts", parts)
-                .max_w(Px(520.0))
                 .test_id_prefix("ui-gallery-menubar-parts")
                 .code_rust_from_file_region(snippets::parts::SOURCE, "example"),
             DocSection::new("Notes", notes),
