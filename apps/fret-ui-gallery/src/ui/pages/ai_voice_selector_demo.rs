@@ -14,7 +14,6 @@ pub(super) fn preview_ai_voice_selector_demo(
         Some("AI Elements are policy-level compositions built on top of lower-level primitives."),
         vec![
             DocSection::new("VoiceSelector", demo)
-                .max_w(Px(820.0))
                 .test_id_prefix("ui-gallery-ai-voice-selector-demo")
                 .code_rust_from_file_region(snippets::voice_selector_demo::SOURCE, "example"),
         ],

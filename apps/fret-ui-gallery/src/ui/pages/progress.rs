@@ -36,7 +36,7 @@ pub(super) fn preview_progress(
                 .max_w(Px(980.0))
                 .test_id_prefix("ui-gallery-progress-extras")
                 .code_rust_from_file_region(snippets::extras::SOURCE, "example"),
-            DocSection::new("Notes", notes).max_w(Px(820.0)),
+            DocSection::new("Notes", notes),
         ],
     );
 

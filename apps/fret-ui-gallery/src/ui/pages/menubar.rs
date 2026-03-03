@@ -56,7 +56,7 @@ pub(super) fn preview_menubar(cx: &mut ElementContext<'_, App>) -> Vec<AnyElemen
                 .max_w(Px(520.0))
                 .test_id_prefix("ui-gallery-menubar-parts")
                 .code_rust_from_file_region(snippets::parts::SOURCE, "example"),
-            DocSection::new("Notes", notes).max_w(Px(820.0)),
+            DocSection::new("Notes", notes),
         ],
     );
 

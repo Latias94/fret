@@ -14,7 +14,6 @@ pub(super) fn preview_ai_chain_of_thought_demo(
         Some("AI Elements are policy-level compositions built on top of lower-level primitives."),
         vec![
             DocSection::new("Chain of Thought", demo)
-                .max_w(Px(820.0))
                 .test_id_prefix("ui-gallery-ai-chain-of-thought-demo")
                 .code_rust_from_file_region(snippets::chain_of_thought_demo::SOURCE, "example"),
         ],

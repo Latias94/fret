@@ -103,7 +103,7 @@ pub(super) fn preview_command_palette(
                     snippets::loading::SOURCE,
                     "example",
                 ),
-            DocSection::new("Notes", notes_stack).max_w(Px(820.0)),
+            DocSection::new("Notes", notes_stack),
         ],
     );
 

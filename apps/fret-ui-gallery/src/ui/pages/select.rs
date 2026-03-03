@@ -80,9 +80,7 @@ pub(super) fn preview_select(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
                 .test_id_prefix("ui-gallery-select-rtl")
                 .code_rust_from_file_region(snippets::rtl::SOURCE, "example")
                 .max_w(Px(620.0)),
-            DocSection::new("Notes", notes)
-                .description("Parity notes and usage guidance.")
-                .max_w(Px(820.0)),
+            DocSection::new("Notes", notes).description("Parity notes and usage guidance."),
         ],
     );
 

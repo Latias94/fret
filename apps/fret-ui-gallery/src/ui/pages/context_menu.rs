@@ -79,7 +79,7 @@ pub(super) fn preview_context_menu(
                 .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-context-menu-rtl")
                 .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
-            DocSection::new("Notes", notes).max_w(Px(820.0)),
+            DocSection::new("Notes", notes),
         ],
     );
 

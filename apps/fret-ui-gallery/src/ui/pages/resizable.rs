@@ -39,7 +39,6 @@ pub(super) fn preview_resizable(
                 .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
             DocSection::new("Notes", notes)
                 .description("Parity notes and references.")
-                .max_w(Px(820.0))
                 .test_id_prefix("ui-gallery-resizable-notes"),
         ],
     );

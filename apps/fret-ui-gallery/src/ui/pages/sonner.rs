@@ -39,7 +39,6 @@ pub(super) fn preview_sonner(
                 .code_rust_from_file_region(snippets::extras::SOURCE, "example"),
             DocSection::new("Notes", notes)
                 .description("Status + parity notes.")
-                .max_w(Px(820.0))
                 .test_id_prefix("ui-gallery-sonner-notes"),
         ],
     );

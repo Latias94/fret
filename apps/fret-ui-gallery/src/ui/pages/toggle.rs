@@ -53,8 +53,7 @@ pub(super) fn preview_toggle(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
                 .max_w(Px(480.0))
                 .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
             DocSection::new("Notes", notes)
-                .description("API reference pointers and accessibility notes.")
-                .max_w(Px(820.0)),
+                .description("API reference pointers and accessibility notes."),
         ],
     );
 

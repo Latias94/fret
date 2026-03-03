@@ -64,7 +64,6 @@ pub(super) fn preview_item(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> 
                 .code_rust_from_file_region(snippets::group::SOURCE, "example"),
             DocSection::new("Header", docs_header)
                 .no_shell()
-                .max_w(Px(820.0))
                 .code_rust_from_file_region(snippets::header::SOURCE, "example"),
             DocSection::new("Link", docs_link)
                 .description(
@@ -94,7 +93,7 @@ pub(super) fn preview_item(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> 
                 .no_shell()
                 .max_w(Px(980.0))
                 .code_rust_from_file_region(snippets::extras_rtl::SOURCE, "example"),
-            DocSection::new("Notes", notes).max_w(Px(820.0)),
+            DocSection::new("Notes", notes),
         ],
     );
 

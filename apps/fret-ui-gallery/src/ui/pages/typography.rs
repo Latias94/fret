@@ -96,8 +96,7 @@ pub(super) fn preview_typography(cx: &mut ElementContext<'_, App>) -> Vec<AnyEle
                 .max_w(Px(760.0))
                 .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
             DocSection::new("Notes", notes)
-                .description("API reference pointers and authoring notes.")
-                .max_w(Px(820.0)),
+                .description("API reference pointers and authoring notes."),
         ],
     );
 

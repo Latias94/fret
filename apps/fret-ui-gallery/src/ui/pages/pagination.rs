@@ -33,7 +33,7 @@ pub(super) fn preview_pagination(cx: &mut ElementContext<'_, App>) -> Vec<AnyEle
                 .max_w(Px(980.0))
                 .test_id_prefix("ui-gallery-pagination-extras")
                 .code_rust_from_file_region(snippets::extras::SOURCE, "example"),
-            DocSection::new("Notes", notes).max_w(Px(820.0)),
+            DocSection::new("Notes", notes),
         ],
     );
 

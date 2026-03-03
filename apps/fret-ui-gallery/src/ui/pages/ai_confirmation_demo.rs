@@ -14,7 +14,6 @@ pub(super) fn preview_ai_confirmation_demo(
         Some("AI Elements are policy-level compositions built on top of lower-level primitives."),
         vec![
             DocSection::new("Confirmation", demo)
-                .max_w(Px(820.0))
                 .test_id_prefix("ui-gallery-ai-confirmation-demo")
                 .code_rust_from_file_region(snippets::confirmation_demo::SOURCE, "example"),
         ],

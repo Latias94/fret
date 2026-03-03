@@ -45,7 +45,7 @@ pub(super) fn preview_chart(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
                 .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-chart-rtl")
                 .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
-            DocSection::new("Notes", notes_stack).max_w(Px(820.0)),
+            DocSection::new("Notes", notes_stack),
         ],
     );
 

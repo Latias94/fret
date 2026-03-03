@@ -151,9 +151,7 @@ pub(super) fn preview_native_select(cx: &mut ElementContext<'_, App>) -> Vec<Any
                 .description("RTL smoke check (not present in upstream docs).")
                 .max_w(Px(980.0))
                 .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
-            DocSection::new("Notes", notes)
-                .description("API reference pointers and caveats.")
-                .max_w(Px(820.0)),
+            DocSection::new("Notes", notes).description("API reference pointers and caveats."),
         ],
     );
 

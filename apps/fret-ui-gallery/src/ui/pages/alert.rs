@@ -52,9 +52,7 @@ pub(super) fn preview_alert(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
                 .description("Alert layout under an RTL direction provider.")
                 .max_w(Px(720.0))
                 .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
-            DocSection::new("Notes", notes)
-                .description("API reference pointers and caveats.")
-                .max_w(Px(820.0)),
+            DocSection::new("Notes", notes).description("API reference pointers and caveats."),
         ],
     );
 

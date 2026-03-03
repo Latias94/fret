@@ -77,7 +77,6 @@ pub(super) fn preview_forms(
                 .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
             DocSection::new("Notes", notes)
                 .description("API reference pointers and authoring notes.")
-                .max_w(Px(820.0))
                 .code_rust_from_file_region(snippets::notes::SOURCE, "example"),
         ],
     );
