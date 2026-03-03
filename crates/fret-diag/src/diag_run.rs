@@ -1,5 +1,12 @@
 use super::*;
 
+fn launched_demo_was_killed(footprint: &serde_json::Value) -> bool {
+    footprint
+        .get("killed")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false)
+}
+
 fn resolve_run_script_source(workspace_root: &Path, raw: &str) -> Result<PathBuf, String> {
     let raw = raw.trim();
     if raw.is_empty() {
@@ -1011,5 +1018,28 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
     }
 
     drop(_stop_guard);
+
+    if !keep_open {
+        let footprint_path = resolved_out_dir.join("resource.footprint.json");
+        if let Ok(bytes) = std::fs::read(&footprint_path)
+            && let Ok(footprint) = serde_json::from_slice::<serde_json::Value>(&bytes)
+            && launched_demo_was_killed(&footprint)
+        {
+            crate::tooling_failures::mark_existing_script_result_tooling_failure(
+                &resolved_out_dir,
+                &resolved_script_result_path,
+                "tooling.demo_exit.killed",
+                "tool-launched demo did not exit cleanly (killed=true in resource.footprint.json)",
+                "tooling_error",
+                Some("stop_launched_demo".to_string()),
+            );
+            result.stage = Some("failed".to_string());
+            result.reason_code = Some("tooling.demo_exit.killed".to_string());
+            result.reason = Some(
+                "tool-launched demo did not exit cleanly (killed=true in resource.footprint.json)"
+                    .to_string(),
+            );
+        }
+    }
     report_result_and_exit(&result);
 }

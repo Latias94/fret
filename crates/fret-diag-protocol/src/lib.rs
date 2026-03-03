@@ -1460,6 +1460,19 @@ pub enum UiPredicateV1 {
         #[serde(default)]
         eps_px: f32,
     },
+    /// True when the diagnostics runtime has a window-level IME surrounding text excerpt.
+    ///
+    /// Notes:
+    /// - This reads `WindowTextInputSnapshot.surrounding_text`.
+    /// - Offsets are UTF-8 byte offsets within the excerpt and should be on char boundaries.
+    ImeSurroundingTextIsSome {
+        is_some: bool,
+    },
+    /// True when the window-level IME surrounding text excerpt is present and internally valid.
+    ///
+    /// This is a coarse regression gate for platform text-input interop (winit `ImeSurroundingText`
+    /// constraints: max bytes, offsets within range, char boundaries).
+    ImeSurroundingTextValid,
     CheckedIsNone {
         target: UiSelectorV1,
     },
@@ -2450,6 +2463,16 @@ pub struct UiTextInputSnapshotV1 {
     pub marked_utf16: Option<(u32, u32)>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub ime_cursor_area: Option<UiRectV1>,
+    /// Optional IME surrounding text excerpt metadata (bytes).
+    ///
+    /// This is derived from `WindowTextInputSnapshot.surrounding_text` and is intended for
+    /// lightweight debugging without embedding potentially sensitive text contents in bundles.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub ime_surrounding_text_len_bytes: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub ime_surrounding_cursor_bytes: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub ime_surrounding_anchor_bytes: Option<u32>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

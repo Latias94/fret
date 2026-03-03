@@ -182,4 +182,6 @@ pub use window_input_context::WindowInputContextService;
 pub use window_menu_bar_focus::WindowMenuBarFocusService;
 pub use window_metrics::apply_window_metrics_event;
 pub use window_text_boundary_mode::{WindowTextBoundaryModeHandle, WindowTextBoundaryModeService};
-pub use window_text_input_snapshot::{WindowTextInputSnapshot, WindowTextInputSnapshotService};
+pub use window_text_input_snapshot::{
+    WindowImeSurroundingText, WindowTextInputSnapshot, WindowTextInputSnapshotService,
+};

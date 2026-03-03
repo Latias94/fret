@@ -14,7 +14,6 @@ pub(super) fn preview_ai_inline_citation_demo(
         Some("AI Elements are policy-level compositions built on top of lower-level primitives."),
         vec![
             DocSection::new("InlineCitation", demo)
-                .max_w(Px(820.0))
                 .test_id_prefix("ui-gallery-ai-inline-citation-demo")
                 .code_rust_from_file_region(snippets::inline_citation_demo::SOURCE, "example"),
         ],

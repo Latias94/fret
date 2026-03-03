@@ -15,7 +15,6 @@ pub(super) fn preview_toast(
         vec![
             DocSection::new("Deprecated", deprecated)
                 .description("Toast is deprecated in upstream shadcn/ui docs. Prefer Sonner.")
-                .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-toast-deprecated")
                 .code_rust_from_file_region(snippets::deprecated::SOURCE, "example"),
         ],

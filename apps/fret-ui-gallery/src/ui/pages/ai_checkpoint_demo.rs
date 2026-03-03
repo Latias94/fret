@@ -14,7 +14,6 @@ pub(super) fn preview_ai_checkpoint_demo(
         Some("AI Elements are policy-level compositions built on top of lower-level primitives."),
         vec![
             DocSection::new("Checkpoint", demo)
-                .max_w(Px(820.0))
                 .test_id_prefix("ui-gallery-ai-checkpoint-demo")
                 .code_rust_from_file_region(snippets::checkpoint_demo::SOURCE, "example"),
         ],

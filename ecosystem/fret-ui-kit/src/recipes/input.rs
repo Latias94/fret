@@ -240,6 +240,11 @@ pub fn default_text_input_style(theme: &Theme) -> fret_ui::TextInputStyle {
     let selection = theme
         .color_by_key("component.input.selection")
         .unwrap_or_else(|| theme.color_token("selection.background"));
+    let preedit_bg_color = {
+        let mut bg = selection;
+        bg.a = (bg.a * 0.35).clamp(0.0, 1.0);
+        bg
+    };
 
     fret_ui::TextInputStyle {
         padding: Edges::all(Px(0.0)),
@@ -263,6 +268,7 @@ pub fn default_text_input_style(theme: &Theme) -> fret_ui::TextInputStyle {
             ..selection
         },
         caret_color: theme.color_token("foreground"),
+        preedit_bg_color,
         preedit_color: theme.color_token("primary"),
         preedit_underline_color: theme.color_token("primary"),
     }

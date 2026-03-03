@@ -50,6 +50,7 @@ impl UiDiagnosticsService {
             steps: script.steps,
             run_id,
             anchor_window,
+            started_unix_ms: unix_ms_now(),
             next_step: 0,
             base_ref: None,
             event_log: Vec::new(),
@@ -144,6 +145,7 @@ impl UiDiagnosticsService {
 
         app.request_redraw(anchor_window);
         app.push_effect(Effect::RequestAnimationFrame(anchor_window));
+        self.sync_script_keepalive_timer(app);
     }
 
     pub(super) fn maybe_migrate_single_active_script_to_window(

@@ -20,11 +20,9 @@ pub(super) fn preview_radio_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
         ),
         vec![
             DocSection::new("Demo", demo)
-                .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-radio-group-demo")
                 .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
             DocSection::new("Plans", plans)
-                .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-radio-group-plans")
                 .code_rust_from_file_region(snippets::plans::SOURCE, "example"),
             DocSection::new("Extras", extras)

@@ -14,7 +14,6 @@ pub(super) fn preview_ai_message_branch_demo(
         Some("AI Elements are policy-level compositions built on top of lower-level primitives."),
         vec![
             DocSection::new("MessageBranch", demo)
-                .max_w(Px(820.0))
                 .test_id_prefix("ui-gallery-ai-message-branch-demo")
                 .code_rust_from_file_region(snippets::message_branch_demo::SOURCE, "example"),
         ],

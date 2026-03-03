@@ -2,11 +2,11 @@ use super::super::super::super::*;
 
 pub(in crate::ui) fn preview_command_palette(
     cx: &mut ElementContext<'_, App>,
-    open: Model<bool>,
-    query: Model<String>,
+    _open: Model<bool>,
+    _query: Model<String>,
     last_action: Model<Arc<str>>,
 ) -> Vec<AnyElement> {
-    pages::preview_command_palette(cx, open, query, last_action)
+    pages::preview_command_palette(cx, last_action)
 }
 
 pub(super) fn sonner_position_key(position: shadcn::ToastPosition) -> &'static str {

@@ -290,7 +290,8 @@ fn platform_text_input_replace_and_mark_can_drive_caret_anchored_preedit() {
         1.0,
         fret_runtime::Utf16Range::new(1, 1),
         "X",
-        Some(fret_runtime::Utf16Range::new(1, 2))
+        Some(fret_runtime::Utf16Range::new(1, 2)),
+        None
     ));
 
     let marked = ui.platform_text_input_query(
@@ -338,7 +339,8 @@ fn platform_text_input_replace_and_mark_can_drive_caret_anchored_preedit() {
         1.0,
         fret_runtime::Utf16Range::new(1, 2),
         "XY",
-        Some(fret_runtime::Utf16Range::new(1, 3))
+        Some(fret_runtime::Utf16Range::new(1, 3)),
+        None
     ));
 
     let marked = ui.platform_text_input_query(
@@ -373,6 +375,7 @@ fn platform_text_input_replace_and_mark_can_drive_caret_anchored_preedit() {
         1.0,
         fret_runtime::Utf16Range::new(1, 3),
         "Z",
+        None,
         None
     ));
 
@@ -446,7 +449,8 @@ fn platform_text_input_replace_and_mark_commits_using_original_replacement_range
         1.0,
         fret_runtime::Utf16Range::new(1, 3),
         "X",
-        Some(fret_runtime::Utf16Range::new(0, 1))
+        Some(fret_runtime::Utf16Range::new(0, 1)),
+        None
     ));
 
     let marked = ui.platform_text_input_query(
@@ -469,6 +473,7 @@ fn platform_text_input_replace_and_mark_commits_using_original_replacement_range
         1.0,
         fret_runtime::Utf16Range::new(1, 2),
         "Z",
+        None,
         None
     ));
 
@@ -494,5 +499,68 @@ fn platform_text_input_replace_and_mark_commits_using_original_replacement_range
     assert_eq!(
         marked,
         fret_runtime::PlatformTextInputQueryResult::Range(None)
+    );
+}
+
+#[test]
+fn platform_text_input_replace_and_mark_can_move_selected_range_within_preedit() {
+    let mut app = crate::test_host::TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+
+    let window = AppWindowId::default();
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let mut input = crate::text_input::TextInput::new().with_text("abc");
+    let style = crate::TextInputStyle {
+        padding: Edges::all(Px(0.0)),
+        ..Default::default()
+    };
+    input.set_chrome_style(style);
+
+    let root = ui.create_node(TestStack);
+    let text = ui.create_node(input);
+    ui.add_child(root, text);
+    ui.set_root(root);
+    ui.set_focus(Some(text));
+
+    let mut services = PlatformTextTestServices::default();
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(100.0), Px(20.0)));
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::SetTextSelection {
+            anchor: 1,
+            focus: 1,
+        },
+    );
+
+    // Start composition with a marked range covering the inserted preedit and place the caret
+    // between the two characters.
+    assert!(ui.platform_text_input_replace_and_mark_text_in_range_utf16(
+        &mut app,
+        &mut services,
+        1.0,
+        fret_runtime::Utf16Range::new(1, 1),
+        "東京",
+        Some(fret_runtime::Utf16Range::new(1, 3)),
+        Some(fret_runtime::Utf16Range::new(2, 2)),
+    ));
+
+    let selected = ui.platform_text_input_query(
+        &mut app,
+        &mut services,
+        1.0,
+        &fret_runtime::PlatformTextInputQuery::SelectedTextRange,
+    );
+    assert_eq!(
+        selected,
+        fret_runtime::PlatformTextInputQueryResult::Range(Some(fret_runtime::Utf16Range::new(
+            2, 2
+        )))
     );
 }

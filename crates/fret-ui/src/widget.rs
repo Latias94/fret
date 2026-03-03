@@ -1756,6 +1756,7 @@ pub trait Widget<H: UiHost> {
         _range: fret_runtime::Utf16Range,
         _text: &str,
         _marked: Option<fret_runtime::Utf16Range>,
+        _selected: Option<fret_runtime::Utf16Range>,
     ) -> bool {
         false
     }

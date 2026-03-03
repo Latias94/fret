@@ -91,7 +91,6 @@ impl<H: UiHost> UiTree<H> {
         let focus = self.focus;
         let focus_in_default_root = focus.is_some_and(|n| self.is_descendant(default_root, n));
         let start = focus.unwrap_or(default_root);
-
         let mut availability = self.command_availability_from_node(app, &input_ctx, start, command);
         if availability == CommandAvailability::NotHandled
             && focus.is_some()
@@ -100,7 +99,7 @@ impl<H: UiHost> UiTree<H> {
         {
             availability =
                 self.command_availability_from_node(app, &input_ctx, default_root, command);
-        };
+        }
 
         if availability == CommandAvailability::NotHandled
             && matches!(command.as_str(), "focus.next" | "focus.previous")

@@ -576,6 +576,32 @@ fn eval_predicate(
 
             area.size.width.0.max(0.0) + eps >= min_w && area.size.height.0.max(0.0) + eps >= min_h
         }
+        UiPredicateV1::ImeSurroundingTextIsSome { is_some } => {
+            text_input_snapshot
+                .and_then(|snapshot| snapshot.surrounding_text.as_ref())
+                .is_some()
+                == *is_some
+        }
+        UiPredicateV1::ImeSurroundingTextValid => {
+            let Some(surrounding) = text_input_snapshot
+                .and_then(|snapshot| snapshot.surrounding_text.as_ref())
+            else {
+                return false;
+            };
+
+            let text = surrounding.text.as_ref();
+            if text.len() > fret_runtime::WindowImeSurroundingText::MAX_TEXT_BYTES {
+                return false;
+            }
+
+            let cursor = surrounding.cursor as usize;
+            let anchor = surrounding.anchor as usize;
+            if cursor > text.len() || anchor > text.len() {
+                return false;
+            }
+
+            text.is_char_boundary(cursor) && text.is_char_boundary(anchor)
+        }
         UiPredicateV1::CheckedIsNone { target } => {
             let Some(node) = select_node(target) else {
                 return false;

@@ -10,6 +10,7 @@ pub(super) struct ActiveScript {
     pub(super) steps: Vec<UiActionStepV2>,
     pub(super) run_id: u64,
     pub(super) anchor_window: AppWindowId,
+    pub(super) started_unix_ms: u64,
     pub(super) next_step: usize,
     pub(super) base_ref: Option<ScriptBaseRefState>,
     pub(super) event_log: Vec<UiScriptEventLogEntryV1>,

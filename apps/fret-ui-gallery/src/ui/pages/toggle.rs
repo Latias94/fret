@@ -30,31 +30,24 @@ pub(super) fn preview_toggle(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
         vec![
             DocSection::new("Demo", demo)
                 .description("A small outline toggle with an icon + label.")
-                .max_w(Px(480.0))
                 .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
             DocSection::new("Outline", outline)
                 .description("Outline variant for dense toolbars.")
-                .max_w(Px(480.0))
                 .code_rust_from_file_region(snippets::outline::SOURCE, "example"),
             DocSection::new("With Text", with_text)
                 .description("Default variant with icon + text.")
-                .max_w(Px(480.0))
                 .code_rust_from_file_region(snippets::with_text::SOURCE, "example"),
             DocSection::new("Size", size)
                 .description("Size presets: Sm / Default / Lg.")
-                .max_w(Px(480.0))
                 .code_rust_from_file_region(snippets::size::SOURCE, "example"),
             DocSection::new("Disabled", disabled)
                 .description("Disabled toggles remain readable and non-interactive.")
-                .max_w(Px(480.0))
                 .code_rust_from_file_region(snippets::disabled::SOURCE, "example"),
             DocSection::new("RTL", rtl)
                 .description("Toggle content order and alignment under RTL.")
-                .max_w(Px(480.0))
                 .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
             DocSection::new("Notes", notes)
-                .description("API reference pointers and accessibility notes.")
-                .max_w(Px(820.0)),
+                .description("API reference pointers and accessibility notes."),
         ],
     );
 

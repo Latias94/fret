@@ -14,7 +14,6 @@ pub(super) fn preview_ai_code_block_demo(
         Some("AI Elements are policy-level compositions built on top of lower-level primitives."),
         vec![
             DocSection::new("CodeBlock", demo)
-                .max_w(Px(820.0))
                 .test_id_prefix("ui-gallery-ai-code-block-demo")
                 .code_rust_from_file_region(snippets::code_block_demo::SOURCE, "example"),
         ],
