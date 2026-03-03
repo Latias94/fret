@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "kind": "diag_script_suite_manifest",
+  "scripts": [
+    "tools/diag-scripts/ui-gallery/clipboard/ui-gallery-clipboard-text-smoke.json",
+    "tools/diag-scripts/ui-gallery/empty/ui-gallery-empty-background-gradient-screenshot.json",
+    "tools/diag-scripts/ui-gallery/diag/ui-gallery-gesture-tap-smoke.json",
+    "tools/diag-scripts/ui-gallery/incoming/ui-gallery-incoming-open-inject-smoke.json",
+    "tools/diag-scripts/ui-gallery/diag/ui-gallery-pointer-kind-touch-click-smoke.json",
+    "tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scroll-area-nested-scroll-routing.json",
+    "tools/diag-scripts/ui-gallery/table/ui-gallery-table-smoke.json"
+  ]
+}

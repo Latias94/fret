@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "kind": "diag_script_suite_manifest",
+  "scripts": [
+    "tools/diag-scripts/custom-effect-v3-non-filterable-user0-fallback-screenshot.json",
+    "tools/diag-scripts/custom-effect-v3-non-filterable-user01-fallback-screenshot.json",
+    "tools/diag-scripts/custom-effect-v3-non-filterable-user1-fallback-screenshot.json"
+  ]
+}

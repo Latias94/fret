@@ -1,0 +1,7 @@
+{
+  "schema_version": 1,
+  "kind": "diag_script_suite_manifest",
+  "scripts": [
+    "tools/diag-scripts/cookbook/external-texture-import-basics/cookbook-external-texture-import-basics-smoke.json"
+  ]
+}

@@ -4,7 +4,7 @@ status: living
 scope: diagnostics, scripted tests, suite membership
 ---
 
-# Diag script suites (redirect stubs + suite manifests)
+# Diag script suites (suite manifests)
 
 Built-in `fretboard diag suite <name>` suites are defined as curated directory inputs under:
 
@@ -14,14 +14,17 @@ Discoverability:
 
 - List suites: `cargo run -p fretboard -- diag list suites`
 
-Suite membership can be expressed in two equivalent tooling-only formats:
+Suite membership is expressed via a tooling-only suite manifest:
 
-1) **Redirect stubs** (legacy / merge-friendly): each JSON file in a suite directory is a small `script_redirect` stub
-   that points at the canonical script path under `tools/diag-scripts/` (or elsewhere in the repo).
-2) **Suite manifest** (low-noise): a single `suite.json` (or `_suite.json`) file at the suite root with:
+1) **Suite manifest** (default): a single `suite.json` (or `_suite.json`) file at the suite root with:
    - `kind: "diag_script_suite_manifest"`
    - `schema_version: 1`
    - `scripts: ["tools/diag-scripts/...", ...]`
+
+Legacy format (still supported by tooling, but discouraged in-tree):
+
+- **Redirect stubs**: each JSON file in a suite directory is a small `script_redirect` stub that points at a canonical
+  script path. This was useful for merge-friendliness, but creates large file-count noise in the repo tree.
 
 Why:
 
@@ -31,8 +34,10 @@ Why:
 
 Choosing a format:
 
-- Prefer **redirect stubs** for high-churn suites (merge conflicts become “add/remove a file”).
-- Prefer a **suite manifest** for low-churn suites when file-count noise is a problem.
+- In this repo, prefer the **suite manifest** format by default.
+- If you need stub-style merge behavior for a high-churn suite, consider:
+  - splitting the suite into smaller suites to reduce concurrent edits, or
+  - maintaining out-of-tree stub suites (tooling still supports them).
 
 Notes:
 
