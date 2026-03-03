@@ -18,6 +18,10 @@ This file is a short, append-only log of landings and decisions for this workstr
   - Code: `ecosystem/fret-dnd/src/scroll.rs`, `ecosystem/fret-workspace/src/tab_strip/kernel.rs`,
     `ecosystem/fret-docking/src/dock/space.rs`
   - Rationale: keep drag-to-scroll behavior consistent (and easier to gate) across workspace and docking.
+- Extracted an overflow dropdown item selection helper (policy remains adapter-owned).
+  - Code: `ecosystem/fret-ui-headless/src/tab_strip_overflow_menu.rs`, wired in
+    `ecosystem/fret-workspace/src/tab_strip/overflow.rs` and `ecosystem/fret-docking/src/dock/tab_overflow.rs`
+  - Rationale: reduce drift in “which indices appear in the overflow dropdown” while keeping per-adapter defaults.
 
 ## Next (proposed)
 

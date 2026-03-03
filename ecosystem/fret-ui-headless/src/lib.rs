@@ -37,6 +37,7 @@ pub mod tab_strip_canonical;
 pub mod tab_strip_controller;
 pub mod tab_strip_drop_target;
 pub mod tab_strip_overflow;
+pub mod tab_strip_overflow_menu;
 pub mod tab_strip_scroll;
 pub mod tab_strip_surface;
 pub mod table;
