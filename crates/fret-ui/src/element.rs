@@ -693,6 +693,8 @@ impl Default for ContainerProps {
 pub struct SemanticsDecoration {
     pub role: Option<SemanticsRole>,
     pub label: Option<Arc<str>>,
+    /// Optional role description override (ARIA `aria-roledescription`-like outcome).
+    pub role_description: Option<Arc<str>>,
     /// Debug/test-only identifier for deterministic automation.
     ///
     /// This MUST NOT be mapped into platform accessibility name/label fields by default.
@@ -750,6 +752,7 @@ impl SemanticsDecoration {
         Self {
             role: other.role.or(self.role),
             label: other.label.or(self.label),
+            role_description: other.role_description.or(self.role_description),
             test_id: other.test_id.or(self.test_id),
             value: other.value.or(self.value),
             disabled: other.disabled.or(self.disabled),
@@ -795,6 +798,11 @@ impl SemanticsDecoration {
 
     pub fn label(mut self, label: impl Into<Arc<str>>) -> Self {
         self.label = Some(label.into());
+        self
+    }
+
+    pub fn role_description(mut self, role_description: impl Into<Arc<str>>) -> Self {
+        self.role_description = Some(role_description.into());
         self
     }
 

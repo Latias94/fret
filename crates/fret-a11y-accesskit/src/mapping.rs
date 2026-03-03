@@ -307,6 +307,9 @@ pub fn tree_update_from_snapshot(snapshot: &SemanticsSnapshot, scale_factor: f64
         if let Some(url) = node.extra.url.as_ref() {
             out.set_url(url.clone());
         }
+        if let Some(role_description) = node.extra.role_description.as_ref() {
+            out.set_role_description(role_description.clone());
+        }
         if let Some(level) = node
             .extra
             .level
@@ -436,5 +439,74 @@ pub fn tree_update_from_snapshot(snapshot: &SemanticsSnapshot, scale_factor: f64
         }),
         tree_id: TreeId::ROOT,
         focus,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_core::{
+        AppWindowId, Point, Px, Rect, SemanticsActions, SemanticsFlags, SemanticsNode,
+        SemanticsNodeExtra, SemanticsRole, SemanticsRoot, SemanticsSnapshot, Size,
+    };
+    use slotmap::KeyData;
+
+    #[test]
+    fn maps_role_description() {
+        let window = AppWindowId::default();
+        let node_id = fret_core::NodeId::from(KeyData::from_ffi(1));
+
+        let node = SemanticsNode {
+            id: node_id,
+            parent: None,
+            role: SemanticsRole::Region,
+            bounds: Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(10.0), Px(10.0))),
+            flags: SemanticsFlags::default(),
+            test_id: None,
+            active_descendant: None,
+            pos_in_set: None,
+            set_size: None,
+            label: None,
+            value: None,
+            extra: SemanticsNodeExtra {
+                role_description: Some("carousel".to_string()),
+                ..SemanticsNodeExtra::default()
+            },
+            text_selection: None,
+            text_composition: None,
+            actions: SemanticsActions::default(),
+            labelled_by: Vec::new(),
+            described_by: Vec::new(),
+            controls: Vec::new(),
+            inline_spans: Vec::new(),
+        };
+
+        let snapshot = SemanticsSnapshot {
+            window,
+            roots: vec![SemanticsRoot {
+                root: node_id,
+                visible: true,
+                blocks_underlay_input: false,
+                hit_testable: true,
+                z_index: 0,
+            }],
+            barrier_root: None,
+            focus_barrier_root: None,
+            focus: None,
+            captured: None,
+            nodes: vec![node],
+        };
+
+        let update = tree_update_from_snapshot(&snapshot, 1.0);
+        let accesskit_id = crate::ids::to_accesskit_id(node_id);
+        let node = update
+            .nodes
+            .iter()
+            .find(|(id, _)| *id == accesskit_id)
+            .map(|(_, n)| n)
+            .expect("expected accesskit node");
+
+        assert_eq!(node.role_description(), Some("carousel"));
     }
 }
