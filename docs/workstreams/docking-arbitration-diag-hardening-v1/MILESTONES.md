@@ -89,6 +89,10 @@ Stage gates for merge-back correctness (2026-03-03):
 - Diagnostics runtime: arm a keepalive timer while scripts are active so `wait_frames` / `wait_until` can progress (or
   fail with `timeout.no_frames`) even when redraw callbacks stop (occlusion/idle).
   - PASS: run id `1772497918062` (`target/fret-diag-chained-postfix`)
+- Diagnostics runtime: allow a small “burst” of frame-independent tail steps per drive call so scripts do not require an
+  additional rendered frame to execute a final `capture_bundle` after the last semantic assertion (avoids launch-mode
+  timeouts under occlusion/idle throttling and tight tooling budgets).
+  - implementation: `ecosystem/fret-bootstrap/src/ui_diagnostics/script_engine.rs`
 
 ## M1.4 — Rebuild reliability for docking demos (Windows/MSVC)
 

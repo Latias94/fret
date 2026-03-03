@@ -71,3 +71,5 @@ with special focus on multi-window tear-off + drag-back sequences.
   scripts, because the last remaining window can be occluded/idle and stop producing redraw callbacks (tooling timeout).
 - Runtime hardening: while a diagnostics script is active, arm a keepalive timer that can advance a conservative subset
   of script steps (and fail with `timeout.no_frames`) even if redraw callbacks stop (occlusion/idle).
+- Runtime hardening: allow a small “burst” of frame-independent tail steps so scripts do not require an additional frame
+  to run a final `capture_bundle` after the last semantic assertion (reduces tooling timeouts at tight `--timeout-ms`).

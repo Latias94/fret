@@ -1216,11 +1216,8 @@ pub(super) fn finalize_drive_script_for_window(
                     window_snapshot_seq: None,
                 },
             );
-            let dumped_dir = service.dump_bundle_with_options(
-                Some(&label),
-                force_dump_max_snapshots,
-                None,
-            );
+            let dumped_dir =
+                service.dump_bundle_with_options(Some(&label), force_dump_max_snapshots, None);
             if let Some(dir) = dumped_dir.as_ref() {
                 push_script_event_log(
                     &mut active,
@@ -1229,7 +1226,11 @@ pub(super) fn finalize_drive_script_for_window(
                         unix_ms: unix_ms_now(),
                         kind: "bundle_dumped".to_string(),
                         step_index: Some(step_index as u32),
-                        note: Some(format_bundle_dump_note(&label, force_dump_max_snapshots, None)),
+                        note: Some(format_bundle_dump_note(
+                            &label,
+                            force_dump_max_snapshots,
+                            None,
+                        )),
                         bundle_dir: Some(display_path(&service.cfg.out_dir, dir)),
                         window: Some(window.data().as_ffi()),
                         tick_id: Some(app.tick_id().0),
@@ -1718,7 +1719,8 @@ pub(super) fn push_ime_event_trace(
 // --- Extracted from `ui_diagnostics.rs` (fearless refactor) ---
 
 impl UiDiagnosticsService {
-    const SCRIPT_KEEPALIVE_TIMER_INTERVAL: std::time::Duration = std::time::Duration::from_millis(16);
+    const SCRIPT_KEEPALIVE_TIMER_INTERVAL: std::time::Duration =
+        std::time::Duration::from_millis(16);
     const SCRIPT_NO_FRAME_DRIVE_STALL_THRESHOLD_MS: u64 = 750;
     const SCRIPT_NO_FRAME_DRIVE_HARD_TIMEOUT_MS: u64 = 15_000;
 
@@ -1797,13 +1799,8 @@ impl UiDiagnosticsService {
                 continue;
             }
 
-            let out = self.drive_script_for_window_no_frame(
-                app,
-                window,
-                bounds,
-                scale_factor,
-                age_ms,
-            );
+            let out =
+                self.drive_script_for_window_no_frame(app, window, bounds, scale_factor, age_ms);
             for effect in out.effects {
                 app.push_effect(effect);
             }
@@ -2029,15 +2026,19 @@ impl UiDiagnosticsService {
             | UiActionStepV2::InjectIncomingOpen { .. }
             | UiActionStepV2::WaitFrames { .. }
             | UiActionStepV2::ResetDiagnostics) => {
-                handled = script_steps::handle_effect_only_steps(self, window, step, &mut active, &mut output);
+                handled = script_steps::handle_effect_only_steps(
+                    self,
+                    window,
+                    step,
+                    &mut active,
+                    &mut output,
+                );
             }
             _ => {}
         }
 
         if !handled && stall_age_ms >= Self::SCRIPT_NO_FRAME_DRIVE_HARD_TIMEOUT_MS {
-            force_dump_label = Some(format!(
-                "script-step-{step_index:04}-stalled-no-frames"
-            ));
+            force_dump_label = Some(format!("script-step-{step_index:04}-stalled-no-frames"));
             stop_script = true;
             failure_reason = Some("script_stalled_no_frames".to_string());
             output.request_redraw = true;
@@ -2173,18 +2174,13 @@ impl UiDiagnosticsService {
             };
         }
 
-        let prev_next_step = active.next_step;
-        let step_index = active.next_step;
-        let step = active.steps.get(step_index).cloned();
-        let Some(step) = step else {
-            return UiScriptFrameOutput {
-                request_redraw: devtools_request_redraw,
-                ..UiScriptFrameOutput::default()
-            };
-        };
-
-        let (step_index_u32, step_kind) =
-            self.note_step_start_and_scope_evidence(app, window, step_index, &step, &mut active);
+        // Some scripts historically required an extra rendered frame to execute a frame-independent
+        // tail step (most commonly `capture_bundle`) after the last semantic assertion. Under
+        // occlusion/idle throttling (or a tight tooling `--timeout-ms`), that last frame may never
+        // arrive. Allow a small “burst” of step execution within a single drive call, but only
+        // while the executed steps produce no injected events/effects and do not enter a wait
+        // state.
+        const MAX_BURST_STEPS_PER_DRIVE: usize = 8;
 
         let mut output = UiScriptFrameOutput::default();
         output.request_redraw |= devtools_request_redraw;
@@ -2195,44 +2191,97 @@ impl UiDiagnosticsService {
         let mut handoff_to: Option<AppWindowId> = None;
         let anchor_window = active.anchor_window;
 
-        Self::reset_active_script_state_for_step(&mut active, &step);
+        let mut prev_next_step = active.next_step;
+        let mut step_index = active.next_step;
+        let mut step_index_u32 = active.next_step.min(u32::MAX as usize) as u32;
+        let mut step_kind: String = "unknown".to_string();
 
-        let outcome = dispatch_drive_script_step(
-            self,
-            app,
-            window,
-            window_bounds,
-            anchor_window,
-            step_index,
-            step,
-            scale_factor,
-            element_runtime,
-            semantics_snapshot,
-            &mut ui,
-            text_font_stack_key_stable_frames,
-            font_catalog_populated,
-            system_font_rescan_idle,
-            &mut active,
-            &mut output,
-            &mut force_dump_label,
-            &mut force_dump_max_snapshots,
-            &mut handoff_to,
-            &mut stop_script,
-            &mut failure_reason,
-        );
-
-        match outcome {
-            DriveScriptStepDispatchOutcome::Continue => {}
-            DriveScriptStepDispatchOutcome::ReturnOutput => {
-                return output;
+        for _ in 0..MAX_BURST_STEPS_PER_DRIVE {
+            if active.next_step >= active.steps.len() {
+                break;
             }
-            DriveScriptStepDispatchOutcome::RequeueActiveAndReturnOutput => {
-                self.active_scripts.insert(window, active);
-                return output;
+
+            prev_next_step = active.next_step;
+            step_index = active.next_step;
+            let Some(step) = active.steps.get(step_index).cloned() else {
+                return UiScriptFrameOutput {
+                    request_redraw: devtools_request_redraw,
+                    ..UiScriptFrameOutput::default()
+                };
+            };
+
+            (step_index_u32, step_kind) = self.note_step_start_and_scope_evidence(
+                app,
+                window,
+                step_index,
+                &step,
+                &mut active,
+            );
+
+            let effects_before = output.effects.len();
+            let events_before = output.events.len();
+
+            Self::reset_active_script_state_for_step(&mut active, &step);
+
+            let outcome = dispatch_drive_script_step(
+                self,
+                app,
+                window,
+                window_bounds,
+                anchor_window,
+                step_index,
+                step,
+                scale_factor,
+                element_runtime,
+                semantics_snapshot,
+                &mut ui,
+                text_font_stack_key_stable_frames,
+                font_catalog_populated,
+                system_font_rescan_idle,
+                &mut active,
+                &mut output,
+                &mut force_dump_label,
+                &mut force_dump_max_snapshots,
+                &mut handoff_to,
+                &mut stop_script,
+                &mut failure_reason,
+            );
+
+            match outcome {
+                DriveScriptStepDispatchOutcome::Continue => {}
+                DriveScriptStepDispatchOutcome::ReturnOutput => {
+                    return output;
+                }
+                DriveScriptStepDispatchOutcome::RequeueActiveAndReturnOutput => {
+                    self.active_scripts.insert(window, active);
+                    return output;
+                }
+            }
+
+            let advanced = active.next_step > prev_next_step;
+            let wrote_effects = output.effects.len() > effects_before;
+            let wrote_events = output.events.len() > events_before;
+
+            let entered_wait_state = active.wait_frames_remaining > 0
+                || active.wait_until.is_some()
+                || active.wait_shortcut_routing_trace.is_some()
+                || active.wait_command_dispatch_trace.is_some()
+                || active.wait_overlay_placement_trace.is_some()
+                || active.screenshot_wait.is_some();
+
+            if stop_script
+                || handoff_to.is_some()
+                || force_dump_label.is_some()
+                || !advanced
+                || wrote_effects
+                || wrote_events
+                || entered_wait_state
+            {
+                break;
             }
         }
 
-        return finalize_drive_script_for_window(
+        finalize_drive_script_for_window(
             self,
             app,
             window,
@@ -2247,7 +2296,7 @@ impl UiDiagnosticsService {
             stop_script,
             failure_reason,
             handoff_to,
-        );
+        )
     }
 
     fn record_script_event(&mut self, app: &App, window: AppWindowId, event: &Event) {
@@ -2261,8 +2310,5 @@ impl UiDiagnosticsService {
 }
 
 fn rect_from_v1(r: RectV1) -> Rect {
-    Rect::new(
-        Point::new(Px(r.x), Px(r.y)),
-        Size::new(Px(r.w), Px(r.h)),
-    )
+    Rect::new(Point::new(Px(r.x), Px(r.y)), Size::new(Px(r.w), Px(r.h)))
 }
