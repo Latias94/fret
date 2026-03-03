@@ -18,6 +18,18 @@ This file is a short, append-only log of landings and decisions for this workstr
   - Code: `ecosystem/fret-dnd/src/scroll.rs`, `ecosystem/fret-workspace/src/tab_strip/kernel.rs`,
     `ecosystem/fret-docking/src/dock/space.rs`
   - Rationale: keep drag-to-scroll behavior consistent (and easier to gate) across workspace and docking.
+- Extracted an overflow dropdown item selection helper (policy remains adapter-owned).
+  - Code: `ecosystem/fret-ui-headless/src/tab_strip_overflow_menu.rs`, wired in
+    `ecosystem/fret-workspace/src/tab_strip/overflow.rs` and `ecosystem/fret-docking/src/dock/tab_overflow.rs`
+  - Rationale: reduce drift in “which indices appear in the overflow dropdown” while keeping per-adapter defaults.
+- Hardened workspace tab close arbitration so clicking the close affordance does not arm the parent tab pressable.
+  - Code: `ecosystem/fret-workspace/src/tab_strip/interaction.rs`, `ecosystem/fret-workspace/src/tab_strip/mod.rs`
+  - Gate: `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-button-does-not-activate.json`
+  - Rationale: editor-grade behavior expects "close without activation" to be reliable, even when close is nested.
+- Made pressable hover edges mark view-cache roots as needing rerender.
+  - Code: `crates/fret-ui/src/tree/dispatch/hover.rs`, `crates/fret-ui/src/tree/debug/invalidation.rs`
+  - Test: `crates/fret-ui/src/declarative/tests/layout/interactivity.rs` (`pressable_hover_marks_view_cache_root_dirty_on_hover_edges`)
+  - Rationale: components that mount/unmount children based on `PressableState::hovered` must remain deterministic under view caching.
 
 ## Next (proposed)
 

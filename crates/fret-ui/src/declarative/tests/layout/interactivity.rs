@@ -291,6 +291,119 @@ fn hover_region_marks_view_cache_root_dirty_on_hover_edges() {
 }
 
 #[test]
+fn pressable_hover_marks_view_cache_root_dirty_on_hover_edges() {
+    use std::sync::atomic::{AtomicBool, Ordering};
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+    ui.set_view_cache_enabled(true);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(200.0), Px(80.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    let observed_hovered = Arc::new(AtomicBool::new(false));
+
+    fn build_root(
+        observed_hovered: Arc<AtomicBool>,
+    ) -> impl FnOnce(&mut ElementContext<'_, TestHost>) -> Vec<AnyElement> {
+        move |cx| {
+            vec![
+                cx.view_cache(crate::element::ViewCacheProps::default(), move |cx| {
+                    let observed_hovered = observed_hovered.clone();
+                    vec![cx.pressable(
+                        crate::element::PressableProps::default(),
+                        move |cx, state| {
+                            observed_hovered.store(state.hovered, Ordering::SeqCst);
+                            let mut children = vec![cx.text("trigger")];
+                            if state.hovered {
+                                children.push(cx.text("hovered"));
+                            }
+                            children
+                        },
+                    )]
+                }),
+            ]
+        }
+    }
+
+    // Frame 0: not hovered yet.
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "pressable-hover-view-cache",
+        build_root(observed_hovered.clone()),
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let view_cache_node = ui.children(root)[0];
+    let pressable_node = ui.children(view_cache_node)[0];
+    let pressable_bounds = ui
+        .debug_node_bounds(pressable_node)
+        .expect("pressable bounds");
+
+    assert!(
+        !observed_hovered.load(Ordering::SeqCst),
+        "expected hovered=false on initial frame"
+    );
+
+    let pos = fret_core::Point::new(
+        Px(pressable_bounds.origin.x.0 + 2.0),
+        Px(pressable_bounds.origin.y.0 + 2.0),
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut text,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+            position: pos,
+            buttons: fret_core::MouseButtons::default(),
+            modifiers: fret_core::Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    assert!(
+        ui.view_cache_node_needs_rerender(view_cache_node),
+        "expected pressable hover edges to mark the view-cache root as needing a rerender"
+    );
+
+    // Frame 1: the cache root must re-run to propagate the hovered signal to declarative code.
+    app.advance_frame();
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "pressable-hover-view-cache",
+        build_root(observed_hovered.clone()),
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let view_cache_node = ui.children(root)[0];
+    let pressable_node = ui.children(view_cache_node)[0];
+    assert_eq!(
+        ui.children(pressable_node).len(),
+        2,
+        "expected hover-driven child to mount under view-cache reuse"
+    );
+    assert!(
+        observed_hovered.load(Ordering::SeqCst),
+        "expected hovered=true after pointer move"
+    );
+}
+
+#[test]
 fn pressable_keyboard_activation_dispatches_click_command() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();

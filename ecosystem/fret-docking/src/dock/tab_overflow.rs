@@ -6,6 +6,9 @@ use super::prelude_core::*;
 use super::tab_bar_kernel as kernel;
 use fret_ui::ThemeSnapshot;
 use fret_ui_headless::tab_strip_overflow::compute_overflowed_tab_indices;
+use fret_ui_headless::tab_strip_overflow_menu::{
+    OverflowMenuActivePolicy, OverflowMenuEmptyOverflowedPolicy, compute_overflow_menu_item_indices,
+};
 
 #[derive(Debug, Clone)]
 pub(super) struct TabOverflowMenuState {
@@ -129,20 +132,13 @@ pub(super) fn compute_tab_overflow_menu_items(
         candidate.strip_rect,
         Px(2.0),
     );
-
-    if overflowed.is_empty() {
-        return Arc::from(indices);
-    }
-
-    let mut overflowed_set = HashSet::<usize>::new();
-    overflowed_set.extend(overflowed);
-
-    let mut items: Vec<usize> = Vec::new();
-    for ix in 0..tab_count {
-        if overflowed_set.contains(&ix) || ix == active {
-            items.push(ix);
-        }
-    }
+    let items = compute_overflow_menu_item_indices(
+        tab_count,
+        &overflowed,
+        Some(active),
+        OverflowMenuActivePolicy::Include,
+        OverflowMenuEmptyOverflowedPolicy::AllTabs,
+    );
     Arc::from(items)
 }
 

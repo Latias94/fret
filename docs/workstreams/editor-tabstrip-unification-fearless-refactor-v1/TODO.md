@@ -31,6 +31,8 @@ This workstream is intentionally scoped to “editor-grade tab UX”:
 - [ ] Add diag script coverage:
   - [x] Workspace: overflow dropdown close does not activate:
     - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-overflow-close-does-not-activate.json`
+  - [x] Workspace: close button does not activate inactive tab:
+    - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-button-does-not-activate.json`
   - [x] Docking: overflow dropdown open + select row activates:
     - `tools/diag-scripts/docking/arbitration/docking-arbitration-demo-tab-overflow-menu-select-row-1-activates.json`
   - [x] Select-from-dropdown keeps active visible (explicit assert / evidence):
