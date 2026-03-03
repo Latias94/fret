@@ -3,6 +3,8 @@ use std::sync::Arc;
 use fret_core::SemanticsRole;
 use fret_ui::element::{AnyElement, SemanticsDecoration};
 
+use crate::UiIntoElement;
+
 pub trait AnyElementSemanticsExt {
     fn a11y(self, decoration: SemanticsDecoration) -> AnyElement;
     fn a11y_role(self, role: SemanticsRole) -> AnyElement;
@@ -52,3 +54,36 @@ impl AnyElementSemanticsExt for AnyElement {
         self.a11y(SemanticsDecoration::default().checked(checked))
     }
 }
+
+#[derive(Debug, Clone)]
+pub struct UiIntoElementWithTestId<T> {
+    inner: T,
+    test_id: Arc<str>,
+}
+
+impl<T> UiIntoElementWithTestId<T> {
+    pub fn new(inner: T, test_id: impl Into<Arc<str>>) -> Self {
+        Self {
+            inner,
+            test_id: test_id.into(),
+        }
+    }
+}
+
+impl<T: UiIntoElement> UiIntoElement for UiIntoElementWithTestId<T> {
+    #[track_caller]
+    fn into_element<H: fret_ui::UiHost>(
+        self,
+        cx: &mut fret_ui::ElementContext<'_, H>,
+    ) -> fret_ui::element::AnyElement {
+        self.inner.into_element(cx).test_id(self.test_id)
+    }
+}
+
+pub trait UiIntoElementTestIdExt: UiIntoElement + Sized {
+    fn test_id(self, id: impl Into<Arc<str>>) -> UiIntoElementWithTestId<Self> {
+        UiIntoElementWithTestId::new(self, id)
+    }
+}
+
+impl<T: UiIntoElement> UiIntoElementTestIdExt for T {}

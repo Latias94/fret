@@ -302,9 +302,10 @@ practical steps:
 
 - Key context stack + diagnostics-visible context naming/stacking rules.
 - Reduce authoring noise:
-  - builder-level semantics decorators (avoid “decorate-only” `.into_element(cx)` calls):
-    `docs/workstreams/authoring-ergonomics-fluent-builder-todo.md`
-    (`AUE-semantics-120`…)
+  - `test_id` late landing is available for `UiIntoElement` via `UiIntoElementTestIdExt`:
+    `ecosystem/fret-ui-kit/src/declarative/semantics.rs` (tracked as `AUE-semantics-120`).
+  - builder-level semantics decorators (beyond `test_id`) to avoid “decorate-only” `.into_element(cx)` calls:
+    `docs/workstreams/authoring-ergonomics-fluent-builder-todo.md` (`AUE-semantics-121`…)
   - unify builder terminals + late-landing decorator coverage:
     `docs/workstreams/unified-authoring-builder-v1-todo.md` (MVP3)
 - Pointer-triggered explainability: stable selector → action mapping without relying on script stamping.

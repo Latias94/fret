@@ -30,7 +30,9 @@ Goal:
 
 Backlog:
 
-- [ ] Expose `test_id(...)` on the fluent builder path (applied during `.into_element(cx)`).
+- [x] Expose `test_id(...)` on the fluent authoring path (applied during `.into_element(cx)`).
+  - Implemented as `UiIntoElementTestIdExt` (no early landing required for patch targets).
+  - Evidence: `ecosystem/fret-ui-kit/src/declarative/semantics.rs`
 - [ ] Expose a minimal a11y role decorator on the fluent builder path (applied during `.into_element(cx)`).
 - [ ] Add compile-only coverage in `ecosystem/fret-ui-shadcn/tests/ui_builder_smoke.rs` for builder-level decorators.
 

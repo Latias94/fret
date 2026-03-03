@@ -952,8 +952,14 @@ mod tests {
             drive_loop_progress_keyed(cx, "loop_progress", true, Duration::from_secs(2)).progress
         });
 
-        assert!(p1 > p0, "expected loop progress to advance (p0={p0} p1={p1})");
-        assert!(p1 < 1.0, "expected loop progress to remain normalized (p1={p1})");
+        assert!(
+            p1 > p0,
+            "expected loop progress to advance (p0={p0} p1={p1})"
+        );
+        assert!(
+            p1 < 1.0,
+            "expected loop progress to remain normalized (p1={p1})"
+        );
     }
 
     #[test]

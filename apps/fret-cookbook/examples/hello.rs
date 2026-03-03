@@ -52,17 +52,13 @@ impl View for HelloView {
         cx.on_action_availability::<act::Click>(|_host, _acx| CommandAvailability::Available);
 
         ui::v_flex(cx, |cx| {
-            [
-                shadcn::Label::new("Hello, Fret cookbook!")
-                    .into_element(cx)
-                    .test_id(TEST_ID_LABEL),
+            ui::children![
+                cx;
+                shadcn::Label::new("Hello, Fret cookbook!").test_id(TEST_ID_LABEL),
                 cx.text(render_marker).test_id(TEST_ID_RENDER_MARKER),
-                cx.text(format!("Count: {count_value}"))
-                    .test_id(TEST_ID_COUNT),
+                cx.text(format!("Count: {count_value}")).test_id(TEST_ID_COUNT),
                 shadcn::Button::new("Click me")
                     .action(act::Click)
-                    .into_element(cx)
-                    .a11y_role(SemanticsRole::Button)
                     .test_id(TEST_ID_BUTTON),
             ]
         })

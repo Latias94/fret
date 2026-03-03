@@ -282,10 +282,13 @@ Constraints:
 
 Backlog:
 
-- [ ] AUE-semantics-120 Add a `UiBuilder`-level decorator surface for stable diagnostics selectors:
-  - `test_id(...)` on `UiBuilder<T>`
-  - apply it during `.into_element(cx)` (and any other terminals)
-  - keep `test_id` stamping deterministic under keyed scopes
+- [x] AUE-semantics-120 Add a decorator surface for stable diagnostics selectors before `.into_element(cx)`:
+  - Implemented as a `UiIntoElement` extension: `UiIntoElementTestIdExt` (`test_id(...)`).
+  - Evidence:
+    - `ecosystem/fret-ui-kit/src/declarative/semantics.rs`
+    - cookbook usage: `apps/fret-cookbook/examples/hello.rs`
+  - Note: this covers components/patch targets that implement `UiIntoElement`. Some layout constructor
+    builders still require `.into_element(cx).test_id(...)` at the root.
 - [ ] AUE-semantics-121 Add a `UiBuilder`-level a11y decorator surface:
   - `a11y_role(...)` (and/or a minimal subset of `attach_semantics` outcomes used by cookbook)
   - ensure it composes with existing component-level semantics defaults without overriding policy
