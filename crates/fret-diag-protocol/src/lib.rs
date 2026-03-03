@@ -652,6 +652,7 @@ pub enum UiActionStepV2 {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         window: Option<UiWindowTargetV1>,
         predicate: UiPredicateV1,
+        #[serde(default = "default_action_timeout_frames")]
         timeout_frames: u32,
     },
     /// Wait until the shortcut routing diagnostics trace contains an entry matching `query`.
@@ -3470,6 +3471,34 @@ mod tests {
                 assert_eq!(timeout_frames, default_action_timeout_frames());
             }
             _ => panic!("expected inspect_help_tree_lock_best_match_and_copy_selector"),
+        }
+    }
+
+    #[test]
+    fn step_wait_until_deserializes_with_default_timeout_frames() {
+        let value = serde_json::json!({
+            "type": "wait_until",
+            "predicate": {
+                "kind": "exists",
+                "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+            }
+        });
+
+        let step: UiActionStepV2 = serde_json::from_value(value).unwrap();
+        match step {
+            UiActionStepV2::WaitUntil {
+                window,
+                predicate,
+                timeout_frames,
+            } => {
+                assert!(window.is_none());
+                assert!(
+                    matches!(predicate, UiPredicateV1::Exists { .. }),
+                    "expected exists predicate"
+                );
+                assert_eq!(timeout_frames, default_action_timeout_frames());
+            }
+            _ => panic!("expected wait_until"),
         }
     }
 }
