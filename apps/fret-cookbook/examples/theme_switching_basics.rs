@@ -22,52 +22,40 @@ fn apply_scheme(app: &mut App, scheme: &str) {
     );
 }
 
-struct ThemeSwitchingBasicsState {
+struct ThemeSwitchingBasicsView {
     window: AppWindowId,
     scheme: Model<Option<Arc<str>>>,
     applied_scheme: Option<Arc<str>>,
 }
 
-struct ThemeSwitchingBasicsProgram;
-
-impl MvuProgram for ThemeSwitchingBasicsProgram {
-    type State = ThemeSwitchingBasicsState;
-    type Message = ();
-
-    fn init(app: &mut App, window: AppWindowId) -> Self::State {
+impl View for ThemeSwitchingBasicsView {
+    fn init(app: &mut App, window: AppWindowId) -> Self {
         apply_scheme(app, SCHEME_LIGHT);
 
-        Self::State {
+        Self {
             window,
             scheme: app.models_mut().insert(Some(Arc::from(SCHEME_LIGHT))),
             applied_scheme: Some(Arc::from(SCHEME_LIGHT)),
         }
     }
 
-    fn update(_app: &mut App, _state: &mut Self::State, _message: Self::Message) {}
-
-    fn view(
-        cx: &mut ElementContext<'_, App>,
-        state: &mut Self::State,
-        _msg: &mut MessageRouter<Self::Message>,
-    ) -> Elements {
-        let scheme = state
-            .scheme
-            .read(&mut *cx.app, |_host, v| v.clone())
-            .ok()
-            .flatten()
+    fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
+        let scheme = cx
+            .watch_model(&self.scheme)
+            .layout()
+            .cloned_or_default()
             .unwrap_or_else(|| Arc::from(SCHEME_LIGHT));
 
-        let applied_mismatch = match state.applied_scheme.as_ref() {
+        let applied_mismatch = match self.applied_scheme.as_ref() {
             Some(applied) => applied.as_ref() != scheme.as_ref(),
             None => true,
         };
         if applied_mismatch {
             apply_scheme(&mut *cx.app, scheme.as_ref());
-            state.applied_scheme = Some(scheme.clone());
-            cx.app.request_redraw(state.window);
+            self.applied_scheme = Some(scheme.clone());
+            cx.app.request_redraw(self.window);
             cx.app
-                .push_effect(Effect::RequestAnimationFrame(state.window));
+                .push_effect(Effect::RequestAnimationFrame(self.window));
         }
 
         let scheme_label = match scheme.as_ref() {
@@ -96,7 +84,7 @@ impl MvuProgram for ThemeSwitchingBasicsProgram {
         .items_center()
         .into_element(cx);
 
-        let scheme_toggle = shadcn::ToggleGroup::single(state.scheme.clone())
+        let scheme_toggle = shadcn::ToggleGroup::single(self.scheme.clone())
             .items([
                 shadcn::ToggleGroupItem::new(SCHEME_LIGHT, [cx.text("Light")])
                     .a11y_label("Light")
@@ -166,6 +154,6 @@ fn main() -> anyhow::Result<()> {
     FretApp::new("cookbook-theme-switching-basics")
         .window("cookbook-theme-switching-basics", (720.0, 520.0))
         .install_app(fret_cookbook::install_cookbook_defaults)
-        .run_mvu::<ThemeSwitchingBasicsProgram>()
+        .run_view::<ThemeSwitchingBasicsView>()
         .map_err(anyhow::Error::from)
 }

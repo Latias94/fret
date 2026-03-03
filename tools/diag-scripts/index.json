@@ -93,6 +93,7 @@
         "cookbook-canvas-pan-zoom-basics"
       ],
       "tags": [
+        "actions",
         "canvas",
         "cookbook",
         "pan_zoom",
@@ -192,6 +193,7 @@
         "cookbook-effects-layer-basics"
       ],
       "tags": [
+        "actions",
         "cookbook",
         "effects",
         "effects_layer_basics",
@@ -324,8 +326,10 @@
         "cookbook-icons-and-assets-basics"
       ],
       "tags": [
+        "actions",
         "cookbook",
-        "cookbook.icons_and_assets_basics"
+        "cookbook.icons_and_assets_basics",
+        "smoke"
       ],
       "target_hints": [
         "Validates that icon + asset panels mount and that the reload epoch button is wired."
@@ -364,6 +368,7 @@
         "cookbook-markdown-and-code-basics"
       ],
       "tags": [
+        "actions",
         "code_view",
         "cookbook",
         "copy",
@@ -429,8 +434,8 @@
         "cookbook-simple-todo"
       ],
       "tags": [
+        "actions",
         "cookbook",
-        "mvu",
         "simple_todo",
         "smoke"
       ],
@@ -506,6 +511,7 @@
         "cookbook-virtual-list-basics"
       ],
       "tags": [
+        "actions",
         "cookbook",
         "reorder",
         "scroll",
@@ -1634,6 +1640,16 @@
     {
       "id": "ui-gallery-accordion-demo-shipping-initial-open-height",
       "path": "tools/diag-scripts/ui-gallery/accordion/ui-gallery-accordion-demo-shipping-initial-open-height.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-accordion-extras-borders-card-screenshots",
+      "path": "tools/diag-scripts/ui-gallery/accordion/ui-gallery-accordion-extras-borders-card-screenshots.json",
       "required_capabilities": [],
       "suite_memberships": [
         "ui-gallery-shadcn-conformance"
@@ -3036,6 +3052,25 @@
         "ui-gallery-retained-measured"
       ],
       "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-date-picker-docs-screenshots",
+      "path": "tools/diag-scripts/ui-gallery/date-picker/ui-gallery-date-picker-docs-screenshots.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-date-picker"
+      ],
+      "tags": [
+        "date_picker",
+        "docs",
+        "screenshots",
+        "shadcn",
+        "ui_gallery"
+      ],
       "target_hints": []
     },
     {
@@ -4515,6 +4550,30 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-tabs-demo-tab-text-centering-420",
+      "path": "tools/diag-scripts/ui-gallery/tabs/ui-gallery-tabs-demo-tab-text-centering-420.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "centering",
+        "screenshot",
+        "shadcn",
+        "tabs",
+        "text",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Navigates to the Tabs page.",
+        "Sets window width=1280px to avoid sidebar clipping in the native gallery shell.",
+        "Captures a screenshot + bundle close to the Demo tab triggers for centering triage."
+      ]
+    },
+    {
       "id": "ui-gallery-tabs-wrap-and-baseline-screenshots",
       "path": "tools/diag-scripts/ui-gallery/text-wrap/ui-gallery-tabs-wrap-and-baseline-screenshots.json",
       "required_capabilities": [
@@ -4870,6 +4929,7 @@
       "id": "workspace-shell-demo-tab-close-button-closes-tab-smoke",
       "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-button-closes-tab-smoke.json",
       "required_capabilities": [
+        "diag.command_dispatch_trace",
         "diag.script_v2"
       ],
       "suite_memberships": [
@@ -4883,8 +4943,10 @@
         "workspace"
       ],
       "target_hints": [
-        "Waits for the close button on the active tab (pane A, doc-a-2).",
+        "Activates a visible tab (pane A, doc-a-0).",
+        "Waits for its close button.",
         "Clicks the close button.",
+        "Asserts a pointer-triggered command dispatch trace entry exists for the close command.",
         "Asserts the tab is removed from the UI tree."
       ]
     },

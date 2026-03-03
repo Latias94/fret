@@ -1222,6 +1222,17 @@ impl UiDiagnosticsService {
             .last_injected_step
             .unwrap_or_else(|| active.next_step.min(u32::MAX as usize) as u32);
 
+        let pointer_source_test_id_for_step: Option<String> = active
+            .hit_test_trace
+            .iter()
+            .rev()
+            .find(|e| e.step_index == step_index)
+            .and_then(|e| {
+                e.hit_semantics_test_id
+                    .clone()
+                    .or_else(|| e.intended_test_id.clone())
+            });
+
         let max_entries = MAX_SHORTCUT_ROUTING_TRACE_ENTRIES;
         let decisions =
             store.snapshot_since(window, active.last_command_dispatch_seq, max_entries);
@@ -1241,6 +1252,20 @@ impl UiDiagnosticsService {
                 fret_runtime::CommandDispatchSourceKindV1::Programmatic => "programmatic",
             };
 
+            let source_test_id = match decision.source.kind {
+                fret_runtime::CommandDispatchSourceKindV1::Pointer => {
+                    pointer_source_test_id_for_step.clone()
+                }
+                _ => None,
+            };
+            let handled_by_test_id = if decision.handled_by_element.is_some()
+                && decision.handled_by_element == decision.source.element
+            {
+                source_test_id.clone()
+            } else {
+                None
+            };
+
             push_command_dispatch_trace(
                 &mut active.command_dispatch_trace,
                 UiScriptCommandDispatchTraceEntryV1 {
@@ -1257,7 +1282,9 @@ impl UiDiagnosticsService {
                     stopped: decision.stopped,
                     source_kind: source_kind.to_string(),
                     source_element: decision.source.element,
+                    source_test_id,
                     handled_by_element: decision.handled_by_element,
+                    handled_by_test_id,
                     started_from_focus: decision.started_from_focus,
                     used_default_root_fallback: decision.used_default_root_fallback,
                 },

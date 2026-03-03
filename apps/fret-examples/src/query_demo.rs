@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use fret::prelude::*;
+use fret::legacy::prelude::*;
 use fret_query::ui::QueryElementContextExt as _;
 use fret_query::{
     QueryError, QueryKey, QueryPolicy, QueryRetryPolicy, QueryState, QueryStatus, with_query_client,

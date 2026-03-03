@@ -5,7 +5,7 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;
 
-use fret::prelude::*;
+use fret::legacy::prelude::*;
 use fret_query::ui::QueryElementContextExt as _;
 use fret_query::{
     CancellationToken, FutureSpawner, FutureSpawnerHandle, QueryCancelMode, QueryError, QueryKey,

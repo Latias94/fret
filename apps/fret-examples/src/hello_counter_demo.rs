@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use fret::prelude::*;
+use fret::legacy::prelude::*;
 use fret_core::Corners;
 
 const TEST_ID_ROOT: &str = "hello-counter.root";

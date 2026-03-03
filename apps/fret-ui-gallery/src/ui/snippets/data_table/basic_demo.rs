@@ -1,0 +1,503 @@
+pub const SOURCE: &str = include_str!("basic_demo.rs");
+
+// region: example
+use fret_app::App;
+use fret_core::Px;
+use fret_runtime::{CommandId, Model};
+use fret_ui::Theme;
+use fret_ui::action::OnActivate;
+use fret_ui::element::AnyElement;
+use fret_ui_headless::table::{ColumnDef, RowKey, Table, TableState};
+use fret_ui_kit::declarative::ModelWatchExt as _;
+use fret_ui_shadcn::{self as shadcn, prelude::*};
+use std::sync::Arc;
+
+#[derive(Debug, Clone)]
+struct PaymentRow {
+    key: u64,
+    id: Arc<str>,
+    amount_usd: u64,
+    status: Arc<str>,
+    email: Arc<str>,
+}
+
+const CMD_SELECT_ALL_PAGE: &str = "ui_gallery.data_table.basic.select_all_page";
+const TOGGLE_ROW_SELECTED_ROUTE_PREFIX: &str = "ui_gallery.data_table.basic.toggle_row_selected.";
+
+fn toggle_row_selected_command(row_key: RowKey) -> CommandId {
+    CommandId::new(Arc::<str>::from(format!(
+        "{TOGGLE_ROW_SELECTED_ROUTE_PREFIX}{}",
+        row_key.0
+    )))
+}
+
+fn try_parse_toggle_row_selected(cmd: &CommandId) -> Option<RowKey> {
+    cmd.as_str()
+        .strip_prefix(TOGGLE_ROW_SELECTED_ROUTE_PREFIX)
+        .and_then(|suffix| suffix.parse::<u64>().ok())
+        .map(RowKey)
+}
+
+fn wire_selection_commands<H: UiHost + 'static>(
+    cx: &mut ElementContext<'_, H>,
+    state: Model<TableState>,
+    data: Arc<[PaymentRow]>,
+    columns: Arc<[ColumnDef<PaymentRow>]>,
+) {
+    cx.command_on_command_for(
+        cx.root_id(),
+        Arc::new(move |host, action_cx, command| {
+            let cmd = command.as_str();
+
+            let current = host
+                .models_mut()
+                .read(&state, |st| st.clone())
+                .ok()
+                .unwrap_or_default();
+
+            let table = Table::builder(data.as_ref())
+                .columns(columns.as_ref().to_vec())
+                .get_row_key(|row, _index, _parent| RowKey(row.key))
+                .state(current)
+                .build();
+
+            let next = if cmd == CMD_SELECT_ALL_PAGE {
+                table.toggled_all_page_rows_selected(None)
+            } else if let Some(row_key) = try_parse_toggle_row_selected(&command) {
+                table.toggled_row_selected(row_key, None, true)
+            } else {
+                return false;
+            };
+
+            let _ = host.models_mut().update(&state, |st| {
+                st.row_selection = next;
+            });
+
+            host.request_redraw(action_cx.window);
+            true
+        }),
+    );
+}
+
+fn align_end(cx: &mut ElementContext<'_, App>, child: AnyElement) -> AnyElement {
+    stack::hstack(
+        cx,
+        stack::HStackProps::default()
+            .layout(LayoutRefinement::default().w_full())
+            .justify_end(),
+        move |_cx| [child],
+    )
+}
+
+fn bottom_controls(
+    cx: &mut ElementContext<'_, App>,
+    state: Model<TableState>,
+    output: Model<fret_ui_kit::declarative::table::TableViewOutput>,
+) -> AnyElement {
+    let state_value = cx.watch_model(&state).layout().cloned().unwrap_or_default();
+    let output_value = cx
+        .watch_model(&output)
+        .layout()
+        .cloned()
+        .unwrap_or_default();
+
+    let selected_count = state_value.row_selection.len();
+    let filtered_count = output_value.filtered_row_count;
+
+    let label: Arc<str> = Arc::from(format!(
+        "{selected_count} of {filtered_count} row(s) selected."
+    ));
+
+    let prev_enabled = output_value.pagination.can_prev;
+    let next_enabled = output_value.pagination.can_next;
+
+    let prev_on_activate: OnActivate = {
+        let state = state.clone();
+        Arc::new(move |host, _acx, _reason| {
+            let _ = host.models_mut().update(&state, |st| {
+                st.pagination.page_index = st.pagination.page_index.saturating_sub(1);
+            });
+        })
+    };
+
+    let next_on_activate: OnActivate = {
+        let state = state.clone();
+        Arc::new(move |host, _acx, _reason| {
+            let _ = host.models_mut().update(&state, |st| {
+                st.pagination.page_index = st.pagination.page_index.saturating_add(1);
+            });
+        })
+    };
+
+    let theme = Theme::global(&*cx.app);
+    let muted_fg = theme.color_by_key("muted-foreground");
+    let mut text = ui::text(cx, label).text_sm().nowrap();
+    if let Some(color) = muted_fg {
+        text = text.text_color(ColorRef::Color(color));
+    }
+
+    stack::hstack(
+        cx,
+        stack::HStackProps::default()
+            .layout(LayoutRefinement::default().w_full())
+            .items_center()
+            .gap_x(Space::N2),
+        move |cx| {
+            vec![
+                text.into_element(cx),
+                cx.spacer(fret_ui::element::SpacerProps::default()),
+                shadcn::Button::new("Previous")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .size(shadcn::ButtonSize::Sm)
+                    .disabled(!prev_enabled)
+                    .on_activate(prev_on_activate.clone())
+                    .into_element(cx),
+                shadcn::Button::new("Next")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .size(shadcn::ButtonSize::Sm)
+                    .disabled(!next_enabled)
+                    .on_activate(next_on_activate.clone())
+                    .into_element(cx),
+            ]
+        },
+    )
+}
+
+pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
+    let assets = cx.with_state(
+        || {
+            let data: Arc<[PaymentRow]> = Arc::from(vec![
+                PaymentRow {
+                    key: 1,
+                    id: Arc::from("m5gr84i9"),
+                    amount_usd: 316,
+                    status: Arc::from("success"),
+                    email: Arc::from("ken99@example.com"),
+                },
+                PaymentRow {
+                    key: 2,
+                    id: Arc::from("3u1reuv4"),
+                    amount_usd: 242,
+                    status: Arc::from("success"),
+                    email: Arc::from("Abe45@example.com"),
+                },
+                PaymentRow {
+                    key: 3,
+                    id: Arc::from("derv1ws0"),
+                    amount_usd: 837,
+                    status: Arc::from("processing"),
+                    email: Arc::from("Monserrat44@example.com"),
+                },
+                PaymentRow {
+                    key: 4,
+                    id: Arc::from("5kma53ae"),
+                    amount_usd: 874,
+                    status: Arc::from("success"),
+                    email: Arc::from("Silas22@example.com"),
+                },
+                PaymentRow {
+                    key: 5,
+                    id: Arc::from("bhqecj4p"),
+                    amount_usd: 721,
+                    status: Arc::from("failed"),
+                    email: Arc::from("carmella@example.com"),
+                },
+            ]);
+
+            let columns: Arc<[ColumnDef<PaymentRow>]> = Arc::from(vec![
+                ColumnDef::new("select")
+                    .enable_sorting(false)
+                    .enable_multi_sort(false)
+                    .enable_column_filter(false)
+                    .enable_global_filter(false)
+                    .enable_hiding(false)
+                    .enable_ordering(false)
+                    .enable_pinning(false)
+                    .enable_resizing(false)
+                    .size(44.0)
+                    .min_size(44.0)
+                    .max_size(44.0),
+                ColumnDef::new("status")
+                    .filter_by(|row: &PaymentRow, q| row.status.as_ref().contains(q))
+                    .sort_by(|a: &PaymentRow, b: &PaymentRow| a.status.cmp(&b.status))
+                    .size(120.0),
+                ColumnDef::new("email")
+                    .filter_by(|row: &PaymentRow, q| row.email.as_ref().contains(q))
+                    .sort_by(|a: &PaymentRow, b: &PaymentRow| a.email.cmp(&b.email))
+                    .size(260.0),
+                ColumnDef::new("amount")
+                    .sort_by(|a: &PaymentRow, b: &PaymentRow| a.amount_usd.cmp(&b.amount_usd))
+                    .size(120.0),
+                ColumnDef::new("actions")
+                    .enable_sorting(false)
+                    .enable_multi_sort(false)
+                    .enable_column_filter(false)
+                    .enable_global_filter(false)
+                    .enable_hiding(false)
+                    .enable_ordering(false)
+                    .enable_pinning(false)
+                    .enable_resizing(false)
+                    .size(60.0)
+                    .min_size(60.0)
+                    .max_size(60.0),
+            ]);
+
+            (data, columns)
+        },
+        |st| st.clone(),
+    );
+
+    #[derive(Default)]
+    struct BasicDemoState {
+        state: Option<Model<TableState>>,
+        output: Option<Model<fret_ui_kit::declarative::table::TableViewOutput>>,
+    }
+
+    let state = cx.with_state(BasicDemoState::default, |st| st.state.clone());
+    let state = match state {
+        Some(m) => m,
+        None => {
+            let m = cx.app.models_mut().insert(TableState::default());
+            let m_for_state = m.clone();
+            cx.with_state(BasicDemoState::default, move |st| {
+                st.state = Some(m_for_state)
+            });
+            m
+        }
+    };
+
+    let output = cx.with_state(BasicDemoState::default, |st| st.output.clone());
+    let output = match output {
+        Some(m) => m,
+        None => {
+            let m = cx
+                .app
+                .models_mut()
+                .insert(fret_ui_kit::declarative::table::TableViewOutput::default());
+            let m_for_state = m.clone();
+            cx.with_state(BasicDemoState::default, move |st| {
+                st.output = Some(m_for_state)
+            });
+            m
+        }
+    };
+
+    wire_selection_commands(cx, state.clone(), assets.0.clone(), assets.1.clone());
+
+    let state_value = cx.watch_model(&state).layout().cloned().unwrap_or_default();
+
+    let toolbar =
+        shadcn::DataTableToolbar::new(state.clone(), assets.1.clone(), |col| Arc::clone(&col.id))
+            .show_global_filter(false)
+            .column_filter("email")
+            .column_filter_placeholder("Filter emails...")
+            .column_filter_a11y_label("Email filter")
+            .faceted_selected_badges_query(shadcn::DataTableToolbarResponsiveQuery::Viewport)
+            .columns_button_label("Columns")
+            .show_pinning_menu(false)
+            .show_selected_text(false)
+            .into_element(cx)
+            .test_id("ui-gallery-data-table-basic-toolbar");
+
+    let state_for_header_checkbox = state.clone();
+    let assets_for_header_checkbox = assets.clone();
+    let table = shadcn::DataTable::new()
+        .row_click_selection(false)
+        .row_height(Px(40.0))
+        .header_height(Px(40.0))
+        .column_actions_menu(false)
+        .output_model(output.clone())
+        .refine_layout(LayoutRefinement::default().w_full())
+        .into_element_with_header_cell(
+            cx,
+            assets.0.clone(),
+            1,
+            state.clone(),
+            assets.1.clone(),
+            |row, _index, _parent| RowKey(row.key),
+            |col| col.id.clone(),
+            move |cx, col, _sort_state| {
+                if col.id.as_ref() != "select" {
+                    return None;
+                }
+
+                let state_value = cx
+                    .app
+                    .models()
+                    .read(&state_for_header_checkbox, |st| st.clone())
+                    .ok()
+                    .unwrap_or_default();
+                let table = Table::builder(assets_for_header_checkbox.0.as_ref())
+                    .columns(assets_for_header_checkbox.1.as_ref().to_vec())
+                    .get_row_key(|row, _index, _parent| RowKey(row.key))
+                    .state(state_value)
+                    .build();
+
+                let checked = if table.is_all_page_rows_selected() {
+                    Some(true)
+                } else if table.is_some_page_rows_selected() {
+                    None
+                } else {
+                    Some(false)
+                };
+
+                let model = cx.with_state(|| None::<Model<Option<bool>>>, |st| st.clone());
+                let model = match model {
+                    Some(m) => m,
+                    None => {
+                        let m = cx.app.models_mut().insert(checked);
+                        let m_for_state = m.clone();
+                        cx.with_state(
+                            || None::<Model<Option<bool>>>,
+                            move |st| {
+                                if st.is_none() {
+                                    *st = Some(m_for_state);
+                                }
+                            },
+                        );
+                        m
+                    }
+                };
+                let _ = cx.app.models_mut().update(&model, |v| *v = checked);
+
+                Some(vec![
+                    shadcn::Checkbox::new_optional(model)
+                        .a11y_label("Select all")
+                        .test_id("ui-gallery-data-table-basic-select-all")
+                        .on_click(CommandId::new(CMD_SELECT_ALL_PAGE))
+                        .into_element(cx),
+                ])
+            },
+            move |cx, col, row| match col.id.as_ref() {
+                "select" => {
+                    let row_key = RowKey(row.key);
+                    let checked = state_value.row_selection.contains(&row_key);
+                    cx.keyed(
+                        ("ui-gallery-data-table-basic-select-row", row_key.0),
+                        |cx| {
+                            let model = cx.with_state(|| None::<Model<bool>>, |st| st.clone());
+                            let model = match model {
+                                Some(m) => m,
+                                None => {
+                                    let m = cx.app.models_mut().insert(checked);
+                                    let m_for_state = m.clone();
+                                    cx.with_state(
+                                        || None::<Model<bool>>,
+                                        move |st| {
+                                            if st.is_none() {
+                                                *st = Some(m_for_state);
+                                            }
+                                        },
+                                    );
+                                    m
+                                }
+                            };
+                            let _ = cx.app.models_mut().update(&model, |v| *v = checked);
+
+                            shadcn::Checkbox::new(model)
+                                .a11y_label("Select row")
+                                .test_id(Arc::<str>::from(format!(
+                                    "ui-gallery-data-table-basic-select-row-{}",
+                                    row_key.0
+                                )))
+                                .on_click(toggle_row_selected_command(row_key))
+                                .into_element(cx)
+                        },
+                    )
+                }
+                "status" => cx.text(row.status.as_ref()),
+                "email" => cx.text(row.email.as_ref()),
+                "amount" => {
+                    let amount = Arc::<str>::from(format!("${}.00", row.amount_usd));
+                    let amount_text = ui::text(cx, amount)
+                        .text_sm()
+                        .tabular_nums()
+                        .nowrap()
+                        .into_element(cx);
+                    align_end(cx, amount_text)
+                }
+                "actions" => {
+                    cx.keyed(("ui-gallery-data-table-basic-row-actions", row.key), |cx| {
+                        let open = cx.with_state(|| None::<Model<bool>>, |st| st.clone());
+                        let open = match open {
+                            Some(m) => m,
+                            None => {
+                                let m = cx.app.models_mut().insert(false);
+                                let m_for_state = m.clone();
+                                cx.with_state(
+                                    || None::<Model<bool>>,
+                                    move |st| {
+                                        if st.is_none() {
+                                            *st = Some(m_for_state);
+                                        }
+                                    },
+                                );
+                                m
+                            }
+                        };
+
+                        let trigger = shadcn::Button::new("")
+                            .a11y_label("Open menu")
+                            .variant(shadcn::ButtonVariant::Ghost)
+                            .size(shadcn::ButtonSize::IconXs)
+                            .test_id(Arc::<str>::from(format!(
+                                "ui-gallery-data-table-basic-row-actions-open-{}",
+                                row.key
+                            )))
+                            .icon(fret_icons::IconId::new_static("lucide.ellipsis"))
+                            .into_element(cx);
+
+                        let payment_id = row.id.clone();
+                        shadcn::DropdownMenu::new(open)
+                            .align(shadcn::DropdownMenuAlign::End)
+                            .side(shadcn::DropdownMenuSide::Bottom)
+                            .into_element(
+                                cx,
+                                move |_cx| trigger,
+                                move |_cx| {
+                                    vec![
+                                    shadcn::DropdownMenuEntry::Label(
+                                        shadcn::DropdownMenuLabel::new("Actions")
+                                    ),
+                                    shadcn::DropdownMenuEntry::Item(
+                                        shadcn::DropdownMenuItem::new("Copy payment ID")
+                                            .on_select(CommandId::new(Arc::<str>::from(format!(
+                                                "ui_gallery.data_table.basic.copy_payment_id.{}",
+                                                payment_id
+                                            )))),
+                                    ),
+                                    shadcn::DropdownMenuEntry::Separator,
+                                    shadcn::DropdownMenuEntry::Item(
+                                        shadcn::DropdownMenuItem::new("View customer")
+                                            .on_select(CommandId::new(
+                                                "ui_gallery.data_table.basic.view_customer",
+                                            )),
+                                    ),
+                                    shadcn::DropdownMenuEntry::Item(
+                                        shadcn::DropdownMenuItem::new("View payment details")
+                                            .on_select(CommandId::new(
+                                                "ui_gallery.data_table.basic.view_payment_details",
+                                            )),
+                                    ),
+                                ]
+                                },
+                            )
+                    })
+                }
+                _ => cx.text("?"),
+            },
+        )
+        .test_id("ui-gallery-data-table-basic-root");
+
+    let controls = bottom_controls(cx, state, output).test_id("ui-gallery-data-table-basic-footer");
+
+    stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .gap(Space::N4)
+            .items_start()
+            .layout(LayoutRefinement::default().w_full().min_w_0()),
+        move |_cx| vec![toolbar, table, controls],
+    )
+}
+// endregion: example
