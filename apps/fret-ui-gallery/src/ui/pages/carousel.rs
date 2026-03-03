@@ -15,8 +15,12 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
         let spacing = snippets::spacing::render(cx);
         let spacing_responsive = snippets::spacing_responsive::render(cx);
         let duration = snippets::duration_embla::render(cx);
+        let options = snippets::options::render(cx);
         let api = snippets::api::render(cx);
         let plugin = snippets::plugin_autoplay::render(cx);
+        let plugin_controlled = snippets::plugin_autoplay_controlled::render(cx);
+        let plugin_stop_on_last_snap = snippets::plugin_autoplay_stop_on_last_snap::render(cx);
+        let plugin_delays = snippets::plugin_autoplay_delays::render(cx);
         let plugin_wheel = snippets::plugin_wheel_gestures::render(cx);
         let expandable = snippets::expandable::render(cx);
         let orientation_vertical = snippets::orientation_vertical::render(cx);
@@ -97,6 +101,12 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
 
                     .test_id_prefix("ui-gallery-carousel-duration")
                     .code_rust_from_file_region(snippets::duration_embla::SOURCE, "example"),
+                DocSection::new("Options", options)
+                    .description(
+                        "Pass options via `opts` (Embla-style): `align=start`, `loop=true`.",
+                    )
+                    .test_id_prefix("ui-gallery-carousel-options")
+                    .code_rust_from_file_region(snippets::options::SOURCE, "example"),
                 DocSection::new("API", api)
                     .description("A carousel with a slide counter (shadcn `setApi`-style outcome).")
 
@@ -107,6 +117,27 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
 
                     .test_id_prefix("ui-gallery-carousel-plugin")
                     .code_rust_from_file_region(snippets::plugin_autoplay::SOURCE, "example"),
+                DocSection::new("Plugin (Autoplay, Controlled)", plugin_controlled)
+                    .description("Autoplay with external stop/reset/play controls (Embla plugin-style outcomes).")
+                    .test_id_prefix("ui-gallery-carousel-plugin-controlled")
+                    .code_rust_from_file_region(
+                        snippets::plugin_autoplay_controlled::SOURCE,
+                        "example",
+                    ),
+                DocSection::new("Plugin (Autoplay, stopOnLastSnap)", plugin_stop_on_last_snap)
+                    .description("Autoplay stops after reaching the last snap (`stop_on_last_snap=true`).")
+                    .test_id_prefix("ui-gallery-carousel-plugin-stop-on-last-snap")
+                    .code_rust_from_file_region(
+                        snippets::plugin_autoplay_stop_on_last_snap::SOURCE,
+                        "example",
+                    ),
+                DocSection::new("Plugin (Autoplay, per-snap delays)", plugin_delays)
+                    .description("Autoplay delay can be varied per snap (`set_delays`).")
+                    .test_id_prefix("ui-gallery-carousel-plugin-delays")
+                    .code_rust_from_file_region(
+                        snippets::plugin_autoplay_delays::SOURCE,
+                        "example",
+                    ),
                 DocSection::new("Plugin (Wheel gestures)", plugin_wheel)
                     .description("Wheel/trackpad gestures: horizontal scroll steps between snaps (Shift swaps axes).")
                     .test_id_prefix("ui-gallery-carousel-plugin-wheel")

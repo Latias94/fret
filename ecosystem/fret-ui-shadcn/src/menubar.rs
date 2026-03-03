@@ -1721,8 +1721,8 @@ impl MenubarMenuEntries {
                     radix_presence::scale_fade_presence_with_durations_and_cubic_bezier_duration(
                         cx,
                         is_open,
-                        overlay_motion::shadcn_motion_duration_100(cx),
-                        overlay_motion::shadcn_motion_duration_100(cx),
+                        overlay_motion::shadcn_motion_duration_150(cx),
+                        overlay_motion::shadcn_motion_duration_150(cx),
                         0.95,
                         1.0,
                         overlay_motion::shadcn_motion_ease_bezier(cx),
@@ -3018,8 +3018,8 @@ impl MenubarMenuEntries {
                         let submenu_motion = radix_presence::scale_fade_presence_with_durations_and_cubic_bezier_duration(
                             cx,
                             submenu_is_open,
-                            overlay_motion::shadcn_motion_duration_100(cx),
-                            std::time::Duration::ZERO,
+                            overlay_motion::shadcn_motion_duration_150(cx),
+                            overlay_motion::shadcn_motion_duration_150(cx),
                             0.95,
                             1.0,
                             overlay_motion::shadcn_motion_ease_bezier(cx),
@@ -5840,7 +5840,7 @@ mod tests {
         );
 
         let settle_frames = fret_ui_kit::declarative::transition::ticks_60hz_for_duration(
-            crate::overlay_motion::SHADCN_MOTION_DURATION_100,
+            crate::overlay_motion::SHADCN_MOTION_DURATION_150,
         );
         for _ in 0..settle_frames {
             render_frame_with_submenu(&mut ui, &mut app, &mut services, window, bounds);

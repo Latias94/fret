@@ -495,9 +495,8 @@ fn legacy_demo_content(
                             )))
                             .icon(fret_icons::ids::ui::MORE_HORIZONTAL)
                             .into_element(cx);
-                        let trigger = align_end(cx, trigger);
 
-                        shadcn::DropdownMenu::new(open)
+                        let menu = shadcn::DropdownMenu::new(open)
                             .align(shadcn::DropdownMenuAlign::End)
                             .side(shadcn::DropdownMenuSide::Bottom)
                             .into_element(
@@ -538,7 +537,9 @@ fn legacy_demo_content(
                                         ),
                                     ]
                                 },
-                            )
+                            );
+
+                        align_end(cx, menu)
                     }),
                     _ => cx.text("?"),
                 };

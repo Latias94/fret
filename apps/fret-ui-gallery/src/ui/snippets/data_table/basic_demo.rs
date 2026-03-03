@@ -490,10 +490,9 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
                         )))
                         .icon(fret_icons::ids::ui::MORE_HORIZONTAL)
                         .into_element(cx);
-                    let trigger = align_end(cx, trigger);
 
                     let payment_id = row.id.clone();
-                    shadcn::DropdownMenu::new(open)
+                    let menu = shadcn::DropdownMenu::new(open)
                         .align(shadcn::DropdownMenuAlign::End)
                         .side(shadcn::DropdownMenuSide::Bottom)
                         .into_element(
@@ -528,7 +527,9 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
                                     ),
                                 ]
                             },
-                        )
+                        );
+
+                    align_end(cx, menu)
                 }),
                 _ => cx.text("?"),
             },

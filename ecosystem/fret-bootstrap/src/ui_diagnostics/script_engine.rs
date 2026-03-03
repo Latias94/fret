@@ -2267,29 +2267,32 @@ impl UiDiagnosticsService {
                     debug_assert!(handled);
                     DriveScriptStepDispatchOutcome::Continue
                 }
-                _ => dispatch_drive_script_step(
-                    self,
-                    app,
-                    window,
-                    window_bounds,
-                    anchor_window,
-                    step_index,
-                    step,
-                    scale_factor,
-                    app.global::<ElementRuntime>(),
-                    semantics_snapshot,
-                    &mut ui,
-                    text_font_stack_key_stable_frames,
-                    font_catalog_populated,
-                    system_font_rescan_idle,
-                    &mut active,
-                    &mut output,
-                    &mut force_dump_label,
-                    &mut force_dump_max_snapshots,
-                    &mut handoff_to,
-                    &mut stop_script,
-                    &mut failure_reason,
-                ),
+                _ => {
+                    let element_runtime = app.global::<ElementRuntime>();
+                    dispatch_drive_script_step(
+                        self,
+                        app,
+                        window,
+                        window_bounds,
+                        anchor_window,
+                        step_index,
+                        step,
+                        scale_factor,
+                        element_runtime,
+                        semantics_snapshot,
+                        &mut ui,
+                        text_font_stack_key_stable_frames,
+                        font_catalog_populated,
+                        system_font_rescan_idle,
+                        &mut active,
+                        &mut output,
+                        &mut force_dump_label,
+                        &mut force_dump_max_snapshots,
+                        &mut handoff_to,
+                        &mut stop_script,
+                        &mut failure_reason,
+                    )
+                }
             };
 
             match outcome {

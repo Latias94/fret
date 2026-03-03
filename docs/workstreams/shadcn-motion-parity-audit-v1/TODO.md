@@ -9,8 +9,8 @@ Last updated: 2026-03-03.
 - Landed: `Combobox` popup placement + presence (fade/zoom/side slide) + unit test gate.
 - Landed: `Switch` thumb slides between states (duration-driven tween) + unit test gate.
 - Landed: `Progress` indicator translate animates on value changes (duration-driven tween) + unit test gate.
-- Gap: popper overlays without explicit `duration-*` should default to ~150ms (tw-animate-css default), not 100ms (Tooltip/HoverCard/DropdownMenu/Select/ContextMenu/Menubar; Popover is already 150ms by default).
-- Gap: `NavigationMenu` content open/close duration should be ~200ms (upstream `duration-200`), not 100ms.
+- Landed: popper overlays without explicit `duration-*` default to ~150ms (tw-animate-css default).
+- Landed: `NavigationMenu` content open/close duration is ~200ms (upstream `duration-200`).
 
 ## P1 (timebase correctness: eliminate 60Hz coupling)
 
@@ -18,7 +18,11 @@ Last updated: 2026-03-03.
 - Landed: `AvatarFallback` delay is duration-driven (`delay_ms` matches Radix `delayMs`).
 - Landed: shadcn extras `Marquee` uses a duration-driven timebase (no `frame_id` delta coupling).
 - Landed: kit `drive_transition_*` does not advance multiple times per frame (prevents call-count-driven transitions).
-- Gap: common primitives should ease hover/focus style changes (`transition-*` parity), not snap (Button/Badge/Toggle/Input/Textarea/TabsTrigger/Table rows/ScrollArea thumb; requires reusable style transition helpers).
+- Landed: `Button` hover background transition eases (~150ms, Tailwind default) and has a unit test gate.
+- Gap: common primitives should ease hover/focus style changes (`transition-*` parity), not snap. Suggested ordering:
+  - P0: Input / Textarea / Toggle / TabsTrigger / SelectTrigger + NativeSelect / Checkbox + RadioGroup / Slider thumb.
+  - P1: Badge / BreadcrumbLink / Table rows / ScrollArea viewport + scrollbar.
+  - P1: Add a gate for Accordion content measured-height motion (`animate-accordion-{down,up}` outcome).
 
 ## P2 (API + token cleanup)
 
