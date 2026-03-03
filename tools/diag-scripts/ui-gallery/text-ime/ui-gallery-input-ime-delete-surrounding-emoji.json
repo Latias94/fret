@@ -1,0 +1,131 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "ui-gallery-input-ime-delete-surrounding-emoji",
+    "required_capabilities": ["diag.script_v2", "diag.inject_ime", "diag.text_input_snapshot"],
+    "tags": ["ui_gallery", "ime", "input", "delete_surrounding"]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+      },
+      "timeout_frames": 600
+    },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "set_window_inner_size", "width_px": 1280.0, "height_px": 720.0 },
+    { "type": "wait_frames", "n": 20 },
+
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
+    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
+    { "type": "press_key", "key": "backspace" },
+    { "type": "type_text", "text": "input" },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-input" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-page-input" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-input-basic" }
+      },
+      "timeout_frames": 600
+    },
+
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-input-basic" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focus_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-input-basic" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
+    { "type": "press_key", "key": "backspace" },
+
+    { "type": "type_text", "text": "a😀" },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "ime_surrounding_text_valid" },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "value_equals",
+        "target": { "kind": "test_id", "id": "ui-gallery-input-basic" },
+        "text": "a😀"
+      },
+      "timeout_frames": 120
+    },
+
+    {
+      "type": "ime",
+      "event": { "kind": "preedit", "text": "東京", "cursor_bytes": [0, 6] }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "text_composition_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-input-basic" },
+        "composing": true
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "ime",
+      "event": { "kind": "delete_surrounding", "before_bytes": 4, "after_bytes": 0 }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "value_equals",
+        "target": { "kind": "test_id", "id": "ui-gallery-input-basic" },
+        "text": "a"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "text_composition_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-input-basic" },
+        "composing": true
+      }
+    },
+
+    { "type": "ime", "event": { "kind": "commit", "text": "東京" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "text_composition_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-input-basic" },
+        "composing": false
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "value_equals",
+        "target": { "kind": "test_id", "id": "ui-gallery-input-basic" },
+        "text": "a東京"
+      },
+      "timeout_frames": 240
+    },
+
+    { "type": "capture_bundle", "label": "ui-gallery-input-ime-delete-surrounding-emoji" }
+  ]
+}
