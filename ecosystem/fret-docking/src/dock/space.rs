@@ -2228,10 +2228,16 @@ impl<H: UiHost> Widget<H> for DockSpace {
                     pointer_id,
                     source_window: drag.source_window,
                     current_window: drag.current_window,
+                    kind: drag.kind,
                     dragging: drag.dragging,
                     cross_window_hover: drag.cross_window_hover,
                     transparent_payload_applied: drag.transparent_payload_applied,
+                    transparent_payload_mouse_passthrough_applied: drag
+                        .transparent_payload_mouse_passthrough_applied,
                     window_under_cursor_source: drag.window_under_cursor_source,
+                    moving_window: drag.moving_window,
+                    window_under_moving_window: drag.window_under_moving_window,
+                    window_under_moving_window_source: drag.window_under_moving_window_source,
                 })
             });
             let floating_drag =
@@ -6483,10 +6489,16 @@ impl<H: UiHost> Widget<H> for DockSpace {
                     pointer_id,
                     source_window: drag.source_window,
                     current_window: drag.current_window,
+                    kind: drag.kind,
                     dragging: drag.dragging,
                     cross_window_hover: drag.cross_window_hover,
                     transparent_payload_applied: drag.transparent_payload_applied,
+                    transparent_payload_mouse_passthrough_applied: drag
+                        .transparent_payload_mouse_passthrough_applied,
                     window_under_cursor_source: drag.window_under_cursor_source,
+                    moving_window: drag.moving_window,
+                    window_under_moving_window: drag.window_under_moving_window,
+                    window_under_moving_window_source: drag.window_under_moving_window_source,
                 })
             });
             let floating_drag =
@@ -6734,7 +6746,8 @@ impl<H: UiHost> Widget<H> for DockSpace {
         {
             let frame_id = cx.app.frame_id();
             let dock_drag_pointer_id = cx.app.find_drag_pointer_id(|d| {
-                d.kind == fret_runtime::DRAG_KIND_DOCK_PANEL
+                (d.kind == fret_runtime::DRAG_KIND_DOCK_PANEL
+                    || d.kind == fret_runtime::DRAG_KIND_DOCK_TABS)
                     && (d.source_window == self.window || d.current_window == self.window)
             });
             let dock_drag = dock_drag_pointer_id.and_then(|pointer_id| {
@@ -6743,10 +6756,16 @@ impl<H: UiHost> Widget<H> for DockSpace {
                     pointer_id,
                     source_window: drag.source_window,
                     current_window: drag.current_window,
+                    kind: drag.kind,
                     dragging: drag.dragging,
                     cross_window_hover: drag.cross_window_hover,
                     transparent_payload_applied: drag.transparent_payload_applied,
+                    transparent_payload_mouse_passthrough_applied: drag
+                        .transparent_payload_mouse_passthrough_applied,
                     window_under_cursor_source: drag.window_under_cursor_source,
+                    moving_window: drag.moving_window,
+                    window_under_moving_window: drag.window_under_moving_window,
+                    window_under_moving_window_source: drag.window_under_moving_window_source,
                 })
             });
             let floating_drag =
