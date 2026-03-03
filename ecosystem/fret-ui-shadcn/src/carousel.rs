@@ -263,6 +263,70 @@ pub struct CarouselSlidesInViewSnapshot {
     pub generation: u64,
 }
 
+#[derive(Debug, Clone, Copy, Default, PartialEq)]
+pub struct CarouselAutoplayApiSnapshot {
+    /// True when an autoplay plugin is attached and the carousel has more than one snap.
+    pub active: bool,
+    /// True while the carousel has an armed autoplay timer.
+    pub playing: bool,
+    /// True when the carousel is paused by an external caller (e.g. a wrapper hover region).
+    pub paused_external: bool,
+    /// True when autoplay was stopped due to a user interaction (`stop_on_interaction=true`).
+    pub stopped_by_interaction: bool,
+    /// True when the carousel is hovered (when hover is supported).
+    pub hovered: bool,
+}
+
+#[derive(Debug, Clone)]
+pub struct CarouselAutoplayApi {
+    commands: Model<CarouselAutoplayCommandQueue>,
+    snapshot: Model<CarouselAutoplayApiSnapshot>,
+}
+
+impl CarouselAutoplayApi {
+    pub fn play(&self, host: &mut impl ModelHost) {
+        let _ = host.update_model(&self.commands, |q, _| {
+            q.pending.push(CarouselAutoplayCommand::Play);
+        });
+    }
+
+    pub fn stop(&self, host: &mut impl ModelHost) {
+        let _ = host.update_model(&self.commands, |q, _| {
+            q.pending.push(CarouselAutoplayCommand::Stop);
+        });
+    }
+
+    pub fn reset(&self, host: &mut impl ModelHost) {
+        let _ = host.update_model(&self.commands, |q, _| {
+            q.pending.push(CarouselAutoplayCommand::Reset);
+        });
+    }
+
+    pub fn play_store(&self, store: &mut ModelStore) {
+        let _ = store.update(&self.commands, |q| {
+            q.pending.push(CarouselAutoplayCommand::Play);
+        });
+    }
+
+    pub fn stop_store(&self, store: &mut ModelStore) {
+        let _ = store.update(&self.commands, |q| {
+            q.pending.push(CarouselAutoplayCommand::Stop);
+        });
+    }
+
+    pub fn reset_store(&self, store: &mut ModelStore) {
+        let _ = store.update(&self.commands, |q| {
+            q.pending.push(CarouselAutoplayCommand::Reset);
+        });
+    }
+
+    pub fn snapshot(&self, host: &mut impl ModelHost) -> CarouselAutoplayApiSnapshot {
+        host.read(&self.snapshot, |_host, v| *v)
+            .ok()
+            .unwrap_or_default()
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct CarouselAutoplayConfig {
     pub delay: Duration,
@@ -810,6 +874,7 @@ pub struct Carousel {
     drag_config: headless_carousel::CarouselDragConfig,
     api_snapshot: Option<Model<CarouselApiSnapshot>>,
     api_handle: Option<Model<Option<CarouselApi>>>,
+    autoplay_api_handle: Option<Model<Option<CarouselAutoplayApi>>>,
     slides_in_view_snapshot: Option<Model<CarouselSlidesInViewSnapshot>>,
     plugins: Vec<CarouselPlugin>,
     controls: CarouselControls,
@@ -828,7 +893,8 @@ struct CarouselRuntime {
     settle_generation: u64,
     selection_initialized: bool,
     autoplay_token: Option<TimerToken>,
-    autoplay_paused: bool,
+    autoplay_paused_external: bool,
+    autoplay_stopped_by_interaction: bool,
     autoplay_hovered: bool,
     api_select_generation: u64,
     api_reinit_generation: u64,
@@ -853,7 +919,8 @@ impl Default for CarouselRuntime {
             settle_generation: 0,
             selection_initialized: false,
             autoplay_token: None,
-            autoplay_paused: false,
+            autoplay_paused_external: false,
+            autoplay_stopped_by_interaction: false,
             autoplay_hovered: false,
             api_select_generation: 0,
             api_reinit_generation: 0,
@@ -880,6 +947,8 @@ struct CarouselState {
     max_offset: Option<Model<Px>>,
     embla_engine: Option<Model<Option<headless_embla::engine::Engine>>>,
     api_commands: Option<Model<CarouselCommandQueue>>,
+    autoplay_commands: Option<Model<CarouselAutoplayCommandQueue>>,
+    autoplay_snapshot: Option<Model<CarouselAutoplayApiSnapshot>>,
     slides_in_view_tracker: Option<Model<headless_embla::slides_in_view::SlidesInViewTracker>>,
     slide_content_ids: Option<Model<Arc<[fret_ui::elements::GlobalElementId]>>>,
 }
@@ -894,6 +963,18 @@ enum CarouselCommand {
     ScrollPrev,
     ScrollNext,
     ScrollTo { index: usize },
+}
+
+#[derive(Debug, Clone, Default)]
+struct CarouselAutoplayCommandQueue {
+    pending: Vec<CarouselAutoplayCommand>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum CarouselAutoplayCommand {
+    Play,
+    Stop,
+    Reset,
 }
 
 fn carousel_models<H: UiHost>(
@@ -1022,6 +1103,42 @@ fn carousel_api_commands_model<H: UiHost>(
     model
 }
 
+fn carousel_autoplay_commands_model<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+) -> Model<CarouselAutoplayCommandQueue> {
+    let existing = cx.with_state(CarouselState::default, |st| st.autoplay_commands.clone());
+    if let Some(existing) = existing {
+        return existing;
+    }
+
+    let model = cx
+        .app
+        .models_mut()
+        .insert(CarouselAutoplayCommandQueue::default());
+    cx.with_state(CarouselState::default, |st| {
+        st.autoplay_commands = Some(model.clone());
+    });
+    model
+}
+
+fn carousel_autoplay_snapshot_model<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+) -> Model<CarouselAutoplayApiSnapshot> {
+    let existing = cx.with_state(CarouselState::default, |st| st.autoplay_snapshot.clone());
+    if let Some(existing) = existing {
+        return existing;
+    }
+
+    let model = cx
+        .app
+        .models_mut()
+        .insert(CarouselAutoplayApiSnapshot::default());
+    cx.with_state(CarouselState::default, |st| {
+        st.autoplay_snapshot = Some(model.clone());
+    });
+    model
+}
+
 fn carousel_slides_in_view_tracker_model<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
 ) -> Model<headless_embla::slides_in_view::SlidesInViewTracker> {
@@ -1115,6 +1232,7 @@ impl Carousel {
             drag_config: headless_carousel::CarouselDragConfig::default(),
             api_snapshot: None,
             api_handle: None,
+            autoplay_api_handle: None,
             slides_in_view_snapshot: None,
             plugins: Vec::new(),
             controls: CarouselControls::BuiltIn,
@@ -1202,6 +1320,13 @@ impl Carousel {
     /// models.
     pub fn api_handle_model(mut self, model: Model<Option<CarouselApi>>) -> Self {
         self.api_handle = Some(model);
+        self
+    }
+
+    /// Exposes a Rust-native handle to control the autoplay plugin (play/stop/reset) when the
+    /// plugin is attached.
+    pub fn autoplay_api_handle_model(mut self, model: Model<Option<CarouselAutoplayApi>>) -> Self {
+        self.autoplay_api_handle = Some(model);
         self
     }
 
@@ -1423,6 +1548,7 @@ impl Carousel {
             let slides_in_view_snapshot_model = self.slides_in_view_snapshot;
             let api_handle_model = self.api_handle;
             let api_snapshot_model = self.api_snapshot;
+            let autoplay_api_handle_model = self.autoplay_api_handle;
             let controls = self.controls;
 
             let (
@@ -1470,6 +1596,28 @@ impl Carousel {
                     slides_in_view_snapshot: slides_in_view_snapshot_model.clone(),
                 };
                 let _ = cx.app.models_mut().update(api_handle_model, |v| {
+                    if v.is_none() {
+                        *v = Some(api);
+                    }
+                });
+            }
+
+            let autoplay_commands_model = autoplay_api_handle_model
+                .as_ref()
+                .map(|_| carousel_autoplay_commands_model(cx));
+            let autoplay_snapshot_model = autoplay_api_handle_model
+                .as_ref()
+                .map(|_| carousel_autoplay_snapshot_model(cx));
+            if let (Some(autoplay_api_handle_model), Some(commands), Some(snapshot)) = (
+                autoplay_api_handle_model.as_ref(),
+                autoplay_commands_model.as_ref(),
+                autoplay_snapshot_model.as_ref(),
+            ) {
+                let api = CarouselAutoplayApi {
+                    commands: commands.clone(),
+                    snapshot: snapshot.clone(),
+                };
+                let _ = cx.app.models_mut().update(autoplay_api_handle_model, |v| {
                     if v.is_none() {
                         *v = Some(api);
                     }
@@ -1590,6 +1738,43 @@ impl Carousel {
             };
             let embla_engine_enabled = embla_engine_enabled && !reduced_motion;
 
+            if let Some(autoplay_commands_model) = autoplay_commands_model.as_ref() {
+                let commands = cx
+                    .app
+                    .models_mut()
+                    .update(autoplay_commands_model, |q| std::mem::take(&mut q.pending))
+                    .unwrap_or_default();
+                if let Some(cmd) = commands.last().copied() {
+                    let token = cx
+                        .app
+                        .models_mut()
+                        .read(&runtime_model, |st| st.autoplay_token)
+                        .ok()
+                        .flatten();
+                    if let Some(token) = token {
+                        cx.app.push_effect(Effect::CancelTimer { token });
+                    }
+
+                    let _ = cx.app.models_mut().update(&runtime_model, |st| {
+                        st.autoplay_token = None;
+                        match cmd {
+                            CarouselAutoplayCommand::Play => {
+                                st.autoplay_paused_external = false;
+                                st.autoplay_stopped_by_interaction = false;
+                            }
+                            CarouselAutoplayCommand::Stop => {
+                                st.autoplay_paused_external = true;
+                            }
+                            CarouselAutoplayCommand::Reset => {
+                                st.autoplay_paused_external = false;
+                            }
+                        }
+                    });
+
+                    cx.request_frame();
+                }
+            }
+
             let mut applied_api_command = false;
             if let Some(api_commands_model) = api_commands_model.as_ref() {
                 let pointer_down = runtime_snapshot.drag.armed || runtime_snapshot.drag.dragging;
@@ -1626,7 +1811,7 @@ impl Carousel {
                             }
                             let _ = cx.app.models_mut().update(&runtime_model, |st| {
                                 st.autoplay_token = None;
-                                st.autoplay_paused = true;
+                                st.autoplay_stopped_by_interaction = true;
                             });
                         }
 
@@ -1937,7 +2122,7 @@ impl Carousel {
                     }
                     let _ = host.models_mut().update(&runtime_for_down, |st| {
                         st.autoplay_token = None;
-                        st.autoplay_paused = true;
+                        st.autoplay_stopped_by_interaction = true;
                     });
                 }
 
@@ -2455,7 +2640,7 @@ impl Carousel {
                         }
                         let _ = host.models_mut().update(&runtime_for_prev, |st| {
                             st.autoplay_token = None;
-                            st.autoplay_paused = true;
+                            st.autoplay_stopped_by_interaction = true;
                         });
                     }
 
@@ -2603,7 +2788,7 @@ impl Carousel {
                         }
                         let _ = host.models_mut().update(&runtime_for_next, |st| {
                             st.autoplay_token = None;
-                            st.autoplay_paused = true;
+                            st.autoplay_stopped_by_interaction = true;
                         });
                     }
 
@@ -2783,7 +2968,7 @@ impl Carousel {
                         }
                         let _ = host.models_mut().update(&runtime_for_key, |st| {
                             st.autoplay_token = None;
-                            st.autoplay_paused = true;
+                            st.autoplay_stopped_by_interaction = true;
                         });
                     }
 
@@ -4054,7 +4239,8 @@ impl Carousel {
 
                                 if left_hover
                                     && cfg.reset_on_hover_leave
-                                    && !runtime_snapshot.autoplay_paused
+                                    && !runtime_snapshot.autoplay_paused_external
+                                    && !runtime_snapshot.autoplay_stopped_by_interaction
                                 {
                                     let snaps: Arc<[Px]> = cx
                                         .watch_model(&snaps_for_hover)
@@ -4079,7 +4265,8 @@ impl Carousel {
                                 }
 
                                 if !hovered
-                                    && !runtime_snapshot.autoplay_paused
+                                    && !runtime_snapshot.autoplay_paused_external
+                                    && !runtime_snapshot.autoplay_stopped_by_interaction
                                     && runtime_snapshot.autoplay_token.is_none()
                                 {
                                     let snaps: Arc<[Px]> = cx
@@ -4122,11 +4309,11 @@ impl Carousel {
                 },
             );
 
-                if let Some(cfg) = autoplay_cfg {
-                    let runtime_for_timer = runtime_model.clone();
-                    let snaps_for_timer = snaps_model.clone();
-                    let index_for_timer = index_model.clone();
-                    let offset_for_timer = offset_model.clone();
+            if let Some(cfg) = autoplay_cfg {
+                let runtime_for_timer = runtime_model.clone();
+                let snaps_for_timer = snaps_model.clone();
+                let index_for_timer = index_model.clone();
+                let offset_for_timer = offset_model.clone();
                     let loop_requested_for_timer = options.loop_enabled;
                     let extent_for_timer = extent_model.clone();
                     let slides_for_timer = slides_model.clone();
@@ -4141,7 +4328,8 @@ impl Carousel {
                         if runtime.autoplay_token.as_ref() != Some(&token) {
                             return false;
                         }
-                        if runtime.autoplay_paused
+                        if runtime.autoplay_paused_external
+                            || runtime.autoplay_stopped_by_interaction
                             || (cfg.pause_on_hover && runtime.autoplay_hovered)
                         {
                             let _ = host.models_mut().update(&runtime_for_timer, |st| {
@@ -4225,6 +4413,26 @@ impl Carousel {
                         true
                     }),
                 );
+            }
+
+            if let Some(autoplay_snapshot_model) = autoplay_snapshot_model.as_ref() {
+                let runtime = cx.watch_model(&runtime_model).copied().unwrap_or_default();
+                let snaps: Arc<[Px]> = cx
+                    .watch_model(&snaps_model)
+                    .cloned()
+                    .unwrap_or_else(|| Arc::from(Vec::<Px>::new()));
+                let extent = cx.watch_model(&extent_model).copied().unwrap_or(Px(0.0));
+                let snapshot = CarouselAutoplayApiSnapshot {
+                    active: autoplay_cfg.is_some() && extent.0 > 0.0 && snaps.len() > 1,
+                    playing: runtime.autoplay_token.is_some(),
+                    paused_external: runtime.autoplay_paused_external,
+                    stopped_by_interaction: runtime.autoplay_stopped_by_interaction,
+                    hovered: runtime.autoplay_hovered,
+                };
+                let _ = cx
+                    .app
+                    .models_mut()
+                    .update(autoplay_snapshot_model, |v| *v = snapshot);
             }
 
             cx.key_add_on_key_down_capture_for(root.id, on_key_down);
