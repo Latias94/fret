@@ -5,6 +5,9 @@ with special focus on multi-window tear-off + drag-back sequences.
 
 ## Immediate TODOs (next)
 
+- Prioritize “timebase decoupling” so docking scripts cannot hang on occlusion/idle (root cause class):
+  - Workstream: `docs/workstreams/ui-diagnostics-timebase-decoupling-v1/README.md`
+  - Goal: scripted runs always progress or fail with `reason_code=timeout.no_frames` (never a tooling timeout).
 - Turn correctness debugging into stage gates:
   - After each merge-back drop, gate `dock_drop_resolved_is_some` + `dock_drop_resolved_zone_is` and capture one bounded bundle.
   - Prefer inner-hint drops (`dock-arb-hint-inner-*`) over outer-hint drops for idempotence (outer-hint tends to produce `wrap_binary`).
