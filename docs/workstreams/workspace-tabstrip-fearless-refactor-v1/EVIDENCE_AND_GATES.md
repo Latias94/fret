@@ -41,6 +41,16 @@ Harness:
 
 - Demo entry: `apps/fret-demo/src/bin/workspace_shell_demo.rs`
 - UI implementation: `apps/fret-examples/src/workspace_shell_demo.rs`
+- Runner resize convergence: `crates/fret-launch/src/runner/desktop/runner/effects.rs`
+
+Stability notes (important for CI + scripted diagnostics):
+
+- Some platforms may apply `set_window_inner_size` without emitting a resize event. Tool-launched
+  scripts rely on the runner queuing the applied surface size so the next redraw reconfigures
+  the surface and updates window metrics.
+- Scripts should not assume the active tab is visible in a horizontally scrollable strip.
+  Prefer activating a known in-view tab (or otherwise ensuring visibility) before clicking
+  tab-scoped affordances like close buttons.
 
 ## Evidence bundles (fill in after running locally)
 
