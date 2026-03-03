@@ -47,6 +47,26 @@ pub struct UiCapabilities {
     pub window_hover_detection: WindowHoverDetectionQuality,
     pub window_set_outer_position: WindowSetOuterPositionQuality,
     pub window_z_level: WindowZLevelQuality,
+
+    // Window style facets (ADR 0139 + follow-ups).
+    pub window_decorations: bool,
+    pub window_resizable: bool,
+    pub window_transparent: bool,
+    pub window_skip_taskbar: bool,
+    pub window_non_activating: bool,
+    pub window_mouse_passthrough: bool,
+    pub window_set_visible: bool,
+    pub window_begin_drag: bool,
+    pub window_begin_resize: bool,
+
+    // Background materials (ADR 0310).
+    pub window_background_material_system_default: bool,
+    pub window_background_material_mica: bool,
+    pub window_background_material_acrylic: bool,
+    pub window_background_material_vibrancy: bool,
+
+    // Non-portable escape hatch (ADR 0139).
+    pub native_window_handle: bool,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]

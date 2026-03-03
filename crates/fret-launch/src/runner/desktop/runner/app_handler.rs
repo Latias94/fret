@@ -412,12 +412,8 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                 let mut spec = self.config.main_window_spec();
                 #[cfg(feature = "dev-state")]
                 self.dev_state.apply_main_window_spec(&mut spec);
-                let window = match self.create_os_window(
-                    event_loop,
-                    spec,
-                    fret_runtime::WindowStyleRequest::default(),
-                    None,
-                ) {
+                let style = fret_runtime::WindowStyleRequest::default();
+                let window = match self.create_os_window(event_loop, spec, style, None) {
                     Ok(w) => w,
                     Err(e) => {
                         error!(error = ?e, "failed to create main window");
@@ -432,6 +428,17 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                         return;
                     }
                 };
+                let caps = self
+                    .app
+                    .global::<fret_runtime::PlatformCapabilities>()
+                    .cloned()
+                    .unwrap_or_default();
+                self.app.with_global_mut(
+                    fret_runtime::RunnerWindowStyleDiagnosticsStore::default,
+                    |svc, _app| {
+                        svc.record_window_open(main_window, style, &caps);
+                    },
+                );
                 self.main_window = Some(main_window);
                 #[cfg(feature = "dev-state")]
                 self.dev_state.register_window_key(main_window, "main");
@@ -663,12 +670,8 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                 );
                 spec
             };
-            let window = match self.create_os_window(
-                event_loop,
-                spec,
-                fret_runtime::WindowStyleRequest::default(),
-                None,
-            ) {
+            let style = fret_runtime::WindowStyleRequest::default();
+            let window = match self.create_os_window(event_loop, spec, style, None) {
                 Ok(w) => w,
                 Err(e) => {
                     error!(error = ?e, "failed to create main window");
@@ -807,6 +810,17 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                     return;
                 }
             };
+            let caps = self
+                .app
+                .global::<fret_runtime::PlatformCapabilities>()
+                .cloned()
+                .unwrap_or_default();
+            self.app.with_global_mut(
+                fret_runtime::RunnerWindowStyleDiagnosticsStore::default,
+                |svc, _app| {
+                    svc.record_window_open(main_window, style, &caps);
+                },
+            );
             self.main_window = Some(main_window);
             #[cfg(feature = "dev-state")]
             self.dev_state.register_window_key(main_window, "main");

@@ -22,6 +22,17 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             } else {
                 spec.visible
             });
+        if let Some(resizable) = style.resizable {
+            attrs = attrs.with_resizable(resizable);
+        }
+        if let Some(decorations) = style.decorations {
+            if matches!(decorations, fret_runtime::WindowDecorationsRequest::None) {
+                attrs = attrs.with_decorations(false);
+            }
+        }
+        if let Some(transparent) = style.transparent {
+            attrs = attrs.with_transparent(transparent);
+        }
         if let Some(policy) = style.activation {
             let active = matches!(policy, ActivationPolicy::Activates);
             attrs = attrs.with_active(active);
@@ -174,8 +185,9 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         #[cfg(not(target_os = "macos"))]
         let parent_window = None;
 
+        let style = request.style;
         let (window, accessibility) =
-            self.create_os_window(event_loop, spec, request.style, parent_window)?;
+            self.create_os_window(event_loop, spec, style, parent_window)?;
         let surface = {
             let Some(context) = self.context.as_ref() else {
                 return Err(RunnerError::WgpuNotInitialized);
@@ -183,6 +195,17 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             context.create_surface(window.clone())?
         };
         let new_window = self.insert_window(window, accessibility, Some(surface))?;
+        let caps = self
+            .app
+            .global::<PlatformCapabilities>()
+            .cloned()
+            .unwrap_or_default();
+        self.app.with_global_mut(
+            fret_runtime::RunnerWindowStyleDiagnosticsStore::default,
+            |svc, _app| {
+                svc.record_window_open(new_window, style, &caps);
+            },
+        );
 
         #[cfg(feature = "dev-state")]
         if self.dev_state.enabled()
@@ -519,6 +542,12 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         self.window_registry.remove(state.window.id());
         self.app.with_global_mut(
             fret_runtime::RunnerWindowLifecycleDiagnosticsStore::default,
+            |svc, _app| {
+                svc.record_window_close(window);
+            },
+        );
+        self.app.with_global_mut(
+            fret_runtime::RunnerWindowStyleDiagnosticsStore::default,
             |svc, _app| {
                 svc.record_window_close(window);
             },

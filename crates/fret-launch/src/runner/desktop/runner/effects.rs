@@ -1576,6 +1576,21 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
                                         {
                                             state.window.set_window_level(WindowLevel::AlwaysOnTop);
                                             always_on_top_applied = true;
+                                            self.app.with_global_mut(
+                                                fret_runtime::RunnerWindowStyleDiagnosticsStore::default,
+                                                |svc, _app| {
+                                                    svc.apply_style_patch(
+                                                        new_window,
+                                                        fret_runtime::WindowStyleRequest {
+                                                            z_level: Some(
+                                                                fret_runtime::WindowZLevel::AlwaysOnTop,
+                                                            ),
+                                                            ..Default::default()
+                                                        },
+                                                        &caps,
+                                                    );
+                                                },
+                                            );
                                         }
 
                                         self.dock_tearoff_follow = Some(super::DockTearoffFollow {
@@ -1611,6 +1626,12 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
                                 .window_created(&mut self.app, &create, new_window);
 
                             self.app.request_redraw(new_window);
+                        }
+                        WindowRequest::SetVisible { window, visible } => {
+                            if let Some(state) = self.windows.get(window) {
+                                state.window.set_visible(visible);
+                                state.window.request_redraw();
+                            }
                         }
                         WindowRequest::SetInnerSize { window, size } => {
                             if let Some(state) = self.windows.get(window) {
@@ -1675,6 +1696,42 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
                                 }
                             }
                         }
+                        WindowRequest::BeginDrag { window } => {
+                            if let Some(state) = self.windows.get(window) {
+                                let _ = state.window.drag_window();
+                            }
+                        }
+                        WindowRequest::BeginResize { window, direction } => {
+                            if let Some(state) = self.windows.get(window) {
+                                let direction = match direction {
+                                    fret_runtime::WindowResizeDirection::N => {
+                                        winit::window::ResizeDirection::North
+                                    }
+                                    fret_runtime::WindowResizeDirection::Ne => {
+                                        winit::window::ResizeDirection::NorthEast
+                                    }
+                                    fret_runtime::WindowResizeDirection::E => {
+                                        winit::window::ResizeDirection::East
+                                    }
+                                    fret_runtime::WindowResizeDirection::Se => {
+                                        winit::window::ResizeDirection::SouthEast
+                                    }
+                                    fret_runtime::WindowResizeDirection::S => {
+                                        winit::window::ResizeDirection::South
+                                    }
+                                    fret_runtime::WindowResizeDirection::Sw => {
+                                        winit::window::ResizeDirection::SouthWest
+                                    }
+                                    fret_runtime::WindowResizeDirection::W => {
+                                        winit::window::ResizeDirection::West
+                                    }
+                                    fret_runtime::WindowResizeDirection::Nw => {
+                                        winit::window::ResizeDirection::NorthWest
+                                    }
+                                };
+                                let _ = state.window.drag_resize_window(direction);
+                            }
+                        }
                         WindowRequest::SetStyle { window, style } => {
                             if let Some(state) = self.windows.get(window) {
                                 if let Some(level) = style.z_level {
@@ -1710,6 +1767,17 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
                                         opacity.as_f32(),
                                     );
                                 }
+                                let caps = self
+                                    .app
+                                    .global::<PlatformCapabilities>()
+                                    .cloned()
+                                    .unwrap_or_default();
+                                self.app.with_global_mut(
+                                    fret_runtime::RunnerWindowStyleDiagnosticsStore::default,
+                                    |svc, _app| {
+                                        svc.apply_style_patch(window, style, &caps);
+                                    },
+                                );
                                 state.window.request_redraw();
                             }
                         }
