@@ -20,6 +20,7 @@ Last updated: 2026-03-03.
 - Landed: kit `drive_transition_*` does not advance multiple times per frame (prevents call-count-driven transitions).
 - Landed: `Button` hover background transition eases (~150ms, Tailwind default) and has a unit test gate.
 - Landed: `Toggle` hover background transition eases (~150ms, Tailwind default) and has a unit test gate. (Focus ring tween still pending.)
+- Landed: `Item` hover background transition eases (~100ms, `duration-100`) and has a unit test gate. (Focus ring tween still pending.)
 - Gap: common primitives should ease hover/focus style changes (`transition-*` parity), not snap. Suggested ordering:
   - P0: Input / Textarea / Toggle / TabsTrigger / SelectTrigger + NativeSelect / Checkbox + RadioGroup / Slider thumb.
   - P1: Badge / BreadcrumbLink / Table rows / ScrollArea viewport + scrollbar.
