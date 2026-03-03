@@ -118,6 +118,25 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
             .into_element(cx)
     };
 
+    let pause = {
+        let autoplay_api = autoplay_api.clone();
+        shadcn::Button::new("Pause")
+            .variant(shadcn::ButtonVariant::Secondary)
+            .on_activate(Arc::new(move |host, action_cx, _reason| {
+                let api = host
+                    .models_mut()
+                    .read(&autoplay_api, |v| v.clone())
+                    .ok()
+                    .flatten();
+                if let Some(api) = api {
+                    api.pause_store(host.models_mut());
+                    host.request_redraw(action_cx.window);
+                }
+            }))
+            .test_id("ui-gallery-carousel-autoplay-controlled-pause")
+            .into_element(cx)
+    };
+
     let play = {
         let autoplay_api = autoplay_api.clone();
         shadcn::Button::new("Play")
@@ -140,7 +159,7 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
     let controls = stack::hstack(
         cx,
         stack::HStackProps::default().gap(Space::N2).items_center(),
-        |_cx| vec![stop, reset, play],
+        |_cx| vec![stop, reset, pause, play],
     );
 
     let carousel = shadcn::Carousel::default()
