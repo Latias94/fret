@@ -2010,7 +2010,7 @@ impl Tabs {
                                             a11y.test_id = Some(test_id.clone());
                                         }
 
-                                        let props = PressableProps {
+                                        let mut props = PressableProps {
                                             layout: trigger_layout,
                                             enabled: !item_disabled,
                                             focusable: tab_stop || st.focused,
@@ -2019,7 +2019,14 @@ impl Tabs {
                                             ..Default::default()
                                         };
 
-                                        let chrome = ContainerProps {
+                                        if orientation == TabsOrientation::Vertical {
+                                            // shadcn new-york-v4: `TabsTrigger` uses `w-full` for vertical tabs so
+                                            // inactive triggers still occupy the full list width (defined by the
+                                            // widest trigger).
+                                            props.layout.flex.align_self = Some(CrossAlign::Stretch);
+                                        }
+
+                                        let mut chrome = ContainerProps {
                                             padding: Edges {
                                                 top: pad_y,
                                                 right: pad_x,
@@ -2033,6 +2040,9 @@ impl Tabs {
                                             corner_radii: Corners::all(radius),
                                             ..Default::default()
                                         };
+                                        if orientation == TabsOrientation::Vertical {
+                                            chrome.layout.size.width = Length::Fill;
+                                        }
 
                                         let mut trigger_children = trigger_children;
                                         let content = move |cx: &mut ElementContext<'_, H>| {
@@ -2598,6 +2608,14 @@ mod tests {
         assert!(
             second_top > first_top + 1.0,
             "expected vertical stacking: first_top={first_top:.3}, second_top={second_top:.3}"
+        );
+
+        let w0 = tabs[0].bounds.size.width.0;
+        let w1 = tabs[1].bounds.size.width.0;
+        let wdiff = (w0 - w1).abs();
+        assert!(
+            wdiff <= 0.51,
+            "expected vertical triggers to share list width: w0={w0:.3}, w1={w1:.3}, diff={wdiff:.3}"
         );
     }
 
