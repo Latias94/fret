@@ -40,6 +40,7 @@ Any remaining legacy surfaces that embed raw Rust code strings are tracked via t
 - [x] Forbid snippet files from importing UI Gallery internals (`crate::ui`, `crate::spec`) (`apps/fret-ui-gallery/tests/ui_snippets_deny_gallery_internal_imports.rs`).
 - [x] Require every snippet file to export a `SOURCE` const (`apps/fret-ui-gallery/tests/ui_snippets_require_source_const.rs`).
 - [x] Add a small “drift audit” doc section in UI Gallery (optional) to list remaining legacy sections (`apps/fret-ui-gallery/build.rs`, `apps/fret-ui-gallery/src/ui/previews/pages/harness/intro.rs`).
+- [x] Prevent ContextMenu Escape dismissal from restoring focus (ensures focus is cleared when the overlay closes): `ecosystem/fret-ui-kit/src/primitives/menu/root.rs`, `ecosystem/fret-ui-shadcn/src/context_menu.rs`, `ecosystem/fret-ui-shadcn/tests/context_menu_escape_dismiss_focus_clears.rs`.
 
 ### Next (post-migration)
 
@@ -49,7 +50,9 @@ Any remaining legacy surfaces that embed raw Rust code strings are tracked via t
 - [x] Ensure Code tabs are vertically scrollable (wheel scrolling over CodeBlock gutters for windowed snippets).
 - [ ] Normalize DocSection chrome/layout (max widths, padding, “Notes” shell usage) across pages.
   - [x] Remove redundant centering wrappers so Preview/Code tabs share consistent left padding.
+  - [x] Center doc pages once (page-level max width) so sections align to the same left gutter.
   - [ ] Audit remaining max-width and padding inconsistencies across pages.
+  - [x] Add a coarse `.max_w` audit report: `docs/workstreams/ui-gallery-fearless-refactor/layout-audit.generated.md` (regen via `tools/ui_gallery_layout_audit.py`).
 - [ ] Optional: align page taxonomy + section ordering to upstream shadcn MDX navigation.
 
 Notes:

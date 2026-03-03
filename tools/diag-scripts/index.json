@@ -1642,6 +1642,16 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-accordion-extras-rtl-trigger-non-overlap",
+      "path": "tools/diag-scripts/ui-gallery/accordion/ui-gallery-accordion-extras-rtl-trigger-non-overlap.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-accordion-faq-toggle-fixed-frame-delta",
       "path": "tools/diag-scripts/ui-gallery/accordion/ui-gallery-accordion-faq-toggle-fixed-frame-delta.json",
       "required_capabilities": [],
@@ -4094,6 +4104,24 @@
       ],
       "tags": [],
       "target_hints": []
+    },
+    {
+      "id": "ui-gallery-scroll-into-view-padding-is-soft",
+      "path": "tools/diag-scripts/ui-gallery/card/ui-gallery-scroll-into-view-padding-is-soft.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "card",
+        "regression",
+        "scroll",
+        "scroll_into_view",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Guards against ScrollIntoView treating padding as a hard visibility requirement, which can cause stuck loops at scroll boundaries."
+      ]
     },
     {
       "id": "ui-gallery-select-commit-and-label-update-bundle",

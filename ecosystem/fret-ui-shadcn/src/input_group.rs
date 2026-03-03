@@ -1919,19 +1919,19 @@ mod tests {
         }
     }
 
-	    fn find_flex_with_text_and_order(node: &AnyElement, text: &str, order: i32) -> bool {
-	        let matches = match &node.kind {
-	            ElementKind::Flex(FlexProps { layout, .. }) => {
-	                layout.flex.order == order && find_text(node, text).is_some()
-	            }
-	            ElementKind::PointerRegion(props) => {
-	                props.layout.flex.order == order && find_text(node, text).is_some()
-	            }
-	            _ => false,
-	        };
-	        if matches {
-	            return true;
-	        }
+    fn find_flex_with_text_and_order(node: &AnyElement, text: &str, order: i32) -> bool {
+        let matches = match &node.kind {
+            ElementKind::Flex(FlexProps { layout, .. }) => {
+                layout.flex.order == order && find_text(node, text).is_some()
+            }
+            ElementKind::PointerRegion(props) => {
+                props.layout.flex.order == order && find_text(node, text).is_some()
+            }
+            _ => false,
+        };
+        if matches {
+            return true;
+        }
         node.children
             .iter()
             .any(|c| find_flex_with_text_and_order(c, text, order))

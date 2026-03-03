@@ -8291,10 +8291,18 @@ fn combobox_demo_open_snapshot(
 
         Combobox::new(value.clone(), open.clone())
             .a11y_label("Select a fruit")
-            .width(Px(200.0))
             .responsive(responsive)
             .items(items)
-            .into_element(cx)
+            .into_element_parts(cx, |_cx| {
+                vec![
+                    fret_ui_shadcn::ComboboxPart::from(
+                        fret_ui_shadcn::ComboboxTrigger::new().width_px(Px(200.0)),
+                    ),
+                    fret_ui_shadcn::ComboboxPart::from(
+                        fret_ui_shadcn::ComboboxInput::new().placeholder("Select a fruit"),
+                    ),
+                ]
+            })
     };
 
     render_frame(

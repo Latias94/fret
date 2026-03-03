@@ -12,7 +12,7 @@ use fret_ui_shadcn::{self as shadcn, prelude::*};
 pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
     let max_w_xs = Px(320.0);
 
-    let vertical_items = (1..=5)
+    let items = (1..=5)
         .map(|idx| {
             let theme = Theme::global(&*cx.app).clone();
             let number = ui::text(cx, format!("{idx}"))
@@ -40,9 +40,10 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
                 .p_1()
                 .into_element(cx)
         })
+        .map(shadcn::CarouselItem::new)
         .collect::<Vec<_>>();
 
-    shadcn::Carousel::new(vertical_items)
+    shadcn::Carousel::default()
         .orientation(shadcn::CarouselOrientation::Vertical)
         .opts(shadcn::CarouselOptions::new().align(shadcn::CarouselAlign::Start))
         .item_basis_main_px(Px(100.0))
@@ -57,6 +58,11 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
                 .mx_auto(),
         )
         .test_id("ui-gallery-carousel-orientation-vertical")
-        .into_element(cx)
+        .into_element_parts(
+            cx,
+            |_cx| shadcn::CarouselContent::new(items),
+            shadcn::CarouselPrevious::new(),
+            shadcn::CarouselNext::new(),
+        )
 }
 // endregion: example

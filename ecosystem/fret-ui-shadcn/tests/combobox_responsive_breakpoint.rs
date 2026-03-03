@@ -144,10 +144,14 @@ fn render_frame(
                                         Combobox::new(value, open)
                                             .responsive(true)
                                             .a11y_label("Combobox")
-                                            .placeholder("Select an option")
                                             .test_id_prefix("combobox-responsive")
                                             .items(items)
-                                            .into_element(cx),
+                                            .into_element_parts(cx, |_cx| {
+                                                vec![fret_ui_shadcn::ComboboxPart::from(
+                                                    fret_ui_shadcn::ComboboxInput::new()
+                                                        .placeholder("Select an option"),
+                                                )]
+                                            }),
                                     ]
                                 },
                             )]

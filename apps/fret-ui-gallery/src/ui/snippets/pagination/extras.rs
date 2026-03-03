@@ -82,8 +82,8 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             .test_id("ui-gallery-pagination-simple")
     };
 
-        let icons_only = {
-            let rows_per_page = shadcn::Select::new(rows_per_page.clone(), rows_per_page_open.clone())
+    let icons_only = {
+        let rows_per_page = shadcn::Select::new(rows_per_page.clone(), rows_per_page_open.clone())
             .value(shadcn::SelectValue::new().placeholder("25"))
             .trigger_test_id("ui-gallery-pagination-rows-per-page-trigger")
             .refine_layout(LayoutRefinement::default().w_px(Px(80.0)))

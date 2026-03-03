@@ -76,9 +76,13 @@ fn fret_combobox_popover_tracks_trigger_when_underlay_scrolls() {
                                 vec![
                                     Combobox::new(value, open)
                                         .a11y_label("Combobox")
-                                        .placeholder("Select an option")
                                         .items(items)
-                                        .into_element(cx),
+                                        .into_element_parts(cx, |_cx| {
+                                            vec![fret_ui_shadcn::ComboboxPart::from(
+                                                fret_ui_shadcn::ComboboxInput::new()
+                                                    .placeholder("Select an option"),
+                                            )]
+                                        }),
                                 ]
                             },
                         )]
@@ -326,9 +330,13 @@ fn fret_combobox_responsive_drawer_blocks_underlay_scroll_on_mobile() {
                                     Combobox::new(value, open)
                                         .responsive(true)
                                         .a11y_label("Combobox")
-                                        .placeholder("Select an option")
                                         .items(items)
-                                        .into_element(cx),
+                                        .into_element_parts(cx, |_cx| {
+                                            vec![fret_ui_shadcn::ComboboxPart::from(
+                                                fret_ui_shadcn::ComboboxInput::new()
+                                                    .placeholder("Select an option"),
+                                            )]
+                                        }),
                                 ]
                             },
                         )]

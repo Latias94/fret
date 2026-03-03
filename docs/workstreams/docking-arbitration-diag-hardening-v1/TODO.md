@@ -5,6 +5,9 @@ with special focus on multi-window tear-off + drag-back sequences.
 
 ## Immediate TODOs (next)
 
+- Turn correctness debugging into stage gates:
+  - After each merge-back drop, gate `dock_drop_resolved_is_some` + `dock_drop_resolved_zone_is` and capture one bounded bundle.
+  - Prefer inner-hint drops (`dock-arb-hint-inner-*`) over outer-hint drops for idempotence (outer-hint tends to produce `wrap_binary`).
 - Decide the contract for “scripted cross-window drag release”:
   - which subsystem owns `Drop` routing (runner vs in-app diagnostics injection),
   - which coordinate space is the source of truth (screen vs window-client),

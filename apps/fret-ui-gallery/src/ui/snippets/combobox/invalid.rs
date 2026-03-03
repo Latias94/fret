@@ -97,14 +97,20 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
 
     let invalid_combo = shadcn::Combobox::new(value.clone(), open.clone())
         .a11y_label("Combobox invalid")
-        .width(Px(260.0))
-        .placeholder("Select required option")
         .query_model(query.clone())
         .test_id_prefix("ui-gallery-combobox-invalid")
         .trigger_test_id("ui-gallery-combobox-invalid-trigger")
         .items(base_items())
-        .aria_invalid(true)
-        .into_element(cx);
+        .into_element_parts(cx, |_cx| {
+            vec![
+                shadcn::ComboboxPart::from(shadcn::ComboboxTrigger::new().width_px(Px(260.0))),
+                shadcn::ComboboxPart::from(
+                    shadcn::ComboboxInput::new()
+                        .placeholder("Select required option")
+                        .aria_invalid(true),
+                ),
+            ]
+        });
 
     stack::vstack(
         cx,

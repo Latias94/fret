@@ -73,6 +73,17 @@ Hover peek-behind hardening (2026-03-02):
   - under-moving-window peek-behind: run id `1772471076428` (`target/fret-diag-under-moving-hover4`)
   - overlap z-order switch (non-transparent): run id `1772471119364` (`target/fret-diag-post-peek`)
 
+Stage gates for merge-back correctness (2026-03-03):
+
+- Chained tear-off: added per-drop `dock_drop_resolved_*` gates + bounded bundles to pinpoint where a panel is lost
+  (drop vs auto-close/cleanup).
+  - PASS: run id `1772493305362` (`target/fret-diag-stage-gates2`)
+- Chained tear-off: added additional bundles right after each auto-close window-count gate (explicit “after close” stage).
+  - PASS: run id `1772494218337` (`target/fret-diag-stage-gates5`)
+- Transparent payload drag-back: switched the merge-back targeting to `dock-arb-hint-inner-right` to avoid `wrap_binary`
+  outcomes from outer-hint drops, and added a drop-stage bundle.
+  - PASS: run id `1772493899790` (`target/fret-diag-stage-gates4`)
+
 ## M1.4 — Rebuild reliability for docking demos (Windows/MSVC)
 
 Goal: docking demo binaries used by `--launch` diagnostics can be rebuilt reliably in local dev.

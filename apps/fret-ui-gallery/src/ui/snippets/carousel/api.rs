@@ -128,14 +128,19 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
         text_px: Px(36.0),
         line_height_px: Px(40.0),
     };
-    let api_items = (1..=5)
-        .map(|idx| slide_card(cx, idx, api_visual))
+    let items = (1..=5)
+        .map(|idx| shadcn::CarouselItem::new(slide_card(cx, idx, api_visual)))
         .collect::<Vec<_>>();
-    let api_carousel = shadcn::Carousel::new(api_items)
+    let api_carousel = shadcn::Carousel::default()
         .api_handle_model(api_handle.clone())
         .refine_layout(LayoutRefinement::default().w_full().max_w(max_w_xs))
         .test_id("ui-gallery-carousel-api")
-        .into_element(cx);
+        .into_element_parts(
+            cx,
+            |_cx| shadcn::CarouselContent::new(items),
+            shadcn::CarouselPrevious::new(),
+            shadcn::CarouselNext::new(),
+        );
 
     let current = cx.watch_model(&api_effect_current).copied().unwrap_or(0);
     let count = cx.watch_model(&api_effect_count).copied().unwrap_or(0);
