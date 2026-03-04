@@ -1417,7 +1417,7 @@ fn ui_app_handle_command<S>(
         |app: &mut App,
          window: AppWindowId,
          command: &CommandId,
-         source: fret_runtime::CommandDispatchSourceV1| {
+         source: &fret_runtime::CommandDispatchSourceV1| {
             let handled_by_scope = app
                 .commands()
                 .get(command.clone())
@@ -1432,7 +1432,7 @@ fn ui_app_handle_command<S>(
                         tick_id: app.tick_id(),
                         window,
                         command: command.clone(),
-                        source,
+                        source: source.clone(),
                         handled: true,
                         handled_by_element: None,
                         handled_by_scope,
@@ -1463,7 +1463,7 @@ fn ui_app_handle_command<S>(
         )
     {
         let _ = command_palette_toggle(app, window);
-        record_driver_handled_dispatch(app, window, &command, pending_source);
+        record_driver_handled_dispatch(app, window, &command, &pending_source);
         return;
     }
 
@@ -1472,7 +1472,12 @@ fn ui_app_handle_command<S>(
     app.with_global_mut(
         fret_runtime::WindowPendingCommandDispatchSourceService::default,
         |svc, app| {
-            svc.record(window, app.tick_id(), command.clone(), pending_source);
+            svc.record(
+                window,
+                app.tick_id(),
+                command.clone(),
+                pending_source.clone(),
+            );
         },
     );
 
@@ -1485,49 +1490,49 @@ fn ui_app_handle_command<S>(
             #[cfg(target_os = "macos")]
             {
                 app.push_effect(Effect::ShowAboutPanel);
-                record_driver_handled_dispatch(app, window, &command, pending_source);
+                record_driver_handled_dispatch(app, window, &command, &pending_source);
                 return;
             }
         }
         fret_app::core_commands::APP_PREFERENCES => {
             if let Some(f) = driver.on_preferences {
                 f(app, services, window, &mut state.ui, &mut state.state);
-                record_driver_handled_dispatch(app, window, &command, pending_source);
+                record_driver_handled_dispatch(app, window, &command, &pending_source);
                 return;
             }
         }
         fret_app::core_commands::APP_LOCALE_SWITCH_NEXT => {
             if fret_app::core_commands::handle_locale_cycle_command(app, &command) {
                 app.request_redraw(window);
-                record_driver_handled_dispatch(app, window, &command, pending_source);
+                record_driver_handled_dispatch(app, window, &command, &pending_source);
                 return;
             }
         }
         fret_app::core_commands::APP_QUIT => {
             app.push_effect(Effect::QuitApp);
-            record_driver_handled_dispatch(app, window, &command, pending_source);
+            record_driver_handled_dispatch(app, window, &command, &pending_source);
             return;
         }
         fret_app::core_commands::APP_HIDE => {
             app.push_effect(Effect::HideApp);
-            record_driver_handled_dispatch(app, window, &command, pending_source);
+            record_driver_handled_dispatch(app, window, &command, &pending_source);
             return;
         }
         fret_app::core_commands::APP_HIDE_OTHERS => {
             app.push_effect(Effect::HideOtherApps);
-            record_driver_handled_dispatch(app, window, &command, pending_source);
+            record_driver_handled_dispatch(app, window, &command, &pending_source);
             return;
         }
         fret_app::core_commands::APP_SHOW_ALL => {
             app.push_effect(Effect::UnhideAllApps);
-            record_driver_handled_dispatch(app, window, &command, pending_source);
+            record_driver_handled_dispatch(app, window, &command, &pending_source);
             return;
         }
         _ => {}
     }
 
     if fret_ui_kit::try_handle_window_overlays_command(&mut state.ui, app, window, &command) {
-        record_driver_handled_dispatch(app, window, &command, pending_source);
+        record_driver_handled_dispatch(app, window, &command, &pending_source);
         return;
     }
 

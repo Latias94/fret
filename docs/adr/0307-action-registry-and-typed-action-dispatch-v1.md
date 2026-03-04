@@ -193,6 +193,16 @@ To keep action-first refactors safe, diagnostics must be able to answer:
 
 This aligns with the scripted interaction testing model (ADR 0159): action IDs become first-class evidence.
 
+Pointer-triggered explainability (best-effort):
+
+- Dispatch traces should record a stable selector for the pointer source when available (typically a
+  semantics `test_id`), so scripted repros can attribute a click to a concrete UI target.
+- Precedence:
+  1) Prefer a direct `test_id` captured at the activation site (e.g. pressable `a11y.test_id` carried
+     through the pending dispatch source metadata).
+  2) Fall back to correlating the pending source element ID with a semantics snapshot when a direct
+     `test_id` is unavailable.
+
 ## Consequences
 
 ### Benefits
