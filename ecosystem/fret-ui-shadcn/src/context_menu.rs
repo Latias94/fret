@@ -40,6 +40,7 @@ use fret_ui_kit::{
 use crate::dropdown_menu::{DropdownMenuAlign, DropdownMenuSide};
 use crate::overlay_motion;
 use crate::popper_arrow::{self, DiamondArrowStyle};
+use crate::rtl;
 use crate::shortcut_display::command_shortcut_label;
 
 #[derive(Debug)]
@@ -2378,10 +2379,7 @@ fn submenu_chevron_icon<H: UiHost>(
     direction: direction_prim::LayoutDirection,
     fg: fret_core::Color,
 ) -> AnyElement {
-    let icon = match direction {
-        direction_prim::LayoutDirection::Ltr => ids::ui::CHEVRON_RIGHT,
-        direction_prim::LayoutDirection::Rtl => ids::ui::CHEVRON_LEFT,
-    };
+    let icon = rtl::chevron_inline_end(direction);
     cx.flex(
         FlexProps {
             layout: {

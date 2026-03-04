@@ -24,6 +24,7 @@ use fret_ui_kit::{
 };
 use time::{Date, OffsetDateTime, Weekday};
 
+use crate::rtl;
 use crate::select::{Select, SelectItem, SelectPosition};
 use crate::surface_slot::{ShadcnSurfaceSlot, surface_slot_in_scope};
 
@@ -1528,11 +1529,8 @@ fn calendar_multi_month_view<H: UiHost>(
         let next_enabled = nav_enabled && max_start.map_or(true, |max| month_lt(start_month, max));
 
         let direction = direction_prim::use_direction_in_scope(cx, None);
-        let (prev_icon, next_icon) = if direction == direction_prim::LayoutDirection::Rtl {
-            (ids::ui::CHEVRON_RIGHT, ids::ui::CHEVRON_LEFT)
-        } else {
-            (ids::ui::CHEVRON_LEFT, ids::ui::CHEVRON_RIGHT)
-        };
+        let prev_icon = rtl::chevron_inline_start(direction);
+        let next_icon = rtl::chevron_inline_end(direction);
 
         let prev_test_id = test_id_prefix
             .as_ref()

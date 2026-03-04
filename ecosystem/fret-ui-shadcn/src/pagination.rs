@@ -1,5 +1,4 @@
 use fret_core::{Color, Corners, Edges, Px, SemanticsRole};
-use fret_icons::IconId;
 use fret_runtime::CommandId;
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, MainAlign, PressableA11y,
@@ -14,6 +13,8 @@ use fret_ui_kit::declarative::viewport_queries;
 use fret_ui_kit::primitives::direction as direction_prim;
 use fret_ui_kit::{LayoutRefinement, MetricRef, Radius, Space};
 use std::sync::Arc;
+
+use crate::rtl;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum PaginationLinkSize {
@@ -416,12 +417,7 @@ impl PaginationPrevious {
             viewport_queries::tailwind::SM,
             Default::default(),
         );
-        let chevron = if dir == direction_prim::LayoutDirection::Rtl {
-            "lucide.chevron-right"
-        } else {
-            "lucide.chevron-left"
-        };
-        let icon = decl_icon::icon(cx, IconId::new_static(chevron));
+        let icon = decl_icon::icon(cx, rtl::chevron_inline_start(dir));
 
         let mut children = Vec::with_capacity(2);
         if dir == direction_prim::LayoutDirection::Rtl {
@@ -504,12 +500,7 @@ impl PaginationNext {
             viewport_queries::tailwind::SM,
             Default::default(),
         );
-        let chevron = if dir == direction_prim::LayoutDirection::Rtl {
-            "lucide.chevron-left"
-        } else {
-            "lucide.chevron-right"
-        };
-        let icon = decl_icon::icon(cx, IconId::new_static(chevron));
+        let icon = decl_icon::icon(cx, rtl::chevron_inline_end(dir));
 
         let mut children = Vec::with_capacity(2);
         if dir == direction_prim::LayoutDirection::Rtl {

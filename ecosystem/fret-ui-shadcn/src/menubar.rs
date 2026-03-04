@@ -37,6 +37,7 @@ use fret_ui_kit::{
 };
 
 use crate::overlay_motion;
+use crate::rtl;
 use crate::shortcut_display::command_shortcut_label;
 
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
@@ -1121,10 +1122,8 @@ fn submenu_chevron_right_text<H: UiHost>(
     fg: Color,
     _text_style: TextStyle,
 ) -> AnyElement {
-    let icon = match direction_prim::use_direction_in_scope(cx, None) {
-        direction_prim::LayoutDirection::Ltr => ids::ui::CHEVRON_RIGHT,
-        direction_prim::LayoutDirection::Rtl => ids::ui::CHEVRON_LEFT,
-    };
+    let dir = direction_prim::use_direction_in_scope(cx, None);
+    let icon = rtl::chevron_inline_end(dir);
     cx.flex(
         FlexProps {
             layout: {

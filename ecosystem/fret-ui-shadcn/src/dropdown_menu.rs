@@ -35,6 +35,7 @@ use fret_ui_kit::{
 
 use crate::overlay_motion;
 use crate::popper_arrow::{self, DiamondArrowStyle};
+use crate::rtl;
 use crate::shortcut_display::command_shortcut_label;
 
 fn alpha_mul(mut c: fret_core::Color, mul: f32) -> fret_core::Color {
@@ -1428,10 +1429,8 @@ fn submenu_chevron_right_text<H: UiHost>(
     _font_size: Px,
     _font_line_height: Px,
 ) -> AnyElement {
-    let icon = match direction_prim::use_direction_in_scope(cx, None) {
-        direction_prim::LayoutDirection::Ltr => ids::ui::CHEVRON_RIGHT,
-        direction_prim::LayoutDirection::Rtl => ids::ui::CHEVRON_LEFT,
-    };
+    let dir = direction_prim::use_direction_in_scope(cx, None);
+    let icon = rtl::chevron_inline_end(dir);
     cx.flex(
         FlexProps {
             layout: {
