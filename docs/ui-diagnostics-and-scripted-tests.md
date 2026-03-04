@@ -166,10 +166,12 @@ Important limitation:
 Footgun / recommendation:
 
 - Avoid running `rg`/`grep` directly on `bundle.json` dumps (they can be huge and can easily explode your terminal output).
-- Prefer bounded tooling commands that use sidecars and/or schema2 views:
+  - Prefer bounded tooling commands that use sidecars and/or schema2 views:
   - `fretboard diag meta <bundle_dir|bundle.json|bundle.schema2.json> --json`
   - `fretboard diag dock-graph <bundle_dir|bundle.json|bundle.schema2.json>`
   - `fretboard diag dock-routing <bundle_dir|bundle.json|bundle.schema2.json>`
+    - Note: when an adjacent bundle artifact is available, `dock-routing` may regenerate/overwrite `dock.routing.json`
+      to keep bounded evidence keys up to date (no manual deletion needed).
   - `fretboard diag query test-id <bundle_dir|bundle.json|bundle.schema2.json> <pattern> --top 50`
   - `fretboard diag slice <bundle_dir|bundle.json|bundle.schema2.json> --test-id <test_id>`
   - `fretboard diag ai-packet <bundle_dir|bundle.json|bundle.schema2.json> --packet-out <dir>`
