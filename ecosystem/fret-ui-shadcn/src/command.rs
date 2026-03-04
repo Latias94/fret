@@ -3188,34 +3188,18 @@ impl CommandPalette {
                                                                         )
                                                                     });
 
-                                                                match dir {
-                                                                    crate::LayoutDirection::Ltr => {
-                                                                        if let Some(check_el) =
-                                                                            check_el
-                                                                        {
-                                                                            out.push(check_el);
-                                                                        }
-                                                                        if let Some(icon_el) =
-                                                                            icon_el
-                                                                        {
-                                                                            out.push(icon_el);
-                                                                        }
-                                                                        out.push(label_el);
-                                                                    }
-                                                                    crate::LayoutDirection::Rtl => {
-                                                                        out.push(label_el);
-                                                                        if let Some(icon_el) =
-                                                                            icon_el
-                                                                        {
-                                                                            out.push(icon_el);
-                                                                        }
-                                                                        if let Some(check_el) =
-                                                                            check_el
-                                                                        {
-                                                                            out.push(check_el);
-                                                                        }
-                                                                    }
+                                                                let mut prefix = Vec::new();
+                                                                if let Some(check_el) = check_el {
+                                                                    prefix.push(check_el);
                                                                 }
+                                                                if let Some(icon_el) = icon_el {
+                                                                    prefix.push(icon_el);
+                                                                }
+                                                                out.extend(
+                                                                    crate::rtl::concat_main_with_inline_start_vec(
+                                                                        dir, label_el, prefix,
+                                                                    ),
+                                                                );
 
                                                                 out
                                                             },
