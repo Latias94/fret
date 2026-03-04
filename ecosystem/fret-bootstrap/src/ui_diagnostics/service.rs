@@ -1105,11 +1105,21 @@ impl UiDiagnosticsService {
             .global::<fret_render::RendererPerfFrameStore>()
             .and_then(|store| store.latest_for_window(window));
 
+        let wgpu_hub_report = app
+            .global::<fret_render::WgpuHubReportFrameStore>()
+            .and_then(|store| store.latest_for_window(window));
+
+        let wgpu_allocator_report = app
+            .global::<fret_render::WgpuAllocatorReportFrameStore>()
+            .and_then(|store| store.latest_for_window(window));
+
         let mut debug = UiTreeDebugSnapshotV1::from_tree(
             app,
             window,
             ui,
             renderer_perf,
+            wgpu_hub_report,
+            wgpu_allocator_report,
             element_runtime,
             hit_test,
             element_diag,

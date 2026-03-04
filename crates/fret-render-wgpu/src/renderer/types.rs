@@ -482,6 +482,17 @@ pub struct RenderPerfSnapshot {
     pub intermediate_pool_evictions: u64,
     pub intermediate_pool_free_bytes: u64,
     pub intermediate_pool_free_textures: u64,
+    // GPU registry live resource estimates (best-effort).
+    //
+    // These are diagnostics-only estimates derived from descriptors the runner provides for
+    // imported render targets and images. They may not match backend allocations exactly but are
+    // useful for explaining large vmmap/driver footprint deltas.
+    pub gpu_images_live: u64,
+    pub gpu_images_bytes_estimate: u64,
+    pub gpu_images_max_bytes_estimate: u64,
+    pub gpu_render_targets_live: u64,
+    pub gpu_render_targets_bytes_estimate: u64,
+    pub gpu_render_targets_max_bytes_estimate: u64,
     pub render_plan_estimated_peak_intermediate_bytes: u64,
     pub render_plan_segments: u64,
     pub render_plan_segments_changed: u64,

@@ -1884,6 +1884,123 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                             );
                         }
 
+                        let diag_wgpu_report = std::env::var_os("FRET_DIAG_WGPU_REPORT")
+                            .is_some_and(|v| !v.is_empty());
+                        if diag_wgpu_report {
+                            let every_n = std::env::var("FRET_DIAG_WGPU_REPORT_EVERY_N_FRAMES")
+                                .ok()
+                                .and_then(|v| v.trim().parse::<u64>().ok())
+                                .unwrap_or(60)
+                                .max(1);
+
+                            let tick_id = self.tick_id.0;
+                            let frame_id = self.frame_id.0;
+                            let should_sample = frame_id <= 2 || frame_id % every_n == 0;
+
+                            if should_sample
+                                && let Some(report) = context.instance.generate_report()
+                            {
+                                let hub = report.hub_report();
+                                let counts = fret_render::WgpuHubReportCounts {
+                                    adapters: (hub.adapters.num_allocated
+                                        + hub.adapters.num_kept_from_user)
+                                        as u64,
+                                    devices: (hub.devices.num_allocated
+                                        + hub.devices.num_kept_from_user)
+                                        as u64,
+                                    queues: (hub.queues.num_allocated
+                                        + hub.queues.num_kept_from_user)
+                                        as u64,
+                                    command_encoders: (hub.command_encoders.num_allocated
+                                        + hub.command_encoders.num_kept_from_user)
+                                        as u64,
+                                    buffers: (hub.buffers.num_allocated
+                                        + hub.buffers.num_kept_from_user)
+                                        as u64,
+                                    textures: (hub.textures.num_allocated
+                                        + hub.textures.num_kept_from_user)
+                                        as u64,
+                                    texture_views: (hub.texture_views.num_allocated
+                                        + hub.texture_views.num_kept_from_user)
+                                        as u64,
+                                    samplers: (hub.samplers.num_allocated
+                                        + hub.samplers.num_kept_from_user)
+                                        as u64,
+                                    shader_modules: (hub.shader_modules.num_allocated
+                                        + hub.shader_modules.num_kept_from_user)
+                                        as u64,
+                                    render_pipelines: (hub.render_pipelines.num_allocated
+                                        + hub.render_pipelines.num_kept_from_user)
+                                        as u64,
+                                    compute_pipelines: (hub.compute_pipelines.num_allocated
+                                        + hub.compute_pipelines.num_kept_from_user)
+                                        as u64,
+                                };
+
+                                self.app.with_global_mut_untracked(
+                                    fret_render::WgpuHubReportFrameStore::default,
+                                    |store, _app| {
+                                        store.record(app_window, tick_id, frame_id, counts);
+                                    },
+                                );
+                            }
+                        }
+
+                        let diag_wgpu_allocator_report =
+                            std::env::var_os("FRET_DIAG_WGPU_ALLOCATOR_REPORT")
+                                .is_some_and(|v| !v.is_empty());
+                        if diag_wgpu_allocator_report {
+                            let every_n =
+                                std::env::var("FRET_DIAG_WGPU_ALLOCATOR_REPORT_EVERY_N_FRAMES")
+                                    .ok()
+                                    .and_then(|v| v.trim().parse::<u64>().ok())
+                                    .unwrap_or(300)
+                                    .max(1);
+                            let top_n = std::env::var("FRET_DIAG_WGPU_ALLOCATOR_REPORT_TOP_N")
+                                .ok()
+                                .and_then(|v| v.trim().parse::<usize>().ok())
+                                .unwrap_or(16)
+                                .max(1);
+                            let max_name_bytes =
+                                std::env::var("FRET_DIAG_WGPU_ALLOCATOR_REPORT_MAX_NAME_BYTES")
+                                    .ok()
+                                    .and_then(|v| v.trim().parse::<usize>().ok())
+                                    .unwrap_or(160)
+                                    .max(16);
+
+                            let tick_id = self.tick_id.0;
+                            let frame_id = self.frame_id.0;
+                            let should_sample = frame_id <= 2 || frame_id % every_n == 0;
+
+                            if should_sample {
+                                let report = context.device.generate_allocator_report();
+                                #[cfg(target_os = "macos")]
+                                let metal_current_allocated_size_bytes = unsafe {
+                                    context
+                                        .device
+                                        .as_hal::<wgpu::hal::api::Metal>()
+                                        .map(|dev| dev.raw_device().current_allocated_size() as u64)
+                                };
+                                #[cfg(not(target_os = "macos"))]
+                                let metal_current_allocated_size_bytes: Option<u64> = None;
+
+                                self.app.with_global_mut_untracked(
+                                    fret_render::WgpuAllocatorReportFrameStore::default,
+                                    |store, _app| {
+                                        store.record_sample(
+                                            app_window,
+                                            tick_id,
+                                            frame_id,
+                                            report,
+                                            metal_current_allocated_size_bytes,
+                                            top_n,
+                                            max_name_bytes,
+                                        );
+                                    },
+                                );
+                            }
+                        }
+
                         let mut cmd_buffers = engine_command_buffers;
                         cmd_buffers.push(ui_cmd);
 

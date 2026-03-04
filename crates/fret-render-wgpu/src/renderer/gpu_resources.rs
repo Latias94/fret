@@ -12,6 +12,16 @@ pub(super) struct GpuResources {
     bind_group_caches: BindGroupCaches,
 }
 
+#[derive(Debug, Default, Clone, Copy)]
+pub(super) struct GpuRegistryBytesEstimate {
+    pub(super) images_live: u64,
+    pub(super) images_bytes_estimate: u64,
+    pub(super) images_max_bytes_estimate: u64,
+    pub(super) render_targets_live: u64,
+    pub(super) render_targets_bytes_estimate: u64,
+    pub(super) render_targets_max_bytes_estimate: u64,
+}
+
 impl GpuResources {
     pub(super) fn generations(&self) -> (u64, u64) {
         (
@@ -186,5 +196,20 @@ impl GpuResources {
         }
         self.bind_group_caches.invalidate_image(id);
         true
+    }
+
+    pub(super) fn diagnostics_estimated_bytes(&self) -> GpuRegistryBytesEstimate {
+        let (images_live, images_bytes_estimate, images_max_bytes_estimate) =
+            self.registries.images.diagnostics_estimated_bytes();
+        let (render_targets_live, render_targets_bytes_estimate, render_targets_max_bytes_estimate) =
+            self.registries.render_targets.diagnostics_estimated_bytes();
+        GpuRegistryBytesEstimate {
+            images_live,
+            images_bytes_estimate,
+            images_max_bytes_estimate,
+            render_targets_live,
+            render_targets_bytes_estimate,
+            render_targets_max_bytes_estimate,
+        }
     }
 }

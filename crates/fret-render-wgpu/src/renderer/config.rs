@@ -39,6 +39,8 @@ impl Renderer {
             return None;
         }
 
+        let registry_est = self.gpu_resources.diagnostics_estimated_bytes();
+
         let snap = RenderPerfSnapshot {
             frames: self.perf.frames,
             encode_scene_us: self.perf.encode_scene.as_micros() as u64,
@@ -113,6 +115,12 @@ impl Renderer {
             intermediate_pool_evictions: self.perf.intermediate_pool_evictions,
             intermediate_pool_free_bytes: self.perf.intermediate_pool_free_bytes,
             intermediate_pool_free_textures: self.perf.intermediate_pool_free_textures,
+            gpu_images_live: registry_est.images_live,
+            gpu_images_bytes_estimate: registry_est.images_bytes_estimate,
+            gpu_images_max_bytes_estimate: registry_est.images_max_bytes_estimate,
+            gpu_render_targets_live: registry_est.render_targets_live,
+            gpu_render_targets_bytes_estimate: registry_est.render_targets_bytes_estimate,
+            gpu_render_targets_max_bytes_estimate: registry_est.render_targets_max_bytes_estimate,
             render_plan_estimated_peak_intermediate_bytes: self
                 .perf
                 .render_plan_estimated_peak_intermediate_bytes,
@@ -389,7 +397,39 @@ impl Renderer {
         self.path_msaa_samples
     }
 
+    fn path_msaa_samples_override_from_env() -> Option<u32> {
+        static OVERRIDE: OnceLock<Option<u32>> = OnceLock::new();
+        *OVERRIDE.get_or_init(|| {
+            let Ok(raw) = std::env::var("FRET_RENDER_WGPU_PATH_MSAA_SAMPLES") else {
+                return None;
+            };
+
+            let trimmed = raw.trim();
+            if trimmed.is_empty() {
+                return None;
+            }
+
+            match trimmed.parse::<u32>() {
+                Ok(samples) => {
+                    tracing::warn!(
+                        path_msaa_samples = samples,
+                        "Renderer path MSAA samples overridden via FRET_RENDER_WGPU_PATH_MSAA_SAMPLES."
+                    );
+                    Some(samples)
+                }
+                Err(_) => {
+                    tracing::warn!(
+                        raw = trimmed,
+                        "Invalid FRET_RENDER_WGPU_PATH_MSAA_SAMPLES; ignoring override."
+                    );
+                    None
+                }
+            }
+        })
+    }
+
     pub fn set_path_msaa_samples(&mut self, samples: u32) {
+        let samples = Self::path_msaa_samples_override_from_env().unwrap_or(samples);
         let samples = samples.max(1);
         let samples = samples.min(16);
         if samples == 1 {
