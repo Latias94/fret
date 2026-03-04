@@ -76,6 +76,9 @@ Using `tools/diag-scripts/ui-gallery/memory/ui-gallery-code-editor-torture-memor
   - `buffer_line_count`: 20,004
   - `undo_len`: 0 (limit 512)
   - `undo_text_bytes_estimate_total`: 0
+- Text system attribution (`resource_caches.render_text`, last snapshot; single run):
+  - `registered_font_blobs_total_bytes`: 0 (no injected memory-backed fonts observed)
+  - `baseline_metrics_cache_entries`: 5
 
 Interpretation:
 
@@ -87,6 +90,10 @@ Interpretation:
   - Full debug snapshot capture can make bundle dumps prohibitively expensive in editor torture scenarios.
     This script therefore sets env defaults (via `meta.env_defaults`) to record **stats-only** debug
     snapshots: `FRET_DIAG_DEBUG_SNAPSHOT=0`.
+  - Text/font attribution note:
+    - `resource_caches.render_text` now also reports best-effort font DB/cache counters:
+      - `registered_font_blobs_{count,total_bytes}` (injected memory-backed fonts)
+      - `family_id_cache_entries`, `baseline_metrics_cache_entries` (shaper caches)
 
 Allocator A/B (empty idle, `--release`, `fretboard diag repro`, same script):
 
@@ -129,6 +136,10 @@ Interpretation:
       - `io_surface_dirty_bytes` (Metal-backed surfaces/textures)
       - `io_accelerator_dirty_bytes` (GPU driver allocations)
       - `malloc_small_dirty_bytes` (CPU heap bucket)
+      - `malloc_dirty_bytes_total` (sum of `MALLOC_*` vmmap regions)
+    - `resource.footprint.json.macos_vmmap.tables.malloc_zones` now includes:
+      - `default_zone` (best-effort `DefaultMallocZone` row)
+      - `total` (allocated/frag/dirty sums across all zones)
     - These are intended to support more actionable macOS gates than “just physical footprint”.
   - wgpu allocator sampling note:
     - Bundles may now report `wgpu_allocator_sample_present=true` even when
