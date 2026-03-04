@@ -14,7 +14,7 @@ use fret_ui_kit::command::ElementCommandGatingExt as _;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
 use fret_ui_kit::declarative::current_color;
-use fret_ui_kit::declarative::motion::drive_tween_color_for_element;
+use fret_ui_kit::declarative::motion::{drive_tween_color_for_element, drive_tween_f32_for_element};
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::typography;
 use fret_ui_kit::{
@@ -937,6 +937,19 @@ impl Button {
                     tailwind_transition_ease_in_out,
                 );
 
+                let ring_alpha = drive_tween_f32_for_element(
+                    cx,
+                    _id,
+                    "button.chrome.ring.alpha",
+                    if states.contains(WidgetStates::FOCUS_VISIBLE) {
+                        1.0
+                    } else {
+                        0.0
+                    },
+                    duration,
+                    tailwind_transition_ease_in_out,
+                );
+
                 let bg = ColorRef::Color(bg_motion.value);
                 let fg = ColorRef::Color(fg_motion.value);
                 let border_color = ColorRef::Color(border_motion.value);
@@ -1010,11 +1023,21 @@ impl Button {
                     Px(max)
                 };
 
+                let mut focus_ring = decl_style::focus_ring(&theme, focus_radius);
+                focus_ring.color.a = (focus_ring.color.a * ring_alpha.value).clamp(0.0, 1.0);
+                if let Some(offset_color) = focus_ring.offset_color {
+                    focus_ring.offset_color = Some(Color {
+                        a: (offset_color.a * ring_alpha.value).clamp(0.0, 1.0),
+                        ..offset_color
+                    });
+                }
+
                 let pressable_props = PressableProps {
                     layout: pressable_layout,
                     enabled: !disabled,
                     focusable,
-                    focus_ring: Some(decl_style::focus_ring(&theme, focus_radius)),
+                    focus_ring: Some(focus_ring),
+                    focus_ring_always_paint: ring_alpha.animating,
                     key_activation: render_key_activation,
                     a11y: PressableA11y {
                         role: render_role,
@@ -1732,6 +1755,216 @@ mod tests {
         assert!(
             color_eq_eps(border_final, ring, 1e-4),
             "expected outline focus border to settle to ring; got border={border_final:?} ring={ring:?}"
+        );
+    }
+
+    #[test]
+    fn button_focus_ring_alpha_tweens_in_and_out_like_a_transition() {
+        use std::cell::Cell;
+        use std::rc::Rc;
+
+        use fret_runtime::FrameId;
+        use fret_ui::elements::GlobalElementId;
+        use fret_ui_kit::declarative::transition::ticks_60hz_for_duration;
+
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        crate::shadcn_themes::apply_shadcn_new_york(
+            &mut app,
+            crate::shadcn_themes::ShadcnBaseColor::Neutral,
+            crate::shadcn_themes::ShadcnColorScheme::Light,
+        );
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(400.0), Px(200.0)),
+        );
+        let mut services = FakeServices;
+
+        let theme = Theme::global(&app).snapshot();
+        let base_alpha = fret_ui_kit::declarative::style::focus_ring(&theme, Px(4.0))
+            .color
+            .a;
+
+        let id_out: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
+        let ring_alpha_out: Rc<Cell<Option<f32>>> = Rc::new(Cell::new(None));
+        let always_paint_out: Rc<Cell<Option<bool>>> = Rc::new(Cell::new(None));
+
+        fn render_frame(
+            ui: &mut UiTree<App>,
+            app: &mut App,
+            services: &mut dyn fret_core::UiServices,
+            window: AppWindowId,
+            bounds: Rect,
+            id_out: Rc<Cell<Option<GlobalElementId>>>,
+            ring_alpha_out: Rc<Cell<Option<f32>>>,
+            always_paint_out: Rc<Cell<Option<bool>>>,
+        ) {
+            let root = fret_ui::declarative::render_root(
+                ui,
+                app,
+                services,
+                window,
+                bounds,
+                "button-focus-ring-transition",
+                move |cx| {
+                    let el = Button::new("Default").into_element(cx);
+                    id_out.set(Some(el.id));
+
+                    let ElementKind::Pressable(props) = &el.kind else {
+                        panic!("expected button to render as a Pressable");
+                    };
+                    let alpha = props
+                        .focus_ring
+                        .as_ref()
+                        .map(|ring| ring.color.a)
+                        .unwrap_or(0.0);
+                    ring_alpha_out.set(Some(alpha));
+                    always_paint_out.set(Some(props.focus_ring_always_paint));
+                    vec![el]
+                },
+            );
+            ui.set_root(root);
+        }
+
+        // Frame 1: unfocused, ring should be fully hidden.
+        app.set_frame_id(FrameId(1));
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            id_out.clone(),
+            ring_alpha_out.clone(),
+            always_paint_out.clone(),
+        );
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        let id = id_out.get().expect("button element id");
+        let node = elements::node_for_element(&mut app, window, id).expect("button node");
+
+        assert!(
+            ring_alpha_out.get().expect("alpha").abs() <= 1e-6,
+            "expected initial ring alpha to be 0; got {:?}",
+            ring_alpha_out.get()
+        );
+        assert_eq!(
+            always_paint_out.get().expect("always paint"),
+            false,
+            "expected initial focus_ring_always_paint=false"
+        );
+
+        // Focus it and switch modality to keyboard (focus-visible).
+        ui.set_focus(Some(node));
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::KeyDown {
+                key: fret_core::KeyCode::Tab,
+                modifiers: fret_core::Modifiers::default(),
+                repeat: false,
+            },
+        );
+
+        // Frame 2: focus-visible should start a tween (intermediate alpha) and paint-on-exit is ok.
+        app.set_frame_id(FrameId(2));
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            id_out.clone(),
+            ring_alpha_out.clone(),
+            always_paint_out.clone(),
+        );
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        let alpha2 = ring_alpha_out.get().expect("alpha2");
+        assert!(
+            alpha2 > 1e-6 && alpha2 < base_alpha - 1e-6,
+            "expected ring alpha to tween in (intermediate); got alpha={alpha2} base_alpha={base_alpha}"
+        );
+        assert!(
+            always_paint_out.get().expect("always paint2"),
+            "expected focus_ring_always_paint while animating"
+        );
+
+        // Advance frames until the default 150ms transition settles.
+        let settle = ticks_60hz_for_duration(Duration::from_millis(150)) + 2;
+        for i in 0..settle {
+            app.set_frame_id(FrameId(3 + i));
+            render_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                id_out.clone(),
+                ring_alpha_out.clone(),
+                always_paint_out.clone(),
+            );
+            ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        }
+        let alpha_final = ring_alpha_out.get().expect("alpha_final");
+        assert!(
+            (alpha_final - base_alpha).abs() <= 1e-4,
+            "expected ring alpha to settle to base; got alpha={alpha_final} base_alpha={base_alpha}"
+        );
+        assert!(
+            !always_paint_out.get().expect("always paint final"),
+            "expected focus_ring_always_paint=false once settled"
+        );
+
+        // Blur: should animate out and keep painting while alpha decreases.
+        ui.set_focus(None);
+        app.set_frame_id(FrameId(3 + settle));
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            id_out.clone(),
+            ring_alpha_out.clone(),
+            always_paint_out.clone(),
+        );
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        let alpha_out = ring_alpha_out.get().expect("alpha_out");
+        assert!(
+            alpha_out > 1e-6 && alpha_out < base_alpha - 1e-6,
+            "expected ring alpha to tween out (intermediate); got alpha={alpha_out} base_alpha={base_alpha}"
+        );
+        assert!(
+            always_paint_out.get().expect("always paint out"),
+            "expected focus_ring_always_paint while animating out"
+        );
+
+        for i in 0..settle {
+            app.set_frame_id(FrameId(4 + settle + i));
+            render_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                id_out.clone(),
+                ring_alpha_out.clone(),
+                always_paint_out.clone(),
+            );
+            ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        }
+
+        let alpha_zero = ring_alpha_out.get().expect("alpha_zero");
+        assert!(
+            alpha_zero.abs() <= 1e-4,
+            "expected ring alpha to settle to 0; got alpha={alpha_zero}"
+        );
+        assert!(
+            !always_paint_out.get().expect("always paint after out"),
+            "expected focus_ring_always_paint=false once ring alpha is 0"
         );
     }
 
