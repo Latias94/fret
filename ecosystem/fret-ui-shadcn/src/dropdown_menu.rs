@@ -2,14 +2,10 @@ use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 use std::sync::Arc;
 
-use fret_core::{
-    Edges, FontId, FontWeight, MouseButton, Point, PointerType, Px, Rect, Size, TextStyle,
-};
+use fret_core::{Edges, FontId, FontWeight, Point, Px, Rect, Size, TextStyle};
 use fret_icons::{IconId, ids};
 use fret_runtime::{CommandId, Model};
-use fret_ui::action::{
-    OnActivate, OnDismissRequest, PressablePointerDownResult, PressablePointerUpResult,
-};
+use fret_ui::action::{OnActivate, OnDismissRequest, PressablePointerDownResult};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, InsetStyle, LayoutStyle, Length, MainAlign,
     Overflow, PositionStyle, PressableProps, RingStyle, RovingFlexProps, RovingFocusProps,
@@ -1893,47 +1889,6 @@ impl DropdownMenu {
 
             // Pointer/activation open (Radix `DropdownMenuTrigger` click/Enter/Space).
             //
-            // Mouse parity: open on pointer-down and skip the default pointer-up activation.
-            //
-            // Rationale: opening on pointer-up can race with outside-press/focus transitions,
-            // producing "opens then immediately closes" flicker in dense interactive surfaces
-            // (notably DataTable action triggers).
-            let open_for_trigger_pointer_down = self.open.clone();
-            cx.pressable_on_pointer_down_for(
-                trigger_id,
-                Arc::new(move |host, _acx, down| {
-                    if disabled {
-                        return PressablePointerDownResult::Continue;
-                    }
-                    if down.pointer_type != PointerType::Mouse {
-                        return PressablePointerDownResult::Continue;
-                    }
-                    if down.button != MouseButton::Left {
-                        return PressablePointerDownResult::Continue;
-                    }
-
-                    let _ = host
-                        .models_mut()
-                        .update(&open_for_trigger_pointer_down, |v| *v = !*v);
-                    host.request_redraw(_acx.window);
-                    PressablePointerDownResult::SkipDefaultAndStopPropagation
-                }),
-            );
-
-            let disabled_for_trigger_pointer_up = disabled;
-            cx.pressable_on_pointer_up_for(
-                trigger_id,
-                Arc::new(move |_host, _acx, up| {
-                    if disabled_for_trigger_pointer_up {
-                        return PressablePointerUpResult::Continue;
-                    }
-                    if up.pointer_type == PointerType::Mouse && up.button == MouseButton::Left {
-                        return PressablePointerUpResult::SkipActivate;
-                    }
-                    PressablePointerUpResult::Continue
-                }),
-            );
-            //
             // We intentionally *set* the trigger activation hook instead of "add"-chaining it.
             //
             // Rationale: `pressable_add_on_activate_for` is persistent for stable element ids,
@@ -1953,7 +1908,6 @@ impl DropdownMenu {
                     let _ = host
                         .models_mut()
                         .update(&open_for_trigger_activate, |v| *v = !*v);
-                    host.request_redraw(_acx.window);
                 }),
             );
             let overlay_root_name = menu::dropdown_menu_root_name(overlay_id);
@@ -5979,6 +5933,82 @@ mod tests {
                 n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Alpha")
             }),
             "expected menu item to exist after opening via trigger activation"
+        );
+    }
+
+    #[test]
+    fn dropdown_menu_trigger_activation_does_not_stack_across_rerenders() {
+        use fret_core::MouseButton;
+
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(false);
+        let trigger_id_out = app.models_mut().insert(None);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let build_entries = || vec![DropdownMenuEntry::Item(DropdownMenuItem::new("Alpha"))];
+
+        // Render closed a few times; if activation wiring stacks up, clicking would toggle open
+        // multiple times and end up closed.
+        let mut trigger_id = None;
+        for _ in 0..5 {
+            let (_, id) = render_frame_focusable_trigger_capture_id(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                open.clone(),
+                trigger_id_out.clone(),
+                build_entries(),
+            );
+            trigger_id = Some(id);
+        }
+        let trigger_id = trigger_id.expect("trigger id");
+
+        let trigger_node =
+            fret_ui::elements::node_for_element(&mut app, window, trigger_id).expect("trigger");
+        let trigger_bounds = ui.debug_node_bounds(trigger_node).expect("trigger bounds");
+        let click_pos = rect_center(trigger_bounds);
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: click_pos,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position: click_pos,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+
+        assert_eq!(
+            app.models().get_copied(&open),
+            Some(true),
+            "expected click to open menu after rerenders"
         );
     }
 
