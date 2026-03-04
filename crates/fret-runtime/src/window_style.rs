@@ -25,13 +25,6 @@ pub enum WindowZLevel {
     AlwaysOnTop,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum MousePolicy {
-    Normal,
-    /// Request click-through / mouse passthrough behavior for the OS window (best-effort).
-    Passthrough,
-}
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum WindowHitTestRequestV1 {
@@ -102,8 +95,6 @@ pub struct WindowStyleRequest {
     pub background_material: Option<WindowBackgroundMaterialRequest>,
     /// Optional request for window-level pointer hit testing (best-effort).
     pub hit_test: Option<WindowHitTestRequestV1>,
-    /// Request click-through / mouse passthrough behavior for the OS window (best-effort).
-    pub mouse: Option<MousePolicy>,
     /// Request global window opacity (not per-pixel transparency), best-effort.
     pub opacity: Option<WindowOpacity>,
 }

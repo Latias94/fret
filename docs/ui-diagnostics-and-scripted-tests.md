@@ -920,7 +920,7 @@ Recent additions:
 - `dock_drag_window_under_moving_window_is` (assert the best-effort “window under moving window” selection during a dock drag)
 - `dock_drag_window_under_moving_window_source_is` (assert which mechanism selected the “window under moving window”: platform vs heuristic)
 - `dock_drag_active_is` (assert that a dock drag session is (or is not) active)
-- `dock_drag_transparent_payload_mouse_passthrough_applied_is` (assert whether the runner successfully applied OS click-through for the moving window during transparent payload)
+- `dock_drag_transparent_payload_hit_test_passthrough_applied_is` (assert whether the runner successfully applied OS click-through for the moving window during transparent payload)
 - `text_composition_is` (assert whether a text surface is currently composing via IME)
 - `ime_cursor_area_is_some` (assert whether a window-level IME cursor area snapshot exists)
 - `ime_cursor_area_within_window` (assert the IME cursor area stays within the current window bounds; coarse “caret teleported” gate)

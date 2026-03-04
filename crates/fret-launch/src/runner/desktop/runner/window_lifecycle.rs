@@ -120,13 +120,11 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 Some(caps.ui.window_hit_test_passthrough_all)
             }
             Some(fret_runtime::WindowHitTestRequestV1::Normal) => Some(false),
-            None => style.mouse.map(|mouse| {
-                matches!(mouse, fret_runtime::MousePolicy::Passthrough)
-                    && caps.ui.window_mouse_passthrough
-            }),
+            None => None,
         };
         if let Some(passthrough) = requested_passthrough {
-            let _ = super::window::set_window_mouse_passthrough(window.as_ref(), passthrough);
+            let _ =
+                super::window::set_window_hit_test_passthrough_all(window.as_ref(), passthrough);
         }
         if let Some(opacity) = style.opacity {
             let _ = super::window::set_window_opacity(window.as_ref(), opacity.as_f32());

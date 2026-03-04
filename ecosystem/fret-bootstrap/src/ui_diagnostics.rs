@@ -16,7 +16,7 @@ use fret_diag_protocol::{
     UiCommandDispatchTraceQueryV1 as UiScriptCommandDispatchTraceQueryV1, UiEdgesV1,
     UiFocusTraceEntryV1, UiHitTestScopeRootEvidenceV1, UiHitTestTraceEntryV1,
     UiImeEventTraceEntryV1, UiImeEventV1, UiIncomingOpenInjectItemV1, UiKeyModifiersV1,
-    UiLayoutDirectionV1, UiMouseButtonV1, UiMousePolicyV1, UiOptionalRootStateV1, UiOverlayAlignV1,
+    UiLayoutDirectionV1, UiMouseButtonV1, UiOptionalRootStateV1, UiOverlayAlignV1,
     UiOverlayArrowLayoutV1, UiOverlayOffsetV1, UiOverlayPlacementTraceEntryV1,
     UiOverlayPlacementTraceKindV1, UiOverlayPlacementTraceQueryV1, UiOverlayShiftV1,
     UiOverlaySideV1, UiOverlayStickyModeV1, UiPaddingInsetsV1, UiPointV1, UiPointerKindV1,

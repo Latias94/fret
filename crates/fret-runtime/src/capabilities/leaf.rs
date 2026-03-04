@@ -54,7 +54,6 @@ pub struct UiCapabilities {
     pub window_transparent: bool,
     pub window_skip_taskbar: bool,
     pub window_non_activating: bool,
-    pub window_mouse_passthrough: bool,
     pub window_hit_test_passthrough_all: bool,
     pub window_hit_test_passthrough_regions: bool,
     pub window_set_visible: bool,

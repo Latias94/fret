@@ -1764,17 +1764,15 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
                                     Some(fret_runtime::WindowHitTestRequestV1::Normal) => {
                                         Some(false)
                                     }
-                                    None => style.mouse.map(|mouse| {
-                                        matches!(mouse, fret_runtime::MousePolicy::Passthrough)
-                                            && caps.ui.window_mouse_passthrough
-                                    }),
+                                    None => None,
                                 };
                                 if let Some(passthrough) = requested_passthrough {
                                     let dock_drag_pointer_id = self.dock_drag_pointer_id();
-                                    let applied = super::window::set_window_mouse_passthrough(
-                                        window_handle.as_ref(),
-                                        passthrough,
-                                    );
+                                    let applied =
+                                        super::window::set_window_hit_test_passthrough_all(
+                                            window_handle.as_ref(),
+                                            passthrough,
+                                        );
                                     if let Some(follow) = self.dock_tearoff_follow.as_mut()
                                         && follow.window == window
                                     {
@@ -1783,7 +1781,7 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
                                             && let Some(drag) = self.app.drag_mut(pointer_id)
                                             && drag.source_window == follow.source_window
                                         {
-                                            drag.transparent_payload_mouse_passthrough_applied =
+                                            drag.transparent_payload_hit_test_passthrough_applied =
                                                 passthrough && applied;
                                         }
                                     }

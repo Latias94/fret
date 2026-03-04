@@ -1326,13 +1326,6 @@ pub enum UiWindowZLevelV1 {
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
-pub enum UiMousePolicyV1 {
-    Normal,
-    Passthrough,
-}
-
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
 pub enum UiWindowHitTestRequestV1 {
     Normal,
     PassthroughAll,
@@ -1376,8 +1369,6 @@ pub struct UiWindowStyleMatchV1 {
     pub z_level: Option<UiWindowZLevelV1>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub hit_test: Option<UiWindowHitTestRequestV1>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub mouse: Option<UiMousePolicyV1>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -1820,13 +1811,13 @@ pub enum UiPredicateV1 {
     },
     /// True when the latest docking diagnostics report a dock drag session with an ImGui-style
     /// "transparent payload" applied to the moving window (e.g. reduced opacity and/or
-    /// click-through mouse passthrough while the dock-floating window follows the cursor).
+    /// click-through hit-test passthrough while the dock-floating window follows the cursor).
     DockDragTransparentPayloadAppliedIs {
         applied: bool,
     },
     /// True when the latest docking diagnostics report that the runner successfully applied
-    /// click-through mouse passthrough for the moving window during transparent payload.
-    DockDragTransparentPayloadMousePassthroughAppliedIs {
+    /// click-through hit-test passthrough for the moving window during transparent payload.
+    DockDragTransparentPayloadHitTestPassthroughAppliedIs {
         applied: bool,
     },
     /// True when the latest docking diagnostics report a dock drag session whose hovered-window

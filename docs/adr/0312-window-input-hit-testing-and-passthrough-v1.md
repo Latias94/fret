@@ -4,9 +4,9 @@ Status: Proposed
 
 ## Context
 
-ADR 0139 introduced `MousePolicy::Passthrough` as a window-level click-through posture for utility
-windows. This is sufficient for a subset of overlays, but it conflates intent-level pointer policy
-with an OS hit-test contract. Many utility windows require a more explicit, diagnosable input model:
+ADR 0139 introduced the need for click-through utility windows. Many overlays are still served by
+simple window-level passthrough, but we want an explicit, diagnosable OS hit-test contract that is
+orthogonal to transparency and background materials:
 
 - A visually transparent / material-backed window that is only interactive in a bounded panel area.
 - A frameless window that should ignore pointer events in "empty" regions but accept them in controls.

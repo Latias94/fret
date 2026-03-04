@@ -4,8 +4,8 @@ use fret_core::AppWindowId;
 
 use crate::PlatformCapabilities;
 use crate::window_style::{
-    ActivationPolicy, MousePolicy, TaskbarVisibility, WindowBackgroundMaterialRequest,
-    WindowDecorationsRequest, WindowHitTestRequestV1, WindowStyleRequest, WindowZLevel,
+    ActivationPolicy, TaskbarVisibility, WindowBackgroundMaterialRequest, WindowDecorationsRequest,
+    WindowHitTestRequestV1, WindowStyleRequest, WindowZLevel,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -38,8 +38,6 @@ pub enum RunnerWindowHitTestSourceV1 {
     Default,
     /// The caller explicitly requested `hit_test=...`.
     HitTestFacet,
-    /// Legacy request via `mouse=Passthrough`.
-    LegacyMousePolicy,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -75,7 +73,6 @@ pub struct RunnerWindowStyleEffectiveSnapshotV1 {
     pub taskbar: TaskbarVisibility,
     pub activation: ActivationPolicy,
     pub z_level: WindowZLevel,
-    pub mouse: MousePolicy,
 }
 
 impl Default for RunnerWindowStyleEffectiveSnapshotV1 {
@@ -95,7 +92,6 @@ impl Default for RunnerWindowStyleEffectiveSnapshotV1 {
             taskbar: TaskbarVisibility::Show,
             activation: ActivationPolicy::Activates,
             z_level: WindowZLevel::Normal,
-            mouse: MousePolicy::Normal,
         }
     }
 }
@@ -146,13 +142,6 @@ impl RunnerWindowStyleDiagnosticsStore {
     ) -> Option<(WindowHitTestRequestV1, RunnerWindowHitTestSourceV1)> {
         if let Some(hit_test) = requested.hit_test {
             return Some((hit_test, RunnerWindowHitTestSourceV1::HitTestFacet));
-        }
-        if matches!(requested.mouse, Some(MousePolicy::Passthrough)) {
-            // Back-compat mapping: window-level mouse passthrough is treated as hit-test passthrough.
-            return Some((
-                WindowHitTestRequestV1::PassthroughAll,
-                RunnerWindowHitTestSourceV1::LegacyMousePolicy,
-            ));
         }
         None
     }
@@ -264,13 +253,6 @@ impl RunnerWindowStyleDiagnosticsStore {
                 z_level
             };
         }
-        if let Some(mouse) = requested.mouse {
-            next.mouse = if mouse == MousePolicy::Passthrough && !caps.ui.window_mouse_passthrough {
-                MousePolicy::Normal
-            } else {
-                mouse
-            };
-        }
 
         self.effective.insert(window, next);
     }
@@ -361,15 +343,6 @@ impl RunnerWindowStyleDiagnosticsStore {
             current.hit_test = effective;
             current.hit_test_source = RunnerWindowHitTestSourceV1::HitTestFacet;
             current.hit_test_clamp_reason = clamp_reason;
-        } else if let Some(mouse) = patch.mouse
-            && matches!(mouse, MousePolicy::Passthrough)
-        {
-            let requested = WindowHitTestRequestV1::PassthroughAll;
-            current.hit_test_requested = Some(requested);
-            let (effective, clamp_reason) = Self::clamp_hit_test_request(requested, caps);
-            current.hit_test = effective;
-            current.hit_test_source = RunnerWindowHitTestSourceV1::LegacyMousePolicy;
-            current.hit_test_clamp_reason = clamp_reason;
         }
 
         if let Some(taskbar) = patch.taskbar {
@@ -393,13 +366,6 @@ impl RunnerWindowStyleDiagnosticsStore {
                 // Ignore unsupported AlwaysOnTop.
             } else {
                 current.z_level = z_level;
-            }
-        }
-        if let Some(mouse) = patch.mouse {
-            if mouse == MousePolicy::Passthrough && !caps.ui.window_mouse_passthrough {
-                // Ignore unsupported passthrough requests.
-            } else {
-                current.mouse = mouse;
             }
         }
     }
@@ -563,36 +529,6 @@ mod tests {
         assert_eq!(
             have.appearance,
             RunnerWindowAppearanceV1::CompositedNoBackdrop
-        );
-    }
-
-    #[test]
-    fn legacy_mouse_passthrough_maps_to_hit_test_passthrough_all() {
-        let caps = PlatformCapabilities::default();
-        let mut store = RunnerWindowStyleDiagnosticsStore::default();
-        let w = window(5);
-
-        store.record_window_open(
-            w,
-            WindowStyleRequest {
-                mouse: Some(MousePolicy::Passthrough),
-                ..Default::default()
-            },
-            &caps,
-        );
-        let have = store.effective_snapshot(w).unwrap();
-        assert_eq!(have.hit_test, WindowHitTestRequestV1::PassthroughAll);
-        assert_eq!(
-            have.hit_test_requested,
-            Some(WindowHitTestRequestV1::PassthroughAll)
-        );
-        assert_eq!(
-            have.hit_test_source,
-            RunnerWindowHitTestSourceV1::LegacyMousePolicy
-        );
-        assert_eq!(
-            have.hit_test_clamp_reason,
-            RunnerWindowHitTestClampReasonV1::None
         );
     }
 

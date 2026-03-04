@@ -346,7 +346,7 @@ pub(super) fn client_origin_screen_for_hwnd(hwnd: isize) -> Option<PhysicalPosit
     Some(PhysicalPosition::new(client.x as f64, client.y as f64))
 }
 
-pub(super) fn set_window_mouse_passthrough(hwnd: isize, enabled: bool) {
+pub(super) fn set_window_hit_test_passthrough_all(hwnd: isize, enabled: bool) {
     if hwnd == 0 {
         return;
     }

@@ -285,7 +285,7 @@ pub(super) fn set_window_opacity(window: &dyn Window, opacity: f32) -> bool {
 }
 
 #[cfg(target_os = "macos")]
-pub(super) fn set_window_mouse_passthrough(window: &dyn Window, enabled: bool) -> bool {
+pub(super) fn set_window_hit_test_passthrough_all(window: &dyn Window, enabled: bool) -> bool {
     use objc::runtime::Object;
     use objc::{msg_send, sel, sel_impl};
     use winit::raw_window_handle::HasWindowHandle as _;
@@ -334,7 +334,7 @@ pub(super) fn set_window_opacity(window: &dyn Window, opacity: f32) -> bool {
 }
 
 #[cfg(target_os = "windows")]
-pub(super) fn set_window_mouse_passthrough(window: &dyn Window, enabled: bool) -> bool {
+pub(super) fn set_window_hit_test_passthrough_all(window: &dyn Window, enabled: bool) -> bool {
     use winit::raw_window_handle::HasWindowHandle as _;
 
     let hwnd: isize = match window.window_handle() {
@@ -347,7 +347,7 @@ pub(super) fn set_window_mouse_passthrough(window: &dyn Window, enabled: bool) -
     if hwnd == 0 {
         return false;
     }
-    super::win32::set_window_mouse_passthrough(hwnd, enabled);
+    super::win32::set_window_hit_test_passthrough_all(hwnd, enabled);
     true
 }
 
@@ -634,7 +634,7 @@ pub(super) fn set_window_opacity(_window: &dyn Window, _opacity: f32) -> bool {
 }
 
 #[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
-pub(super) fn set_window_mouse_passthrough(_window: &dyn Window, _enabled: bool) -> bool {
+pub(super) fn set_window_hit_test_passthrough_all(_window: &dyn Window, _enabled: bool) -> bool {
     false
 }
 

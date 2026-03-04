@@ -26,7 +26,7 @@ in-window overlays:
 - always-on-top z-level hints,
 - skip taskbar / alt-tab visibility (tool windows),
 - non-activating windows (do not steal keyboard focus),
-- mouse passthrough (click-through overlays), where supported.
+- window hit-test passthrough (click-through overlays), where supported.
 
 We want to support these without:
 
@@ -111,7 +111,7 @@ The request is intentionally small and “intent-oriented”:
 - `z_level: Option<WindowZLevel>` — `Normal`, `AlwaysOnTop`.
 - `taskbar: Option<TaskbarVisibility>` — `Show`, `Hide`.
 - `activation: Option<ActivationPolicy>` — `Activates` (default), `NonActivating`.
-- `mouse: Option<MousePolicy>` — `Normal`, `Passthrough` (click-through).
+- `hit_test: Option<WindowHitTestRequestV1>` — `Normal` (default), `PassthroughAll` (click-through).
 
 Notes:
 
@@ -161,7 +161,6 @@ Patchability (normative):
   - `taskbar`
   - `activation`
   - `hit_test`
-  - `mouse`
   - `opacity`
 
 Additional style facets may be introduced by follow-up ADRs (e.g. window background materials);
@@ -169,7 +168,7 @@ those ADRs must explicitly define patchability and capability keys for the added
 
 Rationale:
 
-- Docking and utility-window UX require temporary posture changes (always-on-top, opacity, mouse passthrough).
+- Docking and utility-window UX require temporary posture changes (always-on-top, opacity, hit-test passthrough).
 - “Hard” window topology facets (decorations/transparent/resizable) tend to be create-time-only on many
   platforms and should not be relied on as dynamic knobs.
 
@@ -183,7 +182,6 @@ Extend `PlatformCapabilities.ui` with booleans for the style facets, and add mat
 - `ui.window.non_activating`
 - `ui.window.hit_test.passthrough_all`
 - `ui.window.hit_test.passthrough_regions` (reserved; not implemented in v1)
-- `ui.window.mouse_passthrough` (legacy; prefer `hit_test`)
 - `ui.native_window_handle` (escape hatch; backend-specific)
 
 The runner/backend must:
@@ -227,8 +225,6 @@ Input and focus semantics (v1):
 - `WindowHitTestRequestV1::PassthroughAll` means the OS window must not receive pointer events
   where supported; when enabled, the UI runtime must not assume it will see pointer events for that
   window.
-- `MousePolicy::Passthrough` is a legacy alias for window-level pointer passthrough. New code
-  should use `hit_test` and treat `mouse=Passthrough` as an intent-level policy input only.
 - Neither policy implies global shortcuts or text input; utility windows should be treated as
   “pointer-only unless focused” by default.
 
