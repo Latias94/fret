@@ -41,6 +41,7 @@ pub(crate) struct ReproCmdContext {
     pub renderdoc_markers: Vec<String>,
     pub renderdoc_no_outputs_png: bool,
     pub resource_footprint_thresholds: ResourceFootprintThresholds,
+    pub max_wgpu_metal_current_allocated_size_bytes: Option<u64>,
     pub check_redraw_hitches_max_total_ms_threshold: Option<u64>,
     pub checks: diag_run::RunChecks,
 }
@@ -80,6 +81,7 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
         renderdoc_markers,
         renderdoc_no_outputs_png,
         resource_footprint_thresholds,
+        max_wgpu_metal_current_allocated_size_bytes,
         check_redraw_hitches_max_total_ms_threshold,
         checks,
     } = ctx;
@@ -299,6 +301,7 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
 
     let mut repro_process_footprint: Option<serde_json::Value> = None;
     let mut resource_footprint_gate: Option<ResourceFootprintGateResult> = None;
+    let mut wgpu_metal_allocated_size_gate: Option<WgpuMetalAllocatedSizeGateResult> = None;
     let mut redraw_hitches_gate: Option<RedrawHitchesGateResult> = None;
 
     let mut run_rows: Vec<serde_json::Value> = Vec::new();
@@ -677,6 +680,17 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
         )
         .ok();
     }
+    if let Some(max_bytes) = max_wgpu_metal_current_allocated_size_bytes {
+        let bundle_path = packed_bundle_artifact
+            .as_deref()
+            .or_else(|| selected_bundle_path.as_deref());
+        wgpu_metal_allocated_size_gate = check_wgpu_metal_current_allocated_size_threshold(
+            &resolved_out_dir,
+            bundle_path,
+            max_bytes,
+        )
+        .ok();
+    }
     if let Some(max_total_ms) = check_redraw_hitches_max_total_ms_threshold {
         redraw_hitches_gate =
             check_redraw_hitches_max_total_ms(&resolved_out_dir, max_total_ms).ok();
@@ -778,6 +792,17 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
             r.evidence_path.display()
         ));
         overall_reason_code = Some("tooling.resource_footprint.failed".to_string());
+    }
+    if let Some(r) = wgpu_metal_allocated_size_gate.as_ref()
+        && r.failures > 0
+        && overall_error.is_none()
+    {
+        overall_error = Some(format!(
+            "wgpu Metal allocated size threshold gate failed (failures={}, evidence={})",
+            r.failures,
+            r.evidence_path.display()
+        ));
+        overall_reason_code = Some("tooling.wgpu_metal_allocated_size.failed".to_string());
     }
     if let Some(r) = redraw_hitches_gate.as_ref()
         && r.failures > 0

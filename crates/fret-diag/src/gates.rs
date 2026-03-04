@@ -26,6 +26,119 @@ pub(super) struct ResourceFootprintGateResult {
     pub(super) failures: usize,
 }
 
+#[derive(Debug, Clone)]
+pub(super) struct WgpuMetalAllocatedSizeGateResult {
+    pub(super) evidence_path: PathBuf,
+    pub(super) failures: usize,
+}
+
+pub(super) fn check_wgpu_metal_current_allocated_size_threshold(
+    out_dir: &Path,
+    bundle_path: Option<&Path>,
+    max_wgpu_metal_current_allocated_size_bytes: u64,
+) -> Result<WgpuMetalAllocatedSizeGateResult, String> {
+    let out_path = out_dir.join("check.wgpu_metal_allocated_size.json");
+
+    let v = bundle_path.and_then(read_json_value);
+    let bundle_present = v.is_some();
+
+    let (tick_id, frame_id, present_flag, bytes_value) = if let Some(v) = v.as_ref() {
+        let windows = v.get("windows").and_then(|v| v.as_array());
+        let first_window = windows.and_then(|w| w.first());
+        let snapshots = first_window
+            .and_then(|w| w.get("snapshots"))
+            .and_then(|v| v.as_array());
+        let last_snapshot = snapshots.and_then(|s| s.last());
+        let stats = last_snapshot
+            .and_then(|s| s.get("debug"))
+            .and_then(|d| d.get("stats"))
+            .and_then(|v| v.as_object());
+
+        let tick_id = last_snapshot
+            .and_then(|s| s.get("tick_id"))
+            .and_then(|v| v.as_u64());
+        let frame_id = last_snapshot
+            .and_then(|s| s.get("frame_id"))
+            .and_then(|v| v.as_u64());
+        let present_flag = stats
+            .and_then(|o| o.get("wgpu_metal_current_allocated_size_present"))
+            .and_then(|v| v.as_bool());
+        let bytes_value = stats
+            .and_then(|o| o.get("wgpu_metal_current_allocated_size_bytes"))
+            .and_then(|v| v.as_u64());
+        (tick_id, frame_id, present_flag, bytes_value)
+    } else {
+        (None, None, None, None)
+    };
+
+    let missing_reason = if bundle_present {
+        "missing_field"
+    } else {
+        "missing_bundle"
+    };
+
+    let mut failures: Vec<serde_json::Value> = Vec::new();
+    match (present_flag, bytes_value) {
+        (Some(true), Some(observed)) if observed > max_wgpu_metal_current_allocated_size_bytes => {
+            failures.push(serde_json::json!({
+                "kind": "wgpu_metal_current_allocated_size_bytes",
+                "threshold": max_wgpu_metal_current_allocated_size_bytes,
+                "observed": observed,
+                "reason": "exceeded",
+            }));
+        }
+        (Some(true), Some(_)) => {}
+        (Some(true), None) => failures.push(serde_json::json!({
+            "kind": "wgpu_metal_current_allocated_size_bytes",
+            "threshold": max_wgpu_metal_current_allocated_size_bytes,
+            "observed": serde_json::Value::Null,
+            "reason": missing_reason,
+            "field": "windows[0].snapshots[-1].debug.stats.wgpu_metal_current_allocated_size_bytes",
+        })),
+        (Some(false), _) | (None, _) => failures.push(serde_json::json!({
+            "kind": "wgpu_metal_current_allocated_size_bytes",
+            "threshold": max_wgpu_metal_current_allocated_size_bytes,
+            "observed": serde_json::Value::Null,
+            "reason": missing_reason,
+            "field": "windows[0].snapshots[-1].debug.stats.wgpu_metal_current_allocated_size_bytes",
+        })),
+    }
+
+    let payload = serde_json::json!({
+        "schema_version": 1,
+        "generated_unix_ms": now_unix_ms(),
+        "kind": "wgpu_metal_current_allocated_size_threshold",
+        "out_dir": out_dir.display().to_string(),
+        "bundle_file": bundle_path
+            .and_then(|p| p.file_name())
+            .and_then(|s| s.to_str())
+            .unwrap_or("<unknown>"),
+        "thresholds": {
+            "max_wgpu_metal_current_allocated_size_bytes": max_wgpu_metal_current_allocated_size_bytes,
+        },
+        "observed": {
+            "bundle_present": bundle_present,
+            "tick_id": tick_id,
+            "frame_id": frame_id,
+            "wgpu_metal_current_allocated_size_present": present_flag,
+            "wgpu_metal_current_allocated_size_bytes": bytes_value,
+        },
+        "failures": failures,
+    });
+    let _ = write_json_value(&out_path, &payload);
+
+    let failures = payload
+        .get("failures")
+        .and_then(|v| v.as_array())
+        .map(|a| a.len())
+        .unwrap_or(0);
+
+    Ok(WgpuMetalAllocatedSizeGateResult {
+        evidence_path: out_path,
+        failures,
+    })
+}
+
 pub(super) fn check_resource_footprint_thresholds(
     out_dir: &Path,
     footprint_path: &Path,

@@ -144,6 +144,48 @@ fn bundle_stats_summary_from_path(path: &Path) -> Option<serde_json::Value> {
     let get_u64 = |k: &str| stats.get(k).and_then(|v| v.as_u64());
     let get_bool = |k: &str| stats.get(k).and_then(|v| v.as_bool());
 
+    let render_text = last_snapshot
+        .get("resource_caches")
+        .and_then(|v| v.get("render_text"))
+        .and_then(|v| v.as_object());
+
+    let rt_u64 = |k: &str| render_text.and_then(|o| o.get(k)).and_then(|v| v.as_u64());
+    let rt_atlas = |k: &str| {
+        render_text
+            .and_then(|o| o.get(k))
+            .and_then(|v| v.as_object())
+    };
+
+    let atlas_u64 = |atlas: Option<&serde_json::Map<String, serde_json::Value>>, k: &str| {
+        atlas.and_then(|o| o.get(k)).and_then(|v| v.as_u64())
+    };
+
+    let sat_mul_u64 =
+        |a: u64, b: u64| -> u64 { ((a as u128) * (b as u128)).min(u64::MAX as u128) as u64 };
+    let atlas_bytes =
+        |atlas: Option<&serde_json::Map<String, serde_json::Value>>, bpp: u64| -> Option<u64> {
+            let w = atlas_u64(atlas, "width")?;
+            let h = atlas_u64(atlas, "height")?;
+            let pages = atlas_u64(atlas, "pages")?;
+            Some(sat_mul_u64(sat_mul_u64(sat_mul_u64(w, h), pages), bpp))
+        };
+
+    let mask_atlas = rt_atlas("mask_atlas");
+    let color_atlas = rt_atlas("color_atlas");
+    let subpixel_atlas = rt_atlas("subpixel_atlas");
+
+    let render_text_mask_atlas_bytes_live_estimate = atlas_bytes(mask_atlas, 1);
+    let render_text_color_atlas_bytes_live_estimate = atlas_bytes(color_atlas, 4);
+    let render_text_subpixel_atlas_bytes_live_estimate = atlas_bytes(subpixel_atlas, 4);
+    let render_text_atlas_bytes_live_estimate_total = match (
+        render_text_mask_atlas_bytes_live_estimate,
+        render_text_color_atlas_bytes_live_estimate,
+        render_text_subpixel_atlas_bytes_live_estimate,
+    ) {
+        (Some(a), Some(b), Some(c)) => Some(a.saturating_add(b).saturating_add(c)),
+        _ => None,
+    };
+
     Some(serde_json::json!({
         "bundle_schema_version": v.get("schema_version").and_then(|v| v.as_u64()),
         "window": first_window.get("window").and_then(|v| v.as_u64()),
@@ -159,6 +201,35 @@ fn bundle_stats_summary_from_path(path: &Path) -> Option<serde_json::Value> {
         "renderer_intermediate_peak_in_use_bytes": get_u64("renderer_intermediate_peak_in_use_bytes"),
         "renderer_gpu_images_bytes_estimate": get_u64("renderer_gpu_images_bytes_estimate"),
         "renderer_gpu_render_targets_bytes_estimate": get_u64("renderer_gpu_render_targets_bytes_estimate"),
+
+        "render_text_present": render_text.is_some(),
+        "render_text_blobs_live": rt_u64("blobs_live"),
+        "render_text_blob_cache_entries": rt_u64("blob_cache_entries"),
+        "render_text_shape_cache_entries": rt_u64("shape_cache_entries"),
+        "render_text_measure_cache_buckets": rt_u64("measure_cache_buckets"),
+
+        "render_text_mask_atlas_width_px": atlas_u64(mask_atlas, "width"),
+        "render_text_mask_atlas_height_px": atlas_u64(mask_atlas, "height"),
+        "render_text_mask_atlas_pages": atlas_u64(mask_atlas, "pages"),
+        "render_text_mask_atlas_used_px": atlas_u64(mask_atlas, "used_px"),
+        "render_text_mask_atlas_capacity_px": atlas_u64(mask_atlas, "capacity_px"),
+        "render_text_mask_atlas_bytes_live_estimate": render_text_mask_atlas_bytes_live_estimate,
+
+        "render_text_color_atlas_width_px": atlas_u64(color_atlas, "width"),
+        "render_text_color_atlas_height_px": atlas_u64(color_atlas, "height"),
+        "render_text_color_atlas_pages": atlas_u64(color_atlas, "pages"),
+        "render_text_color_atlas_used_px": atlas_u64(color_atlas, "used_px"),
+        "render_text_color_atlas_capacity_px": atlas_u64(color_atlas, "capacity_px"),
+        "render_text_color_atlas_bytes_live_estimate": render_text_color_atlas_bytes_live_estimate,
+
+        "render_text_subpixel_atlas_width_px": atlas_u64(subpixel_atlas, "width"),
+        "render_text_subpixel_atlas_height_px": atlas_u64(subpixel_atlas, "height"),
+        "render_text_subpixel_atlas_pages": atlas_u64(subpixel_atlas, "pages"),
+        "render_text_subpixel_atlas_used_px": atlas_u64(subpixel_atlas, "used_px"),
+        "render_text_subpixel_atlas_capacity_px": atlas_u64(subpixel_atlas, "capacity_px"),
+        "render_text_subpixel_atlas_bytes_live_estimate": render_text_subpixel_atlas_bytes_live_estimate,
+
+        "render_text_atlas_bytes_live_estimate_total": render_text_atlas_bytes_live_estimate_total,
     }))
 }
 
@@ -215,6 +286,10 @@ pub(crate) fn write_evidence_index(
     add_file("check.perf_thresholds", "check.perf_thresholds.json");
     add_file("check.perf_hints", "check.perf_hints.json");
     add_file("check.redraw_hitches", "check.redraw_hitches.json");
+    add_file(
+        "check.wgpu_metal_allocated_size",
+        "check.wgpu_metal_allocated_size.json",
+    );
     add_file("check.resource_footprint", "check.resource_footprint.json");
     add_file(
         "check.view_cache_reuse_stable",

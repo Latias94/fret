@@ -149,7 +149,7 @@ Candidate gates:
 
 - `--max-macos-physical-footprint-peak-bytes`
 - `--max-macos-owned-unmapped-memory-dirty-bytes`
-- (new) `--max-wgpu-metal-current-allocated-size-bytes` (if stable enough)
+- `--max-wgpu-metal-current-allocated-size-bytes` (macOS/Metal; best-effort)
 
 ## Open Questions
 

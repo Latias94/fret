@@ -110,7 +110,8 @@ use compare::{
 use devtools::DevtoolsOps;
 use gates::{
     RedrawHitchesGateResult, ResourceFootprintGateResult, ResourceFootprintThresholds,
-    check_redraw_hitches_max_total_ms, check_resource_footprint_thresholds,
+    WgpuMetalAllocatedSizeGateResult, check_redraw_hitches_max_total_ms,
+    check_resource_footprint_thresholds, check_wgpu_metal_current_allocated_size_threshold,
 };
 use lint::{LintOptions, lint_bundle_from_path};
 use perf_seed_policy::{PerfBaselineSeed, PerfSeedMetric, ResolvedPerfBaselineSeedPolicy};
@@ -412,6 +413,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut max_peak_working_set_bytes: Option<u64> = None;
     let mut max_macos_physical_footprint_peak_bytes: Option<u64> = None;
     let mut max_macos_owned_unmapped_memory_dirty_bytes: Option<u64> = None;
+    let mut max_wgpu_metal_current_allocated_size_bytes: Option<u64> = None;
     let mut max_cpu_avg_percent_total_cores: Option<f64> = None;
     let mut perf_baseline_path: Option<PathBuf> = None;
     let mut perf_baseline_out: Option<PathBuf> = None;
@@ -1190,6 +1192,21 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 max_macos_owned_unmapped_memory_dirty_bytes =
                     Some(v.parse::<u64>().map_err(|_| {
                         "invalid value for --max-macos-owned-unmapped-memory-dirty-bytes"
+                            .to_string()
+                    })?);
+                i += 1;
+            }
+            "--max-wgpu-metal-current-allocated-size-bytes" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err(
+                        "missing value for --max-wgpu-metal-current-allocated-size-bytes"
+                            .to_string(),
+                    );
+                };
+                max_wgpu_metal_current_allocated_size_bytes =
+                    Some(v.parse::<u64>().map_err(|_| {
+                        "invalid value for --max-wgpu-metal-current-allocated-size-bytes"
                             .to_string()
                     })?);
                 i += 1;
@@ -2176,6 +2193,12 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 .to_string(),
         );
     }
+    if sub != "repro" && max_wgpu_metal_current_allocated_size_bytes.is_some() {
+        return Err(
+            "--max-wgpu-metal-current-allocated-size-bytes is only supported with `diag repro` for now"
+                .to_string(),
+        );
+    }
     if sub != "repro" && check_redraw_hitches_max_total_ms_threshold.is_some() {
         return Err(
             "--check-redraw-hitches-max-total-ms is only supported with `diag repro` for now"
@@ -2811,6 +2834,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 renderdoc_markers: renderdoc_markers.clone(),
                 renderdoc_no_outputs_png,
                 resource_footprint_thresholds,
+                max_wgpu_metal_current_allocated_size_bytes,
                 check_redraw_hitches_max_total_ms_threshold,
                 checks: run_checks.clone(),
             })
