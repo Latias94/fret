@@ -65,6 +65,12 @@ Recommendation:
 
 Examples that use `fret::mvu::app(...)` or implement `MvuProgram` include (non-exhaustive):
 
+- These demos are now **opt-in** behind the `apps/fret-examples` feature `legacy-mvu-demos` (which
+  enables `fret/legacy-mvu`). This keeps the default demo surface action-first.
+- `apps/fret-demo` forwards the same opt-in as `fret-demo/legacy-mvu-demos`.
+  - Run legacy demos via:
+    - `cargo run -p fret-demo --features legacy-mvu-demos -- <demo-name>`
+
 - `apps/fret-examples/src/todo_demo.rs`
 - `apps/fret-examples/src/query_demo.rs`
 - `apps/fret-examples/src/query_async_tokio_demo.rs`
