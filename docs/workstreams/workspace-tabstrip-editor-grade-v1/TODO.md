@@ -13,6 +13,7 @@ This TODO list is scoped to this workstream folder and is intended to keep the r
 - [x] Add a smoke gate for “split preview suppressed while pointer stays in the tab strip row”:
   - [x] `workspace-shell-demo-tab-drag-to-split-right-row-suppressed-smoke`
 - [x] Add an overflow activation smoke gate (`workspace-shell-demo-tab-overflow-activate-hidden-smoke`).
+- [x] Add a close-button “click jitter does not start drag” gate (`workspace-shell-demo-tab-close-button-does-not-start-drag`).
 - [x] Promote a minimal suite that runs in < 30s locally (`diag-hardening-smoke-workspace`) and keep it green.
 - [ ] Add a non-screenshot invariants-based split gate (post-split layout assertions + tab ownership), once split preview routing is stable.
 

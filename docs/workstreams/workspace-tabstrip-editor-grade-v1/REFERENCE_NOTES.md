@@ -17,6 +17,9 @@ Primary reference for editor-grade outcomes:
 - preview tab semantics
 - focus-neutral close/reorder behaviors
 - drop-to-split expectations
+- end-drop target as a real surface (a flex-grow “tab_bar_drop_target” at the end of the scroll row), which is a good
+  reminder to keep close-button hit testing stable so end-drop does not accidentally win clicks when the active tab is
+  partially visible.
 
 Evidence anchor:
 

@@ -19,6 +19,7 @@ Outcomes:
     - `workspace-shell-demo-tab-middle-click-close-smoke`
   - close button behavior (smoke):
     - `workspace-shell-demo-tab-close-button-closes-tab-smoke`
+    - `workspace-shell-demo-tab-close-button-does-not-start-drag`
   - overflow activation (smoke):
     - `workspace-shell-demo-tab-overflow-activate-hidden-smoke`
 

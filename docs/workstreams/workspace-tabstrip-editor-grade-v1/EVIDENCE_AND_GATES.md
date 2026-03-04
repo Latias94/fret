@@ -54,6 +54,11 @@ Add promoted scripts under `tools/diag-scripts/workspace/**`:
 
 2) Close behaviors (smoke)
    - close active via button and assert deterministic next selection
+   - close via button with small pointer jitter (slop) and assert:
+     - the tab closes
+     - activation does not switch to a different tab
+     - drag does not start (no DnD session / no preview)
+     - promoted script: `workspace-shell-demo-tab-close-button-does-not-start-drag`
    - middle-click close (if enabled by policy)
 
 3) Overflow (resize) (invariants-first)
