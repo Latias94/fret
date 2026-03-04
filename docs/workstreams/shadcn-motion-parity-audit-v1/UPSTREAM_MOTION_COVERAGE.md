@@ -10,7 +10,7 @@ manual review (it can produce false positives/negatives).
 
 | Upstream file | Priority | Motion cues | Fret impl | Heuristic: motion keywords | Notes |
 | --- | --- | --- | --- | --- | --- |
-| accordion.tsx | P0 | animate-accordion-up, animate-accordion-down, transition-all, transition-transform, duration-200 | ecosystem/fret-ui-shadcn/src/accordion.rs | Yes |  |
+| accordion.tsx | P0 | animate-accordion-up, animate-accordion-down, transition-all, transition-transform, duration-200 | ecosystem/fret-ui-shadcn/src/accordion.rs | Yes | Focus ring alpha now tweens in/out (transition-all) and is gated by `accordion_trigger_focus_ring_alpha_tweens_in_and_out_like_transition_all`. |
 | alert-dialog.tsx | P0 | animate-in, animate-out, duration-200, fade-out-0, fade-in-0, zoom-out-95, zoom-in-95 | ecosystem/fret-ui-shadcn/src/alert_dialog.rs | Yes |  |
 | badge.tsx | P1 | transition-[color,box-shadow] | ecosystem/fret-ui-shadcn/src/badge.rs | Yes |  |
 | breadcrumb.tsx | P1 | transition-colors | ecosystem/fret-ui-shadcn/src/breadcrumb.rs | Yes |  |

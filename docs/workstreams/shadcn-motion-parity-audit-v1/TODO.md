@@ -23,6 +23,7 @@ Last updated: 2026-03-04.
 - Landed: kit `drive_transition_*` does not advance multiple times per frame (prevents call-count-driven transitions).
 - Landed: `Button` hover background transition eases (~150ms, Tailwind default) and has a unit test gate.
 - Landed: `Button` focus ring alpha transitions ease in/out (~150ms, Tailwind default) and have a unit test gate.
+- Landed: `AccordionTrigger` focus ring alpha transitions ease in/out (~150ms, Tailwind default) and have a unit test gate.
 - Landed: `Toggle` hover background transition eases (~150ms, Tailwind default) and has a unit test gate.
 - Landed: `Toggle` focus ring transitions ease in/out and have a unit test gate.
 - Landed: `Input` / `Textarea` focus ring + border transitions ease (~150ms, Tailwind default) and have unit test gates.
