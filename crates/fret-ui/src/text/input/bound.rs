@@ -97,6 +97,10 @@ impl BoundTextInput {
         self.input.set_focusable(focusable);
     }
 
+    pub fn set_focus_ring_always_paint(&mut self, always_paint: bool) {
+        self.input.set_focus_ring_always_paint(always_paint);
+    }
+
     pub fn cleanup_resources(&mut self, services: &mut dyn fret_core::UiServices) {
         self.input.queue_release_all_text_blobs();
         self.input.flush_pending_releases(services);

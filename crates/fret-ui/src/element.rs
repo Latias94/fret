@@ -1833,6 +1833,12 @@ pub struct TextInputProps {
     pub controls_element: Option<u64>,
     pub expanded: Option<bool>,
     pub chrome: TextInputStyle,
+    /// When true, paints the focus ring even if focus-visible is currently false.
+    ///
+    /// This exists to support CSS-like `transition-[..., box-shadow]` semantics where the ring
+    /// animates out after blur. Policy code is expected to drive ring alpha to zero and set this
+    /// flag only while the transition is animating.
+    pub focus_ring_always_paint: bool,
     pub text_style: TextStyle,
     pub submit_command: Option<CommandId>,
     pub cancel_command: Option<CommandId>,
@@ -1855,6 +1861,7 @@ impl TextInputProps {
             controls_element: None,
             expanded: None,
             chrome: TextInputStyle::default(),
+            focus_ring_always_paint: false,
             text_style: TextStyle::default(),
             submit_command: None,
             cancel_command: None,
@@ -1879,6 +1886,7 @@ impl std::fmt::Debug for TextInputProps {
             .field("controls_element", &self.controls_element)
             .field("expanded", &self.expanded)
             .field("chrome", &self.chrome)
+            .field("focus_ring_always_paint", &self.focus_ring_always_paint)
             .field("text_style", &self.text_style)
             .field("submit_command", &self.submit_command)
             .field("cancel_command", &self.cancel_command)
@@ -1898,6 +1906,12 @@ pub struct TextAreaProps {
     pub a11y_label: Option<std::sync::Arc<str>>,
     pub test_id: Option<std::sync::Arc<str>>,
     pub chrome: TextAreaStyle,
+    /// When true, paints the focus ring even if focus-visible is currently false.
+    ///
+    /// This exists to support CSS-like `transition-[..., box-shadow]` semantics where the ring
+    /// animates out after blur. Policy code is expected to drive ring alpha to zero and set this
+    /// flag only while the transition is animating.
+    pub focus_ring_always_paint: bool,
     pub text_style: TextStyle,
     pub min_height: Px,
 }
@@ -1915,6 +1929,7 @@ impl TextAreaProps {
             a11y_label: None,
             test_id: None,
             chrome: TextAreaStyle::default(),
+            focus_ring_always_paint: false,
             text_style: TextStyle::default(),
             min_height: Px(80.0),
         }
@@ -1935,6 +1950,7 @@ impl std::fmt::Debug for TextAreaProps {
             .field("a11y_label", &self.a11y_label.as_ref().map(|s| s.as_ref()))
             .field("test_id", &self.test_id.as_ref().map(|s| s.as_ref()))
             .field("chrome", &self.chrome)
+            .field("focus_ring_always_paint", &self.focus_ring_always_paint)
             .field("text_style", &self.text_style)
             .field("min_height", &self.min_height)
             .finish()
