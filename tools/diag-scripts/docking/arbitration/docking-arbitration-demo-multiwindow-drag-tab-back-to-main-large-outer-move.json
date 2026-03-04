@@ -11,6 +11,7 @@
       "This gate is a stress variant of the multi-window drag-back flow.",
       "After tear-off creates a floating OS window, the script moves that floating window far along +X (cross-monitor if present).",
       "Expected behavior: cross-window drag routing remains correct and the tab can still be docked back into the main window (no coordinate/DPI drift regressions).",
+      "Evidence: the script captures bundles both right after tear-off and after the large outer move; use `fretboard diag dock-routing <bundle_dir>` to inspect dock-drag routing (including scale_factor_x1000 fields when available).",
       "Note: if the host only has a single monitor, the OS may clamp the outer position; the gate still exercises large-coordinate paths and must pass."
     ]
   },
@@ -64,9 +65,17 @@
     {
       "type": "wait_until",
       "predicate": { "kind": "known_window_count_ge", "n": 2 },
-      "timeout_frames": 240
+      "timeout_frames": 240,
+      "timeout_ms": 15000
     },
     { "type": "wait_frames", "n": 10 },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "dock_drag_active_is", "active": true },
+      "timeout_frames": 240,
+      "timeout_ms": 15000
+    },
+    { "type": "capture_bundle", "label": "multiwindow-drag-back-large-move-after-tearoff" },
 
     { "type": "raise_window", "window": { "kind": "last_seen" } },
     {
@@ -82,7 +91,7 @@
       "height_px": 700.0
     },
     { "type": "wait_frames", "n": 4 },
-    { "type": "capture_bundle", "label": "multiwindow-drag-back-large-move-before-merge" },
+    { "type": "capture_bundle", "label": "multiwindow-drag-back-large-move-after-outer-move" },
 
     { "type": "raise_window", "window": { "kind": "first_seen" } },
     {
@@ -143,4 +152,3 @@
     { "type": "capture_bundle", "label": "docking-arbitration-demo-multiwindow-drag-tab-back-to-main-large-outer-move" }
   ]
 }
-
