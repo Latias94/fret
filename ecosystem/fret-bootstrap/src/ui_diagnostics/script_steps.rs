@@ -52,6 +52,18 @@ pub(super) fn handle_window_effect_steps(
             window: target_window,
             style,
         } => {
+            if !cfg!(target_os = "windows") {
+                *force_dump_label = Some(format!(
+                    "script-step-{step_index:04}-set_window_style-unsupported-platform"
+                ));
+                *stop_script = true;
+                *failure_reason = Some("window_style_patch_unsupported_platform".to_string());
+                active.wait_until = None;
+                active.screenshot_wait = None;
+                active.v2_step_state = None;
+                output.request_redraw = true;
+                return;
+            }
             if let Some(target_window) = svc.resolve_window_target_for_active_step(
                 window,
                 anchor_window,

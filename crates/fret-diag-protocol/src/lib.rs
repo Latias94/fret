@@ -917,6 +917,10 @@ pub enum UiActionStepV2 {
     ///
     /// This is intended for diagnostics-only repros and regression gates for utility window
     /// postures (frameless/transparent/materials/hit-test policies).
+    ///
+    /// Capability-gated behind `diag.window_style_patch_v1`.
+    ///
+    /// Note: as of 2026-03-04 this capability is Windows-only in the default in-tree runner.
     SetWindowStyle {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         window: Option<UiWindowTargetV1>,

@@ -867,7 +867,7 @@ Supported selectors (v1 MVP):
 - `assert_clipboard_text` (schema v2 only; asserts OS clipboard text equals an expected value; capability-gated behind `diag.clipboard_text`)
 - `inspect_help_lock_best_match_and_copy_selector` (schema v2 only; in-app inspector helper: open help, search for `query`, lock the best match, and copy the best selector JSON to the clipboard; intended to avoid relying on shortcut injection in `--launch` runs)
 - `set_window_inner_size` (schema v2 only; optional `window` target)
-- `set_window_style` (schema v2 only; optional `window` target; best-effort OS window style patch; capability-gated behind `diag.window_style_patch_v1`)
+- `set_window_style` (schema v2 only; optional `window` target; best-effort OS window style patch; capability-gated behind `diag.window_style_patch_v1`; Windows-only as of 2026-03-04)
 - `set_window_insets` (schema v2 only; overrides safe-area/occlusion insets; capability-gated behind `diag.window_insets_override`)
 - `set_window_outer_position` (schema v2 only; optional `window` target)
 - `raise_window` (schema v2 only; optional `window` target)
