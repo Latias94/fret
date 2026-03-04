@@ -201,8 +201,8 @@ fn view(
         .and_then(|store| store.effective_snapshot(st.window));
     let style_text: Arc<str> = Arc::from(match effective_style {
         Some(s) => format!(
-            "effective: decorations={:?} resizable={} transparent={} z_level={:?}",
-            s.decorations, s.resizable, s.transparent, s.z_level
+            "effective: decorations={:?} resizable={} visual_transparent={} z_level={:?}",
+            s.decorations, s.resizable, s.visual_transparent, s.z_level
         ),
         None => "effective: <unavailable>".to_string(),
     });
