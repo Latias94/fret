@@ -1225,6 +1225,20 @@ impl NavigationMenuTrigger {
                     let item_value_for_hover = item_value.clone();
                     cx.pressable_on_hover_change(Arc::new(move |host, action_cx, hovered| {
                         if hovered {
+                            // Radix clears the escape/click close gates on pointer enter so a
+                            // subsequent pointer move can reopen the menu. Mirror that behavior
+                            // so hover-open remains reliable across subtree rebuilds (e.g. when a
+                            // recipe toggles breakpoints or query sources).
+                            let mut states = trigger_states_for_hover
+                                .lock()
+                                .unwrap_or_else(|e| e.into_inner());
+                            if let Some(entry) =
+                                states.states.get_mut(item_value_for_hover.as_ref())
+                            {
+                                entry.was_escape_close = false;
+                                entry.was_click_close = false;
+                                entry.has_pointer_move_opened = false;
+                            }
                             return;
                         }
                         let mut root = root_state_for_hover
