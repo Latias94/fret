@@ -12,7 +12,7 @@ use std::sync::Mutex;
 use std::time::Duration;
 
 use fret_core::{Modifiers, Point, PointerType, Px, Rect, Size, Transform2D};
-use fret_runtime::{CommandId, Effect, Model, TimerToken};
+use fret_runtime::{CommandId, Effect, FrameId, Model, TimerToken};
 use fret_ui::action::{ActionCx, OnDismissiblePointerMove, UiActionHost};
 use fret_ui::element::{AnyElement, LayoutStyle};
 use fret_ui::elements::ContinuousFrames;
@@ -87,6 +87,29 @@ struct TriggerIdRegistry {
 #[derive(Default)]
 struct TriggerStateRegistry {
     states: HashMap<Arc<str>, NavigationMenuTriggerState>,
+}
+
+#[derive(Default)]
+struct EntryFocusRegistry {
+    frame_id: Option<FrameId>,
+    first_link_ids: HashMap<Arc<str>, GlobalElementId>,
+}
+
+#[derive(Clone)]
+struct NavigationMenuEntryFocusScope {
+    value: Arc<str>,
+    registry: Arc<Mutex<EntryFocusRegistry>>,
+}
+
+fn navigation_menu_entry_focus_registry<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    root_id: GlobalElementId,
+) -> Arc<Mutex<EntryFocusRegistry>> {
+    cx.with_state_for(
+        root_id,
+        || Arc::new(Mutex::new(EntryFocusRegistry::default())),
+        |s| s.clone(),
+    )
 }
 
 /// Registers a rendered trigger element id for the given value.
@@ -801,6 +824,16 @@ impl NavigationMenuRoot {
             || Arc::new(Mutex::new(NavigationMenuRootState::default())),
             |s| s.clone(),
         );
+        {
+            let entry_focus_registry = navigation_menu_entry_focus_registry(cx, root_id);
+            let mut st = entry_focus_registry
+                .lock()
+                .unwrap_or_else(|e| e.into_inner());
+            if st.frame_id != Some(cx.frame_id) {
+                st.frame_id = Some(cx.frame_id);
+                st.first_link_ids.clear();
+            }
+        }
 
         let value_model_for_timer = self.model.clone();
         let root_state_for_timer = root_state.clone();
@@ -900,6 +933,7 @@ impl NavigationMenuTrigger {
         let cfg = ctx.config;
         let root_id = ctx.root_id;
         let root_state = ctx.root_state.clone();
+        let entry_focus_registry = navigation_menu_entry_focus_registry(cx, root_id);
         let trigger_states: Arc<Mutex<TriggerStateRegistry>> = cx.with_state_for(
             root_id,
             || Arc::new(Mutex::new(TriggerStateRegistry::default())),
@@ -1030,10 +1064,21 @@ impl NavigationMenuTrigger {
 
                     let item_value_for_entry_key = item_value_for_registry.clone();
                     let value_for_entry_key = value_model.clone();
+                    let entry_focus_registry_for_entry_key = entry_focus_registry.clone();
                     cx.key_add_on_key_down_for(
                         element,
                         Arc::new(move |host, action_cx, it| {
-                            if it.repeat || it.key != KeyCode::ArrowDown {
+                            if it.repeat {
+                                return false;
+                            }
+
+                            let is_entry_key = it.key == KeyCode::ArrowDown;
+                            let is_tab = it.key == KeyCode::Tab
+                                && !it.modifiers.shift
+                                && !it.modifiers.ctrl
+                                && !it.modifiers.alt
+                                && !it.modifiers.meta;
+                            if !(is_entry_key || is_tab) {
                                 return false;
                             }
 
@@ -1049,10 +1094,21 @@ impl NavigationMenuTrigger {
                                 return false;
                             }
 
-                            host.dispatch_command(
-                                Some(action_cx.window),
-                                CommandId::from("focus.next"),
-                            );
+                            let target = entry_focus_registry_for_entry_key
+                                .lock()
+                                .unwrap_or_else(|e| e.into_inner())
+                                .first_link_ids
+                                .get(item_value_for_entry_key.as_ref())
+                                .copied();
+                            if let Some(target) = target {
+                                host.request_focus(target);
+                            } else {
+                                host.dispatch_command(
+                                    Some(action_cx.window),
+                                    CommandId::from("focus.next"),
+                                );
+                            }
+                            host.request_redraw(action_cx.window);
                             true
                         }),
                     );
@@ -1150,10 +1206,32 @@ impl NavigationMenuContent {
         if !active && !self.force_mount {
             return None;
         }
+        let entry_focus_scope = NavigationMenuEntryFocusScope {
+            value: self.value.clone(),
+            registry: navigation_menu_entry_focus_registry(cx, ctx.root_id),
+        };
         if self.force_mount {
-            Some(cx.interactivity_gate(active, active, |cx| f(cx)))
+            Some(cx.interactivity_gate(active, active, move |cx| {
+                cx.with_state_for(
+                    cx.root_id(),
+                    || entry_focus_scope.clone(),
+                    |st| {
+                        *st = entry_focus_scope.clone();
+                    },
+                );
+                f(cx)
+            }))
         } else {
-            Some(cx.interactivity_gate(true, true, |cx| f(cx)))
+            Some(cx.interactivity_gate(true, true, move |cx| {
+                cx.with_state_for(
+                    cx.root_id(),
+                    || entry_focus_scope.clone(),
+                    |st| {
+                        *st = entry_focus_scope.clone();
+                    },
+                );
+                f(cx)
+            }))
         }
     }
 }
@@ -1212,6 +1290,13 @@ impl NavigationMenuLink {
         let dismiss = self.dismiss_on_select;
         let dismiss_on_ctrl_or_meta = self.dismiss_on_ctrl_or_meta;
         cx.pressable(pressable, move |cx, st| {
+            if let Some(scope) = cx.inherited_state::<NavigationMenuEntryFocusScope>() {
+                let mut st = scope.registry.lock().unwrap_or_else(|e| e.into_inner());
+                st.first_link_ids
+                    .entry(scope.value.clone())
+                    .or_insert(cx.root_id());
+            }
+
             if dismiss && !disabled {
                 let modifier_state: Arc<Mutex<LinkModifierState>> = cx.with_state_for(
                     cx.root_id(),
