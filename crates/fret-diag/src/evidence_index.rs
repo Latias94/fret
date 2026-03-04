@@ -71,6 +71,46 @@ fn resource_footprint_summary(path: &Path) -> Option<serde_json::Value> {
         .and_then(|v| v.get("owned_unmapped_memory_dirty_bytes"))
         .and_then(|v| v.as_u64());
 
+    let macos_vmmap_top_dirty_region_type = v
+        .get("macos_vmmap")
+        .and_then(|v| v.get("tables"))
+        .and_then(|v| v.get("regions"))
+        .and_then(|v| v.get("top_dirty"))
+        .and_then(|v| v.as_array())
+        .and_then(|a| a.first())
+        .and_then(|v| v.get("region_type"))
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string());
+    let macos_vmmap_top_dirty_region_bytes = v
+        .get("macos_vmmap")
+        .and_then(|v| v.get("tables"))
+        .and_then(|v| v.get("regions"))
+        .and_then(|v| v.get("top_dirty"))
+        .and_then(|v| v.as_array())
+        .and_then(|a| a.first())
+        .and_then(|v| v.get("dirty_bytes"))
+        .and_then(|v| v.as_u64());
+
+    let macos_vmmap_top_allocated_malloc_zone = v
+        .get("macos_vmmap")
+        .and_then(|v| v.get("tables"))
+        .and_then(|v| v.get("malloc_zones"))
+        .and_then(|v| v.get("top_allocated"))
+        .and_then(|v| v.as_array())
+        .and_then(|a| a.first())
+        .and_then(|v| v.get("zone"))
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string());
+    let macos_vmmap_top_allocated_malloc_bytes = v
+        .get("macos_vmmap")
+        .and_then(|v| v.get("tables"))
+        .and_then(|v| v.get("malloc_zones"))
+        .and_then(|v| v.get("top_allocated"))
+        .and_then(|v| v.as_array())
+        .and_then(|a| a.first())
+        .and_then(|v| v.get("allocated_bytes"))
+        .and_then(|v| v.as_u64());
+
     Some(serde_json::json!({
         "pid": pid,
         "wall_time_ms": wall_time_ms,
@@ -83,6 +123,10 @@ fn resource_footprint_summary(path: &Path) -> Option<serde_json::Value> {
         "macos_physical_footprint_bytes": macos_physical_footprint_bytes,
         "macos_physical_footprint_peak_bytes": macos_physical_footprint_peak_bytes,
         "macos_owned_unmapped_memory_dirty_bytes": macos_owned_unmapped_memory_dirty_bytes,
+        "macos_vmmap_top_dirty_region_type": macos_vmmap_top_dirty_region_type,
+        "macos_vmmap_top_dirty_region_bytes": macos_vmmap_top_dirty_region_bytes,
+        "macos_vmmap_top_allocated_malloc_zone": macos_vmmap_top_allocated_malloc_zone,
+        "macos_vmmap_top_allocated_malloc_bytes": macos_vmmap_top_allocated_malloc_bytes,
     }))
 }
 

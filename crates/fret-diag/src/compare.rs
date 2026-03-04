@@ -38,6 +38,198 @@ fn parse_vmmap_size_token_to_bytes(token: &str) -> Option<u64> {
 }
 
 #[cfg(target_os = "macos")]
+fn parse_vmmap_u64_token(token: &str) -> Option<u64> {
+    let t = token.trim();
+    if t.is_empty() {
+        return None;
+    }
+    t.parse::<u64>().ok()
+}
+
+#[cfg(target_os = "macos")]
+fn parse_vmmap_percent_token(token: &str) -> Option<f64> {
+    let t = token.trim().trim_end_matches('%');
+    if t.is_empty() {
+        return None;
+    }
+    let v = t.parse::<f64>().ok()?;
+    if !v.is_finite() || v < 0.0 {
+        return None;
+    }
+    Some(v)
+}
+
+#[cfg(target_os = "macos")]
+#[derive(Debug, Clone, serde::Serialize)]
+struct VmmapRegionRow {
+    region_type: String,
+    virtual_bytes: u64,
+    resident_bytes: u64,
+    dirty_bytes: u64,
+    swapped_bytes: u64,
+    volatile_bytes: u64,
+    nonvol_bytes: u64,
+    empty_bytes: u64,
+    region_count: u64,
+}
+
+#[cfg(target_os = "macos")]
+fn parse_vmmap_regions_table(stdout: &str) -> Vec<VmmapRegionRow> {
+    let mut rows = Vec::new();
+    let mut in_table = false;
+
+    for line in stdout.lines() {
+        let l = line.trim();
+        if l.is_empty() {
+            continue;
+        }
+
+        if l.starts_with("REGION TYPE") {
+            in_table = true;
+            continue;
+        }
+        if !in_table {
+            continue;
+        }
+
+        if l.starts_with("TOTAL") || l.starts_with("TOTAL,") {
+            break;
+        }
+        if l.chars().all(|c| c == '=' || c == '-') {
+            continue;
+        }
+
+        let tokens: Vec<&str> = l.split_whitespace().collect();
+        let first_numeric = tokens
+            .iter()
+            .position(|t| t.chars().next().is_some_and(|c| c.is_ascii_digit()));
+        let Some(first_numeric) = first_numeric else {
+            continue;
+        };
+
+        // Region type may contain spaces; join tokens up to the first numeric.
+        let region_type = tokens[..first_numeric].join(" ");
+
+        // Expected 7 size columns + a count column.
+        if tokens.len() < first_numeric.saturating_add(8) {
+            continue;
+        }
+
+        let parse_size = |idx: usize| parse_vmmap_size_token_to_bytes(tokens[idx]).unwrap_or(0);
+
+        let virtual_bytes = parse_size(first_numeric);
+        let resident_bytes = parse_size(first_numeric + 1);
+        let dirty_bytes = parse_size(first_numeric + 2);
+        let swapped_bytes = parse_size(first_numeric + 3);
+        let volatile_bytes = parse_size(first_numeric + 4);
+        let nonvol_bytes = parse_size(first_numeric + 5);
+        let empty_bytes = parse_size(first_numeric + 6);
+        let region_count = parse_vmmap_u64_token(tokens[first_numeric + 7]).unwrap_or(0);
+
+        rows.push(VmmapRegionRow {
+            region_type,
+            virtual_bytes,
+            resident_bytes,
+            dirty_bytes,
+            swapped_bytes,
+            volatile_bytes,
+            nonvol_bytes,
+            empty_bytes,
+            region_count,
+        });
+    }
+
+    rows
+}
+
+#[cfg(target_os = "macos")]
+#[derive(Debug, Clone, serde::Serialize)]
+struct VmmapMallocZoneRow {
+    zone: String,
+    virtual_bytes: u64,
+    resident_bytes: u64,
+    dirty_bytes: u64,
+    swapped_bytes: u64,
+    allocation_count: u64,
+    allocated_bytes: u64,
+    frag_bytes: u64,
+    frag_percent: Option<f64>,
+    region_count: u64,
+}
+
+#[cfg(target_os = "macos")]
+fn parse_vmmap_malloc_zone_table(stdout: &str) -> Vec<VmmapMallocZoneRow> {
+    let mut rows = Vec::new();
+    let mut in_table = false;
+
+    for line in stdout.lines() {
+        let l = line.trim();
+        if l.is_empty() {
+            continue;
+        }
+
+        if l.starts_with("MALLOC ZONE") {
+            in_table = true;
+            continue;
+        }
+        if !in_table {
+            continue;
+        }
+
+        if l.starts_with("TOTAL") || l.starts_with("TOTAL,") {
+            break;
+        }
+        if l.starts_with("==========") || l.starts_with("===========") {
+            continue;
+        }
+
+        let tokens: Vec<&str> = l.split_whitespace().collect();
+        let first_numeric = tokens
+            .iter()
+            .position(|t| t.chars().next().is_some_and(|c| c.is_ascii_digit()));
+        let Some(first_numeric) = first_numeric else {
+            continue;
+        };
+
+        // Zone name may contain spaces; join tokens up to the first numeric.
+        let zone = tokens[..first_numeric].join(" ");
+
+        // Expected columns:
+        // VIRTUAL, RESIDENT, DIRTY, SWAPPED, ALLOCATION COUNT, ALLOCATED, FRAG SIZE, % FRAG, REGION COUNT
+        if tokens.len() < first_numeric.saturating_add(9) {
+            continue;
+        }
+
+        let parse_size = |idx: usize| parse_vmmap_size_token_to_bytes(tokens[idx]).unwrap_or(0);
+
+        let virtual_bytes = parse_size(first_numeric);
+        let resident_bytes = parse_size(first_numeric + 1);
+        let dirty_bytes = parse_size(first_numeric + 2);
+        let swapped_bytes = parse_size(first_numeric + 3);
+        let allocation_count = parse_vmmap_u64_token(tokens[first_numeric + 4]).unwrap_or(0);
+        let allocated_bytes = parse_size(first_numeric + 5);
+        let frag_bytes = parse_size(first_numeric + 6);
+        let frag_percent = parse_vmmap_percent_token(tokens[first_numeric + 7]);
+        let region_count = parse_vmmap_u64_token(tokens[first_numeric + 8]).unwrap_or(0);
+
+        rows.push(VmmapMallocZoneRow {
+            zone,
+            virtual_bytes,
+            resident_bytes,
+            dirty_bytes,
+            swapped_bytes,
+            allocation_count,
+            allocated_bytes,
+            frag_bytes,
+            frag_percent,
+            region_count,
+        });
+    }
+
+    rows
+}
+
+#[cfg(target_os = "macos")]
 fn collect_macos_vmmap_summary_best_effort(pid: u32, out_dir: &Path) -> Option<serde_json::Value> {
     let out = Command::new("/usr/bin/vmmap")
         .args(["-summary", &pid.to_string()])
@@ -56,6 +248,9 @@ fn collect_macos_vmmap_summary_best_effort(pid: u32, out_dir: &Path) -> Option<s
 
     let mut owned_unmapped_memory_dirty_bytes: Option<u64> = None;
     let mut io_surface_dirty_bytes: Option<u64> = None;
+
+    let regions_table = parse_vmmap_regions_table(&stdout);
+    let malloc_zone_table = parse_vmmap_malloc_zone_table(&stdout);
 
     for line in stdout.lines() {
         let l = line.trim();
@@ -112,6 +307,22 @@ fn collect_macos_vmmap_summary_best_effort(pid: u32, out_dir: &Path) -> Option<s
         }
     }
 
+    let mut regions_top_dirty = regions_table.clone();
+    regions_top_dirty.sort_by_key(|r| std::cmp::Reverse(r.dirty_bytes));
+    regions_top_dirty.truncate(12);
+
+    let mut regions_top_resident = regions_table.clone();
+    regions_top_resident.sort_by_key(|r| std::cmp::Reverse(r.resident_bytes));
+    regions_top_resident.truncate(12);
+
+    let mut malloc_top_allocated = malloc_zone_table.clone();
+    malloc_top_allocated.sort_by_key(|r| std::cmp::Reverse(r.allocated_bytes));
+    malloc_top_allocated.truncate(12);
+
+    let mut malloc_top_frag = malloc_zone_table.clone();
+    malloc_top_frag.sort_by_key(|r| std::cmp::Reverse(r.frag_bytes));
+    malloc_top_frag.truncate(12);
+
     Some(serde_json::json!({
         "collector": "vmmap -summary",
         "captured_unix_ms": now_unix_ms(),
@@ -121,6 +332,18 @@ fn collect_macos_vmmap_summary_best_effort(pid: u32, out_dir: &Path) -> Option<s
         "regions": {
             "owned_unmapped_memory_dirty_bytes": owned_unmapped_memory_dirty_bytes,
             "io_surface_dirty_bytes": io_surface_dirty_bytes,
+        },
+        "tables": {
+            "regions": {
+                "rows_total": regions_table.len(),
+                "top_dirty": regions_top_dirty,
+                "top_resident": regions_top_resident,
+            },
+            "malloc_zones": {
+                "rows_total": malloc_zone_table.len(),
+                "top_allocated": malloc_top_allocated,
+                "top_frag": malloc_top_frag,
+            },
         },
         "note": "best-effort; values are captured at tool shutdown time and may differ from steady-state if the app reacts to exit.",
     }))
