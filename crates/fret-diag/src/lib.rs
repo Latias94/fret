@@ -109,10 +109,12 @@ use compare::{
 };
 use devtools::DevtoolsOps;
 use gates::{
-    RedrawHitchesGateResult, RenderTextAtlasBytesGateResult, ResourceFootprintGateResult,
-    ResourceFootprintThresholds, WgpuMetalAllocatedSizeGateResult,
+    RedrawHitchesGateResult, RenderTextAtlasBytesGateResult, RendererGpuBudgetThresholds,
+    RendererGpuBudgetsGateResult, ResourceFootprintGateResult, ResourceFootprintThresholds,
+    WgpuMetalAllocatedSizeGateResult,
     check_redraw_hitches_max_total_ms, check_render_text_atlas_bytes_live_estimate_total_threshold,
-    check_resource_footprint_thresholds, check_wgpu_metal_current_allocated_size_threshold,
+    check_renderer_gpu_budget_thresholds, check_resource_footprint_thresholds,
+    check_wgpu_metal_current_allocated_size_threshold,
 };
 use lint::{LintOptions, lint_bundle_from_path};
 use perf_seed_policy::{PerfBaselineSeed, PerfSeedMetric, ResolvedPerfBaselineSeedPolicy};
@@ -417,6 +419,9 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut max_macos_io_surface_dirty_bytes: Option<u64> = None;
     let mut max_macos_io_accelerator_dirty_bytes: Option<u64> = None;
     let mut max_macos_malloc_small_dirty_bytes: Option<u64> = None;
+    let mut max_renderer_gpu_images_bytes_estimate: Option<u64> = None;
+    let mut max_renderer_gpu_render_targets_bytes_estimate: Option<u64> = None;
+    let mut max_renderer_intermediate_peak_in_use_bytes: Option<u64> = None;
     let mut max_wgpu_metal_current_allocated_size_bytes: Option<u64> = None;
     let mut max_render_text_atlas_bytes_live_estimate_total: Option<u64> = None;
     let mut max_cpu_avg_percent_total_cores: Option<f64> = None;
@@ -1233,6 +1238,46 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 max_macos_malloc_small_dirty_bytes = Some(v.parse::<u64>().map_err(|_| {
                     "invalid value for --max-macos-malloc-small-dirty-bytes".to_string()
                 })?);
+                i += 1;
+            }
+            "--max-renderer-gpu-images-bytes-estimate" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err(
+                        "missing value for --max-renderer-gpu-images-bytes-estimate".to_string(),
+                    );
+                };
+                max_renderer_gpu_images_bytes_estimate = Some(v.parse::<u64>().map_err(|_| {
+                    "invalid value for --max-renderer-gpu-images-bytes-estimate".to_string()
+                })?);
+                i += 1;
+            }
+            "--max-renderer-gpu-render-targets-bytes-estimate" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err(
+                        "missing value for --max-renderer-gpu-render-targets-bytes-estimate"
+                            .to_string(),
+                    );
+                };
+                max_renderer_gpu_render_targets_bytes_estimate =
+                    Some(v.parse::<u64>().map_err(|_| {
+                        "invalid value for --max-renderer-gpu-render-targets-bytes-estimate"
+                            .to_string()
+                    })?);
+                i += 1;
+            }
+            "--max-renderer-intermediate-peak-in-use-bytes" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err(
+                        "missing value for --max-renderer-intermediate-peak-in-use-bytes"
+                            .to_string(),
+                    );
+                };
+                max_renderer_intermediate_peak_in_use_bytes = Some(v.parse::<u64>().map_err(
+                    |_| "invalid value for --max-renderer-intermediate-peak-in-use-bytes".to_string(),
+                )?);
                 i += 1;
             }
             "--max-wgpu-metal-current-allocated-size-bytes" => {
@@ -2232,6 +2277,12 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
         max_cpu_avg_percent_total_cores,
     };
 
+    let renderer_gpu_budget_thresholds = RendererGpuBudgetThresholds {
+        max_renderer_gpu_images_bytes_estimate,
+        max_renderer_gpu_render_targets_bytes_estimate,
+        max_renderer_intermediate_peak_in_use_bytes,
+    };
+
     if sub != "repro" && (with_tracy || with_renderdoc || renderdoc_after_frames.is_some()) {
         return Err(
             "--with tracy/renderdoc and --renderdoc-after-frames are only supported with `diag repro` for now"
@@ -2244,9 +2295,11 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 .to_string(),
         );
     }
-    if sub != "repro" && resource_footprint_thresholds.any() {
+    if sub != "repro"
+        && (resource_footprint_thresholds.any() || renderer_gpu_budget_thresholds.any())
+    {
         return Err(
-            "--max-working-set-bytes/--max-peak-working-set-bytes/--max-macos-physical-footprint-peak-bytes/--max-macos-owned-unmapped-memory-dirty-bytes/--max-macos-io-surface-dirty-bytes/--max-macos-io-accelerator-dirty-bytes/--max-macos-malloc-small-dirty-bytes/--max-cpu-avg-percent-total-cores are only supported with `diag repro` for now"
+            "--max-working-set-bytes/--max-peak-working-set-bytes/--max-macos-physical-footprint-peak-bytes/--max-macos-owned-unmapped-memory-dirty-bytes/--max-macos-io-surface-dirty-bytes/--max-macos-io-accelerator-dirty-bytes/--max-macos-malloc-small-dirty-bytes/--max-cpu-avg-percent-total-cores/--max-renderer-gpu-images-bytes-estimate/--max-renderer-gpu-render-targets-bytes-estimate/--max-renderer-intermediate-peak-in-use-bytes are only supported with `diag repro` for now"
                 .to_string(),
         );
     }
@@ -2897,6 +2950,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 renderdoc_markers: renderdoc_markers.clone(),
                 renderdoc_no_outputs_png,
                 resource_footprint_thresholds,
+                renderer_gpu_budget_thresholds,
                 max_wgpu_metal_current_allocated_size_bytes,
                 max_render_text_atlas_bytes_live_estimate_total,
                 check_redraw_hitches_max_total_ms_threshold,

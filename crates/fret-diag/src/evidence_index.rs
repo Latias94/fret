@@ -357,6 +357,10 @@ pub(crate) fn write_evidence_index(
         "check.render_text_atlas_bytes",
         "check.render_text_atlas_bytes.json",
     );
+    add_file(
+        "check.renderer_gpu_budgets",
+        "check.renderer_gpu_budgets.json",
+    );
     add_file("check.resource_footprint", "check.resource_footprint.json");
     add_file(
         "check.view_cache_reuse_stable",

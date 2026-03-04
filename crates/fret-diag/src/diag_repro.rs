@@ -41,6 +41,7 @@ pub(crate) struct ReproCmdContext {
     pub renderdoc_markers: Vec<String>,
     pub renderdoc_no_outputs_png: bool,
     pub resource_footprint_thresholds: ResourceFootprintThresholds,
+    pub renderer_gpu_budget_thresholds: RendererGpuBudgetThresholds,
     pub max_wgpu_metal_current_allocated_size_bytes: Option<u64>,
     pub max_render_text_atlas_bytes_live_estimate_total: Option<u64>,
     pub check_redraw_hitches_max_total_ms_threshold: Option<u64>,
@@ -82,6 +83,7 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
         renderdoc_markers,
         renderdoc_no_outputs_png,
         resource_footprint_thresholds,
+        renderer_gpu_budget_thresholds,
         max_wgpu_metal_current_allocated_size_bytes,
         max_render_text_atlas_bytes_live_estimate_total,
         check_redraw_hitches_max_total_ms_threshold,
@@ -303,6 +305,7 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
 
     let mut repro_process_footprint: Option<serde_json::Value> = None;
     let mut resource_footprint_gate: Option<ResourceFootprintGateResult> = None;
+    let mut renderer_gpu_budgets_gate: Option<RendererGpuBudgetsGateResult> = None;
     let mut wgpu_metal_allocated_size_gate: Option<WgpuMetalAllocatedSizeGateResult> = None;
     let mut render_text_atlas_bytes_gate: Option<RenderTextAtlasBytesGateResult> = None;
     let mut redraw_hitches_gate: Option<RedrawHitchesGateResult> = None;
@@ -683,6 +686,17 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
         )
         .ok();
     }
+    if renderer_gpu_budget_thresholds.any() {
+        let bundle_path = packed_bundle_artifact
+            .as_deref()
+            .or_else(|| selected_bundle_path.as_deref());
+        renderer_gpu_budgets_gate = check_renderer_gpu_budget_thresholds(
+            &resolved_out_dir,
+            bundle_path,
+            &renderer_gpu_budget_thresholds,
+        )
+        .ok();
+    }
     if let Some(max_bytes) = max_wgpu_metal_current_allocated_size_bytes {
         let bundle_path = packed_bundle_artifact
             .as_deref()
@@ -806,6 +820,17 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
             r.evidence_path.display()
         ));
         overall_reason_code = Some("tooling.resource_footprint.failed".to_string());
+    }
+    if let Some(r) = renderer_gpu_budgets_gate.as_ref()
+        && r.failures > 0
+        && overall_error.is_none()
+    {
+        overall_error = Some(format!(
+            "renderer GPU budget threshold gate failed (failures={}, evidence={})",
+            r.failures,
+            r.evidence_path.display()
+        ));
+        overall_reason_code = Some("tooling.renderer_gpu_budgets.failed".to_string());
     }
     if let Some(r) = wgpu_metal_allocated_size_gate.as_ref()
         && r.failures > 0

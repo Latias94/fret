@@ -44,6 +44,30 @@ pub(super) struct RenderTextAtlasBytesGateResult {
     pub(super) failures: usize,
 }
 
+pub(super) struct RendererGpuBudgetThresholds {
+    pub(super) max_renderer_gpu_images_bytes_estimate: Option<u64>,
+    pub(super) max_renderer_gpu_render_targets_bytes_estimate: Option<u64>,
+    pub(super) max_renderer_intermediate_peak_in_use_bytes: Option<u64>,
+}
+
+impl RendererGpuBudgetThresholds {
+    pub(super) fn any(&self) -> bool {
+        self.max_renderer_gpu_images_bytes_estimate.is_some()
+            || self
+                .max_renderer_gpu_render_targets_bytes_estimate
+                .is_some()
+            || self
+                .max_renderer_intermediate_peak_in_use_bytes
+                .is_some()
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(super) struct RendererGpuBudgetsGateResult {
+    pub(super) evidence_path: PathBuf,
+    pub(super) failures: usize,
+}
+
 pub(super) fn check_wgpu_metal_current_allocated_size_threshold(
     out_dir: &Path,
     bundle_path: Option<&Path>,
@@ -146,6 +170,155 @@ pub(super) fn check_wgpu_metal_current_allocated_size_threshold(
         .unwrap_or(0);
 
     Ok(WgpuMetalAllocatedSizeGateResult {
+        evidence_path: out_path,
+        failures,
+    })
+}
+
+pub(super) fn check_renderer_gpu_budget_thresholds(
+    out_dir: &Path,
+    bundle_path: Option<&Path>,
+    thresholds: &RendererGpuBudgetThresholds,
+) -> Result<RendererGpuBudgetsGateResult, String> {
+    let out_path = out_dir.join("check.renderer_gpu_budgets.json");
+
+    let v = bundle_path.and_then(read_json_value);
+    let bundle_present = v.is_some();
+
+    let (tick_id, frame_id, stats, images_bytes, render_targets_bytes, intermediate_peak_bytes) =
+        if let Some(v) = v.as_ref() {
+            let windows = v.get("windows").and_then(|v| v.as_array());
+            let first_window = windows.and_then(|w| w.first());
+            let snapshots = first_window
+                .and_then(|w| w.get("snapshots"))
+                .and_then(|v| v.as_array());
+            let last_snapshot = snapshots.and_then(|s| s.last());
+            let stats = last_snapshot
+                .and_then(|s| s.get("debug"))
+                .and_then(|d| d.get("stats"))
+                .and_then(|v| v.as_object());
+
+            let tick_id = last_snapshot
+                .and_then(|s| s.get("tick_id"))
+                .and_then(|v| v.as_u64());
+            let frame_id = last_snapshot
+                .and_then(|s| s.get("frame_id"))
+                .and_then(|v| v.as_u64());
+
+            let images_bytes = stats
+                .and_then(|o| o.get("renderer_gpu_images_bytes_estimate"))
+                .and_then(|v| v.as_u64());
+            let render_targets_bytes = stats
+                .and_then(|o| o.get("renderer_gpu_render_targets_bytes_estimate"))
+                .and_then(|v| v.as_u64());
+            let intermediate_peak_bytes = stats
+                .and_then(|o| o.get("renderer_intermediate_peak_in_use_bytes"))
+                .and_then(|v| v.as_u64());
+
+            (tick_id, frame_id, stats.is_some(), images_bytes, render_targets_bytes, intermediate_peak_bytes)
+        } else {
+            (None, None, false, None, None, None)
+        };
+
+    let missing_reason = if bundle_present {
+        "missing_field"
+    } else {
+        "missing_bundle"
+    };
+
+    let mut failures: Vec<serde_json::Value> = Vec::new();
+
+    if let Some(thr) = thresholds.max_renderer_gpu_images_bytes_estimate {
+        match images_bytes {
+            Some(observed) if observed > thr => failures.push(serde_json::json!({
+                "kind": "renderer_gpu_images_bytes_estimate",
+                "threshold": thr,
+                "observed": observed,
+                "reason": "exceeded",
+            })),
+            Some(_) => {}
+            None => failures.push(serde_json::json!({
+                "kind": "renderer_gpu_images_bytes_estimate",
+                "threshold": thr,
+                "observed": serde_json::Value::Null,
+                "reason": missing_reason,
+                "field": "windows[0].snapshots[-1].debug.stats.renderer_gpu_images_bytes_estimate",
+            })),
+        }
+    }
+
+    if let Some(thr) = thresholds.max_renderer_gpu_render_targets_bytes_estimate {
+        match render_targets_bytes {
+            Some(observed) if observed > thr => failures.push(serde_json::json!({
+                "kind": "renderer_gpu_render_targets_bytes_estimate",
+                "threshold": thr,
+                "observed": observed,
+                "reason": "exceeded",
+            })),
+            Some(_) => {}
+            None => failures.push(serde_json::json!({
+                "kind": "renderer_gpu_render_targets_bytes_estimate",
+                "threshold": thr,
+                "observed": serde_json::Value::Null,
+                "reason": missing_reason,
+                "field": "windows[0].snapshots[-1].debug.stats.renderer_gpu_render_targets_bytes_estimate",
+            })),
+        }
+    }
+
+    if let Some(thr) = thresholds.max_renderer_intermediate_peak_in_use_bytes {
+        match intermediate_peak_bytes {
+            Some(observed) if observed > thr => failures.push(serde_json::json!({
+                "kind": "renderer_intermediate_peak_in_use_bytes",
+                "threshold": thr,
+                "observed": observed,
+                "reason": "exceeded",
+            })),
+            Some(_) => {}
+            None => failures.push(serde_json::json!({
+                "kind": "renderer_intermediate_peak_in_use_bytes",
+                "threshold": thr,
+                "observed": serde_json::Value::Null,
+                "reason": missing_reason,
+                "field": "windows[0].snapshots[-1].debug.stats.renderer_intermediate_peak_in_use_bytes",
+            })),
+        }
+    }
+
+    let payload = serde_json::json!({
+        "schema_version": 1,
+        "generated_unix_ms": now_unix_ms(),
+        "kind": "renderer_gpu_budget_thresholds",
+        "out_dir": out_dir.display().to_string(),
+        "bundle_file": bundle_path
+            .and_then(|p| p.file_name())
+            .and_then(|s| s.to_str())
+            .unwrap_or("<unknown>"),
+        "thresholds": {
+            "max_renderer_gpu_images_bytes_estimate": thresholds.max_renderer_gpu_images_bytes_estimate,
+            "max_renderer_gpu_render_targets_bytes_estimate": thresholds.max_renderer_gpu_render_targets_bytes_estimate,
+            "max_renderer_intermediate_peak_in_use_bytes": thresholds.max_renderer_intermediate_peak_in_use_bytes,
+        },
+        "observed": {
+            "bundle_present": bundle_present,
+            "tick_id": tick_id,
+            "frame_id": frame_id,
+            "stats_present": stats,
+            "renderer_gpu_images_bytes_estimate": images_bytes,
+            "renderer_gpu_render_targets_bytes_estimate": render_targets_bytes,
+            "renderer_intermediate_peak_in_use_bytes": intermediate_peak_bytes,
+        },
+        "failures": failures,
+    });
+    let _ = write_json_value(&out_path, &payload);
+
+    let failures = payload
+        .get("failures")
+        .and_then(|v| v.as_array())
+        .map(|a| a.len())
+        .unwrap_or(0);
+
+    Ok(RendererGpuBudgetsGateResult {
         evidence_path: out_path,
         failures,
     })

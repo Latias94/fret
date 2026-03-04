@@ -190,6 +190,9 @@ Candidate gates:
 - `--max-macos-io-surface-dirty-bytes`
 - `--max-macos-io-accelerator-dirty-bytes`
 - `--max-macos-malloc-small-dirty-bytes`
+- `--max-renderer-gpu-images-bytes-estimate`
+- `--max-renderer-gpu-render-targets-bytes-estimate`
+- `--max-renderer-intermediate-peak-in-use-bytes`
 - `--max-wgpu-metal-current-allocated-size-bytes` (macOS/Metal; best-effort)
 - `--max-render-text-atlas-bytes-live-estimate-total` (text-heavy attribution; stable, derived from `resource_caches.render_text`)
 
@@ -213,6 +216,9 @@ Recommended local gate baselines (macOS, 2026-03-04):
   - `--max-macos-io-surface-dirty-bytes 67108864` (64 MiB)
   - `--max-macos-io-accelerator-dirty-bytes 16777216` (16 MiB)
   - `--max-macos-malloc-small-dirty-bytes 67108864` (64 MiB)
+  - `--max-renderer-gpu-images-bytes-estimate 134217728` (128 MiB)
+  - `--max-renderer-gpu-render-targets-bytes-estimate 67108864` (64 MiB)
+  - `--max-renderer-intermediate-peak-in-use-bytes 67108864` (64 MiB)
   - Optional (requires `--env FRET_DIAG_WGPU_ALLOCATOR_REPORT=1`):
     - `--max-wgpu-metal-current-allocated-size-bytes 268435456` (256 MiB)
 
