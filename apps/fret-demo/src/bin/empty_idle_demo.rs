@@ -1,5 +1,6 @@
 #[cfg(not(target_arch = "wasm32"))]
 fn main() -> anyhow::Result<()> {
+    let _ = fret_alloc::allocator_name();
     fret_examples::empty_idle_demo::run()
 }
 

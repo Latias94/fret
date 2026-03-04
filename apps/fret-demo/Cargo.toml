@@ -13,6 +13,8 @@ default-run = "fret-demo"
 
 [features]
 alloc-profile = ["fret-examples/alloc-profile"]
+alloc-mimalloc = ["fret-alloc/mimalloc"]
+alloc-jemalloc = ["fret-alloc/jemalloc"]
 mathjax-svg = ["fret-examples/mathjax-svg"]
 devtools-ws = ["fret-examples/devtools-ws"]
 ui-gallery = ["dep:fret-ui-gallery"]
@@ -33,6 +35,7 @@ node-graph-demos-legacy = ["fret-examples/node-graph-demos-legacy"]
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 anyhow.workspace = true
+fret-alloc = { path = "../../crates/fret-alloc" }
 fret-examples = { path = "../fret-examples" }
 fret-ui-gallery = { path = "../fret-ui-gallery", optional = true }
 fret-app = { path = "../../crates/fret-app", optional = true }
