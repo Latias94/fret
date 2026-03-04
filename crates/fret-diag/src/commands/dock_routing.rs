@@ -37,10 +37,7 @@ pub(crate) fn cmd_dock_routing(
     {
         if sidecars::try_read_sidecar_json_v1(&src, "dock_routing", warmup_frames).is_some() {
             let bundle_path = sidecars::adjacent_bundle_path_for_sidecar(&src);
-            if let Some(bundle_path) = bundle_path
-                .clone()
-                .filter(|p| p.is_file())
-            {
+            if let Some(bundle_path) = bundle_path.clone().filter(|p| p.is_file()) {
                 // Prefer regenerating from the bundle artifact when possible so the report can
                 // evolve (bounded evidence keys) without requiring users to manually delete
                 // existing `dock.routing.json` files.
@@ -183,8 +180,7 @@ fn print_dock_routing_report(routing: &Value, routing_path: &Path, bundle_path: 
                 .get("current_window")
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0);
-            let sf_cur =
-                scale_factor_x1000_string_obj(drag, "current_window_scale_factor_x1000");
+            let sf_cur = scale_factor_x1000_string_obj(drag, "current_window_scale_factor_x1000");
             let dragging = drag
                 .get("dragging")
                 .and_then(|v| v.as_bool())
@@ -212,13 +208,18 @@ fn print_dock_routing_report(routing: &Value, routing_path: &Path, bundle_path: 
                 .get("cursor_override_active")
                 .and_then(|v| v.as_bool())
                 .unwrap_or(false);
-            let origin = point_xy_string_obj(drag, "current_window_client_origin_screen_physical_px");
+            let outer = point_xy_string_obj(drag, "current_window_outer_pos_physical_px");
+            let deco = point_xy_string_obj(drag, "current_window_decoration_offset_physical_px");
+            let origin =
+                point_xy_string_obj(drag, "current_window_client_origin_screen_physical_px");
             let origin_platform = drag
                 .get("current_window_client_origin_source_platform")
                 .and_then(|v| v.as_bool())
                 .unwrap_or(false);
-            let sf_runner =
-                scale_factor_x1000_string_obj(drag, "current_window_scale_factor_x1000_from_runner");
+            let sf_runner = scale_factor_x1000_string_obj(
+                drag,
+                "current_window_scale_factor_x1000_from_runner",
+            );
             let sf_moving = scale_factor_x1000_string_obj(drag, "moving_window_scale_factor_x1000");
 
             let mut drag_parts: Vec<String> = Vec::new();
@@ -251,6 +252,12 @@ fn print_dock_routing_report(routing: &Value, routing_path: &Path, bundle_path: 
             }
             if clamped {
                 drag_parts.push("clamped=1".to_string());
+            }
+            if let Some(outer) = outer {
+                drag_parts.push(format!("outer=({outer})"));
+            }
+            if let Some(deco) = deco {
+                drag_parts.push(format!("deco=({deco})"));
             }
             if let Some(origin) = origin {
                 drag_parts.push(format!("origin=({origin})"));
