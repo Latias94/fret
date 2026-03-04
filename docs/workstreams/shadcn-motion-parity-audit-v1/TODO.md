@@ -12,7 +12,7 @@ Last updated: 2026-03-04.
 - Landed: popper overlays without explicit `duration-*` default to ~150ms (tw-animate-css default).
 - Landed: `NavigationMenu` content open/close duration is ~200ms (upstream `duration-200`).
 - Landed: `ContextMenu` / `HoverCard` popper overlays use scale+fade+side slide presence (~150ms) and have close-transition click-through gates.
-- Aligned (no gate): `DropdownMenu` presence is implemented; add a fixed-delta motion gate for opacity progression + close-transition mounting.
+- Landed: `DropdownMenu` presence fades/zooms/slides and has a unit test gate.
 
 ## P1 (timebase correctness: eliminate 60Hz coupling)
 
