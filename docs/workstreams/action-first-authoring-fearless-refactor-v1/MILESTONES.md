@@ -153,6 +153,8 @@ Exit criteria:
 - Docs/templates do not mention MVU as an available authoring path.
 - A small gate prevents MVU APIs from being reintroduced (grep-based check is sufficient).
 
-Current blockers (as of 2026-03-04):
+Current blockers (as of 2026-03-05):
 
-- Legacy demo copies (`apps/fret-examples/src/*_legacy.rs`) still exist for A/B comparison.
+- `ecosystem/fret` still exposes legacy MVU (`legacy-mvu` feature + modules).
+- `apps/fretboard` scaffolding still contains internal legacy MVU template sources (not user-facing, but must be removed for M9).
+- Docs still describe MVU as an available compat path (needs cleanup + history note).
