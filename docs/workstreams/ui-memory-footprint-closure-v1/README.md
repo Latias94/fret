@@ -76,6 +76,12 @@ Interpretation:
     never observed a final `script.result` stage. Root cause was a tooling write-back race to the
     runtime-owned `<out_dir>/script.result.json` in filesystem mode; fixed by avoiding writes to
     that path from tooling.
+- Text atlas optimization note:
+  - After `perf(render): lazily allocate mask glyph atlas pages`, the `render_text` mask atlas no
+    longer preallocates all pages. Observed impact (same scripts):
+    - `empty-idle`: `render_text_atlas_bytes_live_estimate_total` drops to `0` (no text draws).
+    - `text-heavy`: `render_text_atlas_bytes_live_estimate_total` drops to `20 MiB` (mask pages `1`
+      instead of `2`).
 
 ## Goals
 

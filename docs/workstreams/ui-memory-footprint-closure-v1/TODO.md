@@ -44,6 +44,7 @@
   - System vs `jemalloc`: default malloc zone allocated drops ~23.9 MB → ~7.8 MB; `owned unmapped memory` dirty remains the headline (~216.3 MB).
 - [ ] Decide whether to keep allocator selection as a dev-only feature (A/B), and whether to surface it in `fretboard dev` presets.
 - [ ] Identify top heap offenders via structured `vmmap` summary and pick one bounded optimization.
+- [x] Reduce baseline text atlas allocations by lazily allocating the mask atlas pages (avoid preallocating `TEXT_ATLAS_MAX_PAGES`).
 
 ## Gates
 
