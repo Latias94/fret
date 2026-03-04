@@ -80,12 +80,14 @@ Examples that use `fret::mvu::app(...)` or implement `MvuProgram` include (non-e
   - The legacy MVU implementation remains at `apps/fret-examples/src/query_async_tokio_demo_legacy.rs`.
   - `apps/fret-examples/src/hello_counter_demo.rs` is now view runtime + typed actions.
   - The legacy MVU implementation remains at `apps/fret-examples/src/hello_counter_demo_legacy.rs`.
+  - `apps/fret-examples/src/async_playground_demo.rs` is now view runtime + typed actions.
+  - The legacy MVU implementation remains at `apps/fret-examples/src/async_playground_demo_legacy.rs`.
 
 - `apps/fret-examples/src/todo_demo_legacy.rs`
 - `apps/fret-examples/src/query_demo_legacy.rs`
 - `apps/fret-examples/src/query_async_tokio_demo_legacy.rs`
 - `apps/fret-examples/src/hello_counter_demo_legacy.rs`
-- `apps/fret-examples/src/async_playground_demo.rs`
+- `apps/fret-examples/src/async_playground_demo_legacy.rs`
 - `apps/fret-examples/src/embedded_viewport_demo.rs`
 - `apps/fret-examples/src/drop_shadow_demo.rs`
 - `apps/fret-examples/src/custom_effect_v1_demo.rs`
