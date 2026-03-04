@@ -26,10 +26,10 @@ Last updated: 2026-03-04.
 - Landed: `SelectTrigger` focus ring + border transitions ease (~150ms, Tailwind default) and has a unit test gate.
 - Landed: `Checkbox` / `RadioGroupItem` focus ring transitions ease (~150ms, Tailwind default) and have unit test gates.
 - Landed: `Slider` thumb hover/focus ring transitions ease (~150ms, Tailwind default) and has a unit test gate.
+- Landed: `Switch` track background/border/ring style transitions ease (~150ms, Tailwind default) and have a unit test gate.
 - Landed: `TabsTrigger` focus ring transitions ease in/out (~150ms, Tailwind default) and have a unit test gate.
 - Landed: `Item` hover background transition eases (~100ms, `duration-100`) and has a unit test gate.
 - Gap: common primitives should ease hover/focus style changes (`transition-*` parity), not snap. Suggested ordering:
-  - P1: Switch track background/border/ring style transitions (thumb is aligned).
   - P1: InputGroup wrapper ring/border transitions (group-focused-child semantics).
   - P1: Badge focus-visible border/ring (`transition-[color,box-shadow]`).
   - P1: BreadcrumbLink hover color (`transition-colors`).
