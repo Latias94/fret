@@ -1005,6 +1005,7 @@ impl TextSystem {
         &self,
         frame_id: fret_core::FrameId,
     ) -> fret_core::RendererTextPerfSnapshot {
+        let font_db = self.parley_shaper.font_db_diagnostics_snapshot();
         fret_core::RendererTextPerfSnapshot {
             frame_id,
             font_stack_key: self.font_stack_key,
@@ -1030,6 +1031,10 @@ impl TextSystem {
             mask_atlas: self.mask_atlas.diagnostics_snapshot(),
             color_atlas: self.color_atlas.diagnostics_snapshot(),
             subpixel_atlas: self.subpixel_atlas.diagnostics_snapshot(),
+            registered_font_blobs_count: font_db.registered_font_blobs_count,
+            registered_font_blobs_total_bytes: font_db.registered_font_blobs_total_bytes,
+            family_id_cache_entries: font_db.family_id_cache_entries,
+            baseline_metrics_cache_entries: font_db.baseline_metrics_cache_entries,
         }
     }
 

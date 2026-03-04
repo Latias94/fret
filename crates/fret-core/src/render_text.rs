@@ -46,6 +46,15 @@ pub struct RendererTextPerfSnapshot {
     pub mask_atlas: RendererGlyphAtlasPerfSnapshot,
     pub color_atlas: RendererGlyphAtlasPerfSnapshot,
     pub subpixel_atlas: RendererGlyphAtlasPerfSnapshot,
+
+    /// Best-effort process-local font database/cache counters.
+    ///
+    /// These are intended to help attribute CPU-side footprint concerns (e.g. "too many injected
+    /// font blobs") without requiring heap profilers.
+    pub registered_font_blobs_count: u64,
+    pub registered_font_blobs_total_bytes: u64,
+    pub family_id_cache_entries: u64,
+    pub baseline_metrics_cache_entries: u64,
 }
 
 #[derive(Debug, Default, Clone, Copy)]
