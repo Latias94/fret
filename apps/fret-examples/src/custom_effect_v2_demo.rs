@@ -7,7 +7,7 @@
 
 use std::sync::Arc;
 
-use fret::legacy::prelude::*;
+use fret::prelude::*;
 use fret_core::scene::{
     CustomEffectImageInputV1, EffectChain, EffectMode, EffectParamsV1, EffectQuality, EffectStep,
     ImageSamplingHint, UvRect,
@@ -17,12 +17,17 @@ use fret_render::{
     ImageColorSpace, ImageDescriptor, Renderer, WgpuContext, write_rgba8_texture_region,
 };
 use fret_runtime::Model;
+use fret_ui::action::UiActionHost;
 use fret_ui::element::{
     ContainerProps, EffectLayerProps, LayoutStyle, Length, Overflow, PositionStyle, SpacerProps,
     TextProps,
 };
 use fret_ui_kit::custom_effects::CustomEffectProgramV2;
 use fret_ui_kit::{Space, UiIntoElement};
+
+mod act {
+    fret::actions!([Reset = "custom_effect_v2_demo.reset.v1"]);
+}
 
 const WGSL: &str = r#"
 // Params packing (EffectParamsV1 is 64 bytes):
@@ -86,26 +91,23 @@ struct CustomEffectV2State {
     debug_input: Model<bool>,
 }
 
-struct CustomEffectV2Program;
-
-#[derive(Debug, Clone)]
-enum Msg {
-    Reset,
+struct CustomEffectV2View {
+    st: CustomEffectV2State,
 }
 
 pub fn run() -> anyhow::Result<()> {
-    let builder = fret::mvu::app::<CustomEffectV2Program>("custom-effect-v2-demo")?
-        .with_main_window("custom_effect_v2_demo", (1100.0, 720.0))
-        .init_app(|app| {
+    let builder = FretApp::new("custom-effect-v2-demo")
+        .window("custom-effect-v2-demo", (1100.0, 720.0))
+        .install_app(|app| {
             shadcn::shadcn_themes::apply_shadcn_new_york(
                 app,
                 shadcn::shadcn_themes::ShadcnBaseColor::Slate,
                 shadcn::shadcn_themes::ShadcnColorScheme::Dark,
             );
-        });
+        })
+        .view::<CustomEffectV2View>()?;
 
-    install_into(builder).run()?;
-    Ok(())
+    install_into(builder).run().map_err(anyhow::Error::from)
 }
 
 /// Example of a “one line install” entrypoint for consumers on the native desktop builder path.
@@ -215,55 +217,72 @@ fn upload_input_image(app: &mut App, context: &WgpuContext, renderer: &mut Rende
     });
 }
 
-impl MvuProgram for CustomEffectV2Program {
-    type State = CustomEffectV2State;
-    type Message = Msg;
+impl CustomEffectV2State {
+    fn reset(host: &mut dyn UiActionHost, st: &CustomEffectV2State) {
+        let _ = host.models_mut().update(&st.enabled, |v| *v = true);
+        let _ = host
+            .models_mut()
+            .update(&st.use_non_filterable_input, |v| *v = false);
+        let _ = host
+            .models_mut()
+            .update(&st.sampling, |v| *v = Some(Arc::from("linear")));
+        let _ = host.models_mut().update(&st.uv_span, |v| *v = vec![0.25]);
+        let _ = host
+            .models_mut()
+            .update(&st.input_strength, |v| *v = vec![0.35]);
+        let _ = host
+            .models_mut()
+            .update(&st.rim_strength, |v| *v = vec![0.65]);
+        let _ = host
+            .models_mut()
+            .update(&st.blur_radius_px, |v| *v = vec![10.0]);
+        let _ = host.models_mut().update(&st.debug_input, |v| *v = false);
+    }
+}
 
-    fn init(app: &mut App, _window: AppWindowId) -> Self::State {
-        Self::State {
-            enabled: app.models_mut().insert(true),
-            use_non_filterable_input: app.models_mut().insert(false),
-            sampling: app.models_mut().insert(Some(Arc::from("linear"))),
-            sampling_open: app.models_mut().insert(false),
-            uv_span: app.models_mut().insert(vec![0.25]),
-            input_strength: app.models_mut().insert(vec![0.35]),
-            rim_strength: app.models_mut().insert(vec![0.65]),
-            blur_radius_px: app.models_mut().insert(vec![10.0]),
-            debug_input: app.models_mut().insert(false),
+impl View for CustomEffectV2View {
+    fn init(app: &mut App, _window: AppWindowId) -> Self {
+        Self {
+            st: CustomEffectV2State {
+                enabled: app.models_mut().insert(true),
+                use_non_filterable_input: app.models_mut().insert(false),
+                sampling: app.models_mut().insert(Some(Arc::from("linear"))),
+                sampling_open: app.models_mut().insert(false),
+                uv_span: app.models_mut().insert(vec![0.25]),
+                input_strength: app.models_mut().insert(vec![0.35]),
+                rim_strength: app.models_mut().insert(vec![0.65]),
+                blur_radius_px: app.models_mut().insert(vec![10.0]),
+                debug_input: app.models_mut().insert(false),
+            },
         }
     }
 
-    fn update(app: &mut App, st: &mut Self::State, msg: Self::Message) {
-        match msg {
-            Msg::Reset => {
-                let _ = app.models_mut().update(&st.enabled, |v| *v = true);
-                let _ = app
-                    .models_mut()
-                    .update(&st.use_non_filterable_input, |v| *v = false);
-                let _ = app
-                    .models_mut()
-                    .update(&st.sampling, |v| *v = Some(Arc::from("linear")));
-                let _ = app.models_mut().update(&st.uv_span, |v| *v = vec![0.25]);
-                let _ = app
-                    .models_mut()
-                    .update(&st.input_strength, |v| *v = vec![0.35]);
-                let _ = app
-                    .models_mut()
-                    .update(&st.rim_strength, |v| *v = vec![0.65]);
-                let _ = app
-                    .models_mut()
-                    .update(&st.blur_radius_px, |v| *v = vec![10.0]);
-                let _ = app.models_mut().update(&st.debug_input, |v| *v = false);
+    fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
+        cx.on_action_notify::<act::Reset>({
+            let st = self.clone_for_reset();
+            move |host, _acx| {
+                CustomEffectV2State::reset(host, &st);
+                true
             }
-        }
-    }
+        });
 
-    fn view(
-        cx: &mut ElementContext<'_, App>,
-        st: &mut Self::State,
-        msg: &mut MessageRouter<Self::Message>,
-    ) -> Elements {
-        view(cx, st, msg)
+        view(cx, &mut self.st)
+    }
+}
+
+impl CustomEffectV2View {
+    fn clone_for_reset(&self) -> CustomEffectV2State {
+        CustomEffectV2State {
+            enabled: self.st.enabled.clone(),
+            use_non_filterable_input: self.st.use_non_filterable_input.clone(),
+            sampling: self.st.sampling.clone(),
+            sampling_open: self.st.sampling_open.clone(),
+            uv_span: self.st.uv_span.clone(),
+            input_strength: self.st.input_strength.clone(),
+            rim_strength: self.st.rim_strength.clone(),
+            blur_radius_px: self.st.blur_radius_px.clone(),
+            debug_input: self.st.debug_input.clone(),
+        }
     }
 }
 
@@ -292,11 +311,7 @@ fn sampling_hint(value: &str) -> ImageSamplingHint {
     }
 }
 
-fn view(
-    cx: &mut ElementContext<'_, App>,
-    st: &mut CustomEffectV2State,
-    msg: &mut MessageRouter<Msg>,
-) -> Elements {
+fn view(cx: &mut ElementContext<'_, App>, st: &mut CustomEffectV2State) -> Elements {
     let (effect, filterable_input_image, non_filterable_input_image) = {
         let pack = cx.app.global::<DemoEffectPack>();
         (
@@ -340,7 +355,6 @@ fn view(
         input_strength,
         rim_strength,
         blur_radius_px,
-        msg,
     );
     let stage = stage(
         cx,
@@ -711,11 +725,9 @@ fn inspector(
     input_strength: f32,
     rim_strength: f32,
     blur_radius_px: f32,
-    msg: &mut MessageRouter<Msg>,
 ) -> AnyElement {
     let theme = Theme::global(&*cx.app).snapshot();
 
-    let reset_cmd = msg.cmd(Msg::Reset);
     let enabled_model = st.enabled.clone();
     let non_filterable_model = st.use_non_filterable_input.clone();
     let sampling_model = st.sampling.clone();
@@ -925,7 +937,7 @@ fn inspector(
                         ),
                         shadcn::Button::new("Reset")
                             .variant(shadcn::ButtonVariant::Secondary)
-                            .on_click(reset_cmd.clone())
+                            .action(act::Reset)
                             .test_id("custom-effect-v2.reset")
                             .into_element(cx),
                     ]
