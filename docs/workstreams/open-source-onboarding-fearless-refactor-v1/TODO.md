@@ -4,23 +4,24 @@
 
 - [ ] Verify the “boring ladder” ordering still matches the fastest-to-understand path:
   templates → cookbook → gallery → labs.
-- [ ] Ensure all onboarding docs use GitHub-clickable links (no bare relative paths).
+- [x] Ensure onboarding docs use GitHub-clickable links (avoid bare relative paths).
 - [ ] Audit `README.md` “Quick Start” commands to ensure they still run on `main`.
 
 ## Cookbook curation
 
-- [ ] Maintain an explicit “Official vs Lab” split (Official should compile fast and avoid optional subsystems).
+- [x] Maintain an explicit “Official vs Lab” split (Official should compile fast and avoid optional subsystems).
 - [ ] For each Lab example, ensure:
   - a `required-features` gate exists, and
   - `fretboard list cookbook-examples --all` shows the required feature name(s).
+- [x] Add a diagnostics walkthrough for `hello` (stable `test_id` + one script).
 - [ ] Add one additional diagnostics walkthrough after `hello` (candidate: `simple_todo` smoke).
 
 ## UI gallery gating (no heavy refactor)
 
-- [ ] Keep default native build “lite” and fast.
-- [ ] Gate unfinished/debug/dev pages behind `gallery-dev`.
-- [ ] Gate `material3` behind `gallery-material3`.
-- [ ] Consider a “gallery-full” umbrella feature for contributors.
+- [x] Keep default native build “lite” and fast.
+- [x] Gate unfinished/debug/dev pages behind `gallery-dev`.
+- [x] Gate `material3` behind `gallery-material3`.
+- [x] Provide a “gallery-full” umbrella feature for contributors.
 
 ## Default feature surfaces (dependency audit)
 
@@ -36,4 +37,3 @@
   - `Model<T>` + `ViewCx` patterns
   - typed action macro usage
   - shadcn authoring surface (constructors + builders)
-
