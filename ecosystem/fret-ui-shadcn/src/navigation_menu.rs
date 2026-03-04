@@ -112,10 +112,9 @@ fn nav_menu_trigger_text_style(theme: &ThemeSnapshot) -> TextStyle {
         .unwrap_or_else(|| theme.metric_token(theme_tokens::metric::COMPONENT_TEXT_SM_PX));
     let line_height = theme
         .metric_by_key("component.navigation_menu.trigger.line_height")
-        .or_else(|| theme.metric_by_key(theme_tokens::metric::COMPONENT_TEXT_SM_LINE_HEIGHT))
-        .or_else(|| theme.metric_by_key("metric.font.line_height"))
-        .or_else(|| theme.metric_by_key("font.line_height"))
-        .unwrap_or_else(|| theme.metric_token(theme_tokens::metric::COMPONENT_TEXT_SM_LINE_HEIGHT));
+        // Upstream base-maia trigger uses `h-9` with `py-2.5`, which implies a smaller fixed
+        // line box than Tailwind's default `text-sm` line height.
+        .unwrap_or(Px(16.0));
     let mut style = typography::fixed_line_box_style(FontId::ui(), px, line_height);
     style.weight = FontWeight::MEDIUM;
     style
@@ -140,7 +139,8 @@ fn nav_menu_link_text_style(theme: &ThemeSnapshot) -> TextStyle {
 fn nav_menu_trigger_padding_x(theme: &ThemeSnapshot) -> Px {
     theme
         .metric_by_key("component.navigation_menu.trigger.pad_x")
-        .unwrap_or(Px(16.0))
+        // Upstream: `px-4.5` (18px).
+        .unwrap_or(Px(18.0))
 }
 
 const NAV_MENU_SAFE_CORRIDOR_BUFFER: Px = Px(5.0);
@@ -218,7 +218,8 @@ fn navigation_menu_open_change_complete_event(
 fn nav_menu_trigger_padding_y(theme: &ThemeSnapshot) -> Px {
     theme
         .metric_by_key("component.navigation_menu.trigger.pad_y")
-        .unwrap_or(Px(8.0))
+        // Upstream: `py-2.5` (10px).
+        .unwrap_or(Px(10.0))
 }
 
 fn nav_menu_trigger_space_px(theme: &ThemeSnapshot) -> Px {
@@ -230,17 +231,20 @@ fn nav_menu_trigger_space_px(theme: &ThemeSnapshot) -> Px {
 fn nav_menu_trigger_radius(theme: &ThemeSnapshot) -> Px {
     theme
         .metric_by_key("component.navigation_menu.trigger.radius")
-        .unwrap_or_else(|| MetricRef::radius(Radius::Md).resolve(theme))
+        // Upstream: `rounded-2xl` (16px).
+        .unwrap_or(Px(16.0))
 }
 
 fn nav_menu_trigger_bg_hover(theme: &ThemeSnapshot) -> Color {
-    theme.color_token("accent")
+    // Upstream: `hover:bg-muted focus:bg-muted`.
+    theme.color_token("muted")
 }
 
 fn nav_menu_trigger_bg_open(theme: &ThemeSnapshot) -> Color {
     theme
         .color_by_key("component.navigation_menu.trigger.bg_open")
-        .unwrap_or_else(|| alpha_mul(theme.color_token("accent"), 0.5))
+        // Upstream: `data-open:bg-muted/50`.
+        .unwrap_or_else(|| alpha_mul(theme.color_token("muted"), 0.5))
 }
 
 fn nav_menu_trigger_fg(theme: &ThemeSnapshot) -> Color {
@@ -280,7 +284,8 @@ fn nav_menu_viewport_border(theme: &ThemeSnapshot) -> Color {
 fn nav_menu_viewport_side_offset(theme: &ThemeSnapshot) -> Px {
     theme
         .metric_by_key("component.navigation_menu.viewport.side_offset")
-        .unwrap_or(Px(6.0))
+        // Upstream base-maia `NavigationMenuPositioner` uses `sideOffset=8`.
+        .unwrap_or(Px(8.0))
 }
 
 fn nav_menu_viewport_window_margin(theme: &ThemeSnapshot) -> Px {
@@ -643,33 +648,28 @@ impl NavigationMenuLink {
             }));
 
             let theme = Theme::global(&*cx.app).snapshot();
-            let radius = MetricRef::radius(Radius::Sm).resolve(&theme);
+            let radius = nav_menu_link_radius(&theme);
             let ring = decl_style::focus_ring(&theme, radius);
 
             let hovered = st.hovered && !st.pressed;
             let focused = st.focused;
             let pressed = st.pressed;
 
-            let accent = theme.color_token("accent");
-            let accent_fg = theme.color_token("accent-foreground");
+            let muted = theme.color_token("muted");
             let default_fg = theme.color_token("foreground");
 
-            let mut bg_active = accent;
+            let mut bg_active = muted;
             bg_active.a *= 0.5;
 
             let use_hover_chrome = hovered || focused || pressed;
             let bg = if use_hover_chrome {
-                Some(accent)
+                Some(muted)
             } else if active {
                 Some(bg_active)
             } else {
                 None
             };
-            let fg = if use_hover_chrome || active {
-                accent_fg
-            } else {
-                default_fg
-            };
+            let fg = default_fg;
 
             let mut pressable = PressableProps::default();
             pressable.enabled = !disabled;
@@ -699,11 +699,12 @@ impl NavigationMenuLink {
                 vec![cx.flex(
                     FlexProps {
                         layout: LayoutStyle::default(),
-                        direction: fret_core::Axis::Vertical,
-                        gap: MetricRef::space(Space::N1).resolve(&theme).into(),
+                        // Upstream base-maia `NavigationMenuLink` is `flex items-center gap-1.5`.
+                        direction: fret_core::Axis::Horizontal,
+                        gap: MetricRef::space(Space::N1p5).resolve(&theme).into(),
                         padding: Edges::all(Px(0.0)).into(),
                         justify: MainAlign::Start,
-                        align: fret_ui::element::CrossAlign::Start,
+                        align: fret_ui::element::CrossAlign::Center,
                         wrap: false,
                     },
                     move |_cx| children,
@@ -720,8 +721,9 @@ impl NavigationMenuLink {
             let mut base_props = decl_style::container_props(
                 &theme,
                 ChromeRefinement::default()
-                    .rounded(Radius::Sm)
-                    .p(Space::N2)
+                    // Upstream base-maia: `rounded-xl p-3`.
+                    .radius(radius)
+                    .p(Space::N3)
                     .merge(chrome.clone()),
                 LayoutRefinement::default().w_full().min_w_0(),
             );
@@ -737,6 +739,13 @@ impl NavigationMenuLink {
             (pressable, vec![content])
         })
     }
+}
+
+fn nav_menu_link_radius(theme: &ThemeSnapshot) -> Px {
+    theme
+        .metric_by_key("component.navigation_menu.link.radius")
+        // Upstream base-maia: `rounded-xl` (12px).
+        .unwrap_or(Px(12.0))
 }
 
 /// shadcn/ui `NavigationMenuContent` (v4).
@@ -1174,13 +1183,15 @@ impl NavigationMenu {
         let viewport_border = nav_menu_viewport_border(&theme);
         let viewport_radius = theme
             .metric_by_key("component.navigation_menu.viewport.radius")
-            .unwrap_or_else(|| MetricRef::radius(Radius::Md).resolve(&theme));
+            // Upstream base-maia: popup `rounded-2xl` (16px).
+            .unwrap_or(Px(16.0));
         let content_switch_slide_px = nav_menu_content_switch_slide_px(&theme);
         let viewport_shadow = decl_style::shadow(&theme, viewport_radius);
         let dir = crate::use_direction(cx, None);
-        let content_pad_y = MetricRef::space(Space::N2).resolve(&theme);
-        let content_pad_left = MetricRef::space(Space::N2).resolve(&theme);
-        let content_pad_right = MetricRef::space(Space::N2p5).resolve(&theme);
+        // Upstream base-maia `NavigationMenuContent` uses `p-2.5 pr-3`.
+        let content_pad_y = MetricRef::space(Space::N2p5).resolve(&theme);
+        let content_pad_left = MetricRef::space(Space::N2p5).resolve(&theme);
+        let content_pad_right = MetricRef::space(Space::N3).resolve(&theme);
         let content_padding = rtl::padding_edges_with_inline_start_end(
             dir,
             content_pad_y,
