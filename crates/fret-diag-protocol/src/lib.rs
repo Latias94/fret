@@ -1333,6 +1333,13 @@ pub enum UiMousePolicyV1 {
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
+pub enum UiWindowHitTestRequestV1 {
+    Normal,
+    PassthroughAll,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum UiWindowAppearanceV1 {
     Opaque,
     CompositedNoBackdrop,
@@ -1367,6 +1374,8 @@ pub struct UiWindowStyleMatchV1 {
     pub activation: Option<UiActivationPolicyV1>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub z_level: Option<UiWindowZLevelV1>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub hit_test: Option<UiWindowHitTestRequestV1>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub mouse: Option<UiMousePolicyV1>,
 }

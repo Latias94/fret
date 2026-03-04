@@ -32,6 +32,15 @@ pub enum MousePolicy {
     Passthrough,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum WindowHitTestRequestV1 {
+    /// Normal OS hit testing (default).
+    Normal,
+    /// Window ignores pointer hit testing (click-through).
+    PassthroughAll,
+}
+
 /// Global window opacity hint (best-effort).
 ///
 /// This is not per-pixel transparency. The value is expressed as an 8-bit alpha where:
@@ -91,6 +100,8 @@ pub struct WindowStyleRequest {
     pub transparent: Option<bool>,
     /// Optional request for OS-provided background materials (best-effort).
     pub background_material: Option<WindowBackgroundMaterialRequest>,
+    /// Optional request for window-level pointer hit testing (best-effort).
+    pub hit_test: Option<WindowHitTestRequestV1>,
     /// Request click-through / mouse passthrough behavior for the OS window (best-effort).
     pub mouse: Option<MousePolicy>,
     /// Request global window opacity (not per-pixel transparency), best-effort.

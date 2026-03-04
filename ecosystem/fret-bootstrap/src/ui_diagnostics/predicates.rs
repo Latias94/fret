@@ -357,6 +357,11 @@ fn window_style_effective_matches(
     {
         return false;
     }
+    if let Some(hit_test) = want.hit_test
+        && !window_hit_test_match(have.hit_test, hit_test)
+    {
+        return false;
+    }
     if let Some(mouse) = want.mouse
         && !mouse_policy_match(have.mouse, mouse)
     {
@@ -375,6 +380,20 @@ fn window_appearance_match(
         (H::Opaque, W::Opaque) => true,
         (H::CompositedNoBackdrop, W::CompositedNoBackdrop) => true,
         (H::CompositedBackdrop, W::CompositedBackdrop) => true,
+        _ => false,
+    }
+}
+
+fn window_hit_test_match(
+    have: fret_runtime::WindowHitTestRequestV1,
+    want: UiWindowHitTestRequestV1,
+) -> bool {
+    use fret_runtime::WindowHitTestRequestV1 as H;
+    use UiWindowHitTestRequestV1 as W;
+
+    match (have, want) {
+        (H::Normal, W::Normal) => true,
+        (H::PassthroughAll, W::PassthroughAll) => true,
         _ => false,
     }
 }

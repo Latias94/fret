@@ -40,6 +40,8 @@ impl Default for PlatformCapabilities {
                 window_skip_taskbar: true,
                 window_non_activating: true,
                 window_mouse_passthrough: true,
+                window_hit_test_passthrough_all: true,
+                window_hit_test_passthrough_regions: false,
                 window_set_visible: true,
                 window_begin_drag: true,
                 window_begin_resize: true,
@@ -107,6 +109,12 @@ impl PlatformCapabilities {
             keys::UI_WINDOW_SKIP_TASKBAR => Some(self.ui.window_skip_taskbar),
             keys::UI_WINDOW_NON_ACTIVATING => Some(self.ui.window_non_activating),
             keys::UI_WINDOW_MOUSE_PASSTHROUGH => Some(self.ui.window_mouse_passthrough),
+            keys::UI_WINDOW_HIT_TEST_PASSTHROUGH_ALL => {
+                Some(self.ui.window_hit_test_passthrough_all)
+            }
+            keys::UI_WINDOW_HIT_TEST_PASSTHROUGH_REGIONS => {
+                Some(self.ui.window_hit_test_passthrough_regions)
+            }
             keys::UI_WINDOW_SET_VISIBLE => Some(self.ui.window_set_visible),
             keys::UI_WINDOW_BEGIN_DRAG => Some(self.ui.window_begin_drag),
             keys::UI_WINDOW_BEGIN_RESIZE => Some(self.ui.window_begin_resize),

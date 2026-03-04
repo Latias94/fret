@@ -1757,9 +1757,19 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
                                         WindowZLevel::AlwaysOnTop => WindowLevel::AlwaysOnTop,
                                     });
                                 }
-                                if let Some(mouse) = style.mouse {
-                                    let passthrough =
-                                        matches!(mouse, fret_runtime::MousePolicy::Passthrough);
+                                let requested_passthrough = match style.hit_test {
+                                    Some(fret_runtime::WindowHitTestRequestV1::PassthroughAll) => {
+                                        Some(caps.ui.window_hit_test_passthrough_all)
+                                    }
+                                    Some(fret_runtime::WindowHitTestRequestV1::Normal) => {
+                                        Some(false)
+                                    }
+                                    None => style.mouse.map(|mouse| {
+                                        matches!(mouse, fret_runtime::MousePolicy::Passthrough)
+                                            && caps.ui.window_mouse_passthrough
+                                    }),
+                                };
+                                if let Some(passthrough) = requested_passthrough {
                                     let dock_drag_pointer_id = self.dock_drag_pointer_id();
                                     let applied = super::window::set_window_mouse_passthrough(
                                         window_handle.as_ref(),

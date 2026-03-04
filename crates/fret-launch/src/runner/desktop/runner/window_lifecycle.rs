@@ -115,8 +115,17 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             let _ = super::window::set_window_background_material(window.as_ref(), material);
         }
 
-        if let Some(mouse) = style.mouse {
-            let passthrough = matches!(mouse, fret_runtime::MousePolicy::Passthrough);
+        let requested_passthrough = match style.hit_test {
+            Some(fret_runtime::WindowHitTestRequestV1::PassthroughAll) => {
+                Some(caps.ui.window_hit_test_passthrough_all)
+            }
+            Some(fret_runtime::WindowHitTestRequestV1::Normal) => Some(false),
+            None => style.mouse.map(|mouse| {
+                matches!(mouse, fret_runtime::MousePolicy::Passthrough)
+                    && caps.ui.window_mouse_passthrough
+            }),
+        };
+        if let Some(passthrough) = requested_passthrough {
             let _ = super::window::set_window_mouse_passthrough(window.as_ref(), passthrough);
         }
         if let Some(opacity) = style.opacity {

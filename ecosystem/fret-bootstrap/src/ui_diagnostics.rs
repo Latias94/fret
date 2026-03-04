@@ -25,7 +25,7 @@ use fret_diag_protocol::{
     UiSelectorResolutionTraceEntryV1, UiSelectorV1, UiShortcutRoutingTraceEntryV1,
     UiShortcutRoutingTraceQueryV1, UiSizeV1, UiTaskbarVisibilityV1, UiTextInputSnapshotV1,
     UiWebImeTraceEntryV1, UiWindowBackgroundMaterialRequestV1, UiWindowDecorationsRequestV1,
-    UiWindowStyleMatchV1, UiWindowTargetV1, UiWindowZLevelV1,
+    UiWindowHitTestRequestV1, UiWindowStyleMatchV1, UiWindowTargetV1, UiWindowZLevelV1,
 };
 use fret_runtime::DragHost as _;
 use fret_ui::elements::ElementRuntime;

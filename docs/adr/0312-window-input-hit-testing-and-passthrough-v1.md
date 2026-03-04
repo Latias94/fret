@@ -1,4 +1,4 @@
-# ADR 0312: Window Input Hit Testing and Passthrough v1 (Window-Level + Simple Regions)
+# ADR 0312: Window Input Hit Testing and Passthrough v1 (Window-Level)
 
 Status: Proposed
 
@@ -27,9 +27,8 @@ We want a portable contract that:
 ## Goals
 
 1. Define a portable, capability-gated contract for window-level pointer passthrough.
-2. Add an optional v1 shape vocabulary for simple hit-test regions (rect / rounded-rect / union).
-3. Keep the mechanism layer free of application policy (panel sizing, interaction rules).
-4. Require per-window observability of effective/clamped hit-test policy.
+2. Keep the mechanism layer free of application policy (panel sizing, interaction rules).
+3. Require per-window observability of effective/clamped hit-test policy.
 
 ## Non-goals
 
@@ -55,29 +54,20 @@ click-through utility windows.
 
 - `Normal` (default): window participates in pointer hit testing normally.
 - `PassthroughAll`: the entire window ignores pointer hit testing (click-through).
-- `PassthroughRegions { regions: Vec<WindowHitTestRegionV1> }`: window is passthrough except for
-  the provided interactive regions.
 
-### 3) Define `WindowHitTestRegionV1` (simple shapes only)
+Region-based hit testing is intentionally deferred: v1 focuses on a deterministic, window-level
+contract that can be implemented safely across backends. A follow-up ADR may extend `hit_test`
+with a region vocabulary once the runner plumbing and diagnostics evidence are stable.
 
-Supported region shapes for v1:
-
-- `Rect { x, y, width, height }` (logical pixels in client coordinates)
-- `RRect { x, y, width, height, radius }` (single radius for simplicity)
-
-Regions are interpreted as a union (any match is interactive).
-
-Notes:
-
-- Regions are a best-effort hint; runners may clamp to `Normal` or `PassthroughAll` based on platform.
-- Runners must treat invalid regions (NaN/negative sizes) as empty and report effective/clamped results.
-
-### 4) Capability keys
+### 3) Capability keys
 
 Add capability keys (ADR 0054):
 
 - `ui.window.hit_test.passthrough_all`
 - `ui.window.hit_test.passthrough_regions`
+
+`ui.window.hit_test.passthrough_regions` is reserved for a future region-based extension. Runners
+must report it as unavailable until there is an end-to-end implementation.
 
 Runners must:
 
@@ -111,4 +101,3 @@ Cons:
 - Cross-platform support for region-based hit testing is uneven; v1 must be conservative.
 - Without per-pixel hit testing, some visual designs still require in-window composition to avoid
   "dead zones".
-

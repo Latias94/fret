@@ -160,6 +160,7 @@ pub use runner_window_lifecycle_diagnostics::{
 };
 pub use runner_window_style_diagnostics::{
     RunnerWindowAppearanceV1, RunnerWindowCompositedAlphaSourceV1,
+    RunnerWindowHitTestClampReasonV1, RunnerWindowHitTestSourceV1,
     RunnerWindowStyleDiagnosticsStore, RunnerWindowStyleEffectiveSnapshotV1,
     clamp_background_material_request,
 };
@@ -189,7 +190,8 @@ pub use window_menu_bar_focus::WindowMenuBarFocusService;
 pub use window_metrics::apply_window_metrics_event;
 pub use window_style::{
     ActivationPolicy, MousePolicy, TaskbarVisibility, WindowBackgroundMaterialRequest,
-    WindowDecorationsRequest, WindowOpacity, WindowRole, WindowStyleRequest, WindowZLevel,
+    WindowDecorationsRequest, WindowHitTestRequestV1, WindowOpacity, WindowRole,
+    WindowStyleRequest, WindowZLevel,
 };
 pub use window_text_boundary_mode::{WindowTextBoundaryModeHandle, WindowTextBoundaryModeService};
 pub use window_text_input_snapshot::{

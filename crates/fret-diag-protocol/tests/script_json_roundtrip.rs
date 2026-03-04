@@ -123,6 +123,26 @@ fn script_v1_roundtrip_active_item_is_none_predicate() {
 }
 
 #[test]
+fn script_v1_roundtrip_window_style_effective_hit_test() {
+    assert_script_v1_roundtrip(
+        r#"{
+  "schema_version": 1,
+  "steps": [
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "window_style_effective_is",
+        "window": { "kind": "current" },
+        "style": { "hit_test": "passthrough_all" }
+      },
+      "timeout_frames": 1
+    }
+  ]
+}"#,
+    );
+}
+
+#[test]
 fn script_v2_roundtrip_command_palette_shortcut_primary() {
     assert_script_v2_roundtrip(include_str!(
         "../../../tools/diag-scripts/ui-gallery-command-palette-shortcut-primary.json"

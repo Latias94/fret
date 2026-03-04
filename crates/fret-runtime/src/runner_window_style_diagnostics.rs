@@ -5,7 +5,7 @@ use fret_core::AppWindowId;
 use crate::PlatformCapabilities;
 use crate::window_style::{
     ActivationPolicy, MousePolicy, TaskbarVisibility, WindowBackgroundMaterialRequest,
-    WindowDecorationsRequest, WindowStyleRequest, WindowZLevel,
+    WindowDecorationsRequest, WindowHitTestRequestV1, WindowStyleRequest, WindowZLevel,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -33,6 +33,23 @@ pub enum RunnerWindowAppearanceV1 {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RunnerWindowHitTestSourceV1 {
+    /// No explicit request (defaults apply).
+    Default,
+    /// The caller explicitly requested `hit_test=...`.
+    HitTestFacet,
+    /// Legacy request via `mouse=Passthrough`.
+    LegacyMousePolicy,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RunnerWindowHitTestClampReasonV1 {
+    None,
+    MissingPassthroughAllCapability,
+    MissingPassthroughRegionsCapability,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct RunnerWindowStyleEffectiveSnapshotV1 {
     pub decorations: WindowDecorationsRequest,
     pub resizable: bool,
@@ -49,6 +66,12 @@ pub struct RunnerWindowStyleEffectiveSnapshotV1 {
     /// A derived, user-facing summary of window background appearance facets.
     pub appearance: RunnerWindowAppearanceV1,
     pub background_material: WindowBackgroundMaterialRequest,
+    /// Effective window hit test policy (pointer passthrough).
+    pub hit_test: WindowHitTestRequestV1,
+    /// Last requested hit test policy (pre-clamp), if any.
+    pub hit_test_requested: Option<WindowHitTestRequestV1>,
+    pub hit_test_source: RunnerWindowHitTestSourceV1,
+    pub hit_test_clamp_reason: RunnerWindowHitTestClampReasonV1,
     pub taskbar: TaskbarVisibility,
     pub activation: ActivationPolicy,
     pub z_level: WindowZLevel,
@@ -65,6 +88,10 @@ impl Default for RunnerWindowStyleEffectiveSnapshotV1 {
             visual_transparent: false,
             appearance: RunnerWindowAppearanceV1::Opaque,
             background_material: WindowBackgroundMaterialRequest::None,
+            hit_test: WindowHitTestRequestV1::Normal,
+            hit_test_requested: None,
+            hit_test_source: RunnerWindowHitTestSourceV1::Default,
+            hit_test_clamp_reason: RunnerWindowHitTestClampReasonV1::None,
             taskbar: TaskbarVisibility::Show,
             activation: ActivationPolicy::Activates,
             z_level: WindowZLevel::Normal,
@@ -92,6 +119,42 @@ impl RunnerWindowStyleDiagnosticsStore {
             return RunnerWindowAppearanceV1::CompositedBackdrop;
         }
         RunnerWindowAppearanceV1::CompositedNoBackdrop
+    }
+
+    pub fn clamp_hit_test_request(
+        requested: WindowHitTestRequestV1,
+        caps: &PlatformCapabilities,
+    ) -> (WindowHitTestRequestV1, RunnerWindowHitTestClampReasonV1) {
+        match requested {
+            WindowHitTestRequestV1::Normal => (
+                WindowHitTestRequestV1::Normal,
+                RunnerWindowHitTestClampReasonV1::None,
+            ),
+            WindowHitTestRequestV1::PassthroughAll if caps.ui.window_hit_test_passthrough_all => (
+                WindowHitTestRequestV1::PassthroughAll,
+                RunnerWindowHitTestClampReasonV1::None,
+            ),
+            WindowHitTestRequestV1::PassthroughAll => (
+                WindowHitTestRequestV1::Normal,
+                RunnerWindowHitTestClampReasonV1::MissingPassthroughAllCapability,
+            ),
+        }
+    }
+
+    fn requested_hit_test_from_request(
+        requested: WindowStyleRequest,
+    ) -> Option<(WindowHitTestRequestV1, RunnerWindowHitTestSourceV1)> {
+        if let Some(hit_test) = requested.hit_test {
+            return Some((hit_test, RunnerWindowHitTestSourceV1::HitTestFacet));
+        }
+        if matches!(requested.mouse, Some(MousePolicy::Passthrough)) {
+            // Back-compat mapping: window-level mouse passthrough is treated as hit-test passthrough.
+            return Some((
+                WindowHitTestRequestV1::PassthroughAll,
+                RunnerWindowHitTestSourceV1::LegacyMousePolicy,
+            ));
+        }
+        None
     }
 
     pub fn effective_snapshot(
@@ -167,6 +230,14 @@ impl RunnerWindowStyleDiagnosticsStore {
             || matches!(requested.transparent, Some(true));
         next.appearance =
             Self::derive_appearance(next.surface_composited_alpha, next.background_material);
+
+        if let Some((hit_test, source)) = Self::requested_hit_test_from_request(requested) {
+            next.hit_test_requested = Some(hit_test);
+            let (effective, clamp_reason) = Self::clamp_hit_test_request(hit_test, caps);
+            next.hit_test = effective;
+            next.hit_test_source = source;
+            next.hit_test_clamp_reason = clamp_reason;
+        }
 
         if let Some(taskbar) = requested.taskbar {
             next.taskbar = if taskbar == TaskbarVisibility::Hide && !caps.ui.window_skip_taskbar {
@@ -282,6 +353,23 @@ impl RunnerWindowStyleDiagnosticsStore {
                 current.surface_composited_alpha,
                 current.background_material,
             );
+        }
+
+        if let Some(hit_test) = patch.hit_test {
+            current.hit_test_requested = Some(hit_test);
+            let (effective, clamp_reason) = Self::clamp_hit_test_request(hit_test, caps);
+            current.hit_test = effective;
+            current.hit_test_source = RunnerWindowHitTestSourceV1::HitTestFacet;
+            current.hit_test_clamp_reason = clamp_reason;
+        } else if let Some(mouse) = patch.mouse
+            && matches!(mouse, MousePolicy::Passthrough)
+        {
+            let requested = WindowHitTestRequestV1::PassthroughAll;
+            current.hit_test_requested = Some(requested);
+            let (effective, clamp_reason) = Self::clamp_hit_test_request(requested, caps);
+            current.hit_test = effective;
+            current.hit_test_source = RunnerWindowHitTestSourceV1::LegacyMousePolicy;
+            current.hit_test_clamp_reason = clamp_reason;
         }
 
         if let Some(taskbar) = patch.taskbar {
@@ -475,6 +563,67 @@ mod tests {
         assert_eq!(
             have.appearance,
             RunnerWindowAppearanceV1::CompositedNoBackdrop
+        );
+    }
+
+    #[test]
+    fn legacy_mouse_passthrough_maps_to_hit_test_passthrough_all() {
+        let caps = PlatformCapabilities::default();
+        let mut store = RunnerWindowStyleDiagnosticsStore::default();
+        let w = window(5);
+
+        store.record_window_open(
+            w,
+            WindowStyleRequest {
+                mouse: Some(MousePolicy::Passthrough),
+                ..Default::default()
+            },
+            &caps,
+        );
+        let have = store.effective_snapshot(w).unwrap();
+        assert_eq!(have.hit_test, WindowHitTestRequestV1::PassthroughAll);
+        assert_eq!(
+            have.hit_test_requested,
+            Some(WindowHitTestRequestV1::PassthroughAll)
+        );
+        assert_eq!(
+            have.hit_test_source,
+            RunnerWindowHitTestSourceV1::LegacyMousePolicy
+        );
+        assert_eq!(
+            have.hit_test_clamp_reason,
+            RunnerWindowHitTestClampReasonV1::None
+        );
+    }
+
+    #[test]
+    fn hit_test_passthrough_all_degrades_when_unsupported() {
+        let mut caps = PlatformCapabilities::default();
+        caps.ui.window_hit_test_passthrough_all = false;
+
+        let mut store = RunnerWindowStyleDiagnosticsStore::default();
+        let w = window(6);
+        store.record_window_open(
+            w,
+            WindowStyleRequest {
+                hit_test: Some(WindowHitTestRequestV1::PassthroughAll),
+                ..Default::default()
+            },
+            &caps,
+        );
+        let have = store.effective_snapshot(w).unwrap();
+        assert_eq!(have.hit_test, WindowHitTestRequestV1::Normal);
+        assert_eq!(
+            have.hit_test_requested,
+            Some(WindowHitTestRequestV1::PassthroughAll)
+        );
+        assert_eq!(
+            have.hit_test_source,
+            RunnerWindowHitTestSourceV1::HitTestFacet
+        );
+        assert_eq!(
+            have.hit_test_clamp_reason,
+            RunnerWindowHitTestClampReasonV1::MissingPassthroughAllCapability
         );
     }
 }
