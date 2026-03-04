@@ -13,6 +13,8 @@ This crate intentionally favors:
 - **Official**: boring, stable, onboarding-friendly; should compile fast and avoid optional subsystems.
 - **Lab**: higher ceiling; feature-gated to keep cold compile time down.
 
+Full index (Bevy-style table of contents): [apps/fret-cookbook/EXAMPLES.md](./EXAMPLES.md)
+
 ## Recommended order (boring ladder)
 
 Start with these before jumping into the UI Gallery:
