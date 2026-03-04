@@ -42,7 +42,9 @@ Goal: create a lightweight, user-facing cookbook that does not pull “everythin
 
 - [x] Create a new crate for cookbook examples: `apps/fret-cookbook`.
   - [x] Put focused runnable examples under Cargo `examples/`.
-  - [~] Keep deps minimal; prefer `fret` + ecosystem surfaces (avoid backend crates unless the example is about that boundary).
+  - [x] Keep deps minimal; prefer `fret` + ecosystem surfaces (avoid backend crates unless the example is about that boundary).
+  - [x] Add a Bevy-style index page for discoverability:
+    - [`apps/fret-cookbook/EXAMPLES.md`](../../../apps/fret-cookbook/EXAMPLES.md)
 - [ ] Implement the “Stage 0–2” ladder examples as `examples/`:
   - [x] `hello`
   - [x] `simple-todo`
@@ -60,6 +62,10 @@ Goal: create a lightweight, user-facing cookbook that does not pull “everythin
   - [x] markdown + code (`markdown_and_code_basics`)
   - [x] effects layer basics (`effects_layer_basics`)
   - [x] chart interactions basics (`chart_interactions_basics`)
+  - [x] toast basics (`toast_basics`)
+  - [x] date picker basics (`date_picker_basics`)
+  - [x] form basics (`form_basics`)
+  - [x] drag basics (`drag_basics`)
 
 Gates:
 
