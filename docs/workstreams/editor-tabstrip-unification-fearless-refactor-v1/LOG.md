@@ -54,6 +54,11 @@ This file is a short, append-only log of landings and decisions for this workstr
   - Code: `ecosystem/fret-ui-headless/src/tab_strip_hit_test.rs`
   - Re-export: `ecosystem/fret-ui-kit/src/headless/tab_strip_arbitration.rs`
   - Wired in: `ecosystem/fret-docking/src/dock/hit_test.rs`
+- Added a docking diag gate for “overflow menu row close does not activate or drag” and asserted the tab is removed from the dock graph.
+  - Protocol predicate: `crates/fret-diag-protocol/src/lib.rs` (`dock_graph_signature_not_contains`)
+  - Predicate wiring: `ecosystem/fret-bootstrap/src/ui_diagnostics/predicates.rs`
+  - Harness anchor: `dock-arb-tab-overflow-menu-row-close-anchor-left-1`
+  - Script: `tools/diag-scripts/docking/arbitration/docking-arbitration-demo-tab-overflow-menu-close-row-1-does-not-activate.json`
 
 ## Next (proposed)
 

@@ -37,6 +37,13 @@ This workstream is intentionally scoped to “editor-grade tab UX”:
     - `tools/diag-scripts/docking/arbitration/docking-arbitration-demo-tab-overflow-menu-select-row-1-activates.json`
   - [x] Docking: close button does not activate inactive tab:
     - `tools/diag-scripts/docking/arbitration/docking-arbitration-demo-tab-close-button-does-not-activate.json`
+  - [x] Docking: overflow menu row close does not activate or drag:
+    - `tools/diag-scripts/docking/arbitration/docking-arbitration-demo-tab-overflow-menu-close-row-1-does-not-activate.json`
+    - Predicates:
+      - `dock_drag_active_is active=false`
+      - `dock_floating_drag_active_is active=false`
+      - `dock_graph_signature_contains needle=\"tabs(a=0:\"` (active unchanged)
+      - `dock_graph_signature_not_contains needle=\"demo.viewport.right\"` (tab closed)
   - [x] Workspace: close button does not start a tab drag:
     - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-button-does-not-start-drag.json`
     - Predicates:
