@@ -9,7 +9,7 @@ use fret_ui::action::{OnActivate, OnDismissRequest, PressablePointerDownResult};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, InsetStyle, LayoutStyle, Length, MainAlign,
     Overflow, PositionStyle, PressableProps, RingStyle, RovingFlexProps, RovingFocusProps,
-    ScrollAxis, ScrollProps, SizeStyle,
+    ScrollAxis, ScrollProps, SemanticsDecoration, SizeStyle,
 };
 use fret_ui::elements::GlobalElementId;
 use fret_ui::overlay_placement::{Align, Side};
@@ -1930,6 +1930,7 @@ impl DropdownMenu {
                     });
 
             if overlay_presence.present {
+                let hide_semantics_when_closed = !overlay_presence.interactive;
                 let align = self.align;
                 let align_offset = self.align_offset;
                 let side = self.side;
@@ -3221,6 +3222,14 @@ impl DropdownMenu {
                             )]
                         },
                     );
+                    let content = if hide_semantics_when_closed {
+                        content.attach_semantics(SemanticsDecoration {
+                            hidden: Some(true),
+                            ..Default::default()
+                        })
+                    } else {
+                        content
+                    };
                     content_focus_id_for_children.set(Some(content_id));
                     cx.key_on_key_down_for(
                         content_id,
