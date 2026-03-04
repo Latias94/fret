@@ -71,6 +71,8 @@ pub mod effects_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod embedded_viewport_demo;
 pub mod emoji_conformance_demo;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod empty_idle_demo;
 pub mod error_bars_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod external_texture_imports_demo;
