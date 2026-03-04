@@ -12,8 +12,8 @@ use fret_ui_kit::headless::tab_strip_arbitration;
 
 use crate::tab_drag::DRAG_KIND_WORKSPACE_TAB;
 
-use super::drag_state::WorkspaceTabStripDragState;
 use super::consts::{TAB_CHROME_PAD_RIGHT, TAB_CLOSE_SIZE};
+use super::drag_state::WorkspaceTabStripDragState;
 use super::intent::{WorkspaceTabStripIntent, dispatch_intent};
 use super::kernel::WorkspaceTabStripDropTarget;
 

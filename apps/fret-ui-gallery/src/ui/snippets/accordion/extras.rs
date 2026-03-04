@@ -126,25 +126,21 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             .test_id("ui-gallery-accordion-extras-card")
     };
 
-    let rtl = fret_ui_kit::primitives::direction::with_direction_provider(
-        cx,
-        fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
-        |cx| {
-            shadcn::Accordion::single_uncontrolled(Some("item-1"))
-                .collapsible(true)
-                .refine_layout(max_w_xl.clone())
-                .items([shadcn::AccordionItem::new(
-                    "item-1",
-                    shadcn::AccordionTrigger::new(vec![cx.text("RTL")])
-                        .test_id("ui-gallery-accordion-extras-rtl-trigger"),
-                    shadcn::AccordionContent::new(vec![shadcn::typography::p(
-                        cx,
-                        "Ensure icons and spacing mirror correctly under RTL.",
-                    )]),
-                )])
-                .into_element(cx)
-        },
-    );
+    let rtl = with_direction_provider(cx, LayoutDirection::Rtl, |cx| {
+        shadcn::Accordion::single_uncontrolled(Some("item-1"))
+            .collapsible(true)
+            .refine_layout(max_w_xl.clone())
+            .items([shadcn::AccordionItem::new(
+                "item-1",
+                shadcn::AccordionTrigger::new(vec![cx.text("RTL")])
+                    .test_id("ui-gallery-accordion-extras-rtl-trigger"),
+                shadcn::AccordionContent::new(vec![shadcn::typography::p(
+                    cx,
+                    "Ensure icons and spacing mirror correctly under RTL.",
+                )]),
+            )])
+            .into_element(cx)
+    });
 
     let multiple = stack::vstack(
         cx,

@@ -54,7 +54,7 @@ pub fn render<H: UiHost>(
     let rtl = shadcn::Slider::new_controllable(cx, None, || vec![75.0])
         .range(0.0, 100.0)
         .step(1.0)
-        .dir(fret_ui_kit::primitives::direction::LayoutDirection::Rtl)
+        .dir(LayoutDirection::Rtl)
         .test_id("ui-gallery-slider-rtl")
         .a11y_label("RTL slider")
         .refine_layout(max_width_xs.clone())

@@ -2,6 +2,7 @@ use std::cell::Cell;
 use std::rc::Rc;
 use std::sync::{Arc, Mutex};
 
+use crate::LayoutDirection;
 use fret_core::{Color, Corners, Edges, FontId, FontWeight, Px, SemanticsRole, TextStyle};
 use fret_icons::ids;
 use fret_runtime::Model;
@@ -21,7 +22,6 @@ use fret_ui_kit::declarative::motion::{
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::combobox as kit_combobox;
 use fret_ui_kit::primitives::controllable_state;
-use fret_ui_kit::primitives::direction as direction_prim;
 use fret_ui_kit::primitives::popover as radix_popover;
 use fret_ui_kit::primitives::popper;
 use fret_ui_kit::{
@@ -1481,15 +1481,16 @@ fn combobox_with_patch<H: UiHost>(
                         let selected = selected_for_trigger.clone();
                         let show_trigger = show_trigger_for_trigger;
                         control_chrome_pressable_with_id_props(cx, |cx, st, trigger_id| {
-                            *focus_restore_target
-                                .lock()
-                                .unwrap_or_else(|e| e.into_inner()) = Some(trigger_id);
-                            let mut states = WidgetStates::from_pressable(cx, st, enabled);
-                            states.set(WidgetState::Open, is_open);
+	                            *focus_restore_target
+	                                .lock()
+	                                .unwrap_or_else(|e| e.into_inner()) = Some(trigger_id);
+	                            let mut states = WidgetStates::from_pressable(cx, st, enabled);
+	                            states.set(WidgetState::Open, is_open);
+	                            let dir = crate::use_direction(cx, None);
 
-                            let bg_ref = resolve_override_slot(
-                                style_override.trigger_background.as_ref(),
-                                &default_trigger_bg,
+	                            let bg_ref = resolve_override_slot(
+	                                style_override.trigger_background.as_ref(),
+	                                &default_trigger_bg,
                                 states,
                             );
                             let fg_ref = resolve_override_slot(
@@ -1571,12 +1572,14 @@ fn combobox_with_patch<H: UiHost>(
                                     layout.size = trigger_layout.size;
                                     layout
                                 },
-                                padding: Edges {
-                                    top: pad_top,
-                                    right: pad_right,
-                                    bottom: pad_bottom,
-                                    left: pad_left,
-                                }.into(),
+                                padding: crate::rtl::padding_edges_with_inline_start_end(
+                                    dir,
+                                    pad_top,
+                                    pad_bottom,
+                                    pad_left,
+                                    pad_right,
+                                )
+                                .into(),
                                 background: Some(bg),
                                 shadow: None,
                                 border: Edges::all(border_w),
@@ -1800,14 +1803,14 @@ fn combobox_with_patch<H: UiHost>(
                                         )
                                         });
 
-                                        let mut out = vec![label_el];
-                                        if let Some(right) = right {
-                                            out.push(right);
-                                        }
-                                        out
-                                    },
-                                )]
-                            })
+	                                        crate::rtl::vec_main_with_inline_end(
+	                                            dir,
+	                                            label_el,
+	                                            right,
+	                                        )
+	                                    },
+	                                )]
+	                            })
                         })
                     },
                     move |cx| {
@@ -2234,15 +2237,16 @@ fn combobox_with_patch<H: UiHost>(
                 let query_model = query_model_for_trigger.clone();
                 let selected = selected_for_trigger.clone();
                 control_chrome_pressable_with_id_props(cx, |cx, st, trigger_id| {
-                    *focus_restore_target
-                        .lock()
-                        .unwrap_or_else(|e| e.into_inner()) = Some(trigger_id);
-                    let mut states = WidgetStates::from_pressable(cx, st, enabled);
-                    states.set(WidgetState::Open, is_open);
+	                    *focus_restore_target
+	                        .lock()
+	                        .unwrap_or_else(|e| e.into_inner()) = Some(trigger_id);
+	                    let mut states = WidgetStates::from_pressable(cx, st, enabled);
+	                    states.set(WidgetState::Open, is_open);
+	                    let dir = crate::use_direction(cx, None);
 
-                    let bg_ref = resolve_override_slot(
-                        style_override.trigger_background.as_ref(),
-                        &default_trigger_bg,
+	                    let bg_ref = resolve_override_slot(
+	                        style_override.trigger_background.as_ref(),
+	                        &default_trigger_bg,
                         states,
                     );
                     let fg_ref = resolve_override_slot(
@@ -2318,12 +2322,14 @@ fn combobox_with_patch<H: UiHost>(
 
                     let chrome_props = ContainerProps {
                         layout: LayoutStyle::default(),
-                        padding: Edges {
-                            top: pad_top,
-                            right: pad_right,
-                            bottom: pad_bottom,
-                            left: pad_left,
-                        }.into(),
+                        padding: crate::rtl::padding_edges_with_inline_start_end(
+                            dir,
+                            pad_top,
+                            pad_bottom,
+                            pad_left,
+                            pad_right,
+                        )
+                        .into(),
                         background: Some(bg),
                         shadow: None,
                         border: Edges::all(border_w),
@@ -2508,14 +2514,10 @@ fn combobox_with_patch<H: UiHost>(
                                 )
                                 });
 
-                                let mut out = vec![label_el];
-                                if let Some(right) = right {
-                                    out.push(right);
-                                }
-                                out
-                            },
-                        )]
-                    })
+	                                crate::rtl::vec_main_with_inline_end(dir, label_el, right)
+	                            },
+	                        )]
+	                    })
                 })
             },
                 move |cx, anchor| {
@@ -2545,7 +2547,7 @@ fn combobox_with_patch<H: UiHost>(
                         fret_ui::Invalidation::Layout,
                         window_margin,
                     );
-                    let direction = direction_prim::use_direction_in_scope(cx, None);
+                    let direction = crate::use_direction(cx, None);
                     let placement = combobox_content_placement(
                         direction,
                         content_side,
@@ -2918,7 +2920,7 @@ fn combobox_with_patch<H: UiHost>(
 }
 
 fn combobox_content_placement(
-    direction: direction_prim::LayoutDirection,
+    direction: LayoutDirection,
     side: popper::Side,
     align: popper::Align,
     side_offset: Px,
@@ -2949,7 +2951,7 @@ mod tests {
     #[test]
     fn combobox_content_placement_tracks_offsets() {
         let placement = combobox_content_placement(
-            direction_prim::LayoutDirection::Ltr,
+            LayoutDirection::Ltr,
             popper::Side::Top,
             popper::Align::Start,
             Px(6.0),

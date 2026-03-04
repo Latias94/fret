@@ -20,7 +20,10 @@ mod tests {
 
     #[test]
     fn tab_close_hit_test_matches_expected_rect() {
-        let bounds = Rect::new(Point::new(px(20.0), px(10.0)), Size::new(px(100.0), px(24.0)));
+        let bounds = Rect::new(
+            Point::new(px(20.0), px(10.0)),
+            Size::new(px(100.0), px(24.0)),
+        );
         let close_size = px(18.0);
         let padding_right = px(6.0);
 
@@ -44,4 +47,3 @@ mod tests {
         );
     }
 }
-

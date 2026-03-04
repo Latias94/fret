@@ -49,6 +49,17 @@ pub struct ImageRegistry {
     images: SlotMap<ImageId, ImageEntry>,
 }
 
+fn estimate_texture_bytes(size: (u32, u32), format: wgpu::TextureFormat) -> u64 {
+    let (w, h) = size;
+    let (bw, bh) = format.block_dimensions();
+    let block_bytes = format.block_copy_size(None).unwrap_or(16) as u64;
+    let blocks_w = u64::from(w).div_ceil(u64::from(bw.max(1)));
+    let blocks_h = u64::from(h).div_ceil(u64::from(bh.max(1)));
+    blocks_w
+        .saturating_mul(blocks_h)
+        .saturating_mul(block_bytes)
+}
+
 impl ImageRegistry {
     pub fn register(&mut self, desc: ImageDescriptor) -> ImageId {
         debug_assert_eq!(
@@ -100,6 +111,17 @@ impl ImageRegistry {
 
     pub(crate) fn size_px(&self, id: ImageId) -> Option<(u32, u32)> {
         self.images.get(id).map(|t| t.size)
+    }
+
+    pub(crate) fn diagnostics_estimated_bytes(&self) -> (u64, u64, u64) {
+        let mut total: u64 = 0;
+        let mut max: u64 = 0;
+        for entry in self.images.values() {
+            let bytes = estimate_texture_bytes(entry.size, entry.format);
+            total = total.saturating_add(bytes);
+            max = max.max(bytes);
+        }
+        (self.images.len() as u64, total, max)
     }
 }
 

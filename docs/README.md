@@ -9,6 +9,19 @@ New to the repo? Start with:
 - Setup (native: toolchain + OS deps + fast builds): [docs/setup.md](./setup.md)
 - Examples index (templates + cookbook + gallery + labs): [docs/examples/README.md](./examples/README.md)
 
+## Command conventions (docs)
+
+Unless a document says otherwise:
+
+- Run commands from the repository root.
+- Prefer the workspace runner: `cargo run -p fretboard -- ...`
+  - Example (cookbook): `cargo run -p fretboard -- dev native --example simple_todo`
+  - Example (native demo bin): `cargo run -p fretboard -- dev native --bin todo_demo`
+- Some maintainer/labs docs reference the broad harness app directly:
+  - `cargo run -p fret-demo --bin <name>`
+  - This is not the first-hour onboarding path; start from [docs/first-hour.md](./first-hour.md) and
+    [docs/examples/README.md](./examples/README.md) instead.
+
 ## Sources of Truth
 
 - Progress: `docs/roadmap.md` and `docs/shadcn-declarative-progress.md`
@@ -92,7 +105,7 @@ so the default authoring story lives in ecosystem crates.
 - Action-first authoring + view runtime (v1, available now):
   - Workstream: `docs/workstreams/action-first-authoring-fearless-refactor-v1/DESIGN.md`
   - ADRs: `docs/adr/0307-action-registry-and-typed-action-dispatch-v1.md`, `docs/adr/0308-view-authoring-runtime-and-hooks-v1.md`
-  - Template entry points: `fretboard new hello`, `fretboard new todo`, `fretboard new simple-todo`
+  - Template entry points: `cargo run -p fretboard -- new hello`, `cargo run -p fretboard -- new todo`, `cargo run -p fretboard -- new simple-todo`
 - Recommended building blocks:
   - View runtime + hooks + typed unit actions (golden path): `ecosystem/fret` (`View`, `ViewCx`, `fret::actions!`)
   - Derived state (selectors/computed): `ecosystem/fret-selector`

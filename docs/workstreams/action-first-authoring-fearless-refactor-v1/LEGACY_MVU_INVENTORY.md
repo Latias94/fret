@@ -66,7 +66,6 @@ Recommendation:
 Examples that use `fret::mvu::app(...)` or implement `MvuProgram` include (non-exhaustive):
 
 - `apps/fret-examples/src/todo_demo.rs`
-- `apps/fret-examples/src/router_query_demo.rs`
 - `apps/fret-examples/src/query_demo.rs`
 - `apps/fret-examples/src/query_async_tokio_demo.rs`
 - `apps/fret-examples/src/hello_counter_demo.rs`

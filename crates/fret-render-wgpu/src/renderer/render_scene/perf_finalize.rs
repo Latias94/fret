@@ -558,6 +558,8 @@ impl Renderer {
             .path_material_paints_degraded_to_solid_base
             .saturating_add(frame_perf.path_material_paints_degraded_to_solid_base);
 
+        let registry_est = self.gpu_resources.diagnostics_estimated_bytes();
+
         self.last_frame_perf = Some(RenderPerfSnapshot {
             frames: frame_perf.frames,
             encode_scene_us: frame_perf.encode_scene.as_micros() as u64,
@@ -623,6 +625,12 @@ impl Renderer {
             intermediate_pool_evictions: frame_perf.intermediate_pool_evictions,
             intermediate_pool_free_bytes: frame_perf.intermediate_pool_free_bytes,
             intermediate_pool_free_textures: frame_perf.intermediate_pool_free_textures,
+            gpu_images_live: registry_est.images_live,
+            gpu_images_bytes_estimate: registry_est.images_bytes_estimate,
+            gpu_images_max_bytes_estimate: registry_est.images_max_bytes_estimate,
+            gpu_render_targets_live: registry_est.render_targets_live,
+            gpu_render_targets_bytes_estimate: registry_est.render_targets_bytes_estimate,
+            gpu_render_targets_max_bytes_estimate: registry_est.render_targets_max_bytes_estimate,
             render_plan_estimated_peak_intermediate_bytes: frame_perf
                 .render_plan_estimated_peak_intermediate_bytes,
             render_plan_segments: frame_perf.render_plan_segments,

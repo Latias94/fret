@@ -256,7 +256,10 @@ pub fn textarea<H: UiHost>(
     };
 
     let mut chrome = TextAreaStyle::default();
-    chrome.padding_x = resolved.padding.left;
+    chrome.padding_x = crate::rtl::padding_x_from_physical_edges_max(
+        resolved.padding.left,
+        resolved.padding.right,
+    );
     // shadcn/ui `Textarea` uses `py-2` (while `Input` uses `py-1`), so prefer a textarea-specific
     // padding intent here rather than reusing input padding wholesale.
     chrome.padding_y = fret_ui_kit::MetricRef::space(Space::N2).resolve(&theme);

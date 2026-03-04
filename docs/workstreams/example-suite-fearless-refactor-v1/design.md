@@ -77,8 +77,8 @@ concept.
 Canonical discovery + run commands:
 
 ```bash
-fretboard list cookbook-examples
-fretboard dev native --example overlay_basics
+cargo run -p fretboard -- list cookbook-examples
+cargo run -p fretboard -- dev native --example overlay_basics
 ```
 
 Notes:
@@ -271,8 +271,8 @@ Recommended direction: start with (1) to reduce duplication, then migrate to (2)
 small “official” list surfaced by default:
 
 ```bash
-fretboard list native-demos
-fretboard list native-demos --all
+cargo run -p fretboard -- list native-demos
+cargo run -p fretboard -- list native-demos --all
 ```
 
 ## Quality bars (what makes an example “official”)

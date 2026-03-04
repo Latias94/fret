@@ -13,41 +13,48 @@ This crate intentionally favors:
 - **Official**: boring, stable, onboarding-friendly; should compile fast and avoid optional subsystems.
 - **Lab**: higher ceiling; feature-gated to keep cold compile time down.
 
+Full index (Bevy-style table of contents): [apps/fret-cookbook/EXAMPLES.md](./EXAMPLES.md)
+
 ## Recommended order (boring ladder)
 
 Start with these before jumping into the UI Gallery:
 
 ```bash
-cargo run -p fret-cookbook --example hello
-cargo run -p fret-cookbook --example simple_todo
-cargo run -p fret-cookbook --example overlay_basics
-cargo run -p fret-cookbook --example text_input_basics
-cargo run -p fret-cookbook --example commands_keymap_basics
+cargo run -p fretboard -- dev native --example hello
+cargo run -p fretboard -- dev native --example simple_todo
+cargo run -p fretboard -- dev native --example overlay_basics
+cargo run -p fretboard -- dev native --example text_input_basics
+cargo run -p fretboard -- dev native --example commands_keymap_basics
 ```
 
 Then pick a topic:
 
 - State + derived state: `virtual_list_basics`, `undo_basics` (feature-gated), `async_inbox_basics` (feature-gated)
+- Queries (feature-gated): `query_basics`
+- Routing (feature-gated): `router_basics`
 - Theming + assets: `theme_switching_basics`, `icons_and_assets_basics` (feature-gated)
+- App patterns: `toast_basics`, `form_basics`, `date_picker_basics`, `drag_basics`
 - Rendering/effects: `effects_layer_basics`, `customv1_basics` (feature-gated)
 - Interop (higher ceiling): `embedded_viewport_basics` (feature-gated), `external_texture_import_basics` (feature-gated), `docking_basics` (feature-gated)
 
 ## Run (native)
 
 ```bash
-cargo run -p fret-cookbook --example hello
-cargo run -p fret-cookbook --example simple_todo
-cargo run -p fret-cookbook --example hello_counter
-cargo run -p fret-cookbook --example overlay_basics
-cargo run -p fret-cookbook --example commands_keymap_basics
-cargo run -p fret-cookbook --example text_input_basics
-cargo run -p fret-cookbook --example effects_layer_basics
-cargo run -p fret-cookbook --example theme_switching_basics
+cargo run -p fretboard -- dev native --example hello
+cargo run -p fretboard -- dev native --example simple_todo
+cargo run -p fretboard -- dev native --example hello_counter
+cargo run -p fretboard -- dev native --example overlay_basics
+cargo run -p fretboard -- dev native --example commands_keymap_basics
+cargo run -p fretboard -- dev native --example text_input_basics
+cargo run -p fretboard -- dev native --example effects_layer_basics
+cargo run -p fretboard -- dev native --example theme_switching_basics
 ```
 
 ## Optional feature-gated examples
 
 Some examples are kept behind Cargo features to reduce cold compile time.
+Tip: if you run examples via `fretboard dev native --example <name>`, `fretboard` will auto-enable
+required cookbook features for known Lab examples and print what it enabled.
 
 - Official (keep it boring):
   - `cargo run -p fret-cookbook --example hello`
@@ -66,6 +73,10 @@ Some examples are kept behind Cargo features to reduce cold compile time.
     - `cargo run -p fret-cookbook --features cookbook-undo --example undo_basics`
   - Async inbox / dispatcher:
     - `cargo run -p fret-cookbook --features cookbook-async --example async_inbox_basics`
+  - Query basics:
+    - `cargo run -p fret-cookbook --features cookbook-query --example query_basics`
+  - Router basics:
+    - `cargo run -p fret-cookbook --features cookbook-router --example router_basics`
   - IMUI + GenUI interop:
     - `cargo run -p fret-cookbook --features cookbook-imui --example imui_action_basics`
   - Docking:
@@ -89,7 +100,8 @@ Some examples are kept behind Cargo features to reduce cold compile time.
 Notes:
 
 - The recommended golden path examples use the view runtime + typed actions.
-- Some advanced/legacy examples still use MVU for now; see
+- Cookbook examples intentionally avoid teaching legacy MVU. The legacy MVU inventory applies to
+  maintainer demos (non-onboarding):
   [docs/workstreams/action-first-authoring-fearless-refactor-v1/LEGACY_MVU_INVENTORY.md](../../docs/workstreams/action-first-authoring-fearless-refactor-v1/LEGACY_MVU_INVENTORY.md).
 
 ## Diagnostics (optional)

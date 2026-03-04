@@ -1908,7 +1908,10 @@ dependencies = [
  "fret-imui",
  "fret-launch",
  "fret-markdown",
+ "fret-query",
  "fret-render",
+ "fret-router",
+ "fret-router-ui",
  "fret-runtime",
  "fret-ui",
  "fret-ui-assets",
@@ -1916,6 +1919,7 @@ dependencies = [
  "fret-undo",
  "glam 0.30.10",
  "serde_json",
+ "time",
  "wgpu",
 ]
 

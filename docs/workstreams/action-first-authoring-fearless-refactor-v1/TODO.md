@@ -248,11 +248,11 @@ ID format:
 - [x] AFA-adopt-043 Update `fretboard` scaffold templates to prefer action-first patterns (once v1 is stable).
   - Rule: do not ship two different default paradigms in templates.
   - Status (as of 2026-03-03):
-    - `fretboard new hello` uses View runtime + typed unit actions:
+    - `cargo run -p fretboard -- new hello` uses View runtime + typed unit actions:
       `apps/fretboard/src/scaffold/templates.rs` (`hello_template_main_rs`)
-    - `fretboard new todo` uses View runtime + typed unit actions + selector/query hooks:
+    - `cargo run -p fretboard -- new todo` uses View runtime + typed unit actions + selector/query hooks:
       `apps/fretboard/src/scaffold/templates.rs` (`todo_template_main_rs`)
-    - `fretboard new simple-todo` uses View runtime + typed unit actions:
+    - `cargo run -p fretboard -- new simple-todo` uses View runtime + typed unit actions:
       `apps/fretboard/src/scaffold/templates.rs` (`simple_todo_template_main_rs`)
 
 ---

@@ -64,6 +64,27 @@
       "target_hints": []
     },
     {
+      "id": "cookbook-assets-reload-epoch-basics-smoke",
+      "path": "tools/diag-scripts/cookbook/assets-reload-epoch-basics/cookbook-assets-reload-epoch-basics-smoke.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "cookbook-assets-reload-epoch-basics"
+      ],
+      "tags": [
+        "assets",
+        "cookbook",
+        "cookbook.assets_reload_epoch_basics",
+        "smoke"
+      ],
+      "target_hints": [
+        "Waits for the root + status badges to exist.",
+        "Clicks the reload epoch button and captures a screenshot + bundle."
+      ]
+    },
+    {
       "id": "cookbook-async-inbox-basics-smoke",
       "path": "tools/diag-scripts/cookbook/async-inbox-basics/cookbook-async-inbox-basics-smoke.json",
       "required_capabilities": [
@@ -142,6 +163,27 @@
       ]
     },
     {
+      "id": "cookbook-compositing-alpha-basics-baseline",
+      "path": "tools/diag-scripts/cookbook/compositing-alpha-basics/cookbook-compositing-alpha-basics-baseline.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "cookbook-compositing-alpha-basics"
+      ],
+      "tags": [
+        "cookbook",
+        "cookbook.compositing_alpha_basics",
+        "renderer",
+        "screenshots"
+      ],
+      "target_hints": [
+        "Waits a short time for image registration to settle.",
+        "Captures a baseline screenshot + bundle for alpha compositing semantics."
+      ]
+    },
+    {
       "id": "cookbook-customv1-basics-smoke",
       "path": "tools/diag-scripts/cookbook/customv1-basics/cookbook-customv1-basics-smoke.json",
       "required_capabilities": [
@@ -165,6 +207,44 @@
       ]
     },
     {
+      "id": "cookbook-data-table-basics-baseline",
+      "path": "tools/diag-scripts/cookbook/data-table-basics/cookbook-data-table-basics-baseline.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "cookbook-data-table-basics"
+      ],
+      "tags": [
+        "cookbook",
+        "cookbook.data_table_basics",
+        "screenshots",
+        "table"
+      ],
+      "target_hints": [
+        "Waits for the root + table slot to exist.",
+        "Captures a baseline screenshot + bundle."
+      ]
+    },
+    {
+      "id": "cookbook-date-picker-basics-smoke",
+      "path": "tools/diag-scripts/cookbook/date-picker-basics/cookbook-date-picker-basics-smoke.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "cookbook-date-picker-basics"
+      ],
+      "tags": [
+        "cookbook",
+        "date_picker_basics",
+        "smoke"
+      ],
+      "target_hints": []
+    },
+    {
       "id": "cookbook-docking-basics-smoke",
       "path": "tools/diag-scripts/cookbook/docking-basics/cookbook-docking-basics-smoke.json",
       "required_capabilities": [
@@ -181,6 +261,44 @@
         "smoke"
       ],
       "target_hints": []
+    },
+    {
+      "id": "cookbook-drag-basics-smoke",
+      "path": "tools/diag-scripts/cookbook/drag-basics/cookbook-drag-basics-smoke.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "cookbook-drag-basics"
+      ],
+      "tags": [
+        "cookbook",
+        "drag_basics",
+        "pointer_capture",
+        "smoke"
+      ],
+      "target_hints": []
+    },
+    {
+      "id": "cookbook-drop-shadow-basics-baseline",
+      "path": "tools/diag-scripts/cookbook/drop-shadow-basics/cookbook-drop-shadow-basics-baseline.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "cookbook-drop-shadow-basics"
+      ],
+      "tags": [
+        "cookbook",
+        "cookbook.drop_shadow_basics",
+        "renderer",
+        "screenshots"
+      ],
+      "target_hints": [
+        "Waits for the root to exist, then captures a baseline screenshot + bundle."
+      ]
     },
     {
       "id": "cookbook-effects-layer-basics-screenshots",
@@ -249,6 +367,24 @@
         "Switches the target size preset and asserts numeric semantics update.",
         "Captures a screenshot + diagnostics bundle."
       ]
+    },
+    {
+      "id": "cookbook-form-basics-smoke",
+      "path": "tools/diag-scripts/cookbook/form-basics/cookbook-form-basics-smoke.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "cookbook-form-basics"
+      ],
+      "tags": [
+        "cookbook",
+        "form_basics",
+        "smoke",
+        "validation"
+      ],
+      "target_hints": []
     },
     {
       "id": "cookbook-gizmo-basics-smoke",
@@ -333,6 +469,27 @@
       ],
       "target_hints": [
         "Validates that icon + asset panels mount and that the reload epoch button is wired."
+      ]
+    },
+    {
+      "id": "cookbook-image-asset-cache-basics-baseline",
+      "path": "tools/diag-scripts/cookbook/image-asset-cache-basics/cookbook-image-asset-cache-basics-baseline.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "cookbook-image-asset-cache-basics"
+      ],
+      "tags": [
+        "assets",
+        "cookbook",
+        "cookbook.image_asset_cache_basics",
+        "screenshots"
+      ],
+      "target_hints": [
+        "Waits briefly for the first upload to settle.",
+        "Captures a baseline screenshot + bundle."
       ]
     },
     {
@@ -424,6 +581,52 @@
       ]
     },
     {
+      "id": "cookbook-query-basics-baseline",
+      "path": "tools/diag-scripts/cookbook/query-basics/cookbook-query-basics-baseline.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "cookbook-query-basics"
+      ],
+      "tags": [
+        "cookbook",
+        "cookbook.query_basics",
+        "query",
+        "screenshots",
+        "smoke"
+      ],
+      "target_hints": [
+        "Waits for the root to exist.",
+        "Waits for the query to reach Success.",
+        "Captures a baseline screenshot + bundle."
+      ]
+    },
+    {
+      "id": "cookbook-router-basics-smoke",
+      "path": "tools/diag-scripts/cookbook/router-basics/cookbook-router-basics-smoke.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "cookbook-router-basics"
+      ],
+      "tags": [
+        "cookbook",
+        "cookbook.router_basics",
+        "router",
+        "screenshots",
+        "smoke"
+      ],
+      "target_hints": [
+        "Waits for the root to exist.",
+        "Navigates to Settings and back.",
+        "Captures a screenshot + bundle."
+      ]
+    },
+    {
       "id": "cookbook-simple-todo-smoke",
       "path": "tools/diag-scripts/cookbook/simple-todo/cookbook-simple-todo-smoke.json",
       "required_capabilities": [
@@ -481,6 +684,24 @@
         "Waits for the example root to exist.",
         "Captures Light and Dark screenshots + bundle."
       ]
+    },
+    {
+      "id": "cookbook-toast-basics-smoke",
+      "path": "tools/diag-scripts/cookbook/toast-basics/cookbook-toast-basics-smoke.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "cookbook-toast-basics"
+      ],
+      "tags": [
+        "cookbook",
+        "smoke",
+        "sonner",
+        "toast_basics"
+      ],
+      "target_hints": []
     },
     {
       "id": "cookbook-undo-basics-smoke",
@@ -1965,6 +2186,24 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-breadcrumb-rtl-screenshot",
+      "path": "tools/diag-scripts/ui-gallery/breadcrumb/ui-gallery-breadcrumb-rtl-screenshot.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-rtl-smoke"
+      ],
+      "tags": [
+        "breadcrumb",
+        "rtl",
+        "screenshots",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-button-group-size-screenshots-zinc-light-dark",
       "path": "tools/diag-scripts/ui-gallery/button/ui-gallery-button-group-size-screenshots-zinc-light-dark.json",
       "required_capabilities": [
@@ -2004,6 +2243,28 @@
         "ui_gallery"
       ],
       "target_hints": []
+    },
+    {
+      "id": "ui-gallery-button-rtl-row-screenshots",
+      "path": "tools/diag-scripts/ui-gallery/button/ui-gallery-button-rtl-row-screenshots.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-rtl-smoke"
+      ],
+      "tags": [
+        "button",
+        "rtl",
+        "screenshots",
+        "shadcn",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Navigates to the Button page via the left nav search.",
+        "Scrolls the docs scaffold to the RTL section and captures a screenshot + bundle."
+      ]
     },
     {
       "id": "ui-gallery-button-with-icon-non-overlap",
@@ -2590,6 +2851,19 @@
         "tabs",
         "ui_gallery"
       ],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-checkbox-rtl-and-checked-wrap",
+      "path": "tools/diag-scripts/ui-gallery/checkbox/ui-gallery-checkbox-rtl-and-checked-wrap.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-rtl-smoke"
+      ],
+      "tags": [],
       "target_hints": []
     },
     {
@@ -3250,6 +3524,29 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-combobox-rtl-open-screenshot",
+      "path": "tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-rtl-open-screenshot.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-rtl-smoke"
+      ],
+      "tags": [
+        "combobox",
+        "rtl",
+        "screenshots",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Navigates to the Combobox page.",
+        "Opens the RTL combobox trigger.",
+        "Captures a screenshot to validate inline-end mirroring for padding/trailing chrome."
+      ]
+    },
+    {
       "id": "ui-gallery-combobox-typeahead-commit-banana",
       "path": "tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-typeahead-commit-banana.json",
       "required_capabilities": [
@@ -3261,6 +3558,29 @@
       ],
       "tags": [],
       "target_hints": []
+    },
+    {
+      "id": "ui-gallery-command-rtl-screenshot",
+      "path": "tools/diag-scripts/ui-gallery/command/ui-gallery-command-rtl-screenshot.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-rtl-smoke"
+      ],
+      "tags": [
+        "command",
+        "rtl",
+        "screenshot",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Navigates to the Command page.",
+        "Scrolls to the RTL CommandPalette snippet.",
+        "Captures a screenshot to validate inline-start/end mirroring for the search icon + padding."
+      ]
     },
     {
       "id": "ui-gallery-context-menu-basic-keyboard-nav",
@@ -3340,6 +3660,29 @@
       ],
       "tags": [],
       "target_hints": []
+    },
+    {
+      "id": "ui-gallery-context-menu-rtl-open-screenshot",
+      "path": "tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-rtl-open-screenshot.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-rtl-smoke"
+      ],
+      "tags": [
+        "context_menu",
+        "rtl",
+        "screenshots",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Navigates to the Context Menu page.",
+        "Right-clicks the RTL trigger.",
+        "Captures a screenshot to validate inline-start/end padding and submenu chevron mirroring."
+      ]
     },
     {
       "id": "ui-gallery-control-chrome-button-group-text-w-fit",
@@ -3995,6 +4338,29 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-input-group-rtl-screenshot",
+      "path": "tools/diag-scripts/ui-gallery/input/ui-gallery-input-group-rtl-screenshot.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-rtl-smoke"
+      ],
+      "tags": [
+        "input_group",
+        "rtl",
+        "screenshots",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Navigates to the InputGroup page.",
+        "Scrolls to the RTL section.",
+        "Captures a screenshot to validate leading/trailing slot mirroring."
+      ]
+    },
+    {
       "id": "ui-gallery-input-group-text-non-overlap",
       "path": "tools/diag-scripts/ui-gallery/input/ui-gallery-input-group-text-non-overlap.json",
       "required_capabilities": [],
@@ -4421,6 +4787,29 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-menubar-rtl-open-screenshot",
+      "path": "tools/diag-scripts/ui-gallery/menubar/ui-gallery-menubar-rtl-open-screenshot.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-rtl-smoke"
+      ],
+      "tags": [
+        "menubar",
+        "rtl",
+        "screenshots",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Navigates to the Menubar page.",
+        "Opens the RTL \"file\" menu.",
+        "Captures a screenshot to validate shortcut trailing alignment and submenu chevron mirroring."
+      ]
+    },
+    {
       "id": "ui-gallery-modal-barrier-focus-restore",
       "path": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-modal-barrier-focus-restore.json",
       "required_capabilities": [],
@@ -4462,6 +4851,29 @@
       ],
       "tags": [],
       "target_hints": []
+    },
+    {
+      "id": "ui-gallery-native-select-rtl-open-screenshot",
+      "path": "tools/diag-scripts/ui-gallery/native-select/ui-gallery-native-select-rtl-open-screenshot.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-rtl-smoke"
+      ],
+      "tags": [
+        "native-select",
+        "rtl",
+        "screenshots",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Navigates to the NativeSelect page.",
+        "Opens the RTL NativeSelect trigger.",
+        "Captures a screenshot to validate inline-end mirroring for padding/chevron."
+      ]
     },
     {
       "id": "ui-gallery-navigation-menu-docs-smoke",
@@ -4511,6 +4923,30 @@
         "Open NavigationMenu content and move keyboard focus into the viewport.",
         "Press Escape to close while focus is inside the content.",
         "Ensure hover pointer-move does not immediately re-open after Escape dismissal."
+      ]
+    },
+    {
+      "id": "ui-gallery-navigation-menu-rtl-open-screenshot",
+      "path": "tools/diag-scripts/ui-gallery/navigation-menu/ui-gallery-navigation-menu-rtl-open-screenshot.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-rtl-smoke"
+      ],
+      "tags": [
+        "navigation_menu",
+        "overlay",
+        "rtl",
+        "screenshot",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Navigates to the Navigation Menu page.",
+        "Opens the RTL NavigationMenu components trigger.",
+        "Captures a screenshot to validate inline-start/end mirroring for viewport padding/content."
       ]
     },
     {
@@ -4964,6 +5400,29 @@
       ],
       "tags": [],
       "target_hints": []
+    },
+    {
+      "id": "ui-gallery-select-rtl-open-screenshot",
+      "path": "tools/diag-scripts/ui-gallery/select/ui-gallery-select-rtl-open-screenshot.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-rtl-smoke"
+      ],
+      "tags": [
+        "rtl",
+        "screenshots",
+        "select",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Navigates to the Select page.",
+        "Opens the RTL Select trigger.",
+        "Captures a screenshot to validate chevron/indicator inline-end mirroring and padding."
+      ]
     },
     {
       "id": "ui-gallery-select-typeahead-commit-banana",

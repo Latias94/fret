@@ -25,28 +25,24 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let name = name_model(cx);
     let max_w = LayoutRefinement::default().w_full().max_w(Px(420.0));
 
-    fret_ui_kit::primitives::direction::with_direction_provider(
-        cx,
-        fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
-        move |cx| {
-            stack::vstack(
-                cx,
-                stack::VStackProps::default()
-                    .gap(Space::N2)
-                    .items_start()
-                    .layout(max_w.clone()),
-                |cx| {
-                    vec![
-                        shadcn::Label::new("الاسم الكامل").into_element(cx),
-                        shadcn::Input::new(name)
-                            .placeholder("اكتب هنا")
-                            .a11y_label("الاسم الكامل")
-                            .into_element(cx),
-                    ]
-                },
-            )
-        },
-    )
+    with_direction_provider(cx, LayoutDirection::Rtl, move |cx| {
+        stack::vstack(
+            cx,
+            stack::VStackProps::default()
+                .gap(Space::N2)
+                .items_start()
+                .layout(max_w.clone()),
+            |cx| {
+                vec![
+                    shadcn::Label::new("الاسم الكامل").into_element(cx),
+                    shadcn::Input::new(name)
+                        .placeholder("اكتب هنا")
+                        .a11y_label("الاسم الكامل")
+                        .into_element(cx),
+                ]
+            },
+        )
+    })
     .test_id("ui-gallery-label-rtl")
 }
 // endregion: example

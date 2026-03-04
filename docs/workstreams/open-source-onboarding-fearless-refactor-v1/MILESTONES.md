@@ -15,7 +15,7 @@ Definition of done:
 
 - Cookbook has an explicit “Official ladder” and hides Lab examples behind features.
 - UI gallery defaults to a lite catalog and compiles without dev/material3 dependencies unless opted in.
-- Diagnostics is presented as optional, with exactly one copy/paste walkthrough (`hello`).
+- Diagnostics is presented as optional, with a copy/paste walkthrough (`hello`) and a boring follow-up (`simple_todo`).
 
 ## M2 — Dependency + feature audit (polish)
 
@@ -24,4 +24,3 @@ Definition of done:
 - `ecosystem/fret` default features are audited and documented, with a clear “minimal vs app vs batteries”
   story.
 - README code samples are confirmed current (or replaced with a minimal compile-tested snippet).
-

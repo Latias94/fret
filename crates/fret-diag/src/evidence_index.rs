@@ -57,6 +57,20 @@ fn resource_footprint_summary(path: &Path) -> Option<serde_json::Value> {
         .and_then(|v| v.get("peak_working_set_bytes"))
         .and_then(|v| v.as_u64());
 
+    let macos_physical_footprint_bytes = v
+        .get("macos_vmmap")
+        .and_then(|v| v.get("physical_footprint_bytes"))
+        .and_then(|v| v.as_u64());
+    let macos_physical_footprint_peak_bytes = v
+        .get("macos_vmmap")
+        .and_then(|v| v.get("physical_footprint_peak_bytes"))
+        .and_then(|v| v.as_u64());
+    let macos_owned_unmapped_memory_dirty_bytes = v
+        .get("macos_vmmap")
+        .and_then(|v| v.get("regions"))
+        .and_then(|v| v.get("owned_unmapped_memory_dirty_bytes"))
+        .and_then(|v| v.as_u64());
+
     Some(serde_json::json!({
         "pid": pid,
         "wall_time_ms": wall_time_ms,
@@ -66,6 +80,41 @@ fn resource_footprint_summary(path: &Path) -> Option<serde_json::Value> {
         "cpu_usage_percent_avg": cpu_usage_pct_avg,
         "working_set_bytes": working_set_bytes,
         "peak_working_set_bytes": peak_working_set_bytes,
+        "macos_physical_footprint_bytes": macos_physical_footprint_bytes,
+        "macos_physical_footprint_peak_bytes": macos_physical_footprint_peak_bytes,
+        "macos_owned_unmapped_memory_dirty_bytes": macos_owned_unmapped_memory_dirty_bytes,
+    }))
+}
+
+fn bundle_stats_summary_from_path(path: &Path) -> Option<serde_json::Value> {
+    let v = crate::read_json_value(path)?;
+    let windows = v.get("windows").and_then(|v| v.as_array())?;
+    let first_window = windows.first()?;
+    let snapshots = first_window.get("snapshots").and_then(|v| v.as_array())?;
+    let last_snapshot = snapshots.last()?;
+    let stats = last_snapshot
+        .get("debug")
+        .and_then(|v| v.get("stats"))
+        .and_then(|v| v.as_object())?;
+
+    let get_u64 = |k: &str| stats.get(k).and_then(|v| v.as_u64());
+    let get_bool = |k: &str| stats.get(k).and_then(|v| v.as_bool());
+
+    Some(serde_json::json!({
+        "bundle_schema_version": v.get("schema_version").and_then(|v| v.as_u64()),
+        "window": first_window.get("window").and_then(|v| v.as_u64()),
+        "tick_id": last_snapshot.get("tick_id").and_then(|v| v.as_u64()),
+        "frame_id": last_snapshot.get("frame_id").and_then(|v| v.as_u64()),
+        "wgpu_allocator_tick_id": get_u64("wgpu_allocator_tick_id"),
+        "wgpu_allocator_frame_id": get_u64("wgpu_allocator_frame_id"),
+        "wgpu_allocator_report_present": get_bool("wgpu_allocator_report_present"),
+        "wgpu_allocator_total_allocated_bytes": get_u64("wgpu_allocator_total_allocated_bytes"),
+        "wgpu_allocator_total_reserved_bytes": get_u64("wgpu_allocator_total_reserved_bytes"),
+        "wgpu_metal_current_allocated_size_present": get_bool("wgpu_metal_current_allocated_size_present"),
+        "wgpu_metal_current_allocated_size_bytes": get_u64("wgpu_metal_current_allocated_size_bytes"),
+        "renderer_intermediate_peak_in_use_bytes": get_u64("renderer_intermediate_peak_in_use_bytes"),
+        "renderer_gpu_images_bytes_estimate": get_u64("renderer_gpu_images_bytes_estimate"),
+        "renderer_gpu_render_targets_bytes_estimate": get_u64("renderer_gpu_render_targets_bytes_estimate"),
     }))
 }
 
@@ -105,6 +154,7 @@ pub(crate) fn write_evidence_index(
     add_file("repro.summary", "repro.summary.json");
     add_file("repro.zip", "repro.zip");
     add_file("resource.footprint", "resource.footprint.json");
+    add_file("resource.vmmap_summary", "resource.vmmap_summary.txt");
     add_file("redraw_hitches", "redraw_hitches.log");
     add_file("renderdoc.captures", "renderdoc.captures.json");
     add_file("tracy.note", "tracy.note.md");
@@ -149,12 +199,23 @@ pub(crate) fn write_evidence_index(
     }
 
     let footprint = artifacts_root.join("resource.footprint.json");
+    let bundle_stats = summary_json
+        .and_then(|v| {
+            v.get("selected_bundle_json")
+                .or_else(|| v.get("packed_bundle_json"))
+        })
+        .and_then(|v| v.as_str())
+        .map(PathBuf::from)
+        .filter(|p| p.is_file())
+        .and_then(|p| bundle_stats_summary_from_path(&p));
+
     let resources = serde_json::json!({
         "process_footprint": if footprint.is_file() {
             resource_footprint_summary(&footprint)
         } else {
             None
         },
+        "bundle_last_frame_stats": bundle_stats,
     });
 
     let payload = serde_json::json!({

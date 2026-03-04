@@ -2,6 +2,13 @@
 
 This checklist exists to keep IME behavior "editor-grade" as the component surface scales.
 
+> [!NOTE]
+> Maintainer/labs document.
+>
+> This checklist uses the `apps/fret-demo` harness and is not part of the first-hour onboarding
+> path. For onboarding, start with [docs/first-hour.md](./first-hour.md) and
+> [docs/examples/README.md](./examples/README.md).
+
 Target platform for this checklist:
 
 - Windows 11 + Microsoft Pinyin (微软拼音)
@@ -37,4 +44,3 @@ Run a harness:
 5. Commit and cancel:
    - Verify commit replaces selection (if any) and clears the preedit state.
    - Verify cancel clears the preedit state without mutating the underlying model text.
-

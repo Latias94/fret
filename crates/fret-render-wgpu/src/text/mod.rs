@@ -339,9 +339,15 @@ enum GlyphAtlasInsertError {
 }
 
 struct GlyphAtlas {
+    device: wgpu::Device,
+    atlas_bind_group_layout: wgpu::BindGroupLayout,
+    atlas_sampler: wgpu::Sampler,
+    label_prefix: String,
     width: u32,
     height: u32,
     padding_px: u32,
+    format: wgpu::TextureFormat,
+    max_pages: usize,
     pages: Vec<GlyphAtlasPage>,
     glyphs: HashMap<GlyphKey, GlyphAtlasEntry>,
     revision: u64,
@@ -359,60 +365,37 @@ impl GlyphAtlas {
         width: u32,
         height: u32,
         format: wgpu::TextureFormat,
-        page_count: usize,
+        initial_pages: usize,
+        max_pages: usize,
     ) -> Self {
         let padding_px = 1;
-        let mut pages: Vec<GlyphAtlasPage> = Vec::with_capacity(page_count.max(1));
+        let max_pages = max_pages.max(1);
+        let initial_pages = initial_pages.min(max_pages);
+        let mut pages: Vec<GlyphAtlasPage> = Vec::with_capacity(max_pages);
 
-        for i in 0..page_count.max(1) {
-            let texture = device.create_texture(&wgpu::TextureDescriptor {
-                label: Some(&format!("{label_prefix} page {i}")),
-                size: wgpu::Extent3d {
-                    width,
-                    height,
-                    depth_or_array_layers: 1,
-                },
-                mip_level_count: 1,
-                sample_count: 1,
-                dimension: wgpu::TextureDimension::D2,
+        for i in 0..initial_pages {
+            pages.push(Self::create_page(
+                device,
+                atlas_bind_group_layout,
+                atlas_sampler,
+                label_prefix,
+                width,
+                height,
                 format,
-                usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
-                view_formats: &[],
-            });
-
-            let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
-            let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-                label: Some(&format!("{label_prefix} bind group page {i}")),
-                layout: atlas_bind_group_layout,
-                entries: &[
-                    wgpu::BindGroupEntry {
-                        binding: 0,
-                        resource: wgpu::BindingResource::Sampler(atlas_sampler),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 1,
-                        resource: wgpu::BindingResource::TextureView(&view),
-                    },
-                ],
-            });
-
-            pages.push(GlyphAtlasPage {
-                allocator: etagere::BucketedAtlasAllocator::new(etagere::Size::new(
-                    width as i32,
-                    height as i32,
-                )),
-                pending: Vec::new(),
-                live_glyph_refs: 0,
-                last_used_epoch: 0,
-                bind_group,
-                _texture: texture,
-            });
+                i,
+            ));
         }
 
         Self {
+            device: device.clone(),
+            atlas_bind_group_layout: atlas_bind_group_layout.clone(),
+            atlas_sampler: atlas_sampler.clone(),
+            label_prefix: label_prefix.to_string(),
             width,
             height,
             padding_px,
+            format,
+            max_pages,
             pages,
             glyphs: HashMap::new(),
             revision: 0,
@@ -420,6 +403,78 @@ impl GlyphAtlas {
             perf_frame: GlyphAtlasFramePerf::default(),
             perf: GlyphAtlasPerfStats::default(),
         }
+    }
+
+    fn create_page(
+        device: &wgpu::Device,
+        atlas_bind_group_layout: &wgpu::BindGroupLayout,
+        atlas_sampler: &wgpu::Sampler,
+        label_prefix: &str,
+        width: u32,
+        height: u32,
+        format: wgpu::TextureFormat,
+        i: usize,
+    ) -> GlyphAtlasPage {
+        let texture = device.create_texture(&wgpu::TextureDescriptor {
+            label: Some(&format!("{label_prefix} page {i}")),
+            size: wgpu::Extent3d {
+                width,
+                height,
+                depth_or_array_layers: 1,
+            },
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: wgpu::TextureDimension::D2,
+            format,
+            usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
+            view_formats: &[],
+        });
+
+        let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
+        let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some(&format!("{label_prefix} bind group page {i}")),
+            layout: atlas_bind_group_layout,
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: wgpu::BindingResource::Sampler(atlas_sampler),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: wgpu::BindingResource::TextureView(&view),
+                },
+            ],
+        });
+
+        GlyphAtlasPage {
+            allocator: etagere::BucketedAtlasAllocator::new(etagere::Size::new(
+                width as i32,
+                height as i32,
+            )),
+            pending: Vec::new(),
+            live_glyph_refs: 0,
+            last_used_epoch: 0,
+            bind_group,
+            _texture: texture,
+        }
+    }
+
+    fn try_grow_pages(&mut self) -> bool {
+        if self.pages.len() >= self.max_pages {
+            return false;
+        }
+        let i = self.pages.len();
+        self.pages.push(Self::create_page(
+            &self.device,
+            &self.atlas_bind_group_layout,
+            &self.atlas_sampler,
+            &self.label_prefix,
+            self.width,
+            self.height,
+            self.format,
+            i,
+        ));
+        true
     }
 
     fn begin_frame_diagnostics(&mut self) {
@@ -430,7 +485,7 @@ impl GlyphAtlas {
         let pages = self.pages.len() as u32;
         let capacity_px = u64::from(self.width)
             .saturating_mul(u64::from(self.height))
-            .saturating_mul(u64::from(pages.max(1)));
+            .saturating_mul(u64::from(pages));
         fret_core::RendererGlyphAtlasPerfSnapshot {
             width: self.width,
             height: self.height,
@@ -481,6 +536,10 @@ impl GlyphAtlas {
     }
 
     fn bind_group(&self, page: u16) -> &wgpu::BindGroup {
+        assert!(
+            !self.pages.is_empty(),
+            "glyph atlas has no pages; bind_group() is only valid after at least one insert"
+        );
         let idx = (page as usize).min(self.pages.len().saturating_sub(1));
         &self.pages[idx].bind_group
     }
@@ -741,7 +800,19 @@ impl GlyphAtlas {
 
         let size = etagere::Size::new(w_pad as i32, h_pad as i32);
 
-        for _ in 0..=self.pages.len() {
+        if self.pages.is_empty() && !self.try_grow_pages() {
+            self.perf_frame.out_of_space = self.perf_frame.out_of_space.saturating_add(1);
+            return Err(GlyphAtlasInsertError::OutOfSpace);
+        }
+
+        let mut guard = 0_u32;
+        loop {
+            guard = guard.saturating_add(1);
+            if guard >= 128 {
+                self.perf_frame.out_of_space = self.perf_frame.out_of_space.saturating_add(1);
+                return Err(GlyphAtlasInsertError::OutOfSpace);
+            }
+
             for (page_index, page) in self.pages.iter_mut().enumerate() {
                 let Some(allocation) = page.allocator.allocate(size) else {
                     continue;
@@ -798,6 +869,9 @@ impl GlyphAtlas {
                 return Ok(entry);
             }
 
+            if self.try_grow_pages() {
+                continue;
+            }
             if self.evict_lru_unreferenced_glyph() {
                 continue;
             }
@@ -807,9 +881,6 @@ impl GlyphAtlas {
             self.perf_frame.out_of_space = self.perf_frame.out_of_space.saturating_add(1);
             return Err(GlyphAtlasInsertError::OutOfSpace);
         }
-
-        self.perf_frame.out_of_space = self.perf_frame.out_of_space.saturating_add(1);
-        Err(GlyphAtlasInsertError::OutOfSpace)
     }
 }
 
@@ -1125,6 +1196,7 @@ impl TextSystem {
             atlas_height,
             wgpu::TextureFormat::R8Unorm,
             TEXT_ATLAS_MAX_PAGES,
+            TEXT_ATLAS_MAX_PAGES,
         );
         let color_atlas = GlyphAtlas::new(
             device,
@@ -1134,6 +1206,7 @@ impl TextSystem {
             atlas_width,
             atlas_height,
             wgpu::TextureFormat::Rgba8UnormSrgb,
+            0,
             TEXT_ATLAS_MAX_PAGES,
         );
         let subpixel_atlas = GlyphAtlas::new(
@@ -1144,6 +1217,7 @@ impl TextSystem {
             atlas_width,
             atlas_height,
             wgpu::TextureFormat::Rgba8Unorm,
+            0,
             TEXT_ATLAS_MAX_PAGES,
         );
 

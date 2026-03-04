@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use crate::button::{ButtonVariant, variant_colors};
+use crate::rtl;
 use fret_core::{
     Axis, Color, Corners, Edges, FontId, FontWeight, MouseButton, Px, SemanticsRole, TextOverflow,
     TextWrap,
@@ -479,6 +480,7 @@ impl InputGroup {
                 ..Default::default()
             },
             |cx| {
+                let dir = crate::use_direction(cx, None);
                 let build_inline_addon = |cx: &mut ElementContext<'_, H>,
                                           children: Vec<AnyElement>,
                                           is_start: bool,
@@ -487,22 +489,41 @@ impl InputGroup {
                                           control_focus_target: Option<
                     fret_ui::elements::GlobalElementId,
                 >| {
-                    let mut layout = LayoutRefinement::default().flex_none().order(if is_start {
-                        -1
+                    let (order_inline_start, order_inline_end) =
+                        rtl::inline_start_end_pair(dir, -1, 1);
+                    let order = if is_start {
+                        order_inline_start
                     } else {
-                        1
-                    });
+                        order_inline_end
+                    };
+                    let mut layout = LayoutRefinement::default().flex_none().order(order);
                     if has_button {
                         layout = if is_start {
-                            layout.ml_neg(Space::N2)
+                            rtl::layout_refinement_apply_margin_inline_start_neg(
+                                layout,
+                                dir,
+                                Space::N2,
+                            )
                         } else {
-                            layout.mr_neg(Space::N2)
+                            rtl::layout_refinement_apply_margin_inline_end_neg(
+                                layout,
+                                dir,
+                                Space::N2,
+                            )
                         };
                     } else if has_kbd {
                         layout = if is_start {
-                            layout.ml_neg(Space::N1p5)
+                            rtl::layout_refinement_apply_margin_inline_start_neg(
+                                layout,
+                                dir,
+                                Space::N1p5,
+                            )
                         } else {
-                            layout.mr_neg(Space::N1p5)
+                            rtl::layout_refinement_apply_margin_inline_end_neg(
+                                layout,
+                                dir,
+                                Space::N1p5,
+                            )
                         };
                     }
 
@@ -515,19 +536,21 @@ impl InputGroup {
                     };
 
                     let padding = if is_start {
-                        Edges {
-                            top: addon_py,
-                            right: Px(0.0),
-                            bottom: addon_py,
-                            left: addon_pl,
-                        }
+                        rtl::padding_edges_with_inline_start_end(
+                            dir,
+                            addon_py,
+                            addon_py,
+                            addon_pl,
+                            Px(0.0),
+                        )
                     } else {
-                        Edges {
-                            top: addon_py,
-                            right: addon_pl,
-                            bottom: addon_py,
-                            left: Px(0.0),
-                        }
+                        rtl::padding_edges_with_inline_start_end(
+                            dir,
+                            addon_py,
+                            addon_py,
+                            Px(0.0),
+                            addon_pl,
+                        )
                     };
 
                     let should_click_to_focus = control_focus_target.is_some() && !has_button;
@@ -675,25 +698,32 @@ impl InputGroup {
                 if is_block_layout {
                     let control_el = match control {
                         InputGroupControlKind::Input => {
-                            let left_pad = if leading.is_empty() {
-                                resolved.padding.left
+                            let (resolved_pad_inline_start, resolved_pad_inline_end) =
+                                rtl::inline_start_end_pair(
+                                    dir,
+                                    resolved.padding.left,
+                                    resolved.padding.right,
+                                );
+                            let pad_inline_start = if leading.is_empty() {
+                                resolved_pad_inline_start
                             } else {
                                 compact_px
                             };
-                            let right_pad = if trailing.is_empty() {
-                                resolved.padding.right
+                            let pad_inline_end = if trailing.is_empty() {
+                                resolved_pad_inline_end
                             } else {
                                 compact_px
                             };
 
                             let mut chrome =
                                 TextInputStyle::from_theme(Theme::global(&*cx.app).snapshot());
-                            chrome.padding = Edges {
-                                top: resolved.padding.top,
-                                right: right_pad,
-                                bottom: resolved.padding.bottom,
-                                left: left_pad,
-                            };
+                            chrome.padding = rtl::padding_edges_with_inline_start_end(
+                                dir,
+                                resolved.padding.top,
+                                resolved.padding.bottom,
+                                pad_inline_start,
+                                pad_inline_end,
+                            );
                             chrome.corner_radii = Corners::all(Px(0.0));
                             chrome.border = Edges::all(Px(0.0));
                             chrome.background = Color::TRANSPARENT;
@@ -730,7 +760,10 @@ impl InputGroup {
                         }
                         InputGroupControlKind::Textarea => {
                             let mut chrome = TextAreaStyle::default();
-                            chrome.padding_x = resolved.padding.left;
+                            chrome.padding_x = rtl::padding_x_from_physical_edges_max(
+                                resolved.padding.left,
+                                resolved.padding.right,
+                            );
                             chrome.padding_y = textarea_py;
                             chrome.background = Color::TRANSPARENT;
                             chrome.border = Edges::all(Px(0.0));
@@ -990,24 +1023,31 @@ impl InputGroup {
                     let overlay = build_wrapper_motion_overlay(cx, control_id);
                     vec![layout, overlay]
                 } else {
-                    let left_pad = if leading.is_empty() {
-                        resolved.padding.left
+                    let (resolved_pad_inline_start, resolved_pad_inline_end) =
+                        rtl::inline_start_end_pair(
+                            dir,
+                            resolved.padding.left,
+                            resolved.padding.right,
+                        );
+                    let pad_inline_start = if leading.is_empty() {
+                        resolved_pad_inline_start
                     } else {
                         compact_px
                     };
-                    let right_pad = if trailing.is_empty() {
-                        resolved.padding.right
+                    let pad_inline_end = if trailing.is_empty() {
+                        resolved_pad_inline_end
                     } else {
                         compact_px
                     };
 
                     let mut chrome = TextInputStyle::from_theme(Theme::global(&*cx.app).snapshot());
-                    chrome.padding = Edges {
-                        top: resolved.padding.top,
-                        right: right_pad,
-                        bottom: resolved.padding.bottom,
-                        left: left_pad,
-                    };
+                    chrome.padding = rtl::padding_edges_with_inline_start_end(
+                        dir,
+                        resolved.padding.top,
+                        resolved.padding.bottom,
+                        pad_inline_start,
+                        pad_inline_end,
+                    );
                     chrome.corner_radii = Corners::all(Px(0.0));
                     chrome.border = Edges::all(Px(0.0));
                     chrome.background = Color::TRANSPARENT;

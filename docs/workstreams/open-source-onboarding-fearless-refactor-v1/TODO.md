@@ -2,7 +2,7 @@
 
 ## Examples surface
 
-- [ ] Verify the “boring ladder” ordering still matches the fastest-to-understand path:
+- [x] Verify the “boring ladder” ordering still matches the fastest-to-understand path:
   templates → cookbook → gallery → labs.
 - [x] Ensure onboarding docs use GitHub-clickable links (avoid bare relative paths).
 - [x] Audit `README.md` “Quick Start” commands to ensure they still run on `main`.
@@ -25,11 +25,11 @@
 
 ## Default feature surfaces (dependency audit)
 
-- [ ] Audit `ecosystem/fret` default features vs “just build an app” expectation:
-  - Confirm `default = ["desktop", "app"]` is the right story.
+- [x] Audit `ecosystem/fret` default features vs “just build an app” expectation:
+  - [x] Keep `default = ["desktop", "app"]` (desktop + shadcn).
   - [x] Keep `diagnostics` opt-in (`app` excludes it; `batteries` includes it).
-- [x] Keep selector/query helpers opt-in (`state` is separate from `app`).
-  - Confirm `shadcn` is the minimum “pleasant” baseline for first-time apps.
+  - [x] Keep selector/query helpers opt-in (`state` is separate from `app`).
+  - [x] Treat `shadcn` as the minimum “pleasant” baseline for first-time apps.
 - [x] Keep `fretboard new` templates boring: do not enable `fret/diagnostics` by default.
 - [x] Audit `apps/` runnable targets and make sure the recommended ones do not pull in heavy optional stacks.
   - Onboarding: `fret-cookbook` examples (no optional features by default).

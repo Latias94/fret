@@ -60,8 +60,8 @@ Need help choosing the right example entry point (templates vs cookbook vs galle
 ### 1) Run a lightweight cookbook example (recommended)
 
 ```bash
-cargo run -p fret-cookbook --example hello
-cargo run -p fret-cookbook --example simple_todo
+cargo run -p fretboard -- dev native --example hello
+cargo run -p fretboard -- dev native --example simple_todo
 ```
 
 ### 2) Generate a new native app scaffold
@@ -87,6 +87,12 @@ Discover runnable targets:
 ```bash
 cargo run -p fretboard -- list cookbook-examples
 cargo run -p fretboard -- list web-demos
+```
+
+Run a cookbook example (this runner auto-enables known feature-gated Lab examples):
+
+```bash
+cargo run -p fretboard -- dev native --example query_basics
 ```
 
 Maintainer native demo bins (from `apps/fret-demo`, not the onboarding path):
@@ -125,15 +131,15 @@ mod act {
     fret::actions!([Add = "app.todo.add.v1"]);
 }
 
-fn main() -> fret::Result<()> {
-    FretApp::new("todo")
-        .window("todo", (560.0, 520.0))
-        .run_view::<TodoView>()
-}
-```
-
-```rust
 struct TodoView;
+
+fn install_app(app: &mut App) {
+    shadcn::shadcn_themes::apply_shadcn_new_york(
+        app,
+        shadcn::shadcn_themes::ShadcnBaseColor::Slate,
+        shadcn::shadcn_themes::ShadcnColorScheme::Light,
+    );
+}
 
 impl View for TodoView {
     fn init(_app: &mut App, _window: AppWindowId) -> Self {
@@ -154,19 +160,31 @@ impl View for TodoView {
             }
         });
 
-        ui::v_flex(cx, |cx| {
-            ui::children![cx;
-                shadcn::Input::new(draft)
-                    .a11y_label("New task")
-                    .placeholder("Add a task…")
-                    .submit_command(act::Add.into()),
-                shadcn::Button::new("Add").disabled(!enabled).action(act::Add),
-            ]
-        })
-        .gap(Space::N3)
-        .into_element(cx)
-        .into()
+        let input = shadcn::Input::new(draft.clone())
+            .a11y_label("New task")
+            .placeholder("Add a task…")
+            .submit_command(act::Add.into())
+            .into_element(cx);
+
+        let add_btn = shadcn::Button::new("Add")
+            .disabled(!enabled)
+            .action(act::Add)
+            .into_element(cx);
+
+        ui::h_flex(cx, |_cx| [input, add_btn])
+            .gap(Space::N2)
+            .items_center()
+            .into_element(cx)
+            .into()
     }
+}
+
+fn main() -> fret::Result<()> {
+    FretApp::new("todo")
+        .window("todo", (560.0, 520.0))
+        .config_files(false)
+        .install_app(install_app)
+        .run_view::<TodoView>()
 }
 ```
 

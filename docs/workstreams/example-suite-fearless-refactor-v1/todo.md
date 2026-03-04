@@ -42,11 +42,15 @@ Goal: create a lightweight, user-facing cookbook that does not pull “everythin
 
 - [x] Create a new crate for cookbook examples: `apps/fret-cookbook`.
   - [x] Put focused runnable examples under Cargo `examples/`.
-  - [~] Keep deps minimal; prefer `fret` + ecosystem surfaces (avoid backend crates unless the example is about that boundary).
-- [ ] Implement the “Stage 0–2” ladder examples as `examples/`:
+  - [x] Keep deps minimal; prefer `fret` + ecosystem surfaces (avoid backend crates unless the example is about that boundary).
+  - [x] Add a Bevy-style index page for discoverability:
+    - [`apps/fret-cookbook/EXAMPLES.md`](../../../apps/fret-cookbook/EXAMPLES.md)
+- [x] Implement the “Stage 0–2” ladder surfaces (cookbook + templates):
   - [x] `hello`
   - [x] `simple-todo`
-  - [ ] `todo` (or keep as template-only, but ensure the runnable “golden” stays obvious)
+  - [x] `todo` stays template-only (not a cookbook example); keep the golden path obvious via:
+    - `cargo run -p fretboard -- new todo --name my-todo`
+    - [`docs/examples/todo-app-golden-path.md`](../../examples/todo-app-golden-path.md)
 - [ ] Add 6–12 focused cookbook examples (App Track):
   - [x] overlays basics (`overlay_basics`)
   - [x] commands + keymap (`commands_keymap_basics`)
@@ -54,12 +58,21 @@ Goal: create a lightweight, user-facing cookbook that does not pull “everythin
   - [x] text input basics (`text_input_basics`)
   - [x] theme switching (`theme_switching_basics`)
   - [x] icons + assets budgets (`icons_and_assets_basics`)
+  - [x] assets reload epoch (`assets_reload_epoch_basics`)
   - [x] canvas pan/zoom (`canvas_pan_zoom_basics`)
   - [x] virtual list (`virtual_list_basics`)
   - [x] async inbox + cancellation (`async_inbox_basics`)
   - [x] markdown + code (`markdown_and_code_basics`)
   - [x] effects layer basics (`effects_layer_basics`)
+  - [x] query basics (`query_basics`) (feature-gated: `cookbook-query`)
+  - [x] router basics (`router_basics`) (feature-gated: `cookbook-router`)
   - [x] chart interactions basics (`chart_interactions_basics`)
+  - [x] toast basics (`toast_basics`)
+  - [x] date picker basics (`date_picker_basics`)
+  - [x] form basics (`form_basics`)
+  - [x] drag basics (`drag_basics`)
+  - [x] data table basics (`data_table_basics`)
+  - [x] image asset cache basics (`image_asset_cache_basics`)
 
 Gates:
 
@@ -125,6 +138,8 @@ Reference apps (app-scale):
   - [x] cookbook topics
   - [x] UI gallery (component catalog)
   - [x] diagnostics bundles/scripts
+- [x] Add a GitHub-friendly `examples/` portal (Bevy-style index):
+  - [`examples/README.md`](../../../examples/README.md)
 - [ ] Ensure `README.md` only links the *canonical* path (avoid scattering run commands).
 - [ ] Add contribution rules:
   - [ ] how to add a new official example

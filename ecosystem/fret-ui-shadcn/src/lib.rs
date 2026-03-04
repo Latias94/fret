@@ -83,6 +83,7 @@ pub mod radio_group;
 #[doc(hidden)]
 pub mod recharts_geometry;
 pub mod resizable;
+mod rtl;
 pub mod scroll_area;
 pub mod select;
 pub mod separator;
@@ -224,7 +225,7 @@ pub use dialog::{
     Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader,
     DialogOverlay, DialogPortal, DialogTitle, DialogTrigger,
 };
-pub use direction::{DirectionProvider, LayoutDirection, use_direction};
+pub use direction::{DirectionProvider, LayoutDirection, use_direction, with_direction_provider};
 pub use drawer::{
     Drawer, DrawerClose, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader,
     DrawerOverlay, DrawerPortal, DrawerSide, DrawerSnapPoint, DrawerTitle, DrawerTrigger, drawer,
@@ -376,6 +377,7 @@ pub use ui_builder_ext::*;
 /// This keeps the “golden path” small: app code can typically depend on `fret-bootstrap` +
 /// `fret-ui-shadcn` and `use fret_ui_shadcn::prelude::*;`.
 pub mod prelude {
+    pub use crate::with_direction_provider;
     pub use crate::{
         AlertDialogUiBuilderExt, BreadcrumbPrimitivesUiBuilderExt, CollapsibleUiBuilderExt,
         CommandDialogUiBuilderExt, ContextMenuUiBuilderExt, DataGridCanvasUiBuilderExt,

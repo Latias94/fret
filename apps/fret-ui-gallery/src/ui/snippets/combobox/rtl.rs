@@ -2,7 +2,6 @@ pub const SOURCE: &str = include_str!("rtl.rs");
 
 // region: example
 use fret_app::App;
-use fret_ui_kit::primitives::direction::{LayoutDirection, with_direction_provider};
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 use std::sync::Arc;
 

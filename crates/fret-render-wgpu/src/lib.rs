@@ -20,6 +20,7 @@ mod targets;
 mod text;
 mod upload_counters;
 pub mod viewport_overlay;
+mod wgpu_report_store;
 
 pub use capabilities::{AdapterCapabilities, RendererCapabilities, StreamingImageCapabilities};
 pub use error::RenderError;
@@ -50,6 +51,11 @@ pub use text::FontCatalogEntryMetadata;
 pub use text::SystemFontRescanResult;
 pub use text::SystemFontRescanSeed;
 pub use text::TextFontFamilyConfig;
+pub use wgpu_report_store::{
+    WgpuAllocatorReportFrameSample, WgpuAllocatorReportFrameStore, WgpuAllocatorReportSummary,
+    WgpuAllocatorReportTopAllocation, WgpuHubReportCounts, WgpuHubReportFrameSample,
+    WgpuHubReportFrameStore,
+};
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 /// Summary of a single backend/adapter initialization attempt.
@@ -440,7 +446,7 @@ impl WgpuContext {
                 required_features: wgpu::Features::empty(),
                 required_limits: wgpu::Limits::default(),
                 experimental_features: wgpu::ExperimentalFeatures::default(),
-                memory_hints: wgpu::MemoryHints::default(),
+                memory_hints: memory_hints_from_env(),
                 trace: wgpu::Trace::default(),
             })
             .await
@@ -503,7 +509,7 @@ impl WgpuContext {
                 required_features: wgpu::Features::empty(),
                 required_limits: wgpu::Limits::default(),
                 experimental_features: wgpu::ExperimentalFeatures::default(),
-                memory_hints: wgpu::MemoryHints::default(),
+                memory_hints: memory_hints_from_env(),
                 trace: wgpu::Trace::default(),
             })
             .await
