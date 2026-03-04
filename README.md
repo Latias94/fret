@@ -85,9 +85,14 @@ cargo run --manifest-path local/my-todo/Cargo.toml
 Discover runnable targets:
 
 ```bash
-cargo run -p fretboard -- list native-demos
 cargo run -p fretboard -- list cookbook-examples
 cargo run -p fretboard -- list web-demos
+```
+
+Maintainer native demo bins (from `apps/fret-demo`, not the onboarding path):
+
+```bash
+cargo run -p fretboard -- list native-demos --all
 ```
 
 Run the UI gallery (optional; heavier than cookbook):

@@ -28,10 +28,13 @@
 - [ ] Audit `ecosystem/fret` default features vs “just build an app” expectation:
   - Confirm `default = ["desktop", "app"]` is the right story.
   - [x] Keep `diagnostics` opt-in (`app` excludes it; `batteries` includes it).
-  - [x] Keep selector/query helpers opt-in (`state` is separate from `app`).
+- [x] Keep selector/query helpers opt-in (`state` is separate from `app`).
   - Confirm `shadcn` is the minimum “pleasant” baseline for first-time apps.
 - [x] Keep `fretboard new` templates boring: do not enable `fret/diagnostics` by default.
-- [ ] Audit `apps/` runnable targets and make sure the recommended ones do not pull in heavy optional stacks.
+- [x] Audit `apps/` runnable targets and make sure the recommended ones do not pull in heavy optional stacks.
+  - Onboarding: `fret-cookbook` examples (no optional features by default).
+  - Catalog: `fret-ui-gallery` (lite by default; dev/material3 behind features).
+  - Maintainer bins: `fret-demo` (discover via `fretboard list native-demos --all`).
 
 ## README code samples (staleness audit)
 

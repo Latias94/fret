@@ -8,7 +8,7 @@ These are not stable library surfaces; they exist to prove contracts, capture di
 
 - [`apps/fretboard`](./fretboard) — dev CLI (templates + native/web demo runner).
   - Start here: `cargo run -p fret-cookbook --example hello`
-  - Discover: `cargo run -p fretboard -- list native-demos`
+  - Generate: `cargo run -p fretboard -- new simple-todo --name my-simple-todo`
 - [`apps/fret-cookbook`](./fret-cookbook) — small, copy/paste-ready lessons (`--example ...`).
   - Discover: `cargo run -p fretboard -- list cookbook-examples`
   - Run: `cargo run -p fret-cookbook --example simple_todo`
@@ -21,6 +21,7 @@ These are not stable library surfaces; they exist to prove contracts, capture di
 
 - [`apps/fret-demo`](./fret-demo) — native demo harness shell (broad demo set; useful for maintainers).
 - [`apps/fret-demo-web`](./fret-demo-web) — web/wasm demo harness shell (Trunk + WebGPU).
+  - Discover native bins: `cargo run -p fretboard -- list native-demos --all`
 
 ## How these fit together
 
