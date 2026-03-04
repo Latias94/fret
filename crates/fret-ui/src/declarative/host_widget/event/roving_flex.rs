@@ -182,14 +182,14 @@ pub(super) fn handle_roving_flex<H: UiHost>(
         return;
     }
 
-    let key_hook = crate::elements::with_element_state(
+    let key_hooks = crate::elements::with_element_state(
         &mut *cx.app,
         window,
         this.element,
         crate::action::RovingActionHooks::default,
         |hooks| hooks.on_key_down.clone(),
     );
-    if let Some(h) = key_hook {
+    if !key_hooks.is_empty() {
         let ime_composing = cx
             .app
             .global::<fret_runtime::WindowTextInputSnapshotService>()
@@ -204,19 +204,21 @@ pub(super) fn handle_roving_flex<H: UiHost>(
             notify_requested: &mut cx.notify_requested,
             notify_requested_location: &mut cx.notify_requested_location,
         };
-        let handled = h(
-            &mut host,
-            action::ActionCx {
-                window,
-                target: this.element,
-            },
-            action::KeyDownCx {
-                key: *key,
-                modifiers: *modifiers,
-                repeat: *repeat,
-                ime_composing,
-            },
-        );
+        let handled = key_hooks.iter().any(|h| {
+            h(
+                &mut host,
+                action::ActionCx {
+                    window,
+                    target: this.element,
+                },
+                action::KeyDownCx {
+                    key: *key,
+                    modifiers: *modifiers,
+                    repeat: *repeat,
+                    ime_composing,
+                },
+            )
+        });
         if handled {
             cx.request_redraw();
             cx.stop_propagation();
