@@ -49,6 +49,8 @@ These are the first “lesson-shaped” examples we actually landed in `fret-coo
   - Script: [`tools/diag-scripts/cookbook/drag-basics/cookbook-drag-basics-smoke.json`](../../../tools/diag-scripts/cookbook/drag-basics/cookbook-drag-basics-smoke.json)
 - Assets reload epoch: [`apps/fret-cookbook/examples/assets_reload_epoch_basics.rs`](../../../apps/fret-cookbook/examples/assets_reload_epoch_basics.rs)
   - Script: [`tools/diag-scripts/cookbook/assets-reload-epoch-basics/cookbook-assets-reload-epoch-basics-smoke.json`](../../../tools/diag-scripts/cookbook/assets-reload-epoch-basics/cookbook-assets-reload-epoch-basics-smoke.json)
+- Compositing alpha: [`apps/fret-cookbook/examples/compositing_alpha_basics.rs`](../../../apps/fret-cookbook/examples/compositing_alpha_basics.rs)
+  - Script: [`tools/diag-scripts/cookbook/compositing-alpha-basics/cookbook-compositing-alpha-basics-baseline.json`](../../../tools/diag-scripts/cookbook/compositing-alpha-basics/cookbook-compositing-alpha-basics-baseline.json)
 
 ### 1) Toasts / notifications (Sonner)
 

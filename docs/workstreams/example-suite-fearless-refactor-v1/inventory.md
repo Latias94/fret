@@ -61,6 +61,7 @@ Canonical cookbook index (Bevy-style tables + feature gates):
 | cookbook.assets_reload_epoch_basics | Keep | `apps/fret-cookbook/examples/assets_reload_epoch_basics.rs` | `cargo run -p fret-cookbook --features cookbook-assets --example assets_reload_epoch_basics` | Lab (feature-gated). File image + SVG icon with ViewCache-safe dev reload (`UiAssetsReloadEpoch`). |
 | cookbook.canvas_pan_zoom_basics | Keep | `apps/fret-cookbook/examples/canvas_pan_zoom_basics.rs` | `cargo run -p fret-cookbook --features cookbook-canvas --example canvas_pan_zoom_basics` | Lab (feature-gated). Pan/zoom wiring (`fret-canvas/ui`) + a tiny app-owned drag tool for one item. |
 | cookbook.virtual_list_basics | Keep | `apps/fret-cookbook/examples/virtual_list_basics.rs` | `cargo run -p fret-cookbook --example virtual_list_basics` | Keyed virtualization + items_revision + scroll-to-item, with a minimal diag smoke script. |
+| cookbook.compositing_alpha_basics | Keep | `apps/fret-cookbook/examples/compositing_alpha_basics.rs` | `cargo run -p fret-cookbook --features cookbook-renderer --example compositing_alpha_basics` | Lab (feature-gated). Renderer semantics: straight vs premultiplied alpha, verified via screenshot baseline. |
 | cookbook.async_inbox_basics | Keep | `apps/fret-cookbook/examples/async_inbox_basics.rs` | `cargo run -p fret-cookbook --features cookbook-async --example async_inbox_basics` | Lab (feature-gated). Portable async pattern: background task → inbox → runner drain, with cancellation + progress semantics gate. |
 | cookbook.markdown_and_code_basics | Keep | `apps/fret-cookbook/examples/markdown_and_code_basics.rs` | `cargo run -p fret-cookbook --features cookbook-markdown --example markdown_and_code_basics` | Preview (feature-gated). Markdown rendering + fenced code blocks (code-view/syntax) + copy affordance, with a minimal diag smoke script. |
 | cookbook.theme_switching_basics | Keep | `apps/fret-cookbook/examples/theme_switching_basics.rs` | `cargo run -p fret-cookbook --example theme_switching_basics` | Minimal theme switching (shadcn New York v4 Light/Dark) with stable `test_id` stamps. |
@@ -85,7 +86,7 @@ subset of this workstream.
 | `datatable_demo.rs` | `data_table_basics` | Planned | Prefer `Lab` + a dedicated `cookbook-table` gate. |
 | `assets_demo.rs` | `assets_reload_epoch_basics` | Done | Reimplemented as a file-based example + reload epoch button + diag smoke (`cookbook-assets-reload-epoch-basics`). |
 | `drop_shadow_demo.rs` | `drop_shadow_basics` | Planned | Prefer `Lab` + keep capability/budget notes explicit. |
-| `alpha_mode_demo.rs` | `compositing_alpha_basics` | Planned | Likely `Lab`; screenshot-only diag gate. |
+| `alpha_mode_demo.rs` | `compositing_alpha_basics` | Done | Reimplemented as a low-level renderer semantics lesson + screenshot baseline (`cookbook-compositing-alpha-basics`). |
 | `query_demo.rs` | `query_basics` | Planned | Needs action-first rewrite; keep `Lab` (feature-gated). |
 | `router_query_demo.rs` | `router_basics` | Planned | Needs action-first rewrite; keep `Lab` (feature-gated). |
 

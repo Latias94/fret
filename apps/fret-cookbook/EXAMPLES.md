@@ -79,6 +79,7 @@ Example | Status | Feature | Run | Diag suite
 Example | Status | Feature | Run | Diag suite
 --- | --- | --- | --- | ---
 [`effects_layer_basics.rs`](./examples/effects_layer_basics.rs) | Official | (none) | `cargo run -p fret-cookbook --example effects_layer_basics` | `cookbook-effects-layer-basics`
+[`compositing_alpha_basics.rs`](./examples/compositing_alpha_basics.rs) | Lab | `cookbook-renderer` | `cargo run -p fret-cookbook --features cookbook-renderer --example compositing_alpha_basics` | `cookbook-compositing-alpha-basics`
 [`customv1_basics.rs`](./examples/customv1_basics.rs) | Lab | `cookbook-customv1` | `cargo run -p fret-cookbook --features cookbook-customv1 --example customv1_basics` | `cookbook-customv1-basics`
 
 ## Interop + advanced (feature-gated)

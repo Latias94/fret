@@ -49,6 +49,7 @@ fret-gizmo = { path = "../../ecosystem/fret-gizmo", optional = true }
 default = []
 cookbook-diag = ["fret/diagnostics"]
 cookbook-assets = ["dep:fret-icons", "dep:fret-icons-lucide", "dep:fret-ui-assets", "fret/icons", "fret/ui-assets"]
+cookbook-renderer = ["dep:fret-launch"]
 cookbook-undo = ["dep:fret-undo"]
 cookbook-async = ["dep:fret-executor"]
 cookbook-bootstrap = ["dep:fret-bootstrap", "dep:fret-render"]
@@ -79,6 +80,10 @@ required-features = ["cookbook-assets"]
 [[example]]
 name = "assets_reload_epoch_basics"
 required-features = ["cookbook-assets"]
+
+[[example]]
+name = "compositing_alpha_basics"
+required-features = ["cookbook-renderer"]
 
 [[example]]
 name = "undo_basics"

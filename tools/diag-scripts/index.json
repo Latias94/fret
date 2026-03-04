@@ -409,6 +409,26 @@
       ]
     },
     {
+      "id": "cookbook-compositing-alpha-basics-baseline",
+      "path": "tools/diag-scripts/cookbook/compositing-alpha-basics/cookbook-compositing-alpha-basics-baseline.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "cookbook-compositing-alpha-basics"
+      ],
+      "tags": [
+        "cookbook",
+        "cookbook.compositing_alpha_basics",
+        "renderer",
+        "screenshots"
+      ],
+      "target_hints": [
+        "Waits briefly and captures a baseline screenshot + bundle for alpha compositing semantics."
+      ]
+    },
+    {
       "id": "cookbook-imui-action-basics-cross-frontend",
       "path": "tools/diag-scripts/cookbook/imui-action-basics/cookbook-imui-action-basics-cross-frontend.json",
       "required_capabilities": [
