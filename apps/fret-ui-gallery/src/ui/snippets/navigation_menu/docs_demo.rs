@@ -323,7 +323,6 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
 
     shadcn::NavigationMenu::new(demo_value.clone())
         .md_breakpoint_query(NavigationMenuMdBreakpointQuery::Viewport)
-        .indicator(true)
         .list(shadcn::NavigationMenuList::new(vec![
             getting_started,
             components,
