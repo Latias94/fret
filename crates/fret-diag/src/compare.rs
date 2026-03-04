@@ -246,9 +246,6 @@ fn collect_macos_vmmap_summary_best_effort(pid: u32, out_dir: &Path) -> Option<s
     let mut physical_footprint_bytes: Option<u64> = None;
     let mut physical_footprint_peak_bytes: Option<u64> = None;
 
-    let mut owned_unmapped_memory_dirty_bytes: Option<u64> = None;
-    let mut io_surface_dirty_bytes: Option<u64> = None;
-
     let regions_table = parse_vmmap_regions_table(&stdout);
     let malloc_zone_table = parse_vmmap_malloc_zone_table(&stdout);
 
@@ -264,48 +261,22 @@ fn collect_macos_vmmap_summary_best_effort(pid: u32, out_dir: &Path) -> Option<s
             physical_footprint_peak_bytes = parse_vmmap_size_token_to_bytes(token);
             continue;
         }
-
-        // Example:
-        // owned unmapped memory             224.1M   224.1M   224.1M       0K       0K       0K       0K        1
-        if l.to_ascii_lowercase().starts_with("owned unmapped memory") {
-            let tokens: Vec<&str> = l.split_whitespace().collect();
-            let numeric: Vec<&str> = tokens
-                .iter()
-                .rev()
-                .filter(|t| t.chars().next().is_some_and(|c| c.is_ascii_digit()))
-                .take(8)
-                .copied()
-                .collect::<Vec<_>>()
-                .into_iter()
-                .rev()
-                .collect();
-            if numeric.len() >= 3 {
-                owned_unmapped_memory_dirty_bytes =
-                    parse_vmmap_size_token_to_bytes(numeric.get(2).copied().unwrap_or(""));
-            }
-            continue;
-        }
-
-        // IOSurface is commonly used for Metal-backed surfaces/textures.
-        if l.starts_with("IOSurface") {
-            let tokens: Vec<&str> = l.split_whitespace().collect();
-            let numeric: Vec<&str> = tokens
-                .iter()
-                .rev()
-                .filter(|t| t.chars().next().is_some_and(|c| c.is_ascii_digit()))
-                .take(8)
-                .copied()
-                .collect::<Vec<_>>()
-                .into_iter()
-                .rev()
-                .collect();
-            if numeric.len() >= 3 {
-                io_surface_dirty_bytes =
-                    parse_vmmap_size_token_to_bytes(numeric.get(2).copied().unwrap_or(""));
-            }
-            continue;
-        }
     }
+
+    let region_dirty_bytes = |name: &str| -> Option<u64> {
+        regions_table
+            .iter()
+            .find(|r| r.region_type.eq_ignore_ascii_case(name))
+            .map(|r| r.dirty_bytes)
+    };
+
+    let owned_unmapped_memory_dirty_bytes = region_dirty_bytes("owned unmapped memory");
+    // IOSurface is commonly used for Metal-backed surfaces/textures.
+    let io_surface_dirty_bytes = region_dirty_bytes("IOSurface");
+    // IOAccelerator is a common region type for GPU driver allocations.
+    let io_accelerator_dirty_bytes = region_dirty_bytes("IOAccelerator");
+    // Heap buckets (useful for attributing CPU-side increases).
+    let malloc_small_dirty_bytes = region_dirty_bytes("MALLOC_SMALL");
 
     let mut regions_top_dirty = regions_table.clone();
     regions_top_dirty.sort_by_key(|r| std::cmp::Reverse(r.dirty_bytes));
@@ -332,6 +303,8 @@ fn collect_macos_vmmap_summary_best_effort(pid: u32, out_dir: &Path) -> Option<s
         "regions": {
             "owned_unmapped_memory_dirty_bytes": owned_unmapped_memory_dirty_bytes,
             "io_surface_dirty_bytes": io_surface_dirty_bytes,
+            "io_accelerator_dirty_bytes": io_accelerator_dirty_bytes,
+            "malloc_small_dirty_bytes": malloc_small_dirty_bytes,
         },
         "tables": {
             "regions": {

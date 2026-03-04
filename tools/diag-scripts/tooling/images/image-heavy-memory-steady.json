@@ -1,0 +1,20 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "image heavy: memory steady",
+    "tags": ["images", "memory", "steady"],
+    "required_capabilities": ["diag.script_v2"],
+    "target_hints": [
+      "Captures a steady-state bundle; intended to grow IOSurface/IOAccelerator (textures) and wgpu Metal allocation size."
+    ]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "wait_frames", "n": 10 },
+
+    { "type": "reset_diagnostics" },
+    { "type": "wait_frames", "n": 600 },
+    { "type": "capture_bundle", "label": "image-heavy-memory-steady" }
+  ]
+}
+

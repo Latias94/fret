@@ -414,6 +414,9 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut max_peak_working_set_bytes: Option<u64> = None;
     let mut max_macos_physical_footprint_peak_bytes: Option<u64> = None;
     let mut max_macos_owned_unmapped_memory_dirty_bytes: Option<u64> = None;
+    let mut max_macos_io_surface_dirty_bytes: Option<u64> = None;
+    let mut max_macos_io_accelerator_dirty_bytes: Option<u64> = None;
+    let mut max_macos_malloc_small_dirty_bytes: Option<u64> = None;
     let mut max_wgpu_metal_current_allocated_size_bytes: Option<u64> = None;
     let mut max_render_text_atlas_bytes_live_estimate_total: Option<u64> = None;
     let mut max_cpu_avg_percent_total_cores: Option<f64> = None;
@@ -1196,6 +1199,40 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         "invalid value for --max-macos-owned-unmapped-memory-dirty-bytes"
                             .to_string()
                     })?);
+                i += 1;
+            }
+            "--max-macos-io-surface-dirty-bytes" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --max-macos-io-surface-dirty-bytes".to_string());
+                };
+                max_macos_io_surface_dirty_bytes = Some(v.parse::<u64>().map_err(|_| {
+                    "invalid value for --max-macos-io-surface-dirty-bytes".to_string()
+                })?);
+                i += 1;
+            }
+            "--max-macos-io-accelerator-dirty-bytes" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err(
+                        "missing value for --max-macos-io-accelerator-dirty-bytes".to_string()
+                    );
+                };
+                max_macos_io_accelerator_dirty_bytes = Some(v.parse::<u64>().map_err(|_| {
+                    "invalid value for --max-macos-io-accelerator-dirty-bytes".to_string()
+                })?);
+                i += 1;
+            }
+            "--max-macos-malloc-small-dirty-bytes" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err(
+                        "missing value for --max-macos-malloc-small-dirty-bytes".to_string()
+                    );
+                };
+                max_macos_malloc_small_dirty_bytes = Some(v.parse::<u64>().map_err(|_| {
+                    "invalid value for --max-macos-malloc-small-dirty-bytes".to_string()
+                })?);
                 i += 1;
             }
             "--max-wgpu-metal-current-allocated-size-bytes" => {
@@ -2189,6 +2226,9 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
         max_peak_working_set_bytes,
         max_macos_physical_footprint_peak_bytes,
         max_macos_owned_unmapped_memory_dirty_bytes,
+        max_macos_io_surface_dirty_bytes,
+        max_macos_io_accelerator_dirty_bytes,
+        max_macos_malloc_small_dirty_bytes,
         max_cpu_avg_percent_total_cores,
     };
 
@@ -2206,7 +2246,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     }
     if sub != "repro" && resource_footprint_thresholds.any() {
         return Err(
-            "--max-working-set-bytes/--max-peak-working-set-bytes/--max-macos-physical-footprint-peak-bytes/--max-macos-owned-unmapped-memory-dirty-bytes/--max-cpu-avg-percent-total-cores are only supported with `diag repro` for now"
+            "--max-working-set-bytes/--max-peak-working-set-bytes/--max-macos-physical-footprint-peak-bytes/--max-macos-owned-unmapped-memory-dirty-bytes/--max-macos-io-surface-dirty-bytes/--max-macos-io-accelerator-dirty-bytes/--max-macos-malloc-small-dirty-bytes/--max-cpu-avg-percent-total-cores are only supported with `diag repro` for now"
                 .to_string(),
         );
     }

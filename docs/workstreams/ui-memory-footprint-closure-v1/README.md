@@ -33,7 +33,7 @@ Using `tools/diag-scripts/empty-idle-memory-steady.json` on macOS/Metal (baselin
   - Repeat sample (N=5):
     - `macos_vmmap.physical_footprint_peak_bytes`: 279,445,504 .. 285,946,675 (~266.6 .. 272.7 MiB)
     - `macos_owned_unmapped_memory_dirty_bytes`: 213,594,931 .. 216,321,229 (~203.7 .. 206.3 MiB)
-    - `render_text_atlas_bytes_live_estimate_total`: 8,388,608 (8 MiB; mask atlas prealloc)
+    - `render_text_atlas_bytes_live_estimate_total`: `0` (after lazy mask atlas page allocation)
   - Default malloc zone: ~24.5 MB allocated, ~15.4 MB frag
   - `debug.stats.wgpu_metal_current_allocated_size_bytes`: 32,161,792 (~30.7 MiB; requires `--env FRET_DIAG_WGPU_ALLOCATOR_REPORT=1`)
 
@@ -42,7 +42,7 @@ Using `tools/diag-scripts/text-heavy-memory-steady.json` on macOS/Metal (fonts +
 - Repeat sample (N=5):
   - `macos_vmmap.physical_footprint_peak_bytes`: 358,927,565 .. 368,364,749 (~342.4 .. 351.4 MiB)
   - `macos_owned_unmapped_memory_dirty_bytes`: 249,036,800 .. 254,699,110 (~237.5 .. 242.9 MiB)
-  - `render_text_atlas_bytes_live_estimate_total`: 25,165,824 (~24 MiB)
+  - `render_text_atlas_bytes_live_estimate_total`: ~20 MiB (after lazy mask atlas page allocation)
 - Default malloc zone: ~26.6 MB allocated, ~20.9 MB frag (system allocator)
 - `wgpu_metal_current_allocated_size_bytes`: 127,418,368 (~121.6 MiB; requires `--env FRET_DIAG_WGPU_ALLOCATOR_REPORT=1`)
 
@@ -82,6 +82,15 @@ Interpretation:
     - `empty-idle`: `render_text_atlas_bytes_live_estimate_total` drops to `0` (no text draws).
     - `text-heavy`: `render_text_atlas_bytes_live_estimate_total` drops to `20 MiB` (mask pages `1`
       instead of `2`).
+  - vmmap region attribution note:
+    - `resource.footprint.json.macos_vmmap.regions` now also includes:
+      - `io_surface_dirty_bytes` (Metal-backed surfaces/textures)
+      - `io_accelerator_dirty_bytes` (GPU driver allocations)
+      - `malloc_small_dirty_bytes` (CPU heap bucket)
+    - These are intended to support more actionable macOS gates than “just physical footprint”.
+  - wgpu allocator sampling note:
+    - Bundles may now report `wgpu_allocator_sample_present=true` even when
+      `wgpu_allocator_report_present=false` (e.g. Metal-only `currentAllocatedSize` path).
 
 ## Goals
 
@@ -126,6 +135,10 @@ Add scripted repros that isolate hypotheses:
 - **Empty idle**: minimal window, no text, no images (baseline CPU + GPU).
 - **Text heavy**: many font faces, emoji, and diverse glyphs (forces atlas growth).
 - **Image heavy**: representative image decode + texture upload path (forces texture cache).
+  - Added: `apps/fret-demo --bin image_heavy_memory_demo` + `tools/diag-scripts/image-heavy-memory-steady.json`
+  - Optional knobs:
+    - `FRET_IMAGE_HEAVY_DEMO_COUNT` (default `24`)
+    - `FRET_IMAGE_HEAVY_DEMO_SIZE_PX` (default `1024`)
 
 Each script must:
 
@@ -164,6 +177,9 @@ Candidate gates:
 
 - `--max-macos-physical-footprint-peak-bytes`
 - `--max-macos-owned-unmapped-memory-dirty-bytes`
+- `--max-macos-io-surface-dirty-bytes`
+- `--max-macos-io-accelerator-dirty-bytes`
+- `--max-macos-malloc-small-dirty-bytes`
 - `--max-wgpu-metal-current-allocated-size-bytes` (macOS/Metal; best-effort)
 - `--max-render-text-atlas-bytes-live-estimate-total` (text-heavy attribution; stable, derived from `resource_caches.render_text`)
 
@@ -181,6 +197,8 @@ Recommended local gate baselines (macOS, 2026-03-04):
   - `--max-render-text-atlas-bytes-live-estimate-total 50331648` (48 MiB)
   - Optional (requires `--env FRET_DIAG_WGPU_ALLOCATOR_REPORT=1`):
     - `--max-wgpu-metal-current-allocated-size-bytes 167772160` (160 MiB)
+- `image-heavy-memory-steady`:
+  - TODO: calibrate (run N=5 and capture `macos_io_surface_dirty_bytes` + `wgpu_metal_current_allocated_size_bytes`)
 
 Note: these numbers are intentionally conservative and should be revisited when:
 

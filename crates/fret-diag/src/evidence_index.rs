@@ -70,6 +70,21 @@ fn resource_footprint_summary(path: &Path) -> Option<serde_json::Value> {
         .and_then(|v| v.get("regions"))
         .and_then(|v| v.get("owned_unmapped_memory_dirty_bytes"))
         .and_then(|v| v.as_u64());
+    let macos_io_surface_dirty_bytes = v
+        .get("macos_vmmap")
+        .and_then(|v| v.get("regions"))
+        .and_then(|v| v.get("io_surface_dirty_bytes"))
+        .and_then(|v| v.as_u64());
+    let macos_io_accelerator_dirty_bytes = v
+        .get("macos_vmmap")
+        .and_then(|v| v.get("regions"))
+        .and_then(|v| v.get("io_accelerator_dirty_bytes"))
+        .and_then(|v| v.as_u64());
+    let macos_malloc_small_dirty_bytes = v
+        .get("macos_vmmap")
+        .and_then(|v| v.get("regions"))
+        .and_then(|v| v.get("malloc_small_dirty_bytes"))
+        .and_then(|v| v.as_u64());
 
     let macos_vmmap_top_dirty_region_type = v
         .get("macos_vmmap")
@@ -165,6 +180,9 @@ fn resource_footprint_summary(path: &Path) -> Option<serde_json::Value> {
         "macos_physical_footprint_bytes": macos_physical_footprint_bytes,
         "macos_physical_footprint_peak_bytes": macos_physical_footprint_peak_bytes,
         "macos_owned_unmapped_memory_dirty_bytes": macos_owned_unmapped_memory_dirty_bytes,
+        "macos_io_surface_dirty_bytes": macos_io_surface_dirty_bytes,
+        "macos_io_accelerator_dirty_bytes": macos_io_accelerator_dirty_bytes,
+        "macos_malloc_small_dirty_bytes": macos_malloc_small_dirty_bytes,
         "macos_vmmap_top_dirty_region_type": macos_vmmap_top_dirty_region_type,
         "macos_vmmap_top_dirty_region_bytes": macos_vmmap_top_dirty_region_bytes,
         "macos_vmmap_top_dirty_regions": macos_vmmap_top_dirty_regions,
@@ -237,6 +255,7 @@ fn bundle_stats_summary_from_path(path: &Path) -> Option<serde_json::Value> {
         "frame_id": last_snapshot.get("frame_id").and_then(|v| v.as_u64()),
         "wgpu_allocator_tick_id": get_u64("wgpu_allocator_tick_id"),
         "wgpu_allocator_frame_id": get_u64("wgpu_allocator_frame_id"),
+        "wgpu_allocator_sample_present": get_bool("wgpu_allocator_sample_present"),
         "wgpu_allocator_report_present": get_bool("wgpu_allocator_report_present"),
         "wgpu_allocator_total_allocated_bytes": get_u64("wgpu_allocator_total_allocated_bytes"),
         "wgpu_allocator_total_reserved_bytes": get_u64("wgpu_allocator_total_reserved_bytes"),

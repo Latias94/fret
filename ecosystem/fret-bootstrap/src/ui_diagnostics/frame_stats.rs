@@ -646,6 +646,13 @@ pub struct UiFrameStatsV1 {
     pub wgpu_allocator_tick_id: u64,
     #[serde(default)]
     pub wgpu_allocator_frame_id: u64,
+    /// True when a diagnostics allocator sample was captured for this frame.
+    ///
+    /// This can be true even if `wgpu_allocator_report_present` is false (e.g. Metal-only sampling
+    /// paths that provide `wgpu_metal_current_allocated_size_bytes` without a full allocator
+    /// report).
+    #[serde(default)]
+    pub wgpu_allocator_sample_present: bool,
     #[serde(default)]
     pub wgpu_allocator_report_present: bool,
     #[serde(default)]
@@ -1058,6 +1065,7 @@ impl UiFrameStatsV1 {
             wgpu_hub_compute_pipelines: 0,
             wgpu_allocator_tick_id: 0,
             wgpu_allocator_frame_id: 0,
+            wgpu_allocator_sample_present: false,
             wgpu_allocator_report_present: false,
             wgpu_allocator_total_allocated_bytes: 0,
             wgpu_allocator_total_reserved_bytes: 0,
@@ -1292,6 +1300,7 @@ impl UiFrameStatsV1 {
         if let Some(sample) = wgpu_allocator_report {
             out.wgpu_allocator_tick_id = sample.tick_id;
             out.wgpu_allocator_frame_id = sample.frame_id;
+            out.wgpu_allocator_sample_present = true;
             out.wgpu_allocator_report_present = sample.summary.allocator_report_present;
             out.wgpu_allocator_total_allocated_bytes = sample.summary.total_allocated_bytes;
             out.wgpu_allocator_total_reserved_bytes = sample.summary.total_reserved_bytes;
