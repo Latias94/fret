@@ -48,6 +48,7 @@ pub(super) fn install_ui_gallery_snapshot_provider(app: &mut App) {
                                 let caret = selection.caret().min(text_len_bytes) as u64;
                                 let stats = handle.cache_stats();
                                 let sizes = handle.cache_size_snapshot();
+                                let mem = handle.memory_snapshot();
                                 let paint_perf = handle.paint_perf_frame().map(|frame| {
                                     serde_json::json!({
                                         "schema_version": 1,
@@ -136,6 +137,19 @@ pub(super) fn install_ui_gallery_snapshot_provider(app: &mut App) {
                                         "row_rich_cache_syntax_spans_len_total": sizes.row_rich_cache_syntax_spans_len_total,
                                         "row_rich_cache_rich_spans_len_total": sizes.row_rich_cache_rich_spans_len_total,
                                         "selection_rect_scratch_capacity": sizes.selection_rect_scratch_capacity,
+                                    },
+                                    "memory": {
+                                        "schema_version": mem.schema_version,
+                                        "buffer_revision": mem.buffer_revision,
+                                        "buffer_len_bytes": mem.buffer_len_bytes,
+                                        "buffer_line_count": mem.buffer_line_count,
+                                        "undo_limit": mem.undo_limit,
+                                        "undo_len": mem.undo_len,
+                                        "redo_len": mem.redo_len,
+                                        "undo_text_bytes_estimate_total": mem.undo_text_bytes_estimate_total,
+                                        "redo_text_bytes_estimate_total": mem.redo_text_bytes_estimate_total,
+                                        "undo_edit_count_total": mem.undo_edit_count_total,
+                                        "redo_edit_count_total": mem.redo_edit_count_total,
                                     },
                                     "paint_perf": paint_perf,
                                 })

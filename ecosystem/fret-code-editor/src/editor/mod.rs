@@ -554,6 +554,50 @@ pub struct CodeEditorCacheSizeSnapshotV1 {
     pub selection_rect_scratch_capacity: u64,
 }
 
+/// Best-effort memory attribution snapshot for editor-owned state.
+///
+/// This is intended to answer "what is the editor keeping alive?" rather than providing exact
+/// allocator-level sizes.
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub struct CodeEditorMemorySnapshotV1 {
+    pub schema_version: u32,
+
+    pub buffer_revision: u64,
+    pub buffer_len_bytes: u64,
+    pub buffer_line_count: u64,
+
+    pub undo_limit: u64,
+    pub undo_len: u64,
+    pub redo_len: u64,
+
+    /// Approximate UTF-8 bytes stored inside undo records (includes both forward and inverse
+    /// `TextBufferTx` payloads).
+    pub undo_text_bytes_estimate_total: u64,
+    pub redo_text_bytes_estimate_total: u64,
+
+    pub undo_edit_count_total: u64,
+    pub redo_edit_count_total: u64,
+}
+
+fn estimate_edit_text_bytes(edit: &Edit) -> u64 {
+    match edit {
+        Edit::Insert { text, .. } | Edit::Replace { text, .. } => text.len() as u64,
+        Edit::Delete { .. } => 0,
+    }
+}
+
+fn estimate_text_buffer_tx_text_bytes_and_edits(tx: &TextBufferTx) -> (u64, u64) {
+    let mut bytes = 0u64;
+    let mut edits = 0u64;
+
+    for edit in tx.edits.iter().chain(tx.inverse_edits.iter()) {
+        bytes = bytes.saturating_add(estimate_edit_text_bytes(edit));
+        edits = edits.saturating_add(1);
+    }
+
+    (bytes, edits)
+}
+
 impl CodeEditorCacheStats {
     pub fn row_rich_get_calls(&self) -> u64 {
         #[cfg(feature = "syntax")]
@@ -1346,6 +1390,40 @@ impl CodeEditorHandle {
         }
 
         out
+    }
+
+    pub fn memory_snapshot(&self) -> CodeEditorMemorySnapshotV1 {
+        let st = self.state.borrow();
+
+        let mut undo_text_bytes = 0u64;
+        let mut undo_edit_count = 0u64;
+        for record in st.undo.undo_records() {
+            let (bytes, edits) = estimate_text_buffer_tx_text_bytes_and_edits(&record.tx.buffer_tx);
+            undo_text_bytes = undo_text_bytes.saturating_add(bytes);
+            undo_edit_count = undo_edit_count.saturating_add(edits);
+        }
+
+        let mut redo_text_bytes = 0u64;
+        let mut redo_edit_count = 0u64;
+        for record in st.undo.redo_records() {
+            let (bytes, edits) = estimate_text_buffer_tx_text_bytes_and_edits(&record.tx.buffer_tx);
+            redo_text_bytes = redo_text_bytes.saturating_add(bytes);
+            redo_edit_count = redo_edit_count.saturating_add(edits);
+        }
+
+        CodeEditorMemorySnapshotV1 {
+            schema_version: 1,
+            buffer_revision: st.buffer.revision().0,
+            buffer_len_bytes: st.buffer.len_bytes() as u64,
+            buffer_line_count: st.buffer.line_count() as u64,
+            undo_limit: st.undo.limit() as u64,
+            undo_len: st.undo.undo_len() as u64,
+            redo_len: st.undo.redo_len() as u64,
+            undo_text_bytes_estimate_total: undo_text_bytes,
+            redo_text_bytes_estimate_total: redo_text_bytes,
+            undo_edit_count_total: undo_edit_count,
+            redo_edit_count_total: redo_edit_count,
+        }
     }
 
     pub fn paint_perf_frame(&self) -> Option<CodeEditorPaintPerfFrame> {
