@@ -1,16 +1,16 @@
-# Milestone 4 — `fret-demo` lesson-shaped candidates
+# Milestone 4 — `fret-demo` lesson-shaped candidates (migrated)
 
-This document identifies **8–15 “lesson-shaped” demos** currently exposed via `apps/fret-demo/src/bin/*`
-that should eventually become **cookbook examples** (`apps/fret-cookbook/examples/*`).
+This document started as a short-list of **lesson-shaped** `fret-demo` bins we wanted to migrate into
+the cookbook (`apps/fret-cookbook/examples/*`), so new users would not have to start in the
+maintainer-grade demo harnesses.
 
-Goal: make `fret-demo` read as **maintainer/labs**, while keeping a smaller, boring, copy/paste-friendly
-learning surface in the cookbook.
+Status (2026-03-04): **the initial batch has been migrated** and most of the redundant
+`apps/fret-demo/src/bin/*` wrappers were removed.
 
-Non-goals:
+Notes:
 
-- This is **not an implementation plan** (no code moved yet).
-- This does **not** change runtime contracts.
-- We do **not** attempt to keep `apps/fret-examples` as an onboarding surface (it is intentionally heavy).
+- `apps/fret-examples` remains a maintainer-grade crate (intentionally heavy).
+- A few `fret-demo` bins remain as **contract/perf probes** where referenced by ADRs/workstreams.
 
 ## Selection rubric (what counts as “lesson-shaped”)
 
@@ -25,15 +25,6 @@ A good migration candidate is:
   - If it needs heavier deps, it must be **feature-gated** in the cookbook.
 - Prefer **action-first / view runtime** authoring.
   - If the upstream demo is MVU/legacy, migration implies rewriting (or keeping it as feature-gated “Legacy MVU” until action-first lands).
-
-## Recommended migration list (12 candidates)
-
-Each item is currently reachable via a `fret-demo` bin that calls into `fret_examples::*`.
-
-Legend:
-
-- **Cookbook label**: `Official` vs `Lab` (feature-gated).
-- **Cookbook feature**: existing feature gate or a suggested new one.
 
 ## Initial migration batch (implemented in cookbook)
 
@@ -62,103 +53,27 @@ These are the first “lesson-shaped” examples we actually landed in `fret-coo
 - Router basics: [`apps/fret-cookbook/examples/router_basics.rs`](../../../apps/fret-cookbook/examples/router_basics.rs)
   - Script: [`tools/diag-scripts/cookbook/router-basics/cookbook-router-basics-smoke.json`](../../../tools/diag-scripts/cookbook/router-basics/cookbook-router-basics-smoke.json)
 
-### 1) Toasts / notifications (Sonner)
+## Migration status (source → cookbook)
 
-- Demo bin: [`apps/fret-demo/src/bin/sonner_demo.rs`](../../../apps/fret-demo/src/bin/sonner_demo.rs)
-- Implementation: [`apps/fret-examples/src/sonner_demo.rs`](../../../apps/fret-examples/src/sonner_demo.rs)
-- Proposed cookbook example: `toast_basics`
-- Cookbook label: `Official`
-- Cookbook feature: none (prefer to keep this in the default ladder)
-- Notes:
-  - Teaches: overlay + toasts, promise-style lifecycle, “last action” feedback.
-  - Should add stable `test_id`s and a short diag smoke (open toast + screenshot).
+The original lesson-shaped demos were implemented in `apps/fret-examples/src/*_demo.rs` and exposed
+via thin `apps/fret-demo/src/bin/*` wrappers. After migration:
 
-### 2) Forms + validation ergonomics
+- the cookbook example is the canonical user-facing entry,
+- the `fret-examples` implementation remains available as a maintainer reference,
+- most `fret-demo` wrapper bins were removed (except where used as probe harnesses).
 
-- Demo bin: [`apps/fret-demo/src/bin/form_demo.rs`](../../../apps/fret-demo/src/bin/form_demo.rs)
-- Implementation: [`apps/fret-examples/src/form_demo.rs`](../../../apps/fret-examples/src/form_demo.rs)
-- Proposed cookbook example: `form_basics`
-- Cookbook label: `Official`
-- Cookbook feature: none
-- Notes:
-  - Teaches: inputs, validation feedback, disabled states, submit wiring.
-  - Should keep the scope narrow (one form, one validation pattern).
-
-### 3) Drag interactions (pointer capture + hit testing)
-
-- Demo bin: [`apps/fret-demo/src/bin/drag_demo.rs`](../../../apps/fret-demo/src/bin/drag_demo.rs)
-- Implementation: [`apps/fret-examples/src/drag_demo.rs`](../../../apps/fret-examples/src/drag_demo.rs)
-- Proposed cookbook example: `drag_basics`
-- Cookbook label: `Official`
-- Cookbook feature: none
-- Notes:
-  - Teaches: pointer capture, drag handles, hover/active affordances.
-  - Good place to standardize `test_id` patterns for draggables.
-
-### 4) Date picker (calendar + popover composition)
-
-- Demo bin: [`apps/fret-demo/src/bin/date_picker_demo.rs`](../../../apps/fret-demo/src/bin/date_picker_demo.rs)
-- Implementation: [`apps/fret-examples/src/date_picker_demo.rs`](../../../apps/fret-examples/src/date_picker_demo.rs)
-- Proposed cookbook example: `date_picker_basics`
-- Cookbook label: `Official` (if compile cost is acceptable), otherwise `Lab`
-- Cookbook feature: none (preferred) or a new `cookbook-date-picker`
-- Notes:
-  - Teaches: overlay placement + focus + calendar selection semantics.
-  - Should include: open/close, keyboard focus, and one screenshot via diag.
-
-### 5) Data table basics (small, non-stress)
-
-- Demo bin: [`apps/fret-demo/src/bin/datatable_demo.rs`](../../../apps/fret-demo/src/bin/datatable_demo.rs)
-- Implementation: [`apps/fret-examples/src/datatable_demo.rs`](../../../apps/fret-examples/src/datatable_demo.rs)
-- Proposed cookbook example: `data_table_basics`
-- Cookbook label: `Lab`
-- Cookbook feature: a new `cookbook-table` (or reuse an existing UI-kit/table crate gate if introduced)
-- Notes:
-  - Avoid: `table_stress_demo` style scenarios; keep it “boring”.
-  - If this depends on heavy table engines, keep it feature-gated.
-
-### 6) Image asset cache (GPU image upload path)
-
-- Demo bin: [`apps/fret-demo/src/bin/image_upload_demo.rs`](../../../apps/fret-demo/src/bin/image_upload_demo.rs)
-- Implementation: [`apps/fret-examples/src/image_upload_demo.rs`](../../../apps/fret-examples/src/image_upload_demo.rs)
-- Proposed cookbook example: `image_asset_cache_basics`
-- Cookbook label: `Lab`
-- Cookbook feature: reuse `cookbook-assets` (preferred) or introduce `cookbook-image-assets`
-- Notes:
-  - Teaches: `fret-ui-assets` image cache host + keyed asset usage.
-  - Should avoid file dialogs; generate synthetic images (like checkerboard) for determinism.
-
-### 7) Renderer semantics: drop shadow
-
-- Demo bin: [`apps/fret-demo/src/bin/drop_shadow_demo.rs`](../../../apps/fret-demo/src/bin/drop_shadow_demo.rs)
-- Implementation: [`apps/fret-examples/src/drop_shadow_demo.rs`](../../../apps/fret-examples/src/drop_shadow_demo.rs)
-- Proposed cookbook example: `drop_shadow_basics`
-- Cookbook label: `Lab` (until compile cost is confirmed)
-- Cookbook feature: reuse `cookbook-bootstrap` or `cookbook-customv1` depending on implementation needs
-- Notes:
-  - Teaches: shadow semantics, clipping interactions, and deterministic degradation expectations.
-
-### 8) Assets + reload epoch (authoring loop basics)
-
-- Demo bin: [`apps/fret-demo/src/bin/assets_demo.rs`](../../../apps/fret-demo/src/bin/assets_demo.rs)
-- Implementation: [`apps/fret-examples/src/assets_demo.rs`](../../../apps/fret-examples/src/assets_demo.rs)
-- Proposed cookbook example: `assets_reload_epoch_basics`
-- Cookbook label: `Lab`
-- Cookbook feature: reuse `cookbook-assets`
-- Notes:
-  - Teaches: assets wiring + reload epoch, “edit and see change” patterns (without hotpatch).
-  - Keep it deterministic; avoid too many asset types in one file.
-
-### 9) Opacity / alpha compositing (small, visual lesson)
-
-- Demo bin: [`apps/fret-demo/src/bin/alpha_mode_demo.rs`](../../../apps/fret-demo/src/bin/alpha_mode_demo.rs)
-- Implementation: [`apps/fret-examples/src/alpha_mode_demo.rs`](../../../apps/fret-examples/src/alpha_mode_demo.rs)
-- Proposed cookbook example: `compositing_alpha_basics`
-- Cookbook label: `Lab`
-- Cookbook feature: likely none (verify), otherwise reuse `cookbook-bootstrap`
-- Notes:
-  - Teaches: compositing groups / isolated opacity expectations.
-  - Great candidate for a screenshot-only diag script.
+| Source (maintainer) | Old `fret-demo` bin | Cookbook example | Wrapper status |
+|---|---|---|---|
+| [`apps/fret-examples/src/sonner_demo.rs`](../../../apps/fret-examples/src/sonner_demo.rs) | `sonner_demo` | [`apps/fret-cookbook/examples/toast_basics.rs`](../../../apps/fret-cookbook/examples/toast_basics.rs) | Removed |
+| [`apps/fret-examples/src/form_demo.rs`](../../../apps/fret-examples/src/form_demo.rs) | `form_demo` | [`apps/fret-cookbook/examples/form_basics.rs`](../../../apps/fret-cookbook/examples/form_basics.rs) | Removed |
+| [`apps/fret-examples/src/drag_demo.rs`](../../../apps/fret-examples/src/drag_demo.rs) | `drag_demo` | [`apps/fret-cookbook/examples/drag_basics.rs`](../../../apps/fret-cookbook/examples/drag_basics.rs) | Kept (probe harness) |
+| [`apps/fret-examples/src/date_picker_demo.rs`](../../../apps/fret-examples/src/date_picker_demo.rs) | `date_picker_demo` | [`apps/fret-cookbook/examples/date_picker_basics.rs`](../../../apps/fret-cookbook/examples/date_picker_basics.rs) | Removed |
+| [`apps/fret-examples/src/datatable_demo.rs`](../../../apps/fret-examples/src/datatable_demo.rs) | `datatable_demo` | [`apps/fret-cookbook/examples/data_table_basics.rs`](../../../apps/fret-cookbook/examples/data_table_basics.rs) | Removed |
+| [`apps/fret-examples/src/image_upload_demo.rs`](../../../apps/fret-examples/src/image_upload_demo.rs) | `image_upload_demo` | [`apps/fret-cookbook/examples/image_asset_cache_basics.rs`](../../../apps/fret-cookbook/examples/image_asset_cache_basics.rs) | Removed |
+| [`apps/fret-examples/src/drop_shadow_demo.rs`](../../../apps/fret-examples/src/drop_shadow_demo.rs) | `drop_shadow_demo` | [`apps/fret-cookbook/examples/drop_shadow_basics.rs`](../../../apps/fret-cookbook/examples/drop_shadow_basics.rs) | Kept (perf/contract probe) |
+| [`apps/fret-examples/src/assets_demo.rs`](../../../apps/fret-examples/src/assets_demo.rs) | `assets_demo` | [`apps/fret-cookbook/examples/assets_reload_epoch_basics.rs`](../../../apps/fret-cookbook/examples/assets_reload_epoch_basics.rs) | Kept (ADR probe) |
+| [`apps/fret-examples/src/alpha_mode_demo.rs`](../../../apps/fret-examples/src/alpha_mode_demo.rs) | `alpha_mode_demo` | [`apps/fret-cookbook/examples/compositing_alpha_basics.rs`](../../../apps/fret-cookbook/examples/compositing_alpha_basics.rs) | Removed |
+| [`apps/fret-examples/src/query_demo.rs`](../../../apps/fret-examples/src/query_demo.rs) | `query_demo` | [`apps/fret-cookbook/examples/query_basics.rs`](../../../apps/fret-cookbook/examples/query_basics.rs) | Removed |
 
 ### 10) Plot tags overlays (feature-gated)
 
@@ -171,31 +86,13 @@ These are the first “lesson-shaped” examples we actually landed in `fret-coo
   - This demo is about plot overlays (`TagX`/`TagY`/`PlotText`), not “tags input”.
   - Keep it out of the onboarding ladder until we have a small, feature-gated plot surface in cookbook.
 
-### 11) Query basics
+## Remaining candidates (not migrated)
 
-- Demo bin: [`apps/fret-demo/src/bin/query_demo.rs`](../../../apps/fret-demo/src/bin/query_demo.rs)
-- Implementation: [`apps/fret-examples/src/query_demo.rs`](../../../apps/fret-examples/src/query_demo.rs)
-- Proposed cookbook example: `query_basics`
-- Cookbook label: `Lab`
-- Cookbook feature: `cookbook-query`
-- Status: Done
-  - Cookbook: [`apps/fret-cookbook/examples/query_basics.rs`](../../../apps/fret-cookbook/examples/query_basics.rs)
-  - Script: [`tools/diag-scripts/cookbook/query-basics/cookbook-query-basics-baseline.json`](../../../tools/diag-scripts/cookbook/query-basics/cookbook-query-basics-baseline.json)
-- Notes:
-  - Implemented as an action-first view runtime example in `fret-cookbook`.
-  - Keep it small and deterministic: one query key, invalidate, namespace invalidation, and a stable baseline screenshot.
+These are still considered “interesting”, but intentionally remain maintainer-grade for now:
 
-### 12) Router basics
-
-- Proposed cookbook example: `router_basics`
-- Cookbook label: `Lab`
-- Cookbook feature: `cookbook-router`
-- Status: Done
-  - Cookbook: [`apps/fret-cookbook/examples/router_basics.rs`](../../../apps/fret-cookbook/examples/router_basics.rs)
-  - Script: [`tools/diag-scripts/cookbook/router-basics/cookbook-router-basics-smoke.json`](../../../tools/diag-scripts/cookbook/router-basics/cookbook-router-basics-smoke.json)
-- Notes:
-  - Implemented as an action-first router-only lesson in `fret-cookbook`.
-  - Query integration is covered separately by `query_basics`.
+- Plot overlay tags: `apps/fret-examples/src/tags_demo.rs` (exposed via `tags_demo`).
+  - Rationale: we do not want to pull a plot stack into the cookbook by default.
+  - If/when migrated, introduce a feature-gated `cookbook-plot` surface.
 
 ## Explicit non-candidates (keep in maintainer/labs)
 
@@ -210,7 +107,7 @@ platform-specific, or too large/multi-topic for cookbook:
   `docking_arbitration_demo`, `liquid_glass_demo`.
 - Node graph demos: keep as ecosystem-level stress + parity surfaces (`node_graph_*`).
 
-## Cookbook gating plan (doc-only)
+## Cookbook gating plan (for future migrations)
 
 If/when these are migrated, keep the cookbook “cold compile” story intact:
 
@@ -224,7 +121,7 @@ Suggested new gates (only if needed):
 - `cookbook-query`
 - `cookbook-router`
 
-## Post-migration checklist (when code work starts)
+## Post-migration checklist (when future code work starts)
 
 - Add stable `test_id`s for each new cookbook example.
 - Add a minimal diag script per migrated example under:

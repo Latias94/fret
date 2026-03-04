@@ -96,6 +96,13 @@ subset of this workstream.
 | `query_demo.rs` | `query_basics` | Done | Reimplemented as an action-first view runtime lesson + deterministic baseline (`cookbook-query-basics`). |
 | `router_query_demo.rs` | `router_basics` | Done | Canonical cookbook: [`apps/fret-cookbook/examples/router_basics.rs`](../../../apps/fret-cookbook/examples/router_basics.rs) (feature-gated: `--features cookbook-router`). Legacy `router_query_demo` was removed after migration. |
 
+Cleanup note:
+
+- Most of the thin `apps/fret-demo/src/bin/*` wrappers for the migrated items were removed to reduce
+  duplication.
+- A small number remain as maintainer-grade probe harnesses (referenced by ADRs/workstreams), e.g.
+  `drag_demo.rs`, `assets_demo.rs`, `drop_shadow_demo.rs`.
+
 ## Interop + renderer “high ceiling” mapping
 
 | ID | State | Current anchors | Run (today) | Notes |
