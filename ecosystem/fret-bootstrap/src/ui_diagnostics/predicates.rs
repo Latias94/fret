@@ -50,6 +50,7 @@ fn eval_predicate_without_semantics(
     open_window_count: u32,
     platform_caps: Option<&fret_runtime::PlatformCapabilities>,
     window_style: Option<&fret_runtime::RunnerWindowStyleDiagnosticsStore>,
+    platform_window_receiver: Option<&fret_runtime::RunnerPlatformWindowReceiverDiagnosticsStore>,
     docking: Option<&fret_runtime::DockingInteractionDiagnostics>,
     workspace: Option<&fret_runtime::WorkspaceInteractionDiagnostics>,
     dock_drag_runtime: Option<&DockDragRuntimeState>,
@@ -61,6 +62,14 @@ fn eval_predicate_without_semantics(
         UiPredicateV1::PlatformUiWindowHoverDetectionIs { quality } => Some(
             platform_caps.is_some_and(|c| c.ui.window_hover_detection.as_str() == quality.as_str()),
         ),
+        UiPredicateV1::PlatformWindowReceiverAtCursorIs {
+            window: target_window,
+        } => {
+            let target_window =
+                resolve_window_target_from_known_windows(window, known_windows, *target_window)?;
+            let have = platform_window_receiver?.latest_at_cursor()?;
+            Some(have.receiver_window == Some(target_window))
+        }
         UiPredicateV1::WindowStyleEffectiveIs {
             window: target_window,
             style,
@@ -484,6 +493,7 @@ fn eval_predicate(
     open_window_count: u32,
     platform_caps: Option<&fret_runtime::PlatformCapabilities>,
     window_style: Option<&fret_runtime::RunnerWindowStyleDiagnosticsStore>,
+    platform_window_receiver: Option<&fret_runtime::RunnerPlatformWindowReceiverDiagnosticsStore>,
     docking: Option<&fret_runtime::DockingInteractionDiagnostics>,
     workspace: Option<&fret_runtime::WorkspaceInteractionDiagnostics>,
     dock_drag_runtime: Option<&DockDragRuntimeState>,
@@ -1183,6 +1193,19 @@ fn eval_predicate(
                 platform_caps
                     .is_some_and(|c| c.ui.window_hover_detection.as_str() == quality.as_str())
             }
+        }
+        UiPredicateV1::PlatformWindowReceiverAtCursorIs {
+            window: target_window,
+        } => {
+            let Some(target_window) =
+                resolve_window_target_from_known_windows(window, known_windows, *target_window)
+            else {
+                return false;
+            };
+            let Some(have) = platform_window_receiver.and_then(|s| s.latest_at_cursor()) else {
+                return false;
+            };
+            have.receiver_window == Some(target_window)
         }
         UiPredicateV1::WindowStyleEffectiveIs {
             window: target_window,

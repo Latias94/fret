@@ -198,6 +198,8 @@ impl DiagCursorScreenPosOverride {
         };
 
         runner.cursor_screen_pos = Some(screen_pos);
+        #[cfg(target_os = "windows")]
+        runner.refresh_platform_window_receiver_at_cursor_diagnostics();
         true
     }
 }

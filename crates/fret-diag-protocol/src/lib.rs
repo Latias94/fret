@@ -913,6 +913,24 @@ pub enum UiActionStepV2 {
         width_px: f32,
         height_px: f32,
     },
+    /// Best-effort request to update OS window style facets at runtime (patch semantics).
+    ///
+    /// This is intended for diagnostics-only repros and regression gates for utility window
+    /// postures (frameless/transparent/materials/hit-test policies).
+    ///
+    /// Capability-gated behind `diag.window_style_patch_v1`.
+    ///
+    /// Note: as of 2026-03-04 this capability is Windows-only in the default in-tree runner.
+    /// Supported patch fields in the default runner are currently limited to:
+    /// - `z_level`
+    /// - `background_material`
+    /// - `hit_test`
+    /// - `opacity_alpha_u8`
+    SetWindowStyle {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        window: Option<UiWindowTargetV1>,
+        style: UiWindowStylePatchV1,
+    },
     SetWindowInsets {
         #[serde(default)]
         safe_area_insets: UiInsetsOverrideV1,
@@ -1374,6 +1392,58 @@ pub struct UiWindowStyleMatchV1 {
     pub hit_test_regions_fingerprint64: Option<u64>,
 }
 
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct UiWindowStylePatchV1 {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub taskbar: Option<UiTaskbarVisibilityV1>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub activation: Option<UiActivationPolicyV1>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub z_level: Option<UiWindowZLevelV1>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub decorations: Option<UiWindowDecorationsRequestV1>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub resizable: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub transparent: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub background_material: Option<UiWindowBackgroundMaterialRequestV1>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub hit_test: Option<UiWindowHitTestPatchV1>,
+    /// Global window opacity hint (0..=255), best-effort.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub opacity_alpha_u8: Option<u8>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum UiWindowHitTestPatchV1 {
+    Normal,
+    PassthroughAll,
+    PassthroughRegions {
+        #[serde(default, skip_serializing_if = "Vec::is_empty")]
+        regions: Vec<UiWindowHitTestRegionV1>,
+    },
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum UiWindowHitTestRegionV1 {
+    Rect {
+        x: f32,
+        y: f32,
+        width: f32,
+        height: f32,
+    },
+    RRect {
+        x: f32,
+        y: f32,
+        width: f32,
+        height: f32,
+        radius: f32,
+    },
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum UiPredicateV1 {
@@ -1761,6 +1831,16 @@ pub enum UiPredicateV1 {
     /// - `reliable`
     PlatformUiWindowHoverDetectionIs {
         quality: String,
+    },
+    /// True when the platform-level "receiver window at cursor" probe reports that the active
+    /// cursor position would be routed to `window` (best-effort).
+    ///
+    /// This predicate is intended to gate runner-level hit-test passthrough behavior (e.g.
+    /// `WM_NCHITTEST` on Win32) without relying on pixel screenshots.
+    ///
+    /// Capability-gated behind `diag.platform_window_receiver_at_cursor_v1`.
+    PlatformWindowReceiverAtCursorIs {
+        window: UiWindowTargetV1,
     },
     /// True when the effective (clamped) OS window style for `window` matches the provided facets.
     ///

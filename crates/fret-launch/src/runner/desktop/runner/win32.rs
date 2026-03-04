@@ -451,9 +451,12 @@ pub(super) fn is_left_mouse_down() -> bool {
 }
 
 pub(super) fn window_under_cursor_root(screen_pos: PhysicalPosition<f64>) -> Option<isize> {
+    if !screen_pos.x.is_finite() || !screen_pos.y.is_finite() {
+        return None;
+    }
     let pt = Point {
-        x: screen_pos.x.round() as i32,
-        y: screen_pos.y.round() as i32,
+        x: screen_pos.x.round().clamp(i32::MIN as f64, i32::MAX as f64) as i32,
+        y: screen_pos.y.round().clamp(i32::MIN as f64, i32::MAX as f64) as i32,
     };
     let hwnd = unsafe { WindowFromPoint(pt) };
     if hwnd == 0 {

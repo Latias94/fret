@@ -1600,7 +1600,7 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
                                             manual_follow: true,
                                             last_outer_pos: None,
                                             transparent_payload_applied: false,
-                                            mouse_passthrough_applied: false,
+                                            hit_test_passthrough_all_applied: false,
                                             always_on_top_applied,
                                         });
                                         // Do not call `drag_window()` here. ImGui drives multi-viewport
@@ -1775,7 +1775,7 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
                                     if let Some(follow) = self.dock_tearoff_follow.as_mut()
                                         && follow.window == window
                                     {
-                                        follow.mouse_passthrough_applied =
+                                        follow.hit_test_passthrough_all_applied =
                                             passthrough_all && applied;
                                         if let Some(pointer_id) = dock_drag_pointer_id
                                             && let Some(drag) = self.app.drag_mut(pointer_id)

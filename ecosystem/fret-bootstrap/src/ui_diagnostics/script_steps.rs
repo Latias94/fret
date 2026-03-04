@@ -48,6 +48,62 @@ pub(super) fn handle_window_effect_steps(
                 output.request_redraw = true;
             }
         }
+        UiActionStepV2::SetWindowStyle {
+            window: target_window,
+            style,
+        } => {
+            if !cfg!(target_os = "windows") {
+                *force_dump_label = Some(format!(
+                    "script-step-{step_index:04}-set_window_style-unsupported-platform"
+                ));
+                *stop_script = true;
+                *failure_reason = Some("window_style_patch_unsupported_platform".to_string());
+                active.wait_until = None;
+                active.screenshot_wait = None;
+                active.v2_step_state = None;
+                output.request_redraw = true;
+                return;
+            }
+            if let Err(fields) = validate_window_style_patch_supported_fields_windows(&style) {
+                *force_dump_label = Some(format!(
+                    "script-step-{step_index:04}-set_window_style-unsupported-fields-{fields}"
+                ));
+                *stop_script = true;
+                *failure_reason = Some("window_style_patch_unsupported_fields".to_string());
+                active.wait_until = None;
+                active.screenshot_wait = None;
+                active.v2_step_state = None;
+                output.request_redraw = true;
+                return;
+            }
+            if let Some(target_window) = svc.resolve_window_target_for_active_step(
+                window,
+                anchor_window,
+                target_window.as_ref(),
+            ) {
+                let patch = window_style_request_from_patch(style);
+                output
+                    .effects
+                    .push(Effect::Window(fret_app::WindowRequest::SetStyle {
+                        window: target_window,
+                        style: patch,
+                    }));
+                active.wait_until = None;
+                active.screenshot_wait = None;
+                active.next_step = active.next_step.saturating_add(1);
+                output.request_redraw = true;
+            } else {
+                *force_dump_label = Some(format!(
+                    "script-step-{step_index:04}-set_window_style-window-not-found"
+                ));
+                *stop_script = true;
+                *failure_reason = Some("window_target_unresolved".to_string());
+                active.wait_until = None;
+                active.screenshot_wait = None;
+                active.v2_step_state = None;
+                output.request_redraw = true;
+            }
+        }
         UiActionStepV2::SetWindowOuterPosition {
             window: target_window,
             x_px,
@@ -404,6 +460,152 @@ pub(super) fn handle_effect_only_steps(
             true
         }
         _ => false,
+    }
+}
+
+fn validate_window_style_patch_supported_fields_windows(
+    patch: &fret_diag_protocol::UiWindowStylePatchV1,
+) -> Result<(), String> {
+    let mut unsupported: Vec<&'static str> = Vec::new();
+    if patch.taskbar.is_some() {
+        unsupported.push("taskbar");
+    }
+    if patch.activation.is_some() {
+        unsupported.push("activation");
+    }
+    if patch.decorations.is_some() {
+        unsupported.push("decorations");
+    }
+    if patch.resizable.is_some() {
+        unsupported.push("resizable");
+    }
+    if patch.transparent.is_some() {
+        unsupported.push("transparent");
+    }
+
+    // Supported (Windows-only, as of 2026-03-04):
+    // - z_level
+    // - background_material
+    // - hit_test (including passthrough regions)
+    // - opacity_alpha_u8
+    if unsupported.is_empty() {
+        Ok(())
+    } else {
+        Err(unsupported.join("-"))
+    }
+}
+
+fn window_style_request_from_patch(
+    patch: fret_diag_protocol::UiWindowStylePatchV1,
+) -> fret_runtime::WindowStyleRequest {
+    use fret_diag_protocol::{
+        UiActivationPolicyV1, UiTaskbarVisibilityV1, UiWindowBackgroundMaterialRequestV1,
+        UiWindowDecorationsRequestV1, UiWindowHitTestPatchV1, UiWindowHitTestRegionV1,
+        UiWindowZLevelV1,
+    };
+    use fret_runtime::{
+        ActivationPolicy, TaskbarVisibility, WindowBackgroundMaterialRequest,
+        WindowDecorationsRequest, WindowHitTestRegionV1, WindowHitTestRequestV1, WindowOpacity,
+        WindowStyleRequest, WindowZLevel,
+    };
+
+    fn taskbar(v: UiTaskbarVisibilityV1) -> TaskbarVisibility {
+        match v {
+            UiTaskbarVisibilityV1::Show => TaskbarVisibility::Show,
+            UiTaskbarVisibilityV1::Hide => TaskbarVisibility::Hide,
+        }
+    }
+
+    fn activation(v: UiActivationPolicyV1) -> ActivationPolicy {
+        match v {
+            UiActivationPolicyV1::Activates => ActivationPolicy::Activates,
+            UiActivationPolicyV1::NonActivating => ActivationPolicy::NonActivating,
+        }
+    }
+
+    fn z_level(v: UiWindowZLevelV1) -> WindowZLevel {
+        match v {
+            UiWindowZLevelV1::Normal => WindowZLevel::Normal,
+            UiWindowZLevelV1::AlwaysOnTop => WindowZLevel::AlwaysOnTop,
+        }
+    }
+
+    fn decorations(v: UiWindowDecorationsRequestV1) -> WindowDecorationsRequest {
+        match v {
+            UiWindowDecorationsRequestV1::System => WindowDecorationsRequest::System,
+            UiWindowDecorationsRequestV1::None => WindowDecorationsRequest::None,
+            UiWindowDecorationsRequestV1::Server => WindowDecorationsRequest::Server,
+            UiWindowDecorationsRequestV1::Client => WindowDecorationsRequest::Client,
+        }
+    }
+
+    fn material(v: UiWindowBackgroundMaterialRequestV1) -> WindowBackgroundMaterialRequest {
+        match v {
+            UiWindowBackgroundMaterialRequestV1::None => WindowBackgroundMaterialRequest::None,
+            UiWindowBackgroundMaterialRequestV1::SystemDefault => {
+                WindowBackgroundMaterialRequest::SystemDefault
+            }
+            UiWindowBackgroundMaterialRequestV1::Mica => WindowBackgroundMaterialRequest::Mica,
+            UiWindowBackgroundMaterialRequestV1::Acrylic => {
+                WindowBackgroundMaterialRequest::Acrylic
+            }
+            UiWindowBackgroundMaterialRequestV1::Vibrancy => {
+                WindowBackgroundMaterialRequest::Vibrancy
+            }
+        }
+    }
+
+    fn hit_test_region(v: UiWindowHitTestRegionV1) -> WindowHitTestRegionV1 {
+        match v {
+            UiWindowHitTestRegionV1::Rect {
+                x,
+                y,
+                width,
+                height,
+            } => WindowHitTestRegionV1::Rect {
+                x,
+                y,
+                width,
+                height,
+            },
+            UiWindowHitTestRegionV1::RRect {
+                x,
+                y,
+                width,
+                height,
+                radius,
+            } => WindowHitTestRegionV1::RRect {
+                x,
+                y,
+                width,
+                height,
+                radius,
+            },
+        }
+    }
+
+    fn hit_test(v: UiWindowHitTestPatchV1) -> WindowHitTestRequestV1 {
+        match v {
+            UiWindowHitTestPatchV1::Normal => WindowHitTestRequestV1::Normal,
+            UiWindowHitTestPatchV1::PassthroughAll => WindowHitTestRequestV1::PassthroughAll,
+            UiWindowHitTestPatchV1::PassthroughRegions { regions } => {
+                WindowHitTestRequestV1::PassthroughRegions {
+                    regions: regions.into_iter().map(hit_test_region).collect(),
+                }
+            }
+        }
+    }
+
+    WindowStyleRequest {
+        taskbar: patch.taskbar.map(taskbar),
+        activation: patch.activation.map(activation),
+        z_level: patch.z_level.map(z_level),
+        decorations: patch.decorations.map(decorations),
+        resizable: patch.resizable,
+        transparent: patch.transparent,
+        background_material: patch.background_material.map(material),
+        hit_test: patch.hit_test.map(hit_test),
+        opacity: patch.opacity_alpha_u8.map(WindowOpacity),
     }
 }
 

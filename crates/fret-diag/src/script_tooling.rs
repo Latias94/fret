@@ -556,6 +556,12 @@ fn window_target_requires_multi_window(window: &UiWindowTargetV1) -> bool {
 
 fn infer_required_capabilities_from_predicate(caps: &mut Vec<String>, predicate: &UiPredicateV1) {
     match predicate {
+        UiPredicateV1::PlatformWindowReceiverAtCursorIs { window } => {
+            push_cap(caps, "diag.platform_window_receiver_at_cursor_v1");
+            if window_target_requires_multi_window(window) {
+                push_cap(caps, "diag.multi_window");
+            }
+        }
         UiPredicateV1::WindowStyleEffectiveIs { window, .. } => {
             push_cap(caps, "diag.window_style_snapshot");
             if window_target_requires_multi_window(window) {
@@ -599,6 +605,7 @@ fn infer_required_capabilities_v2(script: &UiActionScriptV2) -> Vec<String> {
             | UiActionStepV2::DragTo { window, .. }
             | UiActionStepV2::SetSliderValue { window, .. }
             | UiActionStepV2::SetWindowInnerSize { window, .. }
+            | UiActionStepV2::SetWindowStyle { window, .. }
             | UiActionStepV2::SetWindowOuterPosition { window, .. }
             | UiActionStepV2::SetCursorInWindow { window, .. }
             | UiActionStepV2::SetCursorInWindowLogical { window, .. }
@@ -686,6 +693,9 @@ fn infer_required_capabilities_v2(script: &UiActionScriptV2) -> Vec<String> {
         }
         if matches!(step, UiActionStepV2::InjectIncomingOpen { .. }) {
             push_cap(&mut caps, "diag.incoming_open_inject");
+        }
+        if matches!(step, UiActionStepV2::SetWindowStyle { .. }) {
+            push_cap(&mut caps, "diag.window_style_patch_v1");
         }
         if matches!(step, UiActionStepV2::Tap { .. }) {
             push_cap(&mut caps, "diag.gesture_tap");
@@ -897,7 +907,9 @@ pub(crate) fn canonicalize_json_value(value: &mut Value) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use fret_diag_protocol::{UiMouseButtonV1, UiSelectorV1};
+    use fret_diag_protocol::{
+        UiMouseButtonV1, UiSelectorV1, UiWindowHitTestPatchV1, UiWindowStylePatchV1,
+    };
 
     #[test]
     fn canonicalize_sorts_keys_recursively() {
@@ -1134,5 +1146,22 @@ mod tests {
         };
         let inferred = infer_required_capabilities_v2(&script);
         assert!(inferred.iter().any(|c| c == "diag.gesture_swipe"));
+    }
+
+    #[test]
+    fn lint_infers_window_style_patch_capability() {
+        let script = UiActionScriptV2 {
+            schema_version: 2,
+            meta: None,
+            steps: vec![UiActionStepV2::SetWindowStyle {
+                window: None,
+                style: UiWindowStylePatchV1 {
+                    hit_test: Some(UiWindowHitTestPatchV1::PassthroughAll),
+                    ..UiWindowStylePatchV1::default()
+                },
+            }],
+        };
+        let inferred = infer_required_capabilities_v2(&script);
+        assert!(inferred.iter().any(|c| c == "diag.window_style_patch_v1"));
     }
 }
