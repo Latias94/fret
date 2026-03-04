@@ -33,27 +33,57 @@
       },
       "timeout_frames": 600
     },
-    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-popover" } },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-nav-popover" },
+      "stable_frames": 2,
+      "max_move_px": 2.0,
+      "timeout_frames": 600
+    },
     {
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-popover" }
+        "target": { "kind": "test_id", "id": "ui-gallery-page-popover" }
       },
       "timeout_frames": 600
     },
     {
       "type": "scroll_into_view",
-      "container": { "kind": "test_id", "id": "ui-gallery-content-viewport" },
-      "target": { "kind": "test_id", "id": "ui-gallery-popover-demo-trigger" },
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-popover-demo-tabs-trigger-preview" },
       "delta_y": 240.0,
       "require_fully_within_container": false,
       "require_fully_within_window": false,
       "padding_px": 24.0,
       "timeout_frames": 600
     },
-    { "type": "wait_frames", "n": 10 },
-    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-popover-demo-trigger" } },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-popover-demo-tabs-trigger-preview" },
+      "stable_frames": 2,
+      "max_move_px": 2.0,
+      "timeout_frames": 600
+    },
+    { "type": "wait_frames", "n": 4 },
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-popover-demo-popover" },
+      "delta_y": 240.0,
+      "require_fully_within_container": false,
+      "require_fully_within_window": false,
+      "padding_px": 24.0,
+      "timeout_frames": 600
+    },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-popover-demo-popover" },
+      "stable_frames": 2,
+      "max_move_px": 2.0,
+      "timeout_frames": 600
+    },
     {
       "type": "wait_until",
       "predicate": {

@@ -28,32 +28,23 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                 )
         };
 
-        let physical = stack::hstack_build(
-            cx,
-            stack::HStackProps::default()
-                .gap(Space::N2)
-                .items_center()
-                .layout(LayoutRefinement::default().w_full())
-                .justify_center(),
-            |cx, out| {
-                for (id, label, side) in [
-                    ("left", "يسار", shadcn::PopoverSide::Left),
-                    ("top", "أعلى", shadcn::PopoverSide::Top),
-                    ("bottom", "أسفل", shadcn::PopoverSide::Bottom),
-                    ("right", "يمين", shadcn::PopoverSide::Right),
-                ] {
-                    out.push(cx.keyed(id, |cx| popover(cx, label, side)));
-                }
-            },
-        );
-
-        stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .gap(Space::N4)
-                .layout(LayoutRefinement::default().w_full()),
-            move |_cx| [physical],
-        )
+        fret_ui_kit::ui::h_flex(cx, move |cx| {
+            [
+                ("left", "يسار", shadcn::PopoverSide::Left),
+                ("top", "أعلى", shadcn::PopoverSide::Top),
+                ("bottom", "أسفل", shadcn::PopoverSide::Bottom),
+                ("right", "يمين", shadcn::PopoverSide::Right),
+            ]
+            .into_iter()
+            .map(|(id, label, side)| cx.keyed(id, |cx| popover(cx, label, side)))
+            .collect::<Vec<_>>()
+        })
+        .gap(Space::N2)
+        .wrap()
+        .w_full()
+        .items_center()
+        .justify_center()
+        .into_element(cx)
     })
     .test_id("ui-gallery-popover-rtl")
 }

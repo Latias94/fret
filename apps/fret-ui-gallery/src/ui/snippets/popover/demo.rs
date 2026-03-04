@@ -58,7 +58,6 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     };
 
     let popover = shadcn::Popover::new_controllable(cx, None, false)
-        .align(shadcn::PopoverAlign::Start)
         .into_element(
             cx,
             |cx| {

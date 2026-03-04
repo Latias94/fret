@@ -14,14 +14,14 @@ pub(super) fn preview_popover(cx: &mut ElementContext<'_, App>) -> Vec<AnyElemen
         cx,
         [
             "Preview follows shadcn Popover demo (new-york-v4).",
-            "Use `align(Start)` to match the default docs layout; keep content width explicit (e.g. 320px).",
+            "Keep content width explicit (e.g. 320px) for predictable layout.",
             "For dense input rows, prefer `Field`/`FieldGroup` recipes to keep spacing consistent with other form surfaces.",
         ],
     );
 
     let body = doc_layout::render_doc_page(
         cx,
-        Some("Preview follows shadcn Popover demo: Dimensions form (align=start, w=320px)."),
+        Some("Preview follows shadcn Popover demo: Dimensions form (w=320px)."),
         vec![
             DocSection::new("Demo", demo)
                 .test_id_prefix("ui-gallery-popover-demo")

@@ -27,6 +27,15 @@
     { "type": "wait_frames", "n": 2 },
     { "type": "press_key", "key": "escape" },
     { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "not_exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-theme-preset-item-zinc-dark" }
+      },
+      "timeout_frames": 600
+    },
+    { "type": "wait_frames", "n": 4 },
 
     { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
     { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
@@ -40,7 +49,13 @@
       "delta_y": -240.0,
       "timeout_frames": 600
     },
-    { "type": "click_stable", "target": { "kind": "test_id", "id": "ui-gallery-nav-popover" } },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-nav-popover" },
+      "stable_frames": 2,
+      "max_move_px": 2.0,
+      "timeout_frames": 600
+    },
     {
       "type": "wait_until",
       "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-page-popover" } },
@@ -50,7 +65,25 @@
     {
       "type": "scroll_into_view",
       "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
-      "target": { "kind": "test_id", "id": "ui-gallery-popover-basic-trigger" },
+      "target": { "kind": "test_id", "id": "ui-gallery-popover-basic-tabs-trigger-preview" },
+      "delta_y": -180.0,
+      "require_fully_within_container": true,
+      "require_fully_within_window": true,
+      "padding_px": 16.0,
+      "timeout_frames": 600
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-popover-basic-tabs-trigger-preview" },
+      "stable_frames": 2,
+      "max_move_px": 2.0,
+      "timeout_frames": 600
+    },
+    { "type": "wait_frames", "n": 4 },
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-popover-basic-popover" },
       "delta_y": -180.0,
       "require_fully_within_container": true,
       "require_fully_within_window": true,
@@ -58,7 +91,13 @@
       "timeout_frames": 600
     },
     { "type": "wait_frames", "n": 2 },
-    { "type": "click_stable", "target": { "kind": "test_id", "id": "ui-gallery-popover-basic-trigger" } },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-popover-basic-popover" },
+      "stable_frames": 2,
+      "max_move_px": 2.0,
+      "timeout_frames": 600
+    },
     {
       "type": "wait_until",
       "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-popover-basic-panel" } },
@@ -70,4 +109,3 @@
     { "type": "capture_bundle", "label": "ui-gallery-popover-basic-open-zinc-dark" }
   ]
 }
-
