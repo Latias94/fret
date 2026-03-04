@@ -36,10 +36,13 @@
 
 ## Optimization candidates
 
-- [ ] Run allocator A/B locally (mimalloc/jemalloc) and record impact on:
+- [x] Run allocator A/B locally (mimalloc/jemalloc) and record impact on:
   - `resources.process_footprint.macos_owned_unmapped_memory_dirty_bytes`
   - `macos_vmmap.tables.malloc_zones.top_allocated[0]` (`allocated_bytes`, `frag_bytes`, `frag_percent`)
-- [ ] If allocator sensitivity is high, decide whether to expose a dev knob (env var) for repros.
+- Observed (empty idle, sample):
+  - System vs `mimalloc`: default malloc zone allocated drops ~23.9 MB → ~7.8 MB; `owned unmapped memory` dirty unchanged (~213.6 MB).
+  - System vs `jemalloc`: default malloc zone allocated drops ~23.9 MB → ~7.8 MB; `owned unmapped memory` dirty remains the headline (~216.3 MB).
+- [ ] Decide whether to keep allocator selection as a dev-only feature (A/B), and whether to surface it in `fretboard dev` presets.
 - [ ] Identify top heap offenders via structured `vmmap` summary and pick one bounded optimization.
 
 ## Gates

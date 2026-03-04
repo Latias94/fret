@@ -35,11 +35,31 @@ Using `tools/diag-scripts/empty-idle-memory-steady.json` on macOS/Metal (baselin
   - Default malloc zone: ~24.5 MB allocated, ~15.4 MB frag
   - `debug.stats.wgpu_metal_current_allocated_size_bytes`: ~30.7 MiB (requires `--env FRET_DIAG_WGPU_ALLOCATOR_REPORT=1`)
 
+Allocator A/B (empty idle, `--release`, `fretboard diag repro`, same script):
+
+- System allocator:
+  - `macos_vmmap.physical_footprint_peak_bytes`: 284,164,096
+  - `owned unmapped memory` dirty: 213,594,931
+  - Default malloc zone: 23,907,533 allocated, 15,623,782 frag (~40%)
+  - `wgpu_metal_current_allocated_size_bytes`: 32,161,792
+- `mimalloc`:
+  - `macos_vmmap.physical_footprint_peak_bytes`: 285,212,672 (Δ +1,048,576 vs system)
+  - `owned unmapped memory` dirty: 213,594,931 (Δ 0 vs system)
+  - Default malloc zone: 7,843,840 allocated, 5,574,656 frag (~42%)
+  - `wgpu_metal_current_allocated_size_bytes`: 32,161,792
+- `jemalloc`:
+  - `macos_vmmap.physical_footprint_peak_bytes`: 280,494,080 (Δ -3,670,016 vs system)
+  - `owned unmapped memory` dirty: 216,321,229 (Δ +2,726,298 vs system)
+  - Default malloc zone: 7,814,144 allocated, 4,572,160 frag (~37%)
+  - `wgpu_metal_current_allocated_size_bytes`: 32,161,792
+
 Interpretation:
 
 - GPU memory can be substantial but may not be reflected by `physical footprint` in a stable way.
 - The largest CPU-side “mystery” is `owned unmapped memory` dirty, which likely reflects allocator
   behavior, caching, or sticky runtime allocations.
+- The allocator choice strongly affects the default malloc zone (allocated + frag), but does not
+  materially change the `owned unmapped memory` headline in this baseline.
 
 ## Goals
 
