@@ -18,5 +18,6 @@ pub mod plugin_autoplay_stop_on_last_snap;
 pub mod plugin_wheel_gestures;
 pub mod rtl;
 pub mod sizes;
+pub mod sizes_thirds;
 pub mod spacing;
 pub mod spacing_responsive;
