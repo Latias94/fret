@@ -1,0 +1,105 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "Workspace shell demo: drag tab to split (right) preview invariants (smoke)",
+    "tags": [
+      "workspace",
+      "tabstrip",
+      "drag_to_split",
+      "drop_preview",
+      "smoke",
+      "gate"
+    ],
+    "required_capabilities": ["diag.script_v2"],
+    "target_hints": [
+      "Starts a pointer session on an active tab.",
+      "Pins the cursor inside the window edge and asserts the right split preview appears.",
+      "Drops and asserts the preview disappears and the tab moves into the new split pane."
+    ]
+  },
+  "steps": [
+    { "type": "set_window_inner_size", "width_px": 1280.0, "height_px": 720.0 },
+    { "type": "wait_frames", "n": 10 },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-2" }
+      },
+      "timeout_frames": 240,
+      "timeout_ms": 15000
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-b-root" }
+      },
+      "timeout_frames": 240,
+      "timeout_ms": 15000
+    },
+
+    {
+      "type": "pointer_down",
+      "window": { "kind": "current" },
+      "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-2" },
+      "button": "left"
+    },
+    { "type": "pointer_move", "window": { "kind": "current" }, "delta_x": 420.0, "delta_y": 0.0, "steps": 42 },
+    { "type": "set_cursor_in_window_logical", "window": { "kind": "current" }, "x_px": 1278.0, "y_px": 160.0 },
+    { "type": "pointer_move", "window": { "kind": "current" }, "delta_x": -1.0, "delta_y": 0.0, "steps": 1 },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "workspace-pane-pane-b.drop_preview.right" }
+      },
+      "timeout_frames": 480,
+      "timeout_ms": 15000
+    },
+    { "type": "wait_frames", "n": 4 },
+
+    { "type": "pointer_up", "window": { "kind": "current" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "not_exists",
+        "target": { "kind": "test_id", "id": "workspace-pane-pane-b.drop_preview.right" }
+      },
+      "timeout_frames": 240,
+      "timeout_ms": 15000
+    },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "workspace-shell-pane-window-1.pane.1-root" }
+      },
+      "timeout_frames": 240,
+      "timeout_ms": 15000
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "workspace-shell-pane-window-1.pane.1-tab-doc-a-2" }
+      },
+      "timeout_frames": 240,
+      "timeout_ms": 15000
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "not_exists",
+        "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-2" }
+      },
+      "timeout_frames": 240,
+      "timeout_ms": 15000
+    },
+
+    { "type": "capture_bundle", "label": "workspace-shell-demo-tab-drag-to-split-right-preview-invariants-smoke" }
+  ]
+}

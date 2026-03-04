@@ -173,6 +173,14 @@ ID format:
     - `debug.dirty_views` + `debug.notify_requests`: `ecosystem/fret-bootstrap/src/ui_diagnostics/invalidation_diagnostics.rs`
     - `debug.cache_roots[*].reuse_reason`: `ecosystem/fret-bootstrap/src/ui_diagnostics/cache_root_diagnostics.rs`
     - view-cache reason source: `crates/fret-ui/src/declarative/mount.rs`
+- [x] AFA-view-026 Provide a safe “app effects” scheduling helper for views:
+  - Goal: allow `cx.on_action*` handlers to request `App`-scoped effects (e.g. `fret-query`
+    invalidation) with a boring, reusable pattern that avoids allocating a dedicated model for
+    simple “one-shot” effects.
+  - Implemented (v1): transient event scheduling at the view action root.
+  - Evidence:
+    - Helpers: `ecosystem/fret/src/view.rs` (`ViewCx::on_action_notify_transient`, `ViewCx::take_transient_on_action_root`)
+    - Adoption: `apps/fret-examples/src/query_demo.rs`, `apps/fret-examples/src/query_async_tokio_demo.rs`
 
 ---
 
@@ -254,6 +262,20 @@ ID format:
       `apps/fretboard/src/scaffold/templates.rs` (`todo_template_main_rs`)
     - `cargo run -p fretboard -- new simple-todo` uses View runtime + typed unit actions:
       `apps/fretboard/src/scaffold/templates.rs` (`simple_todo_template_main_rs`)
+
+- [x] AFA-adopt-044 Migrate `embedded_viewport_demo` to the view runtime (keep a legacy opt-in copy).
+  - Goal: prove view-runtime authoring composes cleanly with embedded viewport interop:
+    - `viewport_input(...)` forwarding,
+    - and a custom `record_engine_frame(...)` hook for offscreen engine passes.
+  - Why this matters: `UiAppDriver` only supports a single `record_engine_frame` hook; view runtime
+    currently uses it for view-cache enablement (v1), while embedded viewport needs it for engine
+    recording. The migrated demo should demonstrate the correct composition pattern.
+  - Evidence:
+    - `apps/fret-examples/src/embedded_viewport_demo.rs` (composed `record_engine_frame`)
+    - `apps/fret-examples/src/embedded_viewport_demo_legacy.rs`
+    - `apps/fret-demo/src/main.rs` (demo routing + legacy name)
+    - `ecosystem/fret/src/interop/embedded_viewport.rs`
+    - `ecosystem/fret/src/app_entry.rs`
 
 ---
 
@@ -384,6 +406,10 @@ practical steps:
     - `crates/fret-ui/src/declarative/host_widget/event/pressable.rs` (records pending source with `test_id`)
 - View runtime ergonomics: reduce `on_action` handler boilerplate (`request_redraw` + `notify`) without weakening
   determinism or layering (ecosystem-only).
+  - Status (as of 2026-03-04): implemented `ViewCx::on_action_notify` + `ViewCx::on_payload_action_notify` sugar.
+  - Evidence:
+    - `ecosystem/fret/src/view.rs` (`on_action_notify`, `on_payload_action_notify`)
+    - `apps/fret-cookbook/examples/hello.rs` (uses `on_action_notify`)
 - Payload actions (v2+), behind strict determinism + validation rules.
   - See: `docs/adr/0312-payload-actions-v2.md`
 
@@ -429,3 +455,41 @@ practical steps:
   - Keep `actions!` explicit-ID requirement (stable IDs must not drift with refactors).
   - Consider additive helpers that reduce repetition (e.g. prefix/namespace helpers), but do not
     infer IDs from type paths/module names.
+
+---
+
+## H. Hard delete legacy MVU (M9 follow-up)
+
+This workstream landed v1 with MVU quarantined and opt-in. If the repo goal becomes “fully
+migrated, then delete”, track the remaining steps here.
+
+Exit target:
+
+- no remaining MVU usage in-tree,
+- no `legacy-mvu` or `legacy-mvu-demos` features,
+- no `fret::legacy::*` module,
+- no MVU references in templates/docs.
+
+Tasks:
+
+- [x] AFA-m9-001 Migrate remaining non-action-first demos in `apps/fret-examples` to View+actions.
+- [ ] AFA-m9-002 Delete legacy MVU demo copies once the migrated versions exist (remove `*_legacy.rs` files):
+  - `apps/fret-examples/src/todo_demo_legacy.rs`
+  - `apps/fret-examples/src/query_demo_legacy.rs`
+  - `apps/fret-examples/src/query_async_tokio_demo_legacy.rs`
+  - `apps/fret-examples/src/hello_counter_demo_legacy.rs`
+  - `apps/fret-examples/src/async_playground_demo_legacy.rs`
+  - `apps/fret-examples/src/embedded_viewport_demo_legacy.rs`
+  - `apps/fret-examples/src/drop_shadow_demo_legacy.rs`
+  - `apps/fret-examples/src/postprocess_theme_demo_legacy.rs`
+- [ ] AFA-m9-003 Remove `apps/fret-examples` feature `legacy-mvu-demos` and any routing/printing branches in `apps/fret-demo`.
+- [ ] AFA-m9-004 Remove `ecosystem/fret` feature `legacy-mvu` and delete MVU modules:
+  - `ecosystem/fret/src/mvu.rs`
+  - `ecosystem/fret/src/mvu_router.rs`
+  - `ecosystem/fret/src/legacy.rs`
+- [ ] AFA-m9-005 Remove any legacy MVU scaffolding sources from `apps/fretboard/src/scaffold/templates.rs`.
+- [ ] AFA-m9-006 Update docs to remove MVU guidance:
+  - `docs/workstreams/action-first-authoring-fearless-refactor-v1/MVU_POLICY.md`
+  - `docs/workstreams/action-first-authoring-fearless-refactor-v1/MIGRATION_GUIDE.md`
+  - `docs/workstreams/action-first-authoring-fearless-refactor-v1/CLEANUP_PLAN.md`
+- [ ] AFA-m9-007 Add a lightweight gate that fails if MVU identifiers reappear (file list + `git grep` is enough).

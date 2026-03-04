@@ -79,7 +79,7 @@
       "timeout_frames": 600
     },
     {
-      "type": "move_pointer",
+      "type": "click",
       "target": {
         "kind": "test_id",
         "id": "ui-gallery-navigation-menu-demo-trigger-components"
@@ -109,24 +109,39 @@
       "timeout_frames": 600
     },
     {
-      "type": "assert",
+      "type": "wait_until",
       "predicate": {
-        "kind": "bounds_min_size",
+        "kind": "exists",
         "target": {
           "kind": "test_id",
-          "id": "ui-gallery-navigation-menu-demo-viewport"
-        },
-        "min_w_px": 540.0,
-        "min_h_px": 80.0,
-        "eps_px": 2.0
-      }
+          "id": "ui-gallery-navigation-menu-demo-components-layout-two-col"
+        }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "not_exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-navigation-menu-demo-components-layout-single-col"
+        }
+      },
+      "timeout_frames": 600
     },
     {
       "type": "capture_screenshot",
       "label": "ui-gallery-navigation-menu-md-breakpoint-query-source-toggle-viewport"
     },
 
-    { "type": "press_key", "key": "escape" },
+    {
+      "type": "click",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-navigation-menu-demo-trigger-components"
+      }
+    },
     {
       "type": "wait_until",
       "predicate": {
@@ -161,6 +176,23 @@
 
     {
       "type": "move_pointer",
+      "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+    },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-navigation-menu-demo-trigger-components"
+        }
+      },
+      "timeout_frames": 600
+    },
+
+    {
+      "type": "click",
       "target": {
         "kind": "test_id",
         "id": "ui-gallery-navigation-menu-demo-trigger-components"
@@ -190,17 +222,26 @@
       "timeout_frames": 600
     },
     {
-      "type": "assert",
+      "type": "wait_until",
       "predicate": {
-        "kind": "bounds_max_size",
+        "kind": "exists",
         "target": {
           "kind": "test_id",
-          "id": "ui-gallery-navigation-menu-demo-viewport"
-        },
-        "max_w_px": 460.0,
-        "max_h_px": 480.0,
-        "eps_px": 2.0
-      }
+          "id": "ui-gallery-navigation-menu-demo-components-layout-single-col"
+        }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "not_exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-navigation-menu-demo-components-layout-two-col"
+        }
+      },
+      "timeout_frames": 600
     },
     {
       "type": "capture_screenshot",
@@ -213,4 +254,3 @@
     }
   ]
 }
-

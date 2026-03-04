@@ -106,6 +106,15 @@ pub(super) struct WindowUnderCursorHit {
     pub(super) source: fret_runtime::WindowUnderCursorSource,
 }
 
+#[derive(Debug, Clone, Copy)]
+pub(super) struct WindowClientOriginDiagnostics {
+    pub(super) client_origin_screen: PhysicalPosition<f64>,
+    pub(super) client_origin_source_platform: bool,
+    pub(super) outer_pos_physical: Option<PhysicalPosition<i32>>,
+    pub(super) decoration_offset_physical: PhysicalPosition<i32>,
+    pub(super) scale_factor: f64,
+}
+
 #[cfg(target_os = "macos")]
 pub(super) fn bring_window_to_front(window: &dyn Window, sender: Option<&dyn Window>) -> bool {
     use objc::runtime::Class;
@@ -1318,28 +1327,45 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         window: fret_core::AppWindowId,
         screen_pos: PhysicalPosition<f64>,
     ) -> Option<Point> {
-        let state = self.windows.get(window)?;
-        #[cfg(target_os = "windows")]
-        let origin = Self::hwnd_for_window(state.window.as_ref())
-            .and_then(super::win32::client_origin_screen_for_hwnd)
-            .or_else(|| {
-                let outer = state.window.outer_position().ok()?;
-                let deco = Self::hwnd_for_window(state.window.as_ref())
-                    .and_then(super::win32::decoration_offset_for_hwnd)
-                    .unwrap_or_else(|| state.window.surface_position());
-                Some(client_origin_screen(outer, deco))
-            })?;
-        #[cfg(not(target_os = "windows"))]
-        let origin = {
-            let outer = state.window.outer_position().ok()?;
-            let deco = state.window.surface_position();
-            client_origin_screen(outer, deco)
-        };
+        let diag = self.client_origin_screen_diagnostics_for_window(window)?;
         Some(local_pos_for_screen_pos(
-            origin,
-            state.window.scale_factor(),
+            diag.client_origin_screen,
+            diag.scale_factor,
             screen_pos,
         ))
+    }
+
+    pub(super) fn client_origin_screen_diagnostics_for_window(
+        &self,
+        window: fret_core::AppWindowId,
+    ) -> Option<WindowClientOriginDiagnostics> {
+        let state = self.windows.get(window)?;
+
+        let outer = state.window.outer_position().ok();
+        #[cfg(target_os = "windows")]
+        let decoration_offset = Self::hwnd_for_window(state.window.as_ref())
+            .and_then(super::win32::decoration_offset_for_hwnd)
+            .unwrap_or_else(|| state.window.surface_position());
+        #[cfg(not(target_os = "windows"))]
+        let decoration_offset = state.window.surface_position();
+
+        let fallback = outer.map(|outer| client_origin_screen(outer, decoration_offset));
+        #[cfg(target_os = "windows")]
+        let platform = Self::hwnd_for_window(state.window.as_ref())
+            .and_then(super::win32::client_origin_screen_for_hwnd);
+        #[cfg(not(target_os = "windows"))]
+        let platform: Option<PhysicalPosition<f64>> = None;
+
+        let client_origin_screen = platform.or(fallback)?;
+        let client_origin_source_platform = platform.is_some();
+
+        Some(WindowClientOriginDiagnostics {
+            client_origin_screen,
+            client_origin_source_platform,
+            outer_pos_physical: outer,
+            decoration_offset_physical: decoration_offset,
+            scale_factor: state.window.scale_factor(),
+        })
     }
 
     pub(super) fn window_client_rect_screen(

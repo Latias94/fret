@@ -40,6 +40,9 @@ with special focus on multi-window tear-off + drag-back sequences.
   positives).
   - Maintain and revisit the freshness rule and evidence (event log) as we learn more about snapshot liveness.
   - Add a minimal “occluded window still progresses” repro script if we do not already have one that is stable.
+- Script timeouts should be time-based, not frame-only:
+  - Prefer `wait_until.timeout_ms` for no-frame/occlusion resilience.
+  - Use `wait_ms` only as a last-resort stabilization yield when no semantic predicate exists (tooling lints long sleeps).
 
 ## Regression gates (candidate)
 

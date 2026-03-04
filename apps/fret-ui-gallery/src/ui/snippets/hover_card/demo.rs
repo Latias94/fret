@@ -1,9 +1,13 @@
 pub const SOURCE: &str = include_str!("demo.rs");
 
 // region: example
+use fret_core::ImageId;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    avatar_image: Model<Option<ImageId>>,
+) -> AnyElement {
     // Align with upstream shadcn/ui HoverCard demo composition:
     // - trigger: link-style button (`@nextjs`)
     // - content: `w-80` (320px), avatar + text block
@@ -15,8 +19,12 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let theme = Theme::global(&*cx.app).snapshot();
     let muted_fg = theme.color_token("muted-foreground");
 
-    let avatar =
-        shadcn::Avatar::new([shadcn::AvatarFallback::new("VC").into_element(cx)]).into_element(cx);
+    let avatar_image_el = shadcn::AvatarImage::model(avatar_image.clone()).into_element(cx);
+    let avatar_fallback = shadcn::AvatarFallback::new("VC")
+        .when_image_missing_model(avatar_image)
+        .delay_ms(120)
+        .into_element(cx);
+    let avatar = shadcn::Avatar::new([avatar_image_el, avatar_fallback]).into_element(cx);
 
     let heading = ui::text(cx, "@nextjs")
         .text_sm()

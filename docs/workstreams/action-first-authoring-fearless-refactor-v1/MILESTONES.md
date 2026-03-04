@@ -19,12 +19,15 @@ Related:
 - **M5**: Met (workspace shell demo tab strip uses action-first pointer dispatch hooks; scripted diag gate asserts pointer dispatch trace exists).
 - **M6**: Met (legacy MVU authoring is quarantined; golden path is action-first + view runtime).
   - Status (as of 2026-03-04): MVU remains available as compat under `fret::legacy::prelude::*` while cookbook/templates stay MVU-free.
+- **M6 evidence** (as of 2026-03-04): `apps/fret-examples/src/todo_demo.rs`, `apps/fret-examples/src/query_demo.rs`, `apps/fret-examples/src/query_async_tokio_demo.rs`, `apps/fret-examples/src/hello_counter_demo.rs`, `apps/fret-examples/src/async_playground_demo.rs`, `apps/fret-examples/src/embedded_viewport_demo.rs`, `apps/fret-examples/src/drop_shadow_demo.rs`, `apps/fret-examples/src/postprocess_theme_demo.rs`, `apps/fret-examples/src/custom_effect_v1_demo.rs`, `apps/fret-examples/src/custom_effect_v2_demo.rs`, `apps/fret-examples/src/custom_effect_v3_demo.rs`, `apps/fret-examples/src/liquid_glass_demo.rs`, `apps/fret-examples/src/genui_demo.rs`, `apps/fret-examples/src/markdown_demo.rs` are view runtime + typed actions (legacy MVU versions are opt-in where present).
 - **M7**: Met (payload actions v2 contract + prototype landed; at least one in-tree demo uses it with a scripted diag gate).
 - **M8**: Met (in-tree) (MVU is opt-in behind a legacy feature and surfaces are compile-time deprecated; in-tree legacy demos explicitly opt in).
+- **M9**: Planned (in-tree) (remaining MVU demos migrated; legacy MVU feature + modules removed).
 
 Hardening follow-up (post-M1):
 
 - Key-context aware `when` evaluation (`keyctx.*`) is aligned across keymap matching, menus/palette gating, shortcut display, and diagnostics (see TODO `AFA-actions-019`).
+- Embedded viewport interop has a view-runtime demo proving `record_engine_frame` composition (see TODO `AFA-adopt-044`).
 - Authoring ergonomics: semantics/test IDs/key contexts can be attached before `into_element(cx)` and cookbook demos demonstrate the pattern (see TODO “Reduce authoring noise”).
 
 ---
@@ -136,3 +139,20 @@ Exit criteria:
   - Feature gate: `ecosystem/fret/Cargo.toml` (`legacy-mvu`)
   - Module gating: `ecosystem/fret/src/lib.rs`
   - In-tree opt-in: `apps/fret-examples/Cargo.toml`, `apps/fret-ui-gallery/Cargo.toml`
+
+### M9 — Hard delete legacy MVU (in-tree)
+
+Exit criteria:
+
+- `LEGACY_MVU_INVENTORY.md` has no remaining in-tree MVU usage.
+- `ecosystem/fret` no longer exposes MVU surfaces:
+  - remove the `legacy-mvu` feature,
+  - delete `mvu` + `mvu_router` + `legacy` modules,
+  - remove MVU re-exports from `prelude::*`.
+- `apps/fret-examples` and `apps/fret-demo` no longer have a `legacy-mvu-demos` feature or legacy MVU demo routing.
+- Docs/templates do not mention MVU as an available authoring path.
+- A small gate prevents MVU APIs from being reintroduced (grep-based check is sufficient).
+
+Current blockers (as of 2026-03-04):
+
+- Legacy demo copies (`apps/fret-examples/src/*_legacy.rs`) still exist for A/B comparison.

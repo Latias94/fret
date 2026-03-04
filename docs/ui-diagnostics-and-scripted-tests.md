@@ -166,10 +166,19 @@ Important limitation:
 Footgun / recommendation:
 
 - Avoid running `rg`/`grep` directly on `bundle.json` dumps (they can be huge and can easily explode your terminal output).
-- Prefer bounded tooling commands that use sidecars and/or schema2 views:
+  - Prefer bounded tooling commands that use sidecars and/or schema2 views:
   - `fretboard diag meta <bundle_dir|bundle.json|bundle.schema2.json> --json`
   - `fretboard diag dock-graph <bundle_dir|bundle.json|bundle.schema2.json>`
   - `fretboard diag dock-routing <bundle_dir|bundle.json|bundle.schema2.json>`
+    - Note: when an adjacent bundle artifact is available, `dock-routing` may regenerate/overwrite `dock.routing.json`
+      to keep bounded evidence keys up to date (no manual deletion needed).
+    - The report is intentionally compact; it is typically enough to debug multi-window docking routing issues without
+      opening `bundle.json`. Look for:
+      - `src/cur` (source/current window ids),
+      - `pos/start/grab/follow` (window-local cursor position + ImGui-style cursor grab anchor),
+      - `scr/scr_used/origin` (screen cursor + client origin evidence for coordinate-space bugs),
+      - `sf_cur/sf_move` (scale factor evidence for mixed-DPI follow drags),
+      - `under` (hover selection source: platform vs heuristic).
   - `fretboard diag query test-id <bundle_dir|bundle.json|bundle.schema2.json> <pattern> --top 50`
   - `fretboard diag slice <bundle_dir|bundle.json|bundle.schema2.json> --test-id <test_id>`
   - `fretboard diag ai-packet <bundle_dir|bundle.json|bundle.schema2.json> --packet-out <dir>`
@@ -443,8 +452,9 @@ Script shrinking (automated minimal repro):
 Deterministic termination note (especially for multi-window docking scripts):
 
 - Prefer ending a script with `capture_bundle` as the final step.
-- Avoid trailing `wait_frames` after the final `capture_bundle` (it can stall indefinitely if the last remaining window becomes occluded/idle and stops producing frames).
-- Smoke/gate suites (e.g. `diag-hardening-smoke-*`) run a strict preflight and will fail early if a script ends with `wait_frames` or contains `wait_frames` after the final `capture_bundle` (see `check.script_termination.json` under the suite `--dir`).
+- Avoid ending a script with `wait_frames` / `wait_ms` (these are stabilization yields, not meaningful terminal steps).
+- Avoid trailing `wait_frames` / `wait_ms` after the final `capture_bundle` (this can stall indefinitely if the last remaining window becomes occluded/idle and stops producing frames).
+- Smoke/gate suites (e.g. `diag-hardening-smoke-*`) run a strict preflight and will fail early if a script ends with `wait_frames` / `wait_ms` or contains `wait_frames` / `wait_ms` after the final `capture_bundle` (see `check.script_termination.json` under the suite `--dir`).
 
 Screenshot note:
 
@@ -861,13 +871,15 @@ Supported selectors (v1 MVP):
 - `paste_text_into` (schema v2 only; click + set clipboard + `Primary+V`; gates paste-specific code paths with less boilerplate)
 - `ime` (schema v2 only; deterministic IME event injection for composition/commit/preedit)
 - `reset_diagnostics` (clears the diagnostics ring buffer for the current window; useful to avoid mount/settle frames in perf captures)
-- `wait_frames` (schema v2 only: optional `window` target)
-- `wait_until` (schema v2 only: optional `window` target)
-- `wait_shortcut_routing_trace` (schema v2 only; wait until the shortcut routing trace contains a matching entry)
-- `wait_overlay_placement_trace` (schema v2 only; wait until overlay placement trace contains a matching entry)
+- `wait_frames` (schema v2 only: optional `window` target; `n` frames)
+- `wait_ms` (schema v2 only: optional `window` target; `n_ms` milliseconds; last-resort stabilization when no semantic predicate exists)
+- `wait_until` (schema v2 only: optional `window` target; optional `timeout_frames`, optional `timeout_ms`)
+- `wait_shortcut_routing_trace` (schema v2 only; wait until the shortcut routing trace contains a matching entry; optional `timeout_frames`, optional `timeout_ms`)
+- `wait_command_dispatch_trace` (schema v2 only; wait until the command dispatch trace contains a matching entry; optional `timeout_frames`, optional `timeout_ms`)
+- `wait_overlay_placement_trace` (schema v2 only; wait until overlay placement trace contains a matching entry; optional `timeout_frames`, optional `timeout_ms`)
 - `assert` (schema v2 only: optional `window` target)
 - `capture_bundle` (optional `label`, optional `max_snapshots`)
-- `capture_screenshot` (optional `label`, optional `timeout_frames`)
+- `capture_screenshot` (optional `label`, optional `timeout_frames`, optional `timeout_ms`)
 - `set_clipboard_force_unavailable` (schema v2 only; simulates clipboard read denial; capability-gated behind `diag.clipboard_force_unavailable`)
 - `set_clipboard_text` (schema v2 only; sets OS clipboard text; capability-gated behind `diag.clipboard_text`)
 - `assert_clipboard_text` (schema v2 only; asserts OS clipboard text equals an expected value; capability-gated behind `diag.clipboard_text`)
@@ -945,7 +957,7 @@ Notes:
   - When `FRET_DIAG_GPU_SCREENSHOTS=1`, the dump includes a screenshot and the step waits until it is written (so downstream automation can rely on it deterministically).
   - If you want an explicit screenshot step, follow with `capture_screenshot`.
   - Optional `max_snapshots` caps how many snapshots are included in this export (clamped to `FRET_DIAG_MAX_SNAPSHOTS`).
-- `capture_screenshot` requests a screenshot for the **most recent bundle directory** (`last_dump_dir`) and waits for completion (up to `timeout_frames`, default 300). If no bundle exists yet, the harness creates one first.
+- `capture_screenshot` requests a screenshot for the **most recent bundle directory** (`last_dump_dir`) and waits for completion (up to `timeout_frames` and/or `timeout_ms`). If no bundle exists yet, the harness creates one first.
 - `drag_pointer` runs over multiple frames so diagnostics bundles can capture and gate frame-to-frame behavior (prepaint outputs, paint-only invalidations, drag indicators). Roughly: 1 frame for `move+down`, `steps` frames of `move`, then 1 frame for `up`.
   - Pointer synthesis keeps positions slightly inside window bounds when the requested coordinates are still within the window (avoids edge hit-testing misses), but preserves intentionally out-of-bounds positions for tear-off / cross-window docking routes.
 

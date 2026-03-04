@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use fret::legacy::prelude::*;
+use fret::prelude::*;
 use fret_genui_core::catalog::{CatalogActionV1, CatalogV1};
 use fret_genui_core::executor::{GenUiActionExecutorV1, GenUiActionOutcome};
 use fret_genui_core::form_validation::{
@@ -15,19 +15,32 @@ use fret_genui_core::validate::ValidationMode;
 use fret_genui_shadcn::catalog::shadcn_catalog_v1;
 use fret_genui_shadcn::resolver::ShadcnResolver;
 use serde_json::Value;
+mod act {
+    fret::actions!([
+        ClearActions = "genui_demo.clear_actions.v1",
+        ApplyQueuedActions = "genui_demo.apply_queued_actions.v1",
+        ResetState = "genui_demo.reset_state.v1",
+        ApplyEditorSpec = "genui_demo.apply_editor_spec.v1",
+        ResetEditor = "genui_demo.reset_editor.v1",
+        ApplyStream = "genui_demo.apply_stream.v1",
+        ResetStream = "genui_demo.reset_stream.v1",
+        EnableLive = "genui_demo.enable_live.v1",
+        AutoApplyToggled = "genui_demo.auto_apply_toggled.v1",
+    ]);
+}
 
 pub fn run() -> anyhow::Result<()> {
-    fret::mvu::app::<GenUiProgram>("genui-demo")?
-        .with_main_window("genui_demo", (980.0, 720.0))
-        .init_app(|app| {
+    FretApp::new("genui-demo")
+        .window("genui-demo", (980.0, 720.0))
+        .install_app(|app| {
             shadcn::shadcn_themes::apply_shadcn_new_york(
                 app,
                 shadcn::shadcn_themes::ShadcnBaseColor::Slate,
                 shadcn::shadcn_themes::ShadcnColorScheme::Light,
             );
         })
-        .run()?;
-    Ok(())
+        .run_view::<GenUiView>()
+        .map_err(anyhow::Error::from)
 }
 
 const SPEC_JSON: &str = r#"
@@ -392,6 +405,20 @@ struct GenUiState {
     stream_error: Option<Arc<str>>,
 }
 
+const TRANSIENT_GENUI_CLEAR_ACTIONS: u64 = 0x47454E5549_0001;
+const TRANSIENT_GENUI_APPLY_QUEUED_ACTIONS: u64 = 0x47454E5549_0002;
+const TRANSIENT_GENUI_RESET_STATE: u64 = 0x47454E5549_0003;
+const TRANSIENT_GENUI_APPLY_EDITOR_SPEC: u64 = 0x47454E5549_0004;
+const TRANSIENT_GENUI_RESET_EDITOR: u64 = 0x47454E5549_0005;
+const TRANSIENT_GENUI_APPLY_STREAM: u64 = 0x47454E5549_0006;
+const TRANSIENT_GENUI_RESET_STREAM: u64 = 0x47454E5549_0007;
+const TRANSIENT_GENUI_ENABLE_LIVE: u64 = 0x47454E5549_0008;
+const TRANSIENT_GENUI_AUTO_APPLY_TOGGLED: u64 = 0x47454E5549_0009;
+
+struct GenUiView {
+    st: GenUiState,
+}
+
 #[derive(Debug, Clone)]
 enum Msg {
     ClearActions,
@@ -405,13 +432,8 @@ enum Msg {
     AutoApplyToggled,
 }
 
-struct GenUiProgram;
-
-impl MvuProgram for GenUiProgram {
-    type State = GenUiState;
-    type Message = Msg;
-
-    fn init(app: &mut App, _window: AppWindowId) -> Self::State {
+impl GenUiView {
+    fn init_state(app: &mut App) -> GenUiState {
         let spec: SpecV1 = serde_json::from_str(SPEC_JSON).expect("SPEC_JSON must parse");
         let seed = spec.state.clone().unwrap_or(Value::Null);
         let mut catalog = shadcn_catalog_v1();
@@ -444,7 +466,7 @@ impl MvuProgram for GenUiProgram {
         }
     }
 
-    fn update(app: &mut App, state: &mut Self::State, message: Self::Message) {
+    fn handle_msg(app: &mut App, state: &mut GenUiState, message: Msg) {
         match message {
             Msg::ClearActions => {
                 let _ = app
@@ -787,32 +809,72 @@ impl MvuProgram for GenUiProgram {
             }
         }
     }
+}
 
-    fn view(
-        cx: &mut ElementContext<'_, App>,
-        state: &mut Self::State,
-        msg: &mut MessageRouter<Self::Message>,
-    ) -> Elements {
-        view(cx, state, msg)
+impl View for GenUiView {
+    fn init(app: &mut App, _window: AppWindowId) -> Self {
+        Self {
+            st: Self::init_state(app),
+        }
+    }
+
+    fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
+        cx.on_action_notify_transient::<act::ClearActions>(TRANSIENT_GENUI_CLEAR_ACTIONS);
+        cx.on_action_notify_transient::<act::ApplyQueuedActions>(
+            TRANSIENT_GENUI_APPLY_QUEUED_ACTIONS,
+        );
+        cx.on_action_notify_transient::<act::ResetState>(TRANSIENT_GENUI_RESET_STATE);
+        cx.on_action_notify_transient::<act::ApplyEditorSpec>(TRANSIENT_GENUI_APPLY_EDITOR_SPEC);
+        cx.on_action_notify_transient::<act::ResetEditor>(TRANSIENT_GENUI_RESET_EDITOR);
+        cx.on_action_notify_transient::<act::ApplyStream>(TRANSIENT_GENUI_APPLY_STREAM);
+        cx.on_action_notify_transient::<act::ResetStream>(TRANSIENT_GENUI_RESET_STREAM);
+        cx.on_action_notify_transient::<act::EnableLive>(TRANSIENT_GENUI_ENABLE_LIVE);
+        cx.on_action_notify_transient::<act::AutoApplyToggled>(TRANSIENT_GENUI_AUTO_APPLY_TOGGLED);
+
+        if cx.take_transient_on_action_root(TRANSIENT_GENUI_CLEAR_ACTIONS) {
+            Self::handle_msg(cx.app, &mut self.st, Msg::ClearActions);
+        }
+        if cx.take_transient_on_action_root(TRANSIENT_GENUI_APPLY_QUEUED_ACTIONS) {
+            Self::handle_msg(cx.app, &mut self.st, Msg::ApplyQueuedActions);
+        }
+        if cx.take_transient_on_action_root(TRANSIENT_GENUI_RESET_STATE) {
+            Self::handle_msg(cx.app, &mut self.st, Msg::ResetState);
+        }
+        if cx.take_transient_on_action_root(TRANSIENT_GENUI_APPLY_EDITOR_SPEC) {
+            Self::handle_msg(cx.app, &mut self.st, Msg::ApplyEditorSpec);
+        }
+        if cx.take_transient_on_action_root(TRANSIENT_GENUI_RESET_EDITOR) {
+            Self::handle_msg(cx.app, &mut self.st, Msg::ResetEditor);
+        }
+        if cx.take_transient_on_action_root(TRANSIENT_GENUI_APPLY_STREAM) {
+            Self::handle_msg(cx.app, &mut self.st, Msg::ApplyStream);
+        }
+        if cx.take_transient_on_action_root(TRANSIENT_GENUI_RESET_STREAM) {
+            Self::handle_msg(cx.app, &mut self.st, Msg::ResetStream);
+        }
+        if cx.take_transient_on_action_root(TRANSIENT_GENUI_ENABLE_LIVE) {
+            Self::handle_msg(cx.app, &mut self.st, Msg::SetAutoApply(true));
+        }
+        if cx.take_transient_on_action_root(TRANSIENT_GENUI_AUTO_APPLY_TOGGLED) {
+            Self::handle_msg(cx.app, &mut self.st, Msg::AutoApplyToggled);
+        }
+
+        view(cx, &mut self.st)
     }
 }
 
-fn view(
-    cx: &mut ElementContext<'_, App>,
-    st: &mut GenUiState,
-    msg: &mut MessageRouter<Msg>,
-) -> Elements {
+fn view(cx: &mut ElementContext<'_, App>, st: &mut GenUiState) -> Elements {
     let theme = Theme::global(&*cx.app).snapshot();
 
-    let clear_cmd = msg.cmd(Msg::ClearActions);
-    let apply_queue_cmd = msg.cmd(Msg::ApplyQueuedActions);
-    let reset_cmd = msg.cmd(Msg::ResetState);
-    let apply_editor_cmd = msg.cmd(Msg::ApplyEditorSpec);
-    let reset_editor_cmd = msg.cmd(Msg::ResetEditor);
-    let apply_stream_cmd = msg.cmd(Msg::ApplyStream);
-    let reset_stream_cmd = msg.cmd(Msg::ResetStream);
-    let enable_live_cmd = msg.cmd(Msg::SetAutoApply(true));
-    let auto_apply_toggled_cmd = msg.cmd(Msg::AutoApplyToggled);
+    let clear_cmd: fret_runtime::CommandId = act::ClearActions.into();
+    let apply_queue_cmd: fret_runtime::CommandId = act::ApplyQueuedActions.into();
+    let reset_cmd: fret_runtime::CommandId = act::ResetState.into();
+    let apply_editor_cmd: fret_runtime::CommandId = act::ApplyEditorSpec.into();
+    let reset_editor_cmd: fret_runtime::CommandId = act::ResetEditor.into();
+    let apply_stream_cmd: fret_runtime::CommandId = act::ApplyStream.into();
+    let reset_stream_cmd: fret_runtime::CommandId = act::ResetStream.into();
+    let enable_live_cmd: fret_runtime::CommandId = act::EnableLive.into();
+    let auto_apply_toggled_cmd: fret_runtime::CommandId = act::AutoApplyToggled.into();
     let apply_queue_cmd_toolbar = apply_queue_cmd.clone();
     let apply_queue_cmd_banner = apply_queue_cmd.clone();
 

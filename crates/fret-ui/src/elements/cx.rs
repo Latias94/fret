@@ -2838,27 +2838,20 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
 
     pub fn roving_on_key_down(&mut self, handler: OnKeyDown) {
         self.with_state(RovingActionHooks::default, |hooks| {
-            hooks.on_key_down = Some(handler);
+            hooks.on_key_down.clear();
+            hooks.on_key_down.push(handler);
         });
     }
 
     pub fn roving_add_on_key_down(&mut self, handler: OnKeyDown) {
         self.with_state(RovingActionHooks::default, |hooks| {
-            hooks.on_key_down = match hooks.on_key_down.clone() {
-                None => Some(handler),
-                Some(prev) => {
-                    let next = handler.clone();
-                    Some(Arc::new(move |host, cx, down| {
-                        prev(host, cx, down) || next(host, cx, down)
-                    }))
-                }
-            };
+            hooks.on_key_down.push(handler);
         });
     }
 
     pub fn roving_clear_on_key_down(&mut self) {
         self.with_state(RovingActionHooks::default, |hooks| {
-            hooks.on_key_down = None;
+            hooks.on_key_down.clear();
         });
     }
 
@@ -3689,6 +3682,7 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
             let id = cx.root_id();
             cx.roving_clear_on_active_change();
             cx.roving_clear_on_typeahead();
+            cx.roving_clear_on_key_down();
             cx.roving_clear_on_navigate();
             let built = f(cx);
             let children = cx.collect_children(built);

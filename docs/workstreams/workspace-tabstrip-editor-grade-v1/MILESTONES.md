@@ -7,7 +7,7 @@ diagnostics gates (scripts) so refactors remain fearless and reversible.
 
 Outcomes:
 - `WorkspaceTabStrip` implementation is split into small modules (interaction/geometry/kernel/theme/widgets).
-- Stable `test_id` anchors exist for scriptability (root + tabs + pinned boundary + overflow).
+- Stable `test_id` anchors exist for scriptability (root + tabs + pinned boundary + overflow + scroll buttons).
 - At least 2 promoted diagnostics scripts gate:
   - reorder within a single strip (invariants-first):
     - `workspace-shell-demo-tab-reorder-first-to-end-smoke` (currently: first -> after second)
@@ -15,16 +15,20 @@ Outcomes:
   - drag-to-split in workspace shell demo:
     - invariants gate: `workspace-shell-demo-tab-drag-to-split-right`
     - screenshot evidence gate: `workspace-shell-demo-tab-drag-to-split-right-drop-preview-screenshot`
+    - row suppression guardrail: `workspace-shell-demo-tab-drag-to-split-right-row-suppressed-smoke`
   - middle-click close behavior (smoke):
     - `workspace-shell-demo-tab-middle-click-close-smoke`
   - close button behavior (smoke):
     - `workspace-shell-demo-tab-close-button-closes-tab-smoke`
+    - MRU fallback on close (smoke): `workspace-shell-demo-tab-close-mru-fallback-smoke`
+    - `workspace-shell-demo-tab-close-button-does-not-start-drag`
   - overflow activation (smoke):
     - `workspace-shell-demo-tab-overflow-activate-hidden-smoke`
 
 Acceptance:
 - `cargo run -p fretboard -- diag registry check` passes.
 - `cargo run -p fretboard -- diag run ... --launch -- <workspace shell demo>` passes reliably.
+- `cargo run -p fretboard -- diag suite diag-hardening-smoke-workspace --launch -- cargo run -p fret-demo --bin workspace_shell_demo --release` stays green.
 
 ## M2 — Editor-grade behaviors (Zed-style expectations)
 

@@ -140,6 +140,7 @@ struct DockingArbitrationHarnessRoot {
     tab_drop_end_anchor: fret_core::NodeId,
     tab_overflow_button_anchor: fret_core::NodeId,
     tab_overflow_menu_row_1_anchor: fret_core::NodeId,
+    tab_overflow_menu_row_1_close_anchor: fret_core::NodeId,
     tab_scroll_edge_left_anchor: fret_core::NodeId,
     tab_scroll_edge_right_anchor: fret_core::NodeId,
     dock_hint_inner_anchors: Vec<(DropZone, fret_core::NodeId)>,
@@ -479,6 +480,7 @@ impl<H: fret_ui::UiHost> Widget<H> for DockingArbitrationHarnessRoot {
         let (
             overflow_button_anchor_rect,
             overflow_row_1_anchor_rect,
+            overflow_row_1_close_anchor_rect,
             tab_close_inactive_anchor_rect,
             tab_drop_end_anchor_rect,
             tab_scroll_edge_left_anchor_rect,
@@ -609,6 +611,11 @@ impl<H: fret_ui::UiHost> Widget<H> for DockingArbitrationHarnessRoot {
             // affordance.
             let row_cx = row_1_rect.origin.x.0 + row_1_rect.size.width.0 * 0.25;
             let row_cy = row_1_rect.origin.y.0 + row_1_rect.size.height.0 * 0.5;
+            // Duplicate the overflow-menu close affordance geometry (dock/tab_overflow.rs) so the
+            // anchor lands inside the close hit rect without reaching into crate-private helpers.
+            let row_close_cx =
+                row_1_rect.origin.x.0 + row_1_rect.size.width.0 - pad - 20.0_f32 * 0.5;
+            let row_close_cy = row_cy;
 
             // Anchor a "drop at end" position to the reserved header space to the left of the
             // overflow button. This avoids fragile `set_cursor_in_window_logical` coordinates in
@@ -721,18 +728,23 @@ impl<H: fret_ui::UiHost> Widget<H> for DockingArbitrationHarnessRoot {
             Some((
                 rect(button_cx, button_cy),
                 rect(row_cx, row_cy),
+                rect(row_close_cx, row_close_cy),
                 tab_close_inactive_anchor_rect,
                 rect(end_cx, end_cy),
                 rect(edge_left_cx, edge_cy),
                 rect(edge_right_cx, edge_cy),
             ))
         })()
-        .unwrap_or((hidden, hidden, hidden, hidden, hidden, hidden));
+        .unwrap_or((hidden, hidden, hidden, hidden, hidden, hidden, hidden));
 
         let _ = cx.layout_in(self.tab_overflow_button_anchor, overflow_button_anchor_rect);
         let _ = cx.layout_in(
             self.tab_overflow_menu_row_1_anchor,
             overflow_row_1_anchor_rect,
+        );
+        let _ = cx.layout_in(
+            self.tab_overflow_menu_row_1_close_anchor,
+            overflow_row_1_close_anchor_rect,
         );
         let _ = cx.layout_in(
             self.tab_close_inactive_anchor,
@@ -2460,6 +2472,12 @@ impl DockingArbitrationDriver {
                     .create_node_retained(DockingArbitrationDragAnchor::new(
                         "dock-arb-tab-overflow-menu-row-anchor-left-1",
                     ));
+            let tab_overflow_menu_row_1_close_anchor =
+                state
+                    .ui
+                    .create_node_retained(DockingArbitrationDragAnchor::new(
+                        "dock-arb-tab-overflow-menu-row-close-anchor-left-1",
+                    ));
             let tab_close_inactive_anchor =
                 state
                     .ui
@@ -2529,6 +2547,7 @@ impl DockingArbitrationDriver {
                     tab_drop_end_anchor,
                     tab_overflow_button_anchor,
                     tab_overflow_menu_row_1_anchor,
+                    tab_overflow_menu_row_1_close_anchor,
                     tab_scroll_edge_left_anchor,
                     tab_scroll_edge_right_anchor,
                     dock_hint_inner_anchors: dock_hint_inner_anchors.clone(),
@@ -2552,6 +2571,7 @@ impl DockingArbitrationDriver {
                 .chain(std::iter::once(tab_drop_end_anchor))
                 .chain(std::iter::once(tab_overflow_button_anchor))
                 .chain(std::iter::once(tab_overflow_menu_row_1_anchor))
+                .chain(std::iter::once(tab_overflow_menu_row_1_close_anchor))
                 .chain(std::iter::once(tab_scroll_edge_left_anchor))
                 .chain(std::iter::once(tab_scroll_edge_right_anchor))
                 .collect();

@@ -7,16 +7,21 @@
 
 use std::sync::Arc;
 
-use fret::legacy::prelude::*;
+use fret::prelude::*;
 use fret_core::scene::{EffectChain, EffectMode, EffectParamsV1, EffectQuality, EffectStep};
 use fret_core::{Color, Corners, Edges, EffectId, Px};
 use fret_runtime::Model;
+use fret_ui::action::UiActionHost;
 use fret_ui::element::{
     ContainerProps, EffectLayerProps, LayoutStyle, Length, Overflow, PositionStyle, SpacerProps,
     TextProps,
 };
 use fret_ui_kit::custom_effects::CustomEffectProgramV1;
 use fret_ui_kit::{Space, UiIntoElement};
+
+mod act {
+    fret::actions!([Reset = "custom_effect_v1_demo.reset.v1"]);
+}
 
 const WGSL: &str = r#"
 // Params packing (EffectParamsV1 is 64 bytes):
@@ -191,26 +196,24 @@ struct CustomEffectV1State {
     grain_scale: Model<Vec<f32>>,
 }
 
-struct CustomEffectV1Program;
-
-#[derive(Debug, Clone)]
-enum Msg {
-    Reset,
+struct CustomEffectV1View {
+    st: CustomEffectV1State,
 }
 
 pub fn run() -> anyhow::Result<()> {
-    fret::mvu::app::<CustomEffectV1Program>("custom-effect-v1-demo")?
-        .with_main_window("custom_effect_v1_demo", (1100.0, 720.0))
-        .init_app(|app| {
+    FretApp::new("custom-effect-v1-demo")
+        .window("custom-effect-v1-demo", (1100.0, 720.0))
+        .install_app(|app| {
             shadcn::shadcn_themes::apply_shadcn_new_york(
                 app,
                 shadcn::shadcn_themes::ShadcnBaseColor::Slate,
                 shadcn::shadcn_themes::ShadcnColorScheme::Dark,
             );
         })
+        .view::<CustomEffectV1View>()?
         .install_custom_effects(install_custom_effect)
-        .run()?;
-    Ok(())
+        .run()
+        .map_err(anyhow::Error::from)
 }
 
 fn install_custom_effect(app: &mut App, effects: &mut dyn fret_core::CustomEffectService) {
@@ -221,62 +224,84 @@ fn install_custom_effect(app: &mut App, effects: &mut dyn fret_core::CustomEffec
     app.set_global(DemoEffect(id));
 }
 
-impl MvuProgram for CustomEffectV1Program {
-    type State = CustomEffectV1State;
-    type Message = Msg;
+impl CustomEffectV1State {
+    fn reset(host: &mut dyn UiActionHost, st: &CustomEffectV1State) {
+        let _ = host.models_mut().update(&st.enabled, |v| *v = true);
+        let _ = host
+            .models_mut()
+            .update(&st.blur_radius_px, |v| *v = vec![14.0]);
+        let _ = host
+            .models_mut()
+            .update(&st.blur_downsample, |v| *v = vec![2.0]);
+        let _ = host
+            .models_mut()
+            .update(&st.refraction_height_px, |v| *v = vec![20.0]);
+        let _ = host
+            .models_mut()
+            .update(&st.refraction_amount_px, |v| *v = vec![12.0]);
+        let _ = host
+            .models_mut()
+            .update(&st.depth_effect, |v| *v = vec![0.35]);
+        let _ = host
+            .models_mut()
+            .update(&st.chromatic_aberration, |v| *v = vec![0.75]);
+        let _ = host
+            .models_mut()
+            .update(&st.corner_radius_px, |v| *v = vec![20.0]);
+        let _ = host
+            .models_mut()
+            .update(&st.grain_strength, |v| *v = vec![0.06]);
+        let _ = host
+            .models_mut()
+            .update(&st.grain_scale, |v| *v = vec![1.0]);
+    }
+}
 
-    fn init(app: &mut App, _window: AppWindowId) -> Self::State {
-        Self::State {
-            enabled: app.models_mut().insert(true),
-            blur_radius_px: app.models_mut().insert(vec![14.0]),
-            blur_downsample: app.models_mut().insert(vec![2.0]),
-            refraction_height_px: app.models_mut().insert(vec![20.0]),
-            refraction_amount_px: app.models_mut().insert(vec![12.0]),
-            depth_effect: app.models_mut().insert(vec![0.35]),
-            chromatic_aberration: app.models_mut().insert(vec![0.75]),
-            corner_radius_px: app.models_mut().insert(vec![20.0]),
-            grain_strength: app.models_mut().insert(vec![0.06]),
-            grain_scale: app.models_mut().insert(vec![1.0]),
+impl View for CustomEffectV1View {
+    fn init(app: &mut App, _window: AppWindowId) -> Self {
+        Self {
+            st: CustomEffectV1State {
+                enabled: app.models_mut().insert(true),
+                blur_radius_px: app.models_mut().insert(vec![14.0]),
+                blur_downsample: app.models_mut().insert(vec![2.0]),
+                refraction_height_px: app.models_mut().insert(vec![20.0]),
+                refraction_amount_px: app.models_mut().insert(vec![12.0]),
+                depth_effect: app.models_mut().insert(vec![0.35]),
+                chromatic_aberration: app.models_mut().insert(vec![0.75]),
+                corner_radius_px: app.models_mut().insert(vec![20.0]),
+                grain_strength: app.models_mut().insert(vec![0.06]),
+                grain_scale: app.models_mut().insert(vec![1.0]),
+            },
         }
     }
 
-    fn update(app: &mut App, st: &mut Self::State, message: Self::Message) {
-        if matches!(message, Msg::Reset) {
-            let _ = app.models_mut().update(&st.enabled, |v| *v = true);
-            let _ = app
-                .models_mut()
-                .update(&st.blur_radius_px, |v| *v = vec![14.0]);
-            let _ = app
-                .models_mut()
-                .update(&st.blur_downsample, |v| *v = vec![2.0]);
-            let _ = app
-                .models_mut()
-                .update(&st.refraction_height_px, |v| *v = vec![20.0]);
-            let _ = app
-                .models_mut()
-                .update(&st.refraction_amount_px, |v| *v = vec![12.0]);
-            let _ = app
-                .models_mut()
-                .update(&st.depth_effect, |v| *v = vec![0.35]);
-            let _ = app
-                .models_mut()
-                .update(&st.chromatic_aberration, |v| *v = vec![0.75]);
-            let _ = app
-                .models_mut()
-                .update(&st.corner_radius_px, |v| *v = vec![20.0]);
-            let _ = app
-                .models_mut()
-                .update(&st.grain_strength, |v| *v = vec![0.06]);
-            let _ = app.models_mut().update(&st.grain_scale, |v| *v = vec![1.0]);
-        }
-    }
+    fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
+        cx.on_action_notify::<act::Reset>({
+            let st = self.clone_for_reset();
+            move |host, _acx| {
+                CustomEffectV1State::reset(host, &st);
+                true
+            }
+        });
 
-    fn view(
-        cx: &mut ElementContext<'_, App>,
-        st: &mut Self::State,
-        msg: &mut MessageRouter<Self::Message>,
-    ) -> Elements {
-        view(cx, st, msg)
+        view(cx, &mut self.st)
+    }
+}
+
+impl CustomEffectV1View {
+    fn clone_for_reset(&self) -> CustomEffectV1State {
+        CustomEffectV1State {
+            enabled: self.st.enabled.clone(),
+            blur_radius_px: self.st.blur_radius_px.clone(),
+            blur_downsample: self.st.blur_downsample.clone(),
+            refraction_height_px: self.st.refraction_height_px.clone(),
+            refraction_amount_px: self.st.refraction_amount_px.clone(),
+            depth_effect: self.st.depth_effect.clone(),
+            chromatic_aberration: self.st.chromatic_aberration.clone(),
+            corner_radius_px: self.st.corner_radius_px.clone(),
+            grain_strength: self.st.grain_strength.clone(),
+            grain_scale: self.st.grain_scale.clone(),
+        }
     }
 }
 
@@ -296,11 +321,7 @@ fn watch_first_f32(cx: &mut ElementContext<'_, App>, model: &Model<Vec<f32>>, de
         .unwrap_or(default)
 }
 
-fn view(
-    cx: &mut ElementContext<'_, App>,
-    st: &mut CustomEffectV1State,
-    msg: &mut MessageRouter<Msg>,
-) -> Elements {
+fn view(cx: &mut ElementContext<'_, App>, st: &mut CustomEffectV1State) -> Elements {
     let Some(effect) = cx.app.global::<DemoEffect>().map(|v| v.0) else {
         return vec![shadcn::typography::h3(cx, "Custom effects unavailable")].into();
     };
@@ -328,7 +349,6 @@ fn view(
         corner_radius_px,
         grain_strength,
         grain_scale,
-        msg,
     );
     let stage = stage(
         cx,
@@ -714,11 +734,9 @@ fn inspector(
     corner_radius_px: f32,
     grain_strength: f32,
     grain_scale: f32,
-    msg: &mut MessageRouter<Msg>,
 ) -> AnyElement {
     let theme = Theme::global(&*cx.app).snapshot();
 
-    let reset_cmd = msg.cmd(Msg::Reset);
     let enabled_model = st.enabled.clone();
     let blur_radius_model = st.blur_radius_px.clone();
     let blur_downsample_model = st.blur_downsample.clone();
@@ -959,7 +977,7 @@ fn inspector(
                         grain_scale_row,
                         shadcn::Button::new("Reset")
                             .variant(shadcn::ButtonVariant::Secondary)
-                            .on_click(reset_cmd.clone())
+                            .action(act::Reset)
                             .test_id("custom-effect-v1.reset")
                             .into_element(cx),
                     ]

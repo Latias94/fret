@@ -312,6 +312,7 @@ pub(super) fn handle_wait_shortcut_routing_trace_step(
     let UiActionStepV2::WaitShortcutRoutingTrace {
         query,
         timeout_frames,
+        timeout_ms,
     } = step
     else {
         return false;
@@ -323,11 +324,16 @@ pub(super) fn handle_wait_shortcut_routing_trace_step(
     let state = match active.wait_shortcut_routing_trace.take() {
         Some(mut state) if state.step_index == step_index => {
             state.remaining_frames = state.remaining_frames.min(timeout_frames);
+            if state.deadline_unix_ms.is_none() {
+                state.deadline_unix_ms =
+                    timeout_ms.map(|ms| unix_ms_now().saturating_add(ms as u64));
+            }
             state
         }
         _ => WaitShortcutRoutingTraceState {
             step_index,
             remaining_frames: timeout_frames,
+            deadline_unix_ms: timeout_ms.map(|ms| unix_ms_now().saturating_add(ms as u64)),
             start_frame_id: app.frame_id().0.saturating_sub(1),
         },
     };
@@ -341,7 +347,11 @@ pub(super) fn handle_wait_shortcut_routing_trace_step(
         active.wait_shortcut_routing_trace = None;
         active.next_step = active.next_step.saturating_add(1);
         output.request_redraw = true;
-    } else if state.remaining_frames == 0 {
+    } else if state
+        .deadline_unix_ms
+        .is_some_and(|deadline| unix_ms_now() >= deadline)
+        || state.remaining_frames == 0
+    {
         *force_dump_label = Some(format!(
             "script-step-{step_index:04}-wait_shortcut_routing_trace-timeout"
         ));
@@ -353,6 +363,7 @@ pub(super) fn handle_wait_shortcut_routing_trace_step(
         active.wait_shortcut_routing_trace = Some(WaitShortcutRoutingTraceState {
             step_index: state.step_index,
             remaining_frames: state.remaining_frames.saturating_sub(1),
+            deadline_unix_ms: state.deadline_unix_ms,
             start_frame_id: state.start_frame_id,
         });
         output.request_redraw = true;
@@ -374,6 +385,7 @@ pub(super) fn handle_wait_command_dispatch_trace_step(
     let UiActionStepV2::WaitCommandDispatchTrace {
         query,
         timeout_frames,
+        timeout_ms,
     } = step
     else {
         return false;
@@ -385,11 +397,16 @@ pub(super) fn handle_wait_command_dispatch_trace_step(
     let state = match active.wait_command_dispatch_trace.take() {
         Some(mut state) if state.step_index == step_index => {
             state.remaining_frames = state.remaining_frames.min(timeout_frames);
+            if state.deadline_unix_ms.is_none() {
+                state.deadline_unix_ms =
+                    timeout_ms.map(|ms| unix_ms_now().saturating_add(ms as u64));
+            }
             state
         }
         _ => WaitCommandDispatchTraceState {
             step_index,
             remaining_frames: timeout_frames,
+            deadline_unix_ms: timeout_ms.map(|ms| unix_ms_now().saturating_add(ms as u64)),
             start_frame_id: app.frame_id().0.saturating_sub(1),
         },
     };
@@ -403,7 +420,11 @@ pub(super) fn handle_wait_command_dispatch_trace_step(
         active.wait_command_dispatch_trace = None;
         active.next_step = active.next_step.saturating_add(1);
         output.request_redraw = true;
-    } else if state.remaining_frames == 0 {
+    } else if state
+        .deadline_unix_ms
+        .is_some_and(|deadline| unix_ms_now() >= deadline)
+        || state.remaining_frames == 0
+    {
         *force_dump_label = Some(format!(
             "script-step-{step_index:04}-wait_command_dispatch_trace-timeout"
         ));
@@ -415,6 +436,7 @@ pub(super) fn handle_wait_command_dispatch_trace_step(
         active.wait_command_dispatch_trace = Some(WaitCommandDispatchTraceState {
             step_index: state.step_index,
             remaining_frames: state.remaining_frames.saturating_sub(1),
+            deadline_unix_ms: state.deadline_unix_ms,
             start_frame_id: state.start_frame_id,
         });
         output.request_redraw = true;
@@ -438,6 +460,7 @@ pub(super) fn handle_wait_overlay_placement_trace_step(
     let UiActionStepV2::WaitOverlayPlacementTrace {
         query,
         timeout_frames,
+        timeout_ms,
     } = step
     else {
         return false;
@@ -470,11 +493,16 @@ pub(super) fn handle_wait_overlay_placement_trace_step(
     let state = match active.wait_overlay_placement_trace.take() {
         Some(mut state) if state.step_index == step_index => {
             state.remaining_frames = state.remaining_frames.min(timeout_frames);
+            if state.deadline_unix_ms.is_none() {
+                state.deadline_unix_ms =
+                    timeout_ms.map(|ms| unix_ms_now().saturating_add(ms as u64));
+            }
             state
         }
         _ => WaitOverlayPlacementTraceState {
             step_index,
             remaining_frames: timeout_frames,
+            deadline_unix_ms: timeout_ms.map(|ms| unix_ms_now().saturating_add(ms as u64)),
         },
     };
 
@@ -488,7 +516,11 @@ pub(super) fn handle_wait_overlay_placement_trace_step(
         active.wait_overlay_placement_trace = None;
         active.next_step = active.next_step.saturating_add(1);
         output.request_redraw = true;
-    } else if state.remaining_frames == 0 {
+    } else if state
+        .deadline_unix_ms
+        .is_some_and(|deadline| unix_ms_now() >= deadline)
+        || state.remaining_frames == 0
+    {
         *force_dump_label = Some(format!(
             "script-step-{step_index:04}-wait_overlay_placement_trace-timeout"
         ));
@@ -500,6 +532,7 @@ pub(super) fn handle_wait_overlay_placement_trace_step(
         active.wait_overlay_placement_trace = Some(WaitOverlayPlacementTraceState {
             step_index: state.step_index,
             remaining_frames: state.remaining_frames.saturating_sub(1),
+            deadline_unix_ms: state.deadline_unix_ms,
         });
         output.request_redraw = true;
     }
@@ -531,6 +564,7 @@ pub(super) fn handle_wait_until_step(
         window: target_window,
         predicate,
         timeout_frames,
+        timeout_ms,
     } = step
     else {
         return false;
@@ -585,11 +619,16 @@ pub(super) fn handle_wait_until_step(
     let mut state = match active.wait_until.take() {
         Some(mut state) if state.step_index == step_index => {
             state.remaining_frames = state.remaining_frames.min(timeout_frames);
+            if state.deadline_unix_ms.is_none() {
+                state.deadline_unix_ms =
+                    timeout_ms.map(|ms| unix_ms_now().saturating_add(ms as u64));
+            }
             state
         }
         _ => WaitUntilState {
             step_index,
             remaining_frames: timeout_frames,
+            deadline_unix_ms: timeout_ms.map(|ms| unix_ms_now().saturating_add(ms as u64)),
             cached_test_id_predicate_last_stale: None,
         },
     };
@@ -761,7 +800,11 @@ pub(super) fn handle_wait_until_step(
         active.wait_until = None;
         active.next_step = active.next_step.saturating_add(1);
         output.request_redraw = true;
-    } else if state.remaining_frames == 0 {
+    } else if state
+        .deadline_unix_ms
+        .is_some_and(|deadline| unix_ms_now() >= deadline)
+        || state.remaining_frames == 0
+    {
         *force_dump_label = Some(format!("script-step-{step_index:04}-wait_until-timeout"));
         *stop_script = true;
         *failure_reason = Some("wait_until_timeout".to_string());
@@ -771,6 +814,7 @@ pub(super) fn handle_wait_until_step(
         active.wait_until = Some(WaitUntilState {
             step_index: state.step_index,
             remaining_frames: state.remaining_frames.saturating_sub(1),
+            deadline_unix_ms: state.deadline_unix_ms,
             cached_test_id_predicate_last_stale: state.cached_test_id_predicate_last_stale,
         });
         output.request_redraw = true;

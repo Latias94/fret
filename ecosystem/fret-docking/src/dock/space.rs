@@ -59,6 +59,20 @@ const DOCK_TAB_OVERFLOW_SVG: &[u8] =
   <circle cx="17.5" cy="12" r="1.6" fill="black"/>
 </svg>"#;
 
+fn diag_scale_factor_x1000(scale_factor: f32) -> u32 {
+    if !scale_factor.is_finite() {
+        return 0;
+    }
+    let v = (scale_factor * 1000.0).round();
+    if v <= 0.0 {
+        return 0;
+    }
+    if v >= u32::MAX as f32 {
+        return u32::MAX;
+    }
+    v as u32
+}
+
 fn dock_graph_stats_for_window(
     graph: &DockGraph,
     window: fret_core::AppWindowId,
@@ -270,7 +284,7 @@ pub struct DockSpace {
     hovered_tab: Option<(DockNodeId, usize)>,
     hovered_tab_close: bool,
     hovered_tab_overflow_button: Option<DockNodeId>,
-    pressed_tab_close: Option<(DockNodeId, usize, PanelKey)>,
+    pressed_tab_close: Option<PressedTabClose>,
     tab_scroll: HashMap<DockNodeId, Px>,
     tab_drag_auto_scroll_last_frame: HashMap<DockNodeId, fret_runtime::FrameId>,
     tab_overflow_menu: Option<TabOverflowMenuState>,
@@ -307,6 +321,15 @@ pub struct DockSpace {
     last_theme_revision: Option<u64>,
     last_active_tabs: Option<DockNodeId>,
     hovered_float_zone: bool,
+}
+
+#[derive(Debug, Clone)]
+struct PressedTabClose {
+    pointer_id: fret_core::PointerId,
+    tabs: DockNodeId,
+    index: usize,
+    panel: PanelKey,
+    start: Point,
 }
 
 #[derive(Debug, Clone)]
@@ -2229,10 +2252,41 @@ impl<H: UiHost> Widget<H> for DockSpace {
             });
             let dock_drag = dock_drag_pointer_id.and_then(|pointer_id| {
                 let drag = cx.app.drag(pointer_id)?;
+                let window_metrics = cx.app.global::<fret_core::WindowMetricsService>();
+                let current_window_scale_factor_x1000 = window_metrics
+                    .and_then(|svc| svc.scale_factor(drag.current_window))
+                    .map(diag_scale_factor_x1000);
+                let moving_window_scale_factor_x1000 = drag.moving_window.and_then(|w| {
+                    window_metrics
+                        .and_then(|svc| svc.scale_factor(w))
+                        .map(diag_scale_factor_x1000)
+                });
                 Some(fret_runtime::DockDragDiagnostics {
                     pointer_id,
                     source_window: drag.source_window,
                     current_window: drag.current_window,
+                    position: drag.position,
+                    start_position: drag.start_position,
+                    cursor_grab_offset: drag.cursor_grab_offset,
+                    follow_window: drag.follow_window,
+                    cursor_screen_pos_raw_physical_px: drag.diag_cursor_screen_pos_raw_physical_px,
+                    cursor_screen_pos_used_physical_px: drag
+                        .diag_cursor_screen_pos_used_physical_px,
+                    cursor_screen_pos_was_clamped: drag.diag_cursor_screen_pos_was_clamped,
+                    cursor_override_active: drag.diag_cursor_override_active,
+                    current_window_outer_pos_physical_px: drag
+                        .diag_current_window_outer_pos_physical_px,
+                    current_window_decoration_offset_physical_px: drag
+                        .diag_current_window_decoration_offset_physical_px,
+                    current_window_client_origin_screen_physical_px: drag
+                        .diag_current_window_client_origin_screen_physical_px,
+                    current_window_client_origin_source_platform: drag
+                        .diag_current_window_client_origin_source_platform,
+                    current_window_scale_factor_x1000_from_runner: drag
+                        .diag_current_window_scale_factor_x1000,
+                    current_window_local_pos_from_screen_logical_px: drag
+                        .diag_current_window_local_pos_from_screen_logical_px,
+                    current_window_scale_factor_x1000,
                     kind: drag.kind,
                     dragging: drag.dragging,
                     cross_window_hover: drag.cross_window_hover,
@@ -2241,6 +2295,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                         .transparent_payload_hit_test_passthrough_applied,
                     window_under_cursor_source: drag.window_under_cursor_source,
                     moving_window: drag.moving_window,
+                    moving_window_scale_factor_x1000,
                     window_under_moving_window: drag.window_under_moving_window,
                     window_under_moving_window_source: drag.window_under_moving_window_source,
                 })
@@ -4048,8 +4103,13 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                         intent,
                                         tabstrip_controller::TabStripIntent::Close { .. }
                                     ) {
-                                        self.pressed_tab_close =
-                                            Some((tabs_node, tab_index, panel_key.clone()));
+                                        self.pressed_tab_close = Some(PressedTabClose {
+                                            pointer_id,
+                                            tabs: tabs_node,
+                                            index: tab_index,
+                                            panel: panel_key.clone(),
+                                            start: *position,
+                                        });
                                         request_pointer_capture = Some(Some(dock_space_node));
                                         dock.hover = None;
                                         invalidate_paint = true;
@@ -5527,10 +5587,19 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                 handled = true;
                             }
                             if *button == fret_core::MouseButton::Left
-                                && let Some((tabs_node, tab_index, panel_key)) =
-                                    self.pressed_tab_close.take()
+                                && self
+                                    .pressed_tab_close
+                                    .as_ref()
+                                    .is_some_and(|pressed| pressed.pointer_id == pointer_id)
+                                && let Some(pressed) = self.pressed_tab_close.take()
                             {
                                 request_pointer_capture = Some(None);
+
+                                let within_slop = fret_ui_headless::tab_strip_hit_test::pointer_move_within_slop(
+                                    pressed.start,
+                                    *position,
+                                    DOCK_TAB_CLOSE_CLICK_SLOP,
+                                );
 
                                 let (_chrome, dock_bounds) = dock_space_regions(self.last_bounds);
                                 let mut layout = root
@@ -5544,7 +5613,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                         )
                                     })
                                     .unwrap_or_default();
-                                if !layout.contains_key(&tabs_node) {
+                                if !layout.contains_key(&pressed.tabs) {
                                     for floating in dock.graph.floating_windows(self.window) {
                                         let chrome = Self::floating_chrome(floating.rect);
                                         let l = compute_layout_map(
@@ -5554,7 +5623,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                             split_handle_gap,
                                             split_handle_hit_thickness,
                                         );
-                                        if l.contains_key(&tabs_node) {
+                                        if l.contains_key(&pressed.tabs) {
                                             layout = l;
                                             break;
                                         }
@@ -5569,13 +5638,16 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                     *position,
                                 )
                                 .is_some_and(|(n, i, p, close)| {
-                                    close && n == tabs_node && i == tab_index && p == panel_key
+                                    close
+                                        && n == pressed.tabs
+                                        && i == pressed.index
+                                        && p == pressed.panel
                                 });
 
-                                if clicked {
+                                if clicked || within_slop {
                                     pending_effects.push(Effect::Dock(DockOp::ClosePanel {
                                         window: self.window,
-                                        panel: panel_key,
+                                        panel: pressed.panel,
                                     }));
                                     invalidate_layout = true;
                                 }
@@ -6704,10 +6776,41 @@ impl<H: UiHost> Widget<H> for DockSpace {
             });
             let dock_drag = dock_drag_pointer_id.and_then(|pointer_id| {
                 let drag = cx.app.drag(pointer_id)?;
+                let window_metrics = cx.app.global::<fret_core::WindowMetricsService>();
+                let current_window_scale_factor_x1000 = window_metrics
+                    .and_then(|svc| svc.scale_factor(drag.current_window))
+                    .map(diag_scale_factor_x1000);
+                let moving_window_scale_factor_x1000 = drag.moving_window.and_then(|w| {
+                    window_metrics
+                        .and_then(|svc| svc.scale_factor(w))
+                        .map(diag_scale_factor_x1000)
+                });
                 Some(fret_runtime::DockDragDiagnostics {
                     pointer_id,
                     source_window: drag.source_window,
                     current_window: drag.current_window,
+                    position: drag.position,
+                    start_position: drag.start_position,
+                    cursor_grab_offset: drag.cursor_grab_offset,
+                    follow_window: drag.follow_window,
+                    cursor_screen_pos_raw_physical_px: drag.diag_cursor_screen_pos_raw_physical_px,
+                    cursor_screen_pos_used_physical_px: drag
+                        .diag_cursor_screen_pos_used_physical_px,
+                    cursor_screen_pos_was_clamped: drag.diag_cursor_screen_pos_was_clamped,
+                    cursor_override_active: drag.diag_cursor_override_active,
+                    current_window_outer_pos_physical_px: drag
+                        .diag_current_window_outer_pos_physical_px,
+                    current_window_decoration_offset_physical_px: drag
+                        .diag_current_window_decoration_offset_physical_px,
+                    current_window_client_origin_screen_physical_px: drag
+                        .diag_current_window_client_origin_screen_physical_px,
+                    current_window_client_origin_source_platform: drag
+                        .diag_current_window_client_origin_source_platform,
+                    current_window_scale_factor_x1000_from_runner: drag
+                        .diag_current_window_scale_factor_x1000,
+                    current_window_local_pos_from_screen_logical_px: drag
+                        .diag_current_window_local_pos_from_screen_logical_px,
+                    current_window_scale_factor_x1000,
                     kind: drag.kind,
                     dragging: drag.dragging,
                     cross_window_hover: drag.cross_window_hover,
@@ -6716,6 +6819,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                         .transparent_payload_hit_test_passthrough_applied,
                     window_under_cursor_source: drag.window_under_cursor_source,
                     moving_window: drag.moving_window,
+                    moving_window_scale_factor_x1000,
                     window_under_moving_window: drag.window_under_moving_window,
                     window_under_moving_window_source: drag.window_under_moving_window_source,
                 })
@@ -6971,10 +7075,41 @@ impl<H: UiHost> Widget<H> for DockSpace {
             });
             let dock_drag = dock_drag_pointer_id.and_then(|pointer_id| {
                 let drag = cx.app.drag(pointer_id)?;
+                let window_metrics = cx.app.global::<fret_core::WindowMetricsService>();
+                let current_window_scale_factor_x1000 = window_metrics
+                    .and_then(|svc| svc.scale_factor(drag.current_window))
+                    .map(diag_scale_factor_x1000);
+                let moving_window_scale_factor_x1000 = drag.moving_window.and_then(|w| {
+                    window_metrics
+                        .and_then(|svc| svc.scale_factor(w))
+                        .map(diag_scale_factor_x1000)
+                });
                 Some(fret_runtime::DockDragDiagnostics {
                     pointer_id,
                     source_window: drag.source_window,
                     current_window: drag.current_window,
+                    position: drag.position,
+                    start_position: drag.start_position,
+                    cursor_grab_offset: drag.cursor_grab_offset,
+                    follow_window: drag.follow_window,
+                    cursor_screen_pos_raw_physical_px: drag.diag_cursor_screen_pos_raw_physical_px,
+                    cursor_screen_pos_used_physical_px: drag
+                        .diag_cursor_screen_pos_used_physical_px,
+                    cursor_screen_pos_was_clamped: drag.diag_cursor_screen_pos_was_clamped,
+                    cursor_override_active: drag.diag_cursor_override_active,
+                    current_window_outer_pos_physical_px: drag
+                        .diag_current_window_outer_pos_physical_px,
+                    current_window_decoration_offset_physical_px: drag
+                        .diag_current_window_decoration_offset_physical_px,
+                    current_window_client_origin_screen_physical_px: drag
+                        .diag_current_window_client_origin_screen_physical_px,
+                    current_window_client_origin_source_platform: drag
+                        .diag_current_window_client_origin_source_platform,
+                    current_window_scale_factor_x1000_from_runner: drag
+                        .diag_current_window_scale_factor_x1000,
+                    current_window_local_pos_from_screen_logical_px: drag
+                        .diag_current_window_local_pos_from_screen_logical_px,
+                    current_window_scale_factor_x1000,
                     kind: drag.kind,
                     dragging: drag.dragging,
                     cross_window_hover: drag.cross_window_hover,
@@ -6983,6 +7118,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                         .transparent_payload_hit_test_passthrough_applied,
                     window_under_cursor_source: drag.window_under_cursor_source,
                     moving_window: drag.moving_window,
+                    moving_window_scale_factor_x1000,
                     window_under_moving_window: drag.window_under_moving_window,
                     window_under_moving_window_source: drag.window_under_moving_window_source,
                 })
@@ -7303,7 +7439,10 @@ impl<H: UiHost> Widget<H> for DockSpace {
                     hovered_tab: self.hovered_tab,
                     hovered_tab_close: self.hovered_tab_close,
                     hovered_tab_overflow_button: self.hovered_tab_overflow_button,
-                    pressed_tab_close: self.pressed_tab_close.as_ref().map(|(n, i, _)| (*n, *i)),
+                    pressed_tab_close: self
+                        .pressed_tab_close
+                        .as_ref()
+                        .map(|pressed| (pressed.tabs, pressed.index)),
                     tab_scroll: &self.tab_scroll,
                     tab_close_glyph: self.tab_close_glyph,
                     tab_overflow_glyph: self.tab_overflow_glyph,
@@ -7425,7 +7564,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                         pressed_tab_close: self
                             .pressed_tab_close
                             .as_ref()
-                            .map(|(n, i, _)| (*n, *i)),
+                            .map(|pressed| (pressed.tabs, pressed.index)),
                         tab_scroll: &self.tab_scroll,
                         tab_close_glyph: self.tab_close_glyph,
                         tab_overflow_glyph: self.tab_overflow_glyph,

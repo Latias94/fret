@@ -568,7 +568,7 @@ fn page_preview(
         PAGE_DROPDOWN_MENU => pages::preview_dropdown_menu(cx),
         PAGE_EMPTY => pages::preview_empty(cx),
         PAGE_FORM => pages::preview_forms(cx),
-        PAGE_HOVER_CARD => pages::preview_hover_card(cx),
+        PAGE_HOVER_CARD => pages::preview_hover_card(cx, avatar_demo_image),
         PAGE_INPUT => pages::preview_input(cx),
         PAGE_INPUT_GROUP => pages::preview_input_group(cx),
         PAGE_INPUT_OTP => pages::preview_input_otp(cx),

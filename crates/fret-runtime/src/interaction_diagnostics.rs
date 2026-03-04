@@ -7,11 +7,46 @@ use crate::DragKindId;
 use crate::FrameId;
 use crate::WindowUnderCursorSource;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct DockDragDiagnostics {
     pub pointer_id: PointerId,
     pub source_window: AppWindowId,
     pub current_window: AppWindowId,
+    /// Window-local logical cursor position at the time the snapshot was published.
+    pub position: Point,
+    /// Window-local logical cursor position when the drag session started.
+    pub start_position: Point,
+    /// Cursor grab offset in window-local logical coordinates (ImGui-style multi-viewport anchor).
+    pub cursor_grab_offset: Option<Point>,
+    /// The OS window requested to follow the cursor for this drag session (if any).
+    pub follow_window: Option<AppWindowId>,
+    /// Best-effort diagnostics hint: raw cursor position in screen-space physical pixels, as
+    /// observed by the runner.
+    pub cursor_screen_pos_raw_physical_px: Option<Point>,
+    /// Best-effort diagnostics hint: cursor position in screen-space physical pixels used for
+    /// local position conversion (may be clamped during scripted injection).
+    pub cursor_screen_pos_used_physical_px: Option<Point>,
+    pub cursor_screen_pos_was_clamped: bool,
+    pub cursor_override_active: bool,
+    /// Best-effort diagnostics hint: outer position of `current_window` in screen-space physical
+    /// pixels when routing was computed.
+    pub current_window_outer_pos_physical_px: Option<Point>,
+    /// Best-effort diagnostics hint: decoration offset (client origin relative to outer origin)
+    /// in physical pixels for `current_window`.
+    pub current_window_decoration_offset_physical_px: Option<Point>,
+    /// Best-effort diagnostics hint: computed client origin (screen-space physical px) for
+    /// `current_window`.
+    pub current_window_client_origin_screen_physical_px: Option<Point>,
+    pub current_window_client_origin_source_platform: bool,
+    /// Best-effort diagnostics hint: scale factor used by the runner when converting screen
+    /// physical pixels into window-local logical pixels.
+    pub current_window_scale_factor_x1000_from_runner: Option<u32>,
+    /// Best-effort diagnostics hint: local position derived from the screen-space cursor position
+    /// + client origin + scale factor.
+    pub current_window_local_pos_from_screen_logical_px: Option<Point>,
+    /// Best-effort diagnostics hint: scale factor (DPI) of `current_window` at the time the
+    /// snapshot was published.
+    pub current_window_scale_factor_x1000: Option<u32>,
     /// The drag kind for the active dock drag session.
     pub kind: DragKindId,
     pub dragging: bool,
@@ -28,6 +63,9 @@ pub struct DockDragDiagnostics {
     /// Best-effort diagnostics hint: OS window currently being moved by the runner for this drag
     /// session (ImGui-style "follow window" multi-viewport behavior).
     pub moving_window: Option<AppWindowId>,
+    /// Best-effort diagnostics hint: scale factor (DPI) of [`Self::moving_window`] at the time
+    /// the snapshot was published.
+    pub moving_window_scale_factor_x1000: Option<u32>,
     /// Best-effort diagnostics hint: when [`Self::moving_window`] is set, the window considered
     /// "under" the moving window at the current cursor position.
     pub window_under_moving_window: Option<AppWindowId>,

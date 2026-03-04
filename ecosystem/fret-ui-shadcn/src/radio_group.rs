@@ -40,7 +40,8 @@ fn row_gap(theme: &ThemeSnapshot) -> Px {
 fn label_gap(theme: &ThemeSnapshot) -> Px {
     theme
         .metric_by_key("component.radio_group.label_gap")
-        .unwrap_or_else(|| MetricRef::space(Space::N2).resolve(theme))
+        // Upstream shadcn `radio-group-demo` uses `gap-3` between icon and label.
+        .unwrap_or_else(|| MetricRef::space(Space::N3).resolve(theme))
 }
 
 fn icon_size(theme: &ThemeSnapshot) -> Px {
@@ -65,7 +66,8 @@ fn radio_text_style(theme: &ThemeSnapshot) -> TextStyle {
         .unwrap_or(px);
 
     let mut style = typography::fixed_line_box_style(FontId::ui(), px, line_height);
-    style.weight = FontWeight::NORMAL;
+    // Upstream shadcn `Label` defaults to `font-medium`.
+    style.weight = FontWeight::MEDIUM;
     style
 }
 
@@ -313,8 +315,6 @@ impl RadioGroup {
             let dot = radio_indicator(&theme);
 
             let default_icon_border_color = WidgetStateProperty::new(ColorRef::Color(border))
-                .when(WidgetStates::HOVERED, ColorRef::Color(alpha_mul(ring, 0.8)))
-                .when(WidgetStates::ACTIVE, ColorRef::Color(alpha_mul(ring, 0.8)))
                 .when(WidgetStates::FOCUS_VISIBLE, ColorRef::Color(ring))
                 .when(
                     WidgetStates::DISABLED,
@@ -323,11 +323,12 @@ impl RadioGroup {
 
             let default_label_color = WidgetStateProperty::new(ColorRef::Color(fg)).when(
                 WidgetStates::DISABLED,
-                ColorRef::Color(alpha_mul(alpha_mul(fg, 0.5), 0.8)),
+                // shadcn v4 `Label`: `peer-disabled:opacity-50`
+                ColorRef::Color(alpha_mul(fg, 0.5)),
             );
 
             let default_indicator_color = WidgetStateProperty::new(ColorRef::Color(dot))
-                .when(WidgetStates::DISABLED, ColorRef::Color(alpha_mul(dot, 0.8)));
+                .when(WidgetStates::DISABLED, ColorRef::Color(alpha_mul(dot, 0.5)));
 
             let group_disabled = disabled;
             let group_label = a11y_label.clone();
@@ -418,6 +419,16 @@ impl RadioGroup {
 
                         let radius = Px((icon.0 * 0.5).max(0.0));
                         let mut ring_style = decl_style::focus_ring(&theme, radius);
+                        // Upstream shadcn radio-group uses `focus-visible:ring-[3px]` (no offset).
+                        ring_style.width = theme
+                            .metric_by_key("component.radio_group.focus_ring_width_px")
+                            .unwrap_or(Px(3.0));
+                        ring_style.offset = theme
+                            .metric_by_key("component.radio_group.focus_ring_offset_px")
+                            .unwrap_or(Px(0.0));
+                        if ring_style.offset.0 <= 0.0 {
+                            ring_style.offset_color = None;
+                        }
                         if aria_invalid {
                             ring_style.color = crate::theme_variants::invalid_control_ring_color(
                                 &theme,
@@ -507,17 +518,30 @@ impl RadioGroup {
                                             overlay_motion::shadcn_ease,
                                         );
                                         props.focus_ring_always_paint = ring_alpha.animating;
-                                        let mut ring_style = base_ring_style.clone();
-                                        ring_style.color.a = (ring_style.color.a
-                                            * ring_alpha.value)
-                                            .clamp(0.0, 1.0);
-                                        if let Some(offset_color) = ring_style.offset_color {
-                                            ring_style.offset_color = Some(Color {
-                                                a: (offset_color.a * ring_alpha.value)
-                                                    .clamp(0.0, 1.0),
-                                                ..offset_color
-                                            });
-                                        }
+
+                                        // Keep the steady-state focus ring paint-time (focus +
+                                        // focus-visible) so focus changes do not depend on a
+                                        // re-render between layout and paint.
+                                        //
+                                        // When we are animating (in/out), apply alpha scaling and
+                                        // enable `focus_ring_always_paint` so the ring can fade out
+                                        // after blur.
+                                        let ring_style = if ring_alpha.animating {
+                                            let mut ring_style = base_ring_style.clone();
+                                            ring_style.color.a = (ring_style.color.a
+                                                * ring_alpha.value)
+                                                .clamp(0.0, 1.0);
+                                            if let Some(offset_color) = ring_style.offset_color {
+                                                ring_style.offset_color = Some(Color {
+                                                    a: (offset_color.a * ring_alpha.value)
+                                                        .clamp(0.0, 1.0),
+                                                    ..offset_color
+                                                });
+                                            }
+                                            ring_style
+                                        } else {
+                                            base_ring_style.clone()
+                                        };
                                         props.focus_ring = Some(ring_style);
 
                                         let border_color = drive_tween_color_for_element(
@@ -1869,7 +1893,8 @@ mod tests {
             always_paint_out.clone(),
         );
         let a0 = ring_alpha_out.get().expect("a0");
-        assert!(a0.abs() <= 1e-6, "expected ring alpha=0, got {a0}");
+        assert!(a0 > 0.0, "expected non-zero base ring alpha, got {a0}");
+        let base_alpha = a0;
 
         let snap = ui.semantics_snapshot().expect("semantics snapshot");
         let alpha_node = snap
@@ -1899,7 +1924,10 @@ mod tests {
             always_paint_out.clone(),
         );
         let a1 = ring_alpha_out.get().expect("a1");
-        assert!(a1 > 0.0, "expected ring alpha to animate in, got {a1}");
+        assert!(
+            a1 >= 0.0 && a1 < base_alpha,
+            "expected ring alpha to animate in, got base_alpha={base_alpha} a1={a1}"
+        );
 
         let settle = ticks_60hz_for_duration(Duration::from_millis(150)) + 2;
         for _ in 0..settle {
@@ -1916,8 +1944,8 @@ mod tests {
         }
         let a_focused = ring_alpha_out.get().expect("a_focused");
         assert!(
-            a_focused > a1 + 1e-4,
-            "expected ring alpha to increase over time, got a1={a1} a_focused={a_focused}"
+            a_focused > a1 + 1e-4 && (a_focused - base_alpha).abs() <= 1e-4,
+            "expected ring alpha to settle at base_alpha={base_alpha}, got a1={a1} a_focused={a_focused}"
         );
 
         ui.set_focus(None);
@@ -1934,8 +1962,8 @@ mod tests {
         let a_blur = ring_alpha_out.get().expect("a_blur");
         let always_paint = always_paint_out.get().expect("always_paint");
         assert!(
-            a_blur > 0.0 && a_blur < a_focused,
-            "expected ring alpha to be intermediate after blur, got a_blur={a_blur} a_focused={a_focused}"
+            a_blur >= 0.0 && a_blur < a_focused,
+            "expected ring alpha to animate out after blur, got a_blur={a_blur} a_focused={a_focused}"
         );
         assert!(always_paint, "expected always_paint while animating out");
 
@@ -1954,8 +1982,8 @@ mod tests {
         let a_final = ring_alpha_out.get().expect("a_final");
         let always_paint_final = always_paint_out.get().expect("always_paint_final");
         assert!(
-            a_final.abs() <= 1e-4,
-            "expected ring alpha=0, got {a_final}"
+            (a_final - base_alpha).abs() <= 1e-4,
+            "expected base ring alpha={base_alpha}, got {a_final}"
         );
         assert!(
             !always_paint_final,

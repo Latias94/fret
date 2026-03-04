@@ -13,7 +13,7 @@ pub(super) fn preview_label(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
         [
             "API reference: `ecosystem/fret-ui-shadcn/src/label.rs` (Label) and `ecosystem/fret-ui-shadcn/src/field.rs` (FieldLabel).",
             "Label is a lightweight text primitive; form semantics and helper/error text live in `Field`.",
-            "Use `Label::for_control(ControlId)` + `Input::control_id(ControlId)` for an `htmlFor`-like association (focus forwarding + `labelled-by`).",
+            "Use `Label::for_control(ControlId)` + `Input::control_id(ControlId)` to model `htmlFor`/`id` association (click-to-focus + labelled-by semantics).",
         ],
     );
 

@@ -98,14 +98,12 @@ impl View for ImUiActionBasicsView {
         let count = cx.use_state::<u32>();
         let count_value = cx.watch_model(&count).layout().copied_or(0);
 
-        cx.on_action::<act::Inc>({
+        cx.on_action_notify::<act::Inc>({
             let count = count.clone();
-            move |host, acx| {
+            move |host, _acx| {
                 let _ = host
                     .models_mut()
                     .update(&count, |v| *v = v.saturating_add(1));
-                host.request_redraw(acx.window);
-                host.notify(acx);
                 true
             }
         });
@@ -174,6 +172,7 @@ fn main() -> anyhow::Result<()> {
     FretApp::new("cookbook-imui-action-basics")
         .window("cookbook-imui-action-basics", (720.0, 420.0))
         .install_app(fret_cookbook::install_cookbook_defaults)
+        .command_palette(true)
         .run_view::<ImUiActionBasicsView>()
         .map_err(anyhow::Error::from)
 }

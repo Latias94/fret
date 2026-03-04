@@ -7,7 +7,17 @@ fn main() -> anyhow::Result<()> {
 
     if demo == "--list" || demo == "-l" {
         eprintln!(
-            "Available demos:\n  simple-todo\n  todo_demo\n  query_async_tokio_demo\n  async_playground_demo\n  components_gallery\n  genui_demo\n  emoji_conformance_demo\n  cjk_conformance_demo\n  chart_demo\n  chart_declarative_demo\n  chart_multi_axis_demo\n  echarts_demo\n  category_line_demo\n  horizontal_bars_demo\n  plot_demo\n  plot_image_demo\n  bars_demo\n  grouped_bars_demo\n  stacked_bars_demo\n  area_demo\n  candlestick_demo\n  error_bars_demo\n  heatmap_demo\n  histogram_demo\n  histogram2d_demo\n  shaded_demo\n  stairs_demo\n  stems_demo\n  linked_cursor_demo\n  inf_lines_demo\n  tags_demo\n  drag_demo\n  effects_demo\n  liquid_glass_demo\n  custom_effect_v1_demo\n  custom_effect_v2_demo\n  custom_effect_v3_demo\n  postprocess_theme_demo\n  window_hit_test_probe_demo"
+            "Available demos:\n  simple-todo\n  todo_demo\n  query_demo\n  query_async_tokio_demo\n  hello_counter_demo\n  async_playground_demo\n  embedded_viewport_demo\n  drop_shadow_demo\n  postprocess_theme_demo\n  genui_demo\n  markdown_demo\n  liquid_glass_demo\n  custom_effect_v1_demo\n  custom_effect_v2_demo\n  custom_effect_v3_demo\n  components_gallery\n  emoji_conformance_demo\n  cjk_conformance_demo\n  chart_demo\n  chart_declarative_demo\n  chart_multi_axis_demo\n  echarts_demo\n  category_line_demo\n  horizontal_bars_demo\n  plot_demo\n  plot_image_demo\n  bars_demo\n  grouped_bars_demo\n  stacked_bars_demo\n  area_demo\n  candlestick_demo\n  error_bars_demo\n  heatmap_demo\n  histogram_demo\n  histogram2d_demo\n  shaded_demo\n  stairs_demo\n  stems_demo\n  linked_cursor_demo\n  inf_lines_demo\n  tags_demo\n  drag_demo\n  effects_demo\n  launcher_utility_window_demo\n  launcher_utility_window_materials_demo\n  window_hit_test_probe_demo"
+        );
+
+        #[cfg(feature = "legacy-mvu-demos")]
+        eprintln!(
+            "\nLegacy MVU demos (feature `legacy-mvu-demos`):\n  todo_demo_legacy\n  query_demo_legacy\n  query_async_tokio_demo_legacy\n  hello_counter_demo_legacy\n  async_playground_demo_legacy\n  embedded_viewport_demo_legacy\n  drop_shadow_demo_legacy\n  postprocess_theme_demo_legacy"
+        );
+
+        #[cfg(not(feature = "legacy-mvu-demos"))]
+        eprintln!(
+            "\nLegacy MVU demos are disabled by default.\nRe-run with: `cargo run -p fret-demo --features legacy-mvu-demos -- --list`"
         );
         return Ok(());
     }
@@ -17,14 +27,34 @@ fn main() -> anyhow::Result<()> {
             fret_examples::simple_todo_demo::run()
         }
         "todo_demo" | "todo-demo" => fret_examples::todo_demo::run(),
+        "query_demo" | "query-demo" => fret_examples::query_demo::run(),
         "query_async_tokio_demo" | "query-async-tokio-demo" => {
             fret_examples::query_async_tokio_demo::run()
         }
+        "hello_counter_demo" | "hello-counter-demo" => fret_examples::hello_counter_demo::run(),
         "async_playground_demo" | "async-playground-demo" => {
             fret_examples::async_playground_demo::run()
         }
-        "components_gallery" => fret_examples::components_gallery::run(),
+        "embedded_viewport_demo" | "embedded-viewport-demo" => {
+            fret_examples::embedded_viewport_demo::run()
+        }
+        "drop_shadow_demo" | "drop-shadow-demo" => fret_examples::drop_shadow_demo::run(),
+        "postprocess_theme_demo" | "postprocess-theme-demo" => {
+            fret_examples::postprocess_theme_demo::run()
+        }
         "genui_demo" => fret_examples::genui_demo::run(),
+        "markdown_demo" | "markdown-demo" => fret_examples::markdown_demo::run(),
+        "liquid_glass_demo" | "liquid-glass-demo" => fret_examples::liquid_glass_demo::run(),
+        "custom_effect_v1_demo" | "custom-effect-v1-demo" => {
+            fret_examples::custom_effect_v1_demo::run()
+        }
+        "custom_effect_v2_demo" | "custom-effect-v2-demo" => {
+            fret_examples::custom_effect_v2_demo::run()
+        }
+        "custom_effect_v3_demo" | "custom-effect-v3-demo" => {
+            fret_examples::custom_effect_v3_demo::run()
+        }
+        "components_gallery" => fret_examples::components_gallery::run(),
         "emoji_conformance_demo" => fret_examples::emoji_conformance_demo::run(),
         "cjk_conformance_demo" => fret_examples::cjk_conformance_demo::run(),
         "chart_demo" => fret_examples::chart_demo::run(),
@@ -61,26 +91,76 @@ fn main() -> anyhow::Result<()> {
         "window_hit_test_probe_demo" | "window-hit-test-probe-demo" => {
             fret_examples::window_hit_test_probe_demo::run()
         }
-        "liquid_glass_demo" | "liquid-glass-demo" => fret_examples::liquid_glass_demo::run(),
-        "custom_effect_v1_demo" | "custom-effect-v1-demo" => {
-            fret_examples::custom_effect_v1_demo::run()
-        }
-        "custom_effect_v2_demo" | "custom-effect-v2-demo" => {
-            fret_examples::custom_effect_v2_demo::run()
-        }
-        "custom_effect_v3_demo" | "custom-effect-v3-demo" => {
-            fret_examples::custom_effect_v3_demo::run()
-        }
-        "postprocess_theme_demo" | "postprocess-theme-demo" => {
-            fret_examples::postprocess_theme_demo::run()
-        }
         other => {
+            if is_legacy_mvu_demo_name(other) {
+                #[cfg(feature = "legacy-mvu-demos")]
+                if let Some(result) = run_legacy_mvu_demo(other) {
+                    return result;
+                }
+
+                eprintln!(
+                    "Demo `{other}` is a legacy MVU demo and is disabled by default.\nRe-run with: `cargo run -p fret-demo --features legacy-mvu-demos -- {other}`"
+                );
+                return fret_examples::components_gallery::run();
+            }
+
             eprintln!(
                 "Unknown demo: {other}\nRun `cargo run -p fret-demo -- --list` to see available demos."
             );
             fret_examples::components_gallery::run()
         }
     }
+}
+
+#[cfg(all(not(target_arch = "wasm32"), feature = "legacy-mvu-demos"))]
+fn run_legacy_mvu_demo(demo: &str) -> Option<anyhow::Result<()>> {
+    let result = match demo {
+        "todo_demo_legacy" | "todo-demo-legacy" => fret_examples::todo_demo_legacy::run(),
+        "query_demo_legacy" | "query-demo-legacy" => fret_examples::query_demo_legacy::run(),
+        "query_async_tokio_demo_legacy" | "query-async-tokio-demo-legacy" => {
+            fret_examples::query_async_tokio_demo_legacy::run()
+        }
+        "hello_counter_demo_legacy" | "hello-counter-demo-legacy" => {
+            fret_examples::hello_counter_demo_legacy::run()
+        }
+        "async_playground_demo_legacy" | "async-playground-demo-legacy" => {
+            fret_examples::async_playground_demo_legacy::run()
+        }
+        "embedded_viewport_demo_legacy" | "embedded-viewport-demo-legacy" => {
+            fret_examples::embedded_viewport_demo_legacy::run()
+        }
+        "drop_shadow_demo_legacy" | "drop-shadow-demo-legacy" => {
+            fret_examples::drop_shadow_demo_legacy::run()
+        }
+        "postprocess_theme_demo_legacy" | "postprocess-theme-demo-legacy" => {
+            fret_examples::postprocess_theme_demo_legacy::run()
+        }
+        _ => return None,
+    };
+    Some(result)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn is_legacy_mvu_demo_name(demo: &str) -> bool {
+    matches!(
+        demo,
+        "todo_demo_legacy"
+            | "todo-demo-legacy"
+            | "query_demo_legacy"
+            | "query-demo-legacy"
+            | "query_async_tokio_demo_legacy"
+            | "query-async-tokio-demo-legacy"
+            | "hello_counter_demo_legacy"
+            | "hello-counter-demo-legacy"
+            | "async_playground_demo_legacy"
+            | "async-playground-demo-legacy"
+            | "embedded_viewport_demo_legacy"
+            | "embedded-viewport-demo-legacy"
+            | "drop_shadow_demo_legacy"
+            | "drop-shadow-demo-legacy"
+            | "postprocess_theme_demo_legacy"
+            | "postprocess-theme-demo-legacy"
+    )
 }
 
 #[cfg(target_arch = "wasm32")]

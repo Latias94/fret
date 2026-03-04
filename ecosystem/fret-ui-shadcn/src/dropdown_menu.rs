@@ -6823,6 +6823,135 @@ mod tests {
     }
 
     #[test]
+    fn dropdown_menu_close_transition_fades_out_and_keeps_content_painted() {
+        use fret_ui_kit::declarative::transition::ticks_60hz_for_duration;
+
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        crate::shadcn_themes::apply_shadcn_new_york(
+            &mut app,
+            crate::shadcn_themes::ShadcnBaseColor::Neutral,
+            crate::shadcn_themes::ShadcnColorScheme::Light,
+        );
+
+        let open = app.models_mut().insert(false);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let entries = || vec![DropdownMenuEntry::Item(DropdownMenuItem::new("Alpha"))];
+
+        let max_transition_opacity = |scene: &fret_core::Scene| -> Option<f32> {
+            let mut best: Option<f32> = None;
+            for op in scene.ops() {
+                let fret_core::SceneOp::PushOpacity { opacity } = op else {
+                    continue;
+                };
+                if *opacity <= 1e-6 || *opacity >= 1.0 - 1e-6 {
+                    continue;
+                }
+                best = Some(best.map_or(*opacity, |cur| cur.max(*opacity)));
+            }
+            best
+        };
+
+        // Frame 1: closed.
+        render_frame_focusable_trigger(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            entries(),
+        );
+        assert!(!OverlayController::arbitration_snapshot(&ui).has_any_overlays);
+
+        // Frame 2: open, should paint with an intermediate opacity during the fade-in.
+        let _ = app.models_mut().update(&open, |v| *v = true);
+        render_frame_focusable_trigger(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            entries(),
+        );
+        assert!(OverlayController::arbitration_snapshot(&ui).has_any_overlays);
+
+        let mut scene = fret_core::Scene::default();
+        ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+        let opacity_open = max_transition_opacity(&scene).expect("expected fade-in opacity");
+        assert!(
+            opacity_open > 1e-6 && opacity_open < 1.0 - 1e-6,
+            "expected intermediate opacity on open; got {opacity_open}"
+        );
+
+        // Let the open transition settle.
+        let settle = ticks_60hz_for_duration(crate::overlay_motion::SHADCN_MOTION_DURATION_150) + 2;
+        for _ in 0..settle {
+            render_frame_focusable_trigger(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                open.clone(),
+                entries(),
+            );
+        }
+        assert!(OverlayController::arbitration_snapshot(&ui).has_any_overlays);
+
+        // Close: the content should remain painted for at least one frame and fade out.
+        let _ = app.models_mut().update(&open, |v| *v = false);
+        render_frame_focusable_trigger(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            entries(),
+        );
+        assert!(
+            OverlayController::arbitration_snapshot(&ui).has_any_overlays,
+            "expected overlay to remain present during close transition"
+        );
+
+        let mut scene = fret_core::Scene::default();
+        ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+        let opacity_close = max_transition_opacity(&scene).expect("expected fade-out opacity");
+        assert!(
+            opacity_close > 1e-6 && opacity_close < 1.0 - 1e-6,
+            "expected intermediate opacity on close; got {opacity_close}"
+        );
+
+        // After settling, the overlay should be gone.
+        for _ in 0..(settle + 2) {
+            render_frame_focusable_trigger(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                open.clone(),
+                entries(),
+            );
+        }
+        assert!(
+            !OverlayController::arbitration_snapshot(&ui).has_any_overlays,
+            "expected overlay to be removed after close transition settles"
+        );
+    }
+
+    #[test]
     fn dropdown_menu_non_modal_outside_press_closes_without_restoring_focus_to_trigger() {
         use fret_core::MouseButton;
 

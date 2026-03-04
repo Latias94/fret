@@ -1,0 +1,80 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "Docking arbitration demo: overflow menu row-1 close does not activate or drag (smoke)",
+    "tags": ["docking", "tabbar", "overflow", "close", "arbitration", "smoke", "gate"],
+    "required_capabilities": ["diag.script_v2"],
+    "env_defaults": {
+      "FRET_DOCK_ARB_PRESET": "overflow_tabs"
+    },
+    "target_hints": [
+      "Opens the overflow menu and presses the row-1 close affordance.",
+      "Asserts no dock drag/floating drag is started.",
+      "Asserts the active tab index does not change while closing the overflowed tab."
+    ]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 5 },
+
+    { "type": "set_window_inner_size", "width_px": 980.0, "height_px": 720.0 },
+    { "type": "wait_frames", "n": 12 },
+
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "dock-arb-dock-space" } },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "dock-arb-tab-overflow-button-anchor-left" } },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "dock-arb-tab-overflow-menu-row-close-anchor-left-1" } },
+      "timeout_frames": 240
+    },
+
+    { "type": "set_window_inner_size", "width_px": 420.0, "height_px": 720.0 },
+    { "type": "wait_frames", "n": 16 },
+
+    { "type": "wait_until", "predicate": { "kind": "dock_tab_strip_active_overflow_is", "overflow": true }, "timeout_frames": 240 },
+    { "type": "wait_until", "predicate": { "kind": "dock_graph_signature_contains", "needle": "tabs(a=0:" }, "timeout_frames": 240 },
+    { "type": "wait_until", "predicate": { "kind": "dock_graph_signature_contains", "needle": "demo.viewport.right" }, "timeout_frames": 240 },
+
+    {
+      "type": "click",
+      "window": { "kind": "current" },
+      "target": { "kind": "test_id", "id": "dock-arb-tab-overflow-button-anchor-left" }
+    },
+    { "type": "wait_frames", "n": 6 },
+
+    {
+      "type": "pointer_down",
+      "window": { "kind": "current" },
+      "target": { "kind": "test_id", "id": "dock-arb-tab-overflow-menu-row-close-anchor-left-1" },
+      "button": "left"
+    },
+    { "type": "wait_frames", "n": 1 },
+    { "type": "pointer_move", "window": { "kind": "current" }, "delta_x": 2.0, "delta_y": 0.0, "steps": 2 },
+    { "type": "wait_frames", "n": 1 },
+
+    { "type": "assert", "predicate": { "kind": "dock_drag_active_is", "active": false } },
+    { "type": "assert", "predicate": { "kind": "dock_floating_drag_active_is", "active": false } },
+    { "type": "assert", "predicate": { "kind": "dock_graph_signature_contains", "needle": "tabs(a=0:" } },
+
+    { "type": "pointer_up", "window": { "kind": "current" } },
+    { "type": "wait_frames", "n": 8 },
+
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "dock_graph_signature_not_contains", "needle": "demo.viewport.right" },
+      "timeout_frames": 240
+    },
+    { "type": "assert", "predicate": { "kind": "dock_graph_signature_contains", "needle": "tabs(a=0:" } },
+
+    { "type": "capture_bundle", "label": "docking-arbitration-demo-tab-overflow-menu-close-row-1-does-not-activate" }
+  ]
+}

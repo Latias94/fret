@@ -9,7 +9,7 @@
 
 use std::sync::Arc;
 
-use fret::legacy::prelude::*;
+use fret::prelude::*;
 use fret_core::scene::{Color, DropShadowV1, EffectChain, EffectMode, EffectQuality, EffectStep};
 use fret_core::{Corners, Edges, Point, Px};
 use fret_runtime::Model;
@@ -122,58 +122,26 @@ struct DropShadowDemoState {
     stress: Model<bool>,
 }
 
-struct DropShadowDemoProgram;
-
-pub fn run() -> anyhow::Result<()> {
-    fret::mvu::app::<DropShadowDemoProgram>("drop-shadow-demo")?
-        .with_main_window("drop_shadow_demo", (1280.0, 720.0))
-        .init_app(|app| {
-            shadcn::shadcn_themes::apply_shadcn_new_york(
-                app,
-                shadcn::shadcn_themes::ShadcnBaseColor::Slate,
-                shadcn::shadcn_themes::ShadcnColorScheme::Dark,
-            );
-        })
-        .run()?;
-    Ok(())
+struct DropShadowDemoView {
+    st: DropShadowDemoState,
 }
 
-impl MvuProgram for DropShadowDemoProgram {
-    type State = DropShadowDemoState;
-    type Message = ();
-
-    fn init(app: &mut App, _window: AppWindowId) -> Self::State {
-        Self::State {
-            enabled: app.models_mut().insert(false),
-            stress: app.models_mut().insert(false),
+impl View for DropShadowDemoView {
+    fn init(app: &mut App, _window: AppWindowId) -> Self {
+        Self {
+            st: DropShadowDemoState {
+                enabled: app.models_mut().insert(false),
+                stress: app.models_mut().insert(false),
+            },
         }
     }
 
-    fn update(_app: &mut App, _st: &mut Self::State, _message: Self::Message) {}
-
-    fn view(
-        cx: &mut ElementContext<'_, App>,
-        st: &mut Self::State,
-        _msg: &mut MessageRouter<Self::Message>,
-    ) -> Elements {
+    fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
         let enabled = cx
-            .watch_model(&st.enabled)
+            .watch_model(&self.st.enabled)
             .layout()
-            .read_ref(|v| *v)
-            .ok()
-            .unwrap_or(false);
-        let stress = cx
-            .watch_model(&st.stress)
-            .layout()
-            .read_ref(|v| *v)
-            .ok()
-            .unwrap_or(false);
-
-        let (rows, cols) = if stress {
-            (4usize, 3usize)
-        } else {
-            (2usize, 3usize)
-        };
+            .copied_or_default();
+        let stress = cx.watch_model(&self.st.stress).layout().copied_or_default();
 
         let stage = cx.container(
             ContainerProps {
@@ -183,34 +151,39 @@ impl MvuProgram for DropShadowDemoProgram {
                         height: Length::Fill,
                         ..Default::default()
                     },
-                    flex: fret_ui::element::FlexItemStyle {
-                        grow: 1.0,
-                        basis: Length::Px(Px(0.0)),
-                        ..Default::default()
-                    },
-                    overflow: Overflow::Clip,
                     ..Default::default()
                 },
-                background: Some(srgb(9, 11, 15, 1.0)),
+                background: Some(srgb(2, 6, 23, 1.0)),
                 ..Default::default()
             },
             move |cx| {
-                let grid = shadcn::stack::vstack(
-                    cx,
-                    shadcn::stack::VStackProps::default()
-                        .gap(Space::N6)
-                        .items_center(),
+                let grid = cx.container(
+                    ContainerProps {
+                        layout: LayoutStyle {
+                            size: SizeStyle {
+                                width: Length::Fill,
+                                height: Length::Fill,
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        },
+                        padding: Edges::all(Px(32.0)).into(),
+                        ..Default::default()
+                    },
                     move |cx| {
-                        let mut out: Vec<AnyElement> = Vec::with_capacity(rows);
-                        for r in 0..rows {
-                            let enabled = enabled;
-                            out.push(shadcn::stack::hstack(
-                                cx,
-                                shadcn::stack::HStackProps::default()
-                                    .gap(Space::N6)
-                                    .items_start(),
-                                move |cx| {
-                                    let mut row_items: Vec<AnyElement> = Vec::with_capacity(cols);
+                        let cols = if stress { 4 } else { 2 };
+                        let rows = if stress { 4 } else { 2 };
+
+                        let grid = shadcn::stack::vstack(
+                            cx,
+                            shadcn::stack::VStackProps::default()
+                                .gap(Space::N4)
+                                .items_center(),
+                            move |cx| {
+                                let mut out: Vec<AnyElement> = Vec::new();
+                                out.reserve(rows);
+                                for r in 0..rows {
+                                    let mut row_items = Vec::with_capacity(cols);
                                     for c in 0..cols {
                                         let i = r * cols + c;
                                         row_items.push(card(
@@ -220,22 +193,30 @@ impl MvuProgram for DropShadowDemoProgram {
                                             enabled,
                                         ));
                                     }
-                                    row_items
-                                },
-                            ));
-                        }
-                        out
+                                    out.push(shadcn::stack::hstack(
+                                        cx,
+                                        shadcn::stack::HStackProps::default()
+                                            .gap(Space::N4)
+                                            .items_center(),
+                                        move |_cx| row_items,
+                                    ));
+                                }
+                                out
+                            },
+                        );
+
+                        vec![shadcn::stack::vstack(
+                            cx,
+                            shadcn::stack::VStackProps::default()
+                                .layout(LayoutRefinement::default().size_full())
+                                .justify_center()
+                                .items_center(),
+                            move |_cx| vec![grid],
+                        )]
                     },
                 );
 
-                vec![shadcn::stack::vstack(
-                    cx,
-                    shadcn::stack::VStackProps::default()
-                        .layout(LayoutRefinement::default().size_full())
-                        .justify_center()
-                        .items_center(),
-                    move |_cx| vec![grid],
-                )]
+                vec![grid]
             },
         );
 
@@ -278,7 +259,7 @@ impl MvuProgram for DropShadowDemoProgram {
                                     .items_center(),
                                 |cx| {
                                     vec![
-                                        shadcn::Switch::new(st.enabled.clone())
+                                        shadcn::Switch::new(self.st.enabled.clone())
                                             .a11y_label("Enable drop shadow")
                                             .test_id("drop-shadow-switch-enabled")
                                             .into_element(cx),
@@ -293,7 +274,7 @@ impl MvuProgram for DropShadowDemoProgram {
                                     .items_center(),
                                 |cx| {
                                     vec![
-                                        shadcn::Switch::new(st.stress.clone())
+                                        shadcn::Switch::new(self.st.stress.clone())
                                             .a11y_label("Enable stress grid")
                                             .test_id("drop-shadow-switch-stress")
                                             .into_element(cx),
@@ -322,6 +303,20 @@ impl MvuProgram for DropShadowDemoProgram {
         )
         .test_id("drop-shadow-demo-root");
 
-        vec![root].into()
+        root.into()
     }
+}
+
+pub fn run() -> anyhow::Result<()> {
+    FretApp::new("drop-shadow-demo")
+        .window("drop-shadow-demo", (1280.0, 720.0))
+        .install_app(|app| {
+            shadcn::shadcn_themes::apply_shadcn_new_york(
+                app,
+                shadcn::shadcn_themes::ShadcnBaseColor::Slate,
+                shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+            );
+        })
+        .run_view::<DropShadowDemoView>()
+        .map_err(anyhow::Error::from)
 }

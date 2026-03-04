@@ -1,18 +1,12 @@
 use super::super::super::super::*;
 
 use std::collections::HashMap;
-use std::sync::{Arc, OnceLock};
+use std::sync::Arc;
 
-use fret::mvu_router::KeyedMessageRouter;
 use fret_runtime::{CommandId, Model};
 use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, UiHost};
 use fret_ui_headless::table::{ColumnDef, RowKey, Table, TableState};
-
-#[cfg(target_arch = "wasm32")]
-use std::cell::RefCell;
-#[cfg(not(target_arch = "wasm32"))]
-use std::sync::Mutex;
 
 #[derive(Debug, Clone)]
 struct DemoProcessRow {
@@ -42,29 +36,8 @@ struct DemoProcessTableToolbarResponsiveState {
 const CMD_SELECT_ALL_PAGE: &str = "ui_gallery.data_table.select_all_page";
 const TOGGLE_ROW_SELECTED_ROUTE_PREFIX: &str = "ui_gallery.data_table.toggle_row_selected.";
 
-#[cfg(not(target_arch = "wasm32"))]
-fn with_toggle_row_selected_router<R>(f: impl FnOnce(&mut KeyedMessageRouter<u64, u64>) -> R) -> R {
-    static ROUTER: OnceLock<Mutex<KeyedMessageRouter<u64, u64>>> = OnceLock::new();
-    let lock = ROUTER
-        .get_or_init(|| Mutex::new(KeyedMessageRouter::new(TOGGLE_ROW_SELECTED_ROUTE_PREFIX)));
-    let mut guard = lock
-        .lock()
-        .expect("ui-gallery data-table legacy row router lock poisoned");
-    f(&mut guard)
-}
-
-#[cfg(target_arch = "wasm32")]
-fn with_toggle_row_selected_router<R>(f: impl FnOnce(&mut KeyedMessageRouter<u64, u64>) -> R) -> R {
-    thread_local! {
-        static ROUTER: RefCell<KeyedMessageRouter<u64, u64>> =
-            RefCell::new(KeyedMessageRouter::new(TOGGLE_ROW_SELECTED_ROUTE_PREFIX));
-    }
-
-    ROUTER.with(|router| f(&mut *router.borrow_mut()))
-}
-
 fn toggle_row_selected_command(row_id: u64) -> CommandId {
-    with_toggle_row_selected_router(|router| router.cmd(row_id, row_id))
+    CommandId::new(format!("{TOGGLE_ROW_SELECTED_ROUTE_PREFIX}{row_id}"))
 }
 
 fn wire_selection_commands<H: UiHost + 'static>(
@@ -92,8 +65,9 @@ fn wire_selection_commands<H: UiHost + 'static>(
 
             let next = if cmd == CMD_SELECT_ALL_PAGE {
                 table.toggled_all_page_rows_selected(None)
-            } else if let Some(row_id) =
-                with_toggle_row_selected_router(|router| router.try_resolve(&command))
+            } else if let Some(row_id) = cmd
+                .strip_prefix(TOGGLE_ROW_SELECTED_ROUTE_PREFIX)
+                .and_then(|suffix| suffix.parse::<u64>().ok())
             {
                 table.toggled_row_selected(RowKey(row_id), None, true)
             } else {

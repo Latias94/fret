@@ -13,8 +13,13 @@ This TODO list is scoped to this workstream folder and is intended to keep the r
 - [x] Add a smoke gate for “split preview suppressed while pointer stays in the tab strip row”:
   - [x] `workspace-shell-demo-tab-drag-to-split-right-row-suppressed-smoke`
 - [x] Add an overflow activation smoke gate (`workspace-shell-demo-tab-overflow-activate-hidden-smoke`).
+- [x] Add an overflow menu close gate (does not activate, tolerates small pointer jitter): `workspace-shell-demo-tab-overflow-close-does-not-activate`
+- [x] Add a close-button “click jitter does not start drag” gate (`workspace-shell-demo-tab-close-button-does-not-start-drag`).
 - [x] Promote a minimal suite that runs in < 30s locally (`diag-hardening-smoke-workspace`) and keep it green.
-- [ ] Add a non-screenshot invariants-based split gate (post-split layout assertions + tab ownership), once split preview routing is stable.
+- [x] Avoid out-of-window cursor overshoot in hover-driven drag gates (pin cursor via `set_cursor_in_window_logical` + nudge).
+- [x] Add an inactive-tab drag-to-split smoke gate (`workspace-shell-demo-tab-drag-inactive-to-split-right-smoke`).
+- [x] Add a non-screenshot invariants-based split gate (post-split layout assertions + tab ownership):
+  - [x] `workspace-shell-demo-tab-drag-to-split-right-preview-invariants-smoke`
 
 ## Modularization (M1)
 
@@ -43,6 +48,7 @@ This TODO list is scoped to this workstream folder and is intended to keep the r
   - Evidence: `ecosystem/fret-workspace/src/tabs.rs` (`TabCycleMode::Mru` default + unit tests).
   - Evidence: `ecosystem/fret-workspace/src/commands.rs` (default keybindings for `workspace.tab.next/prev`).
 - [x] Make tab strip hit-test surfaces explicit (tab row vs header space vs overflow control / scroll controls) and gate it via unit tests.
+- [x] Add stable `test_id` anchors for scroll buttons (`*.tab-strip.scroll_left/right`).
 - [x] Adopt `WorkspacePaneContentFocusTarget` in workspace shells (real pane content), so exit fallback works in demos.
   - Evidence: `apps/fret-examples/src/workspace_shell_demo.rs`.
   - Evidence: `ecosystem/fret/src/workspace_shell.rs` (golden-path shell registers pane content target).

@@ -3,8 +3,9 @@ use std::sync::Arc;
 
 use fret::prelude::*;
 use fret_app::{CreateWindowKind, CreateWindowRequest, WindowRequest};
+use fret_bootstrap::ui_app_driver;
 use fret_core::{AppWindowId, Px};
-use fret_launch::{WindowCreateSpec, WindowLogicalSize};
+use fret_launch::{WindowCreateSpec, WindowLogicalSize, WinitRunnerConfig};
 use fret_runtime::{
     ActivationPolicy, WindowDecorationsRequest, WindowRole, WindowStyleRequest, WindowZLevel,
 };
@@ -20,16 +21,19 @@ const TEST_ID_BASE_ROOT: &str = "window-hit-test-probe.base.root";
 const TEST_ID_OVERLAY_ROOT: &str = "window-hit-test-probe.overlay.root";
 
 pub fn run() -> anyhow::Result<()> {
-    fret::app_with_hooks("window-hit-test-probe-demo", init_window, view, |d| {
-        d.window_create_spec(window_create_spec)
-            .window_created(window_created)
-    })?
-    .with_main_window("window_hit_test_probe_demo", (720.0, 460.0))
-    .configure(|config| {
-        // Keep deterministic overlap: place restored windows relative to the anchor point.
-        config.new_window_anchor_offset = (0.0, 0.0);
-    })
-    .run()?;
+    let driver = ui_app_driver::UiAppDriver::new("window-hit-test-probe-demo", init_window, view)
+        .on_preferences(ui_app_driver::default_on_preferences::<WindowState>)
+        .window_create_spec(window_create_spec)
+        .window_created(window_created)
+        .into_fn_driver();
+
+    let mut config = WinitRunnerConfig::default();
+    config.main_window_title = "window_hit_test_probe_demo".to_string();
+    config.main_window_size = WindowLogicalSize::new(720.0, 460.0);
+    // Keep deterministic overlap: place restored windows relative to the anchor point.
+    config.new_window_anchor_offset = (0.0, 0.0);
+
+    fret::run_native_demo(config, App::new(), driver)?;
     Ok(())
 }
 

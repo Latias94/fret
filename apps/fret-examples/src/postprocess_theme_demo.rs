@@ -7,18 +7,23 @@
 
 use std::sync::Arc;
 
-use fret::legacy::prelude::*;
+use fret::prelude::*;
 use fret_core::scene::{
     DitherMode, EffectChain, EffectMode, EffectParamsV1, EffectQuality, EffectStep,
 };
 use fret_core::{Color, Corners, Edges, EffectId, Px};
 use fret_runtime::Model;
+use fret_ui::action::UiActionHost;
 use fret_ui::element::{
     ContainerProps, EffectLayerProps, LayoutStyle, Length, Overflow, PositionStyle, SpacerProps,
     TextProps,
 };
 use fret_ui_kit::custom_effects::CustomEffectProgramV1;
 use fret_ui_kit::{Space, UiIntoElement};
+
+mod act {
+    fret::actions!([Reset = "postprocess_theme_demo.reset.v1"]);
+}
 
 const WGSL: &str = r#"
 // Params packing (EffectParamsV1 is 64 bytes):
@@ -134,26 +139,24 @@ struct ThemePostprocessState {
     retro_dither: Model<bool>,
 }
 
-struct ThemePostprocessProgram;
-
-#[derive(Debug, Clone)]
-enum Msg {
-    Reset,
+struct ThemePostprocessView {
+    st: ThemePostprocessState,
 }
 
 pub fn run() -> anyhow::Result<()> {
-    fret::mvu::app::<ThemePostprocessProgram>("postprocess-theme-demo")?
-        .with_main_window("postprocess_theme_demo", (1200.0, 760.0))
-        .init_app(|app| {
+    FretApp::new("postprocess-theme-demo")
+        .window("postprocess-theme-demo", (1200.0, 760.0))
+        .install_app(|app| {
             shadcn::shadcn_themes::apply_shadcn_new_york(
                 app,
                 shadcn::shadcn_themes::ShadcnBaseColor::Slate,
                 shadcn::shadcn_themes::ShadcnColorScheme::Dark,
             );
         })
+        .view::<ThemePostprocessView>()?
         .install_custom_effects(install_custom_effect)
-        .run()?;
-    Ok(())
+        .run()
+        .map_err(anyhow::Error::from)
 }
 
 fn install_custom_effect(app: &mut App, effects: &mut dyn fret_core::CustomEffectService) {
@@ -164,67 +167,154 @@ fn install_custom_effect(app: &mut App, effects: &mut dyn fret_core::CustomEffec
     app.set_global(DemoEffect(id));
 }
 
-impl MvuProgram for ThemePostprocessProgram {
-    type State = ThemePostprocessState;
-    type Message = Msg;
+impl ThemePostprocessState {
+    fn reset(host: &mut dyn UiActionHost, st: &ThemePostprocessState) {
+        let _ = host.models_mut().update(&st.enabled, |v| *v = true);
+        let _ = host.models_mut().update(&st.compare, |v| *v = true);
+        let _ = host
+            .models_mut()
+            .update(&st.theme, |v| *v = Some(Arc::from("cyberpunk")));
+        let _ = host
+            .models_mut()
+            .update(&st.chromatic_offset_px, |v| *v = vec![4.0]);
+        let _ = host
+            .models_mut()
+            .update(&st.scanline_strength, |v| *v = vec![0.32]);
+        let _ = host
+            .models_mut()
+            .update(&st.scanline_spacing_px, |v| *v = vec![3.0]);
+        let _ = host
+            .models_mut()
+            .update(&st.vignette_strength, |v| *v = vec![0.6]);
+        let _ = host
+            .models_mut()
+            .update(&st.grain_strength, |v| *v = vec![0.12]);
+        let _ = host
+            .models_mut()
+            .update(&st.grain_scale, |v| *v = vec![1.5]);
+        let _ = host
+            .models_mut()
+            .update(&st.retro_pixel_scale, |v| *v = vec![10.0]);
+        let _ = host.models_mut().update(&st.retro_dither, |v| *v = true);
+    }
+}
 
-    fn init(app: &mut App, _window: AppWindowId) -> Self::State {
-        Self::State {
-            enabled: app.models_mut().insert(true),
-            compare: app.models_mut().insert(true),
-            theme: app
-                .models_mut()
-                .insert(Option::<Arc<str>>::Some(Arc::from("cyberpunk"))),
-            theme_open: app.models_mut().insert(false),
+impl View for ThemePostprocessView {
+    fn init(app: &mut App, _window: AppWindowId) -> Self {
+        Self {
+            st: ThemePostprocessState {
+                enabled: app.models_mut().insert(true),
+                compare: app.models_mut().insert(true),
+                theme: app
+                    .models_mut()
+                    .insert(Option::<Arc<str>>::Some(Arc::from("cyberpunk"))),
+                theme_open: app.models_mut().insert(false),
 
-            chromatic_offset_px: app.models_mut().insert(vec![4.0]),
-            scanline_strength: app.models_mut().insert(vec![0.32]),
-            scanline_spacing_px: app.models_mut().insert(vec![3.0]),
-            vignette_strength: app.models_mut().insert(vec![0.6]),
-            grain_strength: app.models_mut().insert(vec![0.12]),
-            grain_scale: app.models_mut().insert(vec![1.5]),
+                chromatic_offset_px: app.models_mut().insert(vec![4.0]),
+                scanline_strength: app.models_mut().insert(vec![0.32]),
+                scanline_spacing_px: app.models_mut().insert(vec![3.0]),
+                vignette_strength: app.models_mut().insert(vec![0.6]),
+                grain_strength: app.models_mut().insert(vec![0.12]),
+                grain_scale: app.models_mut().insert(vec![1.5]),
 
-            retro_pixel_scale: app.models_mut().insert(vec![10.0]),
-            retro_dither: app.models_mut().insert(true),
+                retro_pixel_scale: app.models_mut().insert(vec![10.0]),
+                retro_dither: app.models_mut().insert(true),
+            },
         }
     }
 
-    fn update(app: &mut App, st: &mut Self::State, message: Self::Message) {
-        if matches!(message, Msg::Reset) {
-            let _ = app.models_mut().update(&st.enabled, |v| *v = true);
-            let _ = app.models_mut().update(&st.compare, |v| *v = true);
-            let _ = app
-                .models_mut()
-                .update(&st.theme, |v| *v = Some(Arc::from("cyberpunk")));
-            let _ = app
-                .models_mut()
-                .update(&st.chromatic_offset_px, |v| *v = vec![4.0]);
-            let _ = app
-                .models_mut()
-                .update(&st.scanline_strength, |v| *v = vec![0.32]);
-            let _ = app
-                .models_mut()
-                .update(&st.scanline_spacing_px, |v| *v = vec![3.0]);
-            let _ = app
-                .models_mut()
-                .update(&st.vignette_strength, |v| *v = vec![0.6]);
-            let _ = app
-                .models_mut()
-                .update(&st.grain_strength, |v| *v = vec![0.12]);
-            let _ = app.models_mut().update(&st.grain_scale, |v| *v = vec![1.5]);
-            let _ = app
-                .models_mut()
-                .update(&st.retro_pixel_scale, |v| *v = vec![10.0]);
-            let _ = app.models_mut().update(&st.retro_dither, |v| *v = true);
-        }
-    }
+    fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
+        let Some(effect) = cx.app.global::<DemoEffect>().map(|v| v.0) else {
+            return vec![shadcn::typography::h3(cx, "Custom effects unavailable")].into();
+        };
 
-    fn view(
-        cx: &mut ElementContext<'_, App>,
-        st: &mut Self::State,
-        msg: &mut MessageRouter<Self::Message>,
-    ) -> Elements {
-        view(cx, st, msg)
+        let enabled = cx.watch_model(&self.st.enabled).layout().copied_or(true);
+        let compare = cx.watch_model(&self.st.compare).layout().copied_or(true);
+        let theme = cx
+            .watch_model(&self.st.theme)
+            .layout()
+            .cloned_or(Option::<Arc<str>>::None);
+
+        let chromatic_offset_px = watch_first_f32(cx, &self.st.chromatic_offset_px, 2.0);
+        let scanline_strength = watch_first_f32(cx, &self.st.scanline_strength, 0.18);
+        let scanline_spacing_px = watch_first_f32(cx, &self.st.scanline_spacing_px, 3.0);
+        let vignette_strength = watch_first_f32(cx, &self.st.vignette_strength, 0.35);
+        let grain_strength = watch_first_f32(cx, &self.st.grain_strength, 0.06);
+        let grain_scale = watch_first_f32(cx, &self.st.grain_scale, 1.5);
+
+        let retro_pixel_scale = watch_first_f32(cx, &self.st.retro_pixel_scale, 10.0);
+        let retro_dither = cx
+            .watch_model(&self.st.retro_dither)
+            .layout()
+            .copied_or(true);
+
+        let inspector = inspector(
+            cx,
+            &mut self.st,
+            theme.as_deref().unwrap_or("cyberpunk"),
+            chromatic_offset_px,
+            scanline_strength,
+            scanline_spacing_px,
+            vignette_strength,
+            grain_strength,
+            grain_scale,
+            retro_pixel_scale,
+            retro_dither,
+        );
+
+        let stage = stage(
+            cx,
+            enabled,
+            compare,
+            theme.as_deref().unwrap_or("cyberpunk"),
+            effect,
+            chromatic_offset_px,
+            scanline_strength,
+            scanline_spacing_px,
+            vignette_strength,
+            grain_strength,
+            grain_scale,
+            retro_pixel_scale,
+            retro_dither,
+        );
+
+        cx.on_action_notify::<act::Reset>({
+            let st = self.clone_for_reset();
+            move |host, _acx| {
+                ThemePostprocessState::reset(host, &st);
+                true
+            }
+        });
+
+        let root = shadcn::stack::hstack(
+            cx,
+            shadcn::stack::HStackProps::default()
+                .layout(LayoutRefinement::default().size_full())
+                .items_stretch()
+                .gap(Space::N0),
+            move |_cx| vec![inspector, stage],
+        );
+
+        vec![root].into()
+    }
+}
+
+impl ThemePostprocessView {
+    fn clone_for_reset(&self) -> ThemePostprocessState {
+        ThemePostprocessState {
+            enabled: self.st.enabled.clone(),
+            compare: self.st.compare.clone(),
+            theme: self.st.theme.clone(),
+            theme_open: self.st.theme_open.clone(),
+            chromatic_offset_px: self.st.chromatic_offset_px.clone(),
+            scanline_strength: self.st.scanline_strength.clone(),
+            scanline_spacing_px: self.st.scanline_spacing_px.clone(),
+            vignette_strength: self.st.vignette_strength.clone(),
+            grain_strength: self.st.grain_strength.clone(),
+            grain_scale: self.st.grain_scale.clone(),
+            retro_pixel_scale: self.st.retro_pixel_scale.clone(),
+            retro_dither: self.st.retro_dither.clone(),
+        }
     }
 }
 
@@ -244,73 +334,229 @@ fn watch_first_f32(cx: &mut ElementContext<'_, App>, model: &Model<Vec<f32>>, de
         .unwrap_or(default)
 }
 
-fn view(
+fn inspector(
     cx: &mut ElementContext<'_, App>,
     st: &mut ThemePostprocessState,
-    msg: &mut MessageRouter<Msg>,
-) -> Elements {
-    let Some(effect) = cx.app.global::<DemoEffect>().map(|v| v.0) else {
-        return vec![shadcn::typography::h3(cx, "Custom effects unavailable")].into();
-    };
+    theme: &str,
+    chromatic_offset_px: f32,
+    scanline_strength: f32,
+    scanline_spacing_px: f32,
+    vignette_strength: f32,
+    grain_strength: f32,
+    grain_scale: f32,
+    retro_pixel_scale: f32,
+    retro_dither: bool,
+) -> AnyElement {
+    let theme_snapshot = Theme::global(&*cx.app).snapshot();
 
-    let enabled = cx.watch_model(&st.enabled).layout().copied_or(true);
-    let compare = cx.watch_model(&st.compare).layout().copied_or(true);
-    let theme = cx
-        .watch_model(&st.theme)
-        .layout()
-        .cloned_or(Option::<Arc<str>>::None);
+    let enabled_model = st.enabled.clone();
+    let compare_model = st.compare.clone();
+    let theme_model = st.theme.clone();
+    let theme_open_model = st.theme_open.clone();
 
-    let chromatic_offset_px = watch_first_f32(cx, &st.chromatic_offset_px, 2.0);
-    let scanline_strength = watch_first_f32(cx, &st.scanline_strength, 0.18);
-    let scanline_spacing_px = watch_first_f32(cx, &st.scanline_spacing_px, 3.0);
-    let vignette_strength = watch_first_f32(cx, &st.vignette_strength, 0.35);
-    let grain_strength = watch_first_f32(cx, &st.grain_strength, 0.06);
-    let grain_scale = watch_first_f32(cx, &st.grain_scale, 1.5);
+    let chromatic_model = st.chromatic_offset_px.clone();
+    let scanline_strength_model = st.scanline_strength.clone();
+    let scanline_spacing_model = st.scanline_spacing_px.clone();
+    let vignette_model = st.vignette_strength.clone();
+    let grain_strength_model = st.grain_strength.clone();
+    let grain_scale_model = st.grain_scale.clone();
+    let retro_pixel_scale_model = st.retro_pixel_scale.clone();
+    let retro_dither_model = st.retro_dither.clone();
 
-    let retro_pixel_scale = watch_first_f32(cx, &st.retro_pixel_scale, 10.0);
-    let retro_dither = cx.watch_model(&st.retro_dither).layout().copied_or(true);
+    let mut layout = LayoutStyle::default();
+    layout.size.width = Length::Px(Px(380.0));
+    layout.size.height = Length::Fill;
+    layout.flex.shrink = 0.0;
 
-    let inspector = inspector(
-        cx,
-        st,
-        theme.as_deref().unwrap_or("cyberpunk"),
-        chromatic_offset_px,
-        scanline_strength,
-        scanline_spacing_px,
-        vignette_strength,
-        grain_strength,
-        grain_scale,
-        retro_pixel_scale,
-        retro_dither,
-        msg,
-    );
+    cx.container(
+        ContainerProps {
+            layout,
+            padding: Edges::all(Px(16.0)).into(),
+            background: Some(theme_snapshot.color_token("background")),
+            border: Edges {
+                left: Px(0.0),
+                right: Px(1.0),
+                top: Px(0.0),
+                bottom: Px(0.0),
+            },
+            border_color: Some(theme_snapshot.color_token("border")),
+            ..Default::default()
+        },
+        move |cx| {
+            let label_row = |cx: &mut ElementContext<'_, App>, label: &str, value: String| {
+                shadcn::stack::hstack(
+                    cx,
+                    shadcn::stack::HStackProps::default()
+                        .gap(Space::N2)
+                        .items_center(),
+                    move |cx| {
+                        vec![
+                            shadcn::Label::new(label).into_element(cx),
+                            cx.spacer(SpacerProps::default()),
+                            shadcn::Badge::new(value)
+                                .variant(shadcn::BadgeVariant::Secondary)
+                                .into_element(cx),
+                        ]
+                    },
+                )
+            };
 
-    let stage = stage(
-        cx,
-        enabled,
-        compare,
-        theme.as_deref().unwrap_or("cyberpunk"),
-        effect,
-        chromatic_offset_px,
-        scanline_strength,
-        scanline_spacing_px,
-        vignette_strength,
-        grain_strength,
-        grain_scale,
-        retro_pixel_scale,
-        retro_dither,
-    );
+            let header = shadcn::CardHeader::new([
+                shadcn::CardTitle::new("Theme Postprocess").into_element(cx),
+                shadcn::CardDescription::new(
+                    "Built-in steps (Pixelate/Dither/ColorAdjust) + CustomV1 (scanlines/vignette/chromatic/grain).",
+                )
+                .into_element(cx),
+            ])
+            .into_element(cx);
 
-    let root = shadcn::stack::hstack(
-        cx,
-        shadcn::stack::HStackProps::default()
-            .layout(LayoutRefinement::default().size_full())
-            .items_stretch()
-            .gap(Space::N0),
-        move |_cx| vec![inspector, stage],
-    );
+            let theme_row = shadcn::stack::vstack(
+                cx,
+                shadcn::stack::VStackProps::default().gap(Space::N2),
+                move |cx| {
+                    vec![
+                        label_row(cx, "Theme", theme.to_string()),
+                        shadcn::Select::new(theme_model.clone(), theme_open_model.clone())
+                            .value(shadcn::SelectValue::new().placeholder("Pick a theme"))
+                            .items([
+                                shadcn::SelectItem::new("none", "None"),
+                                shadcn::SelectItem::new("cyberpunk", "Cyberpunk"),
+                                shadcn::SelectItem::new("retro", "Retro"),
+                            ])
+                            .into_element(cx),
+                    ]
+                },
+            );
 
-    vec![root].into()
+            let chromatic_row = label_row(
+                cx,
+                "Chromatic offset",
+                format!("{chromatic_offset_px:.2}px"),
+            );
+            let vignette_row =
+                label_row(cx, "Vignette strength", format!("{vignette_strength:.2}"));
+            let scanline_strength_row =
+                label_row(cx, "Scanline strength", format!("{scanline_strength:.2}"));
+            let scanline_spacing_row =
+                label_row(cx, "Scanline spacing", format!("{scanline_spacing_px:.2}px"));
+
+            let grain_strength_row = label_row(cx, "Grain strength", format!("{grain_strength:.2}"));
+            let grain_scale_row = label_row(cx, "Grain scale", format!("{grain_scale:.2}"));
+
+            let retro_pixel_row =
+                label_row(cx, "Retro pixel scale", format!("{retro_pixel_scale:.2}"));
+            let retro_dither_row = shadcn::stack::hstack(
+                cx,
+                shadcn::stack::HStackProps::default()
+                    .gap(Space::N2)
+                    .items_center(),
+                move |cx| {
+                    vec![
+                        shadcn::Switch::new(retro_dither_model.clone())
+                            .a11y_label("Enable retro dither")
+                            .test_id("postprocess.retro.dither")
+                            .into_element(cx),
+                        shadcn::Label::new(format!("Retro dither ({retro_dither})")).into_element(cx),
+                    ]
+                },
+            );
+
+            let content = shadcn::CardContent::new([shadcn::stack::vstack(
+                cx,
+                shadcn::stack::VStackProps::default()
+                    .gap(Space::N3)
+                    .items_stretch(),
+                move |cx| {
+                    vec![
+                        shadcn::stack::hstack(
+                            cx,
+                            shadcn::stack::HStackProps::default()
+                                .gap(Space::N2)
+                                .items_center(),
+                            |cx| {
+                                vec![
+                                    shadcn::Switch::new(enabled_model.clone())
+                                        .a11y_label("Enable postprocess")
+                                        .test_id("postprocess.enabled")
+                                        .into_element(cx),
+                                    shadcn::Label::new("Enable").into_element(cx),
+                                ]
+                            },
+                        ),
+                        shadcn::stack::hstack(
+                            cx,
+                            shadcn::stack::HStackProps::default()
+                                .gap(Space::N2)
+                                .items_center(),
+                            |cx| {
+                                vec![
+                                    shadcn::Switch::new(compare_model.clone())
+                                        .a11y_label("Compare raw vs processed")
+                                        .test_id("postprocess.compare")
+                                        .into_element(cx),
+                                    shadcn::Label::new("Compare (Raw vs Processed)")
+                                        .into_element(cx),
+                                ]
+                            },
+                        ),
+                        theme_row,
+                        shadcn::Separator::new().into_element(cx),
+                        chromatic_row,
+                        vignette_row,
+                        scanline_strength_row,
+                        scanline_spacing_row,
+                        shadcn::Separator::new().into_element(cx),
+                        grain_strength_row,
+                        grain_scale_row,
+                        shadcn::Separator::new().into_element(cx),
+                        retro_pixel_row,
+                        retro_dither_row,
+                        shadcn::Slider::new(chromatic_model.clone())
+                            .range(0.0, 6.0)
+                            .step(0.25)
+                            .into_element(cx),
+                        shadcn::Slider::new(vignette_model.clone())
+                            .range(0.0, 0.9)
+                            .step(0.01)
+                            .into_element(cx),
+                        shadcn::Slider::new(scanline_strength_model.clone())
+                            .range(0.0, 0.5)
+                            .step(0.01)
+                            .into_element(cx),
+                        shadcn::Slider::new(scanline_spacing_model.clone())
+                            .range(1.0, 10.0)
+                            .step(0.25)
+                            .into_element(cx),
+                        shadcn::Slider::new(grain_strength_model.clone())
+                            .range(0.0, 0.2)
+                            .step(0.01)
+                            .into_element(cx),
+                        shadcn::Slider::new(grain_scale_model.clone())
+                            .range(0.25, 6.0)
+                            .step(0.05)
+                            .into_element(cx),
+                        shadcn::Slider::new(retro_pixel_scale_model.clone())
+                            .range(2.0, 24.0)
+                            .step(1.0)
+                            .into_element(cx),
+                        shadcn::Button::new("Reset")
+                            .variant(shadcn::ButtonVariant::Secondary)
+                            .action(act::Reset)
+                            .test_id("postprocess.reset")
+                            .into_element(cx),
+                    ]
+                },
+            )])
+            .into_element(cx);
+
+            vec![
+                shadcn::Card::new([header, content])
+                    .ui()
+                    .w_full()
+                    .into_element(cx),
+            ]
+        },
+    )
 }
 
 fn stage(
@@ -520,87 +766,72 @@ fn stage_body(
                     ..Default::default()
                 },
                 move |cx| {
-                    vec![shadcn::stack::vstack(
-                        cx,
-                        shadcn::stack::VStackProps::default()
-                            .gap(Space::N1)
-                            .items_start(),
-                        move |cx| {
-                            vec![
-                                title.into_element(cx),
-                                subtitle.into_element(cx),
-                                shadcn::stack::hstack(
-                                    cx,
-                                    shadcn::stack::HStackProps::default()
-                                        .gap(Space::N2)
-                                        .items_center(),
-                                    move |cx| {
-                                        vec![
-                                            shadcn::Badge::new(label)
-                                                .variant(shadcn::BadgeVariant::Outline)
-                                                .into_element(cx),
-                                            enabled_badge,
-                                        ]
-                                    },
-                                ),
-                            ]
-                        },
-                    )]
+                    vec![
+                        shadcn::stack::hstack(
+                            cx,
+                            shadcn::stack::HStackProps::default()
+                                .gap(Space::N2)
+                                .items_center(),
+                            move |_cx| vec![title, enabled_badge],
+                        ),
+                        subtitle,
+                        shadcn::typography::muted(cx, label).into_element(cx),
+                    ]
                 },
             );
 
-            let sample_cards = sample_cards(cx);
-            vec![header, sample_cards]
+            let body = stage_cards(cx);
+            vec![header, body]
         },
     )
 }
 
-fn sample_cards(cx: &mut ElementContext<'_, App>) -> AnyElement {
+fn stage_cards(cx: &mut ElementContext<'_, App>) -> AnyElement {
+    let theme_snapshot = Theme::global(&*cx.app).snapshot();
+
+    let card = |cx: &mut ElementContext<'_, App>, title: &str, subtitle: &str| {
+        let mut layout = LayoutStyle::default();
+        layout.size.width = Length::Px(Px(320.0));
+        layout.size.height = Length::Px(Px(220.0));
+        layout.overflow = Overflow::Clip;
+
+        cx.container(
+            ContainerProps {
+                layout,
+                padding: Edges::all(Px(14.0)).into(),
+                background: Some(theme_snapshot.color_token("card")),
+                border: Edges::all(Px(1.0)),
+                border_color: Some(theme_snapshot.color_token("border")),
+                corner_radii: Corners::all(Px(16.0)),
+                ..Default::default()
+            },
+            move |cx| {
+                vec![
+                    shadcn::typography::large(cx, title).into_element(cx),
+                    shadcn::typography::muted(cx, subtitle).into_element(cx),
+                    cx.spacer(SpacerProps::default()),
+                    shadcn::Button::new("Primary")
+                        .variant(shadcn::ButtonVariant::Default)
+                        .into_element(cx),
+                    shadcn::Button::new("Secondary")
+                        .variant(shadcn::ButtonVariant::Secondary)
+                        .into_element(cx),
+                ]
+            },
+        )
+    };
+
     let mut layout = LayoutStyle::default();
     layout.size.width = Length::Fill;
     layout.size.height = Length::Fill;
-    let padding: Edges = Edges {
-        left: Px(28.0),
-        right: Px(28.0),
-        top: Px(110.0),
-        bottom: Px(28.0),
-    };
 
     cx.container(
         ContainerProps {
             layout,
-            padding: padding.into(),
+            padding: Edges::all(Px(28.0)).into(),
             ..Default::default()
         },
         move |cx| {
-            let card = |cx: &mut ElementContext<'_, App>, title: &str, desc: &str| {
-                shadcn::Card::new([
-                    shadcn::CardHeader::new([
-                        shadcn::CardTitle::new(title).into_element(cx),
-                        shadcn::CardDescription::new(desc).into_element(cx),
-                    ])
-                    .into_element(cx),
-                    shadcn::CardContent::new([shadcn::stack::vstack(
-                        cx,
-                        shadcn::stack::VStackProps::default()
-                            .gap(Space::N2)
-                            .items_stretch(),
-                        |cx| {
-                            vec![
-                                shadcn::Button::new("Primary").into_element(cx),
-                                shadcn::Button::new("Secondary")
-                                    .variant(shadcn::ButtonVariant::Secondary)
-                                    .into_element(cx),
-                            ]
-                        },
-                    )])
-                    .into_element(cx),
-                ])
-                .ui()
-                .w_full()
-                .into_element(cx)
-            };
-
             let row = shadcn::stack::hstack(
                 cx,
                 shadcn::stack::HStackProps::default()
@@ -620,303 +851,6 @@ fn sample_cards(cx: &mut ElementContext<'_, App>) -> AnyElement {
             );
 
             vec![row]
-        },
-    )
-}
-
-fn inspector(
-    cx: &mut ElementContext<'_, App>,
-    st: &mut ThemePostprocessState,
-    theme: &str,
-    chromatic_offset_px: f32,
-    scanline_strength: f32,
-    scanline_spacing_px: f32,
-    vignette_strength: f32,
-    grain_strength: f32,
-    grain_scale: f32,
-    retro_pixel_scale: f32,
-    retro_dither: bool,
-    msg: &mut MessageRouter<Msg>,
-) -> AnyElement {
-    let theme_snapshot = Theme::global(&*cx.app).snapshot();
-
-    let reset_cmd = msg.cmd(Msg::Reset);
-
-    let enabled_model = st.enabled.clone();
-    let compare_model = st.compare.clone();
-    let theme_model = st.theme.clone();
-    let theme_open_model = st.theme_open.clone();
-
-    let chromatic_model = st.chromatic_offset_px.clone();
-    let scanline_strength_model = st.scanline_strength.clone();
-    let scanline_spacing_model = st.scanline_spacing_px.clone();
-    let vignette_model = st.vignette_strength.clone();
-    let grain_strength_model = st.grain_strength.clone();
-    let grain_scale_model = st.grain_scale.clone();
-    let retro_pixel_scale_model = st.retro_pixel_scale.clone();
-    let retro_dither_model = st.retro_dither.clone();
-
-    let mut layout = LayoutStyle::default();
-    layout.size.width = Length::Px(Px(380.0));
-    layout.size.height = Length::Fill;
-    layout.flex.shrink = 0.0;
-
-    cx.container(
-        ContainerProps {
-            layout,
-            padding: Edges::all(Px(16.0)).into(),
-            background: Some(theme_snapshot.color_token("background")),
-            border: Edges {
-                left: Px(0.0),
-                right: Px(1.0),
-                top: Px(0.0),
-                bottom: Px(0.0),
-            },
-            border_color: Some(theme_snapshot.color_token("border")),
-            ..Default::default()
-        },
-        move |cx| {
-            let label_row = |cx: &mut ElementContext<'_, App>, label: &str, value: String| {
-                shadcn::stack::hstack(
-                    cx,
-                    shadcn::stack::HStackProps::default()
-                        .gap(Space::N2)
-                        .items_center(),
-                    move |cx| {
-                        vec![
-                            shadcn::Label::new(label).into_element(cx),
-                            cx.spacer(SpacerProps::default()),
-                            shadcn::Badge::new(value)
-                                .variant(shadcn::BadgeVariant::Secondary)
-                                .into_element(cx),
-                        ]
-                    },
-                )
-            };
-
-            let header = shadcn::CardHeader::new([
-                shadcn::CardTitle::new("Theme Postprocess").into_element(cx),
-                shadcn::CardDescription::new(
-                    "Built-in steps (Pixelate/Dither/ColorAdjust) + CustomV1 (scanlines/vignette/chromatic/grain).",
-                )
-                .into_element(cx),
-            ])
-            .into_element(cx);
-
-            let theme_row = shadcn::stack::vstack(
-                cx,
-                shadcn::stack::VStackProps::default().gap(Space::N2),
-                move |cx| {
-                    vec![
-                        label_row(cx, "Theme", theme.to_string()),
-                        shadcn::Select::new(theme_model.clone(), theme_open_model.clone())
-                            .value(shadcn::SelectValue::new().placeholder("Pick a theme"))
-                            .items([
-                                shadcn::SelectItem::new("none", "None"),
-                                shadcn::SelectItem::new("cyberpunk", "Cyberpunk"),
-                                shadcn::SelectItem::new("retro", "Retro"),
-                            ])
-                            .into_element(cx),
-                    ]
-                },
-            );
-
-            let chromatic_row = shadcn::stack::vstack(
-                cx,
-                shadcn::stack::VStackProps::default().gap(Space::N2),
-                move |cx| {
-                    vec![
-                        label_row(
-                            cx,
-                            "Chromatic offset (px)",
-                            format!("{:.2}", chromatic_offset_px.clamp(0.0, 6.0)),
-                        ),
-                        shadcn::Slider::new(chromatic_model.clone())
-                            .range(0.0, 6.0)
-                            .step(0.25)
-                            .into_element(cx),
-                    ]
-                },
-            );
-
-            let scanline_strength_row = shadcn::stack::vstack(
-                cx,
-                shadcn::stack::VStackProps::default().gap(Space::N2),
-                move |cx| {
-                    vec![
-                        label_row(
-                            cx,
-                            "Scanline strength",
-                            format!("{scanline_strength:.2}"),
-                        ),
-                        shadcn::Slider::new(scanline_strength_model.clone())
-                            .range(0.0, 0.5)
-                            .step(0.01)
-                            .into_element(cx),
-                    ]
-                },
-            );
-
-            let scanline_spacing_row = shadcn::stack::vstack(
-                cx,
-                shadcn::stack::VStackProps::default().gap(Space::N2),
-                move |cx| {
-                    vec![
-                        label_row(
-                            cx,
-                            "Scanline spacing (px)",
-                            format!("{:.2}", scanline_spacing_px.clamp(1.0, 12.0)),
-                        ),
-                        shadcn::Slider::new(scanline_spacing_model.clone())
-                            .range(1.0, 10.0)
-                            .step(0.25)
-                            .into_element(cx),
-                    ]
-                },
-            );
-
-            let vignette_row = shadcn::stack::vstack(
-                cx,
-                shadcn::stack::VStackProps::default().gap(Space::N2),
-                move |cx| {
-                    vec![
-                        label_row(cx, "Vignette strength", format!("{vignette_strength:.2}")),
-                        shadcn::Slider::new(vignette_model.clone())
-                            .range(0.0, 0.9)
-                            .step(0.01)
-                            .into_element(cx),
-                    ]
-                },
-            );
-
-            let grain_strength_row = shadcn::stack::vstack(
-                cx,
-                shadcn::stack::VStackProps::default().gap(Space::N2),
-                move |cx| {
-                    vec![
-                        label_row(cx, "Grain strength", format!("{grain_strength:.2}")),
-                        shadcn::Slider::new(grain_strength_model.clone())
-                            .range(0.0, 0.2)
-                            .step(0.01)
-                            .into_element(cx),
-                    ]
-                },
-            );
-
-            let grain_scale_row = shadcn::stack::vstack(
-                cx,
-                shadcn::stack::VStackProps::default().gap(Space::N2),
-                move |cx| {
-                    vec![
-                        label_row(cx, "Grain scale", format!("{grain_scale:.2}")),
-                        shadcn::Slider::new(grain_scale_model.clone())
-                            .range(0.25, 6.0)
-                            .step(0.05)
-                            .into_element(cx),
-                    ]
-                },
-            );
-
-            let retro_pixel_row = shadcn::stack::vstack(
-                cx,
-                shadcn::stack::VStackProps::default().gap(Space::N2),
-                move |cx| {
-                    vec![
-                        label_row(
-                            cx,
-                            "Retro pixel scale",
-                            format!("{:.0}", retro_pixel_scale.clamp(2.0, 24.0)),
-                        ),
-                        shadcn::Slider::new(retro_pixel_scale_model.clone())
-                            .range(2.0, 24.0)
-                            .step(1.0)
-                            .into_element(cx),
-                    ]
-                },
-            );
-
-            let retro_dither_row = shadcn::stack::hstack(
-                cx,
-                shadcn::stack::HStackProps::default()
-                    .gap(Space::N2)
-                    .items_center(),
-                move |cx| {
-                    vec![
-                        shadcn::Switch::new(retro_dither_model.clone())
-                            .a11y_label("Enable retro dither")
-                            .test_id("postprocess.retro.dither")
-                            .into_element(cx),
-                        shadcn::Label::new(format!("Retro dither ({retro_dither})")).into_element(cx),
-                    ]
-                },
-            );
-
-            let content = shadcn::CardContent::new([shadcn::stack::vstack(
-                cx,
-                shadcn::stack::VStackProps::default()
-                    .gap(Space::N3)
-                    .items_stretch(),
-                move |cx| {
-                    vec![
-                        shadcn::stack::hstack(
-                            cx,
-                            shadcn::stack::HStackProps::default()
-                                .gap(Space::N2)
-                                .items_center(),
-                            |cx| {
-                                vec![
-                                    shadcn::Switch::new(enabled_model.clone())
-                                        .a11y_label("Enable postprocess")
-                                        .test_id("postprocess.enabled")
-                                        .into_element(cx),
-                                    shadcn::Label::new("Enable").into_element(cx),
-                                ]
-                            },
-                        ),
-                        shadcn::stack::hstack(
-                            cx,
-                            shadcn::stack::HStackProps::default()
-                                .gap(Space::N2)
-                                .items_center(),
-                            |cx| {
-                                vec![
-                                    shadcn::Switch::new(compare_model.clone())
-                                        .a11y_label("Compare raw vs processed")
-                                        .test_id("postprocess.compare")
-                                        .into_element(cx),
-                                    shadcn::Label::new("Compare (Raw vs Processed)")
-                                        .into_element(cx),
-                                ]
-                            },
-                        ),
-                        theme_row,
-                        shadcn::Separator::new().into_element(cx),
-                        chromatic_row,
-                        vignette_row,
-                        scanline_strength_row,
-                        scanline_spacing_row,
-                        shadcn::Separator::new().into_element(cx),
-                        grain_strength_row,
-                        grain_scale_row,
-                        shadcn::Separator::new().into_element(cx),
-                        retro_pixel_row,
-                        retro_dither_row,
-                        shadcn::Button::new("Reset")
-                            .variant(shadcn::ButtonVariant::Secondary)
-                            .on_click(reset_cmd.clone())
-                            .test_id("postprocess.reset")
-                            .into_element(cx),
-                    ]
-                },
-            )])
-            .into_element(cx);
-
-            vec![
-                shadcn::Card::new([header, content])
-                    .ui()
-                    .w_full()
-                    .into_element(cx),
-            ]
         },
     )
 }

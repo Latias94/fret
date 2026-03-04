@@ -2,8 +2,8 @@ pub const SOURCE: &str = include_str!("extras.rs");
 
 // region: example
 use fret_core::Px;
-use fret_ui_kit::declarative::ElementContextThemeExt as _;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::declarative::ElementContextThemeExt as _;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
@@ -73,10 +73,9 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             decl_style::container_props(
                 theme,
                 ChromeRefinement::default().border_1().rounded(Radius::Md),
-                LayoutRefinement::default()
-                    .w_full()
-                    .min_w_0()
-                    .overflow_visible(),
+                max_w_sm
+                    .clone()
+                    .merge(LayoutRefinement::default().overflow_visible()),
             )
         });
 

@@ -573,7 +573,7 @@ hint: list suites via `fretboard diag list suites`"
 
             return Err(format!(
                 "suite script termination preflight failed (issue_count={}) (see: {})\n\
-hint: smoke/gate suites require deterministic termination; avoid trailing wait_frames and avoid wait_frames after the final capture_bundle",
+hint: smoke/gate suites require deterministic termination; avoid trailing wait_frames/wait_ms and avoid wait_frames/wait_ms after the final capture_bundle",
                 payload["issue_count"].as_u64().unwrap_or(0),
                 out.display()
             ));
