@@ -271,7 +271,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 }
             };
 
-            let want_transparent = self
+            let want_surface_composited_alpha = self
                 .app
                 .global::<fret_runtime::RunnerWindowStyleDiagnosticsStore>()
                 .and_then(|s| s.effective_snapshot(app_window))
@@ -280,7 +280,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 &context.adapter,
                 &context.device,
                 &mut surface_state,
-                want_transparent,
+                want_surface_composited_alpha,
             );
 
             state.surface = Some(surface_state);
@@ -723,7 +723,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                         }
                     };
 
-                    let want_transparent = self
+                    let want_surface_composited_alpha = self
                         .app
                         .global::<fret_runtime::RunnerWindowStyleDiagnosticsStore>()
                         .and_then(|s| s.effective_snapshot(main_window))
@@ -732,7 +732,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                         &context.adapter,
                         &context.device,
                         &mut surface_state,
-                        want_transparent,
+                        want_surface_composited_alpha,
                     );
                     state.surface = Some(surface_state);
                 }
@@ -1814,12 +1814,12 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
 
                         let render_scene_span = tracing::info_span!("fret.runner.render_scene");
                         let _render_scene_guard = render_scene_span.enter();
-                        let want_transparent = self
+                        let want_visual_transparent = self
                             .app
                             .global::<fret_runtime::RunnerWindowStyleDiagnosticsStore>()
                             .and_then(|s| s.effective_snapshot(app_window))
                             .is_some_and(|s| s.visual_transparent);
-                        let clear_color = if want_transparent {
+                        let clear_color = if want_visual_transparent {
                             fret_render::ClearColor(wgpu::Color::TRANSPARENT)
                         } else {
                             self.config.clear_color
