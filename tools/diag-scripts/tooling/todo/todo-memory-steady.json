@@ -1,0 +1,28 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "todo: memory steady",
+    "tags": ["todo", "memory", "steady"],
+    "required_capabilities": ["diag.script_v2"],
+    "target_hints": ["Waits for a short steady-state window before capturing a bundle."]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "wait_frames", "n": 10 },
+
+    { "type": "click", "target": { "kind": "test_id", "id": "todo-input" } },
+    { "type": "type_text", "text": "steady-state memory sample" },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "press_key", "key": "enter" },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "todo-item-3-done" } },
+      "timeout_frames": 120
+    },
+
+    { "type": "reset_diagnostics" },
+    { "type": "wait_frames", "n": 600 },
+    { "type": "capture_bundle", "label": "todo-memory-steady" }
+  ]
+}
+

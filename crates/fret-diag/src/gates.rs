@@ -5,6 +5,8 @@ use super::util::{now_unix_ms, read_json_value, write_json_value};
 pub(super) struct ResourceFootprintThresholds {
     pub(super) max_working_set_bytes: Option<u64>,
     pub(super) max_peak_working_set_bytes: Option<u64>,
+    pub(super) max_macos_physical_footprint_peak_bytes: Option<u64>,
+    pub(super) max_macos_owned_unmapped_memory_dirty_bytes: Option<u64>,
     pub(super) max_cpu_avg_percent_total_cores: Option<f64>,
 }
 
@@ -12,6 +14,8 @@ impl ResourceFootprintThresholds {
     pub(super) fn any(&self) -> bool {
         self.max_working_set_bytes.is_some()
             || self.max_peak_working_set_bytes.is_some()
+            || self.max_macos_physical_footprint_peak_bytes.is_some()
+            || self.max_macos_owned_unmapped_memory_dirty_bytes.is_some()
             || self.max_cpu_avg_percent_total_cores.is_some()
     }
 }
@@ -62,6 +66,18 @@ pub(super) fn check_resource_footprint_thresholds(
         .as_ref()
         .and_then(|v| v.get("memory"))
         .and_then(|v| v.get("peak_working_set_bytes"))
+        .and_then(|v| v.as_u64());
+
+    let macos_physical_footprint_peak_bytes = v
+        .as_ref()
+        .and_then(|v| v.get("macos_vmmap"))
+        .and_then(|v| v.get("physical_footprint_peak_bytes"))
+        .and_then(|v| v.as_u64());
+    let macos_owned_unmapped_memory_dirty_bytes = v
+        .as_ref()
+        .and_then(|v| v.get("macos_vmmap"))
+        .and_then(|v| v.get("regions"))
+        .and_then(|v| v.get("owned_unmapped_memory_dirty_bytes"))
         .and_then(|v| v.as_u64());
 
     let cpu_avg_percent_total_cores = v
@@ -126,6 +142,44 @@ pub(super) fn check_resource_footprint_thresholds(
         }
     }
 
+    if let Some(thr) = thresholds.max_macos_physical_footprint_peak_bytes {
+        match macos_physical_footprint_peak_bytes {
+            Some(observed) if observed > thr => failures.push(serde_json::json!({
+                "kind": "macos_physical_footprint_peak_bytes",
+                "threshold": thr,
+                "observed": observed,
+                "reason": "exceeded",
+            })),
+            Some(_) => {}
+            None => failures.push(serde_json::json!({
+                "kind": "macos_physical_footprint_peak_bytes",
+                "threshold": thr,
+                "observed": serde_json::Value::Null,
+                "reason": missing_reason,
+                "field": "macos_vmmap.physical_footprint_peak_bytes",
+            })),
+        }
+    }
+
+    if let Some(thr) = thresholds.max_macos_owned_unmapped_memory_dirty_bytes {
+        match macos_owned_unmapped_memory_dirty_bytes {
+            Some(observed) if observed > thr => failures.push(serde_json::json!({
+                "kind": "macos_owned_unmapped_memory_dirty_bytes",
+                "threshold": thr,
+                "observed": observed,
+                "reason": "exceeded",
+            })),
+            Some(_) => {}
+            None => failures.push(serde_json::json!({
+                "kind": "macos_owned_unmapped_memory_dirty_bytes",
+                "threshold": thr,
+                "observed": serde_json::Value::Null,
+                "reason": missing_reason,
+                "field": "macos_vmmap.regions.owned_unmapped_memory_dirty_bytes",
+            })),
+        }
+    }
+
     if let Some(thr) = thresholds.max_cpu_avg_percent_total_cores {
         match cpu_avg_percent_total_cores {
             Some(observed) => {
@@ -165,6 +219,8 @@ pub(super) fn check_resource_footprint_thresholds(
         "thresholds": {
             "max_working_set_bytes": thresholds.max_working_set_bytes,
             "max_peak_working_set_bytes": thresholds.max_peak_working_set_bytes,
+            "max_macos_physical_footprint_peak_bytes": thresholds.max_macos_physical_footprint_peak_bytes,
+            "max_macos_owned_unmapped_memory_dirty_bytes": thresholds.max_macos_owned_unmapped_memory_dirty_bytes,
             "max_cpu_avg_percent_total_cores": thresholds.max_cpu_avg_percent_total_cores,
         },
         "observed": {
@@ -179,6 +235,8 @@ pub(super) fn check_resource_footprint_thresholds(
             "cpu_avg_percent_total_cores": cpu_avg_percent_total_cores,
             "working_set_bytes": working_set_bytes,
             "peak_working_set_bytes": peak_working_set_bytes,
+            "macos_physical_footprint_peak_bytes": macos_physical_footprint_peak_bytes,
+            "macos_owned_unmapped_memory_dirty_bytes": macos_owned_unmapped_memory_dirty_bytes,
         },
         "failures": failures,
     });
