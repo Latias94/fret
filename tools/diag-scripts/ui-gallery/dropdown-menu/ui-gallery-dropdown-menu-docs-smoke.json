@@ -64,7 +64,7 @@
       "type": "wait_until",
       "predicate": {
         "kind": "focus_is",
-        "target": { "kind": "test_id", "id": "ui-gallery-dropdown-menu-demo" }
+        "target": { "kind": "test_id", "id": "ui-gallery-dropdown-menu-demo-trigger" }
       },
       "timeout_frames": 600
     },

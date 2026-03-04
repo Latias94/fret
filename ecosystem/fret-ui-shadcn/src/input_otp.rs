@@ -412,6 +412,9 @@ impl InputOtp {
                 input.chrome = chrome;
                 input.text_style = slot_text_style.clone();
                 input.test_id = input_test_id.clone();
+                input.a11y_invalid = self
+                    .aria_invalid
+                    .then_some(fret_core::SemanticsInvalid::True);
                 input.enabled = !self.disabled;
                 input.focusable = !self.disabled;
                 input.layout = LayoutStyle {
@@ -1494,6 +1497,51 @@ mod tests {
         );
 
         assert_eq!(invalid, theme.color_token("destructive"));
+    }
+
+    #[test]
+    fn input_otp_aria_invalid_sets_semantics_invalid() {
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        let mut services = FakeServices::default();
+
+        let model = app.models_mut().insert("000000".to_string());
+
+        let window = AppWindowId::default();
+        ui.set_window(window);
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(480.0), Px(120.0)),
+        );
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "otp",
+            |cx| {
+                vec![
+                    InputOtp::new(model)
+                        .length(6)
+                        .aria_invalid(true)
+                        .test_id_prefix("otp")
+                        .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let node = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("otp.input"))
+            .expect("expected semantics node otp.input");
+        assert_eq!(node.flags.invalid, Some(fret_core::SemanticsInvalid::True));
     }
 
     fn count_svg_icons(node: &AnyElement) -> usize {

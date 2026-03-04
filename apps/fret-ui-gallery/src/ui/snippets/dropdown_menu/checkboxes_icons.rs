@@ -83,6 +83,5 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                 .into()]
             },
         )
-        .test_id("ui-gallery-dropdown-menu-checkboxes-icons")
 }
 // endregion: example
