@@ -56,6 +56,9 @@ Tip: feature-gated examples and their `--features ...` hints are discoverable vi
 cargo run -p fretboard -- list cookbook-examples --all
 ```
 
+Tip: when running cookbook examples via `fretboard dev native --example <name>`, `fretboard` will
+auto-enable required cookbook features for known Lab examples and print what it enabled.
+
 Some cookbook examples still use legacy MVU for now. Track remaining in-tree usage here:
 
 - [docs/workstreams/action-first-authoring-fearless-refactor-v1/LEGACY_MVU_INVENTORY.md](../workstreams/action-first-authoring-fearless-refactor-v1/LEGACY_MVU_INVENTORY.md)

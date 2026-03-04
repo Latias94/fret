@@ -141,7 +141,7 @@ fn is_official_cookbook_example(id: &str) -> bool {
     )
 }
 
-fn cookbook_example_feature_hint(id: &str) -> Option<&'static str> {
+pub(crate) fn cookbook_example_feature_hint(id: &str) -> Option<&'static str> {
     let hint = match id {
         "icons_and_assets_basics" => "--features cookbook-assets",
         "assets_reload_epoch_basics" => "--features cookbook-assets",
