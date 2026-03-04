@@ -1676,6 +1676,7 @@ impl ContextMenuContentRenderEnv {
         cx: &mut ElementContext<'_, H>,
         label: ContextMenuLabel,
     ) -> AnyElement {
+        let dir = crate::use_direction(cx, None);
         let pad_left = if label.inset {
             self.pad_x_inset
         } else {
@@ -1691,12 +1692,9 @@ impl ContextMenuContentRenderEnv {
         cx.container(
             ContainerProps {
                 layout: LayoutStyle::default(),
-                padding: Edges {
-                    top: pad_y,
-                    right: pad_x,
-                    bottom: pad_y,
-                    left: pad_left,
-                }
+                padding: rtl::padding_edges_with_inline_start_end(
+                    dir, pad_y, pad_y, pad_left, pad_x,
+                )
                 .into(),
                 ..Default::default()
             },
@@ -3614,18 +3612,21 @@ impl ContextMenu {
                                             for entry in entries_for_panel {
                                                 match entry {
                                                     ContextMenuEntry::Label(label) => {
+                                                        let dir = crate::use_direction(cx, None);
                                                         let pad_left =
                                                             if label.inset { pad_x_inset } else { pad_x };
                                                         let text = label.text.clone();
                                                         out.push(cx.container(
                                                             ContainerProps {
                                                                 layout: LayoutStyle::default(),
-                                                                padding: Edges {
-                                                                    top: pad_y,
-                                                                    right: pad_x,
-                                                                    bottom: pad_y,
-                                                                    left: pad_left,
-                                                                }.into(),
+                                                                padding: rtl::padding_edges_with_inline_start_end(
+                                                                    dir,
+                                                                    pad_y,
+                                                                    pad_y,
+                                                                    pad_left,
+                                                                    pad_x,
+                                                                )
+                                                                .into(),
                                                                 ..Default::default()
                                                             },
                                                             move |cx| {
