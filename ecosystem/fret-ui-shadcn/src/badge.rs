@@ -16,6 +16,9 @@ use fret_ui::{ElementContext, Theme, ThemeSnapshot, UiHost};
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
 use fret_ui_kit::declarative::current_color;
 use fret_ui_kit::declarative::icon as decl_icon;
+use fret_ui_kit::declarative::motion::{
+    drive_tween_color_for_element, drive_tween_f32_for_element,
+};
 use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, Space, ui};
@@ -92,6 +95,7 @@ pub struct Badge {
     variant: BadgeVariant,
     render: Option<BadgeRender>,
     visited: bool,
+    aria_invalid: bool,
     on_activate: Option<OnActivate>,
     test_id: Option<Arc<str>>,
     leading_icon: Option<IconId>,
@@ -112,6 +116,7 @@ impl std::fmt::Debug for Badge {
             .field("variant", &self.variant)
             .field("render", &self.render)
             .field("on_activate", &self.on_activate.is_some())
+            .field("aria_invalid", &self.aria_invalid)
             .field("test_id", &self.test_id.as_ref().map(|s| s.as_ref()))
             .field("children_len", &self.children.len())
             .field("chrome", &self.chrome)
@@ -127,6 +132,7 @@ impl Badge {
             variant: BadgeVariant::Default,
             render: None,
             visited: false,
+            aria_invalid: false,
             on_activate: None,
             test_id: None,
             leading_icon: None,
@@ -200,6 +206,12 @@ impl Badge {
         self
     }
 
+    /// Apply the upstream `aria-invalid` error state chrome (focus ring color + border color).
+    pub fn aria_invalid(mut self, aria_invalid: bool) -> Self {
+        self.aria_invalid = aria_invalid;
+        self
+    }
+
     pub fn on_activate(mut self, on_activate: OnActivate) -> Self {
         self.on_activate = Some(on_activate);
         self
@@ -226,6 +238,7 @@ impl Badge {
             cx,
             self.label,
             self.variant,
+            self.aria_invalid,
             self.render,
             self.visited,
             self.on_activate,
@@ -368,6 +381,7 @@ pub fn badge<H: UiHost>(
         cx,
         label,
         variant,
+        false,
         None,
         false,
         None,
@@ -388,6 +402,7 @@ fn badge_with_patch<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     label: impl Into<Arc<str>>,
     variant: BadgeVariant,
+    aria_invalid: bool,
     render: Option<BadgeRender>,
     visited: bool,
     on_activate: Option<OnActivate>,
@@ -432,7 +447,6 @@ fn badge_with_patch<H: UiHost>(
     let mut chrome_props = decl_style::container_props(&theme, chrome, LayoutRefinement::default());
     chrome_props.layout.size = pressable_layout.size;
     chrome_props.layout.overflow = fret_ui::element::Overflow::Clip;
-    chrome_props.focus_border_color = Some(theme.color_token("ring"));
 
     let text_px = theme
         .metric_by_key("component.badge.text_px")
@@ -528,16 +542,64 @@ fn badge_with_patch<H: UiHost>(
 
     if render_role.is_some() || render_on_activate.is_some() {
         let visited = visited && render_role == Some(SemanticsRole::Link);
-        return control_chrome_pressable_with_id_props(cx, move |cx, st, _id| {
+        return control_chrome_pressable_with_id_props(cx, move |cx, st, id| {
             if let Some(on_activate) = render_on_activate.clone() {
                 cx.pressable_on_activate(on_activate);
+            }
+
+            let focus_visible =
+                st.focused && fret_ui::focus_visible::is_focus_visible(cx.app, Some(cx.window));
+            let duration = crate::overlay_motion::shadcn_motion_duration_150(cx);
+            let ease = crate::overlay_motion::shadcn_ease;
+
+            let ring_color = theme.color_token("ring");
+            let destructive = theme.color_token("destructive");
+
+            let border_base = chrome_props.border_color.unwrap_or(Color::TRANSPARENT);
+            let border_target = if aria_invalid {
+                destructive
+            } else if focus_visible {
+                ring_color
+            } else {
+                border_base
+            };
+
+            let border_motion = drive_tween_color_for_element(
+                cx,
+                id,
+                "badge-border-color",
+                border_target,
+                duration,
+                ease,
+            );
+
+            let ring_alpha = drive_tween_f32_for_element(
+                cx,
+                id,
+                "badge-ring-alpha",
+                if focus_visible { 1.0 } else { 0.0 },
+                duration,
+                ease,
+            );
+
+            let mut ring = decl_style::focus_ring(&theme, focus_radius);
+            if aria_invalid || variant == BadgeVariant::Destructive {
+                ring.color = crate::theme_variants::invalid_control_ring_color(&theme, destructive);
+            }
+            ring.color.a = (ring.color.a * ring_alpha.value).clamp(0.0, 1.0);
+            if let Some(offset) = ring.offset_color {
+                ring.offset_color = Some(Color {
+                    a: (offset.a * ring_alpha.value).clamp(0.0, 1.0),
+                    ..offset
+                });
             }
 
             let pressable_props = PressableProps {
                 layout: pressable_layout,
                 enabled: true,
                 focusable: true,
-                focus_ring: Some(decl_style::focus_ring(&theme, focus_radius)),
+                focus_ring: Some(ring),
+                focus_ring_always_paint: ring_alpha.animating,
                 key_activation: render_key_activation,
                 a11y: PressableA11y {
                     role: render_role,
@@ -550,6 +612,7 @@ fn badge_with_patch<H: UiHost>(
             };
 
             let mut chrome_props = chrome_props;
+            chrome_props.border_color = Some(border_motion.value);
             // Upstream shadcn applies `[a&]:hover:bg-*/90` for the default/secondary/destructive
             // badge variants. Model this only for link semantics (our `asChild` equivalent).
             if render_role == Some(SemanticsRole::Link) && st.hovered {
@@ -747,6 +810,270 @@ mod tests {
             bg,
             bg_composited,
             surface,
+        );
+    }
+
+    #[derive(Default)]
+    struct FakeServices;
+
+    impl fret_core::TextService for FakeServices {
+        fn prepare(
+            &mut self,
+            _input: &fret_core::TextInput,
+            _constraints: fret_core::TextConstraints,
+        ) -> (fret_core::TextBlobId, fret_core::TextMetrics) {
+            (
+                fret_core::TextBlobId::default(),
+                fret_core::TextMetrics {
+                    size: Size::new(Px(10.0), Px(10.0)),
+                    baseline: Px(8.0),
+                },
+            )
+        }
+
+        fn release(&mut self, _blob: fret_core::TextBlobId) {}
+    }
+
+    impl fret_core::PathService for FakeServices {
+        fn prepare(
+            &mut self,
+            _commands: &[fret_core::PathCommand],
+            _style: fret_core::PathStyle,
+            _constraints: fret_core::PathConstraints,
+        ) -> (fret_core::PathId, fret_core::PathMetrics) {
+            (
+                fret_core::PathId::default(),
+                fret_core::PathMetrics::default(),
+            )
+        }
+
+        fn release(&mut self, _path: fret_core::PathId) {}
+    }
+
+    impl fret_core::SvgService for FakeServices {
+        fn register_svg(&mut self, _bytes: &[u8]) -> fret_core::SvgId {
+            fret_core::SvgId::default()
+        }
+
+        fn unregister_svg(&mut self, _svg: fret_core::SvgId) -> bool {
+            true
+        }
+    }
+
+    impl fret_core::MaterialService for FakeServices {
+        fn register_material(
+            &mut self,
+            _desc: fret_core::MaterialDescriptor,
+        ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+            Ok(fret_core::MaterialId::default())
+        }
+
+        fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
+            true
+        }
+    }
+
+    fn find_pressable_with_test_id<'a>(
+        node: &'a AnyElement,
+        test_id: &str,
+    ) -> Option<&'a PressableProps> {
+        match &node.kind {
+            ElementKind::Pressable(props) => props
+                .a11y
+                .test_id
+                .as_deref()
+                .is_some_and(|id| id == test_id)
+                .then_some(props),
+            _ => node
+                .children
+                .iter()
+                .find_map(|c| find_pressable_with_test_id(c, test_id)),
+        }
+    }
+
+    #[test]
+    fn badge_focus_ring_tweens_in_and_out_like_a_transition() {
+        use std::cell::Cell;
+        use std::rc::Rc;
+        use std::time::Duration;
+
+        use fret_core::{Event, FrameId, KeyCode, Modifiers};
+        use fret_ui::tree::UiTree;
+        use fret_ui_kit::declarative::transition::ticks_60hz_for_duration;
+
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        crate::shadcn_themes::apply_shadcn_new_york(
+            &mut app,
+            crate::shadcn_themes::ShadcnBaseColor::Neutral,
+            crate::shadcn_themes::ShadcnColorScheme::Light,
+        );
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(360.0), Px(160.0)),
+        );
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let mut services = FakeServices::default();
+
+        let ring_alpha_out: Rc<Cell<Option<f32>>> = Rc::new(Cell::new(None));
+        let always_paint_out: Rc<Cell<Option<bool>>> = Rc::new(Cell::new(None));
+
+        fn render_frame(
+            ui: &mut UiTree<App>,
+            app: &mut App,
+            services: &mut dyn fret_core::UiServices,
+            window: AppWindowId,
+            bounds: Rect,
+            ring_alpha_out: Rc<Cell<Option<f32>>>,
+            always_paint_out: Rc<Cell<Option<bool>>>,
+        ) -> fret_core::NodeId {
+            let root = fret_ui::declarative::render_root(
+                ui,
+                app,
+                services,
+                window,
+                bounds,
+                "badge-focus-ring-tween",
+                move |cx| {
+                    let el = Badge::new("Draft")
+                        .render(BadgeRender::Link {
+                            href: Arc::from("https://example.com"),
+                            target: None,
+                            rel: None,
+                        })
+                        .test_id("badge")
+                        .into_element(cx);
+
+                    let badge = find_pressable_with_test_id(&el, "badge").expect("badge pressable");
+                    let a = badge.focus_ring.map(|ring| ring.color.a).unwrap_or(0.0);
+                    ring_alpha_out.set(Some(a));
+                    always_paint_out.set(Some(badge.focus_ring_always_paint));
+
+                    vec![el]
+                },
+            );
+            ui.set_root(root);
+            ui.request_semantics_snapshot();
+            ui.layout_all(app, services, bounds, 1.0);
+            root
+        }
+
+        // Frame 1: baseline render (no focus-visible), ring alpha should be 0.
+        app.set_frame_id(FrameId(1));
+        let root = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            ring_alpha_out.clone(),
+            always_paint_out.clone(),
+        );
+        let a0 = ring_alpha_out.get().expect("a0");
+        assert!(
+            a0.abs() <= 1e-6,
+            "expected ring alpha to start at 0, got {a0}"
+        );
+
+        // Focus the badge and mark focus-visible via a navigation key.
+        let focusable = ui
+            .first_focusable_descendant_including_declarative(&mut app, window, root)
+            .expect("focusable badge");
+        ui.set_focus(Some(focusable));
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::KeyDown {
+                key: KeyCode::Tab,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+
+        // Frame 2: ring should be in-between (not snapped).
+        app.set_frame_id(FrameId(2));
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            ring_alpha_out.clone(),
+            always_paint_out.clone(),
+        );
+        let a1 = ring_alpha_out.get().expect("a1");
+        assert!(
+            a1 > 0.0,
+            "expected ring alpha to start animating in, got {a1}"
+        );
+
+        // Advance frames until the default 150ms transition settles.
+        let settle = ticks_60hz_for_duration(Duration::from_millis(150)) + 2;
+        for i in 0..settle {
+            app.set_frame_id(FrameId(3 + i));
+            let _ = render_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                ring_alpha_out.clone(),
+                always_paint_out.clone(),
+            );
+        }
+        let a_focused = ring_alpha_out.get().expect("a_focused");
+        assert!(
+            a_focused > a1 + 1e-4,
+            "expected ring alpha to increase over time, got a1={a1} a_focused={a_focused}"
+        );
+
+        // Blur and ensure ring animates out while still being painted.
+        ui.set_focus(None);
+        app.set_frame_id(FrameId(1000));
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            ring_alpha_out.clone(),
+            always_paint_out.clone(),
+        );
+        let a_blur = ring_alpha_out.get().expect("a_blur");
+        let always_paint = always_paint_out.get().expect("always_paint");
+        assert!(
+            a_blur > 0.0 && a_blur < a_focused,
+            "expected ring alpha to be intermediate after blur, got a_blur={a_blur} a_focused={a_focused}"
+        );
+        assert!(
+            always_paint,
+            "expected focus ring to request painting while animating out"
+        );
+
+        for i in 0..settle {
+            app.set_frame_id(FrameId(1001 + i));
+            let _ = render_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                ring_alpha_out.clone(),
+                always_paint_out.clone(),
+            );
+        }
+        let a_final = ring_alpha_out.get().expect("a_final");
+        let always_paint_final = always_paint_out.get().expect("always_paint_final");
+        assert!(
+            a_final.abs() <= 1e-4,
+            "expected ring alpha to settle at 0, got {a_final}"
+        );
+        assert!(
+            !always_paint_final,
+            "expected focus ring to stop requesting painting after settling"
         );
     }
 }
