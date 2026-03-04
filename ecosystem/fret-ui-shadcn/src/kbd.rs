@@ -1,6 +1,5 @@
 use std::sync::Arc;
 
-use crate::LayoutDirection;
 use fret_core::window::ColorScheme;
 use fret_core::{FontWeight, Px};
 use fret_icons::IconId;
@@ -203,10 +202,7 @@ impl KbdGroup {
         let theme = Theme::global(&*cx.app).snapshot();
         let gap = MetricRef::space(Space::N1).resolve(&theme);
         let direction = crate::use_direction(cx, None);
-        let children = match direction {
-            LayoutDirection::Ltr => self.children,
-            LayoutDirection::Rtl => self.children.into_iter().rev().collect(),
-        };
+        let children = crate::rtl::reverse_in_rtl(direction, self.children);
         let layout = decl_style::layout_style(&theme, self.layout);
 
         cx.flex(

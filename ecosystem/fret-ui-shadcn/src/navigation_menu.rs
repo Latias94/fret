@@ -1660,8 +1660,6 @@ impl NavigationMenu {
                                                     },
                                                 );
 
-                                                let mut row_children: Vec<AnyElement> =
-                                                    Vec::with_capacity(content_children.len() + 2);
                                                 // Upstream adds a literal `" "` text node between the label
                                                 // and the chevron icon, in addition to `ml-1` on the icon.
                                                 // We model the outcome as a spacer metric so the trigger
@@ -1683,18 +1681,11 @@ impl NavigationMenu {
                                                     },
                                                     |_cx| Vec::new(),
                                                 );
-                                                match dir {
-                                                    crate::LayoutDirection::Ltr => {
-                                                        row_children.extend(content_children);
-                                                        row_children.push(spacer);
-                                                        row_children.push(chevron);
-                                                    }
-                                                    crate::LayoutDirection::Rtl => {
-                                                        row_children.push(chevron);
-                                                        row_children.push(spacer);
-                                                        row_children.extend(content_children);
-                                                    }
-                                                }
+                                                let row_children = rtl::concat_inline_start_end(
+                                                    dir,
+                                                    content_children,
+                                                    vec![spacer, chevron],
+                                                );
                                                 let row = cx.flex(
                                                     FlexProps {
                                                         layout: {

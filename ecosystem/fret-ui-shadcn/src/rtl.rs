@@ -138,6 +138,33 @@ pub(crate) fn vec_main_with_inline_start<T>(
 }
 
 #[inline]
+pub(crate) fn concat_inline_start_end<T>(
+    dir: LayoutDirection,
+    mut inline_start: Vec<T>,
+    mut inline_end: Vec<T>,
+) -> Vec<T> {
+    match dir {
+        LayoutDirection::Ltr => {
+            inline_start.extend(inline_end);
+            inline_start
+        }
+        LayoutDirection::Rtl => {
+            inline_end.reverse();
+            inline_end.extend(inline_start);
+            inline_end
+        }
+    }
+}
+
+#[inline]
+pub(crate) fn reverse_in_rtl<T>(dir: LayoutDirection, mut items: Vec<T>) -> Vec<T> {
+    if dir == LayoutDirection::Rtl {
+        items.reverse();
+    }
+    items
+}
+
+#[inline]
 pub(crate) fn padding_edges_with_inline_start_end(
     dir: LayoutDirection,
     pad_top: Px,
@@ -280,6 +307,30 @@ mod tests {
         assert_eq!(
             vec_main_with_inline_end(LayoutDirection::Rtl, 1, Some(2)),
             vec![2, 1]
+        );
+    }
+
+    #[test]
+    fn concat_inline_start_end_reverses_inline_end_in_rtl() {
+        assert_eq!(
+            concat_inline_start_end(LayoutDirection::Ltr, vec![1, 2], vec![3, 4]),
+            vec![1, 2, 3, 4]
+        );
+        assert_eq!(
+            concat_inline_start_end(LayoutDirection::Rtl, vec![1, 2], vec![3, 4]),
+            vec![4, 3, 1, 2]
+        );
+    }
+
+    #[test]
+    fn reverse_in_rtl_only_reverses_in_rtl() {
+        assert_eq!(
+            reverse_in_rtl(LayoutDirection::Ltr, vec![1, 2, 3]),
+            vec![1, 2, 3]
+        );
+        assert_eq!(
+            reverse_in_rtl(LayoutDirection::Rtl, vec![1, 2, 3]),
+            vec![3, 2, 1]
         );
     }
 }
