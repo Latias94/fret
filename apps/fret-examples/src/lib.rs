@@ -97,8 +97,10 @@ pub mod genui_demo;
 pub mod gizmo3d_demo;
 pub mod grouped_bars_demo;
 pub mod heatmap_demo;
-#[cfg(all(not(target_arch = "wasm32"), feature = "legacy-mvu-demos"))]
+#[cfg(not(target_arch = "wasm32"))]
 pub mod hello_counter_demo;
+#[cfg(all(not(target_arch = "wasm32"), feature = "legacy-mvu-demos"))]
+pub mod hello_counter_demo_legacy;
 pub mod histogram2d_demo;
 pub mod histogram_demo;
 pub mod horizontal_bars_demo;
