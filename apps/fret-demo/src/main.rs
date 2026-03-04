@@ -7,12 +7,12 @@ fn main() -> anyhow::Result<()> {
 
     if demo == "--list" || demo == "-l" {
         eprintln!(
-            "Available demos:\n  simple-todo\n  todo_demo\n  components_gallery\n  emoji_conformance_demo\n  cjk_conformance_demo\n  chart_demo\n  chart_declarative_demo\n  chart_multi_axis_demo\n  echarts_demo\n  category_line_demo\n  horizontal_bars_demo\n  plot_demo\n  plot_image_demo\n  bars_demo\n  grouped_bars_demo\n  stacked_bars_demo\n  area_demo\n  candlestick_demo\n  error_bars_demo\n  heatmap_demo\n  histogram_demo\n  histogram2d_demo\n  shaded_demo\n  stairs_demo\n  stems_demo\n  linked_cursor_demo\n  inf_lines_demo\n  tags_demo\n  drag_demo\n  effects_demo\n  launcher_utility_window_demo\n  launcher_utility_window_materials_demo\n  window_hit_test_probe_demo"
+            "Available demos:\n  simple-todo\n  todo_demo\n  query_demo\n  query_async_tokio_demo\n  components_gallery\n  emoji_conformance_demo\n  cjk_conformance_demo\n  chart_demo\n  chart_declarative_demo\n  chart_multi_axis_demo\n  echarts_demo\n  category_line_demo\n  horizontal_bars_demo\n  plot_demo\n  plot_image_demo\n  bars_demo\n  grouped_bars_demo\n  stacked_bars_demo\n  area_demo\n  candlestick_demo\n  error_bars_demo\n  heatmap_demo\n  histogram_demo\n  histogram2d_demo\n  shaded_demo\n  stairs_demo\n  stems_demo\n  linked_cursor_demo\n  inf_lines_demo\n  tags_demo\n  drag_demo\n  effects_demo\n  launcher_utility_window_demo\n  launcher_utility_window_materials_demo\n  window_hit_test_probe_demo"
         );
 
         #[cfg(feature = "legacy-mvu-demos")]
         eprintln!(
-            "\nLegacy MVU demos (feature `legacy-mvu-demos`):\n  todo_demo_legacy\n  query_demo_legacy\n  query_async_tokio_demo\n  async_playground_demo\n  genui_demo\n  hello_counter_demo\n  markdown_demo\n  embedded_viewport_demo\n  drop_shadow_demo\n  liquid_glass_demo\n  custom_effect_v1_demo\n  custom_effect_v2_demo\n  custom_effect_v3_demo\n  postprocess_theme_demo"
+            "\nLegacy MVU demos (feature `legacy-mvu-demos`):\n  todo_demo_legacy\n  query_demo_legacy\n  query_async_tokio_demo_legacy\n  async_playground_demo\n  genui_demo\n  hello_counter_demo\n  markdown_demo\n  embedded_viewport_demo\n  drop_shadow_demo\n  liquid_glass_demo\n  custom_effect_v1_demo\n  custom_effect_v2_demo\n  custom_effect_v3_demo\n  postprocess_theme_demo"
         );
 
         #[cfg(not(feature = "legacy-mvu-demos"))]
@@ -28,6 +28,9 @@ fn main() -> anyhow::Result<()> {
         }
         "todo_demo" | "todo-demo" => fret_examples::todo_demo::run(),
         "query_demo" | "query-demo" => fret_examples::query_demo::run(),
+        "query_async_tokio_demo" | "query-async-tokio-demo" => {
+            fret_examples::query_async_tokio_demo::run()
+        }
         "components_gallery" => fret_examples::components_gallery::run(),
         "emoji_conformance_demo" => fret_examples::emoji_conformance_demo::run(),
         "cjk_conformance_demo" => fret_examples::cjk_conformance_demo::run(),
@@ -91,8 +94,8 @@ fn run_legacy_mvu_demo(demo: &str) -> Option<anyhow::Result<()>> {
     let result = match demo {
         "todo_demo_legacy" | "todo-demo-legacy" => fret_examples::todo_demo_legacy::run(),
         "query_demo_legacy" | "query-demo-legacy" => fret_examples::query_demo_legacy::run(),
-        "query_async_tokio_demo" | "query-async-tokio-demo" => {
-            fret_examples::query_async_tokio_demo::run()
+        "query_async_tokio_demo_legacy" | "query-async-tokio-demo-legacy" => {
+            fret_examples::query_async_tokio_demo_legacy::run()
         }
         "async_playground_demo" | "async-playground-demo" => {
             fret_examples::async_playground_demo::run()
@@ -131,8 +134,8 @@ fn is_legacy_mvu_demo_name(demo: &str) -> bool {
             | "todo-demo-legacy"
             | "query_demo_legacy"
             | "query-demo-legacy"
-            | "query_async_tokio_demo"
-            | "query-async-tokio-demo"
+            | "query_async_tokio_demo_legacy"
+            | "query-async-tokio-demo-legacy"
             | "async_playground_demo"
             | "async-playground-demo"
             | "genui_demo"

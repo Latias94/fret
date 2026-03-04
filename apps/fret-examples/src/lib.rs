@@ -144,10 +144,13 @@ pub mod plot_image_demo;
 pub mod plot_stress_demo;
 #[cfg(all(not(target_arch = "wasm32"), feature = "legacy-mvu-demos"))]
 pub mod postprocess_theme_demo;
-#[cfg(all(not(target_arch = "wasm32"), feature = "legacy-mvu-demos"))]
+#[cfg(not(target_arch = "wasm32"))]
 pub mod query_async_tokio_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod query_demo;
+
+#[cfg(all(not(target_arch = "wasm32"), feature = "legacy-mvu-demos"))]
+pub mod query_async_tokio_demo_legacy;
 
 #[cfg(all(not(target_arch = "wasm32"), feature = "legacy-mvu-demos"))]
 pub mod query_demo_legacy;
