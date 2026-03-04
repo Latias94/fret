@@ -1,5 +1,6 @@
 use crate::{CommandId, InputContext, KeyChord};
 use std::collections::HashSet;
+use std::sync::Arc;
 
 use super::{Binding, Keymap, KeymapContinuation, SequenceMatch};
 
@@ -15,6 +16,16 @@ impl Keymap {
     /// Last-wins resolution. If a later binding matches and its `command` is `None`, the key is
     /// explicitly unbound and resolution stops.
     pub fn resolve(&self, ctx: &InputContext, chord: KeyChord) -> Option<CommandId> {
+        self.resolve_with_key_contexts(ctx, &[], chord)
+    }
+
+    /// Like [`Self::resolve`], but evaluates `when` expressions with a key-context stack.
+    pub fn resolve_with_key_contexts(
+        &self,
+        ctx: &InputContext,
+        key_contexts: &[Arc<str>],
+        chord: KeyChord,
+    ) -> Option<CommandId> {
         for b in self.bindings.iter().rev() {
             if b.sequence.as_slice() != [chord] {
                 continue;
@@ -23,7 +34,7 @@ impl Keymap {
                 continue;
             }
             if let Some(expr) = b.when.as_ref()
-                && !expr.eval(ctx)
+                && !expr.eval_with_key_contexts(ctx, key_contexts)
             {
                 continue;
             }
@@ -34,6 +45,16 @@ impl Keymap {
 
     /// Sequence matching helper used by pending multi-stroke bindings (ADR 0043).
     pub fn match_sequence(&self, ctx: &InputContext, sequence: &[KeyChord]) -> SequenceMatch {
+        self.match_sequence_with_key_contexts(ctx, &[], sequence)
+    }
+
+    /// Like [`Self::match_sequence`], but evaluates `when` expressions with a key-context stack.
+    pub fn match_sequence_with_key_contexts(
+        &self,
+        ctx: &InputContext,
+        key_contexts: &[Arc<str>],
+        sequence: &[KeyChord],
+    ) -> SequenceMatch {
         let mut exact: Option<Option<CommandId>> = None;
         let mut has_continuation = false;
 
@@ -46,7 +67,7 @@ impl Keymap {
                 continue;
             }
             if let Some(expr) = b.when.as_ref()
-                && !expr.eval(ctx)
+                && !expr.eval_with_key_contexts(ctx, key_contexts)
             {
                 continue;
             }
@@ -92,6 +113,16 @@ impl Keymap {
         ctx: &InputContext,
         prefix: &[KeyChord],
     ) -> Vec<KeymapContinuation> {
+        self.continuations_with_key_contexts(ctx, &[], prefix)
+    }
+
+    /// Like [`Self::continuations`], but evaluates `when` expressions with a key-context stack.
+    pub fn continuations_with_key_contexts(
+        &self,
+        ctx: &InputContext,
+        key_contexts: &[Arc<str>],
+        prefix: &[KeyChord],
+    ) -> Vec<KeymapContinuation> {
         if prefix.is_empty() {
             return Vec::new();
         }
@@ -104,7 +135,7 @@ impl Keymap {
                 continue;
             }
             if let Some(expr) = b.when.as_ref()
-                && !expr.eval(ctx)
+                && !expr.eval_with_key_contexts(ctx, key_contexts)
             {
                 continue;
             }
@@ -127,7 +158,7 @@ impl Keymap {
             seq.extend_from_slice(prefix);
             seq.push(next);
 
-            let matched = self.match_sequence(ctx, &seq);
+            let matched = self.match_sequence_with_key_contexts(ctx, key_contexts, &seq);
             let exact_command = matched.exact.clone().flatten();
             if exact_command.is_some() || matched.has_continuation {
                 out.push(KeymapContinuation { next, matched });

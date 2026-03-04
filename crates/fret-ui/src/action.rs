@@ -4,9 +4,9 @@ use fret_core::{
     PointerId, PointerType, Rect, UiServices,
 };
 use fret_runtime::{
-    CommandId, DefaultAction, DragHost, DragKindId, DragSession, Effect, Model, ModelStore,
-    PlatformTextInputQuery, PlatformTextInputQueryResult, TickId, TimerToken, Utf16Range,
-    WeakModel,
+    ActionId, CommandId, DefaultAction, DragHost, DragKindId, DragSession, Effect, Model,
+    ModelStore, PlatformTextInputQuery, PlatformTextInputQueryResult, TickId, TimerToken,
+    Utf16Range, WeakModel,
 };
 use std::any::Any;
 use std::sync::Arc;
@@ -381,6 +381,36 @@ pub trait UiActionHost {
         _command: &CommandId,
         _reason: ActivateReason,
     ) {
+    }
+
+    /// Record a transient payload for a parameterized action dispatch (ADR 0312).
+    ///
+    /// This is a best-effort, window-scoped pending store with a small tick TTL. Payload is
+    /// intentionally *not* embedded into the element tree; it is passed through a separate,
+    /// transient channel to keep the IR data-first and to preserve future DSL/frontend options.
+    ///
+    /// Hosts that do not support payload actions can leave this as a no-op.
+    fn record_pending_action_payload(
+        &mut self,
+        _cx: ActionCx,
+        _action: &ActionId,
+        _payload: Box<dyn Any + Send + Sync>,
+    ) {
+    }
+
+    /// Consume the most recent pending payload for a given action, if still available (ADR 0312).
+    ///
+    /// Recommended handler semantics when `None`:
+    /// - treat as "not handled" (payload missing/expired/mismatched),
+    /// - keep behavior diagnosable (best-effort) rather than panicking.
+    ///
+    /// Hosts that do not support payload actions can return `None`.
+    fn consume_pending_action_payload(
+        &mut self,
+        _window: AppWindowId,
+        _action: &ActionId,
+    ) -> Option<Box<dyn Any + Send + Sync>> {
+        None
     }
 
     fn dispatch_command(&mut self, window: Option<AppWindowId>, command: CommandId) {

@@ -1,5 +1,6 @@
 use crate::{CommandId, InputContext, InputDispatchPhase, KeyChord};
 use std::collections::{HashMap, HashSet};
+use std::sync::Arc;
 
 use super::Keymap;
 
@@ -23,6 +24,15 @@ impl Keymap {
         ctx: &InputContext,
         command: &CommandId,
     ) -> Option<Vec<KeyChord>> {
+        self.shortcut_for_command_sequence_with_key_contexts(ctx, &[], command)
+    }
+
+    pub fn shortcut_for_command_sequence_with_key_contexts(
+        &self,
+        ctx: &InputContext,
+        key_contexts: &[Arc<str>],
+        command: &CommandId,
+    ) -> Option<Vec<KeyChord>> {
         let mut order: Vec<Vec<KeyChord>> = Vec::new();
         let mut seen: HashSet<Vec<KeyChord>> = HashSet::new();
         let mut effective: HashMap<Vec<KeyChord>, Option<CommandId>> = HashMap::new();
@@ -32,7 +42,7 @@ impl Keymap {
                 continue;
             }
             if let Some(expr) = b.when.as_ref()
-                && !expr.eval(ctx)
+                && !expr.eval_with_key_contexts(ctx, key_contexts)
             {
                 continue;
             }
@@ -81,6 +91,15 @@ impl Keymap {
         base: &InputContext,
         command: &CommandId,
     ) -> Option<Vec<KeyChord>> {
+        self.display_shortcut_for_command_sequence_with_key_contexts(base, &[], command)
+    }
+
+    pub fn display_shortcut_for_command_sequence_with_key_contexts(
+        &self,
+        base: &InputContext,
+        key_contexts: &[Arc<str>],
+        command: &CommandId,
+    ) -> Option<Vec<KeyChord>> {
         #[derive(Debug)]
         struct Candidate {
             ctx_index: usize,
@@ -111,6 +130,7 @@ impl Keymap {
         fn effective_command_for_sequence<'a>(
             keymap: &'a Keymap,
             ctx: &InputContext,
+            key_contexts: &[Arc<str>],
             seq: &[KeyChord],
         ) -> Option<(Option<&'a CommandId>, usize)> {
             for (index, b) in keymap.bindings.iter().enumerate().rev() {
@@ -121,7 +141,7 @@ impl Keymap {
                     continue;
                 }
                 if let Some(expr) = b.when.as_ref()
-                    && !expr.eval(ctx)
+                    && !expr.eval_with_key_contexts(ctx, key_contexts)
                 {
                     continue;
                 }
@@ -141,7 +161,7 @@ impl Keymap {
         for seq in sequences.into_iter() {
             for (ctx_index, ctx) in contexts.iter().enumerate() {
                 let Some((Some(cmd), binding_index)) =
-                    effective_command_for_sequence(self, ctx, &seq)
+                    effective_command_for_sequence(self, ctx, key_contexts, &seq)
                 else {
                     continue;
                 };

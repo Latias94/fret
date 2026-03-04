@@ -15,7 +15,7 @@ Legend:
 | --- | --- | --- | --- | --- |
 | Typed unit actions | `gpui::action` | ✅ `ActionId` alias + typed unit action macro + handler table | ✅ | v1 landed; dispatch remains command-based at the mechanism layer, but authoring binds `ActionId` and handlers live in the view/app layer |
 | Structured action payloads | Keymap JSON payload | ❌ | ❌ (v2) | Gate behind strict validation and determinism rules |
-| Key contexts | `key_context("...")` | ⚠️ keymap `when` expressions exist; no first-class key-context stack yet | ⚠️ | Follow-up: define a minimal key-context stack (naming + stacking rules) and publish it in routing diagnostics |
+| Key contexts | `key_context("...")` | ✅ `UiBuilder::key_context` / `AnyElement::key_context` + `keyctx.*` `when` identifiers + shortcut routing trace includes `key_contexts[*]` | ✅ | Key contexts are derived from the focused node chain (or barrier root fallback) and are visible in `wait_shortcut_routing_trace` gates via `key_context` queries |
 | Availability queries | `is_action_available` | ✅ action availability snapshot + diagnostics traces + scripted gates | ✅ | v1 landed (including modal-barrier gating gates) |
 | Command palette integration | actions visible as commands | ✅ command palette dispatches via the same action/command pipeline | ✅ | metadata registry is unified (no duplication) |
 | View-level dirty/notify loop | “notify → dirty views” | ✅ view runtime provides `notify()` dirty marking + reuse closure | ✅ | v1 landed (minimal); perf hardening continues in dedicated perf workstreams |

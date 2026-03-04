@@ -26,6 +26,8 @@ pub struct AnyElement {
     pub children: Vec<AnyElement>,
     /// Layout-transparent semantics overrides applied when producing semantics snapshots.
     pub semantics_decoration: Option<SemanticsDecoration>,
+    /// Layout-transparent key context identifier used by shortcut/keymap `when` expressions.
+    pub key_context: Option<Arc<str>>,
 }
 
 impl AnyElement {
@@ -35,6 +37,7 @@ impl AnyElement {
             kind,
             children,
             semantics_decoration: None,
+            key_context: None,
         }
     }
 
@@ -64,6 +67,23 @@ impl AnyElement {
         self
     }
 
+    /// Shorthand for attaching a [`SemanticsDecoration`] without introducing a layout node.
+    ///
+    /// This is a convenience wrapper over [`AnyElement::attach_semantics`].
+    pub fn a11y(self, decoration: SemanticsDecoration) -> Self {
+        self.attach_semantics(decoration)
+    }
+
+    /// Attach a semantics role override (ARIA `role`-like outcome).
+    pub fn a11y_role(self, role: SemanticsRole) -> Self {
+        self.a11y(SemanticsDecoration::default().role(role))
+    }
+
+    /// Attach a semantics label override (ARIA `aria-label`-like outcome).
+    pub fn a11y_label(self, label: impl Into<Arc<str>>) -> Self {
+        self.a11y(SemanticsDecoration::default().label(label))
+    }
+
     /// Attach a debug/test-only identifier for diagnostics and deterministic UI automation.
     ///
     /// This is shorthand for attaching a [`SemanticsDecoration`] with `test_id` set.
@@ -72,7 +92,40 @@ impl AnyElement {
     /// let el = some_element.test_id("settings.theme.toggle");
     /// ```
     pub fn test_id(self, test_id: impl Into<Arc<str>>) -> Self {
-        self.attach_semantics(SemanticsDecoration::default().test_id(test_id))
+        self.a11y(SemanticsDecoration::default().test_id(test_id))
+    }
+
+    /// Attach a semantics value override (ARIA `aria-valuetext`-like outcome).
+    pub fn a11y_value(self, value: impl Into<Arc<str>>) -> Self {
+        self.a11y(SemanticsDecoration::default().value(value))
+    }
+
+    /// Attach a disabled override (ARIA `aria-disabled`-like outcome).
+    pub fn a11y_disabled(self, disabled: bool) -> Self {
+        self.a11y(SemanticsDecoration::default().disabled(disabled))
+    }
+
+    /// Attach a selected override (ARIA `aria-selected`-like outcome).
+    pub fn a11y_selected(self, selected: bool) -> Self {
+        self.a11y(SemanticsDecoration::default().selected(selected))
+    }
+
+    /// Attach an expanded override (ARIA `aria-expanded`-like outcome).
+    pub fn a11y_expanded(self, expanded: bool) -> Self {
+        self.a11y(SemanticsDecoration::default().expanded(expanded))
+    }
+
+    /// Attach a tri-state checked override (ARIA `aria-checked`-like outcome).
+    pub fn a11y_checked(self, checked: Option<bool>) -> Self {
+        self.a11y(SemanticsDecoration::default().checked(checked))
+    }
+
+    /// Attach a key context identifier to this element for shortcut routing.
+    ///
+    /// This is a layout-transparent annotation used by `when` expressions via `keyctx.*`.
+    pub fn key_context(mut self, key_context: impl Into<Arc<str>>) -> Self {
+        self.key_context = Some(key_context.into());
+        self
     }
 }
 

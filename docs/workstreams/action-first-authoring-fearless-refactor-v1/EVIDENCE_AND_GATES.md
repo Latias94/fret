@@ -30,6 +30,8 @@ View runtime (v1):
 Legacy MVU quarantine (compat surface):
 
 - `ecosystem/fret/src/legacy.rs` (`fret::legacy::prelude::*`)
+- `ecosystem/fret/src/lib.rs` (MVU modules gated behind `legacy-mvu`)
+- `ecosystem/fret/src/lib.rs` (compile-time deprecations for `legacy`/`mvu`/`mvu_router` entry modules)
 
 UI gallery adoption (v1):
 
@@ -91,6 +93,15 @@ Keymap/availability explainability (diagnostics traces):
 - `ecosystem/fret-bootstrap/src/ui_diagnostics/command_gating_trace.rs` (`debug.command_gating_trace[*]`)
 - `crates/fret-ui/src/tree/shortcuts.rs` (widget-scoped shortcut gating uses live UI-tree availability to avoid stale `command_disabled` after modal barrier transitions)
 
+Key-context stack + `keyctx.*` evaluation (v1):
+
+- `crates/fret-runtime/src/when_expr/*` (`WhenEvalContext`, `keyctx.*`)
+- `crates/fret-ui/src/element.rs` + `crates/fret-ui/src/elements/cx.rs` (`AnyElement::key_context`, `UiBuilder::key_context`)
+- `crates/fret-ui/src/tree/shortcuts.rs` (derives the key-context stack from the focused chain / modal barrier root)
+- `crates/fret-ui/src/tree/dispatch/window.rs` (publishes window key-context snapshots to `WindowKeyContextStackService`)
+- `crates/fret-runtime/src/window_key_context_stack.rs` (`WindowKeyContextStackService` data-only seam)
+- Scripted gate: `tools/diag-scripts/cookbook/commands-keymap-basics/cookbook-commands-keymap-basics-shortcut-and-gating.json` (shortcut routing trace includes `key_contexts`)
+
 Dispatch path explainability (diagnostics traces):
 
 - `crates/fret-runtime/src/command_dispatch_diagnostics.rs` (`WindowCommandDispatchDiagnosticsStore`, `WindowPendingCommandDispatchSourceService`)
@@ -142,9 +153,10 @@ Notes:
 
 Current scripts (as of 2026-03-04):
 
-- `tools/diag-scripts/cookbook/commands-keymap-basics/cookbook-commands-keymap-basics-shortcut-and-gating.json`
+- `tools/diag-scripts/cookbook/commands-keymap-basics/cookbook-commands-keymap-basics-shortcut-and-gating.json` (also gates key-context stack visibility via `wait_shortcut_routing_trace.query.key_context`)
 - `tools/diag-scripts/cookbook/hello/cookbook-hello-click-count.json` (clicks the button via `role_and_name`, but still gates `source_test_id` attribution)
 - `tools/diag-scripts/cookbook/hello/cookbook-hello-view-cache-reuse-and-handler-keepalive.json`
+- `tools/diag-scripts/cookbook/payload-actions-basics/cookbook-payload-actions-basics-remove.json` (parameterized action dispatch: pointer + payload, asserts row removal)
 - `tools/diag-scripts/cookbook/text-input-basics/cookbook-text-input-basics-submit-and-clear.json`
 - `tools/diag-scripts/cookbook/simple-todo/cookbook-simple-todo-smoke.json`
 - `tools/diag-scripts/cookbook/virtual-list-basics/cookbook-virtual-list-basics-smoke.json`
@@ -223,11 +235,24 @@ each applicable item.
 
 Action dispatch:
 
-- [ ] A keybinding-triggered dispatch can be explained (matched binding + key context + resolved ActionId).
-- [ ] A pointer-triggered dispatch can be explained (source element/test_id + resolved ActionId).
-- [ ] A blocked dispatch can be explained (availability outcome + blocking reason/scope).
+- [x] A keybinding-triggered dispatch can be explained (matched binding + key context + resolved ActionId).
+  - Evidence: shortcut routing trace (`debug.shortcut_routing_trace[*]`) + key-context stack snapshot
+    (`debug.shortcut_routing_trace[*].query.key_context`) gated by
+    `tools/diag-scripts/cookbook/commands-keymap-basics/cookbook-commands-keymap-basics-shortcut-and-gating.json`.
+- [x] A pointer-triggered dispatch can be explained (source element/test_id + resolved ActionId).
+  - Evidence: command dispatch trace carries `source_test_id` (best-effort, with fallbacks) gated by
+    `tools/diag-scripts/cookbook/hello/cookbook-hello-click-count.json`.
+- [x] A blocked dispatch can be explained (availability outcome + blocking reason/scope).
+  - Evidence: command gating trace (`debug.command_gating_trace[*]`) gated by
+    `tools/diag-scripts/cookbook/overlay-basics/cookbook-overlay-basics-modal-barrier-shortcut-gating.json`.
 
 View/cache closure:
 
-- [ ] A view rebuild can be explained (notify vs observed deps vs inspection/picking).
-- [ ] Cache reuse can be explained (why reuse happened or was skipped at a cache root).
+- [x] A view rebuild can be explained (notify vs observed deps vs inspection/picking).
+  - Evidence: invalidation diagnostics (`dirty_views`, `notify_requests`) in
+    `ecosystem/fret-bootstrap/src/ui_diagnostics/invalidation_diagnostics.rs`, plus scripted gate
+    `tools/diag-scripts/cookbook/hello/cookbook-hello-view-cache-reuse-and-handler-keepalive.json`.
+- [x] Cache reuse can be explained (why reuse happened or was skipped at a cache root).
+  - Evidence: cache root diagnostics `cache_roots[*].reuse_reason` in
+    `ecosystem/fret-bootstrap/src/ui_diagnostics/cache_root_diagnostics.rs`, plus scripted gate
+    `tools/diag-scripts/cookbook/hello/cookbook-hello-view-cache-reuse-and-handler-keepalive.json`.

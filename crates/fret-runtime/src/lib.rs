@@ -23,6 +23,7 @@
 //! ```
 
 pub mod action;
+pub mod action_payload;
 pub mod capabilities;
 pub mod clipboard_diagnostics;
 pub mod command;
@@ -61,6 +62,7 @@ pub mod window_command_enabled;
 pub mod window_command_gating;
 pub mod window_input_arbitration;
 pub mod window_input_context;
+pub mod window_key_context_stack;
 pub mod window_menu_bar_focus;
 pub mod window_metrics;
 pub mod window_style;
@@ -71,6 +73,7 @@ pub mod window_text_input_snapshot;
 // Stable re-exports (portable runtime contract surface)
 // -----------------------------------------------------------------------------
 pub use action::{ActionId, ActionMeta, ActionRegistry, TypedAction};
+pub use action_payload::WindowPendingActionPayloadService;
 pub use capabilities::{
     ExecBackgroundWork, ExecCapabilities, ExecTimers, ExecWake, ExternalDragPayloadKind,
     ExternalDragPositionQuality, PlatformCapabilities, ShellCapabilities,
@@ -186,6 +189,7 @@ pub use window_command_gating::{
 };
 pub use window_input_arbitration::{WindowInputArbitrationSnapshot, WindowPointerOcclusion};
 pub use window_input_context::WindowInputContextService;
+pub use window_key_context_stack::WindowKeyContextStackService;
 pub use window_menu_bar_focus::WindowMenuBarFocusService;
 pub use window_metrics::apply_window_metrics_event;
 pub use window_style::{

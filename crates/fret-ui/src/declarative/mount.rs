@@ -374,6 +374,7 @@ where
                         element: root_id,
                         instance: ElementInstance::Stack(root_stack),
                         semantics_decoration: None,
+                        key_context: None,
                     },
                 )
                 .is_none();
@@ -907,6 +908,7 @@ where
                             DismissibleLayerProps::default(),
                         ),
                         semantics_decoration: None,
+                        key_context: None,
                     },
                 )
                 .is_none();
@@ -1277,6 +1279,7 @@ fn mount_element<H: UiHost + 'static>(
     let mut element = element;
     let id = element.id;
     let semantics_decoration = element.semantics_decoration.clone();
+    let key_context = element.key_context.clone();
     let mut children = std::mem::take(&mut element.children);
     let existing_node_entry = window_state.node_entry(id);
     let had_existing_node_entry = existing_node_entry.is_some();
@@ -1527,6 +1530,7 @@ fn mount_element<H: UiHost + 'static>(
                 element: id,
                 instance,
                 semantics_decoration,
+                key_context,
             },
         )
         .is_none();

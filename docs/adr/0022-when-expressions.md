@@ -68,6 +68,14 @@ Platform:
 
 - `platform` (string: `"macos" | "windows" | "linux" | "web"`)
 
+Key contexts (v1):
+
+- `keyctx.<context>` (bool): true when `<context>` is active in the current key-context stack.
+  - `<context>` uses dot-separated naming (e.g. `cookbook.commands`, `workspace.tabs`).
+  - Hierarchical matching is supported: if `cookbook.commands` is active, `keyctx.cookbook` is also true.
+  - The key-context stack is derived from the focused node chain (or the modal barrier root when
+    focus is outside the barrier subtree), and does not cross the active modal barrier.
+
 Plugins may register additional keys in a namespaced manner, e.g.:
 
 - `plugin.my_plugin.some_flag`
@@ -98,4 +106,3 @@ This avoids divergence between “can you trigger it?” and “does it show up?
 - Decide whether to support numeric comparisons and set membership (`in`) for richer gating.
 - Add a validation mode for keymap/commands to surface unknown keys and parse errors in UI.
 - Define exact plugin registration APIs for context keys and their types.
-

@@ -244,9 +244,9 @@ impl View for HelloCounterView {
         let step_input = shadcn::Input::new(self.step.clone())
             .placeholder("Step (e.g. 1)")
             .submit_command(act::Inc.into())
-            .into_element(cx)
             .a11y_role(SemanticsRole::TextField)
-            .test_id(TEST_ID_STEP_INPUT);
+            .test_id(TEST_ID_STEP_INPUT)
+            .into_element(cx);
 
         let presets = ui::h_flex(cx, |cx| {
             [
@@ -254,20 +254,20 @@ impl View for HelloCounterView {
                     .variant(shadcn::ButtonVariant::Secondary)
                     .size(shadcn::ButtonSize::Sm)
                     .action(act::StepPreset1)
-                    .into_element(cx)
-                    .test_id(TEST_ID_STEP_1),
+                    .test_id(TEST_ID_STEP_1)
+                    .into_element(cx),
                 shadcn::Button::new("5")
                     .variant(shadcn::ButtonVariant::Secondary)
                     .size(shadcn::ButtonSize::Sm)
                     .action(act::StepPreset5)
-                    .into_element(cx)
-                    .test_id(TEST_ID_STEP_5),
+                    .test_id(TEST_ID_STEP_5)
+                    .into_element(cx),
                 shadcn::Button::new("10")
                     .variant(shadcn::ButtonVariant::Secondary)
                     .size(shadcn::ButtonSize::Sm)
                     .action(act::StepPreset10)
-                    .into_element(cx)
-                    .test_id(TEST_ID_STEP_10),
+                    .test_id(TEST_ID_STEP_10)
+                    .into_element(cx),
             ]
         })
         .gap(Space::N2)
@@ -288,27 +288,27 @@ impl View for HelloCounterView {
                     .corner_radii_override(Corners::all(Px(9999.0)))
                     .action(act::Dec)
                     .children([icon::icon(cx, IconId::new("lucide.minus"))])
-                    .into_element(cx)
                     .a11y_role(SemanticsRole::Button)
                     .a11y_label("Decrement")
-                    .test_id(TEST_ID_DEC),
+                    .test_id(TEST_ID_DEC)
+                    .into_element(cx),
                 shadcn::Button::new("Reset")
                     .variant(shadcn::ButtonVariant::Outline)
                     .action(act::Reset)
                     .children([icon::icon(cx, IconId::new("lucide.rotate-ccw"))])
-                    .into_element(cx)
                     .a11y_role(SemanticsRole::Button)
-                    .test_id(TEST_ID_RESET),
+                    .test_id(TEST_ID_RESET)
+                    .into_element(cx),
                 shadcn::Button::new("")
                     .variant(shadcn::ButtonVariant::Default)
                     .size(shadcn::ButtonSize::IconLg)
                     .corner_radii_override(Corners::all(Px(9999.0)))
                     .action(act::Inc)
                     .children([icon::icon(cx, IconId::new("lucide.plus"))])
-                    .into_element(cx)
                     .a11y_role(SemanticsRole::Button)
                     .a11y_label("Increment")
-                    .test_id(TEST_ID_INC),
+                    .test_id(TEST_ID_INC)
+                    .into_element(cx),
             ]
         })
         .gap(Space::N4)

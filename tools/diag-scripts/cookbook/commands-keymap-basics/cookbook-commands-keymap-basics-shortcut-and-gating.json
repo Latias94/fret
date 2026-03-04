@@ -57,6 +57,16 @@
     },
     { "type": "press_shortcut", "shortcut": "primary+shift+k" },
     {
+      "type": "wait_shortcut_routing_trace",
+      "query": {
+        "outcome": "command_dispatched",
+        "key": "KeyK",
+        "command": "cookbook.commands.toggle_panel.v1",
+        "key_context": "cookbook.commands_keymap_basics"
+      },
+      "timeout_frames": 120
+    },
+    {
       "type": "wait_until",
       "predicate": {
         "kind": "checked_is",

@@ -2,6 +2,7 @@
 use fret_core::AppWindowId;
 
 use crate::WindowCommandActionAvailabilityService;
+use crate::WindowKeyContextStackService;
 use crate::{CommandId, CommandScope, CommandsHost, GlobalsHost, InputContext};
 use crate::{WindowCommandEnabledService, WindowInputContextService};
 
@@ -60,8 +61,15 @@ pub fn snapshot_for_window_with_input_ctx_fallback(
         .global::<WindowCommandActionAvailabilityService>()
         .and_then(|svc| svc.snapshot_arc(window));
 
+    let key_contexts: Vec<std::sync::Arc<str>> = app
+        .global::<WindowKeyContextStackService>()
+        .and_then(|svc| svc.snapshot(window))
+        .map(|v| v.to_vec())
+        .unwrap_or_default();
+
     WindowCommandGatingSnapshot::new(input_ctx, enabled_overrides)
         .with_action_availability(action_availability)
+        .with_key_contexts(key_contexts)
 }
 
 /// Returns whether `command` is enabled according to the best-effort window gating snapshot.

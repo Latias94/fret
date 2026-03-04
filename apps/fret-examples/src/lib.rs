@@ -1,3 +1,5 @@
+#![allow(deprecated)]
+
 #[cfg(not(target_arch = "wasm32"))]
 pub mod alloc_profile;
 

@@ -89,6 +89,7 @@ pub struct UiBuilder<T> {
     inner: T,
     patch: UiPatch,
     semantics: Option<SemanticsDecoration>,
+    key_context: Option<Arc<str>>,
 }
 
 impl<T> UiBuilder<T> {
@@ -97,6 +98,7 @@ impl<T> UiBuilder<T> {
             inner,
             patch: UiPatch::default(),
             semantics: None,
+            key_context: None,
         }
     }
 
@@ -118,6 +120,11 @@ impl<T> UiBuilder<T> {
 
     pub fn a11y_label(self, label: impl Into<Arc<str>>) -> Self {
         self.semantics(SemanticsDecoration::default().label(label))
+    }
+
+    pub fn key_context(mut self, key_context: impl Into<Arc<str>>) -> Self {
+        self.key_context = Some(key_context.into());
+        self
     }
 
     pub fn style(mut self, style: ChromeRefinement) -> Self
@@ -1262,15 +1269,21 @@ impl<T: UiPatchTarget + UiIntoElement> UiBuilder<T> {
             inner,
             patch,
             semantics,
+            key_context,
         } = self;
         let builder = UiBuilder {
             inner,
             patch,
             semantics: None,
+            key_context: None,
         };
         let el = builder.build().into_element(cx);
-        match semantics {
+        let el = match semantics {
             Some(decoration) => el.attach_semantics(decoration),
+            None => el,
+        };
+        match key_context {
+            Some(key_context) => el.key_context(key_context),
             None => el,
         }
     }
@@ -1288,15 +1301,21 @@ where
             inner,
             patch,
             semantics,
+            key_context,
         } = self;
         let builder = UiBuilder {
             inner,
             patch,
             semantics: None,
+            key_context: None,
         };
         let el = builder.build().into_element(cx);
-        match semantics {
+        let el = match semantics {
             Some(decoration) => el.attach_semantics(decoration),
+            None => el,
+        };
+        match key_context {
+            Some(key_context) => el.key_context(key_context),
             None => el,
         }
     }
@@ -1312,15 +1331,21 @@ where
             inner,
             patch,
             semantics,
+            key_context,
         } = self;
         let builder = UiBuilder {
             inner,
             patch,
             semantics: None,
+            key_context: None,
         };
         let el = builder.build().into_element(cx);
-        match semantics {
+        let el = match semantics {
             Some(decoration) => el.attach_semantics(decoration),
+            None => el,
+        };
+        match key_context {
+            Some(key_context) => el.key_context(key_context),
             None => el,
         }
     }
@@ -1336,15 +1361,21 @@ where
             inner,
             patch,
             semantics,
+            key_context,
         } = self;
         let builder = UiBuilder {
             inner,
             patch,
             semantics: None,
+            key_context: None,
         };
         let el = builder.build().into_element(cx);
-        match semantics {
+        let el = match semantics {
             Some(decoration) => el.attach_semantics(decoration),
+            None => el,
+        };
+        match key_context {
+            Some(key_context) => el.key_context(key_context),
             None => el,
         }
     }
@@ -1362,15 +1393,21 @@ where
             inner,
             patch,
             semantics,
+            key_context,
         } = self;
         let builder = UiBuilder {
             inner,
             patch,
             semantics: None,
+            key_context: None,
         };
         let el = builder.build().into_element(cx);
-        match semantics {
+        let el = match semantics {
             Some(decoration) => el.attach_semantics(decoration),
+            None => el,
+        };
+        match key_context {
+            Some(key_context) => el.key_context(key_context),
             None => el,
         }
     }
@@ -1388,15 +1425,21 @@ where
             inner,
             patch,
             semantics,
+            key_context,
         } = self;
         let builder = UiBuilder {
             inner,
             patch,
             semantics: None,
+            key_context: None,
         };
         let el = builder.build().into_element(cx);
-        match semantics {
+        let el = match semantics {
             Some(decoration) => el.attach_semantics(decoration),
+            None => el,
+        };
+        match key_context {
+            Some(key_context) => el.key_context(key_context),
             None => el,
         }
     }
@@ -1414,15 +1457,21 @@ where
             inner,
             patch,
             semantics,
+            key_context,
         } = self;
         let builder = UiBuilder {
             inner,
             patch,
             semantics: None,
+            key_context: None,
         };
         let el = builder.build().into_element(cx);
-        match semantics {
+        let el = match semantics {
             Some(decoration) => el.attach_semantics(decoration),
+            None => el,
+        };
+        match key_context {
+            Some(key_context) => el.key_context(key_context),
             None => el,
         }
     }
@@ -1438,15 +1487,21 @@ where
             inner,
             patch,
             semantics,
+            key_context,
         } = self;
         let builder = UiBuilder {
             inner,
             patch,
             semantics: None,
+            key_context: None,
         };
         let el = builder.build().into_element(cx);
-        match semantics {
+        let el = match semantics {
             Some(decoration) => el.attach_semantics(decoration),
+            None => el,
+        };
+        match key_context {
+            Some(key_context) => el.key_context(key_context),
             None => el,
         }
     }

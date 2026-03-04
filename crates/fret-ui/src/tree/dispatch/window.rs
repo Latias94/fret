@@ -1,4 +1,5 @@
 use super::*;
+use fret_runtime::WindowKeyContextStackService;
 use std::collections::HashMap;
 
 use super::event_chain::pointer_cancel_event_for_capture_switch;
@@ -310,6 +311,20 @@ impl<H: UiHost> UiTree<H> {
                                 fret_runtime::WindowInputContextService::default,
                                 |svc, _app| {
                                     svc.set_snapshot(window, input_ctx.clone());
+                                },
+                            );
+                        }
+
+                        let next_key_contexts = self.shortcut_key_context_stack(app, barrier_root);
+                        let needs_key_contexts_update = app
+                            .global::<WindowKeyContextStackService>()
+                            .and_then(|svc| svc.snapshot(window))
+                            .is_none_or(|prev| prev != next_key_contexts.as_slice());
+                        if needs_key_contexts_update {
+                            app.with_global_mut(
+                                WindowKeyContextStackService::default,
+                                |svc, _app| {
+                                    svc.set_snapshot(window, next_key_contexts);
                                 },
                             );
                         }
@@ -2441,6 +2456,11 @@ impl<H: UiHost> UiTree<H> {
             } = event
         {
             let focus_is_text_input = self.focus_is_text_input(app);
+            let key_contexts = if !self.pending_shortcut.keystrokes.is_empty() {
+                self.pending_shortcut.key_contexts.clone()
+            } else {
+                self.shortcut_key_context_stack(app, barrier_root)
+            };
             app.with_global_mut_untracked(
                 fret_runtime::WindowShortcutRoutingDiagnosticsStore::default,
                 |store, app| {
@@ -2465,6 +2485,7 @@ impl<H: UiHost> UiTree<H> {
                             outcome: fret_runtime::ShortcutRoutingOutcome::ConsumedByWidget,
                             command: None,
                             command_enabled: None,
+                            key_contexts,
                         },
                     );
                 },
@@ -2496,6 +2517,11 @@ impl<H: UiHost> UiTree<H> {
             if let Some(window) = self.window
                 && ime_reserved
             {
+                let key_contexts = if !self.pending_shortcut.keystrokes.is_empty() {
+                    self.pending_shortcut.key_contexts.clone()
+                } else {
+                    self.shortcut_key_context_stack(app, barrier_root)
+                };
                 app.with_global_mut_untracked(
                     fret_runtime::WindowShortcutRoutingDiagnosticsStore::default,
                     |store, app| {
@@ -2520,6 +2546,7 @@ impl<H: UiHost> UiTree<H> {
                                 outcome: fret_runtime::ShortcutRoutingOutcome::ReservedForIme,
                                 command: None,
                                 command_enabled: None,
+                                key_contexts,
                             },
                         );
                     },

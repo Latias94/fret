@@ -1457,6 +1457,11 @@ pub(super) fn shortcut_routing_trace_entry_matches_query(
     {
         return false;
     }
+    if let Some(key_context) = &query.key_context
+        && !entry.key_contexts.iter().any(|c| c == key_context)
+    {
+        return false;
+    }
     true
 }
 
