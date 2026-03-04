@@ -5509,8 +5509,9 @@ mod tests {
             build_entries(),
         );
 
-        let trigger_bounds = fret_ui::elements::bounds_for_element(&mut app, window, trigger_id)
-            .expect("trigger bounds");
+        let trigger_node = fret_ui::elements::node_for_element(&mut app, window, trigger_id)
+            .expect("trigger node");
+        let trigger_bounds = ui.debug_node_bounds(trigger_node).expect("trigger bounds");
         let pos = Point::new(
             Px(trigger_bounds.origin.x.0 + trigger_bounds.size.width.0 * 0.5),
             Px(trigger_bounds.origin.y.0 + trigger_bounds.size.height.0 * 0.5),
