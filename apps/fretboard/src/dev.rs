@@ -1129,10 +1129,7 @@ fn dx_available() -> bool {
 }
 
 fn is_hotpatch_ready_native_demo(name: &str) -> bool {
-    matches!(
-        name,
-        "todo_demo" | "assets_demo" | "hotpatch_smoke_demo"
-    )
+    matches!(name, "todo_demo" | "assets_demo" | "hotpatch_smoke_demo")
 }
 
 pub(crate) fn dev_web(args: Vec<String>) -> Result<(), String> {

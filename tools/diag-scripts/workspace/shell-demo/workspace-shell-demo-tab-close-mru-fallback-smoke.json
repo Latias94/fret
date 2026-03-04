@@ -2,7 +2,8 @@
   "meta": {
     "name": "Workspace shell demo: close active tab selects MRU fallback (smoke)",
     "required_capabilities": [
-      "diag.script_v2"
+      "diag.script_v2",
+      "diag.command_dispatch_trace"
     ],
     "tags": [
       "workspace",
@@ -19,6 +20,9 @@
   },
   "schema_version": 2,
   "steps": [
+    {
+      "type": "reset_diagnostics"
+    },
     {
       "height_px": 720.0,
       "type": "set_window_inner_size",
@@ -40,14 +44,62 @@
       "type": "wait_until"
     },
     {
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "id": "workspace-shell-pane-pane-a-tab-doc-a-1",
+          "kind": "test_id"
+        }
+      },
+      "timeout_frames": 240,
+      "type": "wait_until"
+    },
+    {
       "target": {
         "id": "workspace-shell-pane-pane-a-tab-doc-a-1",
         "kind": "test_id"
       },
-      "type": "click"
+      "type": "move_pointer"
     },
     {
-      "n": 6,
+      "n": 1,
+      "type": "wait_frames"
+    },
+    {
+      "button": "left",
+      "target": {
+        "id": "workspace-shell-pane-pane-a-tab-doc-a-1",
+        "kind": "test_id"
+      },
+      "type": "pointer_down",
+      "window": {
+        "kind": "current"
+      }
+    },
+    {
+      "n": 1,
+      "type": "wait_frames"
+    },
+    {
+      "type": "pointer_up",
+      "window": {
+        "kind": "current"
+      }
+    },
+    {
+      "predicate": {
+        "kind": "selected_is",
+        "selected": true,
+        "target": {
+          "id": "workspace-shell-pane-pane-a-tab-doc-a-1",
+          "kind": "test_id"
+        }
+      },
+      "timeout_frames": 240,
+      "type": "wait_until"
+    },
+    {
+      "n": 2,
       "type": "wait_frames"
     },
     {
@@ -66,10 +118,45 @@
         "id": "workspace-shell-pane-pane-a-tab-doc-a-1.close",
         "kind": "test_id"
       },
-      "type": "click"
+      "type": "move_pointer"
     },
     {
-      "n": 10,
+      "n": 1,
+      "type": "wait_frames"
+    },
+    {
+      "button": "left",
+      "target": {
+        "id": "workspace-shell-pane-pane-a-tab-doc-a-1.close",
+        "kind": "test_id"
+      },
+      "type": "pointer_down",
+      "window": {
+        "kind": "current"
+      }
+    },
+    {
+      "n": 1,
+      "type": "wait_frames"
+    },
+    {
+      "type": "pointer_up",
+      "window": {
+        "kind": "current"
+      }
+    },
+    {
+      "query": {
+        "command": "workspace.tab.close.doc-a-1",
+        "handled": true,
+        "source_kind": "pointer",
+        "source_test_id": "workspace-shell-pane-pane-a-tab-doc-a-1.close"
+      },
+      "timeout_frames": 240,
+      "type": "wait_command_dispatch_trace"
+    },
+    {
+      "n": 4,
       "type": "wait_frames"
     },
     {
@@ -85,9 +172,10 @@
     },
     {
       "predicate": {
-        "kind": "exists",
+        "kind": "selected_is",
+        "selected": true,
         "target": {
-          "id": "workspace-shell-pane-pane-a-tab-doc-a-2.close",
+          "id": "workspace-shell-pane-pane-a-tab-doc-a-2",
           "kind": "test_id"
         }
       },

@@ -37,7 +37,16 @@ pub(crate) fn cmd_dock_routing(
     {
         if sidecars::try_read_sidecar_json_v1(&src, "dock_routing", warmup_frames).is_some() {
             let bundle_path = sidecars::adjacent_bundle_path_for_sidecar(&src);
-            (src.clone(), bundle_path)
+            if let Some(bundle_path) = bundle_path.clone().filter(|p| p.is_file()) {
+                // Prefer regenerating from the bundle artifact when possible so the report can
+                // evolve (bounded evidence keys) without requiring users to manually delete
+                // existing `dock.routing.json` files.
+                let dock_routing_path =
+                    crate::bundle_index::ensure_dock_routing_json(&bundle_path, warmup_frames)?;
+                (dock_routing_path, Some(bundle_path))
+            } else {
+                (src.clone(), bundle_path)
+            }
         } else {
             return Err(format!(
                 "invalid dock.routing.json (expected schema_version=1 warmup_frames={warmup_frames})\n  dock_routing: {}",
@@ -45,23 +54,31 @@ pub(crate) fn cmd_dock_routing(
             ));
         }
     } else if src.is_dir() {
-        let direct = src.join("dock.routing.json");
-        if direct.is_file()
-            && sidecars::try_read_sidecar_json_v1(&direct, "dock_routing", warmup_frames).is_some()
-        {
-            (direct, None)
+        let bundle_path = crate::resolve_bundle_artifact_path(&src);
+        if bundle_path.is_file() {
+            let dock_routing_path =
+                crate::bundle_index::ensure_dock_routing_json(&bundle_path, warmup_frames)?;
+            (dock_routing_path, Some(bundle_path))
         } else {
-            let root = src.join("_root").join("dock.routing.json");
-            if root.is_file()
-                && sidecars::try_read_sidecar_json_v1(&root, "dock_routing", warmup_frames)
+            let direct = src.join("dock.routing.json");
+            if direct.is_file()
+                && sidecars::try_read_sidecar_json_v1(&direct, "dock_routing", warmup_frames)
                     .is_some()
             {
-                (root, None)
+                (direct, None)
             } else {
-                let bundle_path = crate::resolve_bundle_artifact_path(&src);
-                let dock_routing_path =
-                    crate::bundle_index::ensure_dock_routing_json(&bundle_path, warmup_frames)?;
-                (dock_routing_path, Some(bundle_path))
+                let root = src.join("_root").join("dock.routing.json");
+                if root.is_file()
+                    && sidecars::try_read_sidecar_json_v1(&root, "dock_routing", warmup_frames)
+                        .is_some()
+                {
+                    (root, None)
+                } else {
+                    return Err(format!(
+                        "missing bundle artifact (expected bundle.json or bundle.schema2.json) under: {}",
+                        src.display()
+                    ));
+                }
             }
         }
     } else {
@@ -90,6 +107,24 @@ pub(crate) fn cmd_dock_routing(
 fn print_dock_routing_report(routing: &Value, routing_path: &Path, bundle_path: Option<&Path>) {
     fn u64_field(v: &Value, key: &str) -> u64 {
         v.get(key).and_then(|v| v.as_u64()).unwrap_or(0)
+    }
+
+    fn scale_factor_x1000_string_obj(
+        v: &serde_json::Map<String, Value>,
+        key: &str,
+    ) -> Option<String> {
+        let sf = v.get(key).and_then(|v| v.as_u64()).unwrap_or(0);
+        if sf == 0 {
+            return None;
+        }
+        Some(format!("{:.3}", (sf as f64) / 1000.0))
+    }
+
+    fn point_xy_string_obj(v: &serde_json::Map<String, Value>, key: &str) -> Option<String> {
+        let p = v.get(key).and_then(|v| v.as_object())?;
+        let x = p.get("x").and_then(|v| v.as_f64())?;
+        let y = p.get("y").and_then(|v| v.as_f64())?;
+        Some(format!("{x:.1},{y:.1}"))
     }
 
     fn str_field<'a>(v: &'a Value, key: &str) -> &'a str {
@@ -145,6 +180,7 @@ fn print_dock_routing_report(routing: &Value, routing_path: &Path, bundle_path: 
                 .get("current_window")
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0);
+            let sf_cur = scale_factor_x1000_string_obj(drag, "current_window_scale_factor_x1000");
             let dragging = drag
                 .get("dragging")
                 .and_then(|v| v.as_bool())
@@ -157,10 +193,93 @@ fn print_dock_routing_report(routing: &Value, routing_path: &Path, bundle_path: 
                 .get("window_under_cursor_source")
                 .and_then(|v| v.as_str())
                 .unwrap_or("");
-            parts.push(format!(
-                "drag src={} cur={} dragging={} cross={} under={}",
-                src, cur, dragging, cross, under
-            ));
+            let pos = point_xy_string_obj(drag, "position");
+            let start = point_xy_string_obj(drag, "start_position");
+            let grab = point_xy_string_obj(drag, "cursor_grab_offset");
+            let follow = drag.get("follow_window").and_then(|v| v.as_u64());
+            let scr_raw = point_xy_string_obj(drag, "cursor_screen_pos_raw_physical_px");
+            let scr_raw_present = scr_raw.is_some();
+            let scr_used = point_xy_string_obj(drag, "cursor_screen_pos_used_physical_px");
+            let clamped = drag
+                .get("cursor_screen_pos_was_clamped")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+            let override_active = drag
+                .get("cursor_override_active")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+            let outer = point_xy_string_obj(drag, "current_window_outer_pos_physical_px");
+            let deco = point_xy_string_obj(drag, "current_window_decoration_offset_physical_px");
+            let origin =
+                point_xy_string_obj(drag, "current_window_client_origin_screen_physical_px");
+            let origin_platform = drag
+                .get("current_window_client_origin_source_platform")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+            let sf_runner = scale_factor_x1000_string_obj(
+                drag,
+                "current_window_scale_factor_x1000_from_runner",
+            );
+            let sf_moving = scale_factor_x1000_string_obj(drag, "moving_window_scale_factor_x1000");
+
+            let mut drag_parts: Vec<String> = Vec::new();
+            drag_parts.push(format!("src={src}"));
+            drag_parts.push(format!("cur={cur}"));
+            if let Some(pos) = pos {
+                drag_parts.push(format!("pos=({pos})"));
+            }
+            if let Some(start) = start {
+                drag_parts.push(format!("start=({start})"));
+            }
+            if let Some(grab) = grab {
+                drag_parts.push(format!("grab=({grab})"));
+            }
+            if let Some(follow) = follow {
+                drag_parts.push(format!("follow={follow}"));
+            }
+            if let Some(scr_raw) = scr_raw.as_ref() {
+                drag_parts.push(format!("scr=({scr_raw})"));
+            }
+            if let Some(scr_used) = scr_used.as_ref() {
+                if clamped {
+                    drag_parts.push(format!("scr_used=({scr_used})"));
+                } else if !scr_raw_present {
+                    drag_parts.push(format!("scr_used=({scr_used})"));
+                }
+            }
+            if override_active {
+                drag_parts.push("override=1".to_string());
+            }
+            if clamped {
+                drag_parts.push("clamped=1".to_string());
+            }
+            if let Some(outer) = outer {
+                drag_parts.push(format!("outer=({outer})"));
+            }
+            if let Some(deco) = deco {
+                drag_parts.push(format!("deco=({deco})"));
+            }
+            if let Some(origin) = origin {
+                drag_parts.push(format!("origin=({origin})"));
+            }
+            if origin_platform {
+                drag_parts.push("origin_src=platform".to_string());
+            }
+            if let Some(sf_runner) = sf_runner {
+                drag_parts.push(format!("sf_run={sf_runner}"));
+            }
+            if let Some(sf_cur) = sf_cur {
+                drag_parts.push(format!("sf_cur={sf_cur}"));
+            }
+            if let Some(sf_moving) = sf_moving {
+                drag_parts.push(format!("sf_move={sf_moving}"));
+            }
+            drag_parts.push(format!("dragging={dragging}"));
+            drag_parts.push(format!("cross={cross}"));
+            if !under.is_empty() {
+                drag_parts.push(format!("under={under}"));
+            }
+            parts.push(format!("drag {}", drag_parts.join(" ")));
         }
 
         if let Some(drop) = e.get("dock_drop_resolve").and_then(|v| v.as_object()) {

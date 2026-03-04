@@ -1383,6 +1383,72 @@
       ]
     },
     {
+      "id": "docking-arbitration-demo-tab-close-button-does-not-activate",
+      "path": "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-tab-close-button-does-not-activate.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "diag-hardening-smoke-docking"
+      ],
+      "tags": [
+        "arbitration",
+        "close",
+        "docking",
+        "gate",
+        "smoke",
+        "tabbar"
+      ],
+      "target_hints": [
+        "Uses a semantics-only anchor positioned over an inactive tab's close affordance.",
+        "Asserts the active tab index does not change on pointer-down, then releases to close."
+      ]
+    },
+    {
+      "id": "docking-arbitration-demo-tab-overflow-menu-close-row-1-does-not-activate",
+      "path": "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-tab-overflow-menu-close-row-1-does-not-activate.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "diag-hardening-smoke-docking"
+      ],
+      "tags": [
+        "arbitration",
+        "close",
+        "docking",
+        "gate",
+        "overflow",
+        "smoke",
+        "tabbar"
+      ],
+      "target_hints": [
+        "Opens the overflow menu and presses the row-1 close affordance.",
+        "Asserts no dock drag/floating drag is started.",
+        "Asserts the active tab index does not change while closing the overflowed tab."
+      ]
+    },
+    {
+      "id": "docking-arbitration-demo-tab-overflow-menu-select-row-1-activates",
+      "path": "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-tab-overflow-menu-select-row-1-activates.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "diag-hardening-smoke-docking"
+      ],
+      "tags": [
+        "docking",
+        "gate",
+        "overflow",
+        "tabbar"
+      ],
+      "target_hints": [
+        "Builds a long tab stack by merging multiple single-tab viewports into one leaf, then opens the overflow menu and selects row 1.",
+        "Uses non-hit-test semantics anchors so pointer injection targets real docking chrome."
+      ]
+    },
+    {
       "id": "docking-demo-split-toggle-retarget-fixed-frame-delta",
       "path": "tools/diag-scripts/docking/demo/docking-demo-split-toggle-retarget-fixed-frame-delta.json",
       "required_capabilities": [],
@@ -6216,7 +6282,7 @@
       ],
       "target_hints": [
         "Resets diagnostics so dispatch trace assertions are deterministic.",
-        "Activates doc-a-0 (pane A) so the close target is in-view.",
+        "Targets the already-active tab (doc-a-2) so the close target is in-view and deterministic.",
         "Clicks the close button and asserts a pointer-triggered dispatch trace entry exists.",
         "Asserts the tab is removed from the UI tree."
       ]

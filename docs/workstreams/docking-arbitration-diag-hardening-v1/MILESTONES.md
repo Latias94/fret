@@ -131,6 +131,23 @@ Suite progress notes (2026-03-03):
   viewport min size behavior even when a `DockingPolicy` is installed for unrelated hooks (e.g. drop-zone masking).
   - PASS: `target/fret-diag-codex-splitter-min` (run id `1772532241288`)
 
+Status update (2026-03-04):
+
+- Diagnostics scripts gain a time-based fallback for stabilization and timeouts:
+  - Protocol: `wait_ms` step and optional `timeout_ms` fields for `wait_*` and `capture_screenshot`.
+  - Tooling: strict termination preflight treats trailing `wait_ms` like `wait_frames` for smoke/gate suites.
+  - Guidance: prefer `wait_until` with `timeout_ms` for multi-window/occlusion resilience; use `wait_ms` only as a last resort.
+- Dock routing evidence is self-healing:
+  - `fretboard diag dock-routing <bundle_dir|bundle.schema2.json>` prefers regenerating `dock.routing.json` from the adjacent
+    bundle artifact when available, so newly added bounded evidence keys do not require manual sidecar deletion.
+  - The report surfaces window-local cursor evidence (`pos/start/grab/follow`) alongside `src/cur` and DPI fields
+    (`sf_cur/sf_move`) to make mixed-DPI routing bugs actionable without opening `bundle.json`.
+  - When debugging coordinate-space issues (mixed-DPI or decorations), prefer comparing `scr/scr_used/origin` against the
+    derived local cursor position to catch conversion drift.
+- Mixed-DPI multi-window runs no longer hang on release:
+  - `pointer_up` during an active cross-window dock drag is treated as a global "release" step, so the run does not depend
+    on the dock-destination window producing frames while the moving payload window is active.
+
 ## M1.4 — Rebuild reliability for docking demos (Windows/MSVC)
 
 Goal: docking demo binaries used by `--launch` diagnostics can be rebuilt reliably in local dev.

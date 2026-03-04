@@ -1,18 +1,18 @@
 {
   "schema_version": 2,
   "meta": {
-    "name": "Docking arbitration demo: drag a torn-off tab back to the main window (large OS window move, DPI/monitor stress)",
-    "tags": ["docking", "multiwindow", "drag", "dpi", "gate"],
+    "name": "Docking arbitration demo: drag a torn-off tab back to the main window (outer position sweep +X/-X, mixed-DPI evidence)",
+    "tags": ["docking", "multiwindow", "drag", "dpi", "local-debug"],
     "required_capabilities": ["diag.script_v2", "diag.multi_window"],
     "env_defaults": {
       "FRET_DOCK_ALLOW_MULTI_WINDOW_TEAR_OFF": "1"
     },
     "target_hints": [
-      "This gate is a stress variant of the multi-window drag-back flow.",
-      "After tear-off creates a floating OS window, the script moves that floating window far along +X (cross-monitor if present).",
-      "Expected behavior: cross-window drag routing remains correct and the tab can still be docked back into the main window (no coordinate/DPI drift regressions).",
-      "Evidence: the script captures bundles both right after tear-off and after the large outer move; use `fretboard diag dock-routing <bundle_dir>` to inspect dock-drag routing (including scale_factor_x1000 fields when available).",
-      "Note: if the host only has a single monitor, the OS may clamp the outer position; the gate still exercises large-coordinate paths and must pass."
+      "This is a local-debug variant of the multi-window drag-back flow.",
+      "After tear-off creates a floating OS window and a cross-window dock drag is active, the script sweeps the floating window outer position far along +X and -X, capturing bundles after each move.",
+      "Use this when validating mixed-DPI multi-monitor setups (e.g. 125% + 150%). One of the outer moves may cross the monitor boundary depending on monitor arrangement.",
+      "Evidence: use `fretboard diag dock-routing <bundle_dir|bundle.schema2.json>` to inspect `sf_cur/sf_move` and coordinate-space hints (`scr/scr_used/origin`).",
+      "Note: if the host only has a single monitor (or OS clamps window positions), the sweep still exercises large-coordinate paths and must remain stable."
     ]
   },
   "steps": [
@@ -75,23 +75,17 @@
       "timeout_frames": 240,
       "timeout_ms": 15000
     },
-    { "type": "capture_bundle", "label": "multiwindow-drag-back-large-move-after-tearoff" },
+    { "type": "capture_bundle", "label": "multiwindow-drag-back-outer-sweep-after-tearoff" },
 
     { "type": "raise_window", "window": { "kind": "last_seen" } },
-    {
-      "type": "set_window_outer_position",
-      "window": { "kind": "last_seen" },
-      "x_px": 3800.0,
-      "y_px": 120.0
-    },
-    {
-      "type": "set_window_inner_size",
-      "window": { "kind": "last_seen" },
-      "width_px": 900.0,
-      "height_px": 700.0
-    },
+    { "type": "set_window_outer_position", "window": { "kind": "last_seen" }, "x_px": 4200.0, "y_px": 120.0 },
     { "type": "wait_frames", "n": 4 },
-    { "type": "capture_bundle", "label": "multiwindow-drag-back-large-move-after-outer-move" },
+    { "type": "capture_bundle", "label": "multiwindow-drag-back-outer-sweep-after-outer-move-pos-x" },
+
+    { "type": "raise_window", "window": { "kind": "last_seen" } },
+    { "type": "set_window_outer_position", "window": { "kind": "last_seen" }, "x_px": -2400.0, "y_px": 120.0 },
+    { "type": "wait_frames", "n": 4 },
+    { "type": "capture_bundle", "label": "multiwindow-drag-back-outer-sweep-after-outer-move-neg-x" },
 
     { "type": "raise_window", "window": { "kind": "first_seen" } },
     {
@@ -129,10 +123,7 @@
     {
       "type": "assert",
       "window": { "kind": "first_seen" },
-      "predicate": {
-        "kind": "dock_graph_signature_contains",
-        "needle": "demo.viewport.left"
-      }
+      "predicate": { "kind": "dock_graph_signature_contains", "needle": "demo.viewport.left" }
     },
     {
       "type": "assert",
@@ -149,6 +140,7 @@
       "window": { "kind": "first_seen" },
       "predicate": { "kind": "dock_graph_signature_contains", "needle": "floatings=[]" }
     },
-    { "type": "capture_bundle", "label": "docking-arbitration-demo-multiwindow-drag-tab-back-to-main-large-outer-move" }
+    { "type": "capture_bundle", "label": "docking-arbitration-demo-multiwindow-drag-back-outer-pos-sweep" }
   ]
 }
+

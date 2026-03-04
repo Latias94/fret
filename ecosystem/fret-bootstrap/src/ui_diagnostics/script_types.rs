@@ -20,6 +20,7 @@ pub(super) struct ActiveScript {
     pub(super) last_injected_pointer_source_step: Option<u32>,
     pub(super) last_injected_pointer_source_test_id: Option<String>,
     pub(super) wait_frames_remaining: u32,
+    pub(super) wait_ms_deadline_unix_ms: Option<u64>,
     pub(super) wait_until: Option<WaitUntilState>,
     pub(super) wait_shortcut_routing_trace: Option<WaitShortcutRoutingTraceState>,
     pub(super) wait_command_dispatch_trace: Option<WaitCommandDispatchTraceState>,
@@ -425,6 +426,7 @@ pub(super) struct V2MovePointerSweepState {
 pub(super) struct WaitUntilState {
     pub(super) step_index: usize,
     pub(super) remaining_frames: u32,
+    pub(super) deadline_unix_ms: Option<u64>,
     pub(super) cached_test_id_predicate_last_stale: Option<bool>,
 }
 
@@ -432,6 +434,7 @@ pub(super) struct WaitUntilState {
 pub(super) struct WaitShortcutRoutingTraceState {
     pub(super) step_index: usize,
     pub(super) remaining_frames: u32,
+    pub(super) deadline_unix_ms: Option<u64>,
     pub(super) start_frame_id: u64,
 }
 
@@ -439,6 +442,7 @@ pub(super) struct WaitShortcutRoutingTraceState {
 pub(super) struct WaitCommandDispatchTraceState {
     pub(super) step_index: usize,
     pub(super) remaining_frames: u32,
+    pub(super) deadline_unix_ms: Option<u64>,
     pub(super) start_frame_id: u64,
 }
 
@@ -446,12 +450,14 @@ pub(super) struct WaitCommandDispatchTraceState {
 pub(super) struct WaitOverlayPlacementTraceState {
     pub(super) step_index: usize,
     pub(super) remaining_frames: u32,
+    pub(super) deadline_unix_ms: Option<u64>,
 }
 
 #[derive(Debug, Clone)]
 pub(super) struct ScreenshotWaitState {
     pub(super) step_index: usize,
     pub(super) remaining_frames: u32,
+    pub(super) deadline_unix_ms: Option<u64>,
     pub(super) request_id: String,
     pub(super) window_ffi: u64,
 }

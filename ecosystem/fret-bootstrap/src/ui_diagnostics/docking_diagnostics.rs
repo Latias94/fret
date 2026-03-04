@@ -360,6 +360,47 @@ pub struct UiDockDragDiagnosticsV1 {
     pub pointer_id: u64,
     pub source_window: u64,
     pub current_window: u64,
+    /// Window-local logical cursor position at the time the snapshot was published.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub position: Option<PointV1>,
+    /// Window-local logical cursor position when the drag session started.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub start_position: Option<PointV1>,
+    /// Cursor grab offset in window-local logical coordinates (ImGui-style multi-viewport anchor).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cursor_grab_offset: Option<PointV1>,
+    /// The OS window requested to follow the cursor for this drag session (if any).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub follow_window: Option<u64>,
+    /// Raw cursor position in screen-space physical pixels, as observed by the runner.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cursor_screen_pos_raw_physical_px: Option<PointV1>,
+    /// Cursor position in screen-space physical pixels used for local position conversion.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cursor_screen_pos_used_physical_px: Option<PointV1>,
+    #[serde(default)]
+    pub cursor_screen_pos_was_clamped: bool,
+    #[serde(default)]
+    pub cursor_override_active: bool,
+    /// Outer position of `current_window` in screen-space physical pixels when routing was computed.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub current_window_outer_pos_physical_px: Option<PointV1>,
+    /// Decoration offset (client origin relative to outer origin) in physical pixels for `current_window`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub current_window_decoration_offset_physical_px: Option<PointV1>,
+    /// Computed client origin (screen-space physical px) for `current_window`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub current_window_client_origin_screen_physical_px: Option<PointV1>,
+    #[serde(default)]
+    pub current_window_client_origin_source_platform: bool,
+    /// Scale factor used by the runner when converting screen physical px into window-local logical px.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub current_window_scale_factor_x1000_from_runner: Option<u32>,
+    /// Local position derived from screen cursor + client origin + scale factor.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub current_window_local_pos_from_screen_logical_px: Option<PointV1>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub current_window_scale_factor_x1000: Option<u32>,
     #[serde(default)]
     pub kind: String,
     pub dragging: bool,
@@ -372,6 +413,8 @@ pub struct UiDockDragDiagnosticsV1 {
     pub window_under_cursor_source: String,
     #[serde(default)]
     pub moving_window: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub moving_window_scale_factor_x1000: Option<u32>,
     #[serde(default)]
     pub window_under_moving_window: Option<u64>,
     #[serde(default)]
@@ -384,6 +427,35 @@ impl UiDockDragDiagnosticsV1 {
             pointer_id: snapshot.pointer_id.0,
             source_window: snapshot.source_window.data().as_ffi(),
             current_window: snapshot.current_window.data().as_ffi(),
+            position: Some(PointV1::from(snapshot.position)),
+            start_position: Some(PointV1::from(snapshot.start_position)),
+            cursor_grab_offset: snapshot.cursor_grab_offset.map(PointV1::from),
+            follow_window: snapshot.follow_window.map(|w| w.data().as_ffi()),
+            cursor_screen_pos_raw_physical_px: snapshot
+                .cursor_screen_pos_raw_physical_px
+                .map(PointV1::from),
+            cursor_screen_pos_used_physical_px: snapshot
+                .cursor_screen_pos_used_physical_px
+                .map(PointV1::from),
+            cursor_screen_pos_was_clamped: snapshot.cursor_screen_pos_was_clamped,
+            cursor_override_active: snapshot.cursor_override_active,
+            current_window_outer_pos_physical_px: snapshot
+                .current_window_outer_pos_physical_px
+                .map(PointV1::from),
+            current_window_decoration_offset_physical_px: snapshot
+                .current_window_decoration_offset_physical_px
+                .map(PointV1::from),
+            current_window_client_origin_screen_physical_px: snapshot
+                .current_window_client_origin_screen_physical_px
+                .map(PointV1::from),
+            current_window_client_origin_source_platform: snapshot
+                .current_window_client_origin_source_platform,
+            current_window_scale_factor_x1000_from_runner: snapshot
+                .current_window_scale_factor_x1000_from_runner,
+            current_window_local_pos_from_screen_logical_px: snapshot
+                .current_window_local_pos_from_screen_logical_px
+                .map(PointV1::from),
+            current_window_scale_factor_x1000: snapshot.current_window_scale_factor_x1000,
             kind: dock_drag_kind_label(snapshot.kind).to_string(),
             dragging: snapshot.dragging,
             cross_window_hover: snapshot.cross_window_hover,
@@ -395,6 +467,7 @@ impl UiDockDragDiagnosticsV1 {
             )
             .to_string(),
             moving_window: snapshot.moving_window.map(|w| w.data().as_ffi()),
+            moving_window_scale_factor_x1000: snapshot.moving_window_scale_factor_x1000,
             window_under_moving_window: snapshot.window_under_moving_window.map(|w| w.data().as_ffi()),
             window_under_moving_window_source: dock_drag_window_under_cursor_source_label(
                 snapshot.window_under_moving_window_source,

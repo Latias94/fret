@@ -90,6 +90,36 @@ pub struct DragSession {
     /// Best-effort diagnostics hint: which mechanism was used to select the hovered window during
     /// cross-window drag routing (OS-backed vs heuristic).
     pub window_under_cursor_source: WindowUnderCursorSource,
+    /// Best-effort diagnostics hint: raw cursor position in screen-space physical pixels, as
+    /// observed by the runner.
+    pub diag_cursor_screen_pos_raw_physical_px: Option<Point>,
+    /// Best-effort diagnostics hint: cursor position in screen-space physical pixels used for
+    /// local position conversion (may be clamped during scripted injection).
+    pub diag_cursor_screen_pos_used_physical_px: Option<Point>,
+    /// True when [`Self::diag_cursor_screen_pos_used_physical_px`] differs from
+    /// [`Self::diag_cursor_screen_pos_raw_physical_px`] due to runner-side clamping.
+    pub diag_cursor_screen_pos_was_clamped: bool,
+    /// True when diagnostics cursor override/input isolation is active while recording the
+    /// cursor conversion hints.
+    pub diag_cursor_override_active: bool,
+    /// Best-effort diagnostics hint: outer window position (top-left) in screen-space physical
+    /// pixels for [`Self::current_window`] at the time routing was computed.
+    pub diag_current_window_outer_pos_physical_px: Option<Point>,
+    /// Best-effort diagnostics hint: window decoration offset (client origin relative to outer
+    /// origin) in physical pixels for [`Self::current_window`].
+    pub diag_current_window_decoration_offset_physical_px: Option<Point>,
+    /// Best-effort diagnostics hint: computed client origin in screen-space physical pixels for
+    /// [`Self::current_window`] at the time routing was computed.
+    pub diag_current_window_client_origin_screen_physical_px: Option<Point>,
+    /// True when the runner obtained the client origin from a platform API (e.g. Win32 HWND),
+    /// rather than falling back to `outer_position + surface_position`.
+    pub diag_current_window_client_origin_source_platform: bool,
+    /// Best-effort diagnostics hint: scale factor (DPI) of [`Self::current_window`] used by the
+    /// runner to convert screen physical pixels into window-local logical pixels.
+    pub diag_current_window_scale_factor_x1000: Option<u32>,
+    /// Best-effort diagnostics hint: local cursor position derived from the screen-space cursor
+    /// position + client origin + scale factor.
+    pub diag_current_window_local_pos_from_screen_logical_px: Option<Point>,
     pub dragging: bool,
     pub phase: DragPhase,
     payload: Box<dyn Any>,
@@ -121,6 +151,16 @@ impl DragSession {
             transparent_payload_applied: false,
             transparent_payload_hit_test_passthrough_applied: false,
             window_under_cursor_source: WindowUnderCursorSource::Unknown,
+            diag_cursor_screen_pos_raw_physical_px: None,
+            diag_cursor_screen_pos_used_physical_px: None,
+            diag_cursor_screen_pos_was_clamped: false,
+            diag_cursor_override_active: false,
+            diag_current_window_outer_pos_physical_px: None,
+            diag_current_window_decoration_offset_physical_px: None,
+            diag_current_window_client_origin_screen_physical_px: None,
+            diag_current_window_client_origin_source_platform: false,
+            diag_current_window_scale_factor_x1000: None,
+            diag_current_window_local_pos_from_screen_logical_px: None,
             dragging: false,
             phase: DragPhase::Starting,
             payload: Box::new(payload),
@@ -152,6 +192,16 @@ impl DragSession {
             transparent_payload_applied: false,
             transparent_payload_hit_test_passthrough_applied: false,
             window_under_cursor_source: WindowUnderCursorSource::Unknown,
+            diag_cursor_screen_pos_raw_physical_px: None,
+            diag_cursor_screen_pos_used_physical_px: None,
+            diag_cursor_screen_pos_was_clamped: false,
+            diag_cursor_override_active: false,
+            diag_current_window_outer_pos_physical_px: None,
+            diag_current_window_decoration_offset_physical_px: None,
+            diag_current_window_client_origin_screen_physical_px: None,
+            diag_current_window_client_origin_source_platform: false,
+            diag_current_window_scale_factor_x1000: None,
+            diag_current_window_local_pos_from_screen_logical_px: None,
             dragging: false,
             phase: DragPhase::Starting,
             payload: Box::new(payload),

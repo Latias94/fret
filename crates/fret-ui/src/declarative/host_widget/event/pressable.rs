@@ -1,6 +1,7 @@
 use super::ElementHostWidget;
 use crate::declarative::prelude::*;
 use fret_runtime::DragHost;
+use std::sync::Arc;
 
 fn position_local(bounds: Rect, mapped: Point) -> Point {
     Point::new(
@@ -38,6 +39,7 @@ pub(super) fn handle_pressable<H: UiHost>(
         element: crate::GlobalElementId,
         node: NodeId,
         bounds: Rect,
+        source_test_id: Option<Arc<str>>,
         input_ctx: &'a fret_runtime::InputContext,
         prevented_default_actions: &'a mut fret_runtime::DefaultActionSet,
         requested_focus: &'a mut Option<NodeId>,
@@ -93,6 +95,29 @@ pub(super) fn handle_pressable<H: UiHost>(
 
         fn record_transient_event(&mut self, cx: action::ActionCx, key: u64) {
             crate::elements::record_transient_event(&mut *self.app, cx.window, cx.target, key);
+        }
+
+        fn record_pending_command_dispatch_source(
+            &mut self,
+            cx: action::ActionCx,
+            command: &fret_runtime::CommandId,
+            reason: ActivateReason,
+        ) {
+            let kind = match reason {
+                ActivateReason::Pointer => fret_runtime::CommandDispatchSourceKindV1::Pointer,
+                ActivateReason::Keyboard => fret_runtime::CommandDispatchSourceKindV1::Keyboard,
+            };
+            let source = fret_runtime::CommandDispatchSourceV1 {
+                kind,
+                element: Some(cx.target.0),
+                test_id: self.source_test_id.clone(),
+            };
+            self.app.with_global_mut(
+                fret_runtime::WindowPendingCommandDispatchSourceService::default,
+                |svc, app| {
+                    svc.record(cx.window, app.tick_id(), command.clone(), source);
+                },
+            );
         }
 
         #[track_caller]
@@ -261,6 +286,7 @@ pub(super) fn handle_pressable<H: UiHost>(
                         element: this.element,
                         node: cx.node,
                         bounds: cx.bounds,
+                        source_test_id: props.a11y.test_id.clone(),
                         input_ctx: &cx.input_ctx,
                         prevented_default_actions: cx.prevented_default_actions,
                         requested_focus: &mut cx.requested_focus,
@@ -321,6 +347,7 @@ pub(super) fn handle_pressable<H: UiHost>(
                         element: this.element,
                         node: cx.node,
                         bounds: cx.bounds,
+                        source_test_id: props.a11y.test_id.clone(),
                         input_ctx: &cx.input_ctx,
                         prevented_default_actions: cx.prevented_default_actions,
                         requested_focus: &mut cx.requested_focus,
@@ -421,6 +448,7 @@ pub(super) fn handle_pressable<H: UiHost>(
                         element: this.element,
                         node: cx.node,
                         bounds: cx.bounds,
+                        source_test_id: props.a11y.test_id.clone(),
                         input_ctx: &cx.input_ctx,
                         prevented_default_actions: cx.prevented_default_actions,
                         requested_focus: &mut cx.requested_focus,

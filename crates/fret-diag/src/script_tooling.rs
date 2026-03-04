@@ -9,7 +9,11 @@ use std::path::{Path, PathBuf};
 fn step_type_string_from_serializable<S: serde::Serialize>(step: &S) -> String {
     serde_json::to_value(step)
         .ok()
-        .and_then(|v| v.get("type").and_then(|v| v.as_str()).map(|s| s.to_string()))
+        .and_then(|v| {
+            v.get("type")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string())
+        })
         .unwrap_or_else(|| "unknown".to_string())
 }
 
@@ -163,12 +167,10 @@ pub(crate) fn preflight_strict_termination_issues(
             1 => {
                 let script: UiActionScriptV1 =
                     serde_json::from_value(value).map_err(|e| e.to_string())?;
-                let last_capture_bundle_index: Option<usize> = script
-                    .steps
-                    .iter()
-                    .enumerate()
-                    .rev()
-                    .find_map(|(i, step)| matches!(step, UiActionStepV1::CaptureBundle { .. }).then_some(i));
+                let last_capture_bundle_index: Option<usize> =
+                    script.steps.iter().enumerate().rev().find_map(|(i, step)| {
+                        matches!(step, UiActionStepV1::CaptureBundle { .. }).then_some(i)
+                    });
 
                 if let Some(last) = script.steps.last()
                     && matches!(last, UiActionStepV1::WaitFrames { .. })
@@ -183,7 +185,13 @@ pub(crate) fn preflight_strict_termination_issues(
                 }
 
                 if let Some(capture_idx) = last_capture_bundle_index {
-                    if let Some((i, _)) = script.steps.iter().enumerate().skip(capture_idx + 1).find(|(_i, step)| matches!(step, UiActionStepV1::WaitFrames { .. })) {
+                    if let Some((i, _)) = script
+                        .steps
+                        .iter()
+                        .enumerate()
+                        .skip(capture_idx + 1)
+                        .find(|(_i, step)| matches!(step, UiActionStepV1::WaitFrames { .. }))
+                    {
                         push_issue(
                             "script.wait_frames_after_last_capture_bundle",
                             "error",
@@ -196,12 +204,10 @@ pub(crate) fn preflight_strict_termination_issues(
             2 => {
                 let script: UiActionScriptV2 =
                     serde_json::from_value(value).map_err(|e| e.to_string())?;
-                let last_capture_bundle_index: Option<usize> = script
-                    .steps
-                    .iter()
-                    .enumerate()
-                    .rev()
-                    .find_map(|(i, step)| matches!(step, UiActionStepV2::CaptureBundle { .. }).then_some(i));
+                let last_capture_bundle_index: Option<usize> =
+                    script.steps.iter().enumerate().rev().find_map(|(i, step)| {
+                        matches!(step, UiActionStepV2::CaptureBundle { .. }).then_some(i)
+                    });
 
                 if let Some(last) = script.steps.last()
                     && matches!(last, UiActionStepV2::WaitFrames { .. })
@@ -215,12 +221,44 @@ pub(crate) fn preflight_strict_termination_issues(
                     );
                 }
 
+                if let Some(last) = script.steps.last()
+                    && matches!(last, UiActionStepV2::WaitMs { .. })
+                {
+                    let idx = script.steps.len().saturating_sub(1) as u64;
+                    push_issue(
+                        "script.ends_with_wait_ms",
+                        "error",
+                        "script ends with wait_ms; smoke/gate suites require deterministic termination (prefer wait_until + capture_bundle as the final step)".to_string(),
+                        Some(idx),
+                    );
+                }
+
                 if let Some(capture_idx) = last_capture_bundle_index {
-                    if let Some((i, _)) = script.steps.iter().enumerate().skip(capture_idx + 1).find(|(_i, step)| matches!(step, UiActionStepV2::WaitFrames { .. })) {
+                    if let Some((i, _)) = script
+                        .steps
+                        .iter()
+                        .enumerate()
+                        .skip(capture_idx + 1)
+                        .find(|(_i, step)| matches!(step, UiActionStepV2::WaitFrames { .. }))
+                    {
                         push_issue(
                             "script.wait_frames_after_last_capture_bundle",
                             "error",
                             "script has wait_frames after the final capture_bundle; this can stall indefinitely under occlusion/idle".to_string(),
+                            Some(i as u64),
+                        );
+                    }
+                    if let Some((i, _)) = script
+                        .steps
+                        .iter()
+                        .enumerate()
+                        .skip(capture_idx + 1)
+                        .find(|(_i, step)| matches!(step, UiActionStepV2::WaitMs { .. }))
+                    {
+                        push_issue(
+                            "script.wait_ms_after_last_capture_bundle",
+                            "error",
+                            "script has wait_ms after the final capture_bundle; this can stall indefinitely under occlusion/idle".to_string(),
                             Some(i as u64),
                         );
                     }
@@ -388,11 +426,28 @@ fn lint_script(path: &Path) -> Result<Value, String> {
         }));
     }
 
+    let wait_ms_max = step_summary["wait_ms_max"].as_u64().unwrap_or(0);
+    if wait_ms_max >= 2_000 {
+        findings.push(serde_json::json!({
+            "severity": "warning",
+            "code": "script.sleep_wait_ms",
+            "message": format!("script contains wait_ms up to {wait_ms_max}; prefer wait_until on semantic predicates for deterministic gates"),
+        }));
+    }
+
     if step_summary["ends_with_wait_frames"].as_bool() == Some(true) {
         findings.push(serde_json::json!({
             "severity": "warning",
             "code": "script.ends_with_wait_frames",
             "message": "script ends with wait_frames; prefer wait_until, or end with capture_bundle/assert so termination is deterministic under occlusion/idle",
+        }));
+    }
+
+    if step_summary["ends_with_wait_ms"].as_bool() == Some(true) {
+        findings.push(serde_json::json!({
+            "severity": "warning",
+            "code": "script.ends_with_wait_ms",
+            "message": "script ends with wait_ms; prefer wait_until, or end with capture_bundle/assert so termination is deterministic under occlusion/idle",
         }));
     }
 
@@ -402,7 +457,22 @@ fn lint_script(path: &Path) -> Result<Value, String> {
             "code": "script.wait_frames_after_last_capture_bundle",
             "message": "script has wait_frames after the final capture_bundle; this can stall indefinitely if the remaining window becomes occluded/idle and stops producing frames",
         }));
-    } else if step_summary["capture_bundle_not_last"].as_bool() == Some(true) {
+    }
+
+    if step_summary["wait_ms_after_last_capture_bundle"].as_bool() == Some(true) {
+        findings.push(serde_json::json!({
+            "severity": "warning",
+            "code": "script.wait_ms_after_last_capture_bundle",
+            "message": "script has wait_ms after the final capture_bundle; this can stall indefinitely if the remaining window becomes occluded/idle and stops producing frames",
+        }));
+    }
+
+    let has_wait_after_final_capture_bundle =
+        step_summary["wait_frames_after_last_capture_bundle"].as_bool() == Some(true)
+            || step_summary["wait_ms_after_last_capture_bundle"].as_bool() == Some(true);
+    if !has_wait_after_final_capture_bundle
+        && step_summary["capture_bundle_not_last"].as_bool() == Some(true)
+    {
         findings.push(serde_json::json!({
             "severity": "info",
             "code": "script.capture_bundle_not_last",
@@ -750,41 +820,46 @@ fn summarize_steps_v1(script: &UiActionScriptV1) -> Value {
         }
     }
 
-    let ends_with_wait_frames = matches!(script.steps.last(), Some(UiActionStepV1::WaitFrames { .. }));
+    let ends_with_wait_frames =
+        matches!(script.steps.last(), Some(UiActionStepV1::WaitFrames { .. }));
     let last_step_type = script
         .steps
         .last()
         .map(step_type_string_from_serializable)
         .unwrap_or_else(|| "none".to_string());
 
-    let (capture_bundle_not_last, wait_frames_after_last_capture_bundle, tail_step_count, tail_step_types) =
-        if let Some(last_capture_bundle_index) = last_capture_bundle_index {
-            let idx = last_capture_bundle_index as usize;
-            let capture_bundle_not_last = idx + 1 < script.steps.len();
-            let mut wait_frames_after_last_capture_bundle = false;
-            let mut tail_step_types: Vec<String> = Vec::new();
-            for step in script.steps.iter().skip(idx + 1) {
-                if matches!(step, UiActionStepV1::WaitFrames { .. }) {
-                    wait_frames_after_last_capture_bundle = true;
-                }
-                let t = step_type_string_from_serializable(step);
-                if tail_step_types
-                    .last()
-                    .map(|prev| prev != &t)
-                    .unwrap_or(true)
-                {
-                    tail_step_types.push(t);
-                }
+    let (
+        capture_bundle_not_last,
+        wait_frames_after_last_capture_bundle,
+        tail_step_count,
+        tail_step_types,
+    ) = if let Some(last_capture_bundle_index) = last_capture_bundle_index {
+        let idx = last_capture_bundle_index as usize;
+        let capture_bundle_not_last = idx + 1 < script.steps.len();
+        let mut wait_frames_after_last_capture_bundle = false;
+        let mut tail_step_types: Vec<String> = Vec::new();
+        for step in script.steps.iter().skip(idx + 1) {
+            if matches!(step, UiActionStepV1::WaitFrames { .. }) {
+                wait_frames_after_last_capture_bundle = true;
             }
-            (
-                capture_bundle_not_last,
-                wait_frames_after_last_capture_bundle,
-                (script.steps.len().saturating_sub(idx + 1)) as u64,
-                tail_step_types,
-            )
-        } else {
-            (false, false, 0, Vec::new())
-        };
+            let t = step_type_string_from_serializable(step);
+            if tail_step_types
+                .last()
+                .map(|prev| prev != &t)
+                .unwrap_or(true)
+            {
+                tail_step_types.push(t);
+            }
+        }
+        (
+            capture_bundle_not_last,
+            wait_frames_after_last_capture_bundle,
+            (script.steps.len().saturating_sub(idx + 1)) as u64,
+            tail_step_types,
+        )
+    } else {
+        (false, false, 0, Vec::new())
+    };
 
     serde_json::json!({
         "count": script.steps.len(),
@@ -803,6 +878,7 @@ fn summarize_steps_v1(script: &UiActionScriptV1) -> Value {
 fn summarize_steps_v2(script: &UiActionScriptV2) -> Value {
     let mut capture_bundle_count: u64 = 0;
     let mut wait_frames_max: u64 = 0;
+    let mut wait_ms_max: u64 = 0;
     let mut click_stable_count: u64 = 0;
     let mut wait_bounds_stable_count: u64 = 0;
     let mut last_capture_bundle_index: Option<u64> = None;
@@ -816,6 +892,7 @@ fn summarize_steps_v2(script: &UiActionScriptV2) -> Value {
             UiActionStepV2::WaitFrames { n, .. } => {
                 wait_frames_max = wait_frames_max.max(*n as u64)
             }
+            UiActionStepV2::WaitMs { n_ms, .. } => wait_ms_max = wait_ms_max.max(*n_ms as u64),
             UiActionStepV2::ClickStable { .. } => click_stable_count += 1,
             UiActionStepV2::WaitBoundsStable { .. } => wait_bounds_stable_count += 1,
             _ => {}
@@ -824,40 +901,51 @@ fn summarize_steps_v2(script: &UiActionScriptV2) -> Value {
 
     let ends_with_wait_frames =
         matches!(script.steps.last(), Some(UiActionStepV2::WaitFrames { .. }));
+    let ends_with_wait_ms = matches!(script.steps.last(), Some(UiActionStepV2::WaitMs { .. }));
     let last_step_type = script
         .steps
         .last()
         .map(step_type_string_from_serializable)
         .unwrap_or_else(|| "none".to_string());
 
-    let (capture_bundle_not_last, wait_frames_after_last_capture_bundle, tail_step_count, tail_step_types) =
-        if let Some(last_capture_bundle_index) = last_capture_bundle_index {
-            let idx = last_capture_bundle_index as usize;
-            let capture_bundle_not_last = idx + 1 < script.steps.len();
-            let mut wait_frames_after_last_capture_bundle = false;
-            let mut tail_step_types: Vec<String> = Vec::new();
-            for step in script.steps.iter().skip(idx + 1) {
-                if matches!(step, UiActionStepV2::WaitFrames { .. }) {
-                    wait_frames_after_last_capture_bundle = true;
-                }
-                let t = step_type_string_from_serializable(step);
-                if tail_step_types
-                    .last()
-                    .map(|prev| prev != &t)
-                    .unwrap_or(true)
-                {
-                    tail_step_types.push(t);
-                }
+    let (
+        capture_bundle_not_last,
+        wait_frames_after_last_capture_bundle,
+        wait_ms_after_last_capture_bundle,
+        tail_step_count,
+        tail_step_types,
+    ) = if let Some(last_capture_bundle_index) = last_capture_bundle_index {
+        let idx = last_capture_bundle_index as usize;
+        let capture_bundle_not_last = idx + 1 < script.steps.len();
+        let mut wait_frames_after_last_capture_bundle = false;
+        let mut wait_ms_after_last_capture_bundle = false;
+        let mut tail_step_types: Vec<String> = Vec::new();
+        for step in script.steps.iter().skip(idx + 1) {
+            if matches!(step, UiActionStepV2::WaitFrames { .. }) {
+                wait_frames_after_last_capture_bundle = true;
             }
-            (
-                capture_bundle_not_last,
-                wait_frames_after_last_capture_bundle,
-                (script.steps.len().saturating_sub(idx + 1)) as u64,
-                tail_step_types,
-            )
-        } else {
-            (false, false, 0, Vec::new())
-        };
+            if matches!(step, UiActionStepV2::WaitMs { .. }) {
+                wait_ms_after_last_capture_bundle = true;
+            }
+            let t = step_type_string_from_serializable(step);
+            if tail_step_types
+                .last()
+                .map(|prev| prev != &t)
+                .unwrap_or(true)
+            {
+                tail_step_types.push(t);
+            }
+        }
+        (
+            capture_bundle_not_last,
+            wait_frames_after_last_capture_bundle,
+            wait_ms_after_last_capture_bundle,
+            (script.steps.len().saturating_sub(idx + 1)) as u64,
+            tail_step_types,
+        )
+    } else {
+        (false, false, false, 0, Vec::new())
+    };
 
     serde_json::json!({
         "count": script.steps.len(),
@@ -867,10 +955,13 @@ fn summarize_steps_v2(script: &UiActionScriptV2) -> Value {
         "tail_step_count_after_last_capture_bundle": tail_step_count,
         "tail_step_types_after_last_capture_bundle": tail_step_types,
         "wait_frames_after_last_capture_bundle": wait_frames_after_last_capture_bundle,
+        "wait_ms_after_last_capture_bundle": wait_ms_after_last_capture_bundle,
         "wait_frames_max": wait_frames_max,
+        "wait_ms_max": wait_ms_max,
         "click_stable_count": click_stable_count,
         "wait_bounds_stable_count": wait_bounds_stable_count,
         "ends_with_wait_frames": ends_with_wait_frames,
+        "ends_with_wait_ms": ends_with_wait_ms,
         "last_step_type": last_step_type,
     })
 }
@@ -933,6 +1024,7 @@ mod tests {
             steps: vec![UiActionStepV2::CaptureScreenshot {
                 label: None,
                 timeout_frames: 1,
+                timeout_ms: None,
             }],
         };
         let inferred = infer_required_capabilities_v2(&script);
@@ -1077,9 +1169,10 @@ mod tests {
         let issues = preflight_strict_termination_issues(&[script_path.clone()]).unwrap();
         assert!(!issues.is_empty());
         assert!(issues.iter().any(|it| {
-            it.get("code")
-                .and_then(|v| v.as_str())
-                .is_some_and(|c| c == "script.ends_with_wait_frames" || c == "script.wait_frames_after_last_capture_bundle")
+            it.get("code").and_then(|v| v.as_str()).is_some_and(|c| {
+                c == "script.ends_with_wait_frames"
+                    || c == "script.wait_frames_after_last_capture_bundle"
+            })
         }));
 
         let _ = std::fs::remove_dir_all(&root);

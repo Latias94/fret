@@ -3,8 +3,7 @@ use std::rc::Rc;
 use std::sync::Arc;
 
 use fret_core::{Color, Corners, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap};
-use fret_runtime::CommandId;
-use fret_ui::action::{OnActivate, OnPressablePointerDown, PressablePointerDownResult};
+use fret_ui::action::{OnActivate, OnPressablePointerDown, OnPressablePointerUp};
 use fret_ui::element::{
     AnyElement, ContainerProps, FlexProps, LayoutStyle, MainAlign, PressableA11y, PressableProps,
     SemanticsDecoration, TextInkOverflow, TextProps,
@@ -12,28 +11,23 @@ use fret_ui::element::{
 use fret_ui::elements::GlobalElementId;
 use fret_ui::scroll::ScrollHandle;
 use fret_ui::{ElementContext, UiHost};
-use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 
 use super::consts::TAB_CLOSE_SIZE;
 use super::layouts::{centered_row, fill_layout, fixed_square_layout};
 
 pub(super) fn tab_close_button<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    close_command: CommandId,
-    pane_activate_cmd: Option<CommandId>,
     hover_bg: Color,
     text_style: TextStyle,
     tab_fg: Color,
     test_id: Option<Arc<str>>,
+    on_pointer_down: OnPressablePointerDown,
+    on_pointer_up: OnPressablePointerUp,
 ) -> AnyElement {
-    let on_down: OnPressablePointerDown = Arc::new(|host, _acx, _down| {
-        host.prevent_default(fret_runtime::DefaultAction::FocusOnPointerDown);
-        PressablePointerDownResult::Continue
-    });
-
     cx.pressable(
         PressableProps {
             layout: fixed_square_layout(TAB_CLOSE_SIZE),
+            enabled: true,
             focusable: false,
             a11y: PressableA11y {
                 role: Some(SemanticsRole::Button),
@@ -43,12 +37,11 @@ pub(super) fn tab_close_button<H: UiHost>(
             },
             ..Default::default()
         },
-        move |cx, close_state| {
-            cx.pressable_on_pointer_down(on_down.clone());
-            cx.pressable_dispatch_action_if_enabled_opt(pane_activate_cmd.clone());
-            cx.pressable_dispatch_action_if_enabled(close_command.clone());
+        move |cx, state| {
+            cx.pressable_on_pointer_down(on_pointer_down.clone());
+            cx.pressable_on_pointer_up(on_pointer_up.clone());
 
-            let bg = if close_state.hovered || close_state.pressed {
+            let bg = if state.hovered || state.pressed {
                 Some(hover_bg)
             } else {
                 None
@@ -173,6 +166,7 @@ pub(super) fn tab_strip_scroll_button<H: UiHost>(
     enabled: bool,
     glyph: &'static str,
     a11y_label: &'static str,
+    test_id: Option<Arc<str>>,
     delta_x_sign: f32,
     scroll_step: Px,
     scroll_handle: ScrollHandle,
@@ -190,6 +184,7 @@ pub(super) fn tab_strip_scroll_button<H: UiHost>(
             a11y: PressableA11y {
                 role: Some(SemanticsRole::Button),
                 label: Some(Arc::from(a11y_label)),
+                test_id,
                 ..Default::default()
             },
             ..Default::default()

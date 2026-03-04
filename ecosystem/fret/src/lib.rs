@@ -156,7 +156,11 @@ impl Default for Defaults {
 #[deprecated(
     note = "MVU is legacy-only (compat). Prefer View+actions (ADR 0308/0307) and payload actions v2 (ADR 0312). Enable `fret` feature `legacy-mvu` to use MVU surfaces."
 )]
-#[cfg(all(not(target_arch = "wasm32"), feature = "desktop", feature = "legacy-mvu"))]
+#[cfg(all(
+    not(target_arch = "wasm32"),
+    feature = "desktop",
+    feature = "legacy-mvu"
+))]
 pub mod mvu;
 
 /// Legacy MVU-style command routing helpers (portable; desktop + web).
