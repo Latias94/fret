@@ -360,6 +360,18 @@ pub struct UiDockDragDiagnosticsV1 {
     pub pointer_id: u64,
     pub source_window: u64,
     pub current_window: u64,
+    /// Window-local logical cursor position at the time the snapshot was published.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub position: Option<PointV1>,
+    /// Window-local logical cursor position when the drag session started.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub start_position: Option<PointV1>,
+    /// Cursor grab offset in window-local logical coordinates (ImGui-style multi-viewport anchor).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cursor_grab_offset: Option<PointV1>,
+    /// The OS window requested to follow the cursor for this drag session (if any).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub follow_window: Option<u64>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub current_window_scale_factor_x1000: Option<u32>,
     #[serde(default)]
@@ -388,6 +400,10 @@ impl UiDockDragDiagnosticsV1 {
             pointer_id: snapshot.pointer_id.0,
             source_window: snapshot.source_window.data().as_ffi(),
             current_window: snapshot.current_window.data().as_ffi(),
+            position: Some(PointV1::from(snapshot.position)),
+            start_position: Some(PointV1::from(snapshot.start_position)),
+            cursor_grab_offset: snapshot.cursor_grab_offset.map(PointV1::from),
+            follow_window: snapshot.follow_window.map(|w| w.data().as_ffi()),
             current_window_scale_factor_x1000: snapshot.current_window_scale_factor_x1000,
             kind: dock_drag_kind_label(snapshot.kind).to_string(),
             dragging: snapshot.dragging,

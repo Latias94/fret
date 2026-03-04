@@ -172,6 +172,12 @@ Footgun / recommendation:
   - `fretboard diag dock-routing <bundle_dir|bundle.json|bundle.schema2.json>`
     - Note: when an adjacent bundle artifact is available, `dock-routing` may regenerate/overwrite `dock.routing.json`
       to keep bounded evidence keys up to date (no manual deletion needed).
+    - The report is intentionally compact; it is typically enough to debug multi-window docking routing issues without
+      opening `bundle.json`. Look for:
+      - `src/cur` (source/current window ids),
+      - `pos/start/grab/follow` (window-local cursor position + ImGui-style cursor grab anchor),
+      - `sf_cur/sf_move` (scale factor evidence for mixed-DPI follow drags),
+      - `under` (hover selection source: platform vs heuristic).
   - `fretboard diag query test-id <bundle_dir|bundle.json|bundle.schema2.json> <pattern> --top 50`
   - `fretboard diag slice <bundle_dir|bundle.json|bundle.schema2.json> --test-id <test_id>`
   - `fretboard diag ai-packet <bundle_dir|bundle.json|bundle.schema2.json> --packet-out <dir>`

@@ -7,11 +7,19 @@ use crate::DragKindId;
 use crate::FrameId;
 use crate::WindowUnderCursorSource;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct DockDragDiagnostics {
     pub pointer_id: PointerId,
     pub source_window: AppWindowId,
     pub current_window: AppWindowId,
+    /// Window-local logical cursor position at the time the snapshot was published.
+    pub position: Point,
+    /// Window-local logical cursor position when the drag session started.
+    pub start_position: Point,
+    /// Cursor grab offset in window-local logical coordinates (ImGui-style multi-viewport anchor).
+    pub cursor_grab_offset: Option<Point>,
+    /// The OS window requested to follow the cursor for this drag session (if any).
+    pub follow_window: Option<AppWindowId>,
     /// Best-effort diagnostics hint: scale factor (DPI) of `current_window` at the time the
     /// snapshot was published.
     pub current_window_scale_factor_x1000: Option<u32>,

@@ -287,6 +287,9 @@ inability to hit a specific docking direction are often coordinate-space bugs.
   - Notes:
     - Keep this item `[~]` until we have a dedicated conformance test covering mixed-DPI multi-monitor + overlap.
       Tracker: `docs/workstreams/docking-multiwindow-imgui-parity-todo.md` (`DW-P0-dpi-006`, `DW-P1-win-002`).
+  - Diagnostics (bounded):
+    - `fretboard diag dock-routing <bundle_dir|bundle.schema2.json>` surfaces `pos/start/grab/follow` (window-local cursor position + grab anchor)
+      and `sf_cur/sf_move` (mixed-DPI evidence) without opening `bundle.json`.
 
 - [x] **Decoration offset (outer vs client origin) is not confused**
   - ImGui expectation (platform contract): viewport pos is client/inner origin; platform APIs often need outer pos.

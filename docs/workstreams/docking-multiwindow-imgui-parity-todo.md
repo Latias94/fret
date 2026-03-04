@@ -160,7 +160,9 @@ Each TODO is labeled:
     - Start with a manual checklist + bundle captures (pre/post boundary crossing) in the docking arbitration demo.
     - Promote to an automated diag script only if we can reliably detect a mixed-DPI environment (or explicitly mark the
       script as “requires mixed-dpi” and skip otherwise).
-    - Tip: `fretboard diag dock-routing <bundle_dir|bundle.schema2.json>` records `*_scale_factor_x1000` fields when present,
+    - Tip: `fretboard diag dock-routing <bundle_dir|bundle.schema2.json>` records:
+      - `pos/start/grab/follow` (window-local cursor position + cursor grab anchor),
+      - `*_scale_factor_x1000` fields when present (mixed-DPI evidence),
       and will regenerate stale `dock.routing.json` from the adjacent bundle artifact (no manual deletion needed).
   - Progress:
     - [x] Evidence surface area: `dock-routing` includes `current_window_scale_factor_x1000` / `moving_window_scale_factor_x1000`.

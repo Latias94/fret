@@ -123,6 +123,13 @@ fn print_dock_routing_report(routing: &Value, routing_path: &Path, bundle_path: 
         Some(format!("{:.3}", (sf as f64) / 1000.0))
     }
 
+    fn point_xy_string_obj(v: &serde_json::Map<String, Value>, key: &str) -> Option<String> {
+        let p = v.get(key).and_then(|v| v.as_object())?;
+        let x = p.get("x").and_then(|v| v.as_f64())?;
+        let y = p.get("y").and_then(|v| v.as_f64())?;
+        Some(format!("{x:.1},{y:.1}"))
+    }
+
     fn str_field<'a>(v: &'a Value, key: &str) -> &'a str {
         v.get(key).and_then(|v| v.as_str()).unwrap_or("")
     }
@@ -190,11 +197,27 @@ fn print_dock_routing_report(routing: &Value, routing_path: &Path, bundle_path: 
                 .get("window_under_cursor_source")
                 .and_then(|v| v.as_str())
                 .unwrap_or("");
+            let pos = point_xy_string_obj(drag, "position");
+            let start = point_xy_string_obj(drag, "start_position");
+            let grab = point_xy_string_obj(drag, "cursor_grab_offset");
+            let follow = drag.get("follow_window").and_then(|v| v.as_u64());
             let sf_moving = scale_factor_x1000_string_obj(drag, "moving_window_scale_factor_x1000");
 
             let mut drag_parts: Vec<String> = Vec::new();
             drag_parts.push(format!("src={src}"));
             drag_parts.push(format!("cur={cur}"));
+            if let Some(pos) = pos {
+                drag_parts.push(format!("pos=({pos})"));
+            }
+            if let Some(start) = start {
+                drag_parts.push(format!("start=({start})"));
+            }
+            if let Some(grab) = grab {
+                drag_parts.push(format!("grab=({grab})"));
+            }
+            if let Some(follow) = follow {
+                drag_parts.push(format!("follow={follow}"));
+            }
             if let Some(sf_cur) = sf_cur {
                 drag_parts.push(format!("sf_cur={sf_cur}"));
             }
