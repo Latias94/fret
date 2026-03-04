@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use fret_core::{Color, Corners, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap};
 use fret_runtime::CommandId;
-use fret_ui::action::OnActivate;
+use fret_ui::action::{OnActivate, OnPressablePointerDown, PressablePointerDownResult};
 use fret_ui::element::{
     AnyElement, ContainerProps, FlexProps, LayoutStyle, MainAlign, PressableA11y, PressableProps,
     SemanticsDecoration, TextInkOverflow, TextProps,
@@ -26,6 +26,11 @@ pub(super) fn tab_close_button<H: UiHost>(
     tab_fg: Color,
     test_id: Option<Arc<str>>,
 ) -> AnyElement {
+    let on_down: OnPressablePointerDown = Arc::new(|host, _acx, _down| {
+        host.prevent_default(fret_runtime::DefaultAction::FocusOnPointerDown);
+        PressablePointerDownResult::Continue
+    });
+
     cx.pressable(
         PressableProps {
             layout: fixed_square_layout(TAB_CLOSE_SIZE),
@@ -39,6 +44,7 @@ pub(super) fn tab_close_button<H: UiHost>(
             ..Default::default()
         },
         move |cx, close_state| {
+            cx.pressable_on_pointer_down(on_down.clone());
             cx.pressable_dispatch_action_if_enabled_opt(pane_activate_cmd.clone());
             cx.pressable_dispatch_action_if_enabled(close_command.clone());
 
