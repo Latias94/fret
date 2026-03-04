@@ -7,15 +7,17 @@ action-first + view runtime v1 adoption.
 
 Scope:
 
-- “Legacy MVU” refers to `fret::mvu` and `fret::mvu_router` (and their `MessageRouter`/`MvuProgram`
-  authoring surface).
+- “Legacy MVU” refers to the former `fret::mvu` / `fret::mvu_router` surfaces (and their
+  `MessageRouter`/`MvuProgram` authoring surface), plus any remaining in-tree references to them.
 - This is an inventory, not a deletion plan. Deletion/quarantine is tracked by `AFA-clean-062`.
 
 Note:
 
-- MVU is currently feature-gated behind the `fret` feature `legacy-mvu` and surfaces are compile-time
-  deprecated.
+- MVU surfaces were removed from `ecosystem/fret` (feature `legacy-mvu`, and modules `mvu`,
+  `mvu_router`, `legacy`) as part of M9.
 - In-tree demos no longer carry a separate demo-level opt-in feature (e.g. `legacy-mvu-demos`).
+- Any remaining MVU references are expected to be limited to internal scaffolding sources and docs
+  until M9 completes.
 
 ## Why this inventory exists
 
@@ -26,7 +28,7 @@ Note:
 
 Policy:
 
-- MVU is legacy-only (compat), not a supported alternative golden path.
+- MVU is not an available authoring path in-tree. Do not reintroduce it.
 - See: `docs/workstreams/action-first-authoring-fearless-refactor-v1/MVU_POLICY.md`
 
 Removal-track note:
@@ -104,9 +106,7 @@ Recommendation:
 
 ## Suggested next migrations (low-risk, high-value)
 
-1) Remove the `legacy-mvu` feature from `ecosystem/fret` and delete MVU modules (`mvu`, `mvu_router`,
-   `legacy`).
-2) Remove any internal legacy MVU scaffolding sources from `apps/fretboard/src/scaffold/templates.rs`.
-3) Update docs/templates to stop mentioning MVU as an available authoring path (keep a short history
+1) Remove any internal legacy MVU scaffolding sources from `apps/fretboard/src/scaffold/templates.rs`.
+2) Update docs/templates to stop mentioning MVU as an available authoring path (keep a short history
    note instead).
-4) Add a lightweight gate that fails if MVU identifiers reappear (grep-based).
+3) Add a lightweight gate that fails if MVU identifiers reappear (grep-based).

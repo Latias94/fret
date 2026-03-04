@@ -155,6 +155,6 @@ Exit criteria:
 
 Current blockers (as of 2026-03-05):
 
-- `ecosystem/fret` still exposes legacy MVU (`legacy-mvu` feature + modules).
 - `apps/fretboard` scaffolding still contains internal legacy MVU template sources (not user-facing, but must be removed for M9).
 - Docs still describe MVU as an available compat path (needs cleanup + history note).
+- A small gate is still missing to prevent MVU identifiers from being reintroduced.

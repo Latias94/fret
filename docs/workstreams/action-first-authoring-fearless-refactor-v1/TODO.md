@@ -483,7 +483,7 @@ Tasks:
   - `apps/fret-examples/src/drop_shadow_demo_legacy.rs`
   - `apps/fret-examples/src/postprocess_theme_demo_legacy.rs`
 - [x] AFA-m9-003 Remove `apps/fret-examples` feature `legacy-mvu-demos` and any routing/printing branches in `apps/fret-demo`.
-- [ ] AFA-m9-004 Remove `ecosystem/fret` feature `legacy-mvu` and delete MVU modules:
+- [x] AFA-m9-004 Remove `ecosystem/fret` feature `legacy-mvu` and delete MVU modules:
   - `ecosystem/fret/src/mvu.rs`
   - `ecosystem/fret/src/mvu_router.rs`
   - `ecosystem/fret/src/legacy.rs`
