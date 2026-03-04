@@ -28,6 +28,7 @@ use fret_ui_kit::declarative::transition::{
 use fret_ui_kit::headless::safe_hover;
 use fret_ui_kit::primitives::direction as direction_prim;
 use fret_ui_kit::primitives::navigation_menu as radix_navigation_menu;
+use fret_ui_kit::primitives::roving_focus_group;
 use fret_ui_kit::primitives::{popper, popper_content};
 use fret_ui_kit::theme_tokens;
 use fret_ui_kit::typography;
@@ -1390,10 +1391,30 @@ impl NavigationMenu {
             let default_trigger_fg_for_list = default_trigger_fg.clone();
             let style_for_list = style.clone();
 
-            let list = cx.flex(list_props, move |cx| {
-                items_for_children
-                    .iter_mut()
-                    .map(|item| {
+            let roving_disabled: Arc<[bool]> = items_for_children
+                .iter()
+                .map(|it| menu_disabled || it.disabled)
+                .collect::<Vec<_>>()
+                .into();
+            let roving_props = roving_focus_group::RovingFlexProps {
+                flex: list_props,
+                roving: roving_focus_group::RovingFocusProps {
+                    enabled: true,
+                    wrap: true,
+                    disabled: roving_disabled,
+                },
+            };
+            let dir_for_roving = direction_prim::use_direction_in_scope(cx, None);
+
+            let list = roving_focus_group::roving_focus_group_apg_with_direction(
+                cx,
+                roving_props,
+                roving_focus_group::TypeaheadPolicy::None,
+                dir_for_roving,
+                move |cx| {
+                    items_for_children
+                        .iter_mut()
+                        .map(|item| {
                         let item_value = item.value.clone();
                         let label = item.label.clone();
                         let disabled = menu_disabled || item.disabled;
@@ -1704,9 +1725,10 @@ impl NavigationMenu {
                                     },
                                 )
                         })
-                    })
-                    .collect::<Vec<_>>()
-            });
+                        })
+                        .collect::<Vec<_>>()
+                },
+            );
 
             let viewport_children = active_idx
                 .and_then(|idx| items.get_mut(idx))
@@ -3136,6 +3158,89 @@ mod tests {
             !has_open_timer,
             "expected no delayed-open timer after escape gating"
         );
+    }
+
+    #[test]
+    fn horizontal_arrow_keys_move_focus_between_triggers_like_radix() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let model = app.models_mut().insert(None::<Arc<str>>);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(520.0), Px(320.0)),
+        );
+        let mut services = FakeServices::default();
+
+        bump_frame(&mut app);
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "navigation-menu-roving",
+            |cx| {
+                let items = vec![
+                    NavigationMenuItem::new("alpha", "Alpha", std::iter::empty()),
+                    NavigationMenuItem::new("beta", "Beta", std::iter::empty()),
+                ];
+                vec![
+                    NavigationMenu::new(model.clone())
+                        .items(items)
+                        .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let (alpha_id, beta_id) = {
+            let snap = ui.semantics_snapshot().expect("semantics snapshot");
+            let alpha_id = snap
+                .nodes
+                .iter()
+                .find(|n| n.role == SemanticsRole::Link && n.label.as_deref() == Some("Alpha"))
+                .or_else(|| {
+                    snap.nodes.iter().find(|n| {
+                        n.role == SemanticsRole::Button && n.label.as_deref() == Some("Alpha")
+                    })
+                })
+                .expect("Alpha trigger semantics")
+                .id;
+            let beta_id = snap
+                .nodes
+                .iter()
+                .find(|n| n.role == SemanticsRole::Link && n.label.as_deref() == Some("Beta"))
+                .or_else(|| {
+                    snap.nodes.iter().find(|n| {
+                        n.role == SemanticsRole::Button && n.label.as_deref() == Some("Beta")
+                    })
+                })
+                .expect("Beta trigger semantics")
+                .id;
+            (alpha_id, beta_id)
+        };
+
+        ui.set_focus(Some(alpha_id));
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::KeyDown {
+                key: KeyCode::ArrowRight,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        assert_eq!(snap.focus, Some(beta_id));
     }
 
     #[test]
