@@ -1,13 +1,7 @@
 use std::collections::HashMap;
 use std::sync::{Arc, OnceLock};
 
-use fret::mvu_router::KeyedMessageRouter;
 use fret_runtime::CommandId;
-
-#[cfg(target_arch = "wasm32")]
-use std::cell::RefCell;
-#[cfg(not(target_arch = "wasm32"))]
-use std::sync::Mutex;
 
 pub(crate) const ENV_UI_GALLERY_BISECT: &str = "FRET_UI_GALLERY_BISECT";
 pub(crate) const ENV_UI_GALLERY_START_PAGE: &str = "FRET_UI_GALLERY_START_PAGE";
@@ -2477,50 +2471,14 @@ pub(crate) fn page_id_for_nav_command(command: &str) -> Option<&'static str> {
     by_command.get(command).copied()
 }
 
-#[cfg(not(target_arch = "wasm32"))]
-fn with_data_grid_row_router<R>(f: impl FnOnce(&mut KeyedMessageRouter<u64, u64>) -> R) -> R {
-    static ROUTER: OnceLock<Mutex<KeyedMessageRouter<u64, u64>>> = OnceLock::new();
-    let lock = ROUTER.get_or_init(|| {
-        Mutex::new(KeyedMessageRouter::new(
-            CMD_DATA_GRID_ROW_PREFIX.to_string(),
-        ))
-    });
-    let mut guard = lock
-        .lock()
-        .expect("ui-gallery data-grid row router lock poisoned");
-    f(&mut guard)
-}
-
-#[cfg(target_arch = "wasm32")]
-fn with_data_grid_row_router<R>(f: impl FnOnce(&mut KeyedMessageRouter<u64, u64>) -> R) -> R {
-    thread_local! {
-        static ROUTER: RefCell<KeyedMessageRouter<u64, u64>> =
-            RefCell::new(KeyedMessageRouter::new(CMD_DATA_GRID_ROW_PREFIX.to_string()));
-    }
-
-    ROUTER.with(|router| f(&mut *router.borrow_mut()))
-}
-
-#[cfg(not(target_arch = "wasm32"))]
 pub(crate) fn data_grid_row_command(row: usize) -> Option<CommandId> {
     let row = u64::try_from(row).ok()?;
-    Some(with_data_grid_row_router(|router| router.cmd(row, row)))
+    Some(CommandId::new(format!("{CMD_DATA_GRID_ROW_PREFIX}{row}")))
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 pub(crate) fn data_grid_row_for_command(command: &str) -> Option<u64> {
-    with_data_grid_row_router(|router| router.try_resolve(&CommandId::new(command)))
-}
-
-#[cfg(target_arch = "wasm32")]
-pub(crate) fn data_grid_row_command(row: usize) -> Option<CommandId> {
-    let row = u64::try_from(row).ok()?;
-    Some(with_data_grid_row_router(|router| router.cmd(row, row)))
-}
-
-#[cfg(target_arch = "wasm32")]
-pub(crate) fn data_grid_row_for_command(command: &str) -> Option<u64> {
-    with_data_grid_row_router(|router| router.try_resolve(&CommandId::new(command)))
+    let suffix = command.strip_prefix(CMD_DATA_GRID_ROW_PREFIX)?;
+    suffix.parse::<u64>().ok()
 }
 
 pub(crate) fn page_meta(selected: &str) -> (&'static str, &'static str) {
