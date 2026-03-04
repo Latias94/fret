@@ -177,6 +177,7 @@ Notes:
 Gate runner:
 
 - `pwsh tools/diag_gate_action_first_authoring_v1.ps1` (default output: `target/dfa-v1/`; runs under fixed frame delta via `FRET_DIAG_FIXED_FRAME_DELTA_MS=16`; keeps output paths short to avoid Windows path-length issues during schema2 bundle dumps)
+  - Note: the gate script builds cookbook examples with `--features cookbook-diag` (and enables per-example feature bundles such as `cookbook-imui` when required) so the launched demos expose the diagnostics transport.
 
 ### 2.3 wasm smoke (build-only)
 
