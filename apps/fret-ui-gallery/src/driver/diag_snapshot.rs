@@ -2,7 +2,7 @@ use fret_app::App;
 use fret_bootstrap::ui_diagnostics::UiDiagnosticsService;
 use std::sync::Arc;
 
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(feature = "gallery-dev", not(target_arch = "wasm32")))]
 use crate::harness::{
     UI_GALLERY_CODE_EDITOR_TORTURE_SOFT_WRAP_MARKER, UiGalleryCodeEditorHandlesStore,
     UiGalleryMarkdownEditorHandlesStore,
@@ -33,7 +33,7 @@ pub(super) fn install_ui_gallery_snapshot_provider(app: &mut App) {
                     Option<serde_json::Value>,
                     Option<serde_json::Value>,
                 ) = {
-                    #[cfg(not(target_arch = "wasm32"))]
+                    #[cfg(all(feature = "gallery-dev", not(target_arch = "wasm32")))]
                     {
                         let torture = app
                             .global::<UiGalleryCodeEditorHandlesStore>()
@@ -183,7 +183,7 @@ pub(super) fn install_ui_gallery_snapshot_provider(app: &mut App) {
                         (torture, markdown_editor_source)
                     }
 
-                    #[cfg(target_arch = "wasm32")]
+                    #[cfg(any(target_arch = "wasm32", not(feature = "gallery-dev")))]
                     {
                         (None, None)
                     }
