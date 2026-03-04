@@ -2308,6 +2308,7 @@ impl DropdownMenu {
                                                         window_margin: Px,
                                                         submenu_min_width: Px,
                                                         submenu_max_height_metric: Option<Px>,
+                                                        hide_semantics_when_closed: bool,
                                                         open: Model<bool>,
                                                         submenu_for_content: menu::sub::MenuSubmenuModels,
                                                         submenu_cfg: menu::sub::MenuSubmenuConfig,
@@ -2348,6 +2349,8 @@ impl DropdownMenu {
                                                         let submenu_min_width = env.submenu_min_width;
                                                         let submenu_max_height_metric =
                                                             env.submenu_max_height_metric;
+                                                        let hide_semantics_when_closed =
+                                                            env.hide_semantics_when_closed;
                                                         let open_for_menu = env.open.clone();
                                                         let submenu_for_content =
                                                             env.submenu_for_content.clone();
@@ -2530,6 +2533,7 @@ impl DropdownMenu {
                                                                                 checked_now,
                                                                             );
                                                                             a11y.test_id = test_id.clone();
+                                                                            a11y.hidden = hide_semantics_when_closed;
                                                                             a11y.with_collection_position(
                                                                             collection_index,
                                                                             item_count,
@@ -2677,6 +2681,7 @@ impl DropdownMenu {
                                                                                 is_selected,
                                                                             );
                                                                             a11y.test_id = test_id.clone();
+                                                                            a11y.hidden = hide_semantics_when_closed;
                                                                             a11y.with_collection_position(
                                                                             collection_index,
                                                                             item_count,
@@ -2899,6 +2904,7 @@ impl DropdownMenu {
                                                                         controls,
                                                                     );
                                                                 a11y.test_id = test_id.clone();
+                                                                a11y.hidden = hide_semantics_when_closed;
                                                                 let props = PressableProps {
                                                                     layout: {
                                                                         let mut layout = LayoutStyle::default();
@@ -3185,6 +3191,7 @@ impl DropdownMenu {
                                                             .metric_by_key(
                                                                 "component.dropdown_menu.max_height",
                                                             ),
+                                                        hide_semantics_when_closed,
                                                         open: open_for_menu.clone(),
                                                         submenu_for_content:
                                                             submenu_for_content.clone(),
@@ -3432,6 +3439,7 @@ impl DropdownMenu {
                                                         window_margin: Px,
                                                         submenu_min_width: Px,
                                                         submenu_max_height_metric: Option<Px>,
+                                                        hide_semantics_when_closed: bool,
                                                         open: Model<bool>,
                                                         submenu_models: menu::sub::MenuSubmenuModels,
                                                         submenu_cfg: menu::sub::MenuSubmenuConfig,
@@ -3467,6 +3475,8 @@ impl DropdownMenu {
                                                         let _submenu_min_width = env.submenu_min_width;
                                                         let _submenu_max_height_metric =
                                                             env.submenu_max_height_metric;
+                                                        let hide_semantics_when_closed =
+                                                            env.hide_semantics_when_closed;
                                                         let open_for_submenu = env.open.clone();
                                                         let submenu_models_for_panel =
                                                             env.submenu_models.clone();
@@ -3647,6 +3657,7 @@ impl DropdownMenu {
                                                                                         checked_now,
                                                                                     );
                                                                                     a11y.test_id = test_id.clone();
+                                                                                    a11y.hidden = hide_semantics_when_closed;
                                                                                     a11y.with_collection_position(
                                                                                     collection_index,
                                                                                     item_count,
@@ -3777,6 +3788,7 @@ impl DropdownMenu {
                                                                                         is_selected,
                                                                                     );
                                                                                     a11y.test_id = test_id.clone();
+                                                                                    a11y.hidden = hide_semantics_when_closed;
                                                                                     a11y.with_collection_position(
                                                                                     collection_index,
                                                                                     item_count,
@@ -3884,6 +3896,7 @@ impl DropdownMenu {
 
                                                                             let mut a11y = menu::item::menu_item_a11y(a11y_label, None);
                                                                             a11y.test_id = test_id.clone();
+                                                                            a11y.hidden = hide_semantics_when_closed;
                                                                             let props = PressableProps {
                                                                                 layout: {
                                                                                     let mut layout = LayoutStyle::default();
@@ -4084,6 +4097,7 @@ impl DropdownMenu {
                                                             .metric_by_key(
                                                                 "component.dropdown_menu.max_height",
                                                             ),
+                                                        hide_semantics_when_closed,
                                                         open: open_for_submenu.clone(),
                                                         submenu_models: submenu_models_for_panel.clone(),
                                                         submenu_cfg,
@@ -4140,6 +4154,14 @@ impl DropdownMenu {
                                             true,
                                         );
 
+                                        let submenu_panel = if hide_semantics_when_closed {
+                                            submenu_panel.attach_semantics(SemanticsDecoration {
+                                                hidden: Some(true),
+                                                ..Default::default()
+                                            })
+                                        } else {
+                                            submenu_panel
+                                        };
                                         let submenu_panel =
                                             overlay_motion::wrap_opacity_and_render_transform(
                                                 cx,
