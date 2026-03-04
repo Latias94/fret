@@ -487,7 +487,7 @@ Tasks:
   - `ecosystem/fret/src/mvu.rs`
   - `ecosystem/fret/src/mvu_router.rs`
   - `ecosystem/fret/src/legacy.rs`
-- [ ] AFA-m9-005 Remove any legacy MVU scaffolding sources from `apps/fretboard/src/scaffold/templates.rs`.
+- [x] AFA-m9-005 Remove any legacy MVU scaffolding sources from `apps/fretboard/src/scaffold/templates.rs`.
 - [ ] AFA-m9-006 Update docs to remove MVU guidance:
   - `docs/workstreams/action-first-authoring-fearless-refactor-v1/MVU_POLICY.md`
   - `docs/workstreams/action-first-authoring-fearless-refactor-v1/MIGRATION_GUIDE.md`
