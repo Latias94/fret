@@ -154,6 +154,7 @@ Current scripts (as of 2026-03-04):
 - `tools/diag-scripts/cookbook/commands-keymap-basics/cookbook-commands-keymap-basics-shortcut-and-gating.json` (also gates key-context stack visibility via `wait_shortcut_routing_trace.query.key_context`)
 - `tools/diag-scripts/cookbook/hello/cookbook-hello-click-count.json` (clicks the button via `role_and_name`, but still gates `source_test_id` attribution)
 - `tools/diag-scripts/cookbook/hello/cookbook-hello-view-cache-reuse-and-handler-keepalive.json`
+- `tools/diag-scripts/cookbook/payload-actions-basics/cookbook-payload-actions-basics-remove.json` (parameterized action dispatch: pointer + payload, asserts row removal)
 - `tools/diag-scripts/cookbook/text-input-basics/cookbook-text-input-basics-submit-and-clear.json`
 - `tools/diag-scripts/cookbook/simple-todo/cookbook-simple-todo-smoke.json`
 - `tools/diag-scripts/cookbook/virtual-list-basics/cookbook-virtual-list-basics-smoke.json`
