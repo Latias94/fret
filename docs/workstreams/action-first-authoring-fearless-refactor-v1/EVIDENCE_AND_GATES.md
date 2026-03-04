@@ -232,11 +232,24 @@ each applicable item.
 
 Action dispatch:
 
-- [ ] A keybinding-triggered dispatch can be explained (matched binding + key context + resolved ActionId).
-- [ ] A pointer-triggered dispatch can be explained (source element/test_id + resolved ActionId).
-- [ ] A blocked dispatch can be explained (availability outcome + blocking reason/scope).
+- [x] A keybinding-triggered dispatch can be explained (matched binding + key context + resolved ActionId).
+  - Evidence: shortcut routing trace (`debug.shortcut_routing_trace[*]`) + key-context stack snapshot
+    (`debug.shortcut_routing_trace[*].query.key_context`) gated by
+    `tools/diag-scripts/cookbook/commands-keymap-basics/cookbook-commands-keymap-basics-shortcut-and-gating.json`.
+- [x] A pointer-triggered dispatch can be explained (source element/test_id + resolved ActionId).
+  - Evidence: command dispatch trace carries `source_test_id` (best-effort, with fallbacks) gated by
+    `tools/diag-scripts/cookbook/hello/cookbook-hello-click-count.json`.
+- [x] A blocked dispatch can be explained (availability outcome + blocking reason/scope).
+  - Evidence: command gating trace (`debug.command_gating_trace[*]`) gated by
+    `tools/diag-scripts/cookbook/overlay-basics/cookbook-overlay-basics-modal-barrier-shortcut-gating.json`.
 
 View/cache closure:
 
-- [ ] A view rebuild can be explained (notify vs observed deps vs inspection/picking).
-- [ ] Cache reuse can be explained (why reuse happened or was skipped at a cache root).
+- [x] A view rebuild can be explained (notify vs observed deps vs inspection/picking).
+  - Evidence: invalidation diagnostics (`dirty_views`, `notify_requests`) in
+    `ecosystem/fret-bootstrap/src/ui_diagnostics/invalidation_diagnostics.rs`, plus scripted gate
+    `tools/diag-scripts/cookbook/hello/cookbook-hello-view-cache-reuse-and-handler-keepalive.json`.
+- [x] Cache reuse can be explained (why reuse happened or was skipped at a cache root).
+  - Evidence: cache root diagnostics `cache_roots[*].reuse_reason` in
+    `ecosystem/fret-bootstrap/src/ui_diagnostics/cache_root_diagnostics.rs`, plus scripted gate
+    `tools/diag-scripts/cookbook/hello/cookbook-hello-view-cache-reuse-and-handler-keepalive.json`.
