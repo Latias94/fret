@@ -173,6 +173,35 @@ Migration steps:
 
 ---
 
+## 4.1) Stamping semantics/test IDs without early `into_element(cx)`
+
+Target outcome:
+
+- authoring code can attach `test_id` / a11y semantics decorations on *any* `UiIntoElement` value,
+  without forcing an early `into_element(cx)` call.
+
+Recommended pattern (ecosystem authoring surface, ADR 0160):
+
+```rust,ignore
+use fret_core::SemanticsRole;
+use fret_ui_kit::prelude::*;
+
+let button = shadcn::Button::new("Save")
+    .action(act::EditorSave)
+    .a11y_role(SemanticsRole::Button)
+    .test_id("editor.save")
+    .key_context("editor");
+
+// Only convert to `AnyElement` at the end:
+let el = button.into_element(cx);
+```
+
+Notes:
+
+- `a11y_*` decorations are applied via layout-transparent `SemanticsDecoration` on `AnyElement`
+  (no extra layout node required).
+- `key_context(...)` participates in `when` expressions via `keyctx.*` (ADR 0022).
+
 ## 5) GenUI alignment (spec bindings reuse action IDs)
 
 Target outcome:
