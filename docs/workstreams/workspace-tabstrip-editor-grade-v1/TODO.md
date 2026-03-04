@@ -18,7 +18,8 @@ This TODO list is scoped to this workstream folder and is intended to keep the r
 - [x] Promote a minimal suite that runs in < 30s locally (`diag-hardening-smoke-workspace`) and keep it green.
 - [x] Avoid out-of-window cursor overshoot in hover-driven drag gates (pin cursor via `set_cursor_in_window_logical` + nudge).
 - [x] Add an inactive-tab drag-to-split smoke gate (`workspace-shell-demo-tab-drag-inactive-to-split-right-smoke`).
-- [ ] Add a non-screenshot invariants-based split gate (post-split layout assertions + tab ownership), once split preview routing is stable.
+- [x] Add a non-screenshot invariants-based split gate (post-split layout assertions + tab ownership):
+  - [x] `workspace-shell-demo-tab-drag-to-split-right-preview-invariants-smoke`
 
 ## Modularization (M1)
 
