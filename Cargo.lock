@@ -1907,6 +1907,7 @@ dependencies = [
  "fret-imui",
  "fret-launch",
  "fret-markdown",
+ "fret-query",
  "fret-render",
  "fret-runtime",
  "fret-ui",

@@ -581,6 +581,29 @@
       ]
     },
     {
+      "id": "cookbook-query-basics-baseline",
+      "path": "tools/diag-scripts/cookbook/query-basics/cookbook-query-basics-baseline.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "cookbook-query-basics"
+      ],
+      "tags": [
+        "cookbook",
+        "cookbook.query_basics",
+        "query",
+        "screenshots",
+        "smoke"
+      ],
+      "target_hints": [
+        "Waits for the root to exist.",
+        "Waits for the query to reach Success.",
+        "Captures a baseline screenshot + bundle."
+      ]
+    },
+    {
       "id": "cookbook-simple-todo-smoke",
       "path": "tools/diag-scripts/cookbook/simple-todo/cookbook-simple-todo-smoke.json",
       "required_capabilities": [

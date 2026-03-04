@@ -57,6 +57,8 @@ These are the first “lesson-shaped” examples we actually landed in `fret-coo
   - Script: [`tools/diag-scripts/cookbook/data-table-basics/cookbook-data-table-basics-baseline.json`](../../../tools/diag-scripts/cookbook/data-table-basics/cookbook-data-table-basics-baseline.json)
 - Image asset cache: [`apps/fret-cookbook/examples/image_asset_cache_basics.rs`](../../../apps/fret-cookbook/examples/image_asset_cache_basics.rs)
   - Script: [`tools/diag-scripts/cookbook/image-asset-cache-basics/cookbook-image-asset-cache-basics-baseline.json`](../../../tools/diag-scripts/cookbook/image-asset-cache-basics/cookbook-image-asset-cache-basics-baseline.json)
+- Query basics: [`apps/fret-cookbook/examples/query_basics.rs`](../../../apps/fret-cookbook/examples/query_basics.rs)
+  - Script: [`tools/diag-scripts/cookbook/query-basics/cookbook-query-basics-baseline.json`](../../../tools/diag-scripts/cookbook/query-basics/cookbook-query-basics-baseline.json)
 
 ### 1) Toasts / notifications (Sonner)
 
@@ -167,17 +169,16 @@ These are the first “lesson-shaped” examples we actually landed in `fret-coo
   - This demo is about plot overlays (`TagX`/`TagY`/`PlotText`), not “tags input”.
   - Keep it out of the onboarding ladder until we have a small, feature-gated plot surface in cookbook.
 
-### 11) Query basics (needs action-first rewrite)
+### 11) Query basics
 
 - Demo bin: [`apps/fret-demo/src/bin/query_demo.rs`](../../../apps/fret-demo/src/bin/query_demo.rs)
 - Implementation: [`apps/fret-examples/src/query_demo.rs`](../../../apps/fret-examples/src/query_demo.rs)
 - Proposed cookbook example: `query_basics`
-- Cookbook label: `Lab` (until action-first port is done)
-- Cookbook feature: new `cookbook-state` (would pull in `fret-query` + optional UI helpers)
+- Cookbook label: `Lab`
+- Cookbook feature: `cookbook-query`
 - Notes:
-  - Current implementation uses `fret::legacy::prelude::*` MVU; cookbook migration should rewrite to
-    the view runtime.
-  - Keep it small: one query key, invalidate, retry policy, show status transitions.
+  - Implemented as an action-first view runtime example in `fret-cookbook`.
+  - Keep it small and deterministic: one query key, invalidate, namespace invalidation, and a stable baseline screenshot.
 
 ### 12) Router + query integration (needs action-first rewrite)
 
@@ -214,7 +215,7 @@ If/when these are migrated, keep the cookbook “cold compile” story intact:
 Suggested new gates (only if needed):
 
 - `cookbook-table`
-- `cookbook-state`
+- `cookbook-query`
 - `cookbook-router`
 
 ## Post-migration checklist (when code work starts)
