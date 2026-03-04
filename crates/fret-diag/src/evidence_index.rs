@@ -57,37 +57,37 @@ fn resource_footprint_summary(path: &Path) -> Option<serde_json::Value> {
         .and_then(|v| v.get("peak_working_set_bytes"))
         .and_then(|v| v.as_u64());
 
-    let macos_physical_footprint_bytes = v
-        .get("macos_vmmap")
+    let macos_vmmap_source = if v.get("macos_vmmap_steady").is_some() {
+        "steady"
+    } else {
+        "exit"
+    };
+    let macos_vmmap = v.get("macos_vmmap_steady").or_else(|| v.get("macos_vmmap"));
+
+    let macos_physical_footprint_bytes = macos_vmmap
         .and_then(|v| v.get("physical_footprint_bytes"))
         .and_then(|v| v.as_u64());
-    let macos_physical_footprint_peak_bytes = v
-        .get("macos_vmmap")
+    let macos_physical_footprint_peak_bytes = macos_vmmap
         .and_then(|v| v.get("physical_footprint_peak_bytes"))
         .and_then(|v| v.as_u64());
-    let macos_owned_unmapped_memory_dirty_bytes = v
-        .get("macos_vmmap")
+    let macos_owned_unmapped_memory_dirty_bytes = macos_vmmap
         .and_then(|v| v.get("regions"))
         .and_then(|v| v.get("owned_unmapped_memory_dirty_bytes"))
         .and_then(|v| v.as_u64());
-    let macos_io_surface_dirty_bytes = v
-        .get("macos_vmmap")
+    let macos_io_surface_dirty_bytes = macos_vmmap
         .and_then(|v| v.get("regions"))
         .and_then(|v| v.get("io_surface_dirty_bytes"))
         .and_then(|v| v.as_u64());
-    let macos_io_accelerator_dirty_bytes = v
-        .get("macos_vmmap")
+    let macos_io_accelerator_dirty_bytes = macos_vmmap
         .and_then(|v| v.get("regions"))
         .and_then(|v| v.get("io_accelerator_dirty_bytes"))
         .and_then(|v| v.as_u64());
-    let macos_malloc_small_dirty_bytes = v
-        .get("macos_vmmap")
+    let macos_malloc_small_dirty_bytes = macos_vmmap
         .and_then(|v| v.get("regions"))
         .and_then(|v| v.get("malloc_small_dirty_bytes"))
         .and_then(|v| v.as_u64());
 
-    let macos_vmmap_top_dirty_region_type = v
-        .get("macos_vmmap")
+    let macos_vmmap_top_dirty_region_type = macos_vmmap
         .and_then(|v| v.get("tables"))
         .and_then(|v| v.get("regions"))
         .and_then(|v| v.get("top_dirty"))
@@ -96,8 +96,7 @@ fn resource_footprint_summary(path: &Path) -> Option<serde_json::Value> {
         .and_then(|v| v.get("region_type"))
         .and_then(|v| v.as_str())
         .map(|s| s.to_string());
-    let macos_vmmap_top_dirty_region_bytes = v
-        .get("macos_vmmap")
+    let macos_vmmap_top_dirty_region_bytes = macos_vmmap
         .and_then(|v| v.get("tables"))
         .and_then(|v| v.get("regions"))
         .and_then(|v| v.get("top_dirty"))
@@ -106,8 +105,7 @@ fn resource_footprint_summary(path: &Path) -> Option<serde_json::Value> {
         .and_then(|v| v.get("dirty_bytes"))
         .and_then(|v| v.as_u64());
 
-    let macos_vmmap_top_allocated_malloc_zone = v
-        .get("macos_vmmap")
+    let macos_vmmap_top_allocated_malloc_zone = macos_vmmap
         .and_then(|v| v.get("tables"))
         .and_then(|v| v.get("malloc_zones"))
         .and_then(|v| v.get("top_allocated"))
@@ -116,8 +114,7 @@ fn resource_footprint_summary(path: &Path) -> Option<serde_json::Value> {
         .and_then(|v| v.get("zone"))
         .and_then(|v| v.as_str())
         .map(|s| s.to_string());
-    let macos_vmmap_top_allocated_malloc_bytes = v
-        .get("macos_vmmap")
+    let macos_vmmap_top_allocated_malloc_bytes = macos_vmmap
         .and_then(|v| v.get("tables"))
         .and_then(|v| v.get("malloc_zones"))
         .and_then(|v| v.get("top_allocated"))
@@ -126,8 +123,7 @@ fn resource_footprint_summary(path: &Path) -> Option<serde_json::Value> {
         .and_then(|v| v.get("allocated_bytes"))
         .and_then(|v| v.as_u64());
 
-    let macos_vmmap_top_dirty_regions = v
-        .get("macos_vmmap")
+    let macos_vmmap_top_dirty_regions = macos_vmmap
         .and_then(|v| v.get("tables"))
         .and_then(|v| v.get("regions"))
         .and_then(|v| v.get("top_dirty"))
@@ -147,8 +143,7 @@ fn resource_footprint_summary(path: &Path) -> Option<serde_json::Value> {
                 .collect::<Vec<_>>()
         });
 
-    let macos_vmmap_top_resident_regions = v
-        .get("macos_vmmap")
+    let macos_vmmap_top_resident_regions = macos_vmmap
         .and_then(|v| v.get("tables"))
         .and_then(|v| v.get("regions"))
         .and_then(|v| v.get("top_resident"))
@@ -177,6 +172,7 @@ fn resource_footprint_summary(path: &Path) -> Option<serde_json::Value> {
         "cpu_usage_percent_avg": cpu_usage_pct_avg,
         "working_set_bytes": working_set_bytes,
         "peak_working_set_bytes": peak_working_set_bytes,
+        "macos_vmmap_source": macos_vmmap_source,
         "macos_physical_footprint_bytes": macos_physical_footprint_bytes,
         "macos_physical_footprint_peak_bytes": macos_physical_footprint_peak_bytes,
         "macos_owned_unmapped_memory_dirty_bytes": macos_owned_unmapped_memory_dirty_bytes,
@@ -333,6 +329,10 @@ pub(crate) fn write_evidence_index(
     add_file("repro.zip", "repro.zip");
     add_file("resource.footprint", "resource.footprint.json");
     add_file("resource.vmmap_summary", "resource.vmmap_summary.txt");
+    add_file(
+        "resource.vmmap_summary.steady",
+        "resource.vmmap_summary.steady.txt",
+    );
     add_file("redraw_hitches", "redraw_hitches.log");
     add_file("renderdoc.captures", "renderdoc.captures.json");
     add_file("tracy.note", "tracy.note.md");

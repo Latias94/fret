@@ -923,32 +923,40 @@ pub(super) fn check_resource_footprint_thresholds(
         .and_then(|v| v.get("peak_working_set_bytes"))
         .and_then(|v| v.as_u64());
 
-    let macos_physical_footprint_peak_bytes = v
+    let macos_vmmap_source = if v
         .as_ref()
-        .and_then(|v| v.get("macos_vmmap"))
+        .and_then(|v| v.get("macos_vmmap_steady"))
+        .is_some()
+    {
+        "steady"
+    } else {
+        "exit"
+    };
+    let macos_vmmap_field_prefix = if macos_vmmap_source == "steady" {
+        "macos_vmmap_steady"
+    } else {
+        "macos_vmmap"
+    };
+    let macos_vmmap = v
+        .as_ref()
+        .and_then(|v| v.get("macos_vmmap_steady").or_else(|| v.get("macos_vmmap")));
+
+    let macos_physical_footprint_peak_bytes = macos_vmmap
         .and_then(|v| v.get("physical_footprint_peak_bytes"))
         .and_then(|v| v.as_u64());
-    let macos_owned_unmapped_memory_dirty_bytes = v
-        .as_ref()
-        .and_then(|v| v.get("macos_vmmap"))
+    let macos_owned_unmapped_memory_dirty_bytes = macos_vmmap
         .and_then(|v| v.get("regions"))
         .and_then(|v| v.get("owned_unmapped_memory_dirty_bytes"))
         .and_then(|v| v.as_u64());
-    let macos_io_surface_dirty_bytes = v
-        .as_ref()
-        .and_then(|v| v.get("macos_vmmap"))
+    let macos_io_surface_dirty_bytes = macos_vmmap
         .and_then(|v| v.get("regions"))
         .and_then(|v| v.get("io_surface_dirty_bytes"))
         .and_then(|v| v.as_u64());
-    let macos_io_accelerator_dirty_bytes = v
-        .as_ref()
-        .and_then(|v| v.get("macos_vmmap"))
+    let macos_io_accelerator_dirty_bytes = macos_vmmap
         .and_then(|v| v.get("regions"))
         .and_then(|v| v.get("io_accelerator_dirty_bytes"))
         .and_then(|v| v.as_u64());
-    let macos_malloc_small_dirty_bytes = v
-        .as_ref()
-        .and_then(|v| v.get("macos_vmmap"))
+    let macos_malloc_small_dirty_bytes = macos_vmmap
         .and_then(|v| v.get("regions"))
         .and_then(|v| v.get("malloc_small_dirty_bytes"))
         .and_then(|v| v.as_u64());
@@ -1029,7 +1037,7 @@ pub(super) fn check_resource_footprint_thresholds(
                 "threshold": thr,
                 "observed": serde_json::Value::Null,
                 "reason": missing_reason,
-                "field": "macos_vmmap.physical_footprint_peak_bytes",
+                "field": format!("{macos_vmmap_field_prefix}.physical_footprint_peak_bytes"),
             })),
         }
     }
@@ -1048,7 +1056,7 @@ pub(super) fn check_resource_footprint_thresholds(
                 "threshold": thr,
                 "observed": serde_json::Value::Null,
                 "reason": missing_reason,
-                "field": "macos_vmmap.regions.owned_unmapped_memory_dirty_bytes",
+                "field": format!("{macos_vmmap_field_prefix}.regions.owned_unmapped_memory_dirty_bytes"),
             })),
         }
     }
@@ -1067,7 +1075,7 @@ pub(super) fn check_resource_footprint_thresholds(
                 "threshold": thr,
                 "observed": serde_json::Value::Null,
                 "reason": missing_reason,
-                "field": "macos_vmmap.regions.io_surface_dirty_bytes",
+                "field": format!("{macos_vmmap_field_prefix}.regions.io_surface_dirty_bytes"),
             })),
         }
     }
@@ -1086,7 +1094,7 @@ pub(super) fn check_resource_footprint_thresholds(
                 "threshold": thr,
                 "observed": serde_json::Value::Null,
                 "reason": missing_reason,
-                "field": "macos_vmmap.regions.io_accelerator_dirty_bytes",
+                "field": format!("{macos_vmmap_field_prefix}.regions.io_accelerator_dirty_bytes"),
             })),
         }
     }
@@ -1105,7 +1113,7 @@ pub(super) fn check_resource_footprint_thresholds(
                 "threshold": thr,
                 "observed": serde_json::Value::Null,
                 "reason": missing_reason,
-                "field": "macos_vmmap.regions.malloc_small_dirty_bytes",
+                "field": format!("{macos_vmmap_field_prefix}.regions.malloc_small_dirty_bytes"),
             })),
         }
     }
@@ -1168,6 +1176,7 @@ pub(super) fn check_resource_footprint_thresholds(
             "cpu_avg_percent_total_cores": cpu_avg_percent_total_cores,
             "working_set_bytes": working_set_bytes,
             "peak_working_set_bytes": peak_working_set_bytes,
+            "macos_vmmap_source": macos_vmmap_source,
             "macos_physical_footprint_peak_bytes": macos_physical_footprint_peak_bytes,
             "macos_owned_unmapped_memory_dirty_bytes": macos_owned_unmapped_memory_dirty_bytes,
             "macos_io_surface_dirty_bytes": macos_io_surface_dirty_bytes,
