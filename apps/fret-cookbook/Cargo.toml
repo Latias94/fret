@@ -17,6 +17,7 @@ fret-app = { path = "../../crates/fret-app" }
 fret-core = { path = "../../crates/fret-core" }
 fret-runtime = { path = "../../crates/fret-runtime" }
 fret-ui = { path = "../../crates/fret-ui" }
+time.workspace = true
 
 # Lab/optional example dependencies (feature-gated to keep cold compile time down).
 fret-bootstrap = { path = "../../ecosystem/fret-bootstrap", default-features = false, optional = true }

@@ -29,6 +29,7 @@ Then pick a topic:
 
 - State + derived state: `virtual_list_basics`, `undo_basics` (feature-gated), `async_inbox_basics` (feature-gated)
 - Theming + assets: `theme_switching_basics`, `icons_and_assets_basics` (feature-gated)
+- App patterns: `toast_basics`, `form_basics`, `date_picker_basics`, `drag_basics`
 - Rendering/effects: `effects_layer_basics`, `customv1_basics` (feature-gated)
 - Interop (higher ceiling): `embedded_viewport_basics` (feature-gated), `external_texture_import_basics` (feature-gated), `docking_basics` (feature-gated)
 

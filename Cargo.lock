@@ -1915,6 +1915,7 @@ dependencies = [
  "fret-undo",
  "glam 0.30.10",
  "serde_json",
+ "time",
  "wgpu",
 ]
 

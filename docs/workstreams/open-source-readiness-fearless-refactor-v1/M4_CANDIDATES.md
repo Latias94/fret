@@ -35,6 +35,19 @@ Legend:
 - **Cookbook label**: `Official` vs `Lab` (feature-gated).
 - **Cookbook feature**: existing feature gate or a suggested new one.
 
+## Initial migration batch (implemented in cookbook)
+
+These are the first “lesson-shaped” examples we actually landed in `fret-cookbook` as part of M4.
+
+- Toasts: [`apps/fret-cookbook/examples/toast_basics.rs`](../../../apps/fret-cookbook/examples/toast_basics.rs)
+  - Script: [`tools/diag-scripts/cookbook/toast-basics/cookbook-toast-basics-smoke.json`](../../../tools/diag-scripts/cookbook/toast-basics/cookbook-toast-basics-smoke.json)
+- Date picker: [`apps/fret-cookbook/examples/date_picker_basics.rs`](../../../apps/fret-cookbook/examples/date_picker_basics.rs)
+  - Script: [`tools/diag-scripts/cookbook/date-picker-basics/cookbook-date-picker-basics-smoke.json`](../../../tools/diag-scripts/cookbook/date-picker-basics/cookbook-date-picker-basics-smoke.json)
+- Form basics: [`apps/fret-cookbook/examples/form_basics.rs`](../../../apps/fret-cookbook/examples/form_basics.rs)
+  - Script: [`tools/diag-scripts/cookbook/form-basics/cookbook-form-basics-smoke.json`](../../../tools/diag-scripts/cookbook/form-basics/cookbook-form-basics-smoke.json)
+- Drag basics: [`apps/fret-cookbook/examples/drag_basics.rs`](../../../apps/fret-cookbook/examples/drag_basics.rs)
+  - Script: [`tools/diag-scripts/cookbook/drag-basics/cookbook-drag-basics-smoke.json`](../../../tools/diag-scripts/cookbook/drag-basics/cookbook-drag-basics-smoke.json)
+
 ### 1) Toasts / notifications (Sonner)
 
 - Demo bin: [`apps/fret-demo/src/bin/sonner_demo.rs`](../../../apps/fret-demo/src/bin/sonner_demo.rs)
@@ -133,16 +146,16 @@ Legend:
   - Teaches: compositing groups / isolated opacity expectations.
   - Great candidate for a screenshot-only diag script.
 
-### 10) Tags/chips interaction (small app pattern)
+### 10) Plot tags overlays (feature-gated)
 
 - Demo bin: [`apps/fret-demo/src/bin/tags_demo.rs`](../../../apps/fret-demo/src/bin/tags_demo.rs)
 - Implementation: [`apps/fret-examples/src/tags_demo.rs`](../../../apps/fret-examples/src/tags_demo.rs)
-- Proposed cookbook example: `tags_input_basics`
-- Cookbook label: `Official`
-- Cookbook feature: none
+- Proposed cookbook example: `plot_tags_overlays_basics`
+- Cookbook label: `Lab`
+- Cookbook feature: a future `cookbook-plot` gate (would pull `fret-plot` into the cookbook)
 - Notes:
-  - Teaches: text input + tokenization + keyboard affordances (Backspace, Enter).
-  - Adds a “real app” pattern without heavy infra.
+  - This demo is about plot overlays (`TagX`/`TagY`/`PlotText`), not “tags input”.
+  - Keep it out of the onboarding ladder until we have a small, feature-gated plot surface in cookbook.
 
 ### 11) Query basics (needs action-first rewrite)
 
@@ -202,4 +215,3 @@ Suggested new gates (only if needed):
 - Add (or extend) a suite manifest under:
   - `tools/diag-scripts/suites/cookbook-<example>/suite.json`
 - Remove migrated demos from the **default** `fretboard list native-demos` surface (keep behind `--all`).
-

@@ -48,5 +48,15 @@ Status legend:
 
 - [x] Identify 8–15 lesson-shaped `apps/fret-demo/src/bin/*` candidates.
   - See: [docs/workstreams/open-source-readiness-fearless-refactor-v1/M4_CANDIDATES.md](./M4_CANDIDATES.md)
-- [ ] Migrate into `apps/fret-cookbook/examples/*` with stable `test_id`s.
+- [~] Migrate into `apps/fret-cookbook/examples/*` with stable `test_id`s.
+  - Implemented (first batch):
+    - [`apps/fret-cookbook/examples/toast_basics.rs`](../../../apps/fret-cookbook/examples/toast_basics.rs)
+    - [`apps/fret-cookbook/examples/date_picker_basics.rs`](../../../apps/fret-cookbook/examples/date_picker_basics.rs)
+    - [`apps/fret-cookbook/examples/form_basics.rs`](../../../apps/fret-cookbook/examples/form_basics.rs)
+    - [`apps/fret-cookbook/examples/drag_basics.rs`](../../../apps/fret-cookbook/examples/drag_basics.rs)
+  - Scripts:
+    - [`tools/diag-scripts/cookbook/toast-basics/cookbook-toast-basics-smoke.json`](../../../tools/diag-scripts/cookbook/toast-basics/cookbook-toast-basics-smoke.json)
+    - [`tools/diag-scripts/cookbook/date-picker-basics/cookbook-date-picker-basics-smoke.json`](../../../tools/diag-scripts/cookbook/date-picker-basics/cookbook-date-picker-basics-smoke.json)
+    - [`tools/diag-scripts/cookbook/form-basics/cookbook-form-basics-smoke.json`](../../../tools/diag-scripts/cookbook/form-basics/cookbook-form-basics-smoke.json)
+    - [`tools/diag-scripts/cookbook/drag-basics/cookbook-drag-basics-smoke.json`](../../../tools/diag-scripts/cookbook/drag-basics/cookbook-drag-basics-smoke.json)
 - [x] Keep `fret-demo` as maintainer/labs; ensure `fretboard list native-demos` stays intentionally small.
