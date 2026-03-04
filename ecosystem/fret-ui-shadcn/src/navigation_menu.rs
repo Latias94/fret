@@ -1912,6 +1912,7 @@ impl NavigationMenu {
                 radix_navigation_menu::navigation_menu_request_viewport_overlay(
                     cx,
                     root_id,
+                    cfg,
                     value_model.clone(),
                     open_model.clone(),
                     overlay_presence,
