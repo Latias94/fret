@@ -271,7 +271,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 }
             };
 
-            let want_transparent = self
+            let want_surface_composited_alpha = self
                 .app
                 .global::<fret_runtime::RunnerWindowStyleDiagnosticsStore>()
                 .and_then(|s| s.effective_snapshot(app_window))
@@ -280,7 +280,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 &context.adapter,
                 &context.device,
                 &mut surface_state,
-                want_transparent,
+                want_surface_composited_alpha,
             );
 
             state.surface = Some(surface_state);
@@ -723,7 +723,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                         }
                     };
 
-                    let want_transparent = self
+                    let want_surface_composited_alpha = self
                         .app
                         .global::<fret_runtime::RunnerWindowStyleDiagnosticsStore>()
                         .and_then(|s| s.effective_snapshot(main_window))
@@ -732,7 +732,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                         &context.adapter,
                         &context.device,
                         &mut surface_state,
-                        want_transparent,
+                        want_surface_composited_alpha,
                     );
                     state.surface = Some(surface_state);
                 }
@@ -777,7 +777,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                 .global::<fret_runtime::PlatformCapabilities>()
                 .cloned()
                 .unwrap_or_default();
-            let window = match self.create_os_window(event_loop, spec, style, None, &caps) {
+            let window = match self.create_os_window(event_loop, spec, style.clone(), None, &caps) {
                 Ok(w) => w,
                 Err(e) => {
                     error!(error = ?e, "failed to create main window");
@@ -909,13 +909,14 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                 self.driver.gpu_ready(&mut self.app, context, renderer);
             }
 
-            let main_window = match self.insert_window(window.0, window.1, Some(surface), style) {
-                Ok(id) => id,
-                Err(e) => {
-                    error!(error = ?e, "failed to insert main window runtime");
-                    return;
-                }
-            };
+            let main_window =
+                match self.insert_window(window.0, window.1, Some(surface), style.clone()) {
+                    Ok(id) => id,
+                    Err(e) => {
+                        error!(error = ?e, "failed to insert main window runtime");
+                        return;
+                    }
+                };
             let caps = self
                 .app
                 .global::<fret_runtime::PlatformCapabilities>()
@@ -1814,12 +1815,12 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
 
                         let render_scene_span = tracing::info_span!("fret.runner.render_scene");
                         let _render_scene_guard = render_scene_span.enter();
-                        let want_transparent = self
+                        let want_visual_transparent = self
                             .app
                             .global::<fret_runtime::RunnerWindowStyleDiagnosticsStore>()
                             .and_then(|s| s.effective_snapshot(app_window))
                             .is_some_and(|s| s.visual_transparent);
-                        let clear_color = if want_transparent {
+                        let clear_color = if want_visual_transparent {
                             fret_render::ClearColor(wgpu::Color::TRANSPARENT)
                         } else {
                             self.config.clear_color

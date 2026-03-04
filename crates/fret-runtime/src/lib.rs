@@ -133,8 +133,7 @@ pub use interaction_diagnostics::{
     DockTabStripActiveVisibilityDiagnostics, DockTabStripActiveVisibilityStatusDiagnostics,
     DockingInteractionDiagnostics, ViewportCaptureDiagnostics, WindowInteractionDiagnosticsStore,
     WorkspaceInteractionDiagnostics, WorkspaceTabStripActiveVisibilityDiagnostics,
-    WorkspaceTabStripActiveVisibilityStatusDiagnostics,
-    WorkspaceTabStripDragDiagnostics,
+    WorkspaceTabStripActiveVisibilityStatusDiagnostics, WorkspaceTabStripDragDiagnostics,
 };
 pub use keymap::{BindingV1, KeySpecV1, KeymapError, KeymapFileV1};
 pub use keymap::{DefaultKeybinding, Keymap, KeymapContinuation, KeymapService, PlatformFilter};
@@ -160,6 +159,8 @@ pub use runner_window_lifecycle_diagnostics::{
     RunnerWindowLifecycleDiagnosticsStore, RunnerWindowLifecycleSnapshot,
 };
 pub use runner_window_style_diagnostics::{
+    RunnerWindowAppearanceV1, RunnerWindowCompositedAlphaSourceV1,
+    RunnerWindowHitTestClampReasonV1, RunnerWindowHitTestSourceV1,
     RunnerWindowStyleDiagnosticsStore, RunnerWindowStyleEffectiveSnapshotV1,
     clamp_background_material_request,
 };
@@ -188,8 +189,10 @@ pub use window_input_context::WindowInputContextService;
 pub use window_menu_bar_focus::WindowMenuBarFocusService;
 pub use window_metrics::apply_window_metrics_event;
 pub use window_style::{
-    ActivationPolicy, MousePolicy, TaskbarVisibility, WindowBackgroundMaterialRequest,
-    WindowDecorationsRequest, WindowOpacity, WindowRole, WindowStyleRequest, WindowZLevel,
+    ActivationPolicy, TaskbarVisibility, WindowBackgroundMaterialRequest, WindowDecorationsRequest,
+    WindowHitTestRegionV1, WindowHitTestRegionsSignatureV1, WindowHitTestRequestV1, WindowOpacity,
+    WindowRole, WindowStyleRequest, WindowZLevel, canonicalize_hit_test_regions_v1,
+    hit_test_regions_signature_v1,
 };
 pub use window_text_boundary_mode::{WindowTextBoundaryModeHandle, WindowTextBoundaryModeService};
 pub use window_text_input_snapshot::{

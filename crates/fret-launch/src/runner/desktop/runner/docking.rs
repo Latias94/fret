@@ -375,10 +375,10 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 fret_app::WindowRequest::SetStyle {
                     window,
                     style: fret_runtime::WindowStyleRequest {
-                        mouse: Some(if want_transparent_payload {
-                            fret_runtime::MousePolicy::Passthrough
+                        hit_test: Some(if want_transparent_payload {
+                            fret_runtime::WindowHitTestRequestV1::PassthroughAll
                         } else {
-                            fret_runtime::MousePolicy::Normal
+                            fret_runtime::WindowHitTestRequestV1::Normal
                         }),
                         opacity: Some(opacity),
                         ..Default::default()
@@ -393,7 +393,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             {
                 drag.transparent_payload_applied = want_transparent_payload;
                 if !want_transparent_payload {
-                    drag.transparent_payload_mouse_passthrough_applied = false;
+                    drag.transparent_payload_hit_test_passthrough_applied = false;
                 }
             }
         }
@@ -469,7 +469,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 fret_app::WindowRequest::SetStyle {
                     window: follow.window,
                     style: fret_runtime::WindowStyleRequest {
-                        mouse: Some(fret_runtime::MousePolicy::Normal),
+                        hit_test: Some(fret_runtime::WindowHitTestRequestV1::Normal),
                         opacity: Some(fret_runtime::WindowOpacity(255)),
                         ..Default::default()
                     },
@@ -480,7 +480,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             && let Some(drag) = self.app.drag_mut(pointer_id)
         {
             drag.transparent_payload_applied = false;
-            drag.transparent_payload_mouse_passthrough_applied = false;
+            drag.transparent_payload_hit_test_passthrough_applied = false;
         }
 
         if let Some(state) = self.windows.get(follow.window) {

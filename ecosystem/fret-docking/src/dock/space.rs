@@ -2237,8 +2237,8 @@ impl<H: UiHost> Widget<H> for DockSpace {
                     dragging: drag.dragging,
                     cross_window_hover: drag.cross_window_hover,
                     transparent_payload_applied: drag.transparent_payload_applied,
-                    transparent_payload_mouse_passthrough_applied: drag
-                        .transparent_payload_mouse_passthrough_applied,
+                    transparent_payload_hit_test_passthrough_applied: drag
+                        .transparent_payload_hit_test_passthrough_applied,
                     window_under_cursor_source: drag.window_under_cursor_source,
                     moving_window: drag.moving_window,
                     window_under_moving_window: drag.window_under_moving_window,
@@ -6714,8 +6714,8 @@ impl<H: UiHost> Widget<H> for DockSpace {
                     dragging: drag.dragging,
                     cross_window_hover: drag.cross_window_hover,
                     transparent_payload_applied: drag.transparent_payload_applied,
-                    transparent_payload_mouse_passthrough_applied: drag
-                        .transparent_payload_mouse_passthrough_applied,
+                    transparent_payload_hit_test_passthrough_applied: drag
+                        .transparent_payload_hit_test_passthrough_applied,
                     window_under_cursor_source: drag.window_under_cursor_source,
                     moving_window: drag.moving_window,
                     window_under_moving_window: drag.window_under_moving_window,
@@ -6981,8 +6981,8 @@ impl<H: UiHost> Widget<H> for DockSpace {
                     dragging: drag.dragging,
                     cross_window_hover: drag.cross_window_hover,
                     transparent_payload_applied: drag.transparent_payload_applied,
-                    transparent_payload_mouse_passthrough_applied: drag
-                        .transparent_payload_mouse_passthrough_applied,
+                    transparent_payload_hit_test_passthrough_applied: drag
+                        .transparent_payload_hit_test_passthrough_applied,
                     window_under_cursor_source: drag.window_under_cursor_source,
                     moving_window: drag.moving_window,
                     window_under_moving_window: drag.window_under_moving_window,

@@ -285,7 +285,7 @@ pub(super) fn set_window_opacity(window: &dyn Window, opacity: f32) -> bool {
 }
 
 #[cfg(target_os = "macos")]
-pub(super) fn set_window_mouse_passthrough(window: &dyn Window, enabled: bool) -> bool {
+pub(super) fn set_window_hit_test_passthrough_all(window: &dyn Window, enabled: bool) -> bool {
     use objc::runtime::Object;
     use objc::{msg_send, sel, sel_impl};
     use winit::raw_window_handle::HasWindowHandle as _;
@@ -334,7 +334,7 @@ pub(super) fn set_window_opacity(window: &dyn Window, opacity: f32) -> bool {
 }
 
 #[cfg(target_os = "windows")]
-pub(super) fn set_window_mouse_passthrough(window: &dyn Window, enabled: bool) -> bool {
+pub(super) fn set_window_hit_test_passthrough_all(window: &dyn Window, enabled: bool) -> bool {
     use winit::raw_window_handle::HasWindowHandle as _;
 
     let hwnd: isize = match window.window_handle() {
@@ -347,8 +347,75 @@ pub(super) fn set_window_mouse_passthrough(window: &dyn Window, enabled: bool) -
     if hwnd == 0 {
         return false;
     }
-    super::win32::set_window_mouse_passthrough(hwnd, enabled);
+    super::win32::set_window_hit_test_passthrough_all(hwnd, enabled);
     true
+}
+
+#[cfg(target_os = "windows")]
+fn set_window_hit_test_passthrough_regions(
+    window: &dyn Window,
+    regions: Option<&[fret_runtime::WindowHitTestRegionV1]>,
+) -> bool {
+    use winit::raw_window_handle::HasWindowHandle as _;
+
+    let hwnd: isize = match window.window_handle() {
+        Ok(handle) => match handle.as_raw() {
+            winit::raw_window_handle::RawWindowHandle::Win32(h) => h.hwnd.get() as isize,
+            _ => 0,
+        },
+        Err(_) => 0,
+    };
+    if hwnd == 0 {
+        return false;
+    }
+    super::win32::set_window_hit_test_passthrough_regions(hwnd, regions)
+}
+
+pub(super) fn set_window_hit_test(
+    window: &dyn Window,
+    hit_test: &fret_runtime::WindowHitTestRequestV1,
+) -> bool {
+    use fret_runtime::WindowHitTestRequestV1 as H;
+
+    #[cfg(target_os = "windows")]
+    {
+        match hit_test {
+            H::Normal => {
+                let a = set_window_hit_test_passthrough_regions(window, None);
+                let b = set_window_hit_test_passthrough_all(window, false);
+                a && b
+            }
+            H::PassthroughAll => {
+                let a = set_window_hit_test_passthrough_regions(window, None);
+                let b = set_window_hit_test_passthrough_all(window, true);
+                a && b
+            }
+            H::PassthroughRegions { regions } => {
+                let a = set_window_hit_test_passthrough_all(window, false);
+                let b = set_window_hit_test_passthrough_regions(window, Some(regions));
+                a && b
+            }
+        }
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        match hit_test {
+            H::Normal => set_window_hit_test_passthrough_all(window, false),
+            H::PassthroughAll => set_window_hit_test_passthrough_all(window, true),
+            // Defensive fallback; the runner should clamp unsupported regions requests.
+            H::PassthroughRegions { .. } => set_window_hit_test_passthrough_all(window, true),
+        }
+    }
+
+    #[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
+    {
+        match hit_test {
+            H::Normal => set_window_hit_test_passthrough_all(window, false),
+            H::PassthroughAll => set_window_hit_test_passthrough_all(window, true),
+            H::PassthroughRegions { .. } => false,
+        }
+    }
 }
 
 #[cfg(target_os = "windows")]
@@ -633,7 +700,7 @@ pub(super) fn set_window_opacity(_window: &dyn Window, _opacity: f32) -> bool {
 }
 
 #[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
-pub(super) fn set_window_mouse_passthrough(_window: &dyn Window, _enabled: bool) -> bool {
+pub(super) fn set_window_hit_test_passthrough_all(_window: &dyn Window, _enabled: bool) -> bool {
     false
 }
 

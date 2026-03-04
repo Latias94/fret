@@ -119,9 +119,9 @@ fn eval_predicate_without_semantics(
                 .is_some_and(|drag| drag.dragging && drag.transparent_payload_applied == *applied)
                 || (!*applied && dock_drag_runtime.is_none()),
         ),
-        UiPredicateV1::DockDragTransparentPayloadMousePassthroughAppliedIs { applied } => Some(
+        UiPredicateV1::DockDragTransparentPayloadHitTestPassthroughAppliedIs { applied } => Some(
             dock_drag_runtime.is_some_and(|drag| {
-                drag.dragging && drag.transparent_payload_mouse_passthrough_applied == *applied
+                drag.dragging && drag.transparent_payload_hit_test_passthrough_applied == *applied
             }) || (!*applied && dock_drag_runtime.is_none()),
         ),
         UiPredicateV1::DockDragWindowUnderCursorSourceIs { source } => {
@@ -332,6 +332,16 @@ fn window_style_effective_matches(
     {
         return false;
     }
+    if let Some(visual_transparent) = want.visual_transparent
+        && have.visual_transparent != visual_transparent
+    {
+        return false;
+    }
+    if let Some(appearance) = want.appearance
+        && !window_appearance_match(have.appearance, appearance)
+    {
+        return false;
+    }
     if let Some(taskbar) = want.taskbar
         && !taskbar_visibility_match(have.taskbar, taskbar)
     {
@@ -347,12 +357,46 @@ fn window_style_effective_matches(
     {
         return false;
     }
-    if let Some(mouse) = want.mouse
-        && !mouse_policy_match(have.mouse, mouse)
+    if let Some(hit_test) = want.hit_test
+        && !window_hit_test_match(&have.hit_test, hit_test)
+    {
+        return false;
+    }
+    if let Some(fp) = want.hit_test_regions_fingerprint64
+        && have.hit_test_regions_fingerprint64 != Some(fp)
     {
         return false;
     }
     true
+}
+
+fn window_appearance_match(
+    have: fret_runtime::RunnerWindowAppearanceV1,
+    want: UiWindowAppearanceV1,
+) -> bool {
+    use fret_runtime::RunnerWindowAppearanceV1 as H;
+    use UiWindowAppearanceV1 as W;
+    match (have, want) {
+        (H::Opaque, W::Opaque) => true,
+        (H::CompositedNoBackdrop, W::CompositedNoBackdrop) => true,
+        (H::CompositedBackdrop, W::CompositedBackdrop) => true,
+        _ => false,
+    }
+}
+
+fn window_hit_test_match(
+    have: &fret_runtime::WindowHitTestRequestV1,
+    want: UiWindowHitTestRequestV1,
+) -> bool {
+    use fret_runtime::WindowHitTestRequestV1 as H;
+    use UiWindowHitTestRequestV1 as W;
+
+    match (have, want) {
+        (&H::Normal, W::Normal) => true,
+        (&H::PassthroughAll, W::PassthroughAll) => true,
+        (&H::PassthroughRegions { .. }, W::PassthroughRegions) => true,
+        _ => false,
+    }
 }
 
 fn window_background_material_matches(
@@ -415,16 +459,6 @@ fn window_z_level_match(have: fret_runtime::WindowZLevel, want: UiWindowZLevelV1
     match (have, want) {
         (H::Normal, W::Normal) => true,
         (H::AlwaysOnTop, W::AlwaysOnTop) => true,
-        _ => false,
-    }
-}
-
-fn mouse_policy_match(have: fret_runtime::MousePolicy, want: UiMousePolicyV1) -> bool {
-    use fret_runtime::MousePolicy as H;
-    use UiMousePolicyV1 as W;
-    match (have, want) {
-        (H::Normal, W::Normal) => true,
-        (H::Passthrough, W::Passthrough) => true,
         _ => false,
     }
 }
@@ -1205,10 +1239,10 @@ fn eval_predicate(
             }
             !*applied
         }
-        UiPredicateV1::DockDragTransparentPayloadMousePassthroughAppliedIs { applied } => {
+        UiPredicateV1::DockDragTransparentPayloadHitTestPassthroughAppliedIs { applied } => {
             if let Some(drag) = dock_drag_runtime {
                 return drag.dragging
-                    && drag.transparent_payload_mouse_passthrough_applied == *applied;
+                    && drag.transparent_payload_hit_test_passthrough_applied == *applied;
             }
             !*applied
         }

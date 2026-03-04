@@ -53,9 +53,8 @@ pub use fret_runtime::{
     DockDragInversionPolicy, DockDragInversionSettings, DockingInteractionSettings, DragKindId,
     DragPhase, DragSession, DragSessionId, Effect, InputContext, KeyChord, Keymap, KeymapService,
     Menu, MenuBar, MenuItem, MenuRole, Model, ModelCx, ModelId, ModelStore, ModelUpdateError,
-    MousePolicy, OsAction, Platform, PlatformFilter, SystemMenuType, TaskbarVisibility, WhenExpr,
-    WindowOpacity, WindowRequest, WindowRole, WindowStyleRequest, WindowZLevel, format_chord,
-    format_sequence,
+    OsAction, Platform, PlatformFilter, SystemMenuType, TaskbarVisibility, WhenExpr, WindowOpacity,
+    WindowRequest, WindowRole, WindowStyleRequest, WindowZLevel, format_chord, format_sequence,
 };
 
 pub use keymap::KeymapError;
