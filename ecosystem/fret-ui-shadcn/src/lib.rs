@@ -260,7 +260,7 @@ pub use input_group::{
 };
 pub use input_otp::{
     InputOTP, InputOTPGroup, InputOTPSeparator, InputOTPSlot, InputOtp, InputOtpGroup,
-    InputOtpPart, InputOtpSeparator, InputOtpSlot, input_otp,
+    InputOtpPart, InputOtpPattern, InputOtpSeparator, InputOtpSlot, input_otp,
 };
 pub use item::{
     Item, ItemActions, ItemContent, ItemDescription, ItemFooter, ItemGroup, ItemHeader, ItemMedia,

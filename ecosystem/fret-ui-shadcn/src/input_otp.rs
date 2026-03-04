@@ -18,6 +18,12 @@ use fret_ui_kit::{
 use std::sync::Arc;
 use std::time::Duration;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum InputOtpPattern {
+    Digits,
+    DigitsAndChars,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 enum InputOtpSeparatorMode {
     /// Legacy behavior: when `group_size` yields multiple groups, render a separator between every
@@ -81,7 +87,7 @@ fn otp_slot_ring_color(theme: &ThemeSnapshot, aria_invalid: bool) -> Color {
     }
 }
 
-fn sanitize_otp(input: &str, length: usize, numeric_only: bool) -> String {
+fn sanitize_otp(input: &str, length: usize, pattern: InputOtpPattern) -> String {
     let mut out = String::new();
     out.reserve(length.min(input.len()));
     for ch in input.chars() {
@@ -91,10 +97,14 @@ fn sanitize_otp(input: &str, length: usize, numeric_only: bool) -> String {
         if ch.is_whitespace() {
             continue;
         }
-        if numeric_only && !ch.is_ascii_digit() {
+        if ch.is_control() {
             continue;
         }
-        if ch.is_control() {
+        let allowed = match pattern {
+            InputOtpPattern::Digits => ch.is_ascii_digit(),
+            InputOtpPattern::DigitsAndChars => ch.is_ascii_alphanumeric(),
+        };
+        if !allowed {
             continue;
         }
         out.push(ch);
@@ -113,7 +123,7 @@ pub enum InputOtpSlotCornerMode {
 pub struct InputOtp {
     model: Model<String>,
     length: usize,
-    numeric_only: bool,
+    pattern: InputOtpPattern,
     group_size: Option<usize>,
     explicit_groups: Option<Vec<Vec<usize>>>,
     separator_mode: InputOtpSeparatorMode,
@@ -136,7 +146,7 @@ impl std::fmt::Debug for InputOtp {
         f.debug_struct("InputOtp")
             .field("model", &"<model>")
             .field("length", &self.length)
-            .field("numeric_only", &self.numeric_only)
+            .field("pattern", &self.pattern)
             .field("group_size", &self.group_size)
             .field(
                 "explicit_groups",
@@ -170,7 +180,7 @@ impl InputOtp {
         Self {
             model,
             length: 6,
-            numeric_only: true,
+            pattern: InputOtpPattern::Digits,
             group_size: None,
             explicit_groups: None,
             separator_mode: InputOtpSeparatorMode::AutoBetweenGroups,
@@ -200,7 +210,16 @@ impl InputOtp {
     }
 
     pub fn numeric_only(mut self, numeric_only: bool) -> Self {
-        self.numeric_only = numeric_only;
+        self.pattern = if numeric_only {
+            InputOtpPattern::Digits
+        } else {
+            InputOtpPattern::DigitsAndChars
+        };
+        self
+    }
+
+    pub fn pattern(mut self, pattern: InputOtpPattern) -> Self {
+        self.pattern = pattern;
         self
     }
 
@@ -301,7 +320,7 @@ impl InputOtp {
 
         let length = self.length;
         let mut value = cx.watch_model(&self.model).cloned().unwrap_or_default();
-        let sanitized = sanitize_otp(&value, length, self.numeric_only);
+        let sanitized = sanitize_otp(&value, length, self.pattern);
         if sanitized != value {
             let next = sanitized.clone();
             let _ = cx.app.models_mut().update(&self.model, |v| *v = next);
@@ -340,7 +359,7 @@ impl InputOtp {
         let root_layout = decl_style::layout_style(&theme, self.layout.relative());
         let separator_color = otp_separator_color(&theme);
 
-        cx.container(
+        let el = cx.container(
             ContainerProps {
                 layout: root_layout,
                 ..Default::default()
@@ -606,6 +625,9 @@ impl InputOtp {
                         slot_corners[idx] = Some(corner_radii);
 
                         let mut decoration = SemanticsDecoration::default().selected(is_active);
+                        if self.disabled {
+                            decoration = decoration.disabled(true);
+                        }
                         if let Some(test_id) = slot_test_id {
                             decoration = decoration.test_id(test_id);
                         }
@@ -740,7 +762,13 @@ impl InputOtp {
 
                 out
             },
-        )
+        );
+
+        if self.disabled {
+            cx.opacity(0.5, move |_cx| vec![el])
+        } else {
+            el
+        }
     }
 }
 
@@ -1043,6 +1071,42 @@ mod tests {
     }
 
     #[test]
+    fn input_otp_pattern_digits_and_chars_filters_punctuation() {
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        let mut services = FakeServices::default();
+
+        let model = app.models_mut().insert("12a 34-5678".to_string());
+
+        let window = AppWindowId::default();
+        ui.set_window(window);
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(480.0), Px(120.0)),
+        );
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "otp",
+            |cx| {
+                vec![
+                    InputOtp::new(model.clone())
+                        .length(6)
+                        .pattern(InputOtpPattern::DigitsAndChars)
+                        .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        assert_eq!(app.models().get_cloned(&model).as_deref(), Some("12a345"));
+    }
+
+    #[test]
     fn input_otp_fake_caret_blinks_on_a_1000ms_cycle_under_fixed_delta() {
         let window = AppWindowId::default();
         let mut app = App::new();
@@ -1181,5 +1245,30 @@ mod tests {
 
         assert_eq!(app.models().get_cloned(&model).as_deref(), Some("123456"));
         assert_eq!(count_svg_icons(&element), 1);
+    }
+
+    #[test]
+    fn input_otp_disabled_wraps_in_opacity() {
+        use fret_ui::element::ElementKind;
+
+        let mut app = App::new();
+        let window = AppWindowId::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(480.0), Px(120.0)),
+        );
+
+        let model = app.models_mut().insert("123456".to_string());
+        let el = fret_ui::elements::with_element_cx(
+            &mut app,
+            window,
+            bounds,
+            "input_otp_disabled_opacity",
+            |cx| InputOtp::new(model).disabled(true).into_element(cx),
+        );
+
+        let ElementKind::Opacity(_) = &el.kind else {
+            panic!("expected disabled InputOtp to be wrapped in Opacity");
+        };
     }
 }

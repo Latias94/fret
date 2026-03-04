@@ -111,11 +111,49 @@
     {
       "type": "scroll_into_view",
       "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-input-otp-pattern.slot.0" },
+      "delta_y": -240.0,
+      "timeout_frames": 900
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-input-otp-pattern.input" }
+      },
+      "timeout_frames": 600
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-input-otp-pattern.slot.0" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focus_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-input-otp-pattern.input" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
+    { "type": "press_key", "key": "backspace" },
+    { "type": "type_text", "text": "a1-" },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "value_equals",
+        "target": { "kind": "test_id", "id": "ui-gallery-input-otp-pattern.input" },
+        "text": "a1"
+      },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
       "target": { "kind": "test_id", "id": "ui-gallery-input-otp-invalid.slot.0" },
       "delta_y": -240.0,
       "timeout_frames": 1800
     },
-    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-input-otp-invalid.slot.0" } },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-input-otp-invalid.input" } },
     {
       "type": "wait_until",
       "predicate": {
@@ -128,7 +166,7 @@
       "type": "wait_until",
       "predicate": {
         "kind": "selected_is",
-        "target": { "kind": "test_id", "id": "ui-gallery-input-otp-invalid.slot.0" },
+        "target": { "kind": "test_id", "id": "ui-gallery-input-otp-invalid.slot.5" },
         "selected": true
       },
       "timeout_frames": 240

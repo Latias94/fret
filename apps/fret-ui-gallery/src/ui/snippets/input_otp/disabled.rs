@@ -1,4 +1,4 @@
-pub const SOURCE: &str = include_str!("demo.rs");
+pub const SOURCE: &str = include_str!("disabled.rs");
 
 // region: example
 use fret_core::Px;
@@ -14,7 +14,7 @@ fn value_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<String> {
     match state.value {
         Some(model) => model,
         None => {
-            let model = cx.app.models_mut().insert(String::new());
+            let model = cx.app.models_mut().insert(String::from("123456"));
             cx.with_state(Models::default, |st| st.value = Some(model.clone()));
             model
         }
@@ -27,7 +27,8 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
 
     shadcn::InputOTP::new(value)
         .length(6)
-        .test_id_prefix("ui-gallery-input-otp-simple")
+        .disabled(true)
+        .test_id_prefix("ui-gallery-input-otp-disabled")
         .refine_layout(max_w_xs)
         .into_element_parts(cx, |_cx| {
             vec![
@@ -44,6 +45,6 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                 ])),
             ]
         })
-        .test_id("ui-gallery-input-otp-demo")
+        .test_id("ui-gallery-input-otp-disabled")
 }
 // endregion: example

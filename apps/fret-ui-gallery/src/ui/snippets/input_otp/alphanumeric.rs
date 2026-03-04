@@ -1,4 +1,4 @@
-pub const SOURCE: &str = include_str!("demo.rs");
+pub const SOURCE: &str = include_str!("alphanumeric.rs");
 
 // region: example
 use fret_core::Px;
@@ -27,7 +27,8 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
 
     shadcn::InputOTP::new(value)
         .length(6)
-        .test_id_prefix("ui-gallery-input-otp-simple")
+        .pattern(shadcn::InputOtpPattern::DigitsAndChars)
+        .test_id_prefix("ui-gallery-input-otp-alphanumeric")
         .refine_layout(max_w_xs)
         .into_element_parts(cx, |_cx| {
             vec![
@@ -44,6 +45,6 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                 ])),
             ]
         })
-        .test_id("ui-gallery-input-otp-demo")
+        .test_id("ui-gallery-input-otp-alphanumeric")
 }
 // endregion: example
