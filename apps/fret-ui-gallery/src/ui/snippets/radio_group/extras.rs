@@ -167,7 +167,8 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                 ),
             )
             .into_element(cx)
-    });
+    })
+    .test_id("ui-gallery-radio-group-rtl");
 
     stack::vstack(
         cx,
