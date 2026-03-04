@@ -1131,7 +1131,7 @@ fn dx_available() -> bool {
 fn is_hotpatch_ready_native_demo(name: &str) -> bool {
     matches!(
         name,
-        "todo_demo" | "assets_demo" | "hotpatch_smoke_demo" | "hello_counter_demo"
+        "todo_demo" | "assets_demo" | "hotpatch_smoke_demo"
     )
 }
 
