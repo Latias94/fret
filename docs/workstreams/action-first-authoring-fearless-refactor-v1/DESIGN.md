@@ -1,7 +1,7 @@
 # Action-First Authoring + View Runtime (Fearless Refactor v1) — Design
 
 Status: Landed (v1 implementation is in-tree; ADRs remain the source of truth)
-Last updated: 2026-03-03
+Last updated: 2026-03-04
 
 This workstream refactors Fret’s **user-facing authoring story** to close the ergonomics + correctness gap vs
 Zed/GPUI while preserving Fret’s non-negotiable layering rules:
@@ -52,7 +52,7 @@ Establish a single authoring mental model:
 
 This replaces ad-hoc stringly command parsing in user code and reduces boilerplate in demos/templates.
 
-Implementation note (as of 2026-03-03):
+Implementation note (as of 2026-03-04):
 
 - When focus is inside an overlay/portal layer root, command availability and command dispatch fall
   back to the window default root (modal barrier root if present, else base root) so app-level

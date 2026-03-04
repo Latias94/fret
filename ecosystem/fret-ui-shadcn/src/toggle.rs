@@ -1,6 +1,4 @@
 use std::sync::Arc;
-#[cfg(test)]
-use std::time::Duration;
 
 use fret_core::{Color, Edges, FontId, FontWeight, Px, TextStyle};
 use fret_icons::IconId;
@@ -741,6 +739,7 @@ mod tests {
     };
     use fret_ui::UiTree;
     use std::collections::HashMap;
+    use std::time::Duration;
 
     #[derive(Default)]
     struct FakeServices;

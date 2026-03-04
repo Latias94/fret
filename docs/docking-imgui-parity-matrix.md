@@ -24,6 +24,7 @@ If you are looking for overall sequencing and milestones, see:
 - Multi-window (OS windows) plan: `docs/workstreams/docking-multiwindow-imgui-parity.md`
 - macOS multi-window plan: `docs/workstreams/macos-docking-multiwindow-imgui-parity.md`
 - Multi-viewport (engine render targets) plan: `docs/workstreams/docking-multiviewport-arbitration-v1.md`
+- Behavior-first gate status (tear-off + overlap + peek-behind): `docs/workstreams/docking-multi-window-imgui-alignment-v1.md`
 
 If you are looking for hard contracts, start here:
 
@@ -254,6 +255,7 @@ backend guidance. It is not an API map: the goal is to preserve the *outcome* ac
 - **Drop hint hit-testing uses a 5-way selection with hysteresis**
   - ImGui: `DockNodeCalcDropRectsAndTestMousePos()` has a custom radial/quadrant test to reduce diagonal flicker.
   - Fret: `dock_hint_pick_zone(...)` mirrors the same hysteresis approach (`ecosystem/fret-docking/src/dock/layout.rs`).
+  - Gate (multi-window sweep): `tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-five-way-hints-sweep.json`.
 
 - **Dock drags must not fight non-modal overlays or viewport capture**
   - ImGui: docking drag/drop uses explicit payload ownership and preview overlays.

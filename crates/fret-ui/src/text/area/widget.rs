@@ -1570,9 +1570,9 @@ impl<H: UiHost> Widget<H> for TextArea {
             self.placeholder_prepared_key = Some(key);
         }
 
-        let focused_self =
-            cx.focus == Some(cx.node) && crate::focus_visible::is_focus_visible(cx.app, cx.window);
-        let border_color = if focused_self {
+        let focused = cx.focus == Some(cx.node);
+        let focus_visible = focused && crate::focus_visible::is_focus_visible(cx.app, cx.window);
+        let border_color = if focus_visible {
             self.style.border_color_focused
         } else {
             self.style.border_color
@@ -1587,7 +1587,9 @@ impl<H: UiHost> Widget<H> for TextArea {
             corner_radii: self.style.corner_radii,
         });
 
-        if focused_self && let Some(mut ring) = self.style.focus_ring {
+        if (focus_visible || self.focus_ring_always_paint)
+            && let Some(mut ring) = self.style.focus_ring
+        {
             ring.corner_radii = self.style.corner_radii;
             crate::paint::paint_focus_ring(cx.scene, DrawOrder(1), cx.bounds, ring);
         }

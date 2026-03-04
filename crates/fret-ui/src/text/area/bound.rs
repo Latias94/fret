@@ -90,6 +90,10 @@ impl BoundTextArea {
         self.area.set_focusable(focusable);
     }
 
+    pub fn set_focus_ring_always_paint(&mut self, always_paint: bool) {
+        self.area.set_focus_ring_always_paint(always_paint);
+    }
+
     pub fn model_id(&self) -> fret_runtime::ModelId {
         self.model.id()
     }

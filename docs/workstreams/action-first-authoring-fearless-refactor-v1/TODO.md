@@ -1,7 +1,7 @@
 # Action-First Authoring + View Runtime (Fearless Refactor v1) — TODO
 
 Status: Landed (v1)
-Last updated: 2026-03-03
+Last updated: 2026-03-04
 
 Related:
 
@@ -313,9 +313,14 @@ practical steps:
   - Status (as of 2026-03-03): `debug.command_dispatch_trace[*].source_test_id` is inferred from the
     current semantics snapshot when `source_element` is available (fallbacks remain for cases where
     semantics/test IDs are unavailable).
+  - Update (as of 2026-03-04): pointer-triggered `source_test_id` is now recorded directly into the
+    pending dispatch source when available (pressable `PressableA11y.test_id`), and diagnostics
+    fall back to semantics snapshot correlation only when the direct test ID is unavailable.
   - Evidence:
     - `ecosystem/fret-bootstrap/src/ui_diagnostics/service.rs` (`infer_pointer_source_test_id_from_semantics`)
     - `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (`command_dispatch_trace_infers_pointer_source_test_id_from_semantics_snapshot`)
+    - `crates/fret-runtime/src/command_dispatch_diagnostics.rs` (`CommandDispatchSourceV1.test_id`)
+    - `crates/fret-ui/src/declarative/host_widget/event/pressable.rs` (records pending source with `test_id`)
 - View runtime ergonomics: reduce `on_action` handler boilerplate (`request_redraw` + `notify`) without weakening
   determinism or layering (ecosystem-only).
 - Payload actions (v2+), behind strict determinism + validation rules.

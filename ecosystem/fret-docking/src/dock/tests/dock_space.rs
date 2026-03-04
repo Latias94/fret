@@ -549,6 +549,7 @@ fn dock_space_kicks_paint_cache_on_drag_transition_for_cache_root() {
             grab_offset: Point::new(Px(0.0), Px(0.0)),
             start_tick: fret_runtime::TickId(0),
             tear_off_requested: false,
+            tear_off_requested_at_tick: None,
             tear_off_oob_start_frame: None,
             dock_previews_enabled: true,
         },

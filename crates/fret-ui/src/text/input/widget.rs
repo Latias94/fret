@@ -1535,7 +1535,9 @@ impl<H: UiHost> Widget<H> for TextInput {
             corner_radii: self.chrome_style.corner_radii,
         });
 
-        if focus_visible && let Some(mut ring) = self.chrome_style.focus_ring {
+        if (focus_visible || self.focus_ring_always_paint)
+            && let Some(mut ring) = self.chrome_style.focus_ring
+        {
             ring.corner_radii = self.chrome_style.corner_radii;
             crate::paint::paint_focus_ring(cx.scene, DrawOrder(1), cx.bounds, ring);
         }

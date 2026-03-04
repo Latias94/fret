@@ -1,5 +1,16 @@
 use super::*;
 
+fn env_flag_is_true(name: &str) -> bool {
+    std::env::var_os(name).is_some_and(|v| {
+        let v = v.to_string_lossy();
+        let v = v.trim();
+        !(v.eq_ignore_ascii_case("0")
+            || v.eq_ignore_ascii_case("false")
+            || v.eq_ignore_ascii_case("off")
+            || v.eq_ignore_ascii_case("no"))
+    })
+}
+
 impl<D: WinitAppDriver> WinitRunner<D> {
     pub(super) fn internal_drag_routing_pointer_id(&self) -> Option<fret_core::PointerId> {
         if let Some(pointer_id) = self.dock_drag_pointer_id() {
@@ -270,7 +281,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 .copied()
                 .unwrap_or_default();
             settings.transparent_payload_during_follow
-                || std::env::var_os("FRET_DOCK_TEAROFF_TRANSPARENT_PAYLOAD").is_some()
+                || env_flag_is_true("FRET_DOCK_TEAROFF_TRANSPARENT_PAYLOAD")
         };
         let hover_under_moving_window = follow_active
             || (wants_transparent_payload

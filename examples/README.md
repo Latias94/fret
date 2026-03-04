@@ -9,8 +9,8 @@ not apply at the workspace root. Use the commands below.
 ## The bare minimum (recommended)
 
 ```bash
-cargo run -p fret-cookbook --example hello
-cargo run -p fret-cookbook --example simple_todo
+cargo run -p fretboard -- dev native --example hello
+cargo run -p fretboard -- dev native --example simple_todo
 ```
 
 ## Cookbook (lesson-shaped examples)

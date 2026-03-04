@@ -275,7 +275,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 .app
                 .global::<fret_runtime::RunnerWindowStyleDiagnosticsStore>()
                 .and_then(|s| s.effective_snapshot(app_window))
-                .is_some_and(|s| s.transparent);
+                .is_some_and(|s| s.surface_composited_alpha);
             super::window_lifecycle::configure_surface_alpha_mode_for_composited_window(
                 &context.adapter,
                 &context.device,
@@ -727,7 +727,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                         .app
                         .global::<fret_runtime::RunnerWindowStyleDiagnosticsStore>()
                         .and_then(|s| s.effective_snapshot(main_window))
-                        .is_some_and(|s| s.transparent);
+                        .is_some_and(|s| s.surface_composited_alpha);
                     super::window_lifecycle::configure_surface_alpha_mode_for_composited_window(
                         &context.adapter,
                         &context.device,
@@ -1818,7 +1818,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                             .app
                             .global::<fret_runtime::RunnerWindowStyleDiagnosticsStore>()
                             .and_then(|s| s.effective_snapshot(app_window))
-                            .is_some_and(|s| s.transparent);
+                            .is_some_and(|s| s.visual_transparent);
                         let clear_color = if want_transparent {
                             fret_render::ClearColor(wgpu::Color::TRANSPARENT)
                         } else {

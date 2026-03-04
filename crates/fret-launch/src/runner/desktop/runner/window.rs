@@ -486,18 +486,6 @@ pub(super) fn set_window_background_material(
             content_view as *const std::ffi::c_void,
             container_view as *const std::ffi::c_void,
         ));
-
-        // Ensure the window is non-opaque so the compositor can blend the surface alpha and the
-        // behind-window material can show through.
-        let _: () = msg_send![ns_window, setOpaque: false];
-        if let Some(color_cls) = Class::get("NSColor") {
-            // Avoid `clearColor` to preserve window shadow (matches GPUI's behavior).
-            let bg: *mut Object = msg_send![color_cls, colorWithSRGBRed: 0f64 green: 0f64 blue: 0f64 alpha: 0.0001f64];
-            if !bg.is_null() {
-                let _: () = msg_send![ns_window, setBackgroundColor: bg];
-            }
-        }
-
         let subviews: *mut Object = msg_send![container_view, subviews];
         let count: usize = if subviews.is_null() {
             0
@@ -541,6 +529,23 @@ pub(super) fn set_window_background_material(
                 material,
                 fret_runtime::WindowBackgroundMaterialRequest::None
             );
+        }
+
+        // Ensure the window is non-opaque so the compositor can blend the surface alpha and the
+        // behind-window material can show through.
+        let _: () = msg_send![ns_window, setOpaque: false];
+        if let Some(color_cls) = Class::get("NSColor") {
+            // Avoid `clearColor` to preserve window shadow.
+            let bg: *mut Object = msg_send![
+                color_cls,
+                colorWithSRGBRed: 0f64
+                green: 0f64
+                blue: 0f64
+                alpha: 0.0001f64
+            ];
+            if !bg.is_null() {
+                let _: () = msg_send![ns_window, setBackgroundColor: bg];
+            }
         }
 
         let container_bounds: NsRect = msg_send![container_view, bounds];

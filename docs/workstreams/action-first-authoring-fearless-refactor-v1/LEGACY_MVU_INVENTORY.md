@@ -1,6 +1,6 @@
 # Legacy MVU Inventory (Action-First Authoring v1)
 
-Last updated: 2026-03-03
+Last updated: 2026-03-04
 
 This document tracks remaining in-tree usage of legacy MVU/message-routing helpers after the
 action-first + view runtime v1 adoption.
@@ -37,13 +37,13 @@ Scope:
   - `apps/fret-cookbook/examples/virtual_list_basics.rs`
   - `apps/fret-cookbook/examples/icons_and_assets_basics.rs`
 
-## Remaining legacy MVU usage (as of 2026-03-03)
+## Remaining legacy MVU usage (as of 2026-03-04)
 
 ### 1) Cookbook examples (still MVU)
 
 These examples implement `MvuProgram` and/or use `MessageRouter`:
 
-- None (as of 2026-03-03). All cookbook examples now use the view runtime + typed actions.
+- None (as of 2026-03-04). All cookbook examples now use the view runtime + typed actions.
 
 Recommendation:
 

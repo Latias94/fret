@@ -1,6 +1,6 @@
 # Shadcn Motion Parity Audit v1 — Milestones
 
-Last updated: 2026-03-03.
+Last updated: 2026-03-04.
 
 ## M0 — Baseline agreement (audit-ready)
 
@@ -25,4 +25,3 @@ Last updated: 2026-03-03.
 - Remove public “per-frame” speed semantics where possible.
 - Ensure no component-level math reintroduces fixed 60Hz coupling.
 - Update docs/evidence anchors for any moved symbols.
-

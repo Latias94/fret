@@ -4019,6 +4019,7 @@ impl CommandDialog {
                                 fret_runtime::CommandDispatchSourceV1 {
                                     kind,
                                     element: None,
+                                    test_id: None,
                                 },
                             );
                         },

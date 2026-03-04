@@ -184,7 +184,7 @@ struct TodoView {
 
 ## Three-layer state split (recommended)
 
-This section describes the **best-practice baseline** (`todo`) and the `fretboard new todo` scaffold template.
+This section describes the **best-practice baseline** (`todo`) and the `cargo run -p fretboard -- new todo` scaffold template.
 
 The `simple-todo` template intentionally stops earlier (no selector/query).
 
@@ -244,7 +244,7 @@ The view runtime renders the same declarative IR (`Elements`) but provides a coh
 - typed action handler registration,
 - `notify → dirty → reuse` semantics via view cache roots.
 
-For the full runnable baseline, see the `fretboard new todo` scaffold template.
+For the full runnable baseline, see the `cargo run -p fretboard -- new todo` scaffold template.
 
 ## Derived state (selectors)
 

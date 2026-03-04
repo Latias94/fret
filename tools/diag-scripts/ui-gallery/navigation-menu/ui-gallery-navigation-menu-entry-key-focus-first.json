@@ -1,12 +1,12 @@
 {
   "schema_version": 2,
   "meta": {
-    "name": "ui-gallery-navigation-menu-escape-close-gate",
-    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
-    "tags": ["ui_gallery", "shadcn", "navigation_menu", "overlay", "focus", "escape", "gate"],
+    "name": "ui-gallery-navigation-menu-entry-key-focus-first",
+    "required_capabilities": ["diag.script_v2"],
+    "tags": ["ui_gallery", "shadcn", "navigation_menu", "keyboard", "focus", "gate"],
     "target_hints": [
-      "Move the pointer over the trigger, open NavigationMenu content, and press Escape to close.",
-      "Ensure a small mouse move over the trigger does not immediately re-open after Escape dismissal."
+      "Open a NavigationMenu item, then press ArrowDown on the focused trigger.",
+      "Ensure focus moves into the open content (first link), matching Radix entry-key behavior."
     ]
   },
   "steps": [
@@ -67,10 +67,8 @@
       "padding_px": 12.0,
       "timeout_frames": 1200
     },
-    { "type": "capture_screenshot", "label": "ui-gallery-navigation-menu-escape-gate-closed", "timeout_frames": 240 },
 
-    { "type": "move_pointer", "pointer_kind": "mouse", "target": { "kind": "test_id", "id": "ui-gallery-navigation-menu-demo-trigger-components" } },
-    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-navigation-menu-demo-trigger-components" } },
+    { "type": "click_stable", "target": { "kind": "test_id", "id": "ui-gallery-navigation-menu-demo-trigger-components" } },
     {
       "type": "wait_until",
       "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-navigation-menu-demo-viewport" } },
@@ -81,30 +79,20 @@
       "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-navigation-menu-demo-link-alert-dialog" } },
       "timeout_frames": 600
     },
-    { "type": "capture_screenshot", "label": "ui-gallery-navigation-menu-escape-gate-open", "timeout_frames": 240 },
-
-    { "type": "press_key", "key": "escape" },
     {
       "type": "wait_until",
-      "predicate": { "kind": "not_exists", "target": { "kind": "test_id", "id": "ui-gallery-navigation-menu-demo-viewport" } },
+      "predicate": { "kind": "focus_is", "target": { "kind": "test_id", "id": "ui-gallery-navigation-menu-demo-trigger-components" } },
+      "timeout_frames": 240
+    },
+
+    { "type": "press_key", "key": "arrow_down" },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "focus_is", "target": { "kind": "test_id", "id": "ui-gallery-navigation-menu-demo-link-alert-dialog" } },
       "timeout_frames": 600
     },
 
-    {
-      "type": "move_pointer_sweep",
-      "pointer_kind": "mouse",
-      "target": { "kind": "test_id", "id": "ui-gallery-navigation-menu-demo-trigger-components" },
-      "delta_x": 2.0,
-      "delta_y": 0.0,
-      "steps": 2,
-      "frames_per_step": 1
-    },
-    { "type": "wait_frames", "n": 40 },
-    {
-      "type": "assert",
-      "predicate": { "kind": "not_exists", "target": { "kind": "test_id", "id": "ui-gallery-navigation-menu-demo-viewport" } }
-    },
-
-    { "type": "capture_bundle", "label": "ui-gallery-navigation-menu-escape-close-gate" }
+    { "type": "capture_bundle", "label": "ui-gallery-navigation-menu-entry-key-focus-first" }
   ]
 }
+

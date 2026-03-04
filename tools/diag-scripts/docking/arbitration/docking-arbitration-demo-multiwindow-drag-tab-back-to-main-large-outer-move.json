@@ -1,16 +1,17 @@
 {
   "schema_version": 2,
   "meta": {
-    "name": "Docking arbitration demo: drag a torn-off tab back to the main window",
-    "tags": ["docking", "multiwindow", "drag", "gate"],
+    "name": "Docking arbitration demo: drag a torn-off tab back to the main window (large OS window move, DPI/monitor stress)",
+    "tags": ["docking", "multiwindow", "drag", "dpi", "gate"],
     "required_capabilities": ["diag.script_v2", "diag.multi_window"],
     "env_defaults": {
       "FRET_DOCK_ALLOW_MULTI_WINDOW_TEAR_OFF": "1"
     },
     "target_hints": [
-      "This script exercises an ImGui-style continuous tab tear-off: start dragging a tab, allow tear-off to create a floating OS window, then route the same drag back into the main window without releasing.",
-      "It relies on schema v2 window-targeted steps to migrate the active script across windows.",
-      "Note: cursor overrides are expressed in window-client logical pixels (unless a step explicitly requests physical)."
+      "This gate is a stress variant of the multi-window drag-back flow.",
+      "After tear-off creates a floating OS window, the script moves that floating window far along +X (cross-monitor if present).",
+      "Expected behavior: cross-window drag routing remains correct and the tab can still be docked back into the main window (no coordinate/DPI drift regressions).",
+      "Note: if the host only has a single monitor, the OS may clamp the outer position; the gate still exercises large-coordinate paths and must pass."
     ]
   },
   "steps": [
@@ -71,7 +72,7 @@
     {
       "type": "set_window_outer_position",
       "window": { "kind": "last_seen" },
-      "x_px": 1900.0,
+      "x_px": 3800.0,
       "y_px": 120.0
     },
     {
@@ -80,7 +81,8 @@
       "width_px": 900.0,
       "height_px": 700.0
     },
-    { "type": "wait_frames", "n": 2 },
+    { "type": "wait_frames", "n": 4 },
+    { "type": "capture_bundle", "label": "multiwindow-drag-back-large-move-before-merge" },
 
     { "type": "raise_window", "window": { "kind": "first_seen" } },
     {
@@ -138,6 +140,7 @@
       "window": { "kind": "first_seen" },
       "predicate": { "kind": "dock_graph_signature_contains", "needle": "floatings=[]" }
     },
-    { "type": "capture_bundle", "label": "docking-arbitration-demo-multiwindow-drag-tab-back-to-main" }
+    { "type": "capture_bundle", "label": "docking-arbitration-demo-multiwindow-drag-tab-back-to-main-large-outer-move" }
   ]
 }
+

@@ -91,7 +91,7 @@ so the default authoring story lives in ecosystem crates.
 - Action-first authoring + view runtime (v1, available now):
   - Workstream: `docs/workstreams/action-first-authoring-fearless-refactor-v1/DESIGN.md`
   - ADRs: `docs/adr/0307-action-registry-and-typed-action-dispatch-v1.md`, `docs/adr/0308-view-authoring-runtime-and-hooks-v1.md`
-  - Template entry points: `fretboard new hello`, `fretboard new todo`, `fretboard new simple-todo`
+  - Template entry points: `cargo run -p fretboard -- new hello`, `cargo run -p fretboard -- new todo`, `cargo run -p fretboard -- new simple-todo`
 - Recommended building blocks:
   - View runtime + hooks + typed unit actions (golden path): `ecosystem/fret` (`View`, `ViewCx`, `fret::actions!`)
   - Derived state (selectors/computed): `ecosystem/fret-selector`

@@ -1921,6 +1921,7 @@ impl NavigationMenu {
                         radix_navigation_menu::navigation_menu_request_viewport_overlay(
                             cx,
                             root_id,
+                            cfg,
                             value_model.clone(),
                             open_model.clone(),
                             overlay_presence,
@@ -3143,6 +3144,150 @@ mod tests {
             !has_open_timer,
             "expected no delayed-open timer after escape gating"
         );
+    }
+
+    #[test]
+    fn entry_key_focuses_first_link_like_radix() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let model = app.models_mut().insert(None::<Arc<str>>);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(520.0), Px(320.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let render_frame = |ui: &mut UiTree<App>,
+                            app: &mut App,
+                            services: &mut FakeServices,
+                            frame: u64| {
+            app.set_tick_id(TickId(frame));
+            app.set_frame_id(FrameId(frame));
+            OverlayController::begin_frame(app, window);
+            let model_for_render = model.clone();
+            let root = fret_ui::declarative::render_root(
+                ui,
+                app,
+                services,
+                window,
+                bounds,
+                "navigation-menu-entry-key",
+                move |cx| {
+                    let content = vec![
+                        NavigationMenuLink::new(model_for_render.clone(), vec![cx.text("Go")])
+                            .label("Go")
+                            .into_element(cx),
+                        NavigationMenuLink::new(model_for_render.clone(), vec![cx.text("Later")])
+                            .label("Later")
+                            .into_element(cx),
+                    ];
+                    let items = vec![NavigationMenuItem::new("alpha", "Alpha", content)];
+                    vec![
+                        NavigationMenu::new(model_for_render.clone())
+                            .items(items)
+                            .into_element(cx),
+                    ]
+                },
+            );
+            ui.set_root(root);
+            OverlayController::render(ui, app, services, window, bounds);
+            ui.request_semantics_snapshot();
+            ui.layout_all(app, services, bounds, 1.0);
+        };
+
+        render_frame(&mut ui, &mut app, &mut services, 1);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let alpha_btn = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::Button && n.label.as_deref() == Some("Alpha"))
+            .expect("alpha button semantics");
+        let pos = Point::new(
+            Px(alpha_btn.bounds.origin.x.0 + alpha_btn.bounds.size.width.0 * 0.5),
+            Px(alpha_btn.bounds.origin.y.0 + alpha_btn.bounds.size.height.0 * 0.5),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(PointerEvent::Move {
+                pointer_id: fret_core::PointerId(0),
+                position: pos,
+                buttons: MouseButtons::default(),
+                modifiers: Modifiers::default(),
+                pointer_type: PointerType::Mouse,
+            }),
+        );
+
+        let open_token = app
+            .flush_effects()
+            .iter()
+            .find_map(|e| match e {
+                fret_runtime::Effect::SetTimer { token, after, .. }
+                    if *after
+                        == radix_navigation_menu::NavigationMenuConfig::default()
+                            .delay_duration =>
+                {
+                    Some(*token)
+                }
+                _ => None,
+            })
+            .expect("expected delayed-open timer");
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Timer { token: open_token },
+        );
+
+        render_frame(&mut ui, &mut app, &mut services, 2);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let alpha_btn = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::Button && n.label.as_deref() == Some("Alpha"))
+            .expect("alpha button semantics");
+        ui.set_focus(Some(alpha_btn.id));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::KeyDown {
+                key: KeyCode::ArrowDown,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+
+        let cmd = app
+            .flush_effects()
+            .iter()
+            .find_map(|e| match e {
+                fret_runtime::Effect::Command { command, .. }
+                    if command.as_str() == "focus.next" =>
+                {
+                    Some(command.clone())
+                }
+                _ => None,
+            })
+            .expect("expected focus.next command effect");
+        let _ = ui.dispatch_command(&mut app, &mut services, &cmd);
+
+        render_frame(&mut ui, &mut app, &mut services, 3);
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+
+        let go_link = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::Link && n.label.as_deref() == Some("Go"))
+            .expect("Go link semantics");
+        assert_eq!(snap.focus, Some(go_link.id));
     }
 
     #[test]

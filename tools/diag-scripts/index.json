@@ -942,6 +942,54 @@
       ]
     },
     {
+      "id": "docking-arbitration-demo-multiwindow-tearoff-tabs-group-two-tabs",
+      "path": "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-tearoff-tabs-group-two-tabs.json",
+      "required_capabilities": [
+        "diag.multi_window",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "docking-arbitration"
+      ],
+      "tags": [
+        "docking",
+        "drag",
+        "gate",
+        "multiwindow",
+        "tearoff",
+        "tabbar"
+      ],
+      "target_hints": [
+        "Merges two viewports into one tab strip, then starts a tabs-group drag from empty tab-bar space and tears off out-of-bounds.",
+        "Asserts the whole tab stack moves into a new OS window (ImGui-style undock-whole-node gesture)."
+      ]
+    },
+    {
+      "id": "docking-arbitration-demo-multiwindow-tearoff-tabs-group-two-tabs-merge-back",
+      "path": "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-tearoff-tabs-group-two-tabs-merge-back.json",
+      "required_capabilities": [
+        "diag.multi_window",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "diag-hardening-smoke-docking",
+        "docking-arbitration"
+      ],
+      "tags": [
+        "docking",
+        "drag",
+        "gate",
+        "merge",
+        "multiwindow",
+        "tearoff",
+        "titlebar"
+      ],
+      "target_hints": [
+        "Merges two viewports into one tab strip, tears off the whole tab stack via a tabs-group drag, then docks it back into the main window via a title-bar (tabs-group) drag.",
+        "Asserts the floating OS window auto-closes after drop, and the main window still contains the baseline panels with no floatings."
+      ]
+    },
+    {
       "id": "docking-arbitration-demo-multiwindow-drag-tab-back-to-main",
       "path": "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-drag-tab-back-to-main.json",
       "required_capabilities": [
@@ -962,6 +1010,52 @@
         "This script exercises an ImGui-style continuous tab tear-off: start dragging a tab, allow tear-off to create a floating OS window, then route the same drag back into the main window without releasing.",
         "It relies on schema v2 window-targeted steps to migrate the active script across windows.",
         "Note: cursor overrides are expressed in window-client logical pixels (unless a step explicitly requests physical)."
+      ]
+    },
+    {
+      "id": "docking-arbitration-demo-multiwindow-title-bar-drag-docks-to-main",
+      "path": "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-title-bar-drag-docks-to-main.json",
+      "required_capabilities": [
+        "diag.multi_window",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "diag-hardening-smoke-docking",
+        "docking-arbitration"
+      ],
+      "tags": [
+        "docking",
+        "drag",
+        "gate",
+        "multiwindow",
+        "titlebar"
+      ],
+      "target_hints": [
+        "After tear-off, starts a tabs-group drag from empty tab-bar space in a floating OS window (custom chrome title-bar grab).",
+        "Docks back into the main window and asserts the floating window auto-closes after drop."
+      ]
+    },
+    {
+      "id": "docking-arbitration-demo-multiwindow-under-moving-window-basic",
+      "path": "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-under-moving-window-basic.json",
+      "required_capabilities": [
+        "diag.multi_window",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "diag-hardening-smoke-docking",
+        "docking-arbitration"
+      ],
+      "tags": [
+        "docking",
+        "drag",
+        "gate",
+        "hover",
+        "multiwindow"
+      ],
+      "target_hints": [
+        "Overlaps two OS windows and starts a cross-window dock drag in the topmost window.",
+        "With transparent payload enabled, asserts hover routing can peek behind the moving window (ImGui-style HoveredWindowUnderMovingWindow)."
       ]
     },
     {
@@ -1245,6 +1339,26 @@
       "target_hints": [
         "This script first merges two viewports into a single tab stack, then asserts drop-at-end resolves insert_index == 2.",
         "It cancels the final drag (Escape) to avoid mutating layout beyond the setup step."
+      ]
+    },
+    {
+      "id": "docking-arbitration-demo-tab-reorder-two-tabs",
+      "path": "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-tab-reorder-two-tabs.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "docking-arbitration"
+      ],
+      "tags": [
+        "docking",
+        "drag",
+        "gate",
+        "tabbar"
+      ],
+      "target_hints": [
+        "Merges two viewports into one tab strip, then drags a tab to the end to reorder within the strip.",
+        "Asserts the dock graph reflects the new tab order without floating/tear-off."
       ]
     },
     {
