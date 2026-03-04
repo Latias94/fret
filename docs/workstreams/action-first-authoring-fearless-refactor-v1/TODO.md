@@ -173,12 +173,14 @@ ID format:
     - `debug.dirty_views` + `debug.notify_requests`: `ecosystem/fret-bootstrap/src/ui_diagnostics/invalidation_diagnostics.rs`
     - `debug.cache_roots[*].reuse_reason`: `ecosystem/fret-bootstrap/src/ui_diagnostics/cache_root_diagnostics.rs`
     - view-cache reason source: `crates/fret-ui/src/declarative/mount.rs`
-- [ ] AFA-view-026 Provide a safe “app effects” scheduling helper for views:
+- [x] AFA-view-026 Provide a safe “app effects” scheduling helper for views:
   - Goal: allow `cx.on_action*` handlers to request `App`-scoped effects (e.g. `fret-query`
-    invalidation) without performing them directly inside `render()` as a workaround.
-  - Current workaround (documented):
-    - `apps/fret-examples/src/query_demo.rs` (writes a pending model in the action handler and
-      applies `with_query_client(...)` at the top of `render()`).
+    invalidation) with a boring, reusable pattern that avoids allocating a dedicated model for
+    simple “one-shot” effects.
+  - Implemented (v1): transient event scheduling at the view action root.
+  - Evidence:
+    - Helpers: `ecosystem/fret/src/view.rs` (`ViewCx::on_action_notify_transient`, `ViewCx::take_transient_on_action_root`)
+    - Adoption: `apps/fret-examples/src/query_demo.rs`, `apps/fret-examples/src/query_async_tokio_demo.rs`
 
 ---
 

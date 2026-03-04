@@ -141,13 +141,18 @@ Side effects that need `App` access (v1 note):
 
 Recommended v1 pattern (schedule in handler, execute in `render()`):
 
-- In the action handler: write a small “pending effect” model value.
-- In `render()`: read the pending flag, apply the `App`-scoped effect, then clear the flag.
+- Preferred: use transient events (one-shot flags) to schedule work for the next render pass:
+  - In the action handler: record a transient event (see `ViewCx::on_action_notify_transient`).
+  - In `render()`: consume the transient flag (see `ViewCx::take_transient_on_action_root`) and
+    apply the `App`-scoped effect.
+- If you need payload/data (not just a boolean flag), use a small “pending effect” model value
+  instead.
 
 Example:
 
-- `apps/fret-examples/src/query_demo.rs` (uses `PendingInvalidate` + `with_query_client` in `render()`).
-- `apps/fret-examples/src/query_async_tokio_demo.rs` (same pattern, but with `use_query_async`).
+- `ecosystem/fret/src/view.rs` (`ViewCx::on_action_notify_transient`, `ViewCx::take_transient_on_action_root`).
+- `apps/fret-examples/src/query_demo.rs` (uses transient events + `with_query_client`).
+- `apps/fret-examples/src/query_async_tokio_demo.rs` (same, but with `use_query_async`).
 
 ---
 
