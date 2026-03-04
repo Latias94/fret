@@ -112,6 +112,13 @@ How it works (mental model):
 - The script targets those IDs (and/or role/name selectors) and drives input.
 - The runner records a diagnostics bundle you can inspect/share.
 
+Next step (still boring): run the `simple_todo` smoke script (includes a screenshot + bundle):
+
+```bash
+FRET_DIAG=1 cargo run -p fretboard -- diag run tools/diag-scripts/cookbook/simple-todo/cookbook-simple-todo-smoke.json \
+  --launch -- cargo run -p fret-cookbook --features cookbook-diag --example simple_todo
+```
+
 For faster iteration (skip linking):
 
 ```bash

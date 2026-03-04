@@ -14,7 +14,7 @@
   - a `required-features` gate exists, and
   - `fretboard list cookbook-examples --all` shows the required feature name(s).
 - [x] Add a diagnostics walkthrough for `hello` (stable `test_id` + one script).
-- [ ] Add one additional diagnostics walkthrough after `hello` (candidate: `simple_todo` smoke).
+- [x] Add one additional diagnostics walkthrough after `hello` (`simple_todo` smoke).
 
 ## UI gallery gating (no heavy refactor)
 
