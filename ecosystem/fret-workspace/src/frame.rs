@@ -171,7 +171,7 @@ pub struct WorkspaceTopBar {
 impl WorkspaceTopBar {
     pub fn new() -> Self {
         Self {
-            height: Px(32.0),
+            height: Px(40.0),
             padding: Edges::all(Px(6.0)),
             left: Vec::new(),
             center: Vec::new(),

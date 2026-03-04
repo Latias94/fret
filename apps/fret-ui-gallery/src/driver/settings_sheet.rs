@@ -25,6 +25,7 @@ pub(super) fn push_settings_sheet(
     settings_menu_bar_in_window_open: Model<bool>,
     settings_edit_can_undo: Model<bool>,
     settings_edit_can_redo: Model<bool>,
+    chrome_show_workspace_tab_strip: Model<bool>,
     content: &mut Vec<AnyElement>,
 ) {
     content.push(cx.keyed("ui_gallery.settings_sheet", move |cx| {
@@ -98,7 +99,7 @@ pub(super) fn push_settings_sheet(
                                                 shadcn::SheetTitle::new("Settings")
                                                     .into_element(cx),
                                                 shadcn::SheetDescription::new(
-                                                    "Menu bar presentation (OS vs in-window).",
+                                                    "Menu bar presentation (OS vs in-window) + chrome toggles.",
                                                 )
                                                 .into_element(cx),
                                             ])
@@ -107,6 +108,27 @@ pub(super) fn push_settings_sheet(
                                             cx.text("Menu bar surfaces"),
                                             os_select,
                                             in_window_select,
+                                            cx.text("Chrome"),
+                                            stack::hstack(
+                                                cx,
+                                                stack::HStackProps::default()
+                                                    .gap(Space::N2)
+                                                    .items_center(),
+                                                |cx| {
+                                                    vec![
+                                                        shadcn::Switch::new(
+                                                            chrome_show_workspace_tab_strip
+                                                                .clone(),
+                                                        )
+                                                        .a11y_label("Show workspace tab strip")
+                                                        .into_element(cx),
+                                                        flex_row_wrap_label(
+                                                            cx,
+                                                            "Workspace tabs in the top bar",
+                                                        ),
+                                                    ]
+                                                },
+                                            ),
                                             cx.text("Command availability (debug)"),
                                             stack::hstack(
                                                 cx,

@@ -61,11 +61,11 @@ pub(super) fn tab_strip_view(
 pub(super) fn top_bar_view(
     cx: &mut ElementContext<'_, App>,
     left: Vec<AnyElement>,
-    tab_strip: AnyElement,
+    tab_strip: Option<AnyElement>,
 ) -> AnyElement {
     WorkspaceTopBar::new()
         .left(left)
-        .center(vec![tab_strip])
+        .center(tab_strip.into_iter())
         .right(vec![
             shadcn::Button::new("Settings")
                 .test_id("ui-gallery-settings-open")

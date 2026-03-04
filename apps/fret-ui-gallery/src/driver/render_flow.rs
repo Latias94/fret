@@ -33,6 +33,7 @@ pub(super) struct PreparedFrame {
     pub(super) settings_menu_bar_in_window_open: Model<bool>,
     pub(super) settings_edit_can_undo: Model<bool>,
     pub(super) settings_edit_can_redo: Model<bool>,
+    pub(super) chrome_show_workspace_tab_strip: Model<bool>,
     pub(super) menu_bar_seq: Model<u64>,
     pub(super) inspector_enabled: Model<bool>,
     pub(super) inspector_last_pointer: Model<Option<fret_core::Point>>,
@@ -119,6 +120,7 @@ pub(super) fn begin_frame(
     let settings_menu_bar_in_window_open = state.settings_menu_bar_in_window_open.clone();
     let settings_edit_can_undo = state.settings_edit_can_undo.clone();
     let settings_edit_can_redo = state.settings_edit_can_redo.clone();
+    let chrome_show_workspace_tab_strip = state.chrome_show_workspace_tab_strip.clone();
     let menu_bar_seq = state.menu_bar_seq.clone();
     let inspector_enabled = state.inspector_enabled.clone();
     let inspector_last_pointer = state.inspector_last_pointer.clone();
@@ -171,6 +173,7 @@ pub(super) fn begin_frame(
         settings_menu_bar_in_window_open,
         settings_edit_can_undo,
         settings_edit_can_redo,
+        chrome_show_workspace_tab_strip,
         menu_bar_seq,
         inspector_enabled,
         inspector_last_pointer,
@@ -239,13 +242,20 @@ fn render_root_contents(
         frame.content_models.as_ref(),
     );
 
-    let tab_strip = chrome::tab_strip_view(
-        cx,
-        (frame.bisect & BISECT_DISABLE_TAB_STRIP) != 0,
-        &frame.selected_page,
-        &frame.workspace_tabs,
-        &frame.workspace_dirty_tabs,
-    );
+    let show_tab_strip = cx
+        .get_model_copied(&frame.chrome_show_workspace_tab_strip, Invalidation::Layout)
+        .unwrap_or(false);
+    let tab_strip = if show_tab_strip && (frame.bisect & BISECT_DISABLE_TAB_STRIP) == 0 {
+        Some(chrome::tab_strip_view(
+            cx,
+            false,
+            &frame.selected_page,
+            &frame.workspace_tabs,
+            &frame.workspace_dirty_tabs,
+        ))
+    } else {
+        None
+    };
 
     let menubar_handle = std::cell::RefCell::new(None);
     let in_window_menu_bar =
@@ -305,6 +315,7 @@ fn render_root_contents(
         frame.settings_menu_bar_in_window_open.clone(),
         frame.settings_edit_can_undo.clone(),
         frame.settings_edit_can_redo.clone(),
+        frame.chrome_show_workspace_tab_strip.clone(),
         &mut content,
     );
 

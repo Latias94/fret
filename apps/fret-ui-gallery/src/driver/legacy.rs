@@ -199,6 +199,7 @@ struct UiGalleryWindowState {
     settings_menu_bar_in_window_open: Model<bool>,
     settings_edit_can_undo: Model<bool>,
     settings_edit_can_redo: Model<bool>,
+    chrome_show_workspace_tab_strip: Model<bool>,
     undo_doc: DocumentId,
 
     combobox_value: Model<Option<Arc<str>>>,
@@ -1009,6 +1010,7 @@ impl UiGalleryDriver {
         let settings_menu_bar_in_window_open = app.models_mut().insert(false);
         let settings_edit_can_undo = app.models_mut().insert(true);
         let settings_edit_can_redo = app.models_mut().insert(true);
+        let chrome_show_workspace_tab_strip = app.models_mut().insert(false);
         let undo_doc: DocumentId = "ui_gallery.window".into();
         let combobox_value = app.models_mut().insert(None::<Arc<str>>);
         let combobox_open = app.models_mut().insert(false);
@@ -1286,6 +1288,7 @@ impl UiGalleryDriver {
             settings_menu_bar_in_window_open,
             settings_edit_can_undo,
             settings_edit_can_redo,
+            chrome_show_workspace_tab_strip,
             undo_doc,
             combobox_value,
             combobox_open,
