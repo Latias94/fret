@@ -201,6 +201,24 @@ fn print_dock_routing_report(routing: &Value, routing_path: &Path, bundle_path: 
             let start = point_xy_string_obj(drag, "start_position");
             let grab = point_xy_string_obj(drag, "cursor_grab_offset");
             let follow = drag.get("follow_window").and_then(|v| v.as_u64());
+            let scr_raw = point_xy_string_obj(drag, "cursor_screen_pos_raw_physical_px");
+            let scr_raw_present = scr_raw.is_some();
+            let scr_used = point_xy_string_obj(drag, "cursor_screen_pos_used_physical_px");
+            let clamped = drag
+                .get("cursor_screen_pos_was_clamped")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+            let override_active = drag
+                .get("cursor_override_active")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+            let origin = point_xy_string_obj(drag, "current_window_client_origin_screen_physical_px");
+            let origin_platform = drag
+                .get("current_window_client_origin_source_platform")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+            let sf_runner =
+                scale_factor_x1000_string_obj(drag, "current_window_scale_factor_x1000_from_runner");
             let sf_moving = scale_factor_x1000_string_obj(drag, "moving_window_scale_factor_x1000");
 
             let mut drag_parts: Vec<String> = Vec::new();
@@ -217,6 +235,31 @@ fn print_dock_routing_report(routing: &Value, routing_path: &Path, bundle_path: 
             }
             if let Some(follow) = follow {
                 drag_parts.push(format!("follow={follow}"));
+            }
+            if let Some(scr_raw) = scr_raw.as_ref() {
+                drag_parts.push(format!("scr=({scr_raw})"));
+            }
+            if let Some(scr_used) = scr_used.as_ref() {
+                if clamped {
+                    drag_parts.push(format!("scr_used=({scr_used})"));
+                } else if !scr_raw_present {
+                    drag_parts.push(format!("scr_used=({scr_used})"));
+                }
+            }
+            if override_active {
+                drag_parts.push("override=1".to_string());
+            }
+            if clamped {
+                drag_parts.push("clamped=1".to_string());
+            }
+            if let Some(origin) = origin {
+                drag_parts.push(format!("origin=({origin})"));
+            }
+            if origin_platform {
+                drag_parts.push("origin_src=platform".to_string());
+            }
+            if let Some(sf_runner) = sf_runner {
+                drag_parts.push(format!("sf_run={sf_runner}"));
             }
             if let Some(sf_cur) = sf_cur {
                 drag_parts.push(format!("sf_cur={sf_cur}"));

@@ -753,6 +753,16 @@ fn build_dock_routing_payload_from_json(
                     "start_position": d.get("start_position").cloned().unwrap_or(Value::Null),
                     "cursor_grab_offset": d.get("cursor_grab_offset").cloned().unwrap_or(Value::Null),
                     "follow_window": d.get("follow_window").cloned().unwrap_or(Value::Null),
+                    "cursor_screen_pos_raw_physical_px": d.get("cursor_screen_pos_raw_physical_px").cloned().unwrap_or(Value::Null),
+                    "cursor_screen_pos_used_physical_px": d.get("cursor_screen_pos_used_physical_px").cloned().unwrap_or(Value::Null),
+                    "cursor_screen_pos_was_clamped": d.get("cursor_screen_pos_was_clamped").and_then(|v| v.as_bool()).unwrap_or(false),
+                    "cursor_override_active": d.get("cursor_override_active").and_then(|v| v.as_bool()).unwrap_or(false),
+                    "current_window_outer_pos_physical_px": d.get("current_window_outer_pos_physical_px").cloned().unwrap_or(Value::Null),
+                    "current_window_decoration_offset_physical_px": d.get("current_window_decoration_offset_physical_px").cloned().unwrap_or(Value::Null),
+                    "current_window_client_origin_screen_physical_px": d.get("current_window_client_origin_screen_physical_px").cloned().unwrap_or(Value::Null),
+                    "current_window_client_origin_source_platform": d.get("current_window_client_origin_source_platform").and_then(|v| v.as_bool()).unwrap_or(false),
+                    "current_window_scale_factor_x1000_from_runner": d.get("current_window_scale_factor_x1000_from_runner").cloned().unwrap_or(Value::Null),
+                    "current_window_local_pos_from_screen_logical_px": d.get("current_window_local_pos_from_screen_logical_px").cloned().unwrap_or(Value::Null),
                     "current_window_scale_factor_x1000": d.get("current_window_scale_factor_x1000").cloned().unwrap_or(Value::Null),
                     "kind": d.get("kind").cloned().unwrap_or(Value::Null),
                     "dragging": d.get("dragging").and_then(|v| v.as_bool()).unwrap_or(false),
@@ -1640,6 +1650,16 @@ mod tests {
                                     "start_position": { "x": 1.0, "y": 2.0 },
                                     "cursor_grab_offset": { "x": 3.0, "y": 4.0 },
                                     "follow_window": 9,
+                                    "cursor_screen_pos_raw_physical_px": { "x": 100.0, "y": 200.0 },
+                                    "cursor_screen_pos_used_physical_px": { "x": 110.0, "y": 210.0 },
+                                    "cursor_screen_pos_was_clamped": true,
+                                    "cursor_override_active": true,
+                                    "current_window_outer_pos_physical_px": { "x": 1000.0, "y": 2000.0 },
+                                    "current_window_decoration_offset_physical_px": { "x": 7.0, "y": 31.0 },
+                                    "current_window_client_origin_screen_physical_px": { "x": 1007.0, "y": 2031.0 },
+                                    "current_window_client_origin_source_platform": true,
+                                    "current_window_scale_factor_x1000_from_runner": 1250,
+                                    "current_window_local_pos_from_screen_logical_px": { "x": 8.0, "y": 16.0 },
                                     "current_window_scale_factor_x1000": 1500,
                                     "kind": "dock_panel",
                                     "dragging": true,
@@ -1878,6 +1898,53 @@ mod tests {
         assert_eq!(grab.get("x").and_then(|v| v.as_f64()), Some(3.0));
         assert_eq!(grab.get("y").and_then(|v| v.as_f64()), Some(4.0));
         assert_eq!(drag.get("follow_window").and_then(|v| v.as_u64()), Some(9));
+        let scr_raw = drag
+            .get("cursor_screen_pos_raw_physical_px")
+            .unwrap()
+            .as_object()
+            .unwrap();
+        assert_eq!(scr_raw.get("x").and_then(|v| v.as_f64()), Some(100.0));
+        assert_eq!(scr_raw.get("y").and_then(|v| v.as_f64()), Some(200.0));
+        let scr_used = drag
+            .get("cursor_screen_pos_used_physical_px")
+            .unwrap()
+            .as_object()
+            .unwrap();
+        assert_eq!(scr_used.get("x").and_then(|v| v.as_f64()), Some(110.0));
+        assert_eq!(scr_used.get("y").and_then(|v| v.as_f64()), Some(210.0));
+        assert_eq!(
+            drag.get("cursor_screen_pos_was_clamped")
+                .and_then(|v| v.as_bool()),
+            Some(true)
+        );
+        assert_eq!(
+            drag.get("cursor_override_active").and_then(|v| v.as_bool()),
+            Some(true)
+        );
+        let origin = drag
+            .get("current_window_client_origin_screen_physical_px")
+            .unwrap()
+            .as_object()
+            .unwrap();
+        assert_eq!(origin.get("x").and_then(|v| v.as_f64()), Some(1007.0));
+        assert_eq!(origin.get("y").and_then(|v| v.as_f64()), Some(2031.0));
+        assert_eq!(
+            drag.get("current_window_client_origin_source_platform")
+                .and_then(|v| v.as_bool()),
+            Some(true)
+        );
+        assert_eq!(
+            drag.get("current_window_scale_factor_x1000_from_runner")
+                .and_then(|v| v.as_u64()),
+            Some(1250)
+        );
+        let derived = drag
+            .get("current_window_local_pos_from_screen_logical_px")
+            .unwrap()
+            .as_object()
+            .unwrap();
+        assert_eq!(derived.get("x").and_then(|v| v.as_f64()), Some(8.0));
+        assert_eq!(derived.get("y").and_then(|v| v.as_f64()), Some(16.0));
         assert_eq!(
             drag.get("current_window_scale_factor_x1000")
                 .and_then(|v| v.as_u64()),
