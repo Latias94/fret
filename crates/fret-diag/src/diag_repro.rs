@@ -42,6 +42,7 @@ pub(crate) struct ReproCmdContext {
     pub renderdoc_no_outputs_png: bool,
     pub resource_footprint_thresholds: ResourceFootprintThresholds,
     pub max_wgpu_metal_current_allocated_size_bytes: Option<u64>,
+    pub max_render_text_atlas_bytes_live_estimate_total: Option<u64>,
     pub check_redraw_hitches_max_total_ms_threshold: Option<u64>,
     pub checks: diag_run::RunChecks,
 }
@@ -82,6 +83,7 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
         renderdoc_no_outputs_png,
         resource_footprint_thresholds,
         max_wgpu_metal_current_allocated_size_bytes,
+        max_render_text_atlas_bytes_live_estimate_total,
         check_redraw_hitches_max_total_ms_threshold,
         checks,
     } = ctx;
@@ -302,6 +304,7 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
     let mut repro_process_footprint: Option<serde_json::Value> = None;
     let mut resource_footprint_gate: Option<ResourceFootprintGateResult> = None;
     let mut wgpu_metal_allocated_size_gate: Option<WgpuMetalAllocatedSizeGateResult> = None;
+    let mut render_text_atlas_bytes_gate: Option<RenderTextAtlasBytesGateResult> = None;
     let mut redraw_hitches_gate: Option<RedrawHitchesGateResult> = None;
 
     let mut run_rows: Vec<serde_json::Value> = Vec::new();
@@ -691,6 +694,17 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
         )
         .ok();
     }
+    if let Some(max_bytes) = max_render_text_atlas_bytes_live_estimate_total {
+        let bundle_path = packed_bundle_artifact
+            .as_deref()
+            .or_else(|| selected_bundle_path.as_deref());
+        render_text_atlas_bytes_gate = check_render_text_atlas_bytes_live_estimate_total_threshold(
+            &resolved_out_dir,
+            bundle_path,
+            max_bytes,
+        )
+        .ok();
+    }
     if let Some(max_total_ms) = check_redraw_hitches_max_total_ms_threshold {
         redraw_hitches_gate =
             check_redraw_hitches_max_total_ms(&resolved_out_dir, max_total_ms).ok();
@@ -803,6 +817,17 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
             r.evidence_path.display()
         ));
         overall_reason_code = Some("tooling.wgpu_metal_allocated_size.failed".to_string());
+    }
+    if let Some(r) = render_text_atlas_bytes_gate.as_ref()
+        && r.failures > 0
+        && overall_error.is_none()
+    {
+        overall_error = Some(format!(
+            "render_text atlas bytes threshold gate failed (failures={}, evidence={})",
+            r.failures,
+            r.evidence_path.display()
+        ));
+        overall_reason_code = Some("tooling.render_text_atlas_bytes.failed".to_string());
     }
     if let Some(r) = redraw_hitches_gate.as_ref()
         && r.failures > 0

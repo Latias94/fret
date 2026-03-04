@@ -32,6 +32,12 @@ pub(super) struct WgpuMetalAllocatedSizeGateResult {
     pub(super) failures: usize,
 }
 
+#[derive(Debug, Clone)]
+pub(super) struct RenderTextAtlasBytesGateResult {
+    pub(super) evidence_path: PathBuf,
+    pub(super) failures: usize,
+}
+
 pub(super) fn check_wgpu_metal_current_allocated_size_threshold(
     out_dir: &Path,
     bundle_path: Option<&Path>,
@@ -134,6 +140,154 @@ pub(super) fn check_wgpu_metal_current_allocated_size_threshold(
         .unwrap_or(0);
 
     Ok(WgpuMetalAllocatedSizeGateResult {
+        evidence_path: out_path,
+        failures,
+    })
+}
+
+pub(super) fn check_render_text_atlas_bytes_live_estimate_total_threshold(
+    out_dir: &Path,
+    bundle_path: Option<&Path>,
+    max_render_text_atlas_bytes_live_estimate_total: u64,
+) -> Result<RenderTextAtlasBytesGateResult, String> {
+    let out_path = out_dir.join("check.render_text_atlas_bytes.json");
+
+    let v = bundle_path.and_then(read_json_value);
+    let bundle_present = v.is_some();
+
+    let (tick_id, frame_id, present_flag, mask_bytes, color_bytes, subpixel_bytes, total_bytes) =
+        if let Some(v) = v.as_ref() {
+            let windows = v.get("windows").and_then(|v| v.as_array());
+            let first_window = windows.and_then(|w| w.first());
+            let snapshots = first_window
+                .and_then(|w| w.get("snapshots"))
+                .and_then(|v| v.as_array());
+            let last_snapshot = snapshots.and_then(|s| s.last());
+
+            let tick_id = last_snapshot
+                .and_then(|s| s.get("tick_id"))
+                .and_then(|v| v.as_u64());
+            let frame_id = last_snapshot
+                .and_then(|s| s.get("frame_id"))
+                .and_then(|v| v.as_u64());
+
+            let render_text = last_snapshot
+                .and_then(|s| s.get("resource_caches"))
+                .and_then(|v| v.get("render_text"))
+                .and_then(|v| v.as_object());
+
+            let rt_atlas = |k: &str| {
+                render_text
+                    .and_then(|o| o.get(k))
+                    .and_then(|v| v.as_object())
+            };
+            let atlas_u64 = |atlas: Option<&serde_json::Map<String, serde_json::Value>>,
+                             k: &str| {
+                atlas.and_then(|o| o.get(k)).and_then(|v| v.as_u64())
+            };
+            let sat_mul_u64 = |a: u64, b: u64| -> u64 {
+                ((a as u128) * (b as u128)).min(u64::MAX as u128) as u64
+            };
+            let atlas_bytes = |atlas: Option<&serde_json::Map<String, serde_json::Value>>,
+                               bpp: u64|
+             -> Option<u64> {
+                let w = atlas_u64(atlas, "width")?;
+                let h = atlas_u64(atlas, "height")?;
+                let pages = atlas_u64(atlas, "pages")?;
+                Some(sat_mul_u64(sat_mul_u64(sat_mul_u64(w, h), pages), bpp))
+            };
+
+            let mask_atlas = rt_atlas("mask_atlas");
+            let color_atlas = rt_atlas("color_atlas");
+            let subpixel_atlas = rt_atlas("subpixel_atlas");
+
+            let mask_bytes = atlas_bytes(mask_atlas, 1);
+            let color_bytes = atlas_bytes(color_atlas, 4);
+            let subpixel_bytes = atlas_bytes(subpixel_atlas, 4);
+            let total_bytes = match (mask_bytes, color_bytes, subpixel_bytes) {
+                (Some(a), Some(b), Some(c)) => Some(a.saturating_add(b).saturating_add(c)),
+                _ => None,
+            };
+
+            (
+                tick_id,
+                frame_id,
+                Some(render_text.is_some()),
+                mask_bytes,
+                color_bytes,
+                subpixel_bytes,
+                total_bytes,
+            )
+        } else {
+            (None, None, None, None, None, None, None)
+        };
+
+    let missing_reason = if bundle_present {
+        "missing_field"
+    } else {
+        "missing_bundle"
+    };
+
+    let mut failures: Vec<serde_json::Value> = Vec::new();
+    match (present_flag, total_bytes) {
+        (Some(true), Some(observed)) if observed > max_render_text_atlas_bytes_live_estimate_total => {
+            failures.push(serde_json::json!({
+                "kind": "render_text_atlas_bytes_live_estimate_total",
+                "threshold": max_render_text_atlas_bytes_live_estimate_total,
+                "observed": observed,
+                "reason": "exceeded",
+            }));
+        }
+        (Some(true), Some(_)) => {}
+        (Some(true), None) => failures.push(serde_json::json!({
+            "kind": "render_text_atlas_bytes_live_estimate_total",
+            "threshold": max_render_text_atlas_bytes_live_estimate_total,
+            "observed": serde_json::Value::Null,
+            "reason": missing_reason,
+            "field": "windows[0].snapshots[-1].resource_caches.render_text.*_atlas.{width,height,pages}",
+        })),
+        (Some(false), _) | (None, _) => failures.push(serde_json::json!({
+            "kind": "render_text_atlas_bytes_live_estimate_total",
+            "threshold": max_render_text_atlas_bytes_live_estimate_total,
+            "observed": serde_json::Value::Null,
+            "reason": missing_reason,
+            "field": "windows[0].snapshots[-1].resource_caches.render_text",
+        })),
+    }
+
+    let payload = serde_json::json!({
+        "schema_version": 1,
+        "generated_unix_ms": now_unix_ms(),
+        "kind": "render_text_atlas_bytes_threshold",
+        "out_dir": out_dir.display().to_string(),
+        "bundle_file": bundle_path
+            .and_then(|p| p.file_name())
+            .and_then(|s| s.to_str())
+            .unwrap_or("<unknown>"),
+        "thresholds": {
+            "max_render_text_atlas_bytes_live_estimate_total": max_render_text_atlas_bytes_live_estimate_total,
+        },
+        "observed": {
+            "bundle_present": bundle_present,
+            "tick_id": tick_id,
+            "frame_id": frame_id,
+            "render_text_present": present_flag,
+            "render_text_mask_atlas_bytes_live_estimate": mask_bytes,
+            "render_text_color_atlas_bytes_live_estimate": color_bytes,
+            "render_text_subpixel_atlas_bytes_live_estimate": subpixel_bytes,
+            "render_text_atlas_bytes_live_estimate_total": total_bytes,
+        },
+        "failures": failures,
+    });
+    let _ = write_json_value(&out_path, &payload);
+
+    let failures = payload
+        .get("failures")
+        .and_then(|v| v.as_array())
+        .map(|a| a.len())
+        .unwrap_or(0);
+
+    Ok(RenderTextAtlasBytesGateResult {
         evidence_path: out_path,
         failures,
     })
