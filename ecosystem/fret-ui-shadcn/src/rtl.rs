@@ -88,11 +88,11 @@ pub(crate) fn inline_start_end_pair<T>(
 }
 
 #[inline]
-pub(crate) fn vec_main_with_inline_end(
+pub(crate) fn vec_main_with_inline_end<T>(
     dir: LayoutDirection,
-    main: fret_ui::element::AnyElement,
-    inline_end: Option<fret_ui::element::AnyElement>,
-) -> Vec<fret_ui::element::AnyElement> {
+    main: T,
+    inline_end: Option<T>,
+) -> Vec<T> {
     match dir {
         LayoutDirection::Ltr => {
             let mut out = vec![main];
@@ -107,6 +107,31 @@ pub(crate) fn vec_main_with_inline_end(
                 out.push(inline_end);
             }
             out.push(main);
+            out
+        }
+    }
+}
+
+#[inline]
+pub(crate) fn vec_main_with_inline_start<T>(
+    dir: LayoutDirection,
+    main: T,
+    inline_start: Option<T>,
+) -> Vec<T> {
+    match dir {
+        LayoutDirection::Ltr => {
+            let mut out = Vec::new();
+            if let Some(inline_start) = inline_start {
+                out.push(inline_start);
+            }
+            out.push(main);
+            out
+        }
+        LayoutDirection::Rtl => {
+            let mut out = vec![main];
+            if let Some(inline_start) = inline_start {
+                out.push(inline_start);
+            }
             out
         }
     }
@@ -232,5 +257,29 @@ mod tests {
 
         let (a, b) = inline_start_end_pair(LayoutDirection::Rtl, 1, 2);
         assert_eq!((a, b), (2, 1));
+    }
+
+    #[test]
+    fn vec_main_with_inline_start_places_widget_at_inline_start() {
+        assert_eq!(
+            vec_main_with_inline_start(LayoutDirection::Ltr, 1, Some(2)),
+            vec![2, 1]
+        );
+        assert_eq!(
+            vec_main_with_inline_start(LayoutDirection::Rtl, 1, Some(2)),
+            vec![1, 2]
+        );
+    }
+
+    #[test]
+    fn vec_main_with_inline_end_places_widget_at_inline_end() {
+        assert_eq!(
+            vec_main_with_inline_end(LayoutDirection::Ltr, 1, Some(2)),
+            vec![1, 2]
+        );
+        assert_eq!(
+            vec_main_with_inline_end(LayoutDirection::Rtl, 1, Some(2)),
+            vec![2, 1]
+        );
     }
 }

@@ -1850,61 +1850,29 @@ impl CommandList {
 	                                                                            nonmatch_text_fg,
 	                                                                            text_style.clone(),
 	                                                                        );
-	                                                                    let icon_el = leading_icon
-	                                                                        .clone()
-	                                                                        .map(|icon| {
-	                                                                            decl_icon::icon_with(
-	                                                                                cx,
-	                                                                                icon,
-	                                                                                None,
-	                                                                                Some(
-	                                                                                    ColorRef::Color(
-	                                                                                        effective_icon_fg,
-	                                                                                    ),
-	                                                                                ),
-	                                                                            )
-	                                                                        });
-
-	                                                                    match dir {
-	                                                                        crate::LayoutDirection::Ltr => {
-	                                                                            let mut out: Vec<
-	                                                                                AnyElement,
-	                                                                            > = Vec::with_capacity(
-	                                                                                1 + usize::from(
-	                                                                                    icon_el
-	                                                                                        .is_some(),
-	                                                                                ),
-	                                                                            );
-	                                                                            if let Some(icon_el) =
-	                                                                                icon_el
-	                                                                            {
-	                                                                                out.push(icon_el);
-	                                                                            }
-	                                                                            out.push(label_el);
-	                                                                            out
-	                                                                        }
-	                                                                        crate::LayoutDirection::Rtl => {
-	                                                                            let mut out: Vec<
-	                                                                                AnyElement,
-	                                                                            > = Vec::with_capacity(
-	                                                                                1 + usize::from(
-	                                                                                    icon_el
-	                                                                                        .is_some(),
-	                                                                                ),
-	                                                                            );
-	                                                                            out.push(label_el);
-	                                                                            if let Some(icon_el) =
-	                                                                                icon_el
-	                                                                            {
-	                                                                                out.push(icon_el);
-	                                                                            }
-	                                                                            out
-	                                                                        }
-	                                                                    }
-	                                                                } else {
-	                                                                    children
-	                                                                }
-	                                                            },
+                                                                    let icon_el = leading_icon
+                                                                        .clone()
+                                                                        .map(|icon| {
+                                                                            decl_icon::icon_with(
+                                                                                cx,
+                                                                                icon,
+                                                                                None,
+                                                                                Some(
+                                                                                    ColorRef::Color(
+                                                                                        effective_icon_fg,
+                                                                                    ),
+                                                                                ),
+                                                                            )
+                                                                        });
+                                                                    crate::rtl::vec_main_with_inline_start(
+                                                                        dir,
+                                                                        label_el,
+                                                                        icon_el,
+                                                                    )
+                                                                } else {
+                                                                    children
+                                                                }
+                                                            },
 	                                                        )]
 	                                                    },
 	                                                )
@@ -3258,14 +3226,11 @@ impl CommandPalette {
                                                                 CommandShortcut::new(shortcut)
                                                                     .inline()
                                                                     .into_element(cx);
-                                                            match dir {
-                                                                crate::LayoutDirection::Ltr => {
-                                                                    vec![left, shortcut]
-                                                                }
-                                                                crate::LayoutDirection::Rtl => {
-                                                                    vec![shortcut, left]
-                                                                }
-                                                            }
+                                                            let (a, b) =
+                                                                crate::rtl::inline_start_end_pair(
+                                                                    dir, left, shortcut,
+                                                                );
+                                                            vec![a, b]
                                                         } else {
                                                             vec![left]
                                                         }
