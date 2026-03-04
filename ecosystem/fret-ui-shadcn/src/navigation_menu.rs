@@ -3222,7 +3222,8 @@ mod tests {
             .find_map(|e| match e {
                 fret_runtime::Effect::SetTimer { token, after, .. }
                     if *after
-                        == radix_navigation_menu::NavigationMenuConfig::default().delay_duration =>
+                        == radix_navigation_menu::NavigationMenuConfig::default()
+                            .delay_duration =>
                 {
                     Some(*token)
                 }
