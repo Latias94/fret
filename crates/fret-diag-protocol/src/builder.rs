@@ -7,8 +7,8 @@
 
 use crate::{
     UiActionScriptV2, UiActionStepV2, UiImeEventV1, UiIncomingOpenInjectItemV1, UiKeyModifiersV1,
-    UiMouseButtonV1, UiOverlayPlacementTraceQueryV1, UiPointerKindV1, UiPredicateV1, UiSelectorV1,
-    UiShortcutRoutingTraceQueryV1, UiWindowTargetV1,
+    UiCommandDispatchTraceQueryV1, UiMouseButtonV1, UiOverlayPlacementTraceQueryV1, UiPointerKindV1,
+    UiPredicateV1, UiSelectorV1, UiShortcutRoutingTraceQueryV1, UiWindowTargetV1,
 };
 
 pub fn test_id(id: impl Into<String>) -> UiSelectorV1 {
@@ -469,11 +469,19 @@ impl ScriptV2Builder {
         self.push(UiActionStepV2::WaitFrames { window: None, n })
     }
 
+    pub fn wait_ms(self, n_ms: u32) -> Self {
+        self.push(UiActionStepV2::WaitMs {
+            window: None,
+            n_ms,
+        })
+    }
+
     pub fn wait_until(self, predicate: UiPredicateV1, timeout_frames: u32) -> Self {
         self.push(UiActionStepV2::WaitUntil {
             window: None,
             predicate,
             timeout_frames,
+            timeout_ms: None,
         })
     }
 
@@ -485,6 +493,19 @@ impl ScriptV2Builder {
         self.push(UiActionStepV2::WaitShortcutRoutingTrace {
             query,
             timeout_frames,
+            timeout_ms: None,
+        })
+    }
+
+    pub fn wait_command_dispatch_trace(
+        self,
+        query: UiCommandDispatchTraceQueryV1,
+        timeout_frames: u32,
+    ) -> Self {
+        self.push(UiActionStepV2::WaitCommandDispatchTrace {
+            query,
+            timeout_frames,
+            timeout_ms: None,
         })
     }
 
@@ -496,6 +517,7 @@ impl ScriptV2Builder {
         self.push(UiActionStepV2::WaitOverlayPlacementTrace {
             query,
             timeout_frames,
+            timeout_ms: None,
         })
     }
 
@@ -548,6 +570,7 @@ impl ScriptV2Builder {
         self.push(UiActionStepV2::CaptureScreenshot {
             label: label.into(),
             timeout_frames: 300,
+            timeout_ms: None,
         })
     }
 

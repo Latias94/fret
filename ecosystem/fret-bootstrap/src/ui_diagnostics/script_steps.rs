@@ -388,6 +388,16 @@ pub(super) fn handle_effect_only_steps(
         }
         UiActionStepV2::WaitFrames { n, .. } => {
             active.wait_frames_remaining = n;
+            active.wait_ms_deadline_unix_ms = None;
+            active.wait_until = None;
+            active.screenshot_wait = None;
+            active.next_step = active.next_step.saturating_add(1);
+            output.request_redraw = true;
+            true
+        }
+        UiActionStepV2::WaitMs { n_ms, .. } => {
+            active.wait_frames_remaining = 0;
+            active.wait_ms_deadline_unix_ms = Some(unix_ms_now().saturating_add(n_ms as u64));
             active.wait_until = None;
             active.screenshot_wait = None;
             active.next_step = active.next_step.saturating_add(1);
@@ -438,6 +448,7 @@ pub(super) fn handle_capture_steps(
         UiActionStepV2::CaptureScreenshot {
             label,
             timeout_frames,
+            timeout_ms,
         } => {
             let window_ffi = window.data().as_ffi();
             active.wait_until = None;
@@ -453,6 +464,10 @@ pub(super) fn handle_capture_steps(
                 let mut state = match active.screenshot_wait.take() {
                     Some(mut state) if state.step_index == step_index => {
                         state.remaining_frames = state.remaining_frames.min(timeout_frames);
+                        if state.deadline_unix_ms.is_none() {
+                            state.deadline_unix_ms =
+                                timeout_ms.map(|ms| unix_ms_now().saturating_add(ms as u64));
+                        }
                         Some(state)
                     }
                     _ => None,
@@ -514,6 +529,8 @@ pub(super) fn handle_capture_steps(
                                 state = Some(ScreenshotWaitState {
                                     step_index,
                                     remaining_frames: timeout_frames,
+                                    deadline_unix_ms: timeout_ms
+                                        .map(|ms| unix_ms_now().saturating_add(ms as u64)),
                                     request_id,
                                     window_ffi,
                                 });
@@ -555,7 +572,11 @@ pub(super) fn handle_capture_steps(
                             active.screenshot_wait = None;
                             active.next_step = active.next_step.saturating_add(1);
                             output.request_redraw = true;
-                        } else if state.remaining_frames == 0 {
+                        } else if state
+                            .deadline_unix_ms
+                            .is_some_and(|deadline| unix_ms_now() >= deadline)
+                            || state.remaining_frames == 0
+                        {
                             *force_dump_label = Some(format!(
                                 "script-step-{step_index:04}-capture_screenshot-timeout"
                             ));
@@ -567,6 +588,7 @@ pub(super) fn handle_capture_steps(
                             active.screenshot_wait = Some(ScreenshotWaitState {
                                 step_index: state.step_index,
                                 remaining_frames: state.remaining_frames.saturating_sub(1),
+                                deadline_unix_ms: state.deadline_unix_ms,
                                 request_id: state.request_id,
                                 window_ffi: state.window_ffi,
                             });

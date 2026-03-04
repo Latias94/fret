@@ -60,6 +60,7 @@ impl UiDiagnosticsService {
             last_injected_pointer_source_step: None,
             last_injected_pointer_source_test_id: None,
             wait_frames_remaining: 0,
+            wait_ms_deadline_unix_ms: None,
             wait_until: None,
             wait_shortcut_routing_trace: None,
             wait_command_dispatch_trace: None,

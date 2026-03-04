@@ -529,6 +529,18 @@ impl UiDiagnosticsService {
                     window: Some(UiWindowTargetV1::Current),
                     ..
                 } => return None,
+                UiActionStepV2::WaitMs {
+                    window: Some(UiWindowTargetV1::FirstSeen),
+                    ..
+                } => return Some(active.anchor_window),
+                UiActionStepV2::WaitMs {
+                    window: Some(UiWindowTargetV1::WindowFfi { window }),
+                    ..
+                } => return Some(AppWindowId::from(KeyData::from_ffi(*window))),
+                UiActionStepV2::WaitMs {
+                    window: Some(UiWindowTargetV1::Current),
+                    ..
+                } => return None,
                 _ => {}
             }
 
@@ -603,6 +615,7 @@ impl UiDiagnosticsService {
                 | UiActionStepV2::SetMouseButtons { window, .. }
                 | UiActionStepV2::RaiseWindow { window, .. }
                 | UiActionStepV2::WaitFrames { window, .. }
+                | UiActionStepV2::WaitMs { window, .. }
                 | UiActionStepV2::WaitUntil { window, .. }
                 | UiActionStepV2::Assert { window, .. } => window.as_ref(),
                 _ => None,
@@ -648,6 +661,7 @@ impl UiDiagnosticsService {
             | UiActionStepV2::SetMouseButtons { window, .. }
             | UiActionStepV2::RaiseWindow { window, .. }
             | UiActionStepV2::WaitFrames { window, .. }
+            | UiActionStepV2::WaitMs { window, .. }
             | UiActionStepV2::WaitUntil { window, .. }
             | UiActionStepV2::Assert { window, .. } => window.as_ref(),
             _ => None,

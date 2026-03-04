@@ -648,12 +648,23 @@ pub enum UiActionStepV2 {
         window: Option<UiWindowTargetV1>,
         n: u32,
     },
+    /// Wait for a fixed duration (in milliseconds).
+    ///
+    /// This is intended as a last-resort stabilization step when no semantic predicate exists.
+    /// Prefer `wait_until` for deterministic gates.
+    WaitMs {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        window: Option<UiWindowTargetV1>,
+        n_ms: u32,
+    },
     WaitUntil {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         window: Option<UiWindowTargetV1>,
         predicate: UiPredicateV1,
         #[serde(default = "default_action_timeout_frames")]
         timeout_frames: u32,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        timeout_ms: Option<u32>,
     },
     /// Wait until the shortcut routing diagnostics trace contains an entry matching `query`.
     ///
@@ -663,6 +674,8 @@ pub enum UiActionStepV2 {
         query: UiShortcutRoutingTraceQueryV1,
         #[serde(default = "default_action_timeout_frames")]
         timeout_frames: u32,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        timeout_ms: Option<u32>,
     },
     /// Wait until the command dispatch trace contains an entry matching `query`.
     ///
@@ -672,6 +685,8 @@ pub enum UiActionStepV2 {
         query: UiCommandDispatchTraceQueryV1,
         #[serde(default = "default_action_timeout_frames")]
         timeout_frames: u32,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        timeout_ms: Option<u32>,
     },
     /// Wait until the overlay placement trace contains an entry matching `query`.
     ///
@@ -682,6 +697,8 @@ pub enum UiActionStepV2 {
         query: UiOverlayPlacementTraceQueryV1,
         #[serde(default = "default_action_timeout_frames")]
         timeout_frames: u32,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        timeout_ms: Option<u32>,
     },
     Assert {
         #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -697,6 +714,8 @@ pub enum UiActionStepV2 {
         label: Option<String>,
         #[serde(default = "default_capture_screenshot_timeout_frames")]
         timeout_frames: u32,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        timeout_ms: Option<u32>,
     },
     /// Capture a layout sidecar (native-only, best-effort).
     ///
@@ -1145,6 +1164,7 @@ impl From<UiActionStepV1> for UiActionStepV2 {
                 window: None,
                 predicate,
                 timeout_frames,
+                timeout_ms: None,
             },
             UiActionStepV1::Assert { predicate } => Self::Assert {
                 window: None,
@@ -1163,6 +1183,7 @@ impl From<UiActionStepV1> for UiActionStepV2 {
             } => Self::CaptureScreenshot {
                 label,
                 timeout_frames,
+                timeout_ms: None,
             },
         }
     }
