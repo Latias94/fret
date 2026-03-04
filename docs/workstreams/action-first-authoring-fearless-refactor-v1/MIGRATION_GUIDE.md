@@ -147,6 +147,7 @@ Recommended v1 pattern (schedule in handler, execute in `render()`):
 Example:
 
 - `apps/fret-examples/src/query_demo.rs` (uses `PendingInvalidate` + `with_query_client` in `render()`).
+- `apps/fret-examples/src/query_async_tokio_demo.rs` (same pattern, but with `use_query_async`).
 
 ---
 
