@@ -40,6 +40,39 @@ fn keymap_accepts_modifier_tokens_case_insensitive_and_aliases() {
 }
 
 #[test]
+fn keymap_accepts_key_context_when_and_resolves_with_key_contexts() {
+    let mut km = Keymap::empty();
+
+    let chord = KeyChord::new(
+        KeyCode::KeyK,
+        Modifiers {
+            ctrl: true,
+            ..Default::default()
+        },
+    );
+
+    km.push_binding(Binding {
+        platform: PlatformFilter::All,
+        sequence: vec![chord],
+        when: Some(WhenExpr::parse("keyctx.demo").unwrap()),
+        command: Some(CommandId::new(Arc::<str>::from("test.ctx"))),
+    });
+
+    let ctx = InputContext {
+        platform: Platform::Windows,
+        ..Default::default()
+    };
+
+    assert!(km.resolve(&ctx, chord).is_none());
+    assert_eq!(
+        km.resolve_with_key_contexts(&ctx, &[Arc::from("demo")], chord)
+            .unwrap()
+            .as_str(),
+        "test.ctx"
+    );
+}
+
+#[test]
 fn keymap_rejects_string_keys_used_as_boolean_when() {
     let bytes = br#"{
             "keymap_version": 1,

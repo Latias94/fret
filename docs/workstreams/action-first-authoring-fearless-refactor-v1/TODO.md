@@ -302,7 +302,13 @@ This phase is intentionally last.
 These are intentionally *not* part of the v1 milestone closure, but they are likely the next
 practical steps:
 
-- Key context stack + diagnostics-visible context naming/stacking rules.
+- Done: key context stack + diagnostics-visible context naming/stacking rules.
+  - Evidence:
+    - ADR: `docs/adr/0022-when-expressions.md` (`keyctx.*`)
+    - Runtime: `crates/fret-runtime/src/when_expr/*` (`keyctx.*` evaluation + validation)
+    - UI: `crates/fret-ui/src/tree/shortcuts.rs` (collects `key_contexts[*]` from the focused chain / barrier root)
+    - Diag protocol: `crates/fret-diag-protocol/src/lib.rs` (`UiShortcutRoutingTraceEntryV1.key_contexts`)
+    - Gate: `tools/diag-scripts/cookbook/commands-keymap-basics/cookbook-commands-keymap-basics-shortcut-and-gating.json` (`wait_shortcut_routing_trace.query.key_context`)
 - Reduce authoring noise (status):
   - Done: `UiIntoElement`-level `test_id` late-landing (`AUE-semantics-120`):
     `ecosystem/fret-ui-kit/src/declarative/semantics.rs`

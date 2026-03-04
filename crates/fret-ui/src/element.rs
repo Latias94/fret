@@ -26,6 +26,8 @@ pub struct AnyElement {
     pub children: Vec<AnyElement>,
     /// Layout-transparent semantics overrides applied when producing semantics snapshots.
     pub semantics_decoration: Option<SemanticsDecoration>,
+    /// Layout-transparent key context identifier used by shortcut/keymap `when` expressions.
+    pub key_context: Option<Arc<str>>,
 }
 
 impl AnyElement {
@@ -35,6 +37,7 @@ impl AnyElement {
             kind,
             children,
             semantics_decoration: None,
+            key_context: None,
         }
     }
 
@@ -73,6 +76,14 @@ impl AnyElement {
     /// ```
     pub fn test_id(self, test_id: impl Into<Arc<str>>) -> Self {
         self.attach_semantics(SemanticsDecoration::default().test_id(test_id))
+    }
+
+    /// Attach a key context identifier to this element for shortcut routing.
+    ///
+    /// This is a layout-transparent annotation used by `when` expressions via `keyctx.*`.
+    pub fn key_context(mut self, key_context: impl Into<Arc<str>>) -> Self {
+        self.key_context = Some(key_context.into());
+        self
     }
 }
 

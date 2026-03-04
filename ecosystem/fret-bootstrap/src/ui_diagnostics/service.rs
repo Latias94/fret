@@ -1294,6 +1294,11 @@ impl UiDiagnosticsService {
                     deferred: decision.deferred,
                     focus_is_text_input: decision.focus_is_text_input,
                     ime_composing: decision.ime_composing,
+                    key_contexts: decision
+                        .key_contexts
+                        .iter()
+                        .map(|c| c.as_ref().to_string())
+                        .collect(),
                     key: format!("{:?}", decision.key),
                     modifiers: UiKeyModifiersV1::from_modifiers(decision.modifiers),
                     repeat: decision.repeat,

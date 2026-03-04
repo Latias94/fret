@@ -2614,6 +2614,8 @@ pub struct UiShortcutRoutingTraceEntryV1 {
     pub focus_is_text_input: bool,
     #[serde(default)]
     pub ime_composing: bool,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub key_contexts: Vec<String>,
     pub key: String,
     pub modifiers: UiKeyModifiersV1,
     pub repeat: bool,
@@ -2647,6 +2649,8 @@ pub struct UiShortcutRoutingTraceQueryV1 {
     pub ime_composing: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub focus_is_text_input: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub key_context: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

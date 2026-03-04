@@ -218,7 +218,8 @@ impl View for CommandsKeymapBasicsView {
             .ui()
             .w_full()
             .max_w(Px(860.0))
-            .into_element(cx);
+            .into_element(cx)
+            .key_context("cookbook.commands_keymap_basics");
 
         cx.on_action::<act::TogglePanel>({
             let panel_open = self.panel_open.clone();
