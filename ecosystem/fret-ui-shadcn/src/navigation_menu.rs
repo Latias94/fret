@@ -2065,6 +2065,7 @@ impl NavigationMenu {
                         let content =
                             radix_navigation_menu::navigation_menu_viewport_content_pressable_with_id_props(
                                 cx,
+                                root_id,
                                 selected_value_key,
                                 move |cx, _st, content_id| {
                                 let root_state_for_hover = root_state_for_hover.clone();

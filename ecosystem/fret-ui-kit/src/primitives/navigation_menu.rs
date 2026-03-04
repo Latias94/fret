@@ -260,19 +260,25 @@ pub fn navigation_menu_indicator_diamond_id<H: UiHost>(
 
 fn navigation_menu_viewport_content_semantics_id_in_scope<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
+    root_id: GlobalElementId,
     value: &str,
 ) -> GlobalElementId {
-    navigation_menu_viewport_content_pressable_with_id_props::<H>(cx, value, |_cx, _st, _id| {
-        (
-            fret_ui::element::PressableProps {
-                layout: LayoutStyle::default(),
-                enabled: true,
-                focusable: false,
-                ..Default::default()
-            },
-            Vec::new(),
-        )
-    })
+    navigation_menu_viewport_content_pressable_with_id_props::<H>(
+        cx,
+        root_id,
+        value,
+        |_cx, _st, _id| {
+            (
+                fret_ui::element::PressableProps {
+                    layout: LayoutStyle::default(),
+                    enabled: true,
+                    focusable: false,
+                    ..Default::default()
+                },
+                Vec::new(),
+            )
+        },
+    )
     .id
 }
 
@@ -287,12 +293,13 @@ fn navigation_menu_viewport_content_semantics_id_in_scope<H: UiHost>(
 /// mounted yet.
 pub fn navigation_menu_viewport_content_semantics_id<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
+    root_id: GlobalElementId,
     overlay_root_name: &str,
     value: &str,
 ) -> GlobalElementId {
     let inherited = portal_inherited::PortalInherited::capture(cx);
     portal_inherited::with_root_name_inheriting(cx, overlay_root_name, inherited, |cx| {
-        navigation_menu_viewport_content_semantics_id_in_scope::<H>(cx, value)
+        navigation_menu_viewport_content_semantics_id_in_scope::<H>(cx, root_id, value)
     })
 }
 
@@ -302,6 +309,7 @@ pub fn navigation_menu_viewport_content_semantics_id<H: UiHost>(
 /// deterministic content element id (e.g. for trigger `aria-controls` relationships).
 pub fn navigation_menu_viewport_content_pressable_with_id_props<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
+    root_id: GlobalElementId,
     value: &str,
     f: impl FnOnce(
         &mut ElementContext<'_, H>,
@@ -309,7 +317,23 @@ pub fn navigation_menu_viewport_content_pressable_with_id_props<H: UiHost>(
         GlobalElementId,
     ) -> (fret_ui::element::PressableProps, Vec<AnyElement>),
 ) -> AnyElement {
-    cx.keyed(value, |cx| cx.pressable_with_id_props(f))
+    let value: Arc<str> = Arc::from(value);
+    cx.keyed(value.as_ref(), |cx| {
+        let value_for_registry = value.clone();
+        cx.pressable_with_id_props(move |cx, st, id| {
+            let (props, children) = f(cx, st, id);
+
+            if let Some(target) = find_first_focus_target(&children) {
+                let registry = navigation_menu_entry_focus_registry(cx, root_id);
+                let mut st = registry.lock().unwrap_or_else(|e| e.into_inner());
+                st.first_link_ids
+                    .entry(value_for_registry.clone())
+                    .or_insert(target);
+            }
+
+            (props, children)
+        })
+    })
 }
 
 #[derive(Default)]
@@ -975,6 +999,7 @@ impl NavigationMenuTrigger {
             let overlay_root_name = OverlayController::popover_root_name(root_id);
             let content_id = navigation_menu_viewport_content_semantics_id::<H>(
                 cx,
+                root_id,
                 overlay_root_name.as_str(),
                 item_value.as_ref(),
             );
@@ -1085,13 +1110,7 @@ impl NavigationMenuTrigger {
                                 return false;
                             }
 
-                            let is_entry_key = it.key == KeyCode::ArrowDown;
-                            let is_tab = it.key == KeyCode::Tab
-                                && !it.modifiers.shift
-                                && !it.modifiers.ctrl
-                                && !it.modifiers.alt
-                                && !it.modifiers.meta;
-                            if !(is_entry_key || is_tab) {
+                            if it.key != KeyCode::ArrowDown {
                                 return false;
                             }
 
@@ -1121,6 +1140,43 @@ impl NavigationMenuTrigger {
                                     CommandId::from("focus.next"),
                                 );
                             }
+                            host.request_redraw(action_cx.window);
+                            true
+                        }),
+                    );
+
+                    let item_value_for_focus_next = item_value_for_registry.clone();
+                    let value_for_focus_next = value_model.clone();
+                    let entry_focus_registry_for_focus_next = entry_focus_registry.clone();
+                    cx.command_add_on_command_for(
+                        element,
+                        Arc::new(move |host, action_cx, command| {
+                            if command.as_str() != "focus.next" {
+                                return false;
+                            }
+
+                            let selected = host
+                                .models_mut()
+                                .read(&value_for_focus_next, |v| v.clone())
+                                .ok()
+                                .flatten();
+                            let open = selected
+                                .as_ref()
+                                .is_some_and(|v| v.as_ref() == item_value_for_focus_next.as_ref());
+                            if !open {
+                                return false;
+                            }
+
+                            let target = entry_focus_registry_for_focus_next
+                                .lock()
+                                .unwrap_or_else(|e| e.into_inner())
+                                .first_link_ids
+                                .get(item_value_for_focus_next.as_ref())
+                                .copied();
+                            let Some(target) = target else {
+                                return false;
+                            };
+                            host.request_focus(target);
                             host.request_redraw(action_cx.window);
                             true
                         }),
@@ -2124,9 +2180,9 @@ mod tests {
 
     use fret_app::App;
     use fret_core::{AppWindowId, Point, Px, Rect, Size};
-    use fret_ui::element::{AnyElement, ElementKind, PressableProps};
     use fret_ui::GlobalElementId;
     use fret_ui::action::UiActionHostAdapter;
+    use fret_ui::element::{AnyElement, ElementKind, PressableProps};
 
     fn acx(window: AppWindowId) -> ActionCx {
         ActionCx {
@@ -2452,13 +2508,19 @@ mod tests {
         let mut app = App::new();
 
         fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+            let root_id = cx.root_id();
             let overlay_root_name = "nav-menu-overlay";
             let value = "alpha";
-            let expected =
-                navigation_menu_viewport_content_semantics_id::<App>(cx, overlay_root_name, value);
+            let expected = navigation_menu_viewport_content_semantics_id::<App>(
+                cx,
+                root_id,
+                overlay_root_name,
+                value,
+            );
             let actual = cx.with_root_name(overlay_root_name, |cx| {
                 navigation_menu_viewport_content_pressable_with_id_props::<App>(
                     cx,
+                    root_id,
                     value,
                     |_cx, _st, _id| {
                         (
