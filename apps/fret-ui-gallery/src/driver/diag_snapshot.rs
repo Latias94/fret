@@ -39,11 +39,15 @@ pub(super) fn install_ui_gallery_snapshot_provider(app: &mut App) {
                             .global::<UiGalleryCodeEditorHandlesStore>()
                             .and_then(|store| store.per_window.get(&window))
                             .map(|handle| {
-                                let text = handle.with_buffer(|b| b.text_string());
+                                let text_len_bytes = handle.with_buffer(|b| b.len_bytes());
+                                let marker_present = handle.diag_buffer_contains_str_cached(
+                                    UI_GALLERY_CODE_EDITOR_TORTURE_SOFT_WRAP_MARKER,
+                                );
                                 let selection = handle.selection();
-                                let anchor = selection.anchor.min(text.len()) as u64;
-                                let caret = selection.caret().min(text.len()) as u64;
+                                let anchor = selection.anchor.min(text_len_bytes) as u64;
+                                let caret = selection.caret().min(text_len_bytes) as u64;
                                 let stats = handle.cache_stats();
+                                let sizes = handle.cache_size_snapshot();
                                 let paint_perf = handle.paint_perf_frame().map(|frame| {
                                     serde_json::json!({
                                         "schema_version": 1,
@@ -82,7 +86,7 @@ pub(super) fn install_ui_gallery_snapshot_provider(app: &mut App) {
                                     .is_some_and(|t| t.contains("<inlay>"));
                                 serde_json::json!({
                                     "schema_version": 1,
-                                    "marker_present": text.contains(UI_GALLERY_CODE_EDITOR_TORTURE_SOFT_WRAP_MARKER),
+                                    "marker_present": marker_present,
                                     "preedit_active": preedit_active,
                                     "allow_decorations_under_inline_preedit": allow_decorations_under_inline_preedit,
                                     "compose_inline_preedit": compose_inline_preedit,
@@ -95,7 +99,7 @@ pub(super) fn install_ui_gallery_snapshot_provider(app: &mut App) {
                                     "buffer_revision": buffer_revision,
                                     "folds": { "enabled": folds, "line0_placeholder_present": fold_placeholder_present },
                                     "inlays": { "enabled": inlays, "line0_inlay_present": inlay_present },
-                                    "text_len_bytes": text.len() as u64,
+                                    "text_len_bytes": text_len_bytes as u64,
                                     "selection": { "anchor": anchor, "caret": caret },
                                     "cache_stats": {
                                         "row_text_get_calls": stats.row_text_get_calls,
@@ -117,6 +121,22 @@ pub(super) fn install_ui_gallery_snapshot_provider(app: &mut App) {
                                         "syntax_evictions": stats.syntax_evictions,
                                         "syntax_resets": stats.syntax_resets,
                                     },
+                                    "cache_sizes": {
+                                        "schema_version": sizes.schema_version,
+                                        "row_text_cache_entries": sizes.row_text_cache_entries,
+                                        "row_text_cache_text_bytes_estimate_total": sizes.row_text_cache_text_bytes_estimate_total,
+                                        "row_text_cache_row_spans_len_total": sizes.row_text_cache_row_spans_len_total,
+                                        "row_geom_cache_entries": sizes.row_geom_cache_entries,
+                                        "row_geom_cache_caret_stops_len_total": sizes.row_geom_cache_caret_stops_len_total,
+                                        "syntax_row_cache_entries": sizes.syntax_row_cache_entries,
+                                        "syntax_row_cache_spans_len_total": sizes.syntax_row_cache_spans_len_total,
+                                        "row_rich_cache_entries": sizes.row_rich_cache_entries,
+                                        "row_rich_cache_line_bytes_estimate_total": sizes.row_rich_cache_line_bytes_estimate_total,
+                                        "row_rich_cache_row_spans_len_total": sizes.row_rich_cache_row_spans_len_total,
+                                        "row_rich_cache_syntax_spans_len_total": sizes.row_rich_cache_syntax_spans_len_total,
+                                        "row_rich_cache_rich_spans_len_total": sizes.row_rich_cache_rich_spans_len_total,
+                                        "selection_rect_scratch_capacity": sizes.selection_rect_scratch_capacity,
+                                    },
                                     "paint_perf": paint_perf,
                                 })
                             })
@@ -126,10 +146,10 @@ pub(super) fn install_ui_gallery_snapshot_provider(app: &mut App) {
                             .global::<UiGalleryMarkdownEditorHandlesStore>()
                             .and_then(|store| store.per_window.get(&window))
                             .map(|handle| {
-                                let text = handle.with_buffer(|b| b.text_string());
+                                let text_len_bytes = handle.with_buffer(|b| b.len_bytes());
                                 let selection = handle.selection();
-                                let anchor = selection.anchor.min(text.len()) as u64;
-                                let caret = selection.caret().min(text.len()) as u64;
+                                let anchor = selection.anchor.min(text_len_bytes) as u64;
+                                let caret = selection.caret().min(text_len_bytes) as u64;
                                 let preedit_active = handle.preedit_active();
                                 let interaction = handle.interaction();
                                 let buffer_revision = handle.buffer_revision().0 as u64;
@@ -174,7 +194,7 @@ pub(super) fn install_ui_gallery_snapshot_provider(app: &mut App) {
                                         "line0_present": inlay_present,
                                         "fixture_byte_line0": inlay_fixture_byte_line0,
                                     },
-                                    "text_len_bytes": text.len() as u64,
+                                    "text_len_bytes": text_len_bytes as u64,
                                     "selection": { "anchor": anchor, "caret": caret },
                                 })
                             })
