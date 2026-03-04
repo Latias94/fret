@@ -144,6 +144,11 @@ pub struct UiDiagnosticsConfig {
     pub inspect_trigger_path: PathBuf,
     pub redact_text: bool,
     pub max_debug_string_bytes: usize,
+    /// When disabled, record a minimal per-frame debug snapshot (stats-only).
+    ///
+    /// This is intended for memory/perf gate scripts where full debug telemetry would make
+    /// bundle dumps prohibitively expensive (e.g. editor torture scenarios).
+    pub capture_debug_snapshot: bool,
     pub max_gating_trace_entries: usize,
     /// When enabled, ignore external pointer input events (mouse/touch/pen) while a diagnostics
     /// script is running.
@@ -536,6 +541,7 @@ impl Default for UiDiagnosticsConfig {
             })
             .unwrap_or(4096)
             .clamp(0, 256 * 1024);
+        let capture_debug_snapshot = env_flag_override("FRET_DIAG_DEBUG_SNAPSHOT").unwrap_or(true);
         let max_gating_trace_entries = env_usize_override("FRET_DIAG_MAX_GATING_TRACE_ENTRIES")
             .or_else(|| {
                 config_file
@@ -614,6 +620,7 @@ impl Default for UiDiagnosticsConfig {
             inspect_trigger_path,
             redact_text,
             max_debug_string_bytes,
+            capture_debug_snapshot,
             max_gating_trace_entries,
             isolate_external_pointer_input_while_script_running,
             isolate_external_keyboard_input_while_script_running,

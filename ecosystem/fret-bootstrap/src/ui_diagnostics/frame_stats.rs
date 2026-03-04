@@ -1,5 +1,5 @@
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct UiFrameStatsV1 {
     #[serde(default)]
     pub frame_arena_capacity_estimate_bytes: u64,
