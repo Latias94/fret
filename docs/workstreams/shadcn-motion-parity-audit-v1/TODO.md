@@ -32,17 +32,18 @@ Last updated: 2026-03-04.
 - Landed: `Checkbox` / `RadioGroupItem` focus ring transitions ease (~150ms, Tailwind default) and have unit test gates.
 - Landed: `Slider` thumb hover/focus ring transitions ease (~150ms, Tailwind default) and has a unit test gate.
 - Landed: `Switch` track background/border/ring style transitions ease (~150ms, Tailwind default) and have a unit test gate.
+- Landed: `InputOtp` slot border + ring transitions ease (`transition-all`) and have a unit test gate.
 - Landed: `InputGroup` wrapper ring/border transitions ease (~150ms, Tailwind default) and have a unit test gate.
 - Landed: `Combobox` trigger border/ring transitions ease (~150ms, Tailwind default) and have a unit test gate.
 - Landed: `Badge` focus-visible border/ring transitions ease (~150ms, Tailwind default) and have a unit test gate.
 - Landed: `TabsTrigger` focus ring transitions ease in/out (~150ms, Tailwind default) and have a unit test gate.
 - Landed: `Item` hover background transition eases (~100ms, `duration-100`) and has a unit test gate.
 - Gap: common primitives should ease hover/focus style changes (`transition-*` parity), not snap. Suggested ordering:
-  - P1: InputOtp slot focus/active chrome (`transition-all` on slot).
   - P1: ScrollArea viewport ring + scrollbar hover (`transition-*`).
   - P1: Sidebar collapsible width/position/opacity (`duration-200 ease-linear`).
   - P1: Add a deterministic gate for Accordion content measured-height motion (`animate-accordion-{down,up}` outcome).
 - Gap: audit `Drawer` parity vs Vaul (define concrete drag + inertia outcomes; add a fixed-delta diag + a unit test for settle).
+- Not audited: audit `Carousel` parity vs Embla (define concrete drag/scroll + snap settle outcomes; add fixed-delta diag + a unit test for settle invariants).
 
 ## P2 (API + token cleanup)
 
