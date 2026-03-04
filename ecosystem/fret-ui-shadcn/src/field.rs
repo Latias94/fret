@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use crate::LayoutDirection;
-use fret_core::{Edges, Px, SemanticsRole, TextAlign, TextOverflow, TextWrap};
+use fret_core::{Edges, Px, SemanticsLive, SemanticsRole, TextAlign, TextOverflow, TextWrap};
 use fret_ui::element::{
     AnyElement, ColumnProps, ContainerProps, CrossAlign, ElementKind, LayoutQueryRegionProps,
     LayoutStyle, MainAlign, PressableA11y, PressableProps, RowProps, SemanticsDecoration,
@@ -1265,7 +1265,13 @@ impl FieldError {
             .text_align(align)
             .w_full()
             .min_w_0()
-            .into_element(cx);
+            .into_element(cx)
+            .attach_semantics(
+                SemanticsDecoration::default()
+                    .role(SemanticsRole::Alert)
+                    .live(Some(SemanticsLive::Assertive))
+                    .live_atomic(true),
+            );
 
         if let Some(for_control) = self.for_control {
             let control_registry = control_registry_model(cx);
@@ -1663,6 +1669,7 @@ impl Field {
                     })]
                 },
             )
+            .attach_semantics(SemanticsDecoration::default().role(SemanticsRole::Group))
         })
     }
 }
@@ -1826,5 +1833,46 @@ mod tests {
         // Sanity: the description/error nodes we register are stable elements in the tree.
         assert!(desc.id.0 != 0);
         assert!(err.id.0 != 0);
+    }
+
+    #[test]
+    fn field_stamps_group_role_for_accessibility() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(120.0)),
+        );
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            Field::new([cx.text("Label"), cx.text("Control")]).into_element(cx)
+        });
+
+        assert_eq!(
+            element.semantics_decoration.as_ref().and_then(|d| d.role),
+            Some(SemanticsRole::Group)
+        );
+    }
+
+    #[test]
+    fn field_error_stamps_alert_role_and_live_region() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(120.0)),
+        );
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            FieldError::new("Required.").into_element(cx)
+        });
+
+        let decoration = element
+            .semantics_decoration
+            .as_ref()
+            .expect("expected semantics decoration on FieldError");
+        assert_eq!(decoration.role, Some(SemanticsRole::Alert));
+        assert_eq!(decoration.live, Some(Some(SemanticsLive::Assertive)));
+        assert_eq!(decoration.live_atomic, Some(true));
     }
 }

@@ -208,6 +208,8 @@ fn print_dock_routing_report(routing: &Value, routing_path: &Path, bundle_path: 
                 .get("cursor_override_active")
                 .and_then(|v| v.as_bool())
                 .unwrap_or(false);
+            let outer = point_xy_string_obj(drag, "current_window_outer_pos_physical_px");
+            let deco = point_xy_string_obj(drag, "current_window_decoration_offset_physical_px");
             let origin =
                 point_xy_string_obj(drag, "current_window_client_origin_screen_physical_px");
             let origin_platform = drag
@@ -250,6 +252,12 @@ fn print_dock_routing_report(routing: &Value, routing_path: &Path, bundle_path: 
             }
             if clamped {
                 drag_parts.push("clamped=1".to_string());
+            }
+            if let Some(outer) = outer {
+                drag_parts.push(format!("outer=({outer})"));
+            }
+            if let Some(deco) = deco {
+                drag_parts.push(format!("deco=({deco})"));
             }
             if let Some(origin) = origin {
                 drag_parts.push(format!("origin=({origin})"));

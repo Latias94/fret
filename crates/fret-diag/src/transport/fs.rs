@@ -222,6 +222,8 @@ impl State {
             "devtools.scripts".to_string(),
             "devtools.bundles".to_string(),
             "devtools.sessions".to_string(),
+            // Script runner surface (v2+).
+            "diag.script_v2".to_string(),
         ];
 
         let path = self.cfg.out_dir.join("capabilities.json");

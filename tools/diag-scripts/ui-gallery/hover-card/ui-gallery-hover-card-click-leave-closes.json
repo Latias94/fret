@@ -1,0 +1,85 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "UI gallery: HoverCard closes after click-focus + pointer leave",
+    "required_capabilities": ["diag.script_v2"],
+    "tags": ["ui-gallery", "shadcn", "hover-card", "focus", "hover", "gate"],
+    "target_hints": [
+      "Navigate to the Hover Card page.",
+      "Click the instant-delay trigger to focus it and open the hover card.",
+      "Move the pointer away; hover-driven open should close even if focus remains."
+    ]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "set_window_inner_size", "width_px": 1280.0, "height_px": 720.0 },
+    { "type": "wait_frames", "n": 20 },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
+      "timeout_frames": 600
+    },
+
+    { "type": "click_stable", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
+    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
+    { "type": "press_key", "key": "backspace" },
+    { "type": "type_text", "text": "hover card" },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-nav-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-nav-hover-card" },
+      "delta_y": -240.0,
+      "timeout_frames": 600
+    },
+    { "type": "click_stable", "target": { "kind": "test_id", "id": "ui-gallery-nav-hover-card" } },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-page-hover-card" } },
+      "timeout_frames": 600
+    },
+
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-hover-card-delay-instant-trigger" },
+      "delta_y": -240.0,
+      "require_fully_within_container": true,
+      "require_fully_within_window": true,
+      "padding_px": 24.0,
+      "timeout_frames": 1200
+    },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "reset_diagnostics" },
+
+    { "type": "click_stable", "target": { "kind": "test_id", "id": "ui-gallery-hover-card-delay-instant-trigger" } },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "focus_is", "target": { "kind": "test_id", "id": "ui-gallery-hover-card-delay-instant-trigger" } },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-hover-card-delay-instant-content" } },
+      "timeout_frames": 240
+    },
+
+    { "type": "move_pointer", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
+    { "type": "wait_frames", "n": 4 },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "not_exists", "target": { "kind": "test_id", "id": "ui-gallery-hover-card-delay-instant-content" } },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "focus_is", "target": { "kind": "test_id", "id": "ui-gallery-hover-card-delay-instant-trigger" } },
+      "timeout_frames": 600
+    },
+
+    { "type": "capture_bundle", "label": "ui-gallery-hover-card-click-leave-closes" }
+  ]
+}
+

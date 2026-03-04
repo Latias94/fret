@@ -68,6 +68,7 @@ cookbook-imui = [
     "dep:fret-ui-kit",
     "fret-ui-kit/imui",
     "dep:serde_json",
+    "fret/command-palette",
 ]
 cookbook-interop = [
     "cookbook-bootstrap",

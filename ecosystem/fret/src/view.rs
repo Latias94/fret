@@ -56,6 +56,19 @@ impl<'cx, 'a, H: UiHost> ViewCx<'cx, 'a, H> {
         }
     }
 
+    /// The element that owns view-level action handlers for this render pass.
+    pub fn action_root(&self) -> fret_ui::GlobalElementId {
+        self.action_root
+    }
+
+    /// Consume a transient event recorded for this view's action root.
+    ///
+    /// This is a lightweight scheduling primitive intended for “app effects” that need to run in
+    /// the next render pass (e.g. query invalidation) without allocating a dedicated model.
+    pub fn take_transient_on_action_root(&mut self, key: u64) -> bool {
+        self.cx.take_transient_for(self.action_root, key)
+    }
+
     /// Access the underlying element context.
     pub fn elements(&mut self) -> &mut ElementContext<'a, H> {
         self.cx
@@ -254,6 +267,37 @@ impl<'cx, 'a, H: UiHost> ViewCx<'cx, 'a, H> {
         self.action_handlers = next;
     }
 
+    /// Register a typed unit action handler that requests redraw + notifies on `handled=true`.
+    ///
+    /// This is a small ergonomics helper: most action handlers that mutate models/state need both
+    /// `request_redraw(window)` and `notify(action_cx)` to participate in the view-cache closure.
+    pub fn on_action_notify<A: crate::TypedAction>(
+        &mut self,
+        f: impl Fn(&mut dyn fret_ui::action::UiFocusActionHost, fret_ui::action::ActionCx) -> bool
+        + 'static,
+    ) {
+        self.on_action::<A>(move |host, action_cx| {
+            let handled = f(host, action_cx);
+            if handled {
+                host.request_redraw(action_cx.window);
+                host.notify(action_cx);
+            }
+            handled
+        });
+    }
+
+    /// Register a typed action handler that records a transient event for this dispatch cycle.
+    ///
+    /// This is a convenience wrapper over `UiActionHost::record_transient_event`, commonly used
+    /// to schedule “app effects” that must be applied in `render()` (because the handler only
+    /// receives a restricted `UiActionHost`).
+    pub fn on_action_notify_transient<A: crate::TypedAction>(&mut self, transient_key: u64) {
+        self.on_action_notify::<A>(move |host, action_cx| {
+            host.record_transient_event(action_cx, transient_key);
+            true
+        });
+    }
+
     /// Register a typed payload action handler (v2 prototype; ADR 0312).
     ///
     /// Notes:
@@ -271,6 +315,26 @@ impl<'cx, 'a, H: UiHost> ViewCx<'cx, 'a, H> {
         self.action_handlers_used = true;
         let next = std::mem::take(&mut self.action_handlers).on_payload::<A>(f);
         self.action_handlers = next;
+    }
+
+    /// Register a typed payload action handler that requests redraw + notifies on `handled=true`.
+    pub fn on_payload_action_notify<A: crate::actions::TypedPayloadAction>(
+        &mut self,
+        f: impl Fn(
+            &mut dyn fret_ui::action::UiFocusActionHost,
+            fret_ui::action::ActionCx,
+            A::Payload,
+        ) -> bool
+        + 'static,
+    ) {
+        self.on_payload_action::<A>(move |host, action_cx, payload| {
+            let handled = f(host, action_cx, payload);
+            if handled {
+                host.request_redraw(action_cx.window);
+                host.notify(action_cx);
+            }
+            handled
+        });
     }
 
     /// Register a typed unit action availability handler.

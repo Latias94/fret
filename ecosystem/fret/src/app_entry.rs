@@ -16,6 +16,7 @@ pub struct App {
     root_name: &'static str,
     main_window: Option<(String, (f64, f64))>,
     defaults: Defaults,
+    command_palette: bool,
     install_app_hooks: Vec<fn(&mut fret_app::App)>,
     install_hooks: Vec<fn(&mut fret_app::App, &mut dyn fret_core::UiServices)>,
     register_icon_pack_hooks: Vec<fn(&mut crate::IconRegistry)>,
@@ -31,6 +32,7 @@ impl App {
             root_name,
             main_window: None,
             defaults: Defaults::default(),
+            command_palette: false,
             install_app_hooks: Vec::new(),
             install_hooks: Vec::new(),
             register_icon_pack_hooks: Vec::new(),
@@ -69,6 +71,15 @@ impl App {
             svg_budget_bytes,
             svg_max_ready_entries,
         );
+        self
+    }
+
+    /// Enable the command palette (driver-handled command + UI) if available.
+    ///
+    /// This is intentionally opt-in in the `fret` facade.
+    #[cfg(feature = "command-palette")]
+    pub fn command_palette(mut self, enabled: bool) -> Self {
+        self.command_palette = enabled;
         self
     }
 
@@ -115,6 +126,7 @@ impl App {
             root_name,
             main_window,
             defaults,
+            command_palette: _,
             install_app_hooks,
             install_hooks,
             register_icon_pack_hooks,
@@ -149,13 +161,40 @@ impl App {
             root_name,
             main_window,
             defaults,
+            command_palette,
             install_app_hooks,
             install_hooks,
             register_icon_pack_hooks,
         } = self;
 
-        let mut builder =
-            crate::ui_bootstrap_builder_with_hooks(root_name, init_window, view, |d| d);
+        fn configure_ui_driver<S>(d: crate::UiAppDriver<S>) -> crate::UiAppDriver<S> {
+            d
+        }
+
+        #[cfg(feature = "command-palette")]
+        fn configure_ui_driver_with_palette<S>(
+            d: crate::UiAppDriver<S>,
+        ) -> crate::UiAppDriver<S> {
+            d.command_palette(true)
+        }
+
+        let configure: fn(crate::UiAppDriver<S>) -> crate::UiAppDriver<S> = {
+            #[cfg(feature = "command-palette")]
+            {
+                if command_palette {
+                    configure_ui_driver_with_palette::<S>
+                } else {
+                    configure_ui_driver::<S>
+                }
+            }
+            #[cfg(not(feature = "command-palette"))]
+            {
+                let _ = command_palette;
+                configure_ui_driver::<S>
+            }
+        };
+
+        let mut builder = crate::ui_bootstrap_builder_with_hooks(root_name, init_window, view, configure);
 
         for f in install_app_hooks {
             builder = builder.install_app(f);
@@ -184,16 +223,49 @@ impl App {
             root_name,
             main_window,
             defaults,
+            command_palette,
             install_app_hooks,
             install_hooks,
             register_icon_pack_hooks,
         } = self;
 
+        fn configure_view_driver<V: crate::view::View>(
+            d: crate::UiAppDriver<crate::view::ViewWindowState<V>>,
+        ) -> crate::UiAppDriver<crate::view::ViewWindowState<V>> {
+            d.record_engine_frame(crate::view::view_record_engine_frame::<V>)
+        }
+
+        #[cfg(feature = "command-palette")]
+        fn configure_view_driver_with_palette<V: crate::view::View>(
+            d: crate::UiAppDriver<crate::view::ViewWindowState<V>>,
+        ) -> crate::UiAppDriver<crate::view::ViewWindowState<V>> {
+            d.record_engine_frame(crate::view::view_record_engine_frame::<V>)
+                .command_palette(true)
+        }
+
+        let configure: fn(
+            crate::UiAppDriver<crate::view::ViewWindowState<V>>,
+        ) -> crate::UiAppDriver<crate::view::ViewWindowState<V>> = {
+            #[cfg(feature = "command-palette")]
+            {
+                if command_palette {
+                    configure_view_driver_with_palette::<V>
+                } else {
+                    configure_view_driver::<V>
+                }
+            }
+            #[cfg(not(feature = "command-palette"))]
+            {
+                let _ = command_palette;
+                configure_view_driver::<V>
+            }
+        };
+
         let mut builder = crate::ui_bootstrap_builder_with_hooks(
             root_name,
             crate::view::view_init_window::<V>,
             crate::view::view_view::<V>,
-            |d| d.record_engine_frame(crate::view::view_record_engine_frame::<V>),
+            configure,
         );
 
         for f in install_app_hooks {

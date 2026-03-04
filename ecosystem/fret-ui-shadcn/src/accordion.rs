@@ -2136,7 +2136,7 @@ mod tests {
     use std::sync::Mutex;
 
     use fret_app::App;
-    use fret_core::{AppWindowId, PathCommand, Point, Rect, Size, SvgId, SvgService};
+    use fret_core::{AppWindowId, NodeId, PathCommand, Point, Rect, Size, SvgId, SvgService};
     use fret_core::{PathConstraints, PathId, PathMetrics, PathService, PathStyle};
     use fret_core::{Px, TextAlign, TextBlobId, TextConstraints, TextMetrics, TextService};
     use fret_runtime::{FrameId, TickId};
@@ -2434,6 +2434,66 @@ mod tests {
         render_accordion_frame(ui, app, services, window, bounds, open, collapsible);
         ui.request_semantics_snapshot();
         ui.layout_all(app, services, bounds, 1.0);
+    }
+
+    fn render_accordion_frame_with_measured_content_test_id(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn fret_core::UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        open: fret_runtime::Model<Option<Arc<str>>>,
+        content_test_id: &str,
+    ) {
+        app.set_tick_id(TickId(app.tick_id().0.saturating_add(1)));
+        app.set_frame_id(FrameId(app.frame_id().0.saturating_add(1)));
+
+        let content_id: Arc<str> = Arc::from(content_test_id);
+        let root =
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "test", |cx| {
+                let content_lines = vec![
+                    cx.text("Line 1"),
+                    cx.text("Line 2"),
+                    cx.text("Line 3"),
+                    cx.text("Line 4"),
+                    cx.text("Line 5"),
+                    cx.text("Line 6"),
+                ];
+
+                let item_1 = AccordionItem::new(
+                    Arc::from("item-1"),
+                    AccordionTrigger::new(vec![cx.text("Item 1")])
+                        .refine_layout(LayoutRefinement::default().h_px(Px(40.0))),
+                    AccordionContent::new(content_lines).test_id(content_id.clone()),
+                );
+                let item_2 = AccordionItem::new(
+                    Arc::from("item-2"),
+                    AccordionTrigger::new(vec![cx.text("Item 2")])
+                        .refine_layout(LayoutRefinement::default().h_px(Px(40.0))),
+                    AccordionContent::new(vec![cx.text("Content 2")]),
+                );
+
+                let accordion = Accordion::single(open)
+                    .collapsible(true)
+                    .items([item_1, item_2])
+                    .into_element(cx);
+
+                vec![accordion]
+            });
+
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(app, services, bounds, 1.0);
+    }
+
+    fn node_id_by_test_id(ui: &UiTree<App>, test_id: &str) -> NodeId {
+        ui.semantics_snapshot()
+            .expect("semantics snapshot")
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some(test_id))
+            .unwrap_or_else(|| panic!("missing semantics test_id={test_id}"))
+            .id
     }
 
     fn render_accordion_frame_uncontrolled_with_semantics(
@@ -2917,6 +2977,104 @@ mod tests {
             );
         }
         assert!(!snapshot_has_label(&ui, "Content 1"));
+    }
+
+    #[test]
+    fn accordion_content_measured_height_animates_between_open_and_closed_over_time() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app
+            .models_mut()
+            .insert::<Option<Arc<str>>>(Some(Arc::from("item-1")));
+        let mut services = MeasuredServices::default();
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+
+        // Let the open state settle and ensure a stable measured height.
+        for _ in 0..12 {
+            render_accordion_frame_with_measured_content_test_id(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                open.clone(),
+                "accordion-content",
+            );
+        }
+        let content_node = node_id_by_test_id(&ui, "accordion-content");
+        let open_bounds = ui
+            .debug_node_bounds(content_node)
+            .expect("open content bounds");
+        let open_h = open_bounds.size.height;
+        assert!(
+            open_h.0 > 1.0,
+            "expected measured open height > 1px, got {open_h:?}"
+        );
+
+        let _ = app.models_mut().update(&open, |v| *v = None);
+
+        let mut heights: Vec<Px> = Vec::new();
+        for _ in 0..24 {
+            render_accordion_frame_with_measured_content_test_id(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                open.clone(),
+                "accordion-content",
+            );
+
+            let node = ui
+                .semantics_snapshot()
+                .expect("semantics snapshot")
+                .nodes
+                .iter()
+                .find(|n| n.test_id.as_deref() == Some("accordion-content"))
+                .map(|n| n.id);
+
+            let Some(node) = node else {
+                break;
+            };
+
+            let b = ui.debug_node_bounds(node).expect("content bounds");
+            heights.push(b.size.height);
+        }
+
+        assert!(
+            heights.len() >= 3,
+            "expected at least 3 mounted frames during close animation, got {}",
+            heights.len()
+        );
+
+        let start_h = heights[0];
+        let min_h = heights
+            .iter()
+            .copied()
+            .fold(Px(f32::INFINITY), |a, b| Px(a.0.min(b.0)));
+
+        assert!(
+            start_h.0 <= open_h.0 + 0.5 && start_h.0 >= open_h.0 * 0.75,
+            "expected close transition to start near the open height; open={open_h:?} start={start_h:?}"
+        );
+
+        let saw_intermediate = heights.iter().any(|h| h.0 > 1.0 && h.0 < open_h.0 - 1.0);
+        assert!(
+            saw_intermediate,
+            "expected at least one intermediate measured height during close transition; open={open_h:?} heights={heights:?}"
+        );
+
+        assert!(
+            min_h.0 < open_h.0 * 0.5,
+            "expected close transition to significantly reduce height before unmount; open={open_h:?} min={min_h:?} heights={heights:?}"
+        );
     }
 
     #[test]

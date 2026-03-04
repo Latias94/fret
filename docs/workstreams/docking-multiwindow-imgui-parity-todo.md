@@ -165,11 +165,17 @@ Each TODO is labeled:
       - `scr/scr_used/origin` (screen cursor + client origin evidence for coordinate-space bugs),
       - `*_scale_factor_x1000` fields when present (mixed-DPI evidence),
       and will regenerate stale `dock.routing.json` from the adjacent bundle artifact (no manual deletion needed).
+    - Local debug helper:
+      - `tools/diag-scripts/docking/arbitration/local-debug/docking-arbitration-demo-multiwindow-drag-back-outer-pos-sweep.debug.json`
+        sweeps the floating window outer position along +X and -X and captures bundles after each move.
   - Progress:
     - [x] Evidence surface area: `dock-routing` includes `current_window_scale_factor_x1000` / `moving_window_scale_factor_x1000`.
     - [x] Mixed-DPI smoke repro: 125% + 150% setup passes end-to-end with bounded evidence bundles.
       - PASS: run id `1772606963485` (`target/fret-diag-mixed-dpi-125-150-pass1`)
       - Evidence: `window.map.json` shows the two window scale factors (main `1.25`, floating `1.5`); `dock-routing` report shows `sf_cur` / `sf_move` fields.
+    - [x] Coordinate conversion evidence is visible in `dock-routing`:
+      - PASS: run id `1772616085355` (`target/fret-diag-screen-conv-evidence-check`)
+      - Evidence: `dock-routing` report surfaces `scr/origin/sf_run` alongside `pos/grab`.
     - [ ] Manual acceptance run on a real mixed-DPI setup (100% + 150%) with “pre-crossing” and “post-crossing” bundles captured.
     - [ ] Decide if we can auto-detect mixed-DPI reliably enough to add an automated gate.
 

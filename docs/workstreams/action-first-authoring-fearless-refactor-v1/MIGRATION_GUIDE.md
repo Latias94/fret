@@ -127,9 +127,32 @@ Migration steps:
 2) Replace:
    - `msg.cmd(Msg::X)` with `act::X` action references.
 3) Replace `update(...)` with `cx.on_action(...)` handlers.
+   - Tip: for most state-mutating handlers, prefer `cx.on_action_notify::<A>(...)` to request a
+     redraw + notify automatically when `handled=true`.
 4) Replace manual “force refresh” hacks with:
    - `cx.notify()` and/or
    - selector/query hooks that carry proper dependency observation.
+
+Side effects that need `App` access (v1 note):
+
+- Some operations (e.g. `fret-query` invalidation via `with_query_client`) require `&mut App`.
+- View action handlers (`cx.on_action*`) run on a restricted host (`UiActionHost`) by design, so they
+  should avoid direct `App`-only calls.
+
+Recommended v1 pattern (schedule in handler, execute in `render()`):
+
+- Preferred: use transient events (one-shot flags) to schedule work for the next render pass:
+  - In the action handler: record a transient event (see `ViewCx::on_action_notify_transient`).
+  - In `render()`: consume the transient flag (see `ViewCx::take_transient_on_action_root`) and
+    apply the `App`-scoped effect.
+- If you need payload/data (not just a boolean flag), use a small “pending effect” model value
+  instead.
+
+Example:
+
+- `ecosystem/fret/src/view.rs` (`ViewCx::on_action_notify_transient`, `ViewCx::take_transient_on_action_root`).
+- `apps/fret-examples/src/query_demo.rs` (uses transient events + `with_query_client`).
+- `apps/fret-examples/src/query_async_tokio_demo.rs` (same, but with `use_query_async`).
 
 ---
 
@@ -238,3 +261,27 @@ Migration steps:
 1) Standardize action ID naming conventions (namespace + `.v1` suffix).
 2) Expose action metadata to the GenUI inspector surfaces (optional v1).
 3) Keep GenUI guardrails: do not allow specs to dispatch arbitrary actions without catalog approval.
+
+---
+
+## 6) Embedded viewport interop (advanced)
+
+This applies to demos/apps that embed an `EmbeddedViewportSurface` and need a custom per-frame
+engine recording hook.
+
+Key constraint:
+
+- `UiAppDriver` supports a single `record_engine_frame(...)` hook.
+  - View runtime installs a hook today (v1) to enable the view cache on the `UiTree`.
+    - See: `ecosystem/fret/src/app_entry.rs` (`App::view::<V>()`)
+    - See: `ecosystem/fret/src/view.rs` (`view_record_engine_frame`)
+  - Embedded viewport interop installs a hook to record the engine/offscreen pass.
+    - See: `ecosystem/fret/src/interop/embedded_viewport.rs` (`EmbeddedViewportUiAppDriverExt`)
+
+Recommended migration pattern:
+
+1) Keep `viewport_input(handle_viewport_input)` installed (embedded viewport input forwarding).
+2) Install a *composed* `record_engine_frame(...)` that performs both responsibilities:
+   - ensure view-cache enablement (view runtime v1 behavior), and
+   - record the embedded viewport engine pass.
+3) Keep the legacy MVU demo as an opt-in copy until the new demo becomes stable evidence.

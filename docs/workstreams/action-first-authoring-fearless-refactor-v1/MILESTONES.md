@@ -19,12 +19,14 @@ Related:
 - **M5**: Met (workspace shell demo tab strip uses action-first pointer dispatch hooks; scripted diag gate asserts pointer dispatch trace exists).
 - **M6**: Met (legacy MVU authoring is quarantined; golden path is action-first + view runtime).
   - Status (as of 2026-03-04): MVU remains available as compat under `fret::legacy::prelude::*` while cookbook/templates stay MVU-free.
+- **M6 evidence** (as of 2026-03-04): `apps/fret-examples/src/todo_demo.rs`, `apps/fret-examples/src/query_demo.rs`, `apps/fret-examples/src/query_async_tokio_demo.rs`, `apps/fret-examples/src/hello_counter_demo.rs`, `apps/fret-examples/src/async_playground_demo.rs`, `apps/fret-examples/src/embedded_viewport_demo.rs`, `apps/fret-examples/src/drop_shadow_demo.rs` are view runtime + typed actions (legacy MVU versions are opt-in).
 - **M7**: Met (payload actions v2 contract + prototype landed; at least one in-tree demo uses it with a scripted diag gate).
 - **M8**: Met (in-tree) (MVU is opt-in behind a legacy feature and surfaces are compile-time deprecated; in-tree legacy demos explicitly opt in).
 
 Hardening follow-up (post-M1):
 
 - Key-context aware `when` evaluation (`keyctx.*`) is aligned across keymap matching, menus/palette gating, shortcut display, and diagnostics (see TODO `AFA-actions-019`).
+- Embedded viewport interop has a view-runtime demo proving `record_engine_frame` composition (see TODO `AFA-adopt-044`).
 - Authoring ergonomics: semantics/test IDs/key contexts can be attached before `into_element(cx)` and cookbook demos demonstrate the pattern (see TODO “Reduce authoring noise”).
 
 ---

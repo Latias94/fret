@@ -11,11 +11,18 @@ use fret_ui::element::{
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::icon as decl_icon;
+use fret_ui_kit::declarative::motion::drive_tween_color_for_element;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::typography;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Space, ui};
 
-use crate::{rtl, use_direction};
+use crate::{overlay_motion, rtl, use_direction};
+
+fn tailwind_transition_ease_in_out(t: f32) -> f32 {
+    // Tailwind default transition timing function: cubic-bezier(0.4, 0, 0.2, 1).
+    // (Often described as `ease-in-out`-ish.)
+    fret_ui_headless::easing::SHADCN_EASE.sample(t)
+}
 
 fn open_url_on_activate(
     url: Arc<str>,
@@ -804,7 +811,8 @@ pub mod primitives {
                 props.a11y.role = Some(SemanticsRole::Link);
                 props.a11y.label = Some(label.clone());
 
-                let mut element = cx.pressable(props, move |cx, st| {
+                let pressable_props = props;
+                let mut element = cx.pressable_with_id_props(move |cx, st, id| {
                     cx.pressable_dispatch_command_if_enabled_opt(command.clone());
                     if let Some(on_activate) = on_activate.clone() {
                         cx.pressable_on_activate(on_activate);
@@ -816,8 +824,18 @@ pub mod primitives {
                         ));
                     }
 
-                    let color = if st.hovered { fg } else { muted };
-                    vec![cx.container(
+                    let duration = overlay_motion::shadcn_motion_duration_150(cx);
+                    let target_color = if st.hovered { fg } else { muted };
+                    let fg_motion = drive_tween_color_for_element(
+                        cx,
+                        id,
+                        "breadcrumb.link.fg",
+                        target_color,
+                        duration,
+                        tailwind_transition_ease_in_out,
+                    );
+                    let color = fg_motion.value;
+                    let children = vec![cx.container(
                         {
                             let theme = Theme::global(&*cx.app);
                             decl_style::container_props(theme, chrome.clone(), layout.clone())
@@ -840,7 +858,9 @@ pub mod primitives {
 
                             vec![text.into_element(cx)]
                         },
-                    )]
+                    )];
+
+                    (pressable_props, children)
                 });
 
                 if let Some(href) = href_for_semantics {
@@ -1105,8 +1125,13 @@ mod tests {
     use super::*;
 
     use fret_app::App;
-    use fret_core::{AppWindowId, Point, Rect, Size};
+    use fret_core::{AppWindowId, Modifiers, MouseButtons, Point, Px, Rect, Size};
     use fret_ui::UiTree;
+    use fret_ui::elements::GlobalElementId;
+    use fret_ui_kit::declarative::transition::ticks_60hz_for_duration;
+    use std::cell::Cell;
+    use std::rc::Rc;
+    use std::time::Duration;
 
     use crate::shadcn_themes::{ShadcnBaseColor, ShadcnColorScheme, apply_shadcn_new_york};
 
@@ -1122,8 +1147,8 @@ mod tests {
             (
                 fret_core::TextBlobId::default(),
                 fret_core::TextMetrics {
-                    size: fret_core::Size::new(Px(0.0), Px(0.0)),
-                    baseline: Px(0.0),
+                    size: fret_core::Size::new(Px(48.0), Px(16.0)),
+                    baseline: Px(12.0),
                 },
             )
         }
@@ -1219,5 +1244,149 @@ mod tests {
             .find(|n| n.role == SemanticsRole::Link && n.label.as_deref() == Some("Home"))
             .expect("expected Home breadcrumb link semantics node");
         assert_eq!(node.value.as_deref(), Some("https://example.com"));
+    }
+
+    fn color_eq_eps(a: Color, b: Color, eps: f32) -> bool {
+        (a.r - b.r).abs() <= eps
+            && (a.g - b.g).abs() <= eps
+            && (a.b - b.b).abs() <= eps
+            && (a.a - b.a).abs() <= eps
+    }
+
+    fn find_first_text_color(el: &AnyElement) -> Option<Color> {
+        match &el.kind {
+            fret_ui::element::ElementKind::Text(props) => props.color,
+            _ => el.children.iter().find_map(find_first_text_color),
+        }
+    }
+
+    #[test]
+    fn breadcrumb_link_hover_color_tweens_instead_of_snapping() {
+        use fret_runtime::FrameId;
+
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        let mut services = FakeServices::default();
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(360.0), Px(120.0)),
+        );
+
+        let theme = Theme::global(&app).snapshot();
+        let fg = theme.color_token("foreground");
+        let muted = theme.color_token("muted-foreground");
+
+        let link_id_out: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
+        let color_out: Rc<Cell<Option<Color>>> = Rc::new(Cell::new(None));
+
+        fn render_frame(
+            ui: &mut UiTree<App>,
+            app: &mut App,
+            services: &mut dyn fret_core::UiServices,
+            window: AppWindowId,
+            bounds: Rect,
+            link_id_out: Rc<Cell<Option<GlobalElementId>>>,
+            color_out: Rc<Cell<Option<Color>>>,
+        ) {
+            let root = fret_ui::declarative::render_root(
+                ui,
+                app,
+                services,
+                window,
+                bounds,
+                "breadcrumb-link-hover-color-tween",
+                move |cx| {
+                    let el = primitives::BreadcrumbLink::new("Home")
+                        .href("https://example.com")
+                        .on_activate(Arc::new(|_host, _acx, _reason| {}))
+                        .into_element(cx);
+                    link_id_out.set(Some(el.id));
+                    color_out.set(find_first_text_color(&el));
+                    vec![el]
+                },
+            );
+            ui.set_root(root);
+            ui.request_semantics_snapshot();
+            ui.layout_all(app, services, bounds, 1.0);
+        }
+
+        // Frame 1: baseline (not hovered).
+        app.set_frame_id(FrameId(1));
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            link_id_out.clone(),
+            color_out.clone(),
+        );
+        let c0 = color_out.get().expect("c0");
+        assert!(
+            color_eq_eps(c0, muted, 1e-6),
+            "expected base link color to be muted; got c0={c0:?} muted={muted:?}"
+        );
+
+        let id = link_id_out.get().expect("link id");
+        let node = fret_ui::elements::node_for_element(&mut app, window, id).expect("link node");
+        let b = ui.debug_node_bounds(node).expect("link bounds");
+        let center = Point::new(
+            Px(b.origin.x.0 + b.size.width.0 * 0.5),
+            Px(b.origin.y.0 + b.size.height.0 * 0.5),
+        );
+
+        // Hover.
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+                pointer_id: fret_core::PointerId(0),
+                position: center,
+                buttons: MouseButtons::default(),
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+
+        // Frame 2: hover applied; color should tween.
+        app.set_frame_id(FrameId(2));
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            link_id_out.clone(),
+            color_out.clone(),
+        );
+        let c1 = color_out.get().expect("c1");
+        assert!(
+            !color_eq_eps(c1, muted, 1e-6) && !color_eq_eps(c1, fg, 1e-6),
+            "expected hover color to tween (intermediate), got c1={c1:?} muted={muted:?} fg={fg:?}"
+        );
+
+        // Settle to foreground.
+        let settle = ticks_60hz_for_duration(Duration::from_millis(150)) + 2;
+        for i in 0..settle {
+            app.set_frame_id(FrameId(3 + i));
+            render_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                link_id_out.clone(),
+                color_out.clone(),
+            );
+        }
+        let cf = color_out.get().expect("cf");
+        assert!(
+            color_eq_eps(cf, fg, 1e-4),
+            "expected hover color to settle to foreground; got cf={cf:?} fg={fg:?}"
+        );
     }
 }

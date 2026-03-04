@@ -1,0 +1,146 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "Docking arbitration demo: drag a torn-off tab back to the main window (outer position sweep +X/-X, mixed-DPI evidence)",
+    "tags": ["docking", "multiwindow", "drag", "dpi", "local-debug"],
+    "required_capabilities": ["diag.script_v2", "diag.multi_window"],
+    "env_defaults": {
+      "FRET_DOCK_ALLOW_MULTI_WINDOW_TEAR_OFF": "1"
+    },
+    "target_hints": [
+      "This is a local-debug variant of the multi-window drag-back flow.",
+      "After tear-off creates a floating OS window and a cross-window dock drag is active, the script sweeps the floating window outer position far along +X and -X, capturing bundles after each move.",
+      "Use this when validating mixed-DPI multi-monitor setups (e.g. 125% + 150%). One of the outer moves may cross the monitor boundary depending on monitor arrangement.",
+      "Evidence: use `fretboard diag dock-routing <bundle_dir|bundle.schema2.json>` to inspect `sf_cur/sf_move` and coordinate-space hints (`scr/scr_used/origin`).",
+      "Note: if the host only has a single monitor (or OS clamps window positions), the sweep still exercises large-coordinate paths and must remain stable."
+    ]
+  },
+  "steps": [
+    { "type": "press_key", "window": { "kind": "first_seen" }, "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+
+    { "type": "set_window_outer_position", "window": { "kind": "first_seen" }, "x_px": 120.0, "y_px": 120.0 },
+    { "type": "set_window_inner_size", "window": { "kind": "first_seen" }, "width_px": 1600.0, "height_px": 900.0 },
+    { "type": "wait_frames", "n": 2 },
+
+    {
+      "type": "wait_until",
+      "window": { "kind": "first_seen" },
+      "predicate": {
+        "kind": "bounds_min_size",
+        "target": { "kind": "test_id", "id": "dock-arb-viewport-right" },
+        "min_w_px": 700.0,
+        "min_h_px": 500.0,
+        "eps_px": 1.0
+      },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "wait_bounds_stable",
+      "target": { "kind": "test_id", "id": "dock-arb-tab-drag-anchor-right" },
+      "stable_frames": 12,
+      "max_move_px": 0.5,
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "wait_until",
+      "window": { "kind": "first_seen" },
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "dock-arb-tab-drag-anchor-right" } },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "drag_pointer_until",
+      "window": { "kind": "first_seen" },
+      "target": { "kind": "test_id", "id": "dock-arb-tab-drag-anchor-right" },
+      "release_on_success": false,
+      "delta_x": 2400.0,
+      "delta_y": 0.0,
+      "steps": 140,
+      "predicate": { "kind": "known_window_count_ge", "n": 2 },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "known_window_count_ge", "n": 2 },
+      "timeout_frames": 240,
+      "timeout_ms": 15000
+    },
+    { "type": "wait_frames", "n": 10 },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "dock_drag_active_is", "active": true },
+      "timeout_frames": 240,
+      "timeout_ms": 15000
+    },
+    { "type": "capture_bundle", "label": "multiwindow-drag-back-outer-sweep-after-tearoff" },
+
+    { "type": "raise_window", "window": { "kind": "last_seen" } },
+    { "type": "set_window_outer_position", "window": { "kind": "last_seen" }, "x_px": 4200.0, "y_px": 120.0 },
+    { "type": "wait_frames", "n": 4 },
+    { "type": "capture_bundle", "label": "multiwindow-drag-back-outer-sweep-after-outer-move-pos-x" },
+
+    { "type": "raise_window", "window": { "kind": "last_seen" } },
+    { "type": "set_window_outer_position", "window": { "kind": "last_seen" }, "x_px": -2400.0, "y_px": 120.0 },
+    { "type": "wait_frames", "n": 4 },
+    { "type": "capture_bundle", "label": "multiwindow-drag-back-outer-sweep-after-outer-move-neg-x" },
+
+    { "type": "raise_window", "window": { "kind": "first_seen" } },
+    {
+      "type": "move_pointer",
+      "window": { "kind": "first_seen" },
+      "target": { "kind": "test_id", "id": "dock-arb-hint-outer-right" }
+    },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "dock_drag_current_window_is", "window": { "kind": "first_seen" } },
+      "timeout_frames": 240
+    },
+    {
+      "type": "move_pointer",
+      "window": { "kind": "first_seen" },
+      "target": { "kind": "test_id", "id": "dock-arb-hint-outer-right" }
+    },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "pointer_up", "window": { "kind": "first_seen" } },
+    { "type": "wait_frames", "n": 2 },
+
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "known_window_count_is", "n": 1 },
+      "timeout_frames": 600
+    },
+
+    {
+      "type": "wait_until",
+      "window": { "kind": "first_seen" },
+      "predicate": { "kind": "dock_graph_canonical_is", "canonical": true },
+      "timeout_frames": 240
+    },
+    {
+      "type": "assert",
+      "window": { "kind": "first_seen" },
+      "predicate": { "kind": "dock_graph_signature_contains", "needle": "demo.viewport.left" }
+    },
+    {
+      "type": "assert",
+      "window": { "kind": "first_seen" },
+      "predicate": { "kind": "dock_graph_signature_contains", "needle": "demo.viewport.right" }
+    },
+    {
+      "type": "assert",
+      "window": { "kind": "first_seen" },
+      "predicate": { "kind": "dock_graph_signature_contains", "needle": "demo.controls" }
+    },
+    {
+      "type": "assert",
+      "window": { "kind": "first_seen" },
+      "predicate": { "kind": "dock_graph_signature_contains", "needle": "floatings=[]" }
+    },
+    { "type": "capture_bundle", "label": "docking-arbitration-demo-multiwindow-drag-back-outer-pos-sweep" }
+  ]
+}
+

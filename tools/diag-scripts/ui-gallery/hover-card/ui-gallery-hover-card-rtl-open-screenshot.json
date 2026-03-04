@@ -63,9 +63,8 @@
       "require_fully_within_window": true,
       "padding_px": 24.0
     },
-    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-hover-card-rtl-trigger" } },
-    { "type": "pointer_move", "pointer_kind": "mouse", "delta_x": 1.0, "delta_y": 0.0, "steps": 1 },
-    { "type": "wait_frames", "n": 30 },
+    { "type": "move_pointer", "target": { "kind": "test_id", "id": "ui-gallery-hover-card-rtl-trigger" } },
+    { "type": "wait_frames", "n": 10 },
     {
       "type": "wait_until",
       "predicate": {
@@ -78,4 +77,3 @@
     { "type": "capture_screenshot", "label": "ui-gallery-hover-card-rtl-open" }
   ]
 }
-
