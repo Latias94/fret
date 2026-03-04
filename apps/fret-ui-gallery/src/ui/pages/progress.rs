@@ -5,8 +5,9 @@ use crate::ui::snippets::progress as snippets;
 
 pub(super) fn preview_progress(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     let demo = snippets::demo::render(cx);
+    let label = snippets::label::render(cx);
+    let controlled = snippets::controlled::render(cx);
     let rtl = snippets::rtl::render(cx);
-    let extras = snippets::extras::render(cx);
 
     let notes = doc_layout::notes(
         cx,
@@ -24,12 +25,15 @@ pub(super) fn preview_progress(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
             DocSection::new("Demo", demo)
                 .test_id_prefix("ui-gallery-progress-demo")
                 .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
+            DocSection::new("Label", label)
+                .test_id_prefix("ui-gallery-progress-label")
+                .code_rust_from_file_region(snippets::label::SOURCE, "example"),
+            DocSection::new("Controlled", controlled)
+                .test_id_prefix("ui-gallery-progress-controlled")
+                .code_rust_from_file_region(snippets::controlled::SOURCE, "example"),
             DocSection::new("RTL", rtl)
                 .test_id_prefix("ui-gallery-progress-rtl")
                 .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
-            DocSection::new("Extras", extras)
-                .test_id_prefix("ui-gallery-progress-extras")
-                .code_rust_from_file_region(snippets::extras::SOURCE, "example"),
             DocSection::new("Notes", notes),
         ],
     );

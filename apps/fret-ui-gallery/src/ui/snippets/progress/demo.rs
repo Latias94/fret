@@ -2,7 +2,7 @@ pub const SOURCE: &str = include_str!("demo.rs");
 
 // region: example
 use fret_app::App;
-use fret_core::{Px, SemanticsRole, TimerToken};
+use fret_core::{SemanticsRole, TimerToken};
 use fret_runtime::Effect;
 use fret_ui::Invalidation;
 use fret_ui::element::SemanticsProps;
@@ -95,7 +95,8 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
                 }
 
                 let bar = shadcn::Progress::new(value.clone())
-                    .refine_layout(LayoutRefinement::default().w_px(Px(240.0)))
+                    // shadcn/ui v4 demo: `className="w-[60%]"`
+                    .refine_layout(LayoutRefinement::default().w_percent(60.0))
                     .into_element(cx)
                     .test_id("ui-gallery-progress-demo-bar");
 
