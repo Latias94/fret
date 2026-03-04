@@ -123,6 +123,12 @@ fn resolve_builtin_suite_scripts(
             let scripts = expand_script_inputs(workspace_root, &inputs)?;
             (scripts, Some(BuiltinSuite::UiGalleryLayout))
         }
+        "ui-gallery-lite-smoke" => {
+            // Keep this suite fast and deterministic: always start on the Intro page.
+            push_env_if_missing(launch_env, "FRET_UI_GALLERY_START_PAGE", "intro");
+            let scripts = scripts_from_suite_dir("ui-gallery-lite-smoke")?;
+            (scripts, Some(BuiltinSuite::UiGallery))
+        }
         "ui-gallery-virt-retained"
         | "ui-gallery-virt-retained-measured"
         | "ui-gallery-tree-retained"

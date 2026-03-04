@@ -32,7 +32,7 @@ Status legend:
 
 - [x] Decide gating approach (runtime vs compile-time vs separate bin).
 - [x] Implement lite mode (compile-time feature gating + optional deps) and update UI Gallery README.
-- [ ] Ensure lite mode has deterministic smoke gates (first frame + basic navigation).
+- [x] Ensure lite mode has deterministic smoke gates (first frame + basic navigation).
 
 ## M4 — Move lesson-shaped demos out of `fret-demo`
 
