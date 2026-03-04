@@ -3777,6 +3777,29 @@
       ]
     },
     {
+      "id": "ui-gallery-hover-card-rtl-open-screenshot",
+      "path": "tools/diag-scripts/ui-gallery/hover-card/ui-gallery-hover-card-rtl-open-screenshot.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-rtl-smoke"
+      ],
+      "tags": [
+        "hover-card",
+        "overlay",
+        "rtl",
+        "screenshot",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Navigate to the HoverCard page.",
+        "Scroll to the RTL section and open the hover-card via pointer hover.",
+        "Capture a screenshot for RTL placement/alignment parity."
+      ]
+    },
+    {
       "id": "ui-gallery-hover-layout-torture",
       "path": "tools/diag-scripts/ui-gallery/perf/ui-gallery-hover-layout-torture.json",
       "required_capabilities": [],
