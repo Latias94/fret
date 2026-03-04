@@ -150,6 +150,8 @@
       },
       "timeout_frames": 240
     },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 4 },
     {
       "type": "click_stable",
       "target": { "kind": "test_id", "id": "cookbook.imui_action_basics.button.imui" }
