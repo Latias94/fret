@@ -647,7 +647,6 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             RunnerPlatformWindowReceiverDiagnosticsStore, WindowHitTestRegionV1,
             WindowHitTestRequestV1,
         };
-        use std::collections::HashMap;
 
         fn regions_contain_point(regions: &[WindowHitTestRegionV1], px: f32, py: f32) -> bool {
             fn rect_contains(x: f32, y: f32, w: f32, h: f32, px: f32, py: f32) -> bool {
@@ -721,20 +720,36 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             .app
             .global::<fret_runtime::RunnerWindowStyleDiagnosticsStore>();
 
-        let mut number_to_window: HashMap<i32, fret_core::AppWindowId> = HashMap::new();
-        for (window, state) in self.windows.iter() {
-            let Some(number) = Self::ns_window_number_for_window(state.window.as_ref()) else {
-                continue;
-            };
-            number_to_window.insert(number, window);
-        }
-
         let receiver_window = self.cursor_screen_pos.and_then(|screen_pos| {
-            let ordered = Self::ordered_ns_window_numbers_front_to_back();
-            for number in ordered {
-                let Some(&window) = number_to_window.get(&number) else {
+            // Best-effort: prefer the runner's known z-order, since AppKit ordering can diverge for
+            // non-activating/auxiliary windows. This is a scripted-gate probe, not an OS truth.
+            for &window in self.windows_z_order.iter().rev() {
+                if !self.screen_pos_in_window(window, screen_pos) {
                     continue;
+                }
+                let local = self.local_pos_for_window(window, screen_pos)?;
+                let hit_test = style_store
+                    .and_then(|s| s.effective_snapshot(window))
+                    .map(|s| s.hit_test)
+                    .unwrap_or(WindowHitTestRequestV1::Normal);
+
+                let interactive = match hit_test {
+                    WindowHitTestRequestV1::Normal => true,
+                    WindowHitTestRequestV1::PassthroughAll => false,
+                    WindowHitTestRequestV1::PassthroughRegions { regions } => {
+                        regions_contain_point(&regions, local.x.0, local.y.0)
+                    }
                 };
+                if interactive {
+                    return Some(window);
+                }
+            }
+
+            // Fallback for drifted z-order (should be rare, but keeps the probe deterministic).
+            for window in self.windows.keys() {
+                if self.windows_z_order.contains(&window) {
+                    continue;
+                }
                 if !self.screen_pos_in_window(window, screen_pos) {
                     continue;
                 }
