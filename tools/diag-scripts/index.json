@@ -6518,6 +6518,29 @@
       ]
     },
     {
+      "id": "workspace-shell-demo-tab-drag-to-split-right-preview-invariants-smoke",
+      "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-drag-to-split-right-preview-invariants-smoke.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "diag-hardening-smoke-workspace"
+      ],
+      "tags": [
+        "drag_to_split",
+        "drop_preview",
+        "gate",
+        "smoke",
+        "tabstrip",
+        "workspace"
+      ],
+      "target_hints": [
+        "Starts a pointer session on an active tab.",
+        "Pins the cursor inside the window edge and asserts the right split preview appears.",
+        "Drops and asserts the preview disappears and the tab moves into the new split pane."
+      ]
+    },
+    {
       "id": "workspace-shell-demo-tab-drag-to-split-right-row-suppressed-smoke",
       "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-drag-to-split-right-row-suppressed-smoke.json",
       "required_capabilities": [
