@@ -25,7 +25,7 @@ Legend:
 | Popper placement | `align=start/end` flips under RTL for vertical placements | OK | Test | `crates/fret-ui/src/overlay_placement/tests.rs` |
 | DropdownMenu | `align=start` respects direction provider through overlay root | OK | Test | `ecosystem/fret-ui-shadcn/src/dropdown_menu.rs` |
 | NavigationMenu | viewport `align=start` respects direction provider | OK | Test | `ecosystem/fret-ui-shadcn/src/navigation_menu.rs` |
-| Carousel | Drag sign + key behavior under RTL | Unknown | None | (see `docs/workstreams/carousel-embla-fearless-refactor-v1/plan.md`) |
+| Carousel | Drag sign + snap selection threshold under RTL | OK | Test | `ecosystem/fret-ui-shadcn/tests/carousel_direction_rtl.rs` + `ecosystem/fret-ui-shadcn/src/carousel.rs` |
 | Tabs (gallery) | APG keynav (Left/Right flip under RTL) | OK | Diag | `apps/fret-ui-gallery/src/ui/snippets/tabs/extras.rs` + `tools/diag-scripts/ui-gallery/tabs/ui-gallery-tabs-rtl-keynav-screenshot.json` |
 | Slider / Range | Arrow keys + track fill direction | Unknown | None | — |
 | Tabs (recipe) | Visual indicator + spacing parity under RTL | Unknown | None | — |

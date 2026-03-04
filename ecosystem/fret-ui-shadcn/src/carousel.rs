@@ -2602,6 +2602,20 @@ impl Carousel {
                         scroll_snaps.push(0.0);
                     }
 
+                    let release = headless_carousel::on_pointer_up_with_snaps_options(
+                        drag_config,
+                        &mut drag,
+                        track_direction,
+                        direction_for_up,
+                        up.position,
+                        snaps.as_ref(),
+                        max_offset,
+                        loop_enabled_effective,
+                        skip_snaps_for_up,
+                        drag_free_for_up,
+                    )
+                    .expect("release output when dragging");
+
                     let index: usize = host
                         .models_mut()
                         .read(&index_for_up, |v| *v)
@@ -2629,38 +2643,27 @@ impl Carousel {
                     engine.scroll_body.set_target(engine_location);
                     engine.scroll_target.set_target_vector(engine_location);
 
-                    let pointer_kind = match up.pointer_type {
-                        fret_core::PointerType::Touch => headless_embla::drag_release::PointerKind::Touch,
-                        _ => headless_embla::drag_release::PointerKind::Mouse,
-                    };
-                    let velocity = up
-                        .velocity_window
-                        .map(|v| match track_direction {
-                            fret_core::Axis::Horizontal => v.x.0,
-                            fret_core::Axis::Vertical => v.y.0,
-                        })
-                        .unwrap_or(0.0);
-                    // Embla uses px/ms (`event.timeStamp` is ms). Fret provides px/s.
-                    let velocity = velocity / 1000.0;
-
-                    let sign = if track_direction == fret_core::Axis::Horizontal
-                        && direction_for_up == LayoutDirection::Rtl
-                    {
-                        -1.0
+                    // Decide the target snap index using our headless drag contract so the Embla
+                    // path matches `CarouselDragConfig::snap_threshold_fraction` (and remains
+                    // deterministic in tests).
+                    let select = if !drag_free_for_up {
+                        engine.scroll_to_index(release.next_index, headless_embla::utils::DIRECTION_NONE)
                     } else {
-                        1.0
+                        None
                     };
-                    let (_release, select) =
-                        engine.on_drag_release(pointer_kind, velocity, move |v| v * sign);
 
                     let _ = host.models_mut().update(&embla_engine_for_up, |v| {
                         *v = Some(engine);
                     });
 
-                    if let Some(select) = select {
+                    let next_index = select.map(|s| s.target_snap).unwrap_or(release.next_index);
+                    let _ = host
+                        .models_mut()
+                        .update(&index_for_up, |v| *v = next_index);
+                    if drag_free_for_up {
                         let _ = host
                             .models_mut()
-                            .update(&index_for_up, |v| *v = select.target_snap);
+                            .update(&offset_for_up, |v| *v = release.target_offset);
                     }
 
                     let _ = host.models_mut().update(&runtime_for_up, |st| {
@@ -3474,12 +3477,10 @@ impl Carousel {
                 move |_cx| vec![track],
             );
 
-            // Avoid `h_full()` here: the carousel viewport often has auto height derived from its
-            // track/items. A `fill`-height pointer region can collapse under auto-sized parents
-            // (classic "fill without definite budget" footgun) and clip slides via
-            // `overflow_hidden` on the viewport.
+            // Pointer interactions (drag + wheel) should be available across the full viewport,
+            // even when slide content has no intrinsic height (e.g. empty slides in tests).
             let pointer_layout =
-                decl_style::layout_style(&theme, LayoutRefinement::default().w_full().min_w_0());
+                decl_style::layout_style(&theme, LayoutRefinement::default().size_full());
 
             let on_wheel: Option<OnWheel> = wheel_cfg.map(|cfg| {
                 let snaps_for_wheel = snaps_model.clone();
