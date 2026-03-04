@@ -457,10 +457,8 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             d.moving_window = moving_window;
             d.window_under_moving_window = window_under_moving_window;
             d.window_under_moving_window_source = window_under_moving_window_source;
-            d.diag_cursor_screen_pos_raw_physical_px = Some(Point::new(
-                Px(screen_pos.x as f32),
-                Px(screen_pos.y as f32),
-            ));
+            d.diag_cursor_screen_pos_raw_physical_px =
+                Some(Point::new(Px(screen_pos.x as f32), Px(screen_pos.y as f32)));
             d.diag_cursor_screen_pos_used_physical_px = Some(Point::new(
                 Px(screen_pos_for_pos.x as f32),
                 Px(screen_pos_for_pos.y as f32),
@@ -474,9 +472,9 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 } else {
                     None
                 };
-                d.diag_current_window_outer_pos_physical_px = diag.outer_pos_physical.map(|p| {
-                    Point::new(Px(p.x as f32), Px(p.y as f32))
-                });
+                d.diag_current_window_outer_pos_physical_px = diag
+                    .outer_pos_physical
+                    .map(|p| Point::new(Px(p.x as f32), Px(p.y as f32)));
                 d.diag_current_window_decoration_offset_physical_px = Some(Point::new(
                     Px(diag.decoration_offset_physical.x as f32),
                     Px(diag.decoration_offset_physical.y as f32),
@@ -845,10 +843,8 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             d.moving_window = moving_window;
             d.window_under_moving_window = window_under_moving_window;
             d.window_under_moving_window_source = window_under_moving_window_source;
-            d.diag_cursor_screen_pos_raw_physical_px = Some(Point::new(
-                Px(screen_pos.x as f32),
-                Px(screen_pos.y as f32),
-            ));
+            d.diag_cursor_screen_pos_raw_physical_px =
+                Some(Point::new(Px(screen_pos.x as f32), Px(screen_pos.y as f32)));
             d.diag_cursor_screen_pos_used_physical_px = Some(Point::new(
                 Px(screen_pos_for_pos.x as f32),
                 Px(screen_pos_for_pos.y as f32),
@@ -862,9 +858,9 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 } else {
                     None
                 };
-                d.diag_current_window_outer_pos_physical_px = diag.outer_pos_physical.map(|p| {
-                    Point::new(Px(p.x as f32), Px(p.y as f32))
-                });
+                d.diag_current_window_outer_pos_physical_px = diag
+                    .outer_pos_physical
+                    .map(|p| Point::new(Px(p.x as f32), Px(p.y as f32)));
                 d.diag_current_window_decoration_offset_physical_px = Some(Point::new(
                     Px(diag.decoration_offset_physical.x as f32),
                     Px(diag.decoration_offset_physical.y as f32),

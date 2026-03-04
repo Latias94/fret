@@ -325,7 +325,8 @@ pub(super) fn handle_wait_shortcut_routing_trace_step(
         Some(mut state) if state.step_index == step_index => {
             state.remaining_frames = state.remaining_frames.min(timeout_frames);
             if state.deadline_unix_ms.is_none() {
-                state.deadline_unix_ms = timeout_ms.map(|ms| unix_ms_now().saturating_add(ms as u64));
+                state.deadline_unix_ms =
+                    timeout_ms.map(|ms| unix_ms_now().saturating_add(ms as u64));
             }
             state
         }
@@ -397,7 +398,8 @@ pub(super) fn handle_wait_command_dispatch_trace_step(
         Some(mut state) if state.step_index == step_index => {
             state.remaining_frames = state.remaining_frames.min(timeout_frames);
             if state.deadline_unix_ms.is_none() {
-                state.deadline_unix_ms = timeout_ms.map(|ms| unix_ms_now().saturating_add(ms as u64));
+                state.deadline_unix_ms =
+                    timeout_ms.map(|ms| unix_ms_now().saturating_add(ms as u64));
             }
             state
         }
@@ -492,7 +494,8 @@ pub(super) fn handle_wait_overlay_placement_trace_step(
         Some(mut state) if state.step_index == step_index => {
             state.remaining_frames = state.remaining_frames.min(timeout_frames);
             if state.deadline_unix_ms.is_none() {
-                state.deadline_unix_ms = timeout_ms.map(|ms| unix_ms_now().saturating_add(ms as u64));
+                state.deadline_unix_ms =
+                    timeout_ms.map(|ms| unix_ms_now().saturating_add(ms as u64));
             }
             state
         }

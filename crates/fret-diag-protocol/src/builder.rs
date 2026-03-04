@@ -6,9 +6,9 @@
 //! - Prefer stable selectors (`test_id`, semantics role/name) over pixel coordinates.
 
 use crate::{
-    UiActionScriptV2, UiActionStepV2, UiImeEventV1, UiIncomingOpenInjectItemV1, UiKeyModifiersV1,
-    UiCommandDispatchTraceQueryV1, UiMouseButtonV1, UiOverlayPlacementTraceQueryV1, UiPointerKindV1,
-    UiPredicateV1, UiSelectorV1, UiShortcutRoutingTraceQueryV1, UiWindowTargetV1,
+    UiActionScriptV2, UiActionStepV2, UiCommandDispatchTraceQueryV1, UiImeEventV1,
+    UiIncomingOpenInjectItemV1, UiKeyModifiersV1, UiMouseButtonV1, UiOverlayPlacementTraceQueryV1,
+    UiPointerKindV1, UiPredicateV1, UiSelectorV1, UiShortcutRoutingTraceQueryV1, UiWindowTargetV1,
 };
 
 pub fn test_id(id: impl Into<String>) -> UiSelectorV1 {
@@ -470,10 +470,7 @@ impl ScriptV2Builder {
     }
 
     pub fn wait_ms(self, n_ms: u32) -> Self {
-        self.push(UiActionStepV2::WaitMs {
-            window: None,
-            n_ms,
-        })
+        self.push(UiActionStepV2::WaitMs { window: None, n_ms })
     }
 
     pub fn wait_until(self, predicate: UiPredicateV1, timeout_frames: u32) -> Self {

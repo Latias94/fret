@@ -3,9 +3,9 @@ use std::sync::Arc;
 
 use fret::prelude::*;
 use fret_app::{CreateWindowKind, CreateWindowRequest, WindowRequest};
-use fret_core::{AppWindowId, Px};
 use fret_bootstrap::ui_app_driver;
-use fret_launch::{WinitRunnerConfig, WindowCreateSpec, WindowLogicalSize};
+use fret_core::{AppWindowId, Px};
+use fret_launch::{WindowCreateSpec, WindowLogicalSize, WinitRunnerConfig};
 use fret_runtime::{
     ActivationPolicy, WindowDecorationsRequest, WindowRole, WindowStyleRequest, WindowZLevel,
 };
