@@ -9,7 +9,11 @@ use std::path::{Path, PathBuf};
 fn step_type_string_from_serializable<S: serde::Serialize>(step: &S) -> String {
     serde_json::to_value(step)
         .ok()
-        .and_then(|v| v.get("type").and_then(|v| v.as_str()).map(|s| s.to_string()))
+        .and_then(|v| {
+            v.get("type")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string())
+        })
         .unwrap_or_else(|| "unknown".to_string())
 }
 
@@ -163,12 +167,10 @@ pub(crate) fn preflight_strict_termination_issues(
             1 => {
                 let script: UiActionScriptV1 =
                     serde_json::from_value(value).map_err(|e| e.to_string())?;
-                let last_capture_bundle_index: Option<usize> = script
-                    .steps
-                    .iter()
-                    .enumerate()
-                    .rev()
-                    .find_map(|(i, step)| matches!(step, UiActionStepV1::CaptureBundle { .. }).then_some(i));
+                let last_capture_bundle_index: Option<usize> =
+                    script.steps.iter().enumerate().rev().find_map(|(i, step)| {
+                        matches!(step, UiActionStepV1::CaptureBundle { .. }).then_some(i)
+                    });
 
                 if let Some(last) = script.steps.last()
                     && matches!(last, UiActionStepV1::WaitFrames { .. })
@@ -183,7 +185,13 @@ pub(crate) fn preflight_strict_termination_issues(
                 }
 
                 if let Some(capture_idx) = last_capture_bundle_index {
-                    if let Some((i, _)) = script.steps.iter().enumerate().skip(capture_idx + 1).find(|(_i, step)| matches!(step, UiActionStepV1::WaitFrames { .. })) {
+                    if let Some((i, _)) = script
+                        .steps
+                        .iter()
+                        .enumerate()
+                        .skip(capture_idx + 1)
+                        .find(|(_i, step)| matches!(step, UiActionStepV1::WaitFrames { .. }))
+                    {
                         push_issue(
                             "script.wait_frames_after_last_capture_bundle",
                             "error",
@@ -196,12 +204,10 @@ pub(crate) fn preflight_strict_termination_issues(
             2 => {
                 let script: UiActionScriptV2 =
                     serde_json::from_value(value).map_err(|e| e.to_string())?;
-                let last_capture_bundle_index: Option<usize> = script
-                    .steps
-                    .iter()
-                    .enumerate()
-                    .rev()
-                    .find_map(|(i, step)| matches!(step, UiActionStepV2::CaptureBundle { .. }).then_some(i));
+                let last_capture_bundle_index: Option<usize> =
+                    script.steps.iter().enumerate().rev().find_map(|(i, step)| {
+                        matches!(step, UiActionStepV2::CaptureBundle { .. }).then_some(i)
+                    });
 
                 if let Some(last) = script.steps.last()
                     && matches!(last, UiActionStepV2::WaitFrames { .. })
@@ -216,7 +222,13 @@ pub(crate) fn preflight_strict_termination_issues(
                 }
 
                 if let Some(capture_idx) = last_capture_bundle_index {
-                    if let Some((i, _)) = script.steps.iter().enumerate().skip(capture_idx + 1).find(|(_i, step)| matches!(step, UiActionStepV2::WaitFrames { .. })) {
+                    if let Some((i, _)) = script
+                        .steps
+                        .iter()
+                        .enumerate()
+                        .skip(capture_idx + 1)
+                        .find(|(_i, step)| matches!(step, UiActionStepV2::WaitFrames { .. }))
+                    {
                         push_issue(
                             "script.wait_frames_after_last_capture_bundle",
                             "error",
@@ -750,41 +762,46 @@ fn summarize_steps_v1(script: &UiActionScriptV1) -> Value {
         }
     }
 
-    let ends_with_wait_frames = matches!(script.steps.last(), Some(UiActionStepV1::WaitFrames { .. }));
+    let ends_with_wait_frames =
+        matches!(script.steps.last(), Some(UiActionStepV1::WaitFrames { .. }));
     let last_step_type = script
         .steps
         .last()
         .map(step_type_string_from_serializable)
         .unwrap_or_else(|| "none".to_string());
 
-    let (capture_bundle_not_last, wait_frames_after_last_capture_bundle, tail_step_count, tail_step_types) =
-        if let Some(last_capture_bundle_index) = last_capture_bundle_index {
-            let idx = last_capture_bundle_index as usize;
-            let capture_bundle_not_last = idx + 1 < script.steps.len();
-            let mut wait_frames_after_last_capture_bundle = false;
-            let mut tail_step_types: Vec<String> = Vec::new();
-            for step in script.steps.iter().skip(idx + 1) {
-                if matches!(step, UiActionStepV1::WaitFrames { .. }) {
-                    wait_frames_after_last_capture_bundle = true;
-                }
-                let t = step_type_string_from_serializable(step);
-                if tail_step_types
-                    .last()
-                    .map(|prev| prev != &t)
-                    .unwrap_or(true)
-                {
-                    tail_step_types.push(t);
-                }
+    let (
+        capture_bundle_not_last,
+        wait_frames_after_last_capture_bundle,
+        tail_step_count,
+        tail_step_types,
+    ) = if let Some(last_capture_bundle_index) = last_capture_bundle_index {
+        let idx = last_capture_bundle_index as usize;
+        let capture_bundle_not_last = idx + 1 < script.steps.len();
+        let mut wait_frames_after_last_capture_bundle = false;
+        let mut tail_step_types: Vec<String> = Vec::new();
+        for step in script.steps.iter().skip(idx + 1) {
+            if matches!(step, UiActionStepV1::WaitFrames { .. }) {
+                wait_frames_after_last_capture_bundle = true;
             }
-            (
-                capture_bundle_not_last,
-                wait_frames_after_last_capture_bundle,
-                (script.steps.len().saturating_sub(idx + 1)) as u64,
-                tail_step_types,
-            )
-        } else {
-            (false, false, 0, Vec::new())
-        };
+            let t = step_type_string_from_serializable(step);
+            if tail_step_types
+                .last()
+                .map(|prev| prev != &t)
+                .unwrap_or(true)
+            {
+                tail_step_types.push(t);
+            }
+        }
+        (
+            capture_bundle_not_last,
+            wait_frames_after_last_capture_bundle,
+            (script.steps.len().saturating_sub(idx + 1)) as u64,
+            tail_step_types,
+        )
+    } else {
+        (false, false, 0, Vec::new())
+    };
 
     serde_json::json!({
         "count": script.steps.len(),
@@ -830,34 +847,38 @@ fn summarize_steps_v2(script: &UiActionScriptV2) -> Value {
         .map(step_type_string_from_serializable)
         .unwrap_or_else(|| "none".to_string());
 
-    let (capture_bundle_not_last, wait_frames_after_last_capture_bundle, tail_step_count, tail_step_types) =
-        if let Some(last_capture_bundle_index) = last_capture_bundle_index {
-            let idx = last_capture_bundle_index as usize;
-            let capture_bundle_not_last = idx + 1 < script.steps.len();
-            let mut wait_frames_after_last_capture_bundle = false;
-            let mut tail_step_types: Vec<String> = Vec::new();
-            for step in script.steps.iter().skip(idx + 1) {
-                if matches!(step, UiActionStepV2::WaitFrames { .. }) {
-                    wait_frames_after_last_capture_bundle = true;
-                }
-                let t = step_type_string_from_serializable(step);
-                if tail_step_types
-                    .last()
-                    .map(|prev| prev != &t)
-                    .unwrap_or(true)
-                {
-                    tail_step_types.push(t);
-                }
+    let (
+        capture_bundle_not_last,
+        wait_frames_after_last_capture_bundle,
+        tail_step_count,
+        tail_step_types,
+    ) = if let Some(last_capture_bundle_index) = last_capture_bundle_index {
+        let idx = last_capture_bundle_index as usize;
+        let capture_bundle_not_last = idx + 1 < script.steps.len();
+        let mut wait_frames_after_last_capture_bundle = false;
+        let mut tail_step_types: Vec<String> = Vec::new();
+        for step in script.steps.iter().skip(idx + 1) {
+            if matches!(step, UiActionStepV2::WaitFrames { .. }) {
+                wait_frames_after_last_capture_bundle = true;
             }
-            (
-                capture_bundle_not_last,
-                wait_frames_after_last_capture_bundle,
-                (script.steps.len().saturating_sub(idx + 1)) as u64,
-                tail_step_types,
-            )
-        } else {
-            (false, false, 0, Vec::new())
-        };
+            let t = step_type_string_from_serializable(step);
+            if tail_step_types
+                .last()
+                .map(|prev| prev != &t)
+                .unwrap_or(true)
+            {
+                tail_step_types.push(t);
+            }
+        }
+        (
+            capture_bundle_not_last,
+            wait_frames_after_last_capture_bundle,
+            (script.steps.len().saturating_sub(idx + 1)) as u64,
+            tail_step_types,
+        )
+    } else {
+        (false, false, 0, Vec::new())
+    };
 
     serde_json::json!({
         "count": script.steps.len(),
@@ -1077,9 +1098,10 @@ mod tests {
         let issues = preflight_strict_termination_issues(&[script_path.clone()]).unwrap();
         assert!(!issues.is_empty());
         assert!(issues.iter().any(|it| {
-            it.get("code")
-                .and_then(|v| v.as_str())
-                .is_some_and(|c| c == "script.ends_with_wait_frames" || c == "script.wait_frames_after_last_capture_bundle")
+            it.get("code").and_then(|v| v.as_str()).is_some_and(|c| {
+                c == "script.ends_with_wait_frames"
+                    || c == "script.wait_frames_after_last_capture_bundle"
+            })
         }));
 
         let _ = std::fs::remove_dir_all(&root);

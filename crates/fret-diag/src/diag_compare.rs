@@ -239,8 +239,9 @@ fn resolve_session_root_for_resource_footprint(src: &Path) -> PathBuf {
 }
 
 fn summarize_resource_footprint(v: &serde_json::Value) -> FootprintSummary {
-    let physical_footprint_bytes =
-        v.pointer("/macos_vmmap/physical_footprint_bytes").and_then(|v| v.as_u64());
+    let physical_footprint_bytes = v
+        .pointer("/macos_vmmap/physical_footprint_bytes")
+        .and_then(|v| v.as_u64());
     let physical_footprint_peak_bytes = v
         .pointer("/macos_vmmap/physical_footprint_peak_bytes")
         .and_then(|v| v.as_u64());
@@ -249,7 +250,10 @@ fn summarize_resource_footprint(v: &serde_json::Value) -> FootprintSummary {
         .pointer("/macos_vmmap/tables/regions/top_dirty/0")
         .and_then(|v| v.as_object())
         .map(|o| {
-            let ty = o.get("region_type").and_then(|v| v.as_str()).map(|s| s.to_string());
+            let ty = o
+                .get("region_type")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string());
             let dirty = o.get("dirty_bytes").and_then(|v| v.as_u64());
             (ty, dirty)
         })
@@ -264,7 +268,10 @@ fn summarize_resource_footprint(v: &serde_json::Value) -> FootprintSummary {
         .pointer("/macos_vmmap/tables/malloc_zones/top_allocated/0")
         .and_then(|v| v.as_object())
         .map(|o| {
-            let zone = o.get("zone").and_then(|v| v.as_str()).map(|s| s.to_string());
+            let zone = o
+                .get("zone")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string());
             let allocated = o.get("allocated_bytes").and_then(|v| v.as_u64());
             let frag = o.get("frag_bytes").and_then(|v| v.as_u64());
             let frag_percent = o.get("frag_percent").and_then(|v| v.as_f64());
@@ -336,9 +343,18 @@ fn compare_top_region_dirty_deltas(
 
     rows.sort_by_key(|(delta, row)| {
         let abs = delta.unsigned_abs();
-        let a_dirty = row.get("a_dirty_bytes").and_then(|v| v.as_u64()).unwrap_or(0);
-        let b_dirty = row.get("b_dirty_bytes").and_then(|v| v.as_u64()).unwrap_or(0);
-        (std::cmp::Reverse(abs), std::cmp::Reverse(a_dirty.max(b_dirty)))
+        let a_dirty = row
+            .get("a_dirty_bytes")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0);
+        let b_dirty = row
+            .get("b_dirty_bytes")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0);
+        (
+            std::cmp::Reverse(abs),
+            std::cmp::Reverse(a_dirty.max(b_dirty)),
+        )
     });
     rows.into_iter().take(top_n).map(|(_, v)| v).collect()
 }
@@ -396,7 +412,10 @@ fn compare_top_malloc_alloc_deltas(
             .get("b_allocated_bytes")
             .and_then(|v| v.as_u64())
             .unwrap_or(0);
-        (std::cmp::Reverse(abs), std::cmp::Reverse(a_alloc.max(b_alloc)))
+        (
+            std::cmp::Reverse(abs),
+            std::cmp::Reverse(a_alloc.max(b_alloc)),
+        )
     });
     rows.into_iter().take(top_n).map(|(_, v)| v).collect()
 }
@@ -423,12 +442,7 @@ fn collect_region_stats(v: &serde_json::Value) -> std::collections::HashMap<Stri
                 continue;
             };
             let dirty = obj.get("dirty_bytes").and_then(|v| v.as_u64()).unwrap_or(0);
-            out.insert(
-                region_type.to_string(),
-                RegionRowAgg {
-                    dirty_bytes: dirty,
-                },
-            );
+            out.insert(region_type.to_string(), RegionRowAgg { dirty_bytes: dirty });
         }
     }
     out
@@ -443,7 +457,8 @@ struct MallocZoneAgg {
 fn collect_malloc_zone_stats(
     v: &serde_json::Value,
 ) -> std::collections::HashMap<String, MallocZoneAgg> {
-    let mut out: std::collections::HashMap<String, MallocZoneAgg> = std::collections::HashMap::new();
+    let mut out: std::collections::HashMap<String, MallocZoneAgg> =
+        std::collections::HashMap::new();
     for ptr in [
         "/macos_vmmap/tables/malloc_zones/top_allocated",
         "/macos_vmmap/tables/malloc_zones/top_frag",
@@ -496,7 +511,10 @@ fn human_bytes(n: u64) -> String {
 }
 
 fn print_footprint_compare_human(report: &FootprintCompareReport) {
-    println!("resource footprint compare (schema v{}):", report.schema_version);
+    println!(
+        "resource footprint compare (schema v{}):",
+        report.schema_version
+    );
     println!("  A: {}", report.a_out_dir);
     println!("  B: {}", report.b_out_dir);
     println!();
@@ -541,10 +559,22 @@ fn print_footprint_compare_human(report: &FootprintCompareReport) {
     } else {
         println!("  region dirty deltas (top):");
         for row in report.top_region_dirty_deltas.iter() {
-            let ty = row.get("region_type").and_then(|v| v.as_str()).unwrap_or("<unknown>");
-            let delta = row.get("delta_dirty_bytes").and_then(|v| v.as_i64()).unwrap_or(0);
-            let a = row.get("a_dirty_bytes").and_then(|v| v.as_u64()).unwrap_or(0);
-            let b = row.get("b_dirty_bytes").and_then(|v| v.as_u64()).unwrap_or(0);
+            let ty = row
+                .get("region_type")
+                .and_then(|v| v.as_str())
+                .unwrap_or("<unknown>");
+            let delta = row
+                .get("delta_dirty_bytes")
+                .and_then(|v| v.as_i64())
+                .unwrap_or(0);
+            let a = row
+                .get("a_dirty_bytes")
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let b = row
+                .get("b_dirty_bytes")
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
             let sign = if delta < 0 { "-" } else { "+" };
             println!(
                 "    {ty}: A={} B={} Δ={}{}",
@@ -562,7 +592,10 @@ fn print_footprint_compare_human(report: &FootprintCompareReport) {
     } else {
         println!("  malloc zone deltas (top):");
         for row in report.top_malloc_alloc_deltas.iter() {
-            let zone = row.get("zone").and_then(|v| v.as_str()).unwrap_or("<unknown>");
+            let zone = row
+                .get("zone")
+                .and_then(|v| v.as_str())
+                .unwrap_or("<unknown>");
             let delta = row
                 .get("delta_allocated_bytes")
                 .and_then(|v| v.as_i64())
@@ -575,7 +608,10 @@ fn print_footprint_compare_human(report: &FootprintCompareReport) {
                 .get("b_allocated_bytes")
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0);
-            let delta_frag = row.get("delta_frag_bytes").and_then(|v| v.as_i64()).unwrap_or(0);
+            let delta_frag = row
+                .get("delta_frag_bytes")
+                .and_then(|v| v.as_i64())
+                .unwrap_or(0);
             let sign = if delta < 0 { "-" } else { "+" };
             let sign_frag = if delta_frag < 0 { "-" } else { "+" };
             println!(

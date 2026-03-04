@@ -111,8 +111,8 @@ use devtools::DevtoolsOps;
 use gates::{
     RedrawHitchesGateResult, RenderTextAtlasBytesGateResult, RendererGpuBudgetThresholds,
     RendererGpuBudgetsGateResult, ResourceFootprintGateResult, ResourceFootprintThresholds,
-    WgpuMetalAllocatedSizeGateResult,
-    check_redraw_hitches_max_total_ms, check_render_text_atlas_bytes_live_estimate_total_threshold,
+    WgpuMetalAllocatedSizeGateResult, check_redraw_hitches_max_total_ms,
+    check_render_text_atlas_bytes_live_estimate_total_threshold,
     check_renderer_gpu_budget_thresholds, check_resource_footprint_thresholds,
     check_wgpu_metal_current_allocated_size_threshold,
 };
@@ -1244,7 +1244,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 i += 1;
                 let Some(v) = args.get(i).cloned() else {
                     return Err(
-                        "missing value for --max-renderer-gpu-images-bytes-estimate".to_string(),
+                        "missing value for --max-renderer-gpu-images-bytes-estimate".to_string()
                     );
                 };
                 max_renderer_gpu_images_bytes_estimate = Some(v.parse::<u64>().map_err(|_| {
@@ -1275,9 +1275,11 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                             .to_string(),
                     );
                 };
-                max_renderer_intermediate_peak_in_use_bytes = Some(v.parse::<u64>().map_err(
-                    |_| "invalid value for --max-renderer-intermediate-peak-in-use-bytes".to_string(),
-                )?);
+                max_renderer_intermediate_peak_in_use_bytes =
+                    Some(v.parse::<u64>().map_err(|_| {
+                        "invalid value for --max-renderer-intermediate-peak-in-use-bytes"
+                            .to_string()
+                    })?);
                 i += 1;
             }
             "--max-wgpu-metal-current-allocated-size-bytes" => {

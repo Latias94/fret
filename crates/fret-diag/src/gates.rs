@@ -56,9 +56,7 @@ impl RendererGpuBudgetThresholds {
             || self
                 .max_renderer_gpu_render_targets_bytes_estimate
                 .is_some()
-            || self
-                .max_renderer_intermediate_peak_in_use_bytes
-                .is_some()
+            || self.max_renderer_intermediate_peak_in_use_bytes.is_some()
     }
 }
 
@@ -215,7 +213,14 @@ pub(super) fn check_renderer_gpu_budget_thresholds(
                 .and_then(|o| o.get("renderer_intermediate_peak_in_use_bytes"))
                 .and_then(|v| v.as_u64());
 
-            (tick_id, frame_id, stats.is_some(), images_bytes, render_targets_bytes, intermediate_peak_bytes)
+            (
+                tick_id,
+                frame_id,
+                stats.is_some(),
+                images_bytes,
+                render_targets_bytes,
+                intermediate_peak_bytes,
+            )
         } else {
             (None, None, false, None, None, None)
         };

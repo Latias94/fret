@@ -284,8 +284,8 @@ fn collect_macos_vmmap_summary_best_effort(pid: u32, out_dir: &Path) -> Option<s
 
     let owned_unmapped_memory_dirty_bytes = region_dirty_bytes("owned unmapped memory");
     // IOSurface is commonly used for Metal-backed surfaces/textures.
-    let io_surface_dirty_bytes = region_dirty_bytes_sum_prefix("IOSurface")
-        .or_else(|| region_dirty_bytes("IOSurface"));
+    let io_surface_dirty_bytes =
+        region_dirty_bytes_sum_prefix("IOSurface").or_else(|| region_dirty_bytes("IOSurface"));
     // IOAccelerator is a common region type for GPU driver allocations.
     let io_accelerator_dirty_bytes = region_dirty_bytes_sum_prefix("IOAccelerator")
         .or_else(|| region_dirty_bytes("IOAccelerator"));
