@@ -75,9 +75,8 @@ ADR 0223 treats these as first-party ecosystem surfaces today.
 
 After action-first + view runtime adoption:
 
-- decide whether MVU remains:
-  - a supported alternative paradigm, or
-  - a legacy/compat surface for existing demos.
+- MVU is legacy-only (compat), not a supported alternative golden path.
+  - Policy: `docs/workstreams/action-first-authoring-fearless-refactor-v1/MVU_POLICY.md`
 
 If demoted:
 

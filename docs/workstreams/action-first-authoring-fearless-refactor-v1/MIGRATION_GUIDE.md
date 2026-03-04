@@ -156,6 +156,11 @@ Prefer payload actions v2 (post-v1) when:
 - See: `docs/adr/0312-payload-actions-v2.md`
 - Example: `apps/fret-cookbook/examples/payload_actions_basics.rs`
 
+Policy note:
+
+- MVU is legacy-only (compat), not a supported alternative golden path.
+- See: `docs/workstreams/action-first-authoring-fearless-refactor-v1/MVU_POLICY.md`
+
 If you choose MVU in 2026:
 
 - Label it explicitly as legacy/compat in docs and avoid copy-pasting it into new templates.

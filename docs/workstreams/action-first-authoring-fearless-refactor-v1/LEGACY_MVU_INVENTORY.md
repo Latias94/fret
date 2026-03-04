@@ -18,6 +18,11 @@ Scope:
   intended to be action-first.
 - Provide an explicit map for incremental migrations (don’t “fearlessly refactor” 200 files at once).
 
+Policy:
+
+- MVU is legacy-only (compat), not a supported alternative golden path.
+- See: `docs/workstreams/action-first-authoring-fearless-refactor-v1/MVU_POLICY.md`
+
 ## Already converged (golden path)
 
 - `fretboard` scaffolds generate action-first + view runtime by default:

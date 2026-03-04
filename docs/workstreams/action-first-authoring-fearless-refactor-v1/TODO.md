@@ -314,13 +314,18 @@ This phase is intentionally last.
 
 ### Next cleanup steps (post-v1)
 
-- [ ] AFA-clean-063 Decide MVU’s long-term status (supported alternative vs legacy-only).
+- [x] AFA-clean-063 Decide MVU’s long-term status (supported alternative vs legacy-only).
   - Decision inputs:
     - Payload/parameterized actions are not supported in typed actions v1 (ADR 0307 v1 scope),
       which remains a practical reason to keep MVU for some demos/apps.
     - Per-frame message routing must not regress view-cache reuse semantics.
   - Exit criteria:
     - A single, accurate “when to use MVU” policy exists and is reflected in docs/templates.
+  - Decision:
+    - MVU is legacy-only (compat), not a supported alternative golden path.
+  - Evidence:
+    - Policy: `docs/workstreams/action-first-authoring-fearless-refactor-v1/MVU_POLICY.md`
+    - Guidance: `docs/workstreams/action-first-authoring-fearless-refactor-v1/MIGRATION_GUIDE.md` (“When to use MVU vs View”)
 
 - [ ] AFA-clean-064 Add compile-time deprecation warnings for legacy MVU surfaces (if feasible).
   - Rule: docs/templates must stop teaching it *before* adding warnings.
