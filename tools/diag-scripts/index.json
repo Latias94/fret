@@ -4597,6 +4597,25 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-scroll-area-horizontal-max-scroll-screenshot",
+      "path": "tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scroll-area-horizontal-max-scroll-screenshot.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-scroll-area"
+      ],
+      "tags": [
+        "horizontal",
+        "screenshot",
+        "scroll",
+        "scroll-area",
+        "ui-gallery"
+      ],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-scroll-area-nested-scroll-routing",
       "path": "tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scroll-area-nested-scroll-routing.json",
       "required_capabilities": [

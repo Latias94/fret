@@ -20,7 +20,7 @@ Legend:
 | --- | --- | --- | --- | --- |
 | Text (kit builders) | `TextAlign::Start/End` logical flip under RTL | OK | Test | `ecosystem/fret-ui-kit/src/ui.rs` |
 | ScrollArea (gallery) | RTL padding + content alignment parity vs shadcn docs | OK | Diag | `apps/fret-ui-gallery/src/ui/snippets/scroll_area/rtl.rs` + `tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scroll-area-rtl-screenshot.json` |
-| ScrollArea (demo) | Horizontal scroll “blank space” at max scroll | OK | None | `apps/fret-ui-gallery/src/ui/snippets/scroll_area/horizontal.rs` |
+| ScrollArea (demo) | Horizontal scroll “blank space” at max scroll | Drift | Diag | `apps/fret-ui-gallery/src/ui/snippets/scroll_area/horizontal.rs` + `tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scroll-area-horizontal-max-scroll-screenshot.json` |
 | DropdownMenu (gallery) | Overlay root + `align=start` + RTL placement/parity | OK | Test + Diag | `apps/fret-ui-gallery/src/ui/snippets/dropdown_menu/rtl.rs` + `ecosystem/fret-ui-shadcn/src/dropdown_menu.rs` + `tools/diag-scripts/ui-gallery/dropdown-menu/ui-gallery-dropdown-menu-rtl-open-screenshot.json` |
 | Popper placement | `align=start/end` flips under RTL for vertical placements | OK | Test | `crates/fret-ui/src/overlay_placement/tests.rs` |
 | DropdownMenu | `align=start` respects direction provider through overlay root | OK | Test | `ecosystem/fret-ui-shadcn/src/dropdown_menu.rs` |
@@ -33,9 +33,9 @@ Legend:
 
 ## C — Gates (add the missing ones)
 
-- [ ] Add at least 1 scripted diag gate that exercises direction across an overlay root boundary
+- [x] Add at least 1 scripted diag gate that exercises direction across an overlay root boundary
   (provider installed in root, overlay created, ensure direction-sensitive behavior is still correct).
-- [ ] Add at least 1 scripted diag gate for a “direction-sensitive keyboard nav” component (tabs or
+- [x] Add at least 1 scripted diag gate for a “direction-sensitive keyboard nav” component (tabs or
   slider), so future refactors can’t silently regress.
 
 ## D — Shadcn docs alignment hygiene
