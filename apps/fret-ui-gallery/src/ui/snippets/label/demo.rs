@@ -24,6 +24,7 @@ fn email_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<String> {
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let email = email_model(cx);
     let max_w = LayoutRefinement::default().w_full().max_w(Px(420.0));
+    let control_id = "email";
 
     stack::vstack(
         cx,
@@ -33,10 +34,14 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             .layout(max_w),
         |cx| {
             vec![
-                shadcn::Label::new("Your email address").into_element(cx),
+                shadcn::Label::new("Your email address")
+                    .for_control(control_id)
+                    .test_id("ui-gallery-label-demo-label")
+                    .into_element(cx),
                 shadcn::Input::new(email)
                     .placeholder("you@example.com")
-                    .a11y_label("Email")
+                    .control_id(control_id)
+                    .test_id("ui-gallery-label-demo-input")
                     .into_element(cx),
             ]
         },

@@ -24,6 +24,7 @@ fn name_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<String> {
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let name = name_model(cx);
     let max_w = LayoutRefinement::default().w_full().max_w(Px(420.0));
+    let control_id = "full_name";
 
     with_direction_provider(cx, LayoutDirection::Rtl, move |cx| {
         stack::vstack(
@@ -34,10 +35,12 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                 .layout(max_w.clone()),
             |cx| {
                 vec![
-                    shadcn::Label::new("الاسم الكامل").into_element(cx),
+                    shadcn::Label::new("الاسم الكامل")
+                        .for_control(control_id)
+                        .into_element(cx),
                     shadcn::Input::new(name)
                         .placeholder("اكتب هنا")
-                        .a11y_label("الاسم الكامل")
+                        .control_id(control_id)
                         .into_element(cx),
                 ]
             },

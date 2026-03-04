@@ -24,6 +24,7 @@ fn email_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<String> {
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let email = email_model(cx);
     let max_w = LayoutRefinement::default().w_full().max_w(Px(420.0));
+    let control_id = "work_email";
 
     stack::vstack(
         cx,
@@ -38,12 +39,15 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                     "For forms, prefer Field + FieldLabel for built-in description/error structure.",
                 ),
                 shadcn::Field::new([
-                    shadcn::FieldLabel::new("Work email").into_element(cx),
+                    shadcn::FieldLabel::new("Work email")
+                        .for_control(control_id)
+                        .into_element(cx),
                     shadcn::Input::new(email)
                         .placeholder("name@company.com")
-                        .a11y_label("Work email")
+                        .control_id(control_id)
                         .into_element(cx),
                     shadcn::FieldDescription::new("We use this email for notifications.")
+                        .for_control(control_id)
                         .into_element(cx),
                 ])
                 .into_element(cx),
