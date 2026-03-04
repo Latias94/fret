@@ -137,8 +137,6 @@ pub fn tool_window_profile_v1(caps: &PlatformCapabilities) -> CompiledWindowStyl
     let style = WindowStyleRequest {
         taskbar: Some(TaskbarVisibility::Hide),
         activation: Some(ActivationPolicy::Activates),
-        z_level: Some(WindowZLevel::Normal),
-        hit_test: Some(WindowHitTestRequestV1::Normal),
         ..Default::default()
     };
     let expectations = expectations_from_style(&style, caps);

@@ -28,22 +28,33 @@ things.
   - `PassthroughAll` means **window-level click-through**.
   - `PassthroughRegions` means **click-through except for interactive regions** (ADR 0313).
 
-## `fret-bootstrap` profiles (v1)
+## Profiles crate (v1)
 
-The bootstrap crate provides a small set of profiles as **recipes**:
+The canonical implementation lives in:
 
-- Feature gate: enable the `fret-bootstrap/window-style-profiles` Cargo feature.
+- `fret-window-style-profiles` (`fret_window_style_profiles` in Rust code)
 
-- `fret_bootstrap::window_style_profiles::app_window_profile_v1`
-- `fret_bootstrap::window_style_profiles::tool_window_profile_v1`
-- `fret_bootstrap::window_style_profiles::hud_overlay_profile_v1`
-- `fret_bootstrap::window_style_profiles::click_through_overlay_profile_v1`
+It provides a small set of profiles as **recipes**:
+
+- `fret_window_style_profiles::app_window_profile_v1`
+- `fret_window_style_profiles::tool_window_profile_v1`
+- `fret_window_style_profiles::hud_overlay_profile_v1`
+- `fret_window_style_profiles::click_through_overlay_profile_v1`
 
 Each profile returns a `CompiledWindowStyleProfileV1`:
 
 - `style`: the requested `WindowStyleRequest` patch.
 - `expectations`: best-effort expected *effective* facets after clamping (for diagnostics/scripts),
   including `hit_test_regions_fingerprint64` when regions are effective.
+
+## `fret-bootstrap` re-export
+
+For app “golden path” code that already depends on `fret-bootstrap`, the crate re-exports the
+profiles under:
+
+- `fret_bootstrap::window_style_profiles::*`
+
+Feature gate: enable the `fret-bootstrap/window-style-profiles` Cargo feature.
 
 ## Diagnostics gating (script-friendly)
 
