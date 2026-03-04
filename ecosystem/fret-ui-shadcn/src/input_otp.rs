@@ -18,6 +18,14 @@ use fret_ui_kit::{
 use std::sync::Arc;
 use std::time::Duration;
 
+use crate::overlay_motion;
+
+fn tailwind_transition_ease_in_out(t: f32) -> f32 {
+    // Tailwind default transition timing function: cubic-bezier(0.4, 0, 0.2, 1).
+    // (Often described as `ease-in-out`-ish.)
+    fret_ui_headless::easing::SHADCN_EASE.sample(t)
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 enum InputOtpSeparatorMode {
     /// Legacy behavior: when `group_size` yields multiple groups, render a separator between every
@@ -602,6 +610,21 @@ impl InputOtp {
                             },
                         );
 
+                        // Upstream shadcn: `transition-all` on slot chrome, so border should ease
+                        // instead of snapping when active slot changes.
+                        let duration = overlay_motion::shadcn_motion_duration_150(cx);
+                        let border_motion = motion::drive_tween_color_for_element(
+                            cx,
+                            slot_el.id,
+                            "input_otp.slot.border",
+                            border_color,
+                            duration,
+                            tailwind_transition_ease_in_out,
+                        );
+                        if let fret_ui::element::ElementKind::Container(props) = &mut slot_el.kind {
+                            props.border_color = Some(border_motion.value);
+                        }
+
                         slot_ids[idx] = Some(slot_el.id);
                         slot_corners[idx] = Some(corner_radii);
 
@@ -679,63 +702,106 @@ impl InputOtp {
 
                 out.push(input_el);
 
-                if focused {
-                    if let Some(active_idx) = active_slot_idx {
-                        let root_bounds = cx.last_bounds_for_element(cx.root_id());
+                #[derive(Debug, Clone, Copy, Default)]
+                struct ActiveSlotRingGeometry {
+                    left: Option<Px>,
+                    top: Option<Px>,
+                    width: Option<Px>,
+                    height: Option<Px>,
+                    corners: Option<Corners>,
+                }
+
+                // Upstream shadcn: `transition-all` includes the ring (box-shadow), so the ring
+                // should ease in/out instead of snapping. Keep it mounted while animating out.
+                let duration = overlay_motion::shadcn_motion_duration_150(cx);
+                let ring_alpha = motion::drive_tween_f32_for_element(
+                    cx,
+                    input_id,
+                    "input_otp.slot.ring.alpha",
+                    if focused && active_slot_idx.is_some() {
+                        1.0
+                    } else {
+                        0.0
+                    },
+                    duration,
+                    tailwind_transition_ease_in_out,
+                );
+                let wants_ring = ring_alpha.animating || ring_alpha.value > 0.0;
+
+                let active_slot_geom = (focused && wants_ring)
+                    .then_some(())
+                    .and_then(|_| active_slot_idx)
+                    .and_then(|active_idx| {
+                        let root_bounds = cx.last_bounds_for_element(cx.root_id())?;
                         let slot_bounds = slot_ids
                             .get(active_idx)
                             .copied()
                             .flatten()
-                            .and_then(|id| cx.last_bounds_for_element(id));
-                        if let (Some(root_bounds), Some(slot_bounds)) = (root_bounds, slot_bounds) {
-                            let ring_w = otp_active_ring_width(&theme);
-                            let ring_color = otp_slot_ring_color(&theme, self.aria_invalid);
-                            let corners = slot_corners
-                                .get(active_idx)
-                                .copied()
-                                .flatten()
-                                .unwrap_or_else(|| Corners::all(resolved.radius));
-                            let left =
-                                Px((slot_bounds.origin.x.0 - root_bounds.origin.x.0).max(0.0));
-                            let top =
-                                Px((slot_bounds.origin.y.0 - root_bounds.origin.y.0).max(0.0));
+                            .and_then(|id| cx.last_bounds_for_element(id))?;
+                        let corners = slot_corners
+                            .get(active_idx)
+                            .copied()
+                            .flatten()
+                            .unwrap_or_else(|| Corners::all(resolved.radius));
+                        let left = Px((slot_bounds.origin.x.0 - root_bounds.origin.x.0).max(0.0));
+                        let top = Px((slot_bounds.origin.y.0 - root_bounds.origin.y.0).max(0.0));
+                        Some(ActiveSlotRingGeometry {
+                            left: Some(left),
+                            top: Some(top),
+                            width: Some(slot_bounds.size.width),
+                            height: Some(slot_bounds.size.height),
+                            corners: Some(corners),
+                        })
+                    });
 
-                            out.push(cx.hit_test_gate(false, move |cx| {
-                                vec![cx.container(
-                                    ContainerProps {
-                                        layout: LayoutStyle {
-                                            position: PositionStyle::Absolute,
-                                            inset: InsetStyle {
-                                                left: Some(left).into(),
-                                                top: Some(top).into(),
-                                                right: None.into(),
-                                                bottom: None.into(),
-                                            },
-                                            size: SizeStyle {
-                                                width: Length::Px(slot_bounds.size.width),
-                                                height: Length::Px(slot_bounds.size.height),
-                                                ..Default::default()
-                                            },
-                                            ..Default::default()
-                                        },
-                                        shadow: Some(ShadowStyle {
-                                            primary: ShadowLayerStyle {
-                                                color: ring_color,
-                                                offset_x: Px(0.0),
-                                                offset_y: Px(0.0),
-                                                blur: Px(0.0),
-                                                spread: ring_w,
-                                            },
-                                            secondary: None,
-                                            corner_radii: corners,
-                                        }),
+                let geom = cx.with_state_for(input_id, ActiveSlotRingGeometry::default, |st| {
+                    if let Some(active_slot_geom) = active_slot_geom {
+                        *st = active_slot_geom;
+                    }
+                    *st
+                });
+
+                if wants_ring
+                    && let (Some(left), Some(top), Some(width), Some(height), Some(corners)) =
+                        (geom.left, geom.top, geom.width, geom.height, geom.corners)
+                {
+                    let ring_w = otp_active_ring_width(&theme);
+                    let mut ring_color = otp_slot_ring_color(&theme, self.aria_invalid);
+                    ring_color.a = (ring_color.a * ring_alpha.value).clamp(0.0, 1.0);
+                    out.push(cx.hit_test_gate(false, move |cx| {
+                        vec![cx.container(
+                            ContainerProps {
+                                layout: LayoutStyle {
+                                    position: PositionStyle::Absolute,
+                                    inset: InsetStyle {
+                                        left: Some(left).into(),
+                                        top: Some(top).into(),
+                                        right: None.into(),
+                                        bottom: None.into(),
+                                    },
+                                    size: SizeStyle {
+                                        width: Length::Px(width),
+                                        height: Length::Px(height),
                                         ..Default::default()
                                     },
-                                    |_cx| Vec::<AnyElement>::new(),
-                                )]
-                            }));
-                        }
-                    }
+                                    ..Default::default()
+                                },
+                                shadow: Some(ShadowStyle {
+                                    primary: ShadowLayerStyle {
+                                        color: ring_color,
+                                        offset_x: Px(0.0),
+                                        offset_y: Px(0.0),
+                                        blur: Px(0.0),
+                                        spread: ring_w,
+                                    },
+                                    secondary: None,
+                                    corner_radii: corners,
+                                }),
+                                ..Default::default()
+                            },
+                            |_cx| Vec::<AnyElement>::new(),
+                        )]
+                    }));
                 }
 
                 out
@@ -1105,6 +1171,241 @@ mod tests {
         assert!(
             slot_descendant_has_caret_like_1px_bar(&ui, slot0),
             "expected reduced motion to disable the blink (caret remains visible)"
+        );
+    }
+
+    fn find_element_by_test_id<'a>(el: &'a AnyElement, test_id: &str) -> Option<&'a AnyElement> {
+        if el
+            .semantics_decoration
+            .as_ref()
+            .and_then(|d| d.test_id.as_deref())
+            == Some(test_id)
+        {
+            return Some(el);
+        }
+        for child in &el.children {
+            if let Some(found) = find_element_by_test_id(child, test_id) {
+                return Some(found);
+            }
+        }
+        None
+    }
+
+    fn find_slot_border_color(el: &AnyElement, test_id: &str) -> Option<Color> {
+        let slot = find_element_by_test_id(el, test_id)?;
+        match &slot.kind {
+            fret_ui::element::ElementKind::Container(props) => props.border_color,
+            _ => None,
+        }
+    }
+
+    fn find_active_ring_shadow_alpha(el: &AnyElement, ring_spread: Px) -> Option<f32> {
+        let mut best: Option<f32> = None;
+        let mut stack = vec![el];
+        while let Some(node) = stack.pop() {
+            if let fret_ui::element::ElementKind::Container(props) = &node.kind
+                && let Some(shadow) = props.shadow
+                && (shadow.primary.offset_x.0 - 0.0).abs() <= 1e-6
+                && (shadow.primary.offset_y.0 - 0.0).abs() <= 1e-6
+                && (shadow.primary.blur.0 - 0.0).abs() <= 1e-6
+                && (shadow.primary.spread.0 - ring_spread.0).abs() <= 1e-6
+            {
+                best = Some(best.map_or(shadow.primary.color.a, |cur| {
+                    cur.max(shadow.primary.color.a)
+                }));
+            }
+            for child in &node.children {
+                stack.push(child);
+            }
+        }
+        best
+    }
+
+    #[test]
+    fn input_otp_slot_border_and_ring_tween_like_transition_all() {
+        fn color_eq_eps(a: Color, b: Color, eps: f32) -> bool {
+            (a.r - b.r).abs() <= eps
+                && (a.g - b.g).abs() <= eps
+                && (a.b - b.b).abs() <= eps
+                && (a.a - b.a).abs() <= eps
+        }
+
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        let mut services = FakeServices::default();
+
+        app.with_global_mut(WindowFrameClockService::default, |svc, _app| {
+            svc.set_fixed_delta(window, Some(Duration::from_millis(16)));
+        });
+
+        let model = app.models_mut().insert(String::new());
+
+        let theme_full = Theme::global(&app);
+        let theme = theme_full.snapshot();
+        let resolved = resolve_input_chrome(
+            theme_full,
+            ComponentSize::default(),
+            &ChromeRefinement::default(),
+            InputTokenKeys::none(),
+        );
+        let ring_spread = otp_active_ring_width(&theme);
+        let ring_base_alpha = otp_slot_ring_color(&theme, false).a;
+        let border_base = otp_slot_border_color(
+            &theme,
+            resolved.border_color,
+            resolved.border_color_focused,
+            false,
+            false,
+        );
+        let border_active = otp_slot_border_color(
+            &theme,
+            resolved.border_color,
+            resolved.border_color_focused,
+            true,
+            false,
+        );
+
+        fn render_capture(
+            ui: &mut UiTree<App>,
+            app: &mut App,
+            services: &mut dyn fret_core::UiServices,
+            model: Model<String>,
+            slot_border_out: &mut Option<Color>,
+            ring_alpha_out: &mut Option<f32>,
+            ring_spread: Px,
+        ) {
+            let window = AppWindowId::default();
+            ui.set_window(window);
+
+            let bounds = Rect::new(
+                Point::new(Px(0.0), Px(0.0)),
+                fret_core::Size::new(Px(480.0), Px(120.0)),
+            );
+
+            let root =
+                fret_ui::declarative::render_root(ui, app, services, window, bounds, "otp", |cx| {
+                    let el = InputOtp::new(model)
+                        .length(6)
+                        .test_id_prefix("otp")
+                        .into_element(cx);
+                    *slot_border_out = find_slot_border_color(&el, "otp.slot.0");
+                    *ring_alpha_out = find_active_ring_shadow_alpha(&el, ring_spread);
+                    vec![el]
+                });
+            ui.set_root(root);
+            ui.request_semantics_snapshot();
+            ui.layout_all(app, services, bounds, 1.0);
+        }
+
+        // Frame 1: unfocused, border should be base and ring should be absent.
+        app.set_tick_id(TickId(1));
+        app.set_frame_id(FrameId(1));
+        let mut border_out: Option<Color> = None;
+        let mut ring_alpha_out: Option<f32> = None;
+        render_capture(
+            &mut ui,
+            &mut app,
+            &mut services,
+            model.clone(),
+            &mut border_out,
+            &mut ring_alpha_out,
+            ring_spread,
+        );
+        let border0 = border_out.expect("border0");
+        assert!(
+            (border0.r - border_base.r).abs() <= 1e-6
+                && (border0.g - border_base.g).abs() <= 1e-6
+                && (border0.b - border_base.b).abs() <= 1e-6
+                && (border0.a - border_base.a).abs() <= 1e-6,
+            "expected base border color before focus; got border0={border0:?} base={border_base:?}"
+        );
+        assert!(
+            ring_alpha_out.unwrap_or(0.0) <= 1e-6,
+            "expected no ring before focus; got {:?}",
+            ring_alpha_out
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let input = node_id_by_test_id(&snap, "otp.input");
+        ui.set_focus(Some(input));
+
+        // Frame 2: focused, border + ring should tween in (intermediate).
+        app.set_tick_id(TickId(2));
+        app.set_frame_id(FrameId(2));
+        render_capture(
+            &mut ui,
+            &mut app,
+            &mut services,
+            model.clone(),
+            &mut border_out,
+            &mut ring_alpha_out,
+            ring_spread,
+        );
+        let border1 = border_out.expect("border1");
+        assert!(
+            !color_eq_eps(border1, border_base, 1e-6)
+                && !color_eq_eps(border1, border_active, 1e-6),
+            "expected focused border to tween (intermediate); got border1={border1:?} base={border_base:?} active={border_active:?}"
+        );
+        let ring1 = ring_alpha_out.expect("ring1");
+        assert!(
+            ring1 > 1e-6 && ring1 < ring_base_alpha - 1e-6,
+            "expected ring alpha to tween in (intermediate); got ring1={ring1} base_alpha={ring_base_alpha}"
+        );
+
+        // Settle.
+        let settle = fret_ui_kit::declarative::transition::ticks_60hz_for_duration(
+            Duration::from_millis(150),
+        ) + 2;
+        for n in 0..settle {
+            app.set_tick_id(TickId(3 + n));
+            app.set_frame_id(FrameId(3 + n as u64));
+            render_capture(
+                &mut ui,
+                &mut app,
+                &mut services,
+                model.clone(),
+                &mut border_out,
+                &mut ring_alpha_out,
+                ring_spread,
+            );
+        }
+        let border_final = border_out.expect("border_final");
+        assert!(
+            color_eq_eps(border_final, border_active, 1e-4),
+            "expected border to settle; got border_final={border_final:?} active={border_active:?}"
+        );
+        let ring_final = ring_alpha_out.expect("ring_final");
+        assert!(
+            (ring_final - ring_base_alpha).abs() <= 1e-4,
+            "expected ring to settle; got ring_final={ring_final} base_alpha={ring_base_alpha}"
+        );
+
+        // Blur: border + ring should tween out (intermediate).
+        ui.set_focus(None);
+        app.set_tick_id(TickId(1000));
+        app.set_frame_id(FrameId(1000));
+        render_capture(
+            &mut ui,
+            &mut app,
+            &mut services,
+            model.clone(),
+            &mut border_out,
+            &mut ring_alpha_out,
+            ring_spread,
+        );
+        let border_out1 = border_out.expect("border_out1");
+        assert!(
+            !color_eq_eps(border_out1, border_base, 1e-6)
+                && !color_eq_eps(border_out1, border_active, 1e-6),
+            "expected blur border to tween out (intermediate); got border_out1={border_out1:?} base={border_base:?} active={border_active:?}"
+        );
+        let ring_out1 = ring_alpha_out.expect("ring_out1");
+        assert!(
+            ring_out1 > 1e-6 && ring_out1 < ring_base_alpha - 1e-6,
+            "expected ring alpha to tween out (intermediate); got ring_out1={ring_out1} base_alpha={ring_base_alpha}"
         );
     }
 
