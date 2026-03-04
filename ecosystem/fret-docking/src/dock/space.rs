@@ -6543,39 +6543,37 @@ impl<H: UiHost> Widget<H> for DockSpace {
 
             let tear_off_retry_target = (!mark_drag_tear_off_requested
                 && !window_bounds.contains(position))
-                .then(|| {
-                    let drag = cx.app.drag(pointer_id)?;
-                    if drag.source_window != self.window {
+            .then(|| {
+                let drag = cx.app.drag(pointer_id)?;
+                if drag.source_window != self.window {
+                    return None;
+                }
+                if let Some(p) = drag.payload::<DockPanelDragPayload>() {
+                    let requested_at = p.tear_off_requested_at_tick?;
+                    if !p.tear_off_requested || now_tick.0.saturating_sub(requested_at.0) <= 600 {
                         return None;
                     }
-                    if let Some(p) = drag.payload::<DockPanelDragPayload>() {
-                        let requested_at = p.tear_off_requested_at_tick?;
-                        if !p.tear_off_requested || now_tick.0.saturating_sub(requested_at.0) <= 600
-                        {
-                            return None;
-                        }
-                        let dock = cx.app.global::<DockManager>()?;
-                        dock.graph
-                            .find_panel_in_window(drag.source_window, &p.panel)
-                            .is_some()
-                            .then_some(TearOffRetryTarget::Panel)
-                    } else if let Some(p) = drag.payload::<DockTabsDragPayload>() {
-                        let requested_at = p.tear_off_requested_at_tick?;
-                        let panel = p.tabs.get(p.active).or(p.tabs.first())?;
-                        if !p.tear_off_requested || now_tick.0.saturating_sub(requested_at.0) <= 600
-                        {
-                            return None;
-                        }
-                        let dock = cx.app.global::<DockManager>()?;
-                        dock.graph
-                            .find_panel_in_window(drag.source_window, panel)
-                            .is_some()
-                            .then_some(TearOffRetryTarget::Tabs)
-                    } else {
-                        None
+                    let dock = cx.app.global::<DockManager>()?;
+                    dock.graph
+                        .find_panel_in_window(drag.source_window, &p.panel)
+                        .is_some()
+                        .then_some(TearOffRetryTarget::Panel)
+                } else if let Some(p) = drag.payload::<DockTabsDragPayload>() {
+                    let requested_at = p.tear_off_requested_at_tick?;
+                    let panel = p.tabs.get(p.active).or(p.tabs.first())?;
+                    if !p.tear_off_requested || now_tick.0.saturating_sub(requested_at.0) <= 600 {
+                        return None;
                     }
-                })
-                .flatten();
+                    let dock = cx.app.global::<DockManager>()?;
+                    dock.graph
+                        .find_panel_in_window(drag.source_window, panel)
+                        .is_some()
+                        .then_some(TearOffRetryTarget::Tabs)
+                } else {
+                    None
+                }
+            })
+            .flatten();
 
             if let Some(drag) = cx.app.drag_mut(pointer_id)
                 && (drag.payload::<DockPanelDragPayload>().is_some()

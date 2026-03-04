@@ -3,7 +3,9 @@
 use std::sync::Arc;
 
 use fret_app::App;
-use fret_core::{AlphaMode, AppWindowId, ImageColorSpace, ImageId, Px, TextAlign, TextOverflow, TextWrap};
+use fret_core::{
+    AlphaMode, AppWindowId, ImageColorSpace, ImageId, Px, TextAlign, TextOverflow, TextWrap,
+};
 use fret_render::{ImageDescriptor, Renderer, WgpuContext, write_rgba8_texture_region};
 use fret_ui::ElementContext;
 use fret_ui::element::{
