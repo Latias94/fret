@@ -59,6 +59,8 @@ Diagnostics scripts for cookbook examples live under:
 
 - [tools/diag-scripts/cookbook/](../../tools/diag-scripts/cookbook/)
 - [tools/diag-scripts/suites/](../../tools/diag-scripts/suites/) (cookbook suite manifests)
+- New to diagnostics? Start with the `hello` walkthrough in
+  [apps/fret-cookbook/README.md#diagnostics-optional](../../apps/fret-cookbook/README.md#diagnostics-optional).
 
 Note: cookbook examples are separate binaries today, so scripts are per-example (not one “mega suite”).
 

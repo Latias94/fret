@@ -46,6 +46,7 @@ fret-gizmo = { path = "../../ecosystem/fret-gizmo", optional = true }
 
 [features]
 default = []
+cookbook-diag = ["fret/diagnostics"]
 cookbook-assets = ["dep:fret-icons", "dep:fret-icons-lucide", "dep:fret-ui-assets", "fret/icons", "fret/ui-assets"]
 cookbook-undo = ["dep:fret-undo"]
 cookbook-async = ["dep:fret-executor"]

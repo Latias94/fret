@@ -90,7 +90,27 @@ Notes:
 
 - The recommended golden path examples use the view runtime + typed actions.
 - Some advanced/legacy examples still use MVU for now; see
-  `docs/workstreams/action-first-authoring-fearless-refactor-v1/LEGACY_MVU_INVENTORY.md`.
+  [docs/workstreams/action-first-authoring-fearless-refactor-v1/LEGACY_MVU_INVENTORY.md](../../docs/workstreams/action-first-authoring-fearless-refactor-v1/LEGACY_MVU_INVENTORY.md).
+
+## Diagnostics (optional)
+
+Fret includes an optional diagnostics + scripted UI automation toolchain (`fretboard diag`).
+If you are new to it, start with the `hello` example because it already exposes stable `test_id`s.
+
+Run a small script that clicks the button and asserts the count label updates:
+
+```bash
+FRET_DIAG=1 cargo run -p fretboard -- diag run tools/diag-scripts/cookbook/hello/cookbook-hello-click-count.json \
+  --launch -- cargo run -p fret-cookbook --features cookbook-diag --example hello
+```
+
+Note: `--features cookbook-diag` enables the optional `fret/diagnostics` integration for the example binary.
+
+How it works (mental model):
+
+- Your UI attaches stable `test_id`s (e.g. `cookbook.hello.button`).
+- The script targets those IDs (and/or role/name selectors) and drives input.
+- The runner records a diagnostics bundle you can inspect/share.
 
 For faster iteration (skip linking):
 
