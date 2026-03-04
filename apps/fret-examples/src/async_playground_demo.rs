@@ -239,7 +239,11 @@ impl View for AsyncPlaygroundView {
 
     fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
         if cx.take_transient_on_action_root(TRANSIENT_APPLY_THEME) {
-            let dark = cx.app.models().get_copied(&self.st.dark).unwrap_or_default();
+            let dark = cx
+                .app
+                .models()
+                .get_copied(&self.st.dark)
+                .unwrap_or_default();
             apply_theme(cx.app, dark);
         }
 
@@ -305,7 +309,9 @@ impl View for AsyncPlaygroundView {
             let selected = self.st.selected.clone();
             let namespace_input = self.st.namespace_input.clone();
             move |host, _acx| {
-                let _ = host.models_mut().update(&selected, |v| *v = QueryId::Search);
+                let _ = host
+                    .models_mut()
+                    .update(&selected, |v| *v = QueryId::Search);
                 let _ = host.models_mut().update(&namespace_input, |s| {
                     s.clear();
                     s.push_str(default_namespace_for_id(QueryId::Search));
@@ -329,7 +335,9 @@ impl View for AsyncPlaygroundView {
             let selected = self.st.selected.clone();
             let namespace_input = self.st.namespace_input.clone();
             move |host, _acx| {
-                let _ = host.models_mut().update(&selected, |v| *v = QueryId::Status);
+                let _ = host
+                    .models_mut()
+                    .update(&selected, |v| *v = QueryId::Status);
                 let _ = host.models_mut().update(&namespace_input, |s| {
                     s.clear();
                     s.push_str(default_namespace_for_id(QueryId::Status));
@@ -603,14 +611,28 @@ fn main_panel(
     .into_element(cx);
 
     let sync_panel = if mode == FetchMode::Sync {
-        query_panel_for_mode(cx, st, theme.clone(), global_slow, selected, FetchMode::Sync)
+        query_panel_for_mode(
+            cx,
+            st,
+            theme.clone(),
+            global_slow,
+            selected,
+            FetchMode::Sync,
+        )
     } else {
         ui::container(cx, |_cx| Vec::<AnyElement>::new())
             .h_full()
             .into_element(cx)
     };
     let async_panel = if mode == FetchMode::Async {
-        query_panel_for_mode(cx, st, theme.clone(), global_slow, selected, FetchMode::Async)
+        query_panel_for_mode(
+            cx,
+            st,
+            theme.clone(),
+            global_slow,
+            selected,
+            FetchMode::Async,
+        )
     } else {
         ui::container(cx, |_cx| Vec::<AnyElement>::new())
             .h_full()

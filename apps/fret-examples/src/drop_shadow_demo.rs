@@ -141,10 +141,7 @@ impl View for DropShadowDemoView {
             .watch_model(&self.st.enabled)
             .layout()
             .copied_or_default();
-        let stress = cx
-            .watch_model(&self.st.stress)
-            .layout()
-            .copied_or_default();
+        let stress = cx.watch_model(&self.st.stress).layout().copied_or_default();
 
         let stage = cx.container(
             ContainerProps {
@@ -323,4 +320,3 @@ pub fn run() -> anyhow::Result<()> {
         .run_view::<DropShadowDemoView>()
         .map_err(anyhow::Error::from)
 }
-

@@ -87,14 +87,21 @@ impl View for QueryAsyncTokioDemoView {
             });
         }
 
-        let fail_mode = cx.watch_model(&self.st.fail_mode).layout().copied_or_default();
+        let fail_mode = cx
+            .watch_model(&self.st.fail_mode)
+            .layout()
+            .copied_or_default();
 
         let key = demo_key();
         let policy = QueryPolicy {
             stale_time: Duration::from_secs(2),
             cache_time: Duration::from_secs(30),
             keep_previous_data_while_loading: true,
-            retry: QueryRetryPolicy::exponential(3, Duration::from_millis(250), Duration::from_secs(2)),
+            retry: QueryRetryPolicy::exponential(
+                3,
+                Duration::from_millis(250),
+                Duration::from_secs(2),
+            ),
             ..Default::default()
         };
 
@@ -109,8 +116,10 @@ impl View for QueryAsyncTokioDemoView {
                 return Err(QueryError::transient("simulated async fetch error"));
             }
 
-            let label: Arc<str> =
-                Arc::from(format!("async fetched at {:?}", fret_core::time::Instant::now()));
+            let label: Arc<str> = Arc::from(format!(
+                "async fetched at {:?}",
+                fret_core::time::Instant::now()
+            ));
             Ok(DemoData { label })
         });
 
