@@ -51,6 +51,7 @@ cookbook-diag = ["fret/diagnostics"]
 cookbook-assets = ["dep:fret-icons", "dep:fret-icons-lucide", "dep:fret-ui-assets", "fret/icons", "fret/ui-assets"]
 cookbook-renderer = ["dep:fret-launch"]
 cookbook-table = ["dep:fret-ui-kit"]
+cookbook-image-assets = ["dep:fret-ui-assets"]
 cookbook-undo = ["dep:fret-undo"]
 cookbook-async = ["dep:fret-executor"]
 cookbook-bootstrap = ["dep:fret-bootstrap", "dep:fret-render"]
@@ -94,6 +95,10 @@ required-features = ["cookbook-renderer"]
 [[example]]
 name = "data_table_basics"
 required-features = ["cookbook-table"]
+
+[[example]]
+name = "image_asset_cache_basics"
+required-features = ["cookbook-image-assets", "cookbook-renderer"]
 
 [[example]]
 name = "undo_basics"

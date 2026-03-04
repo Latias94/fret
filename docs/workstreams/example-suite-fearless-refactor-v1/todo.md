@@ -68,6 +68,7 @@ Goal: create a lightweight, user-facing cookbook that does not pull “everythin
   - [x] form basics (`form_basics`)
   - [x] drag basics (`drag_basics`)
   - [x] data table basics (`data_table_basics`)
+  - [x] image asset cache basics (`image_asset_cache_basics`)
 
 Gates:
 

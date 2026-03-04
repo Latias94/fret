@@ -79,6 +79,7 @@ Example | Status | Feature | Run | Diag suite
 [`theme_switching_basics.rs`](./examples/theme_switching_basics.rs) | Official | (none) | `cargo run -p fret-cookbook --example theme_switching_basics` | `cookbook-theme-switching-basics`
 [`assets_reload_epoch_basics.rs`](./examples/assets_reload_epoch_basics.rs) | Lab | `cookbook-assets` | `cargo run -p fret-cookbook --features cookbook-assets --example assets_reload_epoch_basics` | `cookbook-assets-reload-epoch-basics`
 [`icons_and_assets_basics.rs`](./examples/icons_and_assets_basics.rs) | Lab | `cookbook-assets` | `cargo run -p fret-cookbook --features cookbook-assets --example icons_and_assets_basics` | `cookbook-icons-and-assets-basics`
+[`image_asset_cache_basics.rs`](./examples/image_asset_cache_basics.rs) | Lab | `cookbook-image-assets,cookbook-renderer` | `cargo run -p fret-cookbook --features cookbook-image-assets,cookbook-renderer --example image_asset_cache_basics` | `cookbook-image-asset-cache-basics`
 
 ## Rendering / effects (feature-gated)
 

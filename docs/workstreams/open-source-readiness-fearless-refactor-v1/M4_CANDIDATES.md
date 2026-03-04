@@ -55,6 +55,8 @@ These are the first “lesson-shaped” examples we actually landed in `fret-coo
   - Script: [`tools/diag-scripts/cookbook/drop-shadow-basics/cookbook-drop-shadow-basics-baseline.json`](../../../tools/diag-scripts/cookbook/drop-shadow-basics/cookbook-drop-shadow-basics-baseline.json)
 - Data table basics: [`apps/fret-cookbook/examples/data_table_basics.rs`](../../../apps/fret-cookbook/examples/data_table_basics.rs)
   - Script: [`tools/diag-scripts/cookbook/data-table-basics/cookbook-data-table-basics-baseline.json`](../../../tools/diag-scripts/cookbook/data-table-basics/cookbook-data-table-basics-baseline.json)
+- Image asset cache: [`apps/fret-cookbook/examples/image_asset_cache_basics.rs`](../../../apps/fret-cookbook/examples/image_asset_cache_basics.rs)
+  - Script: [`tools/diag-scripts/cookbook/image-asset-cache-basics/cookbook-image-asset-cache-basics-baseline.json`](../../../tools/diag-scripts/cookbook/image-asset-cache-basics/cookbook-image-asset-cache-basics-baseline.json)
 
 ### 1) Toasts / notifications (Sonner)
 
