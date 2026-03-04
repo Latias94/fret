@@ -1951,6 +1951,44 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-carousel-api-screenshot",
+      "path": "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-api-screenshot.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-carousel-docs-parity",
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "api",
+        "carousel",
+        "screenshot",
+        "ui-gallery"
+      ],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-carousel-basic-screenshot",
+      "path": "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-basic-screenshot.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-carousel-docs-parity",
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "basic",
+        "carousel",
+        "screenshot",
+        "ui-gallery"
+      ],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-carousel-demo-inertia-pixels-changed",
       "path": "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-demo-inertia-pixels-changed.json",
       "required_capabilities": [
@@ -2018,6 +2056,62 @@
         "Embla engine is enabled by default (set FRET_DEBUG_CAROUSEL_EMBLA_ENGINE=0 to force-disable).",
         "Expected behavior: resizing during an Embla-driven settle does not panic and items remain visible."
       ]
+    },
+    {
+      "id": "ui-gallery-carousel-demo-screenshot",
+      "path": "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-demo-screenshot.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-carousel-docs-parity",
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "carousel",
+        "screenshot",
+        "ui-gallery"
+      ],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-carousel-events-reinit-gate",
+      "path": "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-events-reinit-gate.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-carousel-docs-parity",
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "carousel",
+        "events",
+        "gate",
+        "reInit",
+        "ui-gallery"
+      ],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-carousel-events-select-gate",
+      "path": "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-events-select-gate.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-carousel-docs-parity",
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "carousel",
+        "events",
+        "gate",
+        "select",
+        "ui-gallery"
+      ],
+      "target_hints": []
     },
     {
       "id": "ui-gallery-carousel-expandable-fixed-frame-delta",
@@ -2098,26 +2192,24 @@
       ]
     },
     {
-      "id": "ui-gallery-carousel-plugin-autoplay-stop-on-last-snap-gate",
-      "path": "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-plugin-autoplay-stop-on-last-snap-gate.json",
+      "id": "ui-gallery-carousel-orientation-vertical-screenshot",
+      "path": "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-orientation-vertical-screenshot.json",
       "required_capabilities": [
+        "diag.screenshot_png",
         "diag.script_v2"
       ],
       "suite_memberships": [
+        "ui-gallery-carousel-docs-parity",
         "ui-gallery-shadcn-conformance"
       ],
       "tags": [
-        "autoplay",
         "carousel",
-        "gate",
-        "plugin",
-        "stopOnLastSnap",
-        "ui-gallery"
+        "orientation",
+        "screenshot",
+        "ui-gallery",
+        "vertical"
       ],
-      "target_hints": [
-        "Navigate to the UI gallery Carousel page and wait for the autoplay demo to stop at the last snap.",
-        "Expected behavior: `stopOnLastSnap` stops scheduling timers after the last snap is reached."
-      ]
+      "target_hints": []
     },
     {
       "id": "ui-gallery-carousel-plugin-autoplay-stop-on-interaction-focus-gate",
@@ -2126,6 +2218,7 @@
         "diag.script_v2"
       ],
       "suite_memberships": [
+        "ui-gallery-carousel-docs-parity",
         "ui-gallery-shadcn-conformance"
       ],
       "tags": [
@@ -2137,52 +2230,48 @@
         "stopOnInteraction",
         "ui-gallery"
       ],
-      "target_hints": [
-        "Navigate to the UI gallery Carousel page and Tab focus into a slide button.",
-        "Expected behavior: `stopOnInteraction` stops autoplay when focus enters a slide."
-      ]
+      "target_hints": []
     },
     {
-      "id": "ui-gallery-carousel-events-select-gate",
-      "path": "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-events-select-gate.json",
+      "id": "ui-gallery-carousel-plugin-autoplay-stop-on-last-snap-gate",
+      "path": "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-plugin-autoplay-stop-on-last-snap-gate.json",
       "required_capabilities": [
         "diag.script_v2"
       ],
       "suite_memberships": [
+        "ui-gallery-carousel-docs-parity",
         "ui-gallery-shadcn-conformance"
       ],
       "tags": [
+        "autoplay",
         "carousel",
-        "events",
         "gate",
-        "select",
+        "plugin",
+        "stopOnLastSnap",
         "ui-gallery"
       ],
-      "target_hints": [
-        "Navigate to the UI gallery Carousel page and click Next.",
-        "Expected behavior: `CarouselApi::events_since` yields a Select event after navigation."
-      ]
+      "target_hints": []
     },
     {
-      "id": "ui-gallery-carousel-events-reinit-gate",
-      "path": "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-events-reinit-gate.json",
+      "id": "ui-gallery-carousel-plugin-screenshot",
+      "path": "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-plugin-screenshot.json",
       "required_capabilities": [
+        "diag.screenshot_png",
         "diag.script_v2"
       ],
       "suite_memberships": [
+        "ui-gallery-carousel-docs-parity",
         "ui-gallery-shadcn-conformance"
       ],
       "tags": [
         "carousel",
-        "events",
-        "gate",
-        "reInit",
+        "docs-parity",
+        "plugin",
+        "screenshot",
+        "shadcn",
         "ui-gallery"
       ],
-      "target_hints": [
-        "Navigate to the UI gallery Carousel page and scroll to the Events section.",
-        "Expected behavior: resizing the window triggers a ReInit event."
-      ]
+      "target_hints": []
     },
     {
       "id": "ui-gallery-carousel-rtl-controls-gate",
@@ -2191,6 +2280,7 @@
         "diag.script_v2"
       ],
       "suite_memberships": [
+        "ui-gallery-carousel-docs-parity",
         "ui-gallery-shadcn-conformance"
       ],
       "tags": [
@@ -2199,66 +2289,25 @@
         "rtl",
         "ui-gallery"
       ],
-      "target_hints": [
-        "Navigate to the UI gallery Carousel page and scroll to the RTL section.",
-        "Expected behavior: Previous/Next controls remain clickable and update the selected index."
-      ]
-    },
-    {
-      "id": "ui-gallery-carousel-demo-screenshot",
-      "path": "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-demo-screenshot.json",
-      "required_capabilities": [
-        "diag.script_v2",
-        "diag.screenshot_png"
-      ],
-      "suite_memberships": [
-        "ui-gallery-shadcn-conformance"
-      ],
-      "tags": [
-        "carousel",
-        "docs-parity",
-        "screenshot",
-        "shadcn",
-        "ui-gallery"
-      ],
       "target_hints": []
     },
     {
-      "id": "ui-gallery-carousel-basic-screenshot",
-      "path": "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-basic-screenshot.json",
+      "id": "ui-gallery-carousel-rtl-screenshot",
+      "path": "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-rtl-screenshot.json",
       "required_capabilities": [
-        "diag.script_v2",
-        "diag.screenshot_png"
+        "diag.screenshot_png",
+        "diag.script_v2"
       ],
       "suite_memberships": [
-        "ui-gallery-shadcn-conformance"
-      ],
-      "tags": [
-        "basic",
-        "carousel",
-        "docs-parity",
-        "screenshot",
-        "shadcn",
-        "ui-gallery"
-      ],
-      "target_hints": []
-    },
-    {
-      "id": "ui-gallery-carousel-sizes-screenshot",
-      "path": "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-sizes-screenshot.json",
-      "required_capabilities": [
-        "diag.script_v2",
-        "diag.screenshot_png"
-      ],
-      "suite_memberships": [
+        "ui-gallery-carousel-docs-parity",
         "ui-gallery-shadcn-conformance"
       ],
       "tags": [
         "carousel",
         "docs-parity",
+        "rtl",
         "screenshot",
         "shadcn",
-        "sizes",
         "ui-gallery"
       ],
       "target_hints": []
@@ -2267,10 +2316,11 @@
       "id": "ui-gallery-carousel-sizes-md-screenshot",
       "path": "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-sizes-md-screenshot.json",
       "required_capabilities": [
-        "diag.script_v2",
-        "diag.screenshot_png"
+        "diag.screenshot_png",
+        "diag.script_v2"
       ],
       "suite_memberships": [
+        "ui-gallery-carousel-docs-parity",
         "ui-gallery-shadcn-conformance"
       ],
       "tags": [
@@ -2285,13 +2335,33 @@
       "target_hints": []
     },
     {
-      "id": "ui-gallery-carousel-spacing-screenshot",
-      "path": "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-spacing-screenshot.json",
+      "id": "ui-gallery-carousel-sizes-screenshot",
+      "path": "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-sizes-screenshot.json",
       "required_capabilities": [
-        "diag.script_v2",
-        "diag.screenshot_png"
+        "diag.screenshot_png",
+        "diag.script_v2"
       ],
       "suite_memberships": [
+        "ui-gallery-carousel-docs-parity",
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "carousel",
+        "screenshot",
+        "sizes",
+        "ui-gallery"
+      ],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-carousel-sizes-thirds-screenshot",
+      "path": "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-sizes-thirds-screenshot.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-carousel-docs-parity",
         "ui-gallery-shadcn-conformance"
       ],
       "tags": [
@@ -2299,7 +2369,7 @@
         "docs-parity",
         "screenshot",
         "shadcn",
-        "spacing",
+        "sizes",
         "ui-gallery"
       ],
       "target_hints": []
@@ -2308,10 +2378,11 @@
       "id": "ui-gallery-carousel-spacing-responsive-md-screenshot",
       "path": "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-spacing-responsive-md-screenshot.json",
       "required_capabilities": [
-        "diag.script_v2",
-        "diag.screenshot_png"
+        "diag.screenshot_png",
+        "diag.script_v2"
       ],
       "suite_memberships": [
+        "ui-gallery-carousel-docs-parity",
         "ui-gallery-shadcn-conformance"
       ],
       "tags": [
@@ -2329,10 +2400,11 @@
       "id": "ui-gallery-carousel-spacing-responsive-sm-screenshot",
       "path": "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-spacing-responsive-sm-screenshot.json",
       "required_capabilities": [
-        "diag.script_v2",
-        "diag.screenshot_png"
+        "diag.screenshot_png",
+        "diag.script_v2"
       ],
       "suite_memberships": [
+        "ui-gallery-carousel-docs-parity",
         "ui-gallery-shadcn-conformance"
       ],
       "tags": [
@@ -2347,82 +2419,20 @@
       "target_hints": []
     },
     {
-      "id": "ui-gallery-carousel-orientation-vertical-screenshot",
-      "path": "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-orientation-vertical-screenshot.json",
+      "id": "ui-gallery-carousel-spacing-screenshot",
+      "path": "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-spacing-screenshot.json",
       "required_capabilities": [
-        "diag.script_v2",
-        "diag.screenshot_png"
+        "diag.screenshot_png",
+        "diag.script_v2"
       ],
       "suite_memberships": [
+        "ui-gallery-carousel-docs-parity",
         "ui-gallery-shadcn-conformance"
       ],
       "tags": [
         "carousel",
-        "docs-parity",
-        "orientation",
         "screenshot",
-        "shadcn",
-        "ui-gallery",
-        "vertical"
-      ],
-      "target_hints": []
-    },
-    {
-      "id": "ui-gallery-carousel-api-screenshot",
-      "path": "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-api-screenshot.json",
-      "required_capabilities": [
-        "diag.script_v2",
-        "diag.screenshot_png"
-      ],
-      "suite_memberships": [
-        "ui-gallery-shadcn-conformance"
-      ],
-      "tags": [
-        "api",
-        "carousel",
-        "docs-parity",
-        "screenshot",
-        "shadcn",
-        "ui-gallery"
-      ],
-      "target_hints": []
-    },
-    {
-      "id": "ui-gallery-carousel-plugin-screenshot",
-      "path": "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-plugin-screenshot.json",
-      "required_capabilities": [
-        "diag.script_v2",
-        "diag.screenshot_png"
-      ],
-      "suite_memberships": [
-        "ui-gallery-shadcn-conformance"
-      ],
-      "tags": [
-        "carousel",
-        "docs-parity",
-        "plugin",
-        "screenshot",
-        "shadcn",
-        "ui-gallery"
-      ],
-      "target_hints": []
-    },
-    {
-      "id": "ui-gallery-carousel-rtl-screenshot",
-      "path": "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-rtl-screenshot.json",
-      "required_capabilities": [
-        "diag.script_v2",
-        "diag.screenshot_png"
-      ],
-      "suite_memberships": [
-        "ui-gallery-shadcn-conformance"
-      ],
-      "tags": [
-        "carousel",
-        "docs-parity",
-        "rtl",
-        "screenshot",
-        "shadcn",
+        "spacing",
         "ui-gallery"
       ],
       "target_hints": []
@@ -3578,6 +3588,24 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-dropdown-menu-rtl-open-screenshot",
+      "path": "tools/diag-scripts/ui-gallery/dropdown-menu/ui-gallery-dropdown-menu-rtl-open-screenshot.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-rtl-smoke"
+      ],
+      "tags": [
+        "dropdown_menu",
+        "rtl",
+        "screenshots",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-dropdown-nonmodal-outside-press-focus-underlay",
       "path": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-dropdown-nonmodal-outside-press-focus-underlay.json",
       "required_capabilities": [],
@@ -3746,6 +3774,29 @@
       "target_hints": [
         "Exercises the intent-level tap step (touch-first).",
         "Fails fast when the runner does not advertise diag.gesture_tap."
+      ]
+    },
+    {
+      "id": "ui-gallery-hover-card-rtl-open-screenshot",
+      "path": "tools/diag-scripts/ui-gallery/hover-card/ui-gallery-hover-card-rtl-open-screenshot.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-rtl-smoke"
+      ],
+      "tags": [
+        "hover-card",
+        "overlay",
+        "rtl",
+        "screenshot",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Navigate to the HoverCard page.",
+        "Scroll to the RTL section and open the hover-card via pointer hover.",
+        "Capture a screenshot for RTL placement/alignment parity."
       ]
     },
     {
@@ -3972,6 +4023,16 @@
       "required_capabilities": [],
       "suite_memberships": [
         "ui-gallery-layout"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-lite-smoke",
+      "path": "tools/diag-scripts/ui-gallery/lite/ui-gallery-lite-smoke.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-lite-smoke"
       ],
       "tags": [],
       "target_hints": []
@@ -4289,6 +4350,56 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-navigation-menu-docs-smoke",
+      "path": "tools/diag-scripts/ui-gallery/navigation-menu/ui-gallery-navigation-menu-docs-smoke.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "a11y",
+        "navigation_menu",
+        "overlay",
+        "screenshot",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Navigates to the Navigation Menu page.",
+        "Asserts trigger roles for link vs menu trigger.",
+        "Opens a menu and captures screenshots for quick parity triage.",
+        "Clicks the Docs link to close the menu (Radix/shadcn outcome)."
+      ]
+    },
+    {
+      "id": "ui-gallery-navigation-menu-escape-close-gate",
+      "path": "tools/diag-scripts/ui-gallery/navigation-menu/ui-gallery-navigation-menu-escape-close-gate.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "escape",
+        "focus",
+        "gate",
+        "navigation_menu",
+        "overlay",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Open NavigationMenu content and move keyboard focus into the viewport.",
+        "Press Escape to close while focus is inside the content.",
+        "Ensure hover pointer-move does not immediately re-open after Escape dismissal."
+      ]
+    },
+    {
       "id": "ui-gallery-node-graph-cull-torture-pan-zoom",
       "path": "tools/diag-scripts/ui-gallery/perf/ui-gallery-node-graph-cull-torture-pan-zoom.json",
       "required_capabilities": [],
@@ -4509,6 +4620,25 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-scroll-area-horizontal-max-scroll-screenshot",
+      "path": "tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scroll-area-horizontal-max-scroll-screenshot.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-scroll-area"
+      ],
+      "tags": [
+        "horizontal",
+        "screenshot",
+        "scroll",
+        "scroll-area",
+        "ui-gallery"
+      ],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-scroll-area-nested-scroll-routing",
       "path": "tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scroll-area-nested-scroll-routing.json",
       "required_capabilities": [
@@ -4524,6 +4654,16 @@
         "scroll",
         "ui_gallery"
       ],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-scroll-area-rtl-screenshot",
+      "path": "tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scroll-area-rtl-screenshot.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-rtl-smoke"
+      ],
+      "tags": [],
       "target_hints": []
     },
     {
@@ -5022,6 +5162,25 @@
       ]
     },
     {
+      "id": "ui-gallery-tabs-rtl-keynav-screenshot",
+      "path": "tools/diag-scripts/ui-gallery/tabs/ui-gallery-tabs-rtl-keynav-screenshot.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-rtl-smoke"
+      ],
+      "tags": [
+        "keyboard",
+        "rtl",
+        "screenshots",
+        "shadcn",
+        "tabs",
+        "ui_gallery"
+      ],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-tabs-vertical-list-grows",
       "path": "tools/diag-scripts/ui-gallery/tabs/ui-gallery-tabs-vertical-list-grows.json",
       "required_capabilities": [
@@ -5042,7 +5201,8 @@
       "target_hints": [
         "Navigates to the Tabs page.",
         "Scrolls the Vertical + Vertical (Line) examples into view.",
-        "Asserts the vertical tab list grows to show multiple triggers (no clipping)."
+        "Asserts the vertical tab list grows to show multiple triggers (no clipping).",
+        "Captures screenshots for both sections for quick visual triage."
       ]
     },
     {

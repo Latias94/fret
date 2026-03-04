@@ -43,6 +43,10 @@ Recommended starting points (action-first + view runtime):
 - `commands_keymap_basics`, `overlay_basics`, `text_input_basics`
 - `imui_action_basics` (cross-frontend action dispatch)
 
+Note: some cookbook examples are feature-gated to keep cold compile time down; see:
+
+- [apps/fret-cookbook/README.md](../../apps/fret-cookbook/README.md)
+
 Some cookbook examples still use legacy MVU for now. Track remaining in-tree usage here:
 
 - [docs/workstreams/action-first-authoring-fearless-refactor-v1/LEGACY_MVU_INVENTORY.md](../workstreams/action-first-authoring-fearless-refactor-v1/LEGACY_MVU_INVENTORY.md)
@@ -55,6 +59,8 @@ Diagnostics scripts for cookbook examples live under:
 
 - [tools/diag-scripts/cookbook/](../../tools/diag-scripts/cookbook/)
 - [tools/diag-scripts/suites/](../../tools/diag-scripts/suites/) (cookbook suite manifests)
+- New to diagnostics? Start with the `hello` walkthrough in
+  [apps/fret-cookbook/README.md#diagnostics-optional](../../apps/fret-cookbook/README.md#diagnostics-optional).
 
 Note: cookbook examples are separate binaries today, so scripts are per-example (not one “mega suite”).
 
@@ -67,6 +73,7 @@ The UI gallery is a larger, multi-page app intended for component discovery and 
 - Dev/unfinished pages (opt-in): `cargo run -p fret-ui-gallery --features gallery-dev`
 - Material 3 (in progress, opt-in): `cargo run -p fret-ui-gallery --features gallery-material3`
 - Web: `cargo run -p fretboard -- dev web --demo ui_gallery`
+- Diagnostics (lite smoke): `cargo run -p fretboard -- diag suite ui-gallery-lite-smoke --launch -- cargo run -p fret-ui-gallery`
 - Details: [apps/fret-ui-gallery/README.md](../../apps/fret-ui-gallery/README.md)
 
 ## 3) Labs / maintainer harnesses

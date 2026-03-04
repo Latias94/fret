@@ -8,7 +8,9 @@ fn side_content<H: UiHost>(
     muted_fg: fret_core::Color,
     side_label: &'static str,
     test_id: &'static str,
-) -> AnyElement {
+    side: shadcn::HoverCardSide,
+    align: shadcn::HoverCardAlign,
+) -> shadcn::HoverCardContent {
     let body = stack::vstack(
         cx,
         stack::VStackProps::default()
@@ -34,8 +36,9 @@ fn side_content<H: UiHost>(
     );
 
     shadcn::HoverCardContent::new(vec![body])
-        .into_element(cx)
         .test_id(test_id)
+        .side(side)
+        .align(align)
 }
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
@@ -52,10 +55,10 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             muted_fg,
             "top (align=start)",
             "ui-gallery-hover-card-pos-top-start-content",
+            shadcn::HoverCardSide::Top,
+            shadcn::HoverCardAlign::Start,
         ),
     )
-    .side(shadcn::HoverCardSide::Top)
-    .align(shadcn::HoverCardAlign::Start)
     .open_delay_frames(8)
     .close_delay_frames(8)
     .into_element(cx)
@@ -71,10 +74,10 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             muted_fg,
             "right (align=end)",
             "ui-gallery-hover-card-pos-right-end-content",
+            shadcn::HoverCardSide::Right,
+            shadcn::HoverCardAlign::End,
         ),
     )
-    .side(shadcn::HoverCardSide::Right)
-    .align(shadcn::HoverCardAlign::End)
     .open_delay_frames(8)
     .close_delay_frames(8)
     .into_element(cx)

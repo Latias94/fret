@@ -22,8 +22,12 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                 .side_offset(Px(4.0)),
             |_cx| {
                 [
-                    shadcn::DropdownMenuItem::new("Dashboard").into(),
-                    shadcn::DropdownMenuItem::new("Settings").into(),
+                    shadcn::DropdownMenuItem::new("Dashboard")
+                        .test_id("ui-gallery-dropdown-menu-rtl-item-dashboard")
+                        .into(),
+                    shadcn::DropdownMenuItem::new("Settings")
+                        .test_id("ui-gallery-dropdown-menu-rtl-item-settings")
+                        .into(),
                 ]
             },
         )

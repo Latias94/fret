@@ -16,14 +16,14 @@ Status legend:
 ## M1 — Cookbook curation (small, teachable, fast)
 
 - [~] Keep cookbook deps minimal (avoid enabling “everything” by default).
-- [ ] Add “Official vs Lab” labels for cookbook examples.
-- [ ] Gate the highest-ceiling interop examples behind explicit Cargo features (optional).
+- [x] Add “Official vs Lab” labels for cookbook examples.
+- [x] Gate the highest-ceiling interop examples behind explicit Cargo features (optional).
 - [ ] Add/curate diag scripts for the recommended 5–8 examples.
 
 ## M2 — `fret` feature profiles
 
 - [~] Make selector/query helpers optional (feature-gated) so `default-features = false` is actually small.
-- [ ] Document recommended profiles in `docs/crate-usage-guide.md`:
+- [x] Document recommended profiles in `docs/crate-usage-guide.md`:
   - minimal app,
   - recommended app,
   - batteries-included.
@@ -32,7 +32,7 @@ Status legend:
 
 - [x] Decide gating approach (runtime vs compile-time vs separate bin).
 - [x] Implement lite mode (compile-time feature gating + optional deps) and update UI Gallery README.
-- [ ] Ensure lite mode has deterministic smoke gates (first frame + basic navigation).
+- [x] Ensure lite mode has deterministic smoke gates (first frame + basic navigation).
 
 ## M4 — Move lesson-shaped demos out of `fret-demo`
 

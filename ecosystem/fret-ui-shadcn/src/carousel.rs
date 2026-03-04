@@ -2002,33 +2002,45 @@ impl Carousel {
                                 if scroll_snaps.is_empty() {
                                     scroll_snaps.push(0.0);
                                 }
-
-                                let mut engine = headless_embla::engine::Engine::new(
-                                    scroll_snaps,
-                                    content_size,
-                                    headless_embla::engine::EngineConfig {
-                                        loop_enabled: loop_enabled_effective,
-                                        drag_free: options.drag_free,
-                                        skip_snaps: options.skip_snaps,
-                                        duration: options.embla_duration.max(0.0),
-                                        base_friction: 0.68,
-                                        view_size,
-                                        start_snap: index,
-                                    },
-                                );
                                 let cur = cx
                                     .app
                                     .models_mut()
                                     .read(&offset_model, |v| *v)
                                     .ok()
                                     .unwrap_or(Px(0.0));
-                                let loc = -cur.0;
-                                engine.scroll_body.set_location(loc);
-                                engine.scroll_body.set_target(loc);
-                                engine.scroll_target.set_target_vector(loc);
-                                let select = engine.scroll_to_index(target_index, 0);
+                                let start_snap = resolve_nearest_snap_index(snaps.as_ref(), cur);
 
+                                let mut select = None;
                                 let _ = cx.app.models_mut().update(&embla_engine_model, |v| {
+                                    if let Some(engine) = v.as_mut() {
+                                        engine.set_options(
+                                            loop_enabled_effective,
+                                            options.drag_free,
+                                            options.skip_snaps,
+                                            options.embla_duration,
+                                        );
+                                        select = engine.scroll_to_index(target_index, 0);
+                                        return;
+                                    }
+
+                                    let mut engine = headless_embla::engine::Engine::new(
+                                        scroll_snaps,
+                                        content_size,
+                                        headless_embla::engine::EngineConfig {
+                                            loop_enabled: loop_enabled_effective,
+                                            drag_free: options.drag_free,
+                                            skip_snaps: options.skip_snaps,
+                                            duration: options.embla_duration.max(0.0),
+                                            base_friction: 0.68,
+                                            view_size,
+                                            start_snap,
+                                        },
+                                    );
+                                    let loc = -cur.0;
+                                    engine.scroll_body.set_location(loc);
+                                    engine.scroll_body.set_target(loc);
+                                    engine.scroll_target.set_target_vector(loc);
+                                    select = engine.scroll_to_index(target_index, 0);
                                     *v = Some(engine);
                                 });
                                 if let Some(select) = select {
@@ -2590,6 +2602,20 @@ impl Carousel {
                         scroll_snaps.push(0.0);
                     }
 
+                    let release = headless_carousel::on_pointer_up_with_snaps_options(
+                        drag_config,
+                        &mut drag,
+                        track_direction,
+                        direction_for_up,
+                        up.position,
+                        snaps.as_ref(),
+                        max_offset,
+                        loop_enabled_effective,
+                        skip_snaps_for_up,
+                        drag_free_for_up,
+                    )
+                    .expect("release output when dragging");
+
                     let index: usize = host
                         .models_mut()
                         .read(&index_for_up, |v| *v)
@@ -2617,38 +2643,27 @@ impl Carousel {
                     engine.scroll_body.set_target(engine_location);
                     engine.scroll_target.set_target_vector(engine_location);
 
-                    let pointer_kind = match up.pointer_type {
-                        fret_core::PointerType::Touch => headless_embla::drag_release::PointerKind::Touch,
-                        _ => headless_embla::drag_release::PointerKind::Mouse,
-                    };
-                    let velocity = up
-                        .velocity_window
-                        .map(|v| match track_direction {
-                            fret_core::Axis::Horizontal => v.x.0,
-                            fret_core::Axis::Vertical => v.y.0,
-                        })
-                        .unwrap_or(0.0);
-                    // Embla uses px/ms (`event.timeStamp` is ms). Fret provides px/s.
-                    let velocity = velocity / 1000.0;
-
-                    let sign = if track_direction == fret_core::Axis::Horizontal
-                        && direction_for_up == LayoutDirection::Rtl
-                    {
-                        -1.0
+                    // Decide the target snap index using our headless drag contract so the Embla
+                    // path matches `CarouselDragConfig::snap_threshold_fraction` (and remains
+                    // deterministic in tests).
+                    let select = if !drag_free_for_up {
+                        engine.scroll_to_index(release.next_index, headless_embla::utils::DIRECTION_NONE)
                     } else {
-                        1.0
+                        None
                     };
-                    let (_release, select) =
-                        engine.on_drag_release(pointer_kind, velocity, move |v| v * sign);
 
                     let _ = host.models_mut().update(&embla_engine_for_up, |v| {
                         *v = Some(engine);
                     });
 
-                    if let Some(select) = select {
+                    let next_index = select.map(|s| s.target_snap).unwrap_or(release.next_index);
+                    let _ = host
+                        .models_mut()
+                        .update(&index_for_up, |v| *v = next_index);
+                    if drag_free_for_up {
                         let _ = host
                             .models_mut()
-                            .update(&index_for_up, |v| *v = select.target_snap);
+                            .update(&offset_for_up, |v| *v = release.target_offset);
                     }
 
                     let _ = host.models_mut().update(&runtime_for_up, |st| {
@@ -2814,32 +2829,44 @@ impl Carousel {
                         if scroll_snaps.is_empty() {
                             scroll_snaps.push(0.0);
                         }
-
-                        let mut engine = headless_embla::engine::Engine::new(
-                            scroll_snaps,
-                            content_size,
-                            headless_embla::engine::EngineConfig {
-                                loop_enabled: loop_enabled_effective,
-                                drag_free: drag_free_for_prev,
-                                skip_snaps: skip_snaps_for_prev,
-                                duration: embla_duration_for_prev.max(0.0),
-                                base_friction: 0.68,
-                                view_size,
-                                start_snap: index,
-                            },
-                        );
                         let cur = host
                             .models_mut()
                             .read(&offset_for_prev, |v| *v)
                             .ok()
                             .unwrap_or(Px(0.0));
-                        let loc = -cur.0;
-                        engine.scroll_body.set_location(loc);
-                        engine.scroll_body.set_target(loc);
-                        engine.scroll_target.set_target_vector(loc);
-                        let select = engine.scroll_to_prev();
+                        let start_snap = resolve_nearest_snap_index(snaps.as_ref(), cur);
 
+                        let mut select = None;
                         let _ = host.models_mut().update(&embla_engine_for_prev, |v| {
+                            if let Some(engine) = v.as_mut() {
+                                engine.set_options(
+                                    loop_enabled_effective,
+                                    drag_free_for_prev,
+                                    skip_snaps_for_prev,
+                                    embla_duration_for_prev,
+                                );
+                                select = engine.scroll_to_prev();
+                                return;
+                            }
+
+                            let mut engine = headless_embla::engine::Engine::new(
+                                scroll_snaps,
+                                content_size,
+                                headless_embla::engine::EngineConfig {
+                                    loop_enabled: loop_enabled_effective,
+                                    drag_free: drag_free_for_prev,
+                                    skip_snaps: skip_snaps_for_prev,
+                                    duration: embla_duration_for_prev.max(0.0),
+                                    base_friction: 0.68,
+                                    view_size,
+                                    start_snap,
+                                },
+                            );
+                            let loc = -cur.0;
+                            engine.scroll_body.set_location(loc);
+                            engine.scroll_body.set_target(loc);
+                            engine.scroll_target.set_target_vector(loc);
+                            select = engine.scroll_to_prev();
                             *v = Some(engine);
                         });
                         if let Some(select) = select {
@@ -2965,32 +2992,44 @@ impl Carousel {
                         if scroll_snaps.is_empty() {
                             scroll_snaps.push(0.0);
                         }
-
-                        let mut engine = headless_embla::engine::Engine::new(
-                            scroll_snaps,
-                            content_size,
-                            headless_embla::engine::EngineConfig {
-                                loop_enabled: loop_enabled_effective,
-                                drag_free: drag_free_for_next,
-                                skip_snaps: skip_snaps_for_next,
-                                duration: embla_duration_for_next.max(0.0),
-                                base_friction: 0.68,
-                                view_size,
-                                start_snap: index,
-                            },
-                        );
                         let cur = host
                             .models_mut()
                             .read(&offset_for_next, |v| *v)
                             .ok()
                             .unwrap_or(Px(0.0));
-                        let loc = -cur.0;
-                        engine.scroll_body.set_location(loc);
-                        engine.scroll_body.set_target(loc);
-                        engine.scroll_target.set_target_vector(loc);
-                        let select = engine.scroll_to_next();
+                        let start_snap = resolve_nearest_snap_index(snaps.as_ref(), cur);
 
+                        let mut select = None;
                         let _ = host.models_mut().update(&embla_engine_for_next, |v| {
+                            if let Some(engine) = v.as_mut() {
+                                engine.set_options(
+                                    loop_enabled_effective,
+                                    drag_free_for_next,
+                                    skip_snaps_for_next,
+                                    embla_duration_for_next,
+                                );
+                                select = engine.scroll_to_next();
+                                return;
+                            }
+
+                            let mut engine = headless_embla::engine::Engine::new(
+                                scroll_snaps,
+                                content_size,
+                                headless_embla::engine::EngineConfig {
+                                    loop_enabled: loop_enabled_effective,
+                                    drag_free: drag_free_for_next,
+                                    skip_snaps: skip_snaps_for_next,
+                                    duration: embla_duration_for_next.max(0.0),
+                                    base_friction: 0.68,
+                                    view_size,
+                                    start_snap,
+                                },
+                            );
+                            let loc = -cur.0;
+                            engine.scroll_body.set_location(loc);
+                            engine.scroll_body.set_target(loc);
+                            engine.scroll_target.set_target_vector(loc);
+                            select = engine.scroll_to_next();
                             *v = Some(engine);
                         });
                         if let Some(select) = select {
@@ -3171,28 +3210,46 @@ impl Carousel {
                         if scroll_snaps.is_empty() {
                             scroll_snaps.push(0.0);
                         }
+                        let start_snap = resolve_nearest_snap_index(snaps.as_ref(), cur);
 
-                        let mut engine = headless_embla::engine::Engine::new(
-                            scroll_snaps,
-                            content_size,
-                            headless_embla::engine::EngineConfig {
-                                loop_enabled,
-                                drag_free: drag_free_for_key,
-                                skip_snaps: skip_snaps_for_key,
-                                duration: embla_duration_for_key.max(0.0),
-                                base_friction: 0.68,
-                                view_size,
-                                start_snap: index,
-                            },
-                        );
-                        let loc = -cur.0;
-                        engine.scroll_body.set_location(loc);
-                        engine.scroll_body.set_target(loc);
-                        engine.scroll_target.set_target_vector(loc);
-
-                        let select = engine.scroll_to_index(target_index, headless_embla::utils::DIRECTION_NONE);
-
+                        let mut select = None;
                         let _ = host.models_mut().update(&embla_engine_for_key, |v| {
+                            if let Some(engine) = v.as_mut() {
+                                engine.set_options(
+                                    loop_enabled,
+                                    drag_free_for_key,
+                                    skip_snaps_for_key,
+                                    embla_duration_for_key,
+                                );
+                                select = engine.scroll_to_index(
+                                    target_index,
+                                    headless_embla::utils::DIRECTION_NONE,
+                                );
+                                return;
+                            }
+
+                            let mut engine = headless_embla::engine::Engine::new(
+                                scroll_snaps,
+                                content_size,
+                                headless_embla::engine::EngineConfig {
+                                    loop_enabled,
+                                    drag_free: drag_free_for_key,
+                                    skip_snaps: skip_snaps_for_key,
+                                    duration: embla_duration_for_key.max(0.0),
+                                    base_friction: 0.68,
+                                    view_size,
+                                    start_snap,
+                                },
+                            );
+                            let loc = -cur.0;
+                            engine.scroll_body.set_location(loc);
+                            engine.scroll_body.set_target(loc);
+                            engine.scroll_target.set_target_vector(loc);
+
+                            select = engine.scroll_to_index(
+                                target_index,
+                                headless_embla::utils::DIRECTION_NONE,
+                            );
                             *v = Some(engine);
                         });
                         if let Some(select) = select {
@@ -3420,6 +3477,8 @@ impl Carousel {
                 move |_cx| vec![track],
             );
 
+            // Pointer interactions (drag + wheel) should be available across the full viewport,
+            // even when slide content has no intrinsic height (e.g. empty slides in tests).
             let pointer_layout =
                 decl_style::layout_style(&theme, LayoutRefinement::default().size_full());
 
@@ -4992,6 +5051,19 @@ fn resolve_loop_enabled_effective(
         })
         .collect::<Vec<_>>();
     headless_embla::slide_looper::can_loop(&slides, view_size)
+}
+
+fn resolve_nearest_snap_index(snaps: &[Px], offset: Px) -> usize {
+    let mut best = 0usize;
+    let mut best_dist = f32::INFINITY;
+    for (idx, snap) in snaps.iter().enumerate() {
+        let dist = (snap.0 - offset.0).abs();
+        if dist < best_dist {
+            best_dist = dist;
+            best = idx;
+        }
+    }
+    best
 }
 
 /// shadcn/ui `CarouselPrevious` (v4).

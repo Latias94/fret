@@ -27,6 +27,12 @@ Optional:
 - Start on a specific page: `FRET_UI_GALLERY_START_PAGE=data_table`
 - Enable bisect flags: `FRET_UI_GALLERY_BISECT=<u32>`
 
+## Diagnostics
+
+Lite mode smoke gate (first frame + basic navigation):
+
+- `cargo run -p fretboard -- diag suite ui-gallery-lite-smoke --launch -- cargo run -p fret-ui-gallery`
+
 ## Run (web / wasm32)
 
 Use the dedicated web harness:

@@ -21,23 +21,25 @@ default = [
 # “Works out of the box” ecosystem bundle (within the enabled platform features).
 batteries = [
     "app",
+    "state",
+    "diagnostics",
     "config-files",
     "ui-assets",
     "icons",
     "preload-icon-svgs",
 ]
 
-# Recommended “just build an app” baseline: shadcn-first + state helpers.
+# Recommended “just build an app” baseline: shadcn-first.
 #
 # Intentionally excludes:
+# - `diagnostics` (pulls in extra dev tooling; opt-in)
+# - `state` (selector/query helpers; opt-in)
 # - `config-files` (filesystem side effects; opt-in)
 # - `ui-assets` (image/SVG caches; opt-in)
 # - `preload-icon-svgs` (GPU-time cost; opt-in)
 # - `command-palette` (policy; opt-in)
 app = [
-    "diagnostics",
     "shadcn",
-    "state",
 ]
 
 # Derived + async state helpers used by `ViewCx`.

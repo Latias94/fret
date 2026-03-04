@@ -486,7 +486,6 @@ pub(super) fn set_window_background_material(
             content_view as *const std::ffi::c_void,
             container_view as *const std::ffi::c_void,
         ));
-
         let subviews: *mut Object = msg_send![container_view, subviews];
         let count: usize = if subviews.is_null() {
             0
