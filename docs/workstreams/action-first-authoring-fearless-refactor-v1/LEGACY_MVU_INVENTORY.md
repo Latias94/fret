@@ -86,6 +86,8 @@ Examples that use `fret::mvu::app(...)` or implement `MvuProgram` include (non-e
   - The legacy MVU implementation remains at `apps/fret-examples/src/embedded_viewport_demo_legacy.rs`.
   - `apps/fret-examples/src/drop_shadow_demo.rs` is now view runtime + typed actions.
   - The legacy MVU implementation remains at `apps/fret-examples/src/drop_shadow_demo_legacy.rs`.
+  - `apps/fret-examples/src/postprocess_theme_demo.rs` is now view runtime + typed actions.
+  - The legacy MVU implementation remains at `apps/fret-examples/src/postprocess_theme_demo_legacy.rs`.
 
 - `apps/fret-examples/src/todo_demo_legacy.rs`
 - `apps/fret-examples/src/query_demo_legacy.rs`
@@ -97,7 +99,7 @@ Examples that use `fret::mvu::app(...)` or implement `MvuProgram` include (non-e
 - `apps/fret-examples/src/custom_effect_v1_demo.rs`
 - `apps/fret-examples/src/custom_effect_v2_demo.rs`
 - `apps/fret-examples/src/custom_effect_v3_demo.rs`
-- `apps/fret-examples/src/postprocess_theme_demo.rs`
+- `apps/fret-examples/src/postprocess_theme_demo_legacy.rs`
 - `apps/fret-examples/src/liquid_glass_demo.rs`
 - `apps/fret-examples/src/genui_demo.rs`
 
