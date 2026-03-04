@@ -7,14 +7,21 @@ use fret_diag_protocol::{
 use crate::artifact_store::RunArtifactStore;
 use crate::util::{now_unix_ms, read_json_value, write_json_value};
 
-fn script_result_has_stable_reason_code(script_result_path: &Path) -> bool {
-    read_json_value(script_result_path)
-        .and_then(|v| {
-            v.get("reason_code")
-                .and_then(|v| v.as_str())
-                .map(|s| s.to_string())
-        })
-        .is_some()
+fn script_result_is_stable(script_result_path: &Path) -> bool {
+    let Some(v) = read_json_value(script_result_path) else {
+        return false;
+    };
+
+    // A completed script result is stable even without a reason code (passed scripts typically
+    // have `reason_code=null`).
+    if let Some(stage) = v.get("stage").and_then(|v| v.as_str())
+        && matches!(stage, "passed" | "failed")
+    {
+        return true;
+    }
+
+    // Tooling failures always provide a stable reason code.
+    v.get("reason_code").and_then(|v| v.as_str()).is_some()
 }
 
 pub(crate) fn write_tooling_failure_script_result(
@@ -66,7 +73,7 @@ pub(crate) fn write_tooling_failure_script_result_if_missing(
     kind: &str,
     note: Option<String>,
 ) {
-    if script_result_has_stable_reason_code(script_result_path) {
+    if script_result_is_stable(script_result_path) {
         return;
     }
 
@@ -167,6 +174,42 @@ mod tests {
         let parsed: UiScriptResultV1 = serde_json::from_slice(&bytes).expect("parse script.result");
         assert_eq!(parsed.reason_code.as_deref(), Some("tooling.old"));
         assert_eq!(parsed.reason.as_deref(), Some("old failure"));
+    }
+
+    #[test]
+    fn write_tooling_failure_script_result_if_missing_preserves_passed_stage() {
+        let root = make_temp_dir("fret-diag-tooling-failure-if-missing-passed");
+        let path = root.join("script.result.json");
+
+        let passed = UiScriptResultV1 {
+            schema_version: 1,
+            run_id: 1,
+            updated_unix_ms: now_unix_ms(),
+            window: None,
+            stage: UiScriptStageV1::Passed,
+            step_index: Some(0),
+            reason_code: None,
+            reason: None,
+            evidence: None,
+            last_bundle_dir: None,
+            last_bundle_artifact: None,
+        };
+        write_json_value(&path, &serde_json::to_value(passed).expect("passed json"))
+            .expect("write passed script.result.json");
+
+        write_tooling_failure_script_result_if_missing(
+            &path,
+            "timeout.tooling.script_result",
+            "timeout waiting for script result",
+            "tooling_timeout",
+            Some("note".to_string()),
+        );
+
+        let bytes = std::fs::read(&path).expect("read script.result.json");
+        let parsed: UiScriptResultV1 = serde_json::from_slice(&bytes).expect("parse script.result");
+        assert!(matches!(parsed.stage, UiScriptStageV1::Passed));
+        assert_eq!(parsed.run_id, 1);
+        assert!(parsed.reason_code.is_none());
     }
 
     #[test]

@@ -109,8 +109,9 @@ use compare::{
 };
 use devtools::DevtoolsOps;
 use gates::{
-    RedrawHitchesGateResult, ResourceFootprintGateResult, ResourceFootprintThresholds,
-    WgpuMetalAllocatedSizeGateResult, check_redraw_hitches_max_total_ms,
+    RedrawHitchesGateResult, RenderTextAtlasBytesGateResult, ResourceFootprintGateResult,
+    ResourceFootprintThresholds, WgpuMetalAllocatedSizeGateResult,
+    check_redraw_hitches_max_total_ms, check_render_text_atlas_bytes_live_estimate_total_threshold,
     check_resource_footprint_thresholds, check_wgpu_metal_current_allocated_size_threshold,
 };
 use lint::{LintOptions, lint_bundle_from_path};
@@ -414,6 +415,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut max_macos_physical_footprint_peak_bytes: Option<u64> = None;
     let mut max_macos_owned_unmapped_memory_dirty_bytes: Option<u64> = None;
     let mut max_wgpu_metal_current_allocated_size_bytes: Option<u64> = None;
+    let mut max_render_text_atlas_bytes_live_estimate_total: Option<u64> = None;
     let mut max_cpu_avg_percent_total_cores: Option<f64> = None;
     let mut perf_baseline_path: Option<PathBuf> = None;
     let mut perf_baseline_out: Option<PathBuf> = None;
@@ -1207,6 +1209,21 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 max_wgpu_metal_current_allocated_size_bytes =
                     Some(v.parse::<u64>().map_err(|_| {
                         "invalid value for --max-wgpu-metal-current-allocated-size-bytes"
+                            .to_string()
+                    })?);
+                i += 1;
+            }
+            "--max-render-text-atlas-bytes-live-estimate-total" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err(
+                        "missing value for --max-render-text-atlas-bytes-live-estimate-total"
+                            .to_string(),
+                    );
+                };
+                max_render_text_atlas_bytes_live_estimate_total =
+                    Some(v.parse::<u64>().map_err(|_| {
+                        "invalid value for --max-render-text-atlas-bytes-live-estimate-total"
                             .to_string()
                     })?);
                 i += 1;
@@ -2199,6 +2216,12 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 .to_string(),
         );
     }
+    if sub != "repro" && max_render_text_atlas_bytes_live_estimate_total.is_some() {
+        return Err(
+            "--max-render-text-atlas-bytes-live-estimate-total is only supported with `diag repro` for now"
+                .to_string(),
+        );
+    }
     if sub != "repro" && check_redraw_hitches_max_total_ms_threshold.is_some() {
         return Err(
             "--check-redraw-hitches-max-total-ms is only supported with `diag repro` for now"
@@ -2835,6 +2858,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 renderdoc_no_outputs_png,
                 resource_footprint_thresholds,
                 max_wgpu_metal_current_allocated_size_bytes,
+                max_render_text_atlas_bytes_live_estimate_total,
                 check_redraw_hitches_max_total_ms_threshold,
                 checks: run_checks.clone(),
             })
@@ -4168,13 +4192,20 @@ fn run_script_over_transport(
 
             // Transport-agnostic streaming hook: persist incremental script progress so external
             // tooling can observe long runs without waiting for completion.
-            // Note: `script_result_path` is a tooling output file (not the in-app filesystem
-            // transport `runtime.script.result.json`), so it is safe to update it even when the
-            // underlying transport is filesystem-based.
-            let _ = write_json_value(
-                script_result_path,
-                &serde_json::to_value(&parsed).unwrap_or_else(|_| serde_json::json!({})),
-            );
+            //
+            // IMPORTANT: In filesystem mode, the runtime owns the shared control-plane
+            // `<out_dir>/script.result.json`. Re-writing it from tooling can race with the runtime
+            // and cause missed edge-detection updates (e.g. clobbering the final `passed` result
+            // with a stale `running` snapshot). Tooling should only write to a distinct output
+            // path in filesystem mode (for example `<out_dir>/tool.script.result.json`).
+            let runtime_owned_path = connected.source == "filesystem"
+                && *script_result_path == out_dir.join("script.result.json");
+            if !runtime_owned_path {
+                let _ = write_json_value(
+                    script_result_path,
+                    &serde_json::to_value(&parsed).unwrap_or_else(|_| serde_json::json!({})),
+                );
+            }
             RunArtifactStore::new(out_dir, parsed.run_id).write_script_result(&parsed);
 
             if matches!(
