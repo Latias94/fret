@@ -30,7 +30,7 @@ fret-docking = { path = "../../ecosystem/fret-docking", default-features = false
 fret-imui = { path = "../../ecosystem/fret-imui", optional = true }
 fret-genui-core = { path = "../../ecosystem/fret-genui-core", optional = true }
 fret-genui-shadcn = { path = "../../ecosystem/fret-genui-shadcn", optional = true }
-fret-ui-kit = { path = "../../ecosystem/fret-ui-kit", default-features = false, optional = true, features = ["imui"] }
+fret-ui-kit = { path = "../../ecosystem/fret-ui-kit", default-features = false, optional = true }
 serde_json = { workspace = true, optional = true }
 fret-render = { path = "../../crates/fret-render", optional = true }
 fret-launch = { path = "../../crates/fret-launch", optional = true }
@@ -50,6 +50,7 @@ default = []
 cookbook-diag = ["fret/diagnostics"]
 cookbook-assets = ["dep:fret-icons", "dep:fret-icons-lucide", "dep:fret-ui-assets", "fret/icons", "fret/ui-assets"]
 cookbook-renderer = ["dep:fret-launch"]
+cookbook-table = ["dep:fret-ui-kit"]
 cookbook-undo = ["dep:fret-undo"]
 cookbook-async = ["dep:fret-executor"]
 cookbook-bootstrap = ["dep:fret-bootstrap", "dep:fret-render"]
@@ -59,6 +60,7 @@ cookbook-imui = [
     "dep:fret-genui-core",
     "dep:fret-genui-shadcn",
     "dep:fret-ui-kit",
+    "fret-ui-kit/imui",
     "dep:serde_json",
 ]
 cookbook-interop = [
@@ -88,6 +90,10 @@ required-features = ["cookbook-renderer"]
 [[example]]
 name = "drop_shadow_basics"
 required-features = ["cookbook-renderer"]
+
+[[example]]
+name = "data_table_basics"
+required-features = ["cookbook-table"]
 
 [[example]]
 name = "undo_basics"

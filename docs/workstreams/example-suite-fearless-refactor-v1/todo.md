@@ -67,6 +67,7 @@ Goal: create a lightweight, user-facing cookbook that does not pull “everythin
   - [x] date picker basics (`date_picker_basics`)
   - [x] form basics (`form_basics`)
   - [x] drag basics (`drag_basics`)
+  - [x] data table basics (`data_table_basics`)
 
 Gates:
 

@@ -280,6 +280,26 @@
       ]
     },
     {
+      "id": "cookbook-data-table-basics-baseline",
+      "path": "tools/diag-scripts/cookbook/data-table-basics/cookbook-data-table-basics-baseline.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "cookbook-data-table-basics"
+      ],
+      "tags": [
+        "cookbook",
+        "cookbook.data_table_basics",
+        "screenshots",
+        "table"
+      ],
+      "target_hints": [
+        "Waits for the root + table slot to exist, then captures a baseline screenshot + bundle."
+      ]
+    },
+    {
       "id": "cookbook-effects-layer-basics-screenshots",
       "path": "tools/diag-scripts/cookbook/effects-layer-basics/cookbook-effects-layer-basics-screenshots.json",
       "required_capabilities": [

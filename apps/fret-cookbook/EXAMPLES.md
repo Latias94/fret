@@ -66,6 +66,12 @@ Example | Status | Run | Diag suite
 --- | --- | --- | ---
 [`virtual_list_basics.rs`](./examples/virtual_list_basics.rs) | Official | `cargo run -p fret-cookbook --example virtual_list_basics` | `cookbook-virtual-list-basics`
 
+## Data / tables (feature-gated)
+
+Example | Status | Feature | Run | Diag suite
+--- | --- | --- | --- | ---
+[`data_table_basics.rs`](./examples/data_table_basics.rs) | Lab | `cookbook-table` | `cargo run -p fret-cookbook --features cookbook-table --example data_table_basics` | `cookbook-data-table-basics`
+
 ## Theme + assets (feature-gated)
 
 Example | Status | Feature | Run | Diag suite
