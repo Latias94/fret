@@ -4049,14 +4049,12 @@ fn select_impl<H: UiHost>(
                                                                                                     )]
                                                                                                 },
                                                                                             );
-                                                                                            let row_children = match dir {
-                                                                                                crate::LayoutDirection::Ltr => {
-                                                                                                    vec![text, indicator_slot]
-                                                                                                }
-                                                                                                crate::LayoutDirection::Rtl => {
-                                                                                                    vec![indicator_slot, text]
-                                                                                                }
-                                                                                            };
+                                                                                            let (a, b) = crate::rtl::inline_start_end_pair(
+                                                                                                dir,
+                                                                                                text,
+                                                                                                indicator_slot,
+                                                                                            );
+                                                                                            let row_children = vec![a, b];
 
                                                                                             vec![cx.flex(
                                                                                                 FlexProps {
@@ -4564,13 +4562,11 @@ fn select_impl<H: UiHost>(
                                 )]
                             });
 
-                        match dir {
-                            crate::LayoutDirection::Ltr => vec![value_node, chevron],
-                            crate::LayoutDirection::Rtl => vec![chevron, value_node],
-                        }
-                    },
-                )]
-            };
+	                        let (a, b) = crate::rtl::inline_start_end_pair(dir, value_node, chevron);
+	                        vec![a, b]
+	                    },
+	                )]
+	            };
 
             (props, chrome, content)
         });

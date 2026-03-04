@@ -504,10 +504,8 @@ impl CalendarHijri {
                         title_props.layout.flex.basis = Length::Px(Px(0.0));
                         let title_el = cx.text_props(title_props);
 
-                        match direction {
-                            crate::LayoutDirection::Ltr => vec![prev, title_el, next],
-                            crate::LayoutDirection::Rtl => vec![next, title_el, prev],
-                        }
+                        let (prev, next) = crate::rtl::inline_start_end_pair(direction, prev, next);
+                        vec![prev, title_el, next]
                     },
                 );
 
