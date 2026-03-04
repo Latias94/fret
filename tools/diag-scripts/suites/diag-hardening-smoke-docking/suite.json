@@ -2,7 +2,10 @@
   "schema_version": 1,
   "kind": "diag_script_suite_manifest",
   "scripts": [
+    "tools/diag-scripts/docking-arbitration-demo-multiwindow-drag-tab-back-to-main.json",
     "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-incoming-open-inject-smoke.json",
-    "tools/diag-scripts/docking-arbitration-demo-multiwindow-drag-tab-back-to-main.json"
+    "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-tab-close-button-does-not-activate.json",
+    "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-tab-overflow-menu-close-row-1-does-not-activate.json",
+    "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-tab-overflow-menu-select-row-1-activates.json"
   ]
 }
