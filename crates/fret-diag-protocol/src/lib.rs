@@ -2024,6 +2024,11 @@ pub enum UiPredicateV1 {
     DockGraphSignatureContains {
         needle: String,
     },
+    /// True when the latest dock graph signature snapshot does **not** contain `needle` as a
+    /// substring.
+    DockGraphSignatureNotContains {
+        needle: String,
+    },
     /// True when the latest dock graph signature fingerprint matches `fingerprint64`.
     DockGraphSignatureFingerprint64Is {
         fingerprint64: u64,

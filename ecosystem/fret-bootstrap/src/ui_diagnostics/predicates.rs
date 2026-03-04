@@ -304,6 +304,11 @@ fn eval_predicate_without_semantics(
                 .and_then(|d| d.dock_graph_signature.as_ref())
                 .is_some_and(|s| s.signature.contains(needle)),
         ),
+        UiPredicateV1::DockGraphSignatureNotContains { needle } => Some(
+            docking
+                .and_then(|d| d.dock_graph_signature.as_ref())
+                .is_some_and(|s| !s.signature.contains(needle)),
+        ),
         UiPredicateV1::DockGraphSignatureFingerprint64Is { fingerprint64 } => Some(
             docking
                 .and_then(|d| d.dock_graph_signature.as_ref())
@@ -1383,6 +1388,9 @@ fn eval_predicate(
         UiPredicateV1::DockGraphSignatureContains { needle } => docking
             .and_then(|d| d.dock_graph_signature.as_ref())
             .is_some_and(|s| s.signature.contains(needle)),
+        UiPredicateV1::DockGraphSignatureNotContains { needle } => docking
+            .and_then(|d| d.dock_graph_signature.as_ref())
+            .is_some_and(|s| !s.signature.contains(needle)),
         UiPredicateV1::DockGraphSignatureFingerprint64Is { fingerprint64 } => docking
             .and_then(|d| d.dock_graph_signature.as_ref())
             .is_some_and(|s| s.fingerprint64 == *fingerprint64),
