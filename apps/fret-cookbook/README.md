@@ -100,7 +100,8 @@ required cookbook features for known Lab examples and print what it enabled.
 Notes:
 
 - The recommended golden path examples use the view runtime + typed actions.
-- Some advanced/legacy examples still use MVU for now; see
+- Cookbook examples intentionally avoid teaching legacy MVU. The legacy MVU inventory applies to
+  maintainer demos (non-onboarding):
   [docs/workstreams/action-first-authoring-fearless-refactor-v1/LEGACY_MVU_INVENTORY.md](../../docs/workstreams/action-first-authoring-fearless-refactor-v1/LEGACY_MVU_INVENTORY.md).
 
 ## Diagnostics (optional)

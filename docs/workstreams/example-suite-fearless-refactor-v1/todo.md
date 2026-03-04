@@ -45,10 +45,12 @@ Goal: create a lightweight, user-facing cookbook that does not pull “everythin
   - [x] Keep deps minimal; prefer `fret` + ecosystem surfaces (avoid backend crates unless the example is about that boundary).
   - [x] Add a Bevy-style index page for discoverability:
     - [`apps/fret-cookbook/EXAMPLES.md`](../../../apps/fret-cookbook/EXAMPLES.md)
-- [ ] Implement the “Stage 0–2” ladder examples as `examples/`:
+- [x] Implement the “Stage 0–2” ladder surfaces (cookbook + templates):
   - [x] `hello`
   - [x] `simple-todo`
-  - [ ] `todo` (or keep as template-only, but ensure the runnable “golden” stays obvious)
+  - [x] `todo` stays template-only (not a cookbook example); keep the golden path obvious via:
+    - `cargo run -p fretboard -- new todo --name my-todo`
+    - [`docs/examples/todo-app-golden-path.md`](../../examples/todo-app-golden-path.md)
 - [ ] Add 6–12 focused cookbook examples (App Track):
   - [x] overlays basics (`overlay_basics`)
   - [x] commands + keymap (`commands_keymap_basics`)

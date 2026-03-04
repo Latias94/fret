@@ -9,17 +9,21 @@ Design goals:
 - The default onboarding path stays short and stable (see [`apps/fret-cookbook/README.md`](./README.md)).
 - Higher-ceiling topics are feature-gated to keep cold compile time down.
 
-How to run an example:
+How to run an example (recommended):
 
 ```bash
 cargo run -p fretboard -- dev native --example <name>
 ```
 
-For feature-gated examples:
+How to run an example (direct):
 
 ```bash
-cargo run -p fret-cookbook --features <feature> --example <name>
+cargo run -p fret-cookbook --example <name>
 ```
+
+Note: some higher-ceiling examples are feature-gated when running directly. If you run via
+`fretboard dev native --example <name>`, `fretboard` will auto-enable required cookbook features
+for known Lab examples and print what it enabled.
 
 Diagnostics (optional, scripted smoke):
 
