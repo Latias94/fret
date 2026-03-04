@@ -531,6 +531,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut compare_eps_px: f32 = 0.5;
     let mut compare_ignore_bounds: bool = false;
     let mut compare_ignore_scene_fingerprint: bool = false;
+    let mut compare_footprint: bool = false;
     let mut launch: Option<Vec<String>> = None;
     let mut launch_env: Vec<(String, String)> = Vec::new();
     let mut fixed_frame_delta_ms: Option<u64> = None;
@@ -1944,6 +1945,10 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 compare_ignore_scene_fingerprint = true;
                 i += 1;
             }
+            "--compare-footprint" | "--footprint" => {
+                compare_footprint = true;
+                i += 1;
+            }
             "--json" => {
                 stats_json = true;
                 i += 1;
@@ -3074,6 +3079,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 compare_eps_px,
                 compare_ignore_bounds,
                 compare_ignore_scene_fingerprint,
+                compare_footprint,
                 stats_json,
             })
         }
