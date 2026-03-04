@@ -29,7 +29,7 @@ Long-term, ecosystem crates may move to a separate components repository.
 - **Web-native ergonomics, Rust-native architecture**: declarative element tree authoring with typed state (`Model<T>`) and typed messages/routing. *(declarative elements, state, routing)*
 - **Ecosystem included (batteries, but modular)**: shadcn/ui v4-aligned component taxonomy + recipes, icons, docking UI, markdown, tables, node graph, charts, and more. *(fret-ui-kit, fret-ui-shadcn, icons, docking)*
 - **Mechanism vs policy separation**: the core runtime stays mechanism-only; interaction policies and defaults live in ecosystem crates so apps can stay opinionated without locking the engine. *(runtime contracts, policy in components)*
-- **Rendering semantics you can rely on**: ordered scene ops, clipping/rounded corners/shadows as stable semantics (implementation can evolve without breaking UI behavior). *(ordered SceneOp, compositing groups (isolated opacity), ClipPath, bounded/budgeted offscreen passes, deterministic degradation, GPU conformance gates)*
+- **Rendering semantics you can rely on**: ordered scene ops, clipping/rounded corners/shadows as stable semantics (implementation can evolve without breaking UI behavior). *(ordered SceneOp, compositing groups (isolated opacity), ClipPath, bounded/budgeted offscreen passes, deterministic degradation)*
 - **Debuggable by design**: semantics-first inspection + shareable diagnostics artifacts so UI bugs are explainable, not “works on my machine”. *(semantics tree, inspector, shareable bundles)*
 - **Performance is observable**: built-in perf attribution surfaces worst-frame regressions and layout/measure hot spots without ad-hoc instrumentation. *(worst-frame triage, attribution, layout/measure)*
 - **Modular backends & integration-friendly**: portable core + pluggable platform/runner/render backends to fit both engine-hosted and editor-hosted GPU contexts; desktop-first with an explicit WebGPU/wasm path. *(pluggable backends, engine-hosted GPU, WebGPU/wasm)*
@@ -90,10 +90,10 @@ cargo run -p fretboard -- list cookbook-examples
 cargo run -p fretboard -- list web-demos
 ```
 
-Run a native demo shell (optional; heavier than cookbook):
+Run the UI gallery (optional; heavier than cookbook):
 
 ```bash
-cargo run -p fretboard -- dev native --bin components_gallery
+cargo run -p fret-ui-gallery
 ```
 
 Run a web demo (optional):
@@ -101,6 +101,13 @@ Run a web demo (optional):
 ```bash
 cargo run -p fretboard -- dev web --demo ui_gallery
 ```
+
+### 4) Optional: diagnostics walkthrough (advanced)
+
+Fret includes an optional diagnostics + scripted UI automation toolchain (`fretboard diag`).
+If you are new to it, start with the cookbook walkthrough:
+
+- [apps/fret-cookbook/README.md#diagnostics-optional](./apps/fret-cookbook/README.md#diagnostics-optional)
 
 ## Todo App API Taste
 

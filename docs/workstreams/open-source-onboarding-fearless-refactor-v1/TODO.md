@@ -5,7 +5,7 @@
 - [ ] Verify the “boring ladder” ordering still matches the fastest-to-understand path:
   templates → cookbook → gallery → labs.
 - [x] Ensure onboarding docs use GitHub-clickable links (avoid bare relative paths).
-- [ ] Audit `README.md` “Quick Start” commands to ensure they still run on `main`.
+- [x] Audit `README.md` “Quick Start” commands to ensure they still run on `main`.
 
 ## Cookbook curation
 
