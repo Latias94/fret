@@ -128,6 +128,10 @@ Recommendation:
 
 ## Suggested next migrations (low-risk, high-value)
 
+0) Migrate `apps/fret-examples/src/embedded_viewport_demo.rs` to the view runtime (keep a legacy opt-in copy).
+   - Why: this is a high-signal interop demo that exercises `viewport_input(...)` and a custom
+     `record_engine_frame(...)` hook (engine/offscreen pass recording) alongside the view runtime.
+
 1) Move or label `docs/examples/*` to only show view+actions golden path (no MVU in “golden path” docs).
 2) For cookbook: migrate 1–2 of the most frequently copied MVU examples to view+actions (optional),
    and explicitly label the remaining MVU pages as legacy.

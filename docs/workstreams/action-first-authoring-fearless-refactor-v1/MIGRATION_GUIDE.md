@@ -261,3 +261,27 @@ Migration steps:
 1) Standardize action ID naming conventions (namespace + `.v1` suffix).
 2) Expose action metadata to the GenUI inspector surfaces (optional v1).
 3) Keep GenUI guardrails: do not allow specs to dispatch arbitrary actions without catalog approval.
+
+---
+
+## 6) Embedded viewport interop (advanced)
+
+This applies to demos/apps that embed an `EmbeddedViewportSurface` and need a custom per-frame
+engine recording hook.
+
+Key constraint:
+
+- `UiAppDriver` supports a single `record_engine_frame(...)` hook.
+  - View runtime installs a hook today (v1) to enable the view cache on the `UiTree`.
+    - See: `ecosystem/fret/src/app_entry.rs` (`App::view::<V>()`)
+    - See: `ecosystem/fret/src/view.rs` (`view_record_engine_frame`)
+  - Embedded viewport interop installs a hook to record the engine/offscreen pass.
+    - See: `ecosystem/fret/src/interop/embedded_viewport.rs` (`EmbeddedViewportUiAppDriverExt`)
+
+Recommended migration pattern:
+
+1) Keep `viewport_input(handle_viewport_input)` installed (embedded viewport input forwarding).
+2) Install a *composed* `record_engine_frame(...)` that performs both responsibilities:
+   - ensure view-cache enablement (view runtime v1 behavior), and
+   - record the embedded viewport engine pass.
+3) Keep the legacy MVU demo as an opt-in copy until the new demo becomes stable evidence.

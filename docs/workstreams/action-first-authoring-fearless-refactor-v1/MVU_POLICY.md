@@ -84,3 +84,21 @@ Status (as of 2026-03-04):
 
 - MVU surfaces are compile-time deprecated.
 - MVU is feature-gated behind `legacy-mvu` to keep downstream opt-in explicit.
+
+## Removal criteria (future, beyond M8)
+
+This workstream does not commit to a date for MVU removal. Instead, we only consider removal (or
+moving MVU into an external compat crate) once these conditions are met:
+
+1. **In-tree inventory is empty (or intentionally frozen)**:
+   - `LEGACY_MVU_INVENTORY.md` has no remaining MVU demos *or* the remaining demos are explicitly
+     kept as legacy-only fixtures with a clear owner.
+2. **A replacement story exists for remaining MVU-only use cases**:
+   - payload actions (or another action-first parameterization strategy) covers the practical cases
+     that previously required MVU routers.
+3. **Gates protect the golden path**:
+   - `diag_gate_action_first_authoring_v1.ps1` (and the no-MVU-in-cookbook gate) remain green across
+     platforms we actively support.
+4. **Downstream communication window exists**:
+   - if this repo is consumed externally, MVU removal should be announced and staged (warnings →
+     feature gating → removal), not as a silent breaking change.
