@@ -364,4 +364,3 @@ impl View for HelloCounterView {
         .into()
     }
 }
-
