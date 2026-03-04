@@ -170,7 +170,8 @@ fn view(
             ..Default::default()
         },
         |cx| {
-            images.images.iter().map(|&image| {
+            let mut children = Vec::with_capacity(images.images.len());
+            for &image in images.images.iter() {
                 let mut props = ImageProps::new(image);
                 props.layout = LayoutStyle {
                     size: SizeStyle {
@@ -180,8 +181,9 @@ fn view(
                     },
                     ..Default::default()
                 };
-                cx.image_props(props)
-            })
+                children.push(cx.image_props(props));
+            }
+            children
         },
     );
 
