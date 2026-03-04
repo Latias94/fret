@@ -481,7 +481,12 @@ pub(super) fn paint_row(
                                 .us_rich_materialize
                                 .saturating_add(started.elapsed().as_micros() as u64);
                         }
-                        st.row_rich_cache.insert(
+                        let entry_line_bytes = line.len() as u64;
+                        let entry_row_spans_len = row_spans.len() as u64;
+                        let entry_syntax_spans_len = spans.len() as u64;
+                        let entry_rich_spans_len = rich.spans.len() as u64;
+
+                        if let Some((old, _)) = st.row_rich_cache.insert(
                             row,
                             (
                                 RowRichCacheEntry {
@@ -495,7 +500,32 @@ pub(super) fn paint_row(
                                 },
                                 tick,
                             ),
-                        );
+                        ) {
+                            st.row_rich_cache_line_bytes_estimate_total = st
+                                .row_rich_cache_line_bytes_estimate_total
+                                .saturating_sub(old.line.len() as u64);
+                            st.row_rich_cache_row_spans_len_total = st
+                                .row_rich_cache_row_spans_len_total
+                                .saturating_sub(old.row_spans.len() as u64);
+                            st.row_rich_cache_syntax_spans_len_total = st
+                                .row_rich_cache_syntax_spans_len_total
+                                .saturating_sub(old.syntax_spans.len() as u64);
+                            st.row_rich_cache_rich_spans_len_total = st
+                                .row_rich_cache_rich_spans_len_total
+                                .saturating_sub(old.rich.spans.len() as u64);
+                        }
+                        st.row_rich_cache_line_bytes_estimate_total = st
+                            .row_rich_cache_line_bytes_estimate_total
+                            .saturating_add(entry_line_bytes);
+                        st.row_rich_cache_row_spans_len_total = st
+                            .row_rich_cache_row_spans_len_total
+                            .saturating_add(entry_row_spans_len);
+                        st.row_rich_cache_syntax_spans_len_total = st
+                            .row_rich_cache_syntax_spans_len_total
+                            .saturating_add(entry_syntax_spans_len);
+                        st.row_rich_cache_rich_spans_len_total = st
+                            .row_rich_cache_rich_spans_len_total
+                            .saturating_add(entry_rich_spans_len);
                         st.row_rich_cache_queue.push_back((row, tick));
 
                         while st.row_rich_cache.len() > rich_cache_max_entries {
@@ -508,7 +538,20 @@ pub(super) fn paint_row(
                                 .get(&victim)
                                 .is_some_and(|(_, last_used)| *last_used == victim_tick);
                             if remove {
-                                st.row_rich_cache.remove(&victim);
+                                if let Some((old, _)) = st.row_rich_cache.remove(&victim) {
+                                    st.row_rich_cache_line_bytes_estimate_total = st
+                                        .row_rich_cache_line_bytes_estimate_total
+                                        .saturating_sub(old.line.len() as u64);
+                                    st.row_rich_cache_row_spans_len_total = st
+                                        .row_rich_cache_row_spans_len_total
+                                        .saturating_sub(old.row_spans.len() as u64);
+                                    st.row_rich_cache_syntax_spans_len_total = st
+                                        .row_rich_cache_syntax_spans_len_total
+                                        .saturating_sub(old.syntax_spans.len() as u64);
+                                    st.row_rich_cache_rich_spans_len_total = st
+                                        .row_rich_cache_rich_spans_len_total
+                                        .saturating_sub(old.rich.spans.len() as u64);
+                                }
                                 st.cache_stats.row_rich_evictions =
                                     st.cache_stats.row_rich_evictions.saturating_add(1);
                             }
@@ -1024,6 +1067,7 @@ pub(super) fn paint_row(
         st.row_geom_cache_tick = 0;
         st.row_geom_cache.clear();
         st.row_geom_cache_queue.clear();
+        st.row_geom_cache_caret_stops_len_total = 0;
     }
 
     st.row_geom_cache_tick = st.row_geom_cache_tick.saturating_add(1);
@@ -1031,7 +1075,15 @@ pub(super) fn paint_row(
     let has_row_geom = fresh_geom.is_some() || st.row_geom_cache.contains_key(&row);
     if has_row_geom {
         if let Some(geom) = fresh_geom {
-            st.row_geom_cache.insert(row, (geom, tick));
+            let caret_stops_len = geom.caret_stops.len() as u64;
+            if let Some((old, _)) = st.row_geom_cache.insert(row, (geom, tick)) {
+                st.row_geom_cache_caret_stops_len_total = st
+                    .row_geom_cache_caret_stops_len_total
+                    .saturating_sub(old.caret_stops.len() as u64);
+            }
+            st.row_geom_cache_caret_stops_len_total = st
+                .row_geom_cache_caret_stops_len_total
+                .saturating_add(caret_stops_len);
         } else if let Some((_, last_used)) = st.row_geom_cache.get_mut(&row) {
             *last_used = tick;
         }
@@ -1046,7 +1098,11 @@ pub(super) fn paint_row(
                 .get(&victim)
                 .is_some_and(|(_, last_used)| *last_used == victim_tick);
             if remove {
-                st.row_geom_cache.remove(&victim);
+                if let Some((old, _)) = st.row_geom_cache.remove(&victim) {
+                    st.row_geom_cache_caret_stops_len_total = st
+                        .row_geom_cache_caret_stops_len_total
+                        .saturating_sub(old.caret_stops.len() as u64);
+                }
             }
         }
     }
@@ -1105,12 +1161,18 @@ pub(super) fn cached_row_text_with_range(
         st.row_text_cache_tick = 0;
         st.row_text_cache.clear();
         st.row_text_cache_queue.clear();
+        st.row_text_cache_text_bytes_estimate_total = 0;
+        st.row_text_cache_row_spans_len_total = 0;
         st.cache_stats.row_text_resets = st.cache_stats.row_text_resets.saturating_add(1);
         #[cfg(feature = "syntax")]
         {
             st.row_rich_cache_tick = 0;
             st.row_rich_cache.clear();
             st.row_rich_cache_queue.clear();
+            st.row_rich_cache_line_bytes_estimate_total = 0;
+            st.row_rich_cache_row_spans_len_total = 0;
+            st.row_rich_cache_syntax_spans_len_total = 0;
+            st.row_rich_cache_rich_spans_len_total = 0;
             st.cache_stats.row_rich_resets = st.cache_stats.row_rich_resets.saturating_add(1);
         }
     }
@@ -1148,7 +1210,10 @@ pub(super) fn cached_row_text_with_range(
     let fold_map = (!spans.is_empty()).then_some(super::geom::RowFoldMap::new(spans));
     let text = materialized.text;
 
-    st.row_text_cache.insert(
+    let entry_text_bytes = text.len() as u64;
+    let entry_row_spans_len = row_spans.len() as u64;
+
+    if let Some((old, _)) = st.row_text_cache.insert(
         row,
         (
             RowTextCacheEntry {
@@ -1160,7 +1225,20 @@ pub(super) fn cached_row_text_with_range(
             },
             tick,
         ),
-    );
+    ) {
+        st.row_text_cache_text_bytes_estimate_total = st
+            .row_text_cache_text_bytes_estimate_total
+            .saturating_sub(old.text.len() as u64);
+        st.row_text_cache_row_spans_len_total = st
+            .row_text_cache_row_spans_len_total
+            .saturating_sub(old.row_spans.len() as u64);
+    }
+    st.row_text_cache_text_bytes_estimate_total = st
+        .row_text_cache_text_bytes_estimate_total
+        .saturating_add(entry_text_bytes);
+    st.row_text_cache_row_spans_len_total = st
+        .row_text_cache_row_spans_len_total
+        .saturating_add(entry_row_spans_len);
     st.row_text_cache_queue.push_back((row, tick));
 
     while st.row_text_cache.len() > max_entries {
@@ -1172,7 +1250,14 @@ pub(super) fn cached_row_text_with_range(
             .get(&victim)
             .is_some_and(|(_, last_used)| *last_used == victim_tick);
         if remove {
-            st.row_text_cache.remove(&victim);
+            if let Some((old, _)) = st.row_text_cache.remove(&victim) {
+                st.row_text_cache_text_bytes_estimate_total = st
+                    .row_text_cache_text_bytes_estimate_total
+                    .saturating_sub(old.text.len() as u64);
+                st.row_text_cache_row_spans_len_total = st
+                    .row_text_cache_row_spans_len_total
+                    .saturating_sub(old.row_spans.len() as u64);
+            }
             st.cache_stats.row_text_evictions = st.cache_stats.row_text_evictions.saturating_add(1);
         }
     }
@@ -1481,10 +1566,15 @@ pub(super) fn cached_row_syntax_spans(
         st.syntax_row_cache_tick = 0;
         st.syntax_row_cache.clear();
         st.syntax_row_cache_queue.clear();
+        st.syntax_row_cache_spans_len_total = 0;
         st.cache_stats.syntax_resets = st.cache_stats.syntax_resets.saturating_add(1);
         st.row_rich_cache_tick = 0;
         st.row_rich_cache.clear();
         st.row_rich_cache_queue.clear();
+        st.row_rich_cache_line_bytes_estimate_total = 0;
+        st.row_rich_cache_row_spans_len_total = 0;
+        st.row_rich_cache_syntax_spans_len_total = 0;
+        st.row_rich_cache_rich_spans_len_total = 0;
         st.cache_stats.row_rich_resets = st.cache_stats.row_rich_resets.saturating_add(1);
     }
 
@@ -1620,7 +1710,15 @@ pub(super) fn populate_syntax_row_cache_for_chunk(
         }
 
         let spans: Arc<[SyntaxSpan]> = Arc::from(merged);
-        st.syntax_row_cache.insert(row, (Arc::clone(&spans), tick));
+        let spans_len = spans.len() as u64;
+        if let Some((old, _)) = st.syntax_row_cache.insert(row, (Arc::clone(&spans), tick)) {
+            st.syntax_row_cache_spans_len_total = st
+                .syntax_row_cache_spans_len_total
+                .saturating_sub(old.len() as u64);
+        }
+        st.syntax_row_cache_spans_len_total = st
+            .syntax_row_cache_spans_len_total
+            .saturating_add(spans_len);
         st.syntax_row_cache_queue.push_back((row, tick));
 
         while st.syntax_row_cache.len() > max_entries {
@@ -1632,7 +1730,11 @@ pub(super) fn populate_syntax_row_cache_for_chunk(
                 .get(&victim)
                 .is_some_and(|(_, last_used)| *last_used == victim_tick);
             if remove {
-                st.syntax_row_cache.remove(&victim);
+                if let Some((old, _)) = st.syntax_row_cache.remove(&victim) {
+                    st.syntax_row_cache_spans_len_total = st
+                        .syntax_row_cache_spans_len_total
+                        .saturating_sub(old.len() as u64);
+                }
                 st.cache_stats.syntax_evictions = st.cache_stats.syntax_evictions.saturating_add(1);
             }
         }

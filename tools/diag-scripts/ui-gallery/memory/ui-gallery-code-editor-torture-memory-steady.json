@@ -4,6 +4,13 @@
     "name": "ui-gallery: code-editor torture memory steady",
     "tags": ["ui-gallery", "code-editor", "memory", "steady"],
     "required_capabilities": ["diag.script_v2"],
+    "env_defaults": {
+      "FRET_DIAG_DEBUG_SNAPSHOT": 0,
+      "FRET_DIAG_SEMANTICS_TEST_IDS_ONLY": 1,
+      "FRET_DIAG_MAX_SEMANTICS_NODES": 8000,
+      "FRET_DIAG_WGPU_ALLOCATOR_REPORT": 1,
+      "FRET_DIAG_WGPU_ALLOCATOR_REPORT_EVERY_N_FRAMES": 60
+    },
     "target_hints": [
       "Navigates to the code editor torture page, scrolls to grow caches, waits for steady state, then captures a bundle."
     ]
@@ -63,6 +70,6 @@
     { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-code-editor-torture-viewport" }, "delta_y": 720.0 },
 
     { "type": "wait_frames", "n": 600 },
-    { "type": "capture_bundle", "label": "ui-gallery-code-editor-torture-memory-steady" }
+    { "type": "capture_bundle", "label": "ui-gallery-code-editor-torture-memory-steady", "max_snapshots": 1 }
   ]
 }

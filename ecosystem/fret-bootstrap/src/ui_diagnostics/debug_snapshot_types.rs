@@ -1,4 +1,4 @@
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct UiTreeDebugSnapshotV1 {
     pub stats: UiFrameStatsV1,
     #[serde(default)]

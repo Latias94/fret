@@ -66,6 +66,30 @@ pub(super) struct RendererGpuBudgetsGateResult {
     pub(super) failures: usize,
 }
 
+pub(super) struct CodeEditorMemoryThresholds {
+    pub(super) max_code_editor_buffer_len_bytes: Option<u64>,
+    pub(super) max_code_editor_undo_text_bytes_estimate_total: Option<u64>,
+    pub(super) max_code_editor_row_text_cache_entries: Option<u64>,
+    pub(super) max_code_editor_row_rich_cache_entries: Option<u64>,
+}
+
+impl CodeEditorMemoryThresholds {
+    pub(super) fn any(&self) -> bool {
+        self.max_code_editor_buffer_len_bytes.is_some()
+            || self
+                .max_code_editor_undo_text_bytes_estimate_total
+                .is_some()
+            || self.max_code_editor_row_text_cache_entries.is_some()
+            || self.max_code_editor_row_rich_cache_entries.is_some()
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(super) struct CodeEditorMemoryGateResult {
+    pub(super) evidence_path: PathBuf,
+    pub(super) failures: usize,
+}
+
 pub(super) fn check_wgpu_metal_current_allocated_size_threshold(
     out_dir: &Path,
     bundle_path: Option<&Path>,
@@ -472,6 +496,191 @@ pub(super) fn check_render_text_atlas_bytes_live_estimate_total_threshold(
         .unwrap_or(0);
 
     Ok(RenderTextAtlasBytesGateResult {
+        evidence_path: out_path,
+        failures,
+    })
+}
+
+pub(super) fn check_code_editor_memory_thresholds(
+    out_dir: &Path,
+    bundle_path: Option<&Path>,
+    thresholds: &CodeEditorMemoryThresholds,
+) -> Result<CodeEditorMemoryGateResult, String> {
+    let out_path = out_dir.join("check.code_editor_memory.json");
+
+    let v = bundle_path.and_then(read_json_value);
+    let bundle_present = v.is_some();
+
+    let (tick_id, frame_id, mem, cache_sizes) = if let Some(v) = v.as_ref() {
+        let windows = v.get("windows").and_then(|v| v.as_array());
+        let first_window = windows.and_then(|w| w.first());
+        let snapshots = first_window
+            .and_then(|w| w.get("snapshots"))
+            .and_then(|v| v.as_array());
+        let last_snapshot = snapshots.and_then(|s| s.last());
+
+        let tick_id = last_snapshot
+            .and_then(|s| s.get("tick_id"))
+            .and_then(|v| v.as_u64());
+        let frame_id = last_snapshot
+            .and_then(|s| s.get("frame_id"))
+            .and_then(|v| v.as_u64());
+
+        let torture = last_snapshot
+            .and_then(|s| s.get("app_snapshot"))
+            .and_then(|v| v.get("code_editor"))
+            .and_then(|v| v.get("torture"));
+
+        let mem = torture
+            .and_then(|v| v.get("memory"))
+            .and_then(|v| v.as_object());
+        let cache_sizes = torture
+            .and_then(|v| v.get("cache_sizes"))
+            .and_then(|v| v.as_object());
+
+        (tick_id, frame_id, mem, cache_sizes)
+    } else {
+        (None, None, None, None)
+    };
+
+    let missing_reason = if bundle_present {
+        "missing_field"
+    } else {
+        "missing_bundle"
+    };
+
+    let buffer_len_bytes = mem
+        .as_ref()
+        .and_then(|o| o.get("buffer_len_bytes"))
+        .and_then(|v| v.as_u64());
+    let undo_text_bytes_estimate_total = mem
+        .as_ref()
+        .and_then(|o| o.get("undo_text_bytes_estimate_total"))
+        .and_then(|v| v.as_u64());
+    let row_text_cache_entries = cache_sizes
+        .as_ref()
+        .and_then(|o| o.get("row_text_cache_entries"))
+        .and_then(|v| v.as_u64());
+    let row_rich_cache_entries = cache_sizes
+        .as_ref()
+        .and_then(|o| o.get("row_rich_cache_entries"))
+        .and_then(|v| v.as_u64());
+
+    let mut failures: Vec<serde_json::Value> = Vec::new();
+
+    if let Some(thr) = thresholds.max_code_editor_buffer_len_bytes {
+        match buffer_len_bytes {
+            Some(observed) if observed > thr => failures.push(serde_json::json!({
+                "kind": "code_editor_buffer_len_bytes",
+                "threshold": thr,
+                "observed": observed,
+                "reason": "exceeded",
+            })),
+            Some(_) => {}
+            None => failures.push(serde_json::json!({
+                "kind": "code_editor_buffer_len_bytes",
+                "threshold": thr,
+                "observed": serde_json::Value::Null,
+                "reason": missing_reason,
+                "field": "windows[0].snapshots[-1].app_snapshot.code_editor.torture.memory.buffer_len_bytes",
+            })),
+        }
+    }
+
+    if let Some(thr) = thresholds.max_code_editor_undo_text_bytes_estimate_total {
+        match undo_text_bytes_estimate_total {
+            Some(observed) if observed > thr => failures.push(serde_json::json!({
+                "kind": "code_editor_undo_text_bytes_estimate_total",
+                "threshold": thr,
+                "observed": observed,
+                "reason": "exceeded",
+            })),
+            Some(_) => {}
+            None => failures.push(serde_json::json!({
+                "kind": "code_editor_undo_text_bytes_estimate_total",
+                "threshold": thr,
+                "observed": serde_json::Value::Null,
+                "reason": missing_reason,
+                "field": "windows[0].snapshots[-1].app_snapshot.code_editor.torture.memory.undo_text_bytes_estimate_total",
+            })),
+        }
+    }
+
+    if let Some(thr) = thresholds.max_code_editor_row_text_cache_entries {
+        match row_text_cache_entries {
+            Some(observed) if observed > thr => failures.push(serde_json::json!({
+                "kind": "code_editor_row_text_cache_entries",
+                "threshold": thr,
+                "observed": observed,
+                "reason": "exceeded",
+            })),
+            Some(_) => {}
+            None => failures.push(serde_json::json!({
+                "kind": "code_editor_row_text_cache_entries",
+                "threshold": thr,
+                "observed": serde_json::Value::Null,
+                "reason": missing_reason,
+                "field": "windows[0].snapshots[-1].app_snapshot.code_editor.torture.cache_sizes.row_text_cache_entries",
+            })),
+        }
+    }
+
+    if let Some(thr) = thresholds.max_code_editor_row_rich_cache_entries {
+        match row_rich_cache_entries {
+            Some(observed) if observed > thr => failures.push(serde_json::json!({
+                "kind": "code_editor_row_rich_cache_entries",
+                "threshold": thr,
+                "observed": observed,
+                "reason": "exceeded",
+            })),
+            Some(_) => {}
+            None => failures.push(serde_json::json!({
+                "kind": "code_editor_row_rich_cache_entries",
+                "threshold": thr,
+                "observed": serde_json::Value::Null,
+                "reason": missing_reason,
+                "field": "windows[0].snapshots[-1].app_snapshot.code_editor.torture.cache_sizes.row_rich_cache_entries",
+            })),
+        }
+    }
+
+    let payload = serde_json::json!({
+        "schema_version": 1,
+        "generated_unix_ms": now_unix_ms(),
+        "kind": "code_editor_memory_thresholds",
+        "out_dir": out_dir.display().to_string(),
+        "bundle_file": bundle_path
+            .and_then(|p| p.file_name())
+            .and_then(|s| s.to_str())
+            .unwrap_or("<unknown>"),
+        "thresholds": {
+            "max_code_editor_buffer_len_bytes": thresholds.max_code_editor_buffer_len_bytes,
+            "max_code_editor_undo_text_bytes_estimate_total": thresholds.max_code_editor_undo_text_bytes_estimate_total,
+            "max_code_editor_row_text_cache_entries": thresholds.max_code_editor_row_text_cache_entries,
+            "max_code_editor_row_rich_cache_entries": thresholds.max_code_editor_row_rich_cache_entries,
+        },
+        "observed": {
+            "bundle_present": bundle_present,
+            "tick_id": tick_id,
+            "frame_id": frame_id,
+            "memory_present": mem.is_some(),
+            "cache_sizes_present": cache_sizes.is_some(),
+            "code_editor_buffer_len_bytes": buffer_len_bytes,
+            "code_editor_undo_text_bytes_estimate_total": undo_text_bytes_estimate_total,
+            "code_editor_row_text_cache_entries": row_text_cache_entries,
+            "code_editor_row_rich_cache_entries": row_rich_cache_entries,
+        },
+        "failures": failures,
+    });
+    let _ = write_json_value(&out_path, &payload);
+
+    let failures = payload
+        .get("failures")
+        .and_then(|v| v.as_array())
+        .map(|a| a.len())
+        .unwrap_or(0);
+
+    Ok(CodeEditorMemoryGateResult {
         evidence_path: out_path,
         failures,
     })

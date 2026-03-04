@@ -203,6 +203,16 @@ pub struct ParleyShaper {
     base_line_metrics_cache: HashMap<u64, (f32, f32)>,
 }
 
+#[derive(Debug, Default, Clone, Copy)]
+pub struct ParleyShaperFontDbDiagnosticsSnapshot {
+    pub registered_font_blobs_count: u64,
+    pub registered_font_blobs_total_bytes: u64,
+    pub family_id_cache_entries: u64,
+    pub baseline_metrics_cache_entries: u64,
+    pub all_font_names_cache_present: bool,
+    pub all_font_catalog_entries_cache_present: bool,
+}
+
 #[derive(Debug, Clone)]
 struct RegisteredFontBlob {
     hash: u64,
@@ -252,6 +262,19 @@ impl Default for ParleyShaper {
             all_font_names_cache: None,
             all_font_catalog_entries_cache: None,
             base_line_metrics_cache: HashMap::new(),
+        }
+    }
+}
+
+impl ParleyShaper {
+    pub fn font_db_diagnostics_snapshot(&self) -> ParleyShaperFontDbDiagnosticsSnapshot {
+        ParleyShaperFontDbDiagnosticsSnapshot {
+            registered_font_blobs_count: self.registered_font_blobs.len() as u64,
+            registered_font_blobs_total_bytes: self.registered_font_blobs_total_bytes as u64,
+            family_id_cache_entries: self.family_id_cache_lower.len() as u64,
+            baseline_metrics_cache_entries: self.base_line_metrics_cache.len() as u64,
+            all_font_names_cache_present: self.all_font_names_cache.is_some(),
+            all_font_catalog_entries_cache_present: self.all_font_catalog_entries_cache.is_some(),
         }
     }
 }

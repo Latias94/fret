@@ -109,9 +109,10 @@ use compare::{
 };
 use devtools::DevtoolsOps;
 use gates::{
-    RedrawHitchesGateResult, RenderTextAtlasBytesGateResult, RendererGpuBudgetThresholds,
-    RendererGpuBudgetsGateResult, ResourceFootprintGateResult, ResourceFootprintThresholds,
-    WgpuMetalAllocatedSizeGateResult, check_redraw_hitches_max_total_ms,
+    CodeEditorMemoryGateResult, CodeEditorMemoryThresholds, RedrawHitchesGateResult,
+    RenderTextAtlasBytesGateResult, RendererGpuBudgetThresholds, RendererGpuBudgetsGateResult,
+    ResourceFootprintGateResult, ResourceFootprintThresholds, WgpuMetalAllocatedSizeGateResult,
+    check_code_editor_memory_thresholds, check_redraw_hitches_max_total_ms,
     check_render_text_atlas_bytes_live_estimate_total_threshold,
     check_renderer_gpu_budget_thresholds, check_resource_footprint_thresholds,
     check_wgpu_metal_current_allocated_size_threshold,
@@ -424,6 +425,10 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut max_renderer_intermediate_peak_in_use_bytes: Option<u64> = None;
     let mut max_wgpu_metal_current_allocated_size_bytes: Option<u64> = None;
     let mut max_render_text_atlas_bytes_live_estimate_total: Option<u64> = None;
+    let mut max_code_editor_buffer_len_bytes: Option<u64> = None;
+    let mut max_code_editor_undo_text_bytes_estimate_total: Option<u64> = None;
+    let mut max_code_editor_row_text_cache_entries: Option<u64> = None;
+    let mut max_code_editor_row_rich_cache_entries: Option<u64> = None;
     let mut max_cpu_avg_percent_total_cores: Option<f64> = None;
     let mut perf_baseline_path: Option<PathBuf> = None;
     let mut perf_baseline_out: Option<PathBuf> = None;
@@ -1310,6 +1315,55 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         "invalid value for --max-render-text-atlas-bytes-live-estimate-total"
                             .to_string()
                     })?);
+                i += 1;
+            }
+            "--max-code-editor-buffer-len-bytes" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --max-code-editor-buffer-len-bytes".to_string());
+                };
+                max_code_editor_buffer_len_bytes = Some(v.parse::<u64>().map_err(|_| {
+                    "invalid value for --max-code-editor-buffer-len-bytes".to_string()
+                })?);
+                i += 1;
+            }
+            "--max-code-editor-undo-text-bytes-estimate-total" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err(
+                        "missing value for --max-code-editor-undo-text-bytes-estimate-total"
+                            .to_string(),
+                    );
+                };
+                max_code_editor_undo_text_bytes_estimate_total =
+                    Some(v.parse::<u64>().map_err(|_| {
+                        "invalid value for --max-code-editor-undo-text-bytes-estimate-total"
+                            .to_string()
+                    })?);
+                i += 1;
+            }
+            "--max-code-editor-row-text-cache-entries" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err(
+                        "missing value for --max-code-editor-row-text-cache-entries".to_string()
+                    );
+                };
+                max_code_editor_row_text_cache_entries = Some(v.parse::<u64>().map_err(|_| {
+                    "invalid value for --max-code-editor-row-text-cache-entries".to_string()
+                })?);
+                i += 1;
+            }
+            "--max-code-editor-row-rich-cache-entries" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err(
+                        "missing value for --max-code-editor-row-rich-cache-entries".to_string()
+                    );
+                };
+                max_code_editor_row_rich_cache_entries = Some(v.parse::<u64>().map_err(|_| {
+                    "invalid value for --max-code-editor-row-rich-cache-entries".to_string()
+                })?);
                 i += 1;
             }
             "--max-cpu-avg-percent-total-cores" => {
@@ -2285,6 +2339,13 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
         max_renderer_intermediate_peak_in_use_bytes,
     };
 
+    let code_editor_memory_thresholds = CodeEditorMemoryThresholds {
+        max_code_editor_buffer_len_bytes,
+        max_code_editor_undo_text_bytes_estimate_total,
+        max_code_editor_row_text_cache_entries,
+        max_code_editor_row_rich_cache_entries,
+    };
+
     if sub != "repro" && (with_tracy || with_renderdoc || renderdoc_after_frames.is_some()) {
         return Err(
             "--with tracy/renderdoc and --renderdoc-after-frames are only supported with `diag repro` for now"
@@ -2314,6 +2375,12 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     if sub != "repro" && max_render_text_atlas_bytes_live_estimate_total.is_some() {
         return Err(
             "--max-render-text-atlas-bytes-live-estimate-total is only supported with `diag repro` for now"
+                .to_string(),
+        );
+    }
+    if sub != "repro" && code_editor_memory_thresholds.any() {
+        return Err(
+            "--max-code-editor-buffer-len-bytes/--max-code-editor-undo-text-bytes-estimate-total/--max-code-editor-row-text-cache-entries/--max-code-editor-row-rich-cache-entries are only supported with `diag repro` for now"
                 .to_string(),
         );
     }
@@ -2953,6 +3020,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 renderdoc_no_outputs_png,
                 resource_footprint_thresholds,
                 renderer_gpu_budget_thresholds,
+                code_editor_memory_thresholds,
                 max_wgpu_metal_current_allocated_size_bytes,
                 max_render_text_atlas_bytes_live_estimate_total,
                 check_redraw_hitches_max_total_ms_threshold,

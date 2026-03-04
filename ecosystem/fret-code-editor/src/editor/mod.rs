@@ -527,6 +527,77 @@ pub struct CodeEditorCacheStats {
     pub syntax_resets: u64,
 }
 
+/// Best-effort cache size estimates for diagnostics bundles.
+///
+/// These are intentionally approximate and are used to correlate editor-level cache growth with
+/// process-level memory footprint signals (e.g. `vmmap` buckets on macOS).
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub struct CodeEditorCacheSizeSnapshotV1 {
+    pub schema_version: u32,
+
+    pub row_text_cache_entries: u64,
+    pub row_text_cache_text_bytes_estimate_total: u64,
+    pub row_text_cache_row_spans_len_total: u64,
+
+    pub row_geom_cache_entries: u64,
+    pub row_geom_cache_caret_stops_len_total: u64,
+
+    pub syntax_row_cache_entries: u64,
+    pub syntax_row_cache_spans_len_total: u64,
+
+    pub row_rich_cache_entries: u64,
+    pub row_rich_cache_line_bytes_estimate_total: u64,
+    pub row_rich_cache_row_spans_len_total: u64,
+    pub row_rich_cache_syntax_spans_len_total: u64,
+    pub row_rich_cache_rich_spans_len_total: u64,
+
+    pub selection_rect_scratch_capacity: u64,
+}
+
+/// Best-effort memory attribution snapshot for editor-owned state.
+///
+/// This is intended to answer "what is the editor keeping alive?" rather than providing exact
+/// allocator-level sizes.
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub struct CodeEditorMemorySnapshotV1 {
+    pub schema_version: u32,
+
+    pub buffer_revision: u64,
+    pub buffer_len_bytes: u64,
+    pub buffer_line_count: u64,
+
+    pub undo_limit: u64,
+    pub undo_len: u64,
+    pub redo_len: u64,
+
+    /// Approximate UTF-8 bytes stored inside undo records (includes both forward and inverse
+    /// `TextBufferTx` payloads).
+    pub undo_text_bytes_estimate_total: u64,
+    pub redo_text_bytes_estimate_total: u64,
+
+    pub undo_edit_count_total: u64,
+    pub redo_edit_count_total: u64,
+}
+
+fn estimate_edit_text_bytes(edit: &Edit) -> u64 {
+    match edit {
+        Edit::Insert { text, .. } | Edit::Replace { text, .. } => text.len() as u64,
+        Edit::Delete { .. } => 0,
+    }
+}
+
+fn estimate_text_buffer_tx_text_bytes_and_edits(tx: &TextBufferTx) -> (u64, u64) {
+    let mut bytes = 0u64;
+    let mut edits = 0u64;
+
+    for edit in tx.edits.iter().chain(tx.inverse_edits.iter()) {
+        bytes = bytes.saturating_add(estimate_edit_text_bytes(edit));
+        edits = edits.saturating_add(1);
+    }
+
+    (bytes, edits)
+}
+
 impl CodeEditorCacheStats {
     pub fn row_rich_get_calls(&self) -> u64 {
         #[cfg(feature = "syntax")]
@@ -662,6 +733,8 @@ struct CodeEditorState {
     row_text_cache_tick: u64,
     row_text_cache: HashMap<usize, (RowTextCacheEntry, u64)>,
     row_text_cache_queue: VecDeque<(usize, u64)>,
+    row_text_cache_text_bytes_estimate_total: u64,
+    row_text_cache_row_spans_len_total: u64,
     row_geom_cache_rev: fret_code_editor_buffer::Revision,
     row_geom_cache_wrap_cols: Option<usize>,
     row_geom_cache_folds_epoch: u64,
@@ -670,6 +743,7 @@ struct CodeEditorState {
     row_geom_cache_tick: u64,
     row_geom_cache: HashMap<usize, (RowGeom, u64)>,
     row_geom_cache_queue: VecDeque<(usize, u64)>,
+    row_geom_cache_caret_stops_len_total: u64,
     ime_surrounding_text_cache: Option<ImeSurroundingTextCache>,
     selection_rect_scratch: Vec<Rect>,
     baseline_measure_cache: Option<BaselineMeasureCache>,
@@ -689,11 +763,37 @@ struct CodeEditorState {
     #[cfg(feature = "syntax")]
     syntax_row_cache_queue: VecDeque<(usize, u64)>,
     #[cfg(feature = "syntax")]
+    syntax_row_cache_spans_len_total: u64,
+    #[cfg(feature = "syntax")]
     row_rich_cache_tick: u64,
     #[cfg(feature = "syntax")]
     row_rich_cache: HashMap<usize, (RowRichCacheEntry, u64)>,
     #[cfg(feature = "syntax")]
     row_rich_cache_queue: VecDeque<(usize, u64)>,
+    #[cfg(feature = "syntax")]
+    row_rich_cache_line_bytes_estimate_total: u64,
+    #[cfg(feature = "syntax")]
+    row_rich_cache_row_spans_len_total: u64,
+    #[cfg(feature = "syntax")]
+    row_rich_cache_syntax_spans_len_total: u64,
+    #[cfg(feature = "syntax")]
+    row_rich_cache_rich_spans_len_total: u64,
+
+    diag_contains_str_cache: Option<DiagContainsStrCacheEntry>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct DiagContainsStrCacheEntry {
+    rev: fret_code_editor_buffer::Revision,
+    needle_hash: u64,
+    value: bool,
+}
+
+fn diag_hash_bytes(bytes: &[u8]) -> u64 {
+    use std::hash::Hasher as _;
+    let mut hasher = std::collections::hash_map::DefaultHasher::new();
+    hasher.write(bytes);
+    hasher.finish()
 }
 
 #[derive(Debug, Clone)]
@@ -746,6 +846,7 @@ impl CodeEditorState {
         self.row_geom_cache_tick = 0;
         self.row_geom_cache.clear();
         self.row_geom_cache_queue.clear();
+        self.row_geom_cache_caret_stops_len_total = 0;
         self.baseline_measure_cache = None;
     }
 
@@ -754,18 +855,25 @@ impl CodeEditorState {
         self.row_text_cache_tick = 0;
         self.row_text_cache.clear();
         self.row_text_cache_queue.clear();
+        self.row_text_cache_text_bytes_estimate_total = 0;
+        self.row_text_cache_row_spans_len_total = 0;
         self.cache_stats.row_text_resets = self.cache_stats.row_text_resets.saturating_add(1);
 
         self.row_geom_cache_display_map_epoch = self.display_map_epoch;
         self.row_geom_cache_tick = 0;
         self.row_geom_cache.clear();
         self.row_geom_cache_queue.clear();
+        self.row_geom_cache_caret_stops_len_total = 0;
 
         #[cfg(feature = "syntax")]
         {
             self.row_rich_cache_tick = 0;
             self.row_rich_cache.clear();
             self.row_rich_cache_queue.clear();
+            self.row_rich_cache_line_bytes_estimate_total = 0;
+            self.row_rich_cache_row_spans_len_total = 0;
+            self.row_rich_cache_syntax_spans_len_total = 0;
+            self.row_rich_cache_rich_spans_len_total = 0;
             self.cache_stats.row_rich_resets = self.cache_stats.row_rich_resets.saturating_add(1);
         }
     }
@@ -986,6 +1094,8 @@ impl CodeEditorHandle {
                 row_text_cache_tick: 0,
                 row_text_cache: HashMap::new(),
                 row_text_cache_queue: VecDeque::new(),
+                row_text_cache_text_bytes_estimate_total: 0,
+                row_text_cache_row_spans_len_total: 0,
                 row_geom_cache_rev: fret_code_editor_buffer::Revision(0),
                 row_geom_cache_wrap_cols: None,
                 row_geom_cache_folds_epoch: 0,
@@ -994,6 +1104,7 @@ impl CodeEditorHandle {
                 row_geom_cache_tick: 0,
                 row_geom_cache: HashMap::new(),
                 row_geom_cache_queue: VecDeque::new(),
+                row_geom_cache_caret_stops_len_total: 0,
                 ime_surrounding_text_cache: None,
                 selection_rect_scratch: Vec::new(),
                 baseline_measure_cache: None,
@@ -1013,11 +1124,23 @@ impl CodeEditorHandle {
                 #[cfg(feature = "syntax")]
                 syntax_row_cache_queue: VecDeque::new(),
                 #[cfg(feature = "syntax")]
+                syntax_row_cache_spans_len_total: 0,
+                #[cfg(feature = "syntax")]
                 row_rich_cache_tick: 0,
                 #[cfg(feature = "syntax")]
                 row_rich_cache: HashMap::new(),
                 #[cfg(feature = "syntax")]
                 row_rich_cache_queue: VecDeque::new(),
+                #[cfg(feature = "syntax")]
+                row_rich_cache_line_bytes_estimate_total: 0,
+                #[cfg(feature = "syntax")]
+                row_rich_cache_row_spans_len_total: 0,
+                #[cfg(feature = "syntax")]
+                row_rich_cache_syntax_spans_len_total: 0,
+                #[cfg(feature = "syntax")]
+                row_rich_cache_rich_spans_len_total: 0,
+
+                diag_contains_str_cache: None,
             })),
         }
     }
@@ -1052,9 +1175,14 @@ impl CodeEditorHandle {
             st.syntax_row_cache_tick = 0;
             st.syntax_row_cache.clear();
             st.syntax_row_cache_queue.clear();
+            st.syntax_row_cache_spans_len_total = 0;
             st.row_rich_cache_tick = 0;
             st.row_rich_cache.clear();
             st.row_rich_cache_queue.clear();
+            st.row_rich_cache_line_bytes_estimate_total = 0;
+            st.row_rich_cache_row_spans_len_total = 0;
+            st.row_rich_cache_syntax_spans_len_total = 0;
+            st.row_rich_cache_rich_spans_len_total = 0;
             st.cache_stats.row_rich_resets = st.cache_stats.row_rich_resets.saturating_add(1);
         }
         #[cfg(not(feature = "syntax"))]
@@ -1236,6 +1364,68 @@ impl CodeEditorHandle {
         self.state.borrow().cache_stats
     }
 
+    pub fn cache_size_snapshot(&self) -> CodeEditorCacheSizeSnapshotV1 {
+        let st = self.state.borrow();
+        let mut out = CodeEditorCacheSizeSnapshotV1 {
+            schema_version: 1,
+            row_text_cache_entries: st.row_text_cache.len() as u64,
+            row_text_cache_text_bytes_estimate_total: st.row_text_cache_text_bytes_estimate_total,
+            row_text_cache_row_spans_len_total: st.row_text_cache_row_spans_len_total,
+            row_geom_cache_entries: st.row_geom_cache.len() as u64,
+            row_geom_cache_caret_stops_len_total: st.row_geom_cache_caret_stops_len_total,
+            selection_rect_scratch_capacity: st.selection_rect_scratch.capacity() as u64,
+            ..Default::default()
+        };
+
+        #[cfg(feature = "syntax")]
+        {
+            out.syntax_row_cache_entries = st.syntax_row_cache.len() as u64;
+            out.syntax_row_cache_spans_len_total = st.syntax_row_cache_spans_len_total;
+            out.row_rich_cache_entries = st.row_rich_cache.len() as u64;
+            out.row_rich_cache_line_bytes_estimate_total =
+                st.row_rich_cache_line_bytes_estimate_total;
+            out.row_rich_cache_row_spans_len_total = st.row_rich_cache_row_spans_len_total;
+            out.row_rich_cache_syntax_spans_len_total = st.row_rich_cache_syntax_spans_len_total;
+            out.row_rich_cache_rich_spans_len_total = st.row_rich_cache_rich_spans_len_total;
+        }
+
+        out
+    }
+
+    pub fn memory_snapshot(&self) -> CodeEditorMemorySnapshotV1 {
+        let st = self.state.borrow();
+
+        let mut undo_text_bytes = 0u64;
+        let mut undo_edit_count = 0u64;
+        for record in st.undo.undo_records() {
+            let (bytes, edits) = estimate_text_buffer_tx_text_bytes_and_edits(&record.tx.buffer_tx);
+            undo_text_bytes = undo_text_bytes.saturating_add(bytes);
+            undo_edit_count = undo_edit_count.saturating_add(edits);
+        }
+
+        let mut redo_text_bytes = 0u64;
+        let mut redo_edit_count = 0u64;
+        for record in st.undo.redo_records() {
+            let (bytes, edits) = estimate_text_buffer_tx_text_bytes_and_edits(&record.tx.buffer_tx);
+            redo_text_bytes = redo_text_bytes.saturating_add(bytes);
+            redo_edit_count = redo_edit_count.saturating_add(edits);
+        }
+
+        CodeEditorMemorySnapshotV1 {
+            schema_version: 1,
+            buffer_revision: st.buffer.revision().0,
+            buffer_len_bytes: st.buffer.len_bytes() as u64,
+            buffer_line_count: st.buffer.line_count() as u64,
+            undo_limit: st.undo.limit() as u64,
+            undo_len: st.undo.undo_len() as u64,
+            redo_len: st.undo.redo_len() as u64,
+            undo_text_bytes_estimate_total: undo_text_bytes,
+            redo_text_bytes_estimate_total: redo_text_bytes,
+            undo_edit_count_total: undo_edit_count,
+            redo_edit_count_total: redo_edit_count,
+        }
+    }
+
     pub fn paint_perf_frame(&self) -> Option<CodeEditorPaintPerfFrame> {
         let st = self.state.borrow();
         st.paint_perf_enabled.then_some(st.paint_perf_frame)
@@ -1287,6 +1477,8 @@ impl CodeEditorHandle {
         st.row_text_cache_tick = 0;
         st.row_text_cache.clear();
         st.row_text_cache_queue.clear();
+        st.row_text_cache_text_bytes_estimate_total = 0;
+        st.row_text_cache_row_spans_len_total = 0;
         st.cache_stats.row_text_resets = st.cache_stats.row_text_resets.saturating_add(1);
 
         st.row_geom_cache_folds_epoch = st.folds_epoch;
@@ -1294,6 +1486,7 @@ impl CodeEditorHandle {
         st.row_geom_cache_tick = 0;
         st.row_geom_cache.clear();
         st.row_geom_cache_queue.clear();
+        st.row_geom_cache_caret_stops_len_total = 0;
     }
 
     pub fn clear_all_folds(&self) {
@@ -1311,6 +1504,8 @@ impl CodeEditorHandle {
         st.row_text_cache_tick = 0;
         st.row_text_cache.clear();
         st.row_text_cache_queue.clear();
+        st.row_text_cache_text_bytes_estimate_total = 0;
+        st.row_text_cache_row_spans_len_total = 0;
         st.cache_stats.row_text_resets = st.cache_stats.row_text_resets.saturating_add(1);
 
         st.row_geom_cache_folds_epoch = st.folds_epoch;
@@ -1318,6 +1513,7 @@ impl CodeEditorHandle {
         st.row_geom_cache_tick = 0;
         st.row_geom_cache.clear();
         st.row_geom_cache_queue.clear();
+        st.row_geom_cache_caret_stops_len_total = 0;
     }
 
     pub fn set_line_inlays(&self, line: usize, spans: Vec<InlaySpan>) {
@@ -1346,6 +1542,8 @@ impl CodeEditorHandle {
         st.row_text_cache_tick = 0;
         st.row_text_cache.clear();
         st.row_text_cache_queue.clear();
+        st.row_text_cache_text_bytes_estimate_total = 0;
+        st.row_text_cache_row_spans_len_total = 0;
         st.cache_stats.row_text_resets = st.cache_stats.row_text_resets.saturating_add(1);
 
         st.row_geom_cache_inlays_epoch = st.inlays_epoch;
@@ -1353,6 +1551,7 @@ impl CodeEditorHandle {
         st.row_geom_cache_tick = 0;
         st.row_geom_cache.clear();
         st.row_geom_cache_queue.clear();
+        st.row_geom_cache_caret_stops_len_total = 0;
     }
 
     pub fn clear_all_inlays(&self) {
@@ -1370,6 +1569,8 @@ impl CodeEditorHandle {
         st.row_text_cache_tick = 0;
         st.row_text_cache.clear();
         st.row_text_cache_queue.clear();
+        st.row_text_cache_text_bytes_estimate_total = 0;
+        st.row_text_cache_row_spans_len_total = 0;
         st.cache_stats.row_text_resets = st.cache_stats.row_text_resets.saturating_add(1);
 
         st.row_geom_cache_inlays_epoch = st.inlays_epoch;
@@ -1377,6 +1578,7 @@ impl CodeEditorHandle {
         st.row_geom_cache_tick = 0;
         st.row_geom_cache.clear();
         st.row_geom_cache_queue.clear();
+        st.row_geom_cache_caret_stops_len_total = 0;
     }
 
     pub fn debug_decorated_line_text(&self, line: usize) -> Option<String> {
@@ -1417,6 +1619,8 @@ impl CodeEditorHandle {
         st.row_text_cache_tick = 0;
         st.row_text_cache.clear();
         st.row_text_cache_queue.clear();
+        st.row_text_cache_text_bytes_estimate_total = 0;
+        st.row_text_cache_row_spans_len_total = 0;
         st.row_geom_cache_rev = st.buffer.revision();
         st.row_geom_cache_wrap_cols = st.display_wrap_cols;
         st.row_geom_cache_folds_epoch = st.folds_epoch;
@@ -1425,6 +1629,7 @@ impl CodeEditorHandle {
         st.row_geom_cache_tick = 0;
         st.row_geom_cache.clear();
         st.row_geom_cache_queue.clear();
+        st.row_geom_cache_caret_stops_len_total = 0;
         #[cfg(feature = "syntax")]
         {
             st.syntax_row_cache_rev = st.buffer.revision();
@@ -1432,9 +1637,14 @@ impl CodeEditorHandle {
             st.syntax_row_cache_tick = 0;
             st.syntax_row_cache.clear();
             st.syntax_row_cache_queue.clear();
+            st.syntax_row_cache_spans_len_total = 0;
             st.row_rich_cache_tick = 0;
             st.row_rich_cache.clear();
             st.row_rich_cache_queue.clear();
+            st.row_rich_cache_line_bytes_estimate_total = 0;
+            st.row_rich_cache_row_spans_len_total = 0;
+            st.row_rich_cache_syntax_spans_len_total = 0;
+            st.row_rich_cache_rich_spans_len_total = 0;
         }
     }
 
@@ -1449,6 +1659,35 @@ impl CodeEditorHandle {
     pub fn with_buffer<R>(&self, f: impl FnOnce(&TextBuffer) -> R) -> R {
         let st = self.state.borrow();
         f(&st.buffer)
+    }
+
+    /// Diagnostics helper: best-effort substring check cached by buffer revision.
+    ///
+    /// This avoids repeated full-document scans during `UiDiagnosticsService` snapshot recording.
+    pub fn diag_buffer_contains_str_cached(&self, needle: &'static str) -> bool {
+        let needle_hash = diag_hash_bytes(needle.as_bytes());
+
+        let mut st = self.state.borrow_mut();
+        let rev = st.buffer.revision();
+        if let Some(cache) = st.diag_contains_str_cache
+            && cache.rev == rev
+            && cache.needle_hash == needle_hash
+        {
+            return cache.value;
+        }
+
+        // NOTE: Prefer determinism over cleverness here.
+        //
+        // We cache this value by `TextBuffer` revision, so `to_string()` is paid at most once per
+        // edit revision (acceptable for diagnostic/script use). This avoids pathological slowdowns
+        // when searching directly over fragmented rope chunks.
+        let value = st.buffer.text_string().contains(needle);
+        st.diag_contains_str_cache = Some(DiagContainsStrCacheEntry {
+            rev,
+            needle_hash,
+            value,
+        });
+        value
     }
 
     pub fn can_undo(&self) -> bool {
@@ -1483,6 +1722,7 @@ impl CodeEditorHandle {
         st.row_geom_cache_tick = 0;
         st.row_geom_cache.clear();
         st.row_geom_cache_queue.clear();
+        st.row_geom_cache_caret_stops_len_total = 0;
     }
 
     /// v1 code-wrap seam (ecosystem policy).
@@ -1507,15 +1747,22 @@ impl CodeEditorHandle {
             st.row_geom_cache_tick = 0;
             st.row_geom_cache.clear();
             st.row_geom_cache_queue.clear();
+            st.row_geom_cache_caret_stops_len_total = 0;
             st.row_text_cache_tick = 0;
             st.row_text_cache.clear();
             st.row_text_cache_queue.clear();
+            st.row_text_cache_text_bytes_estimate_total = 0;
+            st.row_text_cache_row_spans_len_total = 0;
             st.cache_stats.row_text_resets = st.cache_stats.row_text_resets.saturating_add(1);
             #[cfg(feature = "syntax")]
             {
                 st.row_rich_cache_tick = 0;
                 st.row_rich_cache.clear();
                 st.row_rich_cache_queue.clear();
+                st.row_rich_cache_line_bytes_estimate_total = 0;
+                st.row_rich_cache_row_spans_len_total = 0;
+                st.row_rich_cache_syntax_spans_len_total = 0;
+                st.row_rich_cache_rich_spans_len_total = 0;
                 st.cache_stats.row_rich_resets = st.cache_stats.row_rich_resets.saturating_add(1);
             }
         }

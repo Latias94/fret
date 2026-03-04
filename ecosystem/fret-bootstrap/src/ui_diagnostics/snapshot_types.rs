@@ -263,6 +263,15 @@ pub struct UiRendererTextPerfSnapshotV1 {
     pub mask_atlas: UiRendererGlyphAtlasPerfSnapshotV1,
     pub color_atlas: UiRendererGlyphAtlasPerfSnapshotV1,
     pub subpixel_atlas: UiRendererGlyphAtlasPerfSnapshotV1,
+
+    #[serde(default)]
+    pub registered_font_blobs_count: u64,
+    #[serde(default)]
+    pub registered_font_blobs_total_bytes: u64,
+    #[serde(default)]
+    pub family_id_cache_entries: u64,
+    #[serde(default)]
+    pub baseline_metrics_cache_entries: u64,
 }
 
 impl UiRendererTextPerfSnapshotV1 {
@@ -292,6 +301,10 @@ impl UiRendererTextPerfSnapshotV1 {
             mask_atlas: UiRendererGlyphAtlasPerfSnapshotV1::from_core(snapshot.mask_atlas),
             color_atlas: UiRendererGlyphAtlasPerfSnapshotV1::from_core(snapshot.color_atlas),
             subpixel_atlas: UiRendererGlyphAtlasPerfSnapshotV1::from_core(snapshot.subpixel_atlas),
+            registered_font_blobs_count: snapshot.registered_font_blobs_count,
+            registered_font_blobs_total_bytes: snapshot.registered_font_blobs_total_bytes,
+            family_id_cache_entries: snapshot.family_id_cache_entries,
+            baseline_metrics_cache_entries: snapshot.baseline_metrics_cache_entries,
         }
     }
 }

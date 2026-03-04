@@ -155,6 +155,22 @@ impl<T> UndoHistory<T> {
         self.limit
     }
 
+    pub fn undo_len(&self) -> usize {
+        self.undo.len()
+    }
+
+    pub fn redo_len(&self) -> usize {
+        self.redo.len()
+    }
+
+    pub fn undo_records(&self) -> impl Iterator<Item = &UndoRecord<T>> {
+        self.undo.iter()
+    }
+
+    pub fn redo_records(&self) -> impl Iterator<Item = &UndoRecord<T>> {
+        self.redo.iter()
+    }
+
     pub fn set_limit(&mut self, limit: usize) {
         self.limit = limit.max(1);
         self.truncate_to_limit();

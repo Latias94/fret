@@ -42,6 +42,7 @@ pub(crate) struct ReproCmdContext {
     pub renderdoc_no_outputs_png: bool,
     pub resource_footprint_thresholds: ResourceFootprintThresholds,
     pub renderer_gpu_budget_thresholds: RendererGpuBudgetThresholds,
+    pub code_editor_memory_thresholds: CodeEditorMemoryThresholds,
     pub max_wgpu_metal_current_allocated_size_bytes: Option<u64>,
     pub max_render_text_atlas_bytes_live_estimate_total: Option<u64>,
     pub check_redraw_hitches_max_total_ms_threshold: Option<u64>,
@@ -84,6 +85,7 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
         renderdoc_no_outputs_png,
         resource_footprint_thresholds,
         renderer_gpu_budget_thresholds,
+        code_editor_memory_thresholds,
         max_wgpu_metal_current_allocated_size_bytes,
         max_render_text_atlas_bytes_live_estimate_total,
         check_redraw_hitches_max_total_ms_threshold,
@@ -202,6 +204,39 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
 
     let (scripts, suite_name) = scripts::resolve_repro_scripts(&rest, &workspace_root)?;
 
+    let mut launch_env = launch_env;
+    if !scripts.is_empty() {
+        use std::collections::BTreeMap;
+
+        let mut defaults: BTreeMap<String, String> = BTreeMap::new();
+        let mut conflicts: Vec<String> = Vec::new();
+        for script in &scripts {
+            for (key, value) in script_env_defaults(script) {
+                if let Some(prev) = defaults.insert(key.clone(), value.clone())
+                    && prev != value
+                {
+                    conflicts.push(format!(
+                        "meta.env_defaults conflict for {key}: {prev} vs {value} (script={})",
+                        script.display()
+                    ));
+                }
+            }
+        }
+        if !conflicts.is_empty() {
+            conflicts.sort();
+            return Err(format!(
+                "conflicting script meta.env_defaults in repro:\n- {}",
+                conflicts.join("\n- ")
+            ));
+        }
+        for (key, value) in defaults {
+            if launch_env.iter().any(|(k, _v)| k == &key) {
+                continue;
+            }
+            launch_env.push((key, value));
+        }
+    }
+
     let summary_path = resolved_out_dir.join("repro.summary.json");
 
     let required_caps = scripts::compute_required_caps(&scripts);
@@ -308,6 +343,7 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
     let mut renderer_gpu_budgets_gate: Option<RendererGpuBudgetsGateResult> = None;
     let mut wgpu_metal_allocated_size_gate: Option<WgpuMetalAllocatedSizeGateResult> = None;
     let mut render_text_atlas_bytes_gate: Option<RenderTextAtlasBytesGateResult> = None;
+    let mut code_editor_memory_gate: Option<CodeEditorMemoryGateResult> = None;
     let mut redraw_hitches_gate: Option<RedrawHitchesGateResult> = None;
 
     let mut run_rows: Vec<serde_json::Value> = Vec::new();
@@ -697,6 +733,17 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
         )
         .ok();
     }
+    if code_editor_memory_thresholds.any() {
+        let bundle_path = packed_bundle_artifact
+            .as_deref()
+            .or_else(|| selected_bundle_path.as_deref());
+        code_editor_memory_gate = check_code_editor_memory_thresholds(
+            &resolved_out_dir,
+            bundle_path,
+            &code_editor_memory_thresholds,
+        )
+        .ok();
+    }
     if let Some(max_bytes) = max_wgpu_metal_current_allocated_size_bytes {
         let bundle_path = packed_bundle_artifact
             .as_deref()
@@ -831,6 +878,17 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
             r.evidence_path.display()
         ));
         overall_reason_code = Some("tooling.renderer_gpu_budgets.failed".to_string());
+    }
+    if let Some(r) = code_editor_memory_gate.as_ref()
+        && r.failures > 0
+        && overall_error.is_none()
+    {
+        overall_error = Some(format!(
+            "code editor memory threshold gate failed (failures={}, evidence={})",
+            r.failures,
+            r.evidence_path.display()
+        ));
+        overall_reason_code = Some("tooling.code_editor_memory.failed".to_string());
     }
     if let Some(r) = wgpu_metal_allocated_size_gate.as_ref()
         && r.failures > 0

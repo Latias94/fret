@@ -361,6 +361,7 @@ pub(crate) fn write_evidence_index(
         "check.renderer_gpu_budgets",
         "check.renderer_gpu_budgets.json",
     );
+    add_file("check.code_editor_memory", "check.code_editor_memory.json");
     add_file("check.resource_footprint", "check.resource_footprint.json");
     add_file(
         "check.view_cache_reuse_stable",

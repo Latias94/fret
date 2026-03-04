@@ -56,6 +56,45 @@ Using `tools/diag-scripts/image-heavy-memory-steady.json` on macOS/Metal (textur
   - `macos_vmmap.regions.malloc_small_dirty_bytes`: 41,104,179 .. 44,774,195 (~39.2 .. 42.7 MiB)
   - `wgpu_metal_current_allocated_size_bytes`: 204,914,688 (~195.4 MiB; stable; requires `--env FRET_DIAG_WGPU_ALLOCATOR_REPORT=1`)
 
+Using `tools/diag-scripts/ui-gallery/memory/ui-gallery-code-editor-torture-memory-steady.json` on macOS/Metal (UI Gallery, editor-grade stress):
+
+- Repeat sample (N=5; captured via `fretboard diag repro --launch`):
+  - `macos_vmmap.physical_footprint_bytes`: 386,924,544 .. 389,545,984 (~369.1 .. 371.6 MiB)
+  - `macos_vmmap.physical_footprint_peak_bytes`: 387,658,547 .. 390,279,987 (~369.8 .. 372.2 MiB)
+  - `macos_vmmap.regions.owned_unmapped_memory_dirty_bytes`: 236,349,030 .. 236,978,176 (~225.4 .. 226.0 MiB)
+  - `macos_vmmap.regions.malloc_small_dirty_bytes`: 80,628,941 .. 83,276,595 (~76.9 .. 79.4 MiB)
+  - `macos_vmmap.regions.io_surface_dirty_bytes`: 37,748,736 (36.0 MiB; stable)
+  - `macos_vmmap.regions.io_accelerator_dirty_bytes`: 5,324,800 (5.1 MiB; stable)
+  - `wgpu_metal_current_allocated_size_bytes`: 118,308,864 (~112.8 MiB; stable)
+- App-side attribution (`app_snapshot.code_editor.torture.cache_sizes`, last snapshot):
+  - `row_text_cache_entries`: 429
+  - `row_text_cache_text_bytes_estimate_total`: ~29–30 KiB
+  - `row_rich_cache_entries`: 429
+  - `row_rich_cache_line_bytes_estimate_total`: ~29–30 KiB
+- App-side attribution (`app_snapshot.code_editor.torture.memory`, last snapshot; single run):
+  - `buffer_len_bytes`: 1,477,870 (~1.4 MiB)
+  - `buffer_line_count`: 20,004
+  - `undo_len`: 0 (limit 512)
+  - `undo_text_bytes_estimate_total`: 0
+- Text system attribution (`resource_caches.render_text`, last snapshot; single run):
+  - `registered_font_blobs_total_bytes`: 0 (no injected memory-backed fonts observed)
+  - `baseline_metrics_cache_entries`: 5
+
+Interpretation:
+
+- This workload's headline "high memory" is **not explained by GPU allocation** (stable ~113 MiB) nor by
+  the measured code editor paint caches (tens of KiB). The dominant CPU-side contributors remain:
+  - `owned unmapped memory` dirty (allocator retention / sticky reservations), and
+  - `MALLOC_SMALL` dirty (heap allocations + fragmentation).
+- Diagnostics stability note:
+  - Full debug snapshot capture can make bundle dumps prohibitively expensive in editor torture scenarios.
+    This script therefore sets env defaults (via `meta.env_defaults`) to record **stats-only** debug
+    snapshots: `FRET_DIAG_DEBUG_SNAPSHOT=0`.
+  - Text/font attribution note:
+    - `resource_caches.render_text` now also reports best-effort font DB/cache counters:
+      - `registered_font_blobs_{count,total_bytes}` (injected memory-backed fonts)
+      - `family_id_cache_entries`, `baseline_metrics_cache_entries` (shaper caches)
+
 Allocator A/B (empty idle, `--release`, `fretboard diag repro`, same script):
 
 - System allocator:
@@ -97,6 +136,10 @@ Interpretation:
       - `io_surface_dirty_bytes` (Metal-backed surfaces/textures)
       - `io_accelerator_dirty_bytes` (GPU driver allocations)
       - `malloc_small_dirty_bytes` (CPU heap bucket)
+      - `malloc_dirty_bytes_total` (sum of `MALLOC_*` vmmap regions)
+    - `resource.footprint.json.macos_vmmap.tables.malloc_zones` now includes:
+      - `default_zone` (best-effort `DefaultMallocZone` row)
+      - `total` (allocated/frag/dirty sums across all zones)
     - These are intended to support more actionable macOS gates than “just physical footprint”.
   - wgpu allocator sampling note:
     - Bundles may now report `wgpu_allocator_sample_present=true` even when
@@ -136,6 +179,10 @@ Interpretation:
 - Add app-side stats for major caches (bytes + counts) where feasible:
   - Text shaping caches / blob caches (heap bytes, not just entry counts).
   - Image cache bytes and “live texture” estimates (already partially present).
+  - Code editor:
+    - Added: buffer/undo best-effort memory snapshots (`app_snapshot.code_editor.torture.memory`).
+    - Next: rope chunk + undo payload distribution estimates, and syntax parse/shaping caches (where
+      applicable), so `MALLOC_SMALL` vs `owned unmapped` can be explained with app-level counters.
 - Keep all fields “best effort” and clearly labeled (estimate vs exact).
 
 ### 3) Build a minimal baseline matrix
@@ -195,6 +242,10 @@ Candidate gates:
 - `--max-renderer-intermediate-peak-in-use-bytes`
 - `--max-wgpu-metal-current-allocated-size-bytes` (macOS/Metal; best-effort)
 - `--max-render-text-atlas-bytes-live-estimate-total` (text-heavy attribution; stable, derived from `resource_caches.render_text`)
+- `--max-code-editor-buffer-len-bytes` (UI Gallery; `app_snapshot.code_editor.torture.memory`)
+- `--max-code-editor-undo-text-bytes-estimate-total` (UI Gallery; `app_snapshot.code_editor.torture.memory`)
+- `--max-code-editor-row-text-cache-entries` (UI Gallery; `app_snapshot.code_editor.torture.cache_sizes`)
+- `--max-code-editor-row-rich-cache-entries` (UI Gallery; `app_snapshot.code_editor.torture.cache_sizes`)
 
 Recommended local gate baselines (macOS, 2026-03-04):
 
@@ -221,6 +272,13 @@ Recommended local gate baselines (macOS, 2026-03-04):
   - `--max-renderer-intermediate-peak-in-use-bytes 67108864` (64 MiB)
   - Optional (requires `--env FRET_DIAG_WGPU_ALLOCATOR_REPORT=1`):
     - `--max-wgpu-metal-current-allocated-size-bytes 268435456` (256 MiB)
+- `ui-gallery-code-editor-torture-memory-steady`:
+  - `--max-macos-physical-footprint-peak-bytes 419430400` (400 MiB)
+  - `--max-macos-owned-unmapped-memory-dirty-bytes 268435456` (256 MiB)
+  - `--max-macos-malloc-small-dirty-bytes 104857600` (100 MiB)
+  - `--max-macos-io-surface-dirty-bytes 67108864` (64 MiB)
+  - `--max-macos-io-accelerator-dirty-bytes 16777216` (16 MiB)
+  - `--max-wgpu-metal-current-allocated-size-bytes 150994944` (144 MiB)
 
 Note: these numbers are intentionally conservative and should be revisited when:
 

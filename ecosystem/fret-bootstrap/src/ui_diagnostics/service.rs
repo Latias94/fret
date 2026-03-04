@@ -1025,13 +1025,17 @@ impl UiDiagnosticsService {
         }
         self.note_window_seen(window);
 
+        let want_debug_snapshot = self.cfg.capture_debug_snapshot;
         let last_pointer_position = self
             .per_window
             .get(&window)
             .and_then(|ring| ring.last_pointer_position);
-        let hit_test = last_pointer_position.map(|pos| UiHitTestSnapshotV1::from_tree(pos, ui));
+        let hit_test = want_debug_snapshot
+            .then_some(last_pointer_position)
+            .flatten()
+            .map(|pos| UiHitTestSnapshotV1::from_tree(pos, ui));
 
-        let element_diag = element_runtime.and_then(|runtime| {
+        let element_diag = want_debug_snapshot.then_some(element_runtime).flatten().and_then(|runtime| {
             runtime.diagnostics_snapshot(window).map(|snapshot| {
                 ElementDiagnosticsSnapshotV1::from_runtime(
                     window,
@@ -1062,9 +1066,7 @@ impl UiDiagnosticsService {
         self.apply_inspect_navigation(window, raw_semantics, element_runtime);
         self.update_inspect_focus_lines(window, raw_semantics, element_runtime);
 
-        let semantics = self
-            .cfg
-            .capture_semantics
+        let semantics = (want_debug_snapshot && self.cfg.capture_semantics)
             .then_some(raw_semantics)
             .flatten()
             .map(|snap| {
@@ -1129,21 +1131,32 @@ impl UiDiagnosticsService {
             .global::<fret_render::WgpuAllocatorReportFrameStore>()
             .and_then(|store| store.latest_for_window(window));
 
-        let mut debug = UiTreeDebugSnapshotV1::from_tree(
-            app,
-            window,
-            ui,
-            renderer_perf,
-            wgpu_hub_report,
-            wgpu_allocator_report,
-            element_runtime,
-            hit_test,
-            element_diag,
-            semantics,
-            self.cfg.max_gating_trace_entries,
-            self.cfg.redact_text,
-            self.cfg.max_debug_string_bytes,
-        );
+        let mut debug = if want_debug_snapshot {
+            UiTreeDebugSnapshotV1::from_tree(
+                app,
+                window,
+                ui,
+                renderer_perf,
+                wgpu_hub_report,
+                wgpu_allocator_report,
+                element_runtime,
+                hit_test,
+                element_diag,
+                semantics,
+                self.cfg.max_gating_trace_entries,
+                self.cfg.redact_text,
+                self.cfg.max_debug_string_bytes,
+            )
+        } else {
+            let mut debug = UiTreeDebugSnapshotV1::default();
+            debug.stats = UiFrameStatsV1::from_stats(
+                ui.debug_stats(),
+                renderer_perf,
+                wgpu_hub_report,
+                wgpu_allocator_report,
+            );
+            debug
+        };
         debug.viewport_input = viewport_input;
         debug.extensions = extensions;
 
