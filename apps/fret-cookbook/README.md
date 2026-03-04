@@ -20,11 +20,11 @@ Full index (Bevy-style table of contents): [apps/fret-cookbook/EXAMPLES.md](./EX
 Start with these before jumping into the UI Gallery:
 
 ```bash
-cargo run -p fret-cookbook --example hello
-cargo run -p fret-cookbook --example simple_todo
-cargo run -p fret-cookbook --example overlay_basics
-cargo run -p fret-cookbook --example text_input_basics
-cargo run -p fret-cookbook --example commands_keymap_basics
+cargo run -p fretboard -- dev native --example hello
+cargo run -p fretboard -- dev native --example simple_todo
+cargo run -p fretboard -- dev native --example overlay_basics
+cargo run -p fretboard -- dev native --example text_input_basics
+cargo run -p fretboard -- dev native --example commands_keymap_basics
 ```
 
 Then pick a topic:
@@ -40,19 +40,21 @@ Then pick a topic:
 ## Run (native)
 
 ```bash
-cargo run -p fret-cookbook --example hello
-cargo run -p fret-cookbook --example simple_todo
-cargo run -p fret-cookbook --example hello_counter
-cargo run -p fret-cookbook --example overlay_basics
-cargo run -p fret-cookbook --example commands_keymap_basics
-cargo run -p fret-cookbook --example text_input_basics
-cargo run -p fret-cookbook --example effects_layer_basics
-cargo run -p fret-cookbook --example theme_switching_basics
+cargo run -p fretboard -- dev native --example hello
+cargo run -p fretboard -- dev native --example simple_todo
+cargo run -p fretboard -- dev native --example hello_counter
+cargo run -p fretboard -- dev native --example overlay_basics
+cargo run -p fretboard -- dev native --example commands_keymap_basics
+cargo run -p fretboard -- dev native --example text_input_basics
+cargo run -p fretboard -- dev native --example effects_layer_basics
+cargo run -p fretboard -- dev native --example theme_switching_basics
 ```
 
 ## Optional feature-gated examples
 
 Some examples are kept behind Cargo features to reduce cold compile time.
+Tip: if you run examples via `fretboard dev native --example <name>`, `fretboard` will auto-enable
+required cookbook features for known Lab examples and print what it enabled.
 
 - Official (keep it boring):
   - `cargo run -p fret-cookbook --example hello`

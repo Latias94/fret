@@ -12,7 +12,7 @@ Design goals:
 How to run an example:
 
 ```bash
-cargo run -p fret-cookbook --example <name>
+cargo run -p fretboard -- dev native --example <name>
 ```
 
 For feature-gated examples:

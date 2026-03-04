@@ -60,8 +60,8 @@ Need help choosing the right example entry point (templates vs cookbook vs galle
 ### 1) Run a lightweight cookbook example (recommended)
 
 ```bash
-cargo run -p fret-cookbook --example hello
-cargo run -p fret-cookbook --example simple_todo
+cargo run -p fretboard -- dev native --example hello
+cargo run -p fretboard -- dev native --example simple_todo
 ```
 
 ### 2) Generate a new native app scaffold
@@ -87,6 +87,12 @@ Discover runnable targets:
 ```bash
 cargo run -p fretboard -- list cookbook-examples
 cargo run -p fretboard -- list web-demos
+```
+
+Run a cookbook example (this runner auto-enables known feature-gated Lab examples):
+
+```bash
+cargo run -p fretboard -- dev native --example query_basics
 ```
 
 Maintainer native demo bins (from `apps/fret-demo`, not the onboarding path):

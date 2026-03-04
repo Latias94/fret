@@ -20,9 +20,9 @@ Prefer an explicit ladder instead of starting with the full baseline on minute 1
 Templates (in this repository):
 
 ```bash
-fretboard new hello --name hello-world
-fretboard new simple-todo --name my-simple-todo
-fretboard new todo --name my-todo
+cargo run -p fretboard -- new hello --name hello-world
+cargo run -p fretboard -- new simple-todo --name my-simple-todo
+cargo run -p fretboard -- new todo --name my-todo
 ```
 
 Related ADRs:
@@ -45,14 +45,14 @@ Related ADRs:
 If you are working inside this repository, you can generate a runnable todo template:
 
 ```bash
-fretboard new todo --name my-todo
+cargo run -p fretboard -- new todo --name my-todo
 cargo run --manifest-path local/my-todo/Cargo.toml
 ```
 
 To enable UI render asset caches (images/SVG), add `--ui-assets`:
 
 ```bash
-fretboard new todo --name my-todo --ui-assets
+cargo run -p fretboard -- new todo --name my-todo --ui-assets
 ```
 
 Notes:
@@ -340,7 +340,7 @@ See ADR 0110 for rationale and constraints.
 
 If you want UI render asset conveniences (not an editor/project asset pipeline):
 
-- Enable `fret/ui-assets` (or scaffold with `fretboard new todo --ui-assets`) so the golden-path
+- Enable `fret/ui-assets` (or scaffold with `cargo run -p fretboard -- new todo --ui-assets`) so the golden-path
   driver wires caches + budgets.
 - Optionally call `.ui_assets_budgets(...)` on `FretApp` to override budgets.
 - If you want to call cache APIs directly (stats, keyed helpers), add an explicit dependency on
