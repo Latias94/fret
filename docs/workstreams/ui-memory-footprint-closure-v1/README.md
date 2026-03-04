@@ -190,6 +190,13 @@ For each track, the closure deliverable is: **(script) + (bundle fields) + (gate
   - `MALLOC ZONE`: default zone row (best-effort) + totals + top allocated/frag.
 - Next (to reduce exit-time bias): add optional **in-run** sampling of the same summary at a fixed
   frame/time marker (script step), so “steady state” can be captured without relying on shutdown.
+  Concrete proposal:
+  - Keep the current exit-time capture: `resource.vmmap_summary.txt` → `resource.footprint.json.macos_vmmap`.
+  - Add a pre-exit “still running” capture:
+    - Raw: `resource.vmmap_summary.steady.txt`
+    - Structured: `resource.footprint.json.macos_vmmap_steady`
+  - Prefer using `macos_vmmap_steady` for macOS gates, and keep `macos_vmmap` for “did shutdown change
+    the allocator/footprint” detection.
 
 ### 2) Improve attribution (app-side)
 
