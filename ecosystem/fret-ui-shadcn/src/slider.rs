@@ -11,6 +11,7 @@ use fret_ui::element::{
 };
 use fret_ui::{ElementContext, GlobalElementId, Theme, ThemeNamedColorKey, UiHost};
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
+use fret_ui_kit::declarative::motion::drive_tween_f32_for_element;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::direction as radix_direction;
 use fret_ui_kit::primitives::slider as radix_slider;
@@ -19,6 +20,7 @@ use fret_ui_kit::{
     WidgetStates,
 };
 
+use crate::overlay_motion;
 use crate::test_id::attach_test_id_suffix;
 
 type OnValueCommit =
@@ -1227,8 +1229,25 @@ pub fn slider<H: UiHost>(
                                         ..Default::default()
                                     };
 
-                                    if !focus_visible || !enabled {
-                                        return vec![cx.container(thumb, |_| Vec::new())];
+                                    let duration = overlay_motion::shadcn_motion_duration_150(cx);
+                                    let ring_target = enabled && (is_hovered || focus_visible);
+                                    let ring_alpha = drive_tween_f32_for_element(
+                                        cx,
+                                        thumb_semantics_id,
+                                        "slider.thumb.ring.alpha",
+                                        if ring_target { 1.0 } else { 0.0 },
+                                        duration,
+                                        overlay_motion::shadcn_ease,
+                                    );
+                                    let ring_present =
+                                        ring_alpha.animating || ring_alpha.value > 1e-6;
+                                    let thumb_el = attach_test_id_suffix(
+                                        cx.container(thumb, |_| Vec::new()),
+                                        test_id_prefix.as_ref(),
+                                        "thumb",
+                                    );
+                                    if !ring_present {
+                                        return vec![thumb_el];
                                     }
 
                                     let ring_color = thumb_ring_color_override
@@ -1238,6 +1257,10 @@ pub fn slider<H: UiHost>(
                                             default_thumb_ring_color.resolve(thumb_states).clone()
                                         })
                                         .resolve(&theme);
+                                    let ring_color = Color {
+                                        a: (ring_color.a * ring_alpha.value).clamp(0.0, 1.0),
+                                        ..ring_color
+                                    };
                                     let ring = ContainerProps {
                                         layout: layout_fill,
                                         padding: Edges::all(Px(0.0)).into(),
@@ -1249,16 +1272,17 @@ pub fn slider<H: UiHost>(
                                         ..Default::default()
                                     };
 
+                                    let ring_el = attach_test_id_suffix(
+                                        cx.container(ring, |_| Vec::new()),
+                                        test_id_prefix.as_ref(),
+                                        "thumb-ring",
+                                    );
+
                                     vec![cx.stack_props(
                                         fret_ui::element::StackProps {
                                             layout: layout_fill,
                                         },
-                                        |cx| {
-                                            vec![
-                                                cx.container(ring, |_| Vec::new()),
-                                                cx.container(thumb, |_| Vec::new()),
-                                            ]
-                                        },
+                                        |_cx| vec![ring_el, thumb_el],
                                     )]
                                 }),
                                 cx.container(end, |_| Vec::new()),
@@ -1333,8 +1357,10 @@ pub fn slider<H: UiHost>(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::cell::Cell;
     use std::cell::RefCell;
     use std::rc::Rc;
+    use std::time::Duration;
 
     use fret_app::App;
     use fret_core::{
@@ -1342,7 +1368,10 @@ mod tests {
         Point, Rect, Scene, Size as CoreSize, SvgId, SvgService, TextBlobId, TextConstraints,
         TextMetrics, TextService,
     };
+    use fret_runtime::FrameId;
+    use fret_ui::element::ElementKind;
     use fret_ui::tree::UiTree;
+    use fret_ui_kit::declarative::transition::ticks_60hz_for_duration;
 
     fn pointer_x_for_value(bounds: Rect, value: f32, min: f32, max: f32, thumb_size: Px) -> Px {
         let t = radix_slider::normalize_value(value, min, max).clamp(0.0, 1.0);
@@ -2399,5 +2428,194 @@ mod tests {
         assert!(commits.len() >= 2, "expected pointer + key commits");
         assert_eq!(commits[0], vec![100.0]);
         assert_eq!(commits[1], vec![99.0]);
+    }
+
+    fn container_border_alpha_by_test_id(el: &AnyElement, test_id: &str) -> Option<f32> {
+        let matches = el
+            .semantics_decoration
+            .as_ref()
+            .and_then(|d| d.test_id.as_deref())
+            .is_some_and(|t| t == test_id);
+        if matches {
+            if let ElementKind::Container(props) = &el.kind {
+                return Some(props.border_color.map(|c| c.a).unwrap_or(0.0));
+            }
+        }
+        for child in &el.children {
+            if let Some(found) = container_border_alpha_by_test_id(child, test_id) {
+                return Some(found);
+            }
+        }
+        None
+    }
+
+    #[test]
+    fn slider_thumb_ring_tweens_in_and_out_like_a_transition() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        crate::shadcn_themes::apply_shadcn_new_york(
+            &mut app,
+            crate::shadcn_themes::ShadcnBaseColor::Neutral,
+            crate::shadcn_themes::ShadcnColorScheme::Light,
+        );
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(240.0), Px(80.0)),
+        );
+        let mut services = FakeServices;
+
+        let model = app.models_mut().insert(vec![50.0]);
+        let ring_alpha_out: Rc<Cell<Option<f32>>> = Rc::new(Cell::new(None));
+        let ring_present_out: Rc<Cell<Option<bool>>> = Rc::new(Cell::new(None));
+
+        fn render_frame(
+            ui: &mut UiTree<App>,
+            app: &mut App,
+            services: &mut dyn fret_core::UiServices,
+            window: AppWindowId,
+            bounds: Rect,
+            model: Model<Vec<f32>>,
+            ring_alpha_out: Rc<Cell<Option<f32>>>,
+            ring_present_out: Rc<Cell<Option<bool>>>,
+        ) -> fret_core::NodeId {
+            app.set_frame_id(FrameId(app.frame_id().0.saturating_add(1)));
+
+            let model_for_render = model.clone();
+            let ring_alpha_out_for_render = ring_alpha_out.clone();
+            let ring_present_out_for_render = ring_present_out.clone();
+            let root = fret_ui::declarative::render_root(
+                ui,
+                app,
+                services,
+                window,
+                bounds,
+                "shadcn-slider-thumb-ring-transition",
+                move |cx| {
+                    let el = Slider::new(model_for_render.clone())
+                        .range(0.0, 100.0)
+                        .test_id("slider")
+                        .into_element(cx);
+                    let alpha =
+                        container_border_alpha_by_test_id(&el, "slider-thumb-ring").unwrap_or(0.0);
+                    ring_alpha_out_for_render.set(Some(alpha));
+                    ring_present_out_for_render.set(Some(
+                        container_border_alpha_by_test_id(&el, "slider-thumb-ring").is_some(),
+                    ));
+                    vec![el]
+                },
+            );
+            ui.set_root(root);
+            ui.request_semantics_snapshot();
+            ui.layout_all(app, services, bounds, 1.0);
+            root
+        }
+
+        app.set_frame_id(FrameId(0));
+        let _root = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            ring_alpha_out.clone(),
+            ring_present_out.clone(),
+        );
+        let a0 = ring_alpha_out.get().expect("a0");
+        let present0 = ring_present_out.get().expect("present0");
+        assert!(a0.abs() <= 1e-6, "expected ring alpha=0, got {a0}");
+        assert!(!present0, "expected no ring element at rest");
+
+        let thumb_node = node_id_by_test_id(&ui, "slider-thumb-0");
+        ui.set_focus(Some(thumb_node));
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::KeyDown {
+                key: fret_core::KeyCode::Tab,
+                modifiers: fret_core::Modifiers::default(),
+                repeat: false,
+            },
+        );
+
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            ring_alpha_out.clone(),
+            ring_present_out.clone(),
+        );
+        let a1 = ring_alpha_out.get().expect("a1");
+        let present1 = ring_present_out.get().expect("present1");
+        assert!(present1, "expected ring element while animating in");
+        assert!(a1 > 0.0, "expected ring alpha to animate in, got {a1}");
+
+        let settle = ticks_60hz_for_duration(Duration::from_millis(150)) + 2;
+        for _ in 0..settle {
+            let _ = render_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                model.clone(),
+                ring_alpha_out.clone(),
+                ring_present_out.clone(),
+            );
+        }
+        let a_focused = ring_alpha_out.get().expect("a_focused");
+        assert!(
+            a_focused > a1 + 1e-4,
+            "expected ring alpha to increase over time, got a1={a1} a_focused={a_focused}"
+        );
+
+        ui.set_focus(None);
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            ring_alpha_out.clone(),
+            ring_present_out.clone(),
+        );
+        let a_blur = ring_alpha_out.get().expect("a_blur");
+        let present_blur = ring_present_out.get().expect("present_blur");
+        assert!(present_blur, "expected ring element while animating out");
+        assert!(
+            a_blur > 0.0 && a_blur < a_focused,
+            "expected ring alpha to be intermediate after blur, got a_blur={a_blur} a_focused={a_focused}"
+        );
+
+        for _ in 0..settle {
+            let _ = render_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                model.clone(),
+                ring_alpha_out.clone(),
+                ring_present_out.clone(),
+            );
+        }
+        let a_final = ring_alpha_out.get().expect("a_final");
+        let present_final = ring_present_out.get().expect("present_final");
+        assert!(
+            a_final.abs() <= 1e-4,
+            "expected ring alpha=0, got {a_final}"
+        );
+        assert!(
+            !present_final,
+            "expected ring element to unmount after settling"
+        );
     }
 }
