@@ -444,6 +444,7 @@ Deterministic termination note (especially for multi-window docking scripts):
 
 - Prefer ending a script with `capture_bundle` as the final step.
 - Avoid trailing `wait_frames` after the final `capture_bundle` (it can stall indefinitely if the last remaining window becomes occluded/idle and stops producing frames).
+- Smoke/gate suites (e.g. `diag-hardening-smoke-*`) run a strict preflight and will fail early if a script ends with `wait_frames` or contains `wait_frames` after the final `capture_bundle` (see `check.script_termination.json` under the suite `--dir`).
 
 Screenshot note:
 
