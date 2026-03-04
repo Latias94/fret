@@ -6,7 +6,7 @@
 #
 # Usage:
 #   pwsh tools/diag_gate_action_first_authoring_v1.ps1
-#   pwsh tools/diag_gate_action_first_authoring_v1.ps1 -OutDir target/fret-diag-afa-v1 -Release
+#   pwsh tools/diag_gate_action_first_authoring_v1.ps1 -OutDir target/dfa-v1 -Release
 
 [CmdletBinding()]
 param(

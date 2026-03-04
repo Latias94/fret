@@ -1,6 +1,6 @@
 # Action-First Authoring + View Runtime (Fearless Refactor v1) — Evidence and Gates
 
-Last updated: 2026-03-03
+Last updated: 2026-03-04
 
 This file defines what “done” means beyond subjective UX feel.
 
@@ -15,7 +15,7 @@ small, deterministic gates (tests and scripted diagnostics), not just manual QA.
 - ADR (view runtime): `docs/adr/0308-view-authoring-runtime-and-hooks-v1.md`
 - Workstream: `docs/workstreams/action-first-authoring-fearless-refactor-v1/DESIGN.md`
 
-### Implementation anchors (as of 2026-03-03)
+### Implementation anchors (as of 2026-03-04)
 
 Action identity + typed unit actions:
 
@@ -140,7 +140,7 @@ Notes:
 - Tests must rely on stable selectors (`test_id`/role/name), not pixel coordinates.
 - The script output must record the resolved `ActionId` (or command/action identity) for each step.
 
-Current scripts (as of 2026-03-03):
+Current scripts (as of 2026-03-04):
 
 - `tools/diag-scripts/cookbook/commands-keymap-basics/cookbook-commands-keymap-basics-shortcut-and-gating.json`
 - `tools/diag-scripts/cookbook/hello/cookbook-hello-click-count.json` (clicks the button via `role_and_name`, but still gates `source_test_id` attribution)

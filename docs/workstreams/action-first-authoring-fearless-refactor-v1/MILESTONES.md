@@ -1,6 +1,6 @@
 # Action-First Authoring + View Runtime (Fearless Refactor v1) — Milestones
 
-Last updated: 2026-03-03
+Last updated: 2026-03-04
 
 Related:
 
@@ -9,7 +9,7 @@ Related:
 
 ---
 
-## Current status snapshot (as of 2026-03-03)
+## Current status snapshot (as of 2026-03-04)
 
 - **M0**: Met (ADRs 0307/0308 are accepted; ADR index jump table is updated).
 - **M1**: Met (ActionId identity + typed unit actions + converged metadata via command registry; dispatch diagnostics include handler scope and driver-handled classification).
@@ -18,7 +18,7 @@ Related:
 - **M4**: Met (ui-gallery includes an action-first view runtime snippet; templates + docs converge on View+actions).
 - **M5**: Met (workspace shell demo tab strip uses action-first pointer dispatch hooks; scripted diag gate asserts pointer dispatch trace exists).
 - **M6**: Met (legacy MVU authoring is quarantined; golden path is action-first + view runtime).
-  - Status (as of 2026-03-03): MVU remains available as compat under `fret::legacy::prelude::*` while cookbook/templates stay MVU-free.
+  - Status (as of 2026-03-04): MVU remains available as compat under `fret::legacy::prelude::*` while cookbook/templates stay MVU-free.
 
 ---
 
