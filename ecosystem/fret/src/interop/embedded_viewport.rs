@@ -410,71 +410,6 @@ pub fn record_engine_frame_foreign<S: EmbeddedViewportSurfaceOwner>(
     update
 }
 
-/// Boilerplate-free `record_engine_frame` hook for MVU window states.
-///
-/// This lets MVU apps embed a surface by:
-/// - implementing [`EmbeddedViewportRecord`] for their user state `S`,
-/// - wiring `viewport_input` to [`handle_viewport_input`],
-/// - wiring `record_engine_frame` to this function.
-#[cfg(feature = "legacy-mvu")]
-#[deprecated(
-    note = "MVU is legacy-only (compat). Prefer View runtime + actions (ADR 0308/0307) and payload actions v2 (ADR 0312)."
-)]
-#[allow(deprecated)]
-pub fn record_engine_frame_mvu<S: EmbeddedViewportRecord, M: 'static>(
-    app: &mut App,
-    window: AppWindowId,
-    ui: &mut fret_ui::UiTree<App>,
-    st: &mut crate::mvu::MvuWindowState<S, M>,
-    context: &WgpuContext,
-    renderer: &mut Renderer,
-    scale_factor: f32,
-    tick_id: TickId,
-    frame_id: FrameId,
-) -> EngineFrameUpdate {
-    record_engine_frame(
-        app,
-        window,
-        ui,
-        &mut st.user,
-        context,
-        renderer,
-        scale_factor,
-        tick_id,
-        frame_id,
-    )
-}
-
-/// Boilerplate-free `record_engine_frame` hook for MVU window states hosting a foreign UI.
-#[cfg(feature = "legacy-mvu")]
-#[deprecated(
-    note = "MVU is legacy-only (compat). Prefer View runtime + actions (ADR 0308/0307) and payload actions v2 (ADR 0312)."
-)]
-#[allow(deprecated)]
-pub fn record_engine_frame_mvu_foreign<S: EmbeddedViewportSurfaceOwner, M: 'static>(
-    app: &mut App,
-    window: AppWindowId,
-    ui: &mut fret_ui::UiTree<App>,
-    st: &mut crate::mvu::MvuWindowState<S, M>,
-    context: &WgpuContext,
-    renderer: &mut Renderer,
-    scale_factor: f32,
-    tick_id: TickId,
-    frame_id: FrameId,
-) -> EngineFrameUpdate {
-    record_engine_frame_foreign(
-        app,
-        window,
-        ui,
-        &mut st.user,
-        context,
-        renderer,
-        scale_factor,
-        tick_id,
-        frame_id,
-    )
-}
-
 /// Extension helpers for `UiAppDriver<S>` applications embedding an [`EmbeddedViewportSurface`].
 pub trait EmbeddedViewportUiAppDriverExt: Sized {
     /// Install the global input hook and the per-window frame recorder.
@@ -504,52 +439,6 @@ where
     fn drive_embedded_viewport_foreign(self) -> Self {
         self.viewport_input(handle_viewport_input)
             .record_engine_frame(record_engine_frame_foreign::<S>)
-    }
-}
-
-/// Extension helpers for MVU drivers embedding an [`EmbeddedViewportSurface`].
-#[cfg(feature = "legacy-mvu")]
-#[deprecated(
-    note = "MVU is legacy-only (compat). Prefer View runtime + actions (ADR 0308/0307) and payload actions v2 (ADR 0312)."
-)]
-pub trait EmbeddedViewportMvuUiAppDriverExt: Sized {
-    /// Install the global input hook and the per-window frame recorder.
-    fn drive_embedded_viewport(self) -> Self;
-}
-
-#[cfg(feature = "legacy-mvu")]
-#[allow(deprecated)]
-impl<S, M> EmbeddedViewportMvuUiAppDriverExt for crate::mvu::MvuUiAppDriver<S, M>
-where
-    S: EmbeddedViewportRecord,
-    M: 'static,
-{
-    fn drive_embedded_viewport(self) -> Self {
-        self.viewport_input(handle_viewport_input)
-            .record_engine_frame(record_engine_frame_mvu::<S, M>)
-    }
-}
-
-/// Extension helpers for MVU drivers hosting a foreign UI in an embedded surface.
-#[cfg(feature = "legacy-mvu")]
-#[deprecated(
-    note = "MVU is legacy-only (compat). Prefer View runtime + actions (ADR 0308/0307) and payload actions v2 (ADR 0312)."
-)]
-pub trait EmbeddedViewportForeignMvuUiAppDriverExt: Sized {
-    /// Install the global input hook and the per-window frame recorder.
-    fn drive_embedded_viewport_foreign(self) -> Self;
-}
-
-#[cfg(feature = "legacy-mvu")]
-#[allow(deprecated)]
-impl<S, M> EmbeddedViewportForeignMvuUiAppDriverExt for crate::mvu::MvuUiAppDriver<S, M>
-where
-    S: EmbeddedViewportSurfaceOwner,
-    M: 'static,
-{
-    fn drive_embedded_viewport_foreign(self) -> Self {
-        self.viewport_input(handle_viewport_input)
-            .record_engine_frame(record_engine_frame_mvu_foreign::<S, M>)
     }
 }
 
