@@ -10,6 +10,7 @@
 //! See:
 //! - ADR 0307 (typed actions)
 //! - ADR 0308 (view runtime + hooks)
+#![allow(deprecated)]
 
 /// Common imports for legacy MVU-based example code.
 ///
@@ -17,6 +18,10 @@
 pub mod prelude {
     pub use crate::prelude::*;
 
-    #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
+    #[cfg(all(
+        not(target_arch = "wasm32"),
+        feature = "desktop",
+        feature = "legacy-mvu"
+    ))]
     pub use crate::mvu::{KeyedMessageRouter, MessageRouter, Program as MvuProgram};
 }

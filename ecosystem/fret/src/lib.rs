@@ -44,6 +44,9 @@ pub use fret_bootstrap::ui_app_driver::ViewElements;
 pub use fret_runtime::{ActionId, ActionMeta, ActionRegistry, CommandId, TypedAction};
 
 pub mod actions;
+#[deprecated(
+    note = "This module is legacy-only (compat). Prefer View+actions (ADR 0308/0307) and payload actions v2 (ADR 0312)."
+)]
 pub mod legacy;
 pub mod view;
 pub mod workspace_menu;
@@ -133,7 +136,10 @@ impl Default for Defaults {
 /// Legacy MVU-style authoring helpers (desktop builds).
 ///
 /// New code should prefer action-first authoring via `View` + typed actions (ADRs 0307/0308).
-#[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
+#[deprecated(
+    note = "MVU is legacy-only (compat). Prefer View+actions (ADR 0308/0307) and payload actions v2 (ADR 0312). Enable `fret` feature `legacy-mvu` to use MVU surfaces."
+)]
+#[cfg(all(not(target_arch = "wasm32"), feature = "desktop", feature = "legacy-mvu"))]
 pub mod mvu;
 
 /// Legacy MVU-style command routing helpers (portable; desktop + web).
@@ -142,6 +148,10 @@ pub mod mvu;
 /// without introducing a full action registry surface.
 ///
 /// Prefer action-first (`fret::actions!`) whenever possible.
+#[deprecated(
+    note = "MVU routers are legacy-only (compat). Prefer actions (ADR 0307) or payload actions v2 (ADR 0312) where possible. Enable `fret` feature `legacy-mvu` to use these routers."
+)]
+#[cfg(feature = "legacy-mvu")]
 pub mod mvu_router;
 
 /// Interop helpers for embedding foreign UI as isolated surfaces (desktop builds).
@@ -171,8 +181,17 @@ pub mod prelude {
 
     #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
     pub use crate::interop::embedded_viewport::{
-        EmbeddedViewportForeignMvuUiAppDriverExt, EmbeddedViewportForeignUiAppDriverExt,
-        EmbeddedViewportMvuUiAppDriverExt, EmbeddedViewportUiAppDriverExt,
+        EmbeddedViewportForeignUiAppDriverExt, EmbeddedViewportUiAppDriverExt,
+    };
+
+    #[cfg(all(
+        not(target_arch = "wasm32"),
+        feature = "desktop",
+        feature = "legacy-mvu"
+    ))]
+    #[allow(deprecated)]
+    pub use crate::interop::embedded_viewport::{
+        EmbeddedViewportForeignMvuUiAppDriverExt, EmbeddedViewportMvuUiAppDriverExt,
     };
     pub use crate::workspace_menu::{
         InWindowMenubarFocusHandle, MenubarFromRuntimeOptions, menubar_from_runtime,

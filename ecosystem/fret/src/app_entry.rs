@@ -103,6 +103,11 @@ impl App {
     }
 
     /// Build a typed-message MVU app (`fret::mvu`) and return a runnable builder.
+    #[cfg(feature = "legacy-mvu")]
+    #[deprecated(
+        note = "MVU is legacy-only (compat). Prefer View runtime + actions (ADR 0308/0307) and payload actions v2 (ADR 0312)."
+    )]
+    #[allow(deprecated)]
     pub fn mvu<P: crate::mvu::Program>(
         self,
     ) -> Result<UiAppBuilder<crate::mvu::MvuWindowState<P::State, P::Message>>> {
@@ -209,6 +214,11 @@ impl App {
     }
 
     /// Convenience: build an MVU app and run it immediately.
+    #[cfg(feature = "legacy-mvu")]
+    #[deprecated(
+        note = "MVU is legacy-only (compat). Prefer View runtime + actions (ADR 0308/0307) and payload actions v2 (ADR 0312)."
+    )]
+    #[allow(deprecated)]
     pub fn run_mvu<P: crate::mvu::Program>(self) -> Result<()> {
         self.mvu::<P>()?.run()
     }

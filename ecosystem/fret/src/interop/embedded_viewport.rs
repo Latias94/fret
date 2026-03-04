@@ -416,6 +416,11 @@ pub fn record_engine_frame_foreign<S: EmbeddedViewportSurfaceOwner>(
 /// - implementing [`EmbeddedViewportRecord`] for their user state `S`,
 /// - wiring `viewport_input` to [`handle_viewport_input`],
 /// - wiring `record_engine_frame` to this function.
+#[cfg(feature = "legacy-mvu")]
+#[deprecated(
+    note = "MVU is legacy-only (compat). Prefer View runtime + actions (ADR 0308/0307) and payload actions v2 (ADR 0312)."
+)]
+#[allow(deprecated)]
 pub fn record_engine_frame_mvu<S: EmbeddedViewportRecord, M: 'static>(
     app: &mut App,
     window: AppWindowId,
@@ -441,6 +446,11 @@ pub fn record_engine_frame_mvu<S: EmbeddedViewportRecord, M: 'static>(
 }
 
 /// Boilerplate-free `record_engine_frame` hook for MVU window states hosting a foreign UI.
+#[cfg(feature = "legacy-mvu")]
+#[deprecated(
+    note = "MVU is legacy-only (compat). Prefer View runtime + actions (ADR 0308/0307) and payload actions v2 (ADR 0312)."
+)]
+#[allow(deprecated)]
 pub fn record_engine_frame_mvu_foreign<S: EmbeddedViewportSurfaceOwner, M: 'static>(
     app: &mut App,
     window: AppWindowId,
@@ -498,11 +508,17 @@ where
 }
 
 /// Extension helpers for MVU drivers embedding an [`EmbeddedViewportSurface`].
+#[cfg(feature = "legacy-mvu")]
+#[deprecated(
+    note = "MVU is legacy-only (compat). Prefer View runtime + actions (ADR 0308/0307) and payload actions v2 (ADR 0312)."
+)]
 pub trait EmbeddedViewportMvuUiAppDriverExt: Sized {
     /// Install the global input hook and the per-window frame recorder.
     fn drive_embedded_viewport(self) -> Self;
 }
 
+#[cfg(feature = "legacy-mvu")]
+#[allow(deprecated)]
 impl<S, M> EmbeddedViewportMvuUiAppDriverExt for crate::mvu::MvuUiAppDriver<S, M>
 where
     S: EmbeddedViewportRecord,
@@ -515,11 +531,17 @@ where
 }
 
 /// Extension helpers for MVU drivers hosting a foreign UI in an embedded surface.
+#[cfg(feature = "legacy-mvu")]
+#[deprecated(
+    note = "MVU is legacy-only (compat). Prefer View runtime + actions (ADR 0308/0307) and payload actions v2 (ADR 0312)."
+)]
 pub trait EmbeddedViewportForeignMvuUiAppDriverExt: Sized {
     /// Install the global input hook and the per-window frame recorder.
     fn drive_embedded_viewport_foreign(self) -> Self;
 }
 
+#[cfg(feature = "legacy-mvu")]
+#[allow(deprecated)]
 impl<S, M> EmbeddedViewportForeignMvuUiAppDriverExt for crate::mvu::MvuUiAppDriver<S, M>
 where
     S: EmbeddedViewportSurfaceOwner,

@@ -60,6 +60,12 @@ icons-lucide = ["icons"]
 preload-icon-svgs = ["fret-bootstrap/preload-icon-svgs"]
 command-palette = ["fret-bootstrap/ui-app-command-palette"]
 
+# Legacy/compat MVU authoring surfaces (AFA-clean-065).
+#
+# This feature is intentionally not in `default`: MVU is legacy-only and should be opt-in in
+# downstream apps. Prefer `View` + typed actions + payload actions (ADR 0308/0307/0312).
+legacy-mvu = []
+
 [dependencies]
 thiserror.workspace = true
 
