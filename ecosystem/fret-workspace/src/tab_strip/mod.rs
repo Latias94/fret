@@ -65,7 +65,7 @@ use kernel::{
 use drag_state::{WorkspaceTabStripDragState, get_drag_model, read_drag_snapshot_for_pointer};
 use geometry::{bounds_for_optional_element_id, collect_tab_hit_rects};
 use intent::{WorkspaceTabStripIntent, dispatch_intent};
-use interaction::tab_pointer_down_handler;
+use interaction::{tab_close_pointer_down_handler, tab_pointer_down_handler, tab_pointer_up_handler};
 use layouts::{
     fill_grow_layout, fill_layout, row_layout, tab_list_semantics_layout,
     tab_strip_scroll_content_layout,
@@ -574,7 +574,6 @@ impl WorkspaceTabStrip {
                                             let pane_id_for_drag = pane_id.clone();
                                             let tab_drag_model_for_drag = tab_drag_model.clone();
                                             let pane_activate_cmd_for_activate = pane_activate_cmd.clone();
-                                            let pane_activate_cmd_for_close = pane_activate_cmd.clone();
                                             let pane_activate_cmd_for_drag = pane_activate_cmd.clone();
                                             let tab_close_command = tab.close_command.clone();
                                             let tab_dirty = tab.dirty;
@@ -1364,6 +1363,9 @@ impl WorkspaceTabStrip {
                                                             })
                                                         };
                                                         cx.pressable_on_pointer_up(dnd_on_up);
+                                                        cx.pressable_add_on_pointer_up(
+                                                            tab_pointer_up_handler(drag_model.clone()),
+                                                        );
 
                                                         let bg = if is_active {
                                                             active_bg
@@ -1634,20 +1636,32 @@ impl WorkspaceTabStrip {
                                                                         ];
 
                                                                         if has_trailing_slot {
-                                                                            if show_close {
-                                                                                if let Some(close_command) =
+                                                                            if show_close
+                                                                                && let Some(close_cmd) =
                                                                                     tab_close_command.clone()
-                                                                                {
-                                                                                    children.push(tab_close_button(
-                                                                                        cx,
-                                                                                        close_command,
-                                                                                        pane_activate_cmd_for_close.clone(),
-                                                                                        hover_bg,
-                                                                                        text_style.clone(),
-                                                                                        tab_fg,
-                                                                                        tab_close_test_id.clone(),
-                                                                                    ));
-                                                                                }
+                                                                            {
+                                                                                let on_down =
+                                                                                    tab_close_pointer_down_handler(
+                                                                                        drag_model.clone(),
+                                                                                        pane_activate_cmd_for_activate
+                                                                                            .clone(),
+                                                                                        close_cmd,
+                                                                                        dnd.clone(),
+                                                                                        dnd_scope,
+                                                                                    );
+                                                                                let on_up =
+                                                                                    tab_pointer_up_handler(
+                                                                                        drag_model.clone(),
+                                                                                    );
+                                                                                children.push(tab_close_button(
+                                                                                    cx,
+                                                                                    hover_bg,
+                                                                                    text_style.clone(),
+                                                                                    tab_fg,
+                                                                                    tab_close_test_id.clone(),
+                                                                                    on_down,
+                                                                                    on_up,
+                                                                                ));
                                                                             } else if tab_dirty {
                                                                                 children.push(tab_dirty_indicator(
                                                                                     cx,
@@ -1655,7 +1669,11 @@ impl WorkspaceTabStrip {
                                                                                     text_style.clone(),
                                                                                 ));
                                                                             } else {
-                                                                                children.push(tab_trailing_slot_placeholder(cx));
+                                                                                children.push(
+                                                                                    tab_trailing_slot_placeholder(
+                                                                                        cx,
+                                                                                    ),
+                                                                                );
                                                                             }
                                                                         }
 
@@ -1850,7 +1868,11 @@ impl WorkspaceTabStrip {
                                 AnyElement::new(
                                     id,
                                     ElementKind::Scroll(ScrollProps {
-                                        layout: fill_grow_layout(),
+                                        layout: {
+                                            let mut layout = fill_grow_layout();
+                                            layout.overflow = fret_ui::element::Overflow::Clip;
+                                            layout
+                                        },
                                         axis: ScrollAxis::X,
                                         scroll_handle: Some(scroll_handle.clone()),
                                         // Important: keep the scroll child width `Auto` (see
@@ -2457,6 +2479,39 @@ impl WorkspaceTabStrip {
                                             st.tab_id = None;
                                             st.reason = None;
                                         },
+                                    );
+                                }
+                            }
+                        }
+                    }
+
+                    // Keep the active tab fully visible when the scroll viewport or tab width
+                    // changes (e.g. overflow controls, close affordances, chrome shifts).
+                    //
+                    // We intentionally do this outside `reveal_pending`: the active tab can become
+                    // partially clipped even if the active id did not change.
+                    if !dragging && drag_snapshot.pointer.is_none() {
+                        if let (Some(scroll_id), Some(tab_id)) =
+                            (scroll_element.get(), active_tab_element.get())
+                        {
+                            if let (Some(viewport), Some(tab_rect)) = (
+                                cx.last_bounds_for_element(scroll_id),
+                                cx.last_bounds_for_element(tab_id),
+                            ) {
+                                let scroll_x = scroll_handle.offset().x;
+                                let view_left = viewport.origin.x.0;
+                                let view_right = viewport.origin.x.0 + viewport.size.width.0;
+                                let tab_left = tab_rect.origin.x.0 - scroll_x.0;
+                                let tab_right =
+                                    tab_rect.origin.x.0 + tab_rect.size.width.0 - scroll_x.0;
+                                let fully_visible =
+                                    tab_left >= view_left && tab_right <= view_right;
+                                if !fully_visible {
+                                    scroll_rect_into_view_x_with_margin(
+                                        &scroll_handle,
+                                        viewport,
+                                        tab_rect,
+                                        Px(0.0),
                                     );
                                 }
                             }
