@@ -25,6 +25,7 @@ Last updated: 2026-03-04.
 - Landed: `Toggle` hover background transition eases (~150ms, Tailwind default) and has a unit test gate.
 - Landed: `Toggle` focus ring transitions ease in/out and have a unit test gate.
 - Landed: `Input` / `Textarea` focus ring + border transitions ease (~150ms, Tailwind default) and have unit test gates.
+- Landed: `BreadcrumbLink` hover foreground uses `transition-colors` semantics (~150ms) and has a unit test gate.
 - Landed: `NativeSelect` focus ring + border transitions ease (~150ms, Tailwind default) and has a unit test gate.
 - Landed: `SelectTrigger` focus ring + border transitions ease (~150ms, Tailwind default) and has a unit test gate.
 - Landed: `Checkbox` / `RadioGroupItem` focus ring transitions ease (~150ms, Tailwind default) and have unit test gates.
@@ -37,7 +38,6 @@ Last updated: 2026-03-04.
 - Landed: `Item` hover background transition eases (~100ms, `duration-100`) and has a unit test gate.
 - Gap: common primitives should ease hover/focus style changes (`transition-*` parity), not snap. Suggested ordering:
   - P1: InputOtp slot focus/active chrome (`transition-all` on slot).
-  - P1: BreadcrumbLink hover color (`transition-colors`).
   - P1: TableRow hover/selected background (`transition-colors`).
   - P1: ScrollArea viewport ring + scrollbar hover (`transition-*`).
   - P1: Sidebar collapsible width/position/opacity (`duration-200 ease-linear`).
