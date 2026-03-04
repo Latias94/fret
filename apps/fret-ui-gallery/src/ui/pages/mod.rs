@@ -886,8 +886,11 @@ pub(super) fn preview_forms(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
     form::preview_forms(cx)
 }
 
-pub(super) fn preview_hover_card(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
-    hover_card::preview_hover_card(cx)
+pub(super) fn preview_hover_card(
+    cx: &mut ElementContext<'_, App>,
+    avatar_image: Model<Option<ImageId>>,
+) -> Vec<AnyElement> {
+    hover_card::preview_hover_card(cx, avatar_image)
 }
 
 pub(super) fn preview_input(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
