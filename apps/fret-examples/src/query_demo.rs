@@ -14,6 +14,9 @@ mod act {
     ]);
 }
 
+const TRANSIENT_INVALIDATE_KEY: u64 = 0xAFA0_0001;
+const TRANSIENT_INVALIDATE_NAMESPACE: u64 = 0xAFA0_0002;
+
 #[derive(Debug)]
 struct DemoData {
     label: Arc<str>,
@@ -23,17 +26,8 @@ fn demo_key() -> QueryKey<DemoData> {
     QueryKey::new("fret-examples.query_demo.demo_data.v1", &0u8)
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-enum PendingInvalidate {
-    #[default]
-    None,
-    Key,
-    Namespace,
-}
-
 struct QueryDemoState {
     fail_mode: Model<bool>,
-    pending_invalidate: Model<PendingInvalidate>,
 }
 
 struct QueryDemoView {
@@ -45,7 +39,6 @@ impl View for QueryDemoView {
         Self {
             st: QueryDemoState {
                 fail_mode: app.models_mut().insert(false),
-                pending_invalidate: app.models_mut().insert(PendingInvalidate::None),
             },
         }
     }
@@ -53,27 +46,16 @@ impl View for QueryDemoView {
     fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
         let theme = Theme::global(&*cx.app).snapshot();
 
-        let pending = cx
-            .watch_model(&self.st.pending_invalidate)
-            .layout()
-            .copied_or_default();
-        if pending != PendingInvalidate::None {
-            let key = demo_key();
-            let _ = with_query_client(cx.app, |client, app| match pending {
-                PendingInvalidate::None => {}
-                PendingInvalidate::Key => {
-                    client.invalidate(app, key);
-                }
-                PendingInvalidate::Namespace => {
-                    client.invalidate_namespace(key.namespace());
-                }
+        if cx.take_transient_on_action_root(TRANSIENT_INVALIDATE_KEY) {
+            let _ = with_query_client(cx.app, |client, app| {
+                client.invalidate(app, demo_key());
             });
-            let _ = cx
-                .app
-                .models_mut()
-                .update(&self.st.pending_invalidate, |v| {
-                    *v = PendingInvalidate::None
-                });
+        }
+        if cx.take_transient_on_action_root(TRANSIENT_INVALIDATE_NAMESPACE) {
+            let key = demo_key();
+            let _ = with_query_client(cx.app, |client, _app| {
+                client.invalidate_namespace(key.namespace());
+            });
         }
 
         let fail_mode = cx
@@ -244,25 +226,8 @@ impl View for QueryDemoView {
             }
         });
 
-        cx.on_action_notify::<act::Invalidate>({
-            let pending = self.st.pending_invalidate.clone();
-            move |host, _acx| {
-                let _ = host
-                    .models_mut()
-                    .update(&pending, |v| *v = PendingInvalidate::Key);
-                true
-            }
-        });
-
-        cx.on_action_notify::<act::InvalidateNamespace>({
-            let pending = self.st.pending_invalidate.clone();
-            move |host, _acx| {
-                let _ = host
-                    .models_mut()
-                    .update(&pending, |v| *v = PendingInvalidate::Namespace);
-                true
-            }
-        });
+        cx.on_action_notify_transient::<act::Invalidate>(TRANSIENT_INVALIDATE_KEY);
+        cx.on_action_notify_transient::<act::InvalidateNamespace>(TRANSIENT_INVALIDATE_NAMESPACE);
 
         let page = ui::container(cx, |cx| {
             [ui::v_flex(cx, |_cx| [card])

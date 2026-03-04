@@ -17,6 +17,9 @@ mod act {
     ]);
 }
 
+const TRANSIENT_INVALIDATE_KEY: u64 = 0xAFA0_0101;
+const TRANSIENT_INVALIDATE_NAMESPACE: u64 = 0xAFA0_0102;
+
 #[derive(Debug)]
 struct DemoData {
     label: Arc<str>,
@@ -52,17 +55,8 @@ fn install_tokio_spawner(app: &mut App) {
     app.set_global::<TokioRuntimeGlobal>(TokioRuntimeGlobal { _rt: rt });
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-enum PendingInvalidate {
-    #[default]
-    None,
-    Key,
-    Namespace,
-}
-
 struct QueryAsyncTokioDemoState {
     fail_mode: Model<bool>,
-    pending_invalidate: Model<PendingInvalidate>,
 }
 
 struct QueryAsyncTokioDemoView {
@@ -74,7 +68,6 @@ impl View for QueryAsyncTokioDemoView {
         Self {
             st: QueryAsyncTokioDemoState {
                 fail_mode: app.models_mut().insert(false),
-                pending_invalidate: app.models_mut().insert(PendingInvalidate::None),
             },
         }
     }
@@ -82,28 +75,16 @@ impl View for QueryAsyncTokioDemoView {
     fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
         let theme = Theme::global(&*cx.app).snapshot();
 
-        let pending = cx
-            .watch_model(&self.st.pending_invalidate)
-            .layout()
-            .copied_or_default();
-        if pending != PendingInvalidate::None {
-            let key = demo_key();
-            let _ = with_query_client(cx.app, |client, app| match pending {
-                PendingInvalidate::None => {}
-                PendingInvalidate::Key => {
-                    client.invalidate(app, key);
-                }
-                PendingInvalidate::Namespace => {
-                    client.invalidate_namespace(key.namespace());
-                }
+        if cx.take_transient_on_action_root(TRANSIENT_INVALIDATE_KEY) {
+            let _ = with_query_client(cx.app, |client, app| {
+                client.invalidate(app, demo_key());
             });
-
-            let _ = cx
-                .app
-                .models_mut()
-                .update(&self.st.pending_invalidate, |v| {
-                    *v = PendingInvalidate::None
-                });
+        }
+        if cx.take_transient_on_action_root(TRANSIENT_INVALIDATE_NAMESPACE) {
+            let key = demo_key();
+            let _ = with_query_client(cx.app, |client, _app| {
+                client.invalidate_namespace(key.namespace());
+            });
         }
 
         let fail_mode = cx.watch_model(&self.st.fail_mode).layout().copied_or_default();
@@ -247,23 +228,8 @@ impl View for QueryAsyncTokioDemoView {
             }
         });
 
-        cx.on_action_notify::<act::Invalidate>({
-            let pending = self.st.pending_invalidate.clone();
-            move |host, _acx| {
-                let _ = host.models_mut().update(&pending, |v| *v = PendingInvalidate::Key);
-                true
-            }
-        });
-
-        cx.on_action_notify::<act::InvalidateNamespace>({
-            let pending = self.st.pending_invalidate.clone();
-            move |host, _acx| {
-                let _ = host
-                    .models_mut()
-                    .update(&pending, |v| *v = PendingInvalidate::Namespace);
-                true
-            }
-        });
+        cx.on_action_notify_transient::<act::Invalidate>(TRANSIENT_INVALIDATE_KEY);
+        cx.on_action_notify_transient::<act::InvalidateNamespace>(TRANSIENT_INVALIDATE_NAMESPACE);
 
         let page = ui::container(cx, |cx| {
             [ui::v_flex(cx, |_cx| [card])
@@ -298,4 +264,3 @@ pub fn run() -> anyhow::Result<()> {
         .run_view::<QueryAsyncTokioDemoView>()
         .map_err(anyhow::Error::from)
 }
-
