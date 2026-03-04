@@ -133,6 +133,21 @@ Migration steps:
    - `cx.notify()` and/or
    - selector/query hooks that carry proper dependency observation.
 
+Side effects that need `App` access (v1 note):
+
+- Some operations (e.g. `fret-query` invalidation via `with_query_client`) require `&mut App`.
+- View action handlers (`cx.on_action*`) run on a restricted host (`UiActionHost`) by design, so they
+  should avoid direct `App`-only calls.
+
+Recommended v1 pattern (schedule in handler, execute in `render()`):
+
+- In the action handler: write a small “pending effect” model value.
+- In `render()`: read the pending flag, apply the `App`-scoped effect, then clear the flag.
+
+Example:
+
+- `apps/fret-examples/src/query_demo.rs` (uses `PendingInvalidate` + `with_query_client` in `render()`).
+
 ---
 
 ## 3.1) When to use MVU vs View (v1 guidance)
