@@ -131,6 +131,13 @@ Suite progress notes (2026-03-03):
   viewport min size behavior even when a `DockingPolicy` is installed for unrelated hooks (e.g. drop-zone masking).
   - PASS: `target/fret-diag-codex-splitter-min` (run id `1772532241288`)
 
+Status update (2026-03-04):
+
+- Diagnostics scripts gain a time-based fallback for stabilization and timeouts:
+  - Protocol: `wait_ms` step and optional `timeout_ms` fields for `wait_*` and `capture_screenshot`.
+  - Tooling: strict termination preflight treats trailing `wait_ms` like `wait_frames` for smoke/gate suites.
+  - Guidance: prefer `wait_until` with `timeout_ms` for multi-window/occlusion resilience; use `wait_ms` only as a last resort.
+
 ## M1.4 — Rebuild reliability for docking demos (Windows/MSVC)
 
 Goal: docking demo binaries used by `--launch` diagnostics can be rebuilt reliably in local dev.

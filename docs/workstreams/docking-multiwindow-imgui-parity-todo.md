@@ -137,6 +137,30 @@ Each TODO is labeled:
     - Scripted input isolation ignores external pointer events, but does not freeze the OS cursor. Avoid moving the
       physical mouse during multi-window docking diag runs to prevent OS-level hover routing from diverging.
 
+## P0 — Editor-grade “hand feel” (multi-monitor / DPI)
+
+- [ ] DW-P0-dpi-006 Mixed-DPI multi-monitor follow (drag active across monitors).
+  - Goal: while a tear-off follow drag is active, moving the DockFloating OS window across monitors with different DPI
+    should not cause large cursor-to-grab offsets, and docking hints/preview should remain usable.
+  - Rationale: ImGui multi-viewports workflows commonly cross monitors; DPI jumps are the fastest way to make docking
+    “feel broken”.
+  - Contracts:
+    - DPI semantics: `docs/adr/0017-multi-window-display-and-dpi.md`
+    - Cross-window drag sessions: `docs/adr/0041-drag-and-drop-clipboard-and-cross-window-drag-sessions.md`
+  - Evidence anchors:
+    - Cursor override integration (diagnostics): `crates/fret-launch/src/runner/desktop/runner/diag_cursor_override.rs`
+    - Hover routing under follow: `crates/fret-launch/src/runner/desktop/runner/event_routing.rs` (`route_internal_drag_hover_from_cursor`)
+    - Window move/follow: `crates/fret-launch/src/runner/desktop/runner/docking.rs`
+  - Acceptance (manual; Windows with 2 monitors at different scale factors):
+    - Tear off a tab to a DockFloating OS window.
+    - Begin drag-back while follow is active.
+    - Move the follow window across the monitor boundary.
+    - Dock hints remain stable; drop still resolves in the intended target window; no large “grab jumps”.
+  - Gate plan:
+    - Start with a manual checklist + bundle captures (pre/post boundary crossing) in the docking arbitration demo.
+    - Promote to an automated diag script only if we can reliably detect a mixed-DPI environment (or explicitly mark the
+      script as “requires mixed-dpi” and skip otherwise).
+
 ## P1 — Cross-platform robustness and capability modeling
 
 - [x] DW-P1-caps-001 Add capability quality signals for window hover + positioning.
