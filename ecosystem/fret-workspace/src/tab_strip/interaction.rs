@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use fret_core::{Modifiers, MouseButton, Px};
+use fret_core::{Modifiers, MouseButton};
 use fret_runtime::{CommandId, DefaultAction, Model};
 use fret_ui::action::{
     ActionCx, ActivateReason, OnPressablePointerDown, PressablePointerDownResult,
@@ -8,10 +8,12 @@ use fret_ui::action::{
 };
 
 use fret_ui_kit::dnd as ui_dnd;
+use fret_ui_kit::headless::tab_strip_arbitration;
 
 use crate::tab_drag::DRAG_KIND_WORKSPACE_TAB;
 
 use super::drag_state::WorkspaceTabStripDragState;
+use super::consts::{TAB_CHROME_PAD_RIGHT, TAB_CLOSE_SIZE};
 use super::intent::{WorkspaceTabStripIntent, dispatch_intent};
 use super::kernel::WorkspaceTabStripDropTarget;
 
@@ -38,17 +40,12 @@ pub(super) fn tab_pointer_down_handler(
                 // Rationale: without this, the tab pressable can observe the pointer-down that
                 // targets the nested close button pressable, leading to accidental activation or
                 // DnD capture when the intent is "close without activation".
-                let bounds = host.bounds();
-                let close_size = Px(18.0);
-                let padding_right = Px(6.0);
-                let close_x0 = Px(bounds.size.width.0 - padding_right.0 - close_size.0);
-                let close_y0 = Px((bounds.size.height.0 - close_size.0) * 0.5);
-                let p = down.position_local;
-                if p.x.0 >= close_x0.0
-                    && p.x.0 <= close_x0.0 + close_size.0
-                    && p.y.0 >= close_y0.0
-                    && p.y.0 <= close_y0.0 + close_size.0
-                {
+                if tab_strip_arbitration::tab_close_hit_test(
+                    host.bounds(),
+                    down.position_local,
+                    TAB_CLOSE_SIZE,
+                    TAB_CHROME_PAD_RIGHT,
+                ) {
                     return PressablePointerDownResult::SkipDefault;
                 }
             }

@@ -136,6 +136,7 @@ struct DockingArbitrationHarnessRoot {
     float_zone_anchor: fret_core::NodeId,
     viewport_split_handle_anchor: fret_core::NodeId,
     floating_title_bar_anchor: fret_core::NodeId,
+    tab_close_inactive_anchor: fret_core::NodeId,
     tab_drop_end_anchor: fret_core::NodeId,
     tab_overflow_button_anchor: fret_core::NodeId,
     tab_overflow_menu_row_1_anchor: fret_core::NodeId,
@@ -478,11 +479,15 @@ impl<H: fret_ui::UiHost> Widget<H> for DockingArbitrationHarnessRoot {
         let (
             overflow_button_anchor_rect,
             overflow_row_1_anchor_rect,
+            tab_close_inactive_anchor_rect,
             tab_drop_end_anchor_rect,
             tab_scroll_edge_left_anchor_rect,
             tab_scroll_edge_right_anchor_rect,
         ) = (|| {
             use fret_core::{DockGraph, DockNode, DockNodeId, PanelKey};
+            use fret_core::{
+                FontId, TextAlign, TextConstraints, TextOverflow, TextStyle, TextWrap,
+            };
 
             fn tabs_rect_for_panel(
                 graph: &DockGraph,
@@ -535,6 +540,8 @@ impl<H: fret_ui::UiHost> Widget<H> for DockingArbitrationHarnessRoot {
                 }
             }
 
+            let theme = cx.theme().snapshot();
+
             let dock = cx.app.global::<DockManager>()?;
             let root = dock.graph.window_root(self.window)?;
 
@@ -550,17 +557,17 @@ impl<H: fret_ui::UiHost> Widget<H> for DockingArbitrationHarnessRoot {
                 &left_panel,
             )?;
             let (tabs_node, _active) = dock.graph.find_panel_in_window(self.window, &left_panel)?;
-            let tab_count = match dock.graph.node(tabs_node)? {
-                DockNode::Tabs { tabs, .. } => tabs.len(),
-                _ => 0,
+            let (tabs, active) = match dock.graph.node(tabs_node)? {
+                DockNode::Tabs { tabs, active } => (tabs.as_slice(), *active),
+                _ => (&[][..], 0),
             };
+            let tab_count = tabs.len();
             if tab_count == 0 {
                 return None;
             }
 
             // Duplicate the docking overflow geometry formula in order to keep scripted anchors
             // stable without reaching into crate-private helpers.
-            let theme = cx.theme().snapshot();
             let tab_bar = Rect {
                 origin: tabs_rect.origin,
                 size: Size::new(
@@ -618,21 +625,110 @@ impl<H: fret_ui::UiHost> Widget<H> for DockingArbitrationHarnessRoot {
                 tab_bar.origin.x.0 + (tab_bar.size.width.0.max(0.0) - 1.0_f32).max(0.0);
             let edge_cy = tab_bar.origin.y.0 + tab_bar.size.height.0 * 0.5;
 
+            let tab_close_inactive_anchor_rect = (|| {
+                if tab_count < 2 {
+                    return Some(hidden);
+                }
+
+                // Inactive tab close anchor (tab index 1 by default in the overflow preset).
+                //
+                // This duplicates docking's title width model (`dock_tab_width_for_title`) so the
+                // anchor lands inside the close affordance hit rect without reaching into
+                // crate-private helpers.
+                let inactive_index = if active == 0 { 1 } else { 0 };
+
+                let pad_x = theme.metric_token("metric.padding.md");
+                let reserve = 20.0_f32 + 6.0_f32;
+                let inner_max_w = (240.0_f32 - pad_x.0 * 2.0 - reserve).max(1.0);
+                let constraints = TextConstraints {
+                    max_width: Some(Px(inner_max_w)),
+                    wrap: TextWrap::None,
+                    overflow: TextOverflow::Clip,
+                    align: TextAlign::Start,
+                    scale_factor: cx.scale_factor,
+                };
+
+                let font_size = theme.metric_token("font.size");
+                let line_height = theme.metric_token("font.line_height");
+                let text_style = TextStyle {
+                    font: FontId::default(),
+                    size: font_size,
+                    line_height: Some(line_height),
+                    ..Default::default()
+                };
+
+                let tab_widths: Vec<Px> = tabs
+                    .iter()
+                    .map(|panel| {
+                        let title = dock
+                            .panel(panel)
+                            .and_then(|p| (!p.title.is_empty()).then_some(p.title.as_str()))
+                            .unwrap_or(panel.kind.0.as_str());
+                        let (mut blob, mut metrics) =
+                            cx.services.text().prepare_str(title, &text_style, constraints);
+                        if metrics.size.width.0 <= 0.0 && !title.is_empty() {
+                            cx.services.text().release(blob);
+                            (blob, metrics) = cx.services.text().prepare_str(
+                                title,
+                                &text_style,
+                                TextConstraints {
+                                    max_width: None,
+                                    wrap: TextWrap::None,
+                                    overflow: TextOverflow::Clip,
+                                    align: TextAlign::Start,
+                                    scale_factor: cx.scale_factor,
+                                },
+                            );
+                        }
+                        cx.services.text().release(blob);
+
+                        let title_w = metrics.size.width;
+                        let raw = title_w.0 + pad_x.0 * 2.0 + reserve;
+                        Px(raw.clamp(120.0, 240.0))
+                    })
+                    .collect();
+
+                let inactive_index = inactive_index.min(tab_widths.len().saturating_sub(1));
+                let tab_x0 = tab_bar.origin.x.0
+                    + tab_widths
+                        .iter()
+                        .take(inactive_index)
+                        .map(|w| w.0)
+                        .sum::<f32>();
+                let tab_w = tab_widths.get(inactive_index).copied().unwrap_or(Px(120.0)).0;
+
+                let pad_sm = theme.metric_token("metric.padding.sm").0.max(0.0);
+                let close_size = 20.0_f32;
+                let close_cx_raw = tab_x0 + tab_w - pad_sm - close_size * 0.5;
+                let close_cy = tab_bar.origin.y.0 + tab_bar.size.height.0 * 0.5;
+
+                let strip_right = (button_rect.origin.x.0 - 2.0).max(tab_bar.origin.x.0);
+                let strip_left = tab_bar.origin.x.0;
+                let strip_min = strip_left + 1.0;
+                let strip_max = (strip_right - 1.0).max(strip_min);
+                let close_cx = close_cx_raw.clamp(strip_min, strip_max);
+
+                Some(rect(close_cx, close_cy))
+            })()
+            .unwrap_or(hidden);
+
             Some((
                 rect(button_cx, button_cy),
                 rect(row_cx, row_cy),
+                tab_close_inactive_anchor_rect,
                 rect(end_cx, end_cy),
                 rect(edge_left_cx, edge_cy),
                 rect(edge_right_cx, edge_cy),
             ))
         })()
-        .unwrap_or((hidden, hidden, hidden, hidden, hidden));
+        .unwrap_or((hidden, hidden, hidden, hidden, hidden, hidden));
 
         let _ = cx.layout_in(self.tab_overflow_button_anchor, overflow_button_anchor_rect);
         let _ = cx.layout_in(
             self.tab_overflow_menu_row_1_anchor,
             overflow_row_1_anchor_rect,
         );
+        let _ = cx.layout_in(self.tab_close_inactive_anchor, tab_close_inactive_anchor_rect);
         let _ = cx.layout_in(self.tab_drop_end_anchor, tab_drop_end_anchor_rect);
         let _ = cx.layout_in(
             self.tab_scroll_edge_left_anchor,
@@ -2355,6 +2451,12 @@ impl DockingArbitrationDriver {
                     .create_node_retained(DockingArbitrationDragAnchor::new(
                         "dock-arb-tab-overflow-menu-row-anchor-left-1",
                     ));
+            let tab_close_inactive_anchor =
+                state
+                    .ui
+                    .create_node_retained(DockingArbitrationDragAnchor::new(
+                        "dock-arb-tab-close-anchor-left-inactive-1",
+                    ));
             let tab_drop_end_anchor =
                 state
                     .ui
@@ -2414,6 +2516,7 @@ impl DockingArbitrationDriver {
                     float_zone_anchor,
                     viewport_split_handle_anchor,
                     floating_title_bar_anchor,
+                    tab_close_inactive_anchor,
                     tab_drop_end_anchor,
                     tab_overflow_button_anchor,
                     tab_overflow_menu_row_1_anchor,
@@ -2436,6 +2539,7 @@ impl DockingArbitrationDriver {
                 .chain(std::iter::once(floating_title_bar_anchor))
                 .chain(dock_hint_inner_anchors.iter().map(|(_, node)| *node))
                 .chain(dock_hint_outer_anchors.iter().map(|(_, node)| *node))
+                .chain(std::iter::once(tab_close_inactive_anchor))
                 .chain(std::iter::once(tab_drop_end_anchor))
                 .chain(std::iter::once(tab_overflow_button_anchor))
                 .chain(std::iter::once(tab_overflow_menu_row_1_anchor))

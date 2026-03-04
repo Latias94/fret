@@ -30,6 +30,30 @@ This file is a short, append-only log of landings and decisions for this workstr
   - Code: `crates/fret-ui/src/tree/dispatch/hover.rs`, `crates/fret-ui/src/tree/debug/invalidation.rs`
   - Test: `crates/fret-ui/src/declarative/tests/layout/interactivity.rs` (`pressable_hover_marks_view_cache_root_dirty_on_hover_edges`)
   - Rationale: components that mount/unmount children based on `PressableState::hovered` must remain deterministic under view caching.
+- Added a docking diag gate for “close button does not activate inactive tab” (non-overflow tab bar).
+  - Harness anchor: `dock-arb-tab-close-anchor-left-inactive-1` (semantics-only, positions over the close affordance)
+  - Script: `tools/diag-scripts/docking/arbitration/docking-arbitration-demo-tab-close-button-does-not-activate.json`
+  - Rationale: editor-grade docking expects close to be an explicit intent that cannot accidentally re-target activation or drag state.
+
+## 2026-03-04
+
+- Added workspace tab strip drag diagnostics + a predicate to gate “close does not start drag”.
+  - Runtime snapshot: `crates/fret-runtime/src/interaction_diagnostics.rs` (`WorkspaceTabStripDragDiagnostics`)
+  - Workspace publisher: `ecosystem/fret-workspace/src/tab_strip/mod.rs`
+  - Protocol predicate: `crates/fret-diag-protocol/src/lib.rs` (`workspace_tab_strip_drag_active_is`)
+  - Predicate wiring: `ecosystem/fret-bootstrap/src/ui_diagnostics/predicates.rs`
+  - Workspace gate: `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-button-does-not-start-drag.json`
+- Hardened the same gate to assert the tab strip drag session is not even armed (no pointer tracking).
+  - Protocol predicate: `crates/fret-diag-protocol/src/lib.rs` (`workspace_tab_strip_drag_armed_is`)
+- Hardened docking close arbitration gate to assert no dock drag is started while pressing close.
+  - Docking gate: `tools/diag-scripts/docking/arbitration/docking-arbitration-demo-tab-close-button-does-not-activate.json`
+- Extracted a shared “tab close pointer-down hit test” helper into `fret-ui-kit` to reduce adapter drift.
+  - Code: `ecosystem/fret-ui-kit/src/headless/tab_strip_arbitration.rs`
+  - Wired in: `ecosystem/fret-workspace/src/tab_strip/interaction.rs`
+- Moved the shared hit-test helper into `fret-ui-headless` so docking/workspace can reuse identical math without new deps.
+  - Code: `ecosystem/fret-ui-headless/src/tab_strip_hit_test.rs`
+  - Re-export: `ecosystem/fret-ui-kit/src/headless/tab_strip_arbitration.rs`
+  - Wired in: `ecosystem/fret-docking/src/dock/hit_test.rs`
 
 ## Next (proposed)
 

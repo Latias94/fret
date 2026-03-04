@@ -248,6 +248,32 @@ fn eval_predicate_without_semantics(
                 })
                 .is_some_and(|s| s.active_visible == *visible),
         ),
+        UiPredicateV1::WorkspaceTabStripDragActiveIs { active, pane_id } => Some(
+            workspace
+                .and_then(|w| {
+                    w.tab_strip_drag.iter().rev().find(|s| {
+                        pane_id.as_ref().is_none_or(|id| {
+                            s.pane_id
+                                .as_ref()
+                                .is_some_and(|p| p.as_ref() == id.as_str())
+                        })
+                    })
+                })
+                .is_some_and(|s| s.dragging == *active),
+        ),
+        UiPredicateV1::WorkspaceTabStripDragArmedIs { armed, pane_id } => Some(
+            workspace
+                .and_then(|w| {
+                    w.tab_strip_drag.iter().rev().find(|s| {
+                        pane_id.as_ref().is_none_or(|id| {
+                            s.pane_id
+                                .as_ref()
+                                .is_some_and(|p| p.as_ref() == id.as_str())
+                        })
+                    })
+                })
+                .is_some_and(|s| s.pointer_id.is_some() == *armed),
+        ),
         UiPredicateV1::DockGraphCanonicalIs { canonical } => Some(
             docking
                 .and_then(|d| d.dock_graph_stats)
@@ -1321,6 +1347,24 @@ fn eval_predicate(
                 })
             })
             .is_some_and(|s| s.scroll_x.0 <= *px),
+        UiPredicateV1::WorkspaceTabStripDragActiveIs { active, pane_id } => workspace
+            .and_then(|w| {
+                w.tab_strip_drag.iter().rev().find(|s| {
+                    pane_id.as_ref().is_none_or(|id| {
+                        s.pane_id.as_ref().is_some_and(|p| p.as_ref() == id.as_str())
+                    })
+                })
+            })
+            .is_some_and(|s| s.dragging == *active),
+        UiPredicateV1::WorkspaceTabStripDragArmedIs { armed, pane_id } => workspace
+            .and_then(|w| {
+                w.tab_strip_drag.iter().rev().find(|s| {
+                    pane_id.as_ref().is_none_or(|id| {
+                        s.pane_id.as_ref().is_some_and(|p| p.as_ref() == id.as_str())
+                    })
+                })
+            })
+            .is_some_and(|s| s.pointer_id.is_some() == *armed),
         UiPredicateV1::DockGraphCanonicalIs { canonical } => docking
             .and_then(|d| d.dock_graph_stats)
             .is_some_and(|s| s.canonical_ok == *canonical),

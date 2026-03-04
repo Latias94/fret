@@ -39,6 +39,7 @@ use crate::tab_drag::{
 };
 
 mod drag_state;
+mod consts;
 mod geometry;
 mod intent;
 mod interaction;
@@ -69,6 +70,7 @@ use layouts::{
     fill_grow_layout, fill_layout, row_layout, tab_list_semantics_layout,
     tab_strip_scroll_content_layout,
 };
+use consts::TAB_CHROME_PAD_RIGHT;
 use state::{WorkspaceTabStripState, get_focus_restore_model, get_reveal_hint_model};
 use theme::WorkspaceTabStripTheme;
 use utils::{
@@ -1436,7 +1438,7 @@ impl WorkspaceTabStrip {
                                                                         },
                                                                         padding: Edges {
                                                                             left: Px(10.0),
-                                                                            right: Px(6.0),
+                                                                            right: TAB_CHROME_PAD_RIGHT,
                                                                             top: Px(4.0),
                                                                             bottom: Px(4.0),
                                                                         }
@@ -2475,6 +2477,8 @@ impl WorkspaceTabStrip {
                         let scroll_x = scroll_handle.offset().x;
                         let max_scroll_x = scroll_handle.max_offset().x;
                         let overflow = max_scroll_x.0 > 0.5;
+                        let drag_pointer_id = drag_snapshot.pointer;
+                        let dragged_tab_id = dragged_tab.clone();
 
                         let viewport_now = scroll_element
                             .get()
@@ -2528,6 +2532,16 @@ impl WorkspaceTabStrip {
                                         scroll_viewport_rect,
                                         active_tab_rect: active_tab_rect_diag,
                                         active_visible,
+                                    },
+                                );
+                                store.record_workspace_tab_strip_drag(
+                                    cx.window,
+                                    frame_id,
+                                    fret_runtime::WorkspaceTabStripDragDiagnostics {
+                                        pane_id: pane_id.clone(),
+                                        pointer_id: drag_pointer_id,
+                                        dragging,
+                                        dragged_tab_id: dragged_tab_id.clone(),
                                     },
                                 );
                             },

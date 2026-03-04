@@ -143,6 +143,10 @@ try {
             "FRET_DIAG_SEMANTICS=1",
             "--env",
             "FRET_DIAG_REDACT_TEXT=0",
+            "--env",
+            "FRET_DIAG_FIXED_FRAME_DELTA_MS=16",
+            "--env",
+            "RUST_LOG=warn",
             "--launch",
             "--",
             $demoExe

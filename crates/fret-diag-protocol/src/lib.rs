@@ -1970,6 +1970,25 @@ pub enum UiPredicateV1 {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         pane_id: Option<String>,
     },
+    /// True when the latest workspace diagnostics report an active tab strip drag session.
+    ///
+    /// This predicate reads the best-effort `workspace_interaction.tab_strip_drag` snapshot
+    /// recorded into `WindowInteractionDiagnosticsStore`.
+    WorkspaceTabStripDragActiveIs {
+        active: bool,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        pane_id: Option<String>,
+    },
+    /// True when the latest workspace diagnostics report whether a tab strip drag session is armed
+    /// (i.e. tracking a pointer that may become a drag on move threshold).
+    ///
+    /// This predicate reads the best-effort `workspace_interaction.tab_strip_drag` snapshot
+    /// recorded into `WindowInteractionDiagnosticsStore`.
+    WorkspaceTabStripDragArmedIs {
+        armed: bool,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        pane_id: Option<String>,
+    },
     /// True when the latest dock graph stats snapshot reports a canonical-form layout.
     DockGraphCanonicalIs {
         canonical: bool,
