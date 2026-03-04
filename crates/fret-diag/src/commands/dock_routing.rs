@@ -37,7 +37,19 @@ pub(crate) fn cmd_dock_routing(
     {
         if sidecars::try_read_sidecar_json_v1(&src, "dock_routing", warmup_frames).is_some() {
             let bundle_path = sidecars::adjacent_bundle_path_for_sidecar(&src);
-            (src.clone(), bundle_path)
+            if let Some(bundle_path) = bundle_path
+                .clone()
+                .filter(|p| p.is_file())
+            {
+                // Prefer regenerating from the bundle artifact when possible so the report can
+                // evolve (bounded evidence keys) without requiring users to manually delete
+                // existing `dock.routing.json` files.
+                let dock_routing_path =
+                    crate::bundle_index::ensure_dock_routing_json(&bundle_path, warmup_frames)?;
+                (dock_routing_path, Some(bundle_path))
+            } else {
+                (src.clone(), bundle_path)
+            }
         } else {
             return Err(format!(
                 "invalid dock.routing.json (expected schema_version=1 warmup_frames={warmup_frames})\n  dock_routing: {}",
@@ -45,23 +57,31 @@ pub(crate) fn cmd_dock_routing(
             ));
         }
     } else if src.is_dir() {
-        let direct = src.join("dock.routing.json");
-        if direct.is_file()
-            && sidecars::try_read_sidecar_json_v1(&direct, "dock_routing", warmup_frames).is_some()
-        {
-            (direct, None)
+        let bundle_path = crate::resolve_bundle_artifact_path(&src);
+        if bundle_path.is_file() {
+            let dock_routing_path =
+                crate::bundle_index::ensure_dock_routing_json(&bundle_path, warmup_frames)?;
+            (dock_routing_path, Some(bundle_path))
         } else {
-            let root = src.join("_root").join("dock.routing.json");
-            if root.is_file()
-                && sidecars::try_read_sidecar_json_v1(&root, "dock_routing", warmup_frames)
+            let direct = src.join("dock.routing.json");
+            if direct.is_file()
+                && sidecars::try_read_sidecar_json_v1(&direct, "dock_routing", warmup_frames)
                     .is_some()
             {
-                (root, None)
+                (direct, None)
             } else {
-                let bundle_path = crate::resolve_bundle_artifact_path(&src);
-                let dock_routing_path =
-                    crate::bundle_index::ensure_dock_routing_json(&bundle_path, warmup_frames)?;
-                (dock_routing_path, Some(bundle_path))
+                let root = src.join("_root").join("dock.routing.json");
+                if root.is_file()
+                    && sidecars::try_read_sidecar_json_v1(&root, "dock_routing", warmup_frames)
+                        .is_some()
+                {
+                    (root, None)
+                } else {
+                    return Err(format!(
+                        "missing bundle artifact (expected bundle.json or bundle.schema2.json) under: {}",
+                        src.display()
+                    ));
+                }
             }
         }
     } else {
