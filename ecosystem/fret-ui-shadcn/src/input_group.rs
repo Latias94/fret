@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use crate::button::{ButtonVariant, variant_colors};
-use crate::{LayoutDirection, rtl};
+use crate::rtl;
 use fret_core::{
     Axis, Color, Corners, Edges, FontId, FontWeight, MouseButton, Px, SemanticsRole, TextOverflow,
     TextWrap,
@@ -484,21 +484,12 @@ impl InputGroup {
                                           control_focus_target: Option<
                     fret_ui::elements::GlobalElementId,
                 >| {
-                    let order = match dir {
-                        LayoutDirection::Ltr => {
-                            if is_start {
-                                -1
-                            } else {
-                                1
-                            }
-                        }
-                        LayoutDirection::Rtl => {
-                            if is_start {
-                                1
-                            } else {
-                                -1
-                            }
-                        }
+                    let (order_inline_start, order_inline_end) =
+                        rtl::inline_start_end_pair(dir, -1, 1);
+                    let order = if is_start {
+                        order_inline_start
+                    } else {
+                        order_inline_end
                     };
                     let mut layout = LayoutRefinement::default().flex_none().order(order);
                     if has_button {
@@ -617,13 +608,19 @@ impl InputGroup {
                 if is_block_layout {
                     let control_el = match control {
                         InputGroupControlKind::Input => {
+                            let (resolved_pad_inline_start, resolved_pad_inline_end) =
+                                rtl::inline_start_end_pair(
+                                    dir,
+                                    resolved.padding.left,
+                                    resolved.padding.right,
+                                );
                             let pad_inline_start = if leading.is_empty() {
-                                resolved.padding.left
+                                resolved_pad_inline_start
                             } else {
                                 compact_px
                             };
                             let pad_inline_end = if trailing.is_empty() {
-                                resolved.padding.right
+                                resolved_pad_inline_end
                             } else {
                                 compact_px
                             };
@@ -673,7 +670,10 @@ impl InputGroup {
                         }
                         InputGroupControlKind::Textarea => {
                             let mut chrome = TextAreaStyle::default();
-                            chrome.padding_x = resolved.padding.left;
+                            chrome.padding_x = rtl::padding_x_from_physical_edges_max(
+                                resolved.padding.left,
+                                resolved.padding.right,
+                            );
                             chrome.padding_y = textarea_py;
                             chrome.background = Color::TRANSPARENT;
                             chrome.border = Edges::all(Px(0.0));
@@ -930,13 +930,19 @@ impl InputGroup {
                         },
                     )]
                 } else {
+                    let (resolved_pad_inline_start, resolved_pad_inline_end) =
+                        rtl::inline_start_end_pair(
+                            dir,
+                            resolved.padding.left,
+                            resolved.padding.right,
+                        );
                     let pad_inline_start = if leading.is_empty() {
-                        resolved.padding.left
+                        resolved_pad_inline_start
                     } else {
                         compact_px
                     };
                     let pad_inline_end = if trailing.is_empty() {
-                        resolved.padding.right
+                        resolved_pad_inline_end
                     } else {
                         compact_px
                     };

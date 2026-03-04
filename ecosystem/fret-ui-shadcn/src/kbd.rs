@@ -224,6 +224,7 @@ impl KbdGroup {
 mod tests {
     use super::*;
 
+    use crate::LayoutDirection;
     use fret_app::App;
     use fret_core::{AppWindowId, Color, Point, Px, Rect, Size as CoreSize};
     use fret_ui::element::{ElementKind, Length, MarginEdge, SpacingLength};

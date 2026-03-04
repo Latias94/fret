@@ -75,6 +75,13 @@ pub(crate) fn physical_inline_start_end(
     }
 }
 
+/// When a style surface only supports a symmetric `padding_x`, pick a value that will not under-pad
+/// any physical edge in the presence of asymmetric token resolution.
+#[inline]
+pub(crate) fn padding_x_from_physical_edges_max(left: Px, right: Px) -> Px {
+    Px(left.0.max(right.0))
+}
+
 #[inline]
 pub(crate) fn inline_start_end_pair<T>(
     dir: LayoutDirection,
@@ -304,6 +311,18 @@ mod tests {
 
         let (a, b) = inline_start_end_pair(LayoutDirection::Rtl, 1, 2);
         assert_eq!((a, b), (2, 1));
+    }
+
+    #[test]
+    fn padding_x_from_physical_edges_max_picks_larger_edge() {
+        assert_eq!(
+            padding_x_from_physical_edges_max(Px(10.0), Px(12.0)),
+            Px(12.0)
+        );
+        assert_eq!(
+            padding_x_from_physical_edges_max(Px(12.0), Px(10.0)),
+            Px(12.0)
+        );
     }
 
     #[test]

@@ -1821,14 +1821,12 @@ impl CommandList {
 	                                                    |cx| {
 	                                                        let dir =
 	                                                            crate::use_direction(cx, None);
-	                                                        let justify = match dir {
-	                                                            crate::LayoutDirection::Ltr => {
-	                                                                MainAlign::Start
-	                                                            }
-	                                                            crate::LayoutDirection::Rtl => {
-	                                                                MainAlign::End
-	                                                            }
-	                                                        };
+	                                                        let justify = crate::rtl::inline_start_end_pair(
+	                                                            dir,
+	                                                            MainAlign::Start,
+	                                                            MainAlign::End,
+	                                                        )
+	                                                        .0;
 
 	                                                        vec![cx.row(
 	                                                            RowProps {
@@ -3104,6 +3102,12 @@ impl CommandPalette {
                                                             return children;
                                                         }
 
+                                                        let left_justify = crate::rtl::inline_start_end_pair(
+                                                            dir,
+                                                            MainAlign::Start,
+                                                            MainAlign::End,
+                                                        )
+                                                        .0;
                                                         let left = cx.row(
                                                             RowProps {
                                                                 layout: {
@@ -3121,14 +3125,7 @@ impl CommandPalette {
                                                                 },
                                                                 gap: row_gap.into(),
                                                                 padding: Edges::all(Px(0.0)).into(),
-                                                                justify: match dir {
-                                                                    crate::LayoutDirection::Ltr => {
-                                                                        MainAlign::Start
-                                                                    }
-                                                                    crate::LayoutDirection::Rtl => {
-                                                                        MainAlign::End
-                                                                    }
-                                                                },
+                                                                justify: left_justify,
                                                                 align: CrossAlign::Center,
                                                             },
                                                             move |cx| {
