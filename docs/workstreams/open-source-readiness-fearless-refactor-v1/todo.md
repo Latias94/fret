@@ -23,7 +23,7 @@ Status legend:
 ## M2 — `fret` feature profiles
 
 - [~] Make selector/query helpers optional (feature-gated) so `default-features = false` is actually small.
-- [ ] Document recommended profiles in `docs/crate-usage-guide.md`:
+- [x] Document recommended profiles in `docs/crate-usage-guide.md`:
   - minimal app,
   - recommended app,
   - batteries-included.

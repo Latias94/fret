@@ -71,6 +71,7 @@ The UI gallery is a larger, multi-page app intended for component discovery and 
 - Dev/unfinished pages (opt-in): `cargo run -p fret-ui-gallery --features gallery-dev`
 - Material 3 (in progress, opt-in): `cargo run -p fret-ui-gallery --features gallery-material3`
 - Web: `cargo run -p fretboard -- dev web --demo ui_gallery`
+- Diagnostics (lite smoke): `cargo run -p fretboard -- diag suite ui-gallery-lite-smoke --launch -- cargo run -p fret-ui-gallery`
 - Details: [apps/fret-ui-gallery/README.md](../../apps/fret-ui-gallery/README.md)
 
 ## 3) Labs / maintainer harnesses

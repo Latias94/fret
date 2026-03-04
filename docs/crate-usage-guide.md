@@ -80,6 +80,43 @@ We treat feature naming as **recommended convention**, not a hard requirement fo
 
 **Use it when:** you want the recommended “just build an app” experience without hand-assembling runners, effects draining, and default integrations.
 
+**Feature profiles (recommended):**
+
+`fret` is designed to let apps choose between “smooth by default” and “small when you opt out”.
+
+- `default` = `desktop` + `app` (recommended for native desktop apps).
+  - Includes: shadcn integration, diagnostics wiring, view runtime state helpers (selector/query).
+  - Intentionally excludes: config files, UI asset caches, icon packs, icon preloading, command palette.
+- `batteries` = a bigger opt-in bundle for app/dev convenience:
+  - includes config files, UI assets, icons, and (optional) icon SVG preloading.
+
+Minimal / explicit profile (useful for embed/minimal builds that must avoid filesystem side effects):
+
+```toml
+[dependencies]
+fret = { path = "../path/to/fret/ecosystem/fret", default-features = false, features = ["desktop", "shadcn"] }
+```
+
+Recommended app profile (golden path; easiest):
+
+```toml
+[dependencies]
+fret = { path = "../path/to/fret/ecosystem/fret" } # defaults: desktop + app
+```
+
+“Batteries included” profile (opt-in bundles):
+
+```toml
+[dependencies]
+fret = { path = "../path/to/fret/ecosystem/fret", features = ["batteries"] }
+```
+
+Notes:
+
+- `config-files` is opt-in because it reads layered `.fret/*` files (settings/keymap/menubar).
+- `ui-assets` is opt-in because it wires caches/budgets and can increase compile + runtime cost.
+- `icons` / `preload-icon-svgs` are opt-in (GPU-time tradeoff; apps can install custom packs).
+
 ### `fret-framework`
 
 **What it is:** the public facade (re-exports + convenience feature bundles).
