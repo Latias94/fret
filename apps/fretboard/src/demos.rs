@@ -144,6 +144,13 @@ fn is_official_cookbook_example(id: &str) -> bool {
 fn cookbook_example_feature_hint(id: &str) -> Option<&'static str> {
     let hint = match id {
         "icons_and_assets_basics" => "--features cookbook-assets",
+        "assets_reload_epoch_basics" => "--features cookbook-assets",
+        "data_table_basics" => "--features cookbook-table",
+        "image_asset_cache_basics" => "--features cookbook-image-assets,cookbook-renderer",
+        "compositing_alpha_basics" => "--features cookbook-renderer",
+        "drop_shadow_basics" => "--features cookbook-renderer",
+        "query_basics" => "--features cookbook-query",
+        "router_basics" => "--features cookbook-router",
         "undo_basics" => "--features cookbook-undo",
         "async_inbox_basics" => "--features cookbook-async",
         "imui_action_basics" => "--features cookbook-imui",
