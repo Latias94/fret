@@ -39,6 +39,22 @@ impl Skeleton {
         }
     }
 
+    /// A convenience skeleton block with a shadcn-like baseline size (`w-full h-4`).
+    ///
+    /// Prefer this when you want a visible placeholder without repeating size refinements.
+    pub fn block() -> Self {
+        Self::line()
+    }
+
+    /// A convenience single-line skeleton (`w-full h-4`).
+    pub fn line() -> Self {
+        Self::new().refine_layout(
+            LayoutRefinement::default()
+                .w_full()
+                .h_px(MetricRef::space(Space::N4)),
+        )
+    }
+
     /// gpui-component parity: `secondary()` uses reduced opacity.
     pub fn secondary(mut self) -> Self {
         self.secondary = true;
@@ -87,11 +103,9 @@ impl Skeleton {
             .bg(ColorRef::Color(bg))
             .merge(self.chrome);
 
-        // `h-4 w-full` is a common upstream default for skeleton blocks (gpui-component uses it).
-        let layout = LayoutRefinement::default()
-            .w_full()
-            .h_px(MetricRef::space(Space::N4))
-            .merge(self.layout);
+        // Upstream shadcn Skeleton has no default size. In Fret, we keep `Skeleton::new()` size-free
+        // (shrink-to-content) and provide `Skeleton::block()` for the common `w-full h-4` case.
+        let layout = LayoutRefinement::default().merge(self.layout);
 
         let props = decl_style::container_props(&theme, chrome, layout);
         cx.container(props, |_cx| Vec::new())
@@ -122,12 +136,12 @@ mod tests {
     }
 
     #[test]
-    fn skeleton_defaults_to_w_full_and_nonzero_height() {
+    fn skeleton_block_defaults_to_w_full_and_nonzero_height() {
         let window = AppWindowId::default();
         let mut app = App::new();
 
         let el = fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
-            Skeleton::new().into_element(cx)
+            Skeleton::block().into_element(cx)
         });
 
         let ElementKind::Container(props) = &el.kind else {
@@ -147,13 +161,13 @@ mod tests {
 
         app.set_frame_id(FrameId(0));
         let a0 = fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
-            Skeleton::new().into_element(cx)
+            Skeleton::block().into_element(cx)
         });
         let a0 = find_bg_alpha(&a0).expect("background alpha");
 
         app.set_frame_id(FrameId(10));
         let a10 = fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
-            Skeleton::new().into_element(cx)
+            Skeleton::block().into_element(cx)
         });
         let a10 = find_bg_alpha(&a10).expect("background alpha");
 
@@ -170,13 +184,13 @@ mod tests {
 
         app.set_frame_id(FrameId(0));
         let a0 = fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
-            Skeleton::new().animate_pulse(false).into_element(cx)
+            Skeleton::block().animate_pulse(false).into_element(cx)
         });
         let a0 = find_bg_alpha(&a0).expect("background alpha");
 
         app.set_frame_id(FrameId(10));
         let a10 = fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
-            Skeleton::new().animate_pulse(false).into_element(cx)
+            Skeleton::block().animate_pulse(false).into_element(cx)
         });
         let a10 = find_bg_alpha(&a10).expect("background alpha");
 

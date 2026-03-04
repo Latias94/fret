@@ -8,10 +8,14 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     shadcn::Card::new(vec![
         shadcn::CardHeader::new(vec![
             shadcn::Skeleton::new()
-                .refine_layout(LayoutRefinement::default().w_fraction(2.0 / 3.0))
+                .refine_layout(
+                    LayoutRefinement::default()
+                        .w_fraction(2.0 / 3.0)
+                        .h_px(Px(16.0)),
+                )
                 .into_element(cx),
             shadcn::Skeleton::new()
-                .refine_layout(LayoutRefinement::default().w_fraction(0.5))
+                .refine_layout(LayoutRefinement::default().w_fraction(0.5).h_px(Px(16.0)))
                 .into_element(cx),
         ])
         .into_element(cx),

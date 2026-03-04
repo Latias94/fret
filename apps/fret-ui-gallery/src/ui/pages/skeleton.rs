@@ -4,6 +4,7 @@ use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::skeleton as snippets;
 
 pub(super) fn preview_skeleton(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    let usage = snippets::usage::render(cx);
     let demo = snippets::demo::render(cx);
     let avatar = snippets::avatar::render(cx);
     let card = snippets::card::render(cx);
@@ -16,6 +17,7 @@ pub(super) fn preview_skeleton(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
         cx,
         [
             "Use Skeleton for loading placeholders, not empty states.",
+            "In Fret, `Skeleton::new()` does not impose size; use `Skeleton::block()` or `refine_layout` to set dimensions.",
             "Prefer consistent sizes and spacing so content doesn't jump when loaded.",
             "Keep semantics grouped so screen readers can skip placeholder-only regions.",
         ],
@@ -23,8 +25,11 @@ pub(super) fn preview_skeleton(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
 
     let body = doc_layout::render_doc_page(
         cx,
-        Some("Preview follows shadcn Skeleton docs examples."),
+        Some("Use to show a placeholder while content is loading."),
         vec![
+            DocSection::new("Usage", usage)
+                .description("Basic skeleton block.")
+                .code_rust_from_file_region(snippets::usage::SOURCE, "example"),
             DocSection::new("Demo", demo)
                 .description("Avatar row with two text lines.")
                 .code_rust_from_file_region(snippets::demo::SOURCE, "example"),

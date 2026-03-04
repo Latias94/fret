@@ -23,10 +23,15 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         |cx| {
             vec![
                 shadcn::Skeleton::new()
-                    .refine_layout(LayoutRefinement::default().w_full().min_w_0())
+                    .refine_layout(
+                        LayoutRefinement::default()
+                            .w_full()
+                            .h_px(Px(16.0))
+                            .min_w_0(),
+                    )
                     .into_element(cx),
                 shadcn::Skeleton::new()
-                    .refine_layout(LayoutRefinement::default().w_px(Px(200.0)))
+                    .refine_layout(LayoutRefinement::default().w_px(Px(200.0)).h_px(Px(16.0)))
                     .into_element(cx),
             ]
         },

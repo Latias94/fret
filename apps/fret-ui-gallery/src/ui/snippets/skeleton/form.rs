@@ -13,7 +13,7 @@ fn row<H: UiHost>(cx: &mut ElementContext<'_, H>, label_w: Px) -> AnyElement {
         move |cx| {
             vec![
                 shadcn::Skeleton::new()
-                    .refine_layout(LayoutRefinement::default().w_px(label_w))
+                    .refine_layout(LayoutRefinement::default().w_px(label_w).h_px(Px(16.0)))
                     .into_element(cx),
                 shadcn::Skeleton::new()
                     .refine_layout(LayoutRefinement::default().w_full().h_px(Px(40.0)))

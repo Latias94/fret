@@ -127,7 +127,7 @@ fn skeleton_respects_reduced_motion_and_does_not_request_frames() {
         bounds,
         FrameId(1),
         "skeleton",
-        |cx| vec![fret_ui_shadcn::Skeleton::new().into_element(cx)],
+        |cx| vec![fret_ui_shadcn::Skeleton::block().into_element(cx)],
     );
     assert!(
         !effects_request_raf(&effects1, window),
@@ -142,7 +142,7 @@ fn skeleton_respects_reduced_motion_and_does_not_request_frames() {
         bounds,
         FrameId(2),
         "skeleton",
-        |cx| vec![fret_ui_shadcn::Skeleton::new().into_element(cx)],
+        |cx| vec![fret_ui_shadcn::Skeleton::block().into_element(cx)],
     );
     assert!(
         !effects_request_raf(&effects2, window),
