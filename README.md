@@ -125,15 +125,15 @@ mod act {
     fret::actions!([Add = "app.todo.add.v1"]);
 }
 
-fn main() -> fret::Result<()> {
-    FretApp::new("todo")
-        .window("todo", (560.0, 520.0))
-        .run_view::<TodoView>()
-}
-```
-
-```rust
 struct TodoView;
+
+fn install_app(app: &mut App) {
+    shadcn::shadcn_themes::apply_shadcn_new_york(
+        app,
+        shadcn::shadcn_themes::ShadcnBaseColor::Slate,
+        shadcn::shadcn_themes::ShadcnColorScheme::Light,
+    );
+}
 
 impl View for TodoView {
     fn init(_app: &mut App, _window: AppWindowId) -> Self {
@@ -154,19 +154,31 @@ impl View for TodoView {
             }
         });
 
-        ui::v_flex(cx, |cx| {
-            ui::children![cx;
-                shadcn::Input::new(draft)
-                    .a11y_label("New task")
-                    .placeholder("Add a task…")
-                    .submit_command(act::Add.into()),
-                shadcn::Button::new("Add").disabled(!enabled).action(act::Add),
-            ]
-        })
-        .gap(Space::N3)
-        .into_element(cx)
-        .into()
+        let input = shadcn::Input::new(draft.clone())
+            .a11y_label("New task")
+            .placeholder("Add a task…")
+            .submit_command(act::Add.into())
+            .into_element(cx);
+
+        let add_btn = shadcn::Button::new("Add")
+            .disabled(!enabled)
+            .action(act::Add)
+            .into_element(cx);
+
+        ui::h_flex(cx, |_cx| [input, add_btn])
+            .gap(Space::N2)
+            .items_center()
+            .into_element(cx)
+            .into()
     }
+}
+
+fn main() -> fret::Result<()> {
+    FretApp::new("todo")
+        .window("todo", (560.0, 520.0))
+        .config_files(false)
+        .install_app(install_app)
+        .run_view::<TodoView>()
 }
 ```
 

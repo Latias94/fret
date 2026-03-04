@@ -37,6 +37,8 @@ Recommended starting points (action-first + view runtime):
 
 - `hello`, `simple_todo`, `hello_counter`
 - `virtual_list_basics` (virtualization + keyed identity + reordering)
+- `query_basics` (feature-gated: `--features cookbook-query`)
+- `router_basics` (feature-gated: `--features cookbook-router`)
 - `icons_and_assets_basics` (semantic icon ids + svg/image loading + reload epoch)
 - `effects_layer_basics` (EffectLayer + EffectChain: pixelate/blur)
 - `markdown_and_code_basics` (markdown preview + fenced code blocks)
@@ -47,6 +49,12 @@ Recommended starting points (action-first + view runtime):
 Note: some cookbook examples are feature-gated to keep cold compile time down; see:
 
 - [apps/fret-cookbook/README.md](../../apps/fret-cookbook/README.md)
+
+Tip: feature-gated examples and their `--features ...` hints are discoverable via:
+
+```bash
+cargo run -p fretboard -- list cookbook-examples --all
+```
 
 Some cookbook examples still use legacy MVU for now. Track remaining in-tree usage here:
 

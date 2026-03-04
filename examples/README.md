@@ -19,6 +19,7 @@ Cookbook examples live in `apps/fret-cookbook/examples/`.
 
 - Start here: [`apps/fret-cookbook/README.md`](../apps/fret-cookbook/README.md)
 - Full index (Bevy-style tables + feature gates + diag suites): [`apps/fret-cookbook/EXAMPLES.md`](../apps/fret-cookbook/EXAMPLES.md)
+- List all cookbook examples (shows feature hints for Labs): `cargo run -p fretboard -- list cookbook-examples --all`
 
 ## UI Gallery (component catalog + conformance)
 
@@ -33,4 +34,3 @@ More details: [`apps/fret-ui-gallery/README.md`](../apps/fret-ui-gallery/README.
 See the “boring ladder” and generators:
 
 - [`docs/examples/README.md`](../docs/examples/README.md)
-
