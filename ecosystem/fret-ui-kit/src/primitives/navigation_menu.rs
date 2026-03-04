@@ -730,6 +730,16 @@ pub fn navigation_menu_request_viewport_overlay<H: UiHost>(
             None,
         );
     request.dismissible_on_dismiss_request = on_dismiss_request;
+    // Radix `NavigationMenu` keeps focus on the trigger when opening the viewport (it does not
+    // auto-focus the content like a modal/menu). Prevent the default overlay autofocus outcome so
+    // click-open does not focus-through into the first link.
+    request.on_open_auto_focus = Some(Arc::new(
+        |_host: &mut dyn fret_ui::action::UiFocusActionHost,
+         _action_cx: fret_ui::action::ActionCx,
+         req: &mut fret_ui::action::AutoFocusRequestCx| {
+            req.prevent_default();
+        },
+    ));
     request.on_close_auto_focus = on_close_auto_focus;
     OverlayController::request(cx, request);
 

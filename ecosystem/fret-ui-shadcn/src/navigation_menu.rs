@@ -1234,6 +1234,11 @@ impl NavigationMenu {
             }
 
             #[derive(Default)]
+            struct TriggerTabStopModelState {
+                model: Option<Model<Option<Arc<str>>>>,
+            }
+
+            #[derive(Default)]
             struct SelectionSyncState {
                 last_selected: Option<Arc<str>>,
             }
@@ -1253,6 +1258,21 @@ impl NavigationMenu {
             } else {
                 let model = cx.app.models_mut().insert(false);
                 cx.with_state_for(root_id, OpenModelState::default, |st| {
+                    st.model = Some(model.clone());
+                });
+                model
+            };
+
+            let trigger_tab_stop_model = cx.with_state_for(
+                root_id,
+                TriggerTabStopModelState::default,
+                |st| st.model.clone(),
+            );
+            let trigger_tab_stop_model = if let Some(model) = trigger_tab_stop_model {
+                model
+            } else {
+                let model = cx.app.models_mut().insert(None::<Arc<str>>);
+                cx.with_state_for(root_id, TriggerTabStopModelState::default, |st| {
                     st.model = Some(model.clone());
                 });
                 model
@@ -1396,15 +1416,56 @@ impl NavigationMenu {
                 .map(|it| menu_disabled || it.disabled)
                 .collect::<Vec<_>>()
                 .into();
+
+            // Radix `NavigationMenu` trigger row uses roving focus: only one trigger is in the Tab
+            // order (`tabIndex=0`), while other triggers are focusable via arrow keys / click
+            // (`tabIndex=-1`). Model the Tab-stop outcome by setting `PressableProps.focusable`
+            // only on the active trigger.
+            let trigger_tab_stop: Option<Arc<str>> = cx
+                .watch_model(&trigger_tab_stop_model)
+                .layout()
+                .cloned()
+                .flatten();
+            let roving_keys: Arc<[Arc<str>]> = items_for_children
+                .iter()
+                .map(|it| it.value.clone())
+                .collect::<Vec<_>>()
+                .into();
+            let desired_tab_stop = roving_focus_group::active_index_from_str_keys(
+                &roving_keys,
+                selected.as_deref(),
+                &roving_disabled,
+            )
+            .and_then(|idx| roving_keys.get(idx).cloned());
+            let valid_current = trigger_tab_stop.as_ref().and_then(|current| {
+                let idx = roving_keys
+                    .iter()
+                    .position(|k| k.as_ref() == current.as_ref())?;
+                if roving_disabled.get(idx).copied().unwrap_or(true) {
+                    return None;
+                }
+                Some(current.clone())
+            });
+            let tab_stop_value = valid_current.or(desired_tab_stop);
+            if tab_stop_value.as_deref() != trigger_tab_stop.as_deref() {
+                let next = tab_stop_value.clone();
+                let _ = cx
+                    .app
+                    .models_mut()
+                    .update(&trigger_tab_stop_model, |v| *v = next);
+            }
+
             let roving_props = roving_focus_group::RovingFlexProps {
                 flex: list_props,
                 roving: roving_focus_group::RovingFocusProps {
                     enabled: true,
                     wrap: true,
-                    disabled: roving_disabled,
+                    disabled: roving_disabled.clone(),
                 },
             };
             let dir_for_roving = direction_prim::use_direction_in_scope(cx, None);
+            let tab_stop_value_for_list = tab_stop_value.clone();
+            let trigger_tab_stop_model_for_list = trigger_tab_stop_model.clone();
 
             let list = roving_focus_group::roving_focus_group_apg_with_direction(
                 cx,
@@ -1418,10 +1479,14 @@ impl NavigationMenu {
                         let item_value = item.value.clone();
                         let label = item.label.clone();
                         let disabled = menu_disabled || item.disabled;
+                        let tab_stop = tab_stop_value_for_list
+                            .as_ref()
+                            .is_some_and(|v| v.as_ref() == item_value.as_ref());
                         let trigger_test_id = item.trigger_test_id.clone();
                         let trigger_chrome_test_id = trigger_test_id
                             .clone()
                             .map(|id| Arc::<str>::from(format!("{id}.chrome")));
+                        let trigger_tab_stop_model = trigger_tab_stop_model_for_list.clone();
                         let trigger_text_style_for_item = trigger_text_style_for_list.clone();
                         let nav_ctx_for_item = nav_ctx_for_list.clone();
                         let theme_for_item = theme_for_list.clone();
@@ -1439,7 +1504,7 @@ impl NavigationMenu {
 
                             let mut pressable = PressableProps::default();
                             pressable.enabled = !disabled;
-                            pressable.focusable = !disabled;
+                            pressable.focusable = !disabled && tab_stop;
                             pressable.layout = decl_style::layout_style(
                                 &theme_for_item,
                                 navigation_menu_trigger_style(&theme_for_item).layout,
@@ -1486,6 +1551,13 @@ impl NavigationMenu {
                                 ));
 
                                 return cx.pressable(pressable, move |cx, st| {
+                                    if st.focused {
+                                        let _ = cx.app.models_mut().update(
+                                            &trigger_tab_stop_model,
+                                            |v| *v = Some(item_value.clone()),
+                                        );
+                                    }
+
                                     let hovered = st.hovered && !st.pressed;
                                     let pressed = st.pressed;
                                     let fg = if disabled {
@@ -1571,6 +1643,13 @@ impl NavigationMenu {
                                     pressable,
                                     pointer_props,
                                     move |cx, st, is_open| {
+                                        if st.focused {
+                                            let _ = cx.app.models_mut().update(
+                                                &trigger_tab_stop_model,
+                                                |v| *v = Some(item_value.clone()),
+                                            );
+                                        }
+
                                         let mut states =
                                             WidgetStates::from_pressable(cx, st, !disabled);
                                         states.set(WidgetState::Open, is_open);
@@ -1738,7 +1817,10 @@ impl NavigationMenu {
             let has_content = !viewport_children.is_empty();
             let is_open = selected_local.is_some() && has_content && open_for_motion;
             let overlay_presence = OverlayPresence {
-                present: motion.present && has_content,
+                // Keep the viewport overlay request alive for the full close transition, even when
+                // the current selection has already been cleared (e.g. Escape dismissal). The
+                // overlay controller needs an explicit "present=false" update to unmount cleanly.
+                present: motion.present,
                 interactive: is_open,
             };
             let open_change_complete =
