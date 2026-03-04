@@ -166,18 +166,39 @@ Interpretation:
 
 ## Work Plan
 
+### 0) Close the loop (v1 tracks)
+
+For each track, the closure deliverable is: **(script) + (bundle fields) + (gate)**.
+
+1) **Allocator / retained pages track (CPU)**
+   - Explain and bound `owned unmapped memory` dirty + malloc fragmentation/dirty (`MALLOC_*`).
+   - Primary evidence: `resource.footprint.json.macos_vmmap.{regions,tables}`.
+2) **Text / fonts track (CPU + GPU)**
+   - Explain and bound text shaping caches and glyph atlas growth.
+   - Primary evidence: `resource_caches.render_text.*` + text atlas bytes gate.
+3) **Renderer / wgpu track (GPU + driver-backed regions)**
+   - Explain and bound Metal/wgpu allocations and render target budgets.
+   - Primary evidence: `wgpu_metal_current_allocated_size_bytes`, render target/image budgets, and
+     `macos_vmmap.regions.{io_surface_dirty_bytes,io_accelerator_dirty_bytes}`.
+
 ### 1) Improve attribution (tool-side)
 
-- Parse `resource.vmmap_summary.txt` into a structured summary:
-  - Top region types by resident/dirty.
-  - `MALLOC ZONE` allocated + fragmentation (where present).
-- Persist these structured fields into `resource.footprint.json` so comparisons do not require manual
-  text parsing.
+- Parse `resource.vmmap_summary.txt` into a structured summary and persist it into
+  `resource.footprint.json` (so comparisons do not require manual text parsing):
+  - Regions: top resident/dirty + key buckets (`owned unmapped`, `IOSurface`, `IOAccelerator`,
+    `MALLOC_*`).
+  - `MALLOC ZONE`: default zone row (best-effort) + totals + top allocated/frag.
+- Next (to reduce exit-time bias): add optional **in-run** sampling of the same summary at a fixed
+  frame/time marker (script step), so “steady state” can be captured without relying on shutdown.
 
 ### 2) Improve attribution (app-side)
 
 - Add app-side stats for major caches (bytes + counts) where feasible:
-  - Text shaping caches / blob caches (heap bytes, not just entry counts).
+  - Text system:
+    - Already present: `resource_caches.render_text` cache entry counters.
+    - Added: font DB counters (`registered_font_blobs_*`, baseline/family caches).
+    - Next: add one “bytes” signal for text caches (even if approximate) to correlate with
+      `MALLOC_SMALL` and malloc zone fragmentation.
   - Image cache bytes and “live texture” estimates (already partially present).
   - Code editor:
     - Added: buffer/undo best-effort memory snapshots (`app_snapshot.code_editor.torture.memory`).
@@ -242,6 +263,8 @@ Candidate gates:
 - `--max-renderer-intermediate-peak-in-use-bytes`
 - `--max-wgpu-metal-current-allocated-size-bytes` (macOS/Metal; best-effort)
 - `--max-render-text-atlas-bytes-live-estimate-total` (text-heavy attribution; stable, derived from `resource_caches.render_text`)
+- (Planned) `--max-render-text-registered-font-blobs-total-bytes` (guards memory-backed font injection growth)
+- (Planned) `--max-render-text-shape-cache-entries` (guards unbounded text shaping cache growth)
 - `--max-code-editor-buffer-len-bytes` (UI Gallery; `app_snapshot.code_editor.torture.memory`)
 - `--max-code-editor-undo-text-bytes-estimate-total` (UI Gallery; `app_snapshot.code_editor.torture.memory`)
 - `--max-code-editor-row-text-cache-entries` (UI Gallery; `app_snapshot.code_editor.torture.cache_sizes`)
