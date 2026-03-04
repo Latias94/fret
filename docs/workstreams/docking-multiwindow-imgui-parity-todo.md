@@ -139,7 +139,7 @@ Each TODO is labeled:
 
 ## P0 — Editor-grade “hand feel” (multi-monitor / DPI)
 
-- [ ] DW-P0-dpi-006 Mixed-DPI multi-monitor follow (drag active across monitors).
+- [~] DW-P0-dpi-006 Mixed-DPI multi-monitor follow (drag active across monitors).
   - Goal: while a tear-off follow drag is active, moving the DockFloating OS window across monitors with different DPI
     should not cause large cursor-to-grab offsets, and docking hints/preview should remain usable.
   - Rationale: ImGui multi-viewports workflows commonly cross monitors; DPI jumps are the fastest way to make docking
@@ -162,6 +162,10 @@ Each TODO is labeled:
       script as “requires mixed-dpi” and skip otherwise).
     - Tip: `fretboard diag dock-routing <bundle_dir|bundle.schema2.json>` records `*_scale_factor_x1000` fields when present,
       and will regenerate stale `dock.routing.json` from the adjacent bundle artifact (no manual deletion needed).
+  - Progress:
+    - [x] Evidence surface area: `dock-routing` includes `current_window_scale_factor_x1000` / `moving_window_scale_factor_x1000`.
+    - [ ] Manual acceptance run on a real mixed-DPI setup (100% + 150%) with “pre-crossing” and “post-crossing” bundles captured.
+    - [ ] Decide if we can auto-detect mixed-DPI reliably enough to add an automated gate.
 
 ## P1 — Cross-platform robustness and capability modeling
 
