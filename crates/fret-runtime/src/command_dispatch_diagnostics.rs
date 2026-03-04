@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::sync::Arc;
 
 use fret_core::{AppWindowId, FrameId};
 
@@ -15,11 +16,17 @@ pub enum CommandDispatchSourceKindV1 {
     Programmatic,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CommandDispatchSourceV1 {
     pub kind: CommandDispatchSourceKindV1,
     /// `GlobalElementId.0` (from `crates/fret-ui`) when available.
     pub element: Option<u64>,
+    /// Best-effort stable selector for explainability (typically a semantics `test_id`).
+    ///
+    /// This is diagnostics-only metadata intended to make pointer-triggered `Effect::Command`
+    /// dispatch explainable without requiring callers to correlate element IDs with a semantics
+    /// snapshot.
+    pub test_id: Option<Arc<str>>,
 }
 
 impl CommandDispatchSourceV1 {
@@ -27,6 +34,7 @@ impl CommandDispatchSourceV1 {
         Self {
             kind: CommandDispatchSourceKindV1::Programmatic,
             element: None,
+            test_id: None,
         }
     }
 }
@@ -202,6 +210,7 @@ mod tests {
             CommandDispatchSourceV1 {
                 kind: CommandDispatchSourceKindV1::Pointer,
                 element: Some(42),
+                test_id: None,
             },
         );
 
@@ -210,6 +219,7 @@ mod tests {
             Some(CommandDispatchSourceV1 {
                 kind: CommandDispatchSourceKindV1::Pointer,
                 element: Some(42),
+                test_id: None,
             })
         );
 
@@ -220,6 +230,7 @@ mod tests {
             CommandDispatchSourceV1 {
                 kind: CommandDispatchSourceKindV1::Pointer,
                 element: Some(42),
+                test_id: None,
             },
         );
 
@@ -228,6 +239,7 @@ mod tests {
             Some(CommandDispatchSourceV1 {
                 kind: CommandDispatchSourceKindV1::Pointer,
                 element: Some(42),
+                test_id: None,
             })
         );
 
@@ -238,6 +250,7 @@ mod tests {
             CommandDispatchSourceV1 {
                 kind: CommandDispatchSourceKindV1::Pointer,
                 element: Some(42),
+                test_id: None,
             },
         );
 
@@ -257,6 +270,7 @@ mod tests {
             CommandDispatchSourceV1 {
                 kind: CommandDispatchSourceKindV1::Pointer,
                 element: Some(1),
+                test_id: None,
             },
         );
         svc.record(
@@ -266,6 +280,7 @@ mod tests {
             CommandDispatchSourceV1 {
                 kind: CommandDispatchSourceKindV1::Pointer,
                 element: Some(2),
+                test_id: None,
             },
         );
 
@@ -274,6 +289,7 @@ mod tests {
             Some(CommandDispatchSourceV1 {
                 kind: CommandDispatchSourceKindV1::Pointer,
                 element: Some(2),
+                test_id: None,
             })
         );
     }

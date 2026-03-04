@@ -1361,12 +1361,15 @@ impl UiDiagnosticsService {
                 fret_runtime::CommandDispatchSourceKindV1::Programmatic => "programmatic",
             };
 
-            let inferred_source_test_id = infer_pointer_source_test_id_from_semantics(
-                window,
-                decision.source.element,
-                semantics_snapshot,
-                element_runtime,
-            );
+            let direct_source_test_id = decision.source.test_id.as_deref().map(str::to_string);
+            let inferred_source_test_id = direct_source_test_id.or_else(|| {
+                infer_pointer_source_test_id_from_semantics(
+                    window,
+                    decision.source.element,
+                    semantics_snapshot,
+                    element_runtime,
+                )
+            });
 
             let source_test_id = match decision.source.kind {
                 fret_runtime::CommandDispatchSourceKindV1::Pointer => {

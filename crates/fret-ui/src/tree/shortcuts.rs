@@ -264,6 +264,7 @@ impl<H: UiHost> UiTree<H> {
                                             kind:
                                                 fret_runtime::CommandDispatchSourceKindV1::Shortcut,
                                             element: None,
+                                            test_id: None,
                                         },
                                     );
                                 },
@@ -388,6 +389,7 @@ impl<H: UiHost> UiTree<H> {
                                     fret_runtime::CommandDispatchSourceV1 {
                                         kind: fret_runtime::CommandDispatchSourceKindV1::Shortcut,
                                         element: None,
+                                        test_id: None,
                                     },
                                 );
                             },
@@ -501,6 +503,7 @@ impl<H: UiHost> UiTree<H> {
                                 fret_runtime::CommandDispatchSourceV1 {
                                     kind: fret_runtime::CommandDispatchSourceKindV1::Shortcut,
                                     element: None,
+                                    test_id: None,
                                 },
                             );
                         },

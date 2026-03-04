@@ -103,6 +103,7 @@ fn dispatch_command_consumes_pending_pointer_source_metadata() {
                 fret_runtime::CommandDispatchSourceV1 {
                     kind: fret_runtime::CommandDispatchSourceKindV1::Pointer,
                     element: Some(expected_element),
+                    test_id: None,
                 },
             );
         },
@@ -184,6 +185,7 @@ fn dispatch_command_bubbles_from_pending_source_element_when_focus_is_none() {
                 fret_runtime::CommandDispatchSourceV1 {
                     kind: fret_runtime::CommandDispatchSourceKindV1::Pointer,
                     element: Some(source_element.0),
+                    test_id: None,
                 },
             );
         },
