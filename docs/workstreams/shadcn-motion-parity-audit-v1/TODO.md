@@ -1,9 +1,10 @@
-# Shadcn Motion Parity Audit v1 — TODO
+# Shadcn Motion Parity Audit v1 - TODO
 
 Last updated: 2026-03-04.
 
 ## P0 (high-signal, low-risk)
 
+- Landed: deterministic unit test gate for Accordion content measured-height expand/collapse (`animate-accordion-{down,up}` outcome).
 - Landed: unit test gate for NavigationMenu trigger chevron rotation transition.
 - Optional: add a fixed-delta diag screenshot pair (`--fixed-frame-delta-ms 16`) for visual review.
 - Landed: `Combobox` popup placement + presence (fade/zoom/side slide) + unit test gate.
@@ -40,15 +41,12 @@ Last updated: 2026-03-04.
 - Landed: `Badge` focus-visible border/ring transitions ease (~150ms, Tailwind default) and have a unit test gate.
 - Landed: `TabsTrigger` focus ring transitions ease in/out (~150ms, Tailwind default) and have a unit test gate.
 - Landed: `Item` hover background transition eases (~100ms, `duration-100`) and has a unit test gate.
-- Gap: common primitives should ease hover/focus style changes (`transition-*` parity), not snap. Suggested ordering:
-  - P1: Add a deterministic gate for Accordion content measured-height motion (`animate-accordion-{down,up}` outcome).
 - Gap: audit `Drawer` parity vs Vaul (define concrete drag + inertia outcomes; add a fixed-delta diag + a unit test for settle).
 - Not audited: audit `Carousel` parity vs Embla (define concrete drag/scroll + snap settle outcomes; add fixed-delta diag + a unit test for settle invariants).
 
 ## P2 (API + token cleanup)
 
-- Replace “per-frame” speed knobs (`radians per frame`, `px per frame`) with “per-second” or
-  “duration” semantics where public APIs exist.
+- Replace "per-frame" speed knobs (`radians per frame`, `px per frame`) with "per-second" or "duration" semantics where public APIs exist.
 - Introduce/standardize token keys for motion durations and easings used by shadcn recipes.
 - Audit which continuous animations should be `VisualTransform` vs `RenderTransform`.
 
