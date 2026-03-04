@@ -119,4 +119,3 @@ Candidate gates:
   - thread count / worker pools?
   - Metal / wgpu internal allocators?
 - Which cache(s) grow unbounded in real editor sessions, and how do we gate that without flakiness?
-

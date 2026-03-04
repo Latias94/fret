@@ -32,4 +32,3 @@
 - [ ] Calibrate a macOS footprint gate for `empty-idle` and `todo-memory-steady`.
 - [ ] Calibrate a Metal allocated size gate for `empty-idle` and `todo-memory-steady`.
 - [ ] Document acceptable drift policy (e.g. +X MiB allowed with justification).
-

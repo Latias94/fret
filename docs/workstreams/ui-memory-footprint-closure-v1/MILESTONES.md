@@ -20,4 +20,3 @@
 - At least one additional optimization is landed that reduces either CPU footprint or GPU allocated size
   measurably in one scenario.
 - A gate is added to prevent regressions, with an explicit drift policy.
-
