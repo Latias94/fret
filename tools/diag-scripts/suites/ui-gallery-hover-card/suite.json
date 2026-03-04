@@ -2,6 +2,7 @@
   "schema_version": 1,
   "kind": "diag_script_suite_manifest",
   "scripts": [
+    "tools/diag-scripts/ui-gallery/hover-card/ui-gallery-hover-card-click-leave-closes.json",
     "tools/diag-scripts/ui-gallery/hover-card/ui-gallery-hover-card-docs-smoke.json",
     "tools/diag-scripts/ui-gallery/hover-card/ui-gallery-hover-card-trigger-delays.json",
     "tools/diag-scripts/ui-gallery/hover-card/ui-gallery-hover-card-sides-placement.json",
@@ -9,4 +10,3 @@
     "tools/diag-scripts/ui-gallery/hover-card/ui-gallery-hovercard-demo-screenshot-zinc-dark.json"
   ]
 }
-
