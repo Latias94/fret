@@ -47,6 +47,7 @@
 
 ## Gates
 
-- [ ] Calibrate a macOS footprint gate for `empty-idle` and `todo-memory-steady`.
-- [ ] Calibrate a Metal allocated size gate for `empty-idle` and `todo-memory-steady`.
+- [x] Calibrate a macOS footprint gate for `empty-idle` and `text-heavy` (repeat samples captured under `target/fret-diag-mem-*-sample5/`).
+- [x] Calibrate a Metal allocated size gate for `empty-idle` and `text-heavy` (requires `--env FRET_DIAG_WGPU_ALLOCATOR_REPORT=1`).
+- [x] Add a text-atlas-focused gate (`--max-render-text-atlas-bytes-live-estimate-total`) for more stable attribution vs total Metal bytes.
 - [ ] Document acceptable drift policy (e.g. +X MiB allowed with justification).

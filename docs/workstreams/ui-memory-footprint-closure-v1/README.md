@@ -30,17 +30,21 @@ Using `tools/diag-scripts/empty-idle-memory-steady.json` on macOS/Metal (baselin
   - `owned unmapped memory` dirty: ~204 MiB
   - Default malloc zone: ~13.6 MiB allocated, ~4.0 MiB frag
 - With `fretboard diag repro` (UI diagnostics enabled, plus tool-side `vmmap` capture):
-  - `macos_vmmap.physical_footprint_peak_bytes`: ~288 MB (tool JSON; `vmmap` prints ~275 MiB)
-  - `owned unmapped memory` dirty: ~216 MB
+  - Repeat sample (N=5):
+    - `macos_vmmap.physical_footprint_peak_bytes`: 279,445,504 .. 285,946,675 (~266.6 .. 272.7 MiB)
+    - `macos_owned_unmapped_memory_dirty_bytes`: 213,594,931 .. 216,321,229 (~203.7 .. 206.3 MiB)
+    - `render_text_atlas_bytes_live_estimate_total`: 8,388,608 (8 MiB; mask atlas prealloc)
   - Default malloc zone: ~24.5 MB allocated, ~15.4 MB frag
-  - `debug.stats.wgpu_metal_current_allocated_size_bytes`: ~30.7 MiB (requires `--env FRET_DIAG_WGPU_ALLOCATOR_REPORT=1`)
+  - `debug.stats.wgpu_metal_current_allocated_size_bytes`: 32,161,792 (~30.7 MiB; requires `--env FRET_DIAG_WGPU_ALLOCATOR_REPORT=1`)
 
 Using `tools/diag-scripts/text-heavy-memory-steady.json` on macOS/Metal (fonts + emoji stress):
 
-- `macos_vmmap.physical_footprint_peak_bytes`: ~360 MB
-- `owned unmapped memory` dirty: ~250 MB
+- Repeat sample (N=5):
+  - `macos_vmmap.physical_footprint_peak_bytes`: 358,927,565 .. 368,364,749 (~342.4 .. 351.4 MiB)
+  - `macos_owned_unmapped_memory_dirty_bytes`: 249,036,800 .. 254,699,110 (~237.5 .. 242.9 MiB)
+  - `render_text_atlas_bytes_live_estimate_total`: 25,165,824 (~24 MiB)
 - Default malloc zone: ~26.6 MB allocated, ~20.9 MB frag (system allocator)
-- `wgpu_metal_current_allocated_size_bytes`: ~121.5 MiB
+- `wgpu_metal_current_allocated_size_bytes`: 127,418,368 (~121.6 MiB; requires `--env FRET_DIAG_WGPU_ALLOCATOR_REPORT=1`)
 
 Allocator A/B (empty idle, `--release`, `fretboard diag repro`, same script):
 
@@ -67,6 +71,11 @@ Interpretation:
   behavior, caching, or sticky runtime allocations.
 - The allocator choice strongly affects the default malloc zone (allocated + frag), but does not
   materially change the `owned unmapped memory` headline in this baseline.
+- Diagnostics stability note:
+  - `diag repro --launch` previously had a rare timeout where the script bundle existed but tooling
+    never observed a final `script.result` stage. Root cause was a tooling write-back race to the
+    runtime-owned `<out_dir>/script.result.json` in filesystem mode; fixed by avoiding writes to
+    that path from tooling.
 
 ## Goals
 
@@ -150,6 +159,28 @@ Candidate gates:
 - `--max-macos-physical-footprint-peak-bytes`
 - `--max-macos-owned-unmapped-memory-dirty-bytes`
 - `--max-wgpu-metal-current-allocated-size-bytes` (macOS/Metal; best-effort)
+- `--max-render-text-atlas-bytes-live-estimate-total` (text-heavy attribution; stable, derived from `resource_caches.render_text`)
+
+Recommended local gate baselines (macOS, 2026-03-04):
+
+- `empty-idle-memory-steady`:
+  - `--max-macos-physical-footprint-peak-bytes 335544320` (320 MiB)
+  - `--max-macos-owned-unmapped-memory-dirty-bytes 241172480` (230 MiB)
+  - `--max-render-text-atlas-bytes-live-estimate-total 16777216` (16 MiB)
+  - Optional (requires `--env FRET_DIAG_WGPU_ALLOCATOR_REPORT=1`):
+    - `--max-wgpu-metal-current-allocated-size-bytes 52428800` (50 MiB)
+- `text-heavy-memory-steady`:
+  - `--max-macos-physical-footprint-peak-bytes 440401920` (420 MiB)
+  - `--max-macos-owned-unmapped-memory-dirty-bytes 304087040` (290 MiB)
+  - `--max-render-text-atlas-bytes-live-estimate-total 50331648` (48 MiB)
+  - Optional (requires `--env FRET_DIAG_WGPU_ALLOCATOR_REPORT=1`):
+    - `--max-wgpu-metal-current-allocated-size-bytes 167772160` (160 MiB)
+
+Note: these numbers are intentionally conservative and should be revisited when:
+
+- the script payload changes (fonts/emoji coverage),
+- the renderer backend changes (wgpu/wgpu-core bumps),
+- or the measurement surface changes (new diagnostics fields enabled by default).
 
 ## Open Questions
 
