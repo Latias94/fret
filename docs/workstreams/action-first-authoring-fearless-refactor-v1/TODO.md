@@ -472,8 +472,7 @@ Exit target:
 
 Tasks:
 
-- [ ] AFA-m9-001 Migrate remaining non-action-first demos in `apps/fret-examples` to View+actions:
-  - `apps/fret-examples/src/markdown_demo.rs`
+- [x] AFA-m9-001 Migrate remaining non-action-first demos in `apps/fret-examples` to View+actions.
 - [ ] AFA-m9-002 Delete legacy MVU demo copies once the migrated versions exist (remove `*_legacy.rs` files):
   - `apps/fret-examples/src/todo_demo_legacy.rs`
   - `apps/fret-examples/src/query_demo_legacy.rs`
