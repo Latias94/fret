@@ -8,6 +8,9 @@ use fret_ui::element::{
 };
 use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, TextAreaStyle, Theme, UiHost, action};
+use fret_ui_kit::declarative::motion::{
+    drive_tween_color_for_element, drive_tween_f32_for_element,
+};
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::control_registry::{
     ControlAction, ControlEntry, ControlId, control_registry_model,
@@ -16,9 +19,17 @@ use fret_ui_kit::recipes::input::{InputTokenKeys, resolve_input_chrome};
 use fret_ui_kit::typography;
 use fret_ui_kit::{ChromeRefinement, LayoutRefinement, Size as ComponentSize, Space};
 
+use crate::overlay_motion;
+
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
     c.a = (c.a * mul).clamp(0.0, 1.0);
     c
+}
+
+fn tailwind_transition_ease_in_out(t: f32) -> f32 {
+    // Tailwind default transition timing function: cubic-bezier(0.4, 0, 0.2, 1).
+    // (Often described as `ease-in-out`-ish.)
+    fret_ui_headless::easing::SHADCN_EASE.sample(t)
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -327,6 +338,7 @@ pub fn textarea<H: UiHost>(
         move |cx| {
             let control_id = control_id.clone();
             let control_registry = control_id.as_ref().map(|_| control_registry_model(cx));
+            let base_props = props.clone();
 
             let labelled_by_element = if labelled_by_element.is_some() {
                 labelled_by_element
@@ -377,6 +389,47 @@ pub fn textarea<H: UiHost>(
                             reg.register_control(cx.window, cx.frame_id, control_id, entry);
                         });
                     }
+                    let mut props = base_props.clone();
+
+                    // shadcn/ui v4 textarea uses `transition-[color,box-shadow]` with Tailwind
+                    // defaults, so border + ring should ease instead of snapping.
+                    let duration = overlay_motion::shadcn_motion_duration_150(cx);
+                    let focus_visible = cx.is_focused_element(id)
+                        && fret_ui::focus_visible::is_focus_visible(cx.app, Some(cx.window));
+
+                    let target_border = if focus_visible {
+                        props.chrome.border_color_focused
+                    } else {
+                        props.chrome.border_color
+                    };
+                    let border_motion = drive_tween_color_for_element(
+                        cx,
+                        id,
+                        "textarea.chrome.border",
+                        target_border,
+                        duration,
+                        tailwind_transition_ease_in_out,
+                    );
+                    props.chrome.border_color = border_motion.value;
+                    props.chrome.border_color_focused = border_motion.value;
+
+                    let ring_alpha = drive_tween_f32_for_element(
+                        cx,
+                        id,
+                        "textarea.chrome.ring.alpha",
+                        if focus_visible { 1.0 } else { 0.0 },
+                        duration,
+                        tailwind_transition_ease_in_out,
+                    );
+                    if let Some(mut ring) = props.chrome.focus_ring.take() {
+                        ring.color = alpha_mul(ring.color, ring_alpha.value);
+                        if let Some(offset_color) = ring.offset_color {
+                            ring.offset_color = Some(alpha_mul(offset_color, ring_alpha.value));
+                        }
+                        props.chrome.focus_ring = Some(ring);
+                    }
+                    props.focus_ring_always_paint = ring_alpha.animating;
+
                     props
                 });
 
@@ -421,9 +474,9 @@ pub fn textarea<H: UiHost>(
                 LayoutRefinement::default().relative().size_full(),
             );
 
-            let mut props = props;
+            let mut base_props = base_props;
             if let Some(px) = override_px {
-                props.layout.size.height = Length::Px(px);
+                base_props.layout.size.height = Length::Px(px);
             }
 
             let control_id_for_register = control_id.clone();
@@ -442,6 +495,45 @@ pub fn textarea<H: UiHost>(
                         reg.register_control(cx.window, cx.frame_id, control_id, entry);
                     });
                 }
+                let mut props = base_props.clone();
+
+                let duration = overlay_motion::shadcn_motion_duration_150(cx);
+                let focus_visible = cx.is_focused_element(id)
+                    && fret_ui::focus_visible::is_focus_visible(cx.app, Some(cx.window));
+
+                let target_border = if focus_visible {
+                    props.chrome.border_color_focused
+                } else {
+                    props.chrome.border_color
+                };
+                let border_motion = drive_tween_color_for_element(
+                    cx,
+                    id,
+                    "textarea.chrome.border",
+                    target_border,
+                    duration,
+                    tailwind_transition_ease_in_out,
+                );
+                props.chrome.border_color = border_motion.value;
+                props.chrome.border_color_focused = border_motion.value;
+
+                let ring_alpha = drive_tween_f32_for_element(
+                    cx,
+                    id,
+                    "textarea.chrome.ring.alpha",
+                    if focus_visible { 1.0 } else { 0.0 },
+                    duration,
+                    tailwind_transition_ease_in_out,
+                );
+                if let Some(mut ring) = props.chrome.focus_ring.take() {
+                    ring.color = alpha_mul(ring.color, ring_alpha.value);
+                    if let Some(offset_color) = ring.offset_color {
+                        ring.offset_color = Some(alpha_mul(offset_color, ring_alpha.value));
+                    }
+                    props.chrome.focus_ring = Some(ring);
+                }
+                props.focus_ring_always_paint = ring_alpha.animating;
+
                 props
             });
 
@@ -596,8 +688,73 @@ mod tests {
 
     use fret_app::App;
     use fret_core::{AppWindowId, Point, Px, Rect, Size as CoreSize};
+    use fret_core::{
+        Modifiers, PathCommand, Size as UiSize, SvgId, SvgService, TextBlobId, TextConstraints,
+        TextMetrics, TextService,
+    };
+    use fret_core::{PathConstraints, PathId, PathMetrics, PathService, PathStyle};
+    use fret_runtime::FrameId;
     use fret_ui::element::{ElementKind, Length};
     use fret_ui::elements;
+    use fret_ui::{UiTree, focus_visible};
+    use fret_ui_kit::declarative::transition::ticks_60hz_for_duration;
+
+    #[derive(Default)]
+    struct FakeServices;
+
+    impl TextService for FakeServices {
+        fn prepare(
+            &mut self,
+            _input: &fret_core::TextInput,
+            _constraints: TextConstraints,
+        ) -> (TextBlobId, TextMetrics) {
+            (
+                TextBlobId::default(),
+                TextMetrics {
+                    size: UiSize::new(Px(0.0), Px(0.0)),
+                    baseline: Px(0.0),
+                },
+            )
+        }
+
+        fn release(&mut self, _blob: TextBlobId) {}
+    }
+
+    impl PathService for FakeServices {
+        fn prepare(
+            &mut self,
+            _commands: &[PathCommand],
+            _style: PathStyle,
+            _constraints: PathConstraints,
+        ) -> (PathId, PathMetrics) {
+            (PathId::default(), PathMetrics::default())
+        }
+
+        fn release(&mut self, _path: PathId) {}
+    }
+
+    impl SvgService for FakeServices {
+        fn register_svg(&mut self, _bytes: &[u8]) -> SvgId {
+            SvgId::default()
+        }
+
+        fn unregister_svg(&mut self, _svg: SvgId) -> bool {
+            true
+        }
+    }
+
+    impl fret_core::MaterialService for FakeServices {
+        fn register_material(
+            &mut self,
+            _desc: fret_core::MaterialDescriptor,
+        ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+            Ok(fret_core::MaterialId::default())
+        }
+
+        fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
+            true
+        }
+    }
 
     #[test]
     fn textarea_wraps_in_shadow_container_like_shadcn() {
@@ -643,6 +800,208 @@ mod tests {
             );
         };
         assert_eq!(props.layout.size.width, Length::Fill);
+    }
+
+    #[test]
+    fn textarea_focus_ring_tweens_in_and_out_like_a_transition() {
+        use std::cell::Cell;
+        use std::rc::Rc;
+        use std::time::Duration;
+
+        use fret_core::{Event, KeyCode, Rect, Size};
+
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        crate::shadcn_themes::apply_shadcn_new_york(
+            &mut app,
+            crate::shadcn_themes::ShadcnBaseColor::Neutral,
+            crate::shadcn_themes::ShadcnColorScheme::Light,
+        );
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(200.0)),
+        );
+        let mut services = FakeServices::default();
+        let model = app.models_mut().insert(String::new());
+
+        let ring_alpha_out: Rc<Cell<Option<f32>>> = Rc::new(Cell::new(None));
+        let always_paint_out: Rc<Cell<Option<bool>>> = Rc::new(Cell::new(None));
+
+        fn render_frame(
+            ui: &mut UiTree<App>,
+            app: &mut App,
+            services: &mut dyn fret_core::UiServices,
+            window: AppWindowId,
+            bounds: Rect,
+            model: Model<String>,
+            ring_alpha_out: Rc<Cell<Option<f32>>>,
+            always_paint_out: Rc<Cell<Option<bool>>>,
+        ) -> fret_core::NodeId {
+            let root = fret_ui::declarative::render_root(
+                ui,
+                app,
+                services,
+                window,
+                bounds,
+                "textarea-focus-ring-tween",
+                move |cx| {
+                    let el = Textarea::new(model)
+                        .a11y_label("Textarea")
+                        .resizable(false)
+                        .into_element(cx);
+
+                    let ElementKind::Container(_) = &el.kind else {
+                        panic!("expected Textarea to wrap in a Container");
+                    };
+                    let child = el.children.first().expect("textarea inner child");
+                    let ElementKind::TextArea(props) = &child.kind else {
+                        panic!("expected Textarea inner to be TextArea");
+                    };
+
+                    let a = props
+                        .chrome
+                        .focus_ring
+                        .map(|ring| ring.color.a)
+                        .unwrap_or(0.0);
+                    ring_alpha_out.set(Some(a));
+                    always_paint_out.set(Some(props.focus_ring_always_paint));
+
+                    vec![el]
+                },
+            );
+            ui.set_root(root);
+            ui.request_semantics_snapshot();
+            ui.layout_all(app, services, bounds, 1.0);
+            root
+        }
+
+        // Frame 1: baseline render (no focus-visible), ring alpha should be 0.
+        app.set_frame_id(FrameId(1));
+        let root = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            ring_alpha_out.clone(),
+            always_paint_out.clone(),
+        );
+        let a0 = ring_alpha_out.get().expect("a0");
+        assert!(
+            a0.abs() <= 1e-6,
+            "expected ring alpha to start at 0, got {a0}"
+        );
+
+        // Focus the textarea and mark focus-visible via a navigation key.
+        let focusable = ui
+            .first_focusable_descendant_including_declarative(&mut app, window, root)
+            .expect("focusable textarea");
+        ui.set_focus(Some(focusable));
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::KeyDown {
+                key: KeyCode::Tab,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+        assert!(
+            focus_visible::is_focus_visible(&mut app, Some(window)),
+            "sanity: focus-visible should be enabled after navigation key"
+        );
+
+        // Frame 2: ring should be in-between (not snapped).
+        app.set_frame_id(FrameId(2));
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            ring_alpha_out.clone(),
+            always_paint_out.clone(),
+        );
+        let a1 = ring_alpha_out.get().expect("a1");
+        assert!(
+            a1 > 0.0,
+            "expected ring alpha to start animating in, got {a1}"
+        );
+
+        // Advance frames until the default 150ms transition settles.
+        let settle = ticks_60hz_for_duration(Duration::from_millis(150)) + 2;
+        for i in 0..settle {
+            app.set_frame_id(FrameId(3 + i));
+            let _ = render_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                model.clone(),
+                ring_alpha_out.clone(),
+                always_paint_out.clone(),
+            );
+        }
+        let a_focused = ring_alpha_out.get().expect("a_focused");
+        assert!(
+            a_focused > a1 + 1e-4,
+            "expected ring alpha to increase over time, got a1={a1} a_focused={a_focused}"
+        );
+
+        // Blur and ensure ring animates out while still being painted.
+        ui.set_focus(None);
+        app.set_frame_id(FrameId(1000));
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            ring_alpha_out.clone(),
+            always_paint_out.clone(),
+        );
+        let a_blur = ring_alpha_out.get().expect("a_blur");
+        let always_paint = always_paint_out.get().expect("always_paint");
+        assert!(
+            a_blur > 0.0 && a_blur < a_focused,
+            "expected ring alpha to be intermediate after blur, got a_blur={a_blur} a_focused={a_focused}"
+        );
+        assert!(
+            always_paint,
+            "expected focus ring to request painting while animating out"
+        );
+
+        for i in 0..settle {
+            app.set_frame_id(FrameId(1001 + i));
+            let _ = render_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                model.clone(),
+                ring_alpha_out.clone(),
+                always_paint_out.clone(),
+            );
+        }
+        let a_final = ring_alpha_out.get().expect("a_final");
+        let always_paint_final = always_paint_out.get().expect("always_paint_final");
+        assert!(
+            a_final.abs() <= 1e-4,
+            "expected ring alpha to settle at 0, got {a_final}"
+        );
+        assert!(
+            !always_paint_final,
+            "expected focus ring to stop requesting painting after settling"
+        );
     }
 
     #[test]

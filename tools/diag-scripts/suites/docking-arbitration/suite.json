@@ -10,6 +10,8 @@
     "tools/diag-scripts/docking-arbitration-demo-modal-dock-drag-viewport-capture.json",
     "tools/diag-scripts/docking-arbitration-demo-multiwindow-chained-tearoff-two-tabs-merge.json",
     "tools/diag-scripts/docking-arbitration-demo-multiwindow-drag-tab-back-to-main.json",
+    "tools/diag-scripts/docking-arbitration-demo-multiwindow-drag-tab-back-to-main-large-outer-move.json",
+    "tools/diag-scripts/docking-arbitration-demo-multiwindow-five-way-hints-sweep.json",
     "tools/diag-scripts/docking-arbitration-demo-multiwindow-tearoff-merge-loop-no-leak.json",
     "tools/diag-scripts/docking-arbitration-demo-nary-drop-zone-mask-disallow-left-edge.json",
     "tools/diag-scripts/docking-arbitration-demo-nary-escape-cancels-drag.json",
@@ -23,6 +25,7 @@
     "tools/diag-scripts/docking-arbitration-demo-tab-bar-drop-end-insert-index.json",
     "tools/diag-scripts/docking-arbitration-demo-tab-bar-edge-autoscroll.json",
     "tools/diag-scripts/docking-arbitration-demo-multiwindow-overlap-zorder-switch.json",
+    "tools/diag-scripts/docking-arbitration-demo-multiwindow-under-moving-window-tabs-group.json",
     "tools/diag-scripts/docking-arbitration-demo-multiwindow-release-outside-windows-poll-up.json"
   ]
 }

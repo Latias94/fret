@@ -285,7 +285,7 @@ pub(super) fn set_window_opacity(window: &dyn Window, opacity: f32) -> bool {
 }
 
 #[cfg(target_os = "macos")]
-pub(super) fn set_window_mouse_passthrough(window: &dyn Window, enabled: bool) -> bool {
+pub(super) fn set_window_hit_test_passthrough_all(window: &dyn Window, enabled: bool) -> bool {
     use objc::runtime::Object;
     use objc::{msg_send, sel, sel_impl};
     use winit::raw_window_handle::HasWindowHandle as _;
@@ -334,7 +334,7 @@ pub(super) fn set_window_opacity(window: &dyn Window, opacity: f32) -> bool {
 }
 
 #[cfg(target_os = "windows")]
-pub(super) fn set_window_mouse_passthrough(window: &dyn Window, enabled: bool) -> bool {
+pub(super) fn set_window_hit_test_passthrough_all(window: &dyn Window, enabled: bool) -> bool {
     use winit::raw_window_handle::HasWindowHandle as _;
 
     let hwnd: isize = match window.window_handle() {
@@ -347,8 +347,75 @@ pub(super) fn set_window_mouse_passthrough(window: &dyn Window, enabled: bool) -
     if hwnd == 0 {
         return false;
     }
-    super::win32::set_window_mouse_passthrough(hwnd, enabled);
+    super::win32::set_window_hit_test_passthrough_all(hwnd, enabled);
     true
+}
+
+#[cfg(target_os = "windows")]
+fn set_window_hit_test_passthrough_regions(
+    window: &dyn Window,
+    regions: Option<&[fret_runtime::WindowHitTestRegionV1]>,
+) -> bool {
+    use winit::raw_window_handle::HasWindowHandle as _;
+
+    let hwnd: isize = match window.window_handle() {
+        Ok(handle) => match handle.as_raw() {
+            winit::raw_window_handle::RawWindowHandle::Win32(h) => h.hwnd.get() as isize,
+            _ => 0,
+        },
+        Err(_) => 0,
+    };
+    if hwnd == 0 {
+        return false;
+    }
+    super::win32::set_window_hit_test_passthrough_regions(hwnd, regions)
+}
+
+pub(super) fn set_window_hit_test(
+    window: &dyn Window,
+    hit_test: &fret_runtime::WindowHitTestRequestV1,
+) -> bool {
+    use fret_runtime::WindowHitTestRequestV1 as H;
+
+    #[cfg(target_os = "windows")]
+    {
+        match hit_test {
+            H::Normal => {
+                let a = set_window_hit_test_passthrough_regions(window, None);
+                let b = set_window_hit_test_passthrough_all(window, false);
+                a && b
+            }
+            H::PassthroughAll => {
+                let a = set_window_hit_test_passthrough_regions(window, None);
+                let b = set_window_hit_test_passthrough_all(window, true);
+                a && b
+            }
+            H::PassthroughRegions { regions } => {
+                let a = set_window_hit_test_passthrough_all(window, false);
+                let b = set_window_hit_test_passthrough_regions(window, Some(regions));
+                a && b
+            }
+        }
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        match hit_test {
+            H::Normal => set_window_hit_test_passthrough_all(window, false),
+            H::PassthroughAll => set_window_hit_test_passthrough_all(window, true),
+            // Defensive fallback; the runner should clamp unsupported regions requests.
+            H::PassthroughRegions { .. } => set_window_hit_test_passthrough_all(window, true),
+        }
+    }
+
+    #[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
+    {
+        match hit_test {
+            H::Normal => set_window_hit_test_passthrough_all(window, false),
+            H::PassthroughAll => set_window_hit_test_passthrough_all(window, true),
+            H::PassthroughRegions { .. } => false,
+        }
+    }
 }
 
 #[cfg(target_os = "windows")]
@@ -486,18 +553,6 @@ pub(super) fn set_window_background_material(
             content_view as *const std::ffi::c_void,
             container_view as *const std::ffi::c_void,
         ));
-
-        // Ensure the window is non-opaque so the compositor can blend the surface alpha and the
-        // behind-window material can show through.
-        let _: () = msg_send![ns_window, setOpaque: false];
-        if let Some(color_cls) = Class::get("NSColor") {
-            // Avoid `clearColor` to preserve window shadow (matches GPUI's behavior).
-            let bg: *mut Object = msg_send![color_cls, colorWithSRGBRed: 0f64 green: 0f64 blue: 0f64 alpha: 0.0001f64];
-            if !bg.is_null() {
-                let _: () = msg_send![ns_window, setBackgroundColor: bg];
-            }
-        }
-
         let subviews: *mut Object = msg_send![container_view, subviews];
         let count: usize = if subviews.is_null() {
             0
@@ -541,6 +596,23 @@ pub(super) fn set_window_background_material(
                 material,
                 fret_runtime::WindowBackgroundMaterialRequest::None
             );
+        }
+
+        // Ensure the window is non-opaque so the compositor can blend the surface alpha and the
+        // behind-window material can show through.
+        let _: () = msg_send![ns_window, setOpaque: false];
+        if let Some(color_cls) = Class::get("NSColor") {
+            // Avoid `clearColor` to preserve window shadow.
+            let bg: *mut Object = msg_send![
+                color_cls,
+                colorWithSRGBRed: 0f64
+                green: 0f64
+                blue: 0f64
+                alpha: 0.0001f64
+            ];
+            if !bg.is_null() {
+                let _: () = msg_send![ns_window, setBackgroundColor: bg];
+            }
         }
 
         let container_bounds: NsRect = msg_send![container_view, bounds];
@@ -628,7 +700,7 @@ pub(super) fn set_window_opacity(_window: &dyn Window, _opacity: f32) -> bool {
 }
 
 #[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
-pub(super) fn set_window_mouse_passthrough(_window: &dyn Window, _enabled: bool) -> bool {
+pub(super) fn set_window_hit_test_passthrough_all(_window: &dyn Window, _enabled: bool) -> bool {
     false
 }
 

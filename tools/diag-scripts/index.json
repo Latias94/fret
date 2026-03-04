@@ -721,6 +721,54 @@
       ]
     },
     {
+      "id": "docking-arbitration-demo-multiwindow-tearoff-tabs-group-two-tabs",
+      "path": "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-tearoff-tabs-group-two-tabs.json",
+      "required_capabilities": [
+        "diag.multi_window",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "docking-arbitration"
+      ],
+      "tags": [
+        "docking",
+        "drag",
+        "gate",
+        "multiwindow",
+        "tearoff",
+        "tabbar"
+      ],
+      "target_hints": [
+        "Merges two viewports into one tab strip, then starts a tabs-group drag from empty tab-bar space and tears off out-of-bounds.",
+        "Asserts the whole tab stack moves into a new OS window (ImGui-style undock-whole-node gesture)."
+      ]
+    },
+    {
+      "id": "docking-arbitration-demo-multiwindow-tearoff-tabs-group-two-tabs-merge-back",
+      "path": "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-tearoff-tabs-group-two-tabs-merge-back.json",
+      "required_capabilities": [
+        "diag.multi_window",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "diag-hardening-smoke-docking",
+        "docking-arbitration"
+      ],
+      "tags": [
+        "docking",
+        "drag",
+        "gate",
+        "merge",
+        "multiwindow",
+        "tearoff",
+        "titlebar"
+      ],
+      "target_hints": [
+        "Merges two viewports into one tab strip, tears off the whole tab stack via a tabs-group drag, then docks it back into the main window via a title-bar (tabs-group) drag.",
+        "Asserts the floating OS window auto-closes after drop, and the main window still contains the baseline panels with no floatings."
+      ]
+    },
+    {
       "id": "docking-arbitration-demo-multiwindow-drag-tab-back-to-main",
       "path": "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-drag-tab-back-to-main.json",
       "required_capabilities": [
@@ -741,6 +789,52 @@
         "This script exercises an ImGui-style continuous tab tear-off: start dragging a tab, allow tear-off to create a floating OS window, then route the same drag back into the main window without releasing.",
         "It relies on schema v2 window-targeted steps to migrate the active script across windows.",
         "Note: cursor overrides are expressed in window-client logical pixels (unless a step explicitly requests physical)."
+      ]
+    },
+    {
+      "id": "docking-arbitration-demo-multiwindow-title-bar-drag-docks-to-main",
+      "path": "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-title-bar-drag-docks-to-main.json",
+      "required_capabilities": [
+        "diag.multi_window",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "diag-hardening-smoke-docking",
+        "docking-arbitration"
+      ],
+      "tags": [
+        "docking",
+        "drag",
+        "gate",
+        "multiwindow",
+        "titlebar"
+      ],
+      "target_hints": [
+        "After tear-off, starts a tabs-group drag from empty tab-bar space in a floating OS window (custom chrome title-bar grab).",
+        "Docks back into the main window and asserts the floating window auto-closes after drop."
+      ]
+    },
+    {
+      "id": "docking-arbitration-demo-multiwindow-under-moving-window-basic",
+      "path": "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-under-moving-window-basic.json",
+      "required_capabilities": [
+        "diag.multi_window",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "diag-hardening-smoke-docking",
+        "docking-arbitration"
+      ],
+      "tags": [
+        "docking",
+        "drag",
+        "gate",
+        "hover",
+        "multiwindow"
+      ],
+      "target_hints": [
+        "Overlaps two OS windows and starts a cross-window dock drag in the topmost window.",
+        "With transparent payload enabled, asserts hover routing can peek behind the moving window (ImGui-style HoveredWindowUnderMovingWindow)."
       ]
     },
     {
@@ -1024,6 +1118,26 @@
       "target_hints": [
         "This script first merges two viewports into a single tab stack, then asserts drop-at-end resolves insert_index == 2.",
         "It cancels the final drag (Escape) to avoid mutating layout beyond the setup step."
+      ]
+    },
+    {
+      "id": "docking-arbitration-demo-tab-reorder-two-tabs",
+      "path": "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-tab-reorder-two-tabs.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "docking-arbitration"
+      ],
+      "tags": [
+        "docking",
+        "drag",
+        "gate",
+        "tabbar"
+      ],
+      "target_hints": [
+        "Merges two viewports into one tab strip, then drags a tab to the end to reorder within the strip.",
+        "Asserts the dock graph reflects the new tab order without floating/tear-off."
       ]
     },
     {
@@ -1951,6 +2065,44 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-carousel-api-screenshot",
+      "path": "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-api-screenshot.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-carousel-docs-parity",
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "api",
+        "carousel",
+        "screenshot",
+        "ui-gallery"
+      ],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-carousel-basic-screenshot",
+      "path": "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-basic-screenshot.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-carousel-docs-parity",
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "basic",
+        "carousel",
+        "screenshot",
+        "ui-gallery"
+      ],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-carousel-demo-inertia-pixels-changed",
       "path": "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-demo-inertia-pixels-changed.json",
       "required_capabilities": [
@@ -2018,6 +2170,62 @@
         "Embla engine is enabled by default (set FRET_DEBUG_CAROUSEL_EMBLA_ENGINE=0 to force-disable).",
         "Expected behavior: resizing during an Embla-driven settle does not panic and items remain visible."
       ]
+    },
+    {
+      "id": "ui-gallery-carousel-demo-screenshot",
+      "path": "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-demo-screenshot.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-carousel-docs-parity",
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "carousel",
+        "screenshot",
+        "ui-gallery"
+      ],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-carousel-events-reinit-gate",
+      "path": "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-events-reinit-gate.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-carousel-docs-parity",
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "carousel",
+        "events",
+        "gate",
+        "reInit",
+        "ui-gallery"
+      ],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-carousel-events-select-gate",
+      "path": "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-events-select-gate.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-carousel-docs-parity",
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "carousel",
+        "events",
+        "gate",
+        "select",
+        "ui-gallery"
+      ],
+      "target_hints": []
     },
     {
       "id": "ui-gallery-carousel-expandable-fixed-frame-delta",
@@ -2098,12 +2306,54 @@
       ]
     },
     {
+      "id": "ui-gallery-carousel-orientation-vertical-screenshot",
+      "path": "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-orientation-vertical-screenshot.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-carousel-docs-parity",
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "carousel",
+        "orientation",
+        "screenshot",
+        "ui-gallery",
+        "vertical"
+      ],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-carousel-plugin-autoplay-stop-on-interaction-focus-gate",
+      "path": "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-plugin-autoplay-stop-on-interaction-focus-gate.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-carousel-docs-parity",
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "autoplay",
+        "carousel",
+        "focus",
+        "gate",
+        "plugin",
+        "stopOnInteraction",
+        "ui-gallery"
+      ],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-carousel-plugin-autoplay-stop-on-last-snap-gate",
       "path": "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-plugin-autoplay-stop-on-last-snap-gate.json",
       "required_capabilities": [
         "diag.script_v2"
       ],
       "suite_memberships": [
+        "ui-gallery-carousel-docs-parity",
         "ui-gallery-shadcn-conformance"
       ],
       "tags": [
@@ -2114,10 +2364,192 @@
         "stopOnLastSnap",
         "ui-gallery"
       ],
-      "target_hints": [
-        "Navigate to the UI gallery Carousel page and wait for the autoplay demo to stop at the last snap.",
-        "Expected behavior: `stopOnLastSnap` stops scheduling timers after the last snap is reached."
-      ]
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-carousel-plugin-screenshot",
+      "path": "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-plugin-screenshot.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-carousel-docs-parity",
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "carousel",
+        "docs-parity",
+        "plugin",
+        "screenshot",
+        "shadcn",
+        "ui-gallery"
+      ],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-carousel-rtl-controls-gate",
+      "path": "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-rtl-controls-gate.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-carousel-docs-parity",
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "carousel",
+        "gate",
+        "rtl",
+        "ui-gallery"
+      ],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-carousel-rtl-screenshot",
+      "path": "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-rtl-screenshot.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-carousel-docs-parity",
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "carousel",
+        "docs-parity",
+        "rtl",
+        "screenshot",
+        "shadcn",
+        "ui-gallery"
+      ],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-carousel-sizes-md-screenshot",
+      "path": "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-sizes-md-screenshot.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-carousel-docs-parity",
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "carousel",
+        "docs-parity",
+        "md",
+        "screenshot",
+        "shadcn",
+        "sizes",
+        "ui-gallery"
+      ],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-carousel-sizes-screenshot",
+      "path": "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-sizes-screenshot.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-carousel-docs-parity",
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "carousel",
+        "screenshot",
+        "sizes",
+        "ui-gallery"
+      ],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-carousel-sizes-thirds-screenshot",
+      "path": "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-sizes-thirds-screenshot.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-carousel-docs-parity",
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "carousel",
+        "docs-parity",
+        "screenshot",
+        "shadcn",
+        "sizes",
+        "ui-gallery"
+      ],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-carousel-spacing-responsive-md-screenshot",
+      "path": "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-spacing-responsive-md-screenshot.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-carousel-docs-parity",
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "carousel",
+        "docs-parity",
+        "responsive",
+        "screenshot",
+        "shadcn",
+        "spacing",
+        "ui-gallery"
+      ],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-carousel-spacing-responsive-sm-screenshot",
+      "path": "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-spacing-responsive-sm-screenshot.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-carousel-docs-parity",
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "carousel",
+        "docs-parity",
+        "responsive",
+        "screenshot",
+        "shadcn",
+        "spacing",
+        "ui-gallery"
+      ],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-carousel-spacing-screenshot",
+      "path": "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-spacing-screenshot.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-carousel-docs-parity",
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "carousel",
+        "screenshot",
+        "spacing",
+        "ui-gallery"
+      ],
+      "target_hints": []
     },
     {
       "id": "ui-gallery-chart-accessibility-layer-keyboard",
@@ -3270,6 +3702,24 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-dropdown-menu-rtl-open-screenshot",
+      "path": "tools/diag-scripts/ui-gallery/dropdown-menu/ui-gallery-dropdown-menu-rtl-open-screenshot.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-rtl-smoke"
+      ],
+      "tags": [
+        "dropdown_menu",
+        "rtl",
+        "screenshots",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-dropdown-nonmodal-outside-press-focus-underlay",
       "path": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-dropdown-nonmodal-outside-press-focus-underlay.json",
       "required_capabilities": [],
@@ -3438,6 +3888,29 @@
       "target_hints": [
         "Exercises the intent-level tap step (touch-first).",
         "Fails fast when the runner does not advertise diag.gesture_tap."
+      ]
+    },
+    {
+      "id": "ui-gallery-hover-card-rtl-open-screenshot",
+      "path": "tools/diag-scripts/ui-gallery/hover-card/ui-gallery-hover-card-rtl-open-screenshot.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-rtl-smoke"
+      ],
+      "tags": [
+        "hover-card",
+        "overlay",
+        "rtl",
+        "screenshot",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Navigate to the HoverCard page.",
+        "Scroll to the RTL section and open the hover-card via pointer hover.",
+        "Capture a screenshot for RTL placement/alignment parity."
       ]
     },
     {
@@ -3664,6 +4137,16 @@
       "required_capabilities": [],
       "suite_memberships": [
         "ui-gallery-layout"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-lite-smoke",
+      "path": "tools/diag-scripts/ui-gallery/lite/ui-gallery-lite-smoke.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-lite-smoke"
       ],
       "tags": [],
       "target_hints": []
@@ -3981,6 +4464,56 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-navigation-menu-docs-smoke",
+      "path": "tools/diag-scripts/ui-gallery/navigation-menu/ui-gallery-navigation-menu-docs-smoke.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "a11y",
+        "navigation_menu",
+        "overlay",
+        "screenshot",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Navigates to the Navigation Menu page.",
+        "Asserts trigger roles for link vs menu trigger.",
+        "Opens a menu and captures screenshots for quick parity triage.",
+        "Clicks the Docs link to close the menu (Radix/shadcn outcome)."
+      ]
+    },
+    {
+      "id": "ui-gallery-navigation-menu-escape-close-gate",
+      "path": "tools/diag-scripts/ui-gallery/navigation-menu/ui-gallery-navigation-menu-escape-close-gate.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "escape",
+        "focus",
+        "gate",
+        "navigation_menu",
+        "overlay",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Open NavigationMenu content and move keyboard focus into the viewport.",
+        "Press Escape to close while focus is inside the content.",
+        "Ensure hover pointer-move does not immediately re-open after Escape dismissal."
+      ]
+    },
+    {
       "id": "ui-gallery-node-graph-cull-torture-pan-zoom",
       "path": "tools/diag-scripts/ui-gallery/perf/ui-gallery-node-graph-cull-torture-pan-zoom.json",
       "required_capabilities": [],
@@ -4201,6 +4734,25 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-scroll-area-horizontal-max-scroll-screenshot",
+      "path": "tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scroll-area-horizontal-max-scroll-screenshot.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-scroll-area"
+      ],
+      "tags": [
+        "horizontal",
+        "screenshot",
+        "scroll",
+        "scroll-area",
+        "ui-gallery"
+      ],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-scroll-area-nested-scroll-routing",
       "path": "tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scroll-area-nested-scroll-routing.json",
       "required_capabilities": [
@@ -4216,6 +4768,16 @@
         "scroll",
         "ui_gallery"
       ],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-scroll-area-rtl-screenshot",
+      "path": "tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scroll-area-rtl-screenshot.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-rtl-smoke"
+      ],
+      "tags": [],
       "target_hints": []
     },
     {
@@ -4714,6 +5276,25 @@
       ]
     },
     {
+      "id": "ui-gallery-tabs-rtl-keynav-screenshot",
+      "path": "tools/diag-scripts/ui-gallery/tabs/ui-gallery-tabs-rtl-keynav-screenshot.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-rtl-smoke"
+      ],
+      "tags": [
+        "keyboard",
+        "rtl",
+        "screenshots",
+        "shadcn",
+        "tabs",
+        "ui_gallery"
+      ],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-tabs-vertical-list-grows",
       "path": "tools/diag-scripts/ui-gallery/tabs/ui-gallery-tabs-vertical-list-grows.json",
       "required_capabilities": [
@@ -4734,7 +5315,8 @@
       "target_hints": [
         "Navigates to the Tabs page.",
         "Scrolls the Vertical + Vertical (Line) examples into view.",
-        "Asserts the vertical tab list grows to show multiple triggers (no clipping)."
+        "Asserts the vertical tab list grows to show multiple triggers (no clipping).",
+        "Captures screenshots for both sections for quick visual triage."
       ]
     },
     {

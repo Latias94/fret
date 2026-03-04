@@ -41,13 +41,29 @@ pub(crate) fn list_web_demos(args: Vec<String>) -> Result<(), String> {
 }
 
 pub(crate) fn list_cookbook_examples(args: Vec<String>) -> Result<(), String> {
-    if !args.is_empty() {
-        return Err("list cookbook-examples does not accept extra args".to_string());
-    }
+    let list_all = parse_list_all_flag(args)?;
     let root = workspace_root()?;
     let examples = list_cookbook_examples_from(&root)?;
-    for ex in examples {
+    let (official, lab) = split_official_cookbook_examples(&examples);
+    for ex in official.iter() {
         println!("{ex}");
+    }
+    if list_all {
+        if !lab.is_empty() {
+            println!();
+        }
+        for ex in lab.iter() {
+            if let Some(feature_hint) = cookbook_example_feature_hint(ex) {
+                println!("{ex}    # requires: {feature_hint}");
+            } else {
+                println!("{ex}");
+            }
+        }
+    } else if !lab.is_empty() {
+        eprintln!(
+            "note: {} lab examples hidden (use: fretboard list cookbook-examples --all)",
+            lab.len()
+        );
     }
     Ok(())
 }
@@ -88,7 +104,7 @@ fn parse_list_all_flag(args: Vec<String>) -> Result<bool, String> {
 fn is_official_native_demo(id: &str) -> bool {
     // Keep this list small and intentional: it defines the user-facing story.
     // Maintainer/stress harnesses remain runnable via `--bin` and discoverable via `--all`.
-    matches!(id, "todo_demo" | "components_gallery")
+    matches!(id, "simple_todo_demo" | "todo_demo")
 }
 
 fn split_official_native_demos(all: &[String]) -> (Vec<String>, Vec<String>) {
@@ -107,6 +123,55 @@ fn split_official_native_demos(all: &[String]) -> (Vec<String>, Vec<String>) {
 pub(crate) fn official_native_demos(all: &[String]) -> Vec<String> {
     let (official, _) = split_official_native_demos(all);
     official
+}
+
+fn is_official_cookbook_example(id: &str) -> bool {
+    // Keep this list small and intentional: it defines the onboarding story.
+    matches!(
+        id,
+        "hello"
+            | "simple_todo"
+            | "overlay_basics"
+            | "text_input_basics"
+            | "commands_keymap_basics"
+            | "theme_switching_basics"
+            | "virtual_list_basics"
+            | "effects_layer_basics"
+            | "hello_counter"
+    )
+}
+
+fn cookbook_example_feature_hint(id: &str) -> Option<&'static str> {
+    let hint = match id {
+        "icons_and_assets_basics" => "--features cookbook-assets",
+        "undo_basics" => "--features cookbook-undo",
+        "async_inbox_basics" => "--features cookbook-async",
+        "imui_action_basics" => "--features cookbook-imui",
+        "docking_basics" => "--features cookbook-docking",
+        "embedded_viewport_basics" => "--features cookbook-interop",
+        "external_texture_import_basics" => "--features cookbook-interop",
+        "customv1_basics" => "--features cookbook-customv1",
+        "utility_window_materials_windows" => "--features cookbook-bootstrap",
+        "markdown_and_code_basics" => "--features cookbook-markdown",
+        "canvas_pan_zoom_basics" => "--features cookbook-canvas",
+        "chart_interactions_basics" => "--features cookbook-chart",
+        "gizmo_basics" => "--features cookbook-gizmo",
+        _ => return None,
+    };
+    Some(hint)
+}
+
+fn split_official_cookbook_examples(all: &[String]) -> (Vec<String>, Vec<String>) {
+    let mut official = Vec::new();
+    let mut lab = Vec::new();
+    for id in all {
+        if is_official_cookbook_example(id) {
+            official.push(id.clone());
+        } else {
+            lab.push(id.clone());
+        }
+    }
+    (official, lab)
 }
 
 fn web_demos() -> &'static [&'static str] {

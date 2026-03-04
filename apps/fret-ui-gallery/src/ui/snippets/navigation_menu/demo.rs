@@ -2,9 +2,11 @@ pub const SOURCE: &str = include_str!("demo.rs");
 
 // region: example
 use fret_app::App;
-use fret_core::{FontId, FontWeight, Px, TextOverflow, TextStyle, TextWrap};
+use fret_core::{Color, FontId, FontWeight, Px, TextOverflow, TextStyle, TextWrap};
+use fret_runtime::Model;
+use fret_ui::Invalidation;
 use fret_ui::element::TextProps;
-use fret_ui_kit::declarative::{ElementContextThemeExt as _, ModelWatchExt as _};
+use fret_ui_kit::declarative::ElementContextThemeExt as _;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 use std::sync::Arc;
 
@@ -15,7 +17,6 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
     #[derive(Default, Clone)]
     struct NavigationMenuModels {
         demo_value: Option<Model<Option<Arc<str>>>>,
-        md_breakpoint_query_uses_container: Option<Model<bool>>,
     }
 
     let muted_foreground = cx.with_theme(|theme| theme.color_token("muted-foreground"));
@@ -31,49 +32,14 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
             model
         }
     };
-    let md_breakpoint_query_uses_container = match state.md_breakpoint_query_uses_container {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(false);
-            cx.with_state(NavigationMenuModels::default, |st| {
-                st.md_breakpoint_query_uses_container = Some(model.clone())
-            });
-            model
-        }
-    };
 
-    let md_breakpoint_query = if cx
-        .watch_model(&md_breakpoint_query_uses_container)
-        .cloned()
-        .unwrap_or(false)
-    {
-        shadcn::navigation_menu::NavigationMenuMdBreakpointQuery::Container
-    } else {
-        shadcn::navigation_menu::NavigationMenuMdBreakpointQuery::Viewport
-    };
-
-    let md_breakpoint_query_toggle = shadcn::FieldGroup::new([shadcn::Field::new([
-        shadcn::FieldContent::new([
-            shadcn::FieldLabel::new("MD breakpoint query source")
-                .for_control("ui-gallery-navigation-menu-md-breakpoint-query-switch")
-                .into_element(cx),
-            shadcn::FieldDescription::new(
-                "Toggle to drive `md:*` behavior by local container width (editor-first) instead of window viewport width (web parity).",
-            )
-            .into_element(cx),
-        ])
-        .into_element(cx),
-        shadcn::Switch::new(md_breakpoint_query_uses_container.clone())
-            .control_id("ui-gallery-navigation-menu-md-breakpoint-query-switch")
-            .test_id("ui-gallery-navigation-menu-md-breakpoint-query-switch")
-            .a11y_label("MD breakpoint query uses container width")
-            .into_element(cx),
-    ])
-    .orientation(shadcn::FieldOrientation::Horizontal)
-    .into_element(cx)])
-    .refine_layout(LayoutRefinement::default().w_full().max_w(Px(720.0)))
-    .into_element(cx)
-    .test_id("ui-gallery-navigation-menu-md-breakpoint-query");
+    let md_breakpoint = fret_ui_kit::declarative::viewport_width_at_least(
+        cx,
+        Invalidation::Layout,
+        fret_ui_kit::declarative::viewport_tailwind::MD,
+        fret_ui_kit::declarative::ViewportQueryHysteresis::default(),
+    );
+    let is_mobile = !md_breakpoint;
 
     let list_item = |cx: &mut ElementContext<'_, App>,
                      model: Model<Option<Arc<str>>>,
@@ -151,213 +117,444 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
             .into_element(cx)
     };
 
-    let demo = {
-        let region_props = fret_ui::element::LayoutQueryRegionProps {
-            layout: cx.with_theme(|theme| {
-                fret_ui_kit::declarative::style::layout_style(
-                    theme,
-                    LayoutRefinement::default().w_px(Px(640.0)).min_w_0(),
-                )
+    let home_card = |cx: &mut ElementContext<'_, App>,
+                     model: Model<Option<Arc<str>>>,
+                     layout: LayoutRefinement| {
+        let mut bg: Color = cx.with_theme(|theme| theme.color_token("muted"));
+        bg.a *= 0.75;
+
+        let title = cx.text_props(TextProps {
+            layout: Default::default(),
+            text: Arc::from("shadcn/ui"),
+            style: Some(TextStyle {
+                font: FontId::default(),
+                size: Px(18.0),
+                weight: FontWeight::MEDIUM,
+                ..Default::default()
             }),
-            name: None,
-        };
+            color: None,
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
+            ink_overflow: fret_ui::element::TextInkOverflow::None,
+        });
+        let description = cx.text_props(TextProps {
+            layout: Default::default(),
+            text: Arc::from("Beautifully designed components built with Tailwind CSS."),
+            style: Some(TextStyle {
+                font: FontId::default(),
+                size: Px(14.0),
+                weight: FontWeight::NORMAL,
+                ..Default::default()
+            }),
+            color: Some(muted_foreground),
+            wrap: TextWrap::Word,
+            overflow: TextOverflow::Ellipsis,
+            align: fret_core::TextAlign::Start,
+            ink_overflow: fret_ui::element::TextInkOverflow::None,
+        });
 
-        let getting_started = shadcn::NavigationMenuItem::new(
-            "getting_started",
-            "Getting started",
-            [stack::vstack(
-                cx,
-                stack::VStackProps::default()
-                    .gap(Space::N1)
-                    .items_start()
-                    .layout(LayoutRefinement::default().w_px(Px(384.0)).min_w_0()),
-                |cx| {
-                    vec![
-                        list_item(
-                            cx,
-                            demo_value.clone(),
-                            "Introduction",
-                            "Re-usable components built with Tailwind CSS.",
-                            "ui-gallery-navigation-menu-demo-link-introduction",
-                            CMD_APP_OPEN,
-                        ),
-                        list_item(
-                            cx,
-                            demo_value.clone(),
-                            "Installation",
-                            "How to install dependencies and structure your app.",
-                            "ui-gallery-navigation-menu-demo-link-installation",
-                            CMD_APP_OPEN,
-                        ),
-                        list_item(
-                            cx,
-                            demo_value.clone(),
-                            "Typography",
-                            "Styles for headings, paragraphs, lists...etc",
-                            "ui-gallery-navigation-menu-demo-link-typography",
-                            CMD_APP_OPEN,
-                        ),
-                    ]
-                },
-            )],
-        )
-        .trigger_test_id("ui-gallery-navigation-menu-demo-trigger-getting-started");
-
-        let components = shadcn::NavigationMenuItem::new(
-            "components",
-            "Components",
-            [stack::hstack(
-                cx,
-                stack::HStackProps::default()
-                    .gap(Space::N2)
-                    .items_start()
-                    .layout(LayoutRefinement::default().w_px(Px(600.0)).min_w_0()),
-                |cx| {
-                    let left = stack::vstack(
-                        cx,
-                        stack::VStackProps::default().gap(Space::N2).items_start(),
-                        |cx| {
-                            vec![
-                                list_item(
-                                    cx,
-                                    demo_value.clone(),
-                                    "Alert Dialog",
-                                    "A modal dialog that interrupts the user with important content and expects a response.",
-                                    "ui-gallery-navigation-menu-demo-link-alert-dialog",
-                                    CMD_APP_OPEN,
-                                ),
-                                list_item(
-                                    cx,
-                                    demo_value.clone(),
-                                    "Hover Card",
-                                    "For sighted users to preview content available behind a link.",
-                                    "ui-gallery-navigation-menu-demo-link-hover-card",
-                                    CMD_APP_OPEN,
-                                ),
-                                list_item(
-                                    cx,
-                                    demo_value.clone(),
-                                    "Progress",
-                                    "Displays an indicator showing the completion progress of a task, typically displayed as a progress bar.",
-                                    "ui-gallery-navigation-menu-demo-link-progress",
-                                    CMD_APP_OPEN,
-                                ),
-                            ]
-                        },
-                    );
-
-                    let right = stack::vstack(
-                        cx,
-                        stack::VStackProps::default().gap(Space::N2).items_start(),
-                        |cx| {
-                            vec![
-                                list_item(
-                                    cx,
-                                    demo_value.clone(),
-                                    "Scroll-area",
-                                    "Visually or semantically separates content.",
-                                    "ui-gallery-navigation-menu-demo-link-scroll-area",
-                                    CMD_APP_SAVE,
-                                ),
-                                list_item(
-                                    cx,
-                                    demo_value.clone(),
-                                    "Tabs",
-                                    "A set of layered sections of content—known as tab panels—that are displayed one at a time.",
-                                    "ui-gallery-navigation-menu-demo-link-tabs",
-                                    CMD_APP_SAVE,
-                                ),
-                                list_item(
-                                    cx,
-                                    demo_value.clone(),
-                                    "Tooltip",
-                                    "A popup that displays information related to an element when the element receives keyboard focus or the mouse hovers over it.",
-                                    "ui-gallery-navigation-menu-demo-link-tooltip",
-                                    CMD_APP_SAVE,
-                                ),
-                            ]
-                        },
-                    );
-
-                    [left, right]
-                },
-            )],
-        )
-        .trigger_test_id("ui-gallery-navigation-menu-demo-trigger-components");
-
-        let with_icon = shadcn::NavigationMenuItem::new(
-            "with_icon",
-            "With Icon",
-            [stack::vstack(
-                cx,
-                stack::VStackProps::default()
-                    .gap(Space::N1)
-                    .items_start()
-                    .layout(LayoutRefinement::default().w_px(Px(200.0)).min_w_0()),
-                |cx| {
-                    vec![
-                        icon_row(
-                            cx,
-                            demo_value.clone(),
-                            "lucide.circle-alert",
-                            "Backlog",
-                            "ui-gallery-navigation-menu-demo-link-backlog",
-                            CMD_APP_OPEN,
-                        ),
-                        icon_row(
-                            cx,
-                            demo_value.clone(),
-                            "lucide.circle-dashed",
-                            "To Do",
-                            "ui-gallery-navigation-menu-demo-link-to-do",
-                            CMD_APP_OPEN,
-                        ),
-                        icon_row(
-                            cx,
-                            demo_value.clone(),
-                            "lucide.circle-check",
-                            "Done",
-                            "ui-gallery-navigation-menu-demo-link-done",
-                            CMD_APP_OPEN,
-                        ),
-                    ]
-                },
-            )],
-        )
-        .trigger_test_id("ui-gallery-navigation-menu-demo-trigger-with-icon");
-
-        let docs = shadcn::NavigationMenuItem::new("docs", "Docs", std::iter::empty())
-            .trigger_test_id("ui-gallery-navigation-menu-demo-trigger-docs");
-
-        fret_ui_kit::declarative::container_query_region_with_id(
+        let theme = cx.with_theme(|theme| theme.clone());
+        let wrapper = fret_ui_kit::declarative::style::container_props(
+            &theme,
+            ChromeRefinement::default()
+                .rounded_md()
+                .bg(ColorRef::Color(bg))
+                .p_4(),
+            LayoutRefinement::default()
+                .w_full()
+                .h_full()
+                .min_w_0()
+                .merge(layout),
+        );
+        let body = stack::vstack(
             cx,
-            "ui-gallery.navigation_menu.demo",
-            region_props,
-            move |cx, region_id| {
+            stack::VStackProps::default()
+                .gap(Space::N2)
+                .items_start()
+                .justify_end()
+                .layout(LayoutRefinement::default().w_full().h_full().min_w_0()),
+            move |_cx| vec![title, description],
+        );
+        let card = cx.container(wrapper, move |_cx| vec![body]);
+
+        shadcn::NavigationMenuLink::new(model, [card])
+            .label("Home")
+            .test_id("ui-gallery-navigation-menu-demo-link-home-card")
+            .on_click(CMD_APP_OPEN)
+            .refine_style(ChromeRefinement::default().p_0())
+            .into_element(cx)
+    };
+
+    let home_content = if md_breakpoint {
+        stack::hstack(
+            cx,
+            stack::HStackProps::default()
+                .gap(Space::N2)
+                .items_start()
+                .layout(LayoutRefinement::default().w_px(Px(500.0)).min_w_0()),
+            |cx| {
+                let card = home_card(
+                    cx,
+                    demo_value.clone(),
+                    LayoutRefinement::default().w_px(Px(180.0)).h_px(Px(192.0)),
+                );
+
+                let list = stack::vstack(
+                    cx,
+                    stack::VStackProps::default().gap(Space::N2).items_start(),
+                    |cx| {
+                        vec![
+                            list_item(
+                                cx,
+                                demo_value.clone(),
+                                "Introduction",
+                                "Re-usable components built using Radix UI and Tailwind CSS.",
+                                "ui-gallery-navigation-menu-demo-link-introduction",
+                                CMD_APP_OPEN,
+                            ),
+                            list_item(
+                                cx,
+                                demo_value.clone(),
+                                "Installation",
+                                "How to install dependencies and structure your app.",
+                                "ui-gallery-navigation-menu-demo-link-installation",
+                                CMD_APP_OPEN,
+                            ),
+                            list_item(
+                                cx,
+                                demo_value.clone(),
+                                "Typography",
+                                "Styles for headings, paragraphs, lists...etc",
+                                "ui-gallery-navigation-menu-demo-link-typography",
+                                CMD_APP_OPEN,
+                            ),
+                        ]
+                    },
+                );
+
+                vec![card, list]
+            },
+        )
+    } else {
+        stack::vstack(
+            cx,
+            stack::VStackProps::default()
+                .gap(Space::N2)
+                .items_start()
+                .layout(LayoutRefinement::default().w_full().min_w_0()),
+            |cx| {
                 vec![
-                    shadcn::NavigationMenu::new(demo_value.clone())
-                        .md_breakpoint_query(md_breakpoint_query)
-                        .container_query_region(region_id)
-                        .list(shadcn::NavigationMenuList::new([
-                            getting_started,
-                            components,
-                            with_icon,
-                            docs,
-                        ]))
-                        .viewport_test_id("ui-gallery-navigation-menu-demo-viewport")
-                        .into_element(cx),
+                    home_card(
+                        cx,
+                        demo_value.clone(),
+                        LayoutRefinement::default().h_px(Px(192.0)),
+                    ),
+                    list_item(
+                        cx,
+                        demo_value.clone(),
+                        "Introduction",
+                        "Re-usable components built using Radix UI and Tailwind CSS.",
+                        "ui-gallery-navigation-menu-demo-link-introduction",
+                        CMD_APP_OPEN,
+                    ),
+                    list_item(
+                        cx,
+                        demo_value.clone(),
+                        "Installation",
+                        "How to install dependencies and structure your app.",
+                        "ui-gallery-navigation-menu-demo-link-installation",
+                        CMD_APP_OPEN,
+                    ),
+                    list_item(
+                        cx,
+                        demo_value.clone(),
+                        "Typography",
+                        "Styles for headings, paragraphs, lists...etc",
+                        "ui-gallery-navigation-menu-demo-link-typography",
+                        CMD_APP_OPEN,
+                    ),
                 ]
             },
         )
     };
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N4)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full().min_w_0()),
-        move |_cx| vec![md_breakpoint_query_toggle, demo],
+    let home = shadcn::NavigationMenuItem::new("home", "Home", [home_content])
+        .trigger_test_id("ui-gallery-navigation-menu-demo-trigger-home");
+
+    let components_content = if md_breakpoint {
+        stack::hstack(
+            cx,
+            stack::HStackProps::default()
+                .gap(Space::N2)
+                .items_start()
+                .layout(LayoutRefinement::default().w_px(Px(600.0)).min_w_0()),
+            |cx| {
+                let left = stack::vstack(
+                    cx,
+                    stack::VStackProps::default().gap(Space::N2).items_start(),
+                    |cx| {
+                        vec![
+                            list_item(
+                                cx,
+                                demo_value.clone(),
+                                "Alert Dialog",
+                                "A modal dialog that interrupts the user with important content and expects a response.",
+                                "ui-gallery-navigation-menu-demo-link-alert-dialog",
+                                CMD_APP_OPEN,
+                            ),
+                            list_item(
+                                cx,
+                                demo_value.clone(),
+                                "Hover Card",
+                                "For sighted users to preview content available behind a link.",
+                                "ui-gallery-navigation-menu-demo-link-hover-card",
+                                CMD_APP_OPEN,
+                            ),
+                            list_item(
+                                cx,
+                                demo_value.clone(),
+                                "Progress",
+                                "Displays an indicator showing the completion progress of a task, typically displayed as a progress bar.",
+                                "ui-gallery-navigation-menu-demo-link-progress",
+                                CMD_APP_OPEN,
+                            ),
+                        ]
+                    },
+                );
+
+                let right = stack::vstack(
+                    cx,
+                    stack::VStackProps::default().gap(Space::N2).items_start(),
+                    |cx| {
+                        vec![
+                            list_item(
+                                cx,
+                                demo_value.clone(),
+                                "Scroll-area",
+                                "Visually or semantically separates content.",
+                                "ui-gallery-navigation-menu-demo-link-scroll-area",
+                                CMD_APP_SAVE,
+                            ),
+                            list_item(
+                                cx,
+                                demo_value.clone(),
+                                "Tabs",
+                                "A set of layered sections of content—known as tab panels—that are displayed one at a time.",
+                                "ui-gallery-navigation-menu-demo-link-tabs",
+                                CMD_APP_SAVE,
+                            ),
+                            list_item(
+                                cx,
+                                demo_value.clone(),
+                                "Tooltip",
+                                "A popup that displays information related to an element when the element receives keyboard focus or the mouse hovers over it.",
+                                "ui-gallery-navigation-menu-demo-link-tooltip",
+                                CMD_APP_SAVE,
+                            ),
+                        ]
+                    },
+                );
+
+                vec![left, right]
+            },
+        )
+    } else {
+        stack::vstack(
+            cx,
+            stack::VStackProps::default()
+                .gap(Space::N2)
+                .items_start()
+                .layout(LayoutRefinement::default().w_full().min_w_0()),
+            |cx| {
+                vec![
+                    list_item(
+                        cx,
+                        demo_value.clone(),
+                        "Alert Dialog",
+                        "A modal dialog that interrupts the user with important content and expects a response.",
+                        "ui-gallery-navigation-menu-demo-link-alert-dialog",
+                        CMD_APP_OPEN,
+                    ),
+                    list_item(
+                        cx,
+                        demo_value.clone(),
+                        "Hover Card",
+                        "For sighted users to preview content available behind a link.",
+                        "ui-gallery-navigation-menu-demo-link-hover-card",
+                        CMD_APP_OPEN,
+                    ),
+                    list_item(
+                        cx,
+                        demo_value.clone(),
+                        "Progress",
+                        "Displays an indicator showing the completion progress of a task, typically displayed as a progress bar.",
+                        "ui-gallery-navigation-menu-demo-link-progress",
+                        CMD_APP_OPEN,
+                    ),
+                    list_item(
+                        cx,
+                        demo_value.clone(),
+                        "Scroll-area",
+                        "Visually or semantically separates content.",
+                        "ui-gallery-navigation-menu-demo-link-scroll-area",
+                        CMD_APP_SAVE,
+                    ),
+                    list_item(
+                        cx,
+                        demo_value.clone(),
+                        "Tabs",
+                        "A set of layered sections of content—known as tab panels—that are displayed one at a time.",
+                        "ui-gallery-navigation-menu-demo-link-tabs",
+                        CMD_APP_SAVE,
+                    ),
+                    list_item(
+                        cx,
+                        demo_value.clone(),
+                        "Tooltip",
+                        "A popup that displays information related to an element when the element receives keyboard focus or the mouse hovers over it.",
+                        "ui-gallery-navigation-menu-demo-link-tooltip",
+                        CMD_APP_SAVE,
+                    ),
+                ]
+            },
+        )
+    };
+
+    let components =
+        shadcn::NavigationMenuItem::new("components", "Components", [components_content])
+            .trigger_test_id("ui-gallery-navigation-menu-demo-trigger-components");
+
+    let docs = shadcn::NavigationMenuItem::new("docs", "Docs", std::iter::empty())
+        .trigger_test_id("ui-gallery-navigation-menu-demo-trigger-docs")
+        .on_click(CMD_APP_OPEN);
+
+    let list = shadcn::NavigationMenuItem::new(
+        "list",
+        "List",
+        [stack::vstack(
+            cx,
+            stack::VStackProps::default()
+                .gap(Space::N2)
+                .items_start()
+                .layout(LayoutRefinement::default().w_px(Px(300.0)).min_w_0()),
+            |cx| {
+                vec![
+                    list_item(
+                        cx,
+                        demo_value.clone(),
+                        "Components",
+                        "Browse all components in the library.",
+                        "ui-gallery-navigation-menu-demo-link-list-components",
+                        CMD_APP_OPEN,
+                    ),
+                    list_item(
+                        cx,
+                        demo_value.clone(),
+                        "Documentation",
+                        "Learn how to use the library.",
+                        "ui-gallery-navigation-menu-demo-link-list-documentation",
+                        CMD_APP_OPEN,
+                    ),
+                    list_item(
+                        cx,
+                        demo_value.clone(),
+                        "Blog",
+                        "Read our latest blog posts.",
+                        "ui-gallery-navigation-menu-demo-link-list-blog",
+                        CMD_APP_OPEN,
+                    ),
+                ]
+            },
+        )],
     )
+    .trigger_test_id("ui-gallery-navigation-menu-demo-trigger-list");
+
+    let simple = shadcn::NavigationMenuItem::new(
+        "simple",
+        "Simple",
+        [stack::vstack(
+            cx,
+            stack::VStackProps::default()
+                .gap(Space::N2)
+                .items_start()
+                .layout(LayoutRefinement::default().w_px(Px(200.0)).min_w_0()),
+            |cx| {
+                vec![
+                    shadcn::NavigationMenuLink::new(demo_value.clone(), [cx.text("Components")])
+                        .label("Components")
+                        .test_id("ui-gallery-navigation-menu-demo-link-simple-components")
+                        .on_click(CMD_APP_OPEN)
+                        .into_element(cx),
+                    shadcn::NavigationMenuLink::new(demo_value.clone(), [cx.text("Documentation")])
+                        .label("Documentation")
+                        .test_id("ui-gallery-navigation-menu-demo-link-simple-documentation")
+                        .on_click(CMD_APP_OPEN)
+                        .into_element(cx),
+                    shadcn::NavigationMenuLink::new(demo_value.clone(), [cx.text("Blocks")])
+                        .label("Blocks")
+                        .test_id("ui-gallery-navigation-menu-demo-link-simple-blocks")
+                        .on_click(CMD_APP_OPEN)
+                        .into_element(cx),
+                ]
+            },
+        )],
+    )
+    .trigger_test_id("ui-gallery-navigation-menu-demo-trigger-simple");
+
+    let with_icon = shadcn::NavigationMenuItem::new(
+        "with_icon",
+        "With Icon",
+        [stack::vstack(
+            cx,
+            stack::VStackProps::default()
+                .gap(Space::N2)
+                .items_start()
+                .layout(LayoutRefinement::default().w_px(Px(200.0)).min_w_0()),
+            |cx| {
+                vec![
+                    icon_row(
+                        cx,
+                        demo_value.clone(),
+                        "lucide.circle-question-mark",
+                        "Backlog",
+                        "ui-gallery-navigation-menu-demo-link-backlog",
+                        CMD_APP_OPEN,
+                    ),
+                    icon_row(
+                        cx,
+                        demo_value.clone(),
+                        "lucide.circle",
+                        "To Do",
+                        "ui-gallery-navigation-menu-demo-link-to-do",
+                        CMD_APP_OPEN,
+                    ),
+                    icon_row(
+                        cx,
+                        demo_value.clone(),
+                        "lucide.circle-check",
+                        "Done",
+                        "ui-gallery-navigation-menu-demo-link-done",
+                        CMD_APP_OPEN,
+                    ),
+                ]
+            },
+        )],
+    )
+    .trigger_test_id("ui-gallery-navigation-menu-demo-trigger-with-icon");
+
+    let mut items = vec![home, components, docs];
+    if md_breakpoint {
+        items.push(list);
+        items.push(simple);
+        items.push(with_icon);
+    }
+
+    shadcn::NavigationMenu::new(demo_value.clone())
+        .viewport(is_mobile)
+        .list(shadcn::NavigationMenuList::new(items))
+        .viewport_test_id("ui-gallery-navigation-menu-demo-viewport")
+        .into_element(cx)
+        .test_id("ui-gallery-navigation-menu-demo")
 }
 // endregion: example

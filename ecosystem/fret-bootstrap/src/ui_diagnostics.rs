@@ -16,7 +16,7 @@ use fret_diag_protocol::{
     UiCommandDispatchTraceQueryV1 as UiScriptCommandDispatchTraceQueryV1, UiEdgesV1,
     UiFocusTraceEntryV1, UiHitTestScopeRootEvidenceV1, UiHitTestTraceEntryV1,
     UiImeEventTraceEntryV1, UiImeEventV1, UiIncomingOpenInjectItemV1, UiKeyModifiersV1,
-    UiLayoutDirectionV1, UiMouseButtonV1, UiMousePolicyV1, UiOptionalRootStateV1, UiOverlayAlignV1,
+    UiLayoutDirectionV1, UiMouseButtonV1, UiOptionalRootStateV1, UiOverlayAlignV1,
     UiOverlayArrowLayoutV1, UiOverlayOffsetV1, UiOverlayPlacementTraceEntryV1,
     UiOverlayPlacementTraceKindV1, UiOverlayPlacementTraceQueryV1, UiOverlayShiftV1,
     UiOverlaySideV1, UiOverlayStickyModeV1, UiPaddingInsetsV1, UiPointV1, UiPointerKindV1,
@@ -25,7 +25,7 @@ use fret_diag_protocol::{
     UiSelectorResolutionTraceEntryV1, UiSelectorV1, UiShortcutRoutingTraceEntryV1,
     UiShortcutRoutingTraceQueryV1, UiSizeV1, UiTaskbarVisibilityV1, UiTextInputSnapshotV1,
     UiWebImeTraceEntryV1, UiWindowBackgroundMaterialRequestV1, UiWindowDecorationsRequestV1,
-    UiWindowStyleMatchV1, UiWindowTargetV1, UiWindowZLevelV1,
+    UiWindowHitTestRequestV1, UiWindowStyleMatchV1, UiWindowTargetV1, UiWindowZLevelV1,
 };
 use fret_runtime::DragHost as _;
 use fret_ui::elements::ElementRuntime;

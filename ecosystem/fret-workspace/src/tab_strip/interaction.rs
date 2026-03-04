@@ -8,10 +8,12 @@ use fret_ui::action::{
 };
 
 use fret_ui_kit::dnd as ui_dnd;
+use fret_ui_kit::headless::tab_strip_arbitration;
 
 use crate::tab_drag::DRAG_KIND_WORKSPACE_TAB;
 
 use super::drag_state::WorkspaceTabStripDragState;
+use super::consts::{TAB_CHROME_PAD_RIGHT, TAB_CLOSE_SIZE};
 use super::intent::{WorkspaceTabStripIntent, dispatch_intent};
 use super::kernel::WorkspaceTabStripDropTarget;
 
@@ -21,12 +23,33 @@ pub(super) fn tab_pointer_down_handler(
     tab_activate_command: CommandId,
     pane_activate_cmd: Option<CommandId>,
     tab_close_command: Option<CommandId>,
+    show_close_button: bool,
     dnd: ui_dnd::DndServiceModel,
     dnd_scope: ui_dnd::DndScopeId,
 ) -> OnPressablePointerDown {
     Arc::new(
         move |host: &mut dyn UiPointerActionHost, acx: ActionCx, down| {
             host.prevent_default(DefaultAction::FocusOnPointerDown);
+
+            if show_close_button
+                && down.button == MouseButton::Left
+                && down.modifiers == Modifiers::default()
+            {
+                // Prevent the tab pressable from arming when clicking the close affordance.
+                //
+                // Rationale: without this, the tab pressable can observe the pointer-down that
+                // targets the nested close button pressable, leading to accidental activation or
+                // DnD capture when the intent is "close without activation".
+                if tab_strip_arbitration::tab_close_hit_test(
+                    host.bounds(),
+                    down.position_local,
+                    TAB_CLOSE_SIZE,
+                    TAB_CHROME_PAD_RIGHT,
+                ) {
+                    return PressablePointerDownResult::SkipDefault;
+                }
+            }
+
             match down.button {
                 MouseButton::Middle => {
                     if let Some(cmd) = pane_activate_cmd.clone() {

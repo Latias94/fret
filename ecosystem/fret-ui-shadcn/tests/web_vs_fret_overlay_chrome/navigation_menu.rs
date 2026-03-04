@@ -118,7 +118,7 @@ fn assert_navigation_menu_trigger_surface_colors_match(
         .models_mut()
         .update(&model, |v| *v = Some(Arc::from(open_value)));
 
-    let settle_frames = crate::shadcn_motion::ticks_100() + 2;
+    let settle_frames = crate::shadcn_motion::ticks_200() + 2;
     for tick in 0..settle_frames {
         let request_semantics = tick + 1 == settle_frames;
         render_frame(

@@ -150,7 +150,7 @@ fn navigation_menu_enter_opens_focused_trigger_and_escape_closes() {
     timers.ingest_effects(&mut app);
     timers.fire_all(&mut ui, &mut app, &mut services);
 
-    let open_settle_frames = shadcn_motion::ticks_100() + 2;
+    let open_settle_frames = shadcn_motion::ticks_200() + 2;
     for tick in 0..open_settle_frames {
         let request_semantics = tick + 1 == open_settle_frames;
         render_frame(
@@ -188,7 +188,7 @@ fn navigation_menu_enter_opens_focused_trigger_and_escape_closes() {
     timers.ingest_effects(&mut app);
     timers.fire_all(&mut ui, &mut app, &mut services);
 
-    let close_settle_frames = shadcn_motion::ticks_100() + 2;
+    let close_settle_frames = shadcn_motion::ticks_200() + 2;
     for tick in 0..close_settle_frames {
         let request_semantics = tick + 1 == close_settle_frames;
         render_frame(

@@ -440,6 +440,12 @@ Script shrinking (automated minimal repro):
 5. The app executes **one step per frame** (deterministic), and (by default) auto-dumps after actions.
    Use `cargo run -p fretboard -- diag latest` to grab the newest bundle.
 
+Deterministic termination note (especially for multi-window docking scripts):
+
+- Prefer ending a script with `capture_bundle` as the final step.
+- Avoid trailing `wait_frames` after the final `capture_bundle` (it can stall indefinitely if the last remaining window becomes occluded/idle and stops producing frames).
+- Smoke/gate suites (e.g. `diag-hardening-smoke-*`) run a strict preflight and will fail early if a script ends with `wait_frames` or contains `wait_frames` after the final `capture_bundle` (see `check.script_termination.json` under the suite `--dir`).
+
 Screenshot note:
 
 - `capture_screenshot` requires the **on-demand PNG screenshot protocol**:
@@ -892,9 +898,13 @@ Cross-window docking note (pointer sessions):
 - During cross-window docking drags, a script may intentionally release the drag in a different window than where the
   pointer session started (e.g. start the drag in a torn-off window, then `pointer_up` in the main window to ensure the
   drop resolves in the correct dock graph).
-- To keep this deterministic, seed the target window coordinates via `set_cursor_in_window_logical` before attempting to
-  migrate `pointer_move`/`pointer_up` to that window.
+- To keep this deterministic, ensure the final drop position is expressed in the *target window* coordinate space:
+  - seed the target window coordinates via `set_cursor_in_window_logical` and/or `move_pointer` (with an explicit
+    `window` target) before migrating `pointer_move`/`pointer_up` to that window,
+  - optionally gate that a drop preview is resolved before releasing (`dock_drop_resolve_source_is`,
+    `dock_drop_resolved_is_some`, `dock_drop_resolved_zone_is`).
   - Example: `tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-chained-tearoff-two-tabs-merge.json`
+  - Example: `tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-title-bar-drag-docks-to-main.json`
 
 Additional predicate kinds are occasionally added to unblock new regression gates (for example menu a11y checks).
 When authoring scripts, prefer stable `test_id` selectors and stick to predicates documented here; see
@@ -905,6 +915,7 @@ Recent additions:
 - `role_is` (assert semantics role equality for a target)
 - `checked_is` / `checked_is_none` (assert `checked` flag state; useful for checkbox/radio menu items)
 - `active_item_is` (assert the active item for composite widgets: matches either container `active_descendant` or roving focus)
+- `window_style_effective_is` (assert effective/clamped OS window style facets such as `transparent`, `appearance`, and `hit_test`)
 - `dock_drop_preview_kind_is` (assert coarse docking drop preview decision: `wrap_binary` vs `insert_into_split`)
 - `dock_drop_resolve_source_is` (assert which mechanism selected the current docking drop preview)
 - `dock_drop_resolved_is_some` (assert whether the drop preview has a resolved target or stays `None`)
@@ -919,7 +930,7 @@ Recent additions:
 - `dock_drag_window_under_moving_window_is` (assert the best-effort “window under moving window” selection during a dock drag)
 - `dock_drag_window_under_moving_window_source_is` (assert which mechanism selected the “window under moving window”: platform vs heuristic)
 - `dock_drag_active_is` (assert that a dock drag session is (or is not) active)
-- `dock_drag_transparent_payload_mouse_passthrough_applied_is` (assert whether the runner successfully applied OS click-through for the moving window during transparent payload)
+- `dock_drag_transparent_payload_hit_test_passthrough_applied_is` (assert whether the runner successfully applied OS click-through for the moving window during transparent payload)
 - `text_composition_is` (assert whether a text surface is currently composing via IME)
 - `ime_cursor_area_is_some` (assert whether a window-level IME cursor area snapshot exists)
 - `ime_cursor_area_within_window` (assert the IME cursor area stays within the current window bounds; coarse “caret teleported” gate)
@@ -1138,6 +1149,20 @@ Docking predicates (require a `WindowInteractionDiagnosticsStore` publisher, typ
 - `{"kind":"dock_drag_current_window_is","window":{"kind":"last_seen_other"}}`
 - `{"kind":"dock_graph_node_count_le","max":32}`
 - `{"kind":"dock_graph_max_split_depth_le","max":8}`
+
+Window style predicates (require runner window style diagnostics, typically provided by desktop runners):
+
+- `{"kind":"window_style_effective_is","window":{"kind":"current"},"style":{"transparent":true}}`
+- `{"kind":"window_style_effective_is","window":{"kind":"current"},"style":{"hit_test":"passthrough_all"}}`
+- `{"kind":"window_style_effective_is","window":{"kind":"current"},"style":{"hit_test":"passthrough_regions","hit_test_regions_fingerprint64":123}}`
+- `{"kind":"window_background_material_effective_is","window":{"kind":"current"},"material":"system_default"}`
+
+Notes:
+
+- `hit_test` supports: `normal`, `passthrough_all`, `passthrough_regions` (ADR 0312 / ADR 0313).
+- `hit_test_regions_fingerprint64` is a stable, canonicalized fingerprint of the effective regions
+  union. It is intended for scripted regression gates that want to assert that the runner applied
+  a specific region shape without relying on pixels.
 
 ## Debugging recipes (Radix primitives / shadcn / overlays)
 
@@ -1374,6 +1399,7 @@ You can run them as a built-in suite:
 There are also multi-window (tear-off) docking scripts (require `diag.multi_window` capability):
 
 - `tools/diag-scripts/docking-arbitration-demo-multiwindow-cross-window-hover.json`
+- `tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-title-bar-drag-docks-to-main.json`
 - `tools/diag-scripts/docking-arbitration-demo-multiwindow-drag-tab-back-to-main.json`
 - `tools/diag-scripts/docking-arbitration-demo-multiwindow-tearoff-merge-loop-no-leak.json`
 

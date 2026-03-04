@@ -121,10 +121,20 @@ fn view(cx: &mut fret_ui::ElementContext<'_, fret_app::App>, st: &mut State) -> 
         .app
         .global::<RunnerWindowStyleDiagnosticsStore>()
         .and_then(|store| store.effective_snapshot(st.window));
+    let root_background = effective_style
+        .map(|s| s.visual_transparent)
+        .unwrap_or(false)
+        .then_some(Color::TRANSPARENT)
+        .unwrap_or_else(|| theme.color_token("background"));
     let style_text: Arc<str> = Arc::from(match effective_style {
         Some(s) => format!(
-            "effective: decorations={:?} resizable={} transparent={} material={:?}",
-            s.decorations, s.resizable, s.transparent, s.background_material
+            "effective: decorations={:?} resizable={} surface_alpha={} surface_alpha_source={:?} visual_transparent={} material={:?}",
+            s.decorations,
+            s.resizable,
+            s.surface_composited_alpha,
+            s.surface_composited_alpha_source,
+            s.visual_transparent,
+            s.background_material
         ),
         None => "effective: <unavailable>".to_string(),
     });
@@ -270,8 +280,9 @@ fn view(cx: &mut fret_ui::ElementContext<'_, fret_app::App>, st: &mut State) -> 
     .max_w(Px(760.0))
     .into_element(cx);
 
-    // Keep the window background empty so the OS material can show through where not covered by UI.
-    // (Most of the content lives inside the centered Card.)
+    // Default to an opaque background so `material=None` looks like a typical window. When a
+    // backdrop material is enabled, switch to a transparent root so the OS material can show
+    // through where not covered by UI (most content lives inside the centered Card).
     ui::container(cx, |cx| {
         [ui::v_flex(cx, |_cx| [surface])
             .items_center()
@@ -279,7 +290,7 @@ fn view(cx: &mut fret_ui::ElementContext<'_, fret_app::App>, st: &mut State) -> 
             .size_full()
             .into_element(cx)]
     })
-    .bg(ColorRef::Color(Color::TRANSPARENT))
+    .bg(ColorRef::Color(root_background))
     .p(Space::N6)
     .size_full()
     .into_element(cx)

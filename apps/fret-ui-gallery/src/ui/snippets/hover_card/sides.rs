@@ -8,7 +8,7 @@ fn side_content<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     side_label: &'static str,
     test_id: &'static str,
-) -> AnyElement {
+) -> shadcn::HoverCardContent {
     let body = stack::vstack(
         cx,
         stack::VStackProps::default()
@@ -28,9 +28,7 @@ fn side_content<H: UiHost>(
         },
     );
 
-    shadcn::HoverCardContent::new(vec![body])
-        .into_element(cx)
-        .test_id(test_id)
+    shadcn::HoverCardContent::new(vec![body]).test_id(test_id)
 }
 
 fn card<H: UiHost>(
@@ -41,14 +39,14 @@ fn card<H: UiHost>(
     content_test_id: &'static str,
     root_test_id: &'static str,
 ) -> AnyElement {
+    let content = side_content(cx, label, content_test_id).side(side);
     shadcn::HoverCard::new(
         shadcn::Button::new(label)
             .variant(shadcn::ButtonVariant::Outline)
             .test_id(trigger_test_id)
             .into_element(cx),
-        side_content(cx, label, content_test_id),
+        content,
     )
-    .side(side)
     .open_delay_frames(10)
     .close_delay_frames(10)
     .into_element(cx)

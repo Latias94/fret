@@ -1,0 +1,77 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "Docking arbitration demo: close button does not activate inactive tab (smoke)",
+    "tags": ["docking", "tabbar", "close", "arbitration", "smoke", "gate"],
+    "required_capabilities": ["diag.script_v2"],
+    "env_defaults": {
+      "FRET_DOCK_ARB_PRESET": "overflow_tabs"
+    },
+    "target_hints": [
+      "Uses a semantics-only anchor positioned over an inactive tab's close affordance.",
+      "Asserts the active tab index does not change on pointer-down, then releases to close."
+    ]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 5 },
+
+    { "type": "set_window_inner_size", "width_px": 1600.0, "height_px": 720.0 },
+    { "type": "wait_frames", "n": 12 },
+
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "dock-arb-dock-space" } },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "dock-arb-tab-close-anchor-left-inactive-1" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "dock-arb-viewport-left" } },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "dock-arb-viewport-right" } },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "dock_graph_signature_contains", "needle": "tabs(a=0:" },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "pointer_down",
+      "window": { "kind": "current" },
+      "target": { "kind": "test_id", "id": "dock-arb-tab-close-anchor-left-inactive-1" },
+      "button": "left"
+    },
+    { "type": "wait_frames", "n": 1 },
+    { "type": "pointer_move", "window": { "kind": "current" }, "delta_x": 8.0, "delta_y": 0.0, "steps": 6 },
+    { "type": "wait_frames", "n": 1 },
+    { "type": "assert", "predicate": { "kind": "dock_drag_active_is", "active": false } },
+    { "type": "assert", "predicate": { "kind": "dock_graph_signature_contains", "needle": "tabs(a=0:" } },
+    { "type": "assert", "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "dock-arb-viewport-right" } } },
+
+    { "type": "pointer_up", "window": { "kind": "current" } },
+    { "type": "wait_frames", "n": 4 },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "not_exists", "target": { "kind": "test_id", "id": "dock-arb-viewport-right" } },
+      "timeout_frames": 240
+    },
+    { "type": "assert", "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "dock-arb-viewport-left" } } },
+    { "type": "assert", "predicate": { "kind": "dock_graph_signature_contains", "needle": "tabs(a=0:" } },
+
+    { "type": "capture_bundle", "label": "docking-arbitration-demo-tab-close-button-does-not-activate" }
+  ]
+}

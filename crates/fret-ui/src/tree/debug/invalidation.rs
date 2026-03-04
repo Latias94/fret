@@ -65,6 +65,13 @@ pub enum UiDebugInvalidationDetail {
     /// closures by design, so hover edges must be treated as "view dirty" to preserve the
     /// contract for hover-driven policies (e.g. hover cards).
     HoverRegionEdge,
+    /// A pressable hover edge that must re-run declarative view-cache subtrees.
+    ///
+    /// `Pressable` exposes a `hovered: bool` signal to declarative component code. Under
+    /// view-cache reuse, paint-only invalidations do not re-run child render closures by design,
+    /// so hover edges must be treated as "view dirty" when component trees depend on pressable
+    /// hover state to mount/unmount children (e.g. tab strip close buttons).
+    PressableHoverEdge,
     FocusEvent,
     ScrollHandleHitTestOnly,
     ScrollHandleLayout,
@@ -100,6 +107,7 @@ impl UiDebugInvalidationDetail {
             Self::NotifyCall => Some("notify_call"),
             Self::HoverEvent => Some("hover_event"),
             Self::HoverRegionEdge => Some("hover_region_edge"),
+            Self::PressableHoverEdge => Some("pressable_hover_edge"),
             Self::FocusEvent => Some("focus_event"),
             Self::ScrollHandleHitTestOnly => Some("scroll_handle_hit_test_only"),
             Self::ScrollHandleLayout => Some("scroll_handle_layout"),

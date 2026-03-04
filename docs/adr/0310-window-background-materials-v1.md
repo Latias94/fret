@@ -1,15 +1,6 @@
 # ADR 0310: Window Background Materials v1 (Mica / Acrylic / Vibrancy) — Capability-Gated
 
-## Upstream references (non-normative)
-
-This document references optional local checkouts under `repo-ref/` for convenience.
-Upstream sources:
-
-- Zed (GPUI): https://github.com/zed-industries/zed
-
-See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
-
-Status: Proposed
+Status: Accepted
 
 ## Context
 
@@ -47,6 +38,27 @@ Terminology:
 
 ## Decision
 
+### 0) Orthogonal facets: decorations, composited alpha surface, OS backdrop material, content background
+
+This ADR intentionally treats window styling as **orthogonal facets** so behavior is portable and
+debuggable without platform forks:
+
+- **Decorations** (`decorations`): whether the platform draws a title bar / border chrome.
+- **Composited alpha surface** (`transparent`): whether the OS window surface participates in alpha
+  composition (create-time; may be sticky for the window lifetime).
+- **OS backdrop material** (`background_material`): OS/compositor-provided backdrop behind the app's
+  content (Mica/Acrylic/Vibrancy).
+- **Content background** (not a window-style facet): whether the app paints an opaque background in
+  its root view.
+
+Important clarifications (normative):
+
+- `background_material=None` means **"do not request an OS backdrop material"**. It does not imply
+  anything about decorations or whether the window surface is composited.
+- `transparent=true` means the **surface is composited**. It does not guarantee that the desktop is
+  visible through the app. Visibility depends on renderer clears and whether the app paints an
+  opaque root background.
+
 ### 1) Extend `WindowStyleRequest` with an optional background material facet
 
 Extend the portable `WindowStyleRequest` (ADR 0139) with:
@@ -77,7 +89,8 @@ Notes:
 Window background materials generally require compositor-backed alpha composition. Therefore:
 
 - If `background_material` is `Some(...)` and the backend requires an alpha/composited window, the
-  runner may implicitly treat `transparent` as `true` for the purposes of *effective style*.
+  runner may implicitly treat `transparent` as `true` for the purposes of the **composited surface**
+  (effective style).
 - Runners may keep this implied composited transparency **sticky** for the lifetime of the window,
   even if the background material is later set back to `None`, because some backends treat window
   transparency as a create-time-only attribute.
@@ -86,9 +99,13 @@ Window background materials generally require compositor-backed alpha compositio
 
 Renderer contract (normative, high-level):
 
-- When the effective style requires a composited/transparent window surface, the runner+renderer
-  must avoid “accidentally opaque” clears. The default clear should preserve alpha (clear alpha = 0)
-  unless the app draws an opaque root background.
+- When the effective style has an OS backdrop material enabled, the runner+renderer must avoid
+  “accidentally opaque” clears. The default clear should preserve alpha (clear alpha = 0) unless
+  the app draws an opaque root background.
+- When the window surface is composited **only** due to a prior implied material request and the
+  effective material is later `None`, runners may choose an **opaque default clear** (clear alpha =
+  1) so the default appearance matches a typical opaque window. Apps that want visual transparency
+  without OS materials must request `transparent=true` explicitly and paint a transparent root.
 
 This ADR intentionally does not prescribe the exact renderer knobs; it only requires that the
 window-level transparency/material intent can be honored without leaking backend handles.
@@ -120,6 +137,27 @@ answer:
 
 The mechanism is runner-defined (log line, inspector entry, diagnostics store), but the information
 must be available without native handle access.
+
+Additional observability requirements (normative):
+
+- Runners must distinguish between:
+  - the **composited surface** decision (create-time; sticky),
+  - the **effective backdrop material** decision (runtime-clamped),
+  - the **default visual transparency** decision (whether the renderer preserves alpha by default).
+- Runners must be able to explain *why* the surface is composited (explicit vs implied-by-material
+  vs sticky create-time).
+
+### 6) Expected combinations (guide for callers and diagnostics)
+
+The following table describes the intended relationship between facets. It is informational, but
+serves as a review checklist for runner implementations.
+
+| Request intent | Composited surface (effective) | Backdrop material (effective) | Default clear alpha |
+| --- | --- | --- | --- |
+| `transparent=false`, `background_material=Mica/Acrylic/Vibrancy` | false | `None` (degraded) | 1 |
+| `transparent` omitted, `background_material=Mica/Acrylic/Vibrancy` | true (implied; sticky) | requested (if supported) | 0 |
+| `transparent` omitted, later set `background_material=None` | true (sticky) | `None` | 1 (runner may choose opaque default) |
+| `transparent=true`, `background_material=None` | true (explicit) | `None` | 0 (caller-owned; app must paint) |
 
 ## Consequences
 

@@ -28,6 +28,7 @@ use fret_ui_kit::declarative::transition::{
 use fret_ui_kit::headless::safe_hover;
 use fret_ui_kit::primitives::direction as direction_prim;
 use fret_ui_kit::primitives::navigation_menu as radix_navigation_menu;
+use fret_ui_kit::primitives::roving_focus_group;
 use fret_ui_kit::primitives::{popper, popper_content};
 use fret_ui_kit::theme_tokens;
 use fret_ui_kit::typography;
@@ -673,12 +674,13 @@ impl NavigationMenuLink {
             pressable.enabled = !disabled;
             pressable.focusable = !disabled;
             pressable.focus_ring = Some(ring);
+            pressable.key_activation = PressableKeyActivation::EnterOnly;
             pressable.layout = decl_style::layout_style(
                 &theme,
                 LayoutRefinement::default().w_full().min_w_0().merge(layout),
             );
             pressable.a11y = PressableA11y {
-                role: Some(SemanticsRole::Button),
+                role: Some(SemanticsRole::Link),
                 label: label.clone(),
                 test_id: test_id.clone(),
                 ..Default::default()
@@ -1232,6 +1234,11 @@ impl NavigationMenu {
             }
 
             #[derive(Default)]
+            struct TriggerTabStopModelState {
+                model: Option<Model<Option<Arc<str>>>>,
+            }
+
+            #[derive(Default)]
             struct SelectionSyncState {
                 last_selected: Option<Arc<str>>,
             }
@@ -1251,6 +1258,21 @@ impl NavigationMenu {
             } else {
                 let model = cx.app.models_mut().insert(false);
                 cx.with_state_for(root_id, OpenModelState::default, |st| {
+                    st.model = Some(model.clone());
+                });
+                model
+            };
+
+            let trigger_tab_stop_model = cx.with_state_for(
+                root_id,
+                TriggerTabStopModelState::default,
+                |st| st.model.clone(),
+            );
+            let trigger_tab_stop_model = if let Some(model) = trigger_tab_stop_model {
+                model
+            } else {
+                let model = cx.app.models_mut().insert(None::<Arc<str>>);
+                cx.with_state_for(root_id, TriggerTabStopModelState::default, |st| {
                     st.model = Some(model.clone());
                 });
                 model
@@ -1389,17 +1411,86 @@ impl NavigationMenu {
             let default_trigger_fg_for_list = default_trigger_fg.clone();
             let style_for_list = style.clone();
 
-            let list = cx.flex(list_props, move |cx| {
-                items_for_children
-                    .iter_mut()
-                    .map(|item| {
+            let roving_disabled: Arc<[bool]> = items_for_children
+                .iter()
+                .map(|it| menu_disabled || it.disabled)
+                .collect::<Vec<_>>()
+                .into();
+
+            // Radix `NavigationMenu` trigger row uses roving focus: only one trigger is in the Tab
+            // order (`tabIndex=0`), while other triggers are focusable via arrow keys / click
+            // (`tabIndex=-1`). Model the Tab-stop outcome by setting `PressableProps.focusable`
+            // only on the active trigger.
+            let trigger_tab_stop: Option<Arc<str>> = cx
+                .watch_model(&trigger_tab_stop_model)
+                .layout()
+                .cloned()
+                .flatten();
+            let roving_keys: Arc<[Arc<str>]> = items_for_children
+                .iter()
+                .map(|it| it.value.clone())
+                .collect::<Vec<_>>()
+                .into();
+            let desired_tab_stop = roving_focus_group::active_index_from_str_keys(
+                &roving_keys,
+                selected.as_deref(),
+                &roving_disabled,
+            )
+            .and_then(|idx| roving_keys.get(idx).cloned());
+            let valid_current = trigger_tab_stop.as_ref().and_then(|current| {
+                let idx = roving_keys
+                    .iter()
+                    .position(|k| k.as_ref() == current.as_ref())?;
+                if roving_disabled.get(idx).copied().unwrap_or(true) {
+                    return None;
+                }
+                Some(current.clone())
+            });
+            let tab_stop_value = if selected.is_some() {
+                desired_tab_stop
+            } else {
+                valid_current.or(desired_tab_stop)
+            };
+            if tab_stop_value.as_deref() != trigger_tab_stop.as_deref() {
+                let next = tab_stop_value.clone();
+                let _ = cx
+                    .app
+                    .models_mut()
+                    .update(&trigger_tab_stop_model, |v| *v = next);
+            }
+
+            let roving_props = roving_focus_group::RovingFlexProps {
+                flex: list_props,
+                roving: roving_focus_group::RovingFocusProps {
+                    enabled: true,
+                    wrap: true,
+                    disabled: roving_disabled.clone(),
+                },
+            };
+            let dir_for_roving = direction_prim::use_direction_in_scope(cx, None);
+            let tab_stop_value_for_list = tab_stop_value.clone();
+            let trigger_tab_stop_model_for_list = trigger_tab_stop_model.clone();
+
+            let list = roving_focus_group::roving_focus_group_apg_with_direction(
+                cx,
+                roving_props,
+                roving_focus_group::TypeaheadPolicy::None,
+                dir_for_roving,
+                move |cx| {
+                    items_for_children
+                        .iter_mut()
+                        .map(|item| {
                         let item_value = item.value.clone();
                         let label = item.label.clone();
                         let disabled = menu_disabled || item.disabled;
+                        let tab_stop = tab_stop_value_for_list
+                            .as_ref()
+                            .is_some_and(|v| v.as_ref() == item_value.as_ref());
                         let trigger_test_id = item.trigger_test_id.clone();
                         let trigger_chrome_test_id = trigger_test_id
                             .clone()
                             .map(|id| Arc::<str>::from(format!("{id}.chrome")));
+                        let trigger_tab_stop_model = trigger_tab_stop_model_for_list.clone();
                         let trigger_text_style_for_item = trigger_text_style_for_list.clone();
                         let nav_ctx_for_item = nav_ctx_for_list.clone();
                         let theme_for_item = theme_for_list.clone();
@@ -1417,7 +1508,7 @@ impl NavigationMenu {
 
                             let mut pressable = PressableProps::default();
                             pressable.enabled = !disabled;
-                            pressable.focusable = !disabled;
+                            pressable.focusable = !disabled && tab_stop;
                             pressable.layout = decl_style::layout_style(
                                 &theme_for_item,
                                 navigation_menu_trigger_style(&theme_for_item).layout,
@@ -1464,6 +1555,13 @@ impl NavigationMenu {
                                 ));
 
                                 return cx.pressable(pressable, move |cx, st| {
+                                    if st.focused {
+                                        let _ = cx.app.models_mut().update(
+                                            &trigger_tab_stop_model,
+                                            |v| *v = Some(item_value.clone()),
+                                        );
+                                    }
+
                                     let hovered = st.hovered && !st.pressed;
                                     let pressed = st.pressed;
                                     let fg = if disabled {
@@ -1549,6 +1647,13 @@ impl NavigationMenu {
                                     pressable,
                                     pointer_props,
                                     move |cx, st, is_open| {
+                                        if st.focused {
+                                            let _ = cx.app.models_mut().update(
+                                                &trigger_tab_stop_model,
+                                                |v| *v = Some(item_value.clone()),
+                                            );
+                                        }
+
                                         let mut states =
                                             WidgetStates::from_pressable(cx, st, !disabled);
                                         states.set(WidgetState::Open, is_open);
@@ -1703,9 +1808,10 @@ impl NavigationMenu {
                                     },
                                 )
                         })
-                    })
-                    .collect::<Vec<_>>()
-            });
+                        })
+                        .collect::<Vec<_>>()
+                },
+            );
 
             let viewport_children = active_idx
                 .and_then(|idx| items.get_mut(idx))
@@ -1715,7 +1821,10 @@ impl NavigationMenu {
             let has_content = !viewport_children.is_empty();
             let is_open = selected_local.is_some() && has_content && open_for_motion;
             let overlay_presence = OverlayPresence {
-                present: motion.present && has_content,
+                // Keep the viewport overlay request alive for the full close transition, even when
+                // the current selection has already been cleared (e.g. Escape dismissal). The
+                // overlay controller needs an explicit "present=false" update to unmount cleanly.
+                present: motion.present,
                 interactive: is_open,
             };
             let open_change_complete =
@@ -1911,6 +2020,7 @@ impl NavigationMenu {
                 radix_navigation_menu::navigation_menu_request_viewport_overlay(
                     cx,
                     root_id,
+                    cfg,
                     value_model.clone(),
                     open_model.clone(),
                     overlay_presence,
@@ -3137,6 +3247,236 @@ mod tests {
     }
 
     #[test]
+    fn horizontal_arrow_keys_move_focus_between_triggers_like_radix() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let model = app.models_mut().insert(None::<Arc<str>>);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(520.0), Px(320.0)),
+        );
+        let mut services = FakeServices::default();
+
+        bump_frame(&mut app);
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "navigation-menu-roving",
+            |cx| {
+                let items = vec![
+                    NavigationMenuItem::new("alpha", "Alpha", std::iter::empty()),
+                    NavigationMenuItem::new("beta", "Beta", std::iter::empty()),
+                ];
+                vec![
+                    NavigationMenu::new(model.clone())
+                        .items(items)
+                        .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let (alpha_id, beta_id) = {
+            let snap = ui.semantics_snapshot().expect("semantics snapshot");
+            let alpha_id = snap
+                .nodes
+                .iter()
+                .find(|n| n.role == SemanticsRole::Link && n.label.as_deref() == Some("Alpha"))
+                .or_else(|| {
+                    snap.nodes.iter().find(|n| {
+                        n.role == SemanticsRole::Button && n.label.as_deref() == Some("Alpha")
+                    })
+                })
+                .expect("Alpha trigger semantics")
+                .id;
+            let beta_id = snap
+                .nodes
+                .iter()
+                .find(|n| n.role == SemanticsRole::Link && n.label.as_deref() == Some("Beta"))
+                .or_else(|| {
+                    snap.nodes.iter().find(|n| {
+                        n.role == SemanticsRole::Button && n.label.as_deref() == Some("Beta")
+                    })
+                })
+                .expect("Beta trigger semantics")
+                .id;
+            (alpha_id, beta_id)
+        };
+
+        ui.set_focus(Some(alpha_id));
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::KeyDown {
+                key: KeyCode::ArrowRight,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        assert_eq!(snap.focus, Some(beta_id));
+    }
+
+    #[test]
+    fn entry_key_focuses_first_link_like_radix() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let model = app.models_mut().insert(None::<Arc<str>>);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(520.0), Px(320.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let render_frame = |ui: &mut UiTree<App>,
+                            app: &mut App,
+                            services: &mut FakeServices,
+                            frame: u64| {
+            app.set_tick_id(TickId(frame));
+            app.set_frame_id(FrameId(frame));
+            OverlayController::begin_frame(app, window);
+            let model_for_render = model.clone();
+            let root = fret_ui::declarative::render_root(
+                ui,
+                app,
+                services,
+                window,
+                bounds,
+                "navigation-menu-entry-key",
+                move |cx| {
+                    let content = vec![
+                        NavigationMenuLink::new(model_for_render.clone(), vec![cx.text("Go")])
+                            .label("Go")
+                            .into_element(cx),
+                        NavigationMenuLink::new(model_for_render.clone(), vec![cx.text("Later")])
+                            .label("Later")
+                            .into_element(cx),
+                    ];
+                    let items = vec![
+                        NavigationMenuItem::new("alpha", "Alpha", content),
+                        NavigationMenuItem::new("docs", "Docs", std::iter::empty()),
+                    ];
+                    vec![
+                        NavigationMenu::new(model_for_render.clone())
+                            .items(items)
+                            .into_element(cx),
+                    ]
+                },
+            );
+            ui.set_root(root);
+            OverlayController::render(ui, app, services, window, bounds);
+            ui.request_semantics_snapshot();
+            ui.layout_all(app, services, bounds, 1.0);
+        };
+
+        render_frame(&mut ui, &mut app, &mut services, 1);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let alpha_btn = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::Button && n.label.as_deref() == Some("Alpha"))
+            .expect("alpha button semantics");
+        let pos = Point::new(
+            Px(alpha_btn.bounds.origin.x.0 + alpha_btn.bounds.size.width.0 * 0.5),
+            Px(alpha_btn.bounds.origin.y.0 + alpha_btn.bounds.size.height.0 * 0.5),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(PointerEvent::Move {
+                pointer_id: fret_core::PointerId(0),
+                position: pos,
+                buttons: MouseButtons::default(),
+                modifiers: Modifiers::default(),
+                pointer_type: PointerType::Mouse,
+            }),
+        );
+
+        let open_token = app
+            .flush_effects()
+            .iter()
+            .find_map(|e| match e {
+                fret_runtime::Effect::SetTimer { token, after, .. }
+                    if *after
+                        == radix_navigation_menu::NavigationMenuConfig::default()
+                            .delay_duration =>
+                {
+                    Some(*token)
+                }
+                _ => None,
+            })
+            .expect("expected delayed-open timer");
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Timer { token: open_token },
+        );
+
+        render_frame(&mut ui, &mut app, &mut services, 2);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let alpha_btn = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::Button && n.label.as_deref() == Some("Alpha"))
+            .expect("alpha button semantics");
+        ui.set_focus(Some(alpha_btn.id));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::KeyDown {
+                key: KeyCode::ArrowDown,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+
+        let cmd = app
+            .flush_effects()
+            .iter()
+            .find_map(|e| match e {
+                fret_runtime::Effect::Command { command, .. }
+                    if command.as_str() == "focus.next" =>
+                {
+                    Some(command.clone())
+                }
+                _ => None,
+            })
+            .expect("expected focus.next command effect");
+        let _ = ui.dispatch_command(&mut app, &mut services, &cmd);
+
+        render_frame(&mut ui, &mut app, &mut services, 3);
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+
+        let go_link = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::Link && n.label.as_deref() == Some("Go"))
+            .expect("Go link semantics");
+        assert_eq!(snap.focus, Some(go_link.id));
+    }
+
+    #[test]
     fn navigation_menu_link_does_not_dismiss_on_ctrl_click() {
         let window = AppWindowId::default();
         let mut app = App::new();
@@ -3172,14 +3512,14 @@ mod tests {
         ui.layout_all(&mut app, &mut services, bounds, 1.0);
 
         let snap = ui.semantics_snapshot().expect("semantics snapshot");
-        let go_btn = snap
+        let go_link = snap
             .nodes
             .iter()
-            .find(|n| n.role == SemanticsRole::Button && n.label.as_deref() == Some("Go"))
-            .expect("Go button semantics");
+            .find(|n| n.role == SemanticsRole::Link && n.label.as_deref() == Some("Go"))
+            .expect("Go link semantics");
         let pos = Point::new(
-            Px(go_btn.bounds.origin.x.0 + go_btn.bounds.size.width.0 * 0.5),
-            Px(go_btn.bounds.origin.y.0 + go_btn.bounds.size.height.0 * 0.5),
+            Px(go_link.bounds.origin.x.0 + go_link.bounds.size.width.0 * 0.5),
+            Px(go_link.bounds.origin.y.0 + go_link.bounds.size.height.0 * 0.5),
         );
 
         ui.dispatch_event(

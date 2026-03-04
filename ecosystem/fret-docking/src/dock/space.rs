@@ -343,6 +343,7 @@ struct FloatingDragState {
     start: Point,
     start_tick: fret_runtime::TickId,
     activated: bool,
+    dock_previews_enabled: bool,
     last_debug_frame: Option<fret_runtime::FrameId>,
 }
 
@@ -1423,7 +1424,8 @@ impl DockSpace {
             max_speed_px_per_tick: base,
         };
         let prev_scroll = self.tab_scroll_for(tabs);
-        let dx = fret_dnd::compute_autoscroll_x_clamped(cfg, tab_bar, position, prev_scroll, max_scroll);
+        let dx =
+            fret_dnd::compute_autoscroll_x_clamped(cfg, tab_bar, position, prev_scroll, max_scroll);
         if dx.0.abs() < 0.01 {
             return false;
         }
@@ -2235,8 +2237,8 @@ impl<H: UiHost> Widget<H> for DockSpace {
                     dragging: drag.dragging,
                     cross_window_hover: drag.cross_window_hover,
                     transparent_payload_applied: drag.transparent_payload_applied,
-                    transparent_payload_mouse_passthrough_applied: drag
-                        .transparent_payload_mouse_passthrough_applied,
+                    transparent_payload_hit_test_passthrough_applied: drag
+                        .transparent_payload_hit_test_passthrough_applied,
                     window_under_cursor_source: drag.window_under_cursor_source,
                     moving_window: drag.moving_window,
                     window_under_moving_window: drag.window_under_moving_window,
@@ -2649,6 +2651,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
             root: Option<DockNodeId>,
             dock_bounds: Rect,
             window_bounds: Rect,
+            allow_floating_hit_test: bool,
             tab_scroll: &HashMap<DockNodeId, Px>,
             tab_widths: &HashMap<DockNodeId, Arc<[Px]>>,
             theme: fret_ui::ThemeSnapshot,
@@ -2706,8 +2709,9 @@ impl<H: UiHost> Widget<H> for DockSpace {
                 );
             }
 
-            if let Some((floating, chrome, FloatingHitKind::TitleBar)) =
-                hit_test_floating(graph, window, position)
+            if allow_floating_hit_test
+                && let Some((floating, chrome, FloatingHitKind::TitleBar)) =
+                    hit_test_floating(graph, window, position)
             {
                 let layout_bounds = chrome.inner;
                 let layout = compute_layout_map(
@@ -2760,7 +2764,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                 return (None, fret_runtime::DockDropResolveSource::None);
             }
 
-            let (layout_root, layout_bounds, effective_position) =
+            let (layout_root, layout_bounds, effective_position) = if allow_floating_hit_test {
                 match hit_test_floating(graph, window, position) {
                     None | Some((_, _, FloatingHitKind::Close)) => {
                         let (layout_root, layout_bounds) =
@@ -2783,7 +2787,12 @@ impl<H: UiHost> Widget<H> for DockSpace {
                         chrome.inner,
                         clamp_point_inside_rect(chrome.inner, position),
                     ),
-                };
+                }
+            } else {
+                // When moving an in-window floating container (title-bar drag), resolve docking
+                // targets against the window dock layout, not the floating container itself.
+                (root, dock_bounds, position)
+            };
 
             if !layout_bounds.contains(effective_position) {
                 if let Some(candidates) = candidates.as_mut() {
@@ -2834,6 +2843,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
         fn resolve_dock_drop_target(
             prev_hover: Option<DockDropTarget>,
             invert_docking: bool,
+            allow_floating_hit_test: bool,
             window: fret_core::AppWindowId,
             docking_policy: Option<&dyn DockingPolicy>,
             graph: &DockGraph,
@@ -2869,6 +2879,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                     root,
                     dock_bounds,
                     window_bounds,
+                    allow_floating_hit_test,
                     tab_scroll,
                     tab_widths,
                     theme,
@@ -3899,6 +3910,9 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                             .iter()
                                             .find(|w| w.floating == floating)
                                         {
+                                            let dock_previews_enabled = docking_interaction_settings
+                                                .drag_inversion
+                                                .wants_dock_previews(*modifiers);
                                             if std::env::var_os("FRET_DOCK_FLOAT_MOVE_DEBUG")
                                                 .is_some_and(|v| !v.is_empty())
                                             {
@@ -3908,6 +3922,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                                     floating = ?floating,
                                                     start_rect = ?entry.rect,
                                                     start = ?position,
+                                                    dock_previews_enabled = dock_previews_enabled,
                                                     "floating drag start (title bar)"
                                                 );
                                             }
@@ -3922,6 +3937,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                                 start: *position,
                                                 start_tick: now_tick,
                                                 activated: true,
+                                                dock_previews_enabled,
                                                 last_debug_frame: None,
                                             });
                                             request_pointer_capture = Some(Some(dock_space_node));
@@ -4018,7 +4034,20 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                             *position,
                                         )
                                 {
-                                    if close {
+                                    let intent = tabstrip_controller::intent_for_click(
+                                        tabstrip_controller::TabStripHitTarget::Tab {
+                                            index: tab_index,
+                                            part: if close {
+                                                tabstrip_controller::TabPart::Close
+                                            } else {
+                                                tabstrip_controller::TabPart::Content
+                                            },
+                                        },
+                                    );
+                                    if matches!(
+                                        intent,
+                                        tabstrip_controller::TabStripIntent::Close { .. }
+                                    ) {
                                         self.pressed_tab_close =
                                             Some((tabs_node, tab_index, panel_key.clone()));
                                         request_pointer_capture = Some(Some(dock_space_node));
@@ -4110,6 +4139,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                                 start: *position,
                                                 start_tick: now_tick,
                                                 activated: false,
+                                                dock_previews_enabled: false,
                                                 last_debug_frame: None,
                                             });
                                             request_pointer_capture = Some(Some(dock_space_node));
@@ -4223,6 +4253,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                             start: *position,
                                             start_tick: now_tick,
                                             activated: false,
+                                            dock_previews_enabled: false,
                                             last_debug_frame: None,
                                         });
                                         request_pointer_capture = Some(Some(dock_space_node));
@@ -4574,7 +4605,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                 // holding the drag session forever.
                                 self.floating_drag = None;
                             }
-                            if let Some(drag) = self.floating_drag.as_mut() {
+                            if let Some(mut drag) = self.floating_drag.take() {
                                 if drag.pointer_id == pointer_id && buttons.left {
                                     if !drag.activated {
                                         let activation =
@@ -4591,6 +4622,9 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                         );
                                         if should_activate {
                                             drag.activated = true;
+                                            drag.dock_previews_enabled = docking_interaction_settings
+                                                .drag_inversion
+                                                .wants_dock_previews(*modifiers);
                                             if std::env::var_os("FRET_DOCK_FLOAT_MOVE_DEBUG")
                                                 .is_some_and(|v| !v.is_empty())
                                             {
@@ -4598,6 +4632,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                                     window = ?self.window,
                                                     pointer_id = ?pointer_id,
                                                     floating = ?drag.floating,
+                                                    dock_previews_enabled = drag.dock_previews_enabled,
                                                     "floating drag activated"
                                                 );
                                             }
@@ -4619,6 +4654,52 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                                 floating: drag.floating,
                                                 rect,
                                             }));
+
+                                        let mut candidates =
+                                            Vec::<fret_runtime::DockDropCandidateRectDiagnostics>::new();
+                                        let invert_docking = !drag.dock_previews_enabled;
+                                        let (hover, source) = resolve_dock_drop_target(
+                                            None,
+                                            invert_docking,
+                                            false,
+                                            self.window,
+                                            docking_policy.as_deref(),
+                                            &dock.graph,
+                                            root,
+                                            dock_bounds,
+                                            window_bounds,
+                                            &self.tab_scroll,
+                                            &self.tab_widths,
+                                            theme.clone(),
+                                            hint_font_size_inner,
+                                            hint_font_size_outer,
+                                            split_handle_gap,
+                                            split_handle_hit_thickness,
+                                            *position,
+                                            None,
+                                            diagnostics_enabled.then_some(&mut candidates),
+                                        );
+                                        dock.hover = hover;
+                                        if diagnostics_enabled {
+                                            let diag = compute_dock_drop_resolve_diagnostics(
+                                                pointer_id,
+                                                *position,
+                                                window_bounds,
+                                                dock_bounds,
+                                                source,
+                                                &dock.graph,
+                                                self.window,
+                                                dock.hover.as_ref(),
+                                                candidates,
+                                            );
+                                            self.set_dock_drop_resolve_diagnostics(
+                                                now_frame,
+                                                Some(diag),
+                                                None,
+                                            );
+                                            // Keep retained diag anchors explainable while a floating title-bar drag
+                                            // is active (bounds derived from layout; see move path invalidation).
+                                        }
                                         if std::env::var_os("FRET_DOCK_FLOAT_MOVE_DEBUG")
                                             .is_some_and(|v| !v.is_empty())
                                             && drag.last_debug_frame != Some(now_frame)
@@ -4641,6 +4722,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                     request_cursor = Some(fret_core::CursorIcon::Default);
                                     stop_propagation = true;
                                 }
+                                self.floating_drag = Some(drag);
                             } else if has_pending_dock_drag {
                                 if !buttons.left {
                                     self.pending_dock_drags.remove(&pointer_id);
@@ -4692,6 +4774,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                                 grab_offset: pending.grab_offset,
                                                 start_tick: pending.start_tick,
                                                 tear_off_requested: false,
+                                                tear_off_requested_at_tick: None,
                                                 tear_off_oob_start_frame: None,
                                                 dock_previews_enabled: wants_dock_previews,
                                             },
@@ -4745,6 +4828,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                                 grab_offset: pending.grab_offset,
                                                 start_tick: pending.start_tick,
                                                 tear_off_requested: false,
+                                                tear_off_requested_at_tick: None,
                                                 tear_off_oob_start_frame: None,
                                                 dock_previews_enabled: wants_dock_previews,
                                             },
@@ -5315,9 +5399,70 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                 handled = true;
                             }
                             if *button == fret_core::MouseButton::Left
-                                && self.floating_drag.take().is_some()
+                                && let Some(drag) = self.floating_drag.take()
                             {
                                 request_pointer_capture = Some(None);
+                                if drag.activated {
+                                    let mut candidates =
+                                        Vec::<fret_runtime::DockDropCandidateRectDiagnostics>::new();
+                                    let invert_docking = !drag.dock_previews_enabled;
+                                    let (target, source) = resolve_dock_drop_target(
+                                        None,
+                                        invert_docking,
+                                        false,
+                                        self.window,
+                                        docking_policy.as_deref(),
+                                        &dock.graph,
+                                        root,
+                                        dock_bounds,
+                                        window_bounds,
+                                        &self.tab_scroll,
+                                        &self.tab_widths,
+                                        theme.clone(),
+                                        hint_font_size_inner,
+                                        hint_font_size_outer,
+                                        split_handle_gap,
+                                        split_handle_hit_thickness,
+                                        *position,
+                                        None,
+                                        diagnostics_enabled.then_some(&mut candidates),
+                                    );
+
+                                    if diagnostics_enabled {
+                                        let diag = compute_dock_drop_resolve_diagnostics(
+                                            pointer_id,
+                                            *position,
+                                            window_bounds,
+                                            dock_bounds,
+                                            source,
+                                            &dock.graph,
+                                            self.window,
+                                            target.as_ref(),
+                                            candidates,
+                                        );
+                                        self.set_dock_drop_resolve_diagnostics(
+                                            now_frame,
+                                            Some(diag),
+                                            Some(3),
+                                        );
+                                        invalidate_layout = true;
+                                    }
+
+                                    if !invert_docking
+                                        && let Some(DockDropTarget::Dock(target)) = target
+                                        && matches!(target.zone, DropZone::Center)
+                                    {
+                                        pending_effects.push(Effect::Dock(
+                                            DockOp::MergeFloatingInto {
+                                                window: self.window,
+                                                floating: drag.floating,
+                                                target_tabs: target.tabs,
+                                            },
+                                        ));
+                                        invalidate_layout = true;
+                                    }
+                                }
+                                dock.hover = None;
                                 invalidate_paint = true;
                                 pending_redraws.push(self.window);
                                 handled = true;
@@ -5886,6 +6031,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
 	                                            let (hover, source) = resolve_dock_drop_target(
 	                                                None,
 	                                                invert_docking,
+	                                                true,
 	                                                self.window,
 	                                                docking_policy.as_deref(),
 	                                                &dock.graph,
@@ -6092,6 +6238,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
 	                                        let (target, source) = resolve_dock_drop_target(
 	                                            prev_hover.clone(),
 	                                            invert_docking,
+	                                            true,
 	                                            self.window,
 	                                            docking_policy.as_deref(),
 	                                            &dock.graph,
@@ -6387,28 +6534,87 @@ impl<H: UiHost> Widget<H> for DockSpace {
             }
         }
 
-        if let Some((position, dragging)) = update_drag
-            && let Some(drag) = cx.app.drag_mut(pointer_id)
-            && (drag.payload::<DockPanelDragPayload>().is_some()
-                || drag.payload::<DockTabsDragPayload>().is_some())
-        {
-            drag.position = position;
-            drag.dragging = dragging;
-            if let Some(payload) = drag.payload_mut::<DockPanelDragPayload>() {
-                if mark_drag_tear_off_requested {
-                    payload.tear_off_requested = true;
-                    payload.tear_off_oob_start_frame = None;
-                }
-                if let Some(next) = set_drag_tear_off_oob_start_frame {
-                    payload.tear_off_oob_start_frame = next;
-                }
-            } else if let Some(payload) = drag.payload_mut::<DockTabsDragPayload>() {
-                if mark_drag_tear_off_requested {
-                    payload.tear_off_requested = true;
-                    payload.tear_off_oob_start_frame = None;
-                }
-                if let Some(next) = set_drag_tear_off_oob_start_frame {
-                    payload.tear_off_oob_start_frame = next;
+        if let Some((position, dragging)) = update_drag {
+            #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+            enum TearOffRetryTarget {
+                Panel,
+                Tabs,
+            }
+
+            let tear_off_retry_target = (!mark_drag_tear_off_requested
+                && !window_bounds.contains(position))
+                .then(|| {
+                    let drag = cx.app.drag(pointer_id)?;
+                    if drag.source_window != self.window {
+                        return None;
+                    }
+                    if let Some(p) = drag.payload::<DockPanelDragPayload>() {
+                        let requested_at = p.tear_off_requested_at_tick?;
+                        if !p.tear_off_requested || now_tick.0.saturating_sub(requested_at.0) <= 600
+                        {
+                            return None;
+                        }
+                        let dock = cx.app.global::<DockManager>()?;
+                        dock.graph
+                            .find_panel_in_window(drag.source_window, &p.panel)
+                            .is_some()
+                            .then_some(TearOffRetryTarget::Panel)
+                    } else if let Some(p) = drag.payload::<DockTabsDragPayload>() {
+                        let requested_at = p.tear_off_requested_at_tick?;
+                        let panel = p.tabs.get(p.active).or(p.tabs.first())?;
+                        if !p.tear_off_requested || now_tick.0.saturating_sub(requested_at.0) <= 600
+                        {
+                            return None;
+                        }
+                        let dock = cx.app.global::<DockManager>()?;
+                        dock.graph
+                            .find_panel_in_window(drag.source_window, panel)
+                            .is_some()
+                            .then_some(TearOffRetryTarget::Tabs)
+                    } else {
+                        None
+                    }
+                })
+                .flatten();
+
+            if let Some(drag) = cx.app.drag_mut(pointer_id)
+                && (drag.payload::<DockPanelDragPayload>().is_some()
+                    || drag.payload::<DockTabsDragPayload>().is_some())
+            {
+                drag.position = position;
+                drag.dragging = dragging;
+                if let Some(payload) = drag.payload_mut::<DockPanelDragPayload>() {
+                    if tear_off_retry_target == Some(TearOffRetryTarget::Panel) {
+                        // Tear-off creation is mediated by a runtime-layer idempotency machine.
+                        // If a request is dropped (or fails) we can get stuck "oob, but already
+                        // requested" for the remainder of the drag session. Allow a bounded retry
+                        // while the drag remains outside the source window.
+                        payload.tear_off_requested = false;
+                        payload.tear_off_requested_at_tick = None;
+                        payload.tear_off_oob_start_frame = None;
+                    }
+                    if mark_drag_tear_off_requested {
+                        payload.tear_off_requested = true;
+                        payload.tear_off_requested_at_tick = Some(now_tick);
+                        payload.tear_off_oob_start_frame = None;
+                    }
+                    if let Some(next) = set_drag_tear_off_oob_start_frame {
+                        payload.tear_off_oob_start_frame = next;
+                    }
+                } else if let Some(payload) = drag.payload_mut::<DockTabsDragPayload>() {
+                    if tear_off_retry_target == Some(TearOffRetryTarget::Tabs) {
+                        payload.tear_off_requested = false;
+                        payload.tear_off_requested_at_tick = None;
+                        payload.tear_off_oob_start_frame = None;
+                    }
+                    if mark_drag_tear_off_requested {
+                        payload.tear_off_requested = true;
+                        payload.tear_off_requested_at_tick = Some(now_tick);
+                        payload.tear_off_oob_start_frame = None;
+                    }
+                    if let Some(next) = set_drag_tear_off_oob_start_frame {
+                        payload.tear_off_oob_start_frame = next;
+                    }
                 }
             }
         }
@@ -6508,8 +6714,8 @@ impl<H: UiHost> Widget<H> for DockSpace {
                     dragging: drag.dragging,
                     cross_window_hover: drag.cross_window_hover,
                     transparent_payload_applied: drag.transparent_payload_applied,
-                    transparent_payload_mouse_passthrough_applied: drag
-                        .transparent_payload_mouse_passthrough_applied,
+                    transparent_payload_hit_test_passthrough_applied: drag
+                        .transparent_payload_hit_test_passthrough_applied,
                     window_under_cursor_source: drag.window_under_cursor_source,
                     moving_window: drag.moving_window,
                     window_under_moving_window: drag.window_under_moving_window,
@@ -6775,8 +6981,8 @@ impl<H: UiHost> Widget<H> for DockSpace {
                     dragging: drag.dragging,
                     cross_window_hover: drag.cross_window_hover,
                     transparent_payload_applied: drag.transparent_payload_applied,
-                    transparent_payload_mouse_passthrough_applied: drag
-                        .transparent_payload_mouse_passthrough_applied,
+                    transparent_payload_hit_test_passthrough_applied: drag
+                        .transparent_payload_hit_test_passthrough_applied,
                     window_under_cursor_source: drag.window_under_cursor_source,
                     moving_window: drag.moving_window,
                     window_under_moving_window: drag.window_under_moving_window,

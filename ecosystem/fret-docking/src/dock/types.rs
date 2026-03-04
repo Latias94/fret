@@ -10,6 +10,7 @@ pub(crate) struct DockPanelDragPayload {
     pub(crate) grab_offset: Point,
     pub(crate) start_tick: TickId,
     pub(crate) tear_off_requested: bool,
+    pub(crate) tear_off_requested_at_tick: Option<TickId>,
     pub(crate) tear_off_oob_start_frame: Option<FrameId>,
     pub(crate) dock_previews_enabled: bool,
 }
@@ -22,6 +23,7 @@ pub(crate) struct DockTabsDragPayload {
     pub(crate) grab_offset: Point,
     pub(crate) start_tick: TickId,
     pub(crate) tear_off_requested: bool,
+    pub(crate) tear_off_requested_at_tick: Option<TickId>,
     pub(crate) tear_off_oob_start_frame: Option<FrameId>,
     pub(crate) dock_previews_enabled: bool,
 }

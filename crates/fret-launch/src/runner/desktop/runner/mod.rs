@@ -335,8 +335,9 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             // Best-effort / platform-specific window style facets.
             caps.ui.window_skip_taskbar = cfg!(target_os = "windows");
             caps.ui.window_transparent = cfg!(any(target_os = "windows", target_os = "macos"));
-            caps.ui.window_mouse_passthrough =
+            caps.ui.window_hit_test_passthrough_all =
                 cfg!(any(target_os = "windows", target_os = "macos"));
+            caps.ui.window_hit_test_passthrough_regions = cfg!(target_os = "windows");
 
             // Background materials are capability-gated and intentionally conservative by default.
             // Runners should only advertise these once there is an end-to-end implementation
@@ -445,7 +446,8 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             caps.ui.window_transparent = false;
             caps.ui.window_skip_taskbar = false;
             caps.ui.window_non_activating = false;
-            caps.ui.window_mouse_passthrough = false;
+            caps.ui.window_hit_test_passthrough_all = false;
+            caps.ui.window_hit_test_passthrough_regions = false;
             caps.ui.window_set_visible = false;
             caps.ui.window_begin_drag = false;
             caps.ui.window_begin_resize = false;
@@ -533,7 +535,9 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         caps.ui.window_transparent &= available.ui.window_transparent;
         caps.ui.window_skip_taskbar &= available.ui.window_skip_taskbar;
         caps.ui.window_non_activating &= available.ui.window_non_activating;
-        caps.ui.window_mouse_passthrough &= available.ui.window_mouse_passthrough;
+        caps.ui.window_hit_test_passthrough_all &= available.ui.window_hit_test_passthrough_all;
+        caps.ui.window_hit_test_passthrough_regions &=
+            available.ui.window_hit_test_passthrough_regions;
         caps.ui.window_set_visible &= available.ui.window_set_visible;
         caps.ui.window_begin_drag &= available.ui.window_begin_drag;
         caps.ui.window_begin_resize &= available.ui.window_begin_resize;

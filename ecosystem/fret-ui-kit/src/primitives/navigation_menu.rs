@@ -12,7 +12,7 @@ use std::sync::Mutex;
 use std::time::Duration;
 
 use fret_core::{Modifiers, Point, PointerType, Px, Rect, Size, Transform2D};
-use fret_runtime::{Effect, Model, TimerToken};
+use fret_runtime::{CommandId, Effect, Model, TimerToken};
 use fret_ui::action::{ActionCx, OnDismissiblePointerMove, UiActionHost};
 use fret_ui::element::{AnyElement, LayoutStyle};
 use fret_ui::elements::ContinuousFrames;
@@ -82,6 +82,11 @@ pub fn navigation_menu_use_value_model<H: UiHost>(
 #[derive(Default)]
 struct TriggerIdRegistry {
     ids: HashMap<Arc<str>, GlobalElementId>,
+}
+
+#[derive(Default)]
+struct TriggerStateRegistry {
+    states: HashMap<Arc<str>, NavigationMenuTriggerState>,
 }
 
 /// Registers a rendered trigger element id for the given value.
@@ -532,6 +537,7 @@ pub struct NavigationMenuViewportOverlayRenderOutput {
 pub fn navigation_menu_request_viewport_overlay<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     root_id: GlobalElementId,
+    cfg: NavigationMenuConfig,
     value_model: Model<Option<Arc<str>>>,
     open_model: Model<bool>,
     presence: OverlayPresence,
@@ -549,6 +555,16 @@ pub fn navigation_menu_request_viewport_overlay<H: UiHost>(
 
     let overlay_root_name = OverlayController::popover_root_name(root_id);
     let mut computed_layout: Option<NavigationMenuViewportOverlayLayout> = None;
+    let root_state: Arc<Mutex<NavigationMenuRootState>> = cx.with_state_for(
+        root_id,
+        || Arc::new(Mutex::new(NavigationMenuRootState::default())),
+        |s| s.clone(),
+    );
+    let trigger_states: Arc<Mutex<TriggerStateRegistry>> = cx.with_state_for(
+        root_id,
+        || Arc::new(Mutex::new(TriggerStateRegistry::default())),
+        |s| s.clone(),
+    );
 
     let inherited = portal_inherited::PortalInherited::capture(cx);
     let overlay_children = portal_inherited::with_root_name_inheriting(
@@ -668,12 +684,37 @@ pub fn navigation_menu_request_viewport_overlay<H: UiHost>(
     );
     request.root_name = Some(overlay_root_name);
     request.dismissible_on_pointer_move = on_pointer_move;
-    let clear_value_on_dismiss: fret_ui::action::OnDismissRequest = Arc::new({
+    let on_dismiss_request: fret_ui::action::OnDismissRequest = Arc::new({
         let value_model = value_model.clone();
+        let root_state = root_state.clone();
+        let trigger_states = trigger_states.clone();
         move |host: &mut dyn fret_ui::action::UiActionHost,
-              _cx: fret_ui::action::ActionCx,
-              _req: &mut fret_ui::action::DismissRequestCx| {
-            let _ = host.models_mut().update(&value_model, |v| *v = None);
+              action_cx: fret_ui::action::ActionCx,
+              req: &mut fret_ui::action::DismissRequestCx| {
+            if req.default_prevented() {
+                return;
+            }
+
+            if req.reason == fret_ui::action::DismissReason::Escape {
+                let selected = host
+                    .models_mut()
+                    .read(&value_model, |v| v.clone())
+                    .ok()
+                    .flatten();
+                if let Some(value) = selected {
+                    let mut states = trigger_states.lock().unwrap_or_else(|e| e.into_inner());
+                    let entry = states
+                        .states
+                        .entry(value)
+                        .or_insert_with(NavigationMenuTriggerState::default);
+                    entry.was_escape_close = true;
+                    entry.was_click_close = false;
+                    entry.has_pointer_move_opened = false;
+                }
+            }
+
+            let mut st = root_state.lock().unwrap_or_else(|e| e.into_inner());
+            st.on_item_dismiss(host, action_cx, &value_model, cfg);
         }
     });
     let policy = crate::primitives::popover::PopoverCloseAutoFocusGuardPolicy::for_variant(
@@ -685,10 +726,20 @@ pub fn navigation_menu_request_viewport_overlay<H: UiHost>(
             cx,
             policy,
             open_model.clone(),
-            Some(clear_value_on_dismiss),
+            Some(on_dismiss_request),
             None,
         );
     request.dismissible_on_dismiss_request = on_dismiss_request;
+    // Radix `NavigationMenu` keeps focus on the trigger when opening the viewport (it does not
+    // auto-focus the content like a modal/menu). Prevent the default overlay autofocus outcome so
+    // click-open does not focus-through into the first link.
+    request.on_open_auto_focus = Some(Arc::new(
+        |_host: &mut dyn fret_ui::action::UiFocusActionHost,
+         _action_cx: fret_ui::action::ActionCx,
+         req: &mut fret_ui::action::AutoFocusRequestCx| {
+            req.prevent_default();
+        },
+    ));
     request.on_close_auto_focus = on_close_auto_focus;
     OverlayController::request(cx, request);
 
@@ -843,14 +894,17 @@ impl NavigationMenuTrigger {
             bool,
         ) -> Vec<fret_ui::element::AnyElement>,
     ) -> fret_ui::element::AnyElement {
-        use fret_core::KeyCode;
-
         let value_model = ctx.model.clone();
         let item_value = self.value.clone();
         let disabled = ctx.disabled || self.disabled;
         let cfg = ctx.config;
         let root_id = ctx.root_id;
         let root_state = ctx.root_state.clone();
+        let trigger_states: Arc<Mutex<TriggerStateRegistry>> = cx.with_state_for(
+            root_id,
+            || Arc::new(Mutex::new(TriggerStateRegistry::default())),
+            |s| s.clone(),
+        );
 
         let is_open = cx
             .watch_model(&value_model)
@@ -859,12 +913,6 @@ impl NavigationMenuTrigger {
             .flatten()
             .as_deref()
             .is_some_and(|v| v == item_value.as_ref());
-
-        let trigger_state: Arc<Mutex<NavigationMenuTriggerState>> = cx.with_state_for(
-            cx.root_id(),
-            || Arc::new(Mutex::new(NavigationMenuTriggerState::default())),
-            |s| s.clone(),
-        );
 
         pressable.enabled = !disabled;
         pressable.focusable = !disabled;
@@ -888,19 +936,20 @@ impl NavigationMenuTrigger {
 
         cx.pointer_region(pointer_region, move |cx| {
             if !disabled {
-                let trigger_state_for_pointer_move = trigger_state.clone();
+                let trigger_states_for_pointer_move = trigger_states.clone();
                 let root_state_for_pointer_move = root_state.clone();
                 let value_for_pointer_move = value_model.clone();
                 let item_value_for_pointer_move = item_value.clone();
                 cx.pointer_region_on_pointer_move(Arc::new(move |host, action_cx, mv| {
-                    let mut trigger = trigger_state_for_pointer_move
+                    let mut states = trigger_states_for_pointer_move
                         .lock()
                         .unwrap_or_else(|e| e.into_inner());
-                    match navigation_menu_trigger_pointer_move_action(
-                        mv.pointer_type,
-                        disabled,
-                        *trigger,
-                    ) {
+                    let st = *states
+                        .states
+                        .get(item_value_for_pointer_move.as_ref())
+                        .unwrap_or(&NavigationMenuTriggerState::default());
+                    match navigation_menu_trigger_pointer_move_action(mv.pointer_type, disabled, st)
+                    {
                         NavigationMenuTriggerPointerMoveAction::Ignore => false,
                         NavigationMenuTriggerPointerMoveAction::Open => {
                             let mut root = root_state_for_pointer_move
@@ -913,9 +962,14 @@ impl NavigationMenuTrigger {
                                 item_value_for_pointer_move.clone(),
                                 cfg,
                             );
-                            trigger.has_pointer_move_opened = true;
-                            trigger.was_click_close = false;
-                            trigger.was_escape_close = false;
+                            states.states.insert(
+                                item_value_for_pointer_move.clone(),
+                                NavigationMenuTriggerState {
+                                    has_pointer_move_opened: true,
+                                    was_click_close: false,
+                                    was_escape_close: false,
+                                },
+                            );
                             false
                         }
                     }
@@ -932,10 +986,12 @@ impl NavigationMenuTrigger {
                 );
 
                 if !disabled {
+                    use fret_core::KeyCode;
+
                     let element = trigger_id;
                     let root_state_for_escape = root_state.clone();
                     let value_for_escape = value_model.clone();
-                    let trigger_state_for_escape = trigger_state.clone();
+                    let trigger_states_for_escape = trigger_states.clone();
                     cx.key_on_key_down_for(
                         element,
                         Arc::new(move |host, action_cx, it| {
@@ -943,34 +999,67 @@ impl NavigationMenuTrigger {
                                 return false;
                             }
 
-                            let is_open = host
+                            let selected = host
                                 .models_mut()
-                                .read(&value_for_escape, |v| v.is_some())
+                                .read(&value_for_escape, |v| v.clone())
                                 .ok()
-                                .unwrap_or(false);
-                            if !is_open {
+                                .flatten();
+                            let Some(selected) = selected else {
                                 return false;
-                            }
+                            };
 
                             let mut root = root_state_for_escape
                                 .lock()
                                 .unwrap_or_else(|e| e.into_inner());
                             root.on_item_dismiss(host, action_cx, &value_for_escape, cfg);
 
-                            let mut trigger = trigger_state_for_escape
+                            let mut states = trigger_states_for_escape
                                 .lock()
                                 .unwrap_or_else(|e| e.into_inner());
-                            trigger.was_escape_close = true;
-                            trigger.was_click_close = false;
-                            trigger.has_pointer_move_opened = false;
+                            let entry = states
+                                .states
+                                .entry(selected)
+                                .or_insert_with(NavigationMenuTriggerState::default);
+                            entry.was_escape_close = true;
+                            entry.was_click_close = false;
+                            entry.has_pointer_move_opened = false;
 
+                            true
+                        }),
+                    );
+
+                    let item_value_for_entry_key = item_value_for_registry.clone();
+                    let value_for_entry_key = value_model.clone();
+                    cx.key_add_on_key_down_for(
+                        element,
+                        Arc::new(move |host, action_cx, it| {
+                            if it.repeat || it.key != KeyCode::ArrowDown {
+                                return false;
+                            }
+
+                            let selected = host
+                                .models_mut()
+                                .read(&value_for_entry_key, |v| v.clone())
+                                .ok()
+                                .flatten();
+                            let open = selected
+                                .as_ref()
+                                .is_some_and(|v| v.as_ref() == item_value_for_entry_key.as_ref());
+                            if !open {
+                                return false;
+                            }
+
+                            host.dispatch_command(
+                                Some(action_cx.window),
+                                CommandId::from("focus.next"),
+                            );
                             true
                         }),
                     );
 
                     let root_state_for_activate = root_state.clone();
                     let value_for_activate = value_model.clone();
-                    let trigger_state_for_activate = trigger_state.clone();
+                    let trigger_states_for_activate = trigger_states.clone();
                     let item_value_for_activate = item_value.clone();
                     cx.pressable_add_on_activate(Arc::new(move |host, action_cx, _reason| {
                         let mut root = root_state_for_activate
@@ -991,31 +1080,36 @@ impl NavigationMenuTrigger {
                             .flatten()
                             .is_some_and(|v| v.as_ref() == item_value_for_activate.as_ref());
 
-                        let mut trigger = trigger_state_for_activate
+                        let mut states = trigger_states_for_activate
                             .lock()
                             .unwrap_or_else(|e| e.into_inner());
-                        trigger.was_click_close = !now_open;
+                        let entry = states
+                            .states
+                            .entry(item_value_for_activate.clone())
+                            .or_insert_with(NavigationMenuTriggerState::default);
+                        entry.was_click_close = !now_open;
                         if now_open {
-                            trigger.was_escape_close = false;
+                            entry.was_escape_close = false;
                         }
-                        trigger.has_pointer_move_opened = false;
+                        entry.has_pointer_move_opened = false;
                     }));
 
-                    let trigger_state_for_hover = trigger_state.clone();
+                    let trigger_states_for_hover = trigger_states.clone();
                     let root_state_for_hover = root_state.clone();
                     let value_for_trigger = value_model.clone();
+                    let item_value_for_hover = item_value.clone();
                     cx.pressable_on_hover_change(Arc::new(move |host, action_cx, hovered| {
                         if hovered {
                             return;
                         }
-                        let mut trigger = trigger_state_for_hover
-                            .lock()
-                            .unwrap_or_else(|e| e.into_inner());
                         let mut root = root_state_for_hover
                             .lock()
                             .unwrap_or_else(|e| e.into_inner());
                         root.on_trigger_leave(host, action_cx, &value_for_trigger, cfg);
-                        *trigger = NavigationMenuTriggerState::default();
+                        let mut states = trigger_states_for_hover
+                            .lock()
+                            .unwrap_or_else(|e| e.into_inner());
+                        states.states.remove(item_value_for_hover.as_ref());
                     }));
                 }
 

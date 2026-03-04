@@ -20,6 +20,7 @@ use fret_runtime::Model;
 use fret_ui::action::{OnCommand, OnCommandAvailability};
 use fret_ui::element::Elements;
 use fret_ui::{ElementContext, UiHost};
+#[cfg(feature = "state-query")]
 use std::future::Future;
 
 /// A stateful view object that renders into the existing declarative IR (`Elements`).
@@ -168,6 +169,7 @@ impl<'cx, 'a, H: UiHost> ViewCx<'cx, 'a, H> {
 
     /// Derived state hook backed by `ecosystem/fret-selector` (UI feature).
     #[track_caller]
+    #[cfg(feature = "state-selector")]
     pub fn use_selector<Deps, TValue>(
         &mut self,
         deps: impl FnOnce(&mut ElementContext<'a, H>) -> Deps,
@@ -182,6 +184,7 @@ impl<'cx, 'a, H: UiHost> ViewCx<'cx, 'a, H> {
 
     /// Keyed derived state hook backed by `ecosystem/fret-selector` (UI feature).
     #[track_caller]
+    #[cfg(feature = "state-selector")]
     pub fn use_selector_keyed<K: Hash, Deps, TValue>(
         &mut self,
         key: K,
@@ -198,6 +201,7 @@ impl<'cx, 'a, H: UiHost> ViewCx<'cx, 'a, H> {
     }
 
     /// Async query hook backed by `ecosystem/fret-query` (UI feature).
+    #[cfg(feature = "state-query")]
     pub fn use_query<T: Any + Send + Sync + 'static>(
         &mut self,
         key: fret_query::QueryKey<T>,
@@ -210,6 +214,7 @@ impl<'cx, 'a, H: UiHost> ViewCx<'cx, 'a, H> {
     }
 
     /// Async query hook (async fetch) backed by `ecosystem/fret-query` (UI feature).
+    #[cfg(feature = "state-query")]
     pub fn use_query_async<T, Fut>(
         &mut self,
         key: fret_query::QueryKey<T>,
@@ -224,6 +229,7 @@ impl<'cx, 'a, H: UiHost> ViewCx<'cx, 'a, H> {
     }
 
     /// Async query hook (non-Send async fetch) backed by `ecosystem/fret-query` (UI feature).
+    #[cfg(feature = "state-query")]
     pub fn use_query_async_local<T, Fut>(
         &mut self,
         key: fret_query::QueryKey<T>,

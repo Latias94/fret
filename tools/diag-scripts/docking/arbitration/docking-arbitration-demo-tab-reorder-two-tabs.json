@@ -1,0 +1,132 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "Docking arbitration demo: reordering tabs within a tab strip works (two tabs)",
+    "tags": ["docking", "tabbar", "drag", "gate"],
+    "required_capabilities": ["diag.script_v2"],
+    "target_hints": [
+      "This gate merges two viewports into a single tab strip, then drags the left tab to the end to reorder the strip.",
+      "Expected behavior: the dock graph updates to reflect the new tab order without tearing off or floating."
+    ]
+  },
+  "steps": [
+    { "type": "set_window_inner_size", "width_px": 1600.0, "height_px": 900.0 },
+    { "type": "wait_frames", "n": 10 },
+
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 5 },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "dock-arb-dock-space" } },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "dock-arb-tab-drag-anchor-left" } },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "dock-arb-tab-drag-anchor-right" } },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "dock-arb-tab-drop-end-anchor-left" } },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "pointer_down",
+      "window": { "kind": "current" },
+      "target": { "kind": "test_id", "id": "dock-arb-tab-drag-anchor-right" },
+      "button": "left"
+    },
+    { "type": "pointer_move", "window": { "kind": "current" }, "delta_x": 20.0, "delta_y": 0.0, "steps": 12 },
+    { "type": "wait_until", "window": { "kind": "current" }, "predicate": { "kind": "dock_drag_active_is", "active": true }, "timeout_frames": 120 },
+    {
+      "type": "move_pointer",
+      "window": { "kind": "current" },
+      "target": { "kind": "test_id", "id": "dock-arb-tab-drag-anchor-left" }
+    },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wait_until",
+      "window": { "kind": "current" },
+      "predicate": { "kind": "dock_drop_resolve_source_is", "source": "tab_bar" },
+      "timeout_frames": 120
+    },
+    { "type": "pointer_up", "window": { "kind": "current" } },
+    { "type": "wait_until", "window": { "kind": "current" }, "predicate": { "kind": "dock_drag_active_is", "active": false }, "timeout_frames": 240 },
+    { "type": "wait_frames", "n": 10 },
+    {
+      "type": "assert",
+      "window": { "kind": "current" },
+      "predicate": { "kind": "dock_graph_signature_contains", "needle": "demo.viewport.left" }
+    },
+    {
+      "type": "assert",
+      "window": { "kind": "current" },
+      "predicate": { "kind": "dock_graph_signature_contains", "needle": "demo.viewport.right" }
+    },
+
+    {
+      "type": "pointer_down",
+      "window": { "kind": "current" },
+      "target": { "kind": "test_id", "id": "dock-arb-tab-drag-anchor-right" },
+      "button": "left"
+    },
+    { "type": "pointer_move", "window": { "kind": "current" }, "delta_x": 20.0, "delta_y": 0.0, "steps": 12 },
+    { "type": "wait_until", "window": { "kind": "current" }, "predicate": { "kind": "dock_drag_active_is", "active": true }, "timeout_frames": 120 },
+
+    { "type": "move_pointer", "window": { "kind": "current" }, "target": { "kind": "test_id", "id": "dock-arb-tab-drop-end-anchor-left" } },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wait_until",
+      "window": { "kind": "current" },
+      "predicate": { "kind": "dock_drop_resolve_source_is", "source": "tab_bar" },
+      "timeout_frames": 120
+    },
+    {
+      "type": "wait_until",
+      "window": { "kind": "current" },
+      "predicate": { "kind": "dock_drop_resolved_is_some", "some": true },
+      "timeout_frames": 120
+    },
+    {
+      "type": "wait_until",
+      "window": { "kind": "current" },
+      "predicate": { "kind": "dock_drop_resolved_zone_is", "zone": "center" },
+      "timeout_frames": 120
+    },
+    {
+      "type": "wait_until",
+      "window": { "kind": "current" },
+      "predicate": { "kind": "dock_drop_resolved_insert_index_is", "index": 2 },
+      "timeout_frames": 120
+    },
+
+    { "type": "pointer_up", "window": { "kind": "current" } },
+    { "type": "wait_until", "window": { "kind": "current" }, "predicate": { "kind": "dock_drag_active_is", "active": false }, "timeout_frames": 240 },
+    { "type": "wait_frames", "n": 10 },
+
+    { "type": "assert", "window": { "kind": "current" }, "predicate": { "kind": "dock_graph_canonical_is", "canonical": true } },
+    {
+      "type": "assert",
+      "window": { "kind": "current" },
+      "predicate": { "kind": "dock_graph_signature_contains", "needle": "[demo.viewport.left,demo.viewport.right]" }
+    },
+    {
+      "type": "assert",
+      "window": { "kind": "current" },
+      "predicate": { "kind": "dock_graph_signature_contains", "needle": "demo.controls" }
+    },
+    {
+      "type": "assert",
+      "window": { "kind": "current" },
+      "predicate": { "kind": "dock_graph_signature_contains", "needle": "floatings=[]" }
+    },
+
+    { "type": "capture_bundle", "label": "docking-arbitration-demo-tab-reorder-two-tabs" }
+  ]
+}

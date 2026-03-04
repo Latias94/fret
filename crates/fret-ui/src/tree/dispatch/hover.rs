@@ -151,6 +151,22 @@ impl<H: UiHost> UiTree<H> {
             *needs_redraw = true;
             self.debug_record_hover_edge_pressable();
             if let Some(node) = prev_node {
+                self.mark_view_cache_roots_needs_rerender_from_snapshot(
+                    node,
+                    snapshot,
+                    UiDebugInvalidationSource::Hover,
+                    UiDebugInvalidationDetail::PressableHoverEdge,
+                );
+            }
+            if let Some(node) = next_node {
+                self.mark_view_cache_roots_needs_rerender_from_snapshot(
+                    node,
+                    snapshot,
+                    UiDebugInvalidationSource::Hover,
+                    UiDebugInvalidationDetail::PressableHoverEdge,
+                );
+            }
+            if let Some(node) = prev_node {
                 self.mark_invalidation_dedup_with_source(
                     node,
                     Invalidation::Paint,

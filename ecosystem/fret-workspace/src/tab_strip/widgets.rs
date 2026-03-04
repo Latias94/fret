@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use fret_core::{Color, Corners, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap};
 use fret_runtime::CommandId;
-use fret_ui::action::OnActivate;
+use fret_ui::action::{OnActivate, OnPressablePointerDown, PressablePointerDownResult};
 use fret_ui::element::{
     AnyElement, ContainerProps, FlexProps, LayoutStyle, MainAlign, PressableA11y, PressableProps,
     SemanticsDecoration, TextInkOverflow, TextProps,
@@ -14,6 +14,7 @@ use fret_ui::scroll::ScrollHandle;
 use fret_ui::{ElementContext, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 
+use super::consts::TAB_CLOSE_SIZE;
 use super::layouts::{centered_row, fill_layout, fixed_square_layout};
 
 pub(super) fn tab_close_button<H: UiHost>(
@@ -25,9 +26,14 @@ pub(super) fn tab_close_button<H: UiHost>(
     tab_fg: Color,
     test_id: Option<Arc<str>>,
 ) -> AnyElement {
+    let on_down: OnPressablePointerDown = Arc::new(|host, _acx, _down| {
+        host.prevent_default(fret_runtime::DefaultAction::FocusOnPointerDown);
+        PressablePointerDownResult::Continue
+    });
+
     cx.pressable(
         PressableProps {
-            layout: fixed_square_layout(Px(18.0)),
+            layout: fixed_square_layout(TAB_CLOSE_SIZE),
             focusable: false,
             a11y: PressableA11y {
                 role: Some(SemanticsRole::Button),
@@ -38,6 +44,7 @@ pub(super) fn tab_close_button<H: UiHost>(
             ..Default::default()
         },
         move |cx, close_state| {
+            cx.pressable_on_pointer_down(on_down.clone());
             cx.pressable_dispatch_action_if_enabled_opt(pane_activate_cmd.clone());
             cx.pressable_dispatch_action_if_enabled(close_command.clone());
 
@@ -80,7 +87,7 @@ pub(super) fn overflow_menu_close_slot<H: UiHost>(
 ) -> AnyElement {
     let mut el = cx.container(
         ContainerProps {
-            layout: fixed_square_layout(Px(18.0)),
+            layout: fixed_square_layout(TAB_CLOSE_SIZE),
             corner_radii: Corners::all(Px(4.0)),
             ..Default::default()
         },

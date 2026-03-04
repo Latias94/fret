@@ -367,7 +367,7 @@ pub struct UiDockDragDiagnosticsV1 {
     #[serde(default)]
     pub transparent_payload_applied: bool,
     #[serde(default)]
-    pub transparent_payload_mouse_passthrough_applied: bool,
+    pub transparent_payload_hit_test_passthrough_applied: bool,
     #[serde(default)]
     pub window_under_cursor_source: String,
     #[serde(default)]
@@ -388,8 +388,8 @@ impl UiDockDragDiagnosticsV1 {
             dragging: snapshot.dragging,
             cross_window_hover: snapshot.cross_window_hover,
             transparent_payload_applied: snapshot.transparent_payload_applied,
-            transparent_payload_mouse_passthrough_applied: snapshot
-                .transparent_payload_mouse_passthrough_applied,
+            transparent_payload_hit_test_passthrough_applied: snapshot
+                .transparent_payload_hit_test_passthrough_applied,
             window_under_cursor_source: dock_drag_window_under_cursor_source_label(
                 snapshot.window_under_cursor_source,
             )

@@ -2,18 +2,8 @@ pub const SOURCE: &str = include_str!("demo.rs");
 
 // region: example
 use fret_app::App;
-use fret_core::Px;
+use fret_core::{FontWeight, Px};
 use fret_ui_shadcn::{self as shadcn, prelude::*};
-
-fn align_end(cx: &mut ElementContext<'_, App>, child: AnyElement) -> AnyElement {
-    stack::hstack(
-        cx,
-        stack::HStackProps::default()
-            .layout(LayoutRefinement::default().w_full())
-            .justify_end(),
-        move |_cx| [child],
-    )
-}
 
 fn make_invoice_table(
     cx: &mut ElementContext<'_, App>,
@@ -21,10 +11,8 @@ fn make_invoice_table(
     include_footer: bool,
     test_id: &'static str,
 ) -> AnyElement {
-    let invoice_w = Px(128.0);
-    let status_w = Px(120.0);
-    let method_w = Px(180.0);
-    let amount_w = Px(132.0);
+    // shadcn docs: only the first column is fixed-width (`w-[100px]`).
+    let invoice_w = Px(100.0);
 
     let header = shadcn::TableHeader::new(vec![
         shadcn::TableRow::new(
@@ -33,14 +21,10 @@ fn make_invoice_table(
                 shadcn::TableHead::new("Invoice")
                     .refine_layout(LayoutRefinement::default().w_px(invoice_w))
                     .into_element(cx),
-                shadcn::TableHead::new("Status")
-                    .refine_layout(LayoutRefinement::default().w_px(status_w))
-                    .into_element(cx),
-                shadcn::TableHead::new("Method")
-                    .refine_layout(LayoutRefinement::default().w_px(method_w))
-                    .into_element(cx),
+                shadcn::TableHead::new("Status").into_element(cx),
+                shadcn::TableHead::new("Method").into_element(cx),
                 shadcn::TableHead::new("Amount")
-                    .refine_layout(LayoutRefinement::default().w_px(amount_w))
+                    .text_align_end()
                     .into_element(cx),
             ],
         )
@@ -52,27 +36,26 @@ fn make_invoice_table(
     let body_rows = rows
         .iter()
         .copied()
-        .map(|(invoice, status, amount, method)| {
+        .map(|(invoice, status, method, amount)| {
             let invoice_slug = invoice.to_ascii_lowercase();
             let row_test_id = format!("{test_id}-row-{invoice_slug}");
             shadcn::TableRow::new(
                 4,
                 vec![
-                    shadcn::TableCell::new(cx.text(invoice))
-                        .refine_layout(LayoutRefinement::default().w_px(invoice_w))
-                        .into_element(cx),
-                    shadcn::TableCell::new(cx.text(status))
-                        .refine_layout(LayoutRefinement::default().w_px(status_w))
-                        .into_element(cx),
-                    shadcn::TableCell::new(cx.text(method))
-                        .refine_layout(LayoutRefinement::default().w_px(method_w))
-                        .into_element(cx),
                     {
-                        let amount_text = cx.text(amount);
-                        shadcn::TableCell::new(align_end(cx, amount_text))
-                            .refine_layout(LayoutRefinement::default().w_px(amount_w))
+                        // shadcn docs: `font-medium` for the invoice id.
+                        let invoice_text = ui::text(cx, invoice)
+                            .font_weight(FontWeight::MEDIUM)
+                            .into_element(cx);
+                        shadcn::TableCell::new(invoice_text)
+                            .refine_layout(LayoutRefinement::default().w_px(invoice_w))
                             .into_element(cx)
                     },
+                    shadcn::TableCell::new(cx.text(status)).into_element(cx),
+                    shadcn::TableCell::new(cx.text(method)).into_element(cx),
+                    shadcn::TableCell::new(cx.text(amount))
+                        .text_align_end()
+                        .into_element(cx),
                 ],
             )
             .into_element(cx)
@@ -90,16 +73,10 @@ fn make_invoice_table(
                 vec![
                     shadcn::TableCell::new(cx.text("Total"))
                         .col_span(3)
-                        .refine_layout(
-                            LayoutRefinement::default().w_px(invoice_w + status_w + method_w),
-                        )
                         .into_element(cx),
-                    {
-                        let total_amount = cx.text("$2,500.00");
-                        shadcn::TableCell::new(align_end(cx, total_amount))
-                            .refine_layout(LayoutRefinement::default().w_px(amount_w))
-                            .into_element(cx)
-                    },
+                    shadcn::TableCell::new(cx.text("$2,500.00"))
+                        .text_align_end()
+                        .into_element(cx),
                 ],
             )
             .border_bottom(false)
@@ -118,14 +95,15 @@ fn make_invoice_table(
 }
 
 pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
+    // Tuple order matches shadcn docs: (invoice, status, method, amount).
     let invoices: [(&str, &str, &str, &str); 7] = [
-        ("INV001", "Paid", "$250.00", "Credit Card"),
-        ("INV002", "Pending", "$150.00", "PayPal"),
-        ("INV003", "Unpaid", "$350.00", "Bank Transfer"),
-        ("INV004", "Paid", "$450.00", "Credit Card"),
-        ("INV005", "Paid", "$550.00", "PayPal"),
-        ("INV006", "Pending", "$200.00", "Bank Transfer"),
-        ("INV007", "Unpaid", "$300.00", "Credit Card"),
+        ("INV001", "Paid", "Credit Card", "$250.00"),
+        ("INV002", "Pending", "PayPal", "$150.00"),
+        ("INV003", "Unpaid", "Bank Transfer", "$350.00"),
+        ("INV004", "Paid", "Credit Card", "$450.00"),
+        ("INV005", "Paid", "PayPal", "$550.00"),
+        ("INV006", "Pending", "Bank Transfer", "$200.00"),
+        ("INV007", "Unpaid", "Credit Card", "$300.00"),
     ];
 
     make_invoice_table(cx, &invoices, true, "ui-gallery-table-demo")

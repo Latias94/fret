@@ -366,7 +366,7 @@ impl UiDiagnosticsService {
                 | UiPredicateV1::DockDragWindowUnderMovingWindowIs { .. }
                 | UiPredicateV1::DockDragActiveIs { .. }
                 | UiPredicateV1::DockDragTransparentPayloadAppliedIs { .. }
-                | UiPredicateV1::DockDragTransparentPayloadMousePassthroughAppliedIs { .. }
+                | UiPredicateV1::DockDragTransparentPayloadHitTestPassthroughAppliedIs { .. }
                 | UiPredicateV1::DockDragWindowUnderCursorSourceIs { .. }
                 | UiPredicateV1::DockDragWindowUnderMovingWindowSourceIs { .. }
                 | UiPredicateV1::DockFloatingDragActiveIs { .. }

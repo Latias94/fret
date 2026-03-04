@@ -645,6 +645,12 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 CMD_NAV_VIEW_CACHE,
                 &["cache", "performance", "gpui-parity"],
             ),
+        ],
+    },
+    #[cfg(feature = "gallery-dev")]
+    PageGroupSpec {
+        title: "Core (Dev)",
+        items: &[
             PageSpec::new(
                 PAGE_HIT_TEST_TORTURE,
                 "Hit Test (Torture)",
@@ -1606,14 +1612,6 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 &["carousel", "scroll"],
             ),
             PageSpec::new(
-                PAGE_CHART,
-                "Chart",
-                "Chart",
-                "fret-ui-shadcn",
-                CMD_NAV_CHART,
-                &["chart", "data_viz"],
-            ),
-            PageSpec::new(
                 PAGE_CHECKBOX,
                 "Checkbox",
                 "Checkbox",
@@ -1975,6 +1973,7 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
             ),
         ],
     },
+    #[cfg(feature = "gallery-dev")]
     PageGroupSpec {
         title: "Shadcn (Extras)",
         items: &[
@@ -1985,6 +1984,14 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-shadcn::extras",
                 CMD_NAV_SHADCN_EXTRAS,
                 &["extras", "blocks", "recipes", "kibo"],
+            ),
+            PageSpec::new(
+                PAGE_CHART,
+                "Chart",
+                "Chart",
+                "fret-ui-shadcn",
+                CMD_NAV_CHART,
+                &["chart", "data_viz"],
             ),
             PageSpec::new(
                 PAGE_DATA_GRID,
@@ -2052,6 +2059,7 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
             ),
         ],
     },
+    #[cfg(feature = "gallery-dev")]
     PageGroupSpec {
         title: "Magic",
         items: &[
@@ -2136,6 +2144,7 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
             ),
         ],
     },
+    #[cfg(feature = "gallery-material3")]
     PageGroupSpec {
         title: "Material 3",
         items: &[

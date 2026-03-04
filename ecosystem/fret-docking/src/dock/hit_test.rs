@@ -9,6 +9,7 @@ use super::prelude_core::*;
 use super::tab_bar_geometry::TabBarGeometry;
 use super::tab_bar_kernel::compute_tab_bar_overflow_candidate_geometry;
 use fret_ui::retained_bridge::resizable_panel_group as resizable;
+use fret_ui_headless::tab_strip_hit_test;
 
 pub(super) fn tab_scroll_for_node(tab_scroll: &HashMap<DockNodeId, Px>, node: DockNodeId) -> Px {
     tab_scroll.get(&node).copied().unwrap_or(Px(0.0))
@@ -70,7 +71,13 @@ pub(super) fn hit_test_tab(
         let idx = geom.hit_test_tab_index(position, scroll)?;
         let panel = tabs.get(idx)?.clone();
         let tab_rect = geom.tab_rect(idx, scroll);
-        let close = tab_close_rect(theme.clone(), tab_rect).contains(position);
+        let pad = theme.metric_token("metric.padding.sm").0.max(0.0);
+        let close = tab_strip_hit_test::tab_close_hit_test(
+            tab_rect,
+            position,
+            DOCK_TAB_CLOSE_SIZE,
+            Px(pad),
+        );
         return Some((node, idx, panel, close));
     }
     None

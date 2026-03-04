@@ -753,6 +753,7 @@ impl Radio {
                         l
                     },
                     focus_ring: Some(focus_ring),
+                    focus_ring_always_paint: false,
                     focus_ring_bounds: None,
                 };
 

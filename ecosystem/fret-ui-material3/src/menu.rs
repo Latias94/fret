@@ -472,6 +472,7 @@ fn material_menu_item<H: UiHost>(
                 l
             },
             focus_ring: None,
+            focus_ring_always_paint: false,
             focus_ring_bounds: None,
         };
 

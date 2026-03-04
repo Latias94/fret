@@ -35,6 +35,10 @@ hover selection + visible target previews), you can enable transparent payload d
 - Quick env var: `FRET_DOCK_TEAROFF_TRANSPARENT_PAYLOAD=1 cargo run -p fret-demo --bin docking_arbitration_demo`
 - Or via settings: `DockingInteractionSettings::transparent_payload_during_follow` (default false)
 
+Notes:
+
+- `FRET_DOCK_TEAROFF_TRANSPARENT_PAYLOAD` is a boolean env flag. Values `0/false/off/no` disable it; any other present value enables it.
+
 For scripted repros with `fretboard`:
 
 - `cargo run -p fretboard -- diag repro docking-arbitration --env FRET_DOCK_TEAROFF_TRANSPARENT_PAYLOAD=1 --launch -- cargo run -p fret-demo --bin docking_arbitration_demo`

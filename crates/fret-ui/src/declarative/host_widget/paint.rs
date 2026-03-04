@@ -1581,6 +1581,7 @@ impl ElementHostWidget {
                 if input.model_id() != model_id {
                     input.set_model(model);
                 }
+                input.set_focus_ring_always_paint(props.focus_ring_always_paint);
                 input.set_chrome_style(props.chrome);
                 input.set_text_style(props.text_style);
                 input.set_placeholder(props.placeholder);
@@ -1601,6 +1602,7 @@ impl ElementHostWidget {
                 if area.model_id() != model_id {
                     area.set_model(model);
                 }
+                area.set_focus_ring_always_paint(props.focus_ring_always_paint);
                 area.set_style(props.chrome);
                 area.set_text_style(props.text_style);
                 area.set_placeholder(props.placeholder);

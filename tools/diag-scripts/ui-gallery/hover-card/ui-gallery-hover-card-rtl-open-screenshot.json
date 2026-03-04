@@ -1,0 +1,81 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "UI gallery: hover-card RTL open screenshot",
+    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
+    "tags": ["hover-card", "overlay", "rtl", "screenshot", "ui-gallery"],
+    "target_hints": [
+      "Navigate to the HoverCard page.",
+      "Scroll to the RTL section and open the hover-card via pointer hover.",
+      "Capture a screenshot for RTL placement/alignment parity."
+    ]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "set_window_inner_size", "width_px": 1280.0, "height_px": 720.0 },
+    { "type": "wait_frames", "n": 20 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+      },
+      "timeout_frames": 600
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
+    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
+    { "type": "press_key", "key": "backspace" },
+    { "type": "type_text", "text": "hover card" },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-nav-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-nav-hover-card" },
+      "delta_y": -240.0,
+      "timeout_frames": 600
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-hover-card" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-page-hover-card" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-hover-card-rtl-trigger" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-hover-card-rtl-trigger" },
+      "delta_y": -240.0,
+      "timeout_frames": 1200,
+      "require_fully_within_container": true,
+      "require_fully_within_window": true,
+      "padding_px": 24.0
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-hover-card-rtl-trigger" } },
+    { "type": "pointer_move", "pointer_kind": "mouse", "delta_x": 1.0, "delta_y": 0.0, "steps": 1 },
+    { "type": "wait_frames", "n": 30 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-hover-card-rtl-content" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "capture_bundle", "label": "hover-card-rtl-open" },
+    { "type": "capture_screenshot", "label": "ui-gallery-hover-card-rtl-open" }
+  ]
+}
+

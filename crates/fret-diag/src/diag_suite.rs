@@ -123,6 +123,12 @@ fn resolve_builtin_suite_scripts(
             let scripts = expand_script_inputs(workspace_root, &inputs)?;
             (scripts, Some(BuiltinSuite::UiGalleryLayout))
         }
+        "ui-gallery-lite-smoke" => {
+            // Keep this suite fast and deterministic: always start on the Intro page.
+            push_env_if_missing(launch_env, "FRET_UI_GALLERY_START_PAGE", "intro");
+            let scripts = scripts_from_suite_dir("ui-gallery-lite-smoke")?;
+            (scripts, Some(BuiltinSuite::UiGallery))
+        }
         "ui-gallery-virt-retained"
         | "ui-gallery-virt-retained-measured"
         | "ui-gallery-tree-retained"
@@ -481,6 +487,8 @@ hint: list suites via `fretboard diag list suites`"
     }
 
     let suite_args: Vec<String> = rest.clone();
+    let strict_termination = suite_args.len() == 1
+        && suite_args[0].starts_with("diag-hardening-smoke");
 
     let is_suite = |name: &str| suite_args.len() == 1 && suite_args[0] == name;
     let is_ui_gallery_ai_transcript_retained_suite = is_suite("ui-gallery-ai-transcript-retained");
@@ -546,6 +554,29 @@ hint: list suites via `fretboard diag list suites`"
 
     if scripts.is_empty() {
         return Err("suite produced no scripts".to_string());
+    }
+    if strict_termination {
+        let issues = crate::script_tooling::preflight_strict_termination_issues(&scripts)?;
+        if !issues.is_empty() {
+            let out = resolved_out_dir.join("check.script_termination.json");
+            let payload = serde_json::json!({
+                "schema_version": 1,
+                "kind": "diag_script_termination_preflight",
+                "status": "failed",
+                "issue_count": issues.len(),
+                "issues": issues,
+            });
+            let pretty = serde_json::to_string_pretty(&payload).unwrap_or_else(|_| "{}".to_string());
+            let _ = std::fs::create_dir_all(&resolved_out_dir);
+            let _ = std::fs::write(&out, pretty.as_bytes());
+
+            return Err(format!(
+                "suite script termination preflight failed (issue_count={}) (see: {})\n\
+hint: smoke/gate suites require deterministic termination; avoid trailing wait_frames and avoid wait_frames after the final capture_bundle",
+                payload["issue_count"].as_u64().unwrap_or(0),
+                out.display()
+            ));
+        }
     }
 
     if used_fallback_paths
