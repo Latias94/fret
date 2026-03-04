@@ -60,7 +60,7 @@ fn main() -> fret::Result<()> {
 ## Features
 
 - `desktop`: enable the native desktop stack (winit + wgpu) via `fret-framework/native-wgpu`.
-- `app`: recommended baseline for apps (shadcn + optional state helpers).
+- `app`: recommended baseline for apps (shadcn + state helpers).
 - `batteries`: “works out of the box” opt-in bundle (config files + UI assets + icons + preloading + diagnostics).
 - `config-files`: load layered config files from `.fret/` (settings/keymap/menubar).
 - `diagnostics`: enable default diagnostics wiring (tracing + panic hook; plus extra dev tooling).

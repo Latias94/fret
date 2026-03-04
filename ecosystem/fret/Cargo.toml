@@ -28,7 +28,7 @@ batteries = [
     "preload-icon-svgs",
 ]
 
-# Recommended “just build an app” baseline: shadcn-first + (optional) state helpers.
+# Recommended “just build an app” baseline: shadcn-first + state helpers.
 #
 # Intentionally excludes:
 # - `diagnostics` (pulls in extra dev tooling; opt-in)
