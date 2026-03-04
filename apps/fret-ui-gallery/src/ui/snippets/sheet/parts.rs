@@ -1,7 +1,6 @@
 pub const SOURCE: &str = include_str!("parts.rs");
 
 // region: example
-use fret_core::Px;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 
 #[derive(Default, Clone)]
@@ -24,8 +23,6 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let close_open = open.clone();
 
     shadcn::Sheet::new(open.clone())
-        .side(shadcn::SheetSide::Right)
-        .size(Px(420.0))
         .into_element_parts(
             cx,
             move |cx| {

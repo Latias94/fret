@@ -1,7 +1,6 @@
 pub const SOURCE: &str = include_str!("side.rs");
 
 // region: example
-use fret_core::Px;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 
 #[derive(Default, Clone)]
@@ -86,13 +85,6 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         let save_open = open_model.clone();
 
         let sheet = shadcn::Sheet::new(open_model).side(side);
-        let sheet = if matches!(side, shadcn::SheetSide::Left | shadcn::SheetSide::Right) {
-            sheet.size(Px(420.0))
-        } else {
-            // Upstream shadcn uses `h-auto` for top/bottom sheets; keep them auto-sized so the
-            // footer actions remain fully visible on typical viewport heights.
-            sheet
-        };
 
         sheet.into_element(
             cx,
@@ -130,6 +122,18 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                     },
                 );
 
+                let fields = {
+                    let props = decl_style::container_props(
+                        Theme::global(&*cx.app),
+                        ChromeRefinement::default().px(Space::N4),
+                        LayoutRefinement::default()
+                            .w_full()
+                            .min_w_0()
+                            .min_h_0()
+                            .flex_1(),
+                    );
+                    cx.container(props, move |_cx| vec![fields])
+                };
                 shadcn::SheetContent::new([
                     shadcn::SheetHeader::new([
                         shadcn::SheetTitle::new("Edit profile").into_element(cx),

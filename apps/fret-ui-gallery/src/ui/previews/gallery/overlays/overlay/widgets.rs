@@ -550,6 +550,14 @@ fn sheet(cx: &mut ElementContext<'_, App>, models: &OverlayModels) -> AnyElement
                                     .collect::<Vec<_>>()
                             },
                         );
+                        let body = {
+                            let props = decl_style::container_props(
+                                Theme::global(&*cx.app),
+                                ChromeRefinement::default().px(Space::N4),
+                                LayoutRefinement::default().w_full().min_w_0().min_h_0(),
+                            );
+                            cx.container(props, move |_cx| vec![body])
+                        };
 
                         shadcn::ScrollArea::new([body])
                             .refine_layout(

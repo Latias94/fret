@@ -1,7 +1,6 @@
 pub const SOURCE: &str = include_str!("rtl.rs");
 
 // region: example
-use fret_core::Px;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 
 #[derive(Default, Clone)]
@@ -70,16 +69,29 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
 
         shadcn::Sheet::new(open.clone())
             .side(shadcn::SheetSide::Left)
-            .size(Px(420.0))
             .into_element(
                 cx,
                 |cx| {
                     shadcn::Button::new("Open")
                         .variant(shadcn::ButtonVariant::Outline)
+                        .test_id("ui-gallery-sheet-rtl-trigger")
                         .toggle_model(trigger_open.clone())
                         .into_element(cx)
                 },
                 |cx| {
+                    let fields = {
+                        let fields = profile_fields(cx, name_model.clone(), username_model.clone());
+                        let props = decl_style::container_props(
+                            Theme::global(&*cx.app),
+                            ChromeRefinement::default().px(Space::N4),
+                            LayoutRefinement::default()
+                                .w_full()
+                                .min_w_0()
+                                .min_h_0()
+                                .flex_1(),
+                        );
+                        cx.container(props, move |_cx| vec![fields])
+                    };
                     shadcn::SheetContent::new([
                         shadcn::SheetHeader::new([
                             shadcn::SheetTitle::new("Edit profile").into_element(cx),
@@ -89,7 +101,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                             .into_element(cx),
                         ])
                         .into_element(cx),
-                        profile_fields(cx, name_model.clone(), username_model.clone()),
+                        fields,
                         shadcn::SheetFooter::new([
                             shadcn::Button::new("Save changes")
                                 .toggle_model(save_open.clone())

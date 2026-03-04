@@ -12,7 +12,9 @@ use fret_ui::{ElementContext, Invalidation, Theme, ThemeNamedColorKey, ThemeSnap
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::declarative::{occlusion_insets_or_zero, safe_area_insets_or_zero};
+use fret_ui_kit::declarative::{
+    occlusion_insets_or_zero, safe_area_insets_or_zero, viewport_queries,
+};
 use fret_ui_kit::primitives::dialog as radix_dialog;
 use fret_ui_kit::primitives::portal_inherited;
 use fret_ui_kit::{
@@ -237,13 +239,6 @@ impl SheetSizeOverride {
         match self {
             Self::Px(px) => Length::Px(px),
             Self::Fraction(fraction) => Length::Fraction(fraction),
-        }
-    }
-
-    fn as_estimated_motion_distance_px(self, default_px: Px, max_px: Option<Px>) -> Px {
-        match self {
-            Self::Px(px) => px,
-            Self::Fraction(_) => max_px.unwrap_or(default_px),
         }
     }
 }
@@ -494,23 +489,31 @@ impl Sheet {
                 let vertical_edge_gap_px = self.vertical_edge_gap_px.unwrap_or(Px(0.0));
                 let vertical_auto_max_height_fraction =
                     self.vertical_auto_max_height_fraction.unwrap_or(1.0);
-                let default_size = theme
-                    .metric_by_key("component.sheet.size")
-                    .or_else(|| theme.metric_by_key("component.sheet.width"))
-                    .unwrap_or(Px(350.0));
-                let estimated_motion_distance_px = size_override
-                    .map(|spec| {
-                        spec.as_estimated_motion_distance_px(default_size, max_size_override)
-                    })
-                    .unwrap_or(default_size);
-
                 let opacity = motion.progress;
+                let viewport_is_sm = viewport_queries::viewport_width_at_least(
+                    cx,
+                    Invalidation::Layout,
+                    viewport_queries::tailwind::SM,
+                    viewport_queries::ViewportQueryHysteresis::default(),
+                );
+                let shadcn_default_side_fraction = 0.75_f32;
+                let shadcn_sm_max_width = theme
+                    .metric_by_key("component.sheet.max_width_sm")
+                    .or_else(|| theme.metric_by_key("component.sheet.size"))
+                    .or_else(|| theme.metric_by_key("component.sheet.width"))
+                    .unwrap_or(Px(384.0));
+                let viewport_bounds = cx.environment_viewport_bounds(Invalidation::Layout);
+                let viewport_width = viewport_bounds.size.width;
+                let viewport_height = viewport_bounds.size.height;
                 let portal_inherited = portal_inherited::PortalInherited::capture(cx);
                 let overlay_children = portal_inherited::with_root_name_inheriting(
                     cx,
                     &overlay_root_name,
                     portal_inherited,
                     |cx| {
+                        let mut barrier_overlay_color = overlay_color;
+                        barrier_overlay_color.a =
+                            (barrier_overlay_color.a * opacity).max(0.0).min(1.0);
                         let barrier_fill = cx.container(
                             ContainerProps {
                                 layout: LayoutStyle {
@@ -522,7 +525,7 @@ impl Sheet {
                                     ..Default::default()
                                 },
                                 padding: Edges::all(Px(0.0)).into(),
-                                background: Some(overlay_color),
+                                background: Some(barrier_overlay_color),
                                 shadow: None,
                                 border: Edges::all(Px(0.0)),
                                 border_color: None,
@@ -556,16 +559,44 @@ impl Sheet {
                                 SizeStyle {
                                     width: size_override
                                         .map(|spec| spec.as_length())
-                                        .unwrap_or(Length::Px(default_size)),
+                                        .unwrap_or(Length::Fraction(shadcn_default_side_fraction)),
                                     max_width: match (size_override, max_size_override) {
                                         (Some(SheetSizeOverride::Px(_)), _) => Some(Length::Fill),
                                         (_, Some(max_px)) => Some(Length::Px(max_px)),
-                                        _ => Some(Length::Fill),
+                                        (None, None) if viewport_is_sm => {
+                                            Some(Length::Px(shadcn_sm_max_width))
+                                        }
+                                        _ => None,
                                     },
                                     height: Length::Fill,
                                     ..Default::default()
                                 },
-                                estimated_motion_distance_px,
+                                match size_override {
+                                    Some(SheetSizeOverride::Px(px)) => px,
+                                    Some(SheetSizeOverride::Fraction(fraction)) => {
+                                        let base = Px((viewport_width.0 * fraction).max(0.0));
+                                        if let Some(max_px) = max_size_override {
+                                            Px(base.0.min(max_px.0))
+                                        } else {
+                                            base
+                                        }
+                                    }
+                                    None => {
+                                        let base = Px((viewport_width.0
+                                            * shadcn_default_side_fraction)
+                                            .max(0.0));
+                                        let base = if viewport_is_sm {
+                                            Px(base.0.min(shadcn_sm_max_width.0))
+                                        } else {
+                                            base
+                                        };
+                                        if let Some(max_px) = max_size_override {
+                                            Px(base.0.min(max_px.0))
+                                        } else {
+                                            base
+                                        }
+                                    }
+                                },
                             ),
                             SheetSide::Left => (
                                 InsetStyle {
@@ -577,16 +608,44 @@ impl Sheet {
                                 SizeStyle {
                                     width: size_override
                                         .map(|spec| spec.as_length())
-                                        .unwrap_or(Length::Px(default_size)),
+                                        .unwrap_or(Length::Fraction(shadcn_default_side_fraction)),
                                     max_width: match (size_override, max_size_override) {
                                         (Some(SheetSizeOverride::Px(_)), _) => Some(Length::Fill),
                                         (_, Some(max_px)) => Some(Length::Px(max_px)),
-                                        _ => Some(Length::Fill),
+                                        (None, None) if viewport_is_sm => {
+                                            Some(Length::Px(shadcn_sm_max_width))
+                                        }
+                                        _ => None,
                                     },
                                     height: Length::Fill,
                                     ..Default::default()
                                 },
-                                estimated_motion_distance_px,
+                                match size_override {
+                                    Some(SheetSizeOverride::Px(px)) => px,
+                                    Some(SheetSizeOverride::Fraction(fraction)) => {
+                                        let base = Px((viewport_width.0 * fraction).max(0.0));
+                                        if let Some(max_px) = max_size_override {
+                                            Px(base.0.min(max_px.0))
+                                        } else {
+                                            base
+                                        }
+                                    }
+                                    None => {
+                                        let base = Px((viewport_width.0
+                                            * shadcn_default_side_fraction)
+                                            .max(0.0));
+                                        let base = if viewport_is_sm {
+                                            Px(base.0.min(shadcn_sm_max_width.0))
+                                        } else {
+                                            base
+                                        };
+                                        if let Some(max_px) = max_size_override {
+                                            Px(base.0.min(max_px.0))
+                                        } else {
+                                            base
+                                        }
+                                    }
+                                },
                             ),
                             SheetSide::Top => (
                                 InsetStyle {
@@ -611,7 +670,18 @@ impl Sheet {
                                     },
                                     ..Default::default()
                                 },
-                                estimated_motion_distance_px,
+                                match size_override {
+                                    Some(SheetSizeOverride::Px(px)) => px,
+                                    Some(SheetSizeOverride::Fraction(fraction)) => {
+                                        let base = Px((viewport_height.0 * fraction).max(0.0));
+                                        if let Some(max_px) = max_size_override {
+                                            Px(base.0.min(max_px.0))
+                                        } else {
+                                            base
+                                        }
+                                    }
+                                    None => Px(350.0),
+                                },
                             ),
                             SheetSide::Bottom => (
                                 InsetStyle {
@@ -636,7 +706,18 @@ impl Sheet {
                                     },
                                     ..Default::default()
                                 },
-                                estimated_motion_distance_px,
+                                match size_override {
+                                    Some(SheetSizeOverride::Px(px)) => px,
+                                    Some(SheetSizeOverride::Fraction(fraction)) => {
+                                        let base = Px((viewport_height.0 * fraction).max(0.0));
+                                        if let Some(max_px) = max_size_override {
+                                            Px(base.0.min(max_px.0))
+                                        } else {
+                                            base
+                                        }
+                                    }
+                                    None => Px(350.0),
+                                },
                             ),
                         };
 
@@ -860,7 +941,6 @@ impl SheetContent {
             .border_1()
             .bg(ColorRef::Color(bg))
             .border_color(ColorRef::Color(border))
-            .p(Space::N6)
             .merge(self.chrome);
 
         let side = sheet_side_in_scope(cx);
@@ -987,7 +1067,7 @@ impl SheetHeader {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let props = decl_style::container_props(
             Theme::global(&*cx.app),
-            ChromeRefinement::default().pb(Space::N4),
+            ChromeRefinement::default().p(Space::N4),
             LayoutRefinement::default(),
         );
         let children = self.children;
@@ -1011,17 +1091,17 @@ impl SheetFooter {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let props = decl_style::container_props(
             Theme::global(&*cx.app),
-            ChromeRefinement::default().pt(Space::N4),
-            LayoutRefinement::default(),
+            ChromeRefinement::default().p(Space::N4),
+            LayoutRefinement::default().mt_auto(),
         );
         let children = self.children;
-        shadcn_layout::container_hstack(
+        shadcn_layout::container_vstack(
             cx,
             props,
-            fret_ui_kit::declarative::stack::HStackProps::default()
+            fret_ui_kit::declarative::stack::VStackProps::default()
                 .gap(Space::N2)
-                .justify_end()
-                .items_center(),
+                .justify_start()
+                .items_stretch(),
             children,
         )
     }
