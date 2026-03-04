@@ -43,6 +43,7 @@ Outcome:
 
 Exit criteria:
 
+- Lite mode is the default build, and the full catalog is opt-in (Cargo features).
 - Lite mode loads quickly and provides a meaningful “what is shadcn in Fret?” tour.
 
 ## Milestone 4 — `fret-demo` reads as maintainer/labs
@@ -54,4 +55,3 @@ Outcome:
 Exit criteria:
 
 - The official native demo list remains intentionally small and stable.
-
