@@ -28,6 +28,19 @@ static PROXY_EVENTS: OnceLock<std::sync::Arc<std::sync::Mutex<Vec<RunnerUserEven
 
 static COALESCED_REFRESH_PENDING: AtomicBool = AtomicBool::new(false);
 
+// TODO(macos): Implement `WindowHitTestRequestV1::PassthroughRegions` via multi-window composition
+// instead of global mouse monitoring.
+//
+// Sketch:
+// - Keep the "visual" window always `ignoresMouseEvents=true` while regions are active.
+// - Create transparent overlay window(s) that cover the interactive regions and forward pointer
+//   events to the visual window (with coordinate remapping).
+// - Add a temporary full-window capture overlay between pointer-down and pointer-up so drags that
+//   leave the interactive region continue to deliver move/up events (ImGui-style semantics).
+//
+// The current global-monitor approach is best-effort and can be sensitive to platform policies
+// (e.g. when global event monitors are restricted).
+
 #[derive(Default)]
 struct MacosHitTestRegionsState {
     by_ns_window_ptr: HashMap<isize, WindowHitTestRegionsWindowState>,
