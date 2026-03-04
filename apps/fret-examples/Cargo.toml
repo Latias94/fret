@@ -14,6 +14,8 @@ publish = false
 alloc-profile = []
 mathjax-svg = ["fret-markdown/mathjax-svg"]
 hotpatch = ["fret-launch/hotpatch-subsecond", "fret-bootstrap/hotpatch-subsecond"]
+# Forward `fret-launch` experimental macOS passthrough-regions implementation.
+macos-hit-test-regions = ["fret-launch/macos-hit-test-regions"]
 # Node-graph demos are split so the default path stays declarative-first (no retained bridge).
 node-graph-demos = []
 node-graph-demos-legacy = ["node-graph-demos", "fret-node/imui"]

@@ -17,6 +17,7 @@ alloc-mimalloc = ["fret-alloc/mimalloc"]
 alloc-jemalloc = ["fret-alloc/jemalloc"]
 mathjax-svg = ["fret-examples/mathjax-svg"]
 devtools-ws = ["fret-examples/devtools-ws"]
+macos-hit-test-regions = ["fret-examples/macos-hit-test-regions"]
 ui-gallery = ["dep:fret-ui-gallery"]
 hotpatch = [
     "fret-examples/hotpatch",
