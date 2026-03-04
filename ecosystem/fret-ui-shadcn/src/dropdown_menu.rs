@@ -6435,6 +6435,186 @@ mod tests {
     }
 
     #[test]
+    fn dropdown_menu_typeahead_enter_closes_after_pointer_open() {
+        use fret_core::MouseButton;
+
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(false);
+        let trigger_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+        let underlay_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(800.0), Px(600.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let build_entries = || {
+            vec![
+                DropdownMenuEntry::Item(DropdownMenuItem::new("Profile")),
+                DropdownMenuEntry::Item(DropdownMenuItem::new("Billing")),
+            ]
+        };
+
+        // Frame 1: closed, establish trigger bounds and install activation wiring.
+        let _root = render_frame_with_underlay(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            trigger_id_out.clone(),
+            underlay_id_out.clone(),
+            build_entries(),
+        );
+
+        let trigger_id = trigger_id_out.get().expect("trigger element id");
+        let trigger_node =
+            fret_ui::elements::node_for_element(&mut app, window, trigger_id).expect("trigger");
+        let trigger_bounds = ui.debug_node_bounds(trigger_node).expect("trigger bounds");
+        let click_pos = rect_center(trigger_bounds);
+
+        // Pointer-open the menu.
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: click_pos,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position: click_pos,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        assert_eq!(app.models().get_copied(&open), Some(true));
+
+        // Frame 2: open, pointer modality should focus the content container.
+        let _root = render_frame_with_underlay(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            trigger_id_out.clone(),
+            underlay_id_out.clone(),
+            build_entries(),
+        );
+
+        // ArrowDown should move focus into the menu list (first item).
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::KeyDown {
+                key: KeyCode::ArrowDown,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+        let _root = render_frame_with_underlay(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            trigger_id_out.clone(),
+            underlay_id_out.clone(),
+            build_entries(),
+        );
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let profile = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Profile"))
+            .expect("Profile menu item");
+        assert_eq!(ui.focus(), Some(profile.id));
+
+        // Typeahead to "Billing" and activate it with Enter: should close the menu.
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::KeyDown {
+                key: KeyCode::KeyB,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+        let _root = render_frame_with_underlay(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            trigger_id_out.clone(),
+            underlay_id_out.clone(),
+            build_entries(),
+        );
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let billing = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Billing"))
+            .expect("Billing menu item");
+        assert_eq!(ui.focus(), Some(billing.id));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::KeyDown {
+                key: KeyCode::Enter,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::KeyUp {
+                key: KeyCode::Enter,
+                modifiers: Modifiers::default(),
+            },
+        );
+        assert_eq!(app.models().get_copied(&open), Some(false));
+
+        // Next frame: closed, focus restored to trigger.
+        let _root = render_frame_with_underlay(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open,
+            trigger_id_out,
+            underlay_id_out,
+            build_entries(),
+        );
+        assert_eq!(ui.focus(), Some(trigger_node));
+    }
+
+    #[test]
     fn dropdown_menu_outside_press_closes_without_overriding_underlay_focus() {
         use fret_core::MouseButton;
 
