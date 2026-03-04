@@ -270,7 +270,7 @@ pub struct DockSpace {
     hovered_tab: Option<(DockNodeId, usize)>,
     hovered_tab_close: bool,
     hovered_tab_overflow_button: Option<DockNodeId>,
-    pressed_tab_close: Option<(DockNodeId, usize, PanelKey)>,
+    pressed_tab_close: Option<PressedTabClose>,
     tab_scroll: HashMap<DockNodeId, Px>,
     tab_drag_auto_scroll_last_frame: HashMap<DockNodeId, fret_runtime::FrameId>,
     tab_overflow_menu: Option<TabOverflowMenuState>,
@@ -307,6 +307,15 @@ pub struct DockSpace {
     last_theme_revision: Option<u64>,
     last_active_tabs: Option<DockNodeId>,
     hovered_float_zone: bool,
+}
+
+#[derive(Debug, Clone)]
+struct PressedTabClose {
+    pointer_id: fret_core::PointerId,
+    tabs: DockNodeId,
+    index: usize,
+    panel: PanelKey,
+    start: Point,
 }
 
 #[derive(Debug, Clone)]
@@ -4033,8 +4042,13 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                         intent,
                                         tabstrip_controller::TabStripIntent::Close { .. }
                                     ) {
-                                        self.pressed_tab_close =
-                                            Some((tabs_node, tab_index, panel_key.clone()));
+                                        self.pressed_tab_close = Some(PressedTabClose {
+                                            pointer_id,
+                                            tabs: tabs_node,
+                                            index: tab_index,
+                                            panel: panel_key.clone(),
+                                            start: *position,
+                                        });
                                         request_pointer_capture = Some(Some(dock_space_node));
                                         dock.hover = None;
                                         invalidate_paint = true;
@@ -5396,10 +5410,19 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                 handled = true;
                             }
                             if *button == fret_core::MouseButton::Left
-                                && let Some((tabs_node, tab_index, panel_key)) =
-                                    self.pressed_tab_close.take()
+                                && self
+                                    .pressed_tab_close
+                                    .as_ref()
+                                    .is_some_and(|pressed| pressed.pointer_id == pointer_id)
+                                && let Some(pressed) = self.pressed_tab_close.take()
                             {
                                 request_pointer_capture = Some(None);
+
+                                let within_slop = fret_ui_headless::tab_strip_hit_test::pointer_move_within_slop(
+                                    pressed.start,
+                                    *position,
+                                    DOCK_TAB_CLOSE_CLICK_SLOP,
+                                );
 
                                 let (_chrome, dock_bounds) = dock_space_regions(self.last_bounds);
                                 let mut layout = root
@@ -5413,7 +5436,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                         )
                                     })
                                     .unwrap_or_default();
-                                if !layout.contains_key(&tabs_node) {
+                                if !layout.contains_key(&pressed.tabs) {
                                     for floating in dock.graph.floating_windows(self.window) {
                                         let chrome = Self::floating_chrome(floating.rect);
                                         let l = compute_layout_map(
@@ -5423,7 +5446,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                             split_handle_gap,
                                             split_handle_hit_thickness,
                                         );
-                                        if l.contains_key(&tabs_node) {
+                                        if l.contains_key(&pressed.tabs) {
                                             layout = l;
                                             break;
                                         }
@@ -5438,13 +5461,16 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                     *position,
                                 )
                                 .is_some_and(|(n, i, p, close)| {
-                                    close && n == tabs_node && i == tab_index && p == panel_key
+                                    close
+                                        && n == pressed.tabs
+                                        && i == pressed.index
+                                        && p == pressed.panel
                                 });
 
-                                if clicked {
+                                if clicked || within_slop {
                                     pending_effects.push(Effect::Dock(DockOp::ClosePanel {
                                         window: self.window,
-                                        panel: panel_key,
+                                        panel: pressed.panel,
                                     }));
                                     invalidate_layout = true;
                                 }
@@ -7113,7 +7139,10 @@ impl<H: UiHost> Widget<H> for DockSpace {
                     hovered_tab: self.hovered_tab,
                     hovered_tab_close: self.hovered_tab_close,
                     hovered_tab_overflow_button: self.hovered_tab_overflow_button,
-                    pressed_tab_close: self.pressed_tab_close.as_ref().map(|(n, i, _)| (*n, *i)),
+                    pressed_tab_close: self
+                        .pressed_tab_close
+                        .as_ref()
+                        .map(|pressed| (pressed.tabs, pressed.index)),
                     tab_scroll: &self.tab_scroll,
                     tab_close_glyph: self.tab_close_glyph,
                     tab_overflow_glyph: self.tab_overflow_glyph,
@@ -7235,7 +7264,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                         pressed_tab_close: self
                             .pressed_tab_close
                             .as_ref()
-                            .map(|(n, i, _)| (*n, *i)),
+                            .map(|pressed| (pressed.tabs, pressed.index)),
                         tab_scroll: &self.tab_scroll,
                         tab_close_glyph: self.tab_close_glyph,
                         tab_overflow_glyph: self.tab_overflow_glyph,
