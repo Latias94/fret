@@ -21,12 +21,14 @@ Legend:
 | Text (kit builders) | `TextAlign::Start/End` logical flip under RTL | OK | Test | `ecosystem/fret-ui-kit/src/ui.rs` |
 | ScrollArea (gallery) | RTL padding + content alignment parity vs shadcn docs | OK | Diag | `apps/fret-ui-gallery/src/ui/snippets/scroll_area/rtl.rs` + `tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scroll-area-rtl-screenshot.json` |
 | ScrollArea (demo) | Horizontal scroll “blank space” at max scroll | OK | None | `apps/fret-ui-gallery/src/ui/snippets/scroll_area/horizontal.rs` |
+| DropdownMenu (gallery) | Overlay root + `align=start` + RTL placement/parity | OK | Test + Diag | `apps/fret-ui-gallery/src/ui/snippets/dropdown_menu/rtl.rs` + `ecosystem/fret-ui-shadcn/src/dropdown_menu.rs` + `tools/diag-scripts/ui-gallery/dropdown-menu/ui-gallery-dropdown-menu-rtl-open-screenshot.json` |
 | Popper placement | `align=start/end` flips under RTL for vertical placements | OK | Test | `crates/fret-ui/src/overlay_placement/tests.rs` |
 | DropdownMenu | `align=start` respects direction provider through overlay root | OK | Test | `ecosystem/fret-ui-shadcn/src/dropdown_menu.rs` |
 | NavigationMenu | viewport `align=start` respects direction provider | OK | Test | `ecosystem/fret-ui-shadcn/src/navigation_menu.rs` |
 | Carousel | Drag sign + key behavior under RTL | Unknown | None | (see `docs/workstreams/carousel-embla-fearless-refactor-v1/plan.md`) |
+| Tabs (gallery) | APG keynav (Left/Right flip under RTL) | OK | Diag | `apps/fret-ui-gallery/src/ui/snippets/tabs/extras.rs` + `tools/diag-scripts/ui-gallery/tabs/ui-gallery-tabs-rtl-keynav-screenshot.json` |
 | Slider / Range | Arrow keys + track fill direction | Unknown | None | — |
-| Tabs | Arrow keys direction + indicator positioning | Unknown | None | — |
+| Tabs (recipe) | Visual indicator + spacing parity under RTL | Unknown | None | — |
 | Pagination | Chevron semantics + “next/prev” physical ordering | Unknown | None | — |
 
 ## C — Gates (add the missing ones)
@@ -42,4 +44,3 @@ Legend:
   - [ ] installs direction the same way,
   - [ ] includes the same padding/wrappers (e.g. `p-4`),
   - [ ] and uses the same “start/end” semantics for alignment.
-
