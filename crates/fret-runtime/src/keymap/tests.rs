@@ -40,6 +40,39 @@ fn keymap_accepts_modifier_tokens_case_insensitive_and_aliases() {
 }
 
 #[test]
+fn keymap_accepts_key_context_when_and_resolves_with_key_contexts() {
+    let mut km = Keymap::empty();
+
+    let chord = KeyChord::new(
+        KeyCode::KeyK,
+        Modifiers {
+            ctrl: true,
+            ..Default::default()
+        },
+    );
+
+    km.push_binding(Binding {
+        platform: PlatformFilter::All,
+        sequence: vec![chord],
+        when: Some(WhenExpr::parse("keyctx.demo").unwrap()),
+        command: Some(CommandId::new(Arc::<str>::from("test.ctx"))),
+    });
+
+    let ctx = InputContext {
+        platform: Platform::Windows,
+        ..Default::default()
+    };
+
+    assert!(km.resolve(&ctx, chord).is_none());
+    assert_eq!(
+        km.resolve_with_key_contexts(&ctx, &[Arc::from("demo")], chord)
+            .unwrap()
+            .as_str(),
+        "test.ctx"
+    );
+}
+
+#[test]
 fn keymap_rejects_string_keys_used_as_boolean_when() {
     let bytes = br#"{
             "keymap_version": 1,
@@ -262,6 +295,59 @@ fn keymap_display_shortcut_prefers_later_overrides_for_the_same_command() {
 
     let out = km
         .display_shortcut_for_command_sequence(&base, &cmd)
+        .unwrap();
+    assert_eq!(out, vec![ctrl_shift_p]);
+}
+
+#[test]
+fn keymap_display_shortcut_can_be_key_context_aware() {
+    let mut km = Keymap::empty();
+    let cmd = CommandId::new(Arc::<str>::from("test.key_context_aware"));
+
+    let ctrl_p = KeyChord::new(
+        KeyCode::KeyP,
+        Modifiers {
+            ctrl: true,
+            ..Default::default()
+        },
+    );
+    let ctrl_shift_p = KeyChord::new(
+        KeyCode::KeyP,
+        Modifiers {
+            ctrl: true,
+            shift: true,
+            ..Default::default()
+        },
+    );
+
+    km.push_binding(Binding {
+        platform: PlatformFilter::All,
+        sequence: vec![ctrl_p],
+        when: Some(WhenExpr::parse("keyctx.editor").unwrap()),
+        command: Some(cmd.clone()),
+    });
+    km.push_binding(Binding {
+        platform: PlatformFilter::All,
+        sequence: vec![ctrl_shift_p],
+        when: Some(WhenExpr::parse("!keyctx.editor").unwrap()),
+        command: Some(cmd.clone()),
+    });
+
+    let base = InputContext {
+        platform: Platform::Windows,
+        ..Default::default()
+    };
+
+    let key_contexts = vec![Arc::<str>::from("editor")];
+    let empty: Vec<Arc<str>> = Vec::new();
+
+    let out = km
+        .display_shortcut_for_command_sequence_with_key_contexts(&base, &key_contexts, &cmd)
+        .unwrap();
+    assert_eq!(out, vec![ctrl_p]);
+
+    let out = km
+        .display_shortcut_for_command_sequence_with_key_contexts(&base, &empty, &cmd)
         .unwrap();
     assert_eq!(out, vec![ctrl_shift_p]);
 }

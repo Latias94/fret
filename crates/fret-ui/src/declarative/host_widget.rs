@@ -277,6 +277,31 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                 fn next_share_sheet_token(&mut self) -> fret_runtime::ShareSheetToken {
                     self.app.next_share_sheet_token()
                 }
+
+                fn record_pending_action_payload(
+                    &mut self,
+                    cx: crate::action::ActionCx,
+                    action: &fret_runtime::ActionId,
+                    payload: Box<dyn std::any::Any + Send + Sync>,
+                ) {
+                    self.app.with_global_mut(
+                        fret_runtime::WindowPendingActionPayloadService::default,
+                        |svc, app| {
+                            svc.record(cx.window, app.tick_id(), action.clone(), payload);
+                        },
+                    );
+                }
+
+                fn consume_pending_action_payload(
+                    &mut self,
+                    window: AppWindowId,
+                    action: &fret_runtime::ActionId,
+                ) -> Option<Box<dyn std::any::Any + Send + Sync>> {
+                    self.app.with_global_mut(
+                        fret_runtime::WindowPendingActionPayloadService::default,
+                        |svc, app| svc.consume(window, app.tick_id(), action),
+                    )
+                }
             }
 
             impl<H: UiHost> crate::action::UiFocusActionHost for CommandHookHost<'_, H> {

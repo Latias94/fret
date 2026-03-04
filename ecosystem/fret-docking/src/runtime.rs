@@ -314,11 +314,12 @@ pub fn handle_dock_op<H: UiHost>(app: &mut H, op: DockOp) -> bool {
                 },
                 anchor,
                 role: fret_runtime::WindowRole::Auxiliary,
-                style: fret_runtime::WindowStyleRequest {
-                    taskbar: Some(fret_runtime::TaskbarVisibility::Hide),
-                    activation: Some(fret_runtime::ActivationPolicy::Activates),
-                    z_level: None,
-                    ..Default::default()
+                style: {
+                    let caps = app
+                        .global::<PlatformCapabilities>()
+                        .cloned()
+                        .unwrap_or_default();
+                    fret_window_style_profiles::tool_window_profile_v1(&caps).style
                 },
             })));
             true
@@ -397,11 +398,12 @@ pub fn handle_dock_op<H: UiHost>(app: &mut H, op: DockOp) -> bool {
                 },
                 anchor,
                 role: fret_runtime::WindowRole::Auxiliary,
-                style: fret_runtime::WindowStyleRequest {
-                    taskbar: Some(fret_runtime::TaskbarVisibility::Hide),
-                    activation: Some(fret_runtime::ActivationPolicy::Activates),
-                    z_level: None,
-                    ..Default::default()
+                style: {
+                    let caps = app
+                        .global::<PlatformCapabilities>()
+                        .cloned()
+                        .unwrap_or_default();
+                    fret_window_style_profiles::tool_window_profile_v1(&caps).style
                 },
             })));
             true

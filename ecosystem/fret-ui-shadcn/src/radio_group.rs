@@ -12,6 +12,9 @@ use fret_ui::element::{
 };
 use fret_ui::{ElementContext, Theme, ThemeSnapshot, UiHost};
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
+use fret_ui_kit::declarative::motion::{
+    drive_tween_color_for_element, drive_tween_f32_for_element,
+};
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::radio_group as radio_group_prim;
 use fret_ui_kit::primitives::roving_focus_group;
@@ -20,6 +23,8 @@ use fret_ui_kit::{
     ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverrideSlot, Space, WidgetState,
     WidgetStateProperty, WidgetStates, resolve_override_slot,
 };
+
+use crate::overlay_motion;
 
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
     c.a = (c.a * mul).clamp(0.0, 1.0);
@@ -431,13 +436,15 @@ impl RadioGroup {
                         let default_indicator_color = default_indicator_color.clone();
                         let key = value.clone();
                         out.push(cx.keyed(key, move |cx| {
+                            let base_ring_style = ring_style;
+                            let focus_ring_for_props = base_ring_style.clone();
                             radio_group_prim::RadioGroupItem::new(value)
                                 .label(a11y_label.clone())
                                 .disabled(!item_enabled)
                                 .index(idx)
                                 .tab_stop(tab_stop)
                                 .set_size(set_size)
-                                .into_element(
+                                .into_element_with_props_hook(
                                     cx,
                                     &root_for_item,
                                     PressableProps {
@@ -454,7 +461,7 @@ impl RadioGroup {
                                         },
                                         enabled: item_enabled,
                                         focusable: tab_stop,
-                                        focus_ring: Some(ring_style),
+                                        focus_ring: Some(focus_ring_for_props),
                                         focus_ring_bounds: match item_variant {
                                             RadioGroupItemVariant::Default => Some(Rect::new(
                                                 Point::new(Px(0.0), Px(0.0)),
@@ -464,7 +471,7 @@ impl RadioGroup {
                                         },
                                         ..Default::default()
                                     },
-                                    move |cx, st, checked| {
+                                    move |cx, st, id, checked, props| {
                                         let theme = Theme::global(&*cx.app).snapshot();
                                         let theme_for_icon = theme.clone();
 
@@ -488,6 +495,40 @@ impl RadioGroup {
                                         } else {
                                             border_color
                                         };
+                                        let duration = overlay_motion::shadcn_motion_duration_150(cx);
+                                        let focus_visible =
+                                            states.contains(WidgetStates::FOCUS_VISIBLE);
+                                        let ring_alpha = drive_tween_f32_for_element(
+                                            cx,
+                                            id,
+                                            "radio_group.item.ring.alpha",
+                                            if focus_visible { 1.0 } else { 0.0 },
+                                            duration,
+                                            overlay_motion::shadcn_ease,
+                                        );
+                                        props.focus_ring_always_paint = ring_alpha.animating;
+                                        let mut ring_style = base_ring_style.clone();
+                                        ring_style.color.a = (ring_style.color.a
+                                            * ring_alpha.value)
+                                            .clamp(0.0, 1.0);
+                                        if let Some(offset_color) = ring_style.offset_color {
+                                            ring_style.offset_color = Some(Color {
+                                                a: (offset_color.a * ring_alpha.value)
+                                                    .clamp(0.0, 1.0),
+                                                ..offset_color
+                                            });
+                                        }
+                                        props.focus_ring = Some(ring_style);
+
+                                        let border_color = drive_tween_color_for_element(
+                                            cx,
+                                            id,
+                                            "radio_group.item.icon.border",
+                                            border_color,
+                                            duration,
+                                            overlay_motion::shadcn_ease,
+                                        )
+                                        .value;
                                         let fg = resolve_override_slot(
                                             style_override.label_color.as_ref(),
                                             &default_label_color,
@@ -736,6 +777,11 @@ pub fn radio_group_uncontrolled<H: UiHost, T: Into<Arc<str>>>(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    use std::cell::Cell;
+    use std::rc::Rc;
+    use std::time::Duration;
+
     use fret_app::App;
     use fret_core::{
         AppWindowId, Modifiers, PathCommand, SemanticsRole, SvgId, SvgService, TextBlobId,
@@ -744,7 +790,10 @@ mod tests {
     use fret_core::{Event, KeyCode};
     use fret_core::{PathConstraints, PathId, PathMetrics, PathService, PathStyle};
     use fret_core::{Point, Px, Rect};
+    use fret_runtime::FrameId;
+    use fret_ui::element::{ElementKind, PressableProps};
     use fret_ui::{Theme, ThemeConfig, UiTree};
+    use fret_ui_kit::declarative::transition::ticks_60hz_for_duration;
 
     struct FakeServices;
 
@@ -1723,5 +1772,194 @@ mod tests {
 
         let selected = app.models().get_cloned(&model).flatten();
         assert_eq!(selected.as_deref(), Some("beta"));
+    }
+
+    fn find_pressable_by_label<'a>(el: &'a AnyElement, label: &str) -> Option<&'a PressableProps> {
+        match &el.kind {
+            ElementKind::Pressable(props) => {
+                if props.a11y.label.as_deref() == Some(label) {
+                    return Some(props);
+                }
+            }
+            _ => {}
+        }
+
+        for child in &el.children {
+            if let Some(found) = find_pressable_by_label(child, label) {
+                return Some(found);
+            }
+        }
+
+        None
+    }
+
+    #[test]
+    fn radio_group_item_focus_ring_tweens_in_and_out_like_a_transition() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        crate::shadcn_themes::apply_shadcn_new_york(
+            &mut app,
+            crate::shadcn_themes::ShadcnBaseColor::Neutral,
+            crate::shadcn_themes::ShadcnColorScheme::Light,
+        );
+
+        let model = app.models_mut().insert(Some(Arc::from("alpha")));
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(320.0), Px(200.0)),
+        );
+        let mut services = FakeServices;
+
+        let ring_alpha_out: Rc<Cell<Option<f32>>> = Rc::new(Cell::new(None));
+        let always_paint_out: Rc<Cell<Option<bool>>> = Rc::new(Cell::new(None));
+
+        fn render_frame(
+            ui: &mut UiTree<App>,
+            app: &mut App,
+            services: &mut dyn fret_core::UiServices,
+            window: AppWindowId,
+            bounds: Rect,
+            model: Model<Option<Arc<str>>>,
+            ring_alpha_out: Rc<Cell<Option<f32>>>,
+            always_paint_out: Rc<Cell<Option<bool>>>,
+        ) -> fret_core::NodeId {
+            app.set_frame_id(FrameId(app.frame_id().0.saturating_add(1)));
+
+            let model_for_render = model.clone();
+            let ring_alpha_out_for_render = ring_alpha_out.clone();
+            let always_paint_out_for_render = always_paint_out.clone();
+            let root = fret_ui::declarative::render_root(
+                ui,
+                app,
+                services,
+                window,
+                bounds,
+                "shadcn-radio-group-focus-ring-transition",
+                move |cx| {
+                    let el = RadioGroup::new(model_for_render.clone())
+                        .item(RadioGroupItem::new("alpha", "Alpha"))
+                        .item(RadioGroupItem::new("beta", "Beta"))
+                        .into_element(cx);
+                    let pressable = find_pressable_by_label(&el, "Alpha").expect("alpha pressable");
+                    let ring = pressable.focus_ring.expect("focus ring");
+                    ring_alpha_out_for_render.set(Some(ring.color.a));
+                    always_paint_out_for_render.set(Some(pressable.focus_ring_always_paint));
+                    vec![el]
+                },
+            );
+            ui.set_root(root);
+            ui.request_semantics_snapshot();
+            ui.layout_all(app, services, bounds, 1.0);
+            root
+        }
+
+        app.set_frame_id(FrameId(0));
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            ring_alpha_out.clone(),
+            always_paint_out.clone(),
+        );
+        let a0 = ring_alpha_out.get().expect("a0");
+        assert!(a0.abs() <= 1e-6, "expected ring alpha=0, got {a0}");
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let alpha_node = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::RadioButton && n.label.as_deref() == Some("Alpha"))
+            .expect("alpha semantics");
+        ui.set_focus(Some(alpha_node.id));
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::KeyDown {
+                key: KeyCode::Tab,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            ring_alpha_out.clone(),
+            always_paint_out.clone(),
+        );
+        let a1 = ring_alpha_out.get().expect("a1");
+        assert!(a1 > 0.0, "expected ring alpha to animate in, got {a1}");
+
+        let settle = ticks_60hz_for_duration(Duration::from_millis(150)) + 2;
+        for _ in 0..settle {
+            let _ = render_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                model.clone(),
+                ring_alpha_out.clone(),
+                always_paint_out.clone(),
+            );
+        }
+        let a_focused = ring_alpha_out.get().expect("a_focused");
+        assert!(
+            a_focused > a1 + 1e-4,
+            "expected ring alpha to increase over time, got a1={a1} a_focused={a_focused}"
+        );
+
+        ui.set_focus(None);
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            ring_alpha_out.clone(),
+            always_paint_out.clone(),
+        );
+        let a_blur = ring_alpha_out.get().expect("a_blur");
+        let always_paint = always_paint_out.get().expect("always_paint");
+        assert!(
+            a_blur > 0.0 && a_blur < a_focused,
+            "expected ring alpha to be intermediate after blur, got a_blur={a_blur} a_focused={a_focused}"
+        );
+        assert!(always_paint, "expected always_paint while animating out");
+
+        for _ in 0..settle {
+            let _ = render_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                model.clone(),
+                ring_alpha_out.clone(),
+                always_paint_out.clone(),
+            );
+        }
+        let a_final = ring_alpha_out.get().expect("a_final");
+        let always_paint_final = always_paint_out.get().expect("always_paint_final");
+        assert!(
+            a_final.abs() <= 1e-4,
+            "expected ring alpha=0, got {a_final}"
+        );
+        assert!(
+            !always_paint_final,
+            "expected always_paint to stop after settling"
+        );
     }
 }

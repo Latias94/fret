@@ -123,6 +123,26 @@ fn script_v1_roundtrip_active_item_is_none_predicate() {
 }
 
 #[test]
+fn script_v1_roundtrip_window_style_effective_hit_test() {
+    assert_script_v1_roundtrip(
+        r#"{
+  "schema_version": 1,
+  "steps": [
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "window_style_effective_is",
+        "window": { "kind": "current" },
+        "style": { "hit_test": "passthrough_all" }
+      },
+      "timeout_frames": 1
+    }
+  ]
+}"#,
+    );
+}
+
+#[test]
 fn script_v2_roundtrip_command_palette_shortcut_primary() {
     assert_script_v2_roundtrip(include_str!(
         "../../../tools/diag-scripts/ui-gallery-command-palette-shortcut-primary.json"
@@ -489,6 +509,28 @@ fn script_v2_roundtrip_set_window_inner_size_first_seen() {
 }
 
 #[test]
+fn script_v2_roundtrip_set_window_style_hit_test_regions() {
+    assert_script_v2_roundtrip(
+        r#"{
+  "schema_version": 2,
+  "steps": [
+    {
+      "type": "set_window_style",
+      "style": {
+        "hit_test": {
+          "kind": "passthrough_regions",
+          "regions": [
+            { "kind": "rect", "x": 10.0, "y": 20.0, "width": 300.0, "height": 200.0 }
+          ]
+        }
+      }
+    }
+  ]
+}"#,
+    );
+}
+
+#[test]
 fn script_v2_roundtrip_set_cursor_screen_pos() {
     assert_script_v2_roundtrip(
         r#"{
@@ -686,14 +728,14 @@ fn script_v2_roundtrip_dock_drag_transparent_payload_applied_predicate() {
 }
 
 #[test]
-fn script_v2_roundtrip_dock_drag_transparent_payload_mouse_passthrough_applied_predicate() {
+fn script_v2_roundtrip_dock_drag_transparent_payload_hit_test_passthrough_applied_predicate() {
     assert_script_v2_roundtrip(
         r#"{
   "schema_version": 2,
   "steps": [
     {
       "type": "assert",
-      "predicate": { "kind": "dock_drag_transparent_payload_mouse_passthrough_applied_is", "applied": true }
+      "predicate": { "kind": "dock_drag_transparent_payload_hit_test_passthrough_applied_is", "applied": true }
     }
   ]
 }"#,

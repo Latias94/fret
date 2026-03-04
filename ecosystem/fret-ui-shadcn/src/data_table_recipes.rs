@@ -1758,44 +1758,54 @@ impl DataTablePagination {
                     text = text.text_color(ColorRef::Color(color));
                 }
 
-                vec![
-                    text.into_element(cx),
-                    cx.spacer(fret_ui::element::SpacerProps::default()),
-                    Button::new("Go to first page")
-                        .variant(ButtonVariant::Outline)
-                        .size(ButtonSize::Icon)
-                        .disabled(!first_enabled)
-                        .on_activate(first_on_activate.clone())
-                        .children([crate::icon::icon(cx, rtl::chevrons_inline_start(dir))])
-                        .into_element(cx),
-                    Button::new("Go to previous page")
-                        .variant(ButtonVariant::Outline)
-                        .size(ButtonSize::Icon)
-                        .disabled(!prev_enabled)
-                        .on_activate(prev_on_activate.clone())
-                        .children([crate::icon::icon(cx, rtl::chevron_inline_start(dir))])
-                        .into_element(cx),
-                    Button::new(page_label.clone())
-                        .variant(ButtonVariant::Ghost)
-                        .size(ButtonSize::Sm)
-                        .label_tabular_nums()
-                        .into_element(cx),
-                    Button::new("Go to next page")
-                        .variant(ButtonVariant::Outline)
-                        .size(ButtonSize::Icon)
-                        .disabled(!next_enabled)
-                        .on_activate(next_on_activate.clone())
-                        .children([crate::icon::icon(cx, rtl::chevron_inline_end(dir))])
-                        .into_element(cx),
-                    Button::new("Go to last page")
-                        .variant(ButtonVariant::Outline)
-                        .size(ButtonSize::Icon)
-                        .disabled(!last_enabled)
-                        .on_activate(last_on_activate.clone())
-                        .children([crate::icon::icon(cx, rtl::chevrons_inline_end(dir))])
-                        .into_element(cx),
+                let selected_text = text.into_element(cx);
+                let spacer = cx.spacer(fret_ui::element::SpacerProps::default());
+
+                let first_btn = Button::new("Go to first page")
+                    .variant(ButtonVariant::Outline)
+                    .size(ButtonSize::Icon)
+                    .disabled(!first_enabled)
+                    .on_activate(first_on_activate.clone())
+                    .children([crate::icon::icon(cx, rtl::chevrons_inline_start(dir))])
+                    .into_element(cx);
+                let prev_btn = Button::new("Go to previous page")
+                    .variant(ButtonVariant::Outline)
+                    .size(ButtonSize::Icon)
+                    .disabled(!prev_enabled)
+                    .on_activate(prev_on_activate.clone())
+                    .children([crate::icon::icon(cx, rtl::chevron_inline_start(dir))])
+                    .into_element(cx);
+                let page_btn = Button::new(page_label.clone())
+                    .variant(ButtonVariant::Ghost)
+                    .size(ButtonSize::Sm)
+                    .label_tabular_nums()
+                    .into_element(cx);
+                let next_btn = Button::new("Go to next page")
+                    .variant(ButtonVariant::Outline)
+                    .size(ButtonSize::Icon)
+                    .disabled(!next_enabled)
+                    .on_activate(next_on_activate.clone())
+                    .children([crate::icon::icon(cx, rtl::chevron_inline_end(dir))])
+                    .into_element(cx);
+                let last_btn = Button::new("Go to last page")
+                    .variant(ButtonVariant::Outline)
+                    .size(ButtonSize::Icon)
+                    .disabled(!last_enabled)
+                    .on_activate(last_on_activate.clone())
+                    .children([crate::icon::icon(cx, rtl::chevrons_inline_end(dir))])
+                    .into_element(cx);
+
+                let items = vec![
+                    selected_text,
+                    spacer,
+                    first_btn,
+                    prev_btn,
+                    page_btn,
+                    next_btn,
+                    last_btn,
                     page_size_menu,
-                ]
+                ];
+                rtl::reverse_in_rtl(dir, items)
             },
         )
     }

@@ -12,6 +12,7 @@ use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
+use fret_ui_kit::declarative::motion::drive_tween_f32_for_element;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::checkbox::{
     CheckedState, checkbox_a11y, checkbox_use_checked_model, checked_state_from_optional_bool,
@@ -25,6 +26,8 @@ use fret_ui_kit::{
     ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverrideSlot, Radius, WidgetState,
     WidgetStateProperty, WidgetStates, resolve_override_slot, resolve_override_slot_opt,
 };
+
+use crate::overlay_motion;
 
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
     c.a = (c.a * mul).clamp(0.0, 1.0);
@@ -370,6 +373,16 @@ impl Checkbox {
 
                 let mut states = WidgetStates::from_pressable(cx, st, !disabled);
                 states.set(WidgetState::Selected, is_on);
+                let focus_visible = states.contains(WidgetStates::FOCUS_VISIBLE);
+                let duration = overlay_motion::shadcn_motion_duration_150(cx);
+                let ring_alpha = drive_tween_f32_for_element(
+                    cx,
+                    id,
+                    "checkbox.ring.alpha",
+                    if focus_visible { 1.0 } else { 0.0 },
+                    duration,
+                    overlay_motion::shadcn_ease,
+                );
 
                 let bg = resolve_override_slot_opt(
                     style_override.background.as_ref(),
@@ -457,11 +470,20 @@ impl Checkbox {
                     a11y.labelled_by_element = Some(label.0);
                 }
                 a11y.test_id = test_id.clone();
+                let mut ring = ring;
+                ring.color.a = (ring.color.a * ring_alpha.value).clamp(0.0, 1.0);
+                if let Some(offset_color) = ring.offset_color {
+                    ring.offset_color = Some(Color {
+                        a: (offset_color.a * ring_alpha.value).clamp(0.0, 1.0),
+                        ..offset_color
+                    });
+                }
                 let pressable_props = PressableProps {
                     layout: pressable_layout,
                     enabled: !disabled,
                     focusable: true,
                     focus_ring: Some(ring),
+                    focus_ring_always_paint: ring_alpha.animating,
                     a11y,
                     ..Default::default()
                 };
@@ -533,6 +555,10 @@ pub fn checkbox_opt<H: UiHost>(
 mod tests {
     use super::*;
 
+    use std::cell::Cell;
+    use std::rc::Rc;
+    use std::time::Duration;
+
     use fret_app::App;
     use fret_core::{
         AppWindowId, Modifiers, MouseButton, PathCommand, PathConstraints, PathId, PathMetrics,
@@ -540,10 +566,12 @@ mod tests {
         TextBlobId, TextConstraints, TextMetrics, TextService,
     };
     use fret_runtime::{
-        CommandMeta, CommandScope, WindowCommandActionAvailabilityService,
+        CommandMeta, CommandScope, FrameId, WindowCommandActionAvailabilityService,
         WindowCommandEnabledService, WindowCommandGatingService, WindowCommandGatingSnapshot,
     };
+    use fret_ui::element::{ElementKind, PressableProps};
     use fret_ui::tree::UiTree;
+    use fret_ui_kit::declarative::transition::ticks_60hz_for_duration;
     use std::collections::HashMap;
 
     struct FakeServices;
@@ -1314,5 +1342,198 @@ mod tests {
             .find(|n| n.test_id.as_deref() == Some("disabled-checkbox"))
             .expect("expected a semantics node for the checkbox test_id");
         assert!(node.flags.disabled);
+    }
+
+    fn find_pressable_by_test_id<'a>(
+        el: &'a AnyElement,
+        test_id: &str,
+    ) -> Option<&'a PressableProps> {
+        match &el.kind {
+            ElementKind::Pressable(props) => {
+                if props.a11y.test_id.as_deref() == Some(test_id) {
+                    return Some(props);
+                }
+            }
+            _ => {}
+        }
+
+        for child in &el.children {
+            if let Some(found) = find_pressable_by_test_id(child, test_id) {
+                return Some(found);
+            }
+        }
+
+        None
+    }
+
+    #[test]
+    fn checkbox_focus_ring_tweens_in_and_out_like_a_transition() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        crate::shadcn_themes::apply_shadcn_new_york(
+            &mut app,
+            crate::shadcn_themes::ShadcnBaseColor::Neutral,
+            crate::shadcn_themes::ShadcnColorScheme::Light,
+        );
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(200.0), Px(120.0)),
+        );
+        let mut services = FakeServices;
+
+        let model = app.models_mut().insert(false);
+
+        let ring_alpha_out: Rc<Cell<Option<f32>>> = Rc::new(Cell::new(None));
+        let always_paint_out: Rc<Cell<Option<bool>>> = Rc::new(Cell::new(None));
+
+        fn render_frame(
+            ui: &mut UiTree<App>,
+            app: &mut App,
+            services: &mut dyn fret_core::UiServices,
+            window: AppWindowId,
+            bounds: Rect,
+            model: Model<bool>,
+            ring_alpha_out: Rc<Cell<Option<f32>>>,
+            always_paint_out: Rc<Cell<Option<bool>>>,
+        ) -> fret_core::NodeId {
+            let next_frame = FrameId(app.frame_id().0.saturating_add(1));
+            app.set_frame_id(next_frame);
+
+            let model_for_render = model.clone();
+            let ring_alpha_out_for_render = ring_alpha_out.clone();
+            let always_paint_out_for_render = always_paint_out.clone();
+            let root = fret_ui::declarative::render_root(
+                ui,
+                app,
+                services,
+                window,
+                bounds,
+                "shadcn-checkbox-focus-ring-transition",
+                move |cx| {
+                    let el = Checkbox::new(model_for_render.clone())
+                        .test_id("checkbox")
+                        .into_element(cx);
+                    let pressable =
+                        find_pressable_by_test_id(&el, "checkbox").expect("checkbox pressable");
+                    let ring = pressable.focus_ring.expect("focus ring");
+                    ring_alpha_out_for_render.set(Some(ring.color.a));
+                    always_paint_out_for_render.set(Some(pressable.focus_ring_always_paint));
+                    vec![el]
+                },
+            );
+            ui.set_root(root);
+            ui.request_semantics_snapshot();
+            ui.layout_all(app, services, bounds, 1.0);
+            root
+        }
+
+        app.set_frame_id(FrameId(0));
+        let root = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            ring_alpha_out.clone(),
+            always_paint_out.clone(),
+        );
+
+        let a0 = ring_alpha_out.get().expect("a0");
+        assert!(a0.abs() <= 1e-6, "expected ring alpha=0, got {a0}");
+
+        let focusable = ui
+            .first_focusable_descendant_including_declarative(&mut app, window, root)
+            .expect("focusable checkbox");
+        ui.set_focus(Some(focusable));
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::KeyDown {
+                key: fret_core::KeyCode::Tab,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            ring_alpha_out.clone(),
+            always_paint_out.clone(),
+        );
+        let a1 = ring_alpha_out.get().expect("a1");
+        assert!(a1 > 0.0, "expected ring alpha to animate in, got {a1}");
+
+        let settle = ticks_60hz_for_duration(Duration::from_millis(150)) + 2;
+        for _ in 0..settle {
+            let _ = render_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                model.clone(),
+                ring_alpha_out.clone(),
+                always_paint_out.clone(),
+            );
+        }
+
+        let a_focused = ring_alpha_out.get().expect("a_focused");
+        assert!(
+            a_focused > a1 + 1e-4,
+            "expected ring alpha to increase over time, got a1={a1} a_focused={a_focused}"
+        );
+
+        ui.set_focus(None);
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            ring_alpha_out.clone(),
+            always_paint_out.clone(),
+        );
+        let a_blur = ring_alpha_out.get().expect("a_blur");
+        let always_paint = always_paint_out.get().expect("always_paint");
+        assert!(
+            a_blur > 0.0 && a_blur < a_focused,
+            "expected ring alpha to be intermediate after blur, got a_blur={a_blur} a_focused={a_focused}"
+        );
+        assert!(always_paint, "expected always_paint while animating out");
+
+        for _ in 0..settle {
+            let _ = render_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                model.clone(),
+                ring_alpha_out.clone(),
+                always_paint_out.clone(),
+            );
+        }
+
+        let a_final = ring_alpha_out.get().expect("a_final");
+        let always_paint_final = always_paint_out.get().expect("always_paint_final");
+        assert!(
+            a_final.abs() <= 1e-4,
+            "expected ring alpha=0, got {a_final}"
+        );
+        assert!(
+            !always_paint_final,
+            "expected always_paint to stop after settling"
+        );
     }
 }

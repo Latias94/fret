@@ -79,14 +79,14 @@ pub struct DragSession {
     pub window_under_moving_window_source: WindowUnderCursorSource,
     /// Best-effort diagnostics hint: true when the runner has applied an ImGui-style "transparent
     /// payload" treatment to the moving dock window (e.g. reduced opacity and/or click-through
-    /// mouse passthrough while following the cursor).
+    /// hit-test passthrough while following the cursor).
     pub transparent_payload_applied: bool,
     /// Best-effort diagnostics hint: true when the runner successfully applied click-through
-    /// mouse passthrough to the moving dock window while transparent payload is enabled.
+    /// hit-test passthrough to the moving dock window while transparent payload is enabled.
     ///
     /// This is a result signal (applied by the OS/window backend), not a request. When false,
     /// the runner either did not attempt passthrough or the platform/backend rejected it.
-    pub transparent_payload_mouse_passthrough_applied: bool,
+    pub transparent_payload_hit_test_passthrough_applied: bool,
     /// Best-effort diagnostics hint: which mechanism was used to select the hovered window during
     /// cross-window drag routing (OS-backed vs heuristic).
     pub window_under_cursor_source: WindowUnderCursorSource,
@@ -119,7 +119,7 @@ impl DragSession {
             window_under_moving_window: None,
             window_under_moving_window_source: WindowUnderCursorSource::Unknown,
             transparent_payload_applied: false,
-            transparent_payload_mouse_passthrough_applied: false,
+            transparent_payload_hit_test_passthrough_applied: false,
             window_under_cursor_source: WindowUnderCursorSource::Unknown,
             dragging: false,
             phase: DragPhase::Starting,
@@ -150,7 +150,7 @@ impl DragSession {
             window_under_moving_window: None,
             window_under_moving_window_source: WindowUnderCursorSource::Unknown,
             transparent_payload_applied: false,
-            transparent_payload_mouse_passthrough_applied: false,
+            transparent_payload_hit_test_passthrough_applied: false,
             window_under_cursor_source: WindowUnderCursorSource::Unknown,
             dragging: false,
             phase: DragPhase::Starting,

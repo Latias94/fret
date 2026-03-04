@@ -4,7 +4,8 @@ use fret_core::geometry::Edges;
 use fret_core::{Axis, Color, FontId, FontWeight, Px, TextStyle};
 use fret_runtime::{CommandId, Model};
 use fret_ui::element::{
-    AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, Overflow,
+    AnyElement, ContainerProps, CrossAlign, ElementKind, FlexProps, LayoutStyle, Length, MainAlign,
+    Overflow,
 };
 use fret_ui::scroll::VirtualListScrollHandle;
 use fret_ui::{ElementContext, Theme, ThemeSnapshot, UiHost};
@@ -23,6 +24,7 @@ use fret_ui_headless::table::{
 };
 
 use crate::button::{Button, ButtonSize, ButtonVariant};
+use crate::direction::{LayoutDirection, use_direction};
 use crate::dropdown_menu::{
     DropdownMenu, DropdownMenuAlign, DropdownMenuEntry, DropdownMenuItem, DropdownMenuSide,
 };
@@ -46,9 +48,62 @@ fn table_text_style(theme: &ThemeSnapshot) -> TextStyle {
     style
 }
 
+fn apply_default_text_style_recursive(mut el: AnyElement, style: &TextStyle) -> AnyElement {
+    match &mut el.kind {
+        ElementKind::Text(props) => {
+            if props.style.is_none() {
+                props.style = Some(style.clone());
+            }
+        }
+        ElementKind::StyledText(props) => {
+            if props.style.is_none() {
+                props.style = Some(style.clone());
+            }
+        }
+        ElementKind::SelectableText(props) => {
+            if props.style.is_none() {
+                props.style = Some(style.clone());
+            }
+        }
+        _ => {}
+    }
+
+    let children = std::mem::take(&mut el.children);
+    el.children = children
+        .into_iter()
+        .map(|child| apply_default_text_style_recursive(child, style))
+        .collect();
+    el
+}
+
 fn mixed_revision(a: u64, b: u64) -> u64 {
     // Cheap, deterministic mixing to avoid obvious collisions.
     a ^ b.wrapping_mul(0x9E37_79B9_7F4A_7C15)
+}
+
+fn reverse_columns_recursive<TData>(cols: &[ColumnDef<TData>]) -> Vec<ColumnDef<TData>> {
+    cols.iter()
+        .rev()
+        .map(|col| {
+            let mut col = col.clone();
+            if !col.columns.is_empty() {
+                col.columns = reverse_columns_recursive(&col.columns);
+            }
+            col
+        })
+        .collect()
+}
+
+fn columns_for_direction<TData>(
+    dir: LayoutDirection,
+    columns: Arc<[ColumnDef<TData>]>,
+) -> Arc<[ColumnDef<TData>]> {
+    if dir == LayoutDirection::Rtl {
+        let reversed = reverse_columns_recursive(&columns);
+        Arc::from(reversed.into_boxed_slice())
+    } else {
+        columns
+    }
 }
 
 const COLUMN_ACTION_PREFIX: &str = "fret_ui_shadcn.data_table.column_action/";
@@ -424,11 +479,13 @@ impl DataTable {
 
         let theme = Theme::global(&*cx.app).snapshot();
         let border = border_color(&theme);
+        let body_text_style = table_text_style(&theme);
 
         let state_revision = state.revision(&*cx.app).unwrap_or(0);
         let items_revision = mixed_revision(data_revision, state_revision);
 
-        let columns: Arc<[ColumnDef<TData>]> = columns.into();
+        let columns: Arc<[ColumnDef<TData>]> =
+            columns_for_direction(use_direction(cx, None), columns.into());
 
         let root_chrome = ChromeRefinement::default()
             .rounded(Radius::Lg)
@@ -443,7 +500,14 @@ impl DataTable {
 
             let get_row_key = Arc::new(get_row_key);
             let header_label = Arc::new(header_label);
-            let cell_at = Arc::new(cell_at);
+            let cell_at_raw = Arc::new(cell_at);
+            let body_text_style_for_cells = body_text_style.clone();
+            let cell_at = Arc::new(
+                move |cx: &mut ElementContext<'_, H>, col: &ColumnDef<TData>, row: &TData| {
+                    let el = cell_at_raw(cx, col, row);
+                    apply_default_text_style_recursive(el, &body_text_style_for_cells)
+                },
+            );
 
             let header_accessory_at: Option<
                 Arc<dyn Fn(&mut ElementContext<'_, H>, &ColumnDef<TData>) -> AnyElement>,
@@ -624,7 +688,8 @@ impl DataTable {
         let state_revision = state.revision(&*cx.app).unwrap_or(0);
         let items_revision = mixed_revision(data_revision, state_revision);
 
-        let columns: Arc<[ColumnDef<TData>]> = columns.into();
+        let columns: Arc<[ColumnDef<TData>]> =
+            columns_for_direction(use_direction(cx, None), columns.into());
 
         let root_chrome = ChromeRefinement::default()
             .rounded(Radius::Lg)
@@ -636,6 +701,7 @@ impl DataTable {
 
         let root = cx.container(root_props, move |cx| {
             let theme = Theme::global(&*cx.app).snapshot();
+            let body_text_style = table_text_style(&theme);
             let scroll_handle = cx.with_state(VirtualListScrollHandle::new, |h| h.clone());
 
             let header_style = TextStyle {
@@ -647,7 +713,14 @@ impl DataTable {
 
             let get_row_key = Arc::new(get_row_key);
             let header_label = Arc::new(header_label);
-            let cell_at = Arc::new(cell_at);
+            let cell_at_raw = Arc::new(cell_at);
+            let body_text_style_for_cells = body_text_style.clone();
+            let cell_at = Arc::new(move |cx: &mut ElementContext<'_, H>,
+                                     col: &ColumnDef<TData>,
+                                     row: &TData| {
+                let el = cell_at_raw(cx, col, row);
+                apply_default_text_style_recursive(el, &body_text_style_for_cells)
+            });
 
             let mut view_props = TableViewProps::default();
             view_props.overscan = overscan;
@@ -702,6 +775,10 @@ impl DataTable {
                         let sort_fg = sort_fg;
                         let can_sort = col.enable_sorting;
                         let state_for_header = state_for_header.clone();
+                        let justify = match crate::use_direction(cx, None) {
+                            crate::LayoutDirection::Rtl => MainAlign::End,
+                            crate::LayoutDirection::Ltr => MainAlign::Start,
+                        };
                         return vec![cx.flex(
                             FlexProps {
                                 layout: decl_style::layout_style(
@@ -711,7 +788,7 @@ impl DataTable {
                                 direction: Axis::Horizontal,
                                 gap: Px(8.0).into(),
                                 padding: Edges::all(Px(0.0)).into(),
-                                justify: MainAlign::Start,
+                                justify,
                                 align: CrossAlign::Center,
                                 wrap: false,
                             },
@@ -813,6 +890,10 @@ impl DataTable {
                     let col_id: Arc<str> = Arc::from(col.id.as_ref());
                     let can_hide = col.enable_hiding;
                     let can_pin = col.enable_pinning;
+                    let justify = match crate::use_direction(cx, None) {
+                        crate::LayoutDirection::Rtl => MainAlign::End,
+                        crate::LayoutDirection::Ltr => MainAlign::Start,
+                    };
                     vec![cx.flex(
                         FlexProps {
                             layout: decl_style::layout_style(
@@ -822,7 +903,7 @@ impl DataTable {
                             direction: Axis::Horizontal,
                             gap: Px(4.0).into(),
                             padding: Edges::all(Px(0.0)).into(),
-                            justify: MainAlign::Start,
+                            justify,
                             align: CrossAlign::Center,
                             wrap: false,
                         },
@@ -836,7 +917,7 @@ impl DataTable {
                                     direction: Axis::Horizontal,
                                     gap: Px(8.0).into(),
                                     padding: Edges::all(Px(0.0)).into(),
-                                    justify: MainAlign::Start,
+                                    justify,
                                     align: CrossAlign::Center,
                                     wrap: false,
                                 },

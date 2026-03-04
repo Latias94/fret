@@ -9,7 +9,7 @@ struct DockDragRuntimeState {
     window_under_moving_window: Option<AppWindowId>,
     window_under_moving_window_source: fret_runtime::WindowUnderCursorSource,
     transparent_payload_applied: bool,
-    transparent_payload_mouse_passthrough_applied: bool,
+    transparent_payload_hit_test_passthrough_applied: bool,
     window_under_cursor_source: fret_runtime::WindowUnderCursorSource,
 }
 
@@ -60,8 +60,8 @@ fn dock_drag_runtime_state(
             window_under_moving_window: drag.window_under_moving_window,
             window_under_moving_window_source: drag.window_under_moving_window_source,
             transparent_payload_applied: drag.transparent_payload_applied,
-            transparent_payload_mouse_passthrough_applied: drag
-                .transparent_payload_mouse_passthrough_applied,
+            transparent_payload_hit_test_passthrough_applied: drag
+                .transparent_payload_hit_test_passthrough_applied,
             window_under_cursor_source: drag.window_under_cursor_source,
         });
     }

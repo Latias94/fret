@@ -187,7 +187,11 @@ fn command_gating_decision_trace(
         blocked_by.push("action_availability".to_string());
     }
 
-    let command_when = meta.and_then(|m| m.when.as_ref().map(|w| w.eval(gating.input_ctx())));
+    let command_when = meta.and_then(|m| {
+        m.when
+            .as_ref()
+            .map(|w| w.eval_with_key_contexts(gating.input_ctx(), gating.key_contexts()))
+    });
     if command_when == Some(false) {
         blocked_by.push("when".to_string());
     }
@@ -197,7 +201,8 @@ fn command_gating_decision_trace(
         blocked_by.push("enabled_override".to_string());
     }
 
-    let menu_when = menu_when.map(|w| w.eval(gating.input_ctx()));
+    let menu_when =
+        menu_when.map(|w| w.eval_with_key_contexts(gating.input_ctx(), gating.key_contexts()));
     if menu_when == Some(false) {
         blocked_by.push("menu_when".to_string());
     }

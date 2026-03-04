@@ -1,0 +1,57 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "Cookbook: payload actions basics (remove row)",
+    "tags": ["cookbook", "payload_actions", "actions", "gate", "smoke"],
+    "required_capabilities": ["diag.script_v2", "diag.command_dispatch_trace"],
+    "target_hints": [
+      "Waits for the payload-actions example root to exist.",
+      "Clicks the remove button for row 2 and asserts a pointer-triggered dispatch trace exists.",
+      "Asserts row 2 is removed from the UI tree."
+    ]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "cookbook.payload_actions.root" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "cookbook.payload_actions.remove.2" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "cookbook.payload_actions.remove.2" }
+    },
+    {
+      "type": "wait_command_dispatch_trace",
+      "query": {
+        "command": "cookbook.payload_actions.remove.v2",
+        "source_kind": "pointer",
+        "source_test_id": "cookbook.payload_actions.remove.2",
+        "handled": true,
+        "handled_by_scope": "widget"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "not_exists",
+        "target": { "kind": "test_id", "id": "cookbook.payload_actions.row.2" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "capture_bundle", "label": "cookbook-payload-actions-basics-remove" }
+  ]
+}
+

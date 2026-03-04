@@ -53,6 +53,8 @@ fn when_expr_identifier_contract_covers_builtin_identifiers() {
         "edit.can_redo",
         "router.can_back",
         "router.can_forward",
+        "keyctx.demo",
+        "keyctx.cookbook.commands",
     ];
     for ident in bool_idents {
         WhenExpr::parse(ident)
@@ -102,6 +104,30 @@ fn when_expr_can_eval_capability_strings() {
         WhenExpr::parse("dnd.external_position == \"best_effort\"")
             .unwrap()
             .eval(&ctx)
+    );
+}
+
+#[test]
+fn when_expr_can_eval_key_context_bools() {
+    use std::sync::Arc;
+
+    let ctx = InputContext::default();
+    let active: Vec<Arc<str>> = vec![Arc::from("cookbook.commands")];
+
+    assert!(
+        WhenExpr::parse("keyctx.cookbook.commands")
+            .unwrap()
+            .eval_with_key_contexts(&ctx, &active)
+    );
+    assert!(
+        WhenExpr::parse("keyctx.cookbook")
+            .unwrap()
+            .eval_with_key_contexts(&ctx, &active)
+    );
+    assert!(
+        !WhenExpr::parse("keyctx.other")
+            .unwrap()
+            .eval_with_key_contexts(&ctx, &active)
     );
 }
 

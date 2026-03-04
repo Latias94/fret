@@ -13,12 +13,15 @@ use fret_ui::element::{
     AnyElement, ContainerProps, FlexProps, LayoutStyle, Length, Overflow, PointerRegionProps,
     PressableA11y, PressableProps, SemanticsDecoration, TextAreaProps, TextInputProps, TextProps,
 };
-use fret_ui::{ElementContext, TextAreaStyle, TextInputStyle, Theme, UiHost};
+use fret_ui::{ElementContext, TextAreaStyle, TextInputStyle, Theme, UiHost, focus_visible};
 use fret_ui_kit::command::ElementCommandGatingExt as _;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
 use fret_ui_kit::declarative::current_color;
 use fret_ui_kit::declarative::icon as decl_icon;
+use fret_ui_kit::declarative::motion::{
+    drive_tween_color_for_element, drive_tween_f32_for_element,
+};
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::recipes::input::{InputTokenKeys, resolve_input_chrome};
 use fret_ui_kit::typography;
@@ -424,6 +427,7 @@ impl InputGroup {
         let trailing_has_button = self.trailing_has_button;
         let leading_has_kbd = self.leading_has_kbd;
         let trailing_has_kbd = self.trailing_has_kbd;
+        let aria_invalid = self.aria_invalid;
         let control = self.control;
         let a11y_label = self.a11y_label;
         let submit_command = self.submit_command;
@@ -433,6 +437,7 @@ impl InputGroup {
         let textarea_min_height = self.textarea_min_height;
         let textarea_max_height = self.textarea_max_height;
         let test_id = self.test_id;
+        let overlay_test_id = test_id.clone();
         let control_test_id = self.control_test_id;
         let control_on_key_down = self.control_on_key_down;
         let disabled = self.disabled;
@@ -467,10 +472,10 @@ impl InputGroup {
                 background: None,
                 shadow: Some(root_shadow),
                 border: root_border,
-                border_color: Some(border_color),
-                focus_ring,
-                focus_border_color,
-                focus_within: true,
+                border_color: None,
+                focus_ring: None,
+                focus_border_color: None,
+                focus_within: false,
                 corner_radii: root_corner_radii,
                 ..Default::default()
             },
@@ -604,6 +609,91 @@ impl InputGroup {
                         )
                     }
                 };
+
+                let build_wrapper_motion_overlay =
+                    |cx: &mut ElementContext<'_, H>,
+                     control_id: fret_ui::elements::GlobalElementId| {
+                        let focus_visible_for_control = cx.is_focused_element(control_id)
+                            && focus_visible::is_focus_visible(cx.app, Some(cx.window));
+
+                        let duration = crate::overlay_motion::shadcn_motion_duration_150(cx);
+                        let ease = crate::overlay_motion::shadcn_ease;
+
+                        let target_border_color = if aria_invalid {
+                            border_color
+                        } else if focus_visible_for_control {
+                            focus_border_color.unwrap_or(border_color)
+                        } else {
+                            border_color
+                        };
+
+                        let border_motion = drive_tween_color_for_element(
+                            cx,
+                            control_id,
+                            "input-group-border-color",
+                            target_border_color,
+                            duration,
+                            ease,
+                        );
+
+                        let ring_alpha = drive_tween_f32_for_element(
+                            cx,
+                            control_id,
+                            "input-group-ring-alpha",
+                            if focus_visible_for_control { 1.0 } else { 0.0 },
+                            duration,
+                            ease,
+                        );
+
+                        let ring = focus_ring.map(|mut ring| {
+                            ring.color.a = (ring.color.a * ring_alpha.value).clamp(0.0, 1.0);
+                            if let Some(offset) = ring.offset_color {
+                                ring.offset_color = Some(Color {
+                                    a: (offset.a * ring_alpha.value).clamp(0.0, 1.0),
+                                    ..offset
+                                });
+                            }
+                            ring
+                        });
+
+                        let overlay_layout = {
+                            let theme = Theme::global(&*cx.app);
+                            decl_style::layout_style(
+                                theme,
+                                LayoutRefinement::default().absolute().inset_px(Px(0.0)),
+                            )
+                        };
+
+                        let mut overlay = cx.container(
+                            ContainerProps {
+                                layout: overlay_layout,
+                                background: None,
+                                shadow: None,
+                                border: root_border,
+                                border_color: Some(border_motion.value),
+                                focus_ring: ring,
+                                focus_border_color: None,
+                                focus_within: false,
+                                focus_ring_always_paint: ring_alpha.animating
+                                    || ring_alpha.value > 1e-4,
+                                corner_radii: root_corner_radii,
+                                ..Default::default()
+                            },
+                            |_cx| Vec::<AnyElement>::new(),
+                        );
+
+                        overlay = overlay.attach_semantics(SemanticsDecoration {
+                            hidden: Some(true),
+                            ..Default::default()
+                        });
+
+                        if let Some(test_id) = overlay_test_id.as_ref() {
+                            overlay =
+                                overlay.test_id(Arc::<str>::from(format!("{test_id}.chrome")));
+                        }
+
+                        overlay
+                    };
 
                 if is_block_layout {
                     let control_el = match control {
@@ -901,7 +991,7 @@ impl InputGroup {
                         )
                     });
 
-                    vec![cx.flex(
+                    let layout = cx.flex(
                         FlexProps {
                             layout: {
                                 let theme = Theme::global(&*cx.app);
@@ -928,7 +1018,10 @@ impl InputGroup {
                             }
                             children
                         },
-                    )]
+                    );
+
+                    let overlay = build_wrapper_motion_overlay(cx, control_id);
+                    vec![layout, overlay]
                 } else {
                     let (resolved_pad_inline_start, resolved_pad_inline_end) =
                         rtl::inline_start_end_pair(
@@ -990,12 +1083,13 @@ impl InputGroup {
                     };
 
                     let control_el = cx.text_input(input);
-                    let control_focus_target = (!disabled).then_some(control_el.id);
+                    let control_id = control_el.id;
+                    let control_focus_target = (!disabled).then_some(control_id);
 
                     if let Some(handler) = control_on_key_down {
                         // Run before the control's internal key handling so callers can
                         // consume keys like Enter/Backspace and prevent default behavior.
-                        cx.key_prepend_on_key_down_for(control_el.id, handler);
+                        cx.key_prepend_on_key_down_for(control_id, handler);
                     }
 
                     let leading = (!leading.is_empty()).then(|| {
@@ -1025,7 +1119,7 @@ impl InputGroup {
                         decl_style::layout_style(theme, LayoutRefinement::default().size_full())
                     };
 
-                    vec![cx.flex(
+                    let layout = cx.flex(
                         FlexProps {
                             layout: flex_layout,
                             direction: Axis::Horizontal,
@@ -1046,7 +1140,10 @@ impl InputGroup {
                             }
                             children
                         },
-                    )]
+                    );
+
+                    let overlay = build_wrapper_motion_overlay(cx, control_id);
+                    vec![layout, overlay]
                 }
             },
         );
@@ -1978,6 +2075,25 @@ mod tests {
             .any(|c| find_flex_with_text_and_order(c, text, order))
     }
 
+    fn find_container_with_test_id<'a>(
+        node: &'a AnyElement,
+        test_id: &str,
+    ) -> Option<&'a ContainerProps> {
+        if let ElementKind::Container(props) = &node.kind {
+            let matches = node
+                .semantics_decoration
+                .as_ref()
+                .and_then(|d| d.test_id.as_deref())
+                .is_some_and(|id| id == test_id);
+            if matches {
+                return Some(props);
+            }
+        }
+        node.children
+            .iter()
+            .find_map(|c| find_container_with_test_id(c, test_id))
+    }
+
     #[test]
     fn input_group_parts_apply_placeholder_to_control() {
         let window = AppWindowId::default();
@@ -2160,5 +2276,194 @@ mod tests {
         );
 
         assert_eq!(ui.focus(), None);
+    }
+
+    #[test]
+    fn input_group_focus_ring_tweens_in_and_out_like_a_transition() {
+        use std::cell::Cell;
+        use std::rc::Rc;
+        use std::time::Duration;
+
+        use fret_core::{Event, FrameId, KeyCode, Rect, Size};
+        use fret_ui_kit::declarative::transition::ticks_60hz_for_duration;
+
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(360.0), Px(160.0)),
+        );
+        let mut services = FakeServices;
+        let model: Model<String> = app.models_mut().insert(String::new());
+
+        let ring_alpha_out: Rc<Cell<Option<f32>>> = Rc::new(Cell::new(None));
+        let always_paint_out: Rc<Cell<Option<bool>>> = Rc::new(Cell::new(None));
+
+        fn render_frame(
+            ui: &mut UiTree<App>,
+            app: &mut App,
+            services: &mut dyn fret_core::UiServices,
+            window: AppWindowId,
+            bounds: Rect,
+            model: Model<String>,
+            ring_alpha_out: Rc<Cell<Option<f32>>>,
+            always_paint_out: Rc<Cell<Option<bool>>>,
+        ) -> fret_core::NodeId {
+            let root = fret_ui::declarative::render_root(
+                ui,
+                app,
+                services,
+                window,
+                bounds,
+                "input-group-focus-ring-tween",
+                move |cx| {
+                    let el = InputGroup::new(model)
+                        .test_id("input_group")
+                        .into_element(cx);
+
+                    let overlay = find_container_with_test_id(&el, "input_group.chrome")
+                        .expect("overlay container");
+
+                    let a = overlay.focus_ring.map(|ring| ring.color.a).unwrap_or(0.0);
+                    ring_alpha_out.set(Some(a));
+                    always_paint_out.set(Some(overlay.focus_ring_always_paint));
+
+                    vec![el]
+                },
+            );
+            ui.set_root(root);
+            ui.request_semantics_snapshot();
+            ui.layout_all(app, services, bounds, 1.0);
+            root
+        }
+
+        // Frame 1: baseline render (no focus-visible), ring alpha should be 0.
+        app.set_frame_id(FrameId(1));
+        let root = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            ring_alpha_out.clone(),
+            always_paint_out.clone(),
+        );
+        let a0 = ring_alpha_out.get().expect("a0");
+        assert!(
+            a0.abs() <= 1e-6,
+            "expected ring alpha to start at 0, got {a0}"
+        );
+
+        // Focus the inner control and enable focus-visible via a navigation key.
+        let focusable = ui
+            .first_focusable_descendant_including_declarative(&mut app, window, root)
+            .expect("focusable input group control");
+        ui.set_focus(Some(focusable));
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::KeyDown {
+                key: KeyCode::Tab,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+        assert!(
+            fret_ui::focus_visible::is_focus_visible(&mut app, Some(window)),
+            "sanity: focus-visible should be enabled after navigation key"
+        );
+
+        // Frame 2: ring should be in-between (not snapped).
+        app.set_frame_id(FrameId(2));
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            ring_alpha_out.clone(),
+            always_paint_out.clone(),
+        );
+        let a1 = ring_alpha_out.get().expect("a1");
+        assert!(
+            a1 > 0.0,
+            "expected ring alpha to start animating in, got {a1}"
+        );
+
+        // Advance frames until the default 150ms transition settles.
+        let settle = ticks_60hz_for_duration(Duration::from_millis(150)) + 2;
+        for i in 0..settle {
+            app.set_frame_id(FrameId(3 + i));
+            let _ = render_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                model.clone(),
+                ring_alpha_out.clone(),
+                always_paint_out.clone(),
+            );
+        }
+        let a_focused = ring_alpha_out.get().expect("a_focused");
+        assert!(
+            a_focused > a1 + 1e-4,
+            "expected ring alpha to increase over time, got a1={a1} a_focused={a_focused}"
+        );
+
+        // Blur and ensure ring animates out while still being painted.
+        ui.set_focus(None);
+        app.set_frame_id(FrameId(1000));
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            ring_alpha_out.clone(),
+            always_paint_out.clone(),
+        );
+        let a_blur = ring_alpha_out.get().expect("a_blur");
+        let always_paint = always_paint_out.get().expect("always_paint");
+        assert!(
+            a_blur > 0.0 && a_blur < a_focused,
+            "expected ring alpha to be intermediate after blur, got a_blur={a_blur} a_focused={a_focused}"
+        );
+        assert!(
+            always_paint,
+            "expected focus ring to request painting while animating out"
+        );
+
+        for i in 0..settle {
+            app.set_frame_id(FrameId(1001 + i));
+            let _ = render_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                model.clone(),
+                ring_alpha_out.clone(),
+                always_paint_out.clone(),
+            );
+        }
+        let a_final = ring_alpha_out.get().expect("a_final");
+        let always_paint_final = always_paint_out.get().expect("always_paint_final");
+        assert!(
+            a_final.abs() <= 1e-4,
+            "expected ring alpha to settle at 0, got {a_final}"
+        );
+        assert!(
+            !always_paint_final,
+            "expected focus ring to stop requesting painting after settling"
+        );
     }
 }

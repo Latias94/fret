@@ -33,6 +33,10 @@ pub enum WhenExprValidationError {
 }
 
 pub(super) fn ident_kind(name: &str) -> Result<WhenValueKind, WhenExprValidationError> {
+    if name.starts_with("keyctx.") {
+        return Ok(WhenValueKind::Bool);
+    }
+
     match name {
         "ui.has_modal" | "focus.is_text_input" => return Ok(WhenValueKind::Bool),
         "edit.can_undo" | "edit.can_redo" => return Ok(WhenValueKind::Bool),

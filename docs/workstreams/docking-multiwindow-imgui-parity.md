@@ -179,7 +179,7 @@ Evidence anchors:
   - `FRET_DOCK_TEAROFF_TRANSPARENT_PAYLOAD=1`
   - Runner implementation: `crates/fret-launch/src/runner/desktop/runner/docking.rs` (emits `WindowRequest::SetStyle`),
     `crates/fret-launch/src/runner/desktop/runner/effects.rs` (applies style), and
-    `crates/fret-launch/src/runner/desktop/runner/window.rs` (`set_window_opacity`, `set_window_mouse_passthrough`)
+    `crates/fret-launch/src/runner/desktop/runner/window.rs` (`set_window_opacity`, `set_window_hit_test_passthrough_all`)
   - Programmatic switch: `DockingInteractionSettings::transparent_payload_during_follow`
   - Note: the follow loop also requests a temporary `WindowZLevel::AlwaysOnTop` (capability-gated) so the moving window stays
     visible above other app windows. This is applied via `WindowRequest::SetStyle` and patched back to `Normal` when follow stops.

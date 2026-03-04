@@ -494,10 +494,16 @@ pub(super) fn handle_pressable<H: UiHost>(
                 let hovered = cx.bounds.contains(*position) || moved <= 2.0;
 
                 let is_touch = *pointer_type == fret_core::PointerType::Touch;
+                if pressed && hovered && (!is_touch || *is_click) {
+                    // Pointer interactions should move focus to the pressable even when
+                    // activation is handled by component-owned pointer hooks.
+                    //
+                    // Note: `PressableProps.focusable` models the Tab-order "focus traversal stop"
+                    // (Radix roving-focus `tabIndex=0` vs `-1`), not whether pointer clicks can
+                    // focus the node.
+                    cx.request_focus(cx.node);
+                }
                 if pressed && hovered && (!is_touch || *is_click) && !skip_activate {
-                    if props.focusable {
-                        cx.request_focus(cx.node);
-                    }
                     let hook = crate::elements::with_element_state(
                         &mut *cx.app,
                         window,
@@ -596,6 +602,25 @@ pub(super) fn handle_pressable<H: UiHost>(
                                     fret_runtime::WindowPendingCommandDispatchSourceService::default,
                                     |svc, app| {
                                         svc.record(cx.window, app.tick_id(), command.clone(), source);
+                                    },
+                                );
+                            }
+
+                            fn record_pending_action_payload(
+                                &mut self,
+                                cx: action::ActionCx,
+                                action: &fret_runtime::ActionId,
+                                payload: Box<dyn std::any::Any + Send + Sync>,
+                            ) {
+                                self.app.with_global_mut(
+                                    fret_runtime::WindowPendingActionPayloadService::default,
+                                    |svc, app| {
+                                        svc.record(
+                                            cx.window,
+                                            app.tick_id(),
+                                            action.clone(),
+                                            payload,
+                                        );
                                     },
                                 );
                             }
@@ -798,6 +823,20 @@ pub(super) fn handle_pressable<H: UiHost>(
                             fret_runtime::WindowPendingCommandDispatchSourceService::default,
                             |svc, app| {
                                 svc.record(cx.window, app.tick_id(), command.clone(), source);
+                            },
+                        );
+                    }
+
+                    fn record_pending_action_payload(
+                        &mut self,
+                        cx: action::ActionCx,
+                        action: &fret_runtime::ActionId,
+                        payload: Box<dyn std::any::Any + Send + Sync>,
+                    ) {
+                        self.app.with_global_mut(
+                            fret_runtime::WindowPendingActionPayloadService::default,
+                            |svc, app| {
+                                svc.record(cx.window, app.tick_id(), action.clone(), payload);
                             },
                         );
                     }

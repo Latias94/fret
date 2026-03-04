@@ -314,7 +314,6 @@ impl Switch {
                     pad_x,
                     radius,
                     ring_border,
-                    ring,
                     bg_off,
                     bg_on,
                     thumb_bg,
@@ -329,8 +328,6 @@ impl Switch {
 
                     let radius = Px((h.0 * 0.5).max(0.0));
                     let ring_border = switch_ring_color(theme);
-                    let mut ring = decl_style::focus_ring(theme, radius);
-                    ring.color = alpha_mul(ring_border, 0.5);
 
                     let bg_off = switch_bg_off(theme);
                     let bg_on = switch_bg_on(theme);
@@ -349,7 +346,6 @@ impl Switch {
                         pad_x,
                         radius,
                         ring_border,
-                        ring,
                         bg_off,
                         bg_on,
                         thumb_bg,
@@ -418,28 +414,66 @@ impl Switch {
                     let mut states = WidgetStates::from_pressable(cx, st, !disabled);
                     states.set(WidgetState::Selected, on);
 
-                    let theme = Theme::global(&*cx.app);
-                    let bg = resolve_override_slot(
+                    let theme = Theme::global(&*cx.app).snapshot();
+                    let bg_target = resolve_override_slot(
                         style_override.track_background.as_ref(),
                         &default_track_background,
                         states,
                     )
-                    .resolve(theme);
-                    let border_color = resolve_override_slot(
+                    .resolve(&theme);
+                    let border_color_target = resolve_override_slot(
                         style_override.border_color.as_ref(),
                         &default_border_color,
                         states,
                     )
-                    .resolve(theme);
+                    .resolve(&theme);
                     let thumb_color = resolve_override_slot(
                         style_override.thumb_background.as_ref(),
                         &default_thumb_background,
                         states,
                     )
-                    .resolve(theme);
+                    .resolve(&theme);
+
+                    // shadcn/ui v4 uses `transition-all` on the switch track, so hover/active/checked
+                    // background and focus-visible border/ring should ease instead of snapping.
+                    let track_duration = overlay_motion::shadcn_motion_duration_150(cx);
+                    let bg = decl_motion::drive_tween_color_for_element(
+                        cx,
+                        id,
+                        "track-bg",
+                        bg_target,
+                        track_duration,
+                        overlay_motion::shadcn_ease,
+                    )
+                    .value;
+                    let border_color = decl_motion::drive_tween_color_for_element(
+                        cx,
+                        id,
+                        "track-border-color",
+                        border_color_target,
+                        track_duration,
+                        overlay_motion::shadcn_ease,
+                    )
+                    .value;
+
+                    let ring_alpha_target = if states.contains(WidgetStates::FOCUS_VISIBLE) {
+                        1.0
+                    } else {
+                        0.0
+                    };
+                    let ring_alpha = decl_motion::drive_tween_f32_for_element(
+                        cx,
+                        id,
+                        "track-ring-alpha",
+                        ring_alpha_target,
+                        track_duration,
+                        overlay_motion::shadcn_ease,
+                    );
+                    let mut ring = decl_style::focus_ring(&theme, radius);
+                    ring.color = alpha_mul(ring_border, 0.5 * ring_alpha.value);
 
                     let mut chrome_props = decl_style::container_props(
-                        theme,
+                        &theme,
                         ChromeRefinement::default()
                             .bg(ColorRef::Color(bg))
                             .rounded(Radius::Full)
@@ -449,7 +483,7 @@ impl Switch {
                         LayoutRefinement::default(),
                     );
                     chrome_props.corner_radii = Corners::all(radius);
-                    chrome_props.shadow = Some(decl_style::shadow_xs(theme, radius));
+                    chrome_props.shadow = Some(decl_style::shadow_xs(&theme, radius));
                     chrome_props.layout.size = pressable_layout.size;
 
                     // NOTE: Container layout already treats border as part of layout insets
@@ -518,6 +552,7 @@ impl Switch {
                         enabled: !disabled,
                         focusable: true,
                         focus_ring: Some(ring),
+                        focus_ring_always_paint: ring_alpha.animating,
                         a11y,
                         ..Default::default()
                     };
@@ -1076,6 +1111,119 @@ mod tests {
                 "expected thumb x to be mostly monotonic; a={a} b={b}"
             );
         }
+    }
+
+    #[test]
+    fn switch_track_background_tweens_between_states_over_time() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        // Stabilize transition duration scaling so the first frame doesn't collapse to a single
+        // tick under host-reported deltas.
+        app.with_global_mut(WindowFrameClockService::default, |svc, _app| {
+            svc.set_fixed_delta(window, Some(std::time::Duration::from_millis(16)));
+        });
+        for fid in [FrameId(1), FrameId(2)] {
+            app.set_frame_id(fid);
+            app.with_global_mut(WindowFrameClockService::default, |svc, app| {
+                svc.record_frame(window, app.frame_id());
+            });
+        }
+
+        app.set_tick_id(TickId(1));
+        app.set_frame_id(FrameId(2));
+        app.with_global_mut(WindowFrameClockService::default, |svc, app| {
+            svc.record_frame(window, app.frame_id());
+        });
+
+        let theme = Theme::global(&app);
+        let track_w = switch_track_w(theme, SwitchSize::Default);
+        let track_h = switch_track_h(theme, SwitchSize::Default);
+        let bg_on = switch_bg_on(theme);
+        let thumb_bg = switch_thumb_bg(theme);
+
+        fn find_track_bg(el: &AnyElement, w: Px, h: Px, thumb_bg: Color) -> Option<Color> {
+            match &el.kind {
+                fret_ui::element::ElementKind::Container(props) => {
+                    let looks_like_track = props.shadow.is_some()
+                        && props.border.top.0 > 0.0
+                        && props.border.left.0 > 0.0
+                        && props.corner_radii.top_left.0 > 0.0
+                        && props.background.is_some()
+                        && props.background != Some(thumb_bg)
+                        && (props.layout.size.width == Length::Px(w)
+                            || props.layout.size.width == Length::Fill)
+                        && (props.layout.size.height == Length::Px(h)
+                            || props.layout.size.height == Length::Fill);
+                    if looks_like_track {
+                        return props.background;
+                    }
+                    el.children
+                        .iter()
+                        .find_map(|c| find_track_bg(c, w, h, thumb_bg))
+                }
+                _ => el
+                    .children
+                    .iter()
+                    .find_map(|c| find_track_bg(c, w, h, thumb_bg)),
+            }
+        }
+
+        fn render_switch(app: &mut App, window: AppWindowId, model: Model<bool>) -> AnyElement {
+            fret_ui::elements::with_element_cx(
+                app,
+                window,
+                Rect::new(
+                    Point::new(Px(0.0), Px(0.0)),
+                    CoreSize::new(Px(200.0), Px(120.0)),
+                ),
+                "switch_track_bg_tween",
+                |cx| Switch::new(model).into_element(cx),
+            )
+        }
+
+        fn channel_abs_sum(a: Color, b: Color) -> f32 {
+            (a.r - b.r).abs() + (a.g - b.g).abs() + (a.b - b.b).abs() + (a.a - b.a).abs()
+        }
+
+        let model = app.models_mut().insert(false);
+        let off_el = render_switch(&mut app, window, model.clone());
+        let bg_off = find_track_bg(&off_el, track_w, track_h, thumb_bg).expect("track background");
+
+        let _ = app.models_mut().update(&model, |v| *v = true);
+
+        let mut bgs = Vec::new();
+        for i in 0..24u64 {
+            app.set_tick_id(TickId(2 + i));
+            app.set_frame_id(FrameId(3 + i));
+            app.with_global_mut(WindowFrameClockService::default, |svc, app| {
+                svc.record_frame(window, app.frame_id());
+            });
+
+            let el = render_switch(&mut app, window, model.clone());
+            let bg = find_track_bg(&el, track_w, track_h, thumb_bg).expect("track background");
+            bgs.push(bg);
+        }
+
+        let first = bgs[0];
+        let last = *bgs.last().expect("track background samples");
+
+        assert!(
+            channel_abs_sum(first, bg_on) > 0.0001,
+            "expected track background not to snap to final on color on first frame; first={first:?} on={bg_on:?}"
+        );
+        assert!(
+            channel_abs_sum(first, bg_off) > 0.0001,
+            "expected track background to start transitioning away from off color on first frame; off={bg_off:?} first={first:?}"
+        );
+        assert!(
+            channel_abs_sum(last, bg_on) < 0.02,
+            "expected track background to settle near on color; last={last:?} on={bg_on:?}"
+        );
+        assert!(
+            channel_abs_sum(last, bg_on) < channel_abs_sum(first, bg_on),
+            "expected track background to move closer to on color over time; first={first:?} last={last:?} on={bg_on:?}"
+        );
     }
 
     #[test]

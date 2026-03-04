@@ -335,8 +335,9 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             // Best-effort / platform-specific window style facets.
             caps.ui.window_skip_taskbar = cfg!(target_os = "windows");
             caps.ui.window_transparent = cfg!(any(target_os = "windows", target_os = "macos"));
-            caps.ui.window_mouse_passthrough =
+            caps.ui.window_hit_test_passthrough_all =
                 cfg!(any(target_os = "windows", target_os = "macos"));
+            caps.ui.window_hit_test_passthrough_regions = cfg!(target_os = "windows");
 
             // Background materials are capability-gated and intentionally conservative by default.
             // Runners should only advertise these once there is an end-to-end implementation
@@ -445,7 +446,8 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             caps.ui.window_transparent = false;
             caps.ui.window_skip_taskbar = false;
             caps.ui.window_non_activating = false;
-            caps.ui.window_mouse_passthrough = false;
+            caps.ui.window_hit_test_passthrough_all = false;
+            caps.ui.window_hit_test_passthrough_regions = false;
             caps.ui.window_set_visible = false;
             caps.ui.window_begin_drag = false;
             caps.ui.window_begin_resize = false;
@@ -533,7 +535,9 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         caps.ui.window_transparent &= available.ui.window_transparent;
         caps.ui.window_skip_taskbar &= available.ui.window_skip_taskbar;
         caps.ui.window_non_activating &= available.ui.window_non_activating;
-        caps.ui.window_mouse_passthrough &= available.ui.window_mouse_passthrough;
+        caps.ui.window_hit_test_passthrough_all &= available.ui.window_hit_test_passthrough_all;
+        caps.ui.window_hit_test_passthrough_regions &=
+            available.ui.window_hit_test_passthrough_regions;
         caps.ui.window_set_visible &= available.ui.window_set_visible;
         caps.ui.window_begin_drag &= available.ui.window_begin_drag;
         caps.ui.window_begin_resize &= available.ui.window_begin_resize;
@@ -591,6 +595,45 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         caps.gfx.webgpu &= available.gfx.webgpu;
 
         caps
+    }
+
+    #[cfg(target_os = "windows")]
+    pub(super) fn refresh_platform_window_receiver_at_cursor_diagnostics(&mut self) {
+        use fret_runtime::{
+            RunnerPlatformWindowReceiverAtCursorSnapshotV1,
+            RunnerPlatformWindowReceiverAtCursorSourceV1,
+            RunnerPlatformWindowReceiverDiagnosticsStore,
+        };
+        use std::collections::HashMap;
+        use winit::raw_window_handle::{HasWindowHandle as _, RawWindowHandle};
+
+        let mut hwnd_to_window: HashMap<isize, fret_core::AppWindowId> = HashMap::new();
+        for (window, state) in self.windows.iter() {
+            let Ok(handle) = state.window.window_handle() else {
+                continue;
+            };
+            let RawWindowHandle::Win32(handle) = handle.as_raw() else {
+                continue;
+            };
+            let hwnd = win32::root_hwnd(handle.hwnd.get());
+            hwnd_to_window.insert(hwnd, window);
+        }
+
+        let receiver_window = self
+            .cursor_screen_pos
+            .and_then(|screen_pos| win32::window_under_cursor_root(screen_pos))
+            .and_then(|hwnd| hwnd_to_window.get(&hwnd).copied());
+
+        let snapshot = RunnerPlatformWindowReceiverAtCursorSnapshotV1 {
+            receiver_window,
+            source: RunnerPlatformWindowReceiverAtCursorSourceV1::Win32WindowFromPoint,
+        };
+        self.app.with_global_mut(
+            RunnerPlatformWindowReceiverDiagnosticsStore::default,
+            |store, _app| {
+                store.set_latest_at_cursor(snapshot);
+            },
+        );
     }
 
     /// Sets the event-loop proxy used to deliver asynchronous platform completions back into the

@@ -1,5 +1,4 @@
-use crate::InputContext;
-
+use super::WhenEvalContext;
 use super::eval::{Lit, eval_ident_bool, eval_value};
 use super::validate::{WhenExprValidationError, WhenValueKind, ident_kind, value_kind};
 
@@ -49,17 +48,17 @@ impl Expr {
         }
     }
 
-    pub(super) fn eval(&self, ctx: &InputContext) -> bool {
+    pub(super) fn eval(&self, cx: &WhenEvalContext<'_>) -> bool {
         match self {
             Expr::Bool(v) => *v,
             Expr::Str(_) => false,
-            Expr::Ident(name) => eval_ident_bool(ctx, name),
-            Expr::Not(e) => !e.eval(ctx),
-            Expr::And(a, b) => a.eval(ctx) && b.eval(ctx),
-            Expr::Or(a, b) => a.eval(ctx) || b.eval(ctx),
+            Expr::Ident(name) => eval_ident_bool(cx, name),
+            Expr::Not(e) => !e.eval(cx),
+            Expr::And(a, b) => a.eval(cx) && b.eval(cx),
+            Expr::Or(a, b) => a.eval(cx) || b.eval(cx),
             Expr::Eq(a, b, is_equal) => {
-                let left = eval_value(ctx, a);
-                let right = eval_value(ctx, b);
+                let left = eval_value(cx, a);
+                let right = eval_value(cx, b);
                 match (left, right) {
                     (Some(Lit::Bool(a)), Some(Lit::Bool(b))) => (a == b) == *is_equal,
                     (Some(Lit::Str(a)), Some(Lit::Str(b))) => (a == b) == *is_equal,

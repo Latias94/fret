@@ -1,3 +1,5 @@
+#![allow(deprecated)]
+
 #[cfg(not(target_arch = "wasm32"))]
 pub mod alloc_profile;
 
@@ -172,5 +174,7 @@ pub mod todo_demo;
 #[cfg(not(target_arch = "wasm32"))]
 #[cfg(not(target_arch = "wasm32"))]
 pub mod virtual_list_stress_demo;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod window_hit_test_probe_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod workspace_shell_demo;

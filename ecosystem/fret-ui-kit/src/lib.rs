@@ -274,9 +274,9 @@ pub mod prelude {
         ChromeRefinement, ColorFallback, ColorRef, Corners4, Edges4, ImageMetadata,
         ImageMetadataStore, ImageSamplingExt, LayoutRefinement, MarginEdge, MetricRef,
         OverrideSlot, Radius, ShadowPreset, SignedMetricRef, Size, Space, StyledExt, UiExt,
-        WidgetState, WidgetStateProperty, WidgetStates, merge_override_slot, merge_slot,
-        resolve_override_slot, resolve_override_slot_opt, resolve_override_slot_opt_with,
-        resolve_override_slot_with, resolve_slot,
+        UiIntoElement, WidgetState, WidgetStateProperty, WidgetStates, merge_override_slot,
+        merge_slot, resolve_override_slot, resolve_override_slot_opt,
+        resolve_override_slot_opt_with, resolve_override_slot_with, resolve_slot,
     };
     pub use crate::{OverlayArbitrationSnapshot, OverlayController, OverlayKind, OverlayPresence};
     pub use crate::{OverlayRequest, OverlayStackEntryKind};

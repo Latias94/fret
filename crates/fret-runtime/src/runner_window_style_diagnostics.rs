@@ -4,8 +4,9 @@ use fret_core::AppWindowId;
 
 use crate::PlatformCapabilities;
 use crate::window_style::{
-    ActivationPolicy, MousePolicy, TaskbarVisibility, WindowBackgroundMaterialRequest,
-    WindowDecorationsRequest, WindowStyleRequest, WindowZLevel,
+    ActivationPolicy, TaskbarVisibility, WindowBackgroundMaterialRequest, WindowDecorationsRequest,
+    WindowHitTestRequestV1, WindowStyleRequest, WindowZLevel, canonicalize_hit_test_regions_v1,
+    hit_test_regions_signature_v1,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -23,6 +24,31 @@ pub enum RunnerWindowCompositedAlphaSourceV1 {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RunnerWindowAppearanceV1 {
+    /// The OS window is not composited with alpha.
+    Opaque,
+    /// The OS window surface is composited with alpha, but no OS backdrop material is enabled.
+    CompositedNoBackdrop,
+    /// The OS window surface is composited with alpha and an OS backdrop material is enabled.
+    CompositedBackdrop,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RunnerWindowHitTestSourceV1 {
+    /// No explicit request (defaults apply).
+    Default,
+    /// The caller explicitly requested `hit_test=...`.
+    HitTestFacet,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RunnerWindowHitTestClampReasonV1 {
+    None,
+    MissingPassthroughAllCapability,
+    MissingPassthroughRegionsCapability,
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub struct RunnerWindowStyleEffectiveSnapshotV1 {
     pub decorations: WindowDecorationsRequest,
     pub resizable: bool,
@@ -36,11 +62,24 @@ pub struct RunnerWindowStyleEffectiveSnapshotV1 {
     /// separated from `surface_composited_alpha` to avoid conflating "window can be composited"
     /// with "window is visually transparent".
     pub visual_transparent: bool,
+    /// A derived, user-facing summary of window background appearance facets.
+    pub appearance: RunnerWindowAppearanceV1,
     pub background_material: WindowBackgroundMaterialRequest,
+    /// Effective window hit test policy (pointer passthrough).
+    pub hit_test: WindowHitTestRequestV1,
+    /// Last requested hit test policy (pre-clamp), if any.
+    pub hit_test_requested: Option<WindowHitTestRequestV1>,
+    /// Stable signature string for effective `PassthroughRegions`, if any.
+    pub hit_test_regions_signature: Option<String>,
+    /// Stable FNV-1a 64-bit fingerprint of `hit_test_regions_signature`, if any.
+    pub hit_test_regions_fingerprint64: Option<u64>,
+    /// Stable FNV-1a 64-bit fingerprint of requested `PassthroughRegions`, if any.
+    pub hit_test_regions_requested_fingerprint64: Option<u64>,
+    pub hit_test_source: RunnerWindowHitTestSourceV1,
+    pub hit_test_clamp_reason: RunnerWindowHitTestClampReasonV1,
     pub taskbar: TaskbarVisibility,
     pub activation: ActivationPolicy,
     pub z_level: WindowZLevel,
-    pub mouse: MousePolicy,
 }
 
 impl Default for RunnerWindowStyleEffectiveSnapshotV1 {
@@ -51,11 +90,18 @@ impl Default for RunnerWindowStyleEffectiveSnapshotV1 {
             surface_composited_alpha: false,
             surface_composited_alpha_source: RunnerWindowCompositedAlphaSourceV1::DefaultOpaque,
             visual_transparent: false,
+            appearance: RunnerWindowAppearanceV1::Opaque,
             background_material: WindowBackgroundMaterialRequest::None,
+            hit_test: WindowHitTestRequestV1::Normal,
+            hit_test_requested: None,
+            hit_test_regions_signature: None,
+            hit_test_regions_fingerprint64: None,
+            hit_test_regions_requested_fingerprint64: None,
+            hit_test_source: RunnerWindowHitTestSourceV1::Default,
+            hit_test_clamp_reason: RunnerWindowHitTestClampReasonV1::None,
             taskbar: TaskbarVisibility::Show,
             activation: ActivationPolicy::Activates,
             z_level: WindowZLevel::Normal,
-            mouse: MousePolicy::Normal,
         }
     }
 }
@@ -68,11 +114,94 @@ pub struct RunnerWindowStyleDiagnosticsStore {
 }
 
 impl RunnerWindowStyleDiagnosticsStore {
+    fn update_hit_test_region_signatures(snapshot: &mut RunnerWindowStyleEffectiveSnapshotV1) {
+        snapshot.hit_test_regions_signature = None;
+        snapshot.hit_test_regions_fingerprint64 = None;
+        snapshot.hit_test_regions_requested_fingerprint64 = None;
+
+        if let WindowHitTestRequestV1::PassthroughRegions { regions } = &snapshot.hit_test {
+            let (sig, fp) = hit_test_regions_signature_v1(regions);
+            snapshot.hit_test_regions_signature = Some(sig);
+            snapshot.hit_test_regions_fingerprint64 = Some(fp.fingerprint64);
+        }
+        if let Some(WindowHitTestRequestV1::PassthroughRegions { regions }) =
+            snapshot.hit_test_requested.as_ref()
+        {
+            let canonical = canonicalize_hit_test_regions_v1(regions.clone());
+            let (_sig, fp) = hit_test_regions_signature_v1(&canonical);
+            snapshot.hit_test_regions_requested_fingerprint64 = Some(fp.fingerprint64);
+        }
+    }
+
+    fn derive_appearance(
+        surface_composited_alpha: bool,
+        background_material: WindowBackgroundMaterialRequest,
+    ) -> RunnerWindowAppearanceV1 {
+        if !surface_composited_alpha {
+            return RunnerWindowAppearanceV1::Opaque;
+        }
+        if background_material != WindowBackgroundMaterialRequest::None {
+            return RunnerWindowAppearanceV1::CompositedBackdrop;
+        }
+        RunnerWindowAppearanceV1::CompositedNoBackdrop
+    }
+
+    pub fn clamp_hit_test_request(
+        requested: WindowHitTestRequestV1,
+        caps: &PlatformCapabilities,
+    ) -> (WindowHitTestRequestV1, RunnerWindowHitTestClampReasonV1) {
+        match requested {
+            WindowHitTestRequestV1::Normal => (
+                WindowHitTestRequestV1::Normal,
+                RunnerWindowHitTestClampReasonV1::None,
+            ),
+            WindowHitTestRequestV1::PassthroughAll if caps.ui.window_hit_test_passthrough_all => (
+                WindowHitTestRequestV1::PassthroughAll,
+                RunnerWindowHitTestClampReasonV1::None,
+            ),
+            WindowHitTestRequestV1::PassthroughAll => (
+                WindowHitTestRequestV1::Normal,
+                RunnerWindowHitTestClampReasonV1::MissingPassthroughAllCapability,
+            ),
+            WindowHitTestRequestV1::PassthroughRegions { regions }
+                if caps.ui.window_hit_test_passthrough_regions =>
+            {
+                (
+                    WindowHitTestRequestV1::PassthroughRegions {
+                        regions: canonicalize_hit_test_regions_v1(regions),
+                    },
+                    RunnerWindowHitTestClampReasonV1::None,
+                )
+            }
+            WindowHitTestRequestV1::PassthroughRegions { .. }
+                if caps.ui.window_hit_test_passthrough_all =>
+            {
+                (
+                    WindowHitTestRequestV1::PassthroughAll,
+                    RunnerWindowHitTestClampReasonV1::MissingPassthroughRegionsCapability,
+                )
+            }
+            WindowHitTestRequestV1::PassthroughRegions { .. } => (
+                WindowHitTestRequestV1::Normal,
+                RunnerWindowHitTestClampReasonV1::MissingPassthroughRegionsCapability,
+            ),
+        }
+    }
+
+    fn requested_hit_test_from_request(
+        requested: &WindowStyleRequest,
+    ) -> Option<(WindowHitTestRequestV1, RunnerWindowHitTestSourceV1)> {
+        if let Some(hit_test) = requested.hit_test.clone() {
+            return Some((hit_test, RunnerWindowHitTestSourceV1::HitTestFacet));
+        }
+        None
+    }
+
     pub fn effective_snapshot(
         &self,
         window: AppWindowId,
     ) -> Option<RunnerWindowStyleEffectiveSnapshotV1> {
-        self.effective.get(&window).copied()
+        self.effective.get(&window).cloned()
     }
 
     pub fn record_window_open(
@@ -139,6 +268,17 @@ impl RunnerWindowStyleDiagnosticsStore {
         // the caller explicitly requested a composited surface for visual transparency.
         next.visual_transparent = next.background_material != WindowBackgroundMaterialRequest::None
             || matches!(requested.transparent, Some(true));
+        next.appearance =
+            Self::derive_appearance(next.surface_composited_alpha, next.background_material);
+
+        if let Some((hit_test, source)) = Self::requested_hit_test_from_request(&requested) {
+            next.hit_test_requested = Some(hit_test.clone());
+            let (effective, clamp_reason) = Self::clamp_hit_test_request(hit_test, caps);
+            next.hit_test = effective;
+            next.hit_test_source = source;
+            next.hit_test_clamp_reason = clamp_reason;
+            Self::update_hit_test_region_signatures(&mut next);
+        }
 
         if let Some(taskbar) = requested.taskbar {
             next.taskbar = if taskbar == TaskbarVisibility::Hide && !caps.ui.window_skip_taskbar {
@@ -163,13 +303,6 @@ impl RunnerWindowStyleDiagnosticsStore {
                 WindowZLevel::Normal
             } else {
                 z_level
-            };
-        }
-        if let Some(mouse) = requested.mouse {
-            next.mouse = if mouse == MousePolicy::Passthrough && !caps.ui.window_mouse_passthrough {
-                MousePolicy::Normal
-            } else {
-                mouse
             };
         }
 
@@ -216,6 +349,10 @@ impl RunnerWindowStyleDiagnosticsStore {
             current.visual_transparent = current.background_material
                 != WindowBackgroundMaterialRequest::None
                 || matches!(explicit, Some(true));
+            current.appearance = Self::derive_appearance(
+                current.surface_composited_alpha,
+                current.background_material,
+            );
 
             // Keep composited alpha create-time and sticky. If the window was created composited
             // (explicitly or implied by a create-time material request), keep it for the lifetime.
@@ -245,6 +382,20 @@ impl RunnerWindowStyleDiagnosticsStore {
                 current.surface_composited_alpha_source =
                     RunnerWindowCompositedAlphaSourceV1::DefaultOpaque;
             }
+
+            current.appearance = Self::derive_appearance(
+                current.surface_composited_alpha,
+                current.background_material,
+            );
+        }
+
+        if let Some(hit_test) = patch.hit_test {
+            current.hit_test_requested = Some(hit_test.clone());
+            let (effective, clamp_reason) = Self::clamp_hit_test_request(hit_test, caps);
+            current.hit_test = effective;
+            current.hit_test_source = RunnerWindowHitTestSourceV1::HitTestFacet;
+            current.hit_test_clamp_reason = clamp_reason;
+            Self::update_hit_test_region_signatures(current);
         }
 
         if let Some(taskbar) = patch.taskbar {
@@ -268,13 +419,6 @@ impl RunnerWindowStyleDiagnosticsStore {
                 // Ignore unsupported AlwaysOnTop.
             } else {
                 current.z_level = z_level;
-            }
-        }
-        if let Some(mouse) = patch.mouse {
-            if mouse == MousePolicy::Passthrough && !caps.ui.window_mouse_passthrough {
-                // Ignore unsupported passthrough requests.
-            } else {
-                current.mouse = mouse;
             }
         }
     }
@@ -388,6 +532,10 @@ mod tests {
         let before = store.effective_snapshot(w).unwrap();
         assert!(before.surface_composited_alpha);
         assert!(before.visual_transparent);
+        assert_eq!(
+            before.appearance,
+            RunnerWindowAppearanceV1::CompositedBackdrop
+        );
 
         store.apply_style_patch(
             w,
@@ -403,6 +551,10 @@ mod tests {
         assert_eq!(
             after.background_material,
             WindowBackgroundMaterialRequest::None
+        );
+        assert_eq!(
+            after.appearance,
+            RunnerWindowAppearanceV1::CompositedNoBackdrop
         );
     }
 
@@ -426,6 +578,41 @@ mod tests {
         assert_eq!(
             have.background_material,
             WindowBackgroundMaterialRequest::None
+        );
+        assert_eq!(
+            have.appearance,
+            RunnerWindowAppearanceV1::CompositedNoBackdrop
+        );
+    }
+
+    #[test]
+    fn hit_test_passthrough_all_degrades_when_unsupported() {
+        let mut caps = PlatformCapabilities::default();
+        caps.ui.window_hit_test_passthrough_all = false;
+
+        let mut store = RunnerWindowStyleDiagnosticsStore::default();
+        let w = window(6);
+        store.record_window_open(
+            w,
+            WindowStyleRequest {
+                hit_test: Some(WindowHitTestRequestV1::PassthroughAll),
+                ..Default::default()
+            },
+            &caps,
+        );
+        let have = store.effective_snapshot(w).unwrap();
+        assert_eq!(have.hit_test, WindowHitTestRequestV1::Normal);
+        assert_eq!(
+            have.hit_test_requested,
+            Some(WindowHitTestRequestV1::PassthroughAll)
+        );
+        assert_eq!(
+            have.hit_test_source,
+            RunnerWindowHitTestSourceV1::HitTestFacet
+        );
+        assert_eq!(
+            have.hit_test_clamp_reason,
+            RunnerWindowHitTestClampReasonV1::MissingPassthroughAllCapability
         );
     }
 }

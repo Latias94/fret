@@ -873,6 +873,7 @@ Supported selectors (v1 MVP):
 - `assert_clipboard_text` (schema v2 only; asserts OS clipboard text equals an expected value; capability-gated behind `diag.clipboard_text`)
 - `inspect_help_lock_best_match_and_copy_selector` (schema v2 only; in-app inspector helper: open help, search for `query`, lock the best match, and copy the best selector JSON to the clipboard; intended to avoid relying on shortcut injection in `--launch` runs)
 - `set_window_inner_size` (schema v2 only; optional `window` target)
+- `set_window_style` (schema v2 only; optional `window` target; best-effort OS window style patch; capability-gated behind `diag.window_style_patch_v1`; Windows-only as of 2026-03-04; supported patch fields: `z_level`, `background_material`, `hit_test`, `opacity_alpha_u8`)
 - `set_window_insets` (schema v2 only; overrides safe-area/occlusion insets; capability-gated behind `diag.window_insets_override`)
 - `set_window_outer_position` (schema v2 only; optional `window` target)
 - `raise_window` (schema v2 only; optional `window` target)
@@ -915,6 +916,7 @@ Recent additions:
 - `role_is` (assert semantics role equality for a target)
 - `checked_is` / `checked_is_none` (assert `checked` flag state; useful for checkbox/radio menu items)
 - `active_item_is` (assert the active item for composite widgets: matches either container `active_descendant` or roving focus)
+- `window_style_effective_is` (assert effective/clamped OS window style facets such as `transparent`, `appearance`, and `hit_test`)
 - `dock_drop_preview_kind_is` (assert coarse docking drop preview decision: `wrap_binary` vs `insert_into_split`)
 - `dock_drop_resolve_source_is` (assert which mechanism selected the current docking drop preview)
 - `dock_drop_resolved_is_some` (assert whether the drop preview has a resolved target or stays `None`)
@@ -929,7 +931,7 @@ Recent additions:
 - `dock_drag_window_under_moving_window_is` (assert the best-effort “window under moving window” selection during a dock drag)
 - `dock_drag_window_under_moving_window_source_is` (assert which mechanism selected the “window under moving window”: platform vs heuristic)
 - `dock_drag_active_is` (assert that a dock drag session is (or is not) active)
-- `dock_drag_transparent_payload_mouse_passthrough_applied_is` (assert whether the runner successfully applied OS click-through for the moving window during transparent payload)
+- `dock_drag_transparent_payload_hit_test_passthrough_applied_is` (assert whether the runner successfully applied OS click-through for the moving window during transparent payload)
 - `text_composition_is` (assert whether a text surface is currently composing via IME)
 - `ime_cursor_area_is_some` (assert whether a window-level IME cursor area snapshot exists)
 - `ime_cursor_area_within_window` (assert the IME cursor area stays within the current window bounds; coarse “caret teleported” gate)
@@ -983,6 +985,7 @@ Supported intent steps (v2):
 - `drag_to` (drag between two semantics targets; optional `window` target)
 - `set_slider_value` (drag a slider to a desired value; optional `window` target; requires a parseable semantics `value`)
 - `set_window_inner_size` (emit `WindowRequest::SetInnerSize`)
+- `set_window_style` (emit `WindowRequest::SetStyle`)
 - `set_window_outer_position` (emit `WindowRequest::SetOuterPosition`)
 - `raise_window` (emit `WindowRequest::Raise`)
 - `set_cursor_screen_pos` (write a best-effort cursor override for desktop runners to consume during cross-window drags; screen-space physical pixels)
@@ -1148,6 +1151,28 @@ Docking predicates (require a `WindowInteractionDiagnosticsStore` publisher, typ
 - `{"kind":"dock_drag_current_window_is","window":{"kind":"last_seen_other"}}`
 - `{"kind":"dock_graph_node_count_le","max":32}`
 - `{"kind":"dock_graph_max_split_depth_le","max":8}`
+
+Window style predicates (require runner window style diagnostics, typically provided by desktop runners):
+
+- `{"kind":"window_style_effective_is","window":{"kind":"current"},"style":{"transparent":true}}`
+- `{"kind":"window_style_effective_is","window":{"kind":"current"},"style":{"hit_test":"passthrough_all"}}`
+- `{"kind":"window_style_effective_is","window":{"kind":"current"},"style":{"hit_test":"passthrough_regions","hit_test_regions_fingerprint64":123}}`
+- `{"kind":"window_background_material_effective_is","window":{"kind":"current"},"material":"system_default"}`
+
+Platform receiver predicates (Windows-only; require runner cursor probe diagnostics):
+
+- `{"kind":"platform_window_receiver_at_cursor_is","window":{"kind":"current"}}`
+
+Notes:
+
+- `hit_test` supports: `normal`, `passthrough_all`, `passthrough_regions` (ADR 0312 / ADR 0313).
+- `hit_test_regions_fingerprint64` is a stable, canonicalized fingerprint of the effective regions
+  union. It is intended for scripted regression gates that want to assert that the runner applied
+  a specific region shape without relying on pixels.
+- `platform_window_receiver_at_cursor_is` is capability-gated behind
+  `diag.platform_window_receiver_at_cursor_v1` and is intended to validate runner-level hit-test
+  passthrough behavior (e.g. Win32 `WM_NCHITTEST`) without requiring OS mouse injection. Pair it
+  with cursor override steps like `set_cursor_in_window_logical`.
 
 ## Debugging recipes (Radix primitives / shadcn / overlays)
 

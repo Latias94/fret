@@ -1,6 +1,6 @@
 # Action-First Authoring + View Runtime (Fearless Refactor v1) — TODO
 
-Status: Landed (v1)
+Status: Landed (v1), hardening follow-ups in progress
 Last updated: 2026-03-04
 
 Related:
@@ -98,6 +98,23 @@ ID format:
     - `ecosystem/fret-bootstrap/src/ui_app_driver.rs` (command palette overlay builds command entries and dispatches via the window command pipeline)
     - `ecosystem/fret-ui-shadcn/src/command.rs` (command palette selection queues a pending command and dispatches via `Effect::Command` after close-on-select completes)
     - `tools/diag-scripts/cookbook/imui-action-basics/cookbook-imui-action-basics-cross-frontend.json` (command palette → action handler gate)
+- [x] AFA-actions-019 Make `keyctx.*` gating observable and consistent across surfaces.
+  - Goal: the same `when` expression (ADR 0022) drives:
+    - keymap matching,
+    - command enablement/visibility (menus + palette),
+    - shortcut display (best-effort reverse lookup),
+    - diagnostics traces.
+  - Evidence:
+    - `crates/fret-runtime/src/when_expr/*` (`WhenEvalContext`, `keyctx.*`)
+    - `crates/fret-runtime/src/window_key_context_stack.rs` (`WindowKeyContextStackService`)
+    - `crates/fret-ui/src/tree/dispatch/window.rs` (publishes window key-context snapshots)
+    - `crates/fret-runtime/src/window_command_gating/snapshot.rs` (`eval_with_key_contexts`)
+    - `crates/fret-runtime/src/keymap/display.rs` (`display_shortcut_for_command_sequence_with_key_contexts`)
+    - `ecosystem/fret-ui-shadcn/src/command.rs` (palette shortcut display uses key contexts)
+    - `ecosystem/fret-bootstrap/src/ui_diagnostics/command_gating_trace.rs` (gating trace uses key contexts)
+    - `ecosystem/fret/src/workspace_menu.rs` + `crates/fret-launch/src/runner/desktop/runner/windows_menu.rs` (menu `when` uses key contexts)
+  - Gates:
+    - `tools/diag-scripts/cookbook/commands-keymap-basics/cookbook-commands-keymap-basics-shortcut-and-gating.json` (shortcut routing trace includes key contexts)
 
 ### B.1 Authoring integration (pointer triggers)
 
@@ -295,6 +312,40 @@ This phase is intentionally last.
     - `apps/fret-examples/src/todo_demo.rs` (example: legacy prelude import)
     - `tools/gate_no_mvu_in_cookbook.ps1`
 
+### Next cleanup steps (post-v1)
+
+- [x] AFA-clean-063 Decide MVU’s long-term status (supported alternative vs legacy-only).
+  - Decision inputs:
+    - Payload/parameterized actions are not supported in typed actions v1 (ADR 0307 v1 scope),
+      which remains a practical reason to keep MVU for some demos/apps.
+    - Per-frame message routing must not regress view-cache reuse semantics.
+  - Exit criteria:
+    - A single, accurate “when to use MVU” policy exists and is reflected in docs/templates.
+  - Decision:
+    - MVU is legacy-only (compat), not a supported alternative golden path.
+  - Evidence:
+    - Policy: `docs/workstreams/action-first-authoring-fearless-refactor-v1/MVU_POLICY.md`
+    - Guidance: `docs/workstreams/action-first-authoring-fearless-refactor-v1/MIGRATION_GUIDE.md` (“When to use MVU vs View”)
+
+- [x] AFA-clean-064 Add compile-time deprecation warnings for legacy MVU surfaces (if feasible).
+  - Rule: docs/templates must stop teaching it *before* adding warnings.
+  - Candidate surfaces:
+    - `ecosystem/fret/src/mvu.rs`
+    - `ecosystem/fret/src/mvu_router.rs`
+  - Evidence:
+    - `ecosystem/fret/src/lib.rs` (deprecated `legacy`/`mvu`/`mvu_router` modules)
+    - `ecosystem/fret/src/app_entry.rs` (deprecated MVU entry points when `legacy-mvu` is enabled)
+    - `ecosystem/fret/src/interop/embedded_viewport.rs` (deprecated MVU embedding helpers when `legacy-mvu` is enabled)
+
+- [x] AFA-clean-065 Consider feature-gating MVU behind an explicit legacy feature.
+  - Goal: keep `fret::prelude::*` boring, and make MVU opt-in in downstream apps.
+  - Non-goal: break existing users without a deprecation window.
+  - Evidence:
+    - `ecosystem/fret/Cargo.toml` (`legacy-mvu` feature)
+    - `ecosystem/fret/src/lib.rs` (MVU modules gated behind `legacy-mvu`)
+    - `apps/fret-examples/Cargo.toml` (in-tree demo opts in via `legacy-mvu`)
+    - `apps/fret-ui-gallery/Cargo.toml` (in-tree demo opts in via `legacy-mvu`)
+
 ---
 
 ## Post-v1 follow-ups (tracked separately)
@@ -302,13 +353,23 @@ This phase is intentionally last.
 These are intentionally *not* part of the v1 milestone closure, but they are likely the next
 practical steps:
 
-- Key context stack + diagnostics-visible context naming/stacking rules.
+- Done: key context stack + diagnostics-visible context naming/stacking rules.
+  - Evidence:
+    - ADR: `docs/adr/0022-when-expressions.md` (`keyctx.*`)
+    - Runtime: `crates/fret-runtime/src/when_expr/*` (`keyctx.*` evaluation + validation)
+    - UI: `crates/fret-ui/src/tree/shortcuts.rs` (collects `key_contexts[*]` from the focused chain / barrier root)
+    - Diag protocol: `crates/fret-diag-protocol/src/lib.rs` (`UiShortcutRoutingTraceEntryV1.key_contexts`)
+    - Gate: `tools/diag-scripts/cookbook/commands-keymap-basics/cookbook-commands-keymap-basics-shortcut-and-gating.json` (`wait_shortcut_routing_trace.query.key_context`)
 - Reduce authoring noise (status):
-  - Done: `UiIntoElement`-level `test_id` late-landing (`AUE-semantics-120`):
-    `ecosystem/fret-ui-kit/src/declarative/semantics.rs`
-  - Done: `UiBuilder`-level semantics late-landing (`AUE-semantics-121`, MVP3):
-    `ecosystem/fret-ui-kit/src/ui_builder.rs`
-  - Remaining: cookbook/demo refactors that remove “decorate-only” early landing (tracked as `AUE-semantics-123`).
+  - Done: attach `SemanticsDecoration`/`test_id`/`key_context` before `into_element(cx)`:
+    - Mechanism helpers: `crates/fret-ui/src/element.rs` (`AnyElement::a11y_*`)
+    - Ecosystem authoring ext: `ecosystem/fret-ui-kit/src/declarative/semantics.rs`
+    - Prelude import fix: `ecosystem/fret-ui-kit/src/lib.rs` (`UiIntoElement` in `prelude::*`)
+  - Done: cookbook demos updated to avoid decorate-only early landing:
+    - `apps/fret-cookbook/examples/hello.rs`
+    - `apps/fret-cookbook/examples/overlay_basics.rs`
+    - `apps/fret-cookbook/examples/commands_keymap_basics.rs`
+    - `apps/fret-cookbook/examples/hello_counter.rs`
 - Pointer-triggered explainability: stable selector → action mapping without relying on script stamping.
   - Status (as of 2026-03-03): `debug.command_dispatch_trace[*].source_test_id` is inferred from the
     current semantics snapshot when `source_element` is available (fallbacks remain for cases where
@@ -324,3 +385,47 @@ practical steps:
 - View runtime ergonomics: reduce `on_action` handler boilerplate (`request_redraw` + `notify`) without weakening
   determinism or layering (ecosystem-only).
 - Payload actions (v2+), behind strict determinism + validation rules.
+  - See: `docs/adr/0312-payload-actions-v2.md`
+
+### Payload actions v2 (prototype, post-v1)
+
+- [x] AFA-actions-070 Lock the payload actions v2 contract (ADR 0312) and scope constraints.
+  - Constraints (prototype):
+    - payload is pointer/programmatic-only (no keymap schema changes),
+    - payload is transient (window-scoped pending store + TTL),
+    - missing payload is safe (recommended: treat as not handled).
+  - Evidence:
+    - ADR: `docs/adr/0312-payload-actions-v2.md`
+
+- [x] AFA-actions-071 Implement a window-scoped pending payload service (TTL) in `crates/fret-runtime`.
+  - Reference: `crates/fret-runtime/src/command_dispatch_diagnostics.rs` (`WindowPendingCommandDispatchSourceService`).
+  - Evidence:
+    - `crates/fret-runtime/src/action_payload.rs` (pending payload store + TTL)
+
+- [x] AFA-actions-072 Expose an object-safe host API for recording/consuming payloads during action dispatch.
+  - Surface: `crates/fret-ui/src/action.rs` (`UiActionHost`).
+  - Evidence:
+    - `crates/fret-ui/src/action.rs` (`record_pending_action_payload`, `consume_pending_action_payload`)
+
+- [x] AFA-actions-073 Add ecosystem authoring sugar:
+  - typed payload action macro (additive; do not break `actions!`),
+  - handler table support for payload actions (consume + downcast),
+  - pressable helper to dispatch action + payload while preserving `*_if_enabled` gating.
+  - Evidence:
+    - `ecosystem/fret/src/actions.rs` (`payload_actions!`, payload handler hooks)
+    - `ecosystem/fret/src/view.rs` (`ViewCx::on_payload_action`)
+    - `ecosystem/fret-ui-kit/src/declarative/action_hooks.rs` (pressable helper)
+    - `ecosystem/fret-ui-shadcn/src/button.rs` (`action_payload*` helpers)
+
+- [x] AFA-actions-074 Migrate at least one in-tree demo from MVU payload routing to payload actions.
+  - Evidence:
+    - demo compiles and behaves correctly,
+    - diagnostics gate can still explain the dispatch decision (and best-effort payload presence).
+  - Evidence:
+    - `apps/fret-cookbook/examples/payload_actions_basics.rs`
+    - `tools/diag-scripts/cookbook/payload-actions-basics/cookbook-payload-actions-basics-remove.json`
+
+- Macro ergonomics (non-breaking, v1.x):
+  - Keep `actions!` explicit-ID requirement (stable IDs must not drift with refactors).
+  - Consider additive helpers that reduce repetition (e.g. prefix/namespace helpers), but do not
+    infer IDs from type paths/module names.

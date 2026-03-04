@@ -275,6 +275,7 @@ pub(super) fn handle_assert_step(
                                         open_window_count,
                                         platform_caps,
                                         app.global::<fret_runtime::RunnerWindowStyleDiagnosticsStore>(),
+                                        app.global::<fret_runtime::RunnerPlatformWindowReceiverDiagnosticsStore>(),
                                         docking_diag,
                                         workspace_diag,
                                         dock_drag_runtime.as_ref(),
@@ -290,6 +291,7 @@ pub(super) fn handle_assert_step(
                                         open_window_count,
                                         platform_caps,
                                         app.global::<fret_runtime::RunnerWindowStyleDiagnosticsStore>(),
+                                        app.global::<fret_runtime::RunnerPlatformWindowReceiverDiagnosticsStore>(),
                                         docking_diag,
                                         workspace_diag,
                                         dock_drag_runtime.as_ref(),
@@ -308,16 +310,17 @@ pub(super) fn handle_assert_step(
                             } else {
                                 // Off-window predicates must not reuse the current window's semantics snapshot.
                                 eval_predicate_without_semantics(
-                                    predicate_window,
-                                    svc.known_windows.as_slice(),
-                                    open_window_count,
-                                    platform_caps,
-                                    app.global::<fret_runtime::RunnerWindowStyleDiagnosticsStore>(),
-                                    docking_diag,
-                                    workspace_diag,
-                                    dock_drag_runtime.as_ref(),
-                                    &predicate,
-                                )
+                            predicate_window,
+                            svc.known_windows.as_slice(),
+                            open_window_count,
+                            platform_caps,
+                            app.global::<fret_runtime::RunnerWindowStyleDiagnosticsStore>(),
+                            app.global::<fret_runtime::RunnerPlatformWindowReceiverDiagnosticsStore>(),
+                            docking_diag,
+                            workspace_diag,
+                            dock_drag_runtime.as_ref(),
+                            &predicate,
+                        )
                                 .unwrap_or_else(|| {
                                     *force_dump_label = Some(format!(
                                         "script-step-{step_index:04}-assert-no-semantics"

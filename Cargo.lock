@@ -1787,6 +1787,7 @@ dependencies = [
  "fret-ui-assets",
  "fret-ui-kit",
  "fret-ui-shadcn",
+ "fret-window-style-profiles",
  "serde",
  "serde_json",
  "slotmap",
@@ -2086,6 +2087,7 @@ dependencies = [
  "fret-runtime",
  "fret-ui",
  "fret-ui-headless",
+ "fret-window-style-profiles",
  "slotmap",
  "tracing",
 ]
@@ -2989,6 +2991,13 @@ dependencies = [
  "raw-window-handle",
  "serde_json",
  "tracing",
+]
+
+[[package]]
+name = "fret-window-style-profiles"
+version = "0.1.0"
+dependencies = [
+ "fret-runtime",
 ]
 
 [[package]]

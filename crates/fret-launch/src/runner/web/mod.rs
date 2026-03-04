@@ -259,7 +259,8 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         available.ui.window_transparent = false;
         available.ui.window_skip_taskbar = false;
         available.ui.window_non_activating = false;
-        available.ui.window_mouse_passthrough = false;
+        available.ui.window_hit_test_passthrough_all = false;
+        available.ui.window_hit_test_passthrough_regions = false;
         available.ui.window_set_visible = false;
         available.ui.window_begin_drag = false;
         available.ui.window_begin_resize = false;
@@ -301,7 +302,9 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         caps.ui.window_transparent &= available.ui.window_transparent;
         caps.ui.window_skip_taskbar &= available.ui.window_skip_taskbar;
         caps.ui.window_non_activating &= available.ui.window_non_activating;
-        caps.ui.window_mouse_passthrough &= available.ui.window_mouse_passthrough;
+        caps.ui.window_hit_test_passthrough_all &= available.ui.window_hit_test_passthrough_all;
+        caps.ui.window_hit_test_passthrough_regions &=
+            available.ui.window_hit_test_passthrough_regions;
         caps.ui.window_set_visible &= available.ui.window_set_visible;
         caps.ui.window_begin_drag &= available.ui.window_begin_drag;
         caps.ui.window_begin_resize &= available.ui.window_begin_resize;

@@ -51,6 +51,7 @@ fn prepaint_updates_virtual_list_window_and_marks_cache_root_dirty_on_escape() {
                     },
                 ),
                 semantics_decoration: None,
+                key_context: None,
             },
         );
     });
@@ -183,6 +184,7 @@ fn prepaint_detects_render_window_insufficient_for_overscan_policy() {
                     },
                 ),
                 semantics_decoration: None,
+                key_context: None,
             },
         );
     });
@@ -306,6 +308,7 @@ fn prepaint_marks_scroll_to_item_window_updates_with_distinct_invalidation_detai
                     },
                 ),
                 semantics_decoration: None,
+                key_context: None,
             },
         );
     });
@@ -425,6 +428,7 @@ fn prepaint_caps_retained_host_prefetch_step_to_bound_attach_detach_delta() {
                     },
                 ),
                 semantics_decoration: None,
+                key_context: None,
             },
         );
     });
