@@ -1195,7 +1195,7 @@ impl TextSystem {
             atlas_width,
             atlas_height,
             wgpu::TextureFormat::R8Unorm,
-            TEXT_ATLAS_MAX_PAGES,
+            0,
             TEXT_ATLAS_MAX_PAGES,
         );
         let color_atlas = GlyphAtlas::new(
