@@ -34,6 +34,7 @@ pub mod select_item_aligned;
 pub mod slider;
 pub mod snap_points;
 pub mod tab_strip_canonical;
+pub mod tab_strip_hit_test;
 pub mod tab_strip_controller;
 pub mod tab_strip_drop_target;
 pub mod tab_strip_overflow;
