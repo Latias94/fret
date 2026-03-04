@@ -11,8 +11,8 @@ use std::sync::Arc;
 use fret_core::SemanticsRole;
 use fret_runtime::Model;
 use fret_ui::element::{
-    AnyElement, LayoutStyle, PressableA11y, PressableProps, RovingFlexProps, RovingFocusProps,
-    SemanticsDecoration, SemanticsProps, StackProps,
+    AnyElement, LayoutStyle, PressableA11y, PressableProps, PressableState, RovingFlexProps,
+    RovingFocusProps, SemanticsDecoration, SemanticsProps, StackProps,
 };
 use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, UiHost};
@@ -607,8 +607,30 @@ impl AccordionTrigger {
         self,
         cx: &mut ElementContext<'_, H>,
         root: &AccordionRoot,
-        mut props: PressableProps,
+        props: PressableProps,
         f: impl FnOnce(&mut ElementContext<'_, H>, bool) -> I,
+    ) -> AnyElement
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
+        self.into_element_with_id_props(cx, root, props, move |cx, open, _st, _id, props| {
+            (props, f(cx, open))
+        })
+    }
+
+    #[track_caller]
+    pub fn into_element_with_id_props<H: UiHost, I>(
+        self,
+        cx: &mut ElementContext<'_, H>,
+        root: &AccordionRoot,
+        mut props: PressableProps,
+        f: impl FnOnce(
+            &mut ElementContext<'_, H>,
+            bool,
+            PressableState,
+            GlobalElementId,
+            PressableProps,
+        ) -> (PressableProps, I),
     ) -> AnyElement
     where
         I: IntoIterator<Item = AnyElement>,
@@ -618,7 +640,7 @@ impl AccordionTrigger {
         let disabled = self.disabled || root.disabled;
         let tab_stop = self.tab_stop;
 
-        cx.pressable_with_id_props(move |cx, st, _id| {
+        cx.pressable_with_id_props(move |cx, st, id| {
             match root.kind {
                 AccordionKind::Single => {
                     let model = root
@@ -658,7 +680,7 @@ impl AccordionTrigger {
             props.focusable = (!disabled) && (tab_stop || st.focused);
             props.a11y = accordion_trigger_a11y(label.clone(), open);
 
-            (props, f(cx, open))
+            f(cx, open, st, id, props)
         })
     }
 }
