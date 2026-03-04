@@ -166,6 +166,8 @@ pub mod table_demo;
 pub mod table_stress_demo;
 pub mod tags_demo;
 #[cfg(not(target_arch = "wasm32"))]
+pub mod text_heavy_memory_demo;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod todo_demo;
 #[cfg(not(target_arch = "wasm32"))]
 #[cfg(not(target_arch = "wasm32"))]

@@ -1,0 +1,18 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "text heavy: memory steady",
+    "tags": ["text", "memory", "steady"],
+    "required_capabilities": ["diag.script_v2"],
+    "target_hints": ["Captures a steady-state bundle; intended to grow text shaping + emoji atlas caches."]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "wait_frames", "n": 10 },
+
+    { "type": "reset_diagnostics" },
+    { "type": "wait_frames", "n": 600 },
+    { "type": "capture_bundle", "label": "text-heavy-memory-steady" }
+  ]
+}
+

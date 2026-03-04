@@ -35,6 +35,13 @@ Using `tools/diag-scripts/empty-idle-memory-steady.json` on macOS/Metal (baselin
   - Default malloc zone: ~24.5 MB allocated, ~15.4 MB frag
   - `debug.stats.wgpu_metal_current_allocated_size_bytes`: ~30.7 MiB (requires `--env FRET_DIAG_WGPU_ALLOCATOR_REPORT=1`)
 
+Using `tools/diag-scripts/text-heavy-memory-steady.json` on macOS/Metal (fonts + emoji stress):
+
+- `macos_vmmap.physical_footprint_peak_bytes`: ~360 MB
+- `owned unmapped memory` dirty: ~250 MB
+- Default malloc zone: ~26.6 MB allocated, ~20.9 MB frag (system allocator)
+- `wgpu_metal_current_allocated_size_bytes`: ~121.5 MiB
+
 Allocator A/B (empty idle, `--release`, `fretboard diag repro`, same script):
 
 - System allocator:

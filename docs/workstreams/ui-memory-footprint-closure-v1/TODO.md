@@ -16,7 +16,7 @@
 ## Scripted repro matrix
 
 - [x] Add `tools/diag-scripts/tooling/empty/empty-idle-memory-steady.json` (schema v2).
-- [ ] Add `tools/diag-scripts/tooling/text/text-heavy-memory-steady.json` (forces emoji/color glyphs).
+- [x] Add `tools/diag-scripts/tooling/text/text-heavy-memory-steady.json` (forces emoji/color glyphs).
 - [ ] Add `tools/diag-scripts/tooling/images/image-heavy-memory-steady.json` (forces texture cache).
 
 ### Evidence (captured)
