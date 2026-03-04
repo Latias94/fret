@@ -110,12 +110,13 @@ use compare::{
 use devtools::DevtoolsOps;
 use gates::{
     CodeEditorMemoryGateResult, CodeEditorMemoryThresholds, RedrawHitchesGateResult,
-    RenderTextAtlasBytesGateResult, RendererGpuBudgetThresholds, RendererGpuBudgetsGateResult,
-    ResourceFootprintGateResult, ResourceFootprintThresholds, WgpuMetalAllocatedSizeGateResult,
+    RenderTextAtlasBytesGateResult, RenderTextFontDbGateResult, RenderTextFontDbThresholds,
+    RendererGpuBudgetThresholds, RendererGpuBudgetsGateResult, ResourceFootprintGateResult,
+    ResourceFootprintThresholds, WgpuMetalAllocatedSizeGateResult,
     check_code_editor_memory_thresholds, check_redraw_hitches_max_total_ms,
     check_render_text_atlas_bytes_live_estimate_total_threshold,
-    check_renderer_gpu_budget_thresholds, check_resource_footprint_thresholds,
-    check_wgpu_metal_current_allocated_size_threshold,
+    check_render_text_font_db_thresholds, check_renderer_gpu_budget_thresholds,
+    check_resource_footprint_thresholds, check_wgpu_metal_current_allocated_size_threshold,
 };
 use lint::{LintOptions, lint_bundle_from_path};
 use perf_seed_policy::{PerfBaselineSeed, PerfSeedMetric, ResolvedPerfBaselineSeedPolicy};
@@ -425,6 +426,10 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut max_renderer_intermediate_peak_in_use_bytes: Option<u64> = None;
     let mut max_wgpu_metal_current_allocated_size_bytes: Option<u64> = None;
     let mut max_render_text_atlas_bytes_live_estimate_total: Option<u64> = None;
+    let mut max_render_text_registered_font_blobs_total_bytes: Option<u64> = None;
+    let mut max_render_text_registered_font_blobs_count: Option<u64> = None;
+    let mut max_render_text_shape_cache_entries: Option<u64> = None;
+    let mut max_render_text_blob_cache_entries: Option<u64> = None;
     let mut max_code_editor_buffer_len_bytes: Option<u64> = None;
     let mut max_code_editor_undo_text_bytes_estimate_total: Option<u64> = None;
     let mut max_code_editor_row_text_cache_entries: Option<u64> = None;
@@ -1315,6 +1320,60 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         "invalid value for --max-render-text-atlas-bytes-live-estimate-total"
                             .to_string()
                     })?);
+                i += 1;
+            }
+            "--max-render-text-registered-font-blobs-total-bytes" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err(
+                        "missing value for --max-render-text-registered-font-blobs-total-bytes"
+                            .to_string(),
+                    );
+                };
+                max_render_text_registered_font_blobs_total_bytes =
+                    Some(v.parse::<u64>().map_err(|_| {
+                        "invalid value for --max-render-text-registered-font-blobs-total-bytes"
+                            .to_string()
+                    })?);
+                i += 1;
+            }
+            "--max-render-text-registered-font-blobs-count" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err(
+                        "missing value for --max-render-text-registered-font-blobs-count"
+                            .to_string(),
+                    );
+                };
+                max_render_text_registered_font_blobs_count =
+                    Some(v.parse::<u64>().map_err(|_| {
+                        "invalid value for --max-render-text-registered-font-blobs-count"
+                            .to_string()
+                    })?);
+                i += 1;
+            }
+            "--max-render-text-shape-cache-entries" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err(
+                        "missing value for --max-render-text-shape-cache-entries".to_string()
+                    );
+                };
+                max_render_text_shape_cache_entries = Some(v.parse::<u64>().map_err(|_| {
+                    "invalid value for --max-render-text-shape-cache-entries".to_string()
+                })?);
+                i += 1;
+            }
+            "--max-render-text-blob-cache-entries" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err(
+                        "missing value for --max-render-text-blob-cache-entries".to_string()
+                    );
+                };
+                max_render_text_blob_cache_entries = Some(v.parse::<u64>().map_err(|_| {
+                    "invalid value for --max-render-text-blob-cache-entries".to_string()
+                })?);
                 i += 1;
             }
             "--max-code-editor-buffer-len-bytes" => {
@@ -2339,6 +2398,13 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
         max_renderer_intermediate_peak_in_use_bytes,
     };
 
+    let render_text_font_db_thresholds = RenderTextFontDbThresholds {
+        max_render_text_registered_font_blobs_total_bytes,
+        max_render_text_registered_font_blobs_count,
+        max_render_text_shape_cache_entries,
+        max_render_text_blob_cache_entries,
+    };
+
     let code_editor_memory_thresholds = CodeEditorMemoryThresholds {
         max_code_editor_buffer_len_bytes,
         max_code_editor_undo_text_bytes_estimate_total,
@@ -2375,6 +2441,12 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     if sub != "repro" && max_render_text_atlas_bytes_live_estimate_total.is_some() {
         return Err(
             "--max-render-text-atlas-bytes-live-estimate-total is only supported with `diag repro` for now"
+                .to_string(),
+        );
+    }
+    if sub != "repro" && render_text_font_db_thresholds.any() {
+        return Err(
+            "--max-render-text-registered-font-blobs-total-bytes/--max-render-text-registered-font-blobs-count/--max-render-text-shape-cache-entries/--max-render-text-blob-cache-entries are only supported with `diag repro` for now"
                 .to_string(),
         );
     }
@@ -3021,6 +3093,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 resource_footprint_thresholds,
                 renderer_gpu_budget_thresholds,
                 code_editor_memory_thresholds,
+                render_text_font_db_thresholds,
                 max_wgpu_metal_current_allocated_size_bytes,
                 max_render_text_atlas_bytes_live_estimate_total,
                 check_redraw_hitches_max_total_ms_threshold,

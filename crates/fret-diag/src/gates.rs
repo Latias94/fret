@@ -44,6 +44,29 @@ pub(super) struct RenderTextAtlasBytesGateResult {
     pub(super) failures: usize,
 }
 
+pub(super) struct RenderTextFontDbThresholds {
+    pub(super) max_render_text_registered_font_blobs_total_bytes: Option<u64>,
+    pub(super) max_render_text_registered_font_blobs_count: Option<u64>,
+    pub(super) max_render_text_shape_cache_entries: Option<u64>,
+    pub(super) max_render_text_blob_cache_entries: Option<u64>,
+}
+
+impl RenderTextFontDbThresholds {
+    pub(super) fn any(&self) -> bool {
+        self.max_render_text_registered_font_blobs_total_bytes
+            .is_some()
+            || self.max_render_text_registered_font_blobs_count.is_some()
+            || self.max_render_text_shape_cache_entries.is_some()
+            || self.max_render_text_blob_cache_entries.is_some()
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(super) struct RenderTextFontDbGateResult {
+    pub(super) evidence_path: PathBuf,
+    pub(super) failures: usize,
+}
+
 pub(super) struct RendererGpuBudgetThresholds {
     pub(super) max_renderer_gpu_images_bytes_estimate: Option<u64>,
     pub(super) max_renderer_gpu_render_targets_bytes_estimate: Option<u64>,
@@ -496,6 +519,178 @@ pub(super) fn check_render_text_atlas_bytes_live_estimate_total_threshold(
         .unwrap_or(0);
 
     Ok(RenderTextAtlasBytesGateResult {
+        evidence_path: out_path,
+        failures,
+    })
+}
+
+pub(super) fn check_render_text_font_db_thresholds(
+    out_dir: &Path,
+    bundle_path: Option<&Path>,
+    thresholds: &RenderTextFontDbThresholds,
+) -> Result<RenderTextFontDbGateResult, String> {
+    let out_path = out_dir.join("check.render_text_font_db.json");
+
+    let v = bundle_path.and_then(read_json_value);
+    let bundle_present = v.is_some();
+
+    let (tick_id, frame_id, render_text) = if let Some(v) = v.as_ref() {
+        let windows = v.get("windows").and_then(|v| v.as_array());
+        let first_window = windows.and_then(|w| w.first());
+        let snapshots = first_window
+            .and_then(|w| w.get("snapshots"))
+            .and_then(|v| v.as_array());
+        let last_snapshot = snapshots.and_then(|s| s.last());
+
+        let tick_id = last_snapshot
+            .and_then(|s| s.get("tick_id"))
+            .and_then(|v| v.as_u64());
+        let frame_id = last_snapshot
+            .and_then(|s| s.get("frame_id"))
+            .and_then(|v| v.as_u64());
+
+        let render_text = last_snapshot
+            .and_then(|s| s.get("resource_caches"))
+            .and_then(|v| v.get("render_text"))
+            .and_then(|v| v.as_object());
+
+        (tick_id, frame_id, render_text)
+    } else {
+        (None, None, None)
+    };
+
+    let missing_reason = if bundle_present {
+        "missing_field"
+    } else {
+        "missing_bundle"
+    };
+
+    let u64_field = |k: &str| -> Option<u64> {
+        render_text
+            .as_ref()
+            .and_then(|o| o.get(k))
+            .and_then(|v| v.as_u64())
+    };
+
+    let registered_font_blobs_total_bytes = u64_field("registered_font_blobs_total_bytes");
+    let registered_font_blobs_count = u64_field("registered_font_blobs_count");
+    let shape_cache_entries = u64_field("shape_cache_entries");
+    let blob_cache_entries = u64_field("blob_cache_entries");
+
+    let mut failures: Vec<serde_json::Value> = Vec::new();
+
+    if let Some(thr) = thresholds.max_render_text_registered_font_blobs_total_bytes {
+        match registered_font_blobs_total_bytes {
+            Some(observed) if observed > thr => failures.push(serde_json::json!({
+                "kind": "render_text_registered_font_blobs_total_bytes",
+                "threshold": thr,
+                "observed": observed,
+                "reason": "exceeded",
+            })),
+            Some(_) => {}
+            None => failures.push(serde_json::json!({
+                "kind": "render_text_registered_font_blobs_total_bytes",
+                "threshold": thr,
+                "observed": serde_json::Value::Null,
+                "reason": missing_reason,
+                "field": "windows[0].snapshots[-1].resource_caches.render_text.registered_font_blobs_total_bytes",
+            })),
+        }
+    }
+
+    if let Some(thr) = thresholds.max_render_text_registered_font_blobs_count {
+        match registered_font_blobs_count {
+            Some(observed) if observed > thr => failures.push(serde_json::json!({
+                "kind": "render_text_registered_font_blobs_count",
+                "threshold": thr,
+                "observed": observed,
+                "reason": "exceeded",
+            })),
+            Some(_) => {}
+            None => failures.push(serde_json::json!({
+                "kind": "render_text_registered_font_blobs_count",
+                "threshold": thr,
+                "observed": serde_json::Value::Null,
+                "reason": missing_reason,
+                "field": "windows[0].snapshots[-1].resource_caches.render_text.registered_font_blobs_count",
+            })),
+        }
+    }
+
+    if let Some(thr) = thresholds.max_render_text_shape_cache_entries {
+        match shape_cache_entries {
+            Some(observed) if observed > thr => failures.push(serde_json::json!({
+                "kind": "render_text_shape_cache_entries",
+                "threshold": thr,
+                "observed": observed,
+                "reason": "exceeded",
+            })),
+            Some(_) => {}
+            None => failures.push(serde_json::json!({
+                "kind": "render_text_shape_cache_entries",
+                "threshold": thr,
+                "observed": serde_json::Value::Null,
+                "reason": missing_reason,
+                "field": "windows[0].snapshots[-1].resource_caches.render_text.shape_cache_entries",
+            })),
+        }
+    }
+
+    if let Some(thr) = thresholds.max_render_text_blob_cache_entries {
+        match blob_cache_entries {
+            Some(observed) if observed > thr => failures.push(serde_json::json!({
+                "kind": "render_text_blob_cache_entries",
+                "threshold": thr,
+                "observed": observed,
+                "reason": "exceeded",
+            })),
+            Some(_) => {}
+            None => failures.push(serde_json::json!({
+                "kind": "render_text_blob_cache_entries",
+                "threshold": thr,
+                "observed": serde_json::Value::Null,
+                "reason": missing_reason,
+                "field": "windows[0].snapshots[-1].resource_caches.render_text.blob_cache_entries",
+            })),
+        }
+    }
+
+    let payload = serde_json::json!({
+        "schema_version": 1,
+        "generated_unix_ms": now_unix_ms(),
+        "kind": "render_text_font_db_thresholds",
+        "out_dir": out_dir.display().to_string(),
+        "bundle_file": bundle_path
+            .and_then(|p| p.file_name())
+            .and_then(|s| s.to_str())
+            .unwrap_or("<unknown>"),
+        "thresholds": {
+            "max_render_text_registered_font_blobs_total_bytes": thresholds.max_render_text_registered_font_blobs_total_bytes,
+            "max_render_text_registered_font_blobs_count": thresholds.max_render_text_registered_font_blobs_count,
+            "max_render_text_shape_cache_entries": thresholds.max_render_text_shape_cache_entries,
+            "max_render_text_blob_cache_entries": thresholds.max_render_text_blob_cache_entries,
+        },
+        "observed": {
+            "bundle_present": bundle_present,
+            "tick_id": tick_id,
+            "frame_id": frame_id,
+            "render_text_present": render_text.is_some(),
+            "render_text_registered_font_blobs_total_bytes": registered_font_blobs_total_bytes,
+            "render_text_registered_font_blobs_count": registered_font_blobs_count,
+            "render_text_shape_cache_entries": shape_cache_entries,
+            "render_text_blob_cache_entries": blob_cache_entries,
+        },
+        "failures": failures,
+    });
+    let _ = write_json_value(&out_path, &payload);
+
+    let failures = payload
+        .get("failures")
+        .and_then(|v| v.as_array())
+        .map(|a| a.len())
+        .unwrap_or(0);
+
+    Ok(RenderTextFontDbGateResult {
         evidence_path: out_path,
         failures,
     })

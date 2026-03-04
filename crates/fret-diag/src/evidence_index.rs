@@ -358,6 +358,10 @@ pub(crate) fn write_evidence_index(
         "check.render_text_atlas_bytes.json",
     );
     add_file(
+        "check.render_text_font_db",
+        "check.render_text_font_db.json",
+    );
+    add_file(
         "check.renderer_gpu_budgets",
         "check.renderer_gpu_budgets.json",
     );
