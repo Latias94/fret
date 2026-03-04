@@ -331,7 +331,7 @@ impl RadioGroup {
                 default_value.clone()
             })
             .model();
-            let is_rtl = direction_prim::use_direction_in_scope(cx, None)
+            let is_rtl = crate::use_direction(cx, None)
                 == direction_prim::LayoutDirection::Rtl;
 
             let selected: Option<Arc<str>> = cx.watch_model(&model).cloned().flatten();

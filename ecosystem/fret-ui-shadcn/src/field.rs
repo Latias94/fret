@@ -762,7 +762,7 @@ impl FieldTitle {
             (fg, px, line_height)
         };
 
-        let align = match direction_prim::use_direction_in_scope(cx, None) {
+        let align = match crate::use_direction(cx, None) {
             direction_prim::LayoutDirection::Rtl => TextAlign::End,
             direction_prim::LayoutDirection::Ltr => TextAlign::Start,
         };
@@ -886,7 +886,7 @@ impl FieldLabel {
 
         let wrap_children = self.children;
         let Some(for_control) = self.for_control else {
-            let align = match direction_prim::use_direction_in_scope(cx, None) {
+            let align = match crate::use_direction(cx, None) {
                 direction_prim::LayoutDirection::Rtl => TextAlign::End,
                 direction_prim::LayoutDirection::Ltr => TextAlign::Start,
             };
@@ -1060,7 +1060,7 @@ impl FieldLabel {
                 let inner = cx.container(wrapper, move |_cx| children);
                 vec![inner]
             } else if render_text {
-                let align = match direction_prim::use_direction_in_scope(cx, None) {
+                let align = match crate::use_direction(cx, None) {
                     direction_prim::LayoutDirection::Rtl => TextAlign::End,
                     direction_prim::LayoutDirection::Ltr => TextAlign::Start,
                 };
@@ -1153,7 +1153,7 @@ impl FieldDescription {
             (fg, px, line_height)
         };
 
-        let align = match direction_prim::use_direction_in_scope(cx, None) {
+        let align = match crate::use_direction(cx, None) {
             direction_prim::LayoutDirection::Rtl => TextAlign::End,
             direction_prim::LayoutDirection::Ltr => TextAlign::Start,
         };
@@ -1248,7 +1248,7 @@ impl FieldError {
             (fg, px, line_height)
         };
 
-        let align = match direction_prim::use_direction_in_scope(cx, None) {
+        let align = match crate::use_direction(cx, None) {
             direction_prim::LayoutDirection::Rtl => TextAlign::End,
             direction_prim::LayoutDirection::Ltr => TextAlign::Start,
         };

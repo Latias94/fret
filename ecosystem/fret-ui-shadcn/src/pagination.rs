@@ -409,7 +409,7 @@ impl PaginationPrevious {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let dir = direction_prim::use_direction_in_scope(cx, None);
+        let dir = crate::use_direction(cx, None);
         let text = self.text.unwrap_or_else(|| Arc::<str>::from("Previous"));
         let show_text = viewport_queries::viewport_width_at_least(
             cx,
@@ -492,7 +492,7 @@ impl PaginationNext {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let dir = direction_prim::use_direction_in_scope(cx, None);
+        let dir = crate::use_direction(cx, None);
         let text = self.text.unwrap_or_else(|| Arc::<str>::from("Next"));
         let show_text = viewport_queries::viewport_width_at_least(
             cx,

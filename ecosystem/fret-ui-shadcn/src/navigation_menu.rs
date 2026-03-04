@@ -26,7 +26,6 @@ use fret_ui_kit::declarative::transition::{
     drive_transition_with_durations_and_cubic_bezier, ticks_60hz_for_duration,
 };
 use fret_ui_kit::headless::safe_hover;
-use fret_ui_kit::primitives::direction as direction_prim;
 use fret_ui_kit::primitives::navigation_menu as radix_navigation_menu;
 use fret_ui_kit::primitives::{popper, popper_content};
 use fret_ui_kit::theme_tokens;
@@ -1220,1089 +1219,1089 @@ impl NavigationMenu {
             move |cx, region_id| {
                 let region_id_for_queries = query_region_override.unwrap_or(region_id);
                 vec![cx.container(root_props, move |cx| {
-            let root_id = cx.root_id();
-            let nav_ctx = radix_navigation_menu::NavigationMenuRoot::new(value_model.clone())
-                .config(cfg)
-                .disabled(menu_disabled)
-                .context(cx, root_id);
-            let root_state = nav_ctx.root_state.clone();
+                    let root_id = cx.root_id();
+                    let nav_ctx = radix_navigation_menu::NavigationMenuRoot::new(value_model.clone())
+                        .config(cfg)
+                        .disabled(menu_disabled)
+                        .context(cx, root_id);
+                    let root_state = nav_ctx.root_state.clone();
 
-            #[derive(Default)]
-            struct OpenModelState {
-                model: Option<Model<bool>>,
-            }
-
-            #[derive(Default)]
-            struct SelectionSyncState {
-                last_selected: Option<Arc<str>>,
-            }
-
-            #[derive(Default)]
-            struct SafeCorridorState {
-                last_pointer: Option<Point>,
-                trigger_anchor: Option<Rect>,
-                viewport_panel: Option<Rect>,
-                pointer_in_corridor: bool,
-            }
-
-            let open_model =
-                cx.with_state_for(root_id, OpenModelState::default, |st| st.model.clone());
-            let open_model = if let Some(model) = open_model {
-                model
-            } else {
-                let model = cx.app.models_mut().insert(false);
-                cx.with_state_for(root_id, OpenModelState::default, |st| {
-                    st.model = Some(model.clone());
-                });
-                model
-            };
-
-            let selected: Option<Arc<str>> =
-                cx.watch_model(&value_model).layout().cloned().flatten();
-            if let Some(handler) = on_value_change.as_ref() {
-                let changed = cx.with_state(
-                    NavigationMenuValueChangeCallbackState::default,
-                    |state| navigation_menu_value_change_event(state, selected.clone()),
-                );
-                if let Some(value) = changed {
-                    handler(value);
-                }
-            }
-            let safe_corridor: Arc<Mutex<SafeCorridorState>> = cx.with_state_for(
-                root_id,
-                || Arc::new(Mutex::new(SafeCorridorState::default())),
-                |st| st.clone(),
-            );
-            let selected_changed = cx.with_state_for(root_id, SelectionSyncState::default, |st| {
-                let changed = selected != st.last_selected;
-                if changed {
-                    st.last_selected = selected.clone();
-                }
-                changed
-            });
-
-            if selected_changed {
-                let selected = selected.clone();
-                let _ = cx
-                    .app
-                    .models_mut()
-                    .update(&open_model, |v| *v = selected.is_some());
-                if selected.is_none() {
-                    let mut safe = safe_corridor.lock().unwrap_or_else(|e| e.into_inner());
-                    safe.pointer_in_corridor = false;
-                    safe.viewport_panel = None;
-                    safe.trigger_anchor = None;
-                }
-            }
-
-            if selected.is_some() {
-                let should_keep_open = {
-                    let safe = safe_corridor.lock().unwrap_or_else(|e| e.into_inner());
-                    safe.pointer_in_corridor
-                };
-                if should_keep_open {
-                    let _ = cx.app.models_mut().update(&open_model, |v| *v = true);
-                }
-            }
-
-            let open: bool = cx
-                .watch_model(&open_model)
-                .layout()
-                .copied()
-                .unwrap_or(false);
-            let open_for_motion = open && selected.is_some();
-            let motion = OverlayController::transition_with_durations_and_cubic_bezier_duration(
-                cx,
-                open_for_motion,
-                overlay_motion::shadcn_motion_duration_200(cx),
-                overlay_motion::shadcn_motion_duration_200(cx),
-                overlay_motion::shadcn_motion_ease_bezier(cx),
-            );
-            let opacity = motion.progress;
-            let scale = if viewport_enabled {
-                // shadcn new-york:
-                // - Viewport: `zoom-in-90` on open, `zoom-out-95` on close.
-                if open_for_motion {
-                    0.9 + 0.1 * opacity
-                } else {
-                    0.95 + 0.05 * opacity
-                }
-            } else {
-                // When `viewport=false`, content behaves like a popover-ish surface with
-                // `zoom-in-95` / `zoom-out-95`.
-                0.95 + 0.05 * opacity
-            };
-
-            let mut selected_local = radix_navigation_menu::navigation_menu_viewport_selected_value(
-                cx,
-                root_id,
-                selected.clone(),
-                motion.present,
-            );
-
-            if !open_for_motion && selected.is_some() && !motion.present {
-                let mut host = fret_ui::action::UiActionHostAdapter { app: &mut *cx.app };
-                let action_cx = fret_ui::action::ActionCx {
-                    window: cx.window,
-                    target: root_id,
-                };
-                let mut st = root_state.lock().unwrap_or_else(|e| e.into_inner());
-                st.on_item_dismiss(&mut host, action_cx, &value_model, cfg);
-                selected_local = None;
-            }
-
-            let active_idx = selected_local.as_deref().and_then(|v| {
-                items
-                    .iter()
-                    .position(|it| it.value.as_ref() == v)
-                    .filter(|_| !menu_disabled)
-            });
-
-            let values: Vec<Arc<str>> = items.iter().map(|it| it.value.clone()).collect();
-            let transition = radix_navigation_menu::navigation_menu_content_transition(
-                cx,
-                root_id,
-                open_for_motion,
-                selected.clone(),
-                &values,
-            );
-
-            let md_breakpoint =
-                nav_menu_md_breakpoint(cx, md_breakpoint_query, region_id_for_queries);
-            let list_props = FlexProps {
-                layout: LayoutStyle::default(),
-                direction: fret_core::Axis::Horizontal,
-                gap: Px(4.0).into(), // Tailwind `space-x-1`
-                padding: Edges::all(Px(0.0)).into(),
-                justify: MainAlign::Center,
-                align: fret_ui::element::CrossAlign::Center,
-                wrap: true,
-                ..Default::default()
-            };
-
-            let items_for_children = &mut items;
-            let value_for_viewport = value_model.clone();
-            let value_for_viewport_for_list = value_for_viewport.clone();
-            let trigger_text_style_for_list = trigger_text_style.clone();
-            let nav_ctx_for_list = nav_ctx.clone();
-            let theme_for_list = theme.clone();
-            let default_trigger_bg_for_list = default_trigger_bg.clone();
-            let default_trigger_fg_for_list = default_trigger_fg.clone();
-            let style_for_list = style.clone();
-
-            let list = cx.flex(list_props, move |cx| {
-                items_for_children
-                    .iter_mut()
-                    .map(|item| {
-                        let item_value = item.value.clone();
-                        let label = item.label.clone();
-                        let disabled = menu_disabled || item.disabled;
-                        let trigger_test_id = item.trigger_test_id.clone();
-                        let trigger_chrome_test_id = trigger_test_id
-                            .clone()
-                            .map(|id| Arc::<str>::from(format!("{id}.chrome")));
-                        let trigger_text_style_for_item = trigger_text_style_for_list.clone();
-                        let nav_ctx_for_item = nav_ctx_for_list.clone();
-                        let theme_for_item = theme_for_list.clone();
-                        let default_trigger_bg = default_trigger_bg_for_list.clone();
-                        let default_trigger_fg = default_trigger_fg_for_list.clone();
-                        let style_override = style_for_list.clone();
-                        let value_for_viewport = value_for_viewport_for_list.clone();
-
-                        let trigger_children = item.trigger.take();
-                        let content_is_empty = item.content.is_empty();
-                        let item_label = item.label.clone();
-                        let command = item.command.clone();
-                        cx.keyed(item_value.clone(), move |cx| {
-                            let trigger_text_style = trigger_text_style_for_item.clone();
-
-                            let mut pressable = PressableProps::default();
-                            pressable.enabled = !disabled;
-                            pressable.focusable = !disabled;
-                            pressable.layout = decl_style::layout_style(
-                                &theme_for_item,
-                                navigation_menu_trigger_style(&theme_for_item).layout,
-                            );
-                            pressable.a11y = PressableA11y {
-                                role: Some(SemanticsRole::Button),
-                                label: Some(label.clone()),
-                                test_id: trigger_test_id.clone(),
-                                ..Default::default()
-                            };
-
-                            let pointer_props = PointerRegionProps {
-                                layout: LayoutStyle::default(),
-                                enabled: true,
-                                ..Default::default()
-                            };
-
-                            if content_is_empty {
-                                // shadcn/ui demo uses a `NavigationMenuLink` for items with no
-                                // content (e.g. "Docs"), styled via `navigationMenuTriggerStyle()`.
-                                // These should behave like a link (no chevron, no open/close).
-                                let trigger_text_style = trigger_text_style.clone();
-                                let trigger_children = trigger_children;
-                                let command = command.clone();
-                                let model_for_activate = value_for_viewport.clone();
-
-                                pressable.a11y.role = Some(SemanticsRole::Link);
-                                pressable.key_activation = PressableKeyActivation::EnterOnly;
-                                pressable.focus_ring =
-                                    Some(decl_style::focus_ring(&theme_for_item, trigger_radius));
-
-                                cx.pressable_add_on_activate(Arc::new(
-                                    move |host, action_cx, _reason| {
-                                        if disabled {
-                                            return;
-                                        }
-
-                                        if let Some(command) = command.as_ref() {
-                                            host.dispatch_command(Some(action_cx.window), command.clone());
-                                        }
-
-                                        let _ = host.models_mut().update(&model_for_activate, |v| *v = None);
-                                    },
-                                ));
-
-                                return cx.pressable(pressable, move |cx, st| {
-                                    let hovered = st.hovered && !st.pressed;
-                                    let pressed = st.pressed;
-                                    let fg = if disabled {
-                                        trigger_fg_muted
-                                    } else {
-                                        trigger_fg
-                                    };
-                                    let bg = (hovered || pressed).then_some(trigger_bg_hover);
-
-                                    let mut layout = LayoutStyle::default();
-                                    layout.size.height = Length::Fill;
-
-                                    let wrapper = ContainerProps {
-                                        layout,
-                                        padding: Edges {
-                                            top: trigger_pad_y,
-                                            right: trigger_pad_x,
-                                            bottom: trigger_pad_y,
-                                            left: trigger_pad_x,
-                                        }.into(),
-                                        background: bg,
-                                        shadow: None,
-                                        border: Edges::all(Px(0.0)),
-                                        border_color: None,
-                                        corner_radii: Corners::all(trigger_radius),
-                                        ..Default::default()
-                                    };
-
-                                    let content_children = trigger_children.unwrap_or_else(|| {
-                                            let style = trigger_text_style.clone();
-                                            let mut label = ui::label(cx, item_label.clone())
-                                                .text_size_px(style.size)
-                                                .font_weight(style.weight)
-                                                .text_color(ColorRef::Color(fg))
-                                                .nowrap();
-                                            if let Some(line_height) = style.line_height {
-                                                label = label
-                                                    .line_height_px(line_height)
-                                                    .line_height_policy(
-                                                        fret_core::TextLineHeightPolicy::FixedFromStyle,
-                                                    );
-                                            }
-                                            if let Some(letter_spacing_em) = style.letter_spacing_em
-                                            {
-                                                label = label
-                                                    .letter_spacing_em(letter_spacing_em);
-                                            }
-                                            vec![label.into_element(cx)]
-                                        });
-
-                                    let row = cx.flex(
-                                        FlexProps {
-                                            layout: {
-                                                let mut layout = LayoutStyle::default();
-                                                layout.size.height = Length::Fill;
-                                                layout
-                                            },
-                                            direction: fret_core::Axis::Horizontal,
-                                            gap: Px(0.0).into(),
-                                            padding: Edges::all(Px(0.0)).into(),
-                                            justify: MainAlign::Center,
-                                            align: fret_ui::element::CrossAlign::Center,
-                                            wrap: false,
-                                            ..Default::default()
-                                        },
-                                        move |_cx| content_children,
-                                    );
-
-                                    let child = cx.container(wrapper, move |_cx| vec![row]);
-                                    let mut chrome = child;
-                                    if let Some(test_id) = trigger_chrome_test_id.clone() {
-                                        chrome = chrome.test_id(test_id);
-                                    }
-                                    vec![chrome]
-                                });
-                            }
-                            radix_navigation_menu::NavigationMenuTrigger::new(item_value.clone())
-                                .label(label.clone())
-                                .disabled(disabled)
-                                .into_element(
-                                    cx,
-                                    &nav_ctx_for_item,
-                                    pressable,
-                                    pointer_props,
-                                    move |cx, st, is_open| {
-                                        let mut states =
-                                            WidgetStates::from_pressable(cx, st, !disabled);
-                                        states.set(WidgetState::Open, is_open);
-
-                                        let fg_ref = resolve_override_slot(
-                                            style_override.trigger_foreground.as_ref(),
-                                            &default_trigger_fg,
-                                            states,
-                                        );
-                                        let bg_ref = resolve_override_slot_opt(
-                                            style_override.trigger_background.as_ref(),
-                                            &default_trigger_bg,
-                                            states,
-                                        );
-
-                                        let bg = bg_ref
-                                            .as_ref()
-                                            .map(|color| color.resolve(&theme_for_item));
-
-                                        let mut layout = LayoutStyle::default();
-                                        layout.size.height = Length::Fill;
-
-                                        let wrapper = ContainerProps {
-                                            layout,
-                                            padding: Edges {
-                                                top: trigger_pad_y,
-                                                right: trigger_pad_x,
-                                                bottom: trigger_pad_y,
-                                                left: trigger_pad_x,
-                                            }.into(),
-                                            background: bg,
-                                            shadow: None,
-                                            border: Edges::all(Px(0.0)),
-                                            border_color: None,
-                                            corner_radii: Corners::all(trigger_radius),
-                                            ..Default::default()
-                                        };
-
-                                        let content_children =
-                                            trigger_children.unwrap_or_else(|| {
-                                                let style = trigger_text_style.clone();
-                                                let mut label = ui::label(cx, item_label.clone())
-                                                    .text_size_px(style.size)
-                                                    .font_weight(style.weight)
-                                                    .text_color(fg_ref.clone())
-                                                    .nowrap();
-                                                if let Some(line_height) = style.line_height {
-                                                    label = label
-                                                        .line_height_px(line_height)
-                                                        .line_height_policy(
-                                                            fret_core::TextLineHeightPolicy::FixedFromStyle,
-                                                        );
-                                                }
-                                                if let Some(letter_spacing_em) =
-                                                    style.letter_spacing_em
-                                                {
-                                                    label = label.letter_spacing_em(letter_spacing_em);
-                                                }
-                                                vec![label.into_element(cx)]
-                                            });
-
-                                        let fg_ref_for_chevron = fg_ref.clone();
-                                        let chevron_motion = drive_navigation_menu_trigger_chevron_motion(
-                                            cx,
-                                            item_value.clone(),
-                                            is_open,
-                                        );
-                                        let chevron_rotation = 180.0 * chevron_motion.progress;
-                                        let chevron_size = Px(12.0); // Tailwind `size-3`
-                                        let chevron_center =
-                                            Point::new(Px(chevron_size.0 * 0.5), Px(chevron_size.0 * 0.5));
-                                        let chevron_transform = Transform2D::rotation_about_degrees(
-                                            chevron_rotation,
-                                            chevron_center,
-                                        );
-
-                                        let chevron = cx.visual_transform_props(
-                                            VisualTransformProps {
-                                                layout: {
-                                                    let mut layout = LayoutStyle::default();
-                                                    layout.size = SizeStyle {
-                                                        width: Length::Px(chevron_size),
-                                                        height: Length::Px(chevron_size),
-                                                        ..Default::default()
-                                                    };
-                                                    layout.flex.shrink = 0.0;
-                                                    layout.position = fret_ui::element::PositionStyle::Relative;
-                                                    layout.inset.top = Some(Px(1.0)).into(); // `top-[1px]`
-                                                    layout.margin.left =
-                                                        fret_ui::element::MarginEdge::Px(Px(4.0)); // `ml-1`
-                                                    layout
-                                                },
-                                                transform: chevron_transform,
-                                            },
-                                            move |cx| {
-                                                vec![decl_icon::icon_with(
-                                                    cx,
-                                                    ids::ui::CHEVRON_DOWN,
-                                                    Some(chevron_size),
-                                                    Some(fg_ref_for_chevron.clone()),
-                                                )]
-                                            },
-                                        );
-
-                                        let mut row_children = content_children;
-                                        // Upstream adds a literal `" "` text node between the label
-                                        // and the chevron icon, in addition to `ml-1` on the icon.
-                                        // We model the outcome as a spacer metric so the trigger
-                                        // width matches the extracted web goldens closely.
-                                        let space_px = nav_menu_trigger_space_px(&theme_for_item);
-                                        row_children.push(cx.container(
-                                            ContainerProps {
-                                                layout: {
-                                                    let mut layout = LayoutStyle::default();
-                                                    layout.size = SizeStyle {
-                                                        width: Length::Px(space_px),
-                                                        height: Length::Px(Px(0.0)),
-                                                        ..Default::default()
-                                                    };
-                                                    layout.flex.shrink = 0.0;
-                                                    layout
-                                                },
-                                                ..Default::default()
-                                            },
-                                            |_cx| Vec::new(),
-                                        ));
-                                        row_children.push(chevron);
-                                        let row = cx.flex(
-                                            FlexProps {
-                                                layout: {
-                                                    let mut layout = LayoutStyle::default();
-                                                    layout.size.height = Length::Fill;
-                                                    layout
-                                                },
-                                                direction: fret_core::Axis::Horizontal,
-                                                gap: Px(0.0).into(),
-                                                padding: Edges::all(Px(0.0)).into(),
-                                                justify: MainAlign::Center,
-                                                align: fret_ui::element::CrossAlign::Center,
-                                                wrap: false,
-                                                ..Default::default()
-                                            },
-                                            move |_cx| row_children,
-                                        );
-
-                                        let child = cx.container(wrapper, move |_cx| vec![row]);
-                                        let mut chrome = child;
-                                        if let Some(test_id) = trigger_chrome_test_id.clone() {
-                                            chrome = chrome.test_id(test_id);
-                                        }
-                                        vec![chrome]
-                                    },
-                                )
-                        })
-                    })
-                    .collect::<Vec<_>>()
-            });
-
-            let viewport_children = active_idx
-                .and_then(|idx| items.get_mut(idx))
-                .map(|active| std::mem::take(&mut active.content))
-                .unwrap_or_default();
-
-            let has_content = !viewport_children.is_empty();
-            let is_open = selected_local.is_some() && has_content && open_for_motion;
-            let overlay_presence = OverlayPresence {
-                present: motion.present && has_content,
-                interactive: is_open,
-            };
-            let open_change_complete =
-                cx.with_state(NavigationMenuOpenChangeCallbackState::default, |state| {
-                    navigation_menu_open_change_complete_event(
-                        state,
-                        is_open,
-                        overlay_presence.present,
-                        motion.animating,
-                    )
-                });
-            if let (Some(open), Some(handler)) =
-                (open_change_complete, on_open_change_complete.as_ref())
-            {
-                handler(open);
-            }
-
-            if !overlay_presence.present {
-                let mut safe = safe_corridor.lock().unwrap_or_else(|e| e.into_inner());
-                safe.viewport_panel = None;
-                safe.pointer_in_corridor = false;
-            }
-
-            let content_switch = radix_navigation_menu::navigation_menu_content_switch(transition)
-                .map(|sw| {
-                    let from_children = items
-                        .get_mut(sw.from_idx)
-                        .map(|it| std::mem::take(&mut it.content))
-                        .unwrap_or_default();
-                    (sw.progress, sw.forward, from_children)
-                });
-
-            if overlay_presence.present {
-                let side_offset = nav_menu_viewport_side_offset(&theme);
-                let window_margin = nav_menu_viewport_window_margin(&theme);
-                let indicator_size = if indicator_enabled { side_offset } else { Px(0.0) };
-                let indicator_diamond_size = nav_menu_indicator_diamond_size(&theme);
-                let indicator_diamond_corners = {
-                    let mut corners = Corners::all(Px(0.0));
-                    corners.top_left = Px(2.0);
-                    corners
-                };
-                let mut indicator_diamond_shadow = decl_style::shadow_md(&theme, Px(0.0));
-                indicator_diamond_shadow.corner_radii = indicator_diamond_corners;
-
-                let estimated = fret_core::Size::new(Px(320.0), Px(240.0));
-                let measured = selected_local
-                    .as_deref()
-                    .and_then(|value| {
-                        radix_navigation_menu::navigation_menu_viewport_content_id(
-                            cx, root_id, value,
-                        )
-                    })
-                    .and_then(|id| cx.last_bounds_for_element(id).map(|r| r.size));
-
-                if let Some(selected_value) = selected_local.as_deref()
-                    && let Some(trigger_id) =
-                        radix_navigation_menu::navigation_menu_trigger_id(cx, root_id, selected_value)
-                    && let Some(trigger_anchor) = cx
-                        .last_visual_bounds_for_element(trigger_id)
-                        .or_else(|| cx.last_bounds_for_element(trigger_id))
-                {
-                    let mut safe = safe_corridor.lock().unwrap_or_else(|e| e.into_inner());
-                    safe.trigger_anchor = Some(trigger_anchor);
-                }
-                if viewport_enabled {
-                    if let (Some(selected_value), Some(size)) = (selected_local.clone(), measured) {
-                        radix_navigation_menu::navigation_menu_register_viewport_size(
-                            cx,
-                            root_id,
-                            selected_value,
-                            size,
-                        );
+                    #[derive(Default)]
+                    struct OpenModelState {
+                        model: Option<Model<bool>>,
                     }
-                }
 
-                let fallback = measured.unwrap_or(estimated);
-                let content_size = if viewport_enabled {
-                    radix_navigation_menu::navigation_menu_viewport_size_for_transition(
+                    #[derive(Default)]
+                    struct SelectionSyncState {
+                        last_selected: Option<Arc<str>>,
+                    }
+
+                    #[derive(Default)]
+                    struct SafeCorridorState {
+                        last_pointer: Option<Point>,
+                        trigger_anchor: Option<Rect>,
+                        viewport_panel: Option<Rect>,
+                        pointer_in_corridor: bool,
+                    }
+
+                    let open_model =
+                        cx.with_state_for(root_id, OpenModelState::default, |st| st.model.clone());
+                    let open_model = if let Some(model) = open_model {
+                        model
+                    } else {
+                        let model = cx.app.models_mut().insert(false);
+                        cx.with_state_for(root_id, OpenModelState::default, |st| {
+                            st.model = Some(model.clone());
+                        });
+                        model
+                    };
+
+                    let selected: Option<Arc<str>> =
+                        cx.watch_model(&value_model).layout().cloned().flatten();
+                    if let Some(handler) = on_value_change.as_ref() {
+                        let changed = cx.with_state(
+                            NavigationMenuValueChangeCallbackState::default,
+                            |state| navigation_menu_value_change_event(state, selected.clone()),
+                        );
+                        if let Some(value) = changed {
+                            handler(value);
+                        }
+                    }
+                    let safe_corridor: Arc<Mutex<SafeCorridorState>> = cx.with_state_for(
+                        root_id,
+                        || Arc::new(Mutex::new(SafeCorridorState::default())),
+                        |st| st.clone(),
+                    );
+                    let selected_changed = cx.with_state_for(root_id, SelectionSyncState::default, |st| {
+                        let changed = selected != st.last_selected;
+                        if changed {
+                            st.last_selected = selected.clone();
+                        }
+                        changed
+                    });
+
+                    if selected_changed {
+                        let selected = selected.clone();
+                        let _ = cx
+                            .app
+                            .models_mut()
+                            .update(&open_model, |v| *v = selected.is_some());
+                        if selected.is_none() {
+                            let mut safe = safe_corridor.lock().unwrap_or_else(|e| e.into_inner());
+                            safe.pointer_in_corridor = false;
+                            safe.viewport_panel = None;
+                            safe.trigger_anchor = None;
+                        }
+                    }
+
+                    if selected.is_some() {
+                        let should_keep_open = {
+                            let safe = safe_corridor.lock().unwrap_or_else(|e| e.into_inner());
+                            safe.pointer_in_corridor
+                        };
+                        if should_keep_open {
+                            let _ = cx.app.models_mut().update(&open_model, |v| *v = true);
+                        }
+                    }
+
+                    let open: bool = cx
+                        .watch_model(&open_model)
+                        .layout()
+                        .copied()
+                        .unwrap_or(false);
+                    let open_for_motion = open && selected.is_some();
+                    let motion = OverlayController::transition_with_durations_and_cubic_bezier_duration(
+                        cx,
+                        open_for_motion,
+                        overlay_motion::shadcn_motion_duration_200(cx),
+                        overlay_motion::shadcn_motion_duration_200(cx),
+                        overlay_motion::shadcn_motion_ease_bezier(cx),
+                    );
+                    let opacity = motion.progress;
+                    let scale = if viewport_enabled {
+                        // shadcn new-york:
+                        // - Viewport: `zoom-in-90` on open, `zoom-out-95` on close.
+                        if open_for_motion {
+                            0.9 + 0.1 * opacity
+                        } else {
+                            0.95 + 0.05 * opacity
+                        }
+                    } else {
+                        // When `viewport=false`, content behaves like a popover-ish surface with
+                        // `zoom-in-95` / `zoom-out-95`.
+                        0.95 + 0.05 * opacity
+                    };
+
+                    let mut selected_local = radix_navigation_menu::navigation_menu_viewport_selected_value(
                         cx,
                         root_id,
-                        selected_local.clone(),
-                        &values,
-                        transition,
-                        fallback,
-                    )
-                    .size
-                } else {
-                    fallback
-                };
+                        selected.clone(),
+                        motion.present,
+                    );
 
-                let root_state_for_viewport = root_state.clone();
-                let value_for_hover = value_for_viewport.clone();
-                let viewport_children_for_panel = viewport_children;
-                let content_switch_for_panel = content_switch;
-                let content_switch_slide_px = content_switch_slide_px;
-
-                let mut panel_props = if viewport_enabled {
-                    ContainerProps {
-                        layout: LayoutStyle {
-                            overflow: fret_ui::element::Overflow::Visible,
-                            ..Default::default()
-                        },
-                        padding: Edges::all(Px(0.0)).into(),
-                        background: Some(viewport_bg),
-                        shadow: Some(viewport_shadow),
-                        border: Edges::all(Px(1.0)),
-                        border_color: Some(viewport_border),
-                        corner_radii: Corners::all(viewport_radius),
-                        ..Default::default()
-                    }
-                } else {
-                    ContainerProps {
-                        layout: LayoutStyle {
-                            overflow: fret_ui::element::Overflow::Visible,
-                            ..Default::default()
-                        },
-                        padding: Edges::all(Px(0.0)).into(),
-                        background: Some(viewport_bg),
-                        shadow: Some(viewport_shadow),
-                        border: Edges::all(Px(1.0)),
-                        border_color: Some(viewport_border),
-                        corner_radii: Corners::all(viewport_radius),
-                        ..Default::default()
-                    }
-                };
-                if viewport_enabled {
-                    // Match shadcn/ui + Radix: the viewport panel is sized by the measured content
-                    // dimensions (CSS vars). Tailwind preflight uses `box-sizing: border-box`, so
-                    // the viewport border is included in those dimensions.
-                    //
-                    // We apply this even when the first measurement hasn't been observed yet so
-                    // popper placement and panel layout remain consistent across frames.
-                    panel_props.layout.size.height = Length::Px(content_size.height);
-                    panel_props.layout.size.width = if md_breakpoint {
-                        // Desktop: `md:w-[var(--radix-navigation-menu-viewport-width)]`.
-                        Length::Px(content_size.width)
-                    } else {
-                        // Mobile: `w-full` so the panel tracks the anchor width.
-                        Length::Fill
-                    };
-                }
-
-                let placement = popper::PopperContentPlacement::new(
-                    direction_prim::use_direction_in_scope(cx, None),
-                    Side::Bottom,
-                    Align::Start,
-                    side_offset,
-                );
-
-                let args = radix_navigation_menu::NavigationMenuViewportOverlayRequestArgs {
-                    window_margin,
-                    placement,
-                    placement_anchor_override: viewport_enabled.then_some(root_id),
-                    content_size,
-                    indicator_size,
-                    width_tracks_anchor: !md_breakpoint,
-                };
-
-                let opacity = opacity;
-                let scale = scale;
-                let selected_value_for_content_id = selected_local.clone();
-                let selected_for_overlay = selected_local.clone();
-                let safe_corridor_for_overlay_pointer_move = safe_corridor.clone();
-                let safe_corridor_for_overlay_layout = safe_corridor.clone();
-                let safe_corridor_for_content_hover = safe_corridor.clone();
-                let on_pointer_move: fret_ui::action::OnDismissiblePointerMove = Arc::new(
-                    move |_host: &mut dyn fret_ui::action::UiActionHost,
-                          _acx: fret_ui::action::ActionCx,
-                          mv: fret_ui::action::PointerMoveCx| {
-                        if mv.pointer_type == PointerType::Touch {
-                            return false;
-                        }
-                        let mut safe = safe_corridor_for_overlay_pointer_move
-                            .lock()
-                            .unwrap_or_else(|e| e.into_inner());
-                        safe.last_pointer = Some(mv.position);
-                        safe.pointer_in_corridor = safe
-                            .trigger_anchor
-                            .zip(safe.viewport_panel)
-                            .is_some_and(|(trigger_anchor, viewport_panel)| {
-                                safe_hover::safe_hover_contains(
-                                    mv.position,
-                                    trigger_anchor,
-                                    viewport_panel,
-                                    NAV_MENU_SAFE_CORRIDOR_BUFFER,
-                                )
-                            });
-                        false
-                    },
-                );
-                let on_pointer_move = Some(on_pointer_move);
-                radix_navigation_menu::navigation_menu_request_viewport_overlay(
-                    cx,
-                    root_id,
-                    value_model.clone(),
-                    open_model.clone(),
-                    overlay_presence,
-                    selected_for_overlay.as_deref(),
-                    args,
-                    on_pointer_move,
-                    move |cx, layout| {
-                        {
-                            let mut safe = safe_corridor_for_overlay_layout
-                                .lock()
-                                .unwrap_or_else(|e| e.into_inner());
-                            safe.viewport_panel = Some(layout.placed);
-                        }
-                        let Some(selected_value_key) =
-                            selected_value_for_content_id.as_deref()
-                        else {
-                            return radix_navigation_menu::NavigationMenuViewportOverlayRenderOutput {
-                                opacity,
-                                transform: overlay_motion::shadcn_zoom_transform_with_scale(
-                                    layout.transform_origin,
-                                    scale,
-                                ),
-                                children: Vec::new(),
-                            };
+                    if !open_for_motion && selected.is_some() && !motion.present {
+                        let mut host = fret_ui::action::UiActionHostAdapter { app: &mut *cx.app };
+                        let action_cx = fret_ui::action::ActionCx {
+                            window: cx.window,
+                            target: root_id,
                         };
+                        let mut st = root_state.lock().unwrap_or_else(|e| e.into_inner());
+                        st.on_item_dismiss(&mut host, action_cx, &value_model, cfg);
+                        selected_local = None;
+                    }
 
-                        let root_state_for_hover = root_state_for_viewport.clone();
-                        let value_for_hover = value_for_hover.clone();
-                        let panel_props = panel_props;
-                        let viewport_children = viewport_children_for_panel;
-                        let content_switch = content_switch_for_panel;
-                        let content_switch_slide_px = content_switch_slide_px;
-                        let content_padding = content_padding;
-                        let indicator_diamond_shadow = indicator_diamond_shadow;
-                        let indicator_diamond_corners = indicator_diamond_corners;
-                        let viewport_enabled = viewport_enabled;
-                        let selected_value_for_registry: Arc<str> = Arc::from(selected_value_key);
+                    let active_idx = selected_local.as_deref().and_then(|v| {
+                        items
+                            .iter()
+                            .position(|it| it.value.as_ref() == v)
+                            .filter(|_| !menu_disabled)
+                    });
 
-                        let content =
-                            radix_navigation_menu::navigation_menu_viewport_content_pressable_with_id_props(
-                                cx,
-                                selected_value_key,
-                                move |cx, _st, content_id| {
-                                let root_state_for_hover = root_state_for_hover.clone();
-                                let value_for_hover = value_for_hover.clone();
-                                cx.pressable_on_hover_change(Arc::new(
-                                    move |host, action_cx, hovered| {
-                                        if hovered {
-                                            let mut safe = safe_corridor_for_content_hover
-                                                .lock()
-                                                .unwrap_or_else(|e| e.into_inner());
-                                            safe.pointer_in_corridor = false;
-                                        }
-                                        let mut root = root_state_for_hover
-                                            .lock()
-                                            .unwrap_or_else(|e| e.into_inner());
-                                        if hovered {
-                                            root.on_content_enter(host);
-                                        } else {
-                                            root.on_content_leave(
-                                                host,
-                                                action_cx,
-                                                &value_for_hover,
-                                                cfg,
-                                            );
-                                        }
-                                    },
-                                ));
+                    let values: Vec<Arc<str>> = items.iter().map(|it| it.value.clone()).collect();
+                    let transition = radix_navigation_menu::navigation_menu_content_transition(
+                        cx,
+                        root_id,
+                        open_for_motion,
+                        selected.clone(),
+                        &values,
+                    );
 
-                                let root_id_for_registry = root_id;
-                                let value_for_registry = selected_value_for_registry.clone();
-                                let content_id_for_registry = content_id;
-                                let viewport_enabled_for_registry = viewport_enabled;
-                                let md_breakpoint_for_registry = md_breakpoint;
-                                let children = vec![cx.container(panel_props, move |cx| {
-                                    let mut clip_layout = LayoutStyle::default();
-                                    clip_layout.overflow = fret_ui::element::Overflow::Clip;
-                                    if viewport_enabled_for_registry {
-                                        clip_layout.size = SizeStyle {
-                                            width: Length::Fill,
-                                            height: Length::Fill,
-                                            ..Default::default()
-                                        };
-                                    }
+                    let md_breakpoint =
+                        nav_menu_md_breakpoint(cx, md_breakpoint_query, region_id_for_queries);
+                    let list_props = FlexProps {
+                        layout: LayoutStyle::default(),
+                        direction: fret_core::Axis::Horizontal,
+                        gap: Px(4.0).into(), // Tailwind `space-x-1`
+                        padding: Edges::all(Px(0.0)).into(),
+                        justify: MainAlign::Center,
+                        align: fret_ui::element::CrossAlign::Center,
+                        wrap: true,
+                        ..Default::default()
+                    };
 
-                                    let clip_props = ContainerProps {
-                                        layout: clip_layout,
-                                        corner_radii: Corners::all(viewport_radius),
+                    let items_for_children = &mut items;
+                    let value_for_viewport = value_model.clone();
+                    let value_for_viewport_for_list = value_for_viewport.clone();
+                    let trigger_text_style_for_list = trigger_text_style.clone();
+                    let nav_ctx_for_list = nav_ctx.clone();
+                    let theme_for_list = theme.clone();
+                    let default_trigger_bg_for_list = default_trigger_bg.clone();
+                    let default_trigger_fg_for_list = default_trigger_fg.clone();
+                    let style_for_list = style.clone();
+
+                    let list = cx.flex(list_props, move |cx| {
+                        items_for_children
+                            .iter_mut()
+                            .map(|item| {
+                                let item_value = item.value.clone();
+                                let label = item.label.clone();
+                                let disabled = menu_disabled || item.disabled;
+                                let trigger_test_id = item.trigger_test_id.clone();
+                                let trigger_chrome_test_id = trigger_test_id
+                                    .clone()
+                                    .map(|id| Arc::<str>::from(format!("{id}.chrome")));
+                                let trigger_text_style_for_item = trigger_text_style_for_list.clone();
+                                let nav_ctx_for_item = nav_ctx_for_list.clone();
+                                let theme_for_item = theme_for_list.clone();
+                                let default_trigger_bg = default_trigger_bg_for_list.clone();
+                                let default_trigger_fg = default_trigger_fg_for_list.clone();
+                                let style_override = style_for_list.clone();
+                                let value_for_viewport = value_for_viewport_for_list.clone();
+
+                                let trigger_children = item.trigger.take();
+                                let content_is_empty = item.content.is_empty();
+                                let item_label = item.label.clone();
+                                let command = item.command.clone();
+                                cx.keyed(item_value.clone(), move |cx| {
+                                    let trigger_text_style = trigger_text_style_for_item.clone();
+
+                                    let mut pressable = PressableProps::default();
+                                    pressable.enabled = !disabled;
+                                    pressable.focusable = !disabled;
+                                    pressable.layout = decl_style::layout_style(
+                                        &theme_for_item,
+                                        navigation_menu_trigger_style(&theme_for_item).layout,
+                                    );
+                                    pressable.a11y = PressableA11y {
+                                        role: Some(SemanticsRole::Button),
+                                        label: Some(label.clone()),
+                                        test_id: trigger_test_id.clone(),
                                         ..Default::default()
                                     };
 
-                                    vec![cx.container(clip_props, move |cx| {
-                                    let Some((t, forward, from_children)) = content_switch
-                                    else {
-                                        let children = viewport_children;
-                                        let viewport_enabled_for_body = viewport_enabled_for_registry;
-                                        let md_breakpoint_for_body = md_breakpoint_for_registry;
-                                        let body = cx.keyed("viewport-body", move |cx| {
-                                            let mut body_layout = LayoutStyle::default();
-                                            if viewport_enabled_for_body && !md_breakpoint_for_body {
-                                                body_layout.size.width = Length::Fill;
-                                            }
-                                            cx.container(
-                                                ContainerProps {
-                                                    layout: body_layout,
-                                                    padding: content_padding.into(),
-                                                    ..Default::default()
-                                                },
-                                                move |_cx| children,
-                                            )
-                                        });
-                                        if viewport_enabled_for_registry {
-                                            radix_navigation_menu::navigation_menu_register_viewport_content_id(
-                                                cx,
-                                                root_id_for_registry,
-                                                value_for_registry.clone(),
-                                                body.id,
-                                            );
-                                        } else {
-                                            radix_navigation_menu::navigation_menu_register_viewport_content_id(
-                                                cx,
-                                                root_id_for_registry,
-                                                value_for_registry.clone(),
-                                                content_id_for_registry,
-                                            );
-                                        }
-                                        return vec![body];
-                                    };
-
-                                    let to_children = viewport_children;
-                                    let t = t.clamp(0.0, 1.0);
-                                    let slide = content_switch_slide_px.0;
-
-                                    let (from_dx, to_dx) = if forward {
-                                        (-slide * t, slide * (1.0 - t))
-                                    } else {
-                                        (slide * t, -slide * (1.0 - t))
-                                    };
-
-                                    let value_for_registry_for_layers = value_for_registry.clone();
-
-                                    let mut layout_for_layers = LayoutStyle::default();
-                                    layout_for_layers.overflow = fret_ui::element::Overflow::Clip;
-
-                                    let stack = cx.stack_props(
-                                        StackProps {
-                                            layout: layout_for_layers,
-                                        },
-                                        move |cx| {
-                                            let layer_layout = LayoutStyle::default();
-
-                                            let from_opacity = 1.0 - t;
-                                            let to_opacity = t;
-
-                                            let viewport_enabled_for_body = viewport_enabled_for_registry;
-                                            let md_breakpoint_for_body = md_breakpoint_for_registry;
-
-                                            let from_children = vec![cx.keyed("from-body", move |cx| {
-                                                let mut body_layout = LayoutStyle::default();
-                                                if viewport_enabled_for_body && !md_breakpoint_for_body {
-                                                    body_layout.size.width = Length::Fill;
-                                                }
-                                                cx.container(
-                                                    ContainerProps {
-                                                        layout: body_layout,
-                                                        padding: content_padding.into(),
-                                                        ..Default::default()
-                                                    },
-                                                    {
-                                                        let from_children = from_children;
-                                                        move |_cx| from_children
-                                                    },
-                                                )
-                                            })];
-                                            let viewport_enabled_for_body = viewport_enabled_for_registry;
-                                            let md_breakpoint_for_body = md_breakpoint_for_registry;
-                                            let to_body = cx.keyed("to-body", move |cx| {
-                                                let mut body_layout = LayoutStyle::default();
-                                                if viewport_enabled_for_body && !md_breakpoint_for_body {
-                                                    body_layout.size.width = Length::Fill;
-                                                }
-                                                cx.container(
-                                                    ContainerProps {
-                                                        layout: body_layout,
-                                                        padding: content_padding.into(),
-                                                        ..Default::default()
-                                                    },
-                                                    {
-                                                        let to_children = to_children;
-                                                        move |_cx| to_children
-                                                    },
-                                                )
-                                            });
-                                            if viewport_enabled_for_registry {
-                                                radix_navigation_menu::navigation_menu_register_viewport_content_id(
-                                                    cx,
-                                                    root_id_for_registry,
-                                                    value_for_registry_for_layers.clone(),
-                                                    to_body.id,
-                                                );
-                                            }
-                                            let to_children = vec![to_body];
-
-                                            let from = overlay_motion::wrap_opacity_and_render_transform_with_layouts(
-                                                cx,
-                                                layer_layout,
-                                                from_opacity,
-                                                RenderTransformProps {
-                                                    layout: layer_layout,
-                                                    transform: Transform2D::translation(Point::new(
-                                                        Px(from_dx),
-                                                        Px(0.0),
-                                                    )),
-                                                },
-                                                from_children,
-                                            );
-
-                                            let to = overlay_motion::wrap_opacity_and_render_transform_with_layouts(
-                                                cx,
-                                                layer_layout,
-                                                to_opacity,
-                                                RenderTransformProps {
-                                                    layout: layer_layout,
-                                                    transform: Transform2D::translation(Point::new(
-                                                        Px(to_dx),
-                                                        Px(0.0),
-                                                    )),
-                                                },
-                                                to_children,
-                                            );
-
-                                            vec![from, to]
-                                        },
-                                    );
-                                    if !viewport_enabled_for_registry {
-                                        radix_navigation_menu::navigation_menu_register_viewport_content_id(
-                                            cx,
-                                            root_id_for_registry,
-                                            value_for_registry.clone(),
-                                            content_id_for_registry,
-                                        );
-                                    }
-                                    vec![stack]
-                                })]
-                                })];
-
-                                (
-                                    PressableProps {
+                                    let pointer_props = PointerRegionProps {
                                         layout: LayoutStyle::default(),
                                         enabled: true,
-                                        focusable: false,
-                                        focus_ring: None,
-                                        focus_ring_always_paint: false,
-                                        focus_ring_bounds: None,
-                                        key_activation: Default::default(),
-                                        a11y: PressableA11y::default(),
-                                    },
-                                    children,
-                                )
-                            },
-                        );
-
-                        let transform = overlay_motion::shadcn_zoom_transform_with_scale(
-                            layout.transform_origin,
-                            scale,
-                        );
-
-                        // `NavigationMenuContent` (desktop) and `NavigationMenuViewport` (mobile)
-                        // are intrinsically sized in Radix/shadcn.
-                        //
-                        // We keep an autosizing wrapper for desktop-style transitions, but use a
-                        // fixed-size wrapper on mobile when the panel is `w-full` (fill-based),
-                        // otherwise `Length::Fill` has no definite width to resolve against.
-                        let mut panel = if viewport_enabled && !md_breakpoint {
-                            popper_content::popper_wrapper_at(
-                                cx,
-                                layout.placed,
-                                Edges::all(Px(0.0)),
-                                move |_cx| vec![content],
-                            )
-                        } else {
-                            popper_content::popper_wrapper_at_autosize(
-                                cx,
-                                layout.placed.origin,
-                                move |_cx| vec![content],
-                            )
-                        };
-
-                        if viewport_enabled {
-                            radix_navigation_menu::navigation_menu_register_viewport_panel_id(
-                                cx,
-                                root_id,
-                                panel.id,
-                            );
-                        }
-
-                        if let Some(test_id) = viewport_test_id.as_ref() {
-                            panel = panel.attach_semantics(
-                                SemanticsDecoration::default().test_id(test_id.clone()),
-                            );
-                        }
-
-                        let mut children = Vec::new();
-                        if indicator_enabled && indicator_size.0 > 0.0 {
-                            let indicator = popper_content::popper_wrapper_panel_at(
-                                cx,
-                                layout.indicator_rect,
-                                Edges::all(Px(0.0)),
-                                fret_ui::element::Overflow::Clip,
-                                move |cx| {
-                                    let track_w = layout.indicator_rect.size.width.0.max(0.0);
-                                    let track_h = layout.indicator_rect.size.height.0.max(0.0);
-
-                                    let diamond_size = indicator_diamond_size.0.max(0.0);
-                                    let diamond_left = ((track_w - diamond_size) * 0.5).max(0.0);
-                                    // Tailwind `top-[60%]` uses percentage units. In CSS, relative
-                                    // positioning percentage offsets resolve against the containing
-                                    // block's size (the indicator track), not the element's own size.
-                                    let diamond_top = (track_h - diamond_size + track_h * 0.60).max(0.0);
-
-                                    let mut diamond_layout = LayoutStyle::default();
-                                    diamond_layout.position = fret_ui::element::PositionStyle::Absolute;
-                                    diamond_layout.inset.left = Some(Px(diamond_left)).into();
-                                    diamond_layout.inset.top = Some(Px(diamond_top)).into();
-                                    diamond_layout.size = SizeStyle {
-                                        width: Length::Px(Px(diamond_size)),
-                                        height: Length::Px(Px(diamond_size)),
                                         ..Default::default()
                                     };
 
-                                    let center = Point::new(Px(diamond_size * 0.5), Px(diamond_size * 0.5));
-                                    let rotate = Transform2D::rotation_about_degrees(45.0, center);
+                                    if content_is_empty {
+                                        // shadcn/ui demo uses a `NavigationMenuLink` for items with no
+                                        // content (e.g. "Docs"), styled via `navigationMenuTriggerStyle()`.
+                                        // These should behave like a link (no chevron, no open/close).
+                                        let trigger_text_style = trigger_text_style.clone();
+                                        let trigger_children = trigger_children;
+                                        let command = command.clone();
+                                        let model_for_activate = value_for_viewport.clone();
 
-                                    let diamond = cx.visual_transform_props(
-                                        VisualTransformProps {
-                                            layout: diamond_layout,
-                                            transform: rotate,
-                                        },
-                                        move |cx| {
+                                        pressable.a11y.role = Some(SemanticsRole::Link);
+                                        pressable.key_activation = PressableKeyActivation::EnterOnly;
+                                        pressable.focus_ring =
+                                            Some(decl_style::focus_ring(&theme_for_item, trigger_radius));
+
+                                        cx.pressable_add_on_activate(Arc::new(
+                                            move |host, action_cx, _reason| {
+                                                if disabled {
+                                                    return;
+                                                }
+
+                                                if let Some(command) = command.as_ref() {
+                                                    host.dispatch_command(Some(action_cx.window), command.clone());
+                                                }
+
+                                                let _ = host.models_mut().update(&model_for_activate, |v| *v = None);
+                                            },
+                                        ));
+
+                                        return cx.pressable(pressable, move |cx, st| {
+                                            let hovered = st.hovered && !st.pressed;
+                                            let pressed = st.pressed;
+                                            let fg = if disabled {
+                                                trigger_fg_muted
+                                            } else {
+                                                trigger_fg
+                                            };
+                                            let bg = (hovered || pressed).then_some(trigger_bg_hover);
+
                                             let mut layout = LayoutStyle::default();
-                                            layout.size = SizeStyle {
-                                                width: Length::Fill,
-                                                height: Length::Fill,
+                                            layout.size.height = Length::Fill;
+
+                                            let wrapper = ContainerProps {
+                                                layout,
+                                                padding: Edges {
+                                                    top: trigger_pad_y,
+                                                    right: trigger_pad_x,
+                                                    bottom: trigger_pad_y,
+                                                    left: trigger_pad_x,
+                                                }.into(),
+                                                background: bg,
+                                                shadow: None,
+                                                border: Edges::all(Px(0.0)),
+                                                border_color: None,
+                                                corner_radii: Corners::all(trigger_radius),
                                                 ..Default::default()
                                             };
 
-                                            vec![cx.container(
-                                                ContainerProps {
-                                                    layout,
+                                            let content_children = trigger_children.unwrap_or_else(|| {
+                                                    let style = trigger_text_style.clone();
+                                                    let mut label = ui::label(cx, item_label.clone())
+                                                        .text_size_px(style.size)
+                                                        .font_weight(style.weight)
+                                                        .text_color(ColorRef::Color(fg))
+                                                        .nowrap();
+                                                    if let Some(line_height) = style.line_height {
+                                                        label = label
+                                                            .line_height_px(line_height)
+                                                            .line_height_policy(
+                                                                fret_core::TextLineHeightPolicy::FixedFromStyle,
+                                                            );
+                                                    }
+                                                    if let Some(letter_spacing_em) = style.letter_spacing_em
+                                                    {
+                                                        label = label
+                                                            .letter_spacing_em(letter_spacing_em);
+                                                    }
+                                                    vec![label.into_element(cx)]
+                                                });
+
+                                            let row = cx.flex(
+                                                FlexProps {
+                                                    layout: {
+                                                        let mut layout = LayoutStyle::default();
+                                                        layout.size.height = Length::Fill;
+                                                        layout
+                                                    },
+                                                    direction: fret_core::Axis::Horizontal,
+                                                    gap: Px(0.0).into(),
                                                     padding: Edges::all(Px(0.0)).into(),
-                                                    background: Some(viewport_border),
-                                                    shadow: Some(indicator_diamond_shadow),
-                                                    border: Edges::all(Px(0.0)),
-                                                    border_color: None,
-                                                    corner_radii: indicator_diamond_corners,
+                                                    justify: MainAlign::Center,
+                                                    align: fret_ui::element::CrossAlign::Center,
+                                                    wrap: false,
                                                     ..Default::default()
                                                 },
-                                                |_cx| Vec::new(),
-                                            )]
-                                        },
-                                    );
+                                                move |_cx| content_children,
+                                            );
 
-                                    radix_navigation_menu::navigation_menu_register_indicator_diamond_id(
-                                        cx,
-                                        root_id,
-                                        diamond.id,
-                                    );
+                                            let child = cx.container(wrapper, move |_cx| vec![row]);
+                                            let mut chrome = child;
+                                            if let Some(test_id) = trigger_chrome_test_id.clone() {
+                                                chrome = chrome.test_id(test_id);
+                                            }
+                                            vec![chrome]
+                                        });
+                                    }
+                                    radix_navigation_menu::NavigationMenuTrigger::new(item_value.clone())
+                                        .label(label.clone())
+                                        .disabled(disabled)
+                                        .into_element(
+                                            cx,
+                                            &nav_ctx_for_item,
+                                            pressable,
+                                            pointer_props,
+                                            move |cx, st, is_open| {
+                                                let mut states =
+                                                    WidgetStates::from_pressable(cx, st, !disabled);
+                                                states.set(WidgetState::Open, is_open);
 
-                                    vec![diamond]
-                                },
-                            );
-                            radix_navigation_menu::navigation_menu_register_indicator_track_id(
+                                                let fg_ref = resolve_override_slot(
+                                                    style_override.trigger_foreground.as_ref(),
+                                                    &default_trigger_fg,
+                                                    states,
+                                                );
+                                                let bg_ref = resolve_override_slot_opt(
+                                                    style_override.trigger_background.as_ref(),
+                                                    &default_trigger_bg,
+                                                    states,
+                                                );
+
+                                                let bg = bg_ref
+                                                    .as_ref()
+                                                    .map(|color| color.resolve(&theme_for_item));
+
+                                                let mut layout = LayoutStyle::default();
+                                                layout.size.height = Length::Fill;
+
+                                                let wrapper = ContainerProps {
+                                                    layout,
+                                                    padding: Edges {
+                                                        top: trigger_pad_y,
+                                                        right: trigger_pad_x,
+                                                        bottom: trigger_pad_y,
+                                                        left: trigger_pad_x,
+                                                    }.into(),
+                                                    background: bg,
+                                                    shadow: None,
+                                                    border: Edges::all(Px(0.0)),
+                                                    border_color: None,
+                                                    corner_radii: Corners::all(trigger_radius),
+                                                    ..Default::default()
+                                                };
+
+                                                let content_children =
+                                                    trigger_children.unwrap_or_else(|| {
+                                                        let style = trigger_text_style.clone();
+                                                        let mut label = ui::label(cx, item_label.clone())
+                                                            .text_size_px(style.size)
+                                                            .font_weight(style.weight)
+                                                            .text_color(fg_ref.clone())
+                                                            .nowrap();
+                                                        if let Some(line_height) = style.line_height {
+                                                            label = label
+                                                                .line_height_px(line_height)
+                                                                .line_height_policy(
+                                                                    fret_core::TextLineHeightPolicy::FixedFromStyle,
+                                                                );
+                                                        }
+                                                        if let Some(letter_spacing_em) =
+                                                            style.letter_spacing_em
+                                                        {
+                                                            label = label.letter_spacing_em(letter_spacing_em);
+                                                        }
+                                                        vec![label.into_element(cx)]
+                                                    });
+
+                                                let fg_ref_for_chevron = fg_ref.clone();
+                                                let chevron_motion = drive_navigation_menu_trigger_chevron_motion(
+                                                    cx,
+                                                    item_value.clone(),
+                                                    is_open,
+                                                );
+                                                let chevron_rotation = 180.0 * chevron_motion.progress;
+                                                let chevron_size = Px(12.0); // Tailwind `size-3`
+                                                let chevron_center =
+                                                    Point::new(Px(chevron_size.0 * 0.5), Px(chevron_size.0 * 0.5));
+                                                let chevron_transform = Transform2D::rotation_about_degrees(
+                                                    chevron_rotation,
+                                                    chevron_center,
+                                                );
+
+                                                let chevron = cx.visual_transform_props(
+                                                    VisualTransformProps {
+                                                        layout: {
+                                                            let mut layout = LayoutStyle::default();
+                                                            layout.size = SizeStyle {
+                                                                width: Length::Px(chevron_size),
+                                                                height: Length::Px(chevron_size),
+                                                                ..Default::default()
+                                                            };
+                                                            layout.flex.shrink = 0.0;
+                                                            layout.position = fret_ui::element::PositionStyle::Relative;
+                                                            layout.inset.top = Some(Px(1.0)).into(); // `top-[1px]`
+                                                            layout.margin.left =
+                                                                fret_ui::element::MarginEdge::Px(Px(4.0)); // `ml-1`
+                                                            layout
+                                                        },
+                                                        transform: chevron_transform,
+                                                    },
+                                                    move |cx| {
+                                                        vec![decl_icon::icon_with(
+                                                            cx,
+                                                            ids::ui::CHEVRON_DOWN,
+                                                            Some(chevron_size),
+                                                            Some(fg_ref_for_chevron.clone()),
+                                                        )]
+                                                    },
+                                                );
+
+                                                let mut row_children = content_children;
+                                                // Upstream adds a literal `" "` text node between the label
+                                                // and the chevron icon, in addition to `ml-1` on the icon.
+                                                // We model the outcome as a spacer metric so the trigger
+                                                // width matches the extracted web goldens closely.
+                                                let space_px = nav_menu_trigger_space_px(&theme_for_item);
+                                                row_children.push(cx.container(
+                                                    ContainerProps {
+                                                        layout: {
+                                                            let mut layout = LayoutStyle::default();
+                                                            layout.size = SizeStyle {
+                                                                width: Length::Px(space_px),
+                                                                height: Length::Px(Px(0.0)),
+                                                                ..Default::default()
+                                                            };
+                                                            layout.flex.shrink = 0.0;
+                                                            layout
+                                                        },
+                                                        ..Default::default()
+                                                    },
+                                                    |_cx| Vec::new(),
+                                                ));
+                                                row_children.push(chevron);
+                                                let row = cx.flex(
+                                                    FlexProps {
+                                                        layout: {
+                                                            let mut layout = LayoutStyle::default();
+                                                            layout.size.height = Length::Fill;
+                                                            layout
+                                                        },
+                                                        direction: fret_core::Axis::Horizontal,
+                                                        gap: Px(0.0).into(),
+                                                        padding: Edges::all(Px(0.0)).into(),
+                                                        justify: MainAlign::Center,
+                                                        align: fret_ui::element::CrossAlign::Center,
+                                                        wrap: false,
+                                                        ..Default::default()
+                                                    },
+                                                    move |_cx| row_children,
+                                                );
+
+                                                let child = cx.container(wrapper, move |_cx| vec![row]);
+                                                let mut chrome = child;
+                                                if let Some(test_id) = trigger_chrome_test_id.clone() {
+                                                    chrome = chrome.test_id(test_id);
+                                                }
+                                                vec![chrome]
+                                            },
+                                        )
+                                })
+                            })
+                            .collect::<Vec<_>>()
+                    });
+
+                    let viewport_children = active_idx
+                        .and_then(|idx| items.get_mut(idx))
+                        .map(|active| std::mem::take(&mut active.content))
+                        .unwrap_or_default();
+
+                    let has_content = !viewport_children.is_empty();
+                    let is_open = selected_local.is_some() && has_content && open_for_motion;
+                    let overlay_presence = OverlayPresence {
+                        present: motion.present && has_content,
+                        interactive: is_open,
+                    };
+                    let open_change_complete =
+                        cx.with_state(NavigationMenuOpenChangeCallbackState::default, |state| {
+                            navigation_menu_open_change_complete_event(
+                                state,
+                                is_open,
+                                overlay_presence.present,
+                                motion.animating,
+                            )
+                        });
+                    if let (Some(open), Some(handler)) =
+                        (open_change_complete, on_open_change_complete.as_ref())
+                    {
+                        handler(open);
+                    }
+
+                    if !overlay_presence.present {
+                        let mut safe = safe_corridor.lock().unwrap_or_else(|e| e.into_inner());
+                        safe.viewport_panel = None;
+                        safe.pointer_in_corridor = false;
+                    }
+
+                    let content_switch = radix_navigation_menu::navigation_menu_content_switch(transition)
+                        .map(|sw| {
+                            let from_children = items
+                                .get_mut(sw.from_idx)
+                                .map(|it| std::mem::take(&mut it.content))
+                                .unwrap_or_default();
+                            (sw.progress, sw.forward, from_children)
+                        });
+
+                    if overlay_presence.present {
+                        let side_offset = nav_menu_viewport_side_offset(&theme);
+                        let window_margin = nav_menu_viewport_window_margin(&theme);
+                        let indicator_size = if indicator_enabled { side_offset } else { Px(0.0) };
+                        let indicator_diamond_size = nav_menu_indicator_diamond_size(&theme);
+                        let indicator_diamond_corners = {
+                            let mut corners = Corners::all(Px(0.0));
+                            corners.top_left = Px(2.0);
+                            corners
+                        };
+                        let mut indicator_diamond_shadow = decl_style::shadow_md(&theme, Px(0.0));
+                        indicator_diamond_shadow.corner_radii = indicator_diamond_corners;
+
+                        let estimated = fret_core::Size::new(Px(320.0), Px(240.0));
+                        let measured = selected_local
+                            .as_deref()
+                            .and_then(|value| {
+                                radix_navigation_menu::navigation_menu_viewport_content_id(
+                                    cx, root_id, value,
+                                )
+                            })
+                            .and_then(|id| cx.last_bounds_for_element(id).map(|r| r.size));
+
+                        if let Some(selected_value) = selected_local.as_deref()
+                            && let Some(trigger_id) =
+                                radix_navigation_menu::navigation_menu_trigger_id(cx, root_id, selected_value)
+                            && let Some(trigger_anchor) = cx
+                                .last_visual_bounds_for_element(trigger_id)
+                                .or_else(|| cx.last_bounds_for_element(trigger_id))
+                        {
+                            let mut safe = safe_corridor.lock().unwrap_or_else(|e| e.into_inner());
+                            safe.trigger_anchor = Some(trigger_anchor);
+                        }
+                        if viewport_enabled {
+                            if let (Some(selected_value), Some(size)) = (selected_local.clone(), measured) {
+                                radix_navigation_menu::navigation_menu_register_viewport_size(
+                                    cx,
+                                    root_id,
+                                    selected_value,
+                                    size,
+                                );
+                            }
+                        }
+
+                        let fallback = measured.unwrap_or(estimated);
+                        let content_size = if viewport_enabled {
+                            radix_navigation_menu::navigation_menu_viewport_size_for_transition(
                                 cx,
                                 root_id,
-                                indicator.id,
-                            );
-                            children.push(indicator);
-                        }
-                        children.push(panel);
+                                selected_local.clone(),
+                                &values,
+                                transition,
+                                fallback,
+                            )
+                            .size
+                        } else {
+                            fallback
+                        };
 
-                        radix_navigation_menu::NavigationMenuViewportOverlayRenderOutput {
-                            opacity,
-                            transform,
-                            children,
-                        }
-                    },
-                );
-            }
+                        let root_state_for_viewport = root_state.clone();
+                        let value_for_hover = value_for_viewport.clone();
+                        let viewport_children_for_panel = viewport_children;
+                        let content_switch_for_panel = content_switch;
+                        let content_switch_slide_px = content_switch_slide_px;
 
-            vec![list]
-        })]
+                        let mut panel_props = if viewport_enabled {
+                            ContainerProps {
+                                layout: LayoutStyle {
+                                    overflow: fret_ui::element::Overflow::Visible,
+                                    ..Default::default()
+                                },
+                                padding: Edges::all(Px(0.0)).into(),
+                                background: Some(viewport_bg),
+                                shadow: Some(viewport_shadow),
+                                border: Edges::all(Px(1.0)),
+                                border_color: Some(viewport_border),
+                                corner_radii: Corners::all(viewport_radius),
+                                ..Default::default()
+                            }
+                        } else {
+                            ContainerProps {
+                                layout: LayoutStyle {
+                                    overflow: fret_ui::element::Overflow::Visible,
+                                    ..Default::default()
+                                },
+                                padding: Edges::all(Px(0.0)).into(),
+                                background: Some(viewport_bg),
+                                shadow: Some(viewport_shadow),
+                                border: Edges::all(Px(1.0)),
+                                border_color: Some(viewport_border),
+                                corner_radii: Corners::all(viewport_radius),
+                                ..Default::default()
+                            }
+                        };
+                        if viewport_enabled {
+                            // Match shadcn/ui + Radix: the viewport panel is sized by the measured content
+                            // dimensions (CSS vars). Tailwind preflight uses `box-sizing: border-box`, so
+                            // the viewport border is included in those dimensions.
+                            //
+                            // We apply this even when the first measurement hasn't been observed yet so
+                            // popper placement and panel layout remain consistent across frames.
+                            panel_props.layout.size.height = Length::Px(content_size.height);
+                            panel_props.layout.size.width = if md_breakpoint {
+                                // Desktop: `md:w-[var(--radix-navigation-menu-viewport-width)]`.
+                                Length::Px(content_size.width)
+                            } else {
+                                // Mobile: `w-full` so the panel tracks the anchor width.
+                                Length::Fill
+                            };
+                        }
+
+                        let placement = popper::PopperContentPlacement::new(
+                            crate::use_direction(cx, None),
+                            Side::Bottom,
+                            Align::Start,
+                            side_offset,
+                        );
+
+                        let args = radix_navigation_menu::NavigationMenuViewportOverlayRequestArgs {
+                            window_margin,
+                            placement,
+                            placement_anchor_override: viewport_enabled.then_some(root_id),
+                            content_size,
+                            indicator_size,
+                            width_tracks_anchor: !md_breakpoint,
+                        };
+
+                        let opacity = opacity;
+                        let scale = scale;
+                        let selected_value_for_content_id = selected_local.clone();
+                        let selected_for_overlay = selected_local.clone();
+                        let safe_corridor_for_overlay_pointer_move = safe_corridor.clone();
+                        let safe_corridor_for_overlay_layout = safe_corridor.clone();
+                        let safe_corridor_for_content_hover = safe_corridor.clone();
+                        let on_pointer_move: fret_ui::action::OnDismissiblePointerMove = Arc::new(
+                            move |_host: &mut dyn fret_ui::action::UiActionHost,
+                                  _acx: fret_ui::action::ActionCx,
+                                  mv: fret_ui::action::PointerMoveCx| {
+                                if mv.pointer_type == PointerType::Touch {
+                                    return false;
+                                }
+                                let mut safe = safe_corridor_for_overlay_pointer_move
+                                    .lock()
+                                    .unwrap_or_else(|e| e.into_inner());
+                                safe.last_pointer = Some(mv.position);
+                                safe.pointer_in_corridor = safe
+                                    .trigger_anchor
+                                    .zip(safe.viewport_panel)
+                                    .is_some_and(|(trigger_anchor, viewport_panel)| {
+                                        safe_hover::safe_hover_contains(
+                                            mv.position,
+                                            trigger_anchor,
+                                            viewport_panel,
+                                            NAV_MENU_SAFE_CORRIDOR_BUFFER,
+                                        )
+                                    });
+                                false
+                            },
+                        );
+                        let on_pointer_move = Some(on_pointer_move);
+                        radix_navigation_menu::navigation_menu_request_viewport_overlay(
+                            cx,
+                            root_id,
+                            value_model.clone(),
+                            open_model.clone(),
+                            overlay_presence,
+                            selected_for_overlay.as_deref(),
+                            args,
+                            on_pointer_move,
+                            move |cx, layout| {
+                                {
+                                    let mut safe = safe_corridor_for_overlay_layout
+                                        .lock()
+                                        .unwrap_or_else(|e| e.into_inner());
+                                    safe.viewport_panel = Some(layout.placed);
+                                }
+                                let Some(selected_value_key) =
+                                    selected_value_for_content_id.as_deref()
+                                else {
+                                    return radix_navigation_menu::NavigationMenuViewportOverlayRenderOutput {
+                                        opacity,
+                                        transform: overlay_motion::shadcn_zoom_transform_with_scale(
+                                            layout.transform_origin,
+                                            scale,
+                                        ),
+                                        children: Vec::new(),
+                                    };
+                                };
+
+                                let root_state_for_hover = root_state_for_viewport.clone();
+                                let value_for_hover = value_for_hover.clone();
+                                let panel_props = panel_props;
+                                let viewport_children = viewport_children_for_panel;
+                                let content_switch = content_switch_for_panel;
+                                let content_switch_slide_px = content_switch_slide_px;
+                                let content_padding = content_padding;
+                                let indicator_diamond_shadow = indicator_diamond_shadow;
+                                let indicator_diamond_corners = indicator_diamond_corners;
+                                let viewport_enabled = viewport_enabled;
+                                let selected_value_for_registry: Arc<str> = Arc::from(selected_value_key);
+
+                                let content =
+                                    radix_navigation_menu::navigation_menu_viewport_content_pressable_with_id_props(
+                                        cx,
+                                        selected_value_key,
+                                        move |cx, _st, content_id| {
+                                        let root_state_for_hover = root_state_for_hover.clone();
+                                        let value_for_hover = value_for_hover.clone();
+                                        cx.pressable_on_hover_change(Arc::new(
+                                            move |host, action_cx, hovered| {
+                                                if hovered {
+                                                    let mut safe = safe_corridor_for_content_hover
+                                                        .lock()
+                                                        .unwrap_or_else(|e| e.into_inner());
+                                                    safe.pointer_in_corridor = false;
+                                                }
+                                                let mut root = root_state_for_hover
+                                                    .lock()
+                                                    .unwrap_or_else(|e| e.into_inner());
+                                                if hovered {
+                                                    root.on_content_enter(host);
+                                                } else {
+                                                    root.on_content_leave(
+                                                        host,
+                                                        action_cx,
+                                                        &value_for_hover,
+                                                        cfg,
+                                                    );
+                                                }
+                                            },
+                                        ));
+
+                                        let root_id_for_registry = root_id;
+                                        let value_for_registry = selected_value_for_registry.clone();
+                                        let content_id_for_registry = content_id;
+                                        let viewport_enabled_for_registry = viewport_enabled;
+                                        let md_breakpoint_for_registry = md_breakpoint;
+                                        let children = vec![cx.container(panel_props, move |cx| {
+                                            let mut clip_layout = LayoutStyle::default();
+                                            clip_layout.overflow = fret_ui::element::Overflow::Clip;
+                                            if viewport_enabled_for_registry {
+                                                clip_layout.size = SizeStyle {
+                                                    width: Length::Fill,
+                                                    height: Length::Fill,
+                                                    ..Default::default()
+                                                };
+                                            }
+
+                                            let clip_props = ContainerProps {
+                                                layout: clip_layout,
+                                                corner_radii: Corners::all(viewport_radius),
+                                                ..Default::default()
+                                            };
+
+                                            vec![cx.container(clip_props, move |cx| {
+                                            let Some((t, forward, from_children)) = content_switch
+                                            else {
+                                                let children = viewport_children;
+                                                let viewport_enabled_for_body = viewport_enabled_for_registry;
+                                                let md_breakpoint_for_body = md_breakpoint_for_registry;
+                                                let body = cx.keyed("viewport-body", move |cx| {
+                                                    let mut body_layout = LayoutStyle::default();
+                                                    if viewport_enabled_for_body && !md_breakpoint_for_body {
+                                                        body_layout.size.width = Length::Fill;
+                                                    }
+                                                    cx.container(
+                                                        ContainerProps {
+                                                            layout: body_layout,
+                                                            padding: content_padding.into(),
+                                                            ..Default::default()
+                                                        },
+                                                        move |_cx| children,
+                                                    )
+                                                });
+                                                if viewport_enabled_for_registry {
+                                                    radix_navigation_menu::navigation_menu_register_viewport_content_id(
+                                                        cx,
+                                                        root_id_for_registry,
+                                                        value_for_registry.clone(),
+                                                        body.id,
+                                                    );
+                                                } else {
+                                                    radix_navigation_menu::navigation_menu_register_viewport_content_id(
+                                                        cx,
+                                                        root_id_for_registry,
+                                                        value_for_registry.clone(),
+                                                        content_id_for_registry,
+                                                    );
+                                                }
+                                                return vec![body];
+                                            };
+
+                                            let to_children = viewport_children;
+                                            let t = t.clamp(0.0, 1.0);
+                                            let slide = content_switch_slide_px.0;
+
+                                            let (from_dx, to_dx) = if forward {
+                                                (-slide * t, slide * (1.0 - t))
+                                            } else {
+                                                (slide * t, -slide * (1.0 - t))
+                                            };
+
+                                            let value_for_registry_for_layers = value_for_registry.clone();
+
+                                            let mut layout_for_layers = LayoutStyle::default();
+                                            layout_for_layers.overflow = fret_ui::element::Overflow::Clip;
+
+                                            let stack = cx.stack_props(
+                                                StackProps {
+                                                    layout: layout_for_layers,
+                                                },
+                                                move |cx| {
+                                                    let layer_layout = LayoutStyle::default();
+
+                                                    let from_opacity = 1.0 - t;
+                                                    let to_opacity = t;
+
+                                                    let viewport_enabled_for_body = viewport_enabled_for_registry;
+                                                    let md_breakpoint_for_body = md_breakpoint_for_registry;
+
+                                                    let from_children = vec![cx.keyed("from-body", move |cx| {
+                                                        let mut body_layout = LayoutStyle::default();
+                                                        if viewport_enabled_for_body && !md_breakpoint_for_body {
+                                                            body_layout.size.width = Length::Fill;
+                                                        }
+                                                        cx.container(
+                                                            ContainerProps {
+                                                                layout: body_layout,
+                                                                padding: content_padding.into(),
+                                                                ..Default::default()
+                                                            },
+                                                            {
+                                                                let from_children = from_children;
+                                                                move |_cx| from_children
+                                                            },
+                                                        )
+                                                    })];
+                                                    let viewport_enabled_for_body = viewport_enabled_for_registry;
+                                                    let md_breakpoint_for_body = md_breakpoint_for_registry;
+                                                    let to_body = cx.keyed("to-body", move |cx| {
+                                                        let mut body_layout = LayoutStyle::default();
+                                                        if viewport_enabled_for_body && !md_breakpoint_for_body {
+                                                            body_layout.size.width = Length::Fill;
+                                                        }
+                                                        cx.container(
+                                                            ContainerProps {
+                                                                layout: body_layout,
+                                                                padding: content_padding.into(),
+                                                                ..Default::default()
+                                                            },
+                                                            {
+                                                                let to_children = to_children;
+                                                                move |_cx| to_children
+                                                            },
+                                                        )
+                                                    });
+                                                    if viewport_enabled_for_registry {
+                                                        radix_navigation_menu::navigation_menu_register_viewport_content_id(
+                                                            cx,
+                                                            root_id_for_registry,
+                                                            value_for_registry_for_layers.clone(),
+                                                            to_body.id,
+                                                        );
+                                                    }
+                                                    let to_children = vec![to_body];
+
+                                                    let from = overlay_motion::wrap_opacity_and_render_transform_with_layouts(
+                                                        cx,
+                                                        layer_layout,
+                                                        from_opacity,
+                                                        RenderTransformProps {
+                                                            layout: layer_layout,
+                                                            transform: Transform2D::translation(Point::new(
+                                                                Px(from_dx),
+                                                                Px(0.0),
+                                                            )),
+                                                        },
+                                                        from_children,
+                                                    );
+
+                                                    let to = overlay_motion::wrap_opacity_and_render_transform_with_layouts(
+                                                        cx,
+                                                        layer_layout,
+                                                        to_opacity,
+                                                        RenderTransformProps {
+                                                            layout: layer_layout,
+                                                            transform: Transform2D::translation(Point::new(
+                                                                Px(to_dx),
+                                                                Px(0.0),
+                                                            )),
+                                                        },
+                                                        to_children,
+                                                    );
+
+                                                    vec![from, to]
+                                                },
+                                            );
+                                            if !viewport_enabled_for_registry {
+                                                radix_navigation_menu::navigation_menu_register_viewport_content_id(
+                                                    cx,
+                                                    root_id_for_registry,
+                                                    value_for_registry.clone(),
+                                                    content_id_for_registry,
+                                                );
+                                            }
+                                            vec![stack]
+                                        })]
+                                        })];
+
+                                        (
+                                            PressableProps {
+                                                layout: LayoutStyle::default(),
+                                                enabled: true,
+                                                focusable: false,
+                                                focus_ring: None,
+                                                focus_ring_always_paint: false,
+                                                focus_ring_bounds: None,
+                                                key_activation: Default::default(),
+                                                a11y: PressableA11y::default(),
+                                            },
+                                            children,
+                                        )
+                                    },
+                                );
+
+                                let transform = overlay_motion::shadcn_zoom_transform_with_scale(
+                                    layout.transform_origin,
+                                    scale,
+                                );
+
+                                // `NavigationMenuContent` (desktop) and `NavigationMenuViewport` (mobile)
+                                // are intrinsically sized in Radix/shadcn.
+                                //
+                                // We keep an autosizing wrapper for desktop-style transitions, but use a
+                                // fixed-size wrapper on mobile when the panel is `w-full` (fill-based),
+                                // otherwise `Length::Fill` has no definite width to resolve against.
+                                let mut panel = if viewport_enabled && !md_breakpoint {
+                                    popper_content::popper_wrapper_at(
+                                        cx,
+                                        layout.placed,
+                                        Edges::all(Px(0.0)),
+                                        move |_cx| vec![content],
+                                    )
+                                } else {
+                                    popper_content::popper_wrapper_at_autosize(
+                                        cx,
+                                        layout.placed.origin,
+                                        move |_cx| vec![content],
+                                    )
+                                };
+
+                                if viewport_enabled {
+                                    radix_navigation_menu::navigation_menu_register_viewport_panel_id(
+                                        cx,
+                                        root_id,
+                                        panel.id,
+                                    );
+                                }
+
+                                if let Some(test_id) = viewport_test_id.as_ref() {
+                                    panel = panel.attach_semantics(
+                                        SemanticsDecoration::default().test_id(test_id.clone()),
+                                    );
+                                }
+
+                                let mut children = Vec::new();
+                                if indicator_enabled && indicator_size.0 > 0.0 {
+                                    let indicator = popper_content::popper_wrapper_panel_at(
+                                        cx,
+                                        layout.indicator_rect,
+                                        Edges::all(Px(0.0)),
+                                        fret_ui::element::Overflow::Clip,
+                                        move |cx| {
+                                            let track_w = layout.indicator_rect.size.width.0.max(0.0);
+                                            let track_h = layout.indicator_rect.size.height.0.max(0.0);
+
+                                            let diamond_size = indicator_diamond_size.0.max(0.0);
+                                            let diamond_left = ((track_w - diamond_size) * 0.5).max(0.0);
+                                            // Tailwind `top-[60%]` uses percentage units. In CSS, relative
+                                            // positioning percentage offsets resolve against the containing
+                                            // block's size (the indicator track), not the element's own size.
+                                            let diamond_top = (track_h - diamond_size + track_h * 0.60).max(0.0);
+
+                                            let mut diamond_layout = LayoutStyle::default();
+                                            diamond_layout.position = fret_ui::element::PositionStyle::Absolute;
+                                            diamond_layout.inset.left = Some(Px(diamond_left)).into();
+                                            diamond_layout.inset.top = Some(Px(diamond_top)).into();
+                                            diamond_layout.size = SizeStyle {
+                                                width: Length::Px(Px(diamond_size)),
+                                                height: Length::Px(Px(diamond_size)),
+                                                ..Default::default()
+                                            };
+
+                                            let center = Point::new(Px(diamond_size * 0.5), Px(diamond_size * 0.5));
+                                            let rotate = Transform2D::rotation_about_degrees(45.0, center);
+
+                                            let diamond = cx.visual_transform_props(
+                                                VisualTransformProps {
+                                                    layout: diamond_layout,
+                                                    transform: rotate,
+                                                },
+                                                move |cx| {
+                                                    let mut layout = LayoutStyle::default();
+                                                    layout.size = SizeStyle {
+                                                        width: Length::Fill,
+                                                        height: Length::Fill,
+                                                        ..Default::default()
+                                                    };
+
+                                                    vec![cx.container(
+                                                        ContainerProps {
+                                                            layout,
+                                                            padding: Edges::all(Px(0.0)).into(),
+                                                            background: Some(viewport_border),
+                                                            shadow: Some(indicator_diamond_shadow),
+                                                            border: Edges::all(Px(0.0)),
+                                                            border_color: None,
+                                                            corner_radii: indicator_diamond_corners,
+                                                            ..Default::default()
+                                                        },
+                                                        |_cx| Vec::new(),
+                                                    )]
+                                                },
+                                            );
+
+                                            radix_navigation_menu::navigation_menu_register_indicator_diamond_id(
+                                                cx,
+                                                root_id,
+                                                diamond.id,
+                                            );
+
+                                            vec![diamond]
+                                        },
+                                    );
+                                    radix_navigation_menu::navigation_menu_register_indicator_track_id(
+                                        cx,
+                                        root_id,
+                                        indicator.id,
+                                    );
+                                    children.push(indicator);
+                                }
+                                children.push(panel);
+
+                                radix_navigation_menu::NavigationMenuViewportOverlayRenderOutput {
+                                    opacity,
+                                    transform,
+                                    children,
+                                }
+                            },
+                        );
+                    }
+
+                    vec![list]
+                })]
             },
         )
     }

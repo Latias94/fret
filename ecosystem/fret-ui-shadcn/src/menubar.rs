@@ -23,7 +23,6 @@ use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::overlay;
-use fret_ui_kit::primitives::direction as direction_prim;
 use fret_ui_kit::primitives::menubar as menu;
 use fret_ui_kit::primitives::menubar::trigger_row as menubar_trigger_row;
 use fret_ui_kit::primitives::popper;
@@ -1122,7 +1121,7 @@ fn submenu_chevron_right_text<H: UiHost>(
     fg: Color,
     _text_style: TextStyle,
 ) -> AnyElement {
-    let dir = direction_prim::use_direction_in_scope(cx, None);
+    let dir = crate::use_direction(cx, None);
     let icon = rtl::chevron_inline_end(dir);
     cx.flex(
         FlexProps {

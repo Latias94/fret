@@ -798,7 +798,7 @@ impl Calendar {
                                     && month_bounds
                                         .map_or(true, |b| month_lt(month, max_start_month(b, 1)));
 
-                                let direction = direction_prim::use_direction_in_scope(cx, None);
+                                let direction = crate::use_direction(cx, None);
                                 let (prev_icon, next_icon) =
                                     if direction == direction_prim::LayoutDirection::Rtl {
                                         (ids::ui::CHEVRON_RIGHT, ids::ui::CHEVRON_LEFT)
@@ -1288,7 +1288,7 @@ impl Calendar {
                             };
 
                             let days_grid = cx.roving_flex(roving_props, move |cx| {
-                                let direction = direction_prim::use_direction_in_scope(cx, None);
+                                let direction = crate::use_direction(cx, None);
                                 let month_model = month_model_days.clone();
                                 let disabled_for_nav = Arc::clone(&disabled);
                                 cx.roving_on_navigate(Arc::new(move |host, _cx, it| {
@@ -1528,7 +1528,7 @@ fn calendar_multi_month_view<H: UiHost>(
         let prev_enabled = nav_enabled && min_start.map_or(true, |min| month_lt(min, start_month));
         let next_enabled = nav_enabled && max_start.map_or(true, |max| month_lt(start_month, max));
 
-        let direction = direction_prim::use_direction_in_scope(cx, None);
+        let direction = crate::use_direction(cx, None);
         let prev_icon = rtl::chevron_inline_start(direction);
         let next_icon = rtl::chevron_inline_end(direction);
 
@@ -1913,7 +1913,7 @@ fn calendar_month_view<H: UiHost>(
     };
 
     let days_grid = cx.roving_flex(roving_props, move |cx| {
-        let direction = direction_prim::use_direction_in_scope(cx, None);
+        let direction = crate::use_direction(cx, None);
         let month_model = month_model.clone();
         let disabled_for_nav = Arc::clone(&disabled);
         cx.roving_on_navigate(Arc::new(move |host, _cx, it| {

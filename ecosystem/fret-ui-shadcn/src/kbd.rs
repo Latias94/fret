@@ -202,7 +202,7 @@ impl KbdGroup {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).snapshot();
         let gap = MetricRef::space(Space::N1).resolve(&theme);
-        let direction = direction_prim::use_direction_in_scope(cx, None);
+        let direction = crate::use_direction(cx, None);
         let children = match direction {
             direction_prim::LayoutDirection::Ltr => self.children,
             direction_prim::LayoutDirection::Rtl => self.children.into_iter().rev().collect(),

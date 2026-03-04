@@ -22,7 +22,6 @@ use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::overlay;
-use fret_ui_kit::primitives::direction as direction_prim;
 use fret_ui_kit::primitives::dropdown_menu as menu;
 use fret_ui_kit::primitives::popper;
 use fret_ui_kit::primitives::popper_content;
@@ -1429,7 +1428,7 @@ fn submenu_chevron_right_text<H: UiHost>(
     _font_size: Px,
     _font_line_height: Px,
 ) -> AnyElement {
-    let dir = direction_prim::use_direction_in_scope(cx, None);
+    let dir = crate::use_direction(cx, None);
     let icon = rtl::chevron_inline_end(dir);
     cx.flex(
         FlexProps {
@@ -1438,7 +1437,7 @@ fn submenu_chevron_right_text<H: UiHost>(
                 layout.size.width = Length::Px(Px(16.0));
                 layout.size.height = Length::Px(Px(16.0));
                 layout.flex.shrink = 0.0;
-                layout.margin.left = fret_ui::element::MarginEdge::Auto;
+                rtl::layout_margin_inline_start_auto(&mut layout, dir);
                 layout
             },
             direction: fret_core::Axis::Horizontal,

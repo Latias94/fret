@@ -184,7 +184,7 @@ impl Progress {
                     // - it is shifted with a translate so the left edge is clipped by the track's
                     //   `overflow-hidden`, keeping the right edge rounded.
                     let motion_owner = cx.root_id();
-                    let dir = direction_prim::use_direction_in_scope(cx, None);
+                    let dir = crate::use_direction(cx, None);
                     let translate_x_fraction_target =
                         if mirror_in_rtl && dir == direction_prim::LayoutDirection::Rtl {
                             1.0 - t

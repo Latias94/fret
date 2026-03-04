@@ -2250,7 +2250,7 @@ fn menu_row_children<H: UiHost>(
             let leading_icon = leading_icon.clone();
             let mut trailing = trailing;
             let has_trailing = trailing.is_some();
-            let direction = direction_prim::use_direction_in_scope(cx, None);
+            let direction = crate::use_direction(cx, None);
             let has_indicator = indicator_on.is_some();
             let has_leading_slot =
                 leading.is_some() || leading_icon.is_some() || reserve_leading_slot;

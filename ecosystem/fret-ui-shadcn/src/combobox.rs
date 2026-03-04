@@ -2478,7 +2478,7 @@ fn combobox_with_patch<H: UiHost>(
                         fret_ui::Invalidation::Layout,
                         window_margin,
                     );
-                    let direction = direction_prim::use_direction_in_scope(cx, None);
+                    let direction = crate::use_direction(cx, None);
                     let placement = combobox_content_placement(
                         direction,
                         content_side,

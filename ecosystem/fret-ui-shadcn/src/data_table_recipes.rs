@@ -23,6 +23,7 @@ use crate::dropdown_menu::{
     DropdownMenuLabel, DropdownMenuRadioGroup, DropdownMenuRadioItemSpec,
 };
 use crate::input::Input;
+use crate::rtl;
 use crate::{
     CommandEntry, CommandGroup, CommandItem, CommandPalette, CommandSeparator, Popover,
     PopoverAlign, PopoverContent, PopoverTrigger,
@@ -1747,6 +1748,7 @@ impl DataTablePagination {
                 .gap_x(Space::N2),
             move |cx| {
                 let theme = Theme::global(&*cx.app);
+                let dir = use_direction(cx, None);
                 let muted_fg = theme.color_by_key("muted-foreground");
                 let mut text = ui::text(cx, selected_label.clone())
                     .text_sm()
@@ -1764,20 +1766,14 @@ impl DataTablePagination {
                         .size(ButtonSize::Icon)
                         .disabled(!first_enabled)
                         .on_activate(first_on_activate.clone())
-                        .children([crate::icon::icon(
-                            cx,
-                            fret_icons::IconId::new_static("lucide.chevrons-left"),
-                        )])
+                        .children([crate::icon::icon(cx, rtl::chevrons_inline_start(dir))])
                         .into_element(cx),
                     Button::new("Go to previous page")
                         .variant(ButtonVariant::Outline)
                         .size(ButtonSize::Icon)
                         .disabled(!prev_enabled)
                         .on_activate(prev_on_activate.clone())
-                        .children([crate::icon::icon(
-                            cx,
-                            fret_icons::IconId::new_static("lucide.chevron-left"),
-                        )])
+                        .children([crate::icon::icon(cx, rtl::chevron_inline_start(dir))])
                         .into_element(cx),
                     Button::new(page_label.clone())
                         .variant(ButtonVariant::Ghost)
@@ -1789,20 +1785,14 @@ impl DataTablePagination {
                         .size(ButtonSize::Icon)
                         .disabled(!next_enabled)
                         .on_activate(next_on_activate.clone())
-                        .children([crate::icon::icon(
-                            cx,
-                            fret_icons::IconId::new_static("lucide.chevron-right"),
-                        )])
+                        .children([crate::icon::icon(cx, rtl::chevron_inline_end(dir))])
                         .into_element(cx),
                     Button::new("Go to last page")
                         .variant(ButtonVariant::Outline)
                         .size(ButtonSize::Icon)
                         .disabled(!last_enabled)
                         .on_activate(last_on_activate.clone())
-                        .children([crate::icon::icon(
-                            cx,
-                            fret_icons::IconId::new_static("lucide.chevrons-right"),
-                        )])
+                        .children([crate::icon::icon(cx, rtl::chevrons_inline_end(dir))])
                         .into_element(cx),
                     page_size_menu,
                 ]
