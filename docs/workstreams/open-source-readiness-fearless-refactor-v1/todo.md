@@ -15,14 +15,15 @@ Status legend:
 
 ## M1 — Cookbook curation (small, teachable, fast)
 
-- [~] Keep cookbook deps minimal (avoid enabling “everything” by default).
+- [x] Keep cookbook deps minimal (avoid enabling “everything” by default).
 - [x] Add “Official vs Lab” labels for cookbook examples.
 - [x] Gate the highest-ceiling interop examples behind explicit Cargo features (optional).
-- [ ] Add/curate diag scripts for the recommended 5–8 examples.
+- [~] Add/curate diag scripts for the recommended 5–8 examples (start with `hello` + `simple_todo`).
 
 ## M2 — `fret` feature profiles
 
-- [~] Make selector/query helpers optional (feature-gated) so `default-features = false` is actually small.
+- [x] Make selector/query helpers optional (feature-gated) so `default-features = false` is actually small.
+- [x] Make `diagnostics` opt-in by default (`app` excludes it; `batteries` includes it).
 - [x] Document recommended profiles in `docs/crate-usage-guide.md`:
   - minimal app,
   - recommended app,
@@ -38,4 +39,4 @@ Status legend:
 
 - [ ] Identify 8–15 lesson-shaped `apps/fret-demo/src/bin/*` candidates.
 - [ ] Migrate into `apps/fret-cookbook/examples/*` with stable `test_id`s.
-- [ ] Keep `fret-demo` as maintainer/labs; ensure `fretboard list native-demos` stays intentionally small.
+- [x] Keep `fret-demo` as maintainer/labs; ensure `fretboard list native-demos` stays intentionally small.
