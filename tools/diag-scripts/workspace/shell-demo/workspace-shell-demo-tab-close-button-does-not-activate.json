@@ -1,0 +1,84 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "Workspace shell demo: close button does not activate inactive tab (smoke)",
+    "tags": ["workspace", "tabstrip", "close", "arbitration", "smoke", "gate"],
+    "required_capabilities": ["diag.script_v2"],
+    "target_hints": [
+      "Asserts a stable active tab (doc-a-2).",
+      "Hovers an inactive tab (doc-a-0) to reveal its close button.",
+      "Clicks the close button and asserts the previously active tab remains selected.",
+      "Asserts the closed tab is removed from the UI tree."
+    ]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "set_window_inner_size", "width_px": 1280.0, "height_px": 720.0 },
+    { "type": "wait_frames", "n": 10 },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-2" }
+      },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "selected_is",
+        "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-2" },
+        "selected": true
+      },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "move_pointer",
+      "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-0" }
+    },
+    { "type": "wait_frames", "n": 4 },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "selected_is",
+        "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-0" },
+        "selected": false
+      }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-0.close" }
+      },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-0.close" }
+    },
+    { "type": "wait_frames", "n": 1 },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "selected_is",
+        "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-2" },
+        "selected": true
+      }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "not_exists",
+        "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-0" }
+      },
+      "timeout_frames": 240
+    },
+
+    { "type": "capture_bundle", "label": "workspace-shell-demo-tab-close-button-does-not-activate" }
+  ]
+}

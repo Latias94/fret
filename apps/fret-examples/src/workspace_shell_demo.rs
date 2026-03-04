@@ -6,7 +6,10 @@ use fret_launch::{
     WinitAppDriver, WinitCommandContext, WinitEventContext, WinitRenderContext, WinitRunnerConfig,
     WinitWindowContext,
 };
-use fret_runtime::PlatformCapabilities;
+use fret_runtime::{
+    CommandDispatchDecisionV1, CommandDispatchSourceV1, CommandScope, PlatformCapabilities,
+    WindowCommandDispatchDiagnosticsStore, WindowPendingCommandDispatchSourceService,
+};
 use fret_ui::declarative;
 use fret_ui::element::{
     ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, Overflow, PressableA11y,
@@ -991,6 +994,31 @@ impl WinitAppDriver for WorkspaceShellDemoDriver {
         // Important: for "app model" commands (e.g. workspace tab operations), we still want to
         // apply the command even if some UI subtree reports it as handled (e.g. a context menu
         // item dispatching the command while focused inside the menu overlay).
+        //
+        // Diagnostics note: because the model application runs before UI command hooks, some UI
+        // hooks become non-idempotent (e.g. close-by-id after the tab is already removed). Capture
+        // pending source metadata up front so we can still emit a stable command dispatch trace
+        // entry for the driver-applied outcome (ADR 0307).
+        let pending_source = app.with_global_mut(
+            WindowPendingCommandDispatchSourceService::default,
+            |svc, app| {
+                svc.consume(window, app.tick_id(), &command)
+                    .unwrap_or_else(CommandDispatchSourceV1::programmatic)
+            },
+        );
+        let pending_source_for_ui = pending_source.clone();
+        app.with_global_mut(
+            WindowPendingCommandDispatchSourceService::default,
+            |svc, app| {
+                svc.record(
+                    window,
+                    app.tick_id(),
+                    command.clone(),
+                    pending_source_for_ui,
+                );
+            },
+        );
+
         let block_dirty_close = env_bool("FRET_WORKSPACE_SHELL_DEBUG_DIRTY_CLOSE_POLICY", false);
         let mut dirty_close_policy = WorkspaceShellDemoDirtyClosePolicy {
             block: block_dirty_close,
@@ -1014,6 +1042,33 @@ impl WinitAppDriver for WorkspaceShellDemoDriver {
         ));
 
         let did_dispatch_ui = state.ui.dispatch_command(app, services, &command);
+        if (outcome.applied || outcome.blocked_dirty_close.is_some()) && !did_dispatch_ui {
+            let handled_by_scope = app
+                .commands()
+                .get(command.clone())
+                .map(|m| m.scope)
+                .or(Some(CommandScope::Window));
+            app.with_global_mut(
+                WindowCommandDispatchDiagnosticsStore::default,
+                |store, app| {
+                    store.record(CommandDispatchDecisionV1 {
+                        seq: 0,
+                        frame_id: app.frame_id(),
+                        tick_id: app.tick_id(),
+                        window,
+                        command: command.clone(),
+                        source: pending_source.clone(),
+                        handled: true,
+                        handled_by_element: None,
+                        handled_by_scope,
+                        handled_by_driver: true,
+                        stopped: false,
+                        started_from_focus: false,
+                        used_default_root_fallback: false,
+                    });
+                },
+            );
+        }
 
         if let Some(req) = outcome.blocked_dirty_close.clone() {
             if let Some(pane_id) = active_pane_id {

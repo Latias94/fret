@@ -7,6 +7,7 @@
 //! Prefer user-facing imports in snippet files (typically `use fret_ui_shadcn::prelude::*;`).
 
 pub mod accordion;
+#[cfg(feature = "gallery-dev")]
 pub mod ai;
 pub mod alert;
 pub mod alert_dialog;
@@ -19,6 +20,7 @@ pub mod button_group;
 pub mod calendar;
 pub mod card;
 pub mod carousel;
+#[cfg(feature = "gallery-dev")]
 pub mod chart;
 pub mod checkbox;
 pub mod collapsible;
@@ -42,6 +44,7 @@ pub mod input_otp;
 pub mod item;
 pub mod kbd;
 pub mod label;
+#[cfg(feature = "gallery-material3")]
 pub mod material3;
 pub mod menubar;
 pub mod motion_presets;

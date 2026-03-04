@@ -1424,7 +1424,8 @@ impl DockSpace {
             max_speed_px_per_tick: base,
         };
         let prev_scroll = self.tab_scroll_for(tabs);
-        let dx = fret_dnd::compute_autoscroll_x_clamped(cfg, tab_bar, position, prev_scroll, max_scroll);
+        let dx =
+            fret_dnd::compute_autoscroll_x_clamped(cfg, tab_bar, position, prev_scroll, max_scroll);
         if dx.0.abs() < 0.01 {
             return false;
         }
@@ -4033,7 +4034,20 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                             *position,
                                         )
                                 {
-                                    if close {
+                                    let intent = tabstrip_controller::intent_for_click(
+                                        tabstrip_controller::TabStripHitTarget::Tab {
+                                            index: tab_index,
+                                            part: if close {
+                                                tabstrip_controller::TabPart::Close
+                                            } else {
+                                                tabstrip_controller::TabPart::Content
+                                            },
+                                        },
+                                    );
+                                    if matches!(
+                                        intent,
+                                        tabstrip_controller::TabStripIntent::Close { .. }
+                                    ) {
                                         self.pressed_tab_close =
                                             Some((tabs_node, tab_index, panel_key.clone()));
                                         request_pointer_capture = Some(Some(dock_space_node));

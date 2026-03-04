@@ -10,9 +10,15 @@ milestones, use:
 
 Active workstreams:
 
+- `docs/workstreams/open-source-onboarding-fearless-refactor-v1/README.md`
+- `docs/workstreams/open-source-onboarding-fearless-refactor-v1/TODO.md`
+- `docs/workstreams/open-source-onboarding-fearless-refactor-v1/MILESTONES.md`
 - `docs/workstreams/ui-focus-overlay-fearless-refactor-v1/DESIGN.md`
 - `docs/workstreams/ui-focus-overlay-fearless-refactor-v1/TODO.md`
 - `docs/workstreams/ui-focus-overlay-fearless-refactor-v1/MILESTONES.md`
+- `docs/workstreams/ui-direction-and-rtl-fearless-refactor-v1/DESIGN.md`
+- `docs/workstreams/ui-direction-and-rtl-fearless-refactor-v1/TODO.md`
+- `docs/workstreams/ui-direction-and-rtl-fearless-refactor-v1/MILESTONES.md`
 - `docs/workstreams/action-first-authoring-fearless-refactor-v1/DESIGN.md`
 - `docs/workstreams/action-first-authoring-fearless-refactor-v1/TODO.md`
 - `docs/workstreams/action-first-authoring-fearless-refactor-v1/MILESTONES.md`

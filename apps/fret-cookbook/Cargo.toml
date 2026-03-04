@@ -12,27 +12,29 @@ publish = false
 
 [dependencies]
 anyhow.workspace = true
-fret = { path = "../../ecosystem/fret", default-features = false, features = ["desktop", "diagnostics", "shadcn", "ui-assets", "icons", "preload-icon-svgs", "command-palette"] }
+fret = { path = "../../ecosystem/fret", default-features = false, features = ["desktop", "shadcn"] }
 fret-app = { path = "../../crates/fret-app" }
 fret-core = { path = "../../crates/fret-core" }
 fret-runtime = { path = "../../crates/fret-runtime" }
 fret-ui = { path = "../../crates/fret-ui" }
-fret-render = { path = "../../crates/fret-render" }
-fret-launch = { path = "../../crates/fret-launch" }
-fret-ui-kit = { path = "../../ecosystem/fret-ui-kit", features = ["imui"] }
-fret-icons = { path = "../../ecosystem/fret-icons" }
-fret-icons-radix = { path = "../../ecosystem/fret-icons-radix", default-features = false, features = ["app-integration"] }
-fret-ui-assets = { path = "../../ecosystem/fret-ui-assets", default-features = false, features = ["ui", "image-decode"] }
-fret-executor = { path = "../../ecosystem/fret-executor" }
-fret-imui = { path = "../../ecosystem/fret-imui" }
-fret-genui-core = { path = "../../ecosystem/fret-genui-core" }
-fret-genui-shadcn = { path = "../../ecosystem/fret-genui-shadcn" }
-serde_json.workspace = true
-fret-undo = { path = "../../ecosystem/fret-undo" }
-fret-docking = { path = "../../ecosystem/fret-docking", default-features = false, features = ["ui"] }
-fret-bootstrap = { path = "../../ecosystem/fret-bootstrap", default-features = false, features = ["ui-app-driver", "diagnostics", "ui-assets", "icons-ui-semantic-lucide"] }
-glam.workspace = true
-wgpu.workspace = true
+
+# Lab/optional example dependencies (feature-gated to keep cold compile time down).
+fret-bootstrap = { path = "../../ecosystem/fret-bootstrap", default-features = false, optional = true }
+fret-ui-assets = { path = "../../ecosystem/fret-ui-assets", default-features = false, features = ["ui", "image-decode"], optional = true }
+fret-icons = { path = "../../ecosystem/fret-icons", optional = true }
+fret-icons-lucide = { path = "../../ecosystem/fret-icons-lucide", default-features = false, optional = true }
+fret-undo = { path = "../../ecosystem/fret-undo", optional = true }
+fret-executor = { path = "../../ecosystem/fret-executor", optional = true }
+fret-docking = { path = "../../ecosystem/fret-docking", default-features = false, features = ["ui"], optional = true }
+fret-imui = { path = "../../ecosystem/fret-imui", optional = true }
+fret-genui-core = { path = "../../ecosystem/fret-genui-core", optional = true }
+fret-genui-shadcn = { path = "../../ecosystem/fret-genui-shadcn", optional = true }
+fret-ui-kit = { path = "../../ecosystem/fret-ui-kit", default-features = false, optional = true, features = ["imui"] }
+serde_json = { workspace = true, optional = true }
+fret-render = { path = "../../crates/fret-render", optional = true }
+fret-launch = { path = "../../crates/fret-launch", optional = true }
+wgpu = { workspace = true, optional = true }
+glam = { workspace = true, optional = true }
 
 # Advanced/optional example dependencies (kept behind features to reduce cold compile time).
 fret-markdown = { path = "../../ecosystem/fret-markdown", default-features = false, features = ["ui", "syntax-rust"], optional = true }
@@ -44,10 +46,66 @@ fret-gizmo = { path = "../../ecosystem/fret-gizmo", optional = true }
 
 [features]
 default = []
+cookbook-diag = ["fret/diagnostics"]
+cookbook-assets = ["dep:fret-icons", "dep:fret-icons-lucide", "dep:fret-ui-assets", "fret/icons", "fret/ui-assets"]
+cookbook-undo = ["dep:fret-undo"]
+cookbook-async = ["dep:fret-executor"]
+cookbook-bootstrap = ["dep:fret-bootstrap", "dep:fret-render"]
+cookbook-docking = ["cookbook-bootstrap", "dep:fret-docking"]
+cookbook-imui = [
+    "dep:fret-imui",
+    "dep:fret-genui-core",
+    "dep:fret-genui-shadcn",
+    "dep:fret-ui-kit",
+    "dep:serde_json",
+]
+cookbook-interop = [
+    "cookbook-bootstrap",
+    "dep:fret-render",
+    "dep:fret-launch",
+    "dep:wgpu",
+]
+cookbook-customv1 = ["cookbook-bootstrap", "dep:fret-render"]
 cookbook-markdown = ["dep:fret-markdown", "dep:fret-code-view"]
 cookbook-canvas = ["dep:fret-canvas"]
-cookbook-chart = ["dep:fret-chart", "dep:delinea"]
-cookbook-gizmo = ["dep:fret-gizmo"]
+cookbook-chart = ["dep:fret-chart", "dep:delinea", "cookbook-bootstrap"]
+cookbook-gizmo = ["dep:fret-gizmo", "dep:glam", "cookbook-bootstrap"]
+
+[[example]]
+name = "icons_and_assets_basics"
+required-features = ["cookbook-assets"]
+
+[[example]]
+name = "undo_basics"
+required-features = ["cookbook-undo"]
+
+[[example]]
+name = "async_inbox_basics"
+required-features = ["cookbook-async"]
+
+[[example]]
+name = "imui_action_basics"
+required-features = ["cookbook-imui"]
+
+[[example]]
+name = "docking_basics"
+required-features = ["cookbook-docking"]
+
+[[example]]
+name = "utility_window_materials_windows"
+required-features = ["cookbook-bootstrap"]
+
+[[example]]
+name = "embedded_viewport_basics"
+required-features = ["cookbook-interop"]
+
+[[example]]
+name = "external_texture_import_basics"
+required-features = ["cookbook-interop"]
+
+[[example]]
+name = "customv1_basics"
+required-features = ["cookbook-customv1"]
 
 [[example]]
 name = "markdown_and_code_basics"

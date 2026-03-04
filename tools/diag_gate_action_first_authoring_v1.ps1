@@ -6,11 +6,13 @@
 #
 # Usage:
 #   pwsh tools/diag_gate_action_first_authoring_v1.ps1
-#   pwsh tools/diag_gate_action_first_authoring_v1.ps1 -OutDir target/fret-diag-afa-v1 -Release
+#   pwsh tools/diag_gate_action_first_authoring_v1.ps1 -OutDir target/dfa-v1 -Release
 
 [CmdletBinding()]
 param(
-    [string] $OutDir = "target/fret-diag-afa-v1",
+    # Keep the base output directory short to avoid Windows path-length issues when bundles are
+    # dumped (schema2 + chunking can create deep directory trees).
+    [string] $OutDir = "target/dfa-v1",
     [int] $TimeoutMs = 180000,
     [int] $PollMs = 50,
     [switch] $Release
@@ -61,31 +63,31 @@ try {
     $gates = @(
         @{
             Name = "cookbook-hello-click-count"
-            DirName = "g01-hello"
+            DirName = "h"
             ScriptPath = "tools/diag-scripts/cookbook/hello/cookbook-hello-click-count.json"
             ExampleName = "hello"
         },
         @{
             Name = "cookbook-commands-keymap-basics-shortcut-and-gating"
-            DirName = "g02-commands"
+            DirName = "k"
             ScriptPath = "tools/diag-scripts/cookbook/commands-keymap-basics/cookbook-commands-keymap-basics-shortcut-and-gating.json"
             ExampleName = "commands_keymap_basics"
         },
         @{
             Name = "cookbook-overlay-basics-modal-barrier-shortcut-gating"
-            DirName = "g03-overlays"
+            DirName = "o"
             ScriptPath = "tools/diag-scripts/cookbook/overlay-basics/cookbook-overlay-basics-modal-barrier-shortcut-gating.json"
             ExampleName = "overlay_basics"
         },
         @{
             Name = "cookbook-imui-action-basics-cross-frontend"
-            DirName = "g04-imui"
+            DirName = "i"
             ScriptPath = "tools/diag-scripts/cookbook/imui-action-basics/cookbook-imui-action-basics-cross-frontend.json"
             ExampleName = "imui_action_basics"
         },
         @{
             Name = "workspace-shell-demo-tab-close-button-command-dispatch-trace"
-            DirName = "g05-workspace"
+            DirName = "w"
             ScriptPath = "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-button-closes-tab-smoke.json"
             PackageName = "fret-demo"
             BinName = "workspace_shell_demo"
@@ -143,6 +145,10 @@ try {
             "FRET_DIAG_SEMANTICS=1",
             "--env",
             "FRET_DIAG_REDACT_TEXT=0",
+            "--env",
+            "FRET_DIAG_FIXED_FRAME_DELTA_MS=16",
+            "--env",
+            "RUST_LOG=warn",
             "--launch",
             "--",
             $demoExe

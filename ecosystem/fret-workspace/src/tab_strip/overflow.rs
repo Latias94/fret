@@ -5,18 +5,21 @@ use fret_core::{Color, Px, Rect, TextStyle};
 use fret_runtime::Model;
 use fret_ui::{ElementContext, UiHost};
 use fret_ui_headless::tab_strip_overflow::compute_overflowed_tab_indices;
+use fret_ui_headless::tab_strip_overflow_menu::{
+    OverflowMenuActivePolicy, OverflowMenuEmptyOverflowedPolicy, compute_overflow_menu_item_indices,
+};
 use fret_ui_shadcn::{DropdownMenuEntry, DropdownMenuItem};
 
 use super::WorkspaceTab;
 use super::state::WorkspaceTabStripRevealHint;
 use crate::tab_drag::WorkspaceTabHitRect;
 
-pub(crate) fn compute_overflowed_tab_ids(
+fn compute_overflowed_tab_indices_for_tabs(
     tabs: &[WorkspaceTab],
     tab_rects: &[WorkspaceTabHitRect],
     viewport: Rect,
     margin: Px,
-) -> Vec<Arc<str>> {
+) -> Vec<usize> {
     let by_id: HashMap<&str, Rect> = tab_rects.iter().map(|r| (r.id.as_ref(), r.rect)).collect();
     compute_overflowed_tab_indices(
         tabs,
@@ -24,9 +27,6 @@ pub(crate) fn compute_overflowed_tab_ids(
         viewport,
         margin,
     )
-    .into_iter()
-    .filter_map(|ix| tabs.get(ix).map(|tab| tab.id.clone()))
-    .collect()
 }
 
 pub(crate) fn compute_overflow_menu_entries<H: UiHost>(
@@ -42,19 +42,24 @@ pub(crate) fn compute_overflow_menu_entries<H: UiHost>(
 ) -> (Option<Arc<str>>, Vec<DropdownMenuEntry>) {
     let button_test_id = root_test_id.map(|id| Arc::<str>::from(format!("{id}.overflow_button")));
 
-    let overflowed = viewport
-        .map(|viewport| compute_overflowed_tab_ids(tabs, tab_rects, viewport, Px(2.0)))
+    let overflowed_indices = viewport
+        .map(|viewport| compute_overflowed_tab_indices_for_tabs(tabs, tab_rects, viewport, Px(2.0)))
         .unwrap_or_default();
-    let overflowed = if is_overflowing && overflowed.is_empty() {
-        tabs.iter().map(|tab| tab.id.clone()).collect()
-    } else {
-        overflowed
-    };
+    let item_indices = compute_overflow_menu_item_indices(
+        tabs.len(),
+        &overflowed_indices,
+        None,
+        OverflowMenuActivePolicy::Exclude,
+        if is_overflowing {
+            OverflowMenuEmptyOverflowedPolicy::AllTabs
+        } else {
+            OverflowMenuEmptyOverflowedPolicy::Empty
+        },
+    );
 
-    let entries = overflowed
-        .iter()
-        .filter_map(|id| {
-            let tab_ix = tabs.iter().position(|t| t.id.as_ref() == id.as_ref())?;
+    let entries = item_indices
+        .into_iter()
+        .filter_map(|tab_ix| {
             let tab = tabs.get(tab_ix)?;
             let test_id = root_test_id
                 .map(|root| Arc::<str>::from(format!("{root}.overflow_entry.{}", tab.id.as_ref())));
@@ -137,14 +142,20 @@ mod tests {
         ];
         let viewport = rect(0.0, 100.0);
 
-        let overflowed = compute_overflowed_tab_ids(&tabs, &rects, viewport, Px(0.0));
+        let overflowed = compute_overflowed_tab_indices_for_tabs(&tabs, &rects, viewport, Px(0.0))
+            .into_iter()
+            .filter_map(|ix| tabs.get(ix).map(|t| t.id.clone()))
+            .collect::<Vec<_>>();
         assert_eq!(
             overflowed,
             vec![Arc::from("d")],
             "expected right-clipped tab to be considered overflowed"
         );
 
-        let overflowed = compute_overflowed_tab_ids(&tabs, &rects, viewport, Px(10.0));
+        let overflowed = compute_overflowed_tab_indices_for_tabs(&tabs, &rects, viewport, Px(10.0))
+            .into_iter()
+            .filter_map(|ix| tabs.get(ix).map(|t| t.id.clone()))
+            .collect::<Vec<_>>();
         assert_eq!(
             overflowed,
             vec![Arc::from("a"), Arc::from("d")],
@@ -182,7 +193,10 @@ mod tests {
         ];
         let viewport = rect(0.0, 60.0);
 
-        let overflowed = compute_overflowed_tab_ids(&tabs, &rects, viewport, Px(0.0));
+        let overflowed = compute_overflowed_tab_indices_for_tabs(&tabs, &rects, viewport, Px(0.0))
+            .into_iter()
+            .filter_map(|ix| tabs.get(ix).map(|t| t.id.clone()))
+            .collect::<Vec<_>>();
         assert_eq!(
             overflowed,
             vec![Arc::from("a"), Arc::from("b"), Arc::from("d")],

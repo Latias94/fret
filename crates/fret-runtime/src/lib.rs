@@ -134,6 +134,7 @@ pub use interaction_diagnostics::{
     DockingInteractionDiagnostics, ViewportCaptureDiagnostics, WindowInteractionDiagnosticsStore,
     WorkspaceInteractionDiagnostics, WorkspaceTabStripActiveVisibilityDiagnostics,
     WorkspaceTabStripActiveVisibilityStatusDiagnostics,
+    WorkspaceTabStripDragDiagnostics,
 };
 pub use keymap::{BindingV1, KeySpecV1, KeymapError, KeymapFileV1};
 pub use keymap::{DefaultKeybinding, Keymap, KeymapContinuation, KeymapService, PlatformFilter};

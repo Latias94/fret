@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use fret_core::SemanticsRole;
 use fret_runtime::ModelStore;
 use fret_ui_headless::calendar::{CalendarMonth, DateRangeSelection};
 use fret_ui_headless::table::{ColumnDef, RowKey, TableState};
@@ -207,6 +208,22 @@ fn ui_builder_nested_surfaces_compile<H: UiHost>(
             .ui()
             .into_element(cx);
     }
+}
+
+#[allow(dead_code, unused_variables)]
+fn ui_builder_semantics_decorators_compile<H: UiHost>(cx: &mut ElementContext<'_, H>) {
+    let _ = Button::new("Click")
+        .ui()
+        .test_id("smoke.button")
+        .a11y_role(SemanticsRole::Button)
+        .a11y_label("Smoke Button")
+        .into_element(cx);
+
+    let _ = Badge::new("x")
+        .ui()
+        .test_id("smoke.badge")
+        .a11y_label("Smoke Badge")
+        .into_element(cx);
 }
 
 #[test]

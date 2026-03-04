@@ -111,6 +111,14 @@ pub struct WorkspaceTabStripActiveVisibilityDiagnostics {
     pub active_visible: bool,
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct WorkspaceTabStripDragDiagnostics {
+    pub pane_id: Option<std::sync::Arc<str>>,
+    pub pointer_id: Option<PointerId>,
+    pub dragging: bool,
+    pub dragged_tab_id: Option<std::sync::Arc<str>>,
+}
+
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct WorkspaceInteractionDiagnostics {
     /// Best-effort tab strip visibility diagnostics published by workspace shells.
@@ -118,6 +126,11 @@ pub struct WorkspaceInteractionDiagnostics {
     /// Multiple strips may exist per window (multi-pane); publishers should include `pane_id`
     /// so scripted gates can select deterministically.
     pub tab_strip_active_visibility: Vec<WorkspaceTabStripActiveVisibilityDiagnostics>,
+    /// Best-effort drag state published by workspace shells.
+    ///
+    /// This is intended for scripted regression gates that want to assert "close buttons do not
+    /// start drags" without relying on pixels.
+    pub tab_strip_drag: Vec<WorkspaceTabStripDragDiagnostics>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -275,6 +288,18 @@ impl WindowInteractionDiagnosticsStore {
         self.begin_frame(window, frame_id);
         let w = self.per_window.entry(window).or_default();
         w.workspace.tab_strip_active_visibility.push(diagnostics);
+        w.latest_workspace = w.workspace.clone();
+    }
+
+    pub fn record_workspace_tab_strip_drag(
+        &mut self,
+        window: AppWindowId,
+        frame_id: FrameId,
+        diagnostics: WorkspaceTabStripDragDiagnostics,
+    ) {
+        self.begin_frame(window, frame_id);
+        let w = self.per_window.entry(window).or_default();
+        w.workspace.tab_strip_drag.push(diagnostics);
         w.latest_workspace = w.workspace.clone();
     }
 

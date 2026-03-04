@@ -5,9 +5,15 @@ use fret_app::App;
 use fret_core::{Edges, LayoutDirection};
 use fret_ui::Theme;
 use fret_ui::element::{CrossAlign, FlexProps, MainAlign};
+use fret_ui_kit::declarative::ModelWatchExt;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::ui;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
+
+#[derive(Default, Clone)]
+struct Models {
+    api_handle: Option<Model<Option<shadcn::CarouselApi>>>,
+}
 
 #[derive(Debug, Clone, Copy)]
 struct SlideVisual {
@@ -54,6 +60,16 @@ fn slide(cx: &mut ElementContext<'_, App>, idx: usize, visual: SlideVisual) -> A
 pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
     let max_w_xs = Px(320.0);
 
+    let state = cx.with_state(Models::default, |st| st.clone());
+    let api_handle = match state.api_handle {
+        Some(model) => model,
+        None => {
+            let model: Model<Option<shadcn::CarouselApi>> = cx.app.models_mut().insert(None);
+            cx.with_state(Models::default, |st| st.api_handle = Some(model.clone()));
+            model
+        }
+    };
+
     let visual = SlideVisual {
         text_px: Px(36.0),
         line_height_px: Px(40.0),
@@ -62,9 +78,10 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
         .map(|idx| shadcn::CarouselItem::new(slide(cx, idx, visual)))
         .collect::<Vec<_>>();
 
-    shadcn::DirectionProvider::new(LayoutDirection::Rtl).into_element(cx, |cx| {
+    let carousel = shadcn::DirectionProvider::new(LayoutDirection::Rtl).into_element(cx, |cx| {
         shadcn::Carousel::default()
             .opts(shadcn::CarouselOptions::new().direction(LayoutDirection::Rtl))
+            .api_handle_model(api_handle.clone())
             .refine_layout(
                 LayoutRefinement::default()
                     .w_full()
@@ -75,9 +92,46 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
             .into_element_parts(
                 cx,
                 |_cx| shadcn::CarouselContent::new(items),
-                shadcn::CarouselPrevious::new(),
-                shadcn::CarouselNext::new(),
+                shadcn::CarouselPrevious::new().test_id("ui-gallery-carousel-rtl-previous"),
+                shadcn::CarouselNext::new().test_id("ui-gallery-carousel-rtl-next"),
             )
-    })
+    });
+
+    let selected_marker = {
+        let selected_index = cx
+            .watch_model(&api_handle)
+            .cloned()
+            .flatten()
+            .map(|api| api.snapshot(&mut *cx.app).selected_index)
+            .unwrap_or(0);
+
+        let badge = shadcn::Badge::new(format!("Selected index: {selected_index}"))
+            .variant(shadcn::BadgeVariant::Secondary)
+            .test_id(format!(
+                "ui-gallery-carousel-rtl-selected-index-{selected_index}"
+            ))
+            .into_element(cx);
+
+        ui::container(cx, move |_cx| vec![badge])
+            .py_2()
+            .into_element(cx)
+    };
+
+    cx.flex(
+        FlexProps {
+            layout: decl_style::layout_style(
+                &Theme::global(&*cx.app).snapshot(),
+                LayoutRefinement::default()
+                    .w_full()
+                    .max_w(max_w_xs)
+                    .mx_auto(),
+            ),
+            direction: fret_core::Axis::Vertical,
+            justify: MainAlign::Start,
+            align: CrossAlign::Stretch,
+            ..Default::default()
+        },
+        move |_cx| vec![carousel, selected_marker],
+    )
 }
 // endregion: example

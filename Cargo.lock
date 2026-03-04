@@ -1903,7 +1903,7 @@ dependencies = [
  "fret-genui-shadcn",
  "fret-gizmo",
  "fret-icons",
- "fret-icons-radix",
+ "fret-icons-lucide",
  "fret-imui",
  "fret-launch",
  "fret-markdown",

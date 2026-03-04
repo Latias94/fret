@@ -499,6 +499,7 @@ fn material_primary_tab<H: UiHost>(
                     corner_radii,
                 )
             }),
+            focus_ring_always_paint: false,
             focus_ring_bounds: None,
         };
 

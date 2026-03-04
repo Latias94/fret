@@ -511,6 +511,7 @@ pub(super) fn handle_pressable<H: UiHost>(
                             app: &'a mut H,
                             window: AppWindowId,
                             element: crate::GlobalElementId,
+                            source_test_id: Option<std::sync::Arc<str>>,
                             notify_requested: &'a mut bool,
                             notify_requested_location:
                                 &'a mut Option<crate::widget::UiSourceLocation>,
@@ -589,6 +590,7 @@ pub(super) fn handle_pressable<H: UiHost>(
                                 let source = fret_runtime::CommandDispatchSourceV1 {
                                     kind,
                                     element: Some(cx.target.0),
+                                    test_id: self.source_test_id.clone(),
                                 };
                                 self.app.with_global_mut(
                                     fret_runtime::WindowPendingCommandDispatchSourceService::default,
@@ -616,6 +618,7 @@ pub(super) fn handle_pressable<H: UiHost>(
                             app: &mut *cx.app,
                             window,
                             element: this.element,
+                            source_test_id: props.a11y.test_id.clone(),
                             notify_requested: &mut cx.notify_requested,
                             notify_requested_location: &mut cx.notify_requested_location,
                         };
@@ -711,6 +714,7 @@ pub(super) fn handle_pressable<H: UiHost>(
                     app: &'a mut H,
                     window: AppWindowId,
                     element: crate::GlobalElementId,
+                    source_test_id: Option<std::sync::Arc<str>>,
                     notify_requested: &'a mut bool,
                     notify_requested_location: &'a mut Option<crate::widget::UiSourceLocation>,
                 }
@@ -788,6 +792,7 @@ pub(super) fn handle_pressable<H: UiHost>(
                         let source = fret_runtime::CommandDispatchSourceV1 {
                             kind,
                             element: Some(cx.target.0),
+                            test_id: self.source_test_id.clone(),
                         };
                         self.app.with_global_mut(
                             fret_runtime::WindowPendingCommandDispatchSourceService::default,
@@ -815,6 +820,7 @@ pub(super) fn handle_pressable<H: UiHost>(
                     app: &mut *cx.app,
                     window,
                     element: this.element,
+                    source_test_id: props.a11y.test_id.clone(),
                     notify_requested: &mut cx.notify_requested,
                     notify_requested_location: &mut cx.notify_requested_location,
                 };

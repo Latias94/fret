@@ -153,6 +153,7 @@ impl Default for TextAreaStyle {
 pub struct TextArea {
     enabled: bool,
     focusable: bool,
+    focus_ring_always_paint: bool,
     text: String,
     base_text_revision: u64,
     ime_surrounding_text_cache: std::cell::RefCell<ImeSurroundingTextCache>,
@@ -215,6 +216,7 @@ impl Default for TextArea {
         Self {
             enabled: true,
             focusable: true,
+            focus_ring_always_paint: false,
             text: String::new(),
             base_text_revision: 0,
             ime_surrounding_text_cache: std::cell::RefCell::default(),
@@ -276,6 +278,10 @@ impl Default for TextArea {
 impl TextArea {
     pub fn new(text: impl Into<String>) -> Self {
         Self::default().with_text(text)
+    }
+
+    pub fn set_focus_ring_always_paint(&mut self, always_paint: bool) {
+        self.focus_ring_always_paint = always_paint;
     }
 
     pub fn set_placeholder(&mut self, placeholder: Option<std::sync::Arc<str>>) {

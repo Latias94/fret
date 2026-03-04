@@ -1,0 +1,91 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "Workspace shell demo: close button does not start a tab drag (smoke)",
+    "tags": ["workspace", "tabstrip", "close", "drag", "arbitration", "smoke", "gate"],
+    "required_capabilities": ["diag.script_v2"],
+    "target_hints": [
+      "Hovers an inactive tab (doc-a-0) to reveal its close button.",
+      "Presses the close button and moves the pointer past the drag threshold.",
+      "Asserts workspace tab strip drag remains inactive and the active tab does not change."
+    ]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "set_window_inner_size", "width_px": 1280.0, "height_px": 720.0 },
+    { "type": "wait_frames", "n": 10 },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-2" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "selected_is",
+        "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-2" },
+        "selected": true
+      },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "move_pointer",
+      "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-0" }
+    },
+    { "type": "wait_frames", "n": 4 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-0.close" }
+      },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "pointer_down",
+      "window": { "kind": "current" },
+      "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-0.close" },
+      "button": "left"
+    },
+    { "type": "wait_frames", "n": 1 },
+
+    { "type": "pointer_move", "window": { "kind": "current" }, "delta_x": 6.0, "delta_y": 0.0, "steps": 6 },
+    { "type": "wait_frames", "n": 2 },
+
+    {
+      "type": "assert",
+      "predicate": { "kind": "workspace_tab_strip_drag_active_is", "active": false, "pane_id": "pane-a" }
+    },
+    {
+      "type": "assert",
+      "predicate": { "kind": "workspace_tab_strip_drag_armed_is", "armed": false, "pane_id": "pane-a" }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "selected_is",
+        "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-2" },
+        "selected": true
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "selected_is",
+        "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-0" },
+        "selected": false
+      }
+    },
+
+    { "type": "pointer_up", "window": { "kind": "current" } },
+    { "type": "wait_frames", "n": 4 },
+
+    { "type": "capture_bundle", "label": "workspace-shell-demo-tab-close-button-does-not-start-drag" }
+  ]
+}

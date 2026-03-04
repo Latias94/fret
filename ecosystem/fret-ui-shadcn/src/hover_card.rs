@@ -38,6 +38,37 @@ const HOVER_CARD_SAFE_CORRIDOR_BUFFER: Px = Px(5.0);
 // (e.g. click/drag), while still allowing the card to close promptly once the interaction ends.
 const HOVER_CARD_INTERACTION_LEASE: Duration = Duration::from_millis(300);
 
+#[derive(Debug, Default, Clone, Copy)]
+struct HoverCardContentPlacementOverrides {
+    side: Option<HoverCardSide>,
+    align: Option<HoverCardAlign>,
+    side_offset: Option<Px>,
+    align_offset: Option<Px>,
+}
+
+/// Hover-card content argument.
+///
+/// This exists to support shadcn/Radix-style authoring where placement parameters (`side`, `align`,
+/// `sideOffset`, `alignOffset`) live on the content, while keeping the older `AnyElement` call sites
+/// working unchanged.
+#[derive(Debug)]
+pub enum HoverCardContentArg {
+    Element(AnyElement),
+    Builder(HoverCardContent),
+}
+
+impl From<AnyElement> for HoverCardContentArg {
+    fn from(value: AnyElement) -> Self {
+        Self::Element(value)
+    }
+}
+
+impl From<HoverCardContent> for HoverCardContentArg {
+    fn from(value: HoverCardContent) -> Self {
+        Self::Builder(value)
+    }
+}
+
 fn hover_card_default_open_delay_frames() -> u32 {
     fret_ui_kit::declarative::transition::ticks_60hz_for_duration(HOVER_CARD_DEFAULT_OPEN_DELAY)
         as u32
@@ -204,7 +235,7 @@ pub struct HoverCard {
     open: Option<Model<bool>>,
     default_open: bool,
     trigger: AnyElement,
-    content: AnyElement,
+    content: HoverCardContentArg,
     align: HoverCardAlign,
     side: HoverCardSide,
     side_offset: Px,
@@ -254,12 +285,12 @@ impl std::fmt::Debug for HoverCard {
 }
 
 impl HoverCard {
-    pub fn new(trigger: AnyElement, content: AnyElement) -> Self {
+    pub fn new(trigger: AnyElement, content: impl Into<HoverCardContentArg>) -> Self {
         Self {
             open: None,
             default_open: false,
             trigger,
-            content,
+            content: content.into(),
             align: HoverCardAlign::default(),
             side: HoverCardSide::default(),
             side_offset: Px(4.0),
@@ -417,7 +448,7 @@ impl HoverCard {
         let theme = Theme::global(&*cx.app).snapshot();
 
         let layout = decl_style::layout_style(&theme, self.layout);
-        let side_offset = if self.side_offset == Px(4.0) {
+        let default_side_offset = if self.side_offset == Px(4.0) {
             theme
                 .metric_by_key("component.hover_card.side_offset")
                 .unwrap_or(self.side_offset)
@@ -458,7 +489,15 @@ impl HoverCard {
         // like Radix `defaultOpen` across frames (rather than being tied to an internal wrapper).
         let open = open_root.open_model(cx);
         let trigger = self.trigger;
-        let content = self.content;
+        let (content, content_overrides) = match self.content {
+            HoverCardContentArg::Element(content) => {
+                (content, HoverCardContentPlacementOverrides::default())
+            }
+            HoverCardContentArg::Builder(content) => {
+                let overrides = content.placement_overrides;
+                (content.into_element(cx), overrides)
+            }
+        };
         let content_size_hint = fixed_size_hint_px(&content);
         let trigger_id = trigger.id;
         let content_id = content.id;
@@ -781,18 +820,29 @@ impl HoverCard {
                     window_margin,
                 );
 
-                let align = match align {
+                let effective_align = content_overrides.align.unwrap_or(align);
+                let align = match effective_align {
                     HoverCardAlign::Start => Align::Start,
                     HoverCardAlign::Center => Align::Center,
                     HoverCardAlign::End => Align::End,
                 };
 
-                let placement_side = match side {
+                let effective_side = content_overrides.side.unwrap_or(side);
+                let placement_side = match effective_side {
                     HoverCardSide::Top => Side::Top,
                     HoverCardSide::Right => Side::Right,
                     HoverCardSide::Bottom => Side::Bottom,
                     HoverCardSide::Left => Side::Left,
                 };
+
+                let side_offset = match content_overrides.side_offset {
+                    None => default_side_offset,
+                    Some(offset) if offset == Px(4.0) => theme
+                        .metric_by_key("component.hover_card.side_offset")
+                        .unwrap_or(offset),
+                    Some(offset) => offset,
+                };
+                let align_offset = content_overrides.align_offset.unwrap_or(Px(0.0));
 
                 let (arrow_options, arrow_protrusion) =
                     popper::diamond_arrow_options(arrow, arrow_size, arrow_padding);
@@ -803,6 +853,7 @@ impl HoverCard {
                     align,
                     side_offset,
                 )
+                .with_align_offset(align_offset)
                 .with_shift_cross_axis(true)
                 .with_arrow(arrow_options, arrow_protrusion);
                 let (layout, trace) = popper::popper_layout_sized_with_trace(
@@ -1080,6 +1131,8 @@ pub struct HoverCardContent {
     children: Vec<AnyElement>,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
+    test_id: Option<Arc<str>>,
+    placement_overrides: HoverCardContentPlacementOverrides,
 }
 
 impl HoverCardContent {
@@ -1089,7 +1142,47 @@ impl HoverCardContent {
             children,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
+            test_id: None,
+            placement_overrides: HoverCardContentPlacementOverrides::default(),
         }
+    }
+
+    pub fn test_id(mut self, test_id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(test_id.into());
+        self
+    }
+
+    /// Radix-style placement side (`side`), applied to the hover-card panel.
+    ///
+    /// Note: This overrides the (legacy) `HoverCard::side(...)` setting when both are present.
+    pub fn side(mut self, side: HoverCardSide) -> Self {
+        self.placement_overrides.side = Some(side);
+        self
+    }
+
+    /// Radix-style placement align (`align`), applied to the hover-card panel.
+    ///
+    /// Note: This overrides the (legacy) `HoverCard::align(...)` setting when both are present.
+    pub fn align(mut self, align: HoverCardAlign) -> Self {
+        self.placement_overrides.align = Some(align);
+        self
+    }
+
+    /// Radix-style placement side offset (`sideOffset`), applied to the hover-card panel.
+    ///
+    /// Notes:
+    /// - Default is `4px` (theme-refinable via `component.hover_card.side_offset`).
+    /// - When set to `4px`, this still resolves through the theme metric key to preserve shadcn
+    ///   token-driven defaults.
+    pub fn side_offset(mut self, offset: Px) -> Self {
+        self.placement_overrides.side_offset = Some(offset);
+        self
+    }
+
+    /// Radix-style align offset (`alignOffset`), applied to the hover-card panel.
+    pub fn align_offset(mut self, offset: Px) -> Self {
+        self.placement_overrides.align_offset = Some(offset);
+        self
     }
 
     pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
@@ -1119,7 +1212,11 @@ impl HoverCardContent {
         let mut props = decl_style::container_props(&theme, chrome, base_layout.merge(self.layout));
         props.shadow = Some(decl_style::shadow_md(&theme, radius));
         let children = self.children;
-        shadcn_layout::container_flow(cx, props, children)
+        let el = shadcn_layout::container_flow(cx, props, children);
+        match self.test_id {
+            Some(test_id) => el.test_id(test_id),
+            None => el,
+        }
     }
 }
 

@@ -14,10 +14,10 @@ use fret_ui::action::{
 };
 use fret_ui::element::ElementKind;
 use fret_ui::element::{
-    AnyElement, ContainerProps, CrossAlign, FlexProps, HitTestGateProps, InsetEdge,
-    InternalDragRegionProps, LayoutStyle, Length, MainAlign, PointerRegionProps, PositionStyle,
-    PressableA11y, PressableProps, RovingFlexProps, RovingFocusProps, ScrollAxis, ScrollProps,
-    SemanticsProps, TextInkOverflow, TextProps,
+    AnyElement, ContainerProps, CrossAlign, FlexProps, HitTestGateProps, HoverRegionProps,
+    InsetEdge, InternalDragRegionProps, LayoutStyle, Length, MainAlign, PointerRegionProps,
+    PositionStyle, PressableA11y, PressableProps, RovingFlexProps, RovingFocusProps, ScrollAxis,
+    ScrollProps, SemanticsProps, TextInkOverflow, TextProps,
 };
 use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, Invalidation, UiHost};
@@ -39,6 +39,7 @@ use crate::tab_drag::{
 };
 
 mod drag_state;
+mod consts;
 mod geometry;
 mod intent;
 mod interaction;
@@ -69,6 +70,7 @@ use layouts::{
     fill_grow_layout, fill_layout, row_layout, tab_list_semantics_layout,
     tab_strip_scroll_content_layout,
 };
+use consts::TAB_CHROME_PAD_RIGHT;
 use state::{WorkspaceTabStripState, get_focus_restore_model, get_reveal_hint_model};
 use theme::WorkspaceTabStripTheme;
 use utils::{
@@ -339,6 +341,7 @@ impl WorkspaceTabStrip {
                 let (
                     scroll_handle,
                     last_active,
+                    reveal_pending,
                     cached_tab_rects,
                     cached_scroll_viewport,
                 ) = cx.with_state(
@@ -347,6 +350,7 @@ impl WorkspaceTabStrip {
                         (
                             state.scroll.clone(),
                             state.last_active.clone(),
+                            state.reveal_pending,
                             state.last_tab_rects.clone(),
                             state.last_scroll_viewport,
                         )
@@ -615,23 +619,22 @@ impl WorkspaceTabStrip {
                                                 let tab_dirty_test_id = tab_test_id
                                                     .as_ref()
                                                     .map(|id| Arc::<str>::from(format!("{id}.dirty")));
-                                                        let tab_element = cx.pressable_with_id(
-                                                            PressableProps {
-                                                                layout: {
-                                                                    let mut layout =
-                                                                        LayoutStyle::default();
-                                                                    layout.size.height = Length::Fill;
-                                                                    layout.size.width = Length::Auto;
-                                                                    // Allow tabs to shrink so long titles don't push later tabs
-                                                                    // fully off-screen (ellipsis needs min-width: 0 behavior).
-                                                                    layout.size.min_width =
-                                                                        Some(Length::Px(Px(0.0)));
-                                                                    layout.flex.shrink = 1.0;
-                                                                    layout
-                                                                },
-                                                                a11y: PressableA11y {
-                                                                    role: Some(SemanticsRole::Tab),
-                                                                    label: Some(tab_title.clone()),
+                                                let tab_layout = {
+                                                    let mut layout = LayoutStyle::default();
+                                                    layout.size.height = Length::Fill;
+                                                    layout.size.width = Length::Auto;
+                                                    // Allow tabs to shrink so long titles don't push later tabs
+                                                    // fully off-screen (ellipsis needs min-width: 0 behavior).
+                                                    layout.size.min_width = Some(Length::Px(Px(0.0)));
+                                                    layout.flex.shrink = 1.0;
+                                                    layout
+                                                };
+                                                let tab_element = cx.pressable_with_id(
+                                                    PressableProps {
+                                                        layout: tab_layout,
+                                                        a11y: PressableA11y {
+                                                            role: Some(SemanticsRole::Tab),
+                                                            label: Some(tab_title.clone()),
                                                             test_id: tab_test_id.clone(),
                                                             selected: is_active,
                                                             pos_in_set: Some(pos_in_set),
@@ -701,6 +704,11 @@ impl WorkspaceTabStrip {
                                                             tab_activate_command.clone(),
                                                         );
 
+                                                        let show_close_button = tab_close_command
+                                                            .is_some()
+                                                            && (is_active
+                                                                || press_state.hovered
+                                                                || press_state.pressed);
                                                         cx.pressable_on_pointer_down(
                                                             tab_pointer_down_handler(
                                                                 drag_model.clone(),
@@ -708,6 +716,7 @@ impl WorkspaceTabStrip {
                                                                 tab_activate_command.clone(),
                                                                 pane_activate_cmd_for_activate.clone(),
                                                                 tab_close_command.clone(),
+                                                                show_close_button,
                                                                 dnd.clone(),
                                                                 dnd_scope,
                                                             ),
@@ -1358,9 +1367,7 @@ impl WorkspaceTabStrip {
 
                                                         let bg = if is_active {
                                                             active_bg
-                                                        } else if press_state.hovered
-                                                            || press_state.pressed
-                                                        {
+                                                        } else if press_state.hovered || press_state.pressed {
                                                             Some(hover_bg)
                                                         } else {
                                                             None
@@ -1413,34 +1420,39 @@ impl WorkspaceTabStrip {
                                                             }
                                                         };
 
-                                                        let mut chrome = cx.container(
-                                                            ContainerProps {
-                                                                layout: {
-                                                                    let mut layout =
-                                                                        LayoutStyle::default();
-                                                                    layout.size.height =
-                                                                        Length::Fill;
-                                                                    layout.size.width =
-                                                                        Length::Auto;
-                                                                    layout
-                                                                },
-                                                                padding: Edges {
-                                                                    left: Px(10.0),
-                                                                    right: Px(6.0),
-                                                                    top: Px(4.0),
-                                                                    bottom: Px(4.0),
-                                                                }
-                                                                .into(),
-                                                                background: bg,
-                                                                border: indicator_border,
-                                                                border_color: indicator_border_color,
-                                                                corner_radii: Corners::all(Px(
-                                                                    tab_radius.0.max(0.0),
-                                                                )),
-                                                                ..Default::default()
+                                                        let chrome = cx.hover_region(
+                                                            HoverRegionProps {
+                                                                layout: fill_layout(),
                                                             },
-                                                            |cx| {
-                                                                let mut out = Vec::new();
+                                                            |cx, _hovered| {
+                                                                let mut chrome = cx.container(
+                                                                    ContainerProps {
+                                                                        layout: {
+                                                                            let mut layout =
+                                                                                LayoutStyle::default();
+                                                                            layout.size.height =
+                                                                                Length::Fill;
+                                                                            layout.size.width =
+                                                                                Length::Auto;
+                                                                            layout
+                                                                        },
+                                                                        padding: Edges {
+                                                                            left: Px(10.0),
+                                                                            right: TAB_CHROME_PAD_RIGHT,
+                                                                            top: Px(4.0),
+                                                                            bottom: Px(4.0),
+                                                                        }
+                                                                        .into(),
+                                                                        background: bg,
+                                                                        border: indicator_border,
+                                                                        border_color: indicator_border_color,
+                                                                        corner_radii: Corners::all(Px(
+                                                                            tab_radius.0.max(0.0),
+                                                                        )),
+                                                                        ..Default::default()
+                                                                    },
+                                                                    |cx| {
+                                                                        let mut out = Vec::new();
                                                                 if tab_preview {
                                                                     if let Some(test_id) =
                                                                         tab_preview_test_id.clone()
@@ -1575,17 +1587,13 @@ impl WorkspaceTabStrip {
                                                                         ..Default::default()
                                                                     },
                                                                     |cx| {
-                                                                let tab_fg = if is_active {
+                                                                        let tab_fg = if is_active {
                                                                     active_fg
                                                                 } else {
                                                                     inactive_fg
                                                                         };
 
-                                                                        let show_close = tab_close_command
-                                                                            .is_some()
-                                                                            && (is_active
-                                                                                || press_state.hovered
-                                                                                || press_state.pressed);
+                                                                        let show_close = show_close_button;
                                                                         let has_trailing_slot =
                                                                             tab_close_command.is_some()
                                                                                 || tab_dirty;
@@ -1656,11 +1664,16 @@ impl WorkspaceTabStrip {
                                                                 ));
 
                                                                 out
+                                                                    },
+                                                                );
+                                                                if let Some(test_id) =
+                                                                    tab_chrome_test_id.clone()
+                                                                {
+                                                                    chrome = chrome.test_id(test_id);
+                                                                }
+                                                                vec![chrome]
                                                             },
                                                         );
-                                                        if let Some(test_id) = tab_chrome_test_id.clone() {
-                                                            chrome = chrome.test_id(test_id);
-                                                        }
                                                         vec![chrome]
                                                     },
                                                 );
@@ -2394,7 +2407,8 @@ impl WorkspaceTabStrip {
                     );
 
                     let active_changed = last_active.as_deref() != active.as_deref();
-                    if active_changed {
+                    let mut reveal_pending = reveal_pending || active_changed;
+                    if reveal_pending {
                         if let (Some(scroll_id), Some(tab_id)) =
                             (scroll_element.get(), active_tab_element.get())
                         {
@@ -2433,6 +2447,7 @@ impl WorkspaceTabStrip {
                                     tab_rect,
                                     margin,
                                 );
+                                reveal_pending = false;
 
                                 if hint.is_some_and(|st| st.tab_id.is_some() || st.reason.is_some())
                                 {
@@ -2450,6 +2465,7 @@ impl WorkspaceTabStrip {
 
                     cx.with_state(WorkspaceTabStripState::default, |state| {
                         state.last_active = active.clone();
+                        state.reveal_pending = reveal_pending;
                     });
 
                     // Best-effort diagnostics hook: publish interaction state into the window-level
@@ -2461,6 +2477,8 @@ impl WorkspaceTabStrip {
                         let scroll_x = scroll_handle.offset().x;
                         let max_scroll_x = scroll_handle.max_offset().x;
                         let overflow = max_scroll_x.0 > 0.5;
+                        let drag_pointer_id = drag_snapshot.pointer;
+                        let dragged_tab_id = dragged_tab.clone();
 
                         let viewport_now = scroll_element
                             .get()
@@ -2514,6 +2532,16 @@ impl WorkspaceTabStrip {
                                         scroll_viewport_rect,
                                         active_tab_rect: active_tab_rect_diag,
                                         active_visible,
+                                    },
+                                );
+                                store.record_workspace_tab_strip_drag(
+                                    cx.window,
+                                    frame_id,
+                                    fret_runtime::WorkspaceTabStripDragDiagnostics {
+                                        pane_id: pane_id.clone(),
+                                        pointer_id: drag_pointer_id,
+                                        dragging,
+                                        dragged_tab_id: dragged_tab_id.clone(),
                                     },
                                 );
                             },

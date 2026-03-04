@@ -3,10 +3,13 @@ use crate::{
     ChromeRefinement, ColorRef, Edges4, Items, Justify, LayoutRefinement, LengthRefinement,
     MarginEdge, MetricRef, Radius, SignedMetricRef, Space,
 };
-use fret_core::{FontId, FontWeight, Px, TextLineHeightPolicy, TextOverflow, TextWrap};
-use fret_ui::element::{AnyElement, ScrollAxis, TextInkOverflow};
+use fret_core::{
+    FontId, FontWeight, Px, SemanticsRole, TextLineHeightPolicy, TextOverflow, TextWrap,
+};
+use fret_ui::element::{AnyElement, ScrollAxis, SemanticsDecoration, TextInkOverflow};
 use fret_ui::scroll::ScrollHandle;
 use fret_ui::{ElementContext, UiHost};
+use std::sync::Arc;
 
 /// Aggregated authoring patch applied by `UiBuilder`.
 ///
@@ -76,7 +79,7 @@ where
 {
     #[track_caller]
     fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        self.build().into_element(cx)
+        UiBuilder::<T>::into_element(self, cx)
     }
 }
 
@@ -85,6 +88,7 @@ where
 pub struct UiBuilder<T> {
     inner: T,
     patch: UiPatch,
+    semantics: Option<SemanticsDecoration>,
 }
 
 impl<T> UiBuilder<T> {
@@ -92,7 +96,28 @@ impl<T> UiBuilder<T> {
         Self {
             inner,
             patch: UiPatch::default(),
+            semantics: None,
         }
+    }
+
+    pub fn semantics(mut self, decoration: SemanticsDecoration) -> Self {
+        self.semantics = Some(match self.semantics.take() {
+            Some(existing) => existing.merge(decoration),
+            None => decoration,
+        });
+        self
+    }
+
+    pub fn test_id(self, test_id: impl Into<Arc<str>>) -> Self {
+        self.semantics(SemanticsDecoration::default().test_id(test_id))
+    }
+
+    pub fn a11y_role(self, role: SemanticsRole) -> Self {
+        self.semantics(SemanticsDecoration::default().role(role))
+    }
+
+    pub fn a11y_label(self, label: impl Into<Arc<str>>) -> Self {
+        self.semantics(SemanticsDecoration::default().label(label))
     }
 
     pub fn style(mut self, style: ChromeRefinement) -> Self
@@ -1233,7 +1258,21 @@ impl<H, B> UiBuilder<crate::ui::ScrollAreaBoxBuild<H, B>> {
 impl<T: UiPatchTarget + UiIntoElement> UiBuilder<T> {
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        self.build().into_element(cx)
+        let UiBuilder {
+            inner,
+            patch,
+            semantics,
+        } = self;
+        let builder = UiBuilder {
+            inner,
+            patch,
+            semantics: None,
+        };
+        let el = builder.build().into_element(cx);
+        match semantics {
+            Some(decoration) => el.attach_semantics(decoration),
+            None => el,
+        }
     }
 }
 
@@ -1245,7 +1284,21 @@ where
 {
     #[track_caller]
     pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        self.build().into_element(cx)
+        let UiBuilder {
+            inner,
+            patch,
+            semantics,
+        } = self;
+        let builder = UiBuilder {
+            inner,
+            patch,
+            semantics: None,
+        };
+        let el = builder.build().into_element(cx);
+        match semantics {
+            Some(decoration) => el.attach_semantics(decoration),
+            None => el,
+        }
     }
 }
 
@@ -1255,7 +1308,21 @@ where
 {
     #[track_caller]
     pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        self.build().into_element(cx)
+        let UiBuilder {
+            inner,
+            patch,
+            semantics,
+        } = self;
+        let builder = UiBuilder {
+            inner,
+            patch,
+            semantics: None,
+        };
+        let el = builder.build().into_element(cx);
+        match semantics {
+            Some(decoration) => el.attach_semantics(decoration),
+            None => el,
+        }
     }
 }
 
@@ -1265,7 +1332,21 @@ where
 {
     #[track_caller]
     pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        self.build().into_element(cx)
+        let UiBuilder {
+            inner,
+            patch,
+            semantics,
+        } = self;
+        let builder = UiBuilder {
+            inner,
+            patch,
+            semantics: None,
+        };
+        let el = builder.build().into_element(cx);
+        match semantics {
+            Some(decoration) => el.attach_semantics(decoration),
+            None => el,
+        }
     }
 }
 
@@ -1277,7 +1358,21 @@ where
 {
     #[track_caller]
     pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        self.build().into_element(cx)
+        let UiBuilder {
+            inner,
+            patch,
+            semantics,
+        } = self;
+        let builder = UiBuilder {
+            inner,
+            patch,
+            semantics: None,
+        };
+        let el = builder.build().into_element(cx);
+        match semantics {
+            Some(decoration) => el.attach_semantics(decoration),
+            None => el,
+        }
     }
 }
 
@@ -1289,7 +1384,21 @@ where
 {
     #[track_caller]
     pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        self.build().into_element(cx)
+        let UiBuilder {
+            inner,
+            patch,
+            semantics,
+        } = self;
+        let builder = UiBuilder {
+            inner,
+            patch,
+            semantics: None,
+        };
+        let el = builder.build().into_element(cx);
+        match semantics {
+            Some(decoration) => el.attach_semantics(decoration),
+            None => el,
+        }
     }
 }
 
@@ -1301,7 +1410,21 @@ where
 {
     #[track_caller]
     pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        self.build().into_element(cx)
+        let UiBuilder {
+            inner,
+            patch,
+            semantics,
+        } = self;
+        let builder = UiBuilder {
+            inner,
+            patch,
+            semantics: None,
+        };
+        let el = builder.build().into_element(cx);
+        match semantics {
+            Some(decoration) => el.attach_semantics(decoration),
+            None => el,
+        }
     }
 }
 
@@ -1311,7 +1434,21 @@ where
 {
     #[track_caller]
     pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        self.build().into_element(cx)
+        let UiBuilder {
+            inner,
+            patch,
+            semantics,
+        } = self;
+        let builder = UiBuilder {
+            inner,
+            patch,
+            semantics: None,
+        };
+        let el = builder.build().into_element(cx);
+        match semantics {
+            Some(decoration) => el.attach_semantics(decoration),
+            None => el,
+        }
     }
 }
 

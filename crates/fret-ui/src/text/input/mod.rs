@@ -28,6 +28,7 @@ pub struct TextInput {
     a11y_role: SemanticsRole,
     enabled: bool,
     focusable: bool,
+    focus_ring_always_paint: bool,
     text: String,
     base_text_revision: u64,
     ime_surrounding_text_cache: std::cell::RefCell<ImeSurroundingTextCache>,

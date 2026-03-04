@@ -535,6 +535,7 @@ impl<'a, H: UiHost> UiActionHost for UiActionHostAdapter<'a, H> {
         let source = fret_runtime::CommandDispatchSourceV1 {
             kind,
             element: Some(cx.target.0),
+            test_id: None,
         };
         self.app.with_global_mut(
             fret_runtime::WindowPendingCommandDispatchSourceService::default,

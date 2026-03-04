@@ -306,6 +306,7 @@ impl InputChip {
                         l
                     },
                     focus_ring: Some(focus_ring),
+                    focus_ring_always_paint: false,
                     focus_ring_bounds: None,
                 };
 
@@ -760,6 +761,7 @@ fn trailing_icon_touch_target_overlay<H: UiHost>(
                 },
                 layout,
                 focus_ring: None,
+                focus_ring_always_paint: false,
                 focus_ring_bounds: None,
             };
 

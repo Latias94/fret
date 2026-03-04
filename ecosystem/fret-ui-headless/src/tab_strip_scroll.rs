@@ -51,21 +51,23 @@ mod tests {
 
     #[test]
     fn ensure_range_visible_x_scrolls_left_when_child_is_left_clipped() {
-        let next = ensure_range_visible_x(Px(50.0), Px(300.0), Px(100.0), Px(20.0), Px(40.0), Px(0.0));
+        let next =
+            ensure_range_visible_x(Px(50.0), Px(300.0), Px(100.0), Px(20.0), Px(40.0), Px(0.0));
         assert_eq!(next, Px(20.0));
     }
 
     #[test]
     fn ensure_range_visible_x_scrolls_right_when_child_is_right_clipped() {
-        let next = ensure_range_visible_x(Px(0.0), Px(300.0), Px(100.0), Px(120.0), Px(160.0), Px(0.0));
+        let next =
+            ensure_range_visible_x(Px(0.0), Px(300.0), Px(100.0), Px(120.0), Px(160.0), Px(0.0));
         assert_eq!(next, Px(60.0));
     }
 
     #[test]
     fn ensure_range_visible_x_respects_margin() {
         // Child ends at 100; with margin=10 and view=100, right edge is 90 => must scroll.
-        let next = ensure_range_visible_x(Px(0.0), Px(300.0), Px(100.0), Px(70.0), Px(100.0), Px(10.0));
+        let next =
+            ensure_range_visible_x(Px(0.0), Px(300.0), Px(100.0), Px(70.0), Px(100.0), Px(10.0));
         assert_eq!(next, Px(10.0));
     }
 }
-

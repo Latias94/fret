@@ -211,7 +211,10 @@ impl ElementHostWidget {
                     }
                 });
 
-                if focused && crate::focus_visible::is_focus_visible(cx.app, cx.window) {
+                let focus_visible = crate::focus_visible::is_focus_visible(cx.app, cx.window);
+                let paint_focus_chrome = focused && focus_visible;
+
+                if paint_focus_chrome {
                     if let Some(border_color) = props.focus_border_color {
                         if let Some(dash) = props.border_dash
                             && props.border != Edges::all(Px(0.0))
@@ -235,10 +238,12 @@ impl ElementHostWidget {
                             });
                         }
                     }
+                }
 
-                    if let Some(ring) = props.focus_ring {
-                        crate::paint::paint_focus_ring(cx.scene, DrawOrder(2), bounds, ring);
-                    }
+                if let Some(ring) = props.focus_ring
+                    && (paint_focus_chrome || props.focus_ring_always_paint)
+                {
+                    crate::paint::paint_focus_ring(cx.scene, DrawOrder(2), bounds, ring);
                 }
             }
             ElementInstance::Semantics(props) => {
@@ -520,8 +525,20 @@ impl ElementHostWidget {
                 if props.enabled
                     && cx.focus == Some(cx.node)
                     && crate::focus_visible::is_focus_visible(cx.app, cx.window)
-                    && let Some(ring) = props.focus_ring
                 {
+                    if let Some(ring) = props.focus_ring {
+                        let bounds = props.focus_ring_bounds.map_or(cx.bounds, |b| {
+                            Rect::new(
+                                Point::new(
+                                    cx.bounds.origin.x + b.origin.x,
+                                    cx.bounds.origin.y + b.origin.y,
+                                ),
+                                b.size,
+                            )
+                        });
+                        crate::paint::paint_focus_ring(cx.scene, DrawOrder(0), bounds, ring);
+                    }
+                } else if props.focus_ring_always_paint {
                     let bounds = props.focus_ring_bounds.map_or(cx.bounds, |b| {
                         Rect::new(
                             Point::new(
@@ -531,7 +548,9 @@ impl ElementHostWidget {
                             b.size,
                         )
                     });
-                    crate::paint::paint_focus_ring(cx.scene, DrawOrder(0), bounds, ring);
+                    if let Some(ring) = props.focus_ring {
+                        crate::paint::paint_focus_ring(cx.scene, DrawOrder(0), bounds, ring);
+                    }
                 }
             }
             ElementInstance::Text(props) => {
@@ -1562,6 +1581,7 @@ impl ElementHostWidget {
                 if input.model_id() != model_id {
                     input.set_model(model);
                 }
+                input.set_focus_ring_always_paint(props.focus_ring_always_paint);
                 input.set_chrome_style(props.chrome);
                 input.set_text_style(props.text_style);
                 input.set_placeholder(props.placeholder);
@@ -1582,6 +1602,7 @@ impl ElementHostWidget {
                 if area.model_id() != model_id {
                     area.set_model(model);
                 }
+                area.set_focus_ring_always_paint(props.focus_ring_always_paint);
                 area.set_style(props.chrome);
                 area.set_text_style(props.text_style);
                 area.set_placeholder(props.placeholder);

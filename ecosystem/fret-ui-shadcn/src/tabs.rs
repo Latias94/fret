@@ -8,7 +8,8 @@ use fret_icons::IconId;
 use fret_runtime::Model;
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign,
-    PressableProps, RovingFlexProps, RovingFocusProps, SpinnerProps, StackProps, SvgIconProps,
+    PressableProps, RovingFlexProps, RovingFocusProps, ShadowLayerStyle, ShadowStyle, SpinnerProps,
+    StackProps, SvgIconProps,
 };
 use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, Theme, ThemeSnapshot, UiHost};
@@ -18,6 +19,9 @@ use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
 use fret_ui_kit::declarative::current_color;
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
+use fret_ui_kit::declarative::motion::{
+    drive_tween_color_for_element, drive_tween_f32_for_element,
+};
 use fret_ui_kit::declarative::motion_springs::shared_indicator_spring_description;
 use fret_ui_kit::declarative::motion_value::{
     MotionToSpecF32, MotionValueF32Update, SpringSpecF32, drive_motion_value_f32,
@@ -30,6 +34,8 @@ use fret_ui_kit::{
     WidgetState, WidgetStateProperty, WidgetStates, resolve_override_slot,
     resolve_override_slot_opt, ui,
 };
+
+use crate::overlay_motion;
 
 #[derive(Debug, Default, Clone)]
 struct TabsListLayoutRuntime {
@@ -45,6 +51,36 @@ struct TabsContentPresenceRuntime {
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
     c.a *= mul;
     c
+}
+
+fn tailwind_transition_ease_in_out(t: f32) -> f32 {
+    // Tailwind default transition timing function: cubic-bezier(0.4, 0, 0.2, 1).
+    // (Often described as `ease-in-out`-ish.)
+    fret_ui_headless::easing::SHADCN_EASE.sample(t)
+}
+
+fn shadow_layer_with_presence(layer: ShadowLayerStyle, presence: f32) -> ShadowLayerStyle {
+    let presence = presence.clamp(0.0, 1.0);
+    ShadowLayerStyle {
+        color: Color {
+            a: (layer.color.a * presence).clamp(0.0, 1.0),
+            ..layer.color
+        },
+        offset_x: Px(layer.offset_x.0 * presence),
+        offset_y: Px(layer.offset_y.0 * presence),
+        blur: Px(layer.blur.0 * presence),
+        spread: Px(layer.spread.0 * presence),
+    }
+}
+
+fn shadow_with_presence(shadow: ShadowStyle, presence: f32) -> ShadowStyle {
+    ShadowStyle {
+        primary: shadow_layer_with_presence(shadow.primary, presence),
+        secondary: shadow
+            .secondary
+            .map(|layer| shadow_layer_with_presence(layer, presence)),
+        corner_radii: shadow.corner_radii,
+    }
 }
 
 fn apply_trigger_inherited_style(
@@ -142,7 +178,10 @@ pub fn tabs_list_variants(theme: &ThemeSnapshot, variant: TabsListVariant) -> Ta
             chrome: ChromeRefinement::default()
                 .bg(ColorRef::Color(Color::TRANSPARENT))
                 .text_color(ColorRef::Color(tabs_list_fg_muted(theme))),
-            padding_px: Px(0.0),
+            // Upstream (radix-* registry variants) keeps `p-[3px]` even for `variant=line`.
+            // Keeping the padding preserves the same trigger inset as the default variant while
+            // switching the "active" affordance from a pill to a shared line indicator.
+            padding_px: tabs_list_padding(theme),
             trigger_row_gap_px: Px(4.0),
         },
     }
@@ -345,6 +384,7 @@ fn tabs_shared_indicator<H: UiHost>(
             shadow,
             radius,
             spring,
+            line_thickness,
         ) = {
             let theme = Theme::global(&*cx.app).snapshot();
 
@@ -441,6 +481,7 @@ fn tabs_shared_indicator<H: UiHost>(
                 border_w,
                 shadow,
                 radius,
+                line_thickness,
             ) = match kind {
                 TabsSharedIndicatorKind::Pill => (
                     target_x,
@@ -453,6 +494,7 @@ fn tabs_shared_indicator<H: UiHost>(
                     (!disabled && selected_idx.is_some())
                         .then(|| decl_style::shadow_sm(&theme, radius)),
                     radius,
+                    0.0,
                 ),
                 TabsSharedIndicatorKind::Line => {
                     let thickness = theme
@@ -462,18 +504,12 @@ fn tabs_shared_indicator<H: UiHost>(
                         .max(0.0);
                     let (target_x, target_y, target_width, target_height) = if thickness > 0.0 {
                         match orientation {
-                            TabsOrientation::Horizontal => (
-                                target_x,
-                                (container_bounds.size.height.0 - thickness).max(0.0),
-                                target_width,
-                                thickness,
-                            ),
-                            TabsOrientation::Vertical => (
-                                (container_bounds.size.width.0 - thickness).max(0.0),
-                                target_y,
-                                thickness,
-                                target_height,
-                            ),
+                            TabsOrientation::Horizontal => {
+                                (target_x, target_y, target_width, thickness)
+                            }
+                            TabsOrientation::Vertical => {
+                                (target_x, target_y, thickness, target_height)
+                            }
                         }
                     } else {
                         (target_x, target_y, target_width, target_height)
@@ -494,6 +530,7 @@ fn tabs_shared_indicator<H: UiHost>(
                         Px(0.0),
                         None,
                         Px(0.0),
+                        thickness,
                     )
                 }
             };
@@ -509,6 +546,7 @@ fn tabs_shared_indicator<H: UiHost>(
                 shadow,
                 radius,
                 spring,
+                line_thickness,
             )
         };
 
@@ -561,12 +599,23 @@ fn tabs_shared_indicator<H: UiHost>(
         props.layout.inset.right = Some(Px(0.0)).into();
         props.layout.inset.bottom = Some(Px(0.0)).into();
         props.layout.inset.left = Some(Px(0.0)).into();
+        if kind == TabsSharedIndicatorKind::Line {
+            // shadcn v4 draws the line "outside" the trigger via negative offsets:
+            // - horizontal: `bottom-[-5px]`
+            // - vertical: `-right-1` (4px)
+            //
+            // Extend the indicator canvas so we can paint into that extra area.
+            match orientation {
+                TabsOrientation::Horizontal => {
+                    props.layout.inset.bottom = Some(Px(-5.0)).into();
+                }
+                TabsOrientation::Vertical => {
+                    props.layout.inset.right = Some(Px(-4.0)).into();
+                }
+            }
+        }
 
         let mut indicator = cx.canvas(props, move |p| {
-            if height.value <= 0.0 || width.value <= 0.0 || bg.a <= 0.0 {
-                return;
-            }
-
             let bounds = p.bounds();
             // The shared indicator targets trigger bounds tracked relative to the *list container*
             // element (`container_bounds`). Depending on how absolute-positioned children are
@@ -576,12 +625,45 @@ fn tabs_shared_indicator<H: UiHost>(
             let dx = container_bounds.origin.x.0 - bounds.origin.x.0;
             let dy = container_bounds.origin.y.0 - bounds.origin.y.0;
 
-            let x_px = (x.value + dx).clamp(0.0, bounds.size.width.0);
-            let y_px = (y.value + dy).clamp(0.0, bounds.size.height.0);
-            let max_width = (bounds.size.width.0 - x_px).max(0.0);
-            let max_height = (bounds.size.height.0 - y_px).max(0.0);
-            let width_px = width.value.clamp(0.0, max_width);
-            let height_px = height.value.clamp(0.0, max_height);
+            let x_base = (x.value + dx).clamp(0.0, bounds.size.width.0);
+            let y_base = (y.value + dy).clamp(0.0, bounds.size.height.0);
+            let max_width_base = (bounds.size.width.0 - x_base).max(0.0);
+            let max_height_base = (bounds.size.height.0 - y_base).max(0.0);
+
+            let (x_px, y_px, width_px, height_px) = match kind {
+                TabsSharedIndicatorKind::Line => {
+                    let thickness = line_thickness.max(0.0);
+                    if thickness <= 0.0 {
+                        return;
+                    }
+
+                    match orientation {
+                        TabsOrientation::Horizontal => {
+                            let y_px = (bounds.size.height.0 - thickness).max(0.0);
+                            let max_height = (bounds.size.height.0 - y_px).max(0.0);
+                            let height_px = thickness.clamp(0.0, max_height);
+                            let width_px = width.value.clamp(0.0, max_width_base);
+                            (x_base, y_px, width_px, height_px)
+                        }
+                        TabsOrientation::Vertical => {
+                            let x_px = (bounds.size.width.0 - thickness).max(0.0);
+                            let max_width = (bounds.size.width.0 - x_px).max(0.0);
+                            let width_px = thickness.clamp(0.0, max_width);
+                            let height_px = height.value.clamp(0.0, max_height_base);
+                            (x_px, y_base, width_px, height_px)
+                        }
+                    }
+                }
+                TabsSharedIndicatorKind::Pill => {
+                    let width_px = width.value.clamp(0.0, max_width_base);
+                    let height_px = height.value.clamp(0.0, max_height_base);
+                    (x_base, y_base, width_px, height_px)
+                }
+            };
+
+            if height_px <= 0.0 || width_px <= 0.0 || bg.a <= 0.0 {
+                return;
+            }
 
             let outer = fret_core::Rect::new(
                 fret_core::Point::new(Px(bounds.origin.x.0 + x_px), Px(bounds.origin.y.0 + y_px)),
@@ -1668,7 +1750,10 @@ impl Tabs {
                         } else {
                             None
                         };
-                        if let Some(indicator_kind) = indicator_kind {
+                        if let Some(indicator_kind) = indicator_kind
+                            && indicator_kind != TabsSharedIndicatorKind::Line
+                        {
+                            // Pill highlight should paint under the triggers.
                             list_children.push(tabs_shared_indicator(
                                 cx,
                                 list_container_id,
@@ -1676,11 +1761,36 @@ impl Tabs {
                                 indicator_kind,
                                 items_len,
                                 active_idx,
-                                indicator_test_id,
+                                indicator_test_id.clone(),
                                 tabs_disabled,
                                 &style_override,
                             ));
                         }
+
+                        // Vertical tabs should keep triggers at a shared width (shadcn's `w-full`
+                        // outcome relative to the widest trigger). Our layout engine does not
+                        // fully match CSS percentage sizing in shrink-to-fit containers, so we
+                        // stabilize this by reusing the previous frame's measured trigger width.
+                        let vertical_trigger_width_px: Option<Px> =
+                            if orientation == TabsOrientation::Vertical {
+                                let trigger_ids = cx.with_state_for(
+                                    list_container_id,
+                                    TabsListLayoutRuntime::default,
+                                    |rt| rt.triggers.clone(),
+                                );
+                                let mut max_w: Option<f32> = None;
+                                for id in trigger_ids {
+                                    if let Some(bounds) = cx.last_bounds_for_element(id) {
+                                        max_w = Some(
+                                            max_w
+                                                .map_or(bounds.size.width.0, |w| w.max(bounds.size.width.0)),
+                                        );
+                                    }
+                                }
+                                max_w.map(Px)
+                            } else {
+                                None
+                            };
 
                         list_children.push(cx.roving_flex(
                             RovingFlexProps {
@@ -1842,12 +1952,6 @@ impl Tabs {
                                     let default_trigger_border = default_trigger_border.clone();
                                     let theme = theme.clone();
 
-                                    let shadow = (!shared_indicator_motion
-                                        && list_variant == TabsListVariant::Default
-                                        && active
-                                        && !item_disabled)
-                                        .then(|| decl_style::shadow_sm(&theme, radius));
-
                                     let value = item.value.clone();
                                     let label = item.label.clone();
                                     let trigger_children = item.trigger.take();
@@ -1972,7 +2076,22 @@ impl Tabs {
                                             &default_trigger_fg,
                                             states,
                                         );
-                                        let fg = fg_ref.resolve(&theme);
+                                        let duration = overlay_motion::shadcn_motion_duration_150(cx);
+
+                                        let focus_visible =
+                                            states.contains(WidgetStates::FOCUS_VISIBLE);
+
+                                        let fg_motion = drive_tween_color_for_element(
+                                            cx,
+                                            id,
+                                            "tabs.trigger.fg",
+                                            fg_ref.resolve(&theme),
+                                            duration,
+                                            tailwind_transition_ease_in_out,
+                                        );
+                                        let fg = fg_motion.value;
+                                        let fg_ref = ColorRef::Color(fg);
+
                                         let default_icon_color = theme
                                             .color_by_key("muted-foreground")
                                             .unwrap_or_else(|| theme.color_token("muted-foreground"));
@@ -1999,6 +2118,64 @@ impl Tabs {
                                             border
                                         };
 
+                                        let border_motion = drive_tween_color_for_element(
+                                            cx,
+                                            id,
+                                            "tabs.trigger.border",
+                                            if focus_visible {
+                                                theme.color_token("ring")
+                                            } else {
+                                                border
+                                            },
+                                            duration,
+                                            tailwind_transition_ease_in_out,
+                                        );
+                                        let border = border_motion.value;
+
+                                        let ring_alpha = drive_tween_f32_for_element(
+                                            cx,
+                                            id,
+                                            "tabs.trigger.ring.alpha",
+                                            if focus_visible { 1.0 } else { 0.0 },
+                                            duration,
+                                            tailwind_transition_ease_in_out,
+                                        );
+                                        let mut ring = ring;
+                                        ring.color.a = (ring.color.a * ring_alpha.value)
+                                            .clamp(0.0, 1.0);
+                                        if let Some(offset_color) = ring.offset_color {
+                                            ring.offset_color = Some(Color {
+                                                a: (offset_color.a * ring_alpha.value)
+                                                    .clamp(0.0, 1.0),
+                                                ..offset_color
+                                            });
+                                        }
+
+                                        let shadow_presence = drive_tween_f32_for_element(
+                                            cx,
+                                            id,
+                                            "tabs.trigger.shadow.presence",
+                                            if !shared_indicator_motion
+                                                && list_variant == TabsListVariant::Default
+                                                && active
+                                                && !item_disabled
+                                            {
+                                                1.0
+                                            } else {
+                                                0.0
+                                            },
+                                            duration,
+                                            tailwind_transition_ease_in_out,
+                                        );
+                                        let wants_shadow =
+                                            shadow_presence.animating || shadow_presence.value > 0.0;
+                                        let shadow = wants_shadow.then(|| {
+                                            shadow_with_presence(
+                                                decl_style::shadow_sm(&theme, radius),
+                                                shadow_presence.value,
+                                            )
+                                        });
+
                                         let mut a11y =
                                             fret_ui_kit::primitives::tabs::tab_a11y_with_collection(
                                                 Some(label.clone()),
@@ -2015,14 +2192,15 @@ impl Tabs {
                                             enabled: !item_disabled,
                                             focusable: tab_stop || st.focused,
                                             focus_ring: Some(ring),
+                                            focus_ring_always_paint: ring_alpha.animating,
                                             a11y,
                                             ..Default::default()
                                         };
 
                                         if orientation == TabsOrientation::Vertical {
-                                            // shadcn new-york-v4: `TabsTrigger` uses `w-full` for vertical tabs so
-                                            // inactive triggers still occupy the full list width (defined by the
-                                            // widest trigger).
+                                            if let Some(w) = vertical_trigger_width_px {
+                                                props.layout.size.width = Length::Px(w);
+                                            }
                                             props.layout.flex.align_self = Some(CrossAlign::Stretch);
                                         }
 
@@ -2148,9 +2326,26 @@ impl Tabs {
                                         })
                                      }));
                                  }
-                                 out
-                             },
+                             out
+                         },
                         ));
+                        if let Some(indicator_kind) = indicator_kind
+                            && indicator_kind == TabsSharedIndicatorKind::Line
+                        {
+                            // shadcn's line indicator is visually "above" the triggers.
+                            // Keep it last in the list so it paints on top.
+                            list_children.push(tabs_shared_indicator(
+                                cx,
+                                list_container_id,
+                                orientation,
+                                indicator_kind,
+                                items_len,
+                                active_idx,
+                                indicator_test_id,
+                                tabs_disabled,
+                                &style_override,
+                            ));
+                        }
                         list_children
                     })]
             }));
@@ -2409,7 +2604,7 @@ mod tests {
         }
 
         let line = tabs_list_variants(&theme, TabsListVariant::Line);
-        assert_eq!(line.padding_px, Px(0.0));
+        assert!(line.padding_px.0 > 0.0);
         assert_eq!(line.trigger_row_gap_px, Px(4.0));
         match line.chrome.background {
             Some(ColorRef::Color(c)) => assert_eq!(c, Color::TRANSPARENT),
@@ -2616,6 +2811,286 @@ mod tests {
         assert!(
             wdiff <= 0.51,
             "expected vertical triggers to share list width: w0={w0:.3}, w1={w1:.3}, diff={wdiff:.3}"
+        );
+    }
+
+    #[test]
+    fn tabs_vertical_line_variant_stretches_triggers_to_shared_width() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let model = app.models_mut().insert(Some(Arc::from("preview")));
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let mut render = || {
+            let root = fret_ui::declarative::render_root(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                "tabs-vertical-line-stretch",
+                |cx| {
+                    vec![
+                        Tabs::new(model.clone())
+                            .orientation(TabsOrientation::Vertical)
+                            .list_variant(TabsListVariant::Line)
+                            .items([
+                                TabsItem::new("preview", "Preview", Vec::<AnyElement>::new()),
+                                TabsItem::new("code", "Code", Vec::<AnyElement>::new()),
+                            ])
+                            .into_element(cx),
+                    ]
+                },
+            );
+            ui.set_root(root);
+            ui.request_semantics_snapshot();
+            ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        };
+
+        // Two frames so the vertical width stabilization can reuse the previous frame's measured
+        // trigger widths.
+        render();
+        render();
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let mut tabs: Vec<_> = snap
+            .nodes
+            .iter()
+            .filter(|n| n.role == SemanticsRole::Tab)
+            .collect();
+        assert_eq!(tabs.len(), 2, "expected two tab triggers");
+
+        tabs.sort_by(|a, b| {
+            a.bounds
+                .origin
+                .y
+                .0
+                .partial_cmp(&b.bounds.origin.y.0)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
+
+        let w0 = tabs[0].bounds.size.width.0;
+        let w1 = tabs[1].bounds.size.width.0;
+        let wdiff = (w0 - w1).abs();
+        assert!(
+            wdiff <= 0.51,
+            "expected vertical line variant triggers to share width: w0={w0:.3}, w1={w1:.3}, diff={wdiff:.3}"
+        );
+    }
+
+    #[test]
+    fn tabs_trigger_focus_ring_tweens_in_and_out_like_a_transition() {
+        use std::cell::Cell;
+        use std::rc::Rc;
+        use std::time::Duration;
+
+        use fret_core::KeyCode;
+        use fret_ui_kit::declarative::transition::ticks_60hz_for_duration;
+
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        crate::shadcn_themes::apply_shadcn_new_york(
+            &mut app,
+            crate::shadcn_themes::ShadcnBaseColor::Neutral,
+            crate::shadcn_themes::ShadcnColorScheme::Light,
+        );
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(200.0)),
+        );
+        let mut services = FakeServices::default();
+        let model = app.models_mut().insert(Some(Arc::from("alpha")));
+
+        let ring_alpha_out: Rc<Cell<Option<f32>>> = Rc::new(Cell::new(None));
+        let always_paint_out: Rc<Cell<Option<bool>>> = Rc::new(Cell::new(None));
+
+        fn find_pressable_with_test_id<'a>(
+            el: &'a AnyElement,
+            test_id: &str,
+        ) -> Option<&'a PressableProps> {
+            match &el.kind {
+                fret_ui::element::ElementKind::Pressable(props) => {
+                    if props.a11y.test_id.as_deref() == Some(test_id) {
+                        return Some(props);
+                    }
+                }
+                _ => {}
+            }
+            el.children
+                .iter()
+                .find_map(|child| find_pressable_with_test_id(child, test_id))
+        }
+
+        fn render_frame(
+            ui: &mut UiTree<App>,
+            app: &mut App,
+            services: &mut dyn fret_core::UiServices,
+            window: AppWindowId,
+            bounds: Rect,
+            model: Model<Option<Arc<str>>>,
+            ring_alpha_out: Rc<Cell<Option<f32>>>,
+            always_paint_out: Rc<Cell<Option<bool>>>,
+        ) -> fret_core::NodeId {
+            let root = fret_ui::declarative::render_root(
+                ui,
+                app,
+                services,
+                window,
+                bounds,
+                "tabs-trigger-focus-ring-tween",
+                move |cx| {
+                    let el = Tabs::new(model)
+                        .items([
+                            TabsItem::new("alpha", "Alpha", Vec::<AnyElement>::new())
+                                .trigger_test_id("tabs.trigger.alpha"),
+                            TabsItem::new("beta", "Beta", Vec::<AnyElement>::new()),
+                        ])
+                        .into_element(cx);
+
+                    let pressable = find_pressable_with_test_id(&el, "tabs.trigger.alpha")
+                        .expect("pressable with trigger test_id");
+                    let ring = pressable.focus_ring.expect("focus ring");
+                    ring_alpha_out.set(Some(ring.color.a));
+                    always_paint_out.set(Some(pressable.focus_ring_always_paint));
+
+                    vec![el]
+                },
+            );
+            ui.set_root(root);
+            ui.request_semantics_snapshot();
+            ui.layout_all(app, services, bounds, 1.0);
+            root
+        }
+
+        // Frame 1: baseline render (no focus-visible), ring alpha should be 0.
+        app.set_frame_id(FrameId(1));
+        let root = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            ring_alpha_out.clone(),
+            always_paint_out.clone(),
+        );
+        let a0 = ring_alpha_out.get().expect("a0");
+        assert!(
+            a0.abs() <= 1e-6,
+            "expected ring alpha to start at 0, got {a0}"
+        );
+
+        // Focus the trigger and mark focus-visible via a navigation key.
+        let focusable = ui
+            .first_focusable_descendant_including_declarative(&mut app, window, root)
+            .expect("focusable tab trigger");
+        ui.set_focus(Some(focusable));
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::KeyDown {
+                key: KeyCode::Tab,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+
+        // Frame 2: ring should be in-between (not snapped).
+        app.set_frame_id(FrameId(2));
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            ring_alpha_out.clone(),
+            always_paint_out.clone(),
+        );
+        let a1 = ring_alpha_out.get().expect("a1");
+        assert!(
+            a1 > 0.0,
+            "expected ring alpha to start animating in, got {a1}"
+        );
+
+        // Advance frames until the default 150ms transition settles.
+        let settle = ticks_60hz_for_duration(Duration::from_millis(150)) + 2;
+        for i in 0..settle {
+            app.set_frame_id(FrameId(3 + i));
+            let _ = render_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                model.clone(),
+                ring_alpha_out.clone(),
+                always_paint_out.clone(),
+            );
+        }
+        let a_focused = ring_alpha_out.get().expect("a_focused");
+        assert!(
+            a_focused > a1 + 1e-4,
+            "expected ring alpha to increase over time, got a1={a1} a_focused={a_focused}"
+        );
+
+        // Blur and ensure ring animates out while still being painted.
+        ui.set_focus(None);
+        app.set_frame_id(FrameId(1000));
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            ring_alpha_out.clone(),
+            always_paint_out.clone(),
+        );
+        let a_blur = ring_alpha_out.get().expect("a_blur");
+        let always_paint = always_paint_out.get().expect("always_paint");
+        assert!(
+            a_blur > 0.0 && a_blur < a_focused,
+            "expected ring alpha to be intermediate after blur, got a_blur={a_blur} a_focused={a_focused}"
+        );
+        assert!(
+            always_paint,
+            "expected focus ring to request painting while animating out"
+        );
+
+        for i in 0..settle {
+            app.set_frame_id(FrameId(1001 + i));
+            let _ = render_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                model.clone(),
+                ring_alpha_out.clone(),
+                always_paint_out.clone(),
+            );
+        }
+        let a_final = ring_alpha_out.get().expect("a_final");
+        let always_paint_final = always_paint_out.get().expect("always_paint_final");
+        assert!(
+            a_final.abs() <= 1e-4,
+            "expected ring alpha to settle at 0, got {a_final}"
+        );
+        assert!(
+            !always_paint_final,
+            "expected focus ring to stop requesting painting after settling"
         );
     }
 

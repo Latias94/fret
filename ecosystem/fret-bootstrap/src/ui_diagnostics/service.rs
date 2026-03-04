@@ -73,6 +73,23 @@ thread_local! {
     static SCRIPT_INJECTION_SCOPE: std::cell::Cell<bool> = std::cell::Cell::new(false);
 }
 
+fn infer_pointer_source_test_id_from_semantics(
+    window: AppWindowId,
+    source_element: Option<u64>,
+    semantics_snapshot: Option<&fret_core::SemanticsSnapshot>,
+    element_runtime: Option<&ElementRuntime>,
+) -> Option<String> {
+    let element_runtime = element_runtime?;
+    let semantics = semantics_snapshot?;
+    let element = fret_ui::elements::GlobalElementId(source_element?);
+    let node = element_runtime.node_for_element(window, element)?;
+    semantics
+        .nodes
+        .iter()
+        .find(|n| n.id == node)
+        .and_then(|n| n.test_id.clone())
+}
+
 impl UiDiagnosticsService {
     fn debug_extensions_registry_mut(&mut self) -> &mut extensions::DebugExtensionsRegistryV1 {
         self.debug_extensions
@@ -1219,7 +1236,7 @@ impl UiDiagnosticsService {
         ring.push_snapshot(&self.cfg, snapshot);
 
         self.record_shortcut_routing_trace_for_window(app, window);
-        self.record_command_dispatch_trace_for_window(app, window);
+        self.record_command_dispatch_trace_for_window(app, window, raw_semantics, element_runtime);
 
         if let Some(pending) = self.inspector.take_pending_pick_for_window(window) {
             self.resolve_pending_pick_for_window(pending, raw_semantics, ui, element_runtime);
@@ -1289,7 +1306,13 @@ impl UiDiagnosticsService {
         }
     }
 
-    fn record_command_dispatch_trace_for_window(&mut self, app: &App, window: AppWindowId) {
+    fn record_command_dispatch_trace_for_window(
+        &mut self,
+        app: &App,
+        window: AppWindowId,
+        semantics_snapshot: Option<&fret_core::SemanticsSnapshot>,
+        element_runtime: Option<&ElementRuntime>,
+    ) {
         let Some(active) = self.active_scripts.get_mut(&window) else {
             return;
         };
@@ -1338,9 +1361,19 @@ impl UiDiagnosticsService {
                 fret_runtime::CommandDispatchSourceKindV1::Programmatic => "programmatic",
             };
 
+            let direct_source_test_id = decision.source.test_id.as_deref().map(str::to_string);
+            let inferred_source_test_id = direct_source_test_id.or_else(|| {
+                infer_pointer_source_test_id_from_semantics(
+                    window,
+                    decision.source.element,
+                    semantics_snapshot,
+                    element_runtime,
+                )
+            });
+
             let source_test_id = match decision.source.kind {
                 fret_runtime::CommandDispatchSourceKindV1::Pointer => {
-                    pointer_source_test_id_for_step.clone()
+                    inferred_source_test_id.or_else(|| pointer_source_test_id_for_step.clone())
                 }
                 _ => None,
             };
@@ -1400,3 +1433,6 @@ impl UiDiagnosticsService {
         id
     }
 }
+
+// Unit tests for pointer-source attribution live in `ui_diagnostics.rs` so they can share
+// existing helpers without introducing additional `mod tests` fragments in include files.

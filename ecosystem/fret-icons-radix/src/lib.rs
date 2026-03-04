@@ -3,7 +3,10 @@
 //! This crate registers a curated subset of Radix Icons SVGs into [`fret_icons::IconRegistry`].
 //! Most users will use the higher-level install hooks exposed by the ecosystem `fret` crate.
 
-use fret_icons::{IconId, IconRegistry, ids};
+use fret_icons::{IconId, IconRegistry};
+
+#[cfg(feature = "semantic-ui")]
+use fret_icons::ids;
 use rust_embed::RustEmbed;
 use std::{borrow::Cow, sync::Arc};
 
