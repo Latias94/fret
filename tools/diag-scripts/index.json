@@ -815,6 +815,29 @@
       ]
     },
     {
+      "id": "docking-arbitration-demo-multiwindow-under-moving-window-basic",
+      "path": "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-under-moving-window-basic.json",
+      "required_capabilities": [
+        "diag.multi_window",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "diag-hardening-smoke-docking",
+        "docking-arbitration"
+      ],
+      "tags": [
+        "docking",
+        "drag",
+        "gate",
+        "hover",
+        "multiwindow"
+      ],
+      "target_hints": [
+        "Overlaps two OS windows and starts a cross-window dock drag in the topmost window.",
+        "With transparent payload enabled, asserts hover routing can peek behind the moving window (ImGui-style HoveredWindowUnderMovingWindow)."
+      ]
+    },
+    {
       "id": "docking-arbitration-demo-multiwindow-overlap-zorder-switch",
       "path": "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-overlap-zorder-switch.json",
       "required_capabilities": [

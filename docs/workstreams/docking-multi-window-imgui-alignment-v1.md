@@ -197,6 +197,11 @@ These gates assert, at minimum:
   - gate: `tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-title-bar-drag-docks-to-main.json`
   - script authoring note: for cross-window drags, ensure the final drop position is expressed in the *target window* coordinate space (e.g. `move_pointer` in the target window) before releasing; otherwise drop-resolve can remain `source=none` and the floating window will not close.
 
+6) **Peek-behind hover routing (HoveredWindowUnderMovingWindow)**
+- Delivered (2026-03-04): when transparent payload is enabled and a dock-floating OS window follows the cursor, hover routing can prefer the window *behind* the moving window so docking previews/resolve can target the overlapped window.
+  - gate: `tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-under-moving-window-basic.json`
+  - included in smoke: `tools/diag-scripts/suites/diag-hardening-smoke-docking/suite.json`
+
 The preferred vehicle remains: add/extend diag scripts in `tools/diag-scripts/` and keep assertions contract-level (dock graph signatures + docking diagnostics), not pixels.
 
 ## ImGui multi-viewport gap inventory (what still differs)
