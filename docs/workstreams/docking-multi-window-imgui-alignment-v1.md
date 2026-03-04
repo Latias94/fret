@@ -201,6 +201,13 @@ These gates assert, at minimum:
 - Delivered (2026-03-04): when transparent payload is enabled and a dock-floating OS window follows the cursor, hover routing can prefer the window *behind* the moving window so docking previews/resolve can target the overlapped window.
   - gate: `tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-under-moving-window-basic.json`
   - included in smoke: `tools/diag-scripts/suites/diag-hardening-smoke-docking/suite.json`
+  - additional gate (tabs-group drags): `tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-under-moving-window-tabs-group.json`
+    - included in suite: `tools/diag-scripts/suites/docking-arbitration/suite.json`
+
+7) **Five-way docking hint selection (inner pad sweep)**
+- Delivered (2026-03-04): during a cross-window dock drag, sweeping the inner 5-way hint pad (top/left/right/bottom/center) selects each zone deterministically via `dock_drop_resolved_zone_is`.
+  - gate: `tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-five-way-hints-sweep.json`
+  - included in suite: `tools/diag-scripts/suites/docking-arbitration/suite.json`
 
 The preferred vehicle remains: add/extend diag scripts in `tools/diag-scripts/` and keep assertions contract-level (dock graph signatures + docking diagnostics), not pixels.
 
@@ -247,3 +254,20 @@ This is a practical checklist for editor-grade parity. It intentionally mixes UX
   contract surface (likely in `crates/fret-core` for the dock graph model + an app-level storage policy).
 - Stronger canonical-form invariants: beyond “graph is canonical”, we should lock behavior like “no panel loss” under
   sequences (tear-off → merge → close → reopen) with a small repeatable suite.
+
+## Next actions (prioritized)
+
+P0 (editor-grade hand feel blockers):
+
+- Multi-monitor DPI during tear-off + follow:
+  - add a Windows-only gate that tears off on monitor A, drags the floating window across to monitor B, and asserts DPI/scale stays consistent with ADR 0017 (`docs/adr/0017-multi-window-display-and-dpi.md`).
+  - target: no large cursor-to-grab offset jumps; drop hints remain stable after crossing monitors.
+- Decide OS non-client title-bar docking scope:
+  - ImGui supports docking while dragging the platform window title bar (multi-viewport backends can cooperate).
+  - Fret currently gates “title-bar docking” via tabs-group drags inside the tab bar (portable).
+  - Action: explicitly decide whether OS title-bar docking is a non-goal, or an opt-in runner policy (likely Windows-only first).
+
+P1 (coverage and regression hardening):
+
+- Promote more multi-window gates into `tools/diag-scripts/suites/docking-arbitration/suite.json` as they stabilize (keep `diag-hardening-smoke-docking` small).
+- Add a macOS-focused “release outside windows still commits drop” gate (mirrors the Windows poll-up gate), and document the capability/degradation expectation when it is not possible.

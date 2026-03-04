@@ -105,10 +105,11 @@ Each TODO is labeled:
 - Log confirmation (macOS):
   - `target/fret-dock-tearoff.log` should include a `[follow-stop]` line around the time you pressed Escape.
 
-- [~] DW-P0-diag-005 Stabilize multi-window docking diag gates (script_v2).
+- [x] DW-P0-diag-005 Stabilize multi-window docking diag gates (script_v2).
   - Goal: lock multi-window docking hand-feel with executable scripts (avoid heuristic regressions).
   - Current state:
     - Scripts exist under `tools/diag-scripts/` (redirects to `tools/diag-scripts/docking/arbitration/`).
+    - Suites run a strict termination preflight for smoke gates so scripts cannot silently stall on trailing `wait_frames`.
     - Verified stable on Windows for a minimal “tear-off → cross-window hover → re-dock closes empty OS window”
       subset (see below).
   - Evidence anchors (scripts):
@@ -119,13 +120,17 @@ Each TODO is labeled:
     - `tools/diag-scripts/docking-arbitration-demo-multiwindow-release-outside-windows-poll-up.json`
     - Additional: `tools/diag-scripts/docking-arbitration-demo-multiwindow-cross-window-hover.json`,
       `tools/diag-scripts/docking-arbitration-demo-multiwindow-under-moving-window-basic.json`
+    - Five-way hint sweep (inner pad): `tools/diag-scripts/docking-arbitration-demo-multiwindow-five-way-hints-sweep.json`
+    - Peek-behind routing for tabs-group drags: `tools/diag-scripts/docking-arbitration-demo-multiwindow-under-moving-window-tabs-group.json`
   - Acceptance:
     - On Windows (at minimum), `fretboard diag run <script> --launch -- cargo run -p fret-demo --bin docking_arbitration_demo`
       passes for an explicitly documented subset.
-    - Verified subset (Windows, 2026-03-02):
+    - Verified subset (Windows, 2026-03-04):
       - `tools/diag-scripts/docking-arbitration-demo-multiwindow-cross-window-hover.json`
       - `tools/diag-scripts/docking-arbitration-demo-multiwindow-drag-tab-back-to-main.json`
       - `tools/diag-scripts/docking-arbitration-demo-multiwindow-under-moving-window-basic.json`
+      - `tools/diag-scripts/docking-arbitration-demo-multiwindow-under-moving-window-tabs-group.json`
+      - `tools/diag-scripts/docking-arbitration-demo-multiwindow-five-way-hints-sweep.json`
     - Failures dump a bundle with actionable evidence (which window saw `dock_drag`, pointer capture, hovered window source).
   - Notes:
     - Scripted input isolation ignores external pointer events, but does not freeze the OS cursor. Avoid moving the
