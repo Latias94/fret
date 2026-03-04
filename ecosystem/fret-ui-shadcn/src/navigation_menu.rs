@@ -1446,7 +1446,11 @@ impl NavigationMenu {
                 }
                 Some(current.clone())
             });
-            let tab_stop_value = valid_current.or(desired_tab_stop);
+            let tab_stop_value = if selected.is_some() {
+                desired_tab_stop
+            } else {
+                valid_current.or(desired_tab_stop)
+            };
             if tab_stop_value.as_deref() != trigger_tab_stop.as_deref() {
                 let next = tab_stop_value.clone();
                 let _ = cx
@@ -3364,7 +3368,10 @@ mod tests {
                             .label("Later")
                             .into_element(cx),
                     ];
-                    let items = vec![NavigationMenuItem::new("alpha", "Alpha", content)];
+                    let items = vec![
+                        NavigationMenuItem::new("alpha", "Alpha", content),
+                        NavigationMenuItem::new("docs", "Docs", std::iter::empty()),
+                    ];
                     vec![
                         NavigationMenu::new(model_for_render.clone())
                             .items(items)
