@@ -1981,6 +1981,28 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-button-rtl-row-screenshots",
+      "path": "tools/diag-scripts/ui-gallery/button/ui-gallery-button-rtl-row-screenshots.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-rtl-smoke"
+      ],
+      "tags": [
+        "button",
+        "rtl",
+        "screenshots",
+        "shadcn",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Navigates to the Button page via the left nav search.",
+        "Scrolls the docs scaffold to the RTL section and captures a screenshot + bundle."
+      ]
+    },
+    {
       "id": "ui-gallery-button-with-icon-non-overlap",
       "path": "tools/diag-scripts/ui-gallery/button/ui-gallery-button-with-icon-non-overlap.json",
       "required_capabilities": [],
@@ -2565,6 +2587,19 @@
         "tabs",
         "ui_gallery"
       ],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-checkbox-rtl-and-checked-wrap",
+      "path": "tools/diag-scripts/ui-gallery/checkbox/ui-gallery-checkbox-rtl-and-checked-wrap.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-rtl-smoke"
+      ],
+      "tags": [],
       "target_hints": []
     },
     {
