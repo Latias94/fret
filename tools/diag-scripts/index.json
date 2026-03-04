@@ -165,6 +165,23 @@
       ]
     },
     {
+      "id": "cookbook-date-picker-basics-smoke",
+      "path": "tools/diag-scripts/cookbook/date-picker-basics/cookbook-date-picker-basics-smoke.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "cookbook-date-picker-basics"
+      ],
+      "tags": [
+        "cookbook",
+        "date_picker_basics",
+        "smoke"
+      ],
+      "target_hints": []
+    },
+    {
       "id": "cookbook-docking-basics-smoke",
       "path": "tools/diag-scripts/cookbook/docking-basics/cookbook-docking-basics-smoke.json",
       "required_capabilities": [
@@ -178,6 +195,24 @@
         "cookbook",
         "docking",
         "interop",
+        "smoke"
+      ],
+      "target_hints": []
+    },
+    {
+      "id": "cookbook-drag-basics-smoke",
+      "path": "tools/diag-scripts/cookbook/drag-basics/cookbook-drag-basics-smoke.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "cookbook-drag-basics"
+      ],
+      "tags": [
+        "cookbook",
+        "drag_basics",
+        "pointer_capture",
         "smoke"
       ],
       "target_hints": []
@@ -249,6 +284,24 @@
         "Switches the target size preset and asserts numeric semantics update.",
         "Captures a screenshot + diagnostics bundle."
       ]
+    },
+    {
+      "id": "cookbook-form-basics-smoke",
+      "path": "tools/diag-scripts/cookbook/form-basics/cookbook-form-basics-smoke.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "cookbook-form-basics"
+      ],
+      "tags": [
+        "cookbook",
+        "form_basics",
+        "smoke",
+        "validation"
+      ],
+      "target_hints": []
     },
     {
       "id": "cookbook-gizmo-basics-smoke",
@@ -481,6 +534,24 @@
         "Waits for the example root to exist.",
         "Captures Light and Dark screenshots + bundle."
       ]
+    },
+    {
+      "id": "cookbook-toast-basics-smoke",
+      "path": "tools/diag-scripts/cookbook/toast-basics/cookbook-toast-basics-smoke.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "cookbook-toast-basics"
+      ],
+      "tags": [
+        "cookbook",
+        "smoke",
+        "sonner",
+        "toast_basics"
+      ],
+      "target_hints": []
     },
     {
       "id": "cookbook-undo-basics-smoke",
@@ -1845,6 +1916,24 @@
         "drawer",
         "dropdown_menu",
         "responsive",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-breadcrumb-rtl-screenshot",
+      "path": "tools/diag-scripts/ui-gallery/breadcrumb/ui-gallery-breadcrumb-rtl-screenshot.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-rtl-smoke"
+      ],
+      "tags": [
+        "breadcrumb",
+        "rtl",
+        "screenshots",
         "shadcn",
         "ui_gallery"
       ],
