@@ -50,6 +50,10 @@ This file is a short, append-only log of landings and decisions for this workstr
 - Extracted a shared “tab close pointer-down hit test” helper into `fret-ui-kit` to reduce adapter drift.
   - Code: `ecosystem/fret-ui-kit/src/headless/tab_strip_arbitration.rs`
   - Wired in: `ecosystem/fret-workspace/src/tab_strip/interaction.rs`
+- Moved the shared hit-test helper into `fret-ui-headless` so docking/workspace can reuse identical math without new deps.
+  - Code: `ecosystem/fret-ui-headless/src/tab_strip_hit_test.rs`
+  - Re-export: `ecosystem/fret-ui-kit/src/headless/tab_strip_arbitration.rs`
+  - Wired in: `ecosystem/fret-docking/src/dock/hit_test.rs`
 
 ## Next (proposed)
 
