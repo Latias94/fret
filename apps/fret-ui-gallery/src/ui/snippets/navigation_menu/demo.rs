@@ -309,15 +309,18 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
                             cx,
                             stack::VStackProps::default().gap(Space::N2).items_start(),
                             move |_cx| col_left,
-                        );
+                        )
+                        .test_id("ui-gallery-navigation-menu-demo-components-col-left");
                         let right = stack::vstack(
                             cx,
                             stack::VStackProps::default().gap(Space::N2).items_start(),
                             move |_cx| col_right,
-                        );
+                        )
+                        .test_id("ui-gallery-navigation-menu-demo-components-col-right");
                         vec![left, right]
                     },
                 )
+                .test_id("ui-gallery-navigation-menu-demo-components-layout-two-col")
             } else {
                 let demo_value_for_components = demo_value.clone();
                 stack::vstack(
@@ -342,6 +345,7 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
                             .collect::<Vec<_>>()
                     },
                 )
+                .test_id("ui-gallery-navigation-menu-demo-components-layout-single-col")
             };
 
             let components =
