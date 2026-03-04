@@ -65,8 +65,10 @@ pub mod docking_arbitration_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod docking_demo;
 pub mod drag_demo;
-#[cfg(all(not(target_arch = "wasm32"), feature = "legacy-mvu-demos"))]
+#[cfg(not(target_arch = "wasm32"))]
 pub mod drop_shadow_demo;
+#[cfg(all(not(target_arch = "wasm32"), feature = "legacy-mvu-demos"))]
+pub mod drop_shadow_demo_legacy;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod echarts_demo;
 #[cfg(not(target_arch = "wasm32"))]
