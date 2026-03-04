@@ -407,6 +407,12 @@ fn window_target_requires_multi_window(window: &UiWindowTargetV1) -> bool {
 
 fn infer_required_capabilities_from_predicate(caps: &mut Vec<String>, predicate: &UiPredicateV1) {
     match predicate {
+        UiPredicateV1::PlatformWindowReceiverAtCursorIs { window } => {
+            push_cap(caps, "diag.platform_window_receiver_at_cursor_v1");
+            if window_target_requires_multi_window(window) {
+                push_cap(caps, "diag.multi_window");
+            }
+        }
         UiPredicateV1::WindowStyleEffectiveIs { window, .. } => {
             push_cap(caps, "diag.window_style_snapshot");
             if window_target_requires_multi_window(window) {

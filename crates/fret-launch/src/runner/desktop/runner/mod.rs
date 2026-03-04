@@ -597,6 +597,45 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         caps
     }
 
+    #[cfg(target_os = "windows")]
+    pub(super) fn refresh_platform_window_receiver_at_cursor_diagnostics(&mut self) {
+        use fret_runtime::{
+            RunnerPlatformWindowReceiverAtCursorSnapshotV1,
+            RunnerPlatformWindowReceiverAtCursorSourceV1,
+            RunnerPlatformWindowReceiverDiagnosticsStore,
+        };
+        use std::collections::HashMap;
+        use winit::raw_window_handle::{HasWindowHandle as _, RawWindowHandle};
+
+        let mut hwnd_to_window: HashMap<isize, fret_core::AppWindowId> = HashMap::new();
+        for (window, state) in self.windows.iter() {
+            let Ok(handle) = state.window.window_handle() else {
+                continue;
+            };
+            let RawWindowHandle::Win32(handle) = handle.as_raw() else {
+                continue;
+            };
+            let hwnd = win32::root_hwnd(handle.hwnd.get());
+            hwnd_to_window.insert(hwnd, window);
+        }
+
+        let receiver_window = self
+            .cursor_screen_pos
+            .and_then(|screen_pos| win32::window_under_cursor_root(screen_pos))
+            .and_then(|hwnd| hwnd_to_window.get(&hwnd).copied());
+
+        let snapshot = RunnerPlatformWindowReceiverAtCursorSnapshotV1 {
+            receiver_window,
+            source: RunnerPlatformWindowReceiverAtCursorSourceV1::Win32WindowFromPoint,
+        };
+        self.app.with_global_mut(
+            RunnerPlatformWindowReceiverDiagnosticsStore::default,
+            |store, _app| {
+                store.set_latest_at_cursor(snapshot);
+            },
+        );
+    }
+
     /// Sets the event-loop proxy used to deliver asynchronous platform completions back into the
     /// window event stream.
     ///

@@ -311,6 +311,7 @@ impl UiDiagnosticsService {
             caps.push("diag.window_background_material_snapshot".to_string());
             if cfg!(target_os = "windows") {
                 caps.push("diag.window_style_patch_v1".to_string());
+                caps.push("diag.platform_window_receiver_at_cursor_v1".to_string());
             }
         }
         caps.push("diag.window_insets_override".to_string());

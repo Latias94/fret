@@ -1832,6 +1832,16 @@ pub enum UiPredicateV1 {
     PlatformUiWindowHoverDetectionIs {
         quality: String,
     },
+    /// True when the platform-level "receiver window at cursor" probe reports that the active
+    /// cursor position would be routed to `window` (best-effort).
+    ///
+    /// This predicate is intended to gate runner-level hit-test passthrough behavior (e.g.
+    /// `WM_NCHITTEST` on Win32) without relying on pixel screenshots.
+    ///
+    /// Capability-gated behind `diag.platform_window_receiver_at_cursor_v1`.
+    PlatformWindowReceiverAtCursorIs {
+        window: UiWindowTargetV1,
+    },
     /// True when the effective (clamped) OS window style for `window` matches the provided facets.
     ///
     /// This predicate is capability-gated and intended for non-pixel regression gates for utility

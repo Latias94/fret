@@ -1149,12 +1149,20 @@ Window style predicates (require runner window style diagnostics, typically prov
 - `{"kind":"window_style_effective_is","window":{"kind":"current"},"style":{"hit_test":"passthrough_regions","hit_test_regions_fingerprint64":123}}`
 - `{"kind":"window_background_material_effective_is","window":{"kind":"current"},"material":"system_default"}`
 
+Platform receiver predicates (Windows-only; require runner cursor probe diagnostics):
+
+- `{"kind":"platform_window_receiver_at_cursor_is","window":{"kind":"current"}}`
+
 Notes:
 
 - `hit_test` supports: `normal`, `passthrough_all`, `passthrough_regions` (ADR 0312 / ADR 0313).
 - `hit_test_regions_fingerprint64` is a stable, canonicalized fingerprint of the effective regions
   union. It is intended for scripted regression gates that want to assert that the runner applied
   a specific region shape without relying on pixels.
+- `platform_window_receiver_at_cursor_is` is capability-gated behind
+  `diag.platform_window_receiver_at_cursor_v1` and is intended to validate runner-level hit-test
+  passthrough behavior (e.g. Win32 `WM_NCHITTEST`) without requiring OS mouse injection. Pair it
+  with cursor override steps like `set_cursor_in_window_logical`.
 
 ## Debugging recipes (Radix primitives / shadcn / overlays)
 
