@@ -125,17 +125,17 @@ impl View for OverlayBasicsView {
                     let bump = shadcn::Button::new("Bump underlay")
                         .variant(shadcn::ButtonVariant::Outline)
                         .action(act::BumpUnderlay)
-                        .into_element(cx)
                         .a11y_role(SemanticsRole::Button)
-                        .test_id(TEST_ID_UNDERLAY_BUMP);
+                        .test_id(TEST_ID_UNDERLAY_BUMP)
+                        .into_element(cx);
 
                     [
                         shadcn::Button::new("Open dialog")
                             .variant(shadcn::ButtonVariant::Outline)
                             .action(act::OpenDialog)
-                            .into_element(cx)
                             .a11y_role(SemanticsRole::Button)
-                            .test_id(TEST_ID_DIALOG_TRIGGER),
+                            .test_id(TEST_ID_DIALOG_TRIGGER)
+                            .into_element(cx),
                         ui::v_flex(cx, |cx| {
                             [
                                 cx.text(format!("Shortcut: {shortcut}"))
@@ -188,11 +188,11 @@ impl View for OverlayBasicsView {
                     // Order matters: `DialogClose` is absolutely-positioned and should be the last
                     // child so it stays above the Dialog content in hit testing.
                     shadcn::DialogClose::new(dialog_open_for_close.clone())
-                        .into_element(cx)
-                        .test_id(TEST_ID_DIALOG_CLOSE),
+                        .test_id(TEST_ID_DIALOG_CLOSE)
+                        .into_element(cx),
                 ])
-                .into_element(cx)
                 .test_id(TEST_ID_DIALOG_CONTENT)
+                .into_element(cx)
             },
         );
 
