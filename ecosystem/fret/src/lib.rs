@@ -454,6 +454,12 @@ impl<S: 'static> UiAppBuilder<S> {
         }
     }
 
+    pub fn configure(self, f: impl FnOnce(&mut fret_launch::WinitRunnerConfig)) -> Self {
+        Self {
+            inner: self.inner.configure(f),
+        }
+    }
+
     pub fn init_app(self, f: impl FnOnce(&mut KernelApp)) -> Self {
         Self {
             inner: self.inner.init_app(f),
