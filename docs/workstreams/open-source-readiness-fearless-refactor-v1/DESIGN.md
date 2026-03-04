@@ -63,21 +63,22 @@ Expected outcomes:
 
 UI Gallery is valuable as a catalog + conformance surface, but it can be too much on day 1.
 
-We introduce a “lite” mode (design options; implement one):
+We introduce a “lite” mode:
 
-1) **Compile-time page feature gating**:
-   - `fret-ui-gallery` defaults to a small set of pages.
-   - `--features ui-gallery-full` enables the full catalog.
-2) **Runtime page gating**:
-   - default build contains all pages, but the initial navigation surface shows only a curated subset
-     unless an env var enables the full list (e.g. `FRET_UI_GALLERY_MODE=full`).
-3) **Separate binary**:
-   - `fret-ui-gallery-lite` as a separate package/bin with a curated page set.
+**Implemented (compile-time feature gating + optional deps):**
 
-Recommendation:
+- Default build shows a curated set of pages (core + shadcn).
+- Dev/unfinished pages and their heavier dependencies are opt-in:
+  - `--features gallery-dev`
+- Material 3 pages are opt-in:
+  - `--features gallery-material3`
+- Full catalog is opt-in:
+  - `--features gallery-full`
 
-- Start with **runtime page gating** (lowest refactor risk), then move to compile-time gating if
-  cold compile time remains a pain point.
+Details live in:
+
+- [apps/fret-ui-gallery/README.md](../../../apps/fret-ui-gallery/README.md)
+- [apps/fret-ui-gallery/Cargo.toml](../../../apps/fret-ui-gallery/Cargo.toml)
 
 ### C) `fret` meta crate: feature profiles for “smooth but not too heavy”
 

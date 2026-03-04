@@ -634,6 +634,15 @@ fn preview_code_tabs(
     tabs.into_element(cx)
 }
 
+pub(in crate::ui) fn preview_code_block(
+    cx: &mut ElementContext<'_, App>,
+    test_id_prefix: Option<&str>,
+    max_w: Px,
+    code: DocCodeBlock,
+) -> AnyElement {
+    code_block_shell(cx, test_id_prefix, max_w, code, true)
+}
+
 fn code_block_shell(
     cx: &mut ElementContext<'_, App>,
     test_id_prefix: Option<&str>,
@@ -642,44 +651,92 @@ fn code_block_shell(
     shell: bool,
 ) -> AnyElement {
     let code: Arc<str> = block.code;
-    let copy = match test_id_prefix {
-        Some(prefix) => ui_ai::CodeBlockCopyButton::new(code.clone())
-            .test_id(format!("{prefix}-code-block-copy"))
-            .copied_marker_test_id(format!("{prefix}-code-block-copy-copied"))
-            .into_element(cx),
-        None => ui_ai::CodeBlockCopyButton::new(code.clone()).into_element(cx),
+
+    let copy_on_activate: fret_ui::action::OnActivate = {
+        let code = code.clone();
+        Arc::new(move |host, _acx, _reason| {
+            host.push_effect(fret_runtime::Effect::ClipboardSetText {
+                text: code.to_string(),
+            });
+        })
     };
 
-    let mut code_block = ui_ai::CodeBlock::new(code)
-        .language(block.language)
-        .show_header(true)
-        .show_language(true)
-        .show_line_numbers(true)
-        .max_height(Px(400.0))
-        .windowed_lines(true)
-        .header_right([copy])
+    let mut copy = shadcn::Button::new("Copy")
+        .variant(shadcn::ButtonVariant::Secondary)
+        .size(shadcn::ButtonSize::Sm)
+        .on_activate(copy_on_activate)
+        .into_element(cx);
+    if let Some(prefix) = test_id_prefix {
+        copy = copy.test_id(format!("{prefix}-code-block-copy"));
+    }
+
+    let header = stack::hstack(
+        cx,
+        stack::HStackProps::default()
+            .layout(LayoutRefinement::default().w_full())
+            .items_center()
+            .justify_between()
+            .gap(Space::N2),
+        |cx| {
+            vec![
+                shadcn::Badge::new(block.language)
+                    .variant(shadcn::BadgeVariant::Secondary)
+                    .into_element(cx),
+                copy,
+            ]
+        },
+    );
+
+    let theme = Theme::global(&*cx.app);
+    let monospace = fret_core::TextStyle {
+        font: fret_core::FontId::monospace(),
+        size: Px(12.0),
+        weight: fret_core::FontWeight::NORMAL,
+        slant: fret_core::TextSlant::Normal,
+        line_height: theme.metric_by_key("font.line_height"),
+        line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
+        letter_spacing_em: None,
+        ..Default::default()
+    };
+    let code_text = cx.text_props(TextProps {
+        layout: {
+            let mut layout = fret_ui::element::LayoutStyle::default();
+            layout.size.width = fret_ui::element::Length::Fill;
+            layout
+        },
+        text: code.clone(),
+        style: Some(monospace),
+        color: Some(theme.color_token("foreground")),
+        wrap: TextWrap::None,
+        overflow: TextOverflow::Clip,
+        align: fret_core::TextAlign::Start,
+        ink_overflow: fret_ui::element::TextInkOverflow::None,
+    });
+
+    let mut scroll = shadcn::ScrollArea::new([code_text])
+        .axis(fret_ui::element::ScrollAxis::Both)
+        .refine_layout(
+            LayoutRefinement::default()
+                .w_full()
+                .min_w_0()
+                .max_h(Px(400.0))
+                .overflow_visible(),
+        )
         .into_element(cx);
 
     if let Some(prefix) = test_id_prefix {
-        code_block = code_block.test_id(format!("{prefix}-code-block"));
+        scroll = scroll.test_id(format!("{prefix}-code-block"));
     }
 
-    let props = cx.with_theme(|theme| {
-        let chrome = if shell {
-            // Match the Preview tab's comfortable padding so Code tabs don't look "flush-left"
-            // compared to the demo shell.
-            ChromeRefinement::default().p(Space::N4)
-        } else {
-            ChromeRefinement::default()
-        };
-        let layout = LayoutRefinement::default()
-            .w_full()
-            .min_w_0()
-            .max_w(max_w)
-            .overflow_visible();
-        decl_style::container_props(theme, chrome, layout)
-    });
-    cx.container(props, move |_cx| [code_block])
+    let body = if shell {
+        vec![header, scroll]
+    } else {
+        vec![scroll]
+    };
+
+    shadcn::Card::new(vec![shadcn::CardContent::new(body).into_element(cx)])
+        .refine_layout(LayoutRefinement::default().w_full().min_w_0().max_w(max_w))
+        .into_element(cx)
 }
 
 fn slice_code_region(code: &str, region: &str) -> Option<String> {

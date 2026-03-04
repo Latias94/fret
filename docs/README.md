@@ -5,9 +5,9 @@ contracts early to avoid large rewrites later.
 
 New to the repo? Start with:
 
-- First hour onboarding (native): `docs/first-hour.md`
-- Setup (native: toolchain + OS deps + fast builds): `docs/setup.md`
-- Examples index (templates + cookbook + gallery + labs): `docs/examples/README.md`
+- First hour onboarding (native): [docs/first-hour.md](./first-hour.md)
+- Setup (native: toolchain + OS deps + fast builds): [docs/setup.md](./setup.md)
+- Examples index (templates + cookbook + gallery + labs): [docs/examples/README.md](./examples/README.md)
 
 ## Sources of Truth
 
@@ -133,21 +133,25 @@ so the default authoring story lives in ecosystem crates.
 
 ## Code Entry Points (After You Read The Docs)
 
-- End-to-end demo wiring (effects → runner → render): `apps/fret-examples/src/components_gallery.rs`
-- Todo app “golden path” (shadcn + bootstrap): `apps/fret-examples/src/todo_demo.rs` (or `fretboard dev native --bin todo_demo`)
-- Starter todo template generator: `fretboard new todo --name my-todo` (uses `fret`; see `docs/examples/todo-app-golden-path.md`)
-- Windows build speed note: prefer `fretboard dev native ...` (defaults to `--profile dev-fast` on Windows), or add `--profile dev-fast` to `cargo run -p fret-demo --bin ...` commands.
-- shadcn surface smoke test (components + overlays): `apps/fret-examples/src/components_gallery.rs` (or `cargo run -p fret-demo --bin components_gallery`)
-- Docking + viewport + overlays conformance harness (ADR 0072): `apps/fret-examples/src/docking_arbitration_demo.rs` (or `cargo run -p fret-demo --bin docking_arbitration_demo`; checklist: `docs/docking-arbitration-checklist.md`)
-- Plot demos (2D): `apps/fret-examples/src/plot_demo.rs` (or `cargo run -p fret-demo --bin plot_demo`; web: `apps/fret-demo-web` + `?demo=plot_demo`)
-- Plot stress harness (desktop-only): `apps/fret-examples/src/plot_stress_demo.rs` (or `cargo run -p fret-demo --bin plot_stress_demo`)
-- A11y manual acceptance checklist (overlays + demo): `docs/a11y-acceptance-checklist.md`
-- App runtime (effects + models + commands): `crates/fret-app/src/app.rs`
-- Desktop runner (integrated example; winit window lifecycle + scheduling): `crates/fret-launch/src/runner/mod.rs`
-   - Note: crate boundary direction is “core vs backends vs apps” (ADR 0092): `docs/adr/0092-crate-structure-core-backends-apps.md`
-- UI runtime substrate (UiTree + declarative bridge): `crates/fret-ui/src/tree/mod.rs` and `crates/fret-ui/src/declarative/`
-- Docking UI (`DockSpace`, policy-heavy): `ecosystem/fret-docking/src/dock/space.rs`
-- Renderer (display list → wgpu pipelines; SDF AA lives here): `crates/fret-render-wgpu/src/renderer/mod.rs`
+- End-to-end demo wiring (effects → runner → render): [apps/fret-examples/src/components_gallery.rs](../apps/fret-examples/src/components_gallery.rs)
+  - Run: `cargo run -p fretboard -- dev native --bin components_gallery`
+- Todo app “golden path” (shadcn + bootstrap): [apps/fret-examples/src/todo_demo.rs](../apps/fret-examples/src/todo_demo.rs)
+  - Run: `cargo run -p fretboard -- dev native --bin todo_demo`
+- Starter todo template generator: `cargo run -p fretboard -- new todo --name my-todo`
+  - Guide: [docs/examples/todo-app-golden-path.md](./examples/todo-app-golden-path.md)
+- Windows build speed note: prefer `fretboard dev native ...` (defaults to `--profile dev-fast` on Windows).
+- Docking + viewport + overlays conformance harness (ADR 0072): [apps/fret-examples/src/docking_arbitration_demo.rs](../apps/fret-examples/src/docking_arbitration_demo.rs)
+  - Run: `cargo run -p fretboard -- dev native --bin docking_arbitration_demo`
+  - Checklist: [docs/docking-arbitration-checklist.md](./docking-arbitration-checklist.md)
+- Plot demos (2D): [apps/fret-examples/src/plot_demo.rs](../apps/fret-examples/src/plot_demo.rs)
+- Plot stress harness (desktop-only): [apps/fret-examples/src/plot_stress_demo.rs](../apps/fret-examples/src/plot_stress_demo.rs)
+- A11y manual acceptance checklist (overlays + demo): [docs/a11y-acceptance-checklist.md](./a11y-acceptance-checklist.md)
+- App runtime (effects + models + commands): [crates/fret-app/src/app.rs](../crates/fret-app/src/app.rs)
+- Desktop runner (integrated example; winit window lifecycle + scheduling): [crates/fret-launch/src/runner/mod.rs](../crates/fret-launch/src/runner/mod.rs)
+  - Crate boundaries (ADR 0092): [docs/adr/0092-crate-structure-core-backends-apps.md](./adr/0092-crate-structure-core-backends-apps.md)
+- UI runtime substrate (UiTree + declarative bridge): [crates/fret-ui/src/tree/mod.rs](../crates/fret-ui/src/tree/mod.rs) and [crates/fret-ui/src/declarative/](../crates/fret-ui/src/declarative/)
+- Docking UI (`DockSpace`, policy-heavy): [ecosystem/fret-docking/src/dock/space.rs](../ecosystem/fret-docking/src/dock/space.rs)
+- Renderer (display list → wgpu pipelines; SDF AA lives here): [crates/fret-render-wgpu/src/renderer/mod.rs](../crates/fret-render-wgpu/src/renderer/mod.rs)
 
 ## Repository references
 

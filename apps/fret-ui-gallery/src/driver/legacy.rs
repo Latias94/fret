@@ -35,7 +35,7 @@ use time::Date;
 
 use fret_bootstrap::ui_diagnostics::UiDiagnosticsService;
 
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(feature = "gallery-dev", not(target_arch = "wasm32")))]
 use crate::harness::UiGalleryCodeEditorHandlesStore;
 use crate::spec::*;
 use crate::ui;
@@ -784,7 +784,7 @@ impl UiGalleryDriver {
             },
         );
 
-        #[cfg(not(target_arch = "wasm32"))]
+        #[cfg(all(feature = "gallery-dev", not(target_arch = "wasm32")))]
         {
             if let Some(handle) = app
                 .global::<UiGalleryCodeEditorHandlesStore>()
@@ -2717,6 +2717,7 @@ impl WinitAppDriver for UiGalleryDriver {
         }
 
         // Ensure magic ecosystem components can use renderer-controlled Tier B materials.
+        #[cfg(feature = "gallery-dev")]
         fret_ui_magic::app_integration::ensure_magic_materials(app, renderer);
     }
 

@@ -13,7 +13,9 @@ These are not stable library surfaces; they exist to prove contracts, capture di
   - Discover: `cargo run -p fretboard -- list cookbook-examples`
   - Run: `cargo run -p fret-cookbook --example simple_todo`
 - [`apps/fret-ui-gallery`](./fret-ui-gallery) — component catalog + conformance app (heavier; not the first step).
-  - Run: `cargo run -p fret-ui-gallery`
+  - Run (lite by default): `cargo run -p fret-ui-gallery`
+  - Full catalog: `cargo run -p fret-ui-gallery --features gallery-full`
+  - Details: [`apps/fret-ui-gallery/README.md`](./fret-ui-gallery/README.md)
 
 ## Maintainer harnesses (not the onboarding path)
 

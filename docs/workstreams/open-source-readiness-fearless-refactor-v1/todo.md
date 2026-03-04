@@ -9,9 +9,9 @@ Status legend:
 
 ## M0 — Lock the public story (docs-first)
 
-- [ ] Ensure `README.md` links only canonical entry points (no scattered run commands).
-- [ ] Add a short pointer from `docs/README.md` to this workstream.
-- [ ] Add a short pointer from `docs/examples/README.md` to the cookbook “recommended order”.
+- [x] Ensure `README.md` links only canonical entry points (no scattered run commands).
+- [x] Add a short pointer from `docs/README.md` to this workstream.
+- [x] Add a short pointer from `docs/examples/README.md` to the cookbook “recommended order”.
 
 ## M1 — Cookbook curation (small, teachable, fast)
 
@@ -30,8 +30,8 @@ Status legend:
 
 ## M3 — UI Gallery “lite” mode
 
-- [ ] Decide gating approach (runtime vs compile-time vs separate bin).
-- [ ] Implement lite mode and update UI Gallery README to explain it.
+- [x] Decide gating approach (runtime vs compile-time vs separate bin).
+- [x] Implement lite mode (compile-time feature gating + optional deps) and update UI Gallery README.
 - [ ] Ensure lite mode has deterministic smoke gates (first frame + basic navigation).
 
 ## M4 — Move lesson-shaped demos out of `fret-demo`
@@ -39,4 +39,3 @@ Status legend:
 - [ ] Identify 8–15 lesson-shaped `apps/fret-demo/src/bin/*` candidates.
 - [ ] Migrate into `apps/fret-cookbook/examples/*` with stable `test_id`s.
 - [ ] Keep `fret-demo` as maintainer/labs; ensure `fretboard list native-demos` stays intentionally small.
-

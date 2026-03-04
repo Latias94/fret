@@ -1,4 +1,6 @@
+#[cfg(feature = "gallery-dev")]
 pub(super) mod gallery;
+#[cfg(feature = "gallery-dev")]
 pub(super) mod magic;
 pub(super) mod pages;
 

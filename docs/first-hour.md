@@ -10,14 +10,14 @@ Goals:
 
 Non-goals:
 
-- Web/wasm setup (follow `docs/ui-ergonomics-and-interop.md` and `apps/fret-demo-web`).
+- Web/wasm setup (follow [docs/ui-ergonomics-and-interop.md](./ui-ergonomics-and-interop.md) and [apps/fret-demo-web](../apps/fret-demo-web)).
 - Engine/editor-grade features (docking, multi-window, viewport interop) — those come later.
 
 ## 0) Prereqs
 
 - Rust toolchain pinned by this repo (`rust-toolchain.toml`).
 - A working desktop GPU stack (wgpu/Winit).
-- For OS setup and faster local builds, see: `docs/setup.md`.
+- For OS setup and faster local builds, see: [docs/setup.md](./setup.md).
 
 ## 1) Generate a runnable app (recommended: `simple-todo`)
 

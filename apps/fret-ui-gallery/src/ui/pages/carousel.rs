@@ -11,6 +11,7 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
         let focus = snippets::focus_watch::render(cx);
         let basic = snippets::basic::render(cx);
         let parts = snippets::parts::render(cx);
+        let sizes_thirds = snippets::sizes_thirds::render(cx);
         let sizes = snippets::sizes::render(cx);
         let spacing = snippets::spacing::render(cx);
         let spacing_responsive = snippets::spacing_responsive::render(cx);
@@ -78,6 +79,10 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
 
                     .test_id_prefix("ui-gallery-carousel-parts")
                     .code_rust_from_file_region(snippets::parts::SOURCE, "example"),
+                DocSection::new("Sizes (1/3)", sizes_thirds)
+                    .description("Fixed slide width (shadcn `basis-1/3`).")
+                    .test_id_prefix("ui-gallery-carousel-sizes-thirds")
+                    .code_rust_from_file_region(snippets::sizes_thirds::SOURCE, "example"),
                 DocSection::new("Sizes", sizes)
                     .description("Three active items (`basis-1/3`) to mirror the docs layout.")
 
