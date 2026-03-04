@@ -346,6 +346,12 @@ fn render_mdstream_block_with_events<H: UiHost + 'static>(
             } else {
                 crate::render_heading_inline(cx, theme, markdown_theme, components, info, events)
             };
+
+            let el = if let Some(decorate) = &components.anchor_decorate {
+                decorate(cx, test_id.clone(), el)
+            } else {
+                el
+            };
             el.attach_semantics(
                 SemanticsDecoration::default()
                     .role(SemanticsRole::Heading)

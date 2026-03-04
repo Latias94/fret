@@ -112,6 +112,8 @@ pub type InlineMathRenderer<H> =
     dyn for<'a> Fn(&mut ElementContext<'a, H>, InlineMathInfo) -> AnyElement;
 pub type MathBlockRenderer<H> =
     dyn for<'a> Fn(&mut ElementContext<'a, H>, MathBlockInfo) -> AnyElement;
+pub type AnchorDecorator<H> =
+    dyn for<'a> Fn(&mut ElementContext<'a, H>, Arc<str>, AnyElement) -> AnyElement;
 
 #[derive(Clone)]
 pub struct MarkdownComponents<H: UiHost> {
@@ -155,6 +157,17 @@ pub struct MarkdownComponents<H: UiHost> {
     /// Render a display math block (`$$...$$`).
     pub math_block: Option<Arc<MathBlockRenderer<H>>>,
     pub on_link_activate: Option<OnLinkActivate>,
+    /// Decorate elements that represent in-document anchors (headings, footnote definitions).
+    ///
+    /// This runs **before** `fret-markdown` attaches the anchor `test_id`, so decorators can wrap
+    /// the element tree while keeping semantics/test IDs on the outermost wrapper.
+    ///
+    /// Typical use cases:
+    ///
+    /// - Wrap anchors in `LayoutQueryRegion` so the host can implement `#fragment` scroll
+    ///   navigation without relying on semantics snapshots.
+    /// - Attach additional host-side metadata without changing Markdown rendering policy.
+    pub anchor_decorate: Option<Arc<AnchorDecorator<H>>>,
     /// Semantics overrides for the default task list marker renderer.
     ///
     /// Notes:
@@ -194,6 +207,7 @@ impl<H: UiHost> Default for MarkdownComponents<H> {
             inline_math: None,
             math_block: None,
             on_link_activate: None,
+            anchor_decorate: None,
             task_list_marker_role: Some(SemanticsRole::Checkbox),
         }
     }
