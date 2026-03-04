@@ -711,7 +711,9 @@ pub(super) fn preview_ai_by_id(
         PAGE_AI_TOOL_DEMO => preview_ai_tool_demo(cx, theme),
         PAGE_AI_WEB_PREVIEW_DEMO => preview_ai_web_preview_demo(cx, theme),
         PAGE_AI_PROMPT_INPUT_PROVIDER_DEMO => preview_ai_prompt_input_provider_demo(cx, theme),
-        PAGE_AI_PROMPT_INPUT_ACTION_MENU_DEMO => preview_ai_prompt_input_action_menu_demo(cx, theme),
+        PAGE_AI_PROMPT_INPUT_ACTION_MENU_DEMO => {
+            preview_ai_prompt_input_action_menu_demo(cx, theme)
+        }
         PAGE_AI_PROMPT_INPUT_REFERENCED_SOURCES_DEMO => {
             preview_ai_prompt_input_referenced_sources_demo(cx, theme)
         }

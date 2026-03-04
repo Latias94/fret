@@ -537,7 +537,12 @@ fn page_preview(
         PAGE_TABLE => pages::preview_table(cx),
         PAGE_PROGRESS => pages::preview_progress(cx),
         #[cfg(feature = "gallery-dev")]
-        PAGE_MENUS => preview_menus(cx, dropdown_open, context_menu_open, last_action.clone()),
+        PAGE_MENUS => super::previews::gallery::preview_menus(
+            cx,
+            dropdown_open,
+            context_menu_open,
+            last_action.clone(),
+        ),
         PAGE_COMMAND => pages::preview_command_palette(cx, last_action.clone()),
         PAGE_TOAST => pages::preview_toast(cx),
         PAGE_SONNER => pages::preview_sonner(cx, last_action.clone(), sonner_position.clone()),
