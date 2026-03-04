@@ -30,7 +30,7 @@
     },
     {
       "type": "click_stable",
-      "target": { "kind": "test_id", "id": "cookbook.hello.button" }
+      "target": { "kind": "role_and_name", "role": "button", "name": "Click me" }
     },
     {
       "type": "wait_command_dispatch_trace",

@@ -28,7 +28,7 @@ pub(super) fn preview_scroll_area(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
                 .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
             DocSection::new("Scrollbar drag baseline", drag_baseline)
                 .description(
-                    "Diagnostics harness: content grows mid-drag (thumb math should stay stable).",
+                    "Diagnostics harness (Fret-only): drag the thumb, then arm content growth. The thumb should not jump when extents change mid-drag.",
                 )
                 .code_rust_from_file_region(snippets::drag_baseline::SOURCE, "example"),
             DocSection::new("Horizontal", horizontal)

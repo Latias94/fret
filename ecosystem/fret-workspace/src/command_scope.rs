@@ -371,7 +371,20 @@ impl WorkspaceCommandScope {
                         host.request_redraw(acx.window);
                         true
                     }
-                    _ => false,
+                    _ => {
+                        if !command.as_str().starts_with("workspace.") {
+                            return false;
+                        }
+
+                        let applied = host
+                            .models_mut()
+                            .update(&window_layout_for_command, |w| w.apply_command(&command))
+                            .unwrap_or(false);
+                        if applied {
+                            host.request_redraw(acx.window);
+                        }
+                        applied
+                    }
                 }
             }),
         );

@@ -92,6 +92,143 @@ fn flush_contains_set_timer(app: &mut App, window: AppWindowId) -> bool {
 }
 
 #[test]
+fn carousel_autoplay_stop_on_interaction_stops_after_slide_receives_focus() {
+    let window = AppWindowId::default();
+    let bounds = window_bounds();
+
+    let mut app = App::new();
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = StyleAwareServices::default();
+
+    let autoplay = app
+        .models_mut()
+        .insert(None::<fret_ui_shadcn::CarouselAutoplayApi>);
+    let opts = fret_ui_shadcn::CarouselOptions::default();
+
+    fn render_focus_stop_frame(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn fret_core::UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        autoplay: Model<Option<fret_ui_shadcn::CarouselAutoplayApi>>,
+        opts: fret_ui_shadcn::CarouselOptions,
+    ) {
+        let next_frame = FrameId(app.frame_id().0.saturating_add(1));
+        app.set_frame_id(next_frame);
+
+        OverlayController::begin_frame(app, window);
+        let root = fret_ui::declarative::render_root(
+            ui,
+            app,
+            services,
+            window,
+            bounds,
+            "carousel-autoplay-stop-on-interaction-slidefocus",
+            move |cx| {
+                let slides = (0..5).map(|_| {
+                    cx.container(
+                        fret_ui::element::ContainerProps {
+                            layout: {
+                                let mut layout = fret_ui::element::LayoutStyle::default();
+                                layout.size.width = fret_ui::element::Length::Fill;
+                                layout.size.height = fret_ui::element::Length::Px(Px(80.0));
+                                layout
+                            },
+                            ..Default::default()
+                        },
+                        |_cx| vec![],
+                    )
+                });
+                let carousel = fret_ui_shadcn::Carousel::new(slides)
+                    .opts(opts)
+                    .plugins([fret_ui_shadcn::CarouselPlugin::Autoplay(
+                        fret_ui_shadcn::CarouselAutoplayConfig::new(Duration::from_millis(2000))
+                            .pause_on_hover(false)
+                            .reset_on_hover_leave(false),
+                    )])
+                    .autoplay_api_handle_model(autoplay)
+                    .track_start_neg_margin(Space::N0)
+                    .item_padding_start(Space::N0)
+                    .item_basis_main_px(Px(200.0))
+                    .refine_layout(
+                        LayoutRefinement::default()
+                            .w_px(MetricRef::Px(Px(200.0)))
+                            .h_px(MetricRef::Px(Px(120.0))),
+                    )
+                    .refine_viewport_layout(
+                        LayoutRefinement::default().h_px(MetricRef::Px(Px(120.0))),
+                    )
+                    .test_id("carousel-focus-stop")
+                    .into_element(cx);
+                vec![carousel]
+            },
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        OverlayController::render(ui, app, services, window, bounds);
+        ui.layout_all(app, services, bounds, 1.0);
+    }
+
+    for _ in 0..3 {
+        render_focus_stop_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            autoplay.clone(),
+            opts,
+        );
+    }
+
+    let handle = app
+        .models()
+        .get_cloned(&autoplay)
+        .flatten()
+        .expect("expected CarouselAutoplayApi handle to be published");
+    assert!(
+        handle.snapshot(&mut app).playing,
+        "expected autoplay to be playing before focus interaction"
+    );
+    let _ = app.flush_effects();
+
+    let snapshot = ui.semantics_snapshot().expect("semantics snapshot");
+    let slide = snapshot
+        .nodes
+        .iter()
+        .find(|n| n.test_id.as_deref() == Some("carousel-focus-stop-item-1"))
+        .map(|n| n.id)
+        .expect("expected carousel item semantics node by test_id");
+    ui.set_focus(Some(slide));
+
+    render_focus_stop_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        autoplay.clone(),
+        opts,
+    );
+
+    let snap = handle.snapshot(&mut app);
+    assert!(
+        snap.stopped_by_interaction,
+        "expected focus interaction to stop autoplay; snapshot={snap:?}"
+    );
+    assert!(
+        !snap.playing,
+        "expected focus interaction to clear playing; snapshot={snap:?}"
+    );
+    assert!(
+        !flush_contains_set_timer(&mut app, window),
+        "expected focus interaction to stop rescheduling timers"
+    );
+}
+
+#[test]
 fn carousel_autoplay_api_handle_publishes_and_accepts_stop_reset() {
     let window = AppWindowId::default();
     let bounds = window_bounds();

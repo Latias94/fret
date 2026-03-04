@@ -35,7 +35,7 @@ use time::Date;
 
 use fret_bootstrap::ui_diagnostics::UiDiagnosticsService;
 
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(feature = "gallery-dev", not(target_arch = "wasm32")))]
 use crate::harness::UiGalleryCodeEditorHandlesStore;
 use crate::spec::*;
 use crate::ui;
@@ -784,7 +784,7 @@ impl UiGalleryDriver {
             },
         );
 
-        #[cfg(not(target_arch = "wasm32"))]
+        #[cfg(all(feature = "gallery-dev", not(target_arch = "wasm32")))]
         {
             if let Some(handle) = app
                 .global::<UiGalleryCodeEditorHandlesStore>()
@@ -2369,10 +2369,12 @@ impl UiGalleryDriver {
 
         shadcn::shadcn_themes::apply_shadcn_new_york(app, base, scheme);
 
-        // Inject Material 3 v30 motion/state/typography tokens on top of the active theme preset.
+        // Optionally inject Material 3 v30 motion/state/typography tokens on top of the active
+        // theme preset.
         //
         // This keeps the gallery's base theme selection (shadcn light/dark) intact while enabling
         // Material components to query their extra token kinds via the shared theme system.
+        #[cfg(feature = "gallery-material3")]
         fret_ui::Theme::with_global_mut(app, |theme| {
             let cfg = fret_ui_material3::tokens::v30::theme_config_with_colors(
                 fret_ui_material3::tokens::v30::TypographyOptions::default(),
@@ -2715,6 +2717,7 @@ impl WinitAppDriver for UiGalleryDriver {
         }
 
         // Ensure magic ecosystem components can use renderer-controlled Tier B materials.
+        #[cfg(feature = "gallery-dev")]
         fret_ui_magic::app_integration::ensure_magic_materials(app, renderer);
     }
 

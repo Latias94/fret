@@ -833,6 +833,7 @@ fn render_menu_from_runtime<H: UiHost>(
                 focusable: true,
                 key_activation: Default::default(),
                 focus_ring: Some(ring),
+                focus_ring_always_paint: false,
                 focus_ring_bounds: None,
                 a11y: PressableA11y {
                     role: Some(SemanticsRole::MenuItem),
@@ -1387,6 +1388,7 @@ fn render_menu_item<H: UiHost>(
             focusable: !disabled,
             key_activation: Default::default(),
             focus_ring: None,
+            focus_ring_always_paint: false,
             focus_ring_bounds: None,
             a11y: PressableA11y {
                 role: Some(role),

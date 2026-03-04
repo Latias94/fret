@@ -39,6 +39,19 @@ where
     out
 }
 
+fn resolve_text_align_for_direction(
+    align: TextAlign,
+    direction: crate::primitives::direction::LayoutDirection,
+) -> TextAlign {
+    use crate::primitives::direction::LayoutDirection;
+
+    match (align, direction) {
+        (TextAlign::Start, LayoutDirection::Rtl) => TextAlign::End,
+        (TextAlign::End, LayoutDirection::Rtl) => TextAlign::Start,
+        _ => align,
+    }
+}
+
 /// A patchable flex layout constructor for authoring ergonomics.
 ///
 /// This is an ecosystem-only helper intended to reduce runtime-props boilerplate in layout-only
@@ -1007,6 +1020,9 @@ impl UiIntoElement for TextBox {
             selectable,
         } = self;
 
+        let direction = crate::primitives::direction::use_direction_in_scope(cx, None);
+        let align = resolve_text_align_for_direction(align, direction);
+
         let (mut style, mut layout, default_label_line_height, resolved_color) = {
             let theme = Theme::global(&*cx.app);
 
@@ -1198,6 +1214,9 @@ impl UiIntoElement for RawTextBox {
             ink_overflow_override,
         } = self;
 
+        let direction = crate::primitives::direction::use_direction_in_scope(cx, None);
+        let align = resolve_text_align_for_direction(align, direction);
+
         let (layout, color) = {
             let theme = Theme::global(&*cx.app);
             let layout = decl_style::layout_style(theme, layout_refinement);
@@ -1230,11 +1249,33 @@ pub fn raw_text<H: UiHost>(
 mod tests {
     use super::*;
     use crate::UiExt;
-    use crate::declarative::semantics::UiIntoElementTestIdExt as _;
     use crate::{LengthRefinement, MetricRef};
     use fret_app::App;
+    use fret_core::SemanticsRole;
     use fret_core::{AppWindowId, Point, Rect, Size};
     use fret_ui::element::ElementKind;
+
+    #[test]
+    fn text_align_start_end_flip_under_rtl() {
+        use crate::primitives::direction::LayoutDirection;
+
+        assert_eq!(
+            resolve_text_align_for_direction(TextAlign::Start, LayoutDirection::Ltr),
+            TextAlign::Start
+        );
+        assert_eq!(
+            resolve_text_align_for_direction(TextAlign::Start, LayoutDirection::Rtl),
+            TextAlign::End
+        );
+        assert_eq!(
+            resolve_text_align_for_direction(TextAlign::End, LayoutDirection::Rtl),
+            TextAlign::Start
+        );
+        assert_eq!(
+            resolve_text_align_for_direction(TextAlign::Center, LayoutDirection::Rtl),
+            TextAlign::Center
+        );
+    }
 
     // Compile-only: ensure `ui::*` layout constructors accept `UiIntoElement` children
     // (e.g. `UiBuilder<TextBox>`) without requiring call-site `.into_element(cx)`.
@@ -1242,6 +1283,18 @@ mod tests {
     fn h_flex_accepts_ui_builder_children<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         h_flex(cx, |cx| [text(cx, "a"), text(cx, "b")])
             .gap(Space::N2)
+            .into_element(cx)
+    }
+
+    // Compile-only: ensure layout constructor roots can be decorated on the builder path without
+    // early landing, mirroring common cookbook usage (`test_id`, role).
+    #[allow(dead_code)]
+    fn h_flex_root_accepts_semantics_decorators<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+    ) -> AnyElement {
+        h_flex(cx, |cx| [text(cx, "a"), text(cx, "b")])
+            .test_id("root")
+            .a11y_role(SemanticsRole::Group)
             .into_element(cx)
     }
 

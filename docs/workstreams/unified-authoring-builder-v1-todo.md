@@ -33,8 +33,14 @@ Backlog:
 - [x] Expose `test_id(...)` on the fluent authoring path (applied during `.into_element(cx)`).
   - Implemented as `UiIntoElementTestIdExt` (no early landing required for patch targets).
   - Evidence: `ecosystem/fret-ui-kit/src/declarative/semantics.rs`
-- [ ] Expose a minimal a11y role decorator on the fluent builder path (applied during `.into_element(cx)`).
-- [ ] Add compile-only coverage in `ecosystem/fret-ui-shadcn/tests/ui_builder_smoke.rs` for builder-level decorators.
+- [x] Expose minimal semantics decorators on the fluent builder path (applied during `.into_element(cx)`).
+  - Implemented on `UiBuilder<T>` as late-landing semantics decoration:
+    `test_id(...)`, `a11y_role(...)`, `a11y_label(...)`.
+  - Evidence: `ecosystem/fret-ui-kit/src/ui_builder.rs`
+- [x] Add compile-only coverage for builder-level decorators.
+  - Evidence:
+    - `ecosystem/fret-ui-kit/src/ui.rs`
+    - `ecosystem/fret-ui-shadcn/tests/ui_builder_smoke.rs`
 
 ## Ongoing (Audit / Guardrails)
 

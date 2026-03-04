@@ -14,6 +14,7 @@ use crate::tab_drag::WorkspaceTabHitRect;
 pub(super) struct WorkspaceTabStripState {
     pub(super) scroll: ScrollHandle,
     pub(super) last_active: Option<Arc<str>>,
+    pub(super) reveal_pending: bool,
     pub(super) last_tab_rects: Vec<WorkspaceTabHitRect>,
     pub(super) last_scroll_viewport: Option<Rect>,
 }

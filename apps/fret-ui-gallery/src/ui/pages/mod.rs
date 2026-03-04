@@ -1,63 +1,121 @@
 use super::*;
 
 mod accordion;
+#[cfg(feature = "gallery-dev")]
 mod ai_agent_demo;
+#[cfg(feature = "gallery-dev")]
 mod ai_artifact_demo;
+#[cfg(feature = "gallery-dev")]
 mod ai_attachments_demo;
+#[cfg(feature = "gallery-dev")]
 mod ai_audio_player_demo;
+#[cfg(feature = "gallery-dev")]
 mod ai_canvas_world_layer_spike;
+#[cfg(feature = "gallery-dev")]
 mod ai_chain_of_thought_demo;
+#[cfg(feature = "gallery-dev")]
 mod ai_chat_demo;
+#[cfg(feature = "gallery-dev")]
 mod ai_checkpoint_demo;
+#[cfg(feature = "gallery-dev")]
 mod ai_code_block_demo;
+#[cfg(feature = "gallery-dev")]
 mod ai_commit_demo;
+#[cfg(feature = "gallery-dev")]
 mod ai_commit_large_demo;
+#[cfg(feature = "gallery-dev")]
 mod ai_confirmation_demo;
+#[cfg(feature = "gallery-dev")]
 mod ai_context_demo;
+#[cfg(feature = "gallery-dev")]
 mod ai_conversation_demo;
+#[cfg(feature = "gallery-dev")]
 mod ai_environment_variables_demo;
+#[cfg(feature = "gallery-dev")]
 mod ai_file_tree_demo;
+#[cfg(feature = "gallery-dev")]
 mod ai_image_demo;
+#[cfg(feature = "gallery-dev")]
 mod ai_inline_citation_demo;
+#[cfg(feature = "gallery-dev")]
 mod ai_message_branch_demo;
+#[cfg(feature = "gallery-dev")]
 mod ai_message_demo;
+#[cfg(feature = "gallery-dev")]
 mod ai_mic_selector_demo;
+#[cfg(feature = "gallery-dev")]
 mod ai_model_selector_demo;
+#[cfg(feature = "gallery-dev")]
 mod ai_open_in_chat_demo;
+#[cfg(feature = "gallery-dev")]
 mod ai_package_info_demo;
+#[cfg(feature = "gallery-dev")]
 mod ai_persona_demo;
+#[cfg(feature = "gallery-dev")]
 mod ai_plan_demo;
+#[cfg(feature = "gallery-dev")]
 mod ai_prompt_input_action_menu_demo;
+#[cfg(feature = "gallery-dev")]
 mod ai_prompt_input_provider_demo;
+#[cfg(feature = "gallery-dev")]
 mod ai_prompt_input_referenced_sources_demo;
+#[cfg(feature = "gallery-dev")]
 mod ai_queue_demo;
+#[cfg(feature = "gallery-dev")]
 mod ai_reasoning_demo;
+#[cfg(feature = "gallery-dev")]
 mod ai_sandbox_demo;
+#[cfg(feature = "gallery-dev")]
 mod ai_schema_display_demo;
+#[cfg(feature = "gallery-dev")]
 mod ai_shimmer_demo;
+#[cfg(feature = "gallery-dev")]
 mod ai_snippet_demo;
+#[cfg(feature = "gallery-dev")]
 mod ai_sources_demo;
+#[cfg(feature = "gallery-dev")]
 mod ai_speech_input_demo;
+#[cfg(feature = "gallery-dev")]
 mod ai_stack_trace_demo;
+#[cfg(feature = "gallery-dev")]
 mod ai_stack_trace_large_demo;
+#[cfg(feature = "gallery-dev")]
 mod ai_suggestions_demo;
+#[cfg(feature = "gallery-dev")]
 mod ai_task_demo;
+#[cfg(feature = "gallery-dev")]
 mod ai_terminal_demo;
+#[cfg(feature = "gallery-dev")]
 mod ai_test_results_demo;
+#[cfg(feature = "gallery-dev")]
 mod ai_test_results_large_demo;
+#[cfg(feature = "gallery-dev")]
 mod ai_tool_demo;
+#[cfg(feature = "gallery-dev")]
 mod ai_transcript_torture;
+#[cfg(feature = "gallery-dev")]
 mod ai_transcription_demo;
+#[cfg(feature = "gallery-dev")]
 mod ai_voice_selector_demo;
+#[cfg(feature = "gallery-dev")]
 mod ai_web_preview_demo;
+#[cfg(feature = "gallery-dev")]
 mod ai_workflow_canvas_demo;
+#[cfg(feature = "gallery-dev")]
 mod ai_workflow_chrome_demo;
+#[cfg(feature = "gallery-dev")]
 mod ai_workflow_connection_demo;
+#[cfg(feature = "gallery-dev")]
 mod ai_workflow_controls_demo;
+#[cfg(feature = "gallery-dev")]
 mod ai_workflow_edge_demo;
+#[cfg(feature = "gallery-dev")]
 mod ai_workflow_node_demo;
+#[cfg(feature = "gallery-dev")]
 mod ai_workflow_node_graph_demo;
+#[cfg(feature = "gallery-dev")]
 mod ai_workflow_panel_demo;
+#[cfg(feature = "gallery-dev")]
 mod ai_workflow_toolbar_demo;
 mod alert;
 mod alert_dialog;
@@ -70,6 +128,7 @@ mod button_group;
 mod calendar;
 mod card;
 mod carousel;
+#[cfg(feature = "gallery-dev")]
 mod chart;
 mod checkbox;
 mod collapsible;
@@ -93,6 +152,7 @@ mod input_otp;
 mod item;
 mod kbd;
 mod label;
+#[cfg(feature = "gallery-material3")]
 pub(super) mod material3;
 mod menubar;
 mod motion_presets;
@@ -127,6 +187,7 @@ pub(super) fn preview_alert(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
     alert::preview_alert(cx)
 }
 
+#[cfg(feature = "gallery-dev")]
 pub(super) fn preview_ai_attachments_demo(
     cx: &mut ElementContext<'_, App>,
     theme: &Theme,
@@ -134,6 +195,7 @@ pub(super) fn preview_ai_attachments_demo(
     ai_attachments_demo::preview_ai_attachments_demo(cx, theme)
 }
 
+#[cfg(feature = "gallery-dev")]
 pub(super) fn preview_ai_audio_player_demo(
     cx: &mut ElementContext<'_, App>,
     theme: &Theme,
@@ -141,6 +203,7 @@ pub(super) fn preview_ai_audio_player_demo(
     ai_audio_player_demo::preview_ai_audio_player_demo(cx, theme)
 }
 
+#[cfg(feature = "gallery-dev")]
 pub(super) fn preview_ai_agent_demo(
     cx: &mut ElementContext<'_, App>,
     theme: &Theme,
@@ -148,6 +211,7 @@ pub(super) fn preview_ai_agent_demo(
     ai_agent_demo::preview_ai_agent_demo(cx, theme)
 }
 
+#[cfg(feature = "gallery-dev")]
 pub(super) fn preview_ai_artifact_demo(
     cx: &mut ElementContext<'_, App>,
     theme: &Theme,
@@ -155,6 +219,7 @@ pub(super) fn preview_ai_artifact_demo(
     ai_artifact_demo::preview_ai_artifact_demo(cx, theme)
 }
 
+#[cfg(feature = "gallery-dev")]
 pub(super) fn preview_ai_canvas_world_layer_spike(
     cx: &mut ElementContext<'_, App>,
     theme: &Theme,
@@ -162,6 +227,7 @@ pub(super) fn preview_ai_canvas_world_layer_spike(
     ai_canvas_world_layer_spike::preview_ai_canvas_world_layer_spike(cx, theme)
 }
 
+#[cfg(feature = "gallery-dev")]
 pub(super) fn preview_ai_chat_demo(
     cx: &mut ElementContext<'_, App>,
     theme: &Theme,
@@ -169,6 +235,7 @@ pub(super) fn preview_ai_chat_demo(
     ai_chat_demo::preview_ai_chat_demo(cx, theme)
 }
 
+#[cfg(feature = "gallery-dev")]
 pub(super) fn preview_ai_checkpoint_demo(
     cx: &mut ElementContext<'_, App>,
     theme: &Theme,
@@ -176,6 +243,7 @@ pub(super) fn preview_ai_checkpoint_demo(
     ai_checkpoint_demo::preview_ai_checkpoint_demo(cx, theme)
 }
 
+#[cfg(feature = "gallery-dev")]
 pub(super) fn preview_ai_chain_of_thought_demo(
     cx: &mut ElementContext<'_, App>,
     theme: &Theme,
@@ -183,6 +251,7 @@ pub(super) fn preview_ai_chain_of_thought_demo(
     ai_chain_of_thought_demo::preview_ai_chain_of_thought_demo(cx, theme)
 }
 
+#[cfg(feature = "gallery-dev")]
 pub(super) fn preview_ai_code_block_demo(
     cx: &mut ElementContext<'_, App>,
     theme: &Theme,
@@ -190,6 +259,7 @@ pub(super) fn preview_ai_code_block_demo(
     ai_code_block_demo::preview_ai_code_block_demo(cx, theme)
 }
 
+#[cfg(feature = "gallery-dev")]
 pub(super) fn preview_ai_commit_demo(
     cx: &mut ElementContext<'_, App>,
     theme: &Theme,
@@ -197,6 +267,7 @@ pub(super) fn preview_ai_commit_demo(
     ai_commit_demo::preview_ai_commit_demo(cx, theme)
 }
 
+#[cfg(feature = "gallery-dev")]
 pub(super) fn preview_ai_commit_large_demo(
     cx: &mut ElementContext<'_, App>,
     theme: &Theme,
@@ -204,6 +275,7 @@ pub(super) fn preview_ai_commit_large_demo(
     ai_commit_large_demo::preview_ai_commit_large_demo(cx, theme)
 }
 
+#[cfg(feature = "gallery-dev")]
 pub(super) fn preview_ai_confirmation_demo(
     cx: &mut ElementContext<'_, App>,
     theme: &Theme,
@@ -211,6 +283,7 @@ pub(super) fn preview_ai_confirmation_demo(
     ai_confirmation_demo::preview_ai_confirmation_demo(cx, theme)
 }
 
+#[cfg(feature = "gallery-dev")]
 pub(super) fn preview_ai_conversation_demo(
     cx: &mut ElementContext<'_, App>,
     theme: &Theme,
@@ -218,6 +291,7 @@ pub(super) fn preview_ai_conversation_demo(
     ai_conversation_demo::preview_ai_conversation_demo(cx, theme)
 }
 
+#[cfg(feature = "gallery-dev")]
 pub(super) fn preview_ai_context_demo(
     cx: &mut ElementContext<'_, App>,
     theme: &Theme,
@@ -225,6 +299,7 @@ pub(super) fn preview_ai_context_demo(
     ai_context_demo::preview_ai_context_demo(cx, theme)
 }
 
+#[cfg(feature = "gallery-dev")]
 pub(super) fn preview_ai_file_tree_demo(
     cx: &mut ElementContext<'_, App>,
     theme: &Theme,
@@ -232,6 +307,7 @@ pub(super) fn preview_ai_file_tree_demo(
     ai_file_tree_demo::preview_ai_file_tree_demo(cx, theme)
 }
 
+#[cfg(feature = "gallery-dev")]
 pub(super) fn preview_ai_image_demo(
     cx: &mut ElementContext<'_, App>,
     theme: &Theme,
@@ -239,6 +315,7 @@ pub(super) fn preview_ai_image_demo(
     ai_image_demo::preview_ai_image_demo(cx, theme)
 }
 
+#[cfg(feature = "gallery-dev")]
 pub(super) fn preview_ai_snippet_demo(
     cx: &mut ElementContext<'_, App>,
     theme: &Theme,
@@ -246,6 +323,7 @@ pub(super) fn preview_ai_snippet_demo(
     ai_snippet_demo::preview_ai_snippet_demo(cx, theme)
 }
 
+#[cfg(feature = "gallery-dev")]
 pub(super) fn preview_ai_environment_variables_demo(
     cx: &mut ElementContext<'_, App>,
     theme: &Theme,
@@ -253,6 +331,7 @@ pub(super) fn preview_ai_environment_variables_demo(
     ai_environment_variables_demo::preview_ai_environment_variables_demo(cx, theme)
 }
 
+#[cfg(feature = "gallery-dev")]
 pub(super) fn preview_ai_message_demo(
     cx: &mut ElementContext<'_, App>,
     theme: &Theme,
@@ -260,6 +339,7 @@ pub(super) fn preview_ai_message_demo(
     ai_message_demo::preview_ai_message_demo(cx, theme)
 }
 
+#[cfg(feature = "gallery-dev")]
 pub(super) fn preview_ai_message_branch_demo(
     cx: &mut ElementContext<'_, App>,
     theme: &Theme,
@@ -267,6 +347,7 @@ pub(super) fn preview_ai_message_branch_demo(
     ai_message_branch_demo::preview_ai_message_branch_demo(cx, theme)
 }
 
+#[cfg(feature = "gallery-dev")]
 pub(super) fn preview_ai_open_in_chat_demo(
     cx: &mut ElementContext<'_, App>,
     theme: &Theme,
@@ -274,6 +355,7 @@ pub(super) fn preview_ai_open_in_chat_demo(
     ai_open_in_chat_demo::preview_ai_open_in_chat_demo(cx, theme)
 }
 
+#[cfg(feature = "gallery-dev")]
 pub(super) fn preview_ai_persona_demo(
     cx: &mut ElementContext<'_, App>,
     theme: &Theme,
@@ -281,6 +363,7 @@ pub(super) fn preview_ai_persona_demo(
     ai_persona_demo::preview_ai_persona_demo(cx, theme)
 }
 
+#[cfg(feature = "gallery-dev")]
 pub(super) fn preview_ai_plan_demo(
     cx: &mut ElementContext<'_, App>,
     theme: &Theme,
@@ -288,6 +371,7 @@ pub(super) fn preview_ai_plan_demo(
     ai_plan_demo::preview_ai_plan_demo(cx, theme)
 }
 
+#[cfg(feature = "gallery-dev")]
 pub(super) fn preview_ai_schema_display_demo(
     cx: &mut ElementContext<'_, App>,
     theme: &Theme,
@@ -295,6 +379,7 @@ pub(super) fn preview_ai_schema_display_demo(
     ai_schema_display_demo::preview_ai_schema_display_demo(cx, theme)
 }
 
+#[cfg(feature = "gallery-dev")]
 pub(super) fn preview_ai_queue_demo(
     cx: &mut ElementContext<'_, App>,
     theme: &Theme,
@@ -302,6 +387,7 @@ pub(super) fn preview_ai_queue_demo(
     ai_queue_demo::preview_ai_queue_demo(cx, theme)
 }
 
+#[cfg(feature = "gallery-dev")]
 pub(super) fn preview_ai_terminal_demo(
     cx: &mut ElementContext<'_, App>,
     theme: &Theme,
@@ -309,6 +395,7 @@ pub(super) fn preview_ai_terminal_demo(
     ai_terminal_demo::preview_ai_terminal_demo(cx, theme)
 }
 
+#[cfg(feature = "gallery-dev")]
 pub(super) fn preview_ai_stack_trace_demo(
     cx: &mut ElementContext<'_, App>,
     theme: &Theme,
@@ -316,6 +403,7 @@ pub(super) fn preview_ai_stack_trace_demo(
     ai_stack_trace_demo::preview_ai_stack_trace_demo(cx, theme)
 }
 
+#[cfg(feature = "gallery-dev")]
 pub(super) fn preview_ai_stack_trace_large_demo(
     cx: &mut ElementContext<'_, App>,
     theme: &Theme,
@@ -323,6 +411,7 @@ pub(super) fn preview_ai_stack_trace_large_demo(
     ai_stack_trace_large_demo::preview_ai_stack_trace_large_demo(cx, theme)
 }
 
+#[cfg(feature = "gallery-dev")]
 pub(super) fn preview_ai_tool_demo(
     cx: &mut ElementContext<'_, App>,
     theme: &Theme,
@@ -330,6 +419,7 @@ pub(super) fn preview_ai_tool_demo(
     ai_tool_demo::preview_ai_tool_demo(cx, theme)
 }
 
+#[cfg(feature = "gallery-dev")]
 pub(super) fn preview_ai_reasoning_demo(
     cx: &mut ElementContext<'_, App>,
     theme: &Theme,
@@ -337,6 +427,7 @@ pub(super) fn preview_ai_reasoning_demo(
     ai_reasoning_demo::preview_ai_reasoning_demo(cx, theme)
 }
 
+#[cfg(feature = "gallery-dev")]
 pub(super) fn preview_ai_shimmer_demo(
     cx: &mut ElementContext<'_, App>,
     theme: &Theme,
@@ -344,6 +435,7 @@ pub(super) fn preview_ai_shimmer_demo(
     ai_shimmer_demo::preview_ai_shimmer_demo(cx, theme)
 }
 
+#[cfg(feature = "gallery-dev")]
 pub(super) fn preview_ai_suggestions_demo(
     cx: &mut ElementContext<'_, App>,
     theme: &Theme,
@@ -351,6 +443,7 @@ pub(super) fn preview_ai_suggestions_demo(
     ai_suggestions_demo::preview_ai_suggestions_demo(cx, theme)
 }
 
+#[cfg(feature = "gallery-dev")]
 pub(super) fn preview_ai_task_demo(
     cx: &mut ElementContext<'_, App>,
     theme: &Theme,
@@ -358,6 +451,7 @@ pub(super) fn preview_ai_task_demo(
     ai_task_demo::preview_ai_task_demo(cx, theme)
 }
 
+#[cfg(feature = "gallery-dev")]
 pub(super) fn preview_ai_test_results_demo(
     cx: &mut ElementContext<'_, App>,
     theme: &Theme,
@@ -365,6 +459,7 @@ pub(super) fn preview_ai_test_results_demo(
     ai_test_results_demo::preview_ai_test_results_demo(cx, theme)
 }
 
+#[cfg(feature = "gallery-dev")]
 pub(super) fn preview_ai_test_results_large_demo(
     cx: &mut ElementContext<'_, App>,
     theme: &Theme,
@@ -372,6 +467,7 @@ pub(super) fn preview_ai_test_results_large_demo(
     ai_test_results_large_demo::preview_ai_test_results_large_demo(cx, theme)
 }
 
+#[cfg(feature = "gallery-dev")]
 pub(super) fn preview_ai_transcription_demo(
     cx: &mut ElementContext<'_, App>,
     theme: &Theme,
@@ -379,6 +475,7 @@ pub(super) fn preview_ai_transcription_demo(
     ai_transcription_demo::preview_ai_transcription_demo(cx, theme)
 }
 
+#[cfg(feature = "gallery-dev")]
 pub(super) fn preview_ai_transcript_torture(
     cx: &mut ElementContext<'_, App>,
     theme: &Theme,
@@ -386,6 +483,7 @@ pub(super) fn preview_ai_transcript_torture(
     ai_transcript_torture::preview_ai_transcript_torture(cx, theme)
 }
 
+#[cfg(feature = "gallery-dev")]
 pub(super) fn preview_ai_prompt_input_provider_demo(
     cx: &mut ElementContext<'_, App>,
     theme: &Theme,
@@ -393,6 +491,7 @@ pub(super) fn preview_ai_prompt_input_provider_demo(
     ai_prompt_input_provider_demo::preview_ai_prompt_input_provider_demo(cx, theme)
 }
 
+#[cfg(feature = "gallery-dev")]
 pub(super) fn preview_ai_prompt_input_action_menu_demo(
     cx: &mut ElementContext<'_, App>,
     theme: &Theme,
@@ -400,6 +499,7 @@ pub(super) fn preview_ai_prompt_input_action_menu_demo(
     ai_prompt_input_action_menu_demo::preview_ai_prompt_input_action_menu_demo(cx, theme)
 }
 
+#[cfg(feature = "gallery-dev")]
 pub(super) fn preview_ai_prompt_input_referenced_sources_demo(
     cx: &mut ElementContext<'_, App>,
     theme: &Theme,
@@ -409,6 +509,7 @@ pub(super) fn preview_ai_prompt_input_referenced_sources_demo(
     )
 }
 
+#[cfg(feature = "gallery-dev")]
 pub(super) fn preview_ai_package_info_demo(
     cx: &mut ElementContext<'_, App>,
     theme: &Theme,
@@ -416,6 +517,7 @@ pub(super) fn preview_ai_package_info_demo(
     ai_package_info_demo::preview_ai_package_info_demo(cx, theme)
 }
 
+#[cfg(feature = "gallery-dev")]
 pub(super) fn preview_ai_model_selector_demo(
     cx: &mut ElementContext<'_, App>,
     theme: &Theme,
@@ -423,6 +525,7 @@ pub(super) fn preview_ai_model_selector_demo(
     ai_model_selector_demo::preview_ai_model_selector_demo(cx, theme)
 }
 
+#[cfg(feature = "gallery-dev")]
 pub(super) fn preview_ai_mic_selector_demo(
     cx: &mut ElementContext<'_, App>,
     theme: &Theme,
@@ -430,6 +533,7 @@ pub(super) fn preview_ai_mic_selector_demo(
     ai_mic_selector_demo::preview_ai_mic_selector_demo(cx, theme)
 }
 
+#[cfg(feature = "gallery-dev")]
 pub(super) fn preview_ai_voice_selector_demo(
     cx: &mut ElementContext<'_, App>,
     theme: &Theme,
@@ -437,6 +541,7 @@ pub(super) fn preview_ai_voice_selector_demo(
     ai_voice_selector_demo::preview_ai_voice_selector_demo(cx, theme)
 }
 
+#[cfg(feature = "gallery-dev")]
 pub(super) fn preview_ai_inline_citation_demo(
     cx: &mut ElementContext<'_, App>,
     theme: &Theme,
@@ -444,6 +549,7 @@ pub(super) fn preview_ai_inline_citation_demo(
     ai_inline_citation_demo::preview_ai_inline_citation_demo(cx, theme)
 }
 
+#[cfg(feature = "gallery-dev")]
 pub(super) fn preview_ai_sources_demo(
     cx: &mut ElementContext<'_, App>,
     theme: &Theme,
@@ -451,6 +557,7 @@ pub(super) fn preview_ai_sources_demo(
     ai_sources_demo::preview_ai_sources_demo(cx, theme)
 }
 
+#[cfg(feature = "gallery-dev")]
 pub(super) fn preview_ai_speech_input_demo(
     cx: &mut ElementContext<'_, App>,
     theme: &Theme,
@@ -458,6 +565,7 @@ pub(super) fn preview_ai_speech_input_demo(
     ai_speech_input_demo::preview_ai_speech_input_demo(cx, theme)
 }
 
+#[cfg(feature = "gallery-dev")]
 pub(super) fn preview_ai_sandbox_demo(
     cx: &mut ElementContext<'_, App>,
     theme: &Theme,
@@ -465,6 +573,7 @@ pub(super) fn preview_ai_sandbox_demo(
     ai_sandbox_demo::preview_ai_sandbox_demo(cx, theme)
 }
 
+#[cfg(feature = "gallery-dev")]
 pub(super) fn preview_ai_web_preview_demo(
     cx: &mut ElementContext<'_, App>,
     theme: &Theme,
@@ -472,6 +581,7 @@ pub(super) fn preview_ai_web_preview_demo(
     ai_web_preview_demo::preview_ai_web_preview_demo(cx, theme)
 }
 
+#[cfg(feature = "gallery-dev")]
 pub(super) fn preview_ai_workflow_toolbar_demo(
     cx: &mut ElementContext<'_, App>,
     theme: &Theme,
@@ -479,6 +589,7 @@ pub(super) fn preview_ai_workflow_toolbar_demo(
     ai_workflow_toolbar_demo::preview_ai_workflow_toolbar_demo(cx, theme)
 }
 
+#[cfg(feature = "gallery-dev")]
 pub(super) fn preview_ai_workflow_panel_demo(
     cx: &mut ElementContext<'_, App>,
     theme: &Theme,
@@ -486,6 +597,7 @@ pub(super) fn preview_ai_workflow_panel_demo(
     ai_workflow_panel_demo::preview_ai_workflow_panel_demo(cx, theme)
 }
 
+#[cfg(feature = "gallery-dev")]
 pub(super) fn preview_ai_workflow_connection_demo(
     cx: &mut ElementContext<'_, App>,
     theme: &Theme,
@@ -493,6 +605,7 @@ pub(super) fn preview_ai_workflow_connection_demo(
     ai_workflow_connection_demo::preview_ai_workflow_connection_demo(cx, theme)
 }
 
+#[cfg(feature = "gallery-dev")]
 pub(super) fn preview_ai_workflow_chrome_demo(
     cx: &mut ElementContext<'_, App>,
     theme: &Theme,
@@ -500,6 +613,7 @@ pub(super) fn preview_ai_workflow_chrome_demo(
     ai_workflow_chrome_demo::preview_ai_workflow_chrome_demo(cx, theme)
 }
 
+#[cfg(feature = "gallery-dev")]
 pub(super) fn preview_ai_workflow_controls_demo(
     cx: &mut ElementContext<'_, App>,
     theme: &Theme,
@@ -507,6 +621,7 @@ pub(super) fn preview_ai_workflow_controls_demo(
     ai_workflow_controls_demo::preview_ai_workflow_controls_demo(cx, theme)
 }
 
+#[cfg(feature = "gallery-dev")]
 pub(super) fn preview_ai_workflow_canvas_demo(
     cx: &mut ElementContext<'_, App>,
     theme: &Theme,
@@ -514,6 +629,7 @@ pub(super) fn preview_ai_workflow_canvas_demo(
     ai_workflow_canvas_demo::preview_ai_workflow_canvas_demo(cx, theme)
 }
 
+#[cfg(feature = "gallery-dev")]
 pub(super) fn preview_ai_workflow_node_demo(
     cx: &mut ElementContext<'_, App>,
     theme: &Theme,
@@ -521,6 +637,7 @@ pub(super) fn preview_ai_workflow_node_demo(
     ai_workflow_node_demo::preview_ai_workflow_node_demo(cx, theme)
 }
 
+#[cfg(feature = "gallery-dev")]
 pub(super) fn preview_ai_workflow_edge_demo(
     cx: &mut ElementContext<'_, App>,
     theme: &Theme,
@@ -528,11 +645,83 @@ pub(super) fn preview_ai_workflow_edge_demo(
     ai_workflow_edge_demo::preview_ai_workflow_edge_demo(cx, theme)
 }
 
+#[cfg(feature = "gallery-dev")]
 pub(super) fn preview_ai_workflow_node_graph_demo(
     cx: &mut ElementContext<'_, App>,
     theme: &Theme,
 ) -> Vec<AnyElement> {
     ai_workflow_node_graph_demo::preview_ai_workflow_node_graph_demo(cx, theme)
+}
+
+#[cfg(feature = "gallery-dev")]
+pub(super) fn preview_ai_by_id(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+    id: &str,
+) -> Option<Vec<AnyElement>> {
+    Some(match id {
+        PAGE_AI_TRANSCRIPT_TORTURE => preview_ai_transcript_torture(cx, theme),
+        PAGE_AI_CHAT_DEMO => preview_ai_chat_demo(cx, theme),
+        PAGE_AI_CONVERSATION_DEMO => preview_ai_conversation_demo(cx, theme),
+        PAGE_AI_MESSAGE_DEMO => preview_ai_message_demo(cx, theme),
+        PAGE_AI_CONTEXT_DEMO => preview_ai_context_demo(cx, theme),
+        PAGE_AI_TERMINAL_DEMO => preview_ai_terminal_demo(cx, theme),
+        PAGE_AI_PACKAGE_INFO_DEMO => preview_ai_package_info_demo(cx, theme),
+        PAGE_AI_FILE_TREE_DEMO => preview_ai_file_tree_demo(cx, theme),
+        PAGE_AI_TASK_DEMO => preview_ai_task_demo(cx, theme),
+        PAGE_AI_AUDIO_PLAYER_DEMO => preview_ai_audio_player_demo(cx, theme),
+        PAGE_AI_TRANSCRIPTION_DEMO => preview_ai_transcription_demo(cx, theme),
+        PAGE_AI_MIC_SELECTOR_DEMO => preview_ai_mic_selector_demo(cx, theme),
+        PAGE_AI_SPEECH_INPUT_DEMO => preview_ai_speech_input_demo(cx, theme),
+        PAGE_AI_VOICE_SELECTOR_DEMO => preview_ai_voice_selector_demo(cx, theme),
+        PAGE_AI_AGENT_DEMO => preview_ai_agent_demo(cx, theme),
+        PAGE_AI_SANDBOX_DEMO => preview_ai_sandbox_demo(cx, theme),
+        PAGE_AI_PERSONA_DEMO => preview_ai_persona_demo(cx, theme),
+        PAGE_AI_OPEN_IN_CHAT_DEMO => preview_ai_open_in_chat_demo(cx, theme),
+        PAGE_AI_WORKFLOW_CHROME_DEMO => preview_ai_workflow_chrome_demo(cx, theme),
+        PAGE_AI_WORKFLOW_CANVAS_DEMO => preview_ai_workflow_canvas_demo(cx, theme),
+        PAGE_AI_WORKFLOW_NODE_DEMO => preview_ai_workflow_node_demo(cx, theme),
+        PAGE_AI_WORKFLOW_EDGE_DEMO => preview_ai_workflow_edge_demo(cx, theme),
+        PAGE_AI_WORKFLOW_CONNECTION_DEMO => preview_ai_workflow_connection_demo(cx, theme),
+        PAGE_AI_WORKFLOW_CONTROLS_DEMO => preview_ai_workflow_controls_demo(cx, theme),
+        PAGE_AI_WORKFLOW_PANEL_DEMO => preview_ai_workflow_panel_demo(cx, theme),
+        PAGE_AI_WORKFLOW_TOOLBAR_DEMO => preview_ai_workflow_toolbar_demo(cx, theme),
+        PAGE_AI_WORKFLOW_NODE_GRAPH_DEMO => preview_ai_workflow_node_graph_demo(cx, theme),
+        PAGE_AI_CANVAS_WORLD_LAYER_SPIKE => preview_ai_canvas_world_layer_spike(cx, theme),
+        PAGE_AI_ARTIFACT_DEMO => preview_ai_artifact_demo(cx, theme),
+        PAGE_AI_ATTACHMENTS_DEMO => preview_ai_attachments_demo(cx, theme),
+        PAGE_AI_MESSAGE_BRANCH_DEMO => preview_ai_message_branch_demo(cx, theme),
+        PAGE_AI_MODEL_SELECTOR_DEMO => preview_ai_model_selector_demo(cx, theme),
+        PAGE_AI_CODE_BLOCK_DEMO => preview_ai_code_block_demo(cx, theme),
+        PAGE_AI_COMMIT_DEMO => preview_ai_commit_demo(cx, theme),
+        PAGE_AI_COMMIT_LARGE_DEMO => preview_ai_commit_large_demo(cx, theme),
+        PAGE_AI_STACK_TRACE_DEMO => preview_ai_stack_trace_demo(cx, theme),
+        PAGE_AI_STACK_TRACE_LARGE_DEMO => preview_ai_stack_trace_large_demo(cx, theme),
+        PAGE_AI_SCHEMA_DISPLAY_DEMO => preview_ai_schema_display_demo(cx, theme),
+        PAGE_AI_SHIMMER_DEMO => preview_ai_shimmer_demo(cx, theme),
+        PAGE_AI_SUGGESTIONS_DEMO => preview_ai_suggestions_demo(cx, theme),
+        PAGE_AI_REASONING_DEMO => preview_ai_reasoning_demo(cx, theme),
+        PAGE_AI_QUEUE_DEMO => preview_ai_queue_demo(cx, theme),
+        PAGE_AI_TEST_RESULTS_DEMO => preview_ai_test_results_demo(cx, theme),
+        PAGE_AI_TEST_RESULTS_LARGE_DEMO => preview_ai_test_results_large_demo(cx, theme),
+        PAGE_AI_CHECKPOINT_DEMO => preview_ai_checkpoint_demo(cx, theme),
+        PAGE_AI_CONFIRMATION_DEMO => preview_ai_confirmation_demo(cx, theme),
+        PAGE_AI_ENVIRONMENT_VARIABLES_DEMO => preview_ai_environment_variables_demo(cx, theme),
+        PAGE_AI_PLAN_DEMO => preview_ai_plan_demo(cx, theme),
+        PAGE_AI_TOOL_DEMO => preview_ai_tool_demo(cx, theme),
+        PAGE_AI_WEB_PREVIEW_DEMO => preview_ai_web_preview_demo(cx, theme),
+        PAGE_AI_PROMPT_INPUT_PROVIDER_DEMO => preview_ai_prompt_input_provider_demo(cx, theme),
+        PAGE_AI_PROMPT_INPUT_ACTION_MENU_DEMO => preview_ai_prompt_input_action_menu_demo(cx, theme),
+        PAGE_AI_PROMPT_INPUT_REFERENCED_SOURCES_DEMO => {
+            preview_ai_prompt_input_referenced_sources_demo(cx, theme)
+        }
+        PAGE_AI_INLINE_CITATION_DEMO => preview_ai_inline_citation_demo(cx, theme),
+        PAGE_AI_SOURCES_DEMO => preview_ai_sources_demo(cx, theme),
+        PAGE_AI_CHAIN_OF_THOUGHT_DEMO => preview_ai_chain_of_thought_demo(cx, theme),
+        PAGE_AI_SNIPPET_DEMO => preview_ai_snippet_demo(cx, theme),
+        PAGE_AI_IMAGE_DEMO => preview_ai_image_demo(cx, theme),
+        _ => return None,
+    })
 }
 
 pub(super) fn preview_accordion(
@@ -623,6 +812,7 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
     carousel::preview_carousel(cx)
 }
 
+#[cfg(feature = "gallery-dev")]
 pub(super) fn preview_chart(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     chart::preview_chart(cx)
 }

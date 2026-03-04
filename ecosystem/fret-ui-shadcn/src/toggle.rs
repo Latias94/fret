@@ -1,4 +1,5 @@
 use std::sync::Arc;
+use std::time::Duration;
 
 use fret_core::{Color, Edges, FontId, FontWeight, Px, TextStyle};
 use fret_icons::IconId;
@@ -11,6 +12,8 @@ use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
 use fret_ui_kit::declarative::current_color;
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
+use fret_ui_kit::declarative::motion::drive_tween_color_for_element;
+use fret_ui_kit::declarative::motion::drive_tween_f32_for_element;
 use fret_ui_kit::declarative::style as decl_style;
 pub use fret_ui_kit::primitives::toggle::ToggleRoot;
 use fret_ui_kit::typography;
@@ -19,6 +22,13 @@ use fret_ui_kit::{
     Size as ComponentSize, Space, WidgetState, WidgetStateProperty, WidgetStates,
     resolve_override_slot, resolve_override_slot_opt, ui,
 };
+
+use crate::overlay_motion;
+
+fn tailwind_transition_ease_in_out(t: f32) -> f32 {
+    // Tailwind default `ease-in-out`: cubic-bezier(0.4, 0, 0.2, 1)
+    fret_ui_kit::headless::easing::CubicBezier::new(0.4, 0.0, 0.2, 1.0).sample(t)
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum ToggleVariant {
@@ -534,10 +544,43 @@ impl Toggle {
                 states,
             );
 
-            let theme = Theme::global(&*cx.app);
-            let fg_color = fg.resolve(theme);
+            let theme = Theme::global(&*cx.app).snapshot();
+            let duration = overlay_motion::shadcn_motion_duration_150(cx);
+
+            let fg_motion = drive_tween_color_for_element(
+                cx,
+                _id,
+                "toggle.content.fg",
+                fg.resolve(&theme),
+                duration,
+                tailwind_transition_ease_in_out,
+            );
+            let fg_color = fg_motion.value;
+            let fg = ColorRef::Color(fg_color);
+
+            let ring_alpha = drive_tween_f32_for_element(
+                cx,
+                _id,
+                "toggle.chrome.ring.alpha",
+                if states.contains(WidgetStates::FOCUS_VISIBLE) {
+                    1.0
+                } else {
+                    0.0
+                },
+                duration,
+                tailwind_transition_ease_in_out,
+            );
+            let mut ring = ring;
+            ring.color.a = (ring.color.a * ring_alpha.value).clamp(0.0, 1.0);
+            if let Some(offset_color) = ring.offset_color {
+                ring.offset_color = Some(Color {
+                    a: (offset_color.a * ring_alpha.value).clamp(0.0, 1.0),
+                    ..offset_color
+                });
+            }
+
             let mut chrome_props = decl_style::container_props(
-                theme,
+                &theme,
                 base_chrome.clone(),
                 LayoutRefinement::default(),
             );
@@ -549,16 +592,40 @@ impl Toggle {
             }
             .into();
             if matches!(variant, ToggleVariant::Outline) {
-                chrome_props.shadow = Some(decl_style::shadow_xs(theme, radius));
+                chrome_props.shadow = Some(decl_style::shadow_xs(&theme, radius));
             }
+
+            let bg_present = bg.is_some();
+            let target_bg = bg
+                .map(|bg| bg.resolve(&theme))
+                .unwrap_or(Color::TRANSPARENT);
+            let bg_motion = drive_tween_color_for_element(
+                cx,
+                _id,
+                "toggle.chrome.bg",
+                target_bg,
+                duration,
+                tailwind_transition_ease_in_out,
+            );
             if !user_bg_override {
-                if let Some(bg) = bg {
-                    chrome_props.background = Some(bg.resolve(theme));
-                }
+                let wants_bg = bg_present || bg_motion.animating || bg_motion.value.a > 0.0;
+                chrome_props.background = wants_bg.then_some(bg_motion.value);
             }
-            if let Some(border_color) = border_color {
-                chrome_props.border_color = Some(border_color.resolve(theme));
-            }
+
+            let base_border = chrome_props.border_color.unwrap_or(Color::TRANSPARENT);
+            let target_border = border_color
+                .map(|border_color| border_color.resolve(&theme))
+                .unwrap_or(base_border);
+            let border_motion = drive_tween_color_for_element(
+                cx,
+                _id,
+                "toggle.chrome.border",
+                target_border,
+                duration,
+                tailwind_transition_ease_in_out,
+            );
+            chrome_props.border_color = Some(border_motion.value);
+
             chrome_props.layout.size = pressable_layout.size;
 
             let pressable_props = PressableProps {
@@ -566,6 +633,7 @@ impl Toggle {
                 enabled: !disabled,
                 focusable: true,
                 focus_ring: Some(ring),
+                focus_ring_always_paint: ring_alpha.animating,
                 a11y: fret_ui_kit::primitives::toggle::toggle_a11y(a11y_label, on),
                 ..Default::default()
             };
@@ -998,5 +1066,350 @@ mod tests {
             .find(|n| n.label.as_deref() == Some("Disabled Toggle"))
             .expect("toggle semantics node");
         assert!(node.flags.disabled);
+    }
+
+    #[test]
+    fn toggle_hover_background_tweens_instead_of_snapping() {
+        use std::cell::Cell;
+        use std::rc::Rc;
+
+        use fret_core::MouseButtons;
+        use fret_runtime::FrameId;
+        use fret_ui::elements::GlobalElementId;
+        use fret_ui_kit::declarative::transition::ticks_60hz_for_duration;
+
+        fn color_eq_eps(a: Color, b: Color, eps: f32) -> bool {
+            (a.r - b.r).abs() <= eps
+                && (a.g - b.g).abs() <= eps
+                && (a.b - b.b).abs() <= eps
+                && (a.a - b.a).abs() <= eps
+        }
+
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        crate::shadcn_themes::apply_shadcn_new_york(
+            &mut app,
+            crate::shadcn_themes::ShadcnBaseColor::Neutral,
+            crate::shadcn_themes::ShadcnColorScheme::Light,
+        );
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(160.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let toggle_id: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
+        let bg_out: Rc<Cell<Option<Color>>> = Rc::new(Cell::new(None));
+
+        fn render_frame(
+            ui: &mut UiTree<App>,
+            app: &mut App,
+            services: &mut dyn fret_core::UiServices,
+            window: AppWindowId,
+            bounds: Rect,
+            toggle_id: Rc<Cell<Option<GlobalElementId>>>,
+            bg_out: Rc<Cell<Option<Color>>>,
+        ) {
+            let root = fret_ui::declarative::render_root(
+                ui,
+                app,
+                services,
+                window,
+                bounds,
+                "toggle-hover-bg-tween",
+                move |cx| {
+                    let el = Toggle::uncontrolled(false)
+                        .a11y_label("Toggle")
+                        .label("Hello")
+                        .into_element(cx);
+                    toggle_id.set(Some(el.id));
+
+                    let chrome = el
+                        .children
+                        .first()
+                        .expect("expected pressable to contain chrome container");
+                    let fret_ui::element::ElementKind::Container(props) = &chrome.kind else {
+                        panic!("expected chrome container element");
+                    };
+                    let bg = props.background.unwrap_or(Color::TRANSPARENT);
+                    bg_out.set(Some(bg));
+
+                    vec![el]
+                },
+            );
+            ui.set_root(root);
+        }
+
+        let theme = Theme::global(&app);
+        let base_bg = Color::TRANSPARENT;
+        let hover_bg = theme.color_token("muted");
+
+        // Frame 1: baseline render.
+        app.set_frame_id(FrameId(1));
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            toggle_id.clone(),
+            bg_out.clone(),
+        );
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let bg0 = bg_out.get().expect("bg0");
+        assert!(
+            color_eq_eps(bg0, base_bg, 1e-6),
+            "expected base background to match; got bg0={bg0:?} base={base_bg:?}"
+        );
+
+        let id = toggle_id.get().expect("toggle id");
+        let node = fret_ui::elements::node_for_element(&mut app, window, id).expect("toggle node");
+        let b = ui.debug_node_bounds(node).expect("toggle bounds");
+        let center = Point::new(
+            Px(b.origin.x.0 + b.size.width.0 * 0.5),
+            Px(b.origin.y.0 + b.size.height.0 * 0.5),
+        );
+
+        // Hover to retarget the transition.
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+                pointer_id: fret_core::PointerId(0),
+                position: center,
+                buttons: MouseButtons::default(),
+                modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+
+        // Frame 2: hover is applied; the background should be in-between (not snapped).
+        app.set_frame_id(FrameId(2));
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            toggle_id.clone(),
+            bg_out.clone(),
+        );
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let bg1 = bg_out.get().expect("bg1");
+        assert!(
+            !color_eq_eps(bg1, base_bg, 1e-6) && !color_eq_eps(bg1, hover_bg, 1e-6),
+            "expected hover background to tween (intermediate), got bg1={bg1:?} base={base_bg:?} hover={hover_bg:?}"
+        );
+
+        // Advance frames until the default 150ms transition settles.
+        let settle = ticks_60hz_for_duration(Duration::from_millis(150)) + 2;
+        for i in 0..settle {
+            app.set_frame_id(FrameId(3 + i));
+            render_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                toggle_id.clone(),
+                bg_out.clone(),
+            );
+            ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        }
+
+        let bg_final = bg_out.get().expect("bg_final");
+        assert!(
+            color_eq_eps(bg_final, hover_bg, 1e-4),
+            "expected hover background to settle; got bg={bg_final:?} hover={hover_bg:?}"
+        );
+    }
+
+    #[test]
+    fn toggle_focus_ring_tweens_in_and_out_like_a_transition() {
+        use std::cell::Cell;
+        use std::rc::Rc;
+
+        use fret_core::KeyCode;
+        use fret_ui::element::ElementKind;
+        use fret_ui_kit::declarative::transition::ticks_60hz_for_duration;
+
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        crate::shadcn_themes::apply_shadcn_new_york(
+            &mut app,
+            crate::shadcn_themes::ShadcnBaseColor::Neutral,
+            crate::shadcn_themes::ShadcnColorScheme::Light,
+        );
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(160.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let ring_alpha_out: Rc<Cell<Option<f32>>> = Rc::new(Cell::new(None));
+        let always_paint_out: Rc<Cell<Option<bool>>> = Rc::new(Cell::new(None));
+
+        fn render_frame(
+            ui: &mut UiTree<App>,
+            app: &mut App,
+            services: &mut dyn fret_core::UiServices,
+            window: AppWindowId,
+            bounds: Rect,
+            ring_alpha_out: Rc<Cell<Option<f32>>>,
+            always_paint_out: Rc<Cell<Option<bool>>>,
+        ) -> fret_core::NodeId {
+            let root = fret_ui::declarative::render_root(
+                ui,
+                app,
+                services,
+                window,
+                bounds,
+                "toggle-focus-ring-tween",
+                move |cx| {
+                    let el = Toggle::uncontrolled(false)
+                        .a11y_label("Toggle")
+                        .label("Hello")
+                        .into_element(cx);
+
+                    let ElementKind::Pressable(pressable) = &el.kind else {
+                        panic!("expected toggle to render as pressable");
+                    };
+                    let ring = pressable.focus_ring.expect("focus ring");
+                    ring_alpha_out.set(Some(ring.color.a));
+                    always_paint_out.set(Some(pressable.focus_ring_always_paint));
+
+                    vec![el]
+                },
+            );
+            ui.set_root(root);
+            ui.request_semantics_snapshot();
+            ui.layout_all(app, services, bounds, 1.0);
+            root
+        }
+
+        // Frame 1: baseline render (no focus-visible), ring alpha should be 0.
+        app.set_frame_id(FrameId(1));
+        let root = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            ring_alpha_out.clone(),
+            always_paint_out.clone(),
+        );
+        let a0 = ring_alpha_out.get().expect("a0");
+        assert!(
+            a0.abs() <= 1e-6,
+            "expected ring alpha to start at 0, got {a0}"
+        );
+
+        // Focus the toggle and mark focus-visible via a navigation key.
+        let focusable = ui
+            .first_focusable_descendant_including_declarative(&mut app, window, root)
+            .expect("focusable toggle");
+        ui.set_focus(Some(focusable));
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::KeyDown {
+                key: KeyCode::ArrowDown,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+
+        // Frame 2: ring should be in-between (not snapped).
+        app.set_frame_id(FrameId(2));
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            ring_alpha_out.clone(),
+            always_paint_out.clone(),
+        );
+        let a1 = ring_alpha_out.get().expect("a1");
+        assert!(
+            a1 > 0.0,
+            "expected ring alpha to start animating in, got {a1}"
+        );
+
+        // Advance frames until the default 150ms transition settles.
+        let settle = ticks_60hz_for_duration(Duration::from_millis(150)) + 2;
+        for i in 0..settle {
+            app.set_frame_id(FrameId(3 + i));
+            let _ = render_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                ring_alpha_out.clone(),
+                always_paint_out.clone(),
+            );
+        }
+        let a_focused = ring_alpha_out.get().expect("a_focused");
+        assert!(
+            a_focused > a1 + 1e-4,
+            "expected ring alpha to increase over time, got a1={a1} a_focused={a_focused}"
+        );
+
+        // Blur and ensure ring animates out while still being painted.
+        ui.set_focus(None);
+        app.set_frame_id(FrameId(1000));
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            ring_alpha_out.clone(),
+            always_paint_out.clone(),
+        );
+        let a_blur = ring_alpha_out.get().expect("a_blur");
+        let always_paint = always_paint_out.get().expect("always_paint");
+        assert!(
+            a_blur > 0.0 && a_blur < a_focused,
+            "expected ring alpha to be intermediate after blur, got a_blur={a_blur} a_focused={a_focused}"
+        );
+        assert!(
+            always_paint,
+            "expected focus ring to request painting while animating out"
+        );
+
+        for i in 0..settle {
+            app.set_frame_id(FrameId(1001 + i));
+            let _ = render_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                ring_alpha_out.clone(),
+                always_paint_out.clone(),
+            );
+        }
+        let a_final = ring_alpha_out.get().expect("a_final");
+        let always_paint_final = always_paint_out.get().expect("always_paint_final");
+        assert!(
+            a_final.abs() <= 1e-4,
+            "expected ring alpha to settle at 0, got {a_final}"
+        );
+        assert!(
+            !always_paint_final,
+            "expected focus ring to stop requesting painting after settling"
+        );
     }
 }

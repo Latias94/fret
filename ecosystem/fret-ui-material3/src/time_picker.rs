@@ -1277,6 +1277,7 @@ fn time_input_field<H: UiHost>(
                     l
                 },
                 focus_ring: Some(focus_ring),
+                focus_ring_always_paint: false,
                 focus_ring_bounds: None,
             };
             (pressable_props, vec![content])
@@ -1517,6 +1518,7 @@ fn time_selector_field<H: UiHost>(
                 l
             },
             focus_ring: Some(focus_ring),
+            focus_ring_always_paint: false,
             focus_ring_bounds: None,
         };
 
@@ -1931,6 +1933,7 @@ fn dial_label<H: UiHost>(
                 l
             },
             focus_ring: None,
+            focus_ring_always_paint: false,
             focus_ring_bounds: None,
         };
 
@@ -2132,6 +2135,7 @@ fn time_input_period_item<H: UiHost>(
                 l
             },
             focus_ring: Some(focus_ring),
+            focus_ring_always_paint: false,
             focus_ring_bounds: None,
         };
 
@@ -2362,6 +2366,7 @@ fn period_item<H: UiHost>(
                 l
             },
             focus_ring: Some(focus_ring),
+            focus_ring_always_paint: false,
             focus_ring_bounds: None,
         };
 

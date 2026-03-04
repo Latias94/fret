@@ -2120,6 +2120,314 @@
       ]
     },
     {
+      "id": "ui-gallery-carousel-plugin-autoplay-stop-on-interaction-focus-gate",
+      "path": "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-plugin-autoplay-stop-on-interaction-focus-gate.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "autoplay",
+        "carousel",
+        "focus",
+        "gate",
+        "plugin",
+        "stopOnInteraction",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Navigate to the UI gallery Carousel page and Tab focus into a slide button.",
+        "Expected behavior: `stopOnInteraction` stops autoplay when focus enters a slide."
+      ]
+    },
+    {
+      "id": "ui-gallery-carousel-events-select-gate",
+      "path": "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-events-select-gate.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "carousel",
+        "events",
+        "gate",
+        "select",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Navigate to the UI gallery Carousel page and click Next.",
+        "Expected behavior: `CarouselApi::events_since` yields a Select event after navigation."
+      ]
+    },
+    {
+      "id": "ui-gallery-carousel-events-reinit-gate",
+      "path": "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-events-reinit-gate.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "carousel",
+        "events",
+        "gate",
+        "reInit",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Navigate to the UI gallery Carousel page and scroll to the Events section.",
+        "Expected behavior: resizing the window triggers a ReInit event."
+      ]
+    },
+    {
+      "id": "ui-gallery-carousel-rtl-controls-gate",
+      "path": "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-rtl-controls-gate.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "carousel",
+        "gate",
+        "rtl",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Navigate to the UI gallery Carousel page and scroll to the RTL section.",
+        "Expected behavior: Previous/Next controls remain clickable and update the selected index."
+      ]
+    },
+    {
+      "id": "ui-gallery-carousel-demo-screenshot",
+      "path": "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-demo-screenshot.json",
+      "required_capabilities": [
+        "diag.script_v2",
+        "diag.screenshot_png"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "carousel",
+        "docs-parity",
+        "screenshot",
+        "shadcn",
+        "ui-gallery"
+      ],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-carousel-basic-screenshot",
+      "path": "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-basic-screenshot.json",
+      "required_capabilities": [
+        "diag.script_v2",
+        "diag.screenshot_png"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "basic",
+        "carousel",
+        "docs-parity",
+        "screenshot",
+        "shadcn",
+        "ui-gallery"
+      ],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-carousel-sizes-screenshot",
+      "path": "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-sizes-screenshot.json",
+      "required_capabilities": [
+        "diag.script_v2",
+        "diag.screenshot_png"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "carousel",
+        "docs-parity",
+        "screenshot",
+        "shadcn",
+        "sizes",
+        "ui-gallery"
+      ],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-carousel-sizes-md-screenshot",
+      "path": "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-sizes-md-screenshot.json",
+      "required_capabilities": [
+        "diag.script_v2",
+        "diag.screenshot_png"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "carousel",
+        "docs-parity",
+        "md",
+        "screenshot",
+        "shadcn",
+        "sizes",
+        "ui-gallery"
+      ],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-carousel-spacing-screenshot",
+      "path": "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-spacing-screenshot.json",
+      "required_capabilities": [
+        "diag.script_v2",
+        "diag.screenshot_png"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "carousel",
+        "docs-parity",
+        "screenshot",
+        "shadcn",
+        "spacing",
+        "ui-gallery"
+      ],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-carousel-spacing-responsive-md-screenshot",
+      "path": "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-spacing-responsive-md-screenshot.json",
+      "required_capabilities": [
+        "diag.script_v2",
+        "diag.screenshot_png"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "carousel",
+        "docs-parity",
+        "responsive",
+        "screenshot",
+        "shadcn",
+        "spacing",
+        "ui-gallery"
+      ],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-carousel-spacing-responsive-sm-screenshot",
+      "path": "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-spacing-responsive-sm-screenshot.json",
+      "required_capabilities": [
+        "diag.script_v2",
+        "diag.screenshot_png"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "carousel",
+        "docs-parity",
+        "responsive",
+        "screenshot",
+        "shadcn",
+        "spacing",
+        "ui-gallery"
+      ],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-carousel-orientation-vertical-screenshot",
+      "path": "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-orientation-vertical-screenshot.json",
+      "required_capabilities": [
+        "diag.script_v2",
+        "diag.screenshot_png"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "carousel",
+        "docs-parity",
+        "orientation",
+        "screenshot",
+        "shadcn",
+        "ui-gallery",
+        "vertical"
+      ],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-carousel-api-screenshot",
+      "path": "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-api-screenshot.json",
+      "required_capabilities": [
+        "diag.script_v2",
+        "diag.screenshot_png"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "api",
+        "carousel",
+        "docs-parity",
+        "screenshot",
+        "shadcn",
+        "ui-gallery"
+      ],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-carousel-plugin-screenshot",
+      "path": "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-plugin-screenshot.json",
+      "required_capabilities": [
+        "diag.script_v2",
+        "diag.screenshot_png"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "carousel",
+        "docs-parity",
+        "plugin",
+        "screenshot",
+        "shadcn",
+        "ui-gallery"
+      ],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-carousel-rtl-screenshot",
+      "path": "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-rtl-screenshot.json",
+      "required_capabilities": [
+        "diag.script_v2",
+        "diag.screenshot_png"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "carousel",
+        "docs-parity",
+        "rtl",
+        "screenshot",
+        "shadcn",
+        "ui-gallery"
+      ],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-chart-accessibility-layer-keyboard",
       "path": "tools/diag-scripts/ui-gallery/chart/ui-gallery-chart-accessibility-layer-keyboard.json",
       "required_capabilities": [],

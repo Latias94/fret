@@ -5,36 +5,46 @@ use fret_ui::element::SemanticsDecoration;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let rail = stack::hstack(
-        cx,
-        stack::HStackProps::default()
-            .gap(Space::N4)
-            .items_start()
-            .layout(LayoutRefinement::default().w_px(Px(760.0))),
-        |cx| {
-            let artists = ["Ornella Binni", "Tom Byrom", "Vladimir Malyavko"];
-            artists
-                .iter()
-                .map(|artist| {
-                    let art = shadcn::Skeleton::new()
-                        .refine_style(ChromeRefinement::default().rounded(Radius::Md))
-                        .refine_layout(LayoutRefinement::default().w_px(Px(150.0)).h_px(Px(200.0)))
-                        .into_element(cx);
+    let rail = ui::container(cx, |cx| {
+        vec![stack::hstack(
+            cx,
+            stack::HStackProps::default().gap(Space::N4).items_start(),
+            |cx| {
+                let artists = ["Ornella Binni", "Tom Byrom", "Vladimir Malyavko"];
+                artists
+                    .iter()
+                    .enumerate()
+                    .map(|(idx, artist)| {
+                        let art = shadcn::Skeleton::new()
+                            .refine_style(ChromeRefinement::default().rounded(Radius::Md))
+                            .refine_layout(
+                                LayoutRefinement::default().w_px(Px(150.0)).h_px(Px(200.0)),
+                            )
+                            .into_element(cx);
 
-                    let caption = shadcn::typography::muted(cx, format!("Photo by {artist}"));
+                        let caption = shadcn::typography::muted(cx, format!("Photo by {artist}"));
 
-                    stack::vstack(
-                        cx,
-                        stack::VStackProps::default()
-                            .gap(Space::N2)
-                            .items_start()
-                            .layout(LayoutRefinement::default().flex_none()),
-                        |_cx| vec![art, caption],
-                    )
-                })
-                .collect::<Vec<_>>()
-        },
-    );
+                        let mut figure = stack::vstack(
+                            cx,
+                            stack::VStackProps::default()
+                                .gap(Space::N2)
+                                .items_start()
+                                .layout(LayoutRefinement::default().flex_none()),
+                            |_cx| vec![art, caption],
+                        );
+
+                        if idx == artists.len() - 1 {
+                            figure = figure.test_id("ui-gallery-scroll-area-horizontal-last");
+                        }
+
+                        figure
+                    })
+                    .collect::<Vec<_>>()
+            },
+        )]
+    })
+    .p_4()
+    .into_element(cx);
 
     let area = shadcn::ScrollArea::new([rail])
         .axis(fret_ui::element::ScrollAxis::X)
@@ -49,13 +59,9 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
 
     let props = decl_style::container_props(
         cx.theme(),
-        ChromeRefinement::default()
-            .border_1()
-            .rounded(Radius::Md)
-            .p(Space::N4),
+        ChromeRefinement::default().border_1().rounded(Radius::Md),
         LayoutRefinement::default()
-            .w_full()
-            .max_w(Px(384.0))
+            .w_px(Px(384.0))
             .overflow_hidden(),
     );
 

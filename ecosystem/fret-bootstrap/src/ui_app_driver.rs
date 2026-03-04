@@ -2443,9 +2443,18 @@ fn ui_app_window_created<S>(
     // The UI runtime will overwrite this placeholder snapshot on the first real dispatch.
     let diag_env_enabled = std::env::var_os("FRET_DIAG").is_some_and(|v| !v.is_empty())
         || std::env::var_os("FRET_DIAG_DIR").is_some_and(|v| !v.is_empty());
-    let diag_service_enabled = app
-        .global::<UiDiagnosticsService>()
-        .is_some_and(|svc| svc.is_enabled());
+    let diag_service_enabled = {
+        #[cfg(feature = "diagnostics")]
+        {
+            app.global::<UiDiagnosticsService>()
+                .is_some_and(|svc| svc.is_enabled())
+        }
+
+        #[cfg(not(feature = "diagnostics"))]
+        {
+            false
+        }
+    };
     if diag_env_enabled || diag_service_enabled {
         app.with_global_mut(
             fret_runtime::WindowInputContextService::default,

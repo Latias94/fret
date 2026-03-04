@@ -80,27 +80,12 @@ pub(in crate::ui) fn preview_intro(
         |_cx| vec![grid, note],
     );
 
-    let drift_audit = ui_ai::CodeBlock::new(Arc::<str>::from(include_str!(concat!(
-        env!("OUT_DIR"),
-        "/ui_gallery_drift_audit.md"
-    ))))
-    .language("markdown")
-    .show_header(true)
-    .show_language(true)
-    .show_line_numbers(false)
-    .max_height(Px(420.0))
-    .windowed_lines(true)
-    .into_element(cx);
-
     let page = doc_layout::render_doc_page(
         cx,
         Some("Pick a page from the sidebar to explore UI contracts and composed recipes."),
         vec![
             DocSection::new("Overview", preview)
                 .no_shell()
-                .max_w(Px(980.0)),
-            DocSection::new("Drift Audit", drift_audit)
-                .description("Build-time report of snippet wiring drift (Preview ≡ Code).")
                 .max_w(Px(980.0)),
         ],
     );

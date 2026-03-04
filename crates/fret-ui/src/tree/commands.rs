@@ -380,7 +380,32 @@ impl<H: UiHost> UiTree<H> {
 
         let default_root = barrier_root.unwrap_or(base_root);
         let focus = self.focus;
-        let focus_in_default_root = focus.is_some_and(|n| self.is_descendant(default_root, n));
+
+        let source = if let Some(window) = self.window {
+            app.with_global_mut(
+                fret_runtime::WindowPendingCommandDispatchSourceService::default,
+                |svc, app| {
+                    svc.consume(window, app.tick_id(), command)
+                        .unwrap_or_else(fret_runtime::CommandDispatchSourceV1::programmatic)
+                },
+            )
+        } else {
+            fret_runtime::CommandDispatchSourceV1::programmatic()
+        };
+
+        let source_node = self.window.and_then(|window| {
+            source.element.and_then(|element| {
+                crate::elements::with_window_state(app, window, |window_state| {
+                    window_state
+                        .node_entry(crate::GlobalElementId(element))
+                        .map(|e| e.node)
+                })
+            })
+        });
+
+        let start = focus.or(source_node).unwrap_or(default_root);
+        let start_in_default_root =
+            start == default_root || self.is_descendant(default_root, start);
 
         let mut bubble_from = |start: NodeId| -> (bool, bool, bool, Option<NodeId>) {
             let mut node_id = start;
@@ -469,15 +494,9 @@ impl<H: UiHost> UiTree<H> {
             (handled, needs_redraw, stopped, handled_by_node)
         };
 
-        let (mut handled, mut needs_redraw, mut stopped, mut handled_by_node) =
-            bubble_from(focus.unwrap_or(default_root));
+        let (mut handled, mut needs_redraw, mut stopped, mut handled_by_node) = bubble_from(start);
         let mut used_default_root_fallback = false;
-        if !handled
-            && !stopped
-            && focus.is_some()
-            && !focus_in_default_root
-            && focus.unwrap_or(default_root) != default_root
-        {
+        if !handled && !stopped && start != default_root && !start_in_default_root {
             used_default_root_fallback = true;
             let (handled2, needs_redraw2, stopped2, handled_by_node2) = bubble_from(default_root);
             handled = handled || handled2;
@@ -559,13 +578,6 @@ impl<H: UiHost> UiTree<H> {
         }
 
         if let Some(window) = self.window {
-            let source = app.with_global_mut(
-                fret_runtime::WindowPendingCommandDispatchSourceService::default,
-                |svc, app| {
-                    svc.consume(window, app.tick_id(), command)
-                        .unwrap_or_else(fret_runtime::CommandDispatchSourceV1::programmatic)
-                },
-            );
             let handled_by_element = handled_by_node
                 .and_then(|node| self.node_element(node))
                 .map(|id| id.0);

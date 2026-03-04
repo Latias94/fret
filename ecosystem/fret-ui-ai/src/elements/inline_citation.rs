@@ -538,6 +538,7 @@ impl InlineCitation {
                         border_paint: None,
                         border_dash: None,
                         focus_ring: None,
+                        focus_ring_always_paint: false,
                         focus_border_color: None,
                         focus_within: false,
                         corner_radii: fret_core::Corners::all(fret_core::Px(0.0)),

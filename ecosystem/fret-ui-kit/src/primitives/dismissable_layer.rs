@@ -455,7 +455,7 @@ mod tests {
             "test",
             |cx| {
                 vec![
-                    cx.semantics_with_id(SemanticsProps::default(), |cx, id| {
+                    cx.semantics_with_id(SemanticsProps::default(), |_cx, id| {
                         layer_root = Some(id);
                         Vec::new()
                     }),

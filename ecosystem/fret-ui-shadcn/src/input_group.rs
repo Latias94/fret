@@ -1722,6 +1722,7 @@ impl InputGroupButton {
                     enabled: !disabled,
                     focusable: !disabled,
                     focus_ring: None,
+                    focus_ring_always_paint: false,
                     focus_ring_bounds: None,
                     key_activation: Default::default(),
                     a11y: PressableA11y {
