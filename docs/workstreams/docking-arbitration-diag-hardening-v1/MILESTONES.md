@@ -142,6 +142,8 @@ Status update (2026-03-04):
     bundle artifact when available, so newly added bounded evidence keys do not require manual sidecar deletion.
   - The report surfaces window-local cursor evidence (`pos/start/grab/follow`) alongside `src/cur` and DPI fields
     (`sf_cur/sf_move`) to make mixed-DPI routing bugs actionable without opening `bundle.json`.
+  - When debugging coordinate-space issues (mixed-DPI or decorations), prefer comparing `scr/scr_used/origin` against the
+    derived local cursor position to catch conversion drift.
 - Mixed-DPI multi-window runs no longer hang on release:
   - `pointer_up` during an active cross-window dock drag is treated as a global "release" step, so the run does not depend
     on the dock-destination window producing frames while the moving payload window is active.

@@ -176,6 +176,7 @@ Footgun / recommendation:
       opening `bundle.json`. Look for:
       - `src/cur` (source/current window ids),
       - `pos/start/grab/follow` (window-local cursor position + ImGui-style cursor grab anchor),
+      - `scr/scr_used/origin` (screen cursor + client origin evidence for coordinate-space bugs),
       - `sf_cur/sf_move` (scale factor evidence for mixed-DPI follow drags),
       - `under` (hover selection source: platform vs heuristic).
   - `fretboard diag query test-id <bundle_dir|bundle.json|bundle.schema2.json> <pattern> --top 50`

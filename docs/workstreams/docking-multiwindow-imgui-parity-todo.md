@@ -162,6 +162,7 @@ Each TODO is labeled:
       script as “requires mixed-dpi” and skip otherwise).
     - Tip: `fretboard diag dock-routing <bundle_dir|bundle.schema2.json>` records:
       - `pos/start/grab/follow` (window-local cursor position + cursor grab anchor),
+      - `scr/scr_used/origin` (screen cursor + client origin evidence for coordinate-space bugs),
       - `*_scale_factor_x1000` fields when present (mixed-DPI evidence),
       and will regenerate stale `dock.routing.json` from the adjacent bundle artifact (no manual deletion needed).
   - Progress:
