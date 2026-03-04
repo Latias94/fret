@@ -12,7 +12,7 @@ fn main() -> anyhow::Result<()> {
 
         #[cfg(feature = "legacy-mvu-demos")]
         eprintln!(
-            "\nLegacy MVU demos (feature `legacy-mvu-demos`):\n  todo_demo_legacy\n  query_async_tokio_demo\n  async_playground_demo\n  genui_demo\n  hello_counter_demo\n  query_demo\n  markdown_demo\n  embedded_viewport_demo\n  drop_shadow_demo\n  liquid_glass_demo\n  custom_effect_v1_demo\n  custom_effect_v2_demo\n  custom_effect_v3_demo\n  postprocess_theme_demo"
+            "\nLegacy MVU demos (feature `legacy-mvu-demos`):\n  todo_demo_legacy\n  query_demo_legacy\n  query_async_tokio_demo\n  async_playground_demo\n  genui_demo\n  hello_counter_demo\n  markdown_demo\n  embedded_viewport_demo\n  drop_shadow_demo\n  liquid_glass_demo\n  custom_effect_v1_demo\n  custom_effect_v2_demo\n  custom_effect_v3_demo\n  postprocess_theme_demo"
         );
 
         #[cfg(not(feature = "legacy-mvu-demos"))]
@@ -27,6 +27,7 @@ fn main() -> anyhow::Result<()> {
             fret_examples::simple_todo_demo::run()
         }
         "todo_demo" | "todo-demo" => fret_examples::todo_demo::run(),
+        "query_demo" | "query-demo" => fret_examples::query_demo::run(),
         "components_gallery" => fret_examples::components_gallery::run(),
         "emoji_conformance_demo" => fret_examples::emoji_conformance_demo::run(),
         "cjk_conformance_demo" => fret_examples::cjk_conformance_demo::run(),
@@ -89,6 +90,7 @@ fn main() -> anyhow::Result<()> {
 fn run_legacy_mvu_demo(demo: &str) -> Option<anyhow::Result<()>> {
     let result = match demo {
         "todo_demo_legacy" | "todo-demo-legacy" => fret_examples::todo_demo_legacy::run(),
+        "query_demo_legacy" | "query-demo-legacy" => fret_examples::query_demo_legacy::run(),
         "query_async_tokio_demo" | "query-async-tokio-demo" => {
             fret_examples::query_async_tokio_demo::run()
         }
@@ -127,6 +129,8 @@ fn is_legacy_mvu_demo_name(demo: &str) -> bool {
         demo,
         "todo_demo_legacy"
             | "todo-demo-legacy"
+            | "query_demo_legacy"
+            | "query-demo-legacy"
             | "query_async_tokio_demo"
             | "query-async-tokio-demo"
             | "async_playground_demo"
@@ -134,8 +138,6 @@ fn is_legacy_mvu_demo_name(demo: &str) -> bool {
             | "genui_demo"
             | "hello_counter_demo"
             | "hello-counter-demo"
-            | "query_demo"
-            | "query-demo"
             | "markdown_demo"
             | "markdown-demo"
             | "embedded_viewport_demo"
