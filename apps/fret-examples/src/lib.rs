@@ -134,7 +134,7 @@ pub mod launcher_utility_window_materials_demo;
 pub mod linked_cursor_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod liquid_glass_demo;
-#[cfg(all(not(target_arch = "wasm32"), feature = "legacy-mvu-demos"))]
+#[cfg(not(target_arch = "wasm32"))]
 pub mod markdown_demo;
 #[cfg(all(not(target_arch = "wasm32"), feature = "node-graph-demos"))]
 pub mod node_graph_demo;

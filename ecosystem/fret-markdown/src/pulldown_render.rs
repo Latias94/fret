@@ -460,6 +460,12 @@ fn render_pulldown_heading<H: UiHost>(
         render_heading_inline(cx, theme, markdown_theme, components, info, slice)
     };
 
+    let el = if let Some(decorate) = &components.anchor_decorate {
+        decorate(cx, test_id.clone(), el)
+    } else {
+        el
+    };
+
     el.attach_semantics(
         SemanticsDecoration::default()
             .role(SemanticsRole::Heading)
@@ -828,6 +834,11 @@ fn render_pulldown_footnote_definition<H: UiHost + 'static>(
     );
 
     let anchor_test_id = crate::anchors::footnote_anchor_test_id(label.as_ref());
+    let el = if let Some(decorate) = &components.anchor_decorate {
+        decorate(cx, anchor_test_id.clone(), el)
+    } else {
+        el
+    };
     el.attach_semantics(SemanticsDecoration::default().test_id(anchor_test_id))
 }
 
