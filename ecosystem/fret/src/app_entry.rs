@@ -113,44 +113,6 @@ impl App {
         self
     }
 
-    /// Build a typed-message MVU app (`fret::mvu`) and return a runnable builder.
-    #[cfg(feature = "legacy-mvu")]
-    #[deprecated(
-        note = "MVU is legacy-only (compat). Prefer View runtime + actions (ADR 0308/0307) and payload actions v2 (ADR 0312)."
-    )]
-    #[allow(deprecated)]
-    pub fn mvu<P: crate::mvu::Program>(
-        self,
-    ) -> Result<UiAppBuilder<crate::mvu::MvuWindowState<P::State, P::Message>>> {
-        let App {
-            root_name,
-            main_window,
-            defaults,
-            command_palette: _,
-            install_app_hooks,
-            install_hooks,
-            register_icon_pack_hooks,
-        } = self;
-
-        let mut builder = crate::mvu::mvu_bootstrap_builder_with_hooks::<P>(root_name, |d| d);
-
-        for f in install_app_hooks {
-            builder = builder.install_app(f);
-        }
-        for f in install_hooks {
-            builder = builder.install(f);
-        }
-        for f in register_icon_pack_hooks {
-            builder = builder.register_icon_pack(f);
-        }
-
-        let builder = crate::apply_desktop_defaults_with(builder, defaults)
-            .map_err(crate::BootstrapError::from)?;
-        let mut builder = UiAppBuilder::from_bootstrap(builder);
-        builder = apply_main_window(root_name, main_window, builder);
-        Ok(builder)
-    }
-
     /// Build a UI app from `init_window` + `view` and return a runnable builder.
     pub fn ui<S: 'static>(
         self,
@@ -172,9 +134,7 @@ impl App {
         }
 
         #[cfg(feature = "command-palette")]
-        fn configure_ui_driver_with_palette<S>(
-            d: crate::UiAppDriver<S>,
-        ) -> crate::UiAppDriver<S> {
+        fn configure_ui_driver_with_palette<S>(d: crate::UiAppDriver<S>) -> crate::UiAppDriver<S> {
             d.command_palette(true)
         }
 
@@ -194,7 +154,8 @@ impl App {
             }
         };
 
-        let mut builder = crate::ui_bootstrap_builder_with_hooks(root_name, init_window, view, configure);
+        let mut builder =
+            crate::ui_bootstrap_builder_with_hooks(root_name, init_window, view, configure);
 
         for f in install_app_hooks {
             builder = builder.install_app(f);
@@ -283,16 +244,6 @@ impl App {
         let mut builder = UiAppBuilder::from_bootstrap(builder);
         builder = apply_main_window(root_name, main_window, builder);
         Ok(builder)
-    }
-
-    /// Convenience: build an MVU app and run it immediately.
-    #[cfg(feature = "legacy-mvu")]
-    #[deprecated(
-        note = "MVU is legacy-only (compat). Prefer View runtime + actions (ADR 0308/0307) and payload actions v2 (ADR 0312)."
-    )]
-    #[allow(deprecated)]
-    pub fn run_mvu<P: crate::mvu::Program>(self) -> Result<()> {
-        self.mvu::<P>()?.run()
     }
 
     /// Convenience: build a view-runtime app and run it immediately.

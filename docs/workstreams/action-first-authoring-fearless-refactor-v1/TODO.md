@@ -466,14 +466,14 @@ migrated, then delete”, track the remaining steps here.
 Exit target:
 
 - no remaining MVU usage in-tree,
-- no `legacy-mvu` or `legacy-mvu-demos` features,
+- no `legacy-mvu` feature (and no demo-level MVU opt-in features like `legacy-mvu-demos`),
 - no `fret::legacy::*` module,
 - no MVU references in templates/docs.
 
 Tasks:
 
 - [x] AFA-m9-001 Migrate remaining non-action-first demos in `apps/fret-examples` to View+actions.
-- [ ] AFA-m9-002 Delete legacy MVU demo copies once the migrated versions exist (remove `*_legacy.rs` files):
+- [x] AFA-m9-002 Delete legacy MVU demo copies once the migrated versions exist (remove `*_legacy.rs` files):
   - `apps/fret-examples/src/todo_demo_legacy.rs`
   - `apps/fret-examples/src/query_demo_legacy.rs`
   - `apps/fret-examples/src/query_async_tokio_demo_legacy.rs`
@@ -482,12 +482,12 @@ Tasks:
   - `apps/fret-examples/src/embedded_viewport_demo_legacy.rs`
   - `apps/fret-examples/src/drop_shadow_demo_legacy.rs`
   - `apps/fret-examples/src/postprocess_theme_demo_legacy.rs`
-- [ ] AFA-m9-003 Remove `apps/fret-examples` feature `legacy-mvu-demos` and any routing/printing branches in `apps/fret-demo`.
-- [ ] AFA-m9-004 Remove `ecosystem/fret` feature `legacy-mvu` and delete MVU modules:
+- [x] AFA-m9-003 Remove `apps/fret-examples` feature `legacy-mvu-demos` and any routing/printing branches in `apps/fret-demo`.
+- [x] AFA-m9-004 Remove `ecosystem/fret` feature `legacy-mvu` and delete MVU modules:
   - `ecosystem/fret/src/mvu.rs`
   - `ecosystem/fret/src/mvu_router.rs`
   - `ecosystem/fret/src/legacy.rs`
-- [ ] AFA-m9-005 Remove any legacy MVU scaffolding sources from `apps/fretboard/src/scaffold/templates.rs`.
+- [x] AFA-m9-005 Remove any legacy MVU scaffolding sources from `apps/fretboard/src/scaffold/templates.rs`.
 - [ ] AFA-m9-006 Update docs to remove MVU guidance:
   - `docs/workstreams/action-first-authoring-fearless-refactor-v1/MVU_POLICY.md`
   - `docs/workstreams/action-first-authoring-fearless-refactor-v1/MIGRATION_GUIDE.md`

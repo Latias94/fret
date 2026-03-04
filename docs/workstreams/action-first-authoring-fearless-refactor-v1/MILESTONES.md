@@ -153,6 +153,7 @@ Exit criteria:
 - Docs/templates do not mention MVU as an available authoring path.
 - A small gate prevents MVU APIs from being reintroduced (grep-based check is sufficient).
 
-Current blockers (as of 2026-03-04):
+Current blockers (as of 2026-03-05):
 
-- Legacy demo copies (`apps/fret-examples/src/*_legacy.rs`) still exist for A/B comparison.
+- Docs still describe MVU as an available compat path (needs cleanup + history note).
+- A small gate is still missing to prevent MVU identifiers from being reintroduced.
