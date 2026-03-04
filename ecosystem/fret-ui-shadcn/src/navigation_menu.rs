@@ -1175,15 +1175,17 @@ impl NavigationMenu {
             .unwrap_or_else(|| MetricRef::radius(Radius::Md).resolve(&theme));
         let content_switch_slide_px = nav_menu_content_switch_slide_px(&theme);
         let viewport_shadow = decl_style::shadow(&theme, viewport_radius);
+        let dir = crate::use_direction(cx, None);
         let content_pad_y = MetricRef::space(Space::N2).resolve(&theme);
         let content_pad_left = MetricRef::space(Space::N2).resolve(&theme);
         let content_pad_right = MetricRef::space(Space::N2p5).resolve(&theme);
-        let content_padding = Edges {
-            top: content_pad_y,
-            right: content_pad_right,
-            bottom: content_pad_y,
-            left: content_pad_left,
-        };
+        let content_padding = rtl::padding_edges_with_inline_start_end(
+            dir,
+            content_pad_y,
+            content_pad_y,
+            content_pad_left,
+            content_pad_right,
+        );
 
         if std::env::var("FRET_DEBUG_NAV_MENU_TRIGGER")
             .ok()

@@ -228,27 +228,6 @@
       ]
     },
     {
-      "id": "cookbook-image-asset-cache-basics-baseline",
-      "path": "tools/diag-scripts/cookbook/image-asset-cache-basics/cookbook-image-asset-cache-basics-baseline.json",
-      "required_capabilities": [
-        "diag.screenshot_png",
-        "diag.script_v2"
-      ],
-      "suite_memberships": [
-        "cookbook-image-asset-cache-basics"
-      ],
-      "tags": [
-        "assets",
-        "cookbook",
-        "cookbook.image_asset_cache_basics",
-        "screenshots"
-      ],
-      "target_hints": [
-        "Waits briefly for the first upload to settle.",
-        "Captures a baseline screenshot + bundle."
-      ]
-    },
-    {
       "id": "cookbook-date-picker-basics-smoke",
       "path": "tools/diag-scripts/cookbook/date-picker-basics/cookbook-date-picker-basics-smoke.json",
       "required_capabilities": [
@@ -3421,6 +3400,29 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-command-rtl-screenshot",
+      "path": "tools/diag-scripts/ui-gallery/command/ui-gallery-command-rtl-screenshot.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-rtl-smoke"
+      ],
+      "tags": [
+        "command",
+        "rtl",
+        "screenshot",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Navigates to the Command page.",
+        "Scrolls to the RTL CommandPalette snippet.",
+        "Captures a screenshot to validate inline-start/end mirroring for the search icon + padding."
+      ]
+    },
+    {
       "id": "ui-gallery-context-menu-basic-keyboard-nav",
       "path": "tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-basic-keyboard-nav.json",
       "required_capabilities": [
@@ -4761,6 +4763,30 @@
         "Open NavigationMenu content and move keyboard focus into the viewport.",
         "Press Escape to close while focus is inside the content.",
         "Ensure hover pointer-move does not immediately re-open after Escape dismissal."
+      ]
+    },
+    {
+      "id": "ui-gallery-navigation-menu-rtl-open-screenshot",
+      "path": "tools/diag-scripts/ui-gallery/navigation-menu/ui-gallery-navigation-menu-rtl-open-screenshot.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-rtl-smoke"
+      ],
+      "tags": [
+        "navigation_menu",
+        "overlay",
+        "rtl",
+        "screenshot",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Navigates to the Navigation Menu page.",
+        "Opens the RTL NavigationMenu components trigger.",
+        "Captures a screenshot to validate inline-start/end mirroring for viewport padding/content."
       ]
     },
     {

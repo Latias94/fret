@@ -367,12 +367,15 @@ fn command_text_input<H: UiHost>(
     props.chrome = chrome;
     props.text_style = item_text_style(&theme);
     props.layout.size = SizeStyle {
-        width: Length::Fill,
+        width: Length::Auto,
         height: Length::Px(height),
         min_width: Some(Length::Px(Px(0.0))),
         min_height: Some(Length::Px(Px(0.0))),
         ..Default::default()
     };
+    props.layout.flex.grow = 1.0;
+    props.layout.flex.shrink = 1.0;
+    props.layout.flex.basis = Length::Px(Px(0.0));
     props.layout.overflow = Overflow::Clip;
 
     cx.text_input(props)
@@ -3262,6 +3265,7 @@ impl CommandPalette {
                 Some(ColorRef::Color(icon_fg)),
             );
             let icon = cx.opacity(0.5, move |_cx| vec![icon]);
+            let dir = crate::use_direction(cx, None);
 
             let mut input = cx.row(
                 RowProps {
@@ -3276,7 +3280,10 @@ impl CommandPalette {
                     justify: MainAlign::Start,
                     align: CrossAlign::Center,
                 },
-                move |_cx| vec![icon, input],
+                move |_cx| match dir {
+                    crate::LayoutDirection::Ltr => vec![icon, input],
+                    crate::LayoutDirection::Rtl => vec![input, icon],
+                },
             );
             let list_labelled_by = Some(input_id.0);
 
