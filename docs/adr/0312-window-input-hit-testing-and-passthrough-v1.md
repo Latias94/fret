@@ -57,7 +57,7 @@ click-through utility windows.
 
 Region-based hit testing is intentionally deferred: v1 focuses on a deterministic, window-level
 contract that can be implemented safely across backends. A follow-up ADR may extend `hit_test`
-with a region vocabulary once the runner plumbing and diagnostics evidence are stable.
+with a region vocabulary once the runner plumbing and diagnostics evidence are stable (ADR 0313).
 
 ### 3) Capability keys
 
@@ -67,7 +67,8 @@ Add capability keys (ADR 0054):
 - `ui.window.hit_test.passthrough_regions`
 
 `ui.window.hit_test.passthrough_regions` is reserved for a future region-based extension. Runners
-must report it as unavailable until there is an end-to-end implementation.
+must report it as unavailable until there is an end-to-end implementation. See ADR 0313 for the
+region vocabulary and degradation rules.
 
 Runners must:
 
