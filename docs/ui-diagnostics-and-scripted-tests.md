@@ -440,6 +440,11 @@ Script shrinking (automated minimal repro):
 5. The app executes **one step per frame** (deterministic), and (by default) auto-dumps after actions.
    Use `cargo run -p fretboard -- diag latest` to grab the newest bundle.
 
+Deterministic termination note (especially for multi-window docking scripts):
+
+- Prefer ending a script with `capture_bundle` as the final step.
+- Avoid trailing `wait_frames` after the final `capture_bundle` (it can stall indefinitely if the last remaining window becomes occluded/idle and stops producing frames).
+
 Screenshot note:
 
 - `capture_screenshot` requires the **on-demand PNG screenshot protocol**:
