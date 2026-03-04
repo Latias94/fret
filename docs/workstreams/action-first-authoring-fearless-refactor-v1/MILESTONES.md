@@ -118,6 +118,7 @@ Exit criteria:
 
 - A concrete contract exists for parameterized/payloaded actions, including determinism and
   diagnostics expectations.
+  - ADR: `docs/adr/0312-payload-actions-v2.md`
 - At least one in-tree demo migrates from MVU payload routing to payload actions (or an explicit
   alternative is adopted).
 

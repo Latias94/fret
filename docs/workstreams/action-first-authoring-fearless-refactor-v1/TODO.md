@@ -371,6 +371,31 @@ practical steps:
 - View runtime ergonomics: reduce `on_action` handler boilerplate (`request_redraw` + `notify`) without weakening
   determinism or layering (ecosystem-only).
 - Payload actions (v2+), behind strict determinism + validation rules.
+  - See: `docs/adr/0312-payload-actions-v2.md`
+
+### Payload actions v2 (prototype, post-v1)
+
+- [ ] AFA-actions-070 Lock the payload actions v2 contract (ADR 0312) and scope constraints.
+  - Constraints (prototype):
+    - payload is pointer/programmatic-only (no keymap schema changes),
+    - payload is transient (window-scoped pending store + TTL),
+    - missing payload is safe (recommended: treat as not handled).
+
+- [ ] AFA-actions-071 Implement a window-scoped pending payload service (TTL) in `crates/fret-runtime`.
+  - Reference: `crates/fret-runtime/src/command_dispatch_diagnostics.rs` (`WindowPendingCommandDispatchSourceService`).
+
+- [ ] AFA-actions-072 Expose an object-safe host API for recording/consuming payloads during action dispatch.
+  - Surface: `crates/fret-ui/src/action.rs` (`UiActionHost`).
+
+- [ ] AFA-actions-073 Add ecosystem authoring sugar:
+  - typed payload action macro (additive; do not break `actions!`),
+  - handler table support for payload actions (consume + downcast),
+  - pressable helper to dispatch action + payload while preserving `*_if_enabled` gating.
+
+- [ ] AFA-actions-074 Migrate at least one in-tree demo from MVU payload routing to payload actions.
+  - Evidence:
+    - demo compiles and behaves correctly,
+    - diagnostics gate can still explain the dispatch decision (and best-effort payload presence).
 
 - Macro ergonomics (non-breaking, v1.x):
   - Keep `actions!` explicit-ID requirement (stable IDs must not drift with refactors).
