@@ -79,7 +79,7 @@
       "timeout_frames": 600
     },
     {
-      "type": "move_pointer",
+      "type": "click",
       "target": {
         "kind": "test_id",
         "id": "ui-gallery-navigation-menu-demo-trigger-components"
@@ -135,7 +135,13 @@
       "label": "ui-gallery-navigation-menu-md-breakpoint-query-source-toggle-viewport"
     },
 
-    { "type": "press_key", "key": "escape" },
+    {
+      "type": "click",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-navigation-menu-demo-trigger-components"
+      }
+    },
     {
       "type": "wait_until",
       "predicate": {
@@ -170,6 +176,23 @@
 
     {
       "type": "move_pointer",
+      "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+    },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-navigation-menu-demo-trigger-components"
+        }
+      },
+      "timeout_frames": 600
+    },
+
+    {
+      "type": "click",
       "target": {
         "kind": "test_id",
         "id": "ui-gallery-navigation-menu-demo-trigger-components"
