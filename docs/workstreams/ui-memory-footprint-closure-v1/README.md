@@ -263,8 +263,10 @@ Candidate gates:
 - `--max-renderer-intermediate-peak-in-use-bytes`
 - `--max-wgpu-metal-current-allocated-size-bytes` (macOS/Metal; best-effort)
 - `--max-render-text-atlas-bytes-live-estimate-total` (text-heavy attribution; stable, derived from `resource_caches.render_text`)
-- (Planned) `--max-render-text-registered-font-blobs-total-bytes` (guards memory-backed font injection growth)
-- (Planned) `--max-render-text-shape-cache-entries` (guards unbounded text shaping cache growth)
+- `--max-render-text-registered-font-blobs-total-bytes` (guards memory-backed font injection growth; `resource_caches.render_text`)
+- `--max-render-text-registered-font-blobs-count` (guards memory-backed font injection churn; `resource_caches.render_text`)
+- `--max-render-text-shape-cache-entries` (guards unbounded text shaping cache growth; `resource_caches.render_text`)
+- `--max-render-text-blob-cache-entries` (guards unbounded text blob cache growth; `resource_caches.render_text`)
 - `--max-code-editor-buffer-len-bytes` (UI Gallery; `app_snapshot.code_editor.torture.memory`)
 - `--max-code-editor-undo-text-bytes-estimate-total` (UI Gallery; `app_snapshot.code_editor.torture.memory`)
 - `--max-code-editor-row-text-cache-entries` (UI Gallery; `app_snapshot.code_editor.torture.cache_sizes`)
