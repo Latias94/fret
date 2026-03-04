@@ -21,17 +21,14 @@ These are intentionally stable and should be your default onboarding path:
 Cookbook examples live under [apps/fret-cookbook/examples/](../../apps/fret-cookbook/examples/).
 Each file is intended to be one lesson. They are runnable and designed for copy/paste.
 
-Run one directly:
-
-```bash
-cargo run -p fret-cookbook --example simple_todo
-```
-
-Or use the tooling runner (recommended on Windows):
+Run one via the tooling runner (recommended):
 
 ```bash
 cargo run -p fretboard -- dev native --example simple_todo
 ```
+
+Note: you can also run cookbook examples directly via Cargo, but feature-gated Lab examples require
+explicit `--features ...` (see [apps/fret-cookbook/README.md](../../apps/fret-cookbook/README.md)).
 
 Recommended starting points (action-first + view runtime):
 
