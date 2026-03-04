@@ -106,7 +106,7 @@ The request is intentionally small and “intent-oriented”:
 
 - `decorations: Option<WindowDecorationsRequest>` — request a window decoration policy.
 - `resizable: Option<bool>`
-- `transparent: Option<bool>` — requests a transparent composited window background.
+- `transparent: Option<bool>` — requests a **composited alpha window surface** (create-time; may be sticky).
 - `opacity: Option<WindowOpacity>` — requests global window opacity (0..=255), not per-pixel transparency.
 - `z_level: Option<WindowZLevel>` — `Normal`, `AlwaysOnTop`.
 - `taskbar: Option<TaskbarVisibility>` — `Show`, `Hide`.
@@ -116,6 +116,9 @@ The request is intentionally small and “intent-oriented”:
 Notes:
 
 - `transparent` is not only a window flag; it is also a rendering/compositing contract (see §6).
+- `transparent` does not mean “the desktop must be visible through the app”. Visual transparency
+  depends on renderer clears and whether the app paints an opaque root background. OS-backed
+  background materials (Mica/Acrylic/Vibrancy) are specified separately (ADR 0310).
 - `opacity` maps to OS/global window alpha when supported (e.g. “transparent payload” style UX in
   Dear ImGui uses `Platform_SetWindowAlpha` for viewports).
 - `NonActivating` defines focus semantics; it is allowed to still receive pointer events.
@@ -260,6 +263,13 @@ If `transparent == true` is requested and supported:
 
 If the backend cannot provide a composited alpha surface, it must clamp `transparent` to false and
 report `ui.window.transparent == false` in capabilities.
+
+Additional note (normative):
+
+- Runners may choose an opaque default clear (alpha = 1) when there is no OS backdrop material
+  enabled and the caller did not explicitly request a visually see-through window. Callers that
+  want a visually see-through window must request `transparent=true` explicitly and paint a
+  transparent root background.
 
 Note (Zed/GPUI reference, non-normative):
 
