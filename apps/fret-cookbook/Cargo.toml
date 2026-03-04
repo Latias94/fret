@@ -86,6 +86,10 @@ name = "compositing_alpha_basics"
 required-features = ["cookbook-renderer"]
 
 [[example]]
+name = "drop_shadow_basics"
+required-features = ["cookbook-renderer"]
+
+[[example]]
 name = "undo_basics"
 required-features = ["cookbook-undo"]
 

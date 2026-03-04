@@ -429,6 +429,26 @@
       ]
     },
     {
+      "id": "cookbook-drop-shadow-basics-baseline",
+      "path": "tools/diag-scripts/cookbook/drop-shadow-basics/cookbook-drop-shadow-basics-baseline.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "cookbook-drop-shadow-basics"
+      ],
+      "tags": [
+        "cookbook",
+        "cookbook.drop_shadow_basics",
+        "renderer",
+        "screenshots"
+      ],
+      "target_hints": [
+        "Waits for the root to exist, then captures a baseline screenshot + bundle."
+      ]
+    },
+    {
       "id": "cookbook-imui-action-basics-cross-frontend",
       "path": "tools/diag-scripts/cookbook/imui-action-basics/cookbook-imui-action-basics-cross-frontend.json",
       "required_capabilities": [
