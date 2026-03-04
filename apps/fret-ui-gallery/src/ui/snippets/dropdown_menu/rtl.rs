@@ -2,7 +2,6 @@ pub const SOURCE: &str = include_str!("rtl.rs");
 
 // region: example
 use fret_core::Px;
-use fret_ui_kit::primitives::direction::{LayoutDirection, with_direction_provider};
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
@@ -22,8 +21,12 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                 .side_offset(Px(4.0)),
             |_cx| {
                 [
-                    shadcn::DropdownMenuItem::new("Dashboard").into(),
-                    shadcn::DropdownMenuItem::new("Settings").into(),
+                    shadcn::DropdownMenuItem::new("Dashboard")
+                        .test_id("ui-gallery-dropdown-menu-rtl-item-dashboard")
+                        .into(),
+                    shadcn::DropdownMenuItem::new("Settings")
+                        .test_id("ui-gallery-dropdown-menu-rtl-item-settings")
+                        .into(),
                 ]
             },
         )

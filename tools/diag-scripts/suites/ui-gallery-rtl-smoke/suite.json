@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "kind": "diag_script_suite_manifest",
+  "scripts": [
+    "tools/diag-scripts/ui-gallery/breadcrumb/ui-gallery-breadcrumb-rtl-screenshot.json",
+    "tools/diag-scripts/ui-gallery/button/ui-gallery-button-rtl-row-screenshots.json",
+    "tools/diag-scripts/ui-gallery/checkbox/ui-gallery-checkbox-rtl-and-checked-wrap.json",
+    "tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-rtl-open-screenshot.json",
+    "tools/diag-scripts/ui-gallery/command/ui-gallery-command-rtl-screenshot.json",
+    "tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-rtl-open-screenshot.json",
+    "tools/diag-scripts/ui-gallery/dropdown-menu/ui-gallery-dropdown-menu-rtl-open-screenshot.json",
+    "tools/diag-scripts/ui-gallery/hover-card/ui-gallery-hover-card-rtl-open-screenshot.json",
+    "tools/diag-scripts/ui-gallery/input/ui-gallery-input-group-rtl-screenshot.json",
+    "tools/diag-scripts/ui-gallery/menubar/ui-gallery-menubar-rtl-open-screenshot.json",
+    "tools/diag-scripts/ui-gallery/navigation-menu/ui-gallery-navigation-menu-rtl-open-screenshot.json",
+    "tools/diag-scripts/ui-gallery/native-select/ui-gallery-native-select-rtl-open-screenshot.json",
+    "tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scroll-area-rtl-screenshot.json",
+    "tools/diag-scripts/ui-gallery/select/ui-gallery-select-rtl-open-screenshot.json",
+    "tools/diag-scripts/ui-gallery/tabs/ui-gallery-tabs-rtl-keynav-screenshot.json"
+  ]
+}

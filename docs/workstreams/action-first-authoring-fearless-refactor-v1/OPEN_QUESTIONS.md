@@ -1,6 +1,6 @@
 # Action-First Authoring + View Runtime (Fearless Refactor v1) — Open Questions
 
-Last updated: 2026-03-03
+Last updated: 2026-03-04
 
 This file tracks decisions intentionally deferred **past the v1 landing**.
 
@@ -84,7 +84,7 @@ This must stay aligned with:
 - ADR 0159 (selectors + scripted interaction),
 - ADR 0213 (cache roots).
 
-Status (as of 2026-03-03):
+Status (as of 2026-03-04):
 
 - The v1 view-cache + action-first gates are green (`pwsh tools/diag_gate_action_first_authoring_v1.ps1`).
 - Inspection/picking may still affect reuse decisions; gaps should be documented as explicit reuse reasons in cache-root diagnostics.

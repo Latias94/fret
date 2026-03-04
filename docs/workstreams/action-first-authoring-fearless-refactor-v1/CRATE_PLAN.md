@@ -1,6 +1,6 @@
 # Action-First Authoring + View Runtime (Fearless Refactor v1) — Crate Plan
 
-Last updated: 2026-03-03
+Last updated: 2026-03-04
 
 This document describes the **crate boundary plan** for the refactor:
 
@@ -13,7 +13,7 @@ This is a workstream note. Hard boundaries must be backed by ADRs.
 
 ---
 
-## Status (as of 2026-03-03)
+## Status (as of 2026-03-04)
 
 - v1 landed without introducing new crates (Option A).
 - `ActionId == CommandId` is implemented in `crates/fret-runtime/src/action.rs`.

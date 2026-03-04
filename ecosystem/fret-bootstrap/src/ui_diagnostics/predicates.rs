@@ -50,6 +50,7 @@ fn eval_predicate_without_semantics(
     open_window_count: u32,
     platform_caps: Option<&fret_runtime::PlatformCapabilities>,
     window_style: Option<&fret_runtime::RunnerWindowStyleDiagnosticsStore>,
+    platform_window_receiver: Option<&fret_runtime::RunnerPlatformWindowReceiverDiagnosticsStore>,
     docking: Option<&fret_runtime::DockingInteractionDiagnostics>,
     workspace: Option<&fret_runtime::WorkspaceInteractionDiagnostics>,
     dock_drag_runtime: Option<&DockDragRuntimeState>,
@@ -61,6 +62,14 @@ fn eval_predicate_without_semantics(
         UiPredicateV1::PlatformUiWindowHoverDetectionIs { quality } => Some(
             platform_caps.is_some_and(|c| c.ui.window_hover_detection.as_str() == quality.as_str()),
         ),
+        UiPredicateV1::PlatformWindowReceiverAtCursorIs {
+            window: target_window,
+        } => {
+            let target_window =
+                resolve_window_target_from_known_windows(window, known_windows, *target_window)?;
+            let have = platform_window_receiver?.latest_at_cursor()?;
+            Some(have.receiver_window == Some(target_window))
+        }
         UiPredicateV1::WindowStyleEffectiveIs {
             window: target_window,
             style,
@@ -77,7 +86,10 @@ fn eval_predicate_without_semantics(
             let target_window =
                 resolve_window_target_from_known_windows(window, known_windows, *target_window)?;
             let have = window_style?.effective_snapshot(target_window)?;
-            Some(window_background_material_matches(have.background_material, *material))
+            Some(window_background_material_matches(
+                have.background_material,
+                *material,
+            ))
         }
         UiPredicateV1::DockDragCurrentWindowIs {
             window: target_window,
@@ -89,9 +101,10 @@ fn eval_predicate_without_semantics(
                     .is_some_and(|drag| drag.dragging && drag.current_window == target_window),
             )
         }
-        UiPredicateV1::DockDragKindIs { drag_kind } => Some(dock_drag_runtime.is_some_and(|drag| {
-            drag.dragging && dock_drag_kind_is(drag.kind, drag_kind)
-        })),
+        UiPredicateV1::DockDragKindIs { drag_kind } => Some(
+            dock_drag_runtime
+                .is_some_and(|drag| drag.dragging && dock_drag_kind_is(drag.kind, drag_kind)),
+        ),
         UiPredicateV1::DockDragMovingWindowIs {
             window: target_window,
         } => {
@@ -119,9 +132,9 @@ fn eval_predicate_without_semantics(
                 .is_some_and(|drag| drag.dragging && drag.transparent_payload_applied == *applied)
                 || (!*applied && dock_drag_runtime.is_none()),
         ),
-        UiPredicateV1::DockDragTransparentPayloadMousePassthroughAppliedIs { applied } => Some(
+        UiPredicateV1::DockDragTransparentPayloadHitTestPassthroughAppliedIs { applied } => Some(
             dock_drag_runtime.is_some_and(|drag| {
-                drag.dragging && drag.transparent_payload_mouse_passthrough_applied == *applied
+                drag.dragging && drag.transparent_payload_hit_test_passthrough_applied == *applied
             }) || (!*applied && dock_drag_runtime.is_none()),
         ),
         UiPredicateV1::DockDragWindowUnderCursorSourceIs { source } => {
@@ -333,7 +346,17 @@ fn window_style_effective_matches(
         return false;
     }
     if let Some(transparent) = want.transparent
-        && have.transparent != transparent
+        && have.surface_composited_alpha != transparent
+    {
+        return false;
+    }
+    if let Some(visual_transparent) = want.visual_transparent
+        && have.visual_transparent != visual_transparent
+    {
+        return false;
+    }
+    if let Some(appearance) = want.appearance
+        && !window_appearance_match(have.appearance, appearance)
     {
         return false;
     }
@@ -352,20 +375,54 @@ fn window_style_effective_matches(
     {
         return false;
     }
-    if let Some(mouse) = want.mouse
-        && !mouse_policy_match(have.mouse, mouse)
+    if let Some(hit_test) = want.hit_test
+        && !window_hit_test_match(&have.hit_test, hit_test)
+    {
+        return false;
+    }
+    if let Some(fp) = want.hit_test_regions_fingerprint64
+        && have.hit_test_regions_fingerprint64 != Some(fp)
     {
         return false;
     }
     true
 }
 
+fn window_appearance_match(
+    have: fret_runtime::RunnerWindowAppearanceV1,
+    want: fret_diag_protocol::UiWindowAppearanceV1,
+) -> bool {
+    use fret_diag_protocol::UiWindowAppearanceV1 as W;
+    use fret_runtime::RunnerWindowAppearanceV1 as H;
+    match (have, want) {
+        (H::Opaque, W::Opaque) => true,
+        (H::CompositedNoBackdrop, W::CompositedNoBackdrop) => true,
+        (H::CompositedBackdrop, W::CompositedBackdrop) => true,
+        _ => false,
+    }
+}
+
+fn window_hit_test_match(
+    have: &fret_runtime::WindowHitTestRequestV1,
+    want: UiWindowHitTestRequestV1,
+) -> bool {
+    use UiWindowHitTestRequestV1 as W;
+    use fret_runtime::WindowHitTestRequestV1 as H;
+
+    match (have, want) {
+        (&H::Normal, W::Normal) => true,
+        (&H::PassthroughAll, W::PassthroughAll) => true,
+        (&H::PassthroughRegions { .. }, W::PassthroughRegions) => true,
+        _ => false,
+    }
+}
+
 fn window_background_material_matches(
     have: fret_runtime::WindowBackgroundMaterialRequest,
     want: UiWindowBackgroundMaterialRequestV1,
 ) -> bool {
-    use fret_runtime::WindowBackgroundMaterialRequest as H;
     use UiWindowBackgroundMaterialRequestV1 as W;
+    use fret_runtime::WindowBackgroundMaterialRequest as H;
     match (have, want) {
         (H::None, W::None) => true,
         (H::SystemDefault, W::SystemDefault) => true,
@@ -380,8 +437,8 @@ fn window_decorations_match(
     have: fret_runtime::WindowDecorationsRequest,
     want: UiWindowDecorationsRequestV1,
 ) -> bool {
-    use fret_runtime::WindowDecorationsRequest as H;
     use UiWindowDecorationsRequestV1 as W;
+    use fret_runtime::WindowDecorationsRequest as H;
     match (have, want) {
         (H::System, W::System) => true,
         (H::None, W::None) => true,
@@ -395,8 +452,8 @@ fn taskbar_visibility_match(
     have: fret_runtime::TaskbarVisibility,
     want: UiTaskbarVisibilityV1,
 ) -> bool {
-    use fret_runtime::TaskbarVisibility as H;
     use UiTaskbarVisibilityV1 as W;
+    use fret_runtime::TaskbarVisibility as H;
     match (have, want) {
         (H::Show, W::Show) => true,
         (H::Hide, W::Hide) => true,
@@ -404,9 +461,12 @@ fn taskbar_visibility_match(
     }
 }
 
-fn activation_policy_match(have: fret_runtime::ActivationPolicy, want: UiActivationPolicyV1) -> bool {
-    use fret_runtime::ActivationPolicy as H;
+fn activation_policy_match(
+    have: fret_runtime::ActivationPolicy,
+    want: UiActivationPolicyV1,
+) -> bool {
     use UiActivationPolicyV1 as W;
+    use fret_runtime::ActivationPolicy as H;
     match (have, want) {
         (H::Activates, W::Activates) => true,
         (H::NonActivating, W::NonActivating) => true,
@@ -415,21 +475,11 @@ fn activation_policy_match(have: fret_runtime::ActivationPolicy, want: UiActivat
 }
 
 fn window_z_level_match(have: fret_runtime::WindowZLevel, want: UiWindowZLevelV1) -> bool {
-    use fret_runtime::WindowZLevel as H;
     use UiWindowZLevelV1 as W;
+    use fret_runtime::WindowZLevel as H;
     match (have, want) {
         (H::Normal, W::Normal) => true,
         (H::AlwaysOnTop, W::AlwaysOnTop) => true,
-        _ => false,
-    }
-}
-
-fn mouse_policy_match(have: fret_runtime::MousePolicy, want: UiMousePolicyV1) -> bool {
-    use fret_runtime::MousePolicy as H;
-    use UiMousePolicyV1 as W;
-    match (have, want) {
-        (H::Normal, W::Normal) => true,
-        (H::Passthrough, W::Passthrough) => true,
         _ => false,
     }
 }
@@ -448,6 +498,7 @@ fn eval_predicate(
     open_window_count: u32,
     platform_caps: Option<&fret_runtime::PlatformCapabilities>,
     window_style: Option<&fret_runtime::RunnerWindowStyleDiagnosticsStore>,
+    platform_window_receiver: Option<&fret_runtime::RunnerPlatformWindowReceiverDiagnosticsStore>,
     docking: Option<&fret_runtime::DockingInteractionDiagnostics>,
     workspace: Option<&fret_runtime::WorkspaceInteractionDiagnostics>,
     dock_drag_runtime: Option<&DockDragRuntimeState>,
@@ -461,27 +512,35 @@ fn eval_predicate(
     };
 
     match pred {
-        UiPredicateV1::Exists { target } => {
-            select_node(target).is_some()
-        }
-        UiPredicateV1::NotExists { target } => {
-            select_node(target).is_none()
-        }
+        UiPredicateV1::Exists { target } => select_node(target).is_some(),
+        UiPredicateV1::NotExists { target } => select_node(target).is_none(),
         UiPredicateV1::ExistsUnder { scope, target } => {
             let Some(scope_node) = select_node(scope) else {
                 return false;
             };
             let scope_root = scope_node.id.data().as_ffi();
-            select_semantics_node_scoped(snapshot, window, element_runtime, target, Some(scope_root))
-                .is_some()
+            select_semantics_node_scoped(
+                snapshot,
+                window,
+                element_runtime,
+                target,
+                Some(scope_root),
+            )
+            .is_some()
         }
         UiPredicateV1::NotExistsUnder { scope, target } => {
             let Some(scope_node) = select_node(scope) else {
                 return false;
             };
             let scope_root = scope_node.id.data().as_ffi();
-            select_semantics_node_scoped(snapshot, window, element_runtime, target, Some(scope_root))
-                .is_none()
+            select_semantics_node_scoped(
+                snapshot,
+                window,
+                element_runtime,
+                target,
+                Some(scope_root),
+            )
+            .is_none()
         }
         UiPredicateV1::FocusedDescendantIs { scope, target } => {
             let Some(focus) = snapshot.focus else {
@@ -491,9 +550,13 @@ fn eval_predicate(
                 return false;
             };
             let scope_root = scope_node.id.data().as_ffi();
-            let Some(node) =
-                select_semantics_node_scoped(snapshot, window, element_runtime, target, Some(scope_root))
-            else {
+            let Some(node) = select_semantics_node_scoped(
+                snapshot,
+                window,
+                element_runtime,
+                target,
+                Some(scope_root),
+            ) else {
                 return false;
             };
             node.id == focus
@@ -520,7 +583,9 @@ fn eval_predicate(
             let Some(node) = select_node(target) else {
                 return false;
             };
-            node.label.as_deref().is_some_and(|label| label.contains(text))
+            node.label
+                .as_deref()
+                .is_some_and(|label| label.contains(text))
         }
         UiPredicateV1::LabelLenIs { target, len_bytes } => {
             let Some(node) = select_node(target) else {
@@ -551,7 +616,9 @@ fn eval_predicate(
             let Some(node) = select_node(target) else {
                 return false;
             };
-            node.value.as_deref().is_some_and(|value| value.contains(text))
+            node.value
+                .as_deref()
+                .is_some_and(|value| value.contains(text))
         }
         UiPredicateV1::ValueEquals { target, text } => {
             let Some(node) = select_node(target) else {
@@ -761,8 +828,8 @@ fn eval_predicate(
                 == *is_some
         }
         UiPredicateV1::ImeSurroundingTextValid => {
-            let Some(surrounding) = text_input_snapshot
-                .and_then(|snapshot| snapshot.surrounding_text.as_ref())
+            let Some(surrounding) =
+                text_input_snapshot.and_then(|snapshot| snapshot.surrounding_text.as_ref())
             else {
                 return false;
             };
@@ -1132,6 +1199,19 @@ fn eval_predicate(
                     .is_some_and(|c| c.ui.window_hover_detection.as_str() == quality.as_str())
             }
         }
+        UiPredicateV1::PlatformWindowReceiverAtCursorIs {
+            window: target_window,
+        } => {
+            let Some(target_window) =
+                resolve_window_target_from_known_windows(window, known_windows, *target_window)
+            else {
+                return false;
+            };
+            let Some(have) = platform_window_receiver.and_then(|s| s.latest_at_cursor()) else {
+                return false;
+            };
+            have.receiver_window == Some(target_window)
+        }
         UiPredicateV1::WindowStyleEffectiveIs {
             window: target_window,
             style,
@@ -1210,10 +1290,10 @@ fn eval_predicate(
             }
             !*applied
         }
-        UiPredicateV1::DockDragTransparentPayloadMousePassthroughAppliedIs { applied } => {
+        UiPredicateV1::DockDragTransparentPayloadHitTestPassthroughAppliedIs { applied } => {
             if let Some(drag) = dock_drag_runtime {
                 return drag.dragging
-                    && drag.transparent_payload_mouse_passthrough_applied == *applied;
+                    && drag.transparent_payload_hit_test_passthrough_applied == *applied;
             }
             !*applied
         }
@@ -1317,7 +1397,9 @@ fn eval_predicate(
                 w.tab_strip_active_visibility.iter().rev().find(|s| {
                     s.status == fret_runtime::WorkspaceTabStripActiveVisibilityStatusDiagnostics::Ok
                         && pane_id.as_ref().is_none_or(|id| {
-                            s.pane_id.as_ref().is_some_and(|p| p.as_ref() == id.as_str())
+                            s.pane_id
+                                .as_ref()
+                                .is_some_and(|p| p.as_ref() == id.as_str())
                         })
                 })
             })
@@ -1327,7 +1409,9 @@ fn eval_predicate(
                 w.tab_strip_active_visibility.iter().rev().find(|s| {
                     s.status == fret_runtime::WorkspaceTabStripActiveVisibilityStatusDiagnostics::Ok
                         && pane_id.as_ref().is_none_or(|id| {
-                            s.pane_id.as_ref().is_some_and(|p| p.as_ref() == id.as_str())
+                            s.pane_id
+                                .as_ref()
+                                .is_some_and(|p| p.as_ref() == id.as_str())
                         })
                 })
             })
@@ -1337,7 +1421,9 @@ fn eval_predicate(
                 w.tab_strip_active_visibility.iter().rev().find(|s| {
                     s.status == fret_runtime::WorkspaceTabStripActiveVisibilityStatusDiagnostics::Ok
                         && pane_id.as_ref().is_none_or(|id| {
-                            s.pane_id.as_ref().is_some_and(|p| p.as_ref() == id.as_str())
+                            s.pane_id
+                                .as_ref()
+                                .is_some_and(|p| p.as_ref() == id.as_str())
                         })
                 })
             })
@@ -1347,7 +1433,9 @@ fn eval_predicate(
                 w.tab_strip_active_visibility.iter().rev().find(|s| {
                     s.status == fret_runtime::WorkspaceTabStripActiveVisibilityStatusDiagnostics::Ok
                         && pane_id.as_ref().is_none_or(|id| {
-                            s.pane_id.as_ref().is_some_and(|p| p.as_ref() == id.as_str())
+                            s.pane_id
+                                .as_ref()
+                                .is_some_and(|p| p.as_ref() == id.as_str())
                         })
                 })
             })
@@ -1356,7 +1444,9 @@ fn eval_predicate(
             .and_then(|w| {
                 w.tab_strip_drag.iter().rev().find(|s| {
                     pane_id.as_ref().is_none_or(|id| {
-                        s.pane_id.as_ref().is_some_and(|p| p.as_ref() == id.as_str())
+                        s.pane_id
+                            .as_ref()
+                            .is_some_and(|p| p.as_ref() == id.as_str())
                     })
                 })
             })
@@ -1365,7 +1455,9 @@ fn eval_predicate(
             .and_then(|w| {
                 w.tab_strip_drag.iter().rev().find(|s| {
                     pane_id.as_ref().is_none_or(|id| {
-                        s.pane_id.as_ref().is_some_and(|p| p.as_ref() == id.as_str())
+                        s.pane_id
+                            .as_ref()
+                            .is_some_and(|p| p.as_ref() == id.as_str())
                     })
                 })
             })

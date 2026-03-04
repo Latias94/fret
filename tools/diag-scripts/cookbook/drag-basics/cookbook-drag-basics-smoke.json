@@ -1,0 +1,50 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "cookbook-drag-basics-smoke",
+    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
+    "tags": ["cookbook", "drag_basics", "pointer_capture", "smoke"]
+  },
+  "steps": [
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "cookbook.drag_basics.root" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "semantics_numeric_approx_eq",
+        "target": { "kind": "test_id", "id": "cookbook.drag_basics.drag_count" },
+        "field": "value",
+        "value": 0.0,
+        "eps": 0.01
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "drag_pointer",
+      "target": { "kind": "test_id", "id": "cookbook.drag_basics.draggable" },
+      "delta_x": 120.0,
+      "delta_y": 40.0,
+      "steps": 12
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "semantics_numeric_approx_eq",
+        "target": { "kind": "test_id", "id": "cookbook.drag_basics.drag_count" },
+        "field": "value",
+        "value": 1.0,
+        "eps": 0.01
+      },
+      "timeout_frames": 240
+    },
+    { "type": "capture_screenshot", "label": "cookbook-drag-basics-smoke" },
+    { "type": "capture_bundle", "label": "cookbook-drag-basics-smoke" }
+  ]
+}
+

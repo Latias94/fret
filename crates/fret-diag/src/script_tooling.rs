@@ -6,6 +6,17 @@ use serde_json::Value;
 use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 
+fn step_type_string_from_serializable<S: serde::Serialize>(step: &S) -> String {
+    serde_json::to_value(step)
+        .ok()
+        .and_then(|v| {
+            v.get("type")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string())
+        })
+        .unwrap_or_else(|| "unknown".to_string())
+}
+
 pub(crate) struct NormalizedScript {
     pub(crate) normalized: String,
     pub(crate) changed: bool,
@@ -126,6 +137,121 @@ pub(crate) fn lint_scripts(scripts: &[PathBuf]) -> ScriptLintReport {
     }
 }
 
+pub(crate) fn preflight_strict_termination_issues(
+    scripts: &[PathBuf],
+) -> Result<Vec<Value>, String> {
+    let mut issues: Vec<Value> = Vec::new();
+
+    for src in scripts {
+        let resolved = read_script_json_resolving_redirects(src)?;
+        let value = resolved.value;
+
+        let schema_version = crate::compat::script::script_schema_version_from_value(&value);
+
+        let mut push_issue = |code: &'static str,
+                              severity: &'static str,
+                              message: String,
+                              step_index: Option<u64>| {
+            issues.push(serde_json::json!({
+                "path": src.display().to_string(),
+                "resolved_path": resolved.write_path.display().to_string(),
+                "schema_version": schema_version,
+                "severity": severity,
+                "code": code,
+                "message": message,
+                "step_index": step_index,
+            }));
+        };
+
+        match schema_version {
+            1 => {
+                let script: UiActionScriptV1 =
+                    serde_json::from_value(value).map_err(|e| e.to_string())?;
+                let last_capture_bundle_index: Option<usize> =
+                    script.steps.iter().enumerate().rev().find_map(|(i, step)| {
+                        matches!(step, UiActionStepV1::CaptureBundle { .. }).then_some(i)
+                    });
+
+                if let Some(last) = script.steps.last()
+                    && matches!(last, UiActionStepV1::WaitFrames { .. })
+                {
+                    let idx = script.steps.len().saturating_sub(1) as u64;
+                    push_issue(
+                        "script.ends_with_wait_frames",
+                        "error",
+                        "script ends with wait_frames; smoke/gate suites require deterministic termination (prefer wait_until + capture_bundle as the final step)".to_string(),
+                        Some(idx),
+                    );
+                }
+
+                if let Some(capture_idx) = last_capture_bundle_index {
+                    if let Some((i, _)) = script
+                        .steps
+                        .iter()
+                        .enumerate()
+                        .skip(capture_idx + 1)
+                        .find(|(_i, step)| matches!(step, UiActionStepV1::WaitFrames { .. }))
+                    {
+                        push_issue(
+                            "script.wait_frames_after_last_capture_bundle",
+                            "error",
+                            "script has wait_frames after the final capture_bundle; this can stall indefinitely under occlusion/idle".to_string(),
+                            Some(i as u64),
+                        );
+                    }
+                }
+            }
+            2 => {
+                let script: UiActionScriptV2 =
+                    serde_json::from_value(value).map_err(|e| e.to_string())?;
+                let last_capture_bundle_index: Option<usize> =
+                    script.steps.iter().enumerate().rev().find_map(|(i, step)| {
+                        matches!(step, UiActionStepV2::CaptureBundle { .. }).then_some(i)
+                    });
+
+                if let Some(last) = script.steps.last()
+                    && matches!(last, UiActionStepV2::WaitFrames { .. })
+                {
+                    let idx = script.steps.len().saturating_sub(1) as u64;
+                    push_issue(
+                        "script.ends_with_wait_frames",
+                        "error",
+                        "script ends with wait_frames; smoke/gate suites require deterministic termination (prefer wait_until + capture_bundle as the final step)".to_string(),
+                        Some(idx),
+                    );
+                }
+
+                if let Some(capture_idx) = last_capture_bundle_index {
+                    if let Some((i, _)) = script
+                        .steps
+                        .iter()
+                        .enumerate()
+                        .skip(capture_idx + 1)
+                        .find(|(_i, step)| matches!(step, UiActionStepV2::WaitFrames { .. }))
+                    {
+                        push_issue(
+                            "script.wait_frames_after_last_capture_bundle",
+                            "error",
+                            "script has wait_frames after the final capture_bundle; this can stall indefinitely under occlusion/idle".to_string(),
+                            Some(i as u64),
+                        );
+                    }
+                }
+            }
+            _ => {
+                push_issue(
+                    "script.schema_version_unknown",
+                    "error",
+                    format!("unknown script schema_version (expected 1 or 2): {schema_version}"),
+                    None,
+                );
+            }
+        }
+    }
+
+    Ok(issues)
+}
+
 fn validate_script(path: &Path) -> Result<Value, String> {
     let resolved = read_script_json_resolving_redirects(path)?;
     let value = resolved.value;
@@ -167,7 +293,7 @@ fn lint_script(path: &Path) -> Result<Value, String> {
     let schema_version = crate::compat::script::script_schema_version_from_value(&value);
 
     let mut findings: Vec<Value> = Vec::new();
-    let (declared_required, inferred_required, step_summary) = match schema_version {
+    let (declared_required, inferred_required, step_summary, meta_tags) = match schema_version {
         1 => {
             let script: UiActionScriptV1 =
                 serde_json::from_value(value).map_err(|e| e.to_string())?;
@@ -179,6 +305,11 @@ fn lint_script(path: &Path) -> Result<Value, String> {
                     .unwrap_or_default(),
                 infer_required_capabilities_v1(&script),
                 summarize_steps_v1(&script),
+                script
+                    .meta
+                    .as_ref()
+                    .map(|m| m.tags.clone())
+                    .unwrap_or_default(),
             )
         }
         2 => {
@@ -192,6 +323,11 @@ fn lint_script(path: &Path) -> Result<Value, String> {
                     .unwrap_or_default(),
                 infer_required_capabilities_v2(&script),
                 summarize_steps_v2(&script),
+                script
+                    .meta
+                    .as_ref()
+                    .map(|m| m.tags.clone())
+                    .unwrap_or_default(),
             )
         }
         _ => {
@@ -264,12 +400,37 @@ fn lint_script(path: &Path) -> Result<Value, String> {
         }));
     }
 
+    if step_summary["ends_with_wait_frames"].as_bool() == Some(true) {
+        findings.push(serde_json::json!({
+            "severity": "warning",
+            "code": "script.ends_with_wait_frames",
+            "message": "script ends with wait_frames; prefer wait_until, or end with capture_bundle/assert so termination is deterministic under occlusion/idle",
+        }));
+    }
+
+    if step_summary["wait_frames_after_last_capture_bundle"].as_bool() == Some(true) {
+        findings.push(serde_json::json!({
+            "severity": "warning",
+            "code": "script.wait_frames_after_last_capture_bundle",
+            "message": "script has wait_frames after the final capture_bundle; this can stall indefinitely if the remaining window becomes occluded/idle and stops producing frames",
+        }));
+    } else if step_summary["capture_bundle_not_last"].as_bool() == Some(true) {
+        findings.push(serde_json::json!({
+            "severity": "info",
+            "code": "script.capture_bundle_not_last",
+            "message": "final capture_bundle is not the last step; if this is a gate script, prefer capture_bundle as the final step so evidence always represents the terminal state",
+        }));
+    }
+
     Ok(serde_json::json!({
         "path": path.display().to_string(),
         "resolved_path": resolved.write_path.display().to_string(),
         "redirect_chain": resolved.redirect_chain.iter().map(|p| p.display().to_string()).collect::<Vec<_>>(),
         "status": "passed",
         "schema_version": schema_version,
+        "meta": {
+            "tags": meta_tags,
+        },
         "capabilities": {
             "declared_required": declared_required,
             "inferred_required": inferred_required,
@@ -407,6 +568,12 @@ fn window_target_requires_multi_window(window: &UiWindowTargetV1) -> bool {
 
 fn infer_required_capabilities_from_predicate(caps: &mut Vec<String>, predicate: &UiPredicateV1) {
     match predicate {
+        UiPredicateV1::PlatformWindowReceiverAtCursorIs { window } => {
+            push_cap(caps, "diag.platform_window_receiver_at_cursor_v1");
+            if window_target_requires_multi_window(window) {
+                push_cap(caps, "diag.multi_window");
+            }
+        }
         UiPredicateV1::WindowStyleEffectiveIs { window, .. } => {
             push_cap(caps, "diag.window_style_snapshot");
             if window_target_requires_multi_window(window) {
@@ -450,6 +617,7 @@ fn infer_required_capabilities_v2(script: &UiActionScriptV2) -> Vec<String> {
             | UiActionStepV2::DragTo { window, .. }
             | UiActionStepV2::SetSliderValue { window, .. }
             | UiActionStepV2::SetWindowInnerSize { window, .. }
+            | UiActionStepV2::SetWindowStyle { window, .. }
             | UiActionStepV2::SetWindowOuterPosition { window, .. }
             | UiActionStepV2::SetCursorInWindow { window, .. }
             | UiActionStepV2::SetCursorInWindowLogical { window, .. }
@@ -538,6 +706,9 @@ fn infer_required_capabilities_v2(script: &UiActionScriptV2) -> Vec<String> {
         if matches!(step, UiActionStepV2::InjectIncomingOpen { .. }) {
             push_cap(&mut caps, "diag.incoming_open_inject");
         }
+        if matches!(step, UiActionStepV2::SetWindowStyle { .. }) {
+            push_cap(&mut caps, "diag.window_style_patch_v1");
+        }
         if matches!(step, UiActionStepV2::Tap { .. }) {
             push_cap(&mut caps, "diag.gesture_tap");
         }
@@ -578,17 +749,71 @@ pub(crate) fn infer_required_capabilities_from_value(value: &Value) -> Vec<Strin
 fn summarize_steps_v1(script: &UiActionScriptV1) -> Value {
     let mut capture_bundle_count: u64 = 0;
     let mut wait_frames_max: u64 = 0;
-    for step in &script.steps {
+    let mut last_capture_bundle_index: Option<u64> = None;
+
+    for (i, step) in script.steps.iter().enumerate() {
         match step {
-            UiActionStepV1::CaptureBundle { .. } => capture_bundle_count += 1,
+            UiActionStepV1::CaptureBundle { .. } => {
+                capture_bundle_count += 1;
+                last_capture_bundle_index = Some(i as u64);
+            }
             UiActionStepV1::WaitFrames { n } => wait_frames_max = wait_frames_max.max(*n as u64),
             _ => {}
         }
     }
+
+    let ends_with_wait_frames =
+        matches!(script.steps.last(), Some(UiActionStepV1::WaitFrames { .. }));
+    let last_step_type = script
+        .steps
+        .last()
+        .map(step_type_string_from_serializable)
+        .unwrap_or_else(|| "none".to_string());
+
+    let (
+        capture_bundle_not_last,
+        wait_frames_after_last_capture_bundle,
+        tail_step_count,
+        tail_step_types,
+    ) = if let Some(last_capture_bundle_index) = last_capture_bundle_index {
+        let idx = last_capture_bundle_index as usize;
+        let capture_bundle_not_last = idx + 1 < script.steps.len();
+        let mut wait_frames_after_last_capture_bundle = false;
+        let mut tail_step_types: Vec<String> = Vec::new();
+        for step in script.steps.iter().skip(idx + 1) {
+            if matches!(step, UiActionStepV1::WaitFrames { .. }) {
+                wait_frames_after_last_capture_bundle = true;
+            }
+            let t = step_type_string_from_serializable(step);
+            if tail_step_types
+                .last()
+                .map(|prev| prev != &t)
+                .unwrap_or(true)
+            {
+                tail_step_types.push(t);
+            }
+        }
+        (
+            capture_bundle_not_last,
+            wait_frames_after_last_capture_bundle,
+            (script.steps.len().saturating_sub(idx + 1)) as u64,
+            tail_step_types,
+        )
+    } else {
+        (false, false, 0, Vec::new())
+    };
+
     serde_json::json!({
         "count": script.steps.len(),
         "capture_bundle_count": capture_bundle_count,
+        "last_capture_bundle_index": last_capture_bundle_index,
+        "capture_bundle_not_last": capture_bundle_not_last,
+        "tail_step_count_after_last_capture_bundle": tail_step_count,
+        "tail_step_types_after_last_capture_bundle": tail_step_types,
+        "wait_frames_after_last_capture_bundle": wait_frames_after_last_capture_bundle,
         "wait_frames_max": wait_frames_max,
+        "ends_with_wait_frames": ends_with_wait_frames,
+        "last_step_type": last_step_type,
     })
 }
 
@@ -597,10 +822,14 @@ fn summarize_steps_v2(script: &UiActionScriptV2) -> Value {
     let mut wait_frames_max: u64 = 0;
     let mut click_stable_count: u64 = 0;
     let mut wait_bounds_stable_count: u64 = 0;
+    let mut last_capture_bundle_index: Option<u64> = None;
 
-    for step in &script.steps {
+    for (i, step) in script.steps.iter().enumerate() {
         match step {
-            UiActionStepV2::CaptureBundle { .. } => capture_bundle_count += 1,
+            UiActionStepV2::CaptureBundle { .. } => {
+                capture_bundle_count += 1;
+                last_capture_bundle_index = Some(i as u64);
+            }
             UiActionStepV2::WaitFrames { n, .. } => {
                 wait_frames_max = wait_frames_max.max(*n as u64)
             }
@@ -609,12 +838,61 @@ fn summarize_steps_v2(script: &UiActionScriptV2) -> Value {
             _ => {}
         }
     }
+
+    let ends_with_wait_frames =
+        matches!(script.steps.last(), Some(UiActionStepV2::WaitFrames { .. }));
+    let last_step_type = script
+        .steps
+        .last()
+        .map(step_type_string_from_serializable)
+        .unwrap_or_else(|| "none".to_string());
+
+    let (
+        capture_bundle_not_last,
+        wait_frames_after_last_capture_bundle,
+        tail_step_count,
+        tail_step_types,
+    ) = if let Some(last_capture_bundle_index) = last_capture_bundle_index {
+        let idx = last_capture_bundle_index as usize;
+        let capture_bundle_not_last = idx + 1 < script.steps.len();
+        let mut wait_frames_after_last_capture_bundle = false;
+        let mut tail_step_types: Vec<String> = Vec::new();
+        for step in script.steps.iter().skip(idx + 1) {
+            if matches!(step, UiActionStepV2::WaitFrames { .. }) {
+                wait_frames_after_last_capture_bundle = true;
+            }
+            let t = step_type_string_from_serializable(step);
+            if tail_step_types
+                .last()
+                .map(|prev| prev != &t)
+                .unwrap_or(true)
+            {
+                tail_step_types.push(t);
+            }
+        }
+        (
+            capture_bundle_not_last,
+            wait_frames_after_last_capture_bundle,
+            (script.steps.len().saturating_sub(idx + 1)) as u64,
+            tail_step_types,
+        )
+    } else {
+        (false, false, 0, Vec::new())
+    };
+
     serde_json::json!({
         "count": script.steps.len(),
         "capture_bundle_count": capture_bundle_count,
+        "last_capture_bundle_index": last_capture_bundle_index,
+        "capture_bundle_not_last": capture_bundle_not_last,
+        "tail_step_count_after_last_capture_bundle": tail_step_count,
+        "tail_step_types_after_last_capture_bundle": tail_step_types,
+        "wait_frames_after_last_capture_bundle": wait_frames_after_last_capture_bundle,
         "wait_frames_max": wait_frames_max,
         "click_stable_count": click_stable_count,
         "wait_bounds_stable_count": wait_bounds_stable_count,
+        "ends_with_wait_frames": ends_with_wait_frames,
+        "last_step_type": last_step_type,
     })
 }
 
@@ -650,7 +928,9 @@ pub(crate) fn canonicalize_json_value(value: &mut Value) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use fret_diag_protocol::{UiMouseButtonV1, UiSelectorV1};
+    use fret_diag_protocol::{
+        UiMouseButtonV1, UiSelectorV1, UiWindowHitTestPatchV1, UiWindowStylePatchV1,
+    };
 
     #[test]
     fn canonicalize_sorts_keys_recursively() {
@@ -762,6 +1042,72 @@ mod tests {
     }
 
     #[test]
+    fn summarize_detects_capture_bundle_trailing_wait_frames_v2() {
+        let script = UiActionScriptV2 {
+            schema_version: 2,
+            meta: None,
+            steps: vec![
+                UiActionStepV2::CaptureBundle {
+                    label: Some("end".to_string()),
+                    max_snapshots: None,
+                },
+                UiActionStepV2::WaitFrames { window: None, n: 1 },
+            ],
+        };
+
+        let summary = summarize_steps_v2(&script);
+        assert_eq!(summary["capture_bundle_count"].as_u64(), Some(1));
+        assert_eq!(summary["last_capture_bundle_index"].as_u64(), Some(0));
+        assert_eq!(summary["capture_bundle_not_last"].as_bool(), Some(true));
+        assert_eq!(
+            summary["wait_frames_after_last_capture_bundle"].as_bool(),
+            Some(true)
+        );
+        assert_eq!(summary["ends_with_wait_frames"].as_bool(), Some(true));
+        assert_eq!(summary["last_step_type"].as_str(), Some("wait_frames"));
+    }
+
+    #[test]
+    fn strict_termination_preflight_reports_trailing_wait_frames() {
+        let root = std::env::temp_dir().join(format!(
+            "fret-diag-script-tooling-{}-{}",
+            crate::util::now_unix_ms(),
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(&root).unwrap();
+
+        let script_path = root.join("script.json");
+        let script = UiActionScriptV2 {
+            schema_version: 2,
+            meta: None,
+            steps: vec![
+                UiActionStepV2::CaptureBundle {
+                    label: Some("end".to_string()),
+                    max_snapshots: None,
+                },
+                UiActionStepV2::WaitFrames { window: None, n: 1 },
+            ],
+        };
+        std::fs::write(
+            &script_path,
+            serde_json::to_vec_pretty(&script).expect("script json"),
+        )
+        .unwrap();
+
+        let issues = preflight_strict_termination_issues(&[script_path.clone()]).unwrap();
+        assert!(!issues.is_empty());
+        assert!(issues.iter().any(|it| {
+            it.get("code").and_then(|v| v.as_str()).is_some_and(|c| {
+                c == "script.ends_with_wait_frames"
+                    || c == "script.wait_frames_after_last_capture_bundle"
+            })
+        }));
+
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
     fn lint_infers_gesture_pinch_capability() {
         let script = UiActionScriptV2 {
             schema_version: 2,
@@ -822,5 +1168,22 @@ mod tests {
         };
         let inferred = infer_required_capabilities_v2(&script);
         assert!(inferred.iter().any(|c| c == "diag.gesture_swipe"));
+    }
+
+    #[test]
+    fn lint_infers_window_style_patch_capability() {
+        let script = UiActionScriptV2 {
+            schema_version: 2,
+            meta: None,
+            steps: vec![UiActionStepV2::SetWindowStyle {
+                window: None,
+                style: UiWindowStylePatchV1 {
+                    hit_test: Some(UiWindowHitTestPatchV1::PassthroughAll),
+                    ..UiWindowStylePatchV1::default()
+                },
+            }],
+        };
+        let inferred = infer_required_capabilities_v2(&script);
+        assert!(inferred.iter().any(|c| c == "diag.window_style_patch_v1"));
     }
 }

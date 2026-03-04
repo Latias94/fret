@@ -30,6 +30,7 @@ ui-app-driver = [
   "dep:fret-ui-kit",
 ]
 ui-app-command-palette = ["ui-app-driver", "dep:fret-ui-shadcn"]
+window-style-profiles = ["dep:fret-window-style-profiles"]
 tracing = ["dep:tracing", "dep:tracing-subscriber"]
 tracy = ["tracing", "dep:tracing-tracy"]
 diagnostics = ["tracing", "dep:fret-canvas", "dep:fret-query", "fret-launch/diag-screenshots"]
@@ -49,6 +50,7 @@ fret-app = { version = "0.1.0", path = "../../crates/fret-app" }
 fret-core = { version = "0.1.0", path = "../../crates/fret-core" }
 fret-i18n = { version = "0.1.0", path = "../../crates/fret-i18n" }
 fret-runtime = { version = "0.1.0", path = "../../crates/fret-runtime", optional = true }
+fret-window-style-profiles = { version = "0.1.0", path = "../fret-window-style-profiles", optional = true }
 fret-icons = { version = "0.1.0", path = "../fret-icons" }
 fret-launch = { version = "0.1.0", path = "../../crates/fret-launch" }
 fret-render = { version = "0.1.0", path = "../../crates/fret-render" }

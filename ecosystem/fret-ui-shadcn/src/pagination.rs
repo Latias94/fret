@@ -1,5 +1,5 @@
+use crate::LayoutDirection;
 use fret_core::{Color, Corners, Edges, Px, SemanticsRole};
-use fret_icons::IconId;
 use fret_runtime::CommandId;
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, MainAlign, PressableA11y,
@@ -11,9 +11,10 @@ use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::declarative::viewport_queries;
-use fret_ui_kit::primitives::direction as direction_prim;
 use fret_ui_kit::{LayoutRefinement, MetricRef, Radius, Space};
 use std::sync::Arc;
+
+use crate::rtl;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum PaginationLinkSize {
@@ -408,7 +409,7 @@ impl PaginationPrevious {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let dir = direction_prim::use_direction_in_scope(cx, None);
+        let dir = crate::use_direction(cx, None);
         let text = self.text.unwrap_or_else(|| Arc::<str>::from("Previous"));
         let show_text = viewport_queries::viewport_width_at_least(
             cx,
@@ -416,15 +417,10 @@ impl PaginationPrevious {
             viewport_queries::tailwind::SM,
             Default::default(),
         );
-        let chevron = if dir == direction_prim::LayoutDirection::Rtl {
-            "lucide.chevron-right"
-        } else {
-            "lucide.chevron-left"
-        };
-        let icon = decl_icon::icon(cx, IconId::new_static(chevron));
+        let icon = decl_icon::icon(cx, rtl::chevron_inline_start(dir));
 
         let mut children = Vec::with_capacity(2);
-        if dir == direction_prim::LayoutDirection::Rtl {
+        if dir == LayoutDirection::Rtl {
             if show_text {
                 children.push(cx.text(text));
             }
@@ -496,7 +492,7 @@ impl PaginationNext {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let dir = direction_prim::use_direction_in_scope(cx, None);
+        let dir = crate::use_direction(cx, None);
         let text = self.text.unwrap_or_else(|| Arc::<str>::from("Next"));
         let show_text = viewport_queries::viewport_width_at_least(
             cx,
@@ -504,15 +500,10 @@ impl PaginationNext {
             viewport_queries::tailwind::SM,
             Default::default(),
         );
-        let chevron = if dir == direction_prim::LayoutDirection::Rtl {
-            "lucide.chevron-left"
-        } else {
-            "lucide.chevron-right"
-        };
-        let icon = decl_icon::icon(cx, IconId::new_static(chevron));
+        let icon = decl_icon::icon(cx, rtl::chevron_inline_end(dir));
 
         let mut children = Vec::with_capacity(2);
-        if dir == direction_prim::LayoutDirection::Rtl {
+        if dir == LayoutDirection::Rtl {
             children.push(icon);
             if show_text {
                 children.push(cx.text(text));

@@ -13,7 +13,6 @@ use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::primitives::direction as direction_prim;
 use fret_ui_kit::theme_tokens;
 use fret_ui_kit::typography;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space, ui};
@@ -648,7 +647,7 @@ impl CalendarRange {
                             };
 
                             let days_grid = cx.roving_flex(roving_props, move |cx| {
-                                let direction = direction_prim::use_direction_in_scope(cx, None);
+                                let direction = crate::use_direction(cx, None);
                                 let month_model = month_model_days.clone();
                                 let disabled_for_nav = Arc::clone(&disabled);
                                 cx.roving_on_navigate(Arc::new(move |host, _cx, it| {
@@ -1298,7 +1297,7 @@ fn calendar_range_month_view<H: UiHost>(
     };
 
     let days_grid = cx.roving_flex(roving_props, move |cx| {
-        let direction = direction_prim::use_direction_in_scope(cx, None);
+        let direction = crate::use_direction(cx, None);
         let month_model = month_model.clone();
         let disabled_for_nav = Arc::clone(&disabled);
         cx.roving_on_navigate(Arc::new(move |host, _cx, it| {

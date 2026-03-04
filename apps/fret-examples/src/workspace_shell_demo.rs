@@ -1009,10 +1009,16 @@ impl WinitAppDriver for WorkspaceShellDemoDriver {
                     .unwrap_or_else(CommandDispatchSourceV1::programmatic)
             },
         );
+        let pending_source_for_ui = pending_source.clone();
         app.with_global_mut(
             WindowPendingCommandDispatchSourceService::default,
             |svc, app| {
-                svc.record(window, app.tick_id(), command.clone(), pending_source);
+                svc.record(
+                    window,
+                    app.tick_id(),
+                    command.clone(),
+                    pending_source_for_ui,
+                );
             },
         );
 
@@ -1054,7 +1060,7 @@ impl WinitAppDriver for WorkspaceShellDemoDriver {
                         tick_id: app.tick_id(),
                         window,
                         command: command.clone(),
-                        source: pending_source,
+                        source: pending_source.clone(),
                         handled: true,
                         handled_by_element: None,
                         handled_by_scope,

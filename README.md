@@ -29,7 +29,7 @@ Long-term, ecosystem crates may move to a separate components repository.
 - **Web-native ergonomics, Rust-native architecture**: declarative element tree authoring with typed state (`Model<T>`) and typed messages/routing. *(declarative elements, state, routing)*
 - **Ecosystem included (batteries, but modular)**: shadcn/ui v4-aligned component taxonomy + recipes, icons, docking UI, markdown, tables, node graph, charts, and more. *(fret-ui-kit, fret-ui-shadcn, icons, docking)*
 - **Mechanism vs policy separation**: the core runtime stays mechanism-only; interaction policies and defaults live in ecosystem crates so apps can stay opinionated without locking the engine. *(runtime contracts, policy in components)*
-- **Rendering semantics you can rely on**: ordered scene ops, clipping/rounded corners/shadows as stable semantics (implementation can evolve without breaking UI behavior). *(ordered SceneOp, compositing groups (isolated opacity), ClipPath, bounded/budgeted offscreen passes, deterministic degradation, GPU conformance gates)*
+- **Rendering semantics you can rely on**: ordered scene ops, clipping/rounded corners/shadows as stable semantics (implementation can evolve without breaking UI behavior). *(ordered SceneOp, compositing groups (isolated opacity), ClipPath, bounded/budgeted offscreen passes, deterministic degradation)*
 - **Debuggable by design**: semantics-first inspection + shareable diagnostics artifacts so UI bugs are explainable, not “works on my machine”. *(semantics tree, inspector, shareable bundles)*
 - **Performance is observable**: built-in perf attribution surfaces worst-frame regressions and layout/measure hot spots without ad-hoc instrumentation. *(worst-frame triage, attribution, layout/measure)*
 - **Modular backends & integration-friendly**: portable core + pluggable platform/runner/render backends to fit both engine-hosted and editor-hosted GPU contexts; desktop-first with an explicit WebGPU/wasm path. *(pluggable backends, engine-hosted GPU, WebGPU/wasm)*
@@ -60,8 +60,8 @@ Need help choosing the right example entry point (templates vs cookbook vs galle
 ### 1) Run a lightweight cookbook example (recommended)
 
 ```bash
-cargo run -p fret-cookbook --example hello
-cargo run -p fret-cookbook --example simple_todo
+cargo run -p fretboard -- dev native --example hello
+cargo run -p fretboard -- dev native --example simple_todo
 ```
 
 ### 2) Generate a new native app scaffold
@@ -85,15 +85,26 @@ cargo run --manifest-path local/my-todo/Cargo.toml
 Discover runnable targets:
 
 ```bash
-cargo run -p fretboard -- list native-demos
 cargo run -p fretboard -- list cookbook-examples
 cargo run -p fretboard -- list web-demos
 ```
 
-Run a native demo shell (optional; heavier than cookbook):
+Run a cookbook example (this runner auto-enables known feature-gated Lab examples):
 
 ```bash
-cargo run -p fretboard -- dev native --bin components_gallery
+cargo run -p fretboard -- dev native --example query_basics
+```
+
+Maintainer native demo bins (from `apps/fret-demo`, not the onboarding path):
+
+```bash
+cargo run -p fretboard -- list native-demos --all
+```
+
+Run the UI gallery (optional; heavier than cookbook):
+
+```bash
+cargo run -p fret-ui-gallery
 ```
 
 Run a web demo (optional):
@@ -102,29 +113,33 @@ Run a web demo (optional):
 cargo run -p fretboard -- dev web --demo ui_gallery
 ```
 
+### 4) Optional: diagnostics walkthrough (advanced)
+
+Fret includes an optional diagnostics + scripted UI automation toolchain (`fretboard diag`).
+If you are new to it, start with the cookbook walkthrough:
+
+- [apps/fret-cookbook/README.md#diagnostics-optional](./apps/fret-cookbook/README.md#diagnostics-optional)
+
 ## Todo App API Taste
 
 This is the interface style we optimize for: typed state, typed actions, and shadcn-based components.
 
 ```rust
-use std::sync::Arc;
 use fret::prelude::*;
 
 mod act {
     fret::actions!([Add = "app.todo.add.v1"]);
 }
 
-fn main() -> anyhow::Result<()> {
-    FretApp::new("todo")
-        .window("todo", (560.0, 520.0))
-        .run_view::<TodoView>()
-        .map_err(anyhow::Error::from)?;
-    Ok(())
-}
-```
-
-```rust
 struct TodoView;
+
+fn install_app(app: &mut App) {
+    shadcn::shadcn_themes::apply_shadcn_new_york(
+        app,
+        shadcn::shadcn_themes::ShadcnBaseColor::Slate,
+        shadcn::shadcn_themes::ShadcnColorScheme::Light,
+    );
+}
 
 impl View for TodoView {
     fn init(_app: &mut App, _window: AppWindowId) -> Self {
@@ -135,18 +150,41 @@ impl View for TodoView {
         let draft = cx.use_state::<String>();
         let enabled = !cx.watch_model(&draft).layout().cloned_or_default().trim().is_empty();
 
-        cx.on_action::<act::Add>(|_host, _acx| true);
+        cx.on_action::<act::Add>({
+            let draft = draft.clone();
+            move |host, acx| {
+                let _ = host.models_mut().update(&draft, String::clear);
+                host.request_redraw(acx.window);
+                host.notify(acx);
+                true
+            }
+        });
 
-        ui::v_flex(cx, |cx| {
-            ui::children![cx;
-                shadcn::Input::new(draft).placeholder("Add a task…"),
-                shadcn::Button::new("Add").disabled(!enabled).action(act::Add),
-            ]
-        })
-        .gap(Space::N3)
-        .into_element(cx)
-        .into()
+        let input = shadcn::Input::new(draft.clone())
+            .a11y_label("New task")
+            .placeholder("Add a task…")
+            .submit_command(act::Add.into())
+            .into_element(cx);
+
+        let add_btn = shadcn::Button::new("Add")
+            .disabled(!enabled)
+            .action(act::Add)
+            .into_element(cx);
+
+        ui::h_flex(cx, |_cx| [input, add_btn])
+            .gap(Space::N2)
+            .items_center()
+            .into_element(cx)
+            .into()
     }
+}
+
+fn main() -> fret::Result<()> {
+    FretApp::new("todo")
+        .window("todo", (560.0, 520.0))
+        .config_files(false)
+        .install_app(install_app)
+        .run_view::<TodoView>()
 }
 ```
 

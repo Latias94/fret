@@ -21,23 +21,25 @@ default = [
 # “Works out of the box” ecosystem bundle (within the enabled platform features).
 batteries = [
     "app",
+    "state",
+    "diagnostics",
     "config-files",
     "ui-assets",
     "icons",
     "preload-icon-svgs",
 ]
 
-# Recommended “just build an app” baseline: shadcn-first + state helpers.
+# Recommended “just build an app” baseline: shadcn-first.
 #
 # Intentionally excludes:
+# - `diagnostics` (pulls in extra dev tooling; opt-in)
+# - `state` (selector/query helpers; opt-in)
 # - `config-files` (filesystem side effects; opt-in)
 # - `ui-assets` (image/SVG caches; opt-in)
 # - `preload-icon-svgs` (GPU-time cost; opt-in)
 # - `command-palette` (policy; opt-in)
 app = [
-    "diagnostics",
     "shadcn",
-    "state",
 ]
 
 # Derived + async state helpers used by `ViewCx`.
@@ -76,6 +78,12 @@ icons = [
 icons-lucide = ["icons"]
 preload-icon-svgs = ["fret-bootstrap/preload-icon-svgs"]
 command-palette = ["fret-bootstrap/ui-app-command-palette"]
+
+# Legacy/compat MVU authoring surfaces (AFA-clean-065).
+#
+# This feature is intentionally not in `default`: MVU is legacy-only and should be opt-in in
+# downstream apps. Prefer `View` + typed actions + payload actions (ADR 0308/0307/0312).
+legacy-mvu = []
 
 [dependencies]
 thiserror.workspace = true

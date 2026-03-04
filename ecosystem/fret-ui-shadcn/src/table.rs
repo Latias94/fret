@@ -1,11 +1,10 @@
 use std::sync::Arc;
 
 use fret_core::geometry::Edges;
-use fret_core::{Axis, FontId, FontWeight, TextOverflow, TextStyle, TextWrap};
+use fret_core::{Axis, FontId, FontWeight, TextAlign, TextOverflow, TextStyle, TextWrap};
 use fret_ui::action::OnActivate;
 use fret_ui::element::{
-    AnyElement, CrossAlign, ElementKind, Elements, FlexProps, GridProps, MainAlign, Overflow,
-    PressableProps, ScrollAxis,
+    AnyElement, CrossAlign, ElementKind, FlexProps, MainAlign, Overflow, PressableProps, ScrollAxis,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::command::ElementCommandGatingExt as _;
@@ -16,6 +15,7 @@ use fret_ui_kit::primitives::scroll_area::ScrollAreaType;
 use fret_ui_kit::typography;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Space, ui};
 
+use crate::direction::{LayoutDirection, use_direction};
 use crate::layout as shadcn_layout;
 
 fn table_text_style(theme: &Theme) -> TextStyle {
@@ -55,19 +55,34 @@ fn foreground(theme: &Theme) -> fret_core::Color {
     theme.color_token("foreground")
 }
 
-fn apply_table_cell_text_defaults(mut child: AnyElement) -> AnyElement {
+fn apply_table_cell_text_defaults(
+    mut child: AnyElement,
+    text_align: Option<TextAlign>,
+) -> AnyElement {
     match &mut child.kind {
         ElementKind::Text(props) => {
             props.wrap = TextWrap::None;
             props.overflow = TextOverflow::Clip;
+            if let Some(align) = text_align {
+                props.align = align;
+                props.layout.size.width = fret_ui::element::Length::Fill;
+            }
         }
         ElementKind::StyledText(props) => {
             props.wrap = TextWrap::None;
             props.overflow = TextOverflow::Clip;
+            if let Some(align) = text_align {
+                props.align = align;
+                props.layout.size.width = fret_ui::element::Length::Fill;
+            }
         }
         ElementKind::SelectableText(props) => {
             props.wrap = TextWrap::None;
             props.overflow = TextOverflow::Clip;
+            if let Some(align) = text_align {
+                props.align = align;
+                props.layout.size.width = fret_ui::element::Length::Fill;
+            }
         }
         _ => {}
     }
@@ -422,7 +437,10 @@ impl TableRow {
         }
         let on_activate = self.on_activate.clone();
         let border_bottom = self.border_bottom;
-        let children = self.children;
+        let mut children = self.children;
+        if use_direction(cx, None) == LayoutDirection::Rtl {
+            children.reverse();
+        }
 
         let pressable_layout = {
             let theme = Theme::global(&*cx.app);
@@ -439,7 +457,7 @@ impl TableRow {
                 cx.pressable_add_on_activate(on_activate);
             }
             cx.pressable_dispatch_command_if_enabled_opt(on_click);
-            let (props, grid_layout) = {
+            let (props, row_layout) = {
                 let theme = Theme::global(&*cx.app);
 
                 let mut hover_bg = muted_bg(theme);
@@ -470,75 +488,28 @@ impl TableRow {
                     Edges::all(fret_core::Px(0.0))
                 };
 
-                let grid_layout =
+                let row_layout =
                     decl_style::layout_style(theme, LayoutRefinement::default().w_full());
 
-                (props, grid_layout)
+                (props, row_layout)
             };
 
             vec![cx.container(props, move |cx| {
-                let grid = GridProps {
-                    cols,
+                let row = FlexProps {
+                    layout: row_layout,
+                    direction: Axis::Horizontal,
                     gap: fret_core::Px(0.0).into(),
                     padding: fret_core::geometry::Edges::all(fret_core::Px(0.0)).into(),
                     justify: MainAlign::Start,
                     align: CrossAlign::Stretch,
-                    layout: grid_layout,
-                    ..Default::default()
+                    wrap: false,
                 };
 
-                let cells = assign_grid_column_starts(children);
-                vec![cx.grid(grid, move |_cx| cells)]
+                let _ = cols;
+                vec![cx.flex(row, move |_cx| children)]
             })]
         })
     }
-}
-
-fn assign_grid_column_starts<I>(cells: I) -> Elements
-where
-    I: IntoIterator<Item = AnyElement>,
-{
-    let cells: Vec<AnyElement> = cells.into_iter().collect();
-
-    fn grid_span(cell: &AnyElement) -> u16 {
-        match &cell.kind {
-            fret_ui::element::ElementKind::Container(props) => {
-                props.layout.grid.column.span.unwrap_or(1).max(1)
-            }
-            fret_ui::element::ElementKind::Semantics(props) => {
-                props.layout.grid.column.span.unwrap_or(1).max(1)
-            }
-            _ => 1,
-        }
-    }
-
-    fn set_grid_start(mut cell: AnyElement, start: i16) -> AnyElement {
-        match &mut cell.kind {
-            fret_ui::element::ElementKind::Container(props) => {
-                if props.layout.grid.column.start.is_none() {
-                    props.layout.grid.column.start = Some(start);
-                }
-            }
-            fret_ui::element::ElementKind::Semantics(props) => {
-                if props.layout.grid.column.start.is_none() {
-                    props.layout.grid.column.start = Some(start);
-                }
-            }
-            _ => {}
-        }
-        cell
-    }
-
-    let mut col: i16 = 1;
-    let mut out: Vec<AnyElement> = Vec::with_capacity(cells.len());
-    for cell in cells {
-        let span = grid_span(&cell);
-        let start = col;
-        out.push(set_grid_start(cell, start));
-        col = col.saturating_add(span as i16);
-    }
-
-    out.into()
 }
 
 /// shadcn/ui `TableHead` (`th`).
@@ -547,6 +518,7 @@ pub struct TableHead {
     text: Arc<str>,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
+    text_align: TextAlign,
 }
 
 impl TableHead {
@@ -555,7 +527,17 @@ impl TableHead {
             text: text.into(),
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
+            text_align: TextAlign::Start,
         }
+    }
+
+    pub fn text_align(mut self, align: TextAlign) -> Self {
+        self.text_align = align;
+        self
+    }
+
+    pub fn text_align_end(self) -> Self {
+        self.text_align(TextAlign::End)
     }
 
     pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
@@ -573,6 +555,9 @@ impl TableHead {
         let theme = Theme::global(&*cx.app);
         let px = Space::N2;
         let py = Space::N0;
+        let text_align = self.text_align;
+        let caller_set_flex = self.layout.flex_item.is_some();
+        let layout_override = self.layout;
 
         let style = TextStyle {
             weight: FontWeight::MEDIUM,
@@ -581,14 +566,22 @@ impl TableHead {
         let fg = foreground(theme);
 
         let chrome = ChromeRefinement::default().px(px).py(py).merge(self.chrome);
-        let props = decl_style::container_props(
-            theme,
-            chrome,
-            LayoutRefinement::default()
-                .w_full()
+        let props = decl_style::container_props(theme, chrome, {
+            let mut layout = LayoutRefinement::default()
+                .flex_1()
+                .min_w_0()
                 .min_h(row_min_h(theme))
-                .merge(self.layout),
-        );
+                .merge(layout_override);
+            let caller_set_width = layout
+                .size
+                .as_ref()
+                .and_then(|s| s.width.as_ref())
+                .is_some();
+            if caller_set_width && !caller_set_flex {
+                layout = layout.flex_none();
+            }
+            layout
+        });
 
         let text = self.text;
         let content_layout =
@@ -609,6 +602,8 @@ impl TableHead {
                         .text_size_px(style.size)
                         .font_weight(style.weight)
                         .text_color(ColorRef::Color(fg))
+                        .text_align(text_align)
+                        .w_full()
                         .nowrap();
                     if let Some(line_height) = style.line_height {
                         head_text = head_text.line_height_px(line_height);
@@ -630,6 +625,7 @@ pub struct TableCell {
     col_span: Option<u16>,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
+    text_align: Option<TextAlign>,
 }
 
 impl TableCell {
@@ -639,16 +635,26 @@ impl TableCell {
             col_span: None,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
+            text_align: None,
         }
     }
 
-    /// Sets `colSpan` semantics for the underlying grid-backed table layout.
+    /// Sets `colSpan` semantics for a flex-backed table row.
     ///
-    /// Note: This only affects placement within Fret's `Grid` implementation; it does not imply
-    /// HTML table semantics, and column sizing remains a separate concern.
+    /// This is modeled as `flex-grow = span` (only when the caller did not provide an explicit
+    /// width or flex-item overrides).
     pub fn col_span(mut self, span: u16) -> Self {
         self.col_span = Some(span.max(1));
         self
+    }
+
+    pub fn text_align(mut self, align: TextAlign) -> Self {
+        self.text_align = Some(align);
+        self
+    }
+
+    pub fn text_align_end(self) -> Self {
+        self.text_align(TextAlign::End)
     }
 
     pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
@@ -666,20 +672,39 @@ impl TableCell {
         let theme = Theme::global(&*cx.app);
         let px = Space::N2;
         let py = Space::N2;
+        let caller_set_flex = self.layout.flex_item.is_some();
+        let caller_set_width = self
+            .layout
+            .size
+            .as_ref()
+            .and_then(|s| s.width.as_ref())
+            .is_some();
+        let layout_override = self.layout;
 
         let chrome = ChromeRefinement::default().px(px).py(py).merge(self.chrome);
-        let layout = LayoutRefinement::default().w_full().merge(self.layout);
-        let mut props = decl_style::container_props(theme, chrome, layout);
-        if let Some(span) = self.col_span {
-            props.layout.grid.column.span = Some(span);
+        let mut layout = LayoutRefinement::default()
+            .flex_1()
+            .min_w_0()
+            .merge(layout_override);
+        if caller_set_width && !caller_set_flex {
+            layout = layout.flex_none();
         }
-        let row_layout = decl_style::layout_style(theme, LayoutRefinement::default().w_full());
+        if let Some(span) = self.col_span
+            && !caller_set_width
+            && !caller_set_flex
+        {
+            layout = layout.flex_grow(span as f32);
+        }
+
+        let props = decl_style::container_props(theme, chrome, layout);
+        let row_layout =
+            decl_style::layout_style(theme, LayoutRefinement::default().w_full().h_full());
         let wrapper_props = decl_style::container_props(
             theme,
             ChromeRefinement::default(),
-            LayoutRefinement::default().flex_1().min_w_0(),
+            LayoutRefinement::default().w_full().min_w_0(),
         );
-        let child = apply_table_cell_text_defaults(self.child);
+        let child = apply_table_cell_text_defaults(self.child, self.text_align);
         cx.container(props, move |cx| {
             vec![cx.flex(
                 FlexProps {

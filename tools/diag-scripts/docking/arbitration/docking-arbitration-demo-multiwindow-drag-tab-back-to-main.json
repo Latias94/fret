@@ -138,7 +138,6 @@
       "window": { "kind": "first_seen" },
       "predicate": { "kind": "dock_graph_signature_contains", "needle": "floatings=[]" }
     },
-    { "type": "capture_bundle", "label": "docking-arbitration-demo-multiwindow-drag-tab-back-to-main" },
-    { "type": "wait_frames", "n": 2 }
+    { "type": "capture_bundle", "label": "docking-arbitration-demo-multiwindow-drag-tab-back-to-main" }
   ]
 }

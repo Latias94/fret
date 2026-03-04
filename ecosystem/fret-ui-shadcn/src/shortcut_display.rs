@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use fret_runtime::{
     CommandId, InputContext, InputDispatchPhase, KeymapService, Platform, PlatformCapabilities,
-    WindowInputContextService, format_sequence,
+    WindowInputContextService, WindowKeyContextStackService, format_sequence,
 };
 use fret_ui::{ElementContext, UiHost};
 
@@ -40,12 +40,23 @@ pub(crate) fn command_shortcut_label<H: UiHost>(
     base_ctx.caps = caps;
     base_ctx.dispatch_phase = InputDispatchPhase::Bubble;
 
+    let key_contexts: Vec<Arc<str>> = cx
+        .app
+        .global::<WindowKeyContextStackService>()
+        .and_then(|svc| svc.snapshot(cx.window))
+        .map(|v| v.to_vec())
+        .unwrap_or_default();
+
     let seq = cx
         .app
         .global::<KeymapService>()
         .and_then(|svc| {
             svc.keymap
-                .display_shortcut_for_command_sequence(&base_ctx, command)
+                .display_shortcut_for_command_sequence_with_key_contexts(
+                    &base_ctx,
+                    &key_contexts,
+                    command,
+                )
         })
         .or_else(|| {
             cx.app.commands().get(command.clone()).and_then(|meta| {

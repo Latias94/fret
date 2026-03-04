@@ -10,6 +10,12 @@ milestones, use:
 
 Active workstreams:
 
+- `docs/workstreams/open-source-onboarding-fearless-refactor-v1/README.md`
+- `docs/workstreams/open-source-onboarding-fearless-refactor-v1/TODO.md`
+- `docs/workstreams/open-source-onboarding-fearless-refactor-v1/MILESTONES.md`
+- `docs/workstreams/ui-memory-footprint-closure-v1/README.md`
+- `docs/workstreams/ui-memory-footprint-closure-v1/TODO.md`
+- `docs/workstreams/ui-memory-footprint-closure-v1/MILESTONES.md`
 - `docs/workstreams/ui-focus-overlay-fearless-refactor-v1/DESIGN.md`
 - `docs/workstreams/ui-focus-overlay-fearless-refactor-v1/TODO.md`
 - `docs/workstreams/ui-focus-overlay-fearless-refactor-v1/MILESTONES.md`

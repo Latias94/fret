@@ -39,6 +39,10 @@
     "tools/diag-scripts/ui-gallery-input-otp-docs-smoke.json",
     "tools/diag-scripts/ui-gallery-popover-click-through-outside-press-focus-underlay.json",
     "tools/diag-scripts/ui-gallery-popover-dialog-escape-underlay.json",
+    "tools/diag-scripts/ui-gallery/navigation-menu/ui-gallery-navigation-menu-docs-smoke.json",
+    "tools/diag-scripts/ui-gallery/navigation-menu/ui-gallery-navigation-menu-tab-enters-content.json",
+    "tools/diag-scripts/ui-gallery/navigation-menu/ui-gallery-navigation-menu-entry-key-focus-first.json",
+    "tools/diag-scripts/ui-gallery/navigation-menu/ui-gallery-navigation-menu-escape-close-gate.json",
     "tools/diag-scripts/ui-gallery-radio-group-description-layout.json",
     "tools/diag-scripts/ui-gallery-scroll-into-view-padding-is-soft.json",
     "tools/diag-scripts/ui-gallery-sidebar-controlled-open-sync.json",
@@ -46,6 +50,8 @@
     "tools/diag-scripts/ui-gallery-sidebar-mobile-sheet-escape-focus-restore.json",
     "tools/diag-scripts/ui-gallery-sidebar-mobile-shortcut-toggle.json",
     "tools/diag-scripts/ui-gallery-sidebar-provider-shortcut-toggle-focus.json",
+    "tools/diag-scripts/ui-gallery/tabs/ui-gallery-tabs-demo-tab-text-centering-420.json",
+    "tools/diag-scripts/ui-gallery/tabs/ui-gallery-tabs-vertical-list-grows.json",
     "tools/diag-scripts/ui-gallery-tooltip-disabled-code-tab-scroll-range.json",
     "tools/diag-scripts/ui-gallery-tooltip-hovercard-scroll-clamp.json",
     "tools/diag-scripts/ui-gallery-tooltip-keyboard-icon-centered.json",
@@ -69,10 +75,6 @@
     "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-sizes-thirds-screenshot.json",
     "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-spacing-responsive-md-screenshot.json",
     "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-spacing-responsive-sm-screenshot.json",
-    "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-spacing-screenshot.json",
-    "tools/diag-scripts/ui-gallery/navigation-menu/ui-gallery-navigation-menu-docs-smoke.json",
-    "tools/diag-scripts/ui-gallery/navigation-menu/ui-gallery-navigation-menu-escape-close-gate.json",
-    "tools/diag-scripts/ui-gallery/tabs/ui-gallery-tabs-demo-tab-text-centering-420.json",
-    "tools/diag-scripts/ui-gallery/tabs/ui-gallery-tabs-vertical-list-grows.json"
+    "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-spacing-screenshot.json"
   ]
 }

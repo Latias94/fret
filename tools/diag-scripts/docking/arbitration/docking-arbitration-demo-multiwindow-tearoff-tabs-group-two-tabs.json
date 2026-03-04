@@ -1,0 +1,122 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "Docking arbitration demo: tabs-group tear-off moves a whole tab stack into a new OS window (two tabs)",
+    "tags": ["docking", "multiwindow", "tearoff", "drag", "gate"],
+    "required_capabilities": ["diag.script_v2", "diag.multi_window"],
+    "env_defaults": {
+      "FRET_DOCK_ALLOW_MULTI_WINDOW_TEAR_OFF": "1"
+    },
+    "target_hints": [
+      "This gate first merges left+right viewports into one tab strip, then starts a tabs-group drag from empty tab-bar space and tears off out-of-bounds.",
+      "Expected behavior: the whole tab stack (two tabs) moves into a new floating OS window, and the main window no longer contains either viewport panel."
+    ]
+  },
+  "steps": [
+    { "type": "press_key", "window": { "kind": "first_seen" }, "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+
+    { "type": "set_window_outer_position", "window": { "kind": "first_seen" }, "x_px": 120.0, "y_px": 120.0 },
+    { "type": "set_window_inner_size", "window": { "kind": "first_seen" }, "width_px": 1600.0, "height_px": 900.0 },
+    { "type": "wait_frames", "n": 2 },
+
+    {
+      "type": "wait_until",
+      "window": { "kind": "first_seen" },
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "dock-arb-tab-drag-anchor-left" } },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "window": { "kind": "first_seen" },
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "dock-arb-tab-drag-anchor-right" } },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "window": { "kind": "first_seen" },
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "dock-arb-tabs-group-drag-anchor-right" } },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "pointer_down",
+      "window": { "kind": "first_seen" },
+      "target": { "kind": "test_id", "id": "dock-arb-tab-drag-anchor-right" },
+      "button": "left"
+    },
+    { "type": "pointer_move", "window": { "kind": "first_seen" }, "delta_x": 20.0, "delta_y": 0.0, "steps": 12 },
+    { "type": "wait_until", "window": { "kind": "first_seen" }, "predicate": { "kind": "dock_drag_active_is", "active": true }, "timeout_frames": 120 },
+    {
+      "type": "move_pointer",
+      "window": { "kind": "first_seen" },
+      "target": { "kind": "test_id", "id": "dock-arb-tab-drag-anchor-left" }
+    },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wait_until",
+      "window": { "kind": "first_seen" },
+      "predicate": { "kind": "dock_drop_resolve_source_is", "source": "tab_bar" },
+      "timeout_frames": 120
+    },
+    { "type": "pointer_up", "window": { "kind": "first_seen" } },
+    { "type": "wait_until", "window": { "kind": "first_seen" }, "predicate": { "kind": "dock_drag_active_is", "active": false }, "timeout_frames": 240 },
+    { "type": "wait_frames", "n": 10 },
+
+    {
+      "type": "assert",
+      "window": { "kind": "first_seen" },
+      "predicate": { "kind": "dock_graph_signature_contains", "needle": "demo.viewport.left" }
+    },
+    {
+      "type": "assert",
+      "window": { "kind": "first_seen" },
+      "predicate": { "kind": "dock_graph_signature_contains", "needle": "demo.viewport.right" }
+    },
+
+    {
+      "type": "drag_pointer_until",
+      "window": { "kind": "first_seen" },
+      "target": { "kind": "test_id", "id": "dock-arb-tabs-group-drag-anchor-right" },
+      "delta_x": 2400.0,
+      "delta_y": 0.0,
+      "steps": 140,
+      "predicate": { "kind": "known_window_count_ge", "n": 2 },
+      "timeout_frames": 900
+    },
+    { "type": "wait_until", "predicate": { "kind": "known_window_count_is", "n": 2 }, "timeout_frames": 600 },
+    { "type": "wait_frames", "n": 8 },
+
+    {
+      "type": "assert",
+      "window": { "kind": "first_seen" },
+      "predicate": { "kind": "dock_graph_signature_contains", "needle": "demo.controls" }
+    },
+    {
+      "type": "assert",
+      "window": { "kind": "first_seen" },
+      "predicate": {
+        "kind": "dock_graph_signature_is",
+        "signature": "dock(root=tabs([demo.controls]);floatings=[])"
+      }
+    },
+
+    {
+      "type": "assert",
+      "window": { "kind": "last_seen" },
+      "predicate": { "kind": "dock_graph_signature_contains", "needle": "demo.viewport.left" }
+    },
+    {
+      "type": "assert",
+      "window": { "kind": "last_seen" },
+      "predicate": { "kind": "dock_graph_signature_contains", "needle": "demo.viewport.right" }
+    },
+    {
+      "type": "assert",
+      "window": { "kind": "last_seen" },
+      "predicate": { "kind": "dock_graph_signature_contains", "needle": "floatings=[]" }
+    },
+
+    { "type": "capture_bundle", "label": "docking-arbitration-demo-multiwindow-tearoff-tabs-group-two-tabs" }
+  ]
+}

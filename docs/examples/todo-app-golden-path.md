@@ -20,16 +20,15 @@ Prefer an explicit ladder instead of starting with the full baseline on minute 1
 Templates (in this repository):
 
 ```bash
-fretboard new hello --name hello-world
-fretboard new simple-todo --name my-simple-todo
-fretboard new todo --name my-todo
+cargo run -p fretboard -- new hello --name hello-world
+cargo run -p fretboard -- new simple-todo --name my-simple-todo
+cargo run -p fretboard -- new todo --name my-todo
 ```
 
 Related ADRs:
 
 - Golden-path driver/pipelines: `docs/adr/0110-golden-path-ui-app-driver-and-pipelines.md`
 - Ecosystem bootstrap and tooling: `docs/adr/0106-ecosystem-bootstrap-ui-assets-and-dev-tools.md`
-- Dev hotpatch safety: `docs/adr/0105-dev-hotpatch-subsecond-and-hot-reload-safety.md`
 - Resource handle boundary: `docs/adr/0004-resource-handles.md`
 
 ## Recommended dependencies (native)
@@ -46,19 +45,19 @@ Related ADRs:
 If you are working inside this repository, you can generate a runnable todo template:
 
 ```bash
-fretboard new todo --name my-todo
+cargo run -p fretboard -- new todo --name my-todo
 cargo run --manifest-path local/my-todo/Cargo.toml
 ```
 
 To enable UI render asset caches (images/SVG), add `--ui-assets`:
 
 ```bash
-fretboard new todo --name my-todo --ui-assets
+cargo run -p fretboard -- new todo --name my-todo --ui-assets
 ```
 
 Notes:
 
-- `fret` defaults to a practical desktop setup (diagnostics + icons + optional caches).
+- `fret` defaults to a practical desktop setup (`desktop` + `app`).
 - Advanced apps can depend on `fret-framework` + `fret-bootstrap` directly for finer-grained control.
 
 ## Invalidation rules of thumb (keep it simple)
@@ -90,9 +89,11 @@ edition = "2024"
 
 [dependencies]
 anyhow = "1"
-fret = { path = "../../ecosystem/fret" }
-fret-selector = { path = "../../ecosystem/fret-selector", features = ["ui"] } # optional
-fret-query = { path = "../../ecosystem/fret-query", features = ["ui"] } # optional
+fret = { path = "../../ecosystem/fret", features = ["state"] }
+
+# Optional: depend on these directly only if you need their APIs outside of `ViewCx`.
+fret-selector = { path = "../../ecosystem/fret-selector", features = ["ui"], optional = true }
+fret-query = { path = "../../ecosystem/fret-query", features = ["ui"], optional = true }
 ```
 
 ## Minimal startup
@@ -138,7 +139,6 @@ fn install_app(app: &mut App) {
 Notes:
 
 - The action-first + view runtime path is the recommended golden path for new apps (ADRs 0307/0308).
-- For dev hotpatch (ADR 0105), keep action IDs stable and treat action hook registries as disposable.
 - Legacy MVU (`fret::mvu`) still exists for compatibility, but new templates/docs avoid teaching it by default.
 
 ## App state (models)
@@ -184,7 +184,7 @@ struct TodoView {
 
 ## Three-layer state split (recommended)
 
-This section describes the **best-practice baseline** (`todo`) and the `fretboard new todo` scaffold template.
+This section describes the **best-practice baseline** (`todo`) and the `cargo run -p fretboard -- new todo` scaffold template.
 
 The `simple-todo` template intentionally stops earlier (no selector/query).
 
@@ -244,7 +244,7 @@ The view runtime renders the same declarative IR (`Elements`) but provides a coh
 - typed action handler registration,
 - `notify → dirty → reuse` semantics via view cache roots.
 
-For the full runnable baseline, see the `fretboard new todo` scaffold template.
+For the full runnable baseline, see the `cargo run -p fretboard -- new todo` scaffold template.
 
 ## Derived state (selectors)
 
@@ -336,24 +336,20 @@ For apps that need background work (I/O, indexing, etc), we recommend:
 
 See ADR 0110 for rationale and constraints.
 
-## Hotpatch (Subsecond) integration
-
-When using hotpatch (ADR 0105):
-
-- keep action IDs stable across reloads,
-- treat action hook registries and overlay registries as disposable,
-- use the runner’s hot reload hooks to reset retained UI state on patch applied.
-
 ## Asset caches (images / SVGs)
 
 If you want UI render asset conveniences (not an editor/project asset pipeline):
 
-- `fret` enables UI asset caches by default; disable via features if you want a smaller build.
-- Optionally call `.with_ui_assets_budgets(...)` (on the returned builder) to override budgets.
+- Enable `fret/ui-assets` (or scaffold with `cargo run -p fretboard -- new todo --ui-assets`) so the golden-path
+  driver wires caches + budgets.
+- Optionally call `.ui_assets_budgets(...)` on `FretApp` to override budgets.
 - If you want to call cache APIs directly (stats, keyed helpers), add an explicit dependency on
   `fret-ui-assets` and enable its `app-integration` feature.
 
-See the runnable demo: `apps/fret-demo/src/bin/assets_demo.rs`.
+See the in-tree cookbook examples:
+
+- `apps/fret-cookbook/examples/icons_and_assets_basics.rs`
+- `apps/fret-cookbook/examples/assets_reload_epoch_basics.rs`
 
 ## Icon packs (Lucide / Radix / custom)
 

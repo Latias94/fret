@@ -22,7 +22,7 @@ pub(super) fn todo_template_cargo_toml(
     opts: ScaffoldOptions,
     workspace_prefix: &str,
 ) -> String {
-    let mut kit_features: Vec<&str> = vec!["desktop", "diagnostics", "shadcn", "state"];
+    let mut kit_features: Vec<&str> = vec!["desktop", "shadcn", "state"];
     if opts.command_palette {
         kit_features.push("command-palette");
     }
@@ -80,7 +80,7 @@ pub(super) fn simple_todo_template_cargo_toml(
     opts: ScaffoldOptions,
     workspace_prefix: &str,
 ) -> String {
-    let mut kit_features: Vec<&str> = vec!["desktop", "diagnostics", "shadcn"];
+    let mut kit_features: Vec<&str> = vec!["desktop", "shadcn"];
     if opts.command_palette {
         kit_features.push("command-palette");
     }
@@ -151,7 +151,7 @@ pub(super) fn hello_template_cargo_toml(
     opts: ScaffoldOptions,
     workspace_prefix: &str,
 ) -> String {
-    let mut kit_features: Vec<&str> = vec!["desktop", "diagnostics", "shadcn"];
+    let mut kit_features: Vec<&str> = vec!["desktop", "shadcn"];
     if opts.command_palette {
         kit_features.push("command-palette");
     }
@@ -2078,36 +2078,6 @@ cargo clippy -- -D warnings
 cargo run --release
 ```
 
-## Hot reload (runner reload boundary)
-
-This template supports a lightweight reload boundary when `FRET_HOTPATCH=1`.
-
-Run with hotpatch enabled:
-
-```bash
-FRET_HOTPATCH=1 cargo run
-```
-
-PowerShell:
-
-```powershell
-$env:FRET_HOTPATCH = "1"
-cargo run
-```
-
-Trigger a reload by poking the marker file (default: `.fret/hotpatch.touch`):
-
-```bash
-mkdir -p .fret && date +%s%N > .fret/hotpatch.touch
-```
-
-PowerShell:
-
-```powershell
-New-Item -ItemType Directory -Force .fret | Out-Null
-Set-Content -Path .fret/hotpatch.touch -Value (Get-Date).Ticks
-```
-
 ## Notes
 
 - Theme: shadcn new-york-v4 (Slate / Light)
@@ -2118,7 +2088,6 @@ Set-Content -Path .fret/hotpatch.touch -Value (Get-Date).Ticks
 ## Next steps
 
 - Edit UI in `src/main.rs`
-- If you want hotpatch later, keep action IDs stable and prefer action-first bindings (avoid ad-hoc string commands).
 "#
     )
 }
@@ -2229,36 +2198,6 @@ cargo run
 cargo fmt
 cargo clippy -- -D warnings
 cargo run --release
-```
-
-## Hot reload (runner reload boundary)
-
-This template supports a lightweight reload boundary when `FRET_HOTPATCH=1`.
-
-Run with hotpatch enabled:
-
-```bash
-FRET_HOTPATCH=1 cargo run
-```
-
-PowerShell:
-
-```powershell
-$env:FRET_HOTPATCH = "1"
-cargo run
-```
-
-Trigger a reload by poking the marker file (default: `.fret/hotpatch.touch`):
-
-```bash
-mkdir -p .fret && date +%s%N > .fret/hotpatch.touch
-```
-
-PowerShell:
-
-```powershell
-New-Item -ItemType Directory -Force .fret | Out-Null
-Set-Content -Path .fret/hotpatch.touch -Value (Get-Date).Ticks
 ```
 
 ## Notes

@@ -66,8 +66,8 @@ impl View for HelloView {
         .gap(Space::N4)
         .items_center()
         .justify_center()
-        .into_element(cx)
         .test_id(TEST_ID_ROOT)
+        .into_element(cx)
         .into()
     }
 }

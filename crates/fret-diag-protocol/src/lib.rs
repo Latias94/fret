@@ -913,6 +913,24 @@ pub enum UiActionStepV2 {
         width_px: f32,
         height_px: f32,
     },
+    /// Best-effort request to update OS window style facets at runtime (patch semantics).
+    ///
+    /// This is intended for diagnostics-only repros and regression gates for utility window
+    /// postures (frameless/transparent/materials/hit-test policies).
+    ///
+    /// Capability-gated behind `diag.window_style_patch_v1`.
+    ///
+    /// Note: as of 2026-03-04 this capability is Windows-only in the default in-tree runner.
+    /// Supported patch fields in the default runner are currently limited to:
+    /// - `z_level`
+    /// - `background_material`
+    /// - `hit_test`
+    /// - `opacity_alpha_u8`
+    SetWindowStyle {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        window: Option<UiWindowTargetV1>,
+        style: UiWindowStylePatchV1,
+    },
     SetWindowInsets {
         #[serde(default)]
         safe_area_insets: UiInsetsOverrideV1,
@@ -1326,9 +1344,18 @@ pub enum UiWindowZLevelV1 {
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
-pub enum UiMousePolicyV1 {
+pub enum UiWindowHitTestRequestV1 {
     Normal,
-    Passthrough,
+    PassthroughAll,
+    PassthroughRegions,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum UiWindowAppearanceV1 {
+    Opaque,
+    CompositedNoBackdrop,
+    CompositedBackdrop,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
@@ -1350,13 +1377,71 @@ pub struct UiWindowStyleMatchV1 {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub transparent: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub visual_transparent: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub appearance: Option<UiWindowAppearanceV1>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub taskbar: Option<UiTaskbarVisibilityV1>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub activation: Option<UiActivationPolicyV1>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub z_level: Option<UiWindowZLevelV1>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub mouse: Option<UiMousePolicyV1>,
+    pub hit_test: Option<UiWindowHitTestRequestV1>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub hit_test_regions_fingerprint64: Option<u64>,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct UiWindowStylePatchV1 {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub taskbar: Option<UiTaskbarVisibilityV1>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub activation: Option<UiActivationPolicyV1>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub z_level: Option<UiWindowZLevelV1>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub decorations: Option<UiWindowDecorationsRequestV1>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub resizable: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub transparent: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub background_material: Option<UiWindowBackgroundMaterialRequestV1>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub hit_test: Option<UiWindowHitTestPatchV1>,
+    /// Global window opacity hint (0..=255), best-effort.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub opacity_alpha_u8: Option<u8>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum UiWindowHitTestPatchV1 {
+    Normal,
+    PassthroughAll,
+    PassthroughRegions {
+        #[serde(default, skip_serializing_if = "Vec::is_empty")]
+        regions: Vec<UiWindowHitTestRegionV1>,
+    },
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum UiWindowHitTestRegionV1 {
+    Rect {
+        x: f32,
+        y: f32,
+        width: f32,
+        height: f32,
+    },
+    RRect {
+        x: f32,
+        y: f32,
+        width: f32,
+        height: f32,
+        radius: f32,
+    },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -1747,6 +1832,16 @@ pub enum UiPredicateV1 {
     PlatformUiWindowHoverDetectionIs {
         quality: String,
     },
+    /// True when the platform-level "receiver window at cursor" probe reports that the active
+    /// cursor position would be routed to `window` (best-effort).
+    ///
+    /// This predicate is intended to gate runner-level hit-test passthrough behavior (e.g.
+    /// `WM_NCHITTEST` on Win32) without relying on pixel screenshots.
+    ///
+    /// Capability-gated behind `diag.platform_window_receiver_at_cursor_v1`.
+    PlatformWindowReceiverAtCursorIs {
+        window: UiWindowTargetV1,
+    },
     /// True when the effective (clamped) OS window style for `window` matches the provided facets.
     ///
     /// This predicate is capability-gated and intended for non-pixel regression gates for utility
@@ -1799,13 +1894,13 @@ pub enum UiPredicateV1 {
     },
     /// True when the latest docking diagnostics report a dock drag session with an ImGui-style
     /// "transparent payload" applied to the moving window (e.g. reduced opacity and/or
-    /// click-through mouse passthrough while the dock-floating window follows the cursor).
+    /// click-through hit-test passthrough while the dock-floating window follows the cursor).
     DockDragTransparentPayloadAppliedIs {
         applied: bool,
     },
     /// True when the latest docking diagnostics report that the runner successfully applied
-    /// click-through mouse passthrough for the moving window during transparent payload.
-    DockDragTransparentPayloadMousePassthroughAppliedIs {
+    /// click-through hit-test passthrough for the moving window during transparent payload.
+    DockDragTransparentPayloadHitTestPassthroughAppliedIs {
         applied: bool,
     },
     /// True when the latest docking diagnostics report a dock drag session whose hovered-window
@@ -2638,6 +2733,8 @@ pub struct UiShortcutRoutingTraceEntryV1 {
     pub focus_is_text_input: bool,
     #[serde(default)]
     pub ime_composing: bool,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub key_contexts: Vec<String>,
     pub key: String,
     pub modifiers: UiKeyModifiersV1,
     pub repeat: bool,
@@ -2671,6 +2768,8 @@ pub struct UiShortcutRoutingTraceQueryV1 {
     pub ime_composing: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub focus_is_text_input: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub key_context: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

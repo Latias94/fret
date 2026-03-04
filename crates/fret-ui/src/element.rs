@@ -26,6 +26,8 @@ pub struct AnyElement {
     pub children: Vec<AnyElement>,
     /// Layout-transparent semantics overrides applied when producing semantics snapshots.
     pub semantics_decoration: Option<SemanticsDecoration>,
+    /// Layout-transparent key context identifier used by shortcut/keymap `when` expressions.
+    pub key_context: Option<Arc<str>>,
 }
 
 impl AnyElement {
@@ -35,6 +37,7 @@ impl AnyElement {
             kind,
             children,
             semantics_decoration: None,
+            key_context: None,
         }
     }
 
@@ -64,6 +67,23 @@ impl AnyElement {
         self
     }
 
+    /// Shorthand for attaching a [`SemanticsDecoration`] without introducing a layout node.
+    ///
+    /// This is a convenience wrapper over [`AnyElement::attach_semantics`].
+    pub fn a11y(self, decoration: SemanticsDecoration) -> Self {
+        self.attach_semantics(decoration)
+    }
+
+    /// Attach a semantics role override (ARIA `role`-like outcome).
+    pub fn a11y_role(self, role: SemanticsRole) -> Self {
+        self.a11y(SemanticsDecoration::default().role(role))
+    }
+
+    /// Attach a semantics label override (ARIA `aria-label`-like outcome).
+    pub fn a11y_label(self, label: impl Into<Arc<str>>) -> Self {
+        self.a11y(SemanticsDecoration::default().label(label))
+    }
+
     /// Attach a debug/test-only identifier for diagnostics and deterministic UI automation.
     ///
     /// This is shorthand for attaching a [`SemanticsDecoration`] with `test_id` set.
@@ -72,7 +92,40 @@ impl AnyElement {
     /// let el = some_element.test_id("settings.theme.toggle");
     /// ```
     pub fn test_id(self, test_id: impl Into<Arc<str>>) -> Self {
-        self.attach_semantics(SemanticsDecoration::default().test_id(test_id))
+        self.a11y(SemanticsDecoration::default().test_id(test_id))
+    }
+
+    /// Attach a semantics value override (ARIA `aria-valuetext`-like outcome).
+    pub fn a11y_value(self, value: impl Into<Arc<str>>) -> Self {
+        self.a11y(SemanticsDecoration::default().value(value))
+    }
+
+    /// Attach a disabled override (ARIA `aria-disabled`-like outcome).
+    pub fn a11y_disabled(self, disabled: bool) -> Self {
+        self.a11y(SemanticsDecoration::default().disabled(disabled))
+    }
+
+    /// Attach a selected override (ARIA `aria-selected`-like outcome).
+    pub fn a11y_selected(self, selected: bool) -> Self {
+        self.a11y(SemanticsDecoration::default().selected(selected))
+    }
+
+    /// Attach an expanded override (ARIA `aria-expanded`-like outcome).
+    pub fn a11y_expanded(self, expanded: bool) -> Self {
+        self.a11y(SemanticsDecoration::default().expanded(expanded))
+    }
+
+    /// Attach a tri-state checked override (ARIA `aria-checked`-like outcome).
+    pub fn a11y_checked(self, checked: Option<bool>) -> Self {
+        self.a11y(SemanticsDecoration::default().checked(checked))
+    }
+
+    /// Attach a key context identifier to this element for shortcut routing.
+    ///
+    /// This is a layout-transparent annotation used by `when` expressions via `keyctx.*`.
+    pub fn key_context(mut self, key_context: impl Into<Arc<str>>) -> Self {
+        self.key_context = Some(key_context.into());
+        self
     }
 }
 
@@ -1833,6 +1886,12 @@ pub struct TextInputProps {
     pub controls_element: Option<u64>,
     pub expanded: Option<bool>,
     pub chrome: TextInputStyle,
+    /// When true, paints the focus ring even if focus-visible is currently false.
+    ///
+    /// This exists to support CSS-like `transition-[..., box-shadow]` semantics where the ring
+    /// animates out after blur. Policy code is expected to drive ring alpha to zero and set this
+    /// flag only while the transition is animating.
+    pub focus_ring_always_paint: bool,
     pub text_style: TextStyle,
     pub submit_command: Option<CommandId>,
     pub cancel_command: Option<CommandId>,
@@ -1855,6 +1914,7 @@ impl TextInputProps {
             controls_element: None,
             expanded: None,
             chrome: TextInputStyle::default(),
+            focus_ring_always_paint: false,
             text_style: TextStyle::default(),
             submit_command: None,
             cancel_command: None,
@@ -1879,6 +1939,7 @@ impl std::fmt::Debug for TextInputProps {
             .field("controls_element", &self.controls_element)
             .field("expanded", &self.expanded)
             .field("chrome", &self.chrome)
+            .field("focus_ring_always_paint", &self.focus_ring_always_paint)
             .field("text_style", &self.text_style)
             .field("submit_command", &self.submit_command)
             .field("cancel_command", &self.cancel_command)
@@ -1898,6 +1959,12 @@ pub struct TextAreaProps {
     pub a11y_label: Option<std::sync::Arc<str>>,
     pub test_id: Option<std::sync::Arc<str>>,
     pub chrome: TextAreaStyle,
+    /// When true, paints the focus ring even if focus-visible is currently false.
+    ///
+    /// This exists to support CSS-like `transition-[..., box-shadow]` semantics where the ring
+    /// animates out after blur. Policy code is expected to drive ring alpha to zero and set this
+    /// flag only while the transition is animating.
+    pub focus_ring_always_paint: bool,
     pub text_style: TextStyle,
     pub min_height: Px,
 }
@@ -1915,6 +1982,7 @@ impl TextAreaProps {
             a11y_label: None,
             test_id: None,
             chrome: TextAreaStyle::default(),
+            focus_ring_always_paint: false,
             text_style: TextStyle::default(),
             min_height: Px(80.0),
         }
@@ -1935,6 +2003,7 @@ impl std::fmt::Debug for TextAreaProps {
             .field("a11y_label", &self.a11y_label.as_ref().map(|s| s.as_ref()))
             .field("test_id", &self.test_id.as_ref().map(|s| s.as_ref()))
             .field("chrome", &self.chrome)
+            .field("focus_ring_always_paint", &self.focus_ring_always_paint)
             .field("text_style", &self.text_style)
             .field("min_height", &self.min_height)
             .finish()

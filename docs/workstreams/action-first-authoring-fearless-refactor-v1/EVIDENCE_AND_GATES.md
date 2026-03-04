@@ -1,6 +1,6 @@
 # Action-First Authoring + View Runtime (Fearless Refactor v1) — Evidence and Gates
 
-Last updated: 2026-03-03
+Last updated: 2026-03-04
 
 This file defines what “done” means beyond subjective UX feel.
 
@@ -15,7 +15,7 @@ small, deterministic gates (tests and scripted diagnostics), not just manual QA.
 - ADR (view runtime): `docs/adr/0308-view-authoring-runtime-and-hooks-v1.md`
 - Workstream: `docs/workstreams/action-first-authoring-fearless-refactor-v1/DESIGN.md`
 
-### Implementation anchors (as of 2026-03-03)
+### Implementation anchors (as of 2026-03-04)
 
 Action identity + typed unit actions:
 
@@ -30,6 +30,8 @@ View runtime (v1):
 Legacy MVU quarantine (compat surface):
 
 - `ecosystem/fret/src/legacy.rs` (`fret::legacy::prelude::*`)
+- `ecosystem/fret/src/lib.rs` (MVU modules gated behind `legacy-mvu`)
+- `ecosystem/fret/src/lib.rs` (compile-time deprecations for `legacy`/`mvu`/`mvu_router` entry modules)
 
 UI gallery adoption (v1):
 
@@ -57,7 +59,9 @@ Pointer-trigger authoring integration (v1 still dispatches through the command p
 
 - `crates/fret-ui/src/tree/commands.rs` (command dispatch bubbles from focus when available; otherwise uses pending source element metadata to start bubbling without requiring focus-steal; falls back from overlay roots to the window default root)
 - `crates/fret-ui/src/tree/tests/command_availability.rs` (cross-layer fallback tests)
-- `ecosystem/fret-bootstrap/src/ui_diagnostics/service.rs` (infers `source_test_id` for pointer-triggered command dispatch trace entries from the current semantics snapshot when possible; retains script/hit-test fallbacks)
+- `crates/fret-runtime/src/command_dispatch_diagnostics.rs` (`CommandDispatchSourceV1.test_id` carries stable selector metadata through the pending-source service)
+- `crates/fret-ui/src/declarative/host_widget/event/pressable.rs` (records pending source `test_id` from `PressableA11y.test_id` when available)
+- `ecosystem/fret-bootstrap/src/ui_diagnostics/service.rs` (uses direct `decision.source.test_id` when present; falls back to inferring `source_test_id` from the current semantics snapshot; retains script/hit-test fallbacks)
 - `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (unit test: `command_dispatch_trace_infers_pointer_source_test_id_from_semantics_snapshot`)
 - `ecosystem/fret-ui-shadcn/src/button.rs` (`Button::action`)
 - `ecosystem/fret-ui-kit/src/command.rs` (`action_is_enabled`, `dispatch_action_if_enabled`)
@@ -88,6 +92,15 @@ Keymap/availability explainability (diagnostics traces):
 - `ecosystem/fret-bootstrap/src/ui_diagnostics/service.rs` (`record_shortcut_routing_trace_for_window`, `UiShortcutRoutingTraceEntryV1`)
 - `ecosystem/fret-bootstrap/src/ui_diagnostics/command_gating_trace.rs` (`debug.command_gating_trace[*]`)
 - `crates/fret-ui/src/tree/shortcuts.rs` (widget-scoped shortcut gating uses live UI-tree availability to avoid stale `command_disabled` after modal barrier transitions)
+
+Key-context stack + `keyctx.*` evaluation (v1):
+
+- `crates/fret-runtime/src/when_expr/*` (`WhenEvalContext`, `keyctx.*`)
+- `crates/fret-ui/src/element.rs` + `crates/fret-ui/src/elements/cx.rs` (`AnyElement::key_context`, `UiBuilder::key_context`)
+- `crates/fret-ui/src/tree/shortcuts.rs` (derives the key-context stack from the focused chain / modal barrier root)
+- `crates/fret-ui/src/tree/dispatch/window.rs` (publishes window key-context snapshots to `WindowKeyContextStackService`)
+- `crates/fret-runtime/src/window_key_context_stack.rs` (`WindowKeyContextStackService` data-only seam)
+- Scripted gate: `tools/diag-scripts/cookbook/commands-keymap-basics/cookbook-commands-keymap-basics-shortcut-and-gating.json` (shortcut routing trace includes `key_contexts`)
 
 Dispatch path explainability (diagnostics traces):
 
@@ -138,11 +151,12 @@ Notes:
 - Tests must rely on stable selectors (`test_id`/role/name), not pixel coordinates.
 - The script output must record the resolved `ActionId` (or command/action identity) for each step.
 
-Current scripts (as of 2026-03-03):
+Current scripts (as of 2026-03-04):
 
-- `tools/diag-scripts/cookbook/commands-keymap-basics/cookbook-commands-keymap-basics-shortcut-and-gating.json`
+- `tools/diag-scripts/cookbook/commands-keymap-basics/cookbook-commands-keymap-basics-shortcut-and-gating.json` (also gates key-context stack visibility via `wait_shortcut_routing_trace.query.key_context`)
 - `tools/diag-scripts/cookbook/hello/cookbook-hello-click-count.json` (clicks the button via `role_and_name`, but still gates `source_test_id` attribution)
 - `tools/diag-scripts/cookbook/hello/cookbook-hello-view-cache-reuse-and-handler-keepalive.json`
+- `tools/diag-scripts/cookbook/payload-actions-basics/cookbook-payload-actions-basics-remove.json` (parameterized action dispatch: pointer + payload, asserts row removal)
 - `tools/diag-scripts/cookbook/text-input-basics/cookbook-text-input-basics-submit-and-clear.json`
 - `tools/diag-scripts/cookbook/simple-todo/cookbook-simple-todo-smoke.json`
 - `tools/diag-scripts/cookbook/virtual-list-basics/cookbook-virtual-list-basics-smoke.json`
@@ -162,7 +176,7 @@ Notes:
 
 Gate runner:
 
-- `pwsh tools/diag_gate_action_first_authoring_v1.ps1` (default output: `target/fret-diag-afa-v1/`; runs under fixed frame delta via `FRET_DIAG_FIXED_FRAME_DELTA_MS=16` to avoid timeout flake when the app is not continuously rendering)
+- `pwsh tools/diag_gate_action_first_authoring_v1.ps1` (default output: `target/dfa-v1/`; runs under fixed frame delta via `FRET_DIAG_FIXED_FRAME_DELTA_MS=16`; keeps output paths short to avoid Windows path-length issues during schema2 bundle dumps)
 
 ### 2.3 wasm smoke (build-only)
 
@@ -221,11 +235,24 @@ each applicable item.
 
 Action dispatch:
 
-- [ ] A keybinding-triggered dispatch can be explained (matched binding + key context + resolved ActionId).
-- [ ] A pointer-triggered dispatch can be explained (source element/test_id + resolved ActionId).
-- [ ] A blocked dispatch can be explained (availability outcome + blocking reason/scope).
+- [x] A keybinding-triggered dispatch can be explained (matched binding + key context + resolved ActionId).
+  - Evidence: shortcut routing trace (`debug.shortcut_routing_trace[*]`) + key-context stack snapshot
+    (`debug.shortcut_routing_trace[*].query.key_context`) gated by
+    `tools/diag-scripts/cookbook/commands-keymap-basics/cookbook-commands-keymap-basics-shortcut-and-gating.json`.
+- [x] A pointer-triggered dispatch can be explained (source element/test_id + resolved ActionId).
+  - Evidence: command dispatch trace carries `source_test_id` (best-effort, with fallbacks) gated by
+    `tools/diag-scripts/cookbook/hello/cookbook-hello-click-count.json`.
+- [x] A blocked dispatch can be explained (availability outcome + blocking reason/scope).
+  - Evidence: command gating trace (`debug.command_gating_trace[*]`) gated by
+    `tools/diag-scripts/cookbook/overlay-basics/cookbook-overlay-basics-modal-barrier-shortcut-gating.json`.
 
 View/cache closure:
 
-- [ ] A view rebuild can be explained (notify vs observed deps vs inspection/picking).
-- [ ] Cache reuse can be explained (why reuse happened or was skipped at a cache root).
+- [x] A view rebuild can be explained (notify vs observed deps vs inspection/picking).
+  - Evidence: invalidation diagnostics (`dirty_views`, `notify_requests`) in
+    `ecosystem/fret-bootstrap/src/ui_diagnostics/invalidation_diagnostics.rs`, plus scripted gate
+    `tools/diag-scripts/cookbook/hello/cookbook-hello-view-cache-reuse-and-handler-keepalive.json`.
+- [x] Cache reuse can be explained (why reuse happened or was skipped at a cache root).
+  - Evidence: cache root diagnostics `cache_roots[*].reuse_reason` in
+    `ecosystem/fret-bootstrap/src/ui_diagnostics/cache_root_diagnostics.rs`, plus scripted gate
+    `tools/diag-scripts/cookbook/hello/cookbook-hello-view-cache-reuse-and-handler-keepalive.json`.

@@ -1,3 +1,5 @@
+#![allow(deprecated)]
+
 mod driver;
 mod harness;
 mod spec;

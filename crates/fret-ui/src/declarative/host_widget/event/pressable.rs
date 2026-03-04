@@ -1,6 +1,7 @@
 use super::ElementHostWidget;
 use crate::declarative::prelude::*;
 use fret_runtime::DragHost;
+use std::sync::Arc;
 
 fn position_local(bounds: Rect, mapped: Point) -> Point {
     Point::new(
@@ -38,6 +39,7 @@ pub(super) fn handle_pressable<H: UiHost>(
         element: crate::GlobalElementId,
         node: NodeId,
         bounds: Rect,
+        source_test_id: Option<Arc<str>>,
         input_ctx: &'a fret_runtime::InputContext,
         prevented_default_actions: &'a mut fret_runtime::DefaultActionSet,
         requested_focus: &'a mut Option<NodeId>,
@@ -108,6 +110,7 @@ pub(super) fn handle_pressable<H: UiHost>(
             let source = fret_runtime::CommandDispatchSourceV1 {
                 kind,
                 element: Some(cx.target.0),
+                test_id: self.source_test_id.clone(),
             };
             self.app.with_global_mut(
                 fret_runtime::WindowPendingCommandDispatchSourceService::default,
@@ -283,6 +286,7 @@ pub(super) fn handle_pressable<H: UiHost>(
                         element: this.element,
                         node: cx.node,
                         bounds: cx.bounds,
+                        source_test_id: props.a11y.test_id.clone(),
                         input_ctx: &cx.input_ctx,
                         prevented_default_actions: cx.prevented_default_actions,
                         requested_focus: &mut cx.requested_focus,
@@ -343,6 +347,7 @@ pub(super) fn handle_pressable<H: UiHost>(
                         element: this.element,
                         node: cx.node,
                         bounds: cx.bounds,
+                        source_test_id: props.a11y.test_id.clone(),
                         input_ctx: &cx.input_ctx,
                         prevented_default_actions: cx.prevented_default_actions,
                         requested_focus: &mut cx.requested_focus,
@@ -443,6 +448,7 @@ pub(super) fn handle_pressable<H: UiHost>(
                         element: this.element,
                         node: cx.node,
                         bounds: cx.bounds,
+                        source_test_id: props.a11y.test_id.clone(),
                         input_ctx: &cx.input_ctx,
                         prevented_default_actions: cx.prevented_default_actions,
                         requested_focus: &mut cx.requested_focus,
@@ -516,10 +522,16 @@ pub(super) fn handle_pressable<H: UiHost>(
                 let hovered = cx.bounds.contains(*position) || moved <= 2.0;
 
                 let is_touch = *pointer_type == fret_core::PointerType::Touch;
+                if pressed && hovered && (!is_touch || *is_click) {
+                    // Pointer interactions should move focus to the pressable even when
+                    // activation is handled by component-owned pointer hooks.
+                    //
+                    // Note: `PressableProps.focusable` models the Tab-order "focus traversal stop"
+                    // (Radix roving-focus `tabIndex=0` vs `-1`), not whether pointer clicks can
+                    // focus the node.
+                    cx.request_focus(cx.node);
+                }
                 if pressed && hovered && (!is_touch || *is_click) && !skip_activate {
-                    if props.focusable {
-                        cx.request_focus(cx.node);
-                    }
                     let hook = crate::elements::with_element_state(
                         &mut *cx.app,
                         window,
@@ -533,6 +545,7 @@ pub(super) fn handle_pressable<H: UiHost>(
                             app: &'a mut H,
                             window: AppWindowId,
                             element: crate::GlobalElementId,
+                            source_test_id: Option<std::sync::Arc<str>>,
                             notify_requested: &'a mut bool,
                             notify_requested_location:
                                 &'a mut Option<crate::widget::UiSourceLocation>,
@@ -611,11 +624,31 @@ pub(super) fn handle_pressable<H: UiHost>(
                                 let source = fret_runtime::CommandDispatchSourceV1 {
                                     kind,
                                     element: Some(cx.target.0),
+                                    test_id: self.source_test_id.clone(),
                                 };
                                 self.app.with_global_mut(
                                     fret_runtime::WindowPendingCommandDispatchSourceService::default,
                                     |svc, app| {
                                         svc.record(cx.window, app.tick_id(), command.clone(), source);
+                                    },
+                                );
+                            }
+
+                            fn record_pending_action_payload(
+                                &mut self,
+                                cx: action::ActionCx,
+                                action: &fret_runtime::ActionId,
+                                payload: Box<dyn std::any::Any + Send + Sync>,
+                            ) {
+                                self.app.with_global_mut(
+                                    fret_runtime::WindowPendingActionPayloadService::default,
+                                    |svc, app| {
+                                        svc.record(
+                                            cx.window,
+                                            app.tick_id(),
+                                            action.clone(),
+                                            payload,
+                                        );
                                     },
                                 );
                             }
@@ -638,6 +671,7 @@ pub(super) fn handle_pressable<H: UiHost>(
                             app: &mut *cx.app,
                             window,
                             element: this.element,
+                            source_test_id: props.a11y.test_id.clone(),
                             notify_requested: &mut cx.notify_requested,
                             notify_requested_location: &mut cx.notify_requested_location,
                         };
@@ -733,6 +767,7 @@ pub(super) fn handle_pressable<H: UiHost>(
                     app: &'a mut H,
                     window: AppWindowId,
                     element: crate::GlobalElementId,
+                    source_test_id: Option<std::sync::Arc<str>>,
                     notify_requested: &'a mut bool,
                     notify_requested_location: &'a mut Option<crate::widget::UiSourceLocation>,
                 }
@@ -810,11 +845,26 @@ pub(super) fn handle_pressable<H: UiHost>(
                         let source = fret_runtime::CommandDispatchSourceV1 {
                             kind,
                             element: Some(cx.target.0),
+                            test_id: self.source_test_id.clone(),
                         };
                         self.app.with_global_mut(
                             fret_runtime::WindowPendingCommandDispatchSourceService::default,
                             |svc, app| {
                                 svc.record(cx.window, app.tick_id(), command.clone(), source);
+                            },
+                        );
+                    }
+
+                    fn record_pending_action_payload(
+                        &mut self,
+                        cx: action::ActionCx,
+                        action: &fret_runtime::ActionId,
+                        payload: Box<dyn std::any::Any + Send + Sync>,
+                    ) {
+                        self.app.with_global_mut(
+                            fret_runtime::WindowPendingActionPayloadService::default,
+                            |svc, app| {
+                                svc.record(cx.window, app.tick_id(), action.clone(), payload);
                             },
                         );
                     }
@@ -837,6 +887,7 @@ pub(super) fn handle_pressable<H: UiHost>(
                     app: &mut *cx.app,
                     window,
                     element: this.element,
+                    source_test_id: props.a11y.test_id.clone(),
                     notify_requested: &mut cx.notify_requested,
                     notify_requested_location: &mut cx.notify_requested_location,
                 };

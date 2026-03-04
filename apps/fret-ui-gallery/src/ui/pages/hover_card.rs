@@ -28,7 +28,7 @@ pub(super) fn preview_hover_card(cx: &mut ElementContext<'_, App>) -> Vec<AnyEle
         vec![
             DocSection::new("Demo", demo)
                 .description(
-                    "Basic hover card surface with a short open delay and a longer close delay.",
+                    "Upstream shadcn demo composition: link trigger + 320px content (w-80) with avatar and text.",
                 )
                 .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
             DocSection::new("Trigger Delays", trigger_delays)
@@ -38,7 +38,7 @@ pub(super) fn preview_hover_card(cx: &mut ElementContext<'_, App>) -> Vec<AnyEle
                 .description("Placement is controlled by `side` and `align`.")
                 .code_rust_from_file_region(snippets::positioning::SOURCE, "example"),
             DocSection::new("Basic", basic)
-                .description("A basic hover card surface matching the upstream example.")
+                .description("Minimal hover card usage surface.")
                 .code_rust_from_file_region(snippets::basic::SOURCE, "example"),
             DocSection::new("Sides", sides)
                 .description("Visual sweep of side placements.")

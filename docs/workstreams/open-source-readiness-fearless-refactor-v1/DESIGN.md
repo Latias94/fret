@@ -24,8 +24,8 @@ When opened on GitHub, the repo currently feels “large and demo-heavy”:
 
 - Make the “what do I run first?” answer obvious in < 60 seconds.
 - Prefer **few, boring, repeatable** entry points:
-  - templates ladder (`fretboard new ...`),
-  - cookbook lessons (`fret-cookbook --example ...`),
+  - templates ladder (`cargo run -p fretboard -- new ...`),
+  - cookbook lessons (`cargo run -p fretboard -- dev native --example ...`),
   - gallery (component catalog) as an optional deep dive.
 - Reduce cold-start friction:
   - fewer heavy defaults for day-1 examples,
@@ -52,7 +52,7 @@ Policy:
 - If a demo is a single concept that fits in one file and is copy/paste-friendly, it belongs in:
   - `apps/fret-cookbook/examples/`.
 - If a demo is a stress harness, deep interop boundary, or regression harness, it stays in:
-  - `apps/fret-demo` (hidden by default in `fretboard list native-demos`).
+  - `apps/fret-demo` (hidden by default in `cargo run -p fretboard -- list native-demos`).
 
 Expected outcomes:
 
@@ -90,9 +90,10 @@ We want `fret` to be:
 
 We define explicit profiles:
 
-- `default`: `desktop` + `app` (shadcn-first + diagnostics + state helpers; no filesystem config by default).
-- `batteries`: opt-in bundle for “everything”: config files, ui-assets caches, icon packs, preloading.
-- `state`: opt-in (or default via `app`) for selector/query helpers in `ViewCx`.
+- `default`: `desktop` + `app` (shadcn-first; no filesystem config by default).
+- `state`: opt-in for selector/query helpers in `ViewCx`.
+- `diagnostics`: opt-in for dev tooling (tracing + panic hook + diag plumbing).
+- `batteries`: opt-in bundle for “everything”: `state` + `diagnostics` + config files + ui-assets caches + icon packs + preloading.
 - `config-files`: opt-in, because it can create filesystem side effects (`.fret/*`) and can surprise
   first-time users in a template/cookbook context.
 

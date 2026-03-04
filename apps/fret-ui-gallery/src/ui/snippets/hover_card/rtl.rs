@@ -1,7 +1,6 @@
 pub const SOURCE: &str = include_str!("rtl.rs");
 
 // region: example
-use fret_ui_kit::primitives::direction::{LayoutDirection, with_direction_provider};
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
@@ -32,12 +31,11 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                 .test_id("ui-gallery-hover-card-rtl-trigger")
                 .into_element(cx),
             shadcn::HoverCardContent::new(vec![body])
-                .into_element(cx)
-                .test_id("ui-gallery-hover-card-rtl-content"),
+                .test_id("ui-gallery-hover-card-rtl-content")
+                .side(shadcn::HoverCardSide::Left),
         )
         .open_delay_frames(10)
         .close_delay_frames(10)
-        .side(shadcn::HoverCardSide::Left)
         .into_element(cx)
     })
     .test_id("ui-gallery-hover-card-rtl")

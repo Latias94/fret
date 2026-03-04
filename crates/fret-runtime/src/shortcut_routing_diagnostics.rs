@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::sync::Arc;
 
 use fret_core::{AppWindowId, FrameId, KeyCode, Modifiers};
 
@@ -49,6 +50,7 @@ pub struct ShortcutRoutingDecision {
     pub outcome: ShortcutRoutingOutcome,
     pub command: Option<CommandId>,
     pub command_enabled: Option<bool>,
+    pub key_contexts: Vec<Arc<str>>,
 }
 
 #[derive(Default)]

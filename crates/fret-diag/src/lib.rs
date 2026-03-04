@@ -141,6 +141,8 @@ struct LaunchedDemo {
     launched_unix_ms: u64,
     launched_instant: Instant,
     launch_cmd: Vec<String>,
+    #[cfg(not(windows))]
+    process_footprint_sampler: Option<crate::compare::ProcessFootprintSamplerHandle>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -408,6 +410,8 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut perf_threshold_agg: PerfThresholdAggregate = PerfThresholdAggregate::Max;
     let mut max_working_set_bytes: Option<u64> = None;
     let mut max_peak_working_set_bytes: Option<u64> = None;
+    let mut max_macos_physical_footprint_peak_bytes: Option<u64> = None;
+    let mut max_macos_owned_unmapped_memory_dirty_bytes: Option<u64> = None;
     let mut max_cpu_avg_percent_total_cores: Option<f64> = None;
     let mut perf_baseline_path: Option<PathBuf> = None;
     let mut perf_baseline_out: Option<PathBuf> = None;
@@ -1159,6 +1163,33 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 max_peak_working_set_bytes =
                     Some(v.parse::<u64>().map_err(|_| {
                         "invalid value for --max-peak-working-set-bytes".to_string()
+                    })?);
+                i += 1;
+            }
+            "--max-macos-physical-footprint-peak-bytes" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err(
+                        "missing value for --max-macos-physical-footprint-peak-bytes".to_string(),
+                    );
+                };
+                max_macos_physical_footprint_peak_bytes = Some(v.parse::<u64>().map_err(|_| {
+                    "invalid value for --max-macos-physical-footprint-peak-bytes".to_string()
+                })?);
+                i += 1;
+            }
+            "--max-macos-owned-unmapped-memory-dirty-bytes" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err(
+                        "missing value for --max-macos-owned-unmapped-memory-dirty-bytes"
+                            .to_string(),
+                    );
+                };
+                max_macos_owned_unmapped_memory_dirty_bytes =
+                    Some(v.parse::<u64>().map_err(|_| {
+                        "invalid value for --max-macos-owned-unmapped-memory-dirty-bytes"
+                            .to_string()
                     })?);
                 i += 1;
             }
@@ -2117,6 +2148,8 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let resource_footprint_thresholds = ResourceFootprintThresholds {
         max_working_set_bytes,
         max_peak_working_set_bytes,
+        max_macos_physical_footprint_peak_bytes,
+        max_macos_owned_unmapped_memory_dirty_bytes,
         max_cpu_avg_percent_total_cores,
     };
 
@@ -2134,7 +2167,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     }
     if sub != "repro" && resource_footprint_thresholds.any() {
         return Err(
-            "--max-working-set-bytes/--max-peak-working-set-bytes/--max-cpu-avg-percent-total-cores are only supported with `diag repro` for now"
+            "--max-working-set-bytes/--max-peak-working-set-bytes/--max-macos-physical-footprint-peak-bytes/--max-macos-owned-unmapped-memory-dirty-bytes/--max-cpu-avg-percent-total-cores are only supported with `diag repro` for now"
                 .to_string(),
         );
     }

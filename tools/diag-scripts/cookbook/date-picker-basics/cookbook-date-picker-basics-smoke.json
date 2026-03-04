@@ -1,0 +1,33 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "cookbook-date-picker-basics-smoke",
+    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
+    "tags": ["cookbook", "date_picker_basics", "smoke"]
+  },
+  "steps": [
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "cookbook.date_picker_basics.root" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "click",
+      "target": { "kind": "test_id", "id": "cookbook.date_picker_basics.picker" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "2026-01-15" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "capture_screenshot", "label": "cookbook-date-picker-basics-smoke" },
+    { "type": "capture_bundle", "label": "cookbook-date-picker-basics-smoke" }
+  ]
+}
+

@@ -60,20 +60,16 @@ pub fn render<H: UiHost>(
         .into(),
     ];
 
-    fret_ui_kit::primitives::direction::with_direction_provider(
-        cx,
-        fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
-        |cx| {
-            shadcn::CommandPalette::new(query.clone(), Vec::new())
-                .placeholder("Type a command or search...")
-                .a11y_label("RTL command list")
-                .entries(entries)
-                .test_id_input("ui-gallery-command-rtl-input")
-                .list_test_id("ui-gallery-command-rtl-listbox")
-                .test_id_item_prefix("ui-gallery-command-rtl-item-")
-                .into_element(cx)
-                .test_id("ui-gallery-command-rtl")
-        },
-    )
+    with_direction_provider(cx, LayoutDirection::Rtl, |cx| {
+        shadcn::CommandPalette::new(query.clone(), Vec::new())
+            .placeholder("Type a command or search...")
+            .a11y_label("RTL command list")
+            .entries(entries)
+            .test_id_input("ui-gallery-command-rtl-input")
+            .list_test_id("ui-gallery-command-rtl-listbox")
+            .test_id_item_prefix("ui-gallery-command-rtl-item-")
+            .into_element(cx)
+            .test_id("ui-gallery-command-rtl")
+    })
 }
 // endregion: example

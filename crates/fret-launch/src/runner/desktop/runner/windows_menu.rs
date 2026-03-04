@@ -202,11 +202,14 @@ fn apply_popup_menu_state(hwnd: isize, popup: HMENU) {
             ) && def
                 .item_when
                 .as_ref()
-                .map(|w| w.eval(gating.input_ctx()))
+                .map(|w| w.eval_with_key_contexts(gating.input_ctx(), gating.key_contexts()))
                 .unwrap_or(true);
 
-            let shortcut =
-                keymap.display_shortcut_for_command_sequence(gating.input_ctx(), &def.command);
+            let shortcut = keymap.display_shortcut_for_command_sequence_with_key_contexts(
+                gating.input_ctx(),
+                gating.key_contexts(),
+                &def.command,
+            );
             let text = if let Some(seq) = shortcut {
                 format!(
                     "{}\t{}",

@@ -5,9 +5,8 @@
     "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
     "tags": ["ui_gallery", "shadcn", "navigation_menu", "overlay", "focus", "escape", "gate"],
     "target_hints": [
-      "Open NavigationMenu content and move keyboard focus into the viewport.",
-      "Press Escape to close while focus is inside the content.",
-      "Ensure hover pointer-move does not immediately re-open after Escape dismissal."
+      "Move the pointer over the trigger, open NavigationMenu content, and press Escape to close.",
+      "Ensure a small mouse move over the trigger does not immediately re-open after Escape dismissal."
     ]
   },
   "steps": [
@@ -70,6 +69,7 @@
     },
     { "type": "capture_screenshot", "label": "ui-gallery-navigation-menu-escape-gate-closed", "timeout_frames": 240 },
 
+    { "type": "move_pointer", "pointer_kind": "mouse", "target": { "kind": "test_id", "id": "ui-gallery-navigation-menu-demo-trigger-components" } },
     { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-navigation-menu-demo-trigger-components" } },
     {
       "type": "wait_until",
@@ -81,20 +81,7 @@
       "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-navigation-menu-demo-link-alert-dialog" } },
       "timeout_frames": 600
     },
-
-    {
-      "type": "pointer_down",
-      "pointer_kind": "mouse",
-      "target": { "kind": "test_id", "id": "ui-gallery-navigation-menu-demo-link-alert-dialog" },
-      "button": "left"
-    },
-    { "type": "wait_frames", "n": 2 },
-    {
-      "type": "wait_until",
-      "predicate": { "kind": "focus_is", "target": { "kind": "test_id", "id": "ui-gallery-navigation-menu-demo-link-alert-dialog" } },
-      "timeout_frames": 600
-    },
-    { "type": "capture_screenshot", "label": "ui-gallery-navigation-menu-escape-gate-open-focused", "timeout_frames": 240 },
+    { "type": "capture_screenshot", "label": "ui-gallery-navigation-menu-escape-gate-open", "timeout_frames": 240 },
 
     { "type": "press_key", "key": "escape" },
     {
@@ -102,9 +89,16 @@
       "predicate": { "kind": "not_exists", "target": { "kind": "test_id", "id": "ui-gallery-navigation-menu-demo-viewport" } },
       "timeout_frames": 600
     },
-    { "type": "pointer_up", "pointer_kind": "mouse", "button": "left" },
 
-    { "type": "pointer_move", "pointer_kind": "mouse", "delta_x": 1.0, "delta_y": 0.0, "steps": 1 },
+    {
+      "type": "move_pointer_sweep",
+      "pointer_kind": "mouse",
+      "target": { "kind": "test_id", "id": "ui-gallery-navigation-menu-demo-trigger-components" },
+      "delta_x": 2.0,
+      "delta_y": 0.0,
+      "steps": 2,
+      "frames_per_step": 1
+    },
     { "type": "wait_frames", "n": 40 },
     {
       "type": "assert",

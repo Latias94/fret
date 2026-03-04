@@ -1,7 +1,5 @@
 use std::sync::Arc;
 
-use std::time::Duration;
-
 use fret_core::{Color, Edges, Px, SemanticsRole, TextOverflow, TextWrap};
 use fret_runtime::{CommandId, Effect};
 use fret_ui::action::OnActivate;
@@ -1089,6 +1087,7 @@ mod tests {
     use fret_ui_kit::declarative::transition::ticks_60hz_for_duration;
     use std::cell::Cell;
     use std::rc::Rc;
+    use std::time::Duration;
 
     fn bounds() -> Rect {
         Rect::new(

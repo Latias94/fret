@@ -271,16 +271,16 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 }
             };
 
-            let want_transparent = self
+            let want_surface_composited_alpha = self
                 .app
                 .global::<fret_runtime::RunnerWindowStyleDiagnosticsStore>()
                 .and_then(|s| s.effective_snapshot(app_window))
-                .is_some_and(|s| s.transparent);
+                .is_some_and(|s| s.surface_composited_alpha);
             super::window_lifecycle::configure_surface_alpha_mode_for_composited_window(
                 &context.adapter,
                 &context.device,
                 &mut surface_state,
-                want_transparent,
+                want_surface_composited_alpha,
             );
 
             state.surface = Some(surface_state);
@@ -723,16 +723,16 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                         }
                     };
 
-                    let want_transparent = self
+                    let want_surface_composited_alpha = self
                         .app
                         .global::<fret_runtime::RunnerWindowStyleDiagnosticsStore>()
                         .and_then(|s| s.effective_snapshot(main_window))
-                        .is_some_and(|s| s.transparent);
+                        .is_some_and(|s| s.surface_composited_alpha);
                     super::window_lifecycle::configure_surface_alpha_mode_for_composited_window(
                         &context.adapter,
                         &context.device,
                         &mut surface_state,
-                        want_transparent,
+                        want_surface_composited_alpha,
                     );
                     state.surface = Some(surface_state);
                 }
@@ -777,7 +777,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                 .global::<fret_runtime::PlatformCapabilities>()
                 .cloned()
                 .unwrap_or_default();
-            let window = match self.create_os_window(event_loop, spec, style, None, &caps) {
+            let window = match self.create_os_window(event_loop, spec, style.clone(), None, &caps) {
                 Ok(w) => w,
                 Err(e) => {
                     error!(error = ?e, "failed to create main window");
@@ -909,13 +909,14 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                 self.driver.gpu_ready(&mut self.app, context, renderer);
             }
 
-            let main_window = match self.insert_window(window.0, window.1, Some(surface), style) {
-                Ok(id) => id,
-                Err(e) => {
-                    error!(error = ?e, "failed to insert main window runtime");
-                    return;
-                }
-            };
+            let main_window =
+                match self.insert_window(window.0, window.1, Some(surface), style.clone()) {
+                    Ok(id) => id,
+                    Err(e) => {
+                        error!(error = ?e, "failed to insert main window runtime");
+                        return;
+                    }
+                };
             let caps = self
                 .app
                 .global::<fret_runtime::PlatformCapabilities>()
@@ -1814,12 +1815,12 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
 
                         let render_scene_span = tracing::info_span!("fret.runner.render_scene");
                         let _render_scene_guard = render_scene_span.enter();
-                        let want_transparent = self
+                        let want_visual_transparent = self
                             .app
                             .global::<fret_runtime::RunnerWindowStyleDiagnosticsStore>()
                             .and_then(|s| s.effective_snapshot(app_window))
-                            .is_some_and(|s| s.transparent);
-                        let clear_color = if want_transparent {
+                            .is_some_and(|s| s.visual_transparent);
+                        let clear_color = if want_visual_transparent {
                             fret_render::ClearColor(wgpu::Color::TRANSPARENT)
                         } else {
                             self.config.clear_color
@@ -1882,6 +1883,123 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                                     store.record(app_window, tick_id, frame_id, perf);
                                 },
                             );
+                        }
+
+                        let diag_wgpu_report = std::env::var_os("FRET_DIAG_WGPU_REPORT")
+                            .is_some_and(|v| !v.is_empty());
+                        if diag_wgpu_report {
+                            let every_n = std::env::var("FRET_DIAG_WGPU_REPORT_EVERY_N_FRAMES")
+                                .ok()
+                                .and_then(|v| v.trim().parse::<u64>().ok())
+                                .unwrap_or(60)
+                                .max(1);
+
+                            let tick_id = self.tick_id.0;
+                            let frame_id = self.frame_id.0;
+                            let should_sample = frame_id <= 2 || frame_id % every_n == 0;
+
+                            if should_sample
+                                && let Some(report) = context.instance.generate_report()
+                            {
+                                let hub = report.hub_report();
+                                let counts = fret_render::WgpuHubReportCounts {
+                                    adapters: (hub.adapters.num_allocated
+                                        + hub.adapters.num_kept_from_user)
+                                        as u64,
+                                    devices: (hub.devices.num_allocated
+                                        + hub.devices.num_kept_from_user)
+                                        as u64,
+                                    queues: (hub.queues.num_allocated
+                                        + hub.queues.num_kept_from_user)
+                                        as u64,
+                                    command_encoders: (hub.command_encoders.num_allocated
+                                        + hub.command_encoders.num_kept_from_user)
+                                        as u64,
+                                    buffers: (hub.buffers.num_allocated
+                                        + hub.buffers.num_kept_from_user)
+                                        as u64,
+                                    textures: (hub.textures.num_allocated
+                                        + hub.textures.num_kept_from_user)
+                                        as u64,
+                                    texture_views: (hub.texture_views.num_allocated
+                                        + hub.texture_views.num_kept_from_user)
+                                        as u64,
+                                    samplers: (hub.samplers.num_allocated
+                                        + hub.samplers.num_kept_from_user)
+                                        as u64,
+                                    shader_modules: (hub.shader_modules.num_allocated
+                                        + hub.shader_modules.num_kept_from_user)
+                                        as u64,
+                                    render_pipelines: (hub.render_pipelines.num_allocated
+                                        + hub.render_pipelines.num_kept_from_user)
+                                        as u64,
+                                    compute_pipelines: (hub.compute_pipelines.num_allocated
+                                        + hub.compute_pipelines.num_kept_from_user)
+                                        as u64,
+                                };
+
+                                self.app.with_global_mut_untracked(
+                                    fret_render::WgpuHubReportFrameStore::default,
+                                    |store, _app| {
+                                        store.record(app_window, tick_id, frame_id, counts);
+                                    },
+                                );
+                            }
+                        }
+
+                        let diag_wgpu_allocator_report =
+                            std::env::var_os("FRET_DIAG_WGPU_ALLOCATOR_REPORT")
+                                .is_some_and(|v| !v.is_empty());
+                        if diag_wgpu_allocator_report {
+                            let every_n =
+                                std::env::var("FRET_DIAG_WGPU_ALLOCATOR_REPORT_EVERY_N_FRAMES")
+                                    .ok()
+                                    .and_then(|v| v.trim().parse::<u64>().ok())
+                                    .unwrap_or(300)
+                                    .max(1);
+                            let top_n = std::env::var("FRET_DIAG_WGPU_ALLOCATOR_REPORT_TOP_N")
+                                .ok()
+                                .and_then(|v| v.trim().parse::<usize>().ok())
+                                .unwrap_or(16)
+                                .max(1);
+                            let max_name_bytes =
+                                std::env::var("FRET_DIAG_WGPU_ALLOCATOR_REPORT_MAX_NAME_BYTES")
+                                    .ok()
+                                    .and_then(|v| v.trim().parse::<usize>().ok())
+                                    .unwrap_or(160)
+                                    .max(16);
+
+                            let tick_id = self.tick_id.0;
+                            let frame_id = self.frame_id.0;
+                            let should_sample = frame_id <= 2 || frame_id % every_n == 0;
+
+                            if should_sample {
+                                let report = context.device.generate_allocator_report();
+                                #[cfg(target_os = "macos")]
+                                let metal_current_allocated_size_bytes = unsafe {
+                                    context
+                                        .device
+                                        .as_hal::<wgpu::hal::api::Metal>()
+                                        .map(|dev| dev.raw_device().current_allocated_size() as u64)
+                                };
+                                #[cfg(not(target_os = "macos"))]
+                                let metal_current_allocated_size_bytes: Option<u64> = None;
+
+                                self.app.with_global_mut_untracked(
+                                    fret_render::WgpuAllocatorReportFrameStore::default,
+                                    |store, _app| {
+                                        store.record_sample(
+                                            app_window,
+                                            tick_id,
+                                            frame_id,
+                                            report,
+                                            metal_current_allocated_size_bytes,
+                                            top_n,
+                                            max_name_bytes,
+                                        );
+                                    },
+                                );
+                            }
                         }
 
                         let mut cmd_buffers = engine_command_buffers;

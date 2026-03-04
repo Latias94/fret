@@ -80,6 +80,62 @@ We treat feature naming as **recommended convention**, not a hard requirement fo
 
 **Use it when:** you want the recommended “just build an app” experience without hand-assembling runners, effects draining, and default integrations.
 
+**Feature profiles (recommended):**
+
+`fret` is designed to let apps choose between “smooth by default” and “small when you opt out”.
+
+- `default` = `desktop` + `app` (recommended for native desktop apps).
+  - Includes: shadcn integration.
+  - Intentionally excludes: config files, UI asset caches, icon packs, icon preloading, command palette.
+- `batteries` = a bigger opt-in bundle for app/dev convenience:
+  - includes diagnostics wiring, config files, UI assets, icons, and (optional) icon SVG preloading.
+  - includes `state` (selector/query helpers).
+
+**Common feature combos (practical map):**
+
+| Goal | Suggested `fret` features | Notes |
+| --- | --- | --- |
+| Small desktop app (shadcn UI only) | `["desktop","shadcn"]` | Minimal explicit profile (no config files, no diagnostics, no assets/icons). |
+| Add derived + async state helpers | `["state"]` | Enables `ViewCx::use_selector` and `ViewCx::use_query` helpers. |
+| Add icons | `["icons"]` | Installs default icon packs (Lucide) via bootstrap wiring. |
+| Add image/SVG caches | `["ui-assets"]` | Wires UI asset caches + budgets (compile/runtime cost). |
+| Enable layered `.fret/*` config | `["config-files"]` | Filesystem side effects; opt-in for embed/minimal builds. |
+| Opt into “everything convenient” | `["batteries"]` | Convenience bundle; may increase cold compile time. |
+
+Minimal / explicit profile (useful for embed/minimal builds that must avoid filesystem side effects):
+
+```toml
+[dependencies]
+fret = { path = "../path/to/fret/ecosystem/fret", default-features = false, features = ["desktop", "shadcn"] }
+```
+
+Enable selector/query helpers (for `ViewCx::use_selector` / `ViewCx::use_query`):
+
+```toml
+[dependencies]
+fret = { path = "../path/to/fret/ecosystem/fret", features = ["state"] }
+```
+
+Recommended app profile (golden path; easiest):
+
+```toml
+[dependencies]
+fret = { path = "../path/to/fret/ecosystem/fret" } # defaults: desktop + app
+```
+
+“Batteries included” profile (opt-in bundles):
+
+```toml
+[dependencies]
+fret = { path = "../path/to/fret/ecosystem/fret", features = ["batteries"] }
+```
+
+Notes:
+
+- `config-files` is opt-in because it reads layered `.fret/*` files (settings/keymap/menubar).
+- `ui-assets` is opt-in because it wires caches/budgets and can increase compile + runtime cost.
+- `icons` / `preload-icon-svgs` are opt-in (GPU-time tradeoff; apps can install custom packs).
+
 ### `fret-framework`
 
 **What it is:** the public facade (re-exports + convenience feature bundles).
@@ -225,7 +281,10 @@ These crates are “real” but **policy-heavy and fast-moving**. They should re
 - icon pack registration (built-in packs or custom),
 - optional UI app driver wiring,
 - optional command palette integration,
-- optional dev hotpatch toggles.
+- optional diagnostics + tracing wiring.
+
+Note: dev hotpatch is an internal maintainer workflow today and is not part of the user-facing
+onboarding path.
 
 ### `fret-executor`
 
@@ -271,6 +330,18 @@ computations.
 `use_query_async_local`. See `docs/integrating-tokio-and-reqwest.md`.
 
 **Feature note:** enable `fret-query/ui` to use `ElementContext` helpers like `cx.use_query_async(...)`.
+
+### `fret-router` + `fret-router-ui`
+
+**What they are:** a small router core (`fret-router`) and a thin UI adoption layer (`fret-router-ui`).
+
+**Use them when:** you need a lightweight “URL + history + outlet” architecture without pulling in
+UI gallery-scale harnesses.
+
+Notes:
+
+- `fret-router-ui` provides `RouterUiStore` (router + snapshot model) and pressable-based link/outlet helpers.
+- Prefer keeping policy in apps (what pages exist, what prefetch means, what “not found” looks like).
 
 ### `fret-canvas`
 

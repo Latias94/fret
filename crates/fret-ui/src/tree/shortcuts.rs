@@ -1,4 +1,5 @@
 use super::*;
+use std::sync::Arc;
 
 const PENDING_SHORTCUT_TIMEOUT: Duration = Duration::from_millis(1000);
 
@@ -16,6 +17,7 @@ pub(super) struct PendingShortcut {
     pub(super) fallback: Option<CommandId>,
     pub(super) timer: Option<fret_runtime::TimerToken>,
     pub(super) capture_next_text_input_key: Option<KeyCode>,
+    pub(super) key_contexts: Vec<Arc<str>>,
 }
 
 pub(super) struct PointerDownOutsideParams<'a> {
@@ -47,6 +49,65 @@ pub(super) struct KeydownShortcutParams<'a> {
 }
 
 impl<H: UiHost> UiTree<H> {
+    fn focus_chain_contains(&self, start: NodeId, target: NodeId) -> bool {
+        let mut node = Some(start);
+        while let Some(id) = node {
+            if id == target {
+                return true;
+            }
+            node = self.nodes.get(id).and_then(|n| n.parent);
+        }
+        false
+    }
+
+    fn key_context_for_node(&self, app: &mut H, node: NodeId) -> Option<Arc<str>> {
+        let window = self.window?;
+        crate::declarative::frame::with_element_record_for_node(app, window, node, |r| {
+            r.key_context.clone()
+        })
+        .flatten()
+    }
+
+    pub(super) fn shortcut_key_context_stack(
+        &self,
+        app: &mut H,
+        barrier_root: Option<NodeId>,
+    ) -> Vec<Arc<str>> {
+        let base_root = self
+            .base_layer
+            .and_then(|id| self.layers.get(id).map(|l| l.root));
+
+        let start = if let Some(barrier_root) = barrier_root {
+            match self.focus {
+                Some(focus) if self.focus_chain_contains(focus, barrier_root) => Some(focus),
+                _ => Some(barrier_root),
+            }
+        } else {
+            self.focus.or(base_root)
+        };
+
+        let Some(mut node) = start else {
+            return Vec::new();
+        };
+
+        let mut out: Vec<Arc<str>> = Vec::new();
+        loop {
+            if let Some(key_context) = self.key_context_for_node(app, node) {
+                out.push(key_context);
+            }
+
+            if Some(node) == barrier_root {
+                break;
+            }
+            let Some(parent) = self.nodes.get(node).and_then(|n| n.parent) else {
+                break;
+            };
+            node = parent;
+        }
+
+        out
+    }
+
     #[cfg(feature = "diagnostics")]
     fn record_shortcut_routing_decision(
         &self,
@@ -62,6 +123,11 @@ impl<H: UiHost> UiTree<H> {
         };
         let frame_id = app.frame_id();
         let ime_composing = self.ime_composing;
+        let key_contexts = if !self.pending_shortcut.keystrokes.is_empty() {
+            self.pending_shortcut.key_contexts.clone()
+        } else {
+            self.shortcut_key_context_stack(app, params.barrier_root)
+        };
         app.with_global_mut_untracked(
             fret_runtime::WindowShortcutRoutingDiagnosticsStore::default,
             |store, _app| {
@@ -81,6 +147,7 @@ impl<H: UiHost> UiTree<H> {
                         outcome,
                         command,
                         command_enabled,
+                        key_contexts,
                     },
                 );
             },
@@ -137,7 +204,11 @@ impl<H: UiHost> UiTree<H> {
         } else if let Some(service) = app.global::<KeymapService>() {
             let mut conts: Vec<crate::pending_shortcut::PendingShortcutContinuation> = service
                 .keymap
-                .continuations(&input_ctx, &sequence)
+                .continuations_with_key_contexts(
+                    &input_ctx,
+                    &self.pending_shortcut.key_contexts,
+                    &sequence,
+                )
                 .into_iter()
                 .map(|c| crate::pending_shortcut::PendingShortcutContinuation {
                     next: c.next,
@@ -224,11 +295,24 @@ impl<H: UiHost> UiTree<H> {
             return false;
         }
 
+        let computed_key_contexts = self
+            .pending_shortcut
+            .keystrokes
+            .is_empty()
+            .then(|| self.shortcut_key_context_stack(app, params.barrier_root));
+        let key_contexts: &[Arc<str>] = match computed_key_contexts.as_ref() {
+            Some(key_contexts) => key_contexts.as_slice(),
+            None => self.pending_shortcut.key_contexts.as_slice(),
+        };
+
         if params.repeat {
             // Allow key-repeat only for explicitly repeatable commands (e.g. text editing).
             if let Some(service) = app.global::<KeymapService>() {
                 let chord = KeyChord::new(params.key, params.modifiers);
-                if let Some(command) = service.keymap.resolve(params.input_ctx, chord)
+                if let Some(command) =
+                    service
+                        .keymap
+                        .resolve_with_key_contexts(params.input_ctx, key_contexts, chord)
                     && app
                         .commands()
                         .get(command.clone())
@@ -264,6 +348,7 @@ impl<H: UiHost> UiTree<H> {
                                             kind:
                                                 fret_runtime::CommandDispatchSourceKindV1::Shortcut,
                                             element: None,
+                                            test_id: None,
                                         },
                                     );
                                 },
@@ -340,7 +425,11 @@ impl<H: UiHost> UiTree<H> {
                 .iter()
                 .map(|s| s.chord)
                 .collect();
-            let matched = service.keymap.match_sequence(params.input_ctx, &sequence);
+            let matched = service.keymap.match_sequence_with_key_contexts(
+                params.input_ctx,
+                &self.pending_shortcut.key_contexts,
+                &sequence,
+            );
 
             if matched.has_continuation {
                 #[cfg(feature = "diagnostics")]
@@ -388,6 +477,7 @@ impl<H: UiHost> UiTree<H> {
                                     fret_runtime::CommandDispatchSourceV1 {
                                         kind: fret_runtime::CommandDispatchSourceKindV1::Shortcut,
                                         element: None,
+                                        test_id: None,
                                     },
                                 );
                             },
@@ -448,9 +538,11 @@ impl<H: UiHost> UiTree<H> {
             return true;
         }
 
-        let matched = service
-            .keymap
-            .match_sequence(params.input_ctx, std::slice::from_ref(&chord));
+        let matched = service.keymap.match_sequence_with_key_contexts(
+            params.input_ctx,
+            key_contexts,
+            std::slice::from_ref(&chord),
+        );
         if matched.has_continuation {
             let exact_command = matched.exact.and_then(|c| c);
             #[cfg(feature = "diagnostics")]
@@ -466,6 +558,7 @@ impl<H: UiHost> UiTree<H> {
             self.pending_shortcut.focus = self.focus;
             self.pending_shortcut.barrier_root = params.barrier_root;
             self.pending_shortcut.fallback = exact_command;
+            self.pending_shortcut.key_contexts = key_contexts.to_vec();
             self.pending_shortcut.capture_next_text_input_key =
                 (params.focus_is_text_input && !params.modifiers.ctrl && !params.modifiers.meta)
                     .then_some(params.key);
@@ -475,7 +568,11 @@ impl<H: UiHost> UiTree<H> {
             return true;
         }
 
-        if let Some(command) = service.keymap.resolve(params.input_ctx, chord) {
+        if let Some(command) =
+            service
+                .keymap
+                .resolve_with_key_contexts(params.input_ctx, key_contexts, chord)
+        {
             if self.command_is_enabled_for_shortcut_dispatch(app, params.input_ctx, &command) {
                 #[cfg(feature = "diagnostics")]
                 self.record_shortcut_routing_decision(
@@ -501,6 +598,7 @@ impl<H: UiHost> UiTree<H> {
                                 fret_runtime::CommandDispatchSourceV1 {
                                     kind: fret_runtime::CommandDispatchSourceKindV1::Shortcut,
                                     element: None,
+                                    test_id: None,
                                 },
                             );
                         },

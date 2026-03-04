@@ -43,7 +43,12 @@ ImGui docking typically supports both:
 - **Drag a tab** (when a window is docked in a tab bar) to tear off / re-dock.
 - **Drag a title bar** (when a window is floating) to move it and drop it onto docking hints.
 
-Current Fret docking arbitration demos primarily gate **tab drag** flows via explicit drag anchors (stable `test_id`s). Title-bar-style docking is not a first-class parity goal for v1 (it is a policy/UX decision and may interact with custom window chrome).
+Current Fret docking arbitration demos gate both:
+
+- **Tab drags** (panel vs tabs-group drag kind).
+- **In-window floating title-bar drags** (ImGui docking with viewports disabled): dragging the floating container chrome can re-dock it back into the main dock tree.
+
+For v1, we intentionally gate *in-window floating* title-bar docking (which is fully controlled by `ecosystem/fret-docking`) rather than OS window chrome title-bar docking (which may interact with custom window chrome and runner policies).
 
 ## Current Fret behavior (mechanism notes)
 
@@ -53,7 +58,11 @@ Current Fret docking arbitration demos primarily gate **tab drag** flows via exp
   - `crates/fret-launch/src/runner/desktop/runner/event_routing.rs`
 - Follow-window movement during dock drags:
   - `crates/fret-launch/src/runner/desktop/runner/docking.rs`
-  - When `FRET_DOCK_TEAROFF_TRANSPARENT_PAYLOAD=1` (or `DockingInteractionSettings.transparent_payload_during_follow`), the runner applies opacity to the moving window and updates drag diagnostics (`transparent_payload_applied`).
+  - `FRET_DOCK_TEAROFF_TRANSPARENT_PAYLOAD` is a boolean env flag:
+    - values `0/false/off/no` disable it,
+    - any other present value enables it.
+  - When enabled (or when `DockingInteractionSettings.transparent_payload_during_follow` is true), the runner applies opacity/passthrough to the moving window and updates drag diagnostics (`transparent_payload_applied`).
+  - The runner only force-enables follow for windows that are already dock-floating (tear-off OS windows); forcing follow for normal app windows prevents out-of-bounds tear-off heuristics from stabilizing.
 
 ### Diagnostics/script injection integration
 
@@ -83,6 +92,7 @@ Key multi-window gates:
   - `tools/diag-scripts/docking-arbitration-demo-multiwindow-drag-tab-back-to-main.json`
   - `tools/diag-scripts/docking-arbitration-demo-multiwindow-drag-tab-into-left-tabs.json`
   - `tools/diag-scripts/docking-arbitration-demo-multiwindow-chained-tearoff-two-tabs-merge.json`
+  - `tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-title-bar-drag-docks-to-main.json`
 - Separate `HoveredWindow` vs `WindowUnderMovingWindow` contract (ImGui terminology):
   - `tools/diag-scripts/docking-arbitration-demo-multiwindow-under-moving-window-basic.json`
 - Structural “no leak / no growth” loops:
@@ -90,6 +100,13 @@ Key multi-window gates:
   - `tools/diag-scripts/docking-arbitration-demo-multiwindow-large-tearoff-merge-loop-no-leak.json`
 - Edge cases:
   - `tools/diag-scripts/docking-arbitration-demo-multiwindow-release-outside-windows-poll-up.json`
+
+Key in-window floating gates:
+
+- Floating title bar drag clamps to window bounds:
+  - `tools/diag-scripts/docking/arbitration/docking-arbitration-demo-floating-title-drag-clamps-to-window.json`
+- Floating title bar drag can dock back into the main dock tree:
+  - `tools/diag-scripts/docking/arbitration/docking-arbitration-demo-floating-title-drag-docks-to-main.json`
 
 These gates assert, at minimum:
 
@@ -169,6 +186,29 @@ These gates assert, at minimum:
   - `tools/diag-scripts/docking-arbitration-demo-multiwindow-transparent-payload-drag-tab-back-to-main.json`
   - `tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-transparent-payload-zorder-switch.json`
 
+4) **In-window floating title-bar drag docking**
+- Delivered (2026-03-03): dragging an in-window floating container title bar resolves dock drop targets against the window dock layout (ignoring the moving floating container), and on center-drop merges the floating container back into the dock tree.
+  - implementation: `ecosystem/fret-docking/src/dock/space.rs`
+  - gate: `tools/diag-scripts/docking/arbitration/docking-arbitration-demo-floating-title-drag-docks-to-main.json`
+  - note: this gates the in-window floating path. OS window chrome title-bar docking remains an explicit policy decision.
+
+5) **Floating OS window “title bar” drag docking (custom chrome / tabs-group drag)**
+- Delivered (2026-03-03): after tear-off, starting a **tabs-group** drag from empty tab-bar space in a floating OS window can dock it back into the main window and auto-close the floating window.
+  - gate: `tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-title-bar-drag-docks-to-main.json`
+  - script authoring note: for cross-window drags, ensure the final drop position is expressed in the *target window* coordinate space (e.g. `move_pointer` in the target window) before releasing; otherwise drop-resolve can remain `source=none` and the floating window will not close.
+
+6) **Peek-behind hover routing (HoveredWindowUnderMovingWindow)**
+- Delivered (2026-03-04): when transparent payload is enabled and a dock-floating OS window follows the cursor, hover routing can prefer the window *behind* the moving window so docking previews/resolve can target the overlapped window.
+  - gate: `tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-under-moving-window-basic.json`
+  - included in smoke: `tools/diag-scripts/suites/diag-hardening-smoke-docking/suite.json`
+  - additional gate (tabs-group drags): `tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-under-moving-window-tabs-group.json`
+    - included in suite: `tools/diag-scripts/suites/docking-arbitration/suite.json`
+
+7) **Five-way docking hint selection (inner pad sweep)**
+- Delivered (2026-03-04): during a cross-window dock drag, sweeping the inner 5-way hint pad (top/left/right/bottom/center) selects each zone deterministically via `dock_drop_resolved_zone_is`.
+  - gate: `tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-five-way-hints-sweep.json`
+  - included in suite: `tools/diag-scripts/suites/docking-arbitration/suite.json`
+
 The preferred vehicle remains: add/extend diag scripts in `tools/diag-scripts/` and keep assertions contract-level (dock graph signatures + docking diagnostics), not pixels.
 
 ## ImGui multi-viewport gap inventory (what still differs)
@@ -178,9 +218,16 @@ This is a practical checklist for editor-grade parity. It intentionally mixes UX
 
 ### A. Gestures and windowing
 
-- Title-bar drag docking: ImGui supports docking via dragging a floating window title bar; Fret’s current gates focus on
-  tab-drag anchors. If we want parity, we need a first-class “drag chrome to dock” policy (likely in `ecosystem/fret-docking`)
-  that does not fight custom window chrome.
+- Title-bar drag docking:
+  - In-window floating: delivered and gated (see above).
+  - Floating OS window, custom chrome: delivered and gated via tabs-group drags on empty tab-bar space (see above).
+  - OS window chrome (non-client): still a parity gap. If we want ImGui-style multi-viewport title-bar docking, we need a first-class “drag chrome to dock” policy that does not fight custom window chrome and runner window-move policies.
+- Undock whole node (tabs-group tear-off):
+  - Delivered (2026-03-03): tearing off a whole tab stack via tabs-group drag is gated:
+    - `tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-tearoff-tabs-group-two-tabs.json`
+- Tear-off + merge back (tabs-group):
+  - Delivered (2026-03-03): tearing off the whole tab stack into a new OS window, then docking it back into the main window (tabs-group title-bar drag) and asserting auto-close + no floatings:
+    - `tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-tearoff-tabs-group-two-tabs-merge-back.json`
 - Multi-monitor “hand off” feel: ImGui viewports are routinely dragged across monitors with changing DPI. We should
   validate (and gate) that tear-off windows preserve expected DPI/scale behavior when crossing monitors (where supported).
 
@@ -197,6 +244,8 @@ This is a practical checklist for editor-grade parity. It intentionally mixes UX
 
 - Tab overflow + scrolling: ensure overflow behavior is predictable and stable under resize (and ideally gate it).
 - Tab reordering within a tab strip (and across tab strips) to match common ImGui editor workflows.
+  - Delivered (2026-03-03): reordering within a single tab strip is gated:
+    - `tools/diag-scripts/docking/arbitration/docking-arbitration-demo-tab-reorder-two-tabs.json`
 - “Close” ergonomics: close button hitboxes + middle-click-to-close (policy decision) should live in the ecosystem layer.
 
 ### D. Persistence and correctness
@@ -205,3 +254,22 @@ This is a practical checklist for editor-grade parity. It intentionally mixes UX
   contract surface (likely in `crates/fret-core` for the dock graph model + an app-level storage policy).
 - Stronger canonical-form invariants: beyond “graph is canonical”, we should lock behavior like “no panel loss” under
   sequences (tear-off → merge → close → reopen) with a small repeatable suite.
+
+## Next actions (prioritized)
+
+P0 (editor-grade hand feel blockers):
+
+- Multi-monitor DPI during tear-off + follow:
+  - add a Windows-only gate that tears off on monitor A, drags the floating window across to monitor B, and asserts DPI/scale stays consistent with ADR 0017 (`docs/adr/0017-multi-window-display-and-dpi.md`).
+  - target: no large cursor-to-grab offset jumps; drop hints remain stable after crossing monitors.
+- Interim stress gate (single or multi-monitor):
+  - `tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-drag-tab-back-to-main-large-outer-move.json` moves the dock-floating window far along +X and asserts drag-back still succeeds.
+- Decide OS non-client title-bar docking scope:
+  - ImGui supports docking while dragging the platform window title bar (multi-viewport backends can cooperate).
+  - Fret currently gates “title-bar docking” via tabs-group drags inside the tab bar (portable).
+  - Action: explicitly decide whether OS title-bar docking is a non-goal, or an opt-in runner policy (likely Windows-only first).
+
+P1 (coverage and regression hardening):
+
+- Promote more multi-window gates into `tools/diag-scripts/suites/docking-arbitration/suite.json` as they stabilize (keep `diag-hardening-smoke-docking` small).
+- Add a macOS-focused “release outside windows still commits drop” gate (mirrors the Windows poll-up gate), and document the capability/degradation expectation when it is not possible.

@@ -109,8 +109,8 @@ impl View for CommandsKeymapBasicsView {
                 shadcn::Label::new("Shortcut:").into_element(cx),
                 shadcn::Badge::new(shortcut)
                     .variant(shadcn::BadgeVariant::Secondary)
-                    .into_element(cx)
-                    .test_id(TEST_ID_SHORTCUT),
+                    .test_id(TEST_ID_SHORTCUT)
+                    .into_element(cx),
             ]
         })
         .gap(Space::N2)
@@ -126,8 +126,8 @@ impl View for CommandsKeymapBasicsView {
                     } else {
                         shadcn::BadgeVariant::Destructive
                     })
-                    .into_element(cx)
-                    .test_id(TEST_ID_ENABLED),
+                    .test_id(TEST_ID_ENABLED)
+                    .into_element(cx),
             ]
         })
         .gap(Space::N2)
@@ -149,9 +149,9 @@ impl View for CommandsKeymapBasicsView {
         let dispatch_button = shadcn::Button::new("Dispatch command")
             .variant(shadcn::ButtonVariant::Outline)
             .action(act::TogglePanel)
-            .into_element(cx)
             .a11y_role(SemanticsRole::Button)
-            .test_id(TEST_ID_DISPATCH);
+            .test_id(TEST_ID_DISPATCH)
+            .into_element(cx);
 
         let left = ui::v_flex(cx, |_cx| {
             [row_shortcut, row_enabled, row_allow, dispatch_button]
@@ -218,7 +218,8 @@ impl View for CommandsKeymapBasicsView {
             .ui()
             .w_full()
             .max_w(Px(860.0))
-            .into_element(cx);
+            .into_element(cx)
+            .key_context("cookbook.commands_keymap_basics");
 
         cx.on_action::<act::TogglePanel>({
             let panel_open = self.panel_open.clone();

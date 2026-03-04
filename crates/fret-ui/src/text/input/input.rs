@@ -14,6 +14,7 @@ impl TextInput {
             a11y_role: SemanticsRole::TextField,
             enabled: true,
             focusable: true,
+            focus_ring_always_paint: false,
             text: String::new(),
             base_text_revision: 0,
             ime_surrounding_text_cache: std::cell::RefCell::default(),
@@ -76,6 +77,10 @@ impl TextInput {
 
     pub fn set_focusable(&mut self, focusable: bool) {
         self.focusable = focusable;
+    }
+
+    pub fn set_focus_ring_always_paint(&mut self, always_paint: bool) {
+        self.focus_ring_always_paint = always_paint;
     }
 
     pub fn set_placeholder(&mut self, placeholder: Option<std::sync::Arc<str>>) {

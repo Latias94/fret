@@ -366,7 +366,7 @@ impl UiDiagnosticsService {
                 | UiPredicateV1::DockDragWindowUnderMovingWindowIs { .. }
                 | UiPredicateV1::DockDragActiveIs { .. }
                 | UiPredicateV1::DockDragTransparentPayloadAppliedIs { .. }
-                | UiPredicateV1::DockDragTransparentPayloadMousePassthroughAppliedIs { .. }
+                | UiPredicateV1::DockDragTransparentPayloadHitTestPassthroughAppliedIs { .. }
                 | UiPredicateV1::DockDragWindowUnderCursorSourceIs { .. }
                 | UiPredicateV1::DockDragWindowUnderMovingWindowSourceIs { .. }
                 | UiPredicateV1::DockFloatingDragActiveIs { .. }
@@ -597,6 +597,7 @@ impl UiDiagnosticsService {
                 | UiActionStepV2::MenuSelectPath { window, .. }
                 | UiActionStepV2::SetSliderValue { window, .. }
                 | UiActionStepV2::SetWindowInnerSize { window, .. }
+                | UiActionStepV2::SetWindowStyle { window, .. }
                 | UiActionStepV2::SetWindowOuterPosition { window, .. }
                 | UiActionStepV2::SetCursorInWindow { window, .. }
                 | UiActionStepV2::SetCursorInWindowLogical { window, .. }
@@ -642,6 +643,7 @@ impl UiDiagnosticsService {
             | UiActionStepV2::MenuSelectPath { window, .. }
             | UiActionStepV2::SetSliderValue { window, .. }
             | UiActionStepV2::SetWindowInnerSize { window, .. }
+            | UiActionStepV2::SetWindowStyle { window, .. }
             | UiActionStepV2::SetWindowOuterPosition { window, .. }
             | UiActionStepV2::SetCursorInWindow { window, .. }
             | UiActionStepV2::SetCursorInWindowLogical { window, .. }
@@ -1105,11 +1107,21 @@ impl UiDiagnosticsService {
             .global::<fret_render::RendererPerfFrameStore>()
             .and_then(|store| store.latest_for_window(window));
 
+        let wgpu_hub_report = app
+            .global::<fret_render::WgpuHubReportFrameStore>()
+            .and_then(|store| store.latest_for_window(window));
+
+        let wgpu_allocator_report = app
+            .global::<fret_render::WgpuAllocatorReportFrameStore>()
+            .and_then(|store| store.latest_for_window(window));
+
         let mut debug = UiTreeDebugSnapshotV1::from_tree(
             app,
             window,
             ui,
             renderer_perf,
+            wgpu_hub_report,
+            wgpu_allocator_report,
             element_runtime,
             hit_test,
             element_diag,
@@ -1294,6 +1306,11 @@ impl UiDiagnosticsService {
                     deferred: decision.deferred,
                     focus_is_text_input: decision.focus_is_text_input,
                     ime_composing: decision.ime_composing,
+                    key_contexts: decision
+                        .key_contexts
+                        .iter()
+                        .map(|c| c.as_ref().to_string())
+                        .collect(),
                     key: format!("{:?}", decision.key),
                     modifiers: UiKeyModifiersV1::from_modifiers(decision.modifiers),
                     repeat: decision.repeat,
@@ -1361,12 +1378,15 @@ impl UiDiagnosticsService {
                 fret_runtime::CommandDispatchSourceKindV1::Programmatic => "programmatic",
             };
 
-            let inferred_source_test_id = infer_pointer_source_test_id_from_semantics(
-                window,
-                decision.source.element,
-                semantics_snapshot,
-                element_runtime,
-            );
+            let direct_source_test_id = decision.source.test_id.as_deref().map(str::to_string);
+            let inferred_source_test_id = direct_source_test_id.or_else(|| {
+                infer_pointer_source_test_id_from_semantics(
+                    window,
+                    decision.source.element,
+                    semantics_snapshot,
+                    element_runtime,
+                )
+            });
 
             let source_test_id = match decision.source.kind {
                 fret_runtime::CommandDispatchSourceKindV1::Pointer => {

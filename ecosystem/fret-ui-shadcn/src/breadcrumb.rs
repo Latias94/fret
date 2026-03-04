@@ -15,6 +15,8 @@ use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::typography;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Space, ui};
 
+use crate::{rtl, use_direction};
+
 fn open_url_on_activate(
     url: Arc<str>,
     target: Option<Arc<str>>,
@@ -414,12 +416,14 @@ fn breadcrumb_separator<H: UiHost>(
     muted: Color,
     separator: &BreadcrumbSeparator,
 ) -> AnyElement {
+    let dir = use_direction(cx, None);
     match separator {
         BreadcrumbSeparator::ChevronRight => {
-            // shadcn uses lucide `ChevronRight` at `size-3.5` (~14px).
+            // shadcn defaults to a right-pointing chevron; in RTL we mirror the visual separator
+            // direction to match the reading flow.
             decl_icon::icon_with(
                 cx,
-                ids::ui::CHEVRON_RIGHT,
+                rtl::chevron_inline_end(dir),
                 Some(Px(14.0)),
                 Some(fret_ui_kit::ColorRef::Color(muted)),
             )
@@ -1012,8 +1016,11 @@ pub mod primitives {
                 (muted, props)
             };
 
+            let dir = crate::use_direction(cx, None);
             let (icon, size) = match self.kind {
-                BreadcrumbSeparatorKind::ChevronRight => (ids::ui::CHEVRON_RIGHT, Px(14.0)),
+                BreadcrumbSeparatorKind::ChevronRight => {
+                    (crate::rtl::chevron_inline_end(dir), Px(14.0))
+                }
                 BreadcrumbSeparatorKind::Slash => (ids::ui::SLASH, Px(14.0)),
                 BreadcrumbSeparatorKind::Icon { icon, size } => (icon, size),
             };
