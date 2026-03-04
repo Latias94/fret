@@ -95,6 +95,28 @@ pub(super) fn handle_pressable<H: UiHost>(
             crate::elements::record_transient_event(&mut *self.app, cx.window, cx.target, key);
         }
 
+        fn record_pending_command_dispatch_source(
+            &mut self,
+            cx: action::ActionCx,
+            command: &fret_runtime::CommandId,
+            reason: ActivateReason,
+        ) {
+            let kind = match reason {
+                ActivateReason::Pointer => fret_runtime::CommandDispatchSourceKindV1::Pointer,
+                ActivateReason::Keyboard => fret_runtime::CommandDispatchSourceKindV1::Keyboard,
+            };
+            let source = fret_runtime::CommandDispatchSourceV1 {
+                kind,
+                element: Some(cx.target.0),
+            };
+            self.app.with_global_mut(
+                fret_runtime::WindowPendingCommandDispatchSourceService::default,
+                |svc, app| {
+                    svc.record(cx.window, app.tick_id(), command.clone(), source);
+                },
+            );
+        }
+
         #[track_caller]
         fn notify(&mut self, _cx: action::ActionCx) {
             *self.notify_requested = true;
