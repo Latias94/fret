@@ -166,8 +166,11 @@ pub mod table_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod table_stress_demo;
 pub mod tags_demo;
-#[cfg(all(not(target_arch = "wasm32"), feature = "legacy-mvu-demos"))]
+#[cfg(not(target_arch = "wasm32"))]
 pub mod todo_demo;
+
+#[cfg(all(not(target_arch = "wasm32"), feature = "legacy-mvu-demos"))]
+pub mod todo_demo_legacy;
 #[cfg(not(target_arch = "wasm32"))]
 #[cfg(not(target_arch = "wasm32"))]
 #[cfg(not(target_arch = "wasm32"))]
