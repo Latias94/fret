@@ -158,11 +158,14 @@ impl WorkspaceShellDemoDriver {
     fn build_ui(app: &mut App, window: AppWindowId) -> WorkspaceShellWindowState {
         let view_cache_enabled = env_bool("FRET_EXAMPLES_VIEW_CACHE", false);
         let view_cache_shell = env_bool("FRET_EXAMPLES_VIEW_CACHE_SHELL", false);
+        // Diagnostics scripts set `FRET_DIAG=1` and should stay lightweight. Opt into expensive
+        // UI debug hotspots explicitly.
+        let ui_debug_enabled = env_bool("FRET_UI_DEBUG", false);
 
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
         ui.set_view_cache_enabled(view_cache_enabled);
-        ui.set_debug_enabled(std::env::var_os("FRET_DIAG").is_some_and(|v| !v.is_empty()));
+        ui.set_debug_enabled(ui_debug_enabled);
 
         let mut window_layout = WorkspaceWindowLayout::new("window-1", "pane-a");
         window_layout.pane_tree = WorkspacePaneTree::split(
