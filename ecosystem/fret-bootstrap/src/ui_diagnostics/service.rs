@@ -597,6 +597,7 @@ impl UiDiagnosticsService {
                 | UiActionStepV2::MenuSelectPath { window, .. }
                 | UiActionStepV2::SetSliderValue { window, .. }
                 | UiActionStepV2::SetWindowInnerSize { window, .. }
+                | UiActionStepV2::SetWindowStyle { window, .. }
                 | UiActionStepV2::SetWindowOuterPosition { window, .. }
                 | UiActionStepV2::SetCursorInWindow { window, .. }
                 | UiActionStepV2::SetCursorInWindowLogical { window, .. }
@@ -642,6 +643,7 @@ impl UiDiagnosticsService {
             | UiActionStepV2::MenuSelectPath { window, .. }
             | UiActionStepV2::SetSliderValue { window, .. }
             | UiActionStepV2::SetWindowInnerSize { window, .. }
+            | UiActionStepV2::SetWindowStyle { window, .. }
             | UiActionStepV2::SetWindowOuterPosition { window, .. }
             | UiActionStepV2::SetCursorInWindow { window, .. }
             | UiActionStepV2::SetCursorInWindowLogical { window, .. }

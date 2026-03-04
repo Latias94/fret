@@ -913,6 +913,15 @@ pub enum UiActionStepV2 {
         width_px: f32,
         height_px: f32,
     },
+    /// Best-effort request to update OS window style facets at runtime (patch semantics).
+    ///
+    /// This is intended for diagnostics-only repros and regression gates for utility window
+    /// postures (frameless/transparent/materials/hit-test policies).
+    SetWindowStyle {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        window: Option<UiWindowTargetV1>,
+        style: UiWindowStylePatchV1,
+    },
     SetWindowInsets {
         #[serde(default)]
         safe_area_insets: UiInsetsOverrideV1,
@@ -1372,6 +1381,58 @@ pub struct UiWindowStyleMatchV1 {
     pub hit_test: Option<UiWindowHitTestRequestV1>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub hit_test_regions_fingerprint64: Option<u64>,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct UiWindowStylePatchV1 {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub taskbar: Option<UiTaskbarVisibilityV1>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub activation: Option<UiActivationPolicyV1>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub z_level: Option<UiWindowZLevelV1>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub decorations: Option<UiWindowDecorationsRequestV1>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub resizable: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub transparent: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub background_material: Option<UiWindowBackgroundMaterialRequestV1>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub hit_test: Option<UiWindowHitTestPatchV1>,
+    /// Global window opacity hint (0..=255), best-effort.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub opacity_alpha_u8: Option<u8>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum UiWindowHitTestPatchV1 {
+    Normal,
+    PassthroughAll,
+    PassthroughRegions {
+        #[serde(default, skip_serializing_if = "Vec::is_empty")]
+        regions: Vec<UiWindowHitTestRegionV1>,
+    },
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum UiWindowHitTestRegionV1 {
+    Rect {
+        x: f32,
+        y: f32,
+        width: f32,
+        height: f32,
+    },
+    RRect {
+        x: f32,
+        y: f32,
+        width: f32,
+        height: f32,
+        radius: f32,
+    },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

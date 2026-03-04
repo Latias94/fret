@@ -309,6 +309,9 @@ impl UiDiagnosticsService {
         if !cfg!(target_arch = "wasm32") {
             caps.push("diag.window_style_snapshot".to_string());
             caps.push("diag.window_background_material_snapshot".to_string());
+            if cfg!(target_os = "windows") {
+                caps.push("diag.window_style_patch_v1".to_string());
+            }
         }
         caps.push("diag.window_insets_override".to_string());
         caps.push("diag.clipboard_force_unavailable".to_string());
