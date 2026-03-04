@@ -599,7 +599,7 @@
       ],
       "target_hints": [
         "Waits for the root to exist.",
-        "Waits for the query to reach Success.",
+        "Waits for the query to reach Success and show stable demo text.",
         "Captures a baseline screenshot + bundle."
       ]
     },
@@ -621,9 +621,9 @@
         "smoke"
       ],
       "target_hints": [
-        "Waits for the root to exist.",
+        "Waits for the root node to exist.",
         "Navigates to Settings and back.",
-        "Captures a screenshot + bundle."
+        "Captures a screenshot + diagnostics bundle."
       ]
     },
     {
@@ -881,6 +881,44 @@
       ]
     },
     {
+      "id": "docking-arbitration-demo-floating-title-drag-clamps-to-window",
+      "path": "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-floating-title-drag-clamps-to-window.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "diag-hardening-smoke-docking"
+      ],
+      "tags": [
+        "docking",
+        "floating",
+        "gate"
+      ],
+      "target_hints": [
+        "Create an in-window floating container via float-zone, then drag its title bar far outside the window.",
+        "Expected behavior: the floating rect is clamped to window bounds (ImGui-style hand feel) and the drag is observed by diagnostics."
+      ]
+    },
+    {
+      "id": "docking-arbitration-demo-floating-title-drag-docks-to-main",
+      "path": "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-floating-title-drag-docks-to-main.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "diag-hardening-smoke-docking"
+      ],
+      "tags": [
+        "docking",
+        "floating",
+        "gate"
+      ],
+      "target_hints": [
+        "Create an in-window floating container via float-zone, then drag its title bar onto docking hint rectangles.",
+        "Expected behavior: while dragging, docking hint routing is published and on drop the floating container merges back into the main dock tree (ImGui-style)."
+      ]
+    },
+    {
       "id": "docking-arbitration-demo-incoming-open-inject-smoke",
       "path": "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-incoming-open-inject-smoke.json",
       "required_capabilities": [
@@ -942,54 +980,6 @@
       ]
     },
     {
-      "id": "docking-arbitration-demo-multiwindow-tearoff-tabs-group-two-tabs",
-      "path": "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-tearoff-tabs-group-two-tabs.json",
-      "required_capabilities": [
-        "diag.multi_window",
-        "diag.script_v2"
-      ],
-      "suite_memberships": [
-        "docking-arbitration"
-      ],
-      "tags": [
-        "docking",
-        "drag",
-        "gate",
-        "multiwindow",
-        "tearoff",
-        "tabbar"
-      ],
-      "target_hints": [
-        "Merges two viewports into one tab strip, then starts a tabs-group drag from empty tab-bar space and tears off out-of-bounds.",
-        "Asserts the whole tab stack moves into a new OS window (ImGui-style undock-whole-node gesture)."
-      ]
-    },
-    {
-      "id": "docking-arbitration-demo-multiwindow-tearoff-tabs-group-two-tabs-merge-back",
-      "path": "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-tearoff-tabs-group-two-tabs-merge-back.json",
-      "required_capabilities": [
-        "diag.multi_window",
-        "diag.script_v2"
-      ],
-      "suite_memberships": [
-        "diag-hardening-smoke-docking",
-        "docking-arbitration"
-      ],
-      "tags": [
-        "docking",
-        "drag",
-        "gate",
-        "merge",
-        "multiwindow",
-        "tearoff",
-        "titlebar"
-      ],
-      "target_hints": [
-        "Merges two viewports into one tab strip, tears off the whole tab stack via a tabs-group drag, then docks it back into the main window via a title-bar (tabs-group) drag.",
-        "Asserts the floating OS window auto-closes after drop, and the main window still contains the baseline panels with no floatings."
-      ]
-    },
-    {
       "id": "docking-arbitration-demo-multiwindow-drag-tab-back-to-main",
       "path": "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-drag-tab-back-to-main.json",
       "required_capabilities": [
@@ -1013,49 +1003,51 @@
       ]
     },
     {
-      "id": "docking-arbitration-demo-multiwindow-title-bar-drag-docks-to-main",
-      "path": "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-title-bar-drag-docks-to-main.json",
+      "id": "docking-arbitration-demo-multiwindow-drag-tab-back-to-main-large-outer-move",
+      "path": "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-drag-tab-back-to-main-large-outer-move.json",
       "required_capabilities": [
         "diag.multi_window",
         "diag.script_v2"
       ],
       "suite_memberships": [
-        "diag-hardening-smoke-docking",
         "docking-arbitration"
       ],
       "tags": [
         "docking",
+        "dpi",
         "drag",
         "gate",
-        "multiwindow",
-        "titlebar"
-      ],
-      "target_hints": [
-        "After tear-off, starts a tabs-group drag from empty tab-bar space in a floating OS window (custom chrome title-bar grab).",
-        "Docks back into the main window and asserts the floating window auto-closes after drop."
-      ]
-    },
-    {
-      "id": "docking-arbitration-demo-multiwindow-under-moving-window-basic",
-      "path": "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-under-moving-window-basic.json",
-      "required_capabilities": [
-        "diag.multi_window",
-        "diag.script_v2"
-      ],
-      "suite_memberships": [
-        "diag-hardening-smoke-docking",
-        "docking-arbitration"
-      ],
-      "tags": [
-        "docking",
-        "drag",
-        "gate",
-        "hover",
         "multiwindow"
       ],
       "target_hints": [
-        "Overlaps two OS windows and starts a cross-window dock drag in the topmost window.",
-        "With transparent payload enabled, asserts hover routing can peek behind the moving window (ImGui-style HoveredWindowUnderMovingWindow)."
+        "This gate is a stress variant of the multi-window drag-back flow.",
+        "After tear-off creates a floating OS window, the script moves that floating window far along +X (cross-monitor if present).",
+        "Expected behavior: cross-window drag routing remains correct and the tab can still be docked back into the main window (no coordinate/DPI drift regressions).",
+        "Evidence: the script captures bundles both right after tear-off and after the large outer move; use `fretboard diag dock-routing <bundle_dir>` to inspect dock-drag routing (including scale_factor_x1000 fields when available).",
+        "Note: if the host only has a single monitor, the OS may clamp the outer position; the gate still exercises large-coordinate paths and must pass."
+      ]
+    },
+    {
+      "id": "docking-arbitration-demo-multiwindow-five-way-hints-sweep",
+      "path": "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-five-way-hints-sweep.json",
+      "required_capabilities": [
+        "diag.multi_window",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "docking-arbitration"
+      ],
+      "tags": [
+        "docking",
+        "gate",
+        "hints",
+        "multiwindow",
+        "tearoff"
+      ],
+      "target_hints": [
+        "Tears off a tab into a dock-floating OS window.",
+        "Starts a cross-window drag and sweeps the inner 5-way docking hint pad in the main window (top/left/right/bottom/center).",
+        "Asserts that each hint can be selected deterministically via `dock_drop_resolved_zone_is`."
       ]
     },
     {
@@ -1124,6 +1116,98 @@
         "This script repeatedly tears off a tab to create a floating OS window, then drags it back into the main window.",
         "Expected behavior: after each cycle the dock graph returns to the default canonical signature without deepening splits or growing node count.",
         "Note: cursor overrides are expressed in window-client physical pixels."
+      ]
+    },
+    {
+      "id": "docking-arbitration-demo-multiwindow-tearoff-tabs-group-two-tabs-merge-back",
+      "path": "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-tearoff-tabs-group-two-tabs-merge-back.json",
+      "required_capabilities": [
+        "diag.multi_window",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "diag-hardening-smoke-docking"
+      ],
+      "tags": [
+        "docking",
+        "drag",
+        "gate",
+        "multiwindow",
+        "tearoff"
+      ],
+      "target_hints": [
+        "This gate merges left+right viewports into one tab strip, tears off the whole tab stack via a tabs-group drag, then docks it back into the main window via a title-bar (tabs-group) drag.",
+        "Expected behavior: the floating OS window auto-closes after the drop, and the main window still contains left+right+controls with no floatings."
+      ]
+    },
+    {
+      "id": "docking-arbitration-demo-multiwindow-title-bar-drag-docks-to-main",
+      "path": "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-title-bar-drag-docks-to-main.json",
+      "required_capabilities": [
+        "diag.multi_window",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "diag-hardening-smoke-docking"
+      ],
+      "tags": [
+        "docking",
+        "drag",
+        "gate",
+        "multiwindow"
+      ],
+      "target_hints": [
+        "This gate exercises an ImGui-like title-bar docking gesture (custom chrome):",
+        "1) tear off a tab to create a floating OS window, then release,",
+        "2) start a *tabs-group* drag from empty tab-bar space (treated as a title-bar grab),",
+        "3) dock the floating OS window back into the main window and auto-close the floating window.",
+        "It captures bundles at 'drop' and 'after-close' to isolate docking-apply vs window-close cleanup regressions."
+      ]
+    },
+    {
+      "id": "docking-arbitration-demo-multiwindow-under-moving-window-basic",
+      "path": "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-under-moving-window-basic.json",
+      "required_capabilities": [
+        "diag.multi_window",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "diag-hardening-smoke-docking"
+      ],
+      "tags": [
+        "docking",
+        "drag",
+        "gate",
+        "hover",
+        "multiwindow"
+      ],
+      "target_hints": [
+        "This gate overlaps two OS windows and starts a cross-window dock tab drag in the topmost window.",
+        "Expected (transparent payload): hover routing peeks behind the moving window so docking previews/resolve can target the overlapped window.",
+        "This mirrors ImGui terminology: `HoveredWindowUnderMovingWindow` becomes the effective hover target when NoInputs/click-through behavior is desired."
+      ]
+    },
+    {
+      "id": "docking-arbitration-demo-multiwindow-under-moving-window-tabs-group",
+      "path": "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-under-moving-window-tabs-group.json",
+      "required_capabilities": [
+        "diag.multi_window",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "docking-arbitration"
+      ],
+      "tags": [
+        "docking",
+        "drag",
+        "gate",
+        "hover",
+        "multiwindow"
+      ],
+      "target_hints": [
+        "This gate overlaps two OS windows and starts a cross-window tabs-group dock drag in the topmost window.",
+        "Expected (transparent payload): hover routing peeks behind the moving window so docking previews/resolve can target the overlapped window.",
+        "It differs from the basic under-moving-window gate by starting the drag on empty tab-bar space (tabs-group drag), not on a specific tab (panel drag)."
       ]
     },
     {
@@ -1339,26 +1423,6 @@
       "target_hints": [
         "This script first merges two viewports into a single tab stack, then asserts drop-at-end resolves insert_index == 2.",
         "It cancels the final drag (Escape) to avoid mutating layout beyond the setup step."
-      ]
-    },
-    {
-      "id": "docking-arbitration-demo-tab-reorder-two-tabs",
-      "path": "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-tab-reorder-two-tabs.json",
-      "required_capabilities": [
-        "diag.script_v2"
-      ],
-      "suite_memberships": [
-        "docking-arbitration"
-      ],
-      "tags": [
-        "docking",
-        "drag",
-        "gate",
-        "tabbar"
-      ],
-      "target_hints": [
-        "Merges two viewports into one tab strip, then drags a tab to the end to reorder within the strip.",
-        "Asserts the dock graph reflects the new tab order without floating/tear-off."
       ]
     },
     {
@@ -3793,6 +3857,16 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-data-table-guide-row-actions-menu-stability",
+      "path": "tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-guide-row-actions-menu-stability.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-data-table"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-data-table-listlike-pointer-selection",
       "path": "tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-listlike-pointer-selection.json",
       "required_capabilities": [],
@@ -4300,6 +4374,42 @@
       ]
     },
     {
+      "id": "ui-gallery-hover-card-click-leave-closes",
+      "path": "tools/diag-scripts/ui-gallery/hover-card/ui-gallery-hover-card-click-leave-closes.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-hover-card"
+      ],
+      "tags": [
+        "focus",
+        "gate",
+        "hover",
+        "hover-card",
+        "shadcn",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Navigate to the Hover Card page.",
+        "Click the instant-delay trigger to focus it and open the hover card.",
+        "Move the pointer away; hover-driven open should close even if focus remains."
+      ]
+    },
+    {
+      "id": "ui-gallery-hover-card-docs-smoke",
+      "path": "tools/diag-scripts/ui-gallery/hover-card/ui-gallery-hover-card-docs-smoke.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-hover-card"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-hover-card-rtl-open-screenshot",
       "path": "tools/diag-scripts/ui-gallery/hover-card/ui-gallery-hover-card-rtl-open-screenshot.json",
       "required_capabilities": [
@@ -4307,6 +4417,7 @@
         "diag.script_v2"
       ],
       "suite_memberships": [
+        "ui-gallery-hover-card",
         "ui-gallery-rtl-smoke"
       ],
       "tags": [
@@ -4321,6 +4432,32 @@
         "Scroll to the RTL section and open the hover-card via pointer hover.",
         "Capture a screenshot for RTL placement/alignment parity."
       ]
+    },
+    {
+      "id": "ui-gallery-hover-card-sides-placement",
+      "path": "tools/diag-scripts/ui-gallery/hover-card/ui-gallery-hover-card-sides-placement.json",
+      "required_capabilities": [
+        "diag.overlay_placement_trace",
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-hover-card"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-hover-card-trigger-delays",
+      "path": "tools/diag-scripts/ui-gallery/hover-card/ui-gallery-hover-card-trigger-delays.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-hover-card"
+      ],
+      "tags": [],
+      "target_hints": []
     },
     {
       "id": "ui-gallery-hover-layout-torture",
@@ -4351,6 +4488,29 @@
         "ui-gallery"
       ],
       "target_hints": []
+    },
+    {
+      "id": "ui-gallery-hovercard-demo-screenshot-zinc-dark",
+      "path": "tools/diag-scripts/ui-gallery/hover-card/ui-gallery-hovercard-demo-screenshot-zinc-dark.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-hover-card"
+      ],
+      "tags": [
+        "hovercard",
+        "screenshots",
+        "shadcn",
+        "ui-gallery",
+        "zinc-dark"
+      ],
+      "target_hints": [
+        "Sets theme preset to zinc/dark.",
+        "Navigates to the Hover Card page.",
+        "Opens the demo hover card and captures a screenshot to gate hover card surface tokens."
+      ]
     },
     {
       "id": "ui-gallery-hovercard-open",
@@ -4531,6 +4691,24 @@
         "ui-gallery-inspector-torture-keep-alive"
       ],
       "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-label-click-focus-input",
+      "path": "tools/diag-scripts/ui-gallery/label/ui-gallery-label-click-focus-input.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "diag-hardening-smoke"
+      ],
+      "tags": [
+        "a11y",
+        "focus",
+        "label",
+        "shadcn",
+        "ui_gallery"
+      ],
       "target_hints": []
     },
     {
@@ -4967,6 +5145,28 @@
       ]
     },
     {
+      "id": "ui-gallery-navigation-menu-entry-key-focus-first",
+      "path": "tools/diag-scripts/ui-gallery/navigation-menu/ui-gallery-navigation-menu-entry-key-focus-first.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "focus",
+        "gate",
+        "keyboard",
+        "navigation_menu",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Open a NavigationMenu item, then press ArrowDown on the focused trigger.",
+        "Ensure focus moves into the open content (first link), matching Radix entry-key behavior."
+      ]
+    },
+    {
       "id": "ui-gallery-navigation-menu-escape-close-gate",
       "path": "tools/diag-scripts/ui-gallery/navigation-menu/ui-gallery-navigation-menu-escape-close-gate.json",
       "required_capabilities": [
@@ -4986,9 +5186,8 @@
         "ui_gallery"
       ],
       "target_hints": [
-        "Open NavigationMenu content and move keyboard focus into the viewport.",
-        "Press Escape to close while focus is inside the content.",
-        "Ensure hover pointer-move does not immediately re-open after Escape dismissal."
+        "Move the pointer over the trigger, open NavigationMenu content, and press Escape to close.",
+        "Ensure a small mouse move over the trigger does not immediately re-open after Escape dismissal."
       ]
     },
     {
@@ -5013,6 +5212,28 @@
         "Navigates to the Navigation Menu page.",
         "Opens the RTL NavigationMenu components trigger.",
         "Captures a screenshot to validate inline-start/end mirroring for viewport padding/content."
+      ]
+    },
+    {
+      "id": "ui-gallery-navigation-menu-tab-enters-content",
+      "path": "tools/diag-scripts/ui-gallery/navigation-menu/ui-gallery-navigation-menu-tab-enters-content.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "focus",
+        "gate",
+        "keyboard",
+        "navigation_menu",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Open a NavigationMenu item, then press Tab while the trigger is focused.",
+        "Ensure focus moves into the open content (first link), matching Radix focus-proxy outcome."
       ]
     },
     {
@@ -6291,6 +6512,7 @@
       "id": "workspace-shell-demo-tab-close-mru-fallback-smoke",
       "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-mru-fallback-smoke.json",
       "required_capabilities": [
+        "diag.command_dispatch_trace",
         "diag.script_v2"
       ],
       "suite_memberships": [

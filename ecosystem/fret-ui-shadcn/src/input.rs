@@ -1096,4 +1096,57 @@ mod tests {
         assert_eq!(decoration.labelled_by_element, Some(label_id.0));
         assert_eq!(decoration.described_by_element, Some(desc_id.0));
     }
+
+    #[test]
+    fn input_control_id_uses_registry_label_element_from_label_primitive() {
+        let mut app = App::new();
+        crate::shadcn_themes::apply_shadcn_new_york(
+            &mut app,
+            crate::shadcn_themes::ShadcnBaseColor::Slate,
+            crate::shadcn_themes::ShadcnColorScheme::Light,
+        );
+
+        let window = AppWindowId::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(320.0), Px(180.0)),
+        );
+
+        let model = app.models_mut().insert(String::new());
+
+        let root =
+            elements::with_element_cx(&mut app, window, bounds, "control-id-input-label", |cx| {
+                let id = ControlId::from("email");
+
+                cx.column(fret_ui::element::ColumnProps::default(), move |cx| {
+                    vec![
+                        crate::label::Label::new("Email")
+                            .for_control(id.clone())
+                            .into_element(cx),
+                        Input::new(model.clone()).control_id(id).into_element(cx),
+                    ]
+                })
+            });
+
+        let label_id = root.children[0].id;
+
+        fn find_text_input(el: &AnyElement) -> Option<&AnyElement> {
+            if matches!(el.kind, ElementKind::TextInput(_)) {
+                return Some(el);
+            }
+            for child in &el.children {
+                if let Some(found) = find_text_input(child) {
+                    return Some(found);
+                }
+            }
+            None
+        }
+
+        let input = find_text_input(&root).expect("expected a TextInput node");
+        let decoration = input
+            .semantics_decoration
+            .as_ref()
+            .expect("expected semantics decoration on TextInput");
+        assert_eq!(decoration.labelled_by_element, Some(label_id.0));
+    }
 }
