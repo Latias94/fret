@@ -189,12 +189,14 @@ fn fixed_size_hint_px(element: &AnyElement) -> Option<Size> {
 
 fn hover_card_content_chrome(theme: &ThemeSnapshot) -> ChromeRefinement {
     let bg = theme.color_token("popover");
+    let fg = theme.color_token("popover.foreground");
     let border = theme.color_token("border");
 
     ChromeRefinement::default()
         .rounded(Radius::Md)
         .border_1()
         .bg(ColorRef::Color(bg))
+        .text_color(ColorRef::Color(fg))
         .border_color(ColorRef::Color(border))
         .p(Space::N4)
 }

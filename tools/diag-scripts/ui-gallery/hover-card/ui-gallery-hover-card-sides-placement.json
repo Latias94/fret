@@ -59,6 +59,7 @@
       "type": "scroll_into_view",
       "container": { "kind": "test_id", "id": "ui-gallery-content-viewport" },
       "target": { "kind": "test_id", "id": "ui-gallery-hover-card-side-left-trigger" },
+      "require_fully_within_container": true,
       "require_fully_within_window": true,
       "padding_px": 8.0,
       "padding_insets_px": { "left_px": 8.0, "top_px": 120.0, "right_px": 8.0, "bottom_px": 240.0 },
@@ -120,6 +121,7 @@
       "container": { "kind": "test_id", "id": "ui-gallery-content-viewport" },
       "target": { "kind": "test_id", "id": "ui-gallery-hover-card-side-top-trigger" },
       "require_fully_within_window": true,
+      "require_fully_within_container": true,
       "padding_px": 8.0,
       "padding_insets_px": { "left_px": 8.0, "top_px": 120.0, "right_px": 8.0, "bottom_px": 240.0 },
       "timeout_frames": 600
@@ -181,6 +183,7 @@
       "target": { "kind": "test_id", "id": "ui-gallery-hover-card-side-bottom-trigger" },
       "delta_y": -240.0,
       "require_fully_within_window": true,
+      "require_fully_within_container": true,
       "padding_px": 8.0,
       "padding_insets_px": { "left_px": 8.0, "top_px": 120.0, "right_px": 8.0, "bottom_px": 240.0 },
       "timeout_frames": 600
@@ -241,6 +244,7 @@
       "container": { "kind": "test_id", "id": "ui-gallery-content-viewport" },
       "target": { "kind": "test_id", "id": "ui-gallery-hover-card-side-right-trigger" },
       "require_fully_within_window": true,
+      "require_fully_within_container": true,
       "padding_px": 8.0,
       "padding_insets_px": { "left_px": 8.0, "top_px": 120.0, "right_px": 8.0, "bottom_px": 240.0 },
       "timeout_frames": 600
