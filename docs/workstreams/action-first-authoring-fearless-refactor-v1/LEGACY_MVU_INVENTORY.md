@@ -94,10 +94,9 @@ Recommendation:
 
 ### 3) UI gallery legacy glue (`mvu_router`)
 
-Current uses of `fret::mvu_router::KeyedMessageRouter` exist in:
+Current status:
 
-- `apps/fret-ui-gallery/src/spec.rs`
-- `apps/fret-ui-gallery/src/ui/previews/gallery/data/table_legacy.rs`
+- No remaining uses of `fret::mvu_router::KeyedMessageRouter` (removed).
 
 Recommendation:
 
