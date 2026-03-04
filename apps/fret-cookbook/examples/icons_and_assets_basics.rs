@@ -127,7 +127,7 @@ impl View for IconsAndAssetsBasicsView {
         let header = shadcn::CardHeader::new([
             shadcn::CardTitle::new("Icons + assets basics").into_element(cx),
             shadcn::CardDescription::new(
-                "Icon packs (lucide/radix), semantic ui.* aliases, and file-based SVG/images via fret-ui-assets.",
+                "Icon packs (lucide), semantic ui.* aliases, and file-based SVG/images via fret-ui-assets.",
             )
             .into_element(cx),
         ])
@@ -212,7 +212,7 @@ impl View for IconsAndAssetsBasicsView {
                         let frozen = cx.app.global::<FrozenIconRegistry>().cloned();
                         let preload = cx
                             .app
-                            .global::<fret_ui_kit::declarative::icon::IconSvgPreloadDiagnostics>()
+                            .global::<fret::prelude::icon::IconSvgPreloadDiagnostics>()
                             .copied();
                         let frozen_len = frozen.as_ref().map(|v| v.len()).unwrap_or(0);
                         let preload_entries = preload.map(|v| v.entries).unwrap_or(0);
@@ -255,11 +255,11 @@ impl View for IconsAndAssetsBasicsView {
                             ),
                             icon_row(
                                 cx,
-                                "Vendor ids (radix.*)",
+                                "Vendor ids (lucide.*)",
                                 [
-                                    IconId::new_static("radix.magnifying-glass"),
-                                    IconId::new_static("radix.cross-2"),
-                                    IconId::new_static("radix.copy"),
+                                    IconId::new_static("lucide.search"),
+                                    IconId::new_static("lucide.x"),
+                                    IconId::new_static("lucide.copy"),
                                 ],
                             ),
                         ]
@@ -466,9 +466,9 @@ impl View for IconsAndAssetsBasicsView {
 fn main() -> anyhow::Result<()> {
     FretApp::new("cookbook-icons-and-assets-basics")
         .window("cookbook-icons-and-assets-basics", (960.0, 860.0))
-        // Register Radix vendor icons during bootstrap so the icon SVG preload step (if enabled)
+        // Register Lucide vendor icons during bootstrap so the icon SVG preload step (if enabled)
         // includes them.
-        .register_icon_pack(fret_icons_radix::register_vendor_icons)
+        .register_icon_pack(fret_icons_lucide::register_vendor_icons)
         .install_app(fret_cookbook::install_cookbook_defaults)
         .run_view::<IconsAndAssetsBasicsView>()
         .map_err(anyhow::Error::from)

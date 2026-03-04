@@ -43,6 +43,10 @@ Recommended starting points (action-first + view runtime):
 - `commands_keymap_basics`, `overlay_basics`, `text_input_basics`
 - `imui_action_basics` (cross-frontend action dispatch)
 
+Note: some cookbook examples are feature-gated to keep cold compile time down; see:
+
+- [apps/fret-cookbook/README.md](../../apps/fret-cookbook/README.md)
+
 Some cookbook examples still use legacy MVU for now. Track remaining in-tree usage here:
 
 - [docs/workstreams/action-first-authoring-fearless-refactor-v1/LEGACY_MVU_INVENTORY.md](../workstreams/action-first-authoring-fearless-refactor-v1/LEGACY_MVU_INVENTORY.md)

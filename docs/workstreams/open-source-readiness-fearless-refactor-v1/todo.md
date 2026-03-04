@@ -16,8 +16,8 @@ Status legend:
 ## M1 — Cookbook curation (small, teachable, fast)
 
 - [~] Keep cookbook deps minimal (avoid enabling “everything” by default).
-- [ ] Add “Official vs Lab” labels for cookbook examples.
-- [ ] Gate the highest-ceiling interop examples behind explicit Cargo features (optional).
+- [x] Add “Official vs Lab” labels for cookbook examples.
+- [x] Gate the highest-ceiling interop examples behind explicit Cargo features (optional).
 - [ ] Add/curate diag scripts for the recommended 5–8 examples.
 
 ## M2 — `fret` feature profiles
