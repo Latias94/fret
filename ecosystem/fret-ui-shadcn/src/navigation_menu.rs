@@ -2348,6 +2348,7 @@ pub type NavigationMenuRoot = NavigationMenu;
 mod tests {
     use super::*;
 
+    use crate::LayoutDirection;
     use fret_app::App;
     use fret_core::{
         AppWindowId, KeyCode, Modifiers, MouseButton, MouseButtons, Point, PointerEvent,
@@ -2362,8 +2363,6 @@ mod tests {
     };
     use fret_ui::tree::UiTree;
     use fret_ui_kit::OverlayController;
-    use fret_ui_kit::primitives::direction as direction_prim;
-    use fret_ui_kit::primitives::direction::LayoutDirection;
     use std::collections::HashMap;
 
     #[derive(Default)]
@@ -3578,7 +3577,7 @@ mod tests {
                     bounds,
                     "navigation-menu-dir",
                     move |cx| {
-                        direction_prim::with_direction_provider(cx, dir, |cx| {
+                        crate::with_direction_provider(cx, dir, |cx| {
                             let theme = Theme::global(&*cx.app).snapshot();
                             let region_props = LayoutQueryRegionProps {
                                 layout: decl_style::layout_style(

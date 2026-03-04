@@ -4223,6 +4223,7 @@ mod tests {
 
     use std::sync::atomic::{AtomicUsize, Ordering};
 
+    use crate::LayoutDirection;
     use fret_app::App;
     use fret_core::{
         AppWindowId, Event, KeyCode, Modifiers, MouseButtons, PathCommand, Point, PointerEvent,
@@ -4234,8 +4235,6 @@ mod tests {
     use fret_runtime::{Effect, FrameId};
     use fret_ui::UiTree;
     use fret_ui::element::PressableA11y;
-    use fret_ui_kit::primitives::direction as direction_prim;
-    use fret_ui_kit::primitives::direction::LayoutDirection;
 
     #[test]
     fn dropdown_menu_new_controllable_uses_controlled_model_when_provided() {
@@ -4759,7 +4758,7 @@ mod tests {
             bounds,
             "dropdown-menu-dir",
             move |cx| {
-                direction_prim::with_direction_provider(cx, dir, |cx| {
+                crate::with_direction_provider(cx, dir, |cx| {
                     vec![
                         cx.container(
                             ContainerProps {
