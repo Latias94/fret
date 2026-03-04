@@ -6682,12 +6682,28 @@ mod tests {
         };
 
         // Frame 1: closed.
-        render_frame_focusable_trigger(&mut ui, &mut app, &mut services, window, bounds, open.clone(), entries());
+        render_frame_focusable_trigger(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            entries(),
+        );
         assert!(!OverlayController::arbitration_snapshot(&ui).has_any_overlays);
 
         // Frame 2: open, should paint with an intermediate opacity during the fade-in.
         let _ = app.models_mut().update(&open, |v| *v = true);
-        render_frame_focusable_trigger(&mut ui, &mut app, &mut services, window, bounds, open.clone(), entries());
+        render_frame_focusable_trigger(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            entries(),
+        );
         assert!(OverlayController::arbitration_snapshot(&ui).has_any_overlays);
 
         let mut scene = fret_core::Scene::default();
@@ -6715,7 +6731,15 @@ mod tests {
 
         // Close: the content should remain painted for at least one frame and fade out.
         let _ = app.models_mut().update(&open, |v| *v = false);
-        render_frame_focusable_trigger(&mut ui, &mut app, &mut services, window, bounds, open.clone(), entries());
+        render_frame_focusable_trigger(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            entries(),
+        );
         assert!(
             OverlayController::arbitration_snapshot(&ui).has_any_overlays,
             "expected overlay to remain present during close transition"
