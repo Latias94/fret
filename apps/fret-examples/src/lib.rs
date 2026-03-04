@@ -73,8 +73,10 @@ pub mod echarts_demo;
 pub mod echarts_multi_grid_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod effects_demo;
-#[cfg(all(not(target_arch = "wasm32"), feature = "legacy-mvu-demos"))]
+#[cfg(not(target_arch = "wasm32"))]
 pub mod embedded_viewport_demo;
+#[cfg(all(not(target_arch = "wasm32"), feature = "legacy-mvu-demos"))]
+pub mod embedded_viewport_demo_legacy;
 pub mod emoji_conformance_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod empty_idle_demo;
