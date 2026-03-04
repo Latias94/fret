@@ -59,6 +59,10 @@ Add promoted scripts under `tools/diag-scripts/workspace/**`:
      - activation does not switch to a different tab
      - drag does not start (no DnD session / no preview)
      - promoted script: `workspace-shell-demo-tab-close-button-does-not-start-drag`
+   - overflow menu: close hidden tab entry and assert:
+     - the tab closes
+     - the previously active tab remains selected
+     - promoted script: `workspace-shell-demo-tab-overflow-close-does-not-activate`
    - middle-click close (if enabled by policy)
 
 3) Overflow (resize) (invariants-first)
