@@ -14,6 +14,7 @@ These are intentionally stable and should be your default onboarding path:
 3. `todo` (template) — “best practice baseline” (selectors + queries).
    - Generate: `cargo run -p fretboard -- new todo --name my-todo`
    - Read: [docs/examples/todo-app-golden-path.md](./todo-app-golden-path.md)
+   - Note: this template opts into `fret` feature `state` (selector/query helpers).
 
 ## 1) In-tree Cookbook (small, focused lessons)
 
