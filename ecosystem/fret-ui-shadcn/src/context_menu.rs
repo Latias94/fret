@@ -379,6 +379,11 @@ struct ContextMenuCancelOpenState {
 
 type ContextMenuCancelOpenShared = Arc<Mutex<ContextMenuCancelOpenState>>;
 
+#[derive(Default)]
+struct ContextMenuTriggerTimerInstalledState {
+    installed: bool,
+}
+
 fn context_menu_cancel_open_shared() -> ContextMenuCancelOpenShared {
     Arc::new(Mutex::new(ContextMenuCancelOpenState::default()))
 }
@@ -3129,26 +3134,45 @@ impl ContextMenu {
                         host.release_pointer_capture();
                         touch_on_cancel(host, acx, cancel)
                     }));
-                    let cancel_open_for_timer = cancel_open_for_region.clone();
-                    cx.timer_add_on_timer_for(
-                        cx.root_id(),
-                        Arc::new(move |host, action_cx, token| {
-                            context_menu_cancel_open_on_timer(&cancel_open_for_timer, host, token);
-                            let Some(anchor) = menu::context_menu_touch_long_press_take_anchor_on_timer(
-                                &touch_long_press_for_timer,
-                                token,
-                            ) else {
-                                return false;
-                            };
-
-                            let _ = host.models_mut().update(&anchor_store_model_for_timer, |map| {
-                                map.insert(open_model_id, anchor);
-                            });
-                            let _ = host.models_mut().update(&open_for_timer, |v| *v = true);
-                            host.request_redraw(action_cx.window);
-                            true
-                        }),
+                    let region_id = cx.root_id();
+                    let installed = cx.with_state_for(
+                        region_id,
+                        ContextMenuTriggerTimerInstalledState::default,
+                        |st| st.installed,
                     );
+                    if !installed {
+                        let cancel_open_for_timer = cancel_open_for_region.clone();
+                        cx.timer_add_on_timer_for(
+                            region_id,
+                            Arc::new(move |host, action_cx, token| {
+                                context_menu_cancel_open_on_timer(
+                                    &cancel_open_for_timer,
+                                    host,
+                                    token,
+                                );
+                                let Some(anchor) = menu::context_menu_touch_long_press_take_anchor_on_timer(
+                                    &touch_long_press_for_timer,
+                                    token,
+                                ) else {
+                                    return false;
+                                };
+
+                                let _ = host.models_mut().update(&anchor_store_model_for_timer, |map| {
+                                    map.insert(open_model_id, anchor);
+                                });
+                                let _ = host.models_mut().update(&open_for_timer, |v| *v = true);
+                                host.request_redraw(action_cx.window);
+                                true
+                            }),
+                        );
+                        cx.with_state_for(
+                            region_id,
+                            ContextMenuTriggerTimerInstalledState::default,
+                            |st| {
+                                st.installed = true;
+                            },
+                        );
+                    }
                     vec![trigger_element]
                 })
             });
@@ -4971,18 +4995,33 @@ mod tests {
                                 }
                                 false
                             }));
-                            let cancel_open_for_timer = cancel_open_for_region.clone();
-                            cx.timer_add_on_timer_for(
-                                cx.root_id(),
-                                Arc::new(move |host, _acx, token| {
-                                    context_menu_cancel_open_on_timer(
-                                        &cancel_open_for_timer,
-                                        host,
-                                        token,
-                                    );
-                                    false
-                                }),
+                            let region_id = cx.root_id();
+                            let installed = cx.with_state_for(
+                                region_id,
+                                ContextMenuTriggerTimerInstalledState::default,
+                                |st| st.installed,
                             );
+                            if !installed {
+                                let cancel_open_for_timer = cancel_open_for_region.clone();
+                                cx.timer_add_on_timer_for(
+                                    region_id,
+                                    Arc::new(move |host, _acx, token| {
+                                        context_menu_cancel_open_on_timer(
+                                            &cancel_open_for_timer,
+                                            host,
+                                            token,
+                                        );
+                                        false
+                                    }),
+                                );
+                                cx.with_state_for(
+                                    region_id,
+                                    ContextMenuTriggerTimerInstalledState::default,
+                                    |st| {
+                                        st.installed = true;
+                                    },
+                                );
+                            }
                             vec![trigger]
                         })
                     },
