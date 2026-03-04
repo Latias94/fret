@@ -262,6 +262,8 @@ P0 (editor-grade hand feel blockers):
 - Multi-monitor DPI during tear-off + follow:
   - add a Windows-only gate that tears off on monitor A, drags the floating window across to monitor B, and asserts DPI/scale stays consistent with ADR 0017 (`docs/adr/0017-multi-window-display-and-dpi.md`).
   - target: no large cursor-to-grab offset jumps; drop hints remain stable after crossing monitors.
+- Interim stress gate (single or multi-monitor):
+  - `tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-drag-tab-back-to-main-large-outer-move.json` moves the dock-floating window far along +X and asserts drag-back still succeeds.
 - Decide OS non-client title-bar docking scope:
   - ImGui supports docking while dragging the platform window title bar (multi-viewport backends can cooperate).
   - Fret currently gates “title-bar docking” via tabs-group drags inside the tab bar (portable).

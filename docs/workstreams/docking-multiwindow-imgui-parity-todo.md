@@ -115,6 +115,7 @@ Each TODO is labeled:
   - Evidence anchors (scripts):
     - `tools/diag-scripts/docking-arbitration-demo-multiwindow-overlap-zorder-switch.json`
     - `tools/diag-scripts/docking-arbitration-demo-multiwindow-drag-tab-back-to-main.json`
+    - `tools/diag-scripts/docking-arbitration-demo-multiwindow-drag-tab-back-to-main-large-outer-move.json`
     - `tools/diag-scripts/docking-arbitration-demo-multiwindow-chained-tearoff-two-tabs-merge.json`
     - `tools/diag-scripts/docking-arbitration-demo-multiwindow-transparent-payload-zorder-switch.json`
     - `tools/diag-scripts/docking-arbitration-demo-multiwindow-release-outside-windows-poll-up.json`
