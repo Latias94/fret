@@ -46,6 +46,7 @@ pub mod model;
 pub mod platform_completion;
 pub mod platform_text_input;
 pub mod runner_accessibility_diagnostics;
+pub mod runner_platform_window_receiver_diagnostics;
 pub mod runner_surface_lifecycle_diagnostics;
 pub mod runner_window_lifecycle_diagnostics;
 pub mod runner_window_style_diagnostics;
@@ -154,6 +155,10 @@ pub use platform_completion::PlatformCompletion;
 pub use platform_text_input::{PlatformTextInputQuery, PlatformTextInputQueryResult, Utf16Range};
 pub use runner_accessibility_diagnostics::{
     RunnerAccessibilityDiagnosticsStore, RunnerAccessibilitySnapshot,
+};
+pub use runner_platform_window_receiver_diagnostics::{
+    RunnerPlatformWindowReceiverAtCursorSnapshotV1, RunnerPlatformWindowReceiverAtCursorSourceV1,
+    RunnerPlatformWindowReceiverDiagnosticsStore,
 };
 pub use runner_surface_lifecycle_diagnostics::{
     RunnerSurfaceLifecycleDiagnosticsStore, RunnerSurfaceLifecycleSnapshot,

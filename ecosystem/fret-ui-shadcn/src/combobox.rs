@@ -2,6 +2,7 @@ use std::cell::Cell;
 use std::rc::Rc;
 use std::sync::{Arc, Mutex};
 
+use crate::LayoutDirection;
 use fret_core::{Color, Corners, Edges, FontId, FontWeight, Px, SemanticsRole, TextStyle};
 use fret_icons::ids;
 use fret_runtime::Model;
@@ -15,10 +16,12 @@ use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
+use fret_ui_kit::declarative::motion::{
+    drive_tween_color_for_element, drive_tween_f32_for_element,
+};
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::combobox as kit_combobox;
 use fret_ui_kit::primitives::controllable_state;
-use fret_ui_kit::primitives::direction as direction_prim;
 use fret_ui_kit::primitives::popover as radix_popover;
 use fret_ui_kit::primitives::popper;
 use fret_ui_kit::{
@@ -1478,15 +1481,16 @@ fn combobox_with_patch<H: UiHost>(
                         let selected = selected_for_trigger.clone();
                         let show_trigger = show_trigger_for_trigger;
                         control_chrome_pressable_with_id_props(cx, |cx, st, trigger_id| {
-                            *focus_restore_target
-                                .lock()
-                                .unwrap_or_else(|e| e.into_inner()) = Some(trigger_id);
-                            let mut states = WidgetStates::from_pressable(cx, st, enabled);
-                            states.set(WidgetState::Open, is_open);
+	                            *focus_restore_target
+	                                .lock()
+	                                .unwrap_or_else(|e| e.into_inner()) = Some(trigger_id);
+	                            let mut states = WidgetStates::from_pressable(cx, st, enabled);
+	                            states.set(WidgetState::Open, is_open);
+	                            let dir = crate::use_direction(cx, None);
 
-                            let bg_ref = resolve_override_slot(
-                                style_override.trigger_background.as_ref(),
-                                &default_trigger_bg,
+	                            let bg_ref = resolve_override_slot(
+	                                style_override.trigger_background.as_ref(),
+	                                &default_trigger_bg,
                                 states,
                             );
                             let fg_ref = resolve_override_slot(
@@ -1505,6 +1509,37 @@ fn combobox_with_patch<H: UiHost>(
                             let border = border_ref.resolve(&theme_for_trigger);
                             let icon_fg = alpha_mul(fg, 0.5);
 
+                            let duration = overlay_motion::shadcn_motion_duration_150(cx);
+                            let ease = overlay_motion::shadcn_ease;
+                            let border_motion = drive_tween_color_for_element(
+                                cx,
+                                trigger_id,
+                                "combobox-trigger-border-color",
+                                border,
+                                duration,
+                                ease,
+                            );
+                            let ring_alpha = drive_tween_f32_for_element(
+                                cx,
+                                trigger_id,
+                                "combobox-trigger-ring-alpha",
+                                if states.contains(WidgetStates::FOCUS_VISIBLE) {
+                                    1.0
+                                } else {
+                                    0.0
+                                },
+                                duration,
+                                ease,
+                            );
+                            let mut ring = ring;
+                            ring.color.a = (ring.color.a * ring_alpha.value).clamp(0.0, 1.0);
+                            if let Some(offset) = ring.offset_color {
+                                ring.offset_color = Some(Color {
+                                    a: (offset.a * ring_alpha.value).clamp(0.0, 1.0),
+                                    ..offset
+                                });
+                            }
+
                             cx.pressable_add_on_activate(
                                 kit_combobox::set_open_change_reason_on_activate(
                                     open_change_reason_model.clone(),
@@ -1518,6 +1553,7 @@ fn combobox_with_patch<H: UiHost>(
                                 enabled,
                                 focusable: true,
                                 focus_ring: Some(ring),
+                                focus_ring_always_paint: ring_alpha.animating,
                                 a11y: PressableA11y {
                                     role: Some(SemanticsRole::ComboBox),
                                     label: a11y_label_for_trigger
@@ -1536,16 +1572,18 @@ fn combobox_with_patch<H: UiHost>(
                                     layout.size = trigger_layout.size;
                                     layout
                                 },
-                                padding: Edges {
-                                    top: pad_top,
-                                    right: pad_right,
-                                    bottom: pad_bottom,
-                                    left: pad_left,
-                                }.into(),
+                                padding: crate::rtl::padding_edges_with_inline_start_end(
+                                    dir,
+                                    pad_top,
+                                    pad_bottom,
+                                    pad_left,
+                                    pad_right,
+                                )
+                                .into(),
                                 background: Some(bg),
                                 shadow: None,
                                 border: Edges::all(border_w),
-                                border_color: Some(border),
+                                border_color: Some(border_motion.value),
                                 corner_radii: Corners::all(radius),
                                 ..Default::default()
                             };
@@ -1765,14 +1803,14 @@ fn combobox_with_patch<H: UiHost>(
                                         )
                                         });
 
-                                        let mut out = vec![label_el];
-                                        if let Some(right) = right {
-                                            out.push(right);
-                                        }
-                                        out
-                                    },
-                                )]
-                            })
+	                                        crate::rtl::vec_main_with_inline_end(
+	                                            dir,
+	                                            label_el,
+	                                            right,
+	                                        )
+	                                    },
+	                                )]
+	                            })
                         })
                     },
                     move |cx| {
@@ -2199,15 +2237,16 @@ fn combobox_with_patch<H: UiHost>(
                 let query_model = query_model_for_trigger.clone();
                 let selected = selected_for_trigger.clone();
                 control_chrome_pressable_with_id_props(cx, |cx, st, trigger_id| {
-                    *focus_restore_target
-                        .lock()
-                        .unwrap_or_else(|e| e.into_inner()) = Some(trigger_id);
-                    let mut states = WidgetStates::from_pressable(cx, st, enabled);
-                    states.set(WidgetState::Open, is_open);
+	                    *focus_restore_target
+	                        .lock()
+	                        .unwrap_or_else(|e| e.into_inner()) = Some(trigger_id);
+	                    let mut states = WidgetStates::from_pressable(cx, st, enabled);
+	                    states.set(WidgetState::Open, is_open);
+	                    let dir = crate::use_direction(cx, None);
 
-                    let bg_ref = resolve_override_slot(
-                        style_override.trigger_background.as_ref(),
-                        &default_trigger_bg,
+	                    let bg_ref = resolve_override_slot(
+	                        style_override.trigger_background.as_ref(),
+	                        &default_trigger_bg,
                         states,
                     );
                     let fg_ref = resolve_override_slot(
@@ -2226,6 +2265,37 @@ fn combobox_with_patch<H: UiHost>(
                     let border = border_ref.resolve(&theme_for_trigger);
                     let icon_fg = alpha_mul(fg, 0.5);
 
+                    let duration = overlay_motion::shadcn_motion_duration_150(cx);
+                    let ease = overlay_motion::shadcn_ease;
+                    let border_motion = drive_tween_color_for_element(
+                        cx,
+                        trigger_id,
+                        "combobox-trigger-border-color",
+                        border,
+                        duration,
+                        ease,
+                    );
+                    let ring_alpha = drive_tween_f32_for_element(
+                        cx,
+                        trigger_id,
+                        "combobox-trigger-ring-alpha",
+                        if states.contains(WidgetStates::FOCUS_VISIBLE) {
+                            1.0
+                        } else {
+                            0.0
+                        },
+                        duration,
+                        ease,
+                    );
+                    let mut ring = ring;
+                    ring.color.a = (ring.color.a * ring_alpha.value).clamp(0.0, 1.0);
+                    if let Some(offset) = ring.offset_color {
+                        ring.offset_color = Some(Color {
+                            a: (offset.a * ring_alpha.value).clamp(0.0, 1.0),
+                            ..offset
+                        });
+                    }
+
                     cx.pressable_add_on_activate(kit_combobox::set_open_change_reason_on_activate(
                         open_change_reason_model.clone(),
                         ComboboxOpenChangeReason::TriggerPress,
@@ -2237,6 +2307,7 @@ fn combobox_with_patch<H: UiHost>(
                         enabled,
                         focusable: true,
                         focus_ring: Some(ring),
+                        focus_ring_always_paint: ring_alpha.animating,
                         a11y: PressableA11y {
                             role: Some(SemanticsRole::ComboBox),
                             label: a11y_label_for_trigger
@@ -2251,16 +2322,18 @@ fn combobox_with_patch<H: UiHost>(
 
                     let chrome_props = ContainerProps {
                         layout: LayoutStyle::default(),
-                        padding: Edges {
-                            top: pad_top,
-                            right: pad_right,
-                            bottom: pad_bottom,
-                            left: pad_left,
-                        }.into(),
+                        padding: crate::rtl::padding_edges_with_inline_start_end(
+                            dir,
+                            pad_top,
+                            pad_bottom,
+                            pad_left,
+                            pad_right,
+                        )
+                        .into(),
                         background: Some(bg),
                         shadow: None,
                         border: Edges::all(border_w),
-                        border_color: Some(border),
+                        border_color: Some(border_motion.value),
                         corner_radii: Corners::all(radius),
                         ..Default::default()
                     };
@@ -2441,14 +2514,10 @@ fn combobox_with_patch<H: UiHost>(
                                 )
                                 });
 
-                                let mut out = vec![label_el];
-                                if let Some(right) = right {
-                                    out.push(right);
-                                }
-                                out
-                            },
-                        )]
-                    })
+	                                crate::rtl::vec_main_with_inline_end(dir, label_el, right)
+	                            },
+	                        )]
+	                    })
                 })
             },
                 move |cx, anchor| {
@@ -2478,7 +2547,7 @@ fn combobox_with_patch<H: UiHost>(
                         fret_ui::Invalidation::Layout,
                         window_margin,
                     );
-                    let direction = direction_prim::use_direction_in_scope(cx, None);
+                    let direction = crate::use_direction(cx, None);
                     let placement = combobox_content_placement(
                         direction,
                         content_side,
@@ -2851,7 +2920,7 @@ fn combobox_with_patch<H: UiHost>(
 }
 
 fn combobox_content_placement(
-    direction: direction_prim::LayoutDirection,
+    direction: LayoutDirection,
     side: popper::Side,
     align: popper::Align,
     side_offset: Px,
@@ -2882,7 +2951,7 @@ mod tests {
     #[test]
     fn combobox_content_placement_tracks_offsets() {
         let placement = combobox_content_placement(
-            direction_prim::LayoutDirection::Ltr,
+            LayoutDirection::Ltr,
             popper::Side::Top,
             popper::Align::Start,
             Px(6.0),
@@ -3524,6 +3593,234 @@ mod tests {
         ui.request_semantics_snapshot();
         ui.layout_all(app, services, bounds, 1.0);
         root
+    }
+
+    fn find_pressable_with_test_id<'a>(
+        node: &'a AnyElement,
+        test_id: &str,
+    ) -> Option<&'a PressableProps> {
+        match &node.kind {
+            fret_ui::element::ElementKind::Pressable(props) => props
+                .a11y
+                .test_id
+                .as_deref()
+                .is_some_and(|id| id == test_id)
+                .then_some(props),
+            _ => node
+                .children
+                .iter()
+                .find_map(|c| find_pressable_with_test_id(c, test_id)),
+        }
+    }
+
+    #[test]
+    fn combobox_trigger_focus_ring_tweens_in_and_out_like_a_transition() {
+        use std::cell::Cell;
+        use std::rc::Rc;
+        use std::time::Duration;
+
+        use fret_core::{Event, KeyCode, Modifiers};
+        use fret_ui_kit::declarative::transition::ticks_60hz_for_duration;
+
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        crate::shadcn_themes::apply_shadcn_new_york(
+            &mut app,
+            crate::shadcn_themes::ShadcnBaseColor::Neutral,
+            crate::shadcn_themes::ShadcnColorScheme::Light,
+        );
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(420.0), Px(240.0)),
+        );
+
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let mut services = FakeServices::default();
+        let model = app.models_mut().insert(None::<Arc<str>>);
+        let open = app.models_mut().insert(false);
+
+        let ring_alpha_out: Rc<Cell<Option<f32>>> = Rc::new(Cell::new(None));
+        let always_paint_out: Rc<Cell<Option<bool>>> = Rc::new(Cell::new(None));
+
+        fn items() -> Vec<ComboboxItem> {
+            vec![
+                ComboboxItem::new("alpha", "Alpha"),
+                ComboboxItem::new("beta", "Beta"),
+                ComboboxItem::new("gamma", "Gamma"),
+            ]
+        }
+
+        fn render_frame_for_motion(
+            ui: &mut UiTree<App>,
+            app: &mut App,
+            services: &mut dyn UiServices,
+            window: AppWindowId,
+            bounds: Rect,
+            model: Model<Option<Arc<str>>>,
+            open: Model<bool>,
+            ring_alpha_out: Rc<Cell<Option<f32>>>,
+            always_paint_out: Rc<Cell<Option<bool>>>,
+        ) -> fret_core::NodeId {
+            let next = app.frame_id().0.saturating_add(1);
+            app.set_frame_id(FrameId(next));
+            app.set_tick_id(TickId(next as u64));
+            app.with_global_mut(WindowFrameClockService::default, |svc, app| {
+                svc.record_frame(window, app.frame_id());
+            });
+
+            fret_ui_kit::OverlayController::begin_frame(app, window);
+            let root = fret_ui::declarative::render_root(
+                ui,
+                app,
+                services,
+                window,
+                bounds,
+                "combobox-trigger-motion",
+                move |cx| {
+                    let el = Combobox::new(model, open)
+                        .test_id_prefix("cb")
+                        .trigger_test_id("cb-trigger")
+                        .items(items())
+                        .into_element(cx);
+
+                    let trigger =
+                        find_pressable_with_test_id(&el, "cb-trigger").expect("trigger pressable");
+                    let a = trigger.focus_ring.map(|ring| ring.color.a).unwrap_or(0.0);
+                    ring_alpha_out.set(Some(a));
+                    always_paint_out.set(Some(trigger.focus_ring_always_paint));
+
+                    vec![el]
+                },
+            );
+            ui.set_root(root);
+            fret_ui_kit::OverlayController::render(ui, app, services, window, bounds);
+            ui.request_semantics_snapshot();
+            ui.layout_all(app, services, bounds, 1.0);
+            root
+        }
+
+        // Frame 1: baseline render (no focus-visible), ring alpha should be 0.
+        let root = render_frame_for_motion(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            ring_alpha_out.clone(),
+            always_paint_out.clone(),
+        );
+        let a0 = ring_alpha_out.get().expect("a0");
+        assert!(
+            a0.abs() <= 1e-6,
+            "expected ring alpha to start at 0, got {a0}"
+        );
+
+        // Focus the trigger and mark focus-visible via a navigation key.
+        let focusable = ui
+            .first_focusable_descendant_including_declarative(&mut app, window, root)
+            .expect("focusable combobox trigger");
+        ui.set_focus(Some(focusable));
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::KeyDown {
+                key: KeyCode::Tab,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+
+        // Frame 2: ring should be in-between (not snapped).
+        let _ = render_frame_for_motion(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            ring_alpha_out.clone(),
+            always_paint_out.clone(),
+        );
+        let a1 = ring_alpha_out.get().expect("a1");
+        assert!(
+            a1 > 0.0,
+            "expected ring alpha to start animating in, got {a1}"
+        );
+
+        // Advance frames until the default 150ms transition settles.
+        let settle = ticks_60hz_for_duration(Duration::from_millis(150)) + 2;
+        for _ in 0..settle {
+            let _ = render_frame_for_motion(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                model.clone(),
+                open.clone(),
+                ring_alpha_out.clone(),
+                always_paint_out.clone(),
+            );
+        }
+        let a_focused = ring_alpha_out.get().expect("a_focused");
+        assert!(
+            a_focused > a1 + 1e-4,
+            "expected ring alpha to increase over time, got a1={a1} a_focused={a_focused}"
+        );
+
+        // Blur and ensure ring animates out while still being painted.
+        ui.set_focus(None);
+        let _ = render_frame_for_motion(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            open.clone(),
+            ring_alpha_out.clone(),
+            always_paint_out.clone(),
+        );
+        let a_blur = ring_alpha_out.get().expect("a_blur");
+        let always_paint = always_paint_out.get().expect("always_paint");
+        assert!(
+            a_blur > 0.0 && a_blur < a_focused,
+            "expected ring alpha to be intermediate after blur, got a_blur={a_blur} a_focused={a_focused}"
+        );
+        assert!(
+            always_paint,
+            "expected focus ring to request painting while animating out"
+        );
+
+        for _ in 0..settle {
+            let _ = render_frame_for_motion(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                model.clone(),
+                open.clone(),
+                ring_alpha_out.clone(),
+                always_paint_out.clone(),
+            );
+        }
+        let a_final = ring_alpha_out.get().expect("a_final");
+        let always_paint_final = always_paint_out.get().expect("always_paint_final");
+        assert!(
+            a_final.abs() <= 1e-4,
+            "expected ring alpha to settle at 0, got {a_final}"
+        );
+        assert!(
+            !always_paint_final,
+            "expected focus ring to stop requesting painting after settling"
+        );
     }
 
     fn render_frame_with_underlay(

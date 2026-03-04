@@ -486,6 +486,18 @@ pub struct UiFrameStatsV1 {
     #[serde(default)]
     pub renderer_intermediate_pool_free_textures: u64,
     #[serde(default)]
+    pub renderer_gpu_images_live: u64,
+    #[serde(default)]
+    pub renderer_gpu_images_bytes_estimate: u64,
+    #[serde(default)]
+    pub renderer_gpu_images_max_bytes_estimate: u64,
+    #[serde(default)]
+    pub renderer_gpu_render_targets_live: u64,
+    #[serde(default)]
+    pub renderer_gpu_render_targets_bytes_estimate: u64,
+    #[serde(default)]
+    pub renderer_gpu_render_targets_max_bytes_estimate: u64,
+    #[serde(default)]
     pub renderer_draw_calls: u64,
     #[serde(default)]
     pub renderer_text_draw_calls: u64,
@@ -511,6 +523,10 @@ pub struct UiFrameStatsV1 {
     pub renderer_bind_group_switches: u64,
     #[serde(default)]
     pub renderer_scissor_sets: u64,
+    #[serde(default)]
+    pub renderer_path_msaa_samples_requested: u32,
+    #[serde(default)]
+    pub renderer_path_msaa_samples_effective: u32,
     #[serde(default)]
     pub renderer_uniform_bytes: u64,
     #[serde(default)]
@@ -590,12 +606,79 @@ pub struct UiFrameStatsV1 {
     pub renderer_backdrop_source_groups_pyramid_degraded_to_one_budget_insufficient: u64,
     #[serde(default)]
     pub renderer_backdrop_source_groups_pyramid_skipped_raw_unavailable: u64,
+
+    // Wgpu hub report sample counts (best-effort; may be absent or lag a frame).
+    //
+    // These are only populated when `FRET_DIAG_WGPU_REPORT=1` and the runner records hub report
+    // samples.
+    #[serde(default)]
+    pub wgpu_hub_tick_id: u64,
+    #[serde(default)]
+    pub wgpu_hub_frame_id: u64,
+    #[serde(default)]
+    pub wgpu_hub_adapters: u64,
+    #[serde(default)]
+    pub wgpu_hub_devices: u64,
+    #[serde(default)]
+    pub wgpu_hub_queues: u64,
+    #[serde(default)]
+    pub wgpu_hub_command_encoders: u64,
+    #[serde(default)]
+    pub wgpu_hub_buffers: u64,
+    #[serde(default)]
+    pub wgpu_hub_textures: u64,
+    #[serde(default)]
+    pub wgpu_hub_texture_views: u64,
+    #[serde(default)]
+    pub wgpu_hub_samplers: u64,
+    #[serde(default)]
+    pub wgpu_hub_shader_modules: u64,
+    #[serde(default)]
+    pub wgpu_hub_render_pipelines: u64,
+    #[serde(default)]
+    pub wgpu_hub_compute_pipelines: u64,
+
+    // Wgpu allocator report summary (best-effort; may be absent or expensive to sample).
+    //
+    // These are only populated when `FRET_DIAG_WGPU_ALLOCATOR_REPORT=1` and the runner records
+    // allocator report samples.
+    #[serde(default)]
+    pub wgpu_allocator_tick_id: u64,
+    #[serde(default)]
+    pub wgpu_allocator_frame_id: u64,
+    #[serde(default)]
+    pub wgpu_allocator_report_present: bool,
+    #[serde(default)]
+    pub wgpu_allocator_total_allocated_bytes: u64,
+    #[serde(default)]
+    pub wgpu_allocator_total_reserved_bytes: u64,
+    #[serde(default)]
+    pub wgpu_allocator_blocks: u64,
+    #[serde(default)]
+    pub wgpu_allocator_allocations: u64,
+    /// Best-effort Metal memory usage hint (`MTLDevice.currentAllocatedSize`).
+    ///
+    /// This is only populated on macOS when the wgpu backend is Metal.
+    #[serde(default)]
+    pub wgpu_metal_current_allocated_size_present: bool,
+    #[serde(default)]
+    pub wgpu_metal_current_allocated_size_bytes: u64,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub wgpu_allocator_top_allocations: Vec<UiWgpuAllocatorTopAllocationV1>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiWgpuAllocatorTopAllocationV1 {
+    pub name: String,
+    pub size: u64,
 }
 
 impl UiFrameStatsV1 {
     fn from_stats(
         stats: UiDebugFrameStats,
         renderer_perf: Option<fret_render::RendererPerfFrameSample>,
+        wgpu_hub_report: Option<fret_render::WgpuHubReportFrameSample>,
+        wgpu_allocator_report: Option<fret_render::WgpuAllocatorReportFrameSample>,
     ) -> Self {
         let cpu = ui_thread_cpu_time::sample_current_thread(stats.frame_id.0);
 
@@ -901,6 +984,12 @@ impl UiFrameStatsV1 {
             renderer_intermediate_pool_evictions: 0,
             renderer_intermediate_pool_free_bytes: 0,
             renderer_intermediate_pool_free_textures: 0,
+            renderer_gpu_images_live: 0,
+            renderer_gpu_images_bytes_estimate: 0,
+            renderer_gpu_images_max_bytes_estimate: 0,
+            renderer_gpu_render_targets_live: 0,
+            renderer_gpu_render_targets_bytes_estimate: 0,
+            renderer_gpu_render_targets_max_bytes_estimate: 0,
             renderer_draw_calls: 0,
             renderer_text_draw_calls: 0,
             renderer_quad_draw_calls: 0,
@@ -914,6 +1003,8 @@ impl UiFrameStatsV1 {
             renderer_pipeline_switches: 0,
             renderer_bind_group_switches: 0,
             renderer_scissor_sets: 0,
+            renderer_path_msaa_samples_requested: 0,
+            renderer_path_msaa_samples_effective: 0,
             renderer_uniform_bytes: 0,
             renderer_instance_bytes: 0,
             renderer_vertex_bytes: 0,
@@ -952,6 +1043,29 @@ impl UiFrameStatsV1 {
             renderer_backdrop_source_groups_pyramid_degraded_to_one_budget_zero: 0,
             renderer_backdrop_source_groups_pyramid_degraded_to_one_budget_insufficient: 0,
             renderer_backdrop_source_groups_pyramid_skipped_raw_unavailable: 0,
+            wgpu_hub_tick_id: 0,
+            wgpu_hub_frame_id: 0,
+            wgpu_hub_adapters: 0,
+            wgpu_hub_devices: 0,
+            wgpu_hub_queues: 0,
+            wgpu_hub_command_encoders: 0,
+            wgpu_hub_buffers: 0,
+            wgpu_hub_textures: 0,
+            wgpu_hub_texture_views: 0,
+            wgpu_hub_samplers: 0,
+            wgpu_hub_shader_modules: 0,
+            wgpu_hub_render_pipelines: 0,
+            wgpu_hub_compute_pipelines: 0,
+            wgpu_allocator_tick_id: 0,
+            wgpu_allocator_frame_id: 0,
+            wgpu_allocator_report_present: false,
+            wgpu_allocator_total_allocated_bytes: 0,
+            wgpu_allocator_total_reserved_bytes: 0,
+            wgpu_allocator_blocks: 0,
+            wgpu_allocator_allocations: 0,
+            wgpu_metal_current_allocated_size_present: false,
+            wgpu_metal_current_allocated_size_bytes: 0,
+            wgpu_allocator_top_allocations: Vec::new(),
         };
 
         if let Some(sample) = renderer_perf {
@@ -1058,6 +1172,14 @@ impl UiFrameStatsV1 {
             out.renderer_intermediate_pool_free_bytes = sample.perf.intermediate_pool_free_bytes;
             out.renderer_intermediate_pool_free_textures =
                 sample.perf.intermediate_pool_free_textures;
+            out.renderer_gpu_images_live = sample.perf.gpu_images_live;
+            out.renderer_gpu_images_bytes_estimate = sample.perf.gpu_images_bytes_estimate;
+            out.renderer_gpu_images_max_bytes_estimate = sample.perf.gpu_images_max_bytes_estimate;
+            out.renderer_gpu_render_targets_live = sample.perf.gpu_render_targets_live;
+            out.renderer_gpu_render_targets_bytes_estimate =
+                sample.perf.gpu_render_targets_bytes_estimate;
+            out.renderer_gpu_render_targets_max_bytes_estimate =
+                sample.perf.gpu_render_targets_max_bytes_estimate;
             out.renderer_draw_calls = sample.perf.draw_calls;
             out.renderer_text_draw_calls = sample.perf.text_draw_calls;
             out.renderer_quad_draw_calls = sample.perf.quad_draw_calls;
@@ -1076,6 +1198,8 @@ impl UiFrameStatsV1 {
             out.renderer_pipeline_switches = sample.perf.pipeline_switches;
             out.renderer_bind_group_switches = sample.perf.bind_group_switches;
             out.renderer_scissor_sets = sample.perf.scissor_sets;
+            out.renderer_path_msaa_samples_requested = sample.perf.path_msaa_samples_requested;
+            out.renderer_path_msaa_samples_effective = sample.perf.path_msaa_samples_effective;
             out.renderer_uniform_bytes = sample.perf.uniform_bytes;
             out.renderer_instance_bytes = sample.perf.instance_bytes;
             out.renderer_vertex_bytes = sample.perf.vertex_bytes;
@@ -1147,6 +1271,46 @@ impl UiFrameStatsV1 {
                 effects.backdrop_source_groups.pyramid_degraded_to_one_budget_insufficient;
             out.renderer_backdrop_source_groups_pyramid_skipped_raw_unavailable =
                 effects.backdrop_source_groups.pyramid_skipped_raw_unavailable;
+        }
+
+        if let Some(sample) = wgpu_hub_report {
+            out.wgpu_hub_tick_id = sample.tick_id;
+            out.wgpu_hub_frame_id = sample.frame_id;
+            out.wgpu_hub_adapters = sample.counts.adapters;
+            out.wgpu_hub_devices = sample.counts.devices;
+            out.wgpu_hub_queues = sample.counts.queues;
+            out.wgpu_hub_command_encoders = sample.counts.command_encoders;
+            out.wgpu_hub_buffers = sample.counts.buffers;
+            out.wgpu_hub_textures = sample.counts.textures;
+            out.wgpu_hub_texture_views = sample.counts.texture_views;
+            out.wgpu_hub_samplers = sample.counts.samplers;
+            out.wgpu_hub_shader_modules = sample.counts.shader_modules;
+            out.wgpu_hub_render_pipelines = sample.counts.render_pipelines;
+            out.wgpu_hub_compute_pipelines = sample.counts.compute_pipelines;
+        }
+
+        if let Some(sample) = wgpu_allocator_report {
+            out.wgpu_allocator_tick_id = sample.tick_id;
+            out.wgpu_allocator_frame_id = sample.frame_id;
+            out.wgpu_allocator_report_present = sample.summary.allocator_report_present;
+            out.wgpu_allocator_total_allocated_bytes = sample.summary.total_allocated_bytes;
+            out.wgpu_allocator_total_reserved_bytes = sample.summary.total_reserved_bytes;
+            out.wgpu_allocator_blocks = sample.summary.blocks;
+            out.wgpu_allocator_allocations = sample.summary.allocations;
+            out.wgpu_metal_current_allocated_size_present =
+                sample.summary.metal_current_allocated_size_bytes.is_some();
+            out.wgpu_metal_current_allocated_size_bytes = sample
+                .summary
+                .metal_current_allocated_size_bytes
+                .unwrap_or(0);
+            out.wgpu_allocator_top_allocations = sample
+                .top_allocations
+                .into_iter()
+                .map(|alloc| UiWgpuAllocatorTopAllocationV1 {
+                    name: alloc.name,
+                    size: alloc.size,
+                })
+                .collect();
         }
 
         out

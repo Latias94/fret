@@ -12,17 +12,28 @@ Status legend:
 - [x] Ensure `README.md` links only canonical entry points (no scattered run commands).
 - [x] Add a short pointer from `docs/README.md` to this workstream.
 - [x] Add a short pointer from `docs/examples/README.md` to the cookbook “recommended order”.
+- [x] Ensure hotpatch is not part of onboarding story (mark as dev-only in `fretboard` help output).
 
 ## M1 — Cookbook curation (small, teachable, fast)
 
-- [~] Keep cookbook deps minimal (avoid enabling “everything” by default).
+- [x] Keep cookbook deps minimal (avoid enabling “everything” by default).
 - [x] Add “Official vs Lab” labels for cookbook examples.
 - [x] Gate the highest-ceiling interop examples behind explicit Cargo features (optional).
-- [ ] Add/curate diag scripts for the recommended 5–8 examples.
+- [x] Add/curate diag scripts for the recommended 5–8 examples (start with `hello` + `simple_todo`).
+  - Evidence: suites exist for the onboarding ladder:
+    - [`tools/diag-scripts/suites/cookbook-hello/suite.json`](../../../tools/diag-scripts/suites/cookbook-hello/suite.json)
+    - [`tools/diag-scripts/suites/cookbook-simple-todo/suite.json`](../../../tools/diag-scripts/suites/cookbook-simple-todo/suite.json)
+    - [`tools/diag-scripts/suites/cookbook-overlay-basics/suite.json`](../../../tools/diag-scripts/suites/cookbook-overlay-basics/suite.json)
+    - [`tools/diag-scripts/suites/cookbook-text-input-basics/suite.json`](../../../tools/diag-scripts/suites/cookbook-text-input-basics/suite.json)
+    - [`tools/diag-scripts/suites/cookbook-commands-keymap-basics/suite.json`](../../../tools/diag-scripts/suites/cookbook-commands-keymap-basics/suite.json)
+    - [`tools/diag-scripts/suites/cookbook-virtual-list-basics/suite.json`](../../../tools/diag-scripts/suites/cookbook-virtual-list-basics/suite.json)
+    - [`tools/diag-scripts/suites/cookbook-effects-layer-basics/suite.json`](../../../tools/diag-scripts/suites/cookbook-effects-layer-basics/suite.json)
+    - [`tools/diag-scripts/suites/cookbook-theme-switching-basics/suite.json`](../../../tools/diag-scripts/suites/cookbook-theme-switching-basics/suite.json)
 
 ## M2 — `fret` feature profiles
 
-- [~] Make selector/query helpers optional (feature-gated) so `default-features = false` is actually small.
+- [x] Make selector/query helpers optional (feature-gated) so `default-features = false` is actually small.
+- [x] Make `diagnostics` opt-in by default (`app` excludes it; `batteries` includes it).
 - [x] Document recommended profiles in `docs/crate-usage-guide.md`:
   - minimal app,
   - recommended app,
@@ -36,6 +47,31 @@ Status legend:
 
 ## M4 — Move lesson-shaped demos out of `fret-demo`
 
-- [ ] Identify 8–15 lesson-shaped `apps/fret-demo/src/bin/*` candidates.
-- [ ] Migrate into `apps/fret-cookbook/examples/*` with stable `test_id`s.
-- [ ] Keep `fret-demo` as maintainer/labs; ensure `fretboard list native-demos` stays intentionally small.
+- [x] Identify 8–15 lesson-shaped `apps/fret-demo/src/bin/*` candidates.
+  - See: [docs/workstreams/open-source-readiness-fearless-refactor-v1/M4_CANDIDATES.md](./M4_CANDIDATES.md)
+- [~] Migrate into `apps/fret-cookbook/examples/*` with stable `test_id`s.
+  - Implemented (first batch):
+    - [`apps/fret-cookbook/examples/toast_basics.rs`](../../../apps/fret-cookbook/examples/toast_basics.rs)
+    - [`apps/fret-cookbook/examples/date_picker_basics.rs`](../../../apps/fret-cookbook/examples/date_picker_basics.rs)
+    - [`apps/fret-cookbook/examples/form_basics.rs`](../../../apps/fret-cookbook/examples/form_basics.rs)
+    - [`apps/fret-cookbook/examples/drag_basics.rs`](../../../apps/fret-cookbook/examples/drag_basics.rs)
+    - [`apps/fret-cookbook/examples/assets_reload_epoch_basics.rs`](../../../apps/fret-cookbook/examples/assets_reload_epoch_basics.rs)
+    - [`apps/fret-cookbook/examples/compositing_alpha_basics.rs`](../../../apps/fret-cookbook/examples/compositing_alpha_basics.rs)
+    - [`apps/fret-cookbook/examples/drop_shadow_basics.rs`](../../../apps/fret-cookbook/examples/drop_shadow_basics.rs)
+    - [`apps/fret-cookbook/examples/data_table_basics.rs`](../../../apps/fret-cookbook/examples/data_table_basics.rs)
+    - [`apps/fret-cookbook/examples/image_asset_cache_basics.rs`](../../../apps/fret-cookbook/examples/image_asset_cache_basics.rs)
+    - [`apps/fret-cookbook/examples/query_basics.rs`](../../../apps/fret-cookbook/examples/query_basics.rs)
+    - [`apps/fret-cookbook/examples/router_basics.rs`](../../../apps/fret-cookbook/examples/router_basics.rs)
+  - Scripts:
+    - [`tools/diag-scripts/cookbook/toast-basics/cookbook-toast-basics-smoke.json`](../../../tools/diag-scripts/cookbook/toast-basics/cookbook-toast-basics-smoke.json)
+    - [`tools/diag-scripts/cookbook/date-picker-basics/cookbook-date-picker-basics-smoke.json`](../../../tools/diag-scripts/cookbook/date-picker-basics/cookbook-date-picker-basics-smoke.json)
+    - [`tools/diag-scripts/cookbook/form-basics/cookbook-form-basics-smoke.json`](../../../tools/diag-scripts/cookbook/form-basics/cookbook-form-basics-smoke.json)
+    - [`tools/diag-scripts/cookbook/drag-basics/cookbook-drag-basics-smoke.json`](../../../tools/diag-scripts/cookbook/drag-basics/cookbook-drag-basics-smoke.json)
+    - [`tools/diag-scripts/cookbook/assets-reload-epoch-basics/cookbook-assets-reload-epoch-basics-smoke.json`](../../../tools/diag-scripts/cookbook/assets-reload-epoch-basics/cookbook-assets-reload-epoch-basics-smoke.json)
+    - [`tools/diag-scripts/cookbook/compositing-alpha-basics/cookbook-compositing-alpha-basics-baseline.json`](../../../tools/diag-scripts/cookbook/compositing-alpha-basics/cookbook-compositing-alpha-basics-baseline.json)
+    - [`tools/diag-scripts/cookbook/drop-shadow-basics/cookbook-drop-shadow-basics-baseline.json`](../../../tools/diag-scripts/cookbook/drop-shadow-basics/cookbook-drop-shadow-basics-baseline.json)
+    - [`tools/diag-scripts/cookbook/data-table-basics/cookbook-data-table-basics-baseline.json`](../../../tools/diag-scripts/cookbook/data-table-basics/cookbook-data-table-basics-baseline.json)
+    - [`tools/diag-scripts/cookbook/image-asset-cache-basics/cookbook-image-asset-cache-basics-baseline.json`](../../../tools/diag-scripts/cookbook/image-asset-cache-basics/cookbook-image-asset-cache-basics-baseline.json)
+    - [`tools/diag-scripts/cookbook/query-basics/cookbook-query-basics-baseline.json`](../../../tools/diag-scripts/cookbook/query-basics/cookbook-query-basics-baseline.json)
+    - [`tools/diag-scripts/cookbook/router-basics/cookbook-router-basics-smoke.json`](../../../tools/diag-scripts/cookbook/router-basics/cookbook-router-basics-smoke.json)
+- [x] Keep `fret-demo` as maintainer/labs; ensure `fretboard list native-demos` stays intentionally small.

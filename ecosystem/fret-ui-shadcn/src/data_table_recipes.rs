@@ -23,6 +23,7 @@ use crate::dropdown_menu::{
     DropdownMenuLabel, DropdownMenuRadioGroup, DropdownMenuRadioItemSpec,
 };
 use crate::input::Input;
+use crate::rtl;
 use crate::{
     CommandEntry, CommandGroup, CommandItem, CommandPalette, CommandSeparator, Popover,
     PopoverAlign, PopoverContent, PopoverTrigger,
@@ -1747,6 +1748,7 @@ impl DataTablePagination {
                 .gap_x(Space::N2),
             move |cx| {
                 let theme = Theme::global(&*cx.app);
+                let dir = use_direction(cx, None);
                 let muted_fg = theme.color_by_key("muted-foreground");
                 let mut text = ui::text(cx, selected_label.clone())
                     .text_sm()
@@ -1756,40 +1758,22 @@ impl DataTablePagination {
                     text = text.text_color(ColorRef::Color(color));
                 }
 
-                let dir = use_direction(cx, None);
                 let selected_text = text.into_element(cx);
                 let spacer = cx.spacer(fret_ui::element::SpacerProps::default());
-
-                let first_icon = match dir {
-                    LayoutDirection::Rtl => fret_icons::IconId::new_static("lucide.chevrons-right"),
-                    LayoutDirection::Ltr => fret_icons::IconId::new_static("lucide.chevrons-left"),
-                };
-                let prev_icon = match dir {
-                    LayoutDirection::Rtl => fret_icons::IconId::new_static("lucide.chevron-right"),
-                    LayoutDirection::Ltr => fret_icons::IconId::new_static("lucide.chevron-left"),
-                };
-                let next_icon = match dir {
-                    LayoutDirection::Rtl => fret_icons::IconId::new_static("lucide.chevron-left"),
-                    LayoutDirection::Ltr => fret_icons::IconId::new_static("lucide.chevron-right"),
-                };
-                let last_icon = match dir {
-                    LayoutDirection::Rtl => fret_icons::IconId::new_static("lucide.chevrons-left"),
-                    LayoutDirection::Ltr => fret_icons::IconId::new_static("lucide.chevrons-right"),
-                };
 
                 let first_btn = Button::new("Go to first page")
                     .variant(ButtonVariant::Outline)
                     .size(ButtonSize::Icon)
                     .disabled(!first_enabled)
                     .on_activate(first_on_activate.clone())
-                    .children([crate::icon::icon(cx, first_icon)])
+                    .children([crate::icon::icon(cx, rtl::chevrons_inline_start(dir))])
                     .into_element(cx);
                 let prev_btn = Button::new("Go to previous page")
                     .variant(ButtonVariant::Outline)
                     .size(ButtonSize::Icon)
                     .disabled(!prev_enabled)
                     .on_activate(prev_on_activate.clone())
-                    .children([crate::icon::icon(cx, prev_icon)])
+                    .children([crate::icon::icon(cx, rtl::chevron_inline_start(dir))])
                     .into_element(cx);
                 let page_btn = Button::new(page_label.clone())
                     .variant(ButtonVariant::Ghost)
@@ -1801,38 +1785,27 @@ impl DataTablePagination {
                     .size(ButtonSize::Icon)
                     .disabled(!next_enabled)
                     .on_activate(next_on_activate.clone())
-                    .children([crate::icon::icon(cx, next_icon)])
+                    .children([crate::icon::icon(cx, rtl::chevron_inline_end(dir))])
                     .into_element(cx);
                 let last_btn = Button::new("Go to last page")
                     .variant(ButtonVariant::Outline)
                     .size(ButtonSize::Icon)
                     .disabled(!last_enabled)
                     .on_activate(last_on_activate.clone())
-                    .children([crate::icon::icon(cx, last_icon)])
+                    .children([crate::icon::icon(cx, rtl::chevrons_inline_end(dir))])
                     .into_element(cx);
 
-                match dir {
-                    LayoutDirection::Rtl => vec![
-                        page_size_menu,
-                        last_btn,
-                        next_btn,
-                        page_btn,
-                        prev_btn,
-                        first_btn,
-                        spacer,
-                        selected_text,
-                    ],
-                    LayoutDirection::Ltr => vec![
-                        selected_text,
-                        spacer,
-                        first_btn,
-                        prev_btn,
-                        page_btn,
-                        next_btn,
-                        last_btn,
-                        page_size_menu,
-                    ],
-                }
+                let items = vec![
+                    selected_text,
+                    spacer,
+                    first_btn,
+                    prev_btn,
+                    page_btn,
+                    next_btn,
+                    last_btn,
+                    page_size_menu,
+                ];
+                rtl::reverse_in_rtl(dir, items)
             },
         )
     }

@@ -59,6 +59,10 @@ impl UiDiagnosticsWsBridge {
         if !cfg!(target_arch = "wasm32") {
             caps.push("diag.multi_window".to_string());
             caps.push("diag.window_insets_override".to_string());
+            if cfg!(target_os = "windows") {
+                caps.push("diag.window_style_patch_v1".to_string());
+                caps.push("diag.platform_window_receiver_at_cursor_v1".to_string());
+            }
             caps.push("diag.clipboard_force_unavailable".to_string());
             caps.push("diag.clipboard_text".to_string());
             caps.push("diag.incoming_open_inject".to_string());

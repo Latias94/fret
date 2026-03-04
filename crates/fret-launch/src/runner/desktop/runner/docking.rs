@@ -313,7 +313,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                     manual_follow: true,
                     last_outer_pos: None,
                     transparent_payload_applied: false,
-                    mouse_passthrough_applied: false,
+                    hit_test_passthrough_all_applied: false,
                     always_on_top_applied: false,
                 });
             }

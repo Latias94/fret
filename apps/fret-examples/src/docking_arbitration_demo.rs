@@ -665,7 +665,9 @@ impl<H: fret_ui::UiHost> Widget<H> for DockingArbitrationHarnessRoot {
                             .and_then(|p| (!p.title.is_empty()).then_some(p.title.as_str()))
                             .unwrap_or(panel.kind.0.as_str());
                         let (mut blob, mut metrics) =
-                            cx.services.text().prepare_str(title, &text_style, constraints);
+                            cx.services
+                                .text()
+                                .prepare_str(title, &text_style, constraints);
                         if metrics.size.width.0 <= 0.0 && !title.is_empty() {
                             cx.services.text().release(blob);
                             (blob, metrics) = cx.services.text().prepare_str(
@@ -695,7 +697,11 @@ impl<H: fret_ui::UiHost> Widget<H> for DockingArbitrationHarnessRoot {
                         .take(inactive_index)
                         .map(|w| w.0)
                         .sum::<f32>();
-                let tab_w = tab_widths.get(inactive_index).copied().unwrap_or(Px(120.0)).0;
+                let tab_w = tab_widths
+                    .get(inactive_index)
+                    .copied()
+                    .unwrap_or(Px(120.0))
+                    .0;
 
                 let pad_sm = theme.metric_token("metric.padding.sm").0.max(0.0);
                 let close_size = 20.0_f32;
@@ -728,7 +734,10 @@ impl<H: fret_ui::UiHost> Widget<H> for DockingArbitrationHarnessRoot {
             self.tab_overflow_menu_row_1_anchor,
             overflow_row_1_anchor_rect,
         );
-        let _ = cx.layout_in(self.tab_close_inactive_anchor, tab_close_inactive_anchor_rect);
+        let _ = cx.layout_in(
+            self.tab_close_inactive_anchor,
+            tab_close_inactive_anchor_rect,
+        );
         let _ = cx.layout_in(self.tab_drop_end_anchor, tab_drop_end_anchor_rect);
         let _ = cx.layout_in(
             self.tab_scroll_edge_left_anchor,

@@ -509,6 +509,28 @@ fn script_v2_roundtrip_set_window_inner_size_first_seen() {
 }
 
 #[test]
+fn script_v2_roundtrip_set_window_style_hit_test_regions() {
+    assert_script_v2_roundtrip(
+        r#"{
+  "schema_version": 2,
+  "steps": [
+    {
+      "type": "set_window_style",
+      "style": {
+        "hit_test": {
+          "kind": "passthrough_regions",
+          "regions": [
+            { "kind": "rect", "x": 10.0, "y": 20.0, "width": 300.0, "height": 200.0 }
+          ]
+        }
+      }
+    }
+  ]
+}"#,
+    );
+}
+
+#[test]
 fn script_v2_roundtrip_set_cursor_screen_pos() {
     assert_script_v2_roundtrip(
         r#"{

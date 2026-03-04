@@ -42,6 +42,7 @@ use fret_ui_kit::typography;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space, ui};
 
 use crate::layout as shadcn_layout;
+use crate::rtl;
 use crate::{Dialog, DialogContent, ScrollArea};
 
 type OnOpenChange = Arc<dyn Fn(bool) + Send + Sync + 'static>;
@@ -362,12 +363,15 @@ fn command_text_input<H: UiHost>(
     props.chrome = chrome;
     props.text_style = item_text_style(&theme);
     props.layout.size = SizeStyle {
-        width: Length::Fill,
+        width: Length::Auto,
         height: Length::Px(height),
         min_width: Some(Length::Px(Px(0.0))),
         min_height: Some(Length::Px(Px(0.0))),
         ..Default::default()
     };
+    props.layout.flex.grow = 1.0;
+    props.layout.flex.shrink = 1.0;
+    props.layout.flex.basis = Length::Px(Px(0.0));
     props.layout.overflow = Overflow::Clip;
 
     cx.text_input(props)
@@ -597,6 +601,7 @@ fn shortcut_attributed_text_with_symbol_fallback(
 #[derive(Clone)]
 pub struct CommandShortcut {
     text: Arc<str>,
+    auto_margin_inline_start: bool,
 }
 
 impl std::fmt::Debug for CommandShortcut {
@@ -609,7 +614,18 @@ impl std::fmt::Debug for CommandShortcut {
 
 impl CommandShortcut {
     pub fn new(text: impl Into<Arc<str>>) -> Self {
-        Self { text: text.into() }
+        Self {
+            text: text.into(),
+            auto_margin_inline_start: true,
+        }
+    }
+
+    /// Renders the shortcut without applying an inline-start `auto` margin.
+    ///
+    /// This is useful when the caller is already handling RTL mirroring and spacing explicitly.
+    pub fn inline(mut self) -> Self {
+        self.auto_margin_inline_start = false;
+        self
     }
 
     #[track_caller]
@@ -618,14 +634,18 @@ impl CommandShortcut {
         let fg = theme.color_token("muted-foreground");
         let style = shortcut_text_style(&theme);
         let platform = Platform::current();
+        let dir = crate::use_direction(cx, None);
+        let shortcut_layout = if self.auto_margin_inline_start {
+            rtl::layout_refinement_margin_inline_start_auto(dir)
+        } else {
+            LayoutRefinement::default()
+        }
+        .flex_shrink_0();
 
         if shortcut_needs_symbol_font(self.text.as_ref())
             && let Some(symbol_font) = shortcut_symbol_font_for_platform(platform)
         {
-            let layout = decl_style::layout_style(
-                &theme,
-                LayoutRefinement::default().flex_shrink_0().ml_auto(),
-            );
+            let layout = decl_style::layout_style(&theme, shortcut_layout);
             let rich = shortcut_attributed_text_with_symbol_fallback(self.text, symbol_font);
             return cx.styled_text_props(StyledTextProps {
                 layout,
@@ -639,7 +659,7 @@ impl CommandShortcut {
             });
         }
         let mut text = ui::text(cx, self.text)
-            .layout(LayoutRefinement::default().flex_shrink_0().ml_auto())
+            .layout(shortcut_layout)
             .text_size_px(style.size)
             .font_weight(style.weight)
             .nowrap()
@@ -840,6 +860,7 @@ impl CommandInput {
             let pad_right = padding.right.map(|m| m.resolve(theme)).unwrap_or(pad_x);
             let pad_bottom = padding.bottom.map(|m| m.resolve(theme)).unwrap_or(Px(0.0));
             let pad_left = padding.left.map(|m| m.resolve(theme)).unwrap_or(pad_x);
+            let dir = crate::use_direction(cx, None);
 
             let icon_fg = theme.color_token("popover-foreground");
 
@@ -860,12 +881,9 @@ impl CommandInput {
             if matches!(wrapper.layout.size.height, Length::Auto) {
                 wrapper.layout.size.height = Length::Px(wrapper_h);
             }
-            wrapper.padding = Edges {
-                top: pad_top,
-                right: pad_right,
-                bottom: pad_bottom,
-                left: pad_left,
-            }
+            wrapper.padding = rtl::padding_edges_with_inline_start_end(
+                dir, pad_top, pad_bottom, pad_left, pad_right,
+            )
             .into();
 
             cx.container(wrapper, move |cx| {
@@ -908,7 +926,10 @@ impl CommandInput {
                         justify: MainAlign::Start,
                         align: CrossAlign::Center,
                     },
-                    move |_cx| vec![icon, input],
+                    move |_cx| {
+                        let (a, b) = rtl::inline_start_end_pair(dir, icon, input);
+                        vec![a, b]
+                    },
                 );
 
                 if disabled {
@@ -1790,58 +1811,66 @@ impl CommandList {
                                                 };
                                                 let effective_icon_fg =
                                                     if enabled { icon_fg } else { icon_fg_disabled };
-                                                current_color::scope_children(
-                                                    cx,
-                                                    ColorRef::Color(text_fg),
-                                                    |cx| {
-                                                        vec![cx.row(
-                                                            RowProps {
-                                                                layout: LayoutStyle::default(),
-                                                                gap: row_gap.into(),
-                                                                padding: Edges::all(Px(0.0)).into(),
-                                                                justify: MainAlign::Start,
-                                                                align: CrossAlign::Center,
-                                                            },
-                                                            move |cx| {
-                                                                if children.is_empty() {
-                                                                    let mut out: Vec<AnyElement> =
-                                                                        Vec::with_capacity(
-                                                                            1 + usize::from(
-                                                                                leading_icon
-                                                                                    .is_some(),
-                                                                            ),
-                                                                        );
-                                                                    if let Some(icon) =
-                                                                        leading_icon.clone()
-                                                                    {
-                                                                        out.push(decl_icon::icon_with(
-                                                                            cx,
-                                                                            icon,
-                                                                            None,
-                                                                            Some(ColorRef::Color(
-                                                                                effective_icon_fg,
-                                                                            )),
-                                                                        ));
-                                                                    }
-                                                                    out.push(
-                                                                        cmdk_highlighted_label(
-                                                                            cx,
-                                                                            label.clone(),
-                                                                            query_for_row.as_ref(),
-                                                                            text_fg,
-                                                                            nonmatch_text_fg,
-                                                                            text_style.clone(),
-                                                                        ),
-                                                                    );
-                                                                    out
+	                                                current_color::scope_children(
+	                                                    cx,
+	                                                    ColorRef::Color(text_fg),
+	                                                    |cx| {
+	                                                        let dir =
+	                                                            crate::use_direction(cx, None);
+	                                                        let justify = crate::rtl::inline_start_end_pair(
+	                                                            dir,
+	                                                            MainAlign::Start,
+	                                                            MainAlign::End,
+	                                                        )
+	                                                        .0;
+
+	                                                        vec![cx.row(
+	                                                            RowProps {
+	                                                                layout: LayoutStyle::default(),
+	                                                                gap: row_gap.into(),
+	                                                                padding: Edges::all(Px(0.0))
+	                                                                    .into(),
+	                                                                justify,
+	                                                                align: CrossAlign::Center,
+	                                                            },
+	                                                            move |cx| {
+	                                                                if children.is_empty() {
+	                                                                    let label_el =
+	                                                                        cmdk_highlighted_label(
+	                                                                            cx,
+	                                                                            label.clone(),
+	                                                                            query_for_row.as_ref(),
+	                                                                            text_fg,
+	                                                                            nonmatch_text_fg,
+	                                                                            text_style.clone(),
+	                                                                        );
+                                                                    let icon_el = leading_icon
+                                                                        .clone()
+                                                                        .map(|icon| {
+                                                                            decl_icon::icon_with(
+                                                                                cx,
+                                                                                icon,
+                                                                                None,
+                                                                                Some(
+                                                                                    ColorRef::Color(
+                                                                                        effective_icon_fg,
+                                                                                    ),
+                                                                                ),
+                                                                            )
+                                                                        });
+                                                                    crate::rtl::vec_main_with_inline_start(
+                                                                        dir,
+                                                                        label_el,
+                                                                        icon_el,
+                                                                    )
                                                                 } else {
                                                                     children
                                                                 }
                                                             },
-                                                        )]
-                                                    },
-                                                )
-                                            });
+	                                                        )]
+	                                                    },
+	                                                )
+	                                            });
 
                                             let mut chrome = child;
                                             if let Some(test_id) = chrome_test_id.clone() {
@@ -3051,6 +3080,7 @@ impl CommandPalette {
                                             cx,
                                             ColorRef::Color(text_fg),
                                             |cx| {
+                                                let dir = crate::use_direction(cx, None);
                                                 vec![cx.row(
                                                     RowProps {
                                                         layout: {
@@ -3068,6 +3098,12 @@ impl CommandPalette {
                                                             return children;
                                                         }
 
+                                                        let left_justify = crate::rtl::inline_start_end_pair(
+                                                            dir,
+                                                            MainAlign::Start,
+                                                            MainAlign::End,
+                                                        )
+                                                        .0;
                                                         let left = cx.row(
                                                             RowProps {
                                                                 layout: {
@@ -3085,7 +3121,7 @@ impl CommandPalette {
                                                                 },
                                                                 gap: row_gap.into(),
                                                                 padding: Edges::all(Px(0.0)).into(),
-                                                                justify: MainAlign::Start,
+                                                                justify: left_justify,
                                                                 align: CrossAlign::Center,
                                                             },
                                                             move |cx| {
@@ -3099,58 +3135,79 @@ impl CommandPalette {
                                                                             + 1,
                                                                     );
 
-                                                                if show_checkmark {
-                                                                    let icon = decl_icon::icon_with(
+                                                                let label_el =
+                                                                    cmdk_highlighted_label(
                                                                         cx,
-                                                                        ids::ui::CHECK,
-                                                                        Some(Px(16.0)),
-                                                                        Some(ColorRef::Color(
-                                                                            icon_fg,
-                                                                        )),
+                                                                        label.clone(),
+                                                                        query_for_row.as_ref(),
+                                                                        text_fg,
+                                                                        nonmatch_text_fg,
+                                                                        text_style.clone(),
                                                                     );
-                                                                    let icon = cx.opacity(
-                                                                        if checked {
-                                                                            1.0
-                                                                        } else {
-                                                                            0.0
-                                                                        },
-                                                                        move |_cx| vec![icon],
-                                                                    );
-                                                                    out.push(icon);
-                                                                }
 
-                                                                if let Some(icon) =
-                                                                    leading_icon.clone()
-                                                                {
-                                                                    out.push(decl_icon::icon_with(
-                                                                        cx,
-                                                                        icon,
-                                                                        None,
-                                                                        Some(ColorRef::Color(
-                                                                            icon_fg,
-                                                                        )),
-                                                                    ));
-                                                                }
+                                                                let icon_el = leading_icon
+                                                                    .clone()
+                                                                    .map(|icon| {
+                                                                        decl_icon::icon_with(
+                                                                            cx,
+                                                                            icon,
+                                                                            None,
+                                                                            Some(ColorRef::Color(
+                                                                                icon_fg,
+                                                                            )),
+                                                                        )
+                                                                    });
 
-                                                                out.push(cmdk_highlighted_label(
-                                                                    cx,
-                                                                    label.clone(),
-                                                                    query_for_row.as_ref(),
-                                                                    text_fg,
-                                                                    nonmatch_text_fg,
-                                                                    text_style.clone(),
-                                                                ));
+                                                                let check_el =
+                                                                    show_checkmark.then(|| {
+                                                                        let icon =
+                                                                            decl_icon::icon_with(
+                                                                                cx,
+                                                                                ids::ui::CHECK,
+                                                                                Some(Px(16.0)),
+                                                                                Some(
+                                                                                    ColorRef::Color(
+                                                                                        icon_fg,
+                                                                                    ),
+                                                                                ),
+                                                                            );
+                                                                        cx.opacity(
+                                                                            if checked {
+                                                                                1.0
+                                                                            } else {
+                                                                                0.0
+                                                                            },
+                                                                            move |_cx| vec![icon],
+                                                                        )
+                                                                    });
+
+                                                                let mut prefix = Vec::new();
+                                                                if let Some(check_el) = check_el {
+                                                                    prefix.push(check_el);
+                                                                }
+                                                                if let Some(icon_el) = icon_el {
+                                                                    prefix.push(icon_el);
+                                                                }
+                                                                out.extend(
+                                                                    crate::rtl::concat_main_with_inline_start_vec(
+                                                                        dir, label_el, prefix,
+                                                                    ),
+                                                                );
 
                                                                 out
                                                             },
                                                         );
 
                                                         if let Some(shortcut) = shortcut.clone() {
-                                                            vec![
-                                                                left,
+                                                            let shortcut =
                                                                 CommandShortcut::new(shortcut)
-                                                                    .into_element(cx),
-                                                            ]
+                                                                    .inline()
+                                                                    .into_element(cx);
+                                                            let (a, b) =
+                                                                crate::rtl::inline_start_end_pair(
+                                                                    dir, left, shortcut,
+                                                                );
+                                                            vec![a, b]
                                                         } else {
                                                             vec![left]
                                                         }
@@ -3255,6 +3312,7 @@ impl CommandPalette {
                 Some(ColorRef::Color(icon_fg)),
             );
             let icon = cx.opacity(0.5, move |_cx| vec![icon]);
+            let dir = crate::use_direction(cx, None);
 
             let mut input = cx.row(
                 RowProps {
@@ -3269,7 +3327,10 @@ impl CommandPalette {
                     justify: MainAlign::Start,
                     align: CrossAlign::Center,
                 },
-                move |_cx| vec![icon, input],
+                move |_cx| {
+                    let (a, b) = rtl::inline_start_end_pair(dir, icon, input);
+                    vec![a, b]
+                },
             );
             let list_labelled_by = Some(input_id.0);
 

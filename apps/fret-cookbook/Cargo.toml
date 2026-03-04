@@ -17,6 +17,7 @@ fret-app = { path = "../../crates/fret-app" }
 fret-core = { path = "../../crates/fret-core" }
 fret-runtime = { path = "../../crates/fret-runtime" }
 fret-ui = { path = "../../crates/fret-ui" }
+time.workspace = true
 
 # Lab/optional example dependencies (feature-gated to keep cold compile time down).
 fret-bootstrap = { path = "../../ecosystem/fret-bootstrap", default-features = false, optional = true }
@@ -29,7 +30,10 @@ fret-docking = { path = "../../ecosystem/fret-docking", default-features = false
 fret-imui = { path = "../../ecosystem/fret-imui", optional = true }
 fret-genui-core = { path = "../../ecosystem/fret-genui-core", optional = true }
 fret-genui-shadcn = { path = "../../ecosystem/fret-genui-shadcn", optional = true }
-fret-ui-kit = { path = "../../ecosystem/fret-ui-kit", default-features = false, optional = true, features = ["imui"] }
+fret-ui-kit = { path = "../../ecosystem/fret-ui-kit", default-features = false, optional = true }
+fret-query = { path = "../../ecosystem/fret-query", default-features = false, features = ["ui"], optional = true }
+fret-router = { path = "../../ecosystem/fret-router", default-features = false, optional = true }
+fret-router-ui = { path = "../../ecosystem/fret-router-ui", default-features = false, optional = true }
 serde_json = { workspace = true, optional = true }
 fret-render = { path = "../../crates/fret-render", optional = true }
 fret-launch = { path = "../../crates/fret-launch", optional = true }
@@ -48,6 +52,11 @@ fret-gizmo = { path = "../../ecosystem/fret-gizmo", optional = true }
 default = []
 cookbook-diag = ["fret/diagnostics"]
 cookbook-assets = ["dep:fret-icons", "dep:fret-icons-lucide", "dep:fret-ui-assets", "fret/icons", "fret/ui-assets"]
+cookbook-renderer = ["dep:fret-launch"]
+cookbook-table = ["dep:fret-ui-kit"]
+cookbook-image-assets = ["dep:fret-ui-assets"]
+cookbook-query = ["fret/state-query", "dep:fret-query"]
+cookbook-router = ["dep:fret-router", "dep:fret-router-ui"]
 cookbook-undo = ["dep:fret-undo"]
 cookbook-async = ["dep:fret-executor"]
 cookbook-bootstrap = ["dep:fret-bootstrap", "dep:fret-render"]
@@ -57,6 +66,7 @@ cookbook-imui = [
     "dep:fret-genui-core",
     "dep:fret-genui-shadcn",
     "dep:fret-ui-kit",
+    "fret-ui-kit/imui",
     "dep:serde_json",
     "fret/command-palette",
 ]
@@ -75,6 +85,34 @@ cookbook-gizmo = ["dep:fret-gizmo", "dep:glam", "cookbook-bootstrap"]
 [[example]]
 name = "icons_and_assets_basics"
 required-features = ["cookbook-assets"]
+
+[[example]]
+name = "assets_reload_epoch_basics"
+required-features = ["cookbook-assets"]
+
+[[example]]
+name = "compositing_alpha_basics"
+required-features = ["cookbook-renderer"]
+
+[[example]]
+name = "drop_shadow_basics"
+required-features = ["cookbook-renderer"]
+
+[[example]]
+name = "data_table_basics"
+required-features = ["cookbook-table"]
+
+[[example]]
+name = "image_asset_cache_basics"
+required-features = ["cookbook-image-assets", "cookbook-renderer"]
+
+[[example]]
+name = "query_basics"
+required-features = ["cookbook-query"]
+
+[[example]]
+name = "router_basics"
+required-features = ["cookbook-router"]
 
 [[example]]
 name = "undo_basics"

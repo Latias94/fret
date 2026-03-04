@@ -73,6 +73,8 @@ pub mod effects_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod embedded_viewport_demo;
 pub mod emoji_conformance_demo;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod empty_idle_demo;
 pub mod error_bars_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod external_texture_imports_demo;
@@ -145,8 +147,6 @@ pub mod postprocess_theme_demo;
 pub mod query_async_tokio_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod query_demo;
-#[cfg(not(target_arch = "wasm32"))]
-pub mod router_query_demo;
 pub mod shaded_demo;
 pub mod simple_todo_demo;
 #[cfg(not(target_arch = "wasm32"))]
@@ -174,5 +174,7 @@ pub mod todo_demo;
 #[cfg(not(target_arch = "wasm32"))]
 #[cfg(not(target_arch = "wasm32"))]
 pub mod virtual_list_stress_demo;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod window_hit_test_probe_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod workspace_shell_demo;

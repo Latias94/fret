@@ -91,6 +91,17 @@ We treat feature naming as **recommended convention**, not a hard requirement fo
   - includes diagnostics wiring, config files, UI assets, icons, and (optional) icon SVG preloading.
   - includes `state` (selector/query helpers).
 
+**Common feature combos (practical map):**
+
+| Goal | Suggested `fret` features | Notes |
+| --- | --- | --- |
+| Small desktop app (shadcn UI only) | `["desktop","shadcn"]` | Minimal explicit profile (no config files, no diagnostics, no assets/icons). |
+| Add derived + async state helpers | `["state"]` | Enables `ViewCx::use_selector` and `ViewCx::use_query` helpers. |
+| Add icons | `["icons"]` | Installs default icon packs (Lucide) via bootstrap wiring. |
+| Add image/SVG caches | `["ui-assets"]` | Wires UI asset caches + budgets (compile/runtime cost). |
+| Enable layered `.fret/*` config | `["config-files"]` | Filesystem side effects; opt-in for embed/minimal builds. |
+| Opt into “everything convenient” | `["batteries"]` | Convenience bundle; may increase cold compile time. |
+
 Minimal / explicit profile (useful for embed/minimal builds that must avoid filesystem side effects):
 
 ```toml
@@ -270,7 +281,10 @@ These crates are “real” but **policy-heavy and fast-moving**. They should re
 - icon pack registration (built-in packs or custom),
 - optional UI app driver wiring,
 - optional command palette integration,
-- optional dev hotpatch toggles.
+- optional diagnostics + tracing wiring.
+
+Note: dev hotpatch is an internal maintainer workflow today and is not part of the user-facing
+onboarding path.
 
 ### `fret-executor`
 
@@ -316,6 +330,18 @@ computations.
 `use_query_async_local`. See `docs/integrating-tokio-and-reqwest.md`.
 
 **Feature note:** enable `fret-query/ui` to use `ElementContext` helpers like `cx.use_query_async(...)`.
+
+### `fret-router` + `fret-router-ui`
+
+**What they are:** a small router core (`fret-router`) and a thin UI adoption layer (`fret-router-ui`).
+
+**Use them when:** you need a lightweight “URL + history + outlet” architecture without pulling in
+UI gallery-scale harnesses.
+
+Notes:
+
+- `fret-router-ui` provides `RouterUiStore` (router + snapshot model) and pressable-based link/outlet helpers.
+- Prefer keeping policy in apps (what pages exist, what prefetch means, what “not found” looks like).
 
 ### `fret-canvas`
 

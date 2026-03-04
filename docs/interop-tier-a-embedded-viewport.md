@@ -13,7 +13,13 @@ This matches editor/engine workflows: viewports, video panels, node graphs, code
 
 ## Run the demo
 
-Native:
+Recommended (cookbook example):
+
+```bash
+cargo run -p fretboard -- dev native --example embedded_viewport_basics
+```
+
+Maintainer harness (legacy demo):
 
 ```bash
 cargo run -p fret-demo --bin embedded_viewport_demo

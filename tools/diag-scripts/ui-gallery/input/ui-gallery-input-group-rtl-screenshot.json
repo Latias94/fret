@@ -1,0 +1,49 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "ui-gallery-input-group-rtl-screenshot",
+    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
+    "tags": ["ui_gallery", "shadcn", "input_group", "rtl", "screenshots"],
+    "target_hints": [
+      "Navigates to the InputGroup page.",
+      "Scrolls to the RTL section.",
+      "Captures a screenshot to validate leading/trailing slot mirroring."
+    ]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "set_window_inner_size", "width_px": 1120.0, "height_px": 760.0 },
+    { "type": "wait_frames", "n": 10 },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
+      "timeout_frames": 600
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
+    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
+    { "type": "press_key", "key": "backspace" },
+    { "type": "type_text", "text": "input_group" },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "click_stable", "target": { "kind": "test_id", "id": "ui-gallery-nav-input-group" } },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-page-input-group" } },
+      "timeout_frames": 600
+    },
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-input-group-rtl" },
+      "delta_y": -220.0,
+      "require_fully_within_window": true,
+      "padding_px": 24.0,
+      "timeout_frames": 600
+    },
+    { "type": "wait_frames", "n": 10 },
+    { "type": "capture_bundle", "label": "ui-gallery-input-group-rtl" },
+    { "type": "capture_screenshot", "label": "ui-gallery-input-group-rtl" }
+  ]
+}
+

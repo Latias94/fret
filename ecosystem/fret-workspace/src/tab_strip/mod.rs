@@ -38,8 +38,8 @@ use crate::tab_drag::{
     resolve_workspace_tab_drop_intent,
 };
 
-mod drag_state;
 mod consts;
+mod drag_state;
 mod geometry;
 mod intent;
 mod interaction;
@@ -62,6 +62,7 @@ use kernel::{
     compute_workspace_tab_strip_drop_target,
 };
 
+use consts::TAB_CHROME_PAD_RIGHT;
 use drag_state::{WorkspaceTabStripDragState, get_drag_model, read_drag_snapshot_for_pointer};
 use geometry::{bounds_for_optional_element_id, collect_tab_hit_rects};
 use intent::{WorkspaceTabStripIntent, dispatch_intent};
@@ -70,7 +71,6 @@ use layouts::{
     fill_grow_layout, fill_layout, row_layout, tab_list_semantics_layout,
     tab_strip_scroll_content_layout,
 };
-use consts::TAB_CHROME_PAD_RIGHT;
 use state::{WorkspaceTabStripState, get_focus_restore_model, get_reveal_hint_model};
 use theme::WorkspaceTabStripTheme;
 use utils::{

@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use crate::LayoutDirection;
 use fret_core::{
     Color, Corners, Edges, FontId, FontWeight, Point, Px, Rect, Size, TextOverflow, TextStyle,
     TextWrap,
@@ -15,7 +16,6 @@ use fret_ui_kit::declarative::motion::{
     drive_tween_color_for_element, drive_tween_f32_for_element,
 };
 use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::primitives::direction as direction_prim;
 use fret_ui_kit::primitives::radio_group as radio_group_prim;
 use fret_ui_kit::primitives::roving_focus_group;
 use fret_ui_kit::typography;
@@ -336,8 +336,8 @@ impl RadioGroup {
                 default_value.clone()
             })
             .model();
-            let is_rtl = direction_prim::use_direction_in_scope(cx, None)
-                == direction_prim::LayoutDirection::Rtl;
+            let is_rtl = crate::use_direction(cx, None)
+                == LayoutDirection::Rtl;
 
             let selected: Option<Arc<str>> = cx.watch_model(&model).cloned().flatten();
             let values: Vec<Arc<str>> = items.iter().map(|i| i.value.clone()).collect();

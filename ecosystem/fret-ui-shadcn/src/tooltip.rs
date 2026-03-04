@@ -6,7 +6,6 @@ use fret_ui_kit::declarative::scheduling;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::headless::tooltip_intent::TooltipTriggerIntentGates;
 use fret_ui_kit::overlay;
-use fret_ui_kit::primitives::direction as direction_prim;
 use fret_ui_kit::primitives::dismissable_layer as radix_dismissable_layer;
 use fret_ui_kit::primitives::popper;
 use fret_ui_kit::primitives::popper_content;
@@ -928,7 +927,7 @@ impl Tooltip {
 
                 let (arrow_options, arrow_protrusion) =
                     tooltip_diamond_arrow_options(arrow, arrow_size, arrow_padding);
-                let direction = direction_prim::use_direction_in_scope(cx, None);
+                let direction = crate::use_direction(cx, None);
 
                 let layout = popper::popper_content_layout_sized(
                     outer,

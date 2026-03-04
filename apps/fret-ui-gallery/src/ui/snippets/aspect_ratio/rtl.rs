@@ -59,20 +59,16 @@ fn ratio_example<H: UiHost>(
 }
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    fret_ui_kit::primitives::direction::with_direction_provider(
-        cx,
-        fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
-        move |cx| {
-            ratio_example(
-                cx,
-                16.0 / 9.0,
-                Px(384.0),
-                "ui-gallery-aspect-ratio-rtl",
-                "ui-gallery-aspect-ratio-rtl-content",
-                None,
-            )
-        },
-    )
+    with_direction_provider(cx, LayoutDirection::Rtl, move |cx| {
+        ratio_example(
+            cx,
+            16.0 / 9.0,
+            Px(384.0),
+            "ui-gallery-aspect-ratio-rtl",
+            "ui-gallery-aspect-ratio-rtl-content",
+            None,
+        )
+    })
 }
 // endregion: example
 
@@ -85,49 +81,45 @@ pub fn render_preview<H: UiHost>(
         return render(cx);
     }
 
-    fret_ui_kit::primitives::direction::with_direction_provider(
-        cx,
-        fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
-        move |cx| {
-            let image = if let Some(image_id) = asset_image {
-                shadcn::MediaImage::maybe(Some(image_id))
-            } else if let Some(demo_image) = demo_image.clone() {
-                shadcn::MediaImage::model(demo_image)
-            } else {
-                shadcn::MediaImage::maybe(None)
-            };
+    with_direction_provider(cx, LayoutDirection::Rtl, move |cx| {
+        let image = if let Some(image_id) = asset_image {
+            shadcn::MediaImage::maybe(Some(image_id))
+        } else if let Some(demo_image) = demo_image.clone() {
+            shadcn::MediaImage::model(demo_image)
+        } else {
+            shadcn::MediaImage::maybe(None)
+        };
 
-            let image = image
-                .loading(true)
-                .fit(fret_core::ViewportFit::Cover)
-                .refine_style(ChromeRefinement::default().rounded(Radius::Lg))
-                .refine_layout(LayoutRefinement::default().w_full().h_full())
-                .into_element(cx)
-                .test_id("ui-gallery-aspect-ratio-rtl-content");
+        let image = image
+            .loading(true)
+            .fit(fret_core::ViewportFit::Cover)
+            .refine_style(ChromeRefinement::default().rounded(Radius::Lg))
+            .refine_layout(LayoutRefinement::default().w_full().h_full())
+            .into_element(cx)
+            .test_id("ui-gallery-aspect-ratio-rtl-content");
 
-            let theme = Theme::global(&*cx.app);
-            let muted_bg = theme.color_token("muted");
-            let border = theme.color_token("border");
+        let theme = Theme::global(&*cx.app);
+        let muted_bg = theme.color_token("muted");
+        let border = theme.color_token("border");
 
-            let frame = shadcn::AspectRatio::new(16.0 / 9.0, image)
-                .refine_style(
-                    ChromeRefinement::default()
-                        .rounded(Radius::Lg)
-                        .border_1()
-                        .bg(ColorRef::Color(muted_bg))
-                        .border_color(ColorRef::Color(border)),
-                )
-                .refine_layout(LayoutRefinement::default().w_full().max_w(Px(384.0)))
-                .into_element(cx)
-                .test_id("ui-gallery-aspect-ratio-rtl");
-
-            stack::hstack(
-                cx,
-                stack::HStackProps::default()
-                    .layout(LayoutRefinement::default().w_full().min_w_0())
-                    .justify_center(),
-                move |_cx| vec![frame],
+        let frame = shadcn::AspectRatio::new(16.0 / 9.0, image)
+            .refine_style(
+                ChromeRefinement::default()
+                    .rounded(Radius::Lg)
+                    .border_1()
+                    .bg(ColorRef::Color(muted_bg))
+                    .border_color(ColorRef::Color(border)),
             )
-        },
-    )
+            .refine_layout(LayoutRefinement::default().w_full().max_w(Px(384.0)))
+            .into_element(cx)
+            .test_id("ui-gallery-aspect-ratio-rtl");
+
+        stack::hstack(
+            cx,
+            stack::HStackProps::default()
+                .layout(LayoutRefinement::default().w_full().min_w_0())
+                .justify_center(),
+            move |_cx| vec![frame],
+        )
+    })
 }

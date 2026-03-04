@@ -57,10 +57,10 @@ Usage:
   fretboard init <template> [...]    # alias for `new` (compat)
   fretboard config menubar [--path <path>] [--force]
   fretboard theme import-vscode <theme.json> [--out <path>] [--base <path>] [--all-tags] [--map <path>] [--set <key=value>...] [--report <path>] [--force]
-  fretboard hotpatch poke [--path <path>]
-  fretboard hotpatch path [--path <path>]
-  fretboard hotpatch status [--tail <n>]
-  fretboard hotpatch watch [--path <path>...] [--trigger-path <path>] [--poll-ms <ms>] [--debounce-ms <ms>]
+  fretboard hotpatch poke [--path <path>]        # dev-only (experimental)
+  fretboard hotpatch path [--path <path>]        # dev-only (experimental)
+  fretboard hotpatch status [--tail <n>]         # dev-only (experimental)
+  fretboard hotpatch watch [--path <path>...] [--trigger-path <path>] [--poll-ms <ms>] [--debounce-ms <ms>]  # dev-only (experimental)
   fretboard diag path [--trigger-path <path>] [--dir <dir>]
   fretboard diag poke [--trigger-path <path>] [--dir <dir>] [--label <label>] [--max-snapshots <n>] [--wait] [--record-run] [--run-id <id>]
   fretboard diag latest [--dir <dir>]               # prints the latest bundle dir (session-aware when <dir>/sessions/* exists)

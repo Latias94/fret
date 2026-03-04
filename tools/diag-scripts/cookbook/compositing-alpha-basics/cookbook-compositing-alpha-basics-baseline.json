@@ -1,0 +1,20 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "cookbook compositing alpha: baseline",
+    "tags": ["cookbook", "cookbook.compositing_alpha_basics", "renderer", "screenshots"],
+    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
+    "target_hints": [
+      "Waits a short time for image registration to settle.",
+      "Captures a baseline screenshot + bundle for alpha compositing semantics."
+    ]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "set_window_inner_size", "width_px": 920.0, "height_px": 320.0 },
+    { "type": "wait_frames", "n": 60 },
+    { "type": "capture_screenshot", "label": "cookbook-compositing-alpha-basics-baseline" },
+    { "type": "capture_bundle", "label": "cookbook-compositing-alpha-basics-baseline" }
+  ]
+}
+

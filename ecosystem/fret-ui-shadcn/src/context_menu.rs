@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use std::rc::Rc;
 use std::sync::{Arc, Mutex};
 
+use crate::LayoutDirection;
 use fret_core::time::Duration;
 use fret_core::{Edges, Point, Px, Rect, Size, TextStyle};
 use fret_icons::{IconId, ids};
@@ -27,7 +28,6 @@ use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::overlay;
 use fret_ui_kit::primitives::context_menu as menu;
-use fret_ui_kit::primitives::direction as direction_prim;
 use fret_ui_kit::primitives::popper;
 use fret_ui_kit::primitives::popper_content;
 use fret_ui_kit::primitives::portal_inherited;
@@ -40,6 +40,7 @@ use fret_ui_kit::{
 use crate::dropdown_menu::{DropdownMenuAlign, DropdownMenuSide};
 use crate::overlay_motion;
 use crate::popper_arrow::{self, DiamondArrowStyle};
+use crate::rtl;
 use crate::shortcut_display::command_shortcut_label;
 
 #[derive(Debug)]
@@ -1131,6 +1132,7 @@ impl ContextMenuRenderEnv {
         cx: &mut ElementContext<'_, H>,
         label: ContextMenuLabel,
     ) -> AnyElement {
+        let dir = crate::use_direction(cx, None);
         let pad_left = if label.inset {
             self.pad_x_inset
         } else {
@@ -1146,12 +1148,9 @@ impl ContextMenuRenderEnv {
         cx.container(
             ContainerProps {
                 layout: LayoutStyle::default(),
-                padding: Edges {
-                    top: pad_y,
-                    right: pad_x,
-                    bottom: pad_y,
-                    left: pad_left,
-                }
+                padding: rtl::padding_edges_with_inline_start_end(
+                    dir, pad_y, pad_y, pad_left, pad_x,
+                )
                 .into(),
                 ..Default::default()
             },
@@ -1677,6 +1676,7 @@ impl ContextMenuContentRenderEnv {
         cx: &mut ElementContext<'_, H>,
         label: ContextMenuLabel,
     ) -> AnyElement {
+        let dir = crate::use_direction(cx, None);
         let pad_left = if label.inset {
             self.pad_x_inset
         } else {
@@ -1692,12 +1692,9 @@ impl ContextMenuContentRenderEnv {
         cx.container(
             ContainerProps {
                 layout: LayoutStyle::default(),
-                padding: Edges {
-                    top: pad_y,
-                    right: pad_x,
-                    bottom: pad_y,
-                    left: pad_left,
-                }
+                padding: rtl::padding_edges_with_inline_start_end(
+                    dir, pad_y, pad_y, pad_left, pad_x,
+                )
                 .into(),
                 ..Default::default()
             },
@@ -2211,6 +2208,7 @@ fn menu_row_children<H: UiHost>(
     text_disabled: fret_core::Color,
     chrome_test_id: Option<Arc<str>>,
 ) -> Elements {
+    let direction = crate::use_direction(cx, None);
     let label_test_id = chrome_test_id
         .as_ref()
         .map(|id| Arc::<str>::from(format!("{id}-label")));
@@ -2227,12 +2225,9 @@ fn menu_row_children<H: UiHost>(
                 layout.size.width = Length::Fill;
                 layout
             },
-            padding: Edges {
-                top: pad_y,
-                right: pad_x,
-                bottom: pad_y,
-                left: pad_left,
-            }
+            padding: rtl::padding_edges_with_inline_start_end(
+                direction, pad_y, pad_y, pad_left, pad_x,
+            )
             .into(),
             background: Some(row_bg),
             corner_radii: fret_core::Corners::all(radius_sm),
@@ -2249,7 +2244,6 @@ fn menu_row_children<H: UiHost>(
             let leading_icon = leading_icon.clone();
             let mut trailing = trailing;
             let has_trailing = trailing.is_some();
-            let direction = direction_prim::use_direction_in_scope(cx, None);
             let has_indicator = indicator_on.is_some();
             let has_leading_slot =
                 leading.is_some() || leading_icon.is_some() || reserve_leading_slot;
@@ -2375,13 +2369,10 @@ fn menu_row_children<H: UiHost>(
 
 fn submenu_chevron_icon<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    direction: direction_prim::LayoutDirection,
+    direction: LayoutDirection,
     fg: fret_core::Color,
 ) -> AnyElement {
-    let icon = match direction {
-        direction_prim::LayoutDirection::Ltr => ids::ui::CHEVRON_RIGHT,
-        direction_prim::LayoutDirection::Rtl => ids::ui::CHEVRON_LEFT,
-    };
+    let icon = rtl::chevron_inline_end(direction);
     cx.flex(
         FlexProps {
             layout: {
@@ -3621,18 +3612,21 @@ impl ContextMenu {
                                             for entry in entries_for_panel {
                                                 match entry {
                                                     ContextMenuEntry::Label(label) => {
+                                                        let dir = crate::use_direction(cx, None);
                                                         let pad_left =
                                                             if label.inset { pad_x_inset } else { pad_x };
                                                         let text = label.text.clone();
                                                         out.push(cx.container(
                                                             ContainerProps {
                                                                 layout: LayoutStyle::default(),
-                                                                padding: Edges {
-                                                                    top: pad_y,
-                                                                    right: pad_x,
-                                                                    bottom: pad_y,
-                                                                    left: pad_left,
-                                                                }.into(),
+                                                                padding: rtl::padding_edges_with_inline_start_end(
+                                                                    dir,
+                                                                    pad_y,
+                                                                    pad_y,
+                                                                    pad_left,
+                                                                    pad_x,
+                                                                )
+                                                                .into(),
                                                                 ..Default::default()
                                                             },
                                                             move |cx| {

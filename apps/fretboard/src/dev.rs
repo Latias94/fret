@@ -4,9 +4,9 @@ use std::time::{Duration, Instant, SystemTime};
 
 use crate::cli::{help, workspace_root};
 use crate::demos::{
-    display_path, list_cookbook_examples_from, list_native_demos_from, official_native_demos,
-    prompt_choose_demo, validate_cookbook_example, validate_native_demo, validate_web_demo,
-    web_demos_as_vec,
+    cookbook_example_feature_hint, display_path, list_cookbook_examples_from,
+    list_native_demos_from, official_native_demos, prompt_choose_demo, validate_cookbook_example,
+    validate_native_demo, validate_web_demo, web_demos_as_vec,
 };
 use crate::hotpatch::{
     HotpatchBuildIdArg, ensure_hotpatch_trigger_file_initialized, parse_hotpatch_build_id,
@@ -356,6 +356,16 @@ pub(crate) fn dev_native(args: Vec<String>) -> Result<(), String> {
                 );
             }
             cmd.args(["--profile", profile]);
+        }
+
+        if let Some(hint) = cookbook_example_feature_hint(example) {
+            let Some(features) = hint.trim().strip_prefix("--features ") else {
+                return Err(format!(
+                    "internal error: unexpected cookbook feature hint format for `{example}`: `{hint}`"
+                ));
+            };
+            eprintln!("note: auto-enabled for `{example}`: --features {features}");
+            cmd.args(["--features", features]);
         }
 
         cmd.args(["-p", "fret-cookbook", "--example", example]);
@@ -1121,7 +1131,7 @@ fn dx_available() -> bool {
 fn is_hotpatch_ready_native_demo(name: &str) -> bool {
     matches!(
         name,
-        "todo_demo" | "assets_demo" | "hotpatch_smoke_demo" | "hello_counter_demo"
+        "todo_demo" | "assets_demo" | "hotpatch_smoke_demo"
     )
 }
 
