@@ -81,6 +81,7 @@ Add promoted scripts under `tools/diag-scripts/workspace/**`:
 4) Drag-to-split preview (bridge)
    - promoted scripts:
      - `workspace-shell-demo-tab-drag-to-split-right`
+     - `workspace-shell-demo-tab-drag-inactive-to-split-right-smoke`
      - `workspace-shell-demo-tab-drag-to-split-right-drop-preview-screenshot`
    - notes:
      - avoid large `pointer_move` deltas that can push the cursor outside the window (hit-test becomes `null`,

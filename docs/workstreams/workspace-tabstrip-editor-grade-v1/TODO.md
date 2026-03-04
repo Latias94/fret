@@ -17,6 +17,7 @@ This TODO list is scoped to this workstream folder and is intended to keep the r
 - [x] Add a close-button “click jitter does not start drag” gate (`workspace-shell-demo-tab-close-button-does-not-start-drag`).
 - [x] Promote a minimal suite that runs in < 30s locally (`diag-hardening-smoke-workspace`) and keep it green.
 - [x] Avoid out-of-window cursor overshoot in hover-driven drag gates (pin cursor via `set_cursor_in_window_logical` + nudge).
+- [x] Add an inactive-tab drag-to-split smoke gate (`workspace-shell-demo-tab-drag-inactive-to-split-right-smoke`).
 - [ ] Add a non-screenshot invariants-based split gate (post-split layout assertions + tab ownership), once split preview routing is stable.
 
 ## Modularization (M1)
