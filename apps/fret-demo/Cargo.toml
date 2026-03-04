@@ -16,6 +16,7 @@ alloc-profile = ["fret-examples/alloc-profile"]
 mathjax-svg = ["fret-examples/mathjax-svg"]
 devtools-ws = ["fret-examples/devtools-ws"]
 ui-gallery = ["dep:fret-ui-gallery"]
+legacy-mvu-demos = ["fret-examples/legacy-mvu-demos"]
 hotpatch = [
     "fret-examples/hotpatch",
     "dep:fret-app",
@@ -47,3 +48,33 @@ fret-bootstrap = { path = "../../ecosystem/fret-bootstrap", optional = true, fea
 name = "ui_gallery"
 path = "src/bin/ui_gallery.rs"
 required-features = ["ui-gallery"]
+
+[[bin]]
+name = "custom_effect_v2_demo"
+path = "src/bin/custom_effect_v2_demo.rs"
+required-features = ["legacy-mvu-demos"]
+
+[[bin]]
+name = "custom_effect_v3_demo"
+path = "src/bin/custom_effect_v3_demo.rs"
+required-features = ["legacy-mvu-demos"]
+
+[[bin]]
+name = "drop_shadow_demo"
+path = "src/bin/drop_shadow_demo.rs"
+required-features = ["legacy-mvu-demos"]
+
+[[bin]]
+name = "embedded_viewport_demo"
+path = "src/bin/embedded_viewport_demo.rs"
+required-features = ["legacy-mvu-demos"]
+
+[[bin]]
+name = "liquid_glass_demo"
+path = "src/bin/liquid_glass_demo.rs"
+required-features = ["legacy-mvu-demos"]
+
+[[bin]]
+name = "todo_demo"
+path = "src/bin/todo_demo.rs"
+required-features = ["legacy-mvu-demos"]

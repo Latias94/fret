@@ -384,6 +384,10 @@ practical steps:
     - `crates/fret-ui/src/declarative/host_widget/event/pressable.rs` (records pending source with `test_id`)
 - View runtime ergonomics: reduce `on_action` handler boilerplate (`request_redraw` + `notify`) without weakening
   determinism or layering (ecosystem-only).
+  - Status (as of 2026-03-04): implemented `ViewCx::on_action_notify` + `ViewCx::on_payload_action_notify` sugar.
+  - Evidence:
+    - `ecosystem/fret/src/view.rs` (`on_action_notify`, `on_payload_action_notify`)
+    - `apps/fret-cookbook/examples/hello.rs` (uses `on_action_notify`)
 - Payload actions (v2+), behind strict determinism + validation rules.
   - See: `docs/adr/0312-payload-actions-v2.md`
 
