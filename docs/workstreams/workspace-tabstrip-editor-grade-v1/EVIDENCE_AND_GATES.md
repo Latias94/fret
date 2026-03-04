@@ -5,11 +5,15 @@ Goal: keep the tab strip refactor **fearless** by locking outcomes behind unit t
 
 ## Evidence anchors (current)
 
+- `apps/fret-examples/src/workspace_shell_demo.rs` (demo wiring; keep `FRET_DIAG=1` runs lightweight)
 - `ecosystem/fret-workspace/src/tab_strip/mod.rs` (workspace tab strip implementation)
 - `ecosystem/fret-workspace/src/tab_strip/kernel.rs` (drop target computation)
 - `ecosystem/fret-workspace/src/tab_strip/geometry.rs` (tab rect collection / hit testing helpers)
 - `ecosystem/fret-workspace/src/tab_strip/surface.rs` (hit-test surface classification)
 - `ecosystem/fret-workspace/src/tab_strip/utils.rs` (canonical end-drop resolution)
+- `ecosystem/fret-workspace/src/tab_strip/interaction.rs` (tab strip pointer/drag state machine)
+- `ecosystem/fret-workspace/src/tab_strip/drag_state.rs` (drag diagnostics snapshot; window-space start position)
+- `ecosystem/fret-workspace/src/tab_strip/widgets.rs` (scroll button semantics + `test_id` anchors)
 - `ecosystem/fret-workspace/src/focus_registry.rs` (cross-frame element id registry for focus restore)
 - `ecosystem/fret-workspace/src/pane_content_focus.rs` (pane content focus target seam for exiting tab strip)
 - `ecosystem/fret-ui-headless/src/tab_strip_surface.rs` (shared hit-test surface vocabulary)
@@ -17,6 +21,7 @@ Goal: keep the tab strip refactor **fearless** by locking outcomes behind unit t
 - `ecosystem/fret-ui-headless/src/tab_strip_canonical.rs` (shared canonical end-drop insert index helper)
 - `ecosystem/fret-ui-headless/src/tab_strip_overflow.rs` (shared overflow membership helper)
 - `ecosystem/fret-workspace/src/command_scope.rs` (workspace-shell command routing scope)
+- `ecosystem/fret-bootstrap/src/ui_diagnostics/workspace_diagnostics.rs` (workspace interaction diagnostics export)
 - `ecosystem/fret-workspace/tests/tab_strip_pointer_down_does_not_steal_focus.rs` (focus stability)
 - `ecosystem/fret-workspace/tests/tab_strip_focus_restore_after_close_command.rs` (close focus restore)
 - `ecosystem/fret-workspace/tests/tab_strip_keyboard_roving_arrow_activates_tab.rs` (roving keyboard activation)
@@ -78,12 +83,15 @@ Add promoted scripts under `tools/diag-scripts/workspace/**`:
      - `workspace-shell-demo-tab-drag-to-split-right`
      - `workspace-shell-demo-tab-drag-to-split-right-drop-preview-screenshot`
    - notes:
-     - prefer `drag_pointer_until` over large raw pixel deltas to avoid runner/window-size drift
-     - the screenshot script may use `release_on_success: false` to keep the preview visible for
-       `capture_screenshot` before releasing
+     - avoid large `pointer_move` deltas that can push the cursor outside the window (hit-test becomes `null`,
+       preventing hover-driven preview routing).
+     - for “hover the edge while dragging” gates, prefer:
+       - `set_cursor_in_window_logical` to pin the runner cursor within the window, then
+       - a tiny `pointer_move` (1 step) to trigger hover updates deterministically.
    - replace screenshot-only gating with an invariants-based gate once the preview snapshot surface is stable
 
 ## Tooling checklist
 
 - `cargo run -p fretboard -- diag registry check` passes after script registration/promotions.
+- `cargo run -p fretboard -- diag suite diag-hardening-smoke-workspace --launch -- cargo run -p fret-demo --bin workspace_shell_demo --release` stays green.
 - Avoid raw `bundle.json` by default; prefer schema2 + sidecars and `diag query/slice`.

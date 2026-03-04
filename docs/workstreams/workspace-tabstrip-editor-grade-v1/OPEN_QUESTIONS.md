@@ -33,6 +33,8 @@ Why it matters:
 Recommendation:
 - Prefer `drag_to` when a stable target exists.
 - Prefer `drag_pointer_until` for “find the edge preview” style gates.
+- For hover-driven edge preview routing, prefer `set_cursor_in_window_logical` (runner cursor override) plus a tiny
+  `pointer_move` nudge to keep the cursor **inside** the window while still triggering hover updates.
 - Only use raw `pointer_move` deltas for short, local motions.
 
 ## Q3: Where should “keep drag session position fresh” live long-term?
