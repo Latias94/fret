@@ -10,7 +10,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             cx,
             |cx| {
                 shadcn::DropdownMenuTrigger::new(
-                    shadcn::Button::new("Icons")
+                    shadcn::Button::new("Open")
                         .variant(shadcn::ButtonVariant::Outline)
                         .test_id("ui-gallery-dropdown-menu-icons-trigger")
                         .into_element(cx),
@@ -30,6 +30,11 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                         .into(),
                     shadcn::DropdownMenuItem::new("Settings")
                         .leading_icon(IconId::new_static("lucide.settings"))
+                        .into(),
+                    shadcn::DropdownMenuSeparator::new().into(),
+                    shadcn::DropdownMenuItem::new("Log out")
+                        .leading_icon(IconId::new_static("lucide.log-out"))
+                        .variant(shadcn::dropdown_menu::DropdownMenuItemVariant::Destructive)
                         .into(),
                 ]
             },

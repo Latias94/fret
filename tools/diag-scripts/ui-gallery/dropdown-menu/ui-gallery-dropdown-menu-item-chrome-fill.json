@@ -44,7 +44,7 @@
 
     {
       "type": "click_stable",
-      "target": { "kind": "test_id", "id": "ui-gallery-dropdown-menu-demo-trigger" }
+      "target": { "kind": "test_id", "id": "ui-gallery-dropdown-menu-demo-trigger.chrome" }
     },
     {
       "type": "wait_until",
@@ -76,7 +76,7 @@
 
     {
       "type": "click_stable",
-      "target": { "kind": "test_id", "id": "ui-gallery-dropdown-menu-basic-trigger" }
+      "target": { "kind": "test_id", "id": "ui-gallery-dropdown-menu-basic-trigger.chrome" }
     },
     {
       "type": "wait_until",
@@ -107,4 +107,3 @@
     { "type": "capture_bundle", "label": "ui-gallery-dropdown-menu-item-chrome-fill" }
   ]
 }
-

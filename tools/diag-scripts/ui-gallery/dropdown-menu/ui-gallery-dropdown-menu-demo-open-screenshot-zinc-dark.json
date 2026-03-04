@@ -50,7 +50,7 @@
     {
       "type": "scroll_into_view",
       "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
-      "target": { "kind": "test_id", "id": "ui-gallery-dropdown-menu-demo-trigger" },
+      "target": { "kind": "test_id", "id": "ui-gallery-dropdown-menu-demo-trigger.chrome" },
       "delta_y": -180.0,
       "require_fully_within_container": true,
       "require_fully_within_window": true,
@@ -58,7 +58,7 @@
       "timeout_frames": 600
     },
     { "type": "wait_frames", "n": 2 },
-    { "type": "click_stable", "target": { "kind": "test_id", "id": "ui-gallery-dropdown-menu-demo-trigger" } },
+    { "type": "click_stable", "target": { "kind": "test_id", "id": "ui-gallery-dropdown-menu-demo-trigger.chrome" } },
     { "type": "wait_frames", "n": 2 },
     {
       "type": "wait_until",

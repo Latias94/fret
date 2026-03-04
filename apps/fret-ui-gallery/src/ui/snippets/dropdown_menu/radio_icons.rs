@@ -7,17 +7,19 @@ use std::sync::Arc;
 
 #[derive(Default, Clone)]
 struct Models {
-    theme_mode: Option<Model<Option<Arc<str>>>>,
+    payment_method: Option<Model<Option<Arc<str>>>>,
 }
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let state = cx.with_state(Models::default, |st| st.clone());
 
-    let theme_mode = match state.theme_mode {
+    let payment_method = match state.payment_method {
         Some(model) => model,
         None => {
-            let model = cx.app.models_mut().insert(Some(Arc::<str>::from("system")));
-            cx.with_state(Models::default, |st| st.theme_mode = Some(model.clone()));
+            let model = cx.app.models_mut().insert(Some(Arc::<str>::from("card")));
+            cx.with_state(Models::default, |st| {
+                st.payment_method = Some(model.clone())
+            });
             model
         }
     };
@@ -27,7 +29,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             cx,
             |cx| {
                 shadcn::DropdownMenuTrigger::new(
-                    shadcn::Button::new("Radio Icons")
+                    shadcn::Button::new("Payment Method")
                         .variant(shadcn::ButtonVariant::Outline)
                         .test_id("ui-gallery-dropdown-menu-radio-icons-trigger")
                         .into_element(cx),
@@ -35,26 +37,31 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             },
             shadcn::DropdownMenuContent::new()
                 .align(shadcn::DropdownMenuAlign::Start)
-                .side_offset(Px(4.0)),
+                .side_offset(Px(4.0))
+                // shadcn/ui docs: `DropdownMenuContent className="min-w-56"`.
+                .min_width(Px(224.0)),
             |_cx| {
-                [shadcn::DropdownMenuRadioGroup::new(theme_mode.clone())
-                    .item(
-                        shadcn::DropdownMenuRadioItemSpec::new("system", "System")
-                            .leading_icon(IconId::new_static("lucide.monitor"))
-                            .disabled(true)
-                            .test_id("ui-gallery-dropdown-menu-radio-icons-system"),
-                    )
-                    .item(
-                        shadcn::DropdownMenuRadioItemSpec::new("light", "Light")
-                            .leading_icon(IconId::new_static("lucide.sun"))
-                            .test_id("ui-gallery-dropdown-menu-radio-icons-light"),
-                    )
-                    .item(
-                        shadcn::DropdownMenuRadioItemSpec::new("dark", "Dark")
-                            .leading_icon(IconId::new_static("lucide.moon"))
-                            .test_id("ui-gallery-dropdown-menu-radio-icons-dark"),
-                    )
-                    .into()]
+                [shadcn::DropdownMenuGroup::new([
+                    shadcn::DropdownMenuLabel::new("Select Payment Method").into(),
+                    shadcn::DropdownMenuRadioGroup::new(payment_method.clone())
+                        .item(
+                            shadcn::DropdownMenuRadioItemSpec::new("card", "Credit Card")
+                                .leading_icon(IconId::new_static("lucide.credit-card"))
+                                .test_id("ui-gallery-dropdown-menu-radio-icons-card"),
+                        )
+                        .item(
+                            shadcn::DropdownMenuRadioItemSpec::new("paypal", "PayPal")
+                                .leading_icon(IconId::new_static("lucide.wallet"))
+                                .test_id("ui-gallery-dropdown-menu-radio-icons-paypal"),
+                        )
+                        .item(
+                            shadcn::DropdownMenuRadioItemSpec::new("bank", "Bank Transfer")
+                                .leading_icon(IconId::new_static("lucide.building-2"))
+                                .test_id("ui-gallery-dropdown-menu-radio-icons-bank"),
+                        )
+                        .into(),
+                ])
+                .into()]
             },
         )
         .test_id("ui-gallery-dropdown-menu-radio-icons")

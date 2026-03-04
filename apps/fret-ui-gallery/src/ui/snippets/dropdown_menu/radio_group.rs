@@ -7,17 +7,17 @@ use std::sync::Arc;
 
 #[derive(Default, Clone)]
 struct Models {
-    theme_mode: Option<Model<Option<Arc<str>>>>,
+    position: Option<Model<Option<Arc<str>>>>,
 }
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let state = cx.with_state(Models::default, |st| st.clone());
 
-    let theme_mode = match state.theme_mode {
+    let position = match state.position {
         Some(model) => model,
         None => {
-            let model = cx.app.models_mut().insert(Some(Arc::<str>::from("system")));
-            cx.with_state(Models::default, |st| st.theme_mode = Some(model.clone()));
+            let model = cx.app.models_mut().insert(Some(Arc::<str>::from("bottom")));
+            cx.with_state(Models::default, |st| st.position = Some(model.clone()));
             model
         }
     };
@@ -27,7 +27,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             cx,
             |cx| {
                 shadcn::DropdownMenuTrigger::new(
-                    shadcn::Button::new("Radio Group")
+                    shadcn::Button::new("Open")
                         .variant(shadcn::ButtonVariant::Outline)
                         .test_id("ui-gallery-dropdown-menu-radio-group-trigger")
                         .into_element(cx),
@@ -35,22 +35,28 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             },
             shadcn::DropdownMenuContent::new()
                 .align(shadcn::DropdownMenuAlign::Start)
-                .side_offset(Px(4.0)),
+                .side_offset(Px(4.0))
+                // shadcn/ui docs: `DropdownMenuContent className="w-32"`.
+                .min_width(Px(128.0)),
             |_cx| {
-                [shadcn::DropdownMenuRadioGroup::new(theme_mode.clone())
-                    .item(
-                        shadcn::DropdownMenuRadioItemSpec::new("system", "System")
-                            .test_id("ui-gallery-dropdown-menu-radio-group-system"),
-                    )
-                    .item(
-                        shadcn::DropdownMenuRadioItemSpec::new("light", "Light")
-                            .test_id("ui-gallery-dropdown-menu-radio-group-light"),
-                    )
-                    .item(
-                        shadcn::DropdownMenuRadioItemSpec::new("dark", "Dark")
-                            .test_id("ui-gallery-dropdown-menu-radio-group-dark"),
-                    )
-                    .into()]
+                [shadcn::DropdownMenuGroup::new([
+                    shadcn::DropdownMenuLabel::new("Panel Position").into(),
+                    shadcn::DropdownMenuRadioGroup::new(position.clone())
+                        .item(
+                            shadcn::DropdownMenuRadioItemSpec::new("top", "Top")
+                                .test_id("ui-gallery-dropdown-menu-radio-group-top"),
+                        )
+                        .item(
+                            shadcn::DropdownMenuRadioItemSpec::new("bottom", "Bottom")
+                                .test_id("ui-gallery-dropdown-menu-radio-group-bottom"),
+                        )
+                        .item(
+                            shadcn::DropdownMenuRadioItemSpec::new("right", "Right")
+                                .test_id("ui-gallery-dropdown-menu-radio-group-right"),
+                        )
+                        .into(),
+                ])
+                .into()]
             },
         )
         .test_id("ui-gallery-dropdown-menu-radio-group")

@@ -10,7 +10,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             cx,
             |cx| {
                 shadcn::DropdownMenuTrigger::new(
-                    shadcn::Button::new("Destructive")
+                    shadcn::Button::new("Actions")
                         .variant(shadcn::ButtonVariant::Outline)
                         .test_id("ui-gallery-dropdown-menu-destructive-trigger")
                         .into_element(cx),
@@ -21,10 +21,21 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                 .side_offset(Px(4.0)),
             |_cx| {
                 [
-                    shadcn::DropdownMenuItem::new("Rename").into(),
-                    shadcn::DropdownMenuItem::new("Delete")
+                    shadcn::DropdownMenuGroup::new([
+                        shadcn::DropdownMenuItem::new("Edit")
+                            .leading_icon(IconId::new_static("lucide.pencil"))
+                            .into(),
+                        shadcn::DropdownMenuItem::new("Share")
+                            .leading_icon(IconId::new_static("lucide.share"))
+                            .into(),
+                    ])
+                    .into(),
+                    shadcn::DropdownMenuSeparator::new().into(),
+                    shadcn::DropdownMenuGroup::new([shadcn::DropdownMenuItem::new("Delete")
+                        .leading_icon(IconId::new_static("lucide.trash"))
                         .variant(shadcn::dropdown_menu::DropdownMenuItemVariant::Destructive)
-                        .into(),
+                        .into()])
+                    .into(),
                 ]
             },
         )

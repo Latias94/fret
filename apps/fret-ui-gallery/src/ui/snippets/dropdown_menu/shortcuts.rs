@@ -10,7 +10,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             cx,
             |cx| {
                 shadcn::DropdownMenuTrigger::new(
-                    shadcn::Button::new("Shortcuts")
+                    shadcn::Button::new("Open")
                         .variant(shadcn::ButtonVariant::Outline)
                         .test_id("ui-gallery-dropdown-menu-shortcuts-trigger")
                         .into_element(cx),
@@ -21,14 +21,22 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                 .side_offset(Px(4.0)),
             |cx| {
                 [
-                    shadcn::DropdownMenuItem::new("Open file")
-                        .trailing(shadcn::DropdownMenuShortcut::new("Cmd+O").into_element(cx))
-                        .into(),
-                    shadcn::DropdownMenuItem::new("Save file")
-                        .trailing(shadcn::DropdownMenuShortcut::new("Cmd+S").into_element(cx))
-                        .into(),
-                    shadcn::DropdownMenuItem::new("Close tab")
-                        .trailing(shadcn::DropdownMenuShortcut::new("Cmd+W").into_element(cx))
+                    shadcn::DropdownMenuGroup::new([
+                        shadcn::DropdownMenuLabel::new("My Account").into(),
+                        shadcn::DropdownMenuItem::new("Profile")
+                            .trailing(shadcn::DropdownMenuShortcut::new("⇧⌘P").into_element(cx))
+                            .into(),
+                        shadcn::DropdownMenuItem::new("Billing")
+                            .trailing(shadcn::DropdownMenuShortcut::new("⌘B").into_element(cx))
+                            .into(),
+                        shadcn::DropdownMenuItem::new("Settings")
+                            .trailing(shadcn::DropdownMenuShortcut::new("⌘S").into_element(cx))
+                            .into(),
+                    ])
+                    .into(),
+                    shadcn::DropdownMenuSeparator::new().into(),
+                    shadcn::DropdownMenuItem::new("Log out")
+                        .trailing(shadcn::DropdownMenuShortcut::new("⇧⌘Q").into_element(cx))
                         .into(),
                 ]
             },

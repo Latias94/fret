@@ -10,7 +10,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             cx,
             |cx| {
                 shadcn::DropdownMenuTrigger::new(
-                    shadcn::Button::new("Submenu")
+                    shadcn::Button::new("Open")
                         .variant(shadcn::ButtonVariant::Outline)
                         .test_id("ui-gallery-dropdown-menu-submenu-trigger")
                         .into_element(cx),
@@ -19,16 +19,34 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             shadcn::DropdownMenuContent::new()
                 .align(shadcn::DropdownMenuAlign::Start)
                 .side_offset(Px(4.0)),
-            |_cx| {
-                [
-                    shadcn::DropdownMenuItem::new("Open").into(),
-                    shadcn::DropdownMenuItem::new("More tools")
-                        .submenu([
-                            shadcn::DropdownMenuItem::new("Rename").into(),
-                            shadcn::DropdownMenuItem::new("Duplicate").into(),
-                        ])
+            |cx| {
+                [shadcn::DropdownMenuGroup::new([
+                    shadcn::DropdownMenuItem::new("Team").into(),
+                    shadcn::DropdownMenuSub::new(
+                        shadcn::DropdownMenuSubTrigger::new("Invite users"),
+                        shadcn::DropdownMenuSubContent::new([
+                            shadcn::DropdownMenuItem::new("Email").into(),
+                            shadcn::DropdownMenuItem::new("Message").into(),
+                            shadcn::DropdownMenuSub::new(
+                                shadcn::DropdownMenuSubTrigger::new("More options"),
+                                shadcn::DropdownMenuSubContent::new([
+                                    shadcn::DropdownMenuItem::new("Calendly").into(),
+                                    shadcn::DropdownMenuItem::new("Slack").into(),
+                                    shadcn::DropdownMenuSeparator::new().into(),
+                                    shadcn::DropdownMenuItem::new("Webhook").into(),
+                                ]),
+                            )
+                            .into(),
+                            shadcn::DropdownMenuSeparator::new().into(),
+                            shadcn::DropdownMenuItem::new("Advanced...").into(),
+                        ]),
+                    )
+                    .into(),
+                    shadcn::DropdownMenuItem::new("New Team")
+                        .trailing(shadcn::DropdownMenuShortcut::new("⌘+T").into_element(cx))
                         .into(),
-                ]
+                ])
+                .into()]
             },
         )
         .test_id("ui-gallery-dropdown-menu-submenu")

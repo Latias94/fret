@@ -13,7 +13,7 @@
       },
       "timeout_frames": 240
     },
-    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
+    { "type": "click_stable", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
     { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
     { "type": "press_key", "key": "backspace" },
     { "type": "type_text", "text": "dropdown menu" },
@@ -26,7 +26,10 @@
       },
       "timeout_frames": 240
     },
-    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-dropdown-menu" } },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-nav-dropdown-menu" }
+    },
     {
       "type": "wait_until",
       "predicate": {
@@ -37,7 +40,7 @@
     },
     {
       "type": "click_stable",
-      "target": { "kind": "test_id", "id": "ui-gallery-dropdown-menu-demo-trigger" }
+      "target": { "kind": "test_id", "id": "ui-gallery-dropdown-menu-demo-trigger.chrome" }
     },
     {
       "type": "wait_until",
@@ -51,10 +54,19 @@
     {
       "type": "wait_until",
       "predicate": {
-        "kind": "not_exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-dropdown-menu-demo-profile" }
+        "kind": "label_contains",
+        "target": { "kind": "test_id", "id": "ui-gallery-status-last-action" },
+        "text": "menu.dropdown.apple"
       },
       "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focus_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-dropdown-menu-demo" }
+      },
+      "timeout_frames": 600
     },
     { "type": "capture_bundle", "label": "ui-gallery-dropdown-menu-docs-smoke" }
   ]
