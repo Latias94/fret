@@ -70,8 +70,12 @@ Examples that use `fret::mvu::app(...)` or implement `MvuProgram` include (non-e
 - `apps/fret-demo` forwards the same opt-in as `fret-demo/legacy-mvu-demos`.
   - Run legacy demos via:
     - `cargo run -p fret-demo --features legacy-mvu-demos -- <demo-name>`
+    - For the old MVU todo demo specifically: `cargo run -p fret-demo --features legacy-mvu-demos -- todo_demo_legacy`
+- Migration note:
+  - `apps/fret-examples/src/todo_demo.rs` is now view runtime + typed actions.
+  - The legacy MVU implementation remains at `apps/fret-examples/src/todo_demo_legacy.rs`.
 
-- `apps/fret-examples/src/todo_demo.rs`
+- `apps/fret-examples/src/todo_demo_legacy.rs`
 - `apps/fret-examples/src/query_demo.rs`
 - `apps/fret-examples/src/query_async_tokio_demo.rs`
 - `apps/fret-examples/src/hello_counter_demo.rs`
