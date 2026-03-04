@@ -66,30 +66,35 @@ try {
             DirName = "h"
             ScriptPath = "tools/diag-scripts/cookbook/hello/cookbook-hello-click-count.json"
             ExampleName = "hello"
+            CookbookFeatures = @("cookbook-diag")
         },
         @{
             Name = "cookbook-commands-keymap-basics-shortcut-and-gating"
             DirName = "k"
             ScriptPath = "tools/diag-scripts/cookbook/commands-keymap-basics/cookbook-commands-keymap-basics-shortcut-and-gating.json"
             ExampleName = "commands_keymap_basics"
+            CookbookFeatures = @("cookbook-diag")
         },
         @{
             Name = "cookbook-overlay-basics-modal-barrier-shortcut-gating"
             DirName = "o"
             ScriptPath = "tools/diag-scripts/cookbook/overlay-basics/cookbook-overlay-basics-modal-barrier-shortcut-gating.json"
             ExampleName = "overlay_basics"
+            CookbookFeatures = @("cookbook-diag")
         },
         @{
             Name = "cookbook-imui-action-basics-cross-frontend"
             DirName = "i"
             ScriptPath = "tools/diag-scripts/cookbook/imui-action-basics/cookbook-imui-action-basics-cross-frontend.json"
             ExampleName = "imui_action_basics"
+            CookbookFeatures = @("cookbook-diag", "cookbook-imui")
         },
         @{
             Name = "cookbook-payload-actions-basics-remove"
             DirName = "p"
             ScriptPath = "tools/diag-scripts/cookbook/payload-actions-basics/cookbook-payload-actions-basics-remove.json"
             ExampleName = "payload_actions_basics"
+            CookbookFeatures = @("cookbook-diag")
         },
         @{
             Name = "workspace-shell-demo-tab-close-button-command-dispatch-trace"
@@ -108,6 +113,9 @@ try {
         if ($gate.ContainsKey("ExampleName")) {
             $exampleName = $gate.ExampleName
             $buildArgs = @("build", "-j", "1", "-p", "fret-cookbook", "--example", $exampleName)
+            if ($gate.ContainsKey("CookbookFeatures")) {
+                $buildArgs += @("--features", ($gate.CookbookFeatures -join ","))
+            }
             if ($Release) {
                 $buildArgs += "--release"
             }
