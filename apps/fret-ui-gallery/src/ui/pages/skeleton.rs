@@ -23,10 +23,10 @@ pub(super) fn preview_skeleton(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
 
     let body = doc_layout::render_doc_page(
         cx,
-        Some("Preview follows shadcn Skeleton demo: avatar row + cards."),
+        Some("Preview follows shadcn Skeleton docs examples."),
         vec![
             DocSection::new("Demo", demo)
-                .description("Avatar row + card list.")
+                .description("Avatar row with two text lines.")
                 .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
             DocSection::new("Avatar", avatar)
                 .description("Smaller avatar placeholder.")

@@ -16,7 +16,7 @@ fn row<H: UiHost>(cx: &mut ElementContext<'_, H>, label_w: Px) -> AnyElement {
                     .refine_layout(LayoutRefinement::default().w_px(label_w))
                     .into_element(cx),
                 shadcn::Skeleton::new()
-                    .refine_layout(LayoutRefinement::default().w_full().h_px(Px(32.0)))
+                    .refine_layout(LayoutRefinement::default().w_full().h_px(Px(40.0)))
                     .into_element(cx),
             ]
         },
@@ -34,7 +34,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                 row(cx, Px(80.0)),
                 row(cx, Px(96.0)),
                 shadcn::Skeleton::new()
-                    .refine_layout(LayoutRefinement::default().w_px(Px(96.0)).h_px(Px(32.0)))
+                    .refine_layout(LayoutRefinement::default().w_px(Px(96.0)).h_px(Px(36.0)))
                     .into_element(cx),
             ]
         },

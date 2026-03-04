@@ -19,7 +19,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                     .refine_layout(LayoutRefinement::default().w_full())
                     .into_element(cx),
                 shadcn::Skeleton::new()
-                    .refine_layout(LayoutRefinement::default().w_px(Px(240.0)))
+                    .refine_layout(LayoutRefinement::default().w_fraction(3.0 / 4.0))
                     .into_element(cx),
             ]
         },

@@ -33,7 +33,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         stack::VStackProps::default()
             .gap(Space::N2)
             .layout(LayoutRefinement::default().w_full().max_w(Px(420.0))),
-        |cx| (0..5).map(|_| row(cx)).collect::<Vec<_>>(),
+        |cx| (0..3).map(|_| row(cx)).collect::<Vec<_>>(),
     )
     .attach_semantics(
         SemanticsDecoration::default()
