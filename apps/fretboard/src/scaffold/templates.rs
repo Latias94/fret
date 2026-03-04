@@ -22,7 +22,7 @@ pub(super) fn todo_template_cargo_toml(
     opts: ScaffoldOptions,
     workspace_prefix: &str,
 ) -> String {
-    let mut kit_features: Vec<&str> = vec!["desktop", "diagnostics", "shadcn", "state"];
+    let mut kit_features: Vec<&str> = vec!["desktop", "shadcn", "state"];
     if opts.command_palette {
         kit_features.push("command-palette");
     }
@@ -80,7 +80,7 @@ pub(super) fn simple_todo_template_cargo_toml(
     opts: ScaffoldOptions,
     workspace_prefix: &str,
 ) -> String {
-    let mut kit_features: Vec<&str> = vec!["desktop", "diagnostics", "shadcn"];
+    let mut kit_features: Vec<&str> = vec!["desktop", "shadcn"];
     if opts.command_palette {
         kit_features.push("command-palette");
     }
@@ -151,7 +151,7 @@ pub(super) fn hello_template_cargo_toml(
     opts: ScaffoldOptions,
     workspace_prefix: &str,
 ) -> String {
-    let mut kit_features: Vec<&str> = vec!["desktop", "diagnostics", "shadcn"];
+    let mut kit_features: Vec<&str> = vec!["desktop", "shadcn"];
     if opts.command_palette {
         kit_features.push("command-palette");
     }
