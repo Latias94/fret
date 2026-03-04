@@ -10,7 +10,7 @@
 ## Cookbook curation
 
 - [x] Maintain an explicit “Official vs Lab” split (Official should compile fast and avoid optional subsystems).
-- [ ] For each Lab example, ensure:
+- [x] For each Lab example, ensure:
   - a `required-features` gate exists, and
   - `fretboard list cookbook-examples --all` shows the required feature name(s).
 - [x] Add a diagnostics walkthrough for `hello` (stable `test_id` + one script).
