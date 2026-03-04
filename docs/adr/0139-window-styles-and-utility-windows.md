@@ -160,6 +160,7 @@ Patchability (normative):
   - `z_level`
   - `taskbar`
   - `activation`
+  - `hit_test`
   - `mouse`
   - `opacity`
 
@@ -180,7 +181,9 @@ Extend `PlatformCapabilities.ui` with booleans for the style facets, and add mat
 - `ui.window.always_on_top`
 - `ui.window.skip_taskbar`
 - `ui.window.non_activating`
-- `ui.window.mouse_passthrough`
+- `ui.window.hit_test.passthrough_all`
+- `ui.window.hit_test.passthrough_regions` (reserved; not implemented in v1)
+- `ui.window.mouse_passthrough` (legacy; prefer `hit_test`)
 - `ui.native_window_handle` (escape hatch; backend-specific)
 
 The runner/backend must:
@@ -221,8 +224,11 @@ Input and focus semantics (v1):
 
 - `ActivationPolicy::NonActivating` means the runner must not programmatically focus/activate the
   window as a side-effect of creation or pointer interaction, where supported.
-- `MousePolicy::Passthrough` means the window must not receive pointer events where supported; when
-  enabled, the UI runtime must not assume it will see pointer events for that window.
+- `WindowHitTestRequestV1::PassthroughAll` means the OS window must not receive pointer events
+  where supported; when enabled, the UI runtime must not assume it will see pointer events for that
+  window.
+- `MousePolicy::Passthrough` is a legacy alias for window-level pointer passthrough. New code
+  should use `hit_test` and treat `mouse=Passthrough` as an intent-level policy input only.
 - Neither policy implies global shortcuts or text input; utility windows should be treated as
   “pointer-only unless focused” by default.
 

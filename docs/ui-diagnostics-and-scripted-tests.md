@@ -905,6 +905,7 @@ Recent additions:
 - `role_is` (assert semantics role equality for a target)
 - `checked_is` / `checked_is_none` (assert `checked` flag state; useful for checkbox/radio menu items)
 - `active_item_is` (assert the active item for composite widgets: matches either container `active_descendant` or roving focus)
+- `window_style_effective_is` (assert effective/clamped OS window style facets such as `transparent`, `appearance`, and `hit_test`)
 - `dock_drop_preview_kind_is` (assert coarse docking drop preview decision: `wrap_binary` vs `insert_into_split`)
 - `dock_drop_resolve_source_is` (assert which mechanism selected the current docking drop preview)
 - `dock_drop_resolved_is_some` (assert whether the drop preview has a resolved target or stays `None`)
