@@ -68,8 +68,7 @@
     { "type": "move_pointer", "target": { "kind": "test_id", "id": "ui-gallery-hover-card-demo-content" } },
     { "type": "wait_frames", "n": 3 },
 
-    { "type": "capture_screenshot", "label": "ui-gallery-hovercard-demo-zinc-dark" },
-    { "type": "capture_bundle", "label": "ui-gallery-hovercard-demo-zinc-dark" }
+    { "type": "capture_bundle", "label": "ui-gallery-hovercard-demo-zinc-dark" },
+    { "type": "capture_screenshot", "label": "ui-gallery-hovercard-demo-zinc-dark" }
   ]
 }
-

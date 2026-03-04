@@ -3,6 +3,7 @@ pub const SOURCE: &str = include_str!("trigger_delays.rs");
 // region: example
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 use std::sync::Arc;
+use std::time::Duration;
 
 fn demo_content<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
@@ -76,13 +77,13 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         demo_content(
             cx,
             "Delayed",
-            "openDelay=16",
-            "closeDelay=12",
+            "openDelay=700ms",
+            "closeDelay=300ms",
             "ui-gallery-hover-card-delay-delayed-content",
         ),
     )
-    .open_delay_frames(16)
-    .close_delay_frames(12)
+    .open_delay(Duration::from_millis(700))
+    .close_delay(Duration::from_millis(300))
     .into_element(cx)
     .test_id("ui-gallery-hover-card-delay-delayed");
 
