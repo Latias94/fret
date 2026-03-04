@@ -1,3 +1,7 @@
+//! Legacy MVU async playground demo (compat).
+//!
+//! Prefer `async_playground_demo.rs` (View runtime + typed actions) for new code.
+
 use std::collections::HashMap;
 use std::future::Future;
 use std::pin::Pin;
@@ -5,7 +9,7 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;
 
-use fret::prelude::*;
+use fret::legacy::prelude::*;
 use fret_query::ui::QueryElementContextExt as _;
 use fret_query::{
     CancellationToken, FutureSpawner, FutureSpawnerHandle, QueryCancelMode, QueryError, QueryKey,
@@ -15,36 +19,12 @@ use fret_ui::element::{PressableA11y, PressableProps};
 use fret_ui_kit::primitives::scroll_area::ScrollAreaType;
 use fret_ui_kit::primitives::separator::SeparatorOrientation;
 
-mod act {
-    fret::actions!([
-        SelectTip = "async_playground_demo.select.tip.v1",
-        SelectSearch = "async_playground_demo.select.search.v1",
-        SelectStock = "async_playground_demo.select.stock.v1",
-        SelectStatus = "async_playground_demo.select.status.v1",
-        ToggleTheme = "async_playground_demo.toggle_theme.v1",
-        InvalidateSelected = "async_playground_demo.invalidate_selected.v1",
-        CancelSelected = "async_playground_demo.cancel_selected.v1",
-        InvalidateNamespace = "async_playground_demo.invalidate_namespace.v1"
-    ]);
-}
-
-const TRANSIENT_APPLY_THEME: u64 = 0xAFA0_1001;
-const TRANSIENT_INVALIDATE_SELECTED: u64 = 0xAFA0_1002;
-const TRANSIENT_CANCEL_SELECTED: u64 = 0xAFA0_1003;
-const TRANSIENT_INVALIDATE_NAMESPACE: u64 = 0xAFA0_1004;
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 enum QueryId {
     Tip,
     Search,
     Stock,
     Status,
-}
-
-impl Default for QueryId {
-    fn default() -> Self {
-        Self::Tip
-    }
 }
 
 impl QueryId {
@@ -171,8 +151,9 @@ enum FetchMode {
 }
 
 struct AsyncPlaygroundState {
-    selected: Model<QueryId>,
-    dark: Model<bool>,
+    window: AppWindowId,
+    selected: QueryId,
+    dark: bool,
 
     global_slow: Model<bool>,
     tabs: Model<Option<Arc<str>>>,
@@ -188,168 +169,111 @@ struct AsyncPlaygroundState {
     inspector_scroll: fret_ui::scroll::ScrollHandle,
 }
 
-struct AsyncPlaygroundView {
-    st: AsyncPlaygroundState,
-}
-
-fn default_namespace_for_id(id: QueryId) -> &'static str {
-    match id {
-        QueryId::Tip => "tip",
-        QueryId::Search => "search",
-        QueryId::Stock => "stock",
-        QueryId::Status => "status",
-    }
+#[derive(Debug, Clone)]
+enum Msg {
+    Select(QueryId),
+    ToggleTheme,
+    InvalidateSelected,
+    CancelSelected,
+    InvalidateNamespace,
 }
 
 pub fn run() -> anyhow::Result<()> {
-    FretApp::new("async-playground")
-        .window("async-playground", (1180.0, 720.0))
-        .config_files(false)
+    fret::App::new("async-playground")
+        .window("async_playground_demo", (1180.0, 720.0))
         .install_app(|app| {
             install_tokio_spawner(app);
             apply_theme(app, false);
         })
-        .run_view::<AsyncPlaygroundView>()
+        .mvu::<AsyncPlaygroundProgram>()?
+        .run()
         .map_err(anyhow::Error::from)
 }
 
-impl View for AsyncPlaygroundView {
-    fn init(app: &mut App, _window: AppWindowId) -> Self {
+struct AsyncPlaygroundProgram;
+
+impl MvuProgram for AsyncPlaygroundProgram {
+    type State = AsyncPlaygroundState;
+    type Message = Msg;
+
+    fn init(app: &mut App, window: AppWindowId) -> Self::State {
         let mut configs = HashMap::new();
         for id in QueryId::ALL {
             configs.insert(id, QueryConfigModels::new(app));
         }
 
-        Self {
-            st: AsyncPlaygroundState {
-                selected: app.models_mut().insert(QueryId::Tip),
-                dark: app.models_mut().insert(false),
-                global_slow: app.models_mut().insert(false),
-                tabs: app.models_mut().insert(Some(Arc::<str>::from("async"))),
-                namespace_input: app.models_mut().insert("tip".to_string()),
-                search_input: app.models_mut().insert("react".to_string()),
-                stock_symbol: app.models_mut().insert("FRET".to_string()),
-                configs,
-                last_diag: HashMap::new(),
-                catalog_scroll: fret_ui::scroll::ScrollHandle::default(),
-                inspector_scroll: fret_ui::scroll::ScrollHandle::default(),
-            },
+        AsyncPlaygroundState {
+            window,
+            selected: QueryId::Tip,
+            dark: false,
+            global_slow: app.models_mut().insert(false),
+            tabs: app.models_mut().insert(Some(Arc::<str>::from("async"))),
+            namespace_input: app.models_mut().insert("tip".to_string()),
+            search_input: app.models_mut().insert("react".to_string()),
+            stock_symbol: app.models_mut().insert("FRET".to_string()),
+            configs,
+            last_diag: HashMap::new(),
+            catalog_scroll: fret_ui::scroll::ScrollHandle::default(),
+            inspector_scroll: fret_ui::scroll::ScrollHandle::default(),
         }
     }
 
-    fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
-        if cx.take_transient_on_action_root(TRANSIENT_APPLY_THEME) {
-            let dark = cx.app.models().get_copied(&self.st.dark).unwrap_or_default();
-            apply_theme(cx.app, dark);
-        }
-
-        if cx.take_transient_on_action_root(TRANSIENT_INVALIDATE_SELECTED) {
-            let selected = cx
-                .app
-                .models()
-                .get_copied(&self.st.selected)
-                .unwrap_or_default();
-            let key = query_key_for_selected(cx.app, &self.st, selected);
-            let _ = with_query_client(cx.app, |client, app| client.invalidate(app, key));
-        }
-
-        if cx.take_transient_on_action_root(TRANSIENT_CANCEL_SELECTED) {
-            let selected = cx
-                .app
-                .models()
-                .get_copied(&self.st.selected)
-                .unwrap_or_default();
-            let key = query_key_for_selected(cx.app, &self.st, selected);
-            let _ = with_query_client(cx.app, |client, app| client.cancel_inflight(app, key));
-        }
-
-        if cx.take_transient_on_action_root(TRANSIENT_INVALIDATE_NAMESPACE) {
-            let ns = cx
-                .app
-                .models()
-                .get_cloned(&self.st.namespace_input)
-                .unwrap_or_default();
-            let ns = ns.trim();
-            if let Some(ns) = map_namespace(ns) {
-                let _ = with_query_client(cx.app, |client, _app| client.invalidate_namespace(ns));
+    fn update(app: &mut App, st: &mut Self::State, msg: Self::Message) {
+        match msg {
+            Msg::Select(id) => {
+                st.selected = id;
+                let _ = app.models_mut().update(&st.namespace_input, |s| {
+                    s.clear();
+                    s.push_str(match id {
+                        QueryId::Tip => "tip",
+                        QueryId::Search => "search",
+                        QueryId::Stock => "stock",
+                        QueryId::Status => "status",
+                    });
+                });
+                app.request_redraw(st.window);
+            }
+            Msg::ToggleTheme => {
+                st.dark = !st.dark;
+                apply_theme(app, st.dark);
+                app.request_redraw(st.window);
+            }
+            Msg::InvalidateSelected => {
+                let key = query_key_for_selected(app, st);
+                let _ = with_query_client(app, |client, app| client.invalidate(app, key));
+                app.request_redraw(st.window);
+            }
+            Msg::CancelSelected => {
+                let key = query_key_for_selected(app, st);
+                let _ = with_query_client(app, |client, app| client.cancel_inflight(app, key));
+                app.request_redraw(st.window);
+            }
+            Msg::InvalidateNamespace => {
+                let ns = app
+                    .models()
+                    .get_cloned(&st.namespace_input)
+                    .unwrap_or_default();
+                let ns = ns.trim();
+                let Some(ns) = map_namespace(ns) else {
+                    app.request_redraw(st.window);
+                    return;
+                };
+                let _ = with_query_client(app, |client, _app| client.invalidate_namespace(ns));
+                app.request_redraw(st.window);
             }
         }
+    }
 
+    fn view(
+        cx: &mut ElementContext<'_, App>,
+        st: &mut Self::State,
+        msg: &mut MessageRouter<Self::Message>,
+    ) -> Elements {
         let theme = Theme::global(&*cx.app).snapshot();
-        let selected = cx
-            .watch_model(&self.st.selected)
-            .layout()
-            .copied_or_default();
-        let dark = cx.watch_model(&self.st.dark).layout().copied_or_default();
-        let global_slow = cx
-            .watch_model(&self.st.global_slow)
-            .layout()
-            .copied_or_default();
+        let global_slow = cx.watch_model(&st.global_slow).layout().copied_or_default();
 
-        let header = header_bar(cx, &mut self.st, theme.clone(), global_slow, dark);
-        let body = body(cx, &mut self.st, theme, global_slow, selected);
-
-        cx.on_action_notify::<act::SelectTip>({
-            let selected = self.st.selected.clone();
-            let namespace_input = self.st.namespace_input.clone();
-            move |host, _acx| {
-                let _ = host.models_mut().update(&selected, |v| *v = QueryId::Tip);
-                let _ = host.models_mut().update(&namespace_input, |s| {
-                    s.clear();
-                    s.push_str(default_namespace_for_id(QueryId::Tip));
-                });
-                true
-            }
-        });
-        cx.on_action_notify::<act::SelectSearch>({
-            let selected = self.st.selected.clone();
-            let namespace_input = self.st.namespace_input.clone();
-            move |host, _acx| {
-                let _ = host.models_mut().update(&selected, |v| *v = QueryId::Search);
-                let _ = host.models_mut().update(&namespace_input, |s| {
-                    s.clear();
-                    s.push_str(default_namespace_for_id(QueryId::Search));
-                });
-                true
-            }
-        });
-        cx.on_action_notify::<act::SelectStock>({
-            let selected = self.st.selected.clone();
-            let namespace_input = self.st.namespace_input.clone();
-            move |host, _acx| {
-                let _ = host.models_mut().update(&selected, |v| *v = QueryId::Stock);
-                let _ = host.models_mut().update(&namespace_input, |s| {
-                    s.clear();
-                    s.push_str(default_namespace_for_id(QueryId::Stock));
-                });
-                true
-            }
-        });
-        cx.on_action_notify::<act::SelectStatus>({
-            let selected = self.st.selected.clone();
-            let namespace_input = self.st.namespace_input.clone();
-            move |host, _acx| {
-                let _ = host.models_mut().update(&selected, |v| *v = QueryId::Status);
-                let _ = host.models_mut().update(&namespace_input, |s| {
-                    s.clear();
-                    s.push_str(default_namespace_for_id(QueryId::Status));
-                });
-                true
-            }
-        });
-
-        cx.on_action_notify::<act::ToggleTheme>({
-            let dark = self.st.dark.clone();
-            move |host, acx| {
-                let _ = host.models_mut().update(&dark, |v| *v = !*v);
-                host.record_transient_event(acx, TRANSIENT_APPLY_THEME);
-                true
-            }
-        });
-
-        cx.on_action_notify_transient::<act::InvalidateSelected>(TRANSIENT_INVALIDATE_SELECTED);
-        cx.on_action_notify_transient::<act::CancelSelected>(TRANSIENT_CANCEL_SELECTED);
-        cx.on_action_notify_transient::<act::InvalidateNamespace>(TRANSIENT_INVALIDATE_NAMESPACE);
+        let header = header_bar(cx, st, msg, theme.clone(), global_slow);
+        let body = body(cx, st, msg, theme, global_slow);
 
         ui::v_flex(cx, |_cx| [header, body])
             .w_full()
@@ -362,9 +286,9 @@ impl View for AsyncPlaygroundView {
 fn header_bar(
     cx: &mut ElementContext<'_, App>,
     st: &mut AsyncPlaygroundState,
+    msg: &mut MessageRouter<Msg>,
     theme: ThemeSnapshot,
     global_slow: bool,
-    dark: bool,
 ) -> AnyElement {
     let title = ui::text(cx, "Async Playground")
         .text_sm()
@@ -384,10 +308,10 @@ fn header_bar(
         .items_center()
         .into_element(cx);
 
-    let theme_btn = shadcn::Button::new(if dark { "Light" } else { "Dark" })
+    let theme_btn = shadcn::Button::new(if st.dark { "Light" } else { "Dark" })
         .variant(shadcn::ButtonVariant::Ghost)
         .size(shadcn::ButtonSize::Sm)
-        .action(act::ToggleTheme)
+        .on_click(msg.cmd(Msg::ToggleTheme))
         .into_element(cx);
 
     let right = ui::h_flex(cx, |_cx| [slow_row, theme_btn])
@@ -412,13 +336,13 @@ fn header_bar(
 fn body(
     cx: &mut ElementContext<'_, App>,
     st: &mut AsyncPlaygroundState,
+    msg: &mut MessageRouter<Msg>,
     theme: ThemeSnapshot,
     global_slow: bool,
-    selected: QueryId,
 ) -> AnyElement {
-    let left = catalog_panel(cx, st, theme.clone(), selected);
-    let mid = main_panel(cx, st, theme.clone(), global_slow, selected);
-    let right = inspector_panel(cx, st, theme, selected);
+    let left = catalog_panel(cx, st, msg, theme.clone());
+    let mid = main_panel(cx, st, msg, theme.clone(), global_slow);
+    let right = inspector_panel(cx, st, msg, theme);
 
     let sep_1 = shadcn::Separator::new()
         .orientation(SeparatorOrientation::Vertical)
@@ -439,8 +363,8 @@ fn body(
 fn catalog_panel(
     cx: &mut ElementContext<'_, App>,
     st: &mut AsyncPlaygroundState,
+    msg: &mut MessageRouter<Msg>,
     theme: ThemeSnapshot,
-    selected: QueryId,
 ) -> AnyElement {
     let header = ui::text(cx, "Catalog")
         .font_semibold()
@@ -454,7 +378,7 @@ fn catalog_panel(
 
     let list = shadcn::ScrollArea::new([ui::v_flex_build(cx, |cx, out| {
         for id in QueryId::ALL {
-            out.push(catalog_item(cx, st, theme.clone(), selected, id));
+            out.push(catalog_item(cx, st, msg, theme.clone(), id));
         }
     })
     .gap(Space::N1)
@@ -477,12 +401,12 @@ fn catalog_panel(
 fn catalog_item(
     cx: &mut ElementContext<'_, App>,
     st: &mut AsyncPlaygroundState,
+    msg: &mut MessageRouter<Msg>,
     theme: ThemeSnapshot,
-    selected: QueryId,
     id: QueryId,
 ) -> AnyElement {
-    let selected = selected == id;
-    let select_cmd = select_command_for_id(id);
+    let selected = st.selected == id;
+    let select_cmd = msg.cmd(Msg::Select(id));
     let diag = st.last_diag.get(&id).cloned();
 
     let bg_idle = theme.color_token("muted");
@@ -540,25 +464,16 @@ fn catalog_item(
     )
 }
 
-fn select_command_for_id(id: QueryId) -> CommandId {
-    match id {
-        QueryId::Tip => act::SelectTip.into(),
-        QueryId::Search => act::SelectSearch.into(),
-        QueryId::Stock => act::SelectStock.into(),
-        QueryId::Status => act::SelectStatus.into(),
-    }
-}
-
 fn main_panel(
     cx: &mut ElementContext<'_, App>,
     st: &mut AsyncPlaygroundState,
+    msg: &mut MessageRouter<Msg>,
     theme: ThemeSnapshot,
     global_slow: bool,
-    selected: QueryId,
 ) -> AnyElement {
     let mode = active_mode(cx, st);
 
-    let title = ui::text(cx, selected.label())
+    let title = ui::text(cx, st.selected.label())
         .font_semibold()
         .text_sm()
         .into_element(cx);
@@ -566,12 +481,12 @@ fn main_panel(
     let cancel = shadcn::Button::new("Cancel")
         .variant(shadcn::ButtonVariant::Secondary)
         .size(shadcn::ButtonSize::Sm)
-        .action(act::CancelSelected)
+        .on_click(msg.cmd(Msg::CancelSelected))
         .into_element(cx);
     let invalidate = shadcn::Button::new("Invalidate")
         .variant(shadcn::ButtonVariant::Default)
         .size(shadcn::ButtonSize::Sm)
-        .action(act::InvalidateSelected)
+        .on_click(msg.cmd(Msg::InvalidateSelected))
         .into_element(cx);
     let actions = ui::h_flex(cx, |_cx| [cancel, invalidate])
         .gap(Space::N2)
@@ -603,14 +518,14 @@ fn main_panel(
     .into_element(cx);
 
     let sync_panel = if mode == FetchMode::Sync {
-        query_panel_for_mode(cx, st, theme.clone(), global_slow, selected, FetchMode::Sync)
+        query_panel_for_mode(cx, st, theme.clone(), global_slow, FetchMode::Sync)
     } else {
         ui::container(cx, |_cx| Vec::<AnyElement>::new())
             .h_full()
             .into_element(cx)
     };
     let async_panel = if mode == FetchMode::Async {
-        query_panel_for_mode(cx, st, theme.clone(), global_slow, selected, FetchMode::Async)
+        query_panel_for_mode(cx, st, theme.clone(), global_slow, FetchMode::Async)
     } else {
         ui::container(cx, |_cx| Vec::<AnyElement>::new())
             .h_full()
@@ -650,9 +565,10 @@ fn main_panel(
 fn inspector_panel(
     cx: &mut ElementContext<'_, App>,
     st: &mut AsyncPlaygroundState,
+    msg: &mut MessageRouter<Msg>,
     theme: ThemeSnapshot,
-    selected: QueryId,
 ) -> AnyElement {
+    let selected = st.selected;
     let policy = query_policy(cx, st, selected);
     let key = query_key_for_id(cx, st, selected);
     let snap = snapshot_entry_for_key(cx, key);
@@ -714,7 +630,7 @@ fn inspector_panel(
         let btn = shadcn::Button::new("Invalidate ns")
             .variant(shadcn::ButtonVariant::Secondary)
             .size(shadcn::ButtonSize::Sm)
-            .action(act::InvalidateNamespace)
+            .on_click(msg.cmd(Msg::InvalidateNamespace))
             .into_element(cx);
         [input, btn]
     })
@@ -820,10 +736,9 @@ fn query_panel_for_mode(
     st: &mut AsyncPlaygroundState,
     theme: ThemeSnapshot,
     global_slow: bool,
-    selected: QueryId,
     mode: FetchMode,
 ) -> AnyElement {
-    let id = selected;
+    let id = st.selected;
     let policy = query_policy(cx, st, id);
     let fail_mode = query_fail_mode(cx, st, id);
     let key = query_key_for_id(cx, st, id);
@@ -1091,11 +1006,8 @@ fn parse_u64_or(s: &str, fallback: u64) -> u64 {
     s.trim().parse::<u64>().unwrap_or(fallback)
 }
 
-fn query_key_for_selected(
-    app: &App,
-    st: &AsyncPlaygroundState,
-    selected: QueryId,
-) -> QueryKey<Arc<str>> {
+fn query_key_for_selected(app: &App, st: &AsyncPlaygroundState) -> QueryKey<Arc<str>> {
+    let selected = st.selected;
     let search = app
         .models()
         .get_cloned(&st.search_input)

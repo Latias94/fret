@@ -20,8 +20,10 @@ pub mod alpha_mode_demo;
 pub mod area_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod assets_demo;
-#[cfg(all(not(target_arch = "wasm32"), feature = "legacy-mvu-demos"))]
+#[cfg(not(target_arch = "wasm32"))]
 pub mod async_playground_demo;
+#[cfg(all(not(target_arch = "wasm32"), feature = "legacy-mvu-demos"))]
+pub mod async_playground_demo_legacy;
 pub mod bars_demo;
 pub mod candlestick_demo;
 #[cfg(not(target_arch = "wasm32"))]
