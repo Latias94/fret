@@ -46,6 +46,7 @@ Status legend:
 
 ## M4 — Move lesson-shaped demos out of `fret-demo`
 
-- [ ] Identify 8–15 lesson-shaped `apps/fret-demo/src/bin/*` candidates.
+- [x] Identify 8–15 lesson-shaped `apps/fret-demo/src/bin/*` candidates.
+  - See: [docs/workstreams/open-source-readiness-fearless-refactor-v1/M4_CANDIDATES.md](./M4_CANDIDATES.md)
 - [ ] Migrate into `apps/fret-cookbook/examples/*` with stable `test_id`s.
 - [x] Keep `fret-demo` as maintainer/labs; ensure `fretboard list native-demos` stays intentionally small.
