@@ -643,6 +643,12 @@ fn build_dock_routing_payload_from_json(
                 );
                 mix(
                     &mut fp,
+                    d.get("current_window_scale_factor_x1000")
+                        .and_then(|v| v.as_u64())
+                        .unwrap_or(0),
+                );
+                mix(
+                    &mut fp,
                     hash_str_64(d.get("kind").and_then(|v| v.as_str()).unwrap_or("")),
                 );
                 mix(
@@ -678,6 +684,12 @@ fn build_dock_routing_payload_from_json(
                 mix(
                     &mut fp,
                     d.get("moving_window").and_then(|v| v.as_u64()).unwrap_or(0),
+                );
+                mix(
+                    &mut fp,
+                    d.get("moving_window_scale_factor_x1000")
+                        .and_then(|v| v.as_u64())
+                        .unwrap_or(0),
                 );
                 mix(
                     &mut fp,
@@ -737,6 +749,7 @@ fn build_dock_routing_payload_from_json(
                     "pointer_id": d.get("pointer_id").and_then(|v| v.as_u64()).unwrap_or(0),
                     "source_window": d.get("source_window").and_then(|v| v.as_u64()).unwrap_or(0),
                     "current_window": d.get("current_window").and_then(|v| v.as_u64()).unwrap_or(0),
+                    "current_window_scale_factor_x1000": d.get("current_window_scale_factor_x1000").cloned().unwrap_or(Value::Null),
                     "kind": d.get("kind").cloned().unwrap_or(Value::Null),
                     "dragging": d.get("dragging").and_then(|v| v.as_bool()).unwrap_or(false),
                     "cross_window_hover": d.get("cross_window_hover").and_then(|v| v.as_bool()).unwrap_or(false),
@@ -744,6 +757,7 @@ fn build_dock_routing_payload_from_json(
                     "transparent_payload_mouse_passthrough_applied": d.get("transparent_payload_mouse_passthrough_applied").and_then(|v| v.as_bool()).unwrap_or(false),
                     "window_under_cursor_source": d.get("window_under_cursor_source").cloned().unwrap_or(Value::Null),
                     "moving_window": d.get("moving_window").cloned().unwrap_or(Value::Null),
+                    "moving_window_scale_factor_x1000": d.get("moving_window_scale_factor_x1000").cloned().unwrap_or(Value::Null),
                     "window_under_moving_window": d.get("window_under_moving_window").cloned().unwrap_or(Value::Null),
                     "window_under_moving_window_source": d.get("window_under_moving_window_source").cloned().unwrap_or(Value::Null),
                 })
@@ -1618,6 +1632,7 @@ mod tests {
                                     "pointer_id": 1,
                                     "source_window": 1,
                                     "current_window": 2,
+                                    "current_window_scale_factor_x1000": 1500,
                                     "kind": "dock_panel",
                                     "dragging": true,
                                     "cross_window_hover": true,
@@ -1626,6 +1641,7 @@ mod tests {
                                     "window_under_cursor_source": "heuristic_rects"
                                     ,
                                     "moving_window": 2,
+                                    "moving_window_scale_factor_x1000": 1000,
                                     "window_under_moving_window": 1,
                                     "window_under_moving_window_source": "platform_win32"
                                 },
@@ -1651,6 +1667,7 @@ mod tests {
                                     "pointer_id": 1,
                                     "source_window": 1,
                                     "current_window": 2,
+                                    "current_window_scale_factor_x1000": 1500,
                                     "kind": "dock_panel",
                                     "dragging": true,
                                     "cross_window_hover": true,
@@ -1659,6 +1676,7 @@ mod tests {
                                     "window_under_cursor_source": "heuristic_rects"
                                     ,
                                     "moving_window": 2,
+                                    "moving_window_scale_factor_x1000": 1000,
                                     "window_under_moving_window": 1,
                                     "window_under_moving_window_source": "platform_win32"
                                 },
@@ -1843,6 +1861,11 @@ mod tests {
             Some("dock_panel")
         );
         assert_eq!(
+            drag.get("current_window_scale_factor_x1000")
+                .and_then(|v| v.as_u64()),
+            Some(1500)
+        );
+        assert_eq!(
             drag.get("cross_window_hover").and_then(|v| v.as_bool()),
             Some(true)
         );
@@ -1852,6 +1875,11 @@ mod tests {
             Some("heuristic_rects")
         );
         assert_eq!(drag.get("moving_window").and_then(|v| v.as_u64()), Some(2));
+        assert_eq!(
+            drag.get("moving_window_scale_factor_x1000")
+                .and_then(|v| v.as_u64()),
+            Some(1000)
+        );
         assert_eq!(
             drag.get("window_under_moving_window")
                 .and_then(|v| v.as_u64()),

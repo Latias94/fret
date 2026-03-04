@@ -92,6 +92,17 @@ fn print_dock_routing_report(routing: &Value, routing_path: &Path, bundle_path: 
         v.get(key).and_then(|v| v.as_u64()).unwrap_or(0)
     }
 
+    fn scale_factor_x1000_string_obj(
+        v: &serde_json::Map<String, Value>,
+        key: &str,
+    ) -> Option<String> {
+        let sf = v.get(key).and_then(|v| v.as_u64()).unwrap_or(0);
+        if sf == 0 {
+            return None;
+        }
+        Some(format!("{:.3}", (sf as f64) / 1000.0))
+    }
+
     fn str_field<'a>(v: &'a Value, key: &str) -> &'a str {
         v.get(key).and_then(|v| v.as_str()).unwrap_or("")
     }
@@ -145,6 +156,8 @@ fn print_dock_routing_report(routing: &Value, routing_path: &Path, bundle_path: 
                 .get("current_window")
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0);
+            let sf_cur =
+                scale_factor_x1000_string_obj(drag, "current_window_scale_factor_x1000");
             let dragging = drag
                 .get("dragging")
                 .and_then(|v| v.as_bool())
@@ -157,10 +170,23 @@ fn print_dock_routing_report(routing: &Value, routing_path: &Path, bundle_path: 
                 .get("window_under_cursor_source")
                 .and_then(|v| v.as_str())
                 .unwrap_or("");
-            parts.push(format!(
-                "drag src={} cur={} dragging={} cross={} under={}",
-                src, cur, dragging, cross, under
-            ));
+            let sf_moving = scale_factor_x1000_string_obj(drag, "moving_window_scale_factor_x1000");
+
+            let mut drag_parts: Vec<String> = Vec::new();
+            drag_parts.push(format!("src={src}"));
+            drag_parts.push(format!("cur={cur}"));
+            if let Some(sf_cur) = sf_cur {
+                drag_parts.push(format!("sf_cur={sf_cur}"));
+            }
+            if let Some(sf_moving) = sf_moving {
+                drag_parts.push(format!("sf_move={sf_moving}"));
+            }
+            drag_parts.push(format!("dragging={dragging}"));
+            drag_parts.push(format!("cross={cross}"));
+            if !under.is_empty() {
+                drag_parts.push(format!("under={under}"));
+            }
+            parts.push(format!("drag {}", drag_parts.join(" ")));
         }
 
         if let Some(drop) = e.get("dock_drop_resolve").and_then(|v| v.as_object()) {
