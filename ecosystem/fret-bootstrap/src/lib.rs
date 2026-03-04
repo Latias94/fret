@@ -665,6 +665,9 @@ pub mod hot_literals;
 #[cfg(feature = "ui-app-driver")]
 pub use hot_literals::{HotLiterals, HotLiteralsFile};
 
+#[cfg(feature = "window-style-profiles")]
+pub mod window_style_profiles;
+
 #[cfg(all(feature = "ui-app-driver", feature = "diagnostics"))]
 pub mod ui_diagnostics;
 
