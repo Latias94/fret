@@ -56,7 +56,7 @@
       "button": "left"
     },
     { "type": "wait_frames", "n": 1 },
-    { "type": "pointer_move", "window": { "kind": "current" }, "delta_x": 8.0, "delta_y": 0.0, "steps": 6 },
+    { "type": "pointer_move", "window": { "kind": "current" }, "delta_x": 2.0, "delta_y": 0.0, "steps": 2 },
     { "type": "wait_frames", "n": 1 },
     { "type": "assert", "predicate": { "kind": "dock_drag_active_is", "active": false } },
     { "type": "assert", "predicate": { "kind": "dock_floating_drag_active_is", "active": false } },
@@ -64,7 +64,7 @@
     { "type": "assert", "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "dock-arb-viewport-right" } } },
 
     { "type": "pointer_up", "window": { "kind": "current" } },
-    { "type": "wait_frames", "n": 4 },
+    { "type": "wait_frames", "n": 1 },
     {
       "type": "wait_until",
       "predicate": { "kind": "not_exists", "target": { "kind": "test_id", "id": "dock-arb-viewport-right" } },
