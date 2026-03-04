@@ -270,13 +270,28 @@ fn collect_macos_vmmap_summary_best_effort(pid: u32, out_dir: &Path) -> Option<s
             .map(|r| r.dirty_bytes)
     };
 
+    let region_dirty_bytes_sum_prefix = |prefix: &str| -> Option<u64> {
+        let mut sum: u64 = 0;
+        let mut any = false;
+        for row in &regions_table {
+            if row.region_type.starts_with(prefix) {
+                any = true;
+                sum = sum.saturating_add(row.dirty_bytes);
+            }
+        }
+        any.then_some(sum)
+    };
+
     let owned_unmapped_memory_dirty_bytes = region_dirty_bytes("owned unmapped memory");
     // IOSurface is commonly used for Metal-backed surfaces/textures.
-    let io_surface_dirty_bytes = region_dirty_bytes("IOSurface");
+    let io_surface_dirty_bytes = region_dirty_bytes_sum_prefix("IOSurface")
+        .or_else(|| region_dirty_bytes("IOSurface"));
     // IOAccelerator is a common region type for GPU driver allocations.
-    let io_accelerator_dirty_bytes = region_dirty_bytes("IOAccelerator");
+    let io_accelerator_dirty_bytes = region_dirty_bytes_sum_prefix("IOAccelerator")
+        .or_else(|| region_dirty_bytes("IOAccelerator"));
     // Heap buckets (useful for attributing CPU-side increases).
-    let malloc_small_dirty_bytes = region_dirty_bytes("MALLOC_SMALL");
+    let malloc_small_dirty_bytes = region_dirty_bytes_sum_prefix("MALLOC_SMALL")
+        .or_else(|| region_dirty_bytes("MALLOC_SMALL"));
 
     let mut regions_top_dirty = regions_table.clone();
     regions_top_dirty.sort_by_key(|r| std::cmp::Reverse(r.dirty_bytes));
