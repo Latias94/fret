@@ -17,34 +17,30 @@ fn round<H: UiHost>(cx: &mut ElementContext<'_, H>, size: f32) -> AnyElement {
 }
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    fret_ui_kit::primitives::direction::with_direction_provider(
-        cx,
-        fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
-        |cx| {
-            let text_lines = stack::vstack(
-                cx,
-                stack::VStackProps::default()
-                    .gap(Space::N2)
-                    .layout(LayoutRefinement::default().w_px(Px(250.0))),
-                |cx| {
-                    vec![
-                        shadcn::Skeleton::new()
-                            .refine_layout(LayoutRefinement::default().w_full())
-                            .into_element(cx),
-                        shadcn::Skeleton::new()
-                            .refine_layout(LayoutRefinement::default().w_px(Px(200.0)))
-                            .into_element(cx),
-                    ]
-                },
-            );
+    with_direction_provider(cx, LayoutDirection::Rtl, |cx| {
+        let text_lines = stack::vstack(
+            cx,
+            stack::VStackProps::default()
+                .gap(Space::N2)
+                .layout(LayoutRefinement::default().w_px(Px(250.0))),
+            |cx| {
+                vec![
+                    shadcn::Skeleton::new()
+                        .refine_layout(LayoutRefinement::default().w_full())
+                        .into_element(cx),
+                    shadcn::Skeleton::new()
+                        .refine_layout(LayoutRefinement::default().w_px(Px(200.0)))
+                        .into_element(cx),
+                ]
+            },
+        );
 
-            stack::hstack(
-                cx,
-                stack::HStackProps::default().gap(Space::N4).items_center(),
-                |cx| vec![round(cx, 48.0), text_lines],
-            )
-        },
-    )
+        stack::hstack(
+            cx,
+            stack::HStackProps::default().gap(Space::N4).items_center(),
+            |cx| vec![round(cx, 48.0), text_lines],
+        )
+    })
     .attach_semantics(
         SemanticsDecoration::default()
             .role(fret_core::SemanticsRole::Group)
