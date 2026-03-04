@@ -56,7 +56,7 @@
       "button": "left"
     },
     { "type": "wait_frames", "n": 1 },
-    { "type": "pointer_move", "window": { "kind": "current" }, "delta_x": 2.0, "delta_y": 0.0, "steps": 2 },
+    { "type": "pointer_move", "window": { "kind": "current" }, "delta_x": 8.0, "delta_y": 0.0, "steps": 4 },
     { "type": "wait_frames", "n": 1 },
     { "type": "assert", "predicate": { "kind": "dock_drag_active_is", "active": false } },
     { "type": "assert", "predicate": { "kind": "dock_floating_drag_active_is", "active": false } },
