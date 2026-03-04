@@ -129,8 +129,7 @@ impl View for DropShadowBasicsView {
                 .overflow_hidden()
                 .bg(ColorRef::Color(theme.color_token("muted")))
                 .rounded_md()
-                .into_element(cx)
-                ;
+                .into_element(cx);
 
             if enabled {
                 cx.effect_layer(EffectMode::FilterContent, chain, move |_cx| [bounds])
@@ -139,7 +138,11 @@ impl View for DropShadowBasicsView {
             }
         };
 
-        let (rows, cols) = if stress { (4usize, 3usize) } else { (2usize, 3usize) };
+        let (rows, cols) = if stress {
+            (4usize, 3usize)
+        } else {
+            (2usize, 3usize)
+        };
         let mut grid_rows: Vec<AnyElement> = Vec::with_capacity(rows);
         for r in 0..rows {
             grid_rows.push(
@@ -171,11 +174,9 @@ impl View for DropShadowBasicsView {
         ])
         .into_element(cx);
 
-        let content = shadcn::CardContent::new([
-            ui::v_flex(cx, |_cx| [toolbar, stage])
-                .gap(Space::N5)
-                .into_element(cx),
-        ])
+        let content = shadcn::CardContent::new([ui::v_flex(cx, |_cx| [toolbar, stage])
+            .gap(Space::N5)
+            .into_element(cx)])
         .into_element(cx);
 
         let card = shadcn::Card::new([header, content])

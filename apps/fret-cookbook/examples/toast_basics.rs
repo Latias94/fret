@@ -66,8 +66,12 @@ impl View for ToastBasicsView {
             }
         });
 
-        cx.on_action_availability::<act::DefaultToast>(|_host, _acx| CommandAvailability::Available);
-        cx.on_action_availability::<act::SuccessToast>(|_host, _acx| CommandAvailability::Available);
+        cx.on_action_availability::<act::DefaultToast>(|_host, _acx| {
+            CommandAvailability::Available
+        });
+        cx.on_action_availability::<act::SuccessToast>(|_host, _acx| {
+            CommandAvailability::Available
+        });
         cx.on_action_availability::<act::DismissAll>(|_host, _acx| CommandAvailability::Available);
 
         let header = shadcn::CardHeader::new([
@@ -102,11 +106,12 @@ impl View for ToastBasicsView {
         .items_center()
         .into_element(cx);
 
-        let card = shadcn::Card::new([header, shadcn::CardContent::new([buttons]).into_element(cx)])
-            .ui()
-            .w_full()
-            .max_w(Px(720.0))
-            .into_element(cx);
+        let card =
+            shadcn::Card::new([header, shadcn::CardContent::new([buttons]).into_element(cx)])
+                .ui()
+                .w_full()
+                .max_w(Px(720.0))
+                .into_element(cx);
 
         let toaster = shadcn::Toaster::new().into_element(cx);
 

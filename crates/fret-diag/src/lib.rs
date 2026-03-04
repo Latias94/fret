@@ -1173,10 +1173,9 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         "missing value for --max-macos-physical-footprint-peak-bytes".to_string(),
                     );
                 };
-                max_macos_physical_footprint_peak_bytes =
-                    Some(v.parse::<u64>().map_err(|_| {
-                        "invalid value for --max-macos-physical-footprint-peak-bytes".to_string()
-                    })?);
+                max_macos_physical_footprint_peak_bytes = Some(v.parse::<u64>().map_err(|_| {
+                    "invalid value for --max-macos-physical-footprint-peak-bytes".to_string()
+                })?);
                 i += 1;
             }
             "--max-macos-owned-unmapped-memory-dirty-bytes" => {

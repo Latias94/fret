@@ -295,28 +295,26 @@ fn render_svg_panel(
             .into_element(cx),
         ])
         .into_element(cx),
-        shadcn::CardContent::new([
-            ui::v_flex(cx, |cx| {
-                [
-                    ui::h_flex(cx, |cx| {
-                        [
-                            shadcn::Label::new("SVG status:").into_element(cx),
-                            shadcn::Badge::new(status)
-                                .variant(shadcn::BadgeVariant::Secondary)
-                                .into_element(cx)
-                                .test_id(TEST_ID_SVG_STATUS),
-                        ]
-                    })
-                    .gap(Space::N2)
-                    .items_center()
-                    .into_element(cx),
-                    box_el,
-                ]
-            })
-            .gap(Space::N3)
-            .items_start()
-            .into_element(cx),
-        ])
+        shadcn::CardContent::new([ui::v_flex(cx, |cx| {
+            [
+                ui::h_flex(cx, |cx| {
+                    [
+                        shadcn::Label::new("SVG status:").into_element(cx),
+                        shadcn::Badge::new(status)
+                            .variant(shadcn::BadgeVariant::Secondary)
+                            .into_element(cx)
+                            .test_id(TEST_ID_SVG_STATUS),
+                    ]
+                })
+                .gap(Space::N2)
+                .items_center()
+                .into_element(cx),
+                box_el,
+            ]
+        })
+        .gap(Space::N3)
+        .items_start()
+        .into_element(cx)])
         .into_element(cx),
     ])
     .ui()

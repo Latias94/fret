@@ -3,7 +3,10 @@ use fret_ui::CommandAvailability;
 use fret_ui::element::SemanticsDecoration;
 
 mod act {
-    fret::actions!([Submit = "cookbook.form_basics.submit.v1", Reset = "cookbook.form_basics.reset.v1"]);
+    fret::actions!([
+        Submit = "cookbook.form_basics.submit.v1",
+        Reset = "cookbook.form_basics.reset.v1"
+    ]);
 }
 
 const TEST_ID_ROOT: &str = "cookbook.form_basics.root";
@@ -190,9 +193,11 @@ impl View for FormBasicsView {
         .items_center()
         .into_element(cx);
 
-        let body = ui::v_flex(cx, |_cx| [name_input, email_input, error_row, valid, buttons])
-            .gap(Space::N3)
-            .into_element(cx);
+        let body = ui::v_flex(cx, |_cx| {
+            [name_input, email_input, error_row, valid, buttons]
+        })
+        .gap(Space::N3)
+        .into_element(cx);
 
         let card = shadcn::Card::new([header, shadcn::CardContent::new([body]).into_element(cx)])
             .ui()

@@ -46,7 +46,9 @@ impl View for DataTableBasicsView {
 
         Self {
             table_state: app.models_mut().insert(state),
-            table_output: app.models_mut().insert(shadcn::DataTableViewOutput::default()),
+            table_output: app
+                .models_mut()
+                .insert(shadcn::DataTableViewOutput::default()),
             rows,
             columns,
         }
@@ -116,13 +118,12 @@ impl View for DataTableBasicsView {
             .into_element(cx)
             .test_id(TEST_ID_TABLE);
 
-        let content = shadcn::CardContent::new([
-            ui::v_flex(cx, |_cx| [toolbar, table_slot, pagination])
+        let content =
+            shadcn::CardContent::new([ui::v_flex(cx, |_cx| [toolbar, table_slot, pagination])
                 .gap(Space::N3)
                 .h_full()
-                .into_element(cx),
-        ])
-        .into_element(cx);
+                .into_element(cx)])
+            .into_element(cx);
 
         let card = shadcn::Card::new([header, content])
             .ui()
@@ -144,4 +145,3 @@ fn main() -> anyhow::Result<()> {
         .run_view::<DataTableBasicsView>()
         .map_err(anyhow::Error::from)
 }
-

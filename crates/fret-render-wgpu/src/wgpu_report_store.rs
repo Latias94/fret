@@ -106,8 +106,7 @@ impl WgpuAllocatorReportFrameStore {
             ..WgpuAllocatorReportSummary::default()
         };
 
-        let mut top_allocations: Vec<WgpuAllocatorReportTopAllocation> =
-            Vec::new();
+        let mut top_allocations: Vec<WgpuAllocatorReportTopAllocation> = Vec::new();
 
         if let Some(report) = report {
             summary.total_allocated_bytes = report.total_allocated_bytes;

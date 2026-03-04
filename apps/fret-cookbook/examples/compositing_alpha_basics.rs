@@ -255,4 +255,3 @@ fn main() -> anyhow::Result<()> {
     )
     .map_err(anyhow::Error::from)
 }
-

@@ -52,9 +52,9 @@ pub use text::SystemFontRescanResult;
 pub use text::SystemFontRescanSeed;
 pub use text::TextFontFamilyConfig;
 pub use wgpu_report_store::{
-    WgpuAllocatorReportFrameSample, WgpuAllocatorReportFrameStore,
-    WgpuAllocatorReportSummary, WgpuAllocatorReportTopAllocation, WgpuHubReportCounts,
-    WgpuHubReportFrameSample, WgpuHubReportFrameStore,
+    WgpuAllocatorReportFrameSample, WgpuAllocatorReportFrameStore, WgpuAllocatorReportSummary,
+    WgpuAllocatorReportTopAllocation, WgpuHubReportCounts, WgpuHubReportFrameSample,
+    WgpuHubReportFrameStore,
 };
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]

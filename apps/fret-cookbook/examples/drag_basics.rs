@@ -95,10 +95,7 @@ impl View for DragBasicsView {
                 let _ = host.models_mut().update(&origin_model_move, |p| {
                     let x = (drag.origin_at_start.x.0 + dx).clamp(0.0, 480.0);
                     let y = (drag.origin_at_start.y.0 + dy).clamp(0.0, 120.0);
-                    *p = Point::new(
-                        Px(x),
-                        Px(y),
-                    );
+                    *p = Point::new(Px(x), Px(y));
                 });
 
                 host.invalidate(Invalidation::Paint);
@@ -182,8 +179,7 @@ impl View for DragBasicsView {
                 .w_px(offset_x)
                 .into_element(cx);
 
-            let row = ui::h_flex(cx, |_cx| [left_spacer, box_el])
-                .into_element(cx);
+            let row = ui::h_flex(cx, |_cx| [left_spacer, box_el]).into_element(cx);
             let col = ui::v_flex(cx, |_cx| [top_spacer, row]).into_element(cx);
 
             let bounds = ui::container(cx, |_cx| vec![col])
