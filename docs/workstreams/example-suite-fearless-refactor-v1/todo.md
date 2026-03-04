@@ -131,6 +131,8 @@ Reference apps (app-scale):
   - [x] cookbook topics
   - [x] UI gallery (component catalog)
   - [x] diagnostics bundles/scripts
+- [x] Add a GitHub-friendly `examples/` portal (Bevy-style index):
+  - [`examples/README.md`](../../../examples/README.md)
 - [ ] Ensure `README.md` only links the *canonical* path (avoid scattering run commands).
 - [ ] Add contribution rules:
   - [ ] how to add a new official example
