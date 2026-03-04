@@ -91,6 +91,15 @@ Keymap/availability explainability (diagnostics traces):
 - `ecosystem/fret-bootstrap/src/ui_diagnostics/command_gating_trace.rs` (`debug.command_gating_trace[*]`)
 - `crates/fret-ui/src/tree/shortcuts.rs` (widget-scoped shortcut gating uses live UI-tree availability to avoid stale `command_disabled` after modal barrier transitions)
 
+Key-context stack + `keyctx.*` evaluation (v1):
+
+- `crates/fret-runtime/src/when_expr/*` (`WhenEvalContext`, `keyctx.*`)
+- `crates/fret-ui/src/element.rs` + `crates/fret-ui/src/elements/cx.rs` (`AnyElement::key_context`, `UiBuilder::key_context`)
+- `crates/fret-ui/src/tree/shortcuts.rs` (derives the key-context stack from the focused chain / modal barrier root)
+- `crates/fret-ui/src/tree/dispatch/window.rs` (publishes window key-context snapshots to `WindowKeyContextStackService`)
+- `crates/fret-runtime/src/window_key_context_stack.rs` (`WindowKeyContextStackService` data-only seam)
+- Scripted gate: `tools/diag-scripts/cookbook/commands-keymap-basics/cookbook-commands-keymap-basics-shortcut-and-gating.json` (shortcut routing trace includes `key_contexts`)
+
 Dispatch path explainability (diagnostics traces):
 
 - `crates/fret-runtime/src/command_dispatch_diagnostics.rs` (`WindowCommandDispatchDiagnosticsStore`, `WindowPendingCommandDispatchSourceService`)

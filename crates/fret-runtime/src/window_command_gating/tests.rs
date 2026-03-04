@@ -4,6 +4,7 @@ use std::sync::Arc;
 use fret_core::AppWindowId;
 
 use super::*;
+use crate::WhenExpr;
 use crate::{CommandId, CommandScope, InputContext};
 
 #[test]
@@ -97,6 +98,25 @@ fn action_availability_disables_widget_scope_commands_only() {
     assert!(
         snapshot.is_enabled_for_meta(&command, CommandScope::Window, None),
         "expected non-widget scopes to ignore action availability"
+    );
+}
+
+#[test]
+fn when_expr_can_gate_by_key_contexts_in_snapshot() {
+    let command = CommandId::new("test.key_contexts");
+    let when = WhenExpr::parse("keyctx.workspace.tabs").unwrap();
+
+    let snapshot = WindowCommandGatingSnapshot::new(InputContext::default(), HashMap::new())
+        .with_key_contexts(vec![Arc::<str>::from("workspace.tabs")]);
+    assert!(
+        snapshot.is_enabled_for_meta(&command, CommandScope::App, Some(&when)),
+        "expected the command to be enabled when the required key context is active"
+    );
+
+    let snapshot = WindowCommandGatingSnapshot::new(InputContext::default(), HashMap::new());
+    assert!(
+        !snapshot.is_enabled_for_meta(&command, CommandScope::App, Some(&when)),
+        "expected the command to be disabled when the key context is missing"
     );
 }
 

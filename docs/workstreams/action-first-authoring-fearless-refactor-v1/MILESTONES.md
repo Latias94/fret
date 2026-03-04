@@ -20,6 +20,10 @@ Related:
 - **M6**: Met (legacy MVU authoring is quarantined; golden path is action-first + view runtime).
   - Status (as of 2026-03-04): MVU remains available as compat under `fret::legacy::prelude::*` while cookbook/templates stay MVU-free.
 
+Hardening follow-up (post-M1):
+
+- Key-context aware `when` evaluation (`keyctx.*`) is being aligned across keymap matching, menus/palette gating, shortcut display, and diagnostics (see TODO `AFA-actions-019`).
+
 ---
 
 ## M0 — Decision gates locked (ADRs accepted)

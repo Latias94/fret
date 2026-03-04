@@ -1,6 +1,6 @@
 # Action-First Authoring + View Runtime (Fearless Refactor v1) — Design
 
-Status: Landed (v1 implementation is in-tree; ADRs remain the source of truth)
+Status: Landed (v1 implementation is in-tree; hardening follow-ups in progress; ADRs remain the source of truth)
 Last updated: 2026-03-04
 
 This workstream refactors Fret’s **user-facing authoring story** to close the ergonomics + correctness gap vs
@@ -121,6 +121,7 @@ These v1 decisions are locked to keep the implementation plan executable:
 - Observation + invalidation: `docs/adr/0051-model-observation-and-ui-invalidation-propagation.md`
 - Focus + command routing: `docs/adr/0020-focus-and-command-routing.md`
 - Keymap: `docs/adr/0021-keymap-file-format.md`
+- `when` expressions: `docs/adr/0022-when-expressions.md`
 - Command metadata/palette: `docs/adr/0023-command-metadata-menus-and-palette.md`
 - Unified builder surface (ecosystem-only): `docs/adr/0160-unified-authoring-builder-surface-v1.md`
 - Cache roots/view cache semantics: `docs/adr/0213-cache-roots-and-cached-subtree-semantics-v1.md`

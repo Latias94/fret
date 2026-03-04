@@ -10,7 +10,6 @@ use fret_core::{
     TextAlign, TextOverflow, TextSpan, TextStyle, TextWrap,
 };
 use fret_icons::{IconId, ids};
-use fret_runtime::WindowCommandGatingService;
 use fret_runtime::WindowCommandGatingSnapshot;
 use fret_runtime::{
     CommandId, InputContext, InputDispatchPhase, KeymapService, Platform, PlatformCapabilities,
@@ -149,7 +148,11 @@ fn command_item_from_meta_with_gating<H: UiHost>(
         .global::<KeymapService>()
         .and_then(|svc| {
             svc.keymap
-                .display_shortcut_for_command_sequence(input_ctx, id)
+                .display_shortcut_for_command_sequence_with_key_contexts(
+                    input_ctx,
+                    gating.key_contexts(),
+                    id,
+                )
         })
         .map(|seq| Arc::from(format_sequence(input_ctx.platform, &seq)));
 
@@ -177,18 +180,11 @@ pub fn command_entries_from_host_commands_with_options<H: UiHost>(
     options: CommandCatalogOptions,
 ) -> Vec<CommandEntry> {
     let fallback_input_ctx = command_palette_input_context(&*cx.app);
-    let snapshot = cx
-        .app
-        .global::<WindowCommandGatingService>()
-        .and_then(|svc| svc.snapshot(cx.window))
-        .cloned()
-        .unwrap_or_else(|| {
-            fret_runtime::snapshot_for_window_with_input_ctx_fallback(
-                &*cx.app,
-                cx.window,
-                fallback_input_ctx,
-            )
-        });
+    let snapshot = fret_runtime::best_effort_snapshot_for_window_with_input_ctx_fallback(
+        &*cx.app,
+        cx.window,
+        fallback_input_ctx,
+    );
 
     // Best-effort: treat the command palette as a global discovery surface, even when the window
     // input context reflects focus in the palette input itself.

@@ -300,6 +300,59 @@ fn keymap_display_shortcut_prefers_later_overrides_for_the_same_command() {
 }
 
 #[test]
+fn keymap_display_shortcut_can_be_key_context_aware() {
+    let mut km = Keymap::empty();
+    let cmd = CommandId::new(Arc::<str>::from("test.key_context_aware"));
+
+    let ctrl_p = KeyChord::new(
+        KeyCode::KeyP,
+        Modifiers {
+            ctrl: true,
+            ..Default::default()
+        },
+    );
+    let ctrl_shift_p = KeyChord::new(
+        KeyCode::KeyP,
+        Modifiers {
+            ctrl: true,
+            shift: true,
+            ..Default::default()
+        },
+    );
+
+    km.push_binding(Binding {
+        platform: PlatformFilter::All,
+        sequence: vec![ctrl_p],
+        when: Some(WhenExpr::parse("keyctx.editor").unwrap()),
+        command: Some(cmd.clone()),
+    });
+    km.push_binding(Binding {
+        platform: PlatformFilter::All,
+        sequence: vec![ctrl_shift_p],
+        when: Some(WhenExpr::parse("!keyctx.editor").unwrap()),
+        command: Some(cmd.clone()),
+    });
+
+    let base = InputContext {
+        platform: Platform::Windows,
+        ..Default::default()
+    };
+
+    let key_contexts = vec![Arc::<str>::from("editor")];
+    let empty: Vec<Arc<str>> = Vec::new();
+
+    let out = km
+        .display_shortcut_for_command_sequence_with_key_contexts(&base, &key_contexts, &cmd)
+        .unwrap();
+    assert_eq!(out, vec![ctrl_p]);
+
+    let out = km
+        .display_shortcut_for_command_sequence_with_key_contexts(&base, &empty, &cmd)
+        .unwrap();
+    assert_eq!(out, vec![ctrl_shift_p]);
+}
+
+#[test]
 fn keymap_display_shortcut_ignores_explicit_unbinds() {
     let mut km = Keymap::empty();
     let cmd = CommandId::new(Arc::<str>::from("test.cmd"));

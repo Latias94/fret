@@ -61,6 +61,7 @@ pub mod window_command_enabled;
 pub mod window_command_gating;
 pub mod window_input_arbitration;
 pub mod window_input_context;
+pub mod window_key_context_stack;
 pub mod window_menu_bar_focus;
 pub mod window_metrics;
 pub mod window_style;
@@ -184,6 +185,7 @@ pub use window_command_gating::{
 };
 pub use window_input_arbitration::{WindowInputArbitrationSnapshot, WindowPointerOcclusion};
 pub use window_input_context::WindowInputContextService;
+pub use window_key_context_stack::WindowKeyContextStackService;
 pub use window_menu_bar_focus::WindowMenuBarFocusService;
 pub use window_metrics::apply_window_metrics_event;
 pub use window_style::{

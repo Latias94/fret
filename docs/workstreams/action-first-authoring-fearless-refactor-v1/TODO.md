@@ -1,6 +1,6 @@
 # Action-First Authoring + View Runtime (Fearless Refactor v1) — TODO
 
-Status: Landed (v1)
+Status: Landed (v1), hardening follow-ups in progress
 Last updated: 2026-03-04
 
 Related:
@@ -98,6 +98,23 @@ ID format:
     - `ecosystem/fret-bootstrap/src/ui_app_driver.rs` (command palette overlay builds command entries and dispatches via the window command pipeline)
     - `ecosystem/fret-ui-shadcn/src/command.rs` (command palette selection queues a pending command and dispatches via `Effect::Command` after close-on-select completes)
     - `tools/diag-scripts/cookbook/imui-action-basics/cookbook-imui-action-basics-cross-frontend.json` (command palette → action handler gate)
+- [~] AFA-actions-019 Make `keyctx.*` gating observable and consistent across surfaces.
+  - Goal: the same `when` expression (ADR 0022) drives:
+    - keymap matching,
+    - command enablement/visibility (menus + palette),
+    - shortcut display (best-effort reverse lookup),
+    - diagnostics traces.
+  - Evidence (in progress on this branch):
+    - `crates/fret-runtime/src/when_expr/*` (`WhenEvalContext`, `keyctx.*`)
+    - `crates/fret-runtime/src/window_key_context_stack.rs` (`WindowKeyContextStackService`)
+    - `crates/fret-ui/src/tree/dispatch/window.rs` (publishes window key-context snapshots)
+    - `crates/fret-runtime/src/window_command_gating/snapshot.rs` (`eval_with_key_contexts`)
+    - `crates/fret-runtime/src/keymap/display.rs` (`display_shortcut_for_command_sequence_with_key_contexts`)
+    - `ecosystem/fret-ui-shadcn/src/command.rs` (palette shortcut display uses key contexts)
+    - `ecosystem/fret-bootstrap/src/ui_diagnostics/command_gating_trace.rs` (gating trace uses key contexts)
+    - `ecosystem/fret/src/workspace_menu.rs` + `crates/fret-launch/src/runner/desktop/runner/windows_menu.rs` (menu `when` uses key contexts)
+  - Gates:
+    - `tools/diag-scripts/cookbook/commands-keymap-basics/cookbook-commands-keymap-basics-shortcut-and-gating.json` (shortcut routing trace includes key contexts)
 
 ### B.1 Authoring integration (pointer triggers)
 

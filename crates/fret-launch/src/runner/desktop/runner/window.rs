@@ -492,8 +492,7 @@ pub(super) fn set_window_background_material(
         let _: () = msg_send![ns_window, setOpaque: false];
         if let Some(color_cls) = Class::get("NSColor") {
             // Avoid `clearColor` to preserve window shadow (matches GPUI's behavior).
-            let bg: *mut Object =
-                msg_send![color_cls, colorWithSRGBRed: 0f64 green: 0f64 blue: 0f64 alpha: 0.0001f64];
+            let bg: *mut Object = msg_send![color_cls, colorWithSRGBRed: 0f64 green: 0f64 blue: 0f64 alpha: 0.0001f64];
             if !bg.is_null() {
                 let _: () = msg_send![ns_window, setBackgroundColor: bg];
             }

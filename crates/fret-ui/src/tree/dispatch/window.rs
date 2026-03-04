@@ -1,4 +1,5 @@
 use super::*;
+use fret_runtime::WindowKeyContextStackService;
 use std::collections::HashMap;
 
 use super::event_chain::pointer_cancel_event_for_capture_switch;
@@ -310,6 +311,20 @@ impl<H: UiHost> UiTree<H> {
                                 fret_runtime::WindowInputContextService::default,
                                 |svc, _app| {
                                     svc.set_snapshot(window, input_ctx.clone());
+                                },
+                            );
+                        }
+
+                        let next_key_contexts = self.shortcut_key_context_stack(app, barrier_root);
+                        let needs_key_contexts_update = app
+                            .global::<WindowKeyContextStackService>()
+                            .and_then(|svc| svc.snapshot(window))
+                            .is_none_or(|prev| prev != next_key_contexts.as_slice());
+                        if needs_key_contexts_update {
+                            app.with_global_mut(
+                                WindowKeyContextStackService::default,
+                                |svc, _app| {
+                                    svc.set_snapshot(window, next_key_contexts);
                                 },
                             );
                         }

@@ -744,7 +744,7 @@ extern "C-unwind" fn fret_validate_menu_item(
                 && def
                     .item_when
                     .as_ref()
-                    .map(|w| w.eval(gating.input_ctx()))
+                    .map(|w| w.eval_with_key_contexts(gating.input_ctx(), gating.key_contexts()))
                     .unwrap_or(true);
         Bool::new(enabled)
     })
