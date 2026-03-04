@@ -529,6 +529,109 @@ pub(super) fn handle_pointer_up_step(
             target_window_spec.as_ref(),
         );
 
+        // When a cross-window dock drag is active, treat `pointer_up` as a global "release" step:
+        // the desktop runner owns drop routing based on the current cursor + mouse-button override
+        // files, so we must not require a specific window to be actively producing frames just to
+        // complete the release.
+        //
+        // This avoids migration/nudge loops in mixed-DPI and occlusion-heavy multi-window docking
+        // scenarios where the dock-destination window may be throttled by the OS while the moving
+        // payload window keeps rendering.
+        if cross_window_dock_drag_active {
+            if target_window_spec.is_some() && resolved_target_window.is_none() {
+                *force_dump_label = Some(format!(
+                    "script-step-{step_index:04}-pointer_up-window-not-found"
+                ));
+                *stop_script = true;
+                *failure_reason = Some("window_target_unresolved".to_string());
+                output.request_redraw = true;
+                active.v2_step_state = None;
+                return true;
+            }
+
+            if let Some(want) = want_button
+                && want != session.button
+            {
+                *force_dump_label = Some(format!(
+                    "script-step-{step_index:04}-pointer_up-button-mismatch"
+                ));
+                *stop_script = true;
+                *failure_reason = Some("pointer_up_button_mismatch".to_string());
+                output.request_redraw = true;
+                active.v2_step_state = None;
+                return true;
+            }
+
+            if let Some(want) = pointer_kind
+                && pointer_type_from_kind(Some(want)) != session.pointer_type
+            {
+                *force_dump_label = Some(format!(
+                    "script-step-{step_index:04}-pointer_up-pointer-kind-mismatch"
+                ));
+                *stop_script = true;
+                *failure_reason = Some("pointer_session_pointer_kind_mismatch".to_string());
+                output.request_redraw = true;
+                active.v2_step_state = None;
+                return true;
+            }
+
+            // Preserve any explicit cursor override set by earlier script steps (e.g. `move_pointer`
+            // targeting a dock hint). Overwriting the cursor here can "snap back" to a stale
+            // pointer-session position and cause the runner-routed cross-window drop to land in the
+            // wrong place.
+            if active.last_explicit_cursor_override.is_none() {
+                let _ = write_cursor_override_window_client_logical(
+                    &svc.cfg.out_dir,
+                    window,
+                    session.position.x.0,
+                    session.position.y.0,
+                );
+            }
+            let _ = write_mouse_buttons_override_all_windows_v1(
+                &svc.cfg.out_dir,
+                match session.button {
+                    UiMouseButtonV1::Left => Some(false),
+                    _ => None,
+                },
+                match session.button {
+                    UiMouseButtonV1::Right => Some(false),
+                    _ => None,
+                },
+                match session.button {
+                    UiMouseButtonV1::Middle => Some(false),
+                    _ => None,
+                },
+            );
+            active.pending_cancel_cross_window_drag =
+                Some(PendingCancelCrossWindowDrag::new(pointer_id));
+            push_script_event_log(
+                active,
+                &svc.cfg,
+                UiScriptEventLogEntryV1 {
+                    unix_ms: unix_ms_now(),
+                    kind: "diag.pending_cancel_drag".to_string(),
+                    step_index: Some(step_index.min(u32::MAX as usize) as u32),
+                    note: Some(format!("pointer_id={}", pointer_id.0)),
+                    bundle_dir: None,
+                    window: Some(window.data().as_ffi()),
+                    tick_id: Some(app.tick_id().0),
+                    frame_id: Some(app.frame_id().0),
+                    window_snapshot_seq: None,
+                },
+            );
+
+            active.pointer_session = None;
+            active.last_injected_step = Some(step_index.min(u32::MAX as usize) as u32);
+            active.next_step = active.next_step.saturating_add(1);
+            output.request_redraw = true;
+            if svc.cfg.script_auto_dump {
+                *force_dump_label = Some(format!(
+                    "script-step-{step_index:04}-pointer_up-cross-window"
+                ));
+            }
+            return true;
+        }
+
         match resolved_target_window {
             Some(target_window) => {
                 if target_window != window {
