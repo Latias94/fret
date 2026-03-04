@@ -22,7 +22,7 @@ Related:
 
 Hardening follow-up (post-M1):
 
-- Key-context aware `when` evaluation (`keyctx.*`) is being aligned across keymap matching, menus/palette gating, shortcut display, and diagnostics (see TODO `AFA-actions-019`).
+- Key-context aware `when` evaluation (`keyctx.*`) is aligned across keymap matching, menus/palette gating, shortcut display, and diagnostics (see TODO `AFA-actions-019`).
 
 ---
 

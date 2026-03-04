@@ -98,13 +98,13 @@ ID format:
     - `ecosystem/fret-bootstrap/src/ui_app_driver.rs` (command palette overlay builds command entries and dispatches via the window command pipeline)
     - `ecosystem/fret-ui-shadcn/src/command.rs` (command palette selection queues a pending command and dispatches via `Effect::Command` after close-on-select completes)
     - `tools/diag-scripts/cookbook/imui-action-basics/cookbook-imui-action-basics-cross-frontend.json` (command palette → action handler gate)
-- [~] AFA-actions-019 Make `keyctx.*` gating observable and consistent across surfaces.
+- [x] AFA-actions-019 Make `keyctx.*` gating observable and consistent across surfaces.
   - Goal: the same `when` expression (ADR 0022) drives:
     - keymap matching,
     - command enablement/visibility (menus + palette),
     - shortcut display (best-effort reverse lookup),
     - diagnostics traces.
-  - Evidence (in progress on this branch):
+  - Evidence:
     - `crates/fret-runtime/src/when_expr/*` (`WhenEvalContext`, `keyctx.*`)
     - `crates/fret-runtime/src/window_key_context_stack.rs` (`WindowKeyContextStackService`)
     - `crates/fret-ui/src/tree/dispatch/window.rs` (publishes window key-context snapshots)
