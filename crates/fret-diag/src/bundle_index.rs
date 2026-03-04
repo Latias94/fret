@@ -1636,6 +1636,10 @@ mod tests {
                                     "pointer_id": 1,
                                     "source_window": 1,
                                     "current_window": 2,
+                                    "position": { "x": 12.0, "y": 34.0 },
+                                    "start_position": { "x": 1.0, "y": 2.0 },
+                                    "cursor_grab_offset": { "x": 3.0, "y": 4.0 },
+                                    "follow_window": 9,
                                     "current_window_scale_factor_x1000": 1500,
                                     "kind": "dock_panel",
                                     "dragging": true,
@@ -1864,6 +1868,16 @@ mod tests {
             drag.get("kind").and_then(|v| v.as_str()),
             Some("dock_panel")
         );
+        let pos = drag.get("position").unwrap().as_object().unwrap();
+        assert_eq!(pos.get("x").and_then(|v| v.as_f64()), Some(12.0));
+        assert_eq!(pos.get("y").and_then(|v| v.as_f64()), Some(34.0));
+        let start = drag.get("start_position").unwrap().as_object().unwrap();
+        assert_eq!(start.get("x").and_then(|v| v.as_f64()), Some(1.0));
+        assert_eq!(start.get("y").and_then(|v| v.as_f64()), Some(2.0));
+        let grab = drag.get("cursor_grab_offset").unwrap().as_object().unwrap();
+        assert_eq!(grab.get("x").and_then(|v| v.as_f64()), Some(3.0));
+        assert_eq!(grab.get("y").and_then(|v| v.as_f64()), Some(4.0));
+        assert_eq!(drag.get("follow_window").and_then(|v| v.as_u64()), Some(9));
         assert_eq!(
             drag.get("current_window_scale_factor_x1000")
                 .and_then(|v| v.as_u64()),
