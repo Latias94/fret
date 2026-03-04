@@ -263,16 +263,17 @@ ID format:
     - `cargo run -p fretboard -- new simple-todo` uses View runtime + typed unit actions:
       `apps/fretboard/src/scaffold/templates.rs` (`simple_todo_template_main_rs`)
 
-- [ ] AFA-adopt-044 Migrate `embedded_viewport_demo` to the view runtime (keep a legacy opt-in copy).
+- [x] AFA-adopt-044 Migrate `embedded_viewport_demo` to the view runtime (keep a legacy opt-in copy).
   - Goal: prove view-runtime authoring composes cleanly with embedded viewport interop:
     - `viewport_input(...)` forwarding,
     - and a custom `record_engine_frame(...)` hook for offscreen engine passes.
   - Why this matters: `UiAppDriver` only supports a single `record_engine_frame` hook; view runtime
     currently uses it for view-cache enablement (v1), while embedded viewport needs it for engine
     recording. The migrated demo should demonstrate the correct composition pattern.
-  - Evidence (target):
-    - `apps/fret-examples/src/embedded_viewport_demo.rs`
+  - Evidence:
+    - `apps/fret-examples/src/embedded_viewport_demo.rs` (composed `record_engine_frame`)
     - `apps/fret-examples/src/embedded_viewport_demo_legacy.rs`
+    - `apps/fret-demo/src/main.rs` (demo routing + legacy name)
     - `ecosystem/fret/src/interop/embedded_viewport.rs`
     - `ecosystem/fret/src/app_entry.rs`
 
