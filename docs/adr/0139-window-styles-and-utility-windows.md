@@ -1,15 +1,6 @@
 # ADR 0139: Window Styles and Utility Windows (Transparent / Frameless / Always-on-top)
 
-
-## Upstream references (non-normative)
-
-This document references optional local checkouts under `repo-ref/` for convenience.
-Upstream sources:
-
-- Zed: https://github.com/zed-industries/zed
-
-See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
-Status: Proposed
+Status: Accepted
 
 ## Context
 
@@ -44,7 +35,8 @@ We want to support these without:
 ## Non-goals
 
 - System-wide selection, global hotkeys, cross-app integration (out of scope for this ADR).
-- Per-pixel hit-test regions, shaped windows, or arbitrary compositor effects beyond “transparent”.
+- Per-pixel hit testing, shaped windows, or arbitrary path-based hit-test regions beyond the
+  portable Rect/RRect union vocabulary (ADR 0313).
 - A portable guarantee that all window style requests can be honored on all platforms.
 - Full window state management (maximize/minimize/fullscreen, native tabbing groups, restore bounds)
   as a framework-level contract. These belong to the runner/app shell and may be added via separate
@@ -107,11 +99,14 @@ The request is intentionally small and “intent-oriented”:
 - `decorations: Option<WindowDecorationsRequest>` — request a window decoration policy.
 - `resizable: Option<bool>`
 - `transparent: Option<bool>` — requests a **composited alpha window surface** (create-time; may be sticky).
+- `background_material: Option<WindowBackgroundMaterialRequest>` — requests an OS-provided backdrop
+  material (capability-gated; see ADR 0310).
 - `opacity: Option<WindowOpacity>` — requests global window opacity (0..=255), not per-pixel transparency.
 - `z_level: Option<WindowZLevel>` — `Normal`, `AlwaysOnTop`.
 - `taskbar: Option<TaskbarVisibility>` — `Show`, `Hide`.
 - `activation: Option<ActivationPolicy>` — `Activates` (default), `NonActivating`.
-- `hit_test: Option<WindowHitTestRequestV1>` — `Normal` (default), `PassthroughAll` (click-through).
+- `hit_test: Option<WindowHitTestRequestV1>` — `Normal` (default), `PassthroughAll` (click-through),
+  `PassthroughRegions` (ADR 0313).
 
 Notes:
 
@@ -119,12 +114,21 @@ Notes:
 - `transparent` does not mean “the desktop must be visible through the app”. Visual transparency
   depends on renderer clears and whether the app paints an opaque root background. OS-backed
   background materials (Mica/Acrylic/Vibrancy) are specified separately (ADR 0310).
-- `opacity` maps to OS/global window alpha when supported (e.g. “transparent payload” style UX in
-  Dear ImGui uses `Platform_SetWindowAlpha` for viewports).
+- `opacity` maps to OS/global window alpha when supported (for example, multi-window docking
+  systems may temporarily lower alpha for a moving/dragging window).
 - `NonActivating` defines focus semantics; it is allowed to still receive pointer events.
-- `Passthrough` is defined at the window level (not per-pixel). Per-pixel hit regions are out of
-  scope for v1.
+- `hit_test` is defined at the window level. v1 supports a portable Rect/RRect union vocabulary for
+  region-based hit testing (ADR 0313); per-pixel hit testing remains out of scope.
 - `decorations` refers to the window frame/titlebar/controls policy, not to alpha transparency.
+
+Terminology note (normative):
+
+- `WindowDecorationsRequest::None` means "frameless/client-drawn decorations". It does not imply
+  window transparency, a background material, or click-through behavior.
+- `WindowBackgroundMaterialRequest::None` means "no OS-provided backdrop material" (ADR 0310). It
+  does not imply frameless windows or visual transparency.
+- `transparent=true` means "request a composited alpha surface" (create-time; may be sticky). It
+  does not imply frameless windows or a specific backdrop material.
 
 `WindowDecorationsRequest` v1:
 
@@ -137,9 +141,7 @@ Future extensions (explicitly out of scope for v1):
 
 - `AlwaysOnBottom` / “desktop level” semantics.
 - Per-pixel hit testing / shaped windows.
-- OS-provided background materials (blur/mica/vibrancy) as portable style facets. These typically
-  require renderer + platform coordination and are defined in a separate ADR:
-  `docs/adr/0310-window-background-materials-v1.md`.
+- Parameterized OS background materials (tint/blur strength) beyond the v1 enum (ADR 0310).
 
 #### Runtime patching (`WindowRequest::SetStyle`) is a v1 feature
 
@@ -161,10 +163,12 @@ Patchability (normative):
   - `taskbar`
   - `activation`
   - `hit_test`
+  - `background_material`
   - `opacity`
 
-Additional style facets may be introduced by follow-up ADRs (e.g. window background materials);
-those ADRs must explicitly define patchability and capability keys for the added facets.
+Additional style facets may be introduced by follow-up ADRs (e.g. richer background material
+parameterization); those ADRs must explicitly define patchability and capability keys for the added
+facets.
 
 Rationale:
 
@@ -181,7 +185,11 @@ Extend `PlatformCapabilities.ui` with booleans for the style facets, and add mat
 - `ui.window.skip_taskbar`
 - `ui.window.non_activating`
 - `ui.window.hit_test.passthrough_all`
-- `ui.window.hit_test.passthrough_regions` (reserved; not implemented in v1)
+- `ui.window.hit_test.passthrough_regions` (ADR 0313)
+- `ui.window.background_material.system_default` (ADR 0310)
+- `ui.window.background_material.mica` (ADR 0310)
+- `ui.window.background_material.acrylic` (ADR 0310)
+- `ui.window.background_material.vibrancy` (ADR 0310)
 - `ui.native_window_handle` (escape hatch; backend-specific)
 
 The runner/backend must:

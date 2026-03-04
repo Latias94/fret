@@ -1,6 +1,6 @@
 # ADR 0312: Window Input Hit Testing and Passthrough v1 (Window-Level)
 
-Status: Proposed
+Status: Accepted
 
 ## Context
 
@@ -38,15 +38,13 @@ We want a portable contract that:
 
 ## Decision
 
-### 1) Introduce a dedicated hit-test policy facet (orthogonal to `mouse`)
+### 1) Introduce a dedicated window hit-test facet
 
 Add a new optional facet to `WindowStyleRequest`:
 
 - `hit_test: Option<WindowHitTestRequestV1>`
 
-This facet is intentionally separate from the existing `mouse` facet. `mouse` remains a high-level
-policy vocabulary for pointer routing. `hit_test` is a window-level OS hit-test contract used for
-click-through utility windows.
+`hit_test` is a window-level OS hit-test contract used for click-through utility windows.
 
 ### 2) Define `WindowHitTestRequestV1`
 
@@ -55,9 +53,8 @@ click-through utility windows.
 - `Normal` (default): window participates in pointer hit testing normally.
 - `PassthroughAll`: the entire window ignores pointer hit testing (click-through).
 
-Region-based hit testing is intentionally deferred: v1 focuses on a deterministic, window-level
-contract that can be implemented safely across backends. A follow-up ADR may extend `hit_test`
-with a region vocabulary once the runner plumbing and diagnostics evidence are stable (ADR 0313).
+Region-based hit testing is specified separately in ADR 0313. Runners must deterministically clamp
+region requests when unsupported.
 
 ### 3) Capability keys
 
@@ -66,9 +63,7 @@ Add capability keys (ADR 0054):
 - `ui.window.hit_test.passthrough_all`
 - `ui.window.hit_test.passthrough_regions`
 
-`ui.window.hit_test.passthrough_regions` is reserved for a future region-based extension. Runners
-must report it as unavailable until there is an end-to-end implementation. See ADR 0313 for the
-region vocabulary and degradation rules.
+See ADR 0313 for the region vocabulary and degradation rules.
 
 Runners must:
 
@@ -76,7 +71,7 @@ Runners must:
 2. Clamp requests deterministically.
 3. Expose effective/clamped hit-test state per window via diagnostics.
 
-### 5) Observability (required)
+### 4) Observability (required)
 
 Runners must expose per-window information that can answer:
 
@@ -84,7 +79,7 @@ Runners must expose per-window information that can answer:
 - What policy is effective/clamped?
 - If clamped, which capability was missing?
 
-### 6) Patchability
+### 5) Patchability
 
 `hit_test` is runtime patchable on platforms where the backend supports it. Where it is create-time
 only, runners may ignore runtime patches (and must reflect that in the effective snapshot).

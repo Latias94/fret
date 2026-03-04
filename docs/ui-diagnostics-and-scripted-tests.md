@@ -1140,6 +1140,20 @@ Docking predicates (require a `WindowInteractionDiagnosticsStore` publisher, typ
 - `{"kind":"dock_graph_node_count_le","max":32}`
 - `{"kind":"dock_graph_max_split_depth_le","max":8}`
 
+Window style predicates (require runner window style diagnostics, typically provided by desktop runners):
+
+- `{"kind":"window_style_effective_is","window":{"kind":"current"},"style":{"transparent":true}}`
+- `{"kind":"window_style_effective_is","window":{"kind":"current"},"style":{"hit_test":"passthrough_all"}}`
+- `{"kind":"window_style_effective_is","window":{"kind":"current"},"style":{"hit_test":"passthrough_regions","hit_test_regions_fingerprint64":123}}`
+- `{"kind":"window_background_material_effective_is","window":{"kind":"current"},"material":"system_default"}`
+
+Notes:
+
+- `hit_test` supports: `normal`, `passthrough_all`, `passthrough_regions` (ADR 0312 / ADR 0313).
+- `hit_test_regions_fingerprint64` is a stable, canonicalized fingerprint of the effective regions
+  union. It is intended for scripted regression gates that want to assert that the runner applied
+  a specific region shape without relying on pixels.
+
 ## Debugging recipes (Radix primitives / shadcn / overlays)
 
 ### 1) "My click didn't hit the button"
