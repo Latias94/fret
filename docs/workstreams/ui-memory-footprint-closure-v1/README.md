@@ -46,6 +46,16 @@ Using `tools/diag-scripts/text-heavy-memory-steady.json` on macOS/Metal (fonts +
 - Default malloc zone: ~26.6 MB allocated, ~20.9 MB frag (system allocator)
 - `wgpu_metal_current_allocated_size_bytes`: 127,418,368 (~121.6 MiB; requires `--env FRET_DIAG_WGPU_ALLOCATOR_REPORT=1`)
 
+Using `tools/diag-scripts/image-heavy-memory-steady.json` on macOS/Metal (texture upload stress):
+
+- Repeat sample (N=5, defaults: `FRET_IMAGE_HEAVY_DEMO_COUNT=24`, `FRET_IMAGE_HEAVY_DEMO_SIZE_PX=1024`):
+  - `macos_vmmap.physical_footprint_peak_bytes`: 483,917,824 .. 501,324,186 (~461.6 .. 478.2 MiB)
+  - `macos_vmmap.regions.owned_unmapped_memory_dirty_bytes`: 331,874,304 .. 337,222,042 (~316.5 .. 321.6 MiB)
+  - `macos_vmmap.regions.io_surface_dirty_bytes`: 34,393,293 (~32.8 MiB; stable)
+  - `macos_vmmap.regions.io_accelerator_dirty_bytes`: 5,980,160 .. 7,372,800 (~5.7 .. 7.0 MiB)
+  - `macos_vmmap.regions.malloc_small_dirty_bytes`: 41,104,179 .. 44,774,195 (~39.2 .. 42.7 MiB)
+  - `wgpu_metal_current_allocated_size_bytes`: 204,914,688 (~195.4 MiB; stable; requires `--env FRET_DIAG_WGPU_ALLOCATOR_REPORT=1`)
+
 Allocator A/B (empty idle, `--release`, `fretboard diag repro`, same script):
 
 - System allocator:
@@ -198,7 +208,13 @@ Recommended local gate baselines (macOS, 2026-03-04):
   - Optional (requires `--env FRET_DIAG_WGPU_ALLOCATOR_REPORT=1`):
     - `--max-wgpu-metal-current-allocated-size-bytes 167772160` (160 MiB)
 - `image-heavy-memory-steady`:
-  - TODO: calibrate (run N=5 and capture `macos_io_surface_dirty_bytes` + `wgpu_metal_current_allocated_size_bytes`)
+  - `--max-macos-physical-footprint-peak-bytes 536870912` (512 MiB)
+  - `--max-macos-owned-unmapped-memory-dirty-bytes 402653184` (384 MiB)
+  - `--max-macos-io-surface-dirty-bytes 67108864` (64 MiB)
+  - `--max-macos-io-accelerator-dirty-bytes 16777216` (16 MiB)
+  - `--max-macos-malloc-small-dirty-bytes 67108864` (64 MiB)
+  - Optional (requires `--env FRET_DIAG_WGPU_ALLOCATOR_REPORT=1`):
+    - `--max-wgpu-metal-current-allocated-size-bytes 268435456` (256 MiB)
 
 Note: these numbers are intentionally conservative and should be revisited when:
 
