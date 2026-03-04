@@ -494,11 +494,16 @@ pub(super) fn handle_pressable<H: UiHost>(
                 let hovered = cx.bounds.contains(*position) || moved <= 2.0;
 
                 let is_touch = *pointer_type == fret_core::PointerType::Touch;
-                if pressed && hovered && (!is_touch || *is_click) && !skip_activate {
-                    // `PressableProps.focusable` models the Tab-order "focus traversal stop"
-                    // (Radix roving-focus `tabIndex=0` vs `-1`). Pointer activation should still
-                    // move focus to the pressable, even when it is not in the default traversal.
+                if pressed && hovered && (!is_touch || *is_click) {
+                    // Pointer interactions should move focus to the pressable even when
+                    // activation is handled by component-owned pointer hooks.
+                    //
+                    // Note: `PressableProps.focusable` models the Tab-order "focus traversal stop"
+                    // (Radix roving-focus `tabIndex=0` vs `-1`), not whether pointer clicks can
+                    // focus the node.
                     cx.request_focus(cx.node);
+                }
+                if pressed && hovered && (!is_touch || *is_click) && !skip_activate {
                     let hook = crate::elements::with_element_state(
                         &mut *cx.app,
                         window,
