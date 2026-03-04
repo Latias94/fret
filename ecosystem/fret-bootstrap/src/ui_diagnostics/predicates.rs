@@ -328,7 +328,7 @@ fn window_style_effective_matches(
         return false;
     }
     if let Some(transparent) = want.transparent
-        && have.transparent != transparent
+        && have.surface_composited_alpha != transparent
     {
         return false;
     }

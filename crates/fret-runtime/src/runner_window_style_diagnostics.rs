@@ -9,10 +9,33 @@ use crate::window_style::{
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RunnerWindowCompositedAlphaSourceV1 {
+    /// The runner does not support composited alpha windows.
+    Unavailable,
+    /// The caller explicitly requested `transparent=true`.
+    ExplicitTrue,
+    /// The caller explicitly requested `transparent=false`.
+    ExplicitFalse,
+    /// The window was created composited because a non-None backdrop material was requested.
+    ImpliedByMaterialCreateTime,
+    /// The caller omitted `transparent` and no implied material required composition.
+    DefaultOpaque,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct RunnerWindowStyleEffectiveSnapshotV1 {
     pub decorations: WindowDecorationsRequest,
     pub resizable: bool,
-    pub transparent: bool,
+    /// Whether the OS window surface is composited with alpha (create-time; may be sticky).
+    pub surface_composited_alpha: bool,
+    /// Why the surface is (or is not) composited.
+    pub surface_composited_alpha_source: RunnerWindowCompositedAlphaSourceV1,
+    /// Whether the runner will preserve alpha by default (clear alpha = 0) for this window.
+    ///
+    /// This is a visual policy decision used by the runner+renderer. It is intentionally
+    /// separated from `surface_composited_alpha` to avoid conflating "window can be composited"
+    /// with "window is visually transparent".
+    pub visual_transparent: bool,
     pub background_material: WindowBackgroundMaterialRequest,
     pub taskbar: TaskbarVisibility,
     pub activation: ActivationPolicy,
@@ -25,7 +48,9 @@ impl Default for RunnerWindowStyleEffectiveSnapshotV1 {
         Self {
             decorations: WindowDecorationsRequest::System,
             resizable: true,
-            transparent: false,
+            surface_composited_alpha: false,
+            surface_composited_alpha_source: RunnerWindowCompositedAlphaSourceV1::DefaultOpaque,
+            visual_transparent: false,
             background_material: WindowBackgroundMaterialRequest::None,
             taskbar: TaskbarVisibility::Show,
             activation: ActivationPolicy::Activates,
@@ -39,6 +64,7 @@ impl Default for RunnerWindowStyleEffectiveSnapshotV1 {
 pub struct RunnerWindowStyleDiagnosticsStore {
     effective: HashMap<AppWindowId, RunnerWindowStyleEffectiveSnapshotV1>,
     transparent_explicit: HashMap<AppWindowId, Option<bool>>,
+    transparent_implied_by_material_create_time: HashMap<AppWindowId, bool>,
 }
 
 impl RunnerWindowStyleDiagnosticsStore {
@@ -58,6 +84,8 @@ impl RunnerWindowStyleDiagnosticsStore {
         let mut next = RunnerWindowStyleEffectiveSnapshotV1::default();
         self.transparent_explicit
             .insert(window, requested.transparent);
+        self.transparent_implied_by_material_create_time
+            .insert(window, false);
 
         if caps.ui.window_decorations {
             if let Some(decorations) = requested.decorations {
@@ -74,23 +102,43 @@ impl RunnerWindowStyleDiagnosticsStore {
             next.background_material = clamped;
         }
 
-        if caps.ui.window_transparent {
-            if let Some(transparent) = requested.transparent {
-                next.transparent = transparent;
-            } else if next.background_material != WindowBackgroundMaterialRequest::None {
-                // Background materials may require a composited alpha surface. If the caller did
-                // not explicitly request `transparent`, runners may implicitly treat it as true
-                // once a non-None material is effectively applied. See ADR 0310.
-                next.transparent = true;
-            }
+        // Determine whether the surface is composited with alpha (create-time semantics).
+        if !caps.ui.window_transparent {
+            next.surface_composited_alpha = false;
+            next.surface_composited_alpha_source = RunnerWindowCompositedAlphaSourceV1::Unavailable;
+        } else if let Some(transparent) = requested.transparent {
+            next.surface_composited_alpha = transparent;
+            next.surface_composited_alpha_source = if transparent {
+                RunnerWindowCompositedAlphaSourceV1::ExplicitTrue
+            } else {
+                RunnerWindowCompositedAlphaSourceV1::ExplicitFalse
+            };
+        } else if next.background_material != WindowBackgroundMaterialRequest::None {
+            // Background materials may require a composited alpha surface (ADR 0310). If the
+            // caller did not explicitly request `transparent`, treat it as implied once a
+            // non-None material is effectively applied.
+            next.surface_composited_alpha = true;
+            next.surface_composited_alpha_source =
+                RunnerWindowCompositedAlphaSourceV1::ImpliedByMaterialCreateTime;
+            self.transparent_implied_by_material_create_time
+                .insert(window, true);
+        } else {
+            next.surface_composited_alpha = false;
+            next.surface_composited_alpha_source =
+                RunnerWindowCompositedAlphaSourceV1::DefaultOpaque;
         }
-        if !next.transparent {
-            // Background materials generally require a composited alpha window surface (ADR 0310).
-            // If the effective style is not composited (either due to capability gating or an
-            // explicit `transparent=false` request), degrade any background material request to
-            // None so the effective snapshot remains achievable.
+
+        // Background materials generally require a composited alpha surface. If the window is not
+        // composited, degrade any material request to None so the effective snapshot remains
+        // achievable.
+        if !next.surface_composited_alpha {
             next.background_material = WindowBackgroundMaterialRequest::None;
         }
+
+        // Visual transparency default: preserve alpha when a backdrop material is enabled, or when
+        // the caller explicitly requested a composited surface for visual transparency.
+        next.visual_transparent = next.background_material != WindowBackgroundMaterialRequest::None
+            || matches!(requested.transparent, Some(true));
 
         if let Some(taskbar) = requested.taskbar {
             next.taskbar = if taskbar == TaskbarVisibility::Hide && !caps.ui.window_skip_taskbar {
@@ -131,6 +179,8 @@ impl RunnerWindowStyleDiagnosticsStore {
     pub fn record_window_close(&mut self, window: AppWindowId) {
         self.effective.remove(&window);
         self.transparent_explicit.remove(&window);
+        self.transparent_implied_by_material_create_time
+            .remove(&window);
     }
 
     pub fn apply_style_patch(
@@ -150,21 +200,50 @@ impl RunnerWindowStyleDiagnosticsStore {
             let next_material = clamp_background_material_request(material, caps);
 
             // Background materials generally require a composited alpha window surface (ADR 0310).
-            // Since `transparent` is treated as create-time in the runner, degrade non-None
-            // material requests when the window is not already composited.
-            current.background_material =
-                if next_material != WindowBackgroundMaterialRequest::None && !current.transparent {
-                    WindowBackgroundMaterialRequest::None
-                } else {
-                    next_material
-                };
-
-            // Keep transparency create-time. If the window was created composited (explicitly or
-            // implied by a prior material request), keep it sticky for the window lifetime.
-            if caps.ui.window_transparent
-                && let Some(explicit) = self.transparent_explicit.get(&window).copied().flatten()
+            // Since composited alpha is create-time in the runner, degrade non-None material
+            // requests when the window is not already composited.
+            current.background_material = if next_material != WindowBackgroundMaterialRequest::None
+                && !current.surface_composited_alpha
             {
-                current.transparent = explicit;
+                WindowBackgroundMaterialRequest::None
+            } else {
+                next_material
+            };
+
+            // Visual transparency default tracks the effective material, but falls back to the
+            // caller's explicit create-time transparency intent.
+            let explicit = self.transparent_explicit.get(&window).copied().flatten();
+            current.visual_transparent = current.background_material
+                != WindowBackgroundMaterialRequest::None
+                || matches!(explicit, Some(true));
+
+            // Keep composited alpha create-time and sticky. If the window was created composited
+            // (explicitly or implied by a create-time material request), keep it for the lifetime.
+            if !caps.ui.window_transparent {
+                current.surface_composited_alpha = false;
+                current.surface_composited_alpha_source =
+                    RunnerWindowCompositedAlphaSourceV1::Unavailable;
+            } else if let Some(explicit) = explicit {
+                current.surface_composited_alpha = explicit;
+                current.surface_composited_alpha_source = if explicit {
+                    RunnerWindowCompositedAlphaSourceV1::ExplicitTrue
+                } else {
+                    RunnerWindowCompositedAlphaSourceV1::ExplicitFalse
+                };
+            } else if self
+                .transparent_implied_by_material_create_time
+                .get(&window)
+                .copied()
+                .unwrap_or(false)
+            {
+                current.surface_composited_alpha = true;
+                // Once implied at create-time, keep it sticky even if the material is cleared.
+                current.surface_composited_alpha_source =
+                    RunnerWindowCompositedAlphaSourceV1::ImpliedByMaterialCreateTime;
+            } else {
+                current.surface_composited_alpha = false;
+                current.surface_composited_alpha_source =
+                    RunnerWindowCompositedAlphaSourceV1::DefaultOpaque;
             }
         }
 
@@ -240,7 +319,7 @@ mod tests {
             &caps,
         );
         let before = store.effective_snapshot(w).unwrap();
-        assert!(before.transparent);
+        assert!(before.surface_composited_alpha);
         assert_eq!(
             before.background_material,
             WindowBackgroundMaterialRequest::Mica
@@ -255,7 +334,7 @@ mod tests {
             &caps,
         );
         let after = store.effective_snapshot(w).unwrap();
-        assert!(after.transparent);
+        assert!(after.surface_composited_alpha);
         assert_eq!(
             after.background_material,
             WindowBackgroundMaterialRequest::None
@@ -270,7 +349,7 @@ mod tests {
 
         store.record_window_open(w, WindowStyleRequest::default(), &caps);
         let before = store.effective_snapshot(w).unwrap();
-        assert!(!before.transparent);
+        assert!(!before.surface_composited_alpha);
         assert_eq!(
             before.background_material,
             WindowBackgroundMaterialRequest::None
@@ -285,9 +364,67 @@ mod tests {
             &caps,
         );
         let after = store.effective_snapshot(w).unwrap();
-        assert!(!after.transparent);
+        assert!(!after.surface_composited_alpha);
         assert_eq!(
             after.background_material,
+            WindowBackgroundMaterialRequest::None
+        );
+    }
+
+    #[test]
+    fn implied_material_transparency_clears_visually_when_material_cleared() {
+        let caps = PlatformCapabilities::default();
+        let mut store = RunnerWindowStyleDiagnosticsStore::default();
+        let w = window(3);
+
+        store.record_window_open(
+            w,
+            WindowStyleRequest {
+                background_material: Some(WindowBackgroundMaterialRequest::Mica),
+                ..Default::default()
+            },
+            &caps,
+        );
+        let before = store.effective_snapshot(w).unwrap();
+        assert!(before.surface_composited_alpha);
+        assert!(before.visual_transparent);
+
+        store.apply_style_patch(
+            w,
+            WindowStyleRequest {
+                background_material: Some(WindowBackgroundMaterialRequest::None),
+                ..Default::default()
+            },
+            &caps,
+        );
+        let after = store.effective_snapshot(w).unwrap();
+        assert!(after.surface_composited_alpha);
+        assert!(!after.visual_transparent);
+        assert_eq!(
+            after.background_material,
+            WindowBackgroundMaterialRequest::None
+        );
+    }
+
+    #[test]
+    fn explicit_transparent_window_defaults_to_visual_transparency_without_material() {
+        let caps = PlatformCapabilities::default();
+        let mut store = RunnerWindowStyleDiagnosticsStore::default();
+        let w = window(4);
+
+        store.record_window_open(
+            w,
+            WindowStyleRequest {
+                transparent: Some(true),
+                ..Default::default()
+            },
+            &caps,
+        );
+        let have = store.effective_snapshot(w).unwrap();
+        assert!(have.surface_composited_alpha);
+        assert!(have.visual_transparent);
+        assert_eq!(
+            have.background_material,
             WindowBackgroundMaterialRequest::None
         );
     }

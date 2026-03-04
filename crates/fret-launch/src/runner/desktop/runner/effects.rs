@@ -1815,7 +1815,7 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
 
                                 if let Some(context) = self.context.as_ref() {
                                     let want_transparent =
-                                        effective_style.is_some_and(|s| s.transparent);
+                                        effective_style.is_some_and(|s| s.surface_composited_alpha);
                                     if let Some(state) = self.windows.get_mut(window)
                                         && let Some(surface) = state.surface.as_mut()
                                     {
