@@ -43,6 +43,7 @@ use fret_ui_kit::typography;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space, ui};
 
 use crate::layout as shadcn_layout;
+use crate::rtl;
 use crate::{Dialog, DialogContent, ScrollArea};
 
 type OnOpenChange = Arc<dyn Fn(bool) + Send + Sync + 'static>;
@@ -622,13 +623,14 @@ impl CommandShortcut {
         let fg = theme.color_token("muted-foreground");
         let style = shortcut_text_style(&theme);
         let platform = Platform::current();
+        let dir = crate::use_direction(cx, None);
 
         if shortcut_needs_symbol_font(self.text.as_ref())
             && let Some(symbol_font) = shortcut_symbol_font_for_platform(platform)
         {
             let layout = decl_style::layout_style(
                 &theme,
-                LayoutRefinement::default().flex_shrink_0().ml_auto(),
+                rtl::layout_refinement_margin_inline_start_auto(dir).flex_shrink_0(),
             );
             let rich = shortcut_attributed_text_with_symbol_fallback(self.text, symbol_font);
             return cx.styled_text_props(StyledTextProps {
@@ -643,7 +645,7 @@ impl CommandShortcut {
             });
         }
         let mut text = ui::text(cx, self.text)
-            .layout(LayoutRefinement::default().flex_shrink_0().ml_auto())
+            .layout(rtl::layout_refinement_margin_inline_start_auto(dir).flex_shrink_0())
             .text_size_px(style.size)
             .font_weight(style.weight)
             .nowrap()

@@ -1132,6 +1132,7 @@ impl ContextMenuRenderEnv {
         cx: &mut ElementContext<'_, H>,
         label: ContextMenuLabel,
     ) -> AnyElement {
+        let dir = crate::use_direction(cx, None);
         let pad_left = if label.inset {
             self.pad_x_inset
         } else {
@@ -1147,12 +1148,9 @@ impl ContextMenuRenderEnv {
         cx.container(
             ContainerProps {
                 layout: LayoutStyle::default(),
-                padding: Edges {
-                    top: pad_y,
-                    right: pad_x,
-                    bottom: pad_y,
-                    left: pad_left,
-                }
+                padding: rtl::padding_edges_with_inline_start_end(
+                    dir, pad_y, pad_y, pad_left, pad_x,
+                )
                 .into(),
                 ..Default::default()
             },
@@ -2212,6 +2210,7 @@ fn menu_row_children<H: UiHost>(
     text_disabled: fret_core::Color,
     chrome_test_id: Option<Arc<str>>,
 ) -> Elements {
+    let direction = crate::use_direction(cx, None);
     let label_test_id = chrome_test_id
         .as_ref()
         .map(|id| Arc::<str>::from(format!("{id}-label")));
@@ -2228,12 +2227,9 @@ fn menu_row_children<H: UiHost>(
                 layout.size.width = Length::Fill;
                 layout
             },
-            padding: Edges {
-                top: pad_y,
-                right: pad_x,
-                bottom: pad_y,
-                left: pad_left,
-            }
+            padding: rtl::padding_edges_with_inline_start_end(
+                direction, pad_y, pad_y, pad_left, pad_x,
+            )
             .into(),
             background: Some(row_bg),
             corner_radii: fret_core::Corners::all(radius_sm),
@@ -2250,7 +2246,6 @@ fn menu_row_children<H: UiHost>(
             let leading_icon = leading_icon.clone();
             let mut trailing = trailing;
             let has_trailing = trailing.is_some();
-            let direction = crate::use_direction(cx, None);
             let has_indicator = indicator_on.is_some();
             let has_leading_slot =
                 leading.is_some() || leading_icon.is_some() || reserve_leading_slot;

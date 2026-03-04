@@ -920,6 +920,7 @@ impl DropdownMenuShortcut {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).snapshot();
         let fg = theme.color_token("muted-foreground");
+        let dir = crate::use_direction(cx, None);
 
         let base_size = theme.metric_token("font.size");
         let base_line_height = theme.metric_token("font.line_height");
@@ -931,7 +932,7 @@ impl DropdownMenuShortcut {
             .unwrap_or_else(|| Px((base_line_height.0 - 2.0).max(font_size.0)));
 
         ui::text(cx, self.text)
-            .layout(LayoutRefinement::default().ml_auto())
+            .layout(rtl::layout_refinement_margin_inline_start_auto(dir))
             .text_size_px(font_size)
             .fixed_line_box_px(font_line_height)
             .line_box_in_bounds()
@@ -1263,6 +1264,7 @@ fn checkable_menu_row_children<H: UiHost>(
     pad_y: Px,
     radius_sm: Px,
 ) -> Vec<AnyElement> {
+    let dir = crate::use_direction(cx, None);
     let effective_fg = if disabled {
         alpha_mul(row_fg, 0.5)
     } else {
@@ -1278,13 +1280,14 @@ fn checkable_menu_row_children<H: UiHost>(
                     layout.size.width = Length::Fill;
                     layout
                 },
-                padding: Edges {
-                    top: pad_y,
-                    right: pad_x,
-                    bottom: pad_y,
+                padding: rtl::padding_edges_with_inline_start_end(
+                    dir,
+                    pad_y,
+                    pad_y,
                     // new-york-v4: checkbox/radio items use `pl-8`.
-                    left: pad_x_inset,
-                }
+                    pad_x_inset,
+                    pad_x,
+                )
                 .into(),
                 background: Some(row_bg),
                 corner_radii: fret_core::Corners::all(radius_sm),
@@ -1296,12 +1299,16 @@ fn checkable_menu_row_children<H: UiHost>(
                         ContainerProps {
                             layout: LayoutStyle {
                                 position: fret_ui::element::PositionStyle::Absolute,
-                                inset: fret_ui::element::InsetStyle {
-                                    top: Some(Px(0.0)).into(),
-                                    right: None.into(),
-                                    bottom: Some(Px(0.0)).into(),
+                                inset: {
+                                    let mut inset = fret_ui::element::InsetStyle {
+                                        top: Some(Px(0.0)).into(),
+                                        right: None.into(),
+                                        bottom: Some(Px(0.0)).into(),
+                                        left: None.into(),
+                                    };
                                     // new-york-v4: indicator slot uses `left-2`.
-                                    left: Some(pad_x).into(),
+                                    rtl::inset_style_set_inline_start(&mut inset, dir, pad_x);
+                                    inset
                                 },
                                 size: SizeStyle {
                                     width: Length::Px(Px(16.0)),
@@ -2319,6 +2326,7 @@ impl DropdownMenu {
                                                         item_ix: &mut usize,
                                                         env: &RenderEnv,
                                                     ) -> Vec<AnyElement> {
+                                                        let dir = crate::use_direction(cx, None);
                                                         let reserve_leading_slot_enabled =
                                                             env.reserve_leading_slot_enabled;
                                                         let scroll_id = env.scroll_id;
@@ -2369,12 +2377,10 @@ impl DropdownMenu {
                                                         out.push(cx.container(
                                                             ContainerProps {
                                                                 layout: LayoutStyle::default(),
-                                                                padding: Edges {
-                                                                    top: pad_y,
-                                                                    right: pad_x,
-                                                                    bottom: pad_y,
-                                                                    left: pad_left,
-                                                                }.into(),
+                                                                padding: rtl::padding_edges_with_inline_start_end(
+                                                                    dir, pad_y, pad_y, pad_left, pad_x,
+                                                                )
+                                                                .into(),
                                                                 ..Default::default()
                                                             },
                                                             move |cx| {
@@ -2957,12 +2963,19 @@ impl DropdownMenu {
                                                                     });
                                                                 }
 
-                                                                 let row_padding = padding_override.unwrap_or(Edges {
-                                                                     top: pad_y,
-                                                                     right: pad_x,
-                                                                     bottom: pad_y,
-                                                                     left: pad_left,
-                                                                 });
+                                                                let row_padding_logical = padding_override.unwrap_or(Edges {
+                                                                    top: pad_y,
+                                                                    right: pad_x,
+                                                                    bottom: pad_y,
+                                                                    left: pad_left,
+                                                                });
+                                                                let row_padding = rtl::padding_edges_with_inline_start_end(
+                                                                    dir,
+                                                                    row_padding_logical.top,
+                                                                    row_padding_logical.bottom,
+                                                                    row_padding_logical.left,
+                                                                    row_padding_logical.right,
+                                                                );
 
                                                                 if !has_submenu && !disabled {
                                                                     if let Some(trailing_cmd) =
@@ -2973,8 +2986,8 @@ impl DropdownMenu {
                                                                             trailing_close_on_select;
                                                                         let hit_width = trailing_hit_width
                                                                             .unwrap_or(Px(28.0));
-                                                                        let right_pad =
-                                                                            row_padding.right;
+                                                                        let inline_end_pad =
+                                                                            row_padding_logical.right;
                                                                         cx.pressable_add_on_pointer_down(
                                                                             Arc::new(
                                                                                 move |host, acx, down| {
@@ -2986,12 +2999,20 @@ impl DropdownMenu {
 
                                                                                     let bounds =
                                                                                         host.bounds();
-                                                                                    let threshold_x = bounds.size.width.0
-                                                                                        - right_pad.0
-                                                                                        - hit_width.0;
-                                                                                    if down.position_local.x.0
-                                                                                        >= threshold_x
-                                                                                    {
+                                                                                    let is_hit = match dir {
+                                                                                        crate::LayoutDirection::Ltr => {
+                                                                                            let threshold_x = bounds.size.width.0
+                                                                                                - inline_end_pad.0
+                                                                                                - hit_width.0;
+                                                                                            down.position_local.x.0 >= threshold_x
+                                                                                        }
+                                                                                        crate::LayoutDirection::Rtl => {
+                                                                                            let threshold_x =
+                                                                                                inline_end_pad.0 + hit_width.0;
+                                                                                            down.position_local.x.0 <= threshold_x
+                                                                                        }
+                                                                                    };
+                                                                                    if is_hit {
                                                                                         host.dispatch_command(
                                                                                             Some(acx.window),
                                                                                             trailing_cmd.clone(),
@@ -3433,6 +3454,7 @@ impl DropdownMenu {
                                                         item_ix: &mut usize,
                                                         env: &RenderEnv,
                                                     ) -> Vec<AnyElement> {
+                                                        let dir = crate::use_direction(cx, None);
                                                         let reserve_leading_slot_enabled =
                                                             env.reserve_leading_slot_enabled;
                                                         let item_count = env.item_count;
@@ -3482,12 +3504,14 @@ impl DropdownMenu {
                                                                 rows.push(cx.container(
                                                                     ContainerProps {
                                                                         layout: LayoutStyle::default(),
-                                                                        padding: Edges {
-                                                                            top: pad_y,
-                                                                            right: pad_x,
-                                                                            bottom: pad_y,
-                                                                            left: pad_left,
-                                                                        }.into(),
+                                                                        padding: rtl::padding_edges_with_inline_start_end(
+                                                                            dir,
+                                                                            pad_y,
+                                                                            pad_y,
+                                                                            pad_left,
+                                                                            pad_x,
+                                                                        )
+                                                                        .into(),
                                                                         ..Default::default()
                                                                     },
                                                                     move |cx| {
@@ -3937,12 +3961,14 @@ impl DropdownMenu {
                                                                                         layout.size.width = Length::Fill;
                                                                                         layout
                                                                                     },
-                                                                                    padding: Edges {
-                                                                                        top: pad_y,
-                                                                                        right: pad_x,
-                                                                                        bottom: pad_y,
-                                                                                        left: pad_left,
-                                                                                    }.into(),
+                                                                                    padding: rtl::padding_edges_with_inline_start_end(
+                                                                                        dir,
+                                                                                        pad_y,
+                                                                                        pad_y,
+                                                                                        pad_left,
+                                                                                        pad_x,
+                                                                                    )
+                                                                                    .into(),
                                                                                     background: Some(row_bg),
                                                                                 corner_radii: fret_core::Corners::all(radius_sm),
                                                                                 ..Default::default()

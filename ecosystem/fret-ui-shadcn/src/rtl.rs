@@ -1,5 +1,9 @@
 use fret_icons::{IconId, ids};
 
+use fret_core::{Edges, Px};
+use fret_ui::element::InsetStyle;
+use fret_ui_kit::LayoutRefinement;
+
 use crate::LayoutDirection;
 
 #[inline]
@@ -48,6 +52,57 @@ pub(crate) fn layout_margin_inline_start_auto(
     match dir {
         LayoutDirection::Ltr => layout.margin.left = fret_ui::element::MarginEdge::Auto,
         LayoutDirection::Rtl => layout.margin.right = fret_ui::element::MarginEdge::Auto,
+    }
+}
+
+#[inline]
+pub(crate) fn layout_refinement_margin_inline_start_auto(dir: LayoutDirection) -> LayoutRefinement {
+    match dir {
+        LayoutDirection::Ltr => LayoutRefinement::default().ml_auto(),
+        LayoutDirection::Rtl => LayoutRefinement::default().mr_auto(),
+    }
+}
+
+#[inline]
+pub(crate) fn physical_inline_start_end(
+    dir: LayoutDirection,
+    inline_start: Px,
+    inline_end: Px,
+) -> (Px, Px) {
+    match dir {
+        LayoutDirection::Ltr => (inline_start, inline_end),
+        LayoutDirection::Rtl => (inline_end, inline_start),
+    }
+}
+
+#[inline]
+pub(crate) fn padding_edges_with_inline_start_end(
+    dir: LayoutDirection,
+    pad_top: Px,
+    pad_bottom: Px,
+    pad_inline_start: Px,
+    pad_inline_end: Px,
+) -> Edges {
+    let (left, right) = physical_inline_start_end(dir, pad_inline_start, pad_inline_end);
+    Edges {
+        top: pad_top,
+        right,
+        bottom: pad_bottom,
+        left,
+    }
+}
+
+#[inline]
+pub(crate) fn inset_style_set_inline_start(inset: &mut InsetStyle, dir: LayoutDirection, px: Px) {
+    match dir {
+        LayoutDirection::Ltr => {
+            inset.left = Some(px).into();
+            inset.right = None.into();
+        }
+        LayoutDirection::Rtl => {
+            inset.right = Some(px).into();
+            inset.left = None.into();
+        }
     }
 }
 

@@ -1,0 +1,61 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "ui-gallery-menubar-rtl-open-screenshot",
+    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
+    "tags": ["ui_gallery", "shadcn", "menubar", "rtl", "screenshots"],
+    "target_hints": [
+      "Navigates to the Menubar page.",
+      "Opens the RTL \"file\" menu.",
+      "Captures a screenshot to validate shortcut trailing alignment and submenu chevron mirroring."
+    ]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "set_window_inner_size", "width_px": 1120.0, "height_px": 760.0 },
+    { "type": "wait_frames", "n": 10 },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
+      "timeout_frames": 600
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
+    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
+    { "type": "press_key", "key": "backspace" },
+    { "type": "type_text", "text": "menubar" },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-nav-menubar" } },
+      "timeout_frames": 600
+    },
+    { "type": "click_stable", "target": { "kind": "test_id", "id": "ui-gallery-nav-menubar" } },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-page-menubar" } },
+      "timeout_frames": 600
+    },
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-menubar-rtl-file" },
+      "delta_y": -200.0,
+      "require_fully_within_window": true,
+      "padding_px": 24.0,
+      "timeout_frames": 600
+    },
+    { "type": "wait_frames", "n": 6 },
+    { "type": "click_stable", "target": { "kind": "test_id", "id": "ui-gallery-menubar-rtl-file" } },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-menubar-rtl-print" } },
+      "timeout_frames": 600
+    },
+    { "type": "wait_frames", "n": 10 },
+    { "type": "capture_bundle", "label": "ui-gallery-menubar-rtl-open" },
+    { "type": "capture_screenshot", "label": "ui-gallery-menubar-rtl-open" }
+  ]
+}
+

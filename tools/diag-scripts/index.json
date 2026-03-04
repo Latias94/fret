@@ -3352,6 +3352,29 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-context-menu-rtl-open-screenshot",
+      "path": "tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-rtl-open-screenshot.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-rtl-smoke"
+      ],
+      "tags": [
+        "context_menu",
+        "rtl",
+        "screenshots",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Navigates to the Context Menu page.",
+        "Right-clicks the RTL trigger.",
+        "Captures a screenshot to validate inline-start/end padding and submenu chevron mirroring."
+      ]
+    },
+    {
       "id": "ui-gallery-control-chrome-button-group-text-w-fit",
       "path": "tools/diag-scripts/ui-gallery/control-chrome/ui-gallery-control-chrome-button-group-text-w-fit.json",
       "required_capabilities": [
@@ -4429,6 +4452,29 @@
       ],
       "tags": [],
       "target_hints": []
+    },
+    {
+      "id": "ui-gallery-menubar-rtl-open-screenshot",
+      "path": "tools/diag-scripts/ui-gallery/menubar/ui-gallery-menubar-rtl-open-screenshot.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-rtl-smoke"
+      ],
+      "tags": [
+        "menubar",
+        "rtl",
+        "screenshots",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Navigates to the Menubar page.",
+        "Opens the RTL \"file\" menu.",
+        "Captures a screenshot to validate shortcut trailing alignment and submenu chevron mirroring."
+      ]
     },
     {
       "id": "ui-gallery-modal-barrier-focus-restore",

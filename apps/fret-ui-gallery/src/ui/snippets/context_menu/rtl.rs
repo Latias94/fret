@@ -20,13 +20,37 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                     trigger_surface(cx, "Right click in RTL")
                         .test_id("ui-gallery-context-menu-rtl-trigger")
                 },
-                |_cx| {
+                |cx| {
                     vec![
-                        shadcn::ContextMenuEntry::Item(shadcn::ContextMenuItem::new("Open")),
-                        shadcn::ContextMenuEntry::Item(shadcn::ContextMenuItem::new("Settings")),
+                        shadcn::ContextMenuEntry::Item(
+                            shadcn::ContextMenuItem::new("Open")
+                                .test_id("ui-gallery-context-menu-rtl-item-open")
+                                .trailing(shadcn::ContextMenuShortcut::new("⌘O").into_element(cx)),
+                        ),
+                        shadcn::ContextMenuEntry::Item(
+                            shadcn::ContextMenuItem::new("Settings")
+                                .test_id("ui-gallery-context-menu-rtl-item-settings")
+                                .trailing(shadcn::ContextMenuShortcut::new("⌘,").into_element(cx)),
+                        ),
+                        shadcn::ContextMenuEntry::Separator,
+                        shadcn::ContextMenuEntry::Item(
+                            shadcn::ContextMenuItem::new("More")
+                                .test_id("ui-gallery-context-menu-rtl-item-more")
+                                .submenu([
+                                    shadcn::ContextMenuEntry::Item(
+                                        shadcn::ContextMenuItem::new("Sub Alpha")
+                                            .test_id("ui-gallery-context-menu-rtl-item-sub-alpha"),
+                                    ),
+                                    shadcn::ContextMenuEntry::Item(
+                                        shadcn::ContextMenuItem::new("Sub Beta")
+                                            .test_id("ui-gallery-context-menu-rtl-item-sub-beta"),
+                                    ),
+                                ]),
+                        ),
                         shadcn::ContextMenuEntry::Separator,
                         shadcn::ContextMenuEntry::Item(
                             shadcn::ContextMenuItem::new("Delete")
+                                .test_id("ui-gallery-context-menu-rtl-item-delete")
                                 .variant(shadcn::context_menu::ContextMenuItemVariant::Destructive),
                         ),
                     ]

@@ -645,10 +645,11 @@ impl MenubarShortcut {
         let fg = theme.color_token("muted-foreground");
         let font_size = theme.metric_token("font.size");
         let font_line_height = theme.metric_token("font.line_height");
+        let dir = crate::use_direction(cx, None);
 
         ui::text(cx, self.text)
             // new-york-v4: `ml-auto` to push shortcut to the trailing edge.
-            .ml_auto()
+            .layout(rtl::layout_refinement_margin_inline_start_auto(dir).flex_shrink_0())
             .text_size_px(font_size)
             .fixed_line_box_px(font_line_height)
             .line_box_in_bounds()
@@ -944,6 +945,7 @@ fn menu_row_children<H: UiHost>(
     text_style: TextStyle,
     chrome_test_id: Option<Arc<str>>,
 ) -> Elements {
+    let dir = crate::use_direction(cx, None);
     let child = cx.container(
         ContainerProps {
             layout: {
@@ -951,13 +953,8 @@ fn menu_row_children<H: UiHost>(
                 layout.size.width = Length::Fill;
                 layout
             },
-            padding: Edges {
-                top: pad_y,
-                right: pad_x,
-                bottom: pad_y,
-                left: pad_left,
-            }
-            .into(),
+            padding: rtl::padding_edges_with_inline_start_end(dir, pad_y, pad_y, pad_left, pad_x)
+                .into(),
             background: Some(bg),
             shadow: None,
             border: Edges::all(Px(0.0)),
@@ -2089,6 +2086,7 @@ impl MenubarMenuEntries {
                                               submenu_for_panel_for_content.clone(),
                                               move |cx| {
                                                   let entries_for_content = entries_for_content;
+                                                  let dir = crate::use_direction(cx, None);
                                                   let mut out: Vec<AnyElement> =
                                                       Vec::with_capacity(entries_for_content.len());
 
@@ -2132,12 +2130,15 @@ impl MenubarMenuEntries {
                                                             out.push(cx.container(
                                                                 ContainerProps {
                                                                     layout: LayoutStyle::default(),
-                                                                    padding: Edges {
-                                                                        top: pad_y,
-                                                                        right: pad_x,
-                                                                        bottom: pad_y,
-                                                                        left: pad_left,
-                                                                    }.into(),
+                                                                    padding:
+                                                                        rtl::padding_edges_with_inline_start_end(
+                                                                            dir,
+                                                                            pad_y,
+                                                                            pad_y,
+                                                                            pad_left,
+                                                                            pad_x,
+                                                                        )
+                                                                        .into(),
                                                                     ..Default::default()
                                                                 },
                                                                 move |cx| {
@@ -3231,6 +3232,7 @@ impl MenubarMenuEntries {
                                                                      &*cx.app,
                                                                      cx.window,
                                                                  );
+                                                             let dir = crate::use_direction(cx, None);
                                                              let submenu_entries_for_panel =
                                                                  submenu_entries_for_panel;
                                                              let mut out: Vec<AnyElement> =
@@ -3274,12 +3276,15 @@ impl MenubarMenuEntries {
                                                                         out.push(cx.container(
                                                                             ContainerProps {
                                                                                 layout: LayoutStyle::default(),
-                                                                                padding: Edges {
-                                                                                    top: pad_y,
-                                                                                    right: pad_x,
-                                                                                    bottom: pad_y,
-                                                                                    left: pad_left,
-                                                                                }.into(),
+                                                                                padding:
+                                                                                    rtl::padding_edges_with_inline_start_end(
+                                                                                        dir,
+                                                                                        pad_y,
+                                                                                        pad_y,
+                                                                                        pad_left,
+                                                                                        pad_x,
+                                                                                    )
+                                                                                    .into(),
                                                                                 ..Default::default()
                                                                             },
                                                                             move |cx| {
