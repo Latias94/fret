@@ -51,7 +51,7 @@ Goal: create a lightweight, user-facing cookbook that does not pull “everythin
   - [x] `todo` stays template-only (not a cookbook example); keep the golden path obvious via:
     - `cargo run -p fretboard -- new todo --name my-todo`
     - [`docs/examples/todo-app-golden-path.md`](../../examples/todo-app-golden-path.md)
-- [ ] Add 6–12 focused cookbook examples (App Track):
+- [x] Add 6–12 focused cookbook examples (App Track):
   - [x] overlays basics (`overlay_basics`)
   - [x] commands + keymap (`commands_keymap_basics`)
   - [x] undo/redo basics (`undo_basics`)
