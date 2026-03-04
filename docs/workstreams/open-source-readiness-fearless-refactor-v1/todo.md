@@ -18,7 +18,16 @@ Status legend:
 - [x] Keep cookbook deps minimal (avoid enabling “everything” by default).
 - [x] Add “Official vs Lab” labels for cookbook examples.
 - [x] Gate the highest-ceiling interop examples behind explicit Cargo features (optional).
-- [~] Add/curate diag scripts for the recommended 5–8 examples (start with `hello` + `simple_todo`).
+- [x] Add/curate diag scripts for the recommended 5–8 examples (start with `hello` + `simple_todo`).
+  - Evidence: suites exist for the onboarding ladder:
+    - [`tools/diag-scripts/suites/cookbook-hello/suite.json`](../../../tools/diag-scripts/suites/cookbook-hello/suite.json)
+    - [`tools/diag-scripts/suites/cookbook-simple-todo/suite.json`](../../../tools/diag-scripts/suites/cookbook-simple-todo/suite.json)
+    - [`tools/diag-scripts/suites/cookbook-overlay-basics/suite.json`](../../../tools/diag-scripts/suites/cookbook-overlay-basics/suite.json)
+    - [`tools/diag-scripts/suites/cookbook-text-input-basics/suite.json`](../../../tools/diag-scripts/suites/cookbook-text-input-basics/suite.json)
+    - [`tools/diag-scripts/suites/cookbook-commands-keymap-basics/suite.json`](../../../tools/diag-scripts/suites/cookbook-commands-keymap-basics/suite.json)
+    - [`tools/diag-scripts/suites/cookbook-virtual-list-basics/suite.json`](../../../tools/diag-scripts/suites/cookbook-virtual-list-basics/suite.json)
+    - [`tools/diag-scripts/suites/cookbook-effects-layer-basics/suite.json`](../../../tools/diag-scripts/suites/cookbook-effects-layer-basics/suite.json)
+    - [`tools/diag-scripts/suites/cookbook-theme-switching-basics/suite.json`](../../../tools/diag-scripts/suites/cookbook-theme-switching-basics/suite.json)
 
 ## M2 — `fret` feature profiles
 
