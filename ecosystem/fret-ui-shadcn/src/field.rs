@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use crate::LayoutDirection;
 use fret_core::{Edges, Px, SemanticsRole, TextAlign, TextOverflow, TextWrap};
 use fret_ui::element::{
     AnyElement, ColumnProps, ContainerProps, CrossAlign, ElementKind, LayoutQueryRegionProps,
@@ -10,7 +11,6 @@ use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::control_registry::{
     ControlId, DescriptionEntry, ErrorEntry, LabelEntry, control_registry_model,
 };
-use fret_ui_kit::primitives::direction as direction_prim;
 use fret_ui_kit::primitives::field_state as field_state_prim;
 use fret_ui_kit::theme_tokens;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Space, ui};
@@ -763,8 +763,8 @@ impl FieldTitle {
         };
 
         let align = match crate::use_direction(cx, None) {
-            direction_prim::LayoutDirection::Rtl => TextAlign::End,
-            direction_prim::LayoutDirection::Ltr => TextAlign::Start,
+            LayoutDirection::Rtl => TextAlign::End,
+            LayoutDirection::Ltr => TextAlign::Start,
         };
         let el = ui::label(cx, self.text)
             .w_full()
@@ -887,8 +887,8 @@ impl FieldLabel {
         let wrap_children = self.children;
         let Some(for_control) = self.for_control else {
             let align = match crate::use_direction(cx, None) {
-                direction_prim::LayoutDirection::Rtl => TextAlign::End,
-                direction_prim::LayoutDirection::Ltr => TextAlign::Start,
+                LayoutDirection::Rtl => TextAlign::End,
+                LayoutDirection::Ltr => TextAlign::Start,
             };
             let mut el = if let Some(children) = wrap_children {
                 let theme = Theme::global(&*cx.app);
@@ -1061,8 +1061,8 @@ impl FieldLabel {
                 vec![inner]
             } else if render_text {
                 let align = match crate::use_direction(cx, None) {
-                    direction_prim::LayoutDirection::Rtl => TextAlign::End,
-                    direction_prim::LayoutDirection::Ltr => TextAlign::Start,
+                    LayoutDirection::Rtl => TextAlign::End,
+                    LayoutDirection::Ltr => TextAlign::Start,
                 };
                 let mut builder = ui::label(cx, text.clone());
                 if render_text_block {
@@ -1154,8 +1154,8 @@ impl FieldDescription {
         };
 
         let align = match crate::use_direction(cx, None) {
-            direction_prim::LayoutDirection::Rtl => TextAlign::End,
-            direction_prim::LayoutDirection::Ltr => TextAlign::Start,
+            LayoutDirection::Rtl => TextAlign::End,
+            LayoutDirection::Ltr => TextAlign::Start,
         };
         let wrap = self.wrap.unwrap_or(TextWrap::Word);
         let overflow = self.overflow.unwrap_or(TextOverflow::Clip);
@@ -1249,8 +1249,8 @@ impl FieldError {
         };
 
         let align = match crate::use_direction(cx, None) {
-            direction_prim::LayoutDirection::Rtl => TextAlign::End,
-            direction_prim::LayoutDirection::Ltr => TextAlign::Start,
+            LayoutDirection::Rtl => TextAlign::End,
+            LayoutDirection::Ltr => TextAlign::Start,
         };
         let wrap = self.wrap.unwrap_or(TextWrap::Word);
         let overflow = self.overflow.unwrap_or(TextOverflow::Clip);

@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use crate::LayoutDirection;
 use fret_core::window::ColorScheme;
 use fret_core::{FontWeight, Px};
 use fret_icons::IconId;
@@ -9,7 +10,6 @@ use fret_ui::element::{
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::primitives::direction as direction_prim;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space, ui};
 
 use crate::surface_slot::{ShadcnSurfaceSlot, surface_slot_in_scope};
@@ -204,8 +204,8 @@ impl KbdGroup {
         let gap = MetricRef::space(Space::N1).resolve(&theme);
         let direction = crate::use_direction(cx, None);
         let children = match direction {
-            direction_prim::LayoutDirection::Ltr => self.children,
-            direction_prim::LayoutDirection::Rtl => self.children.into_iter().rev().collect(),
+            LayoutDirection::Ltr => self.children,
+            LayoutDirection::Rtl => self.children.into_iter().rev().collect(),
         };
         let layout = decl_style::layout_style(&theme, self.layout);
 
@@ -368,17 +368,13 @@ mod tests {
 
         let element =
             fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
-                direction_prim::with_direction_provider(
-                    cx,
-                    direction_prim::LayoutDirection::Rtl,
-                    |cx| {
-                        KbdGroup::new([
-                            Kbd::new("A").into_element(cx).test_id("a"),
-                            Kbd::new("B").into_element(cx).test_id("b"),
-                        ])
-                        .into_element(cx)
-                    },
-                )
+                crate::with_direction_provider(cx, LayoutDirection::Rtl, |cx| {
+                    KbdGroup::new([
+                        Kbd::new("A").into_element(cx).test_id("a"),
+                        Kbd::new("B").into_element(cx).test_id("b"),
+                    ])
+                    .into_element(cx)
+                })
             });
 
         assert_eq!(element.children.len(), 2);

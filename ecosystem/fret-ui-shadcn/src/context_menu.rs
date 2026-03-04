@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use std::rc::Rc;
 use std::sync::{Arc, Mutex};
 
+use crate::LayoutDirection;
 use fret_core::time::Duration;
 use fret_core::{Edges, Point, Px, Rect, Size, TextStyle};
 use fret_icons::{IconId, ids};
@@ -27,7 +28,6 @@ use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::overlay;
 use fret_ui_kit::primitives::context_menu as menu;
-use fret_ui_kit::primitives::direction as direction_prim;
 use fret_ui_kit::primitives::popper;
 use fret_ui_kit::primitives::popper_content;
 use fret_ui_kit::primitives::portal_inherited;
@@ -2376,7 +2376,7 @@ fn menu_row_children<H: UiHost>(
 
 fn submenu_chevron_icon<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    direction: direction_prim::LayoutDirection,
+    direction: LayoutDirection,
     fg: fret_core::Color,
 ) -> AnyElement {
     let icon = rtl::chevron_inline_end(direction);

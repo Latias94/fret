@@ -2,6 +2,7 @@ use std::cell::Cell;
 use std::rc::Rc;
 use std::sync::{Arc, Mutex};
 
+use crate::LayoutDirection;
 use fret_core::{Color, Corners, Edges, FontId, FontWeight, Px, SemanticsRole, TextStyle};
 use fret_icons::ids;
 use fret_runtime::Model;
@@ -18,7 +19,6 @@ use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::combobox as kit_combobox;
 use fret_ui_kit::primitives::controllable_state;
-use fret_ui_kit::primitives::direction as direction_prim;
 use fret_ui_kit::primitives::popover as radix_popover;
 use fret_ui_kit::primitives::popper;
 use fret_ui_kit::{
@@ -2851,7 +2851,7 @@ fn combobox_with_patch<H: UiHost>(
 }
 
 fn combobox_content_placement(
-    direction: direction_prim::LayoutDirection,
+    direction: LayoutDirection,
     side: popper::Side,
     align: popper::Align,
     side_offset: Px,
@@ -2882,7 +2882,7 @@ mod tests {
     #[test]
     fn combobox_content_placement_tracks_offsets() {
         let placement = combobox_content_placement(
-            direction_prim::LayoutDirection::Ltr,
+            LayoutDirection::Ltr,
             popper::Side::Top,
             popper::Align::Start,
             Px(6.0),

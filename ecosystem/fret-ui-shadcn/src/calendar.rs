@@ -2,6 +2,7 @@ use std::cell::Cell;
 use std::rc::Rc;
 use std::sync::Arc;
 
+use crate::LayoutDirection;
 use fret_core::{Color, FontWeight, KeyCode, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap};
 use fret_icons::ids;
 use fret_runtime::Model;
@@ -16,7 +17,6 @@ use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::primitives::direction as direction_prim;
 use fret_ui_kit::theme_tokens;
 use fret_ui_kit::typography;
 use fret_ui_kit::{
@@ -35,29 +35,18 @@ use fret_ui_headless::calendar::{
 };
 use time::Month;
 
-pub(crate) fn calendar_day_grid_step_for_key(
-    dir: direction_prim::LayoutDirection,
-    key: KeyCode,
-) -> Option<i32> {
+pub(crate) fn calendar_day_grid_step_for_key(dir: LayoutDirection, key: KeyCode) -> Option<i32> {
     match key {
         KeyCode::ArrowUp => Some(-7),
         KeyCode::ArrowDown => Some(7),
-        KeyCode::ArrowLeft => Some(if dir == direction_prim::LayoutDirection::Rtl {
-            1
-        } else {
-            -1
-        }),
-        KeyCode::ArrowRight => Some(if dir == direction_prim::LayoutDirection::Rtl {
-            -1
-        } else {
-            1
-        }),
+        KeyCode::ArrowLeft => Some(if dir == LayoutDirection::Rtl { 1 } else { -1 }),
+        KeyCode::ArrowRight => Some(if dir == LayoutDirection::Rtl { -1 } else { 1 }),
         _ => None,
     }
 }
 
 pub(crate) fn calendar_day_grid_row_edge_target_for_key(
-    dir: direction_prim::LayoutDirection,
+    dir: LayoutDirection,
     key: KeyCode,
     current: usize,
     len: usize,
@@ -66,12 +55,12 @@ pub(crate) fn calendar_day_grid_row_edge_target_for_key(
     let row_end = (row_start + 6).min(len.saturating_sub(1));
 
     match key {
-        KeyCode::Home => Some(if dir == direction_prim::LayoutDirection::Rtl {
+        KeyCode::Home => Some(if dir == LayoutDirection::Rtl {
             row_end
         } else {
             row_start
         }),
-        KeyCode::End => Some(if dir == direction_prim::LayoutDirection::Rtl {
+        KeyCode::End => Some(if dir == LayoutDirection::Rtl {
             row_start
         } else {
             row_end
@@ -799,12 +788,11 @@ impl Calendar {
                                         .map_or(true, |b| month_lt(month, max_start_month(b, 1)));
 
                                 let direction = crate::use_direction(cx, None);
-                                let (prev_icon, next_icon) =
-                                    if direction == direction_prim::LayoutDirection::Rtl {
-                                        (ids::ui::CHEVRON_RIGHT, ids::ui::CHEVRON_LEFT)
-                                    } else {
-                                        (ids::ui::CHEVRON_LEFT, ids::ui::CHEVRON_RIGHT)
-                                    };
+                                let (prev_icon, next_icon) = if direction == LayoutDirection::Rtl {
+                                    (ids::ui::CHEVRON_RIGHT, ids::ui::CHEVRON_LEFT)
+                                } else {
+                                    (ids::ui::CHEVRON_LEFT, ids::ui::CHEVRON_RIGHT)
+                                };
 
                                 let caption_month_value_for_prev = caption_month_value_prev.clone();
                                 let caption_year_value_for_prev = caption_year_value_prev.clone();
@@ -2528,7 +2516,7 @@ mod tests {
 
     #[test]
     fn calendar_day_grid_step_matches_direction_semantics() {
-        use direction_prim::LayoutDirection;
+        use crate::LayoutDirection;
 
         assert_eq!(
             calendar_day_grid_step_for_key(LayoutDirection::Ltr, KeyCode::ArrowLeft),
@@ -2572,7 +2560,7 @@ mod tests {
 
     #[test]
     fn calendar_day_grid_home_end_follow_direction_semantics() {
-        use direction_prim::LayoutDirection;
+        use crate::LayoutDirection;
 
         let current = 10;
         let len = 42;
