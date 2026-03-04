@@ -387,6 +387,7 @@ pub(super) fn dispatch_drive_script_step(
         | UiActionStepV2::SetClipboardText { .. }
         | UiActionStepV2::InjectIncomingOpen { .. }
         | UiActionStepV2::WaitFrames { .. }
+        | UiActionStepV2::WaitMs { .. }
         | UiActionStepV2::ResetDiagnostics) => {
             let handled =
                 script_steps::handle_effect_only_steps(service, window, step, active, output);
