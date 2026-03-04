@@ -80,11 +80,20 @@
     {
       "button": "left",
       "target": { "kind": "test_id", "id": "ui-gallery-data-table-row-actions-open-1" },
-      "type": "click"
+      "type": "click_stable"
     },
-    { "n": 2, "type": "wait_frames" },
     {
-      "label": "ui-gallery-data-table-guide-row-actions-menu-stability.after-open+2f",
+      "label": "ui-gallery-data-table-guide-row-actions-menu-stability.after-click",
+      "type": "capture_bundle"
+    },
+    { "n": 1, "type": "wait_frames" },
+    {
+      "label": "ui-gallery-data-table-guide-row-actions-menu-stability.after+1f",
+      "type": "capture_bundle"
+    },
+    { "n": 1, "type": "wait_frames" },
+    {
+      "label": "ui-gallery-data-table-guide-row-actions-menu-stability.after+2f",
       "type": "capture_bundle"
     },
     {
