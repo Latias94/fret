@@ -289,6 +289,15 @@ pub(crate) fn unregister_window(window: &dyn Window) {
     clear_passthrough_regions(window);
 }
 
+pub(crate) fn has_active_regions() -> bool {
+    STATE.with(|state| {
+        state
+            .try_borrow()
+            .map(|s| !s.by_ns_window_ptr.is_empty())
+            .unwrap_or(false)
+    })
+}
+
 pub(crate) fn apply_latest_mouse_location() {
     COALESCED_REFRESH_PENDING.store(false, Ordering::SeqCst);
 

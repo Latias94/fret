@@ -1024,6 +1024,12 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
         }
 
         match event {
+            #[cfg(all(target_os = "macos", feature = "macos-hit-test-regions"))]
+            WindowEvent::Moved(..) => {
+                if macos_hit_test::has_active_regions() {
+                    macos_hit_test::apply_latest_mouse_location();
+                }
+            }
             ref ev @ WindowEvent::ModifiersChanged(..) => {
                 if let Some(state) = self.windows.get_mut(app_window) {
                     state.platform.handle_window_event(
@@ -1196,6 +1202,10 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
             WindowEvent::SurfaceResized(size) => {
                 if let Some(state) = self.windows.get_mut(app_window) {
                     state.pending_surface_resize = Some(size);
+                }
+                #[cfg(all(target_os = "macos", feature = "macos-hit-test-regions"))]
+                if macos_hit_test::has_active_regions() {
+                    macos_hit_test::apply_latest_mouse_location();
                 }
                 self.app.request_redraw(app_window);
             }

@@ -1,0 +1,100 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "Workstream: platform window receiver (macOS ordered windows + passthrough regions best-effort)",
+    "tags": ["workstream", "window_style", "hit_test", "passthrough_regions", "macos"],
+    "required_capabilities": [
+      "diag.script_v2",
+      "diag.multi_window",
+      "diag.window_style_snapshot",
+      "diag.window_style_patch_v1",
+      "diag.cursor_screen_pos_override",
+      "diag.platform_window_receiver_at_cursor_v1"
+    ],
+    "target_hints": [
+      "macOS-only: best-effort gate for runner-level passthrough regions.",
+      "Requires building `fret-launch` with feature `macos-hit-test-regions` enabled.",
+      "Uses cursor override + receiver-at-cursor probe to avoid OS mouse injection."
+    ]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "window-hit-test-probe.base.root" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "known_window_count_ge", "n": 2 },
+      "timeout_frames": 600
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "window_style_effective_is",
+        "window": { "kind": "last_seen_other" },
+        "style": { "z_level": "always_on_top" }
+      }
+    },
+    {
+      "type": "set_cursor_in_window_logical",
+      "window": { "kind": "last_seen_other" },
+      "x_px": 10.0,
+      "y_px": 10.0
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "platform_window_receiver_at_cursor_is",
+        "window": { "kind": "last_seen_other" }
+      },
+      "timeout_frames": 120
+    },
+    {
+      "type": "set_window_style",
+      "window": { "kind": "last_seen_other" },
+      "style": {
+        "hit_test": {
+          "kind": "passthrough_regions",
+          "regions": [
+            { "kind": "rect", "x": 160.0, "y": 160.0, "width": 200.0, "height": 160.0 }
+          ]
+        }
+      }
+    },
+    {
+      "type": "set_cursor_in_window_logical",
+      "window": { "kind": "last_seen_other" },
+      "x_px": 10.0,
+      "y_px": 10.0
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "platform_window_receiver_at_cursor_is",
+        "window": { "kind": "first_seen" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "set_cursor_in_window_logical",
+      "window": { "kind": "last_seen_other" },
+      "x_px": 200.0,
+      "y_px": 200.0
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "platform_window_receiver_at_cursor_is",
+        "window": { "kind": "last_seen_other" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "capture_bundle", "label": "window-hit-test-passthrough-regions-receiver-macos" }
+  ]
+}
+
