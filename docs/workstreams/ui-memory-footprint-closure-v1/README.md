@@ -71,6 +71,11 @@ Using `tools/diag-scripts/ui-gallery/memory/ui-gallery-code-editor-torture-memor
   - `row_text_cache_text_bytes_estimate_total`: ~29–30 KiB
   - `row_rich_cache_entries`: 429
   - `row_rich_cache_line_bytes_estimate_total`: ~29–30 KiB
+- App-side attribution (`app_snapshot.code_editor.torture.memory`, last snapshot; single run):
+  - `buffer_len_bytes`: 1,477,870 (~1.4 MiB)
+  - `buffer_line_count`: 20,004
+  - `undo_len`: 0 (limit 512)
+  - `undo_text_bytes_estimate_total`: 0
 
 Interpretation:
 
@@ -163,8 +168,10 @@ Interpretation:
 - Add app-side stats for major caches (bytes + counts) where feasible:
   - Text shaping caches / blob caches (heap bytes, not just entry counts).
   - Image cache bytes and “live texture” estimates (already partially present).
-  - Code editor: buffer/undo/syntax memory estimates (rope chunks, undo history, parse tree / spans),
-    so `MALLOC_SMALL` vs `owned unmapped` can be explained with app-level counters.
+  - Code editor:
+    - Added: buffer/undo best-effort memory snapshots (`app_snapshot.code_editor.torture.memory`).
+    - Next: rope chunk + undo payload distribution estimates, and syntax parse/shaping caches (where
+      applicable), so `MALLOC_SMALL` vs `owned unmapped` can be explained with app-level counters.
 - Keep all fields “best effort” and clearly labeled (estimate vs exact).
 
 ### 3) Build a minimal baseline matrix
@@ -224,6 +231,10 @@ Candidate gates:
 - `--max-renderer-intermediate-peak-in-use-bytes`
 - `--max-wgpu-metal-current-allocated-size-bytes` (macOS/Metal; best-effort)
 - `--max-render-text-atlas-bytes-live-estimate-total` (text-heavy attribution; stable, derived from `resource_caches.render_text`)
+- `--max-code-editor-buffer-len-bytes` (UI Gallery; `app_snapshot.code_editor.torture.memory`)
+- `--max-code-editor-undo-text-bytes-estimate-total` (UI Gallery; `app_snapshot.code_editor.torture.memory`)
+- `--max-code-editor-row-text-cache-entries` (UI Gallery; `app_snapshot.code_editor.torture.cache_sizes`)
+- `--max-code-editor-row-rich-cache-entries` (UI Gallery; `app_snapshot.code_editor.torture.cache_sizes`)
 
 Recommended local gate baselines (macOS, 2026-03-04):
 
