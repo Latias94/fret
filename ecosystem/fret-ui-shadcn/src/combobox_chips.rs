@@ -665,8 +665,9 @@ fn combobox_chips_with_patch<H: UiHost>(
                             .lock()
                             .unwrap_or_else(|e| e.into_inner()) = Some(trigger_id);
 
-                        let mut states = WidgetStates::from_pressable(cx, st, enabled);
-                        states.set(WidgetState::Open, is_open);
+	                        let mut states = WidgetStates::from_pressable(cx, st, enabled);
+	                        states.set(WidgetState::Open, is_open);
+	                        let dir = crate::use_direction(cx, None);
 
                         let bg_ref = resolve_override_slot(
                             style_override.trigger_background.as_ref(),
@@ -714,32 +715,33 @@ fn combobox_chips_with_patch<H: UiHost>(
                             ..Default::default()
                         };
 
-                        let chrome_props = ContainerProps {
-                            layout: {
-                                let mut layout = LayoutStyle::default();
-                                layout.size = trigger_layout.size;
-                                layout
-                            },
-                            padding: Edges {
-                                top: pad_top,
-                                right: pad_right,
-                                bottom: pad_bottom,
-                                left: pad_left,
-                            }
-                            .into(),
-                            background: Some(bg),
-                            shadow: None,
-                            border: Edges::all(border_w),
-                            border_color: Some(border),
+	                        let chrome_props = ContainerProps {
+	                            layout: {
+	                                let mut layout = LayoutStyle::default();
+	                                layout.size = trigger_layout.size;
+	                                layout
+	                            },
+	                            padding: crate::rtl::padding_edges_with_inline_start_end(
+	                                dir,
+	                                pad_top,
+	                                pad_bottom,
+	                                pad_left,
+	                                pad_right,
+	                            )
+	                            .into(),
+	                            background: Some(bg),
+	                            shadow: None,
+	                            border: Edges::all(border_w),
+	                            border_color: Some(border),
                             corner_radii: Corners::all(radius),
                             ..Default::default()
                         };
 
-                        (props, chrome_props, move |cx| {
-                            let label_style = text_style.clone();
-                            let chip_prefix = test_id_prefix_for_trigger
-                                .clone()
-                                .unwrap_or_else(|| Arc::from("combobox"));
+	                        (props, chrome_props, move |cx| {
+	                            let label_style = text_style.clone();
+	                            let chip_prefix = test_id_prefix_for_trigger
+	                                .clone()
+	                                .unwrap_or_else(|| Arc::from("combobox"));
 
                             let chips = cx.flex(
                                 FlexProps {
@@ -790,19 +792,20 @@ fn combobox_chips_with_patch<H: UiHost>(
                                             .cloned()
                                             .unwrap_or_else(|| value.clone());
 
-                                        let chip_props = ContainerProps {
-                                            layout: LayoutStyle::default(),
-                                            padding: Edges {
-                                                top: Px(2.0),
-                                                right: Px(4.0),
-                                                bottom: Px(2.0),
-                                                left: Px(6.0),
-                                            }
-                                            .into(),
-                                            background: Some(chip_bg),
-                                            corner_radii: Corners::all(Px(4.0)),
-                                            ..Default::default()
-                                        };
+	                                        let chip_props = ContainerProps {
+	                                            layout: LayoutStyle::default(),
+	                                            padding: crate::rtl::padding_edges_with_inline_start_end(
+	                                                dir,
+	                                                Px(2.0),
+	                                                Px(2.0),
+	                                                Px(6.0),
+	                                                Px(4.0),
+	                                            )
+	                                            .into(),
+	                                            background: Some(chip_bg),
+	                                            corner_radii: Corners::all(Px(4.0)),
+	                                            ..Default::default()
+	                                        };
                                         out.push(
                                             cx.container(chip_props, move |cx| {
                                                 vec![cx.flex(
@@ -957,11 +960,14 @@ fn combobox_chips_with_patch<H: UiHost>(
                                     align: CrossAlign::Center,
                                     wrap: false,
                                 },
-                                move |_cx| vec![chips, right],
-                            )]
-                        })
-                    })
-                }
+	                                move |_cx| match dir {
+	                                    crate::LayoutDirection::Ltr => vec![chips, right],
+	                                    crate::LayoutDirection::Rtl => vec![right, chips],
+	                                },
+	                            )]
+	                        })
+	                    })
+	                }
             },
             {
                 let theme = theme.clone();

@@ -207,6 +207,48 @@
       ]
     },
     {
+      "id": "cookbook-data-table-basics-baseline",
+      "path": "tools/diag-scripts/cookbook/data-table-basics/cookbook-data-table-basics-baseline.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "cookbook-data-table-basics"
+      ],
+      "tags": [
+        "cookbook",
+        "cookbook.data_table_basics",
+        "screenshots",
+        "table"
+      ],
+      "target_hints": [
+        "Waits for the root + table slot to exist.",
+        "Captures a baseline screenshot + bundle."
+      ]
+    },
+    {
+      "id": "cookbook-image-asset-cache-basics-baseline",
+      "path": "tools/diag-scripts/cookbook/image-asset-cache-basics/cookbook-image-asset-cache-basics-baseline.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "cookbook-image-asset-cache-basics"
+      ],
+      "tags": [
+        "assets",
+        "cookbook",
+        "cookbook.image_asset_cache_basics",
+        "screenshots"
+      ],
+      "target_hints": [
+        "Waits briefly for the first upload to settle.",
+        "Captures a baseline screenshot + bundle."
+      ]
+    },
+    {
       "id": "cookbook-date-picker-basics-smoke",
       "path": "tools/diag-scripts/cookbook/date-picker-basics/cookbook-date-picker-basics-smoke.json",
       "required_capabilities": [
@@ -277,26 +319,6 @@
       ],
       "target_hints": [
         "Waits for the root to exist, then captures a baseline screenshot + bundle."
-      ]
-    },
-    {
-      "id": "cookbook-data-table-basics-baseline",
-      "path": "tools/diag-scripts/cookbook/data-table-basics/cookbook-data-table-basics-baseline.json",
-      "required_capabilities": [
-        "diag.screenshot_png",
-        "diag.script_v2"
-      ],
-      "suite_memberships": [
-        "cookbook-data-table-basics"
-      ],
-      "tags": [
-        "cookbook",
-        "cookbook.data_table_basics",
-        "screenshots",
-        "table"
-      ],
-      "target_hints": [
-        "Waits for the root + table slot to exist, then captures a baseline screenshot + bundle."
       ]
     },
     {
@@ -468,6 +490,27 @@
       ],
       "target_hints": [
         "Validates that icon + asset panels mount and that the reload epoch button is wired."
+      ]
+    },
+    {
+      "id": "cookbook-image-asset-cache-basics-baseline",
+      "path": "tools/diag-scripts/cookbook/image-asset-cache-basics/cookbook-image-asset-cache-basics-baseline.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "cookbook-image-asset-cache-basics"
+      ],
+      "tags": [
+        "assets",
+        "cookbook",
+        "cookbook.image_asset_cache_basics",
+        "screenshots"
+      ],
+      "target_hints": [
+        "Waits briefly for the first upload to settle.",
+        "Captures a baseline screenshot + bundle."
       ]
     },
     {
@@ -3342,6 +3385,29 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-combobox-rtl-open-screenshot",
+      "path": "tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-rtl-open-screenshot.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-rtl-smoke"
+      ],
+      "tags": [
+        "combobox",
+        "rtl",
+        "screenshots",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Navigates to the Combobox page.",
+        "Opens the RTL combobox trigger.",
+        "Captures a screenshot to validate inline-end mirroring for padding/trailing chrome."
+      ]
+    },
+    {
       "id": "ui-gallery-combobox-typeahead-commit-banana",
       "path": "tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-typeahead-commit-banana.json",
       "required_capabilities": [
@@ -4623,6 +4689,29 @@
       ],
       "tags": [],
       "target_hints": []
+    },
+    {
+      "id": "ui-gallery-native-select-rtl-open-screenshot",
+      "path": "tools/diag-scripts/ui-gallery/native-select/ui-gallery-native-select-rtl-open-screenshot.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-rtl-smoke"
+      ],
+      "tags": [
+        "native-select",
+        "rtl",
+        "screenshots",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Navigates to the NativeSelect page.",
+        "Opens the RTL NativeSelect trigger.",
+        "Captures a screenshot to validate inline-end mirroring for padding/chevron."
+      ]
     },
     {
       "id": "ui-gallery-navigation-menu-docs-smoke",

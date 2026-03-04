@@ -436,6 +436,7 @@ pub fn native_select<H: UiHost>(
                 pressable_props,
                 chrome_props,
                 move |cx: &mut ElementContext<'_, H>| {
+                    let dir = crate::use_direction(cx, None);
                     let surface = {
                         let surface_props = ContainerProps {
                             layout: LayoutStyle {
@@ -446,12 +447,13 @@ pub fn native_select<H: UiHost>(
                                 },
                                 ..Default::default()
                             },
-                            padding: Edges {
-                                left: resolved.padding.left,
-                                right: resolved.padding.right,
-                                top: py,
-                                bottom: py,
-                            }
+                            padding: crate::rtl::padding_edges_with_inline_start_end(
+                                dir,
+                                py,
+                                py,
+                                resolved.padding.left,
+                                resolved.padding.right,
+                            )
                             .into(),
                             background: Some(bg),
                             shadow: None,
@@ -496,7 +498,13 @@ pub fn native_select<H: UiHost>(
                                     .justify_between()
                                     .items_center()
                                     .gap_x(Space::N2),
-                                |cx| vec![content.flex_1().min_w_0().into_element(cx), icon],
+                                |cx| {
+                                    let content = content.flex_1().min_w_0().into_element(cx);
+                                    match dir {
+                                        crate::LayoutDirection::Ltr => vec![content, icon],
+                                        crate::LayoutDirection::Rtl => vec![icon, content],
+                                    }
+                                },
                             )]
                         })
                     };

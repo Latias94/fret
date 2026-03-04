@@ -1478,15 +1478,16 @@ fn combobox_with_patch<H: UiHost>(
                         let selected = selected_for_trigger.clone();
                         let show_trigger = show_trigger_for_trigger;
                         control_chrome_pressable_with_id_props(cx, |cx, st, trigger_id| {
-                            *focus_restore_target
-                                .lock()
-                                .unwrap_or_else(|e| e.into_inner()) = Some(trigger_id);
-                            let mut states = WidgetStates::from_pressable(cx, st, enabled);
-                            states.set(WidgetState::Open, is_open);
+	                            *focus_restore_target
+	                                .lock()
+	                                .unwrap_or_else(|e| e.into_inner()) = Some(trigger_id);
+	                            let mut states = WidgetStates::from_pressable(cx, st, enabled);
+	                            states.set(WidgetState::Open, is_open);
+	                            let dir = crate::use_direction(cx, None);
 
-                            let bg_ref = resolve_override_slot(
-                                style_override.trigger_background.as_ref(),
-                                &default_trigger_bg,
+	                            let bg_ref = resolve_override_slot(
+	                                style_override.trigger_background.as_ref(),
+	                                &default_trigger_bg,
                                 states,
                             );
                             let fg_ref = resolve_override_slot(
@@ -1530,22 +1531,24 @@ fn combobox_with_patch<H: UiHost>(
                                 ..Default::default()
                             };
 
-                            let chrome_props = ContainerProps {
-                                layout: {
-                                    let mut layout = LayoutStyle::default();
-                                    layout.size = trigger_layout.size;
-                                    layout
-                                },
-                                padding: Edges {
-                                    top: pad_top,
-                                    right: pad_right,
-                                    bottom: pad_bottom,
-                                    left: pad_left,
-                                }.into(),
-                                background: Some(bg),
-                                shadow: None,
-                                border: Edges::all(border_w),
-                                border_color: Some(border),
+	                            let chrome_props = ContainerProps {
+	                                layout: {
+	                                    let mut layout = LayoutStyle::default();
+	                                    layout.size = trigger_layout.size;
+	                                    layout
+	                                },
+	                                padding: crate::rtl::padding_edges_with_inline_start_end(
+	                                    dir,
+	                                    pad_top,
+	                                    pad_bottom,
+	                                    pad_left,
+	                                    pad_right,
+	                                )
+	                                .into(),
+	                                background: Some(bg),
+	                                shadow: None,
+	                                border: Edges::all(border_w),
+	                                border_color: Some(border),
                                 corner_radii: Corners::all(radius),
                                 ..Default::default()
                             };
@@ -1765,14 +1768,26 @@ fn combobox_with_patch<H: UiHost>(
                                         )
                                         });
 
-                                        let mut out = vec![label_el];
-                                        if let Some(right) = right {
-                                            out.push(right);
-                                        }
-                                        out
-                                    },
-                                )]
-                            })
+	                                        match dir {
+	                                            crate::LayoutDirection::Ltr => {
+	                                                let mut out = vec![label_el];
+	                                                if let Some(right) = right {
+	                                                    out.push(right);
+	                                                }
+	                                                out
+	                                            }
+	                                            crate::LayoutDirection::Rtl => {
+	                                                let mut out = Vec::new();
+	                                                if let Some(right) = right {
+	                                                    out.push(right);
+	                                                }
+	                                                out.push(label_el);
+	                                                out
+	                                            }
+	                                        }
+	                                    },
+	                                )]
+	                            })
                         })
                     },
                     move |cx| {
@@ -2199,15 +2214,16 @@ fn combobox_with_patch<H: UiHost>(
                 let query_model = query_model_for_trigger.clone();
                 let selected = selected_for_trigger.clone();
                 control_chrome_pressable_with_id_props(cx, |cx, st, trigger_id| {
-                    *focus_restore_target
-                        .lock()
-                        .unwrap_or_else(|e| e.into_inner()) = Some(trigger_id);
-                    let mut states = WidgetStates::from_pressable(cx, st, enabled);
-                    states.set(WidgetState::Open, is_open);
+	                    *focus_restore_target
+	                        .lock()
+	                        .unwrap_or_else(|e| e.into_inner()) = Some(trigger_id);
+	                    let mut states = WidgetStates::from_pressable(cx, st, enabled);
+	                    states.set(WidgetState::Open, is_open);
+	                    let dir = crate::use_direction(cx, None);
 
-                    let bg_ref = resolve_override_slot(
-                        style_override.trigger_background.as_ref(),
-                        &default_trigger_bg,
+	                    let bg_ref = resolve_override_slot(
+	                        style_override.trigger_background.as_ref(),
+	                        &default_trigger_bg,
                         states,
                     );
                     let fg_ref = resolve_override_slot(
@@ -2249,18 +2265,20 @@ fn combobox_with_patch<H: UiHost>(
                         ..Default::default()
                     };
 
-                    let chrome_props = ContainerProps {
-                        layout: LayoutStyle::default(),
-                        padding: Edges {
-                            top: pad_top,
-                            right: pad_right,
-                            bottom: pad_bottom,
-                            left: pad_left,
-                        }.into(),
-                        background: Some(bg),
-                        shadow: None,
-                        border: Edges::all(border_w),
-                        border_color: Some(border),
+	                    let chrome_props = ContainerProps {
+	                        layout: LayoutStyle::default(),
+	                        padding: crate::rtl::padding_edges_with_inline_start_end(
+	                            dir,
+	                            pad_top,
+	                            pad_bottom,
+	                            pad_left,
+	                            pad_right,
+	                        )
+	                        .into(),
+	                        background: Some(bg),
+	                        shadow: None,
+	                        border: Edges::all(border_w),
+	                        border_color: Some(border),
                         corner_radii: Corners::all(radius),
                         ..Default::default()
                     };
@@ -2441,14 +2459,26 @@ fn combobox_with_patch<H: UiHost>(
                                 )
                                 });
 
-                                let mut out = vec![label_el];
-                                if let Some(right) = right {
-                                    out.push(right);
-                                }
-                                out
-                            },
-                        )]
-                    })
+	                                match dir {
+	                                    crate::LayoutDirection::Ltr => {
+	                                        let mut out = vec![label_el];
+	                                        if let Some(right) = right {
+	                                            out.push(right);
+	                                        }
+	                                        out
+	                                    }
+	                                    crate::LayoutDirection::Rtl => {
+	                                        let mut out = Vec::new();
+	                                        if let Some(right) = right {
+	                                            out.push(right);
+	                                        }
+	                                        out.push(label_el);
+	                                        out
+	                                    }
+	                                }
+	                            },
+	                        )]
+	                    })
                 })
             },
                 move |cx, anchor| {

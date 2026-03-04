@@ -846,6 +846,7 @@ impl CommandInput {
             let pad_right = padding.right.map(|m| m.resolve(theme)).unwrap_or(pad_x);
             let pad_bottom = padding.bottom.map(|m| m.resolve(theme)).unwrap_or(Px(0.0));
             let pad_left = padding.left.map(|m| m.resolve(theme)).unwrap_or(pad_x);
+            let dir = crate::use_direction(cx, None);
 
             let icon_fg = theme.color_token("popover-foreground");
 
@@ -866,12 +867,9 @@ impl CommandInput {
             if matches!(wrapper.layout.size.height, Length::Auto) {
                 wrapper.layout.size.height = Length::Px(wrapper_h);
             }
-            wrapper.padding = Edges {
-                top: pad_top,
-                right: pad_right,
-                bottom: pad_bottom,
-                left: pad_left,
-            }
+            wrapper.padding = rtl::padding_edges_with_inline_start_end(
+                dir, pad_top, pad_bottom, pad_left, pad_right,
+            )
             .into();
 
             cx.container(wrapper, move |cx| {
@@ -914,7 +912,10 @@ impl CommandInput {
                         justify: MainAlign::Start,
                         align: CrossAlign::Center,
                     },
-                    move |_cx| vec![icon, input],
+                    move |_cx| match dir {
+                        crate::LayoutDirection::Ltr => vec![icon, input],
+                        crate::LayoutDirection::Rtl => vec![input, icon],
+                    },
                 );
 
                 if disabled {
