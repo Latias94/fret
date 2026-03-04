@@ -54,9 +54,11 @@ Status legend:
     - [`apps/fret-cookbook/examples/date_picker_basics.rs`](../../../apps/fret-cookbook/examples/date_picker_basics.rs)
     - [`apps/fret-cookbook/examples/form_basics.rs`](../../../apps/fret-cookbook/examples/form_basics.rs)
     - [`apps/fret-cookbook/examples/drag_basics.rs`](../../../apps/fret-cookbook/examples/drag_basics.rs)
+    - [`apps/fret-cookbook/examples/assets_reload_epoch_basics.rs`](../../../apps/fret-cookbook/examples/assets_reload_epoch_basics.rs)
   - Scripts:
     - [`tools/diag-scripts/cookbook/toast-basics/cookbook-toast-basics-smoke.json`](../../../tools/diag-scripts/cookbook/toast-basics/cookbook-toast-basics-smoke.json)
     - [`tools/diag-scripts/cookbook/date-picker-basics/cookbook-date-picker-basics-smoke.json`](../../../tools/diag-scripts/cookbook/date-picker-basics/cookbook-date-picker-basics-smoke.json)
     - [`tools/diag-scripts/cookbook/form-basics/cookbook-form-basics-smoke.json`](../../../tools/diag-scripts/cookbook/form-basics/cookbook-form-basics-smoke.json)
     - [`tools/diag-scripts/cookbook/drag-basics/cookbook-drag-basics-smoke.json`](../../../tools/diag-scripts/cookbook/drag-basics/cookbook-drag-basics-smoke.json)
+    - [`tools/diag-scripts/cookbook/assets-reload-epoch-basics/cookbook-assets-reload-epoch-basics-smoke.json`](../../../tools/diag-scripts/cookbook/assets-reload-epoch-basics/cookbook-assets-reload-epoch-basics-smoke.json)
 - [x] Keep `fret-demo` as maintainer/labs; ensure `fretboard list native-demos` stays intentionally small.

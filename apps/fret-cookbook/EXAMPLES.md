@@ -71,6 +71,7 @@ Example | Status | Run | Diag suite
 Example | Status | Feature | Run | Diag suite
 --- | --- | --- | --- | ---
 [`theme_switching_basics.rs`](./examples/theme_switching_basics.rs) | Official | (none) | `cargo run -p fret-cookbook --example theme_switching_basics` | `cookbook-theme-switching-basics`
+[`assets_reload_epoch_basics.rs`](./examples/assets_reload_epoch_basics.rs) | Lab | `cookbook-assets` | `cargo run -p fret-cookbook --features cookbook-assets --example assets_reload_epoch_basics` | `cookbook-assets-reload-epoch-basics`
 [`icons_and_assets_basics.rs`](./examples/icons_and_assets_basics.rs) | Lab | `cookbook-assets` | `cargo run -p fret-cookbook --features cookbook-assets --example icons_and_assets_basics` | `cookbook-icons-and-assets-basics`
 
 ## Rendering / effects (feature-gated)
@@ -109,4 +110,3 @@ Example | Status | Feature | Run
 [`utility_window_materials_windows.rs`](./examples/utility_window_materials_windows.rs) | Lab | `cookbook-bootstrap` | `cargo run -p fret-cookbook --features cookbook-bootstrap --example utility_window_materials_windows`
 [`undo_basics.rs`](./examples/undo_basics.rs) | Lab | `cookbook-undo` | `cargo run -p fret-cookbook --features cookbook-undo --example undo_basics`
 [`async_inbox_basics.rs`](./examples/async_inbox_basics.rs) | Lab | `cookbook-async` | `cargo run -p fret-cookbook --features cookbook-async --example async_inbox_basics`
-

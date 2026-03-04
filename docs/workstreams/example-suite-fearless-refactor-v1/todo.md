@@ -56,6 +56,7 @@ Goal: create a lightweight, user-facing cookbook that does not pull “everythin
   - [x] text input basics (`text_input_basics`)
   - [x] theme switching (`theme_switching_basics`)
   - [x] icons + assets budgets (`icons_and_assets_basics`)
+  - [x] assets reload epoch (`assets_reload_epoch_basics`)
   - [x] canvas pan/zoom (`canvas_pan_zoom_basics`)
   - [x] virtual list (`virtual_list_basics`)
   - [x] async inbox + cancellation (`async_inbox_basics`)

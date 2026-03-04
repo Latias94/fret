@@ -58,6 +58,7 @@ Canonical cookbook index (Bevy-style tables + feature gates):
 | cookbook.text_input_basics | Keep | `apps/fret-cookbook/examples/text_input_basics.rs` | `cargo run -p fret-cookbook --example text_input_basics` | Input submit/clear via commands (Enter/Escape) + numeric semantics gates. |
 | cookbook.effects_layer_basics | Keep | `apps/fret-cookbook/examples/effects_layer_basics.rs` | `cargo run -p fret-cookbook --example effects_layer_basics` | Minimal effect layer example (Pixelate/Blur) with stable `test_id` stamps. |
 | cookbook.icons_and_assets_basics | Keep | `apps/fret-cookbook/examples/icons_and_assets_basics.rs` | `cargo run -p fret-cookbook --features cookbook-assets --example icons_and_assets_basics` | Lab (feature-gated). Icon packs (lucide/radix) + semantic `ui.*` ids + file-based SVG/images via `fret-ui-assets`. |
+| cookbook.assets_reload_epoch_basics | Keep | `apps/fret-cookbook/examples/assets_reload_epoch_basics.rs` | `cargo run -p fret-cookbook --features cookbook-assets --example assets_reload_epoch_basics` | Lab (feature-gated). File image + SVG icon with ViewCache-safe dev reload (`UiAssetsReloadEpoch`). |
 | cookbook.canvas_pan_zoom_basics | Keep | `apps/fret-cookbook/examples/canvas_pan_zoom_basics.rs` | `cargo run -p fret-cookbook --features cookbook-canvas --example canvas_pan_zoom_basics` | Lab (feature-gated). Pan/zoom wiring (`fret-canvas/ui`) + a tiny app-owned drag tool for one item. |
 | cookbook.virtual_list_basics | Keep | `apps/fret-cookbook/examples/virtual_list_basics.rs` | `cargo run -p fret-cookbook --example virtual_list_basics` | Keyed virtualization + items_revision + scroll-to-item, with a minimal diag smoke script. |
 | cookbook.async_inbox_basics | Keep | `apps/fret-cookbook/examples/async_inbox_basics.rs` | `cargo run -p fret-cookbook --features cookbook-async --example async_inbox_basics` | Lab (feature-gated). Portable async pattern: background task → inbox → runner drain, with cancellation + progress semantics gate. |
@@ -82,7 +83,7 @@ subset of this workstream.
 | `drag_demo.rs` | `drag_basics` | Done | Reimplemented as pointer-capture drag + diag smoke (`cookbook-drag-basics`). |
 | `date_picker_demo.rs` | `date_picker_basics` | Done | Reimplemented as a minimal controlled-model example + diag smoke (`cookbook-date-picker-basics`). |
 | `datatable_demo.rs` | `data_table_basics` | Planned | Prefer `Lab` + a dedicated `cookbook-table` gate. |
-| `assets_demo.rs` | `assets_reload_epoch_basics` | Planned | Prefer `Lab` + reuse `cookbook-assets` gate. |
+| `assets_demo.rs` | `assets_reload_epoch_basics` | Done | Reimplemented as a file-based example + reload epoch button + diag smoke (`cookbook-assets-reload-epoch-basics`). |
 | `drop_shadow_demo.rs` | `drop_shadow_basics` | Planned | Prefer `Lab` + keep capability/budget notes explicit. |
 | `alpha_mode_demo.rs` | `compositing_alpha_basics` | Planned | Likely `Lab`; screenshot-only diag gate. |
 | `query_demo.rs` | `query_basics` | Planned | Needs action-first rewrite; keep `Lab` (feature-gated). |

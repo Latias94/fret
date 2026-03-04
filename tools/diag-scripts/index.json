@@ -389,6 +389,26 @@
       ]
     },
     {
+      "id": "cookbook-assets-reload-epoch-basics-smoke",
+      "path": "tools/diag-scripts/cookbook/assets-reload-epoch-basics/cookbook-assets-reload-epoch-basics-smoke.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "cookbook-assets-reload-epoch-basics"
+      ],
+      "tags": [
+        "assets",
+        "cookbook",
+        "cookbook.assets_reload_epoch_basics",
+        "smoke"
+      ],
+      "target_hints": [
+        "Waits for the root + status badges to exist, clicks reload epoch, and captures a screenshot + bundle."
+      ]
+    },
+    {
       "id": "cookbook-imui-action-basics-cross-frontend",
       "path": "tools/diag-scripts/cookbook/imui-action-basics/cookbook-imui-action-basics-cross-frontend.json",
       "required_capabilities": [

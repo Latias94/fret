@@ -77,6 +77,10 @@ name = "icons_and_assets_basics"
 required-features = ["cookbook-assets"]
 
 [[example]]
+name = "assets_reload_epoch_basics"
+required-features = ["cookbook-assets"]
+
+[[example]]
 name = "undo_basics"
 required-features = ["cookbook-undo"]
 
