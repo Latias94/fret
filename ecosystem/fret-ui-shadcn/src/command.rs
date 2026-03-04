@@ -930,9 +930,9 @@ impl CommandInput {
                         justify: MainAlign::Start,
                         align: CrossAlign::Center,
                     },
-                    move |_cx| match dir {
-                        crate::LayoutDirection::Ltr => vec![icon, input],
-                        crate::LayoutDirection::Rtl => vec![input, icon],
+                    move |_cx| {
+                        let (a, b) = rtl::inline_start_end_pair(dir, icon, input);
+                        vec![a, b]
                     },
                 );
 
@@ -3385,9 +3385,9 @@ impl CommandPalette {
                     justify: MainAlign::Start,
                     align: CrossAlign::Center,
                 },
-                move |_cx| match dir {
-                    crate::LayoutDirection::Ltr => vec![icon, input],
-                    crate::LayoutDirection::Rtl => vec![input, icon],
+                move |_cx| {
+                    let (a, b) = rtl::inline_start_end_pair(dir, icon, input);
+                    vec![a, b]
                 },
             );
             let list_labelled_by = Some(input_id.0);

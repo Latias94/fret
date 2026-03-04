@@ -1768,23 +1768,11 @@ fn combobox_with_patch<H: UiHost>(
                                         )
                                         });
 
-	                                        match dir {
-	                                            crate::LayoutDirection::Ltr => {
-	                                                let mut out = vec![label_el];
-	                                                if let Some(right) = right {
-	                                                    out.push(right);
-	                                                }
-	                                                out
-	                                            }
-	                                            crate::LayoutDirection::Rtl => {
-	                                                let mut out = Vec::new();
-	                                                if let Some(right) = right {
-	                                                    out.push(right);
-	                                                }
-	                                                out.push(label_el);
-	                                                out
-	                                            }
-	                                        }
+	                                        crate::rtl::vec_main_with_inline_end(
+	                                            dir,
+	                                            label_el,
+	                                            right,
+	                                        )
 	                                    },
 	                                )]
 	                            })
@@ -2459,23 +2447,7 @@ fn combobox_with_patch<H: UiHost>(
                                 )
                                 });
 
-	                                match dir {
-	                                    crate::LayoutDirection::Ltr => {
-	                                        let mut out = vec![label_el];
-	                                        if let Some(right) = right {
-	                                            out.push(right);
-	                                        }
-	                                        out
-	                                    }
-	                                    crate::LayoutDirection::Rtl => {
-	                                        let mut out = Vec::new();
-	                                        if let Some(right) = right {
-	                                            out.push(right);
-	                                        }
-	                                        out.push(label_el);
-	                                        out
-	                                    }
-	                                }
+	                                crate::rtl::vec_main_with_inline_end(dir, label_el, right)
 	                            },
 	                        )]
 	                    })

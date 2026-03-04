@@ -500,10 +500,9 @@ pub fn native_select<H: UiHost>(
                                     .gap_x(Space::N2),
                                 |cx| {
                                     let content = content.flex_1().min_w_0().into_element(cx);
-                                    match dir {
-                                        crate::LayoutDirection::Ltr => vec![content, icon],
-                                        crate::LayoutDirection::Rtl => vec![icon, content],
-                                    }
+                                    let (a, b) =
+                                        crate::rtl::inline_start_end_pair(dir, content, icon);
+                                    vec![a, b]
                                 },
                             )]
                         })

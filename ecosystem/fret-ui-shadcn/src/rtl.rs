@@ -76,6 +76,43 @@ pub(crate) fn physical_inline_start_end(
 }
 
 #[inline]
+pub(crate) fn inline_start_end_pair<T>(
+    dir: LayoutDirection,
+    inline_start: T,
+    inline_end: T,
+) -> (T, T) {
+    match dir {
+        LayoutDirection::Ltr => (inline_start, inline_end),
+        LayoutDirection::Rtl => (inline_end, inline_start),
+    }
+}
+
+#[inline]
+pub(crate) fn vec_main_with_inline_end(
+    dir: LayoutDirection,
+    main: fret_ui::element::AnyElement,
+    inline_end: Option<fret_ui::element::AnyElement>,
+) -> Vec<fret_ui::element::AnyElement> {
+    match dir {
+        LayoutDirection::Ltr => {
+            let mut out = vec![main];
+            if let Some(inline_end) = inline_end {
+                out.push(inline_end);
+            }
+            out
+        }
+        LayoutDirection::Rtl => {
+            let mut out = Vec::new();
+            if let Some(inline_end) = inline_end {
+                out.push(inline_end);
+            }
+            out.push(main);
+            out
+        }
+    }
+}
+
+#[inline]
 pub(crate) fn padding_edges_with_inline_start_end(
     dir: LayoutDirection,
     pad_top: Px,
@@ -186,5 +223,14 @@ mod tests {
             chevron_inline_end(LayoutDirection::Rtl),
             ids::ui::CHEVRON_LEFT
         );
+    }
+
+    #[test]
+    fn inline_start_end_pair_swaps_in_rtl() {
+        let (a, b) = inline_start_end_pair(LayoutDirection::Ltr, 1, 2);
+        assert_eq!((a, b), (1, 2));
+
+        let (a, b) = inline_start_end_pair(LayoutDirection::Rtl, 1, 2);
+        assert_eq!((a, b), (2, 1));
     }
 }

@@ -960,9 +960,13 @@ fn combobox_chips_with_patch<H: UiHost>(
                                     align: CrossAlign::Center,
                                     wrap: false,
                                 },
-	                                move |_cx| match dir {
-	                                    crate::LayoutDirection::Ltr => vec![chips, right],
-	                                    crate::LayoutDirection::Rtl => vec![right, chips],
+	                                move |_cx| {
+	                                    let (a, b) = crate::rtl::inline_start_end_pair(
+	                                        dir,
+	                                        chips,
+	                                        right,
+	                                    );
+	                                    vec![a, b]
 	                                },
 	                            )]
 	                        })
