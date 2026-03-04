@@ -455,3 +455,42 @@ practical steps:
   - Keep `actions!` explicit-ID requirement (stable IDs must not drift with refactors).
   - Consider additive helpers that reduce repetition (e.g. prefix/namespace helpers), but do not
     infer IDs from type paths/module names.
+
+---
+
+## H. Hard delete legacy MVU (M9 follow-up)
+
+This workstream landed v1 with MVU quarantined and opt-in. If the repo goal becomes “fully
+migrated, then delete”, track the remaining steps here.
+
+Exit target:
+
+- no remaining MVU usage in-tree,
+- no `legacy-mvu` or `legacy-mvu-demos` features,
+- no `fret::legacy::*` module,
+- no MVU references in templates/docs.
+
+Tasks:
+
+- [ ] AFA-m9-001 Migrate remaining non-action-first demos in `apps/fret-examples` to View+actions:
+  - `apps/fret-examples/src/markdown_demo.rs`
+- [ ] AFA-m9-002 Delete legacy MVU demo copies once the migrated versions exist (remove `*_legacy.rs` files):
+  - `apps/fret-examples/src/todo_demo_legacy.rs`
+  - `apps/fret-examples/src/query_demo_legacy.rs`
+  - `apps/fret-examples/src/query_async_tokio_demo_legacy.rs`
+  - `apps/fret-examples/src/hello_counter_demo_legacy.rs`
+  - `apps/fret-examples/src/async_playground_demo_legacy.rs`
+  - `apps/fret-examples/src/embedded_viewport_demo_legacy.rs`
+  - `apps/fret-examples/src/drop_shadow_demo_legacy.rs`
+  - `apps/fret-examples/src/postprocess_theme_demo_legacy.rs`
+- [ ] AFA-m9-003 Remove `apps/fret-examples` feature `legacy-mvu-demos` and any routing/printing branches in `apps/fret-demo`.
+- [ ] AFA-m9-004 Remove `ecosystem/fret` feature `legacy-mvu` and delete MVU modules:
+  - `ecosystem/fret/src/mvu.rs`
+  - `ecosystem/fret/src/mvu_router.rs`
+  - `ecosystem/fret/src/legacy.rs`
+- [ ] AFA-m9-005 Remove any legacy MVU scaffolding sources from `apps/fretboard/src/scaffold/templates.rs`.
+- [ ] AFA-m9-006 Update docs to remove MVU guidance:
+  - `docs/workstreams/action-first-authoring-fearless-refactor-v1/MVU_POLICY.md`
+  - `docs/workstreams/action-first-authoring-fearless-refactor-v1/MIGRATION_GUIDE.md`
+  - `docs/workstreams/action-first-authoring-fearless-refactor-v1/CLEANUP_PLAN.md`
+- [ ] AFA-m9-007 Add a lightweight gate that fails if MVU identifiers reappear (file list + `git grep` is enough).

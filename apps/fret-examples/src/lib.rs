@@ -39,9 +39,9 @@ pub mod cjk_conformance_demo;
 pub mod components_gallery;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod container_queries_docking_demo;
-#[cfg(all(not(target_arch = "wasm32"), feature = "legacy-mvu-demos"))]
+#[cfg(not(target_arch = "wasm32"))]
 pub mod custom_effect_v1_demo;
-#[cfg(all(not(target_arch = "wasm32"), feature = "legacy-mvu-demos"))]
+#[cfg(not(target_arch = "wasm32"))]
 pub mod custom_effect_v2_demo;
 #[cfg(target_arch = "wasm32")]
 pub mod custom_effect_v2_glass_chrome_web_demo;
@@ -51,7 +51,7 @@ pub mod custom_effect_v2_identity_web_demo;
 pub mod custom_effect_v2_lut_web_demo;
 #[cfg(target_arch = "wasm32")]
 pub mod custom_effect_v2_web_demo;
-#[cfg(all(not(target_arch = "wasm32"), feature = "legacy-mvu-demos"))]
+#[cfg(not(target_arch = "wasm32"))]
 pub mod custom_effect_v3_demo;
 #[cfg(target_arch = "wasm32")]
 pub mod custom_effect_v3_web_demo;
@@ -97,7 +97,7 @@ pub mod extras_marquee_perf_demo;
 pub mod first_frame_smoke_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod form_demo;
-#[cfg(all(not(target_arch = "wasm32"), feature = "legacy-mvu-demos"))]
+#[cfg(not(target_arch = "wasm32"))]
 pub mod genui_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod gizmo3d_demo;
@@ -132,7 +132,7 @@ pub mod launcher_utility_window_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod launcher_utility_window_materials_demo;
 pub mod linked_cursor_demo;
-#[cfg(all(not(target_arch = "wasm32"), feature = "legacy-mvu-demos"))]
+#[cfg(not(target_arch = "wasm32"))]
 pub mod liquid_glass_demo;
 #[cfg(all(not(target_arch = "wasm32"), feature = "legacy-mvu-demos"))]
 pub mod markdown_demo;

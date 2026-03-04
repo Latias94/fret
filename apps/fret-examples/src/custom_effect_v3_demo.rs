@@ -1,14 +1,14 @@
 //! Custom effect demo (CustomV3).
 //!
 //! Native (desktop) authoring demo for the CustomV3 "lens" recipe. This intentionally uses the
-//! `fret::mvu` path so it participates in the UI diagnostics + scripted testing pipeline
-//! (`fretboard diag run`).
+//! action-first + view runtime path so it participates in the UI diagnostics + scripted testing
+//! pipeline (`fretboard diag run`).
 
 #![cfg(not(target_arch = "wasm32"))]
 
 use std::sync::Arc;
 
-use fret::legacy::prelude::*;
+use fret::prelude::*;
 use fret_core::scene::{
     CustomEffectImageInputV1, CustomEffectPyramidRequestV1, CustomEffectSourcesV3, EffectChain,
     EffectMode, EffectParamsV1, EffectQuality, EffectStep, ImageSamplingHint, UvRect,
@@ -20,6 +20,7 @@ use fret_render::{
 };
 use fret_runtime::Model;
 use fret_ui::Invalidation;
+use fret_ui::action::UiActionHost;
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, EffectLayerProps, LayoutStyle, Length, MainAlign,
     Overflow, PositionStyle, RowProps, SpacingLength, TextProps,
@@ -28,6 +29,10 @@ use fret_ui_kit::custom_effects::CustomEffectProgramV3;
 use fret_ui_shadcn as shadcn;
 
 use crate::custom_effect_v3_wgsl::CUSTOM_EFFECT_V3_LENS_WGSL;
+
+mod act {
+    fret::actions!([Reset = "custom_effect_v3_demo.reset.v1"]);
+}
 
 const CUSTOM_EFFECT_V3_USER0_PROBE_WGSL: &str = r#"
 fn fret_custom_effect(_src: vec4<f32>, _uv: vec2<f32>, pos_px: vec2<f32>, _params: EffectParamsV1) -> vec4<f32> {
@@ -98,26 +103,23 @@ struct State {
     use_non_filterable_user1: Model<bool>,
 }
 
-#[derive(Debug, Clone)]
-enum Msg {
-    Reset,
+struct CustomEffectV3View {
+    st: State,
 }
 
-struct Program;
-
 pub fn run() -> anyhow::Result<()> {
-    let builder = fret::mvu::app::<Program>("custom-effect-v3-demo")?
-        .with_main_window("custom_effect_v3_demo", (1100.0, 720.0))
-        .init_app(|app| {
+    let builder = FretApp::new("custom-effect-v3-demo")
+        .window("custom-effect-v3-demo", (1100.0, 720.0))
+        .install_app(|app| {
             shadcn::shadcn_themes::apply_shadcn_new_york(
                 app,
                 shadcn::shadcn_themes::ShadcnBaseColor::Slate,
                 shadcn::shadcn_themes::ShadcnColorScheme::Dark,
             );
-        });
+        })
+        .view::<CustomEffectV3View>()?;
 
-    install_into(builder).run()?;
-    Ok(())
+    install_into(builder).run().map_err(anyhow::Error::from)
 }
 
 /// Example of a “one line install” entrypoint for consumers on the native desktop builder path.
@@ -276,54 +278,63 @@ fn upload_user0_images(app: &mut App, context: &WgpuContext, renderer: &mut Rend
     });
 }
 
-impl MvuProgram for Program {
-    type State = State;
-    type Message = Msg;
-
-    fn init(app: &mut App, _window: AppWindowId) -> Self::State {
-        Self::State {
-            enabled: app.models_mut().insert(true),
-            show_user0_probe: app.models_mut().insert(false),
-            show_user1_probe: app.models_mut().insert(false),
-            use_non_filterable_user0: app.models_mut().insert(false),
-            use_non_filterable_user1: app.models_mut().insert(false),
-        }
-    }
-
-    fn update(app: &mut App, st: &mut Self::State, msg: Self::Message) {
-        match msg {
-            Msg::Reset => {
-                let _ = app.models_mut().update(&st.enabled, |v| *v = true);
-                let _ = app
-                    .models_mut()
-                    .update(&st.show_user0_probe, |v| *v = false);
-                let _ = app
-                    .models_mut()
-                    .update(&st.show_user1_probe, |v| *v = false);
-                let _ = app
-                    .models_mut()
-                    .update(&st.use_non_filterable_user0, |v| *v = false);
-                let _ = app
-                    .models_mut()
-                    .update(&st.use_non_filterable_user1, |v| *v = false);
-            }
-        }
-    }
-
-    fn view(
-        cx: &mut ElementContext<'_, App>,
-        st: &mut Self::State,
-        msg: &mut MessageRouter<Self::Message>,
-    ) -> Elements {
-        view(cx, st, msg)
+impl State {
+    fn reset(host: &mut dyn UiActionHost, st: &State) {
+        let _ = host.models_mut().update(&st.enabled, |v| *v = true);
+        let _ = host
+            .models_mut()
+            .update(&st.show_user0_probe, |v| *v = false);
+        let _ = host
+            .models_mut()
+            .update(&st.show_user1_probe, |v| *v = false);
+        let _ = host
+            .models_mut()
+            .update(&st.use_non_filterable_user0, |v| *v = false);
+        let _ = host
+            .models_mut()
+            .update(&st.use_non_filterable_user1, |v| *v = false);
     }
 }
 
-fn view(
-    cx: &mut ElementContext<'_, App>,
-    st: &mut State,
-    msg: &mut MessageRouter<Msg>,
-) -> Elements {
+impl View for CustomEffectV3View {
+    fn init(app: &mut App, _window: AppWindowId) -> Self {
+        Self {
+            st: State {
+                enabled: app.models_mut().insert(true),
+                show_user0_probe: app.models_mut().insert(false),
+                show_user1_probe: app.models_mut().insert(false),
+                use_non_filterable_user0: app.models_mut().insert(false),
+                use_non_filterable_user1: app.models_mut().insert(false),
+            },
+        }
+    }
+
+    fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
+        cx.on_action_notify::<act::Reset>({
+            let st = self.clone_for_reset();
+            move |host, _acx| {
+                State::reset(host, &st);
+                true
+            }
+        });
+
+        view(cx, &mut self.st)
+    }
+}
+
+impl CustomEffectV3View {
+    fn clone_for_reset(&self) -> State {
+        State {
+            enabled: self.st.enabled.clone(),
+            show_user0_probe: self.st.show_user0_probe.clone(),
+            show_user1_probe: self.st.show_user1_probe.clone(),
+            use_non_filterable_user0: self.st.use_non_filterable_user0.clone(),
+            use_non_filterable_user1: self.st.use_non_filterable_user1.clone(),
+        }
+    }
+}
+
+fn view(cx: &mut ElementContext<'_, App>, st: &mut State) -> Elements {
     // Animations make refraction far easier to see than static gradients.
     // Hold a continuous-frames lease so the backdrop moves without user input.
     let _frames = cx.begin_continuous_frames();
@@ -394,7 +405,6 @@ fn view(
     let stage = stage(
         cx,
         st,
-        msg,
         enabled,
         show_user0_probe,
         use_non_filterable_user0,
@@ -426,7 +436,6 @@ fn view(
 fn stage(
     cx: &mut ElementContext<'_, App>,
     st: &mut State,
-    msg: &mut MessageRouter<Msg>,
     enabled: bool,
     show_user0_probe: bool,
     use_non_filterable_user0: bool,
@@ -461,7 +470,6 @@ fn stage(
     let controls = stage_controls(
         cx,
         st,
-        msg,
         enabled,
         show_user0_probe,
         show_user1_probe,
@@ -537,14 +545,12 @@ fn stage(
 fn stage_controls(
     cx: &mut ElementContext<'_, App>,
     st: &mut State,
-    msg: &mut MessageRouter<Msg>,
     enabled: bool,
     show_user0_probe: bool,
     show_user1_probe: bool,
     use_non_filterable_user0: bool,
     use_non_filterable_user1: bool,
 ) -> AnyElement {
-    let reset_cmd = msg.cmd(Msg::Reset);
     let enabled_model = st.enabled.clone();
     let show_user0_probe_model = st.show_user0_probe.clone();
     let show_user1_probe_model = st.show_user1_probe.clone();
@@ -632,7 +638,7 @@ fn stage_controls(
             out.push(
                 shadcn::Button::new("Reset")
                     .variant(shadcn::ButtonVariant::Secondary)
-                    .on_click(reset_cmd.clone())
+                    .action(act::Reset)
                     .test_id("custom-effect-v3.reset")
                     .into_element(cx),
             );

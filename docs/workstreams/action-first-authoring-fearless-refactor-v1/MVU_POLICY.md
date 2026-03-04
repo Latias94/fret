@@ -8,6 +8,14 @@ This document locks the “when to use MVU” policy for the action-first author
 
 **MVU is legacy-only (compat), not a supported alternative golden path.**
 
+Removal track (optional, M9):
+
+- If the repo goal becomes “fully migrate, then hard delete MVU”, MVU stays in-tree only until:
+  - the inventory is empty (`LEGACY_MVU_INVENTORY.md`),
+  - replacement stories exist (payload actions v2 and/or other action-first parameterization),
+  - and a small gate prevents MVU identifiers from being reintroduced.
+  - See milestone M9 in `MILESTONES.md`.
+
 Normative implications:
 
 - New code (templates, cookbook, recommended app authoring) must use:
@@ -87,8 +95,8 @@ Status (as of 2026-03-04):
 
 ## Removal criteria (future, beyond M8)
 
-This workstream does not commit to a date for MVU removal. Instead, we only consider removal (or
-moving MVU into an external compat crate) once these conditions are met:
+This workstream does not require MVU removal to be considered “v1 landed”. Instead, we only
+consider removal (or moving MVU into an external compat crate) once these conditions are met:
 
 1. **In-tree inventory is empty (or intentionally frozen)**:
    - `LEGACY_MVU_INVENTORY.md` has no remaining MVU demos *or* the remaining demos are explicitly
@@ -102,3 +110,8 @@ moving MVU into an external compat crate) once these conditions are met:
 4. **Downstream communication window exists**:
    - if this repo is consumed externally, MVU removal should be announced and staged (warnings →
      feature gating → removal), not as a silent breaking change.
+
+If M9 (hard delete in-tree) is adopted:
+
+- treat MVU removal as a breaking change and stage it as a dedicated cleanup PR series,
+- land migrations first, delete last.
