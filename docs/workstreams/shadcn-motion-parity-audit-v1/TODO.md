@@ -24,10 +24,11 @@ Last updated: 2026-03-04.
 - Landed: `Input` / `Textarea` focus ring + border transitions ease (~150ms, Tailwind default) and have unit test gates.
 - Landed: `NativeSelect` focus ring + border transitions ease (~150ms, Tailwind default) and has a unit test gate.
 - Landed: `SelectTrigger` focus ring + border transitions ease (~150ms, Tailwind default) and has a unit test gate.
+- Landed: `Checkbox` / `RadioGroupItem` focus ring transitions ease (~150ms, Tailwind default) and have unit test gates.
 - Landed: `TabsTrigger` focus ring transitions ease in/out (~150ms, Tailwind default) and have a unit test gate.
 - Landed: `Item` hover background transition eases (~100ms, `duration-100`) and has a unit test gate.
 - Gap: common primitives should ease hover/focus style changes (`transition-*` parity), not snap. Suggested ordering:
-  - P0: Checkbox + RadioGroup / Slider thumb.
+  - P0: Slider thumb.
   - P1: Badge / BreadcrumbLink / Table rows / ScrollArea viewport + scrollbar.
   - P1: Add a gate for Accordion content measured-height motion (`animate-accordion-{down,up}` outcome).
 - Gap: audit `Drawer` parity vs Vaul (define concrete drag + inertia outcomes; add a fixed-delta diag + a unit test for settle).
