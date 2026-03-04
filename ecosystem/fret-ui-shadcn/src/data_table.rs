@@ -24,6 +24,7 @@ use fret_ui_headless::table::{
 };
 
 use crate::button::{Button, ButtonSize, ButtonVariant};
+use crate::direction::{LayoutDirection, use_direction};
 use crate::dropdown_menu::{
     DropdownMenu, DropdownMenuAlign, DropdownMenuEntry, DropdownMenuItem, DropdownMenuSide,
 };
@@ -78,6 +79,31 @@ fn apply_default_text_style_recursive(mut el: AnyElement, style: &TextStyle) -> 
 fn mixed_revision(a: u64, b: u64) -> u64 {
     // Cheap, deterministic mixing to avoid obvious collisions.
     a ^ b.wrapping_mul(0x9E37_79B9_7F4A_7C15)
+}
+
+fn reverse_columns_recursive<TData>(cols: &[ColumnDef<TData>]) -> Vec<ColumnDef<TData>> {
+    cols.iter()
+        .rev()
+        .map(|col| {
+            let mut col = col.clone();
+            if !col.columns.is_empty() {
+                col.columns = reverse_columns_recursive(&col.columns);
+            }
+            col
+        })
+        .collect()
+}
+
+fn columns_for_direction<TData>(
+    dir: LayoutDirection,
+    columns: Arc<[ColumnDef<TData>]>,
+) -> Arc<[ColumnDef<TData>]> {
+    if dir == LayoutDirection::Rtl {
+        let reversed = reverse_columns_recursive(&columns);
+        Arc::from(reversed.into_boxed_slice())
+    } else {
+        columns
+    }
 }
 
 const COLUMN_ACTION_PREFIX: &str = "fret_ui_shadcn.data_table.column_action/";
@@ -458,7 +484,8 @@ impl DataTable {
         let state_revision = state.revision(&*cx.app).unwrap_or(0);
         let items_revision = mixed_revision(data_revision, state_revision);
 
-        let columns: Arc<[ColumnDef<TData>]> = columns.into();
+        let columns: Arc<[ColumnDef<TData>]> =
+            columns_for_direction(use_direction(cx, None), columns.into());
 
         let root_chrome = ChromeRefinement::default()
             .rounded(Radius::Lg)
@@ -661,7 +688,8 @@ impl DataTable {
         let state_revision = state.revision(&*cx.app).unwrap_or(0);
         let items_revision = mixed_revision(data_revision, state_revision);
 
-        let columns: Arc<[ColumnDef<TData>]> = columns.into();
+        let columns: Arc<[ColumnDef<TData>]> =
+            columns_for_direction(use_direction(cx, None), columns.into());
 
         let root_chrome = ChromeRefinement::default()
             .rounded(Radius::Lg)
