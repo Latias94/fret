@@ -64,6 +64,18 @@ pub(super) fn handle_window_effect_steps(
                 output.request_redraw = true;
                 return;
             }
+            if let Err(fields) = validate_window_style_patch_supported_fields_windows(&style) {
+                *force_dump_label = Some(format!(
+                    "script-step-{step_index:04}-set_window_style-unsupported-fields-{fields}"
+                ));
+                *stop_script = true;
+                *failure_reason = Some("window_style_patch_unsupported_fields".to_string());
+                active.wait_until = None;
+                active.screenshot_wait = None;
+                active.v2_step_state = None;
+                output.request_redraw = true;
+                return;
+            }
             if let Some(target_window) = svc.resolve_window_target_for_active_step(
                 window,
                 anchor_window,
@@ -448,6 +460,38 @@ pub(super) fn handle_effect_only_steps(
             true
         }
         _ => false,
+    }
+}
+
+fn validate_window_style_patch_supported_fields_windows(
+    patch: &fret_diag_protocol::UiWindowStylePatchV1,
+) -> Result<(), String> {
+    let mut unsupported: Vec<&'static str> = Vec::new();
+    if patch.taskbar.is_some() {
+        unsupported.push("taskbar");
+    }
+    if patch.activation.is_some() {
+        unsupported.push("activation");
+    }
+    if patch.decorations.is_some() {
+        unsupported.push("decorations");
+    }
+    if patch.resizable.is_some() {
+        unsupported.push("resizable");
+    }
+    if patch.transparent.is_some() {
+        unsupported.push("transparent");
+    }
+
+    // Supported (Windows-only, as of 2026-03-04):
+    // - z_level
+    // - background_material
+    // - hit_test (including passthrough regions)
+    // - opacity_alpha_u8
+    if unsupported.is_empty() {
+        Ok(())
+    } else {
+        Err(unsupported.join("-"))
     }
 }
 
