@@ -360,6 +360,8 @@ pub struct UiDockDragDiagnosticsV1 {
     pub pointer_id: u64,
     pub source_window: u64,
     pub current_window: u64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub current_window_scale_factor_x1000: Option<u32>,
     #[serde(default)]
     pub kind: String,
     pub dragging: bool,
@@ -372,6 +374,8 @@ pub struct UiDockDragDiagnosticsV1 {
     pub window_under_cursor_source: String,
     #[serde(default)]
     pub moving_window: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub moving_window_scale_factor_x1000: Option<u32>,
     #[serde(default)]
     pub window_under_moving_window: Option<u64>,
     #[serde(default)]
@@ -384,6 +388,7 @@ impl UiDockDragDiagnosticsV1 {
             pointer_id: snapshot.pointer_id.0,
             source_window: snapshot.source_window.data().as_ffi(),
             current_window: snapshot.current_window.data().as_ffi(),
+            current_window_scale_factor_x1000: snapshot.current_window_scale_factor_x1000,
             kind: dock_drag_kind_label(snapshot.kind).to_string(),
             dragging: snapshot.dragging,
             cross_window_hover: snapshot.cross_window_hover,
@@ -395,6 +400,7 @@ impl UiDockDragDiagnosticsV1 {
             )
             .to_string(),
             moving_window: snapshot.moving_window.map(|w| w.data().as_ffi()),
+            moving_window_scale_factor_x1000: snapshot.moving_window_scale_factor_x1000,
             window_under_moving_window: snapshot.window_under_moving_window.map(|w| w.data().as_ffi()),
             window_under_moving_window_source: dock_drag_window_under_cursor_source_label(
                 snapshot.window_under_moving_window_source,

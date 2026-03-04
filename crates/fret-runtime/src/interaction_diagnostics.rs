@@ -12,6 +12,9 @@ pub struct DockDragDiagnostics {
     pub pointer_id: PointerId,
     pub source_window: AppWindowId,
     pub current_window: AppWindowId,
+    /// Best-effort diagnostics hint: scale factor (DPI) of `current_window` at the time the
+    /// snapshot was published.
+    pub current_window_scale_factor_x1000: Option<u32>,
     /// The drag kind for the active dock drag session.
     pub kind: DragKindId,
     pub dragging: bool,
@@ -28,6 +31,9 @@ pub struct DockDragDiagnostics {
     /// Best-effort diagnostics hint: OS window currently being moved by the runner for this drag
     /// session (ImGui-style "follow window" multi-viewport behavior).
     pub moving_window: Option<AppWindowId>,
+    /// Best-effort diagnostics hint: scale factor (DPI) of [`Self::moving_window`] at the time
+    /// the snapshot was published.
+    pub moving_window_scale_factor_x1000: Option<u32>,
     /// Best-effort diagnostics hint: when [`Self::moving_window`] is set, the window considered
     /// "under" the moving window at the current cursor position.
     pub window_under_moving_window: Option<AppWindowId>,

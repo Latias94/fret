@@ -59,6 +59,20 @@ const DOCK_TAB_OVERFLOW_SVG: &[u8] =
   <circle cx="17.5" cy="12" r="1.6" fill="black"/>
 </svg>"#;
 
+fn diag_scale_factor_x1000(scale_factor: f32) -> u32 {
+    if !scale_factor.is_finite() {
+        return 0;
+    }
+    let v = (scale_factor * 1000.0).round();
+    if v <= 0.0 {
+        return 0;
+    }
+    if v >= u32::MAX as f32 {
+        return u32::MAX;
+    }
+    v as u32
+}
+
 fn dock_graph_stats_for_window(
     graph: &DockGraph,
     window: fret_core::AppWindowId,
@@ -2229,10 +2243,20 @@ impl<H: UiHost> Widget<H> for DockSpace {
             });
             let dock_drag = dock_drag_pointer_id.and_then(|pointer_id| {
                 let drag = cx.app.drag(pointer_id)?;
+                let window_metrics = cx.app.global::<fret_core::WindowMetricsService>();
+                let current_window_scale_factor_x1000 = window_metrics
+                    .and_then(|svc| svc.scale_factor(drag.current_window))
+                    .map(diag_scale_factor_x1000);
+                let moving_window_scale_factor_x1000 = drag.moving_window.and_then(|w| {
+                    window_metrics
+                        .and_then(|svc| svc.scale_factor(w))
+                        .map(diag_scale_factor_x1000)
+                });
                 Some(fret_runtime::DockDragDiagnostics {
                     pointer_id,
                     source_window: drag.source_window,
                     current_window: drag.current_window,
+                    current_window_scale_factor_x1000,
                     kind: drag.kind,
                     dragging: drag.dragging,
                     cross_window_hover: drag.cross_window_hover,
@@ -2241,6 +2265,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                         .transparent_payload_mouse_passthrough_applied,
                     window_under_cursor_source: drag.window_under_cursor_source,
                     moving_window: drag.moving_window,
+                    moving_window_scale_factor_x1000,
                     window_under_moving_window: drag.window_under_moving_window,
                     window_under_moving_window_source: drag.window_under_moving_window_source,
                 })
@@ -6706,10 +6731,20 @@ impl<H: UiHost> Widget<H> for DockSpace {
             });
             let dock_drag = dock_drag_pointer_id.and_then(|pointer_id| {
                 let drag = cx.app.drag(pointer_id)?;
+                let window_metrics = cx.app.global::<fret_core::WindowMetricsService>();
+                let current_window_scale_factor_x1000 = window_metrics
+                    .and_then(|svc| svc.scale_factor(drag.current_window))
+                    .map(diag_scale_factor_x1000);
+                let moving_window_scale_factor_x1000 = drag.moving_window.and_then(|w| {
+                    window_metrics
+                        .and_then(|svc| svc.scale_factor(w))
+                        .map(diag_scale_factor_x1000)
+                });
                 Some(fret_runtime::DockDragDiagnostics {
                     pointer_id,
                     source_window: drag.source_window,
                     current_window: drag.current_window,
+                    current_window_scale_factor_x1000,
                     kind: drag.kind,
                     dragging: drag.dragging,
                     cross_window_hover: drag.cross_window_hover,
@@ -6718,6 +6753,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                         .transparent_payload_mouse_passthrough_applied,
                     window_under_cursor_source: drag.window_under_cursor_source,
                     moving_window: drag.moving_window,
+                    moving_window_scale_factor_x1000,
                     window_under_moving_window: drag.window_under_moving_window,
                     window_under_moving_window_source: drag.window_under_moving_window_source,
                 })
@@ -6973,10 +7009,20 @@ impl<H: UiHost> Widget<H> for DockSpace {
             });
             let dock_drag = dock_drag_pointer_id.and_then(|pointer_id| {
                 let drag = cx.app.drag(pointer_id)?;
+                let window_metrics = cx.app.global::<fret_core::WindowMetricsService>();
+                let current_window_scale_factor_x1000 = window_metrics
+                    .and_then(|svc| svc.scale_factor(drag.current_window))
+                    .map(diag_scale_factor_x1000);
+                let moving_window_scale_factor_x1000 = drag.moving_window.and_then(|w| {
+                    window_metrics
+                        .and_then(|svc| svc.scale_factor(w))
+                        .map(diag_scale_factor_x1000)
+                });
                 Some(fret_runtime::DockDragDiagnostics {
                     pointer_id,
                     source_window: drag.source_window,
                     current_window: drag.current_window,
+                    current_window_scale_factor_x1000,
                     kind: drag.kind,
                     dragging: drag.dragging,
                     cross_window_hover: drag.cross_window_hover,
@@ -6985,6 +7031,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                         .transparent_payload_mouse_passthrough_applied,
                     window_under_cursor_source: drag.window_under_cursor_source,
                     moving_window: drag.moving_window,
+                    moving_window_scale_factor_x1000,
                     window_under_moving_window: drag.window_under_moving_window,
                     window_under_moving_window_source: drag.window_under_moving_window_source,
                 })
