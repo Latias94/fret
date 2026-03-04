@@ -187,8 +187,6 @@ These are the first “lesson-shaped” examples we actually landed in `fret-coo
 
 ### 12) Router basics
 
-- Demo bin: [`apps/fret-demo/src/bin/router_query_demo.rs`](../../../apps/fret-demo/src/bin/router_query_demo.rs)
-- Implementation: [`apps/fret-examples/src/router_query_demo.rs`](../../../apps/fret-examples/src/router_query_demo.rs)
 - Proposed cookbook example: `router_basics`
 - Cookbook label: `Lab`
 - Cookbook feature: `cookbook-router`

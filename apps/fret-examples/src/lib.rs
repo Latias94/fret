@@ -143,8 +143,6 @@ pub mod postprocess_theme_demo;
 pub mod query_async_tokio_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod query_demo;
-#[cfg(not(target_arch = "wasm32"))]
-pub mod router_query_demo;
 pub mod shaded_demo;
 pub mod simple_todo_demo;
 #[cfg(not(target_arch = "wasm32"))]
