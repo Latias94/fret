@@ -31,6 +31,7 @@ Then pick a topic:
 
 - State + derived state: `virtual_list_basics`, `undo_basics` (feature-gated), `async_inbox_basics` (feature-gated)
 - Queries (feature-gated): `query_basics`
+- Routing (feature-gated): `router_basics`
 - Theming + assets: `theme_switching_basics`, `icons_and_assets_basics` (feature-gated)
 - App patterns: `toast_basics`, `form_basics`, `date_picker_basics`, `drag_basics`
 - Rendering/effects: `effects_layer_basics`, `customv1_basics` (feature-gated)
@@ -72,6 +73,8 @@ Some examples are kept behind Cargo features to reduce cold compile time.
     - `cargo run -p fret-cookbook --features cookbook-async --example async_inbox_basics`
   - Query basics:
     - `cargo run -p fret-cookbook --features cookbook-query --example query_basics`
+  - Router basics:
+    - `cargo run -p fret-cookbook --features cookbook-router --example router_basics`
   - IMUI + GenUI interop:
     - `cargo run -p fret-cookbook --features cookbook-imui --example imui_action_basics`
   - Docking:

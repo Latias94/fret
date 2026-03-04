@@ -60,6 +60,7 @@ Status legend:
     - [`apps/fret-cookbook/examples/data_table_basics.rs`](../../../apps/fret-cookbook/examples/data_table_basics.rs)
     - [`apps/fret-cookbook/examples/image_asset_cache_basics.rs`](../../../apps/fret-cookbook/examples/image_asset_cache_basics.rs)
     - [`apps/fret-cookbook/examples/query_basics.rs`](../../../apps/fret-cookbook/examples/query_basics.rs)
+    - [`apps/fret-cookbook/examples/router_basics.rs`](../../../apps/fret-cookbook/examples/router_basics.rs)
   - Scripts:
     - [`tools/diag-scripts/cookbook/toast-basics/cookbook-toast-basics-smoke.json`](../../../tools/diag-scripts/cookbook/toast-basics/cookbook-toast-basics-smoke.json)
     - [`tools/diag-scripts/cookbook/date-picker-basics/cookbook-date-picker-basics-smoke.json`](../../../tools/diag-scripts/cookbook/date-picker-basics/cookbook-date-picker-basics-smoke.json)
@@ -71,4 +72,5 @@ Status legend:
     - [`tools/diag-scripts/cookbook/data-table-basics/cookbook-data-table-basics-baseline.json`](../../../tools/diag-scripts/cookbook/data-table-basics/cookbook-data-table-basics-baseline.json)
     - [`tools/diag-scripts/cookbook/image-asset-cache-basics/cookbook-image-asset-cache-basics-baseline.json`](../../../tools/diag-scripts/cookbook/image-asset-cache-basics/cookbook-image-asset-cache-basics-baseline.json)
     - [`tools/diag-scripts/cookbook/query-basics/cookbook-query-basics-baseline.json`](../../../tools/diag-scripts/cookbook/query-basics/cookbook-query-basics-baseline.json)
+    - [`tools/diag-scripts/cookbook/router-basics/cookbook-router-basics-smoke.json`](../../../tools/diag-scripts/cookbook/router-basics/cookbook-router-basics-smoke.json)
 - [x] Keep `fret-demo` as maintainer/labs; ensure `fretboard list native-demos` stays intentionally small.

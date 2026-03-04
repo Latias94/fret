@@ -59,6 +59,8 @@ These are the first “lesson-shaped” examples we actually landed in `fret-coo
   - Script: [`tools/diag-scripts/cookbook/image-asset-cache-basics/cookbook-image-asset-cache-basics-baseline.json`](../../../tools/diag-scripts/cookbook/image-asset-cache-basics/cookbook-image-asset-cache-basics-baseline.json)
 - Query basics: [`apps/fret-cookbook/examples/query_basics.rs`](../../../apps/fret-cookbook/examples/query_basics.rs)
   - Script: [`tools/diag-scripts/cookbook/query-basics/cookbook-query-basics-baseline.json`](../../../tools/diag-scripts/cookbook/query-basics/cookbook-query-basics-baseline.json)
+- Router basics: [`apps/fret-cookbook/examples/router_basics.rs`](../../../apps/fret-cookbook/examples/router_basics.rs)
+  - Script: [`tools/diag-scripts/cookbook/router-basics/cookbook-router-basics-smoke.json`](../../../tools/diag-scripts/cookbook/router-basics/cookbook-router-basics-smoke.json)
 
 ### 1) Toasts / notifications (Sonner)
 
@@ -180,16 +182,16 @@ These are the first “lesson-shaped” examples we actually landed in `fret-coo
   - Implemented as an action-first view runtime example in `fret-cookbook`.
   - Keep it small and deterministic: one query key, invalidate, namespace invalidation, and a stable baseline screenshot.
 
-### 12) Router + query integration (needs action-first rewrite)
+### 12) Router basics
 
 - Demo bin: [`apps/fret-demo/src/bin/router_query_demo.rs`](../../../apps/fret-demo/src/bin/router_query_demo.rs)
 - Implementation: [`apps/fret-examples/src/router_query_demo.rs`](../../../apps/fret-examples/src/router_query_demo.rs)
 - Proposed cookbook example: `router_basics`
 - Cookbook label: `Lab`
-- Cookbook feature: new `cookbook-router` (would pull in `fret-router` + `fret-router-ui`)
+- Cookbook feature: `cookbook-router`
 - Notes:
-  - This is valuable as a “small app skeleton” lesson.
-  - Keep the UI minimal: nav links + outlet + back/forward + one prefetch log panel.
+  - Implemented as an action-first router-only lesson in `fret-cookbook`.
+  - Query integration is covered separately by `query_basics`.
 
 ## Explicit non-candidates (keep in maintainer/labs)
 

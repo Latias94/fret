@@ -60,6 +60,12 @@ Example | Status | Run | Diag suite
 [`drag_basics.rs`](./examples/drag_basics.rs) | Official | `cargo run -p fret-cookbook --example drag_basics` | `cookbook-drag-basics`
 [`hello_counter.rs`](./examples/hello_counter.rs) | Official | `cargo run -p fret-cookbook --example hello_counter` | `cookbook-hello-counter`
 
+## Routing (feature-gated)
+
+Example | Status | Feature | Run | Diag suite
+--- | --- | --- | --- | ---
+[`router_basics.rs`](./examples/router_basics.rs) | Lab | `cookbook-router` | `cargo run -p fret-cookbook --features cookbook-router --example router_basics` | `cookbook-router-basics`
+
 ## State + derived state
 
 Example | Status | Run | Diag suite

@@ -63,6 +63,7 @@ Canonical cookbook index (Bevy-style tables + feature gates):
 | cookbook.canvas_pan_zoom_basics | Keep | `apps/fret-cookbook/examples/canvas_pan_zoom_basics.rs` | `cargo run -p fret-cookbook --features cookbook-canvas --example canvas_pan_zoom_basics` | Lab (feature-gated). Pan/zoom wiring (`fret-canvas/ui`) + a tiny app-owned drag tool for one item. |
 | cookbook.virtual_list_basics | Keep | `apps/fret-cookbook/examples/virtual_list_basics.rs` | `cargo run -p fret-cookbook --example virtual_list_basics` | Keyed virtualization + items_revision + scroll-to-item, with a minimal diag smoke script. |
 | cookbook.query_basics | Keep | `apps/fret-cookbook/examples/query_basics.rs` | `cargo run -p fret-cookbook --features cookbook-query --example query_basics` | Lab (feature-gated). Query-style async resource state (`fret-query`): invalidate + namespace invalidation + error mode, with a deterministic baseline script. |
+| cookbook.router_basics | Keep | `apps/fret-cookbook/examples/router_basics.rs` | `cargo run -p fret-cookbook --features cookbook-router --example router_basics` | Lab (feature-gated). Minimal router wiring (`fret-router` + `fret-router-ui`): links + outlet rendering + back/forward, with a deterministic smoke script. |
 | cookbook.data_table_basics | Keep | `apps/fret-cookbook/examples/data_table_basics.rs` | `cargo run -p fret-cookbook --features cookbook-table --example data_table_basics` | Lab (feature-gated). shadcn-style DataTable + headless TanStack-aligned state (sorting/filtering/pagination) with virtualized rows. |
 | cookbook.compositing_alpha_basics | Keep | `apps/fret-cookbook/examples/compositing_alpha_basics.rs` | `cargo run -p fret-cookbook --features cookbook-renderer --example compositing_alpha_basics` | Lab (feature-gated). Renderer semantics: straight vs premultiplied alpha, verified via screenshot baseline. |
 | cookbook.drop_shadow_basics | Keep | `apps/fret-cookbook/examples/drop_shadow_basics.rs` | `cargo run -p fret-cookbook --features cookbook-renderer --example drop_shadow_basics` | Lab (feature-gated). Renderer semantics: DropShadowV1 bounded multi-pass effect; toggle + screenshot baseline. |
@@ -93,7 +94,7 @@ subset of this workstream.
 | `drop_shadow_demo.rs` | `drop_shadow_basics` | Done | Reimplemented as a deterministic toggle surface + screenshot baseline (`cookbook-drop-shadow-basics`). |
 | `alpha_mode_demo.rs` | `compositing_alpha_basics` | Done | Reimplemented as a low-level renderer semantics lesson + screenshot baseline (`cookbook-compositing-alpha-basics`). |
 | `query_demo.rs` | `query_basics` | Done | Reimplemented as an action-first view runtime lesson + deterministic baseline (`cookbook-query-basics`). |
-| `router_query_demo.rs` | `router_basics` | Planned | Needs action-first rewrite; keep `Lab` (feature-gated). |
+| `router_query_demo.rs` | `router_basics` | Done | Reimplemented as an action-first router-only lesson (query integration is covered by `query_basics`). |
 
 ## Interop + renderer “high ceiling” mapping
 

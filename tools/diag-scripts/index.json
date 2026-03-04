@@ -604,6 +604,29 @@
       ]
     },
     {
+      "id": "cookbook-router-basics-smoke",
+      "path": "tools/diag-scripts/cookbook/router-basics/cookbook-router-basics-smoke.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "cookbook-router-basics"
+      ],
+      "tags": [
+        "cookbook",
+        "cookbook.router_basics",
+        "router",
+        "screenshots",
+        "smoke"
+      ],
+      "target_hints": [
+        "Waits for the root to exist.",
+        "Navigates to Settings and back.",
+        "Captures a screenshot + bundle."
+      ]
+    },
+    {
       "id": "cookbook-simple-todo-smoke",
       "path": "tools/diag-scripts/cookbook/simple-todo/cookbook-simple-todo-smoke.json",
       "required_capabilities": [
