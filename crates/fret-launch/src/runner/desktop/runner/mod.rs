@@ -337,7 +337,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             caps.ui.window_transparent = cfg!(any(target_os = "windows", target_os = "macos"));
             caps.ui.window_hit_test_passthrough_all =
                 cfg!(any(target_os = "windows", target_os = "macos"));
-            caps.ui.window_hit_test_passthrough_regions = false;
+            caps.ui.window_hit_test_passthrough_regions = cfg!(target_os = "windows");
 
             // Background materials are capability-gated and intentionally conservative by default.
             // Runners should only advertise these once there is an end-to-end implementation

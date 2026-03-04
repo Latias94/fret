@@ -352,6 +352,73 @@ pub(super) fn set_window_hit_test_passthrough_all(window: &dyn Window, enabled: 
 }
 
 #[cfg(target_os = "windows")]
+fn set_window_hit_test_passthrough_regions(
+    window: &dyn Window,
+    regions: Option<&[fret_runtime::WindowHitTestRegionV1]>,
+) -> bool {
+    use winit::raw_window_handle::HasWindowHandle as _;
+
+    let hwnd: isize = match window.window_handle() {
+        Ok(handle) => match handle.as_raw() {
+            winit::raw_window_handle::RawWindowHandle::Win32(h) => h.hwnd.get() as isize,
+            _ => 0,
+        },
+        Err(_) => 0,
+    };
+    if hwnd == 0 {
+        return false;
+    }
+    super::win32::set_window_hit_test_passthrough_regions(hwnd, regions)
+}
+
+pub(super) fn set_window_hit_test(
+    window: &dyn Window,
+    hit_test: &fret_runtime::WindowHitTestRequestV1,
+) -> bool {
+    use fret_runtime::WindowHitTestRequestV1 as H;
+
+    #[cfg(target_os = "windows")]
+    {
+        match hit_test {
+            H::Normal => {
+                let a = set_window_hit_test_passthrough_regions(window, None);
+                let b = set_window_hit_test_passthrough_all(window, false);
+                a && b
+            }
+            H::PassthroughAll => {
+                let a = set_window_hit_test_passthrough_regions(window, None);
+                let b = set_window_hit_test_passthrough_all(window, true);
+                a && b
+            }
+            H::PassthroughRegions { regions } => {
+                let a = set_window_hit_test_passthrough_all(window, false);
+                let b = set_window_hit_test_passthrough_regions(window, Some(regions));
+                a && b
+            }
+        }
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        match hit_test {
+            H::Normal => set_window_hit_test_passthrough_all(window, false),
+            H::PassthroughAll => set_window_hit_test_passthrough_all(window, true),
+            // Defensive fallback; the runner should clamp unsupported regions requests.
+            H::PassthroughRegions { .. } => set_window_hit_test_passthrough_all(window, true),
+        }
+    }
+
+    #[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
+    {
+        match hit_test {
+            H::Normal => set_window_hit_test_passthrough_all(window, false),
+            H::PassthroughAll => set_window_hit_test_passthrough_all(window, true),
+            H::PassthroughRegions { .. } => false,
+        }
+    }
+}
+
+#[cfg(target_os = "windows")]
 pub(super) fn set_window_background_material(
     window: &dyn Window,
     material: fret_runtime::WindowBackgroundMaterialRequest,

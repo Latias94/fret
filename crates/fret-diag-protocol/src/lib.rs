@@ -1329,6 +1329,7 @@ pub enum UiWindowZLevelV1 {
 pub enum UiWindowHitTestRequestV1 {
     Normal,
     PassthroughAll,
+    PassthroughRegions,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
@@ -1369,6 +1370,8 @@ pub struct UiWindowStyleMatchV1 {
     pub z_level: Option<UiWindowZLevelV1>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub hit_test: Option<UiWindowHitTestRequestV1>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub hit_test_regions_fingerprint64: Option<u64>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

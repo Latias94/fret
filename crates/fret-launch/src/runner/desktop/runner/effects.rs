@@ -1757,32 +1757,32 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
                                         WindowZLevel::AlwaysOnTop => WindowLevel::AlwaysOnTop,
                                     });
                                 }
-                                let requested_passthrough = match style.hit_test {
-                                    Some(fret_runtime::WindowHitTestRequestV1::PassthroughAll) => {
-                                        Some(caps.ui.window_hit_test_passthrough_all)
-                                    }
-                                    Some(fret_runtime::WindowHitTestRequestV1::Normal) => {
-                                        Some(false)
-                                    }
-                                    None => None,
-                                };
-                                if let Some(passthrough) = requested_passthrough {
+                                if let Some(hit_test) = style.hit_test.clone() {
                                     let dock_drag_pointer_id = self.dock_drag_pointer_id();
-                                    let applied =
-                                        super::window::set_window_hit_test_passthrough_all(
-                                            window_handle.as_ref(),
-                                            passthrough,
+                                    let (effective, _reason) =
+                                        fret_runtime::RunnerWindowStyleDiagnosticsStore::clamp_hit_test_request(
+                                            hit_test,
+                                            &caps,
                                         );
+                                    let applied = super::window::set_window_hit_test(
+                                        window_handle.as_ref(),
+                                        &effective,
+                                    );
+                                    let passthrough_all = matches!(
+                                        effective,
+                                        fret_runtime::WindowHitTestRequestV1::PassthroughAll
+                                    );
                                     if let Some(follow) = self.dock_tearoff_follow.as_mut()
                                         && follow.window == window
                                     {
-                                        follow.mouse_passthrough_applied = passthrough && applied;
+                                        follow.mouse_passthrough_applied =
+                                            passthrough_all && applied;
                                         if let Some(pointer_id) = dock_drag_pointer_id
                                             && let Some(drag) = self.app.drag_mut(pointer_id)
                                             && drag.source_window == follow.source_window
                                         {
                                             drag.transparent_payload_hit_test_passthrough_applied =
-                                                passthrough && applied;
+                                                passthrough_all && applied;
                                         }
                                     }
                                 }
@@ -1806,6 +1806,7 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
 
                                 if requested_background_material.is_some() {
                                     let material = effective_style
+                                        .as_ref()
                                         .map(|s| s.background_material)
                                         .unwrap_or_else(|| {
                                             fret_runtime::runner_window_style_diagnostics::clamp_background_material_request(
@@ -1822,8 +1823,9 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
                                 }
 
                                 if let Some(context) = self.context.as_ref() {
-                                    let want_surface_composited_alpha =
-                                        effective_style.is_some_and(|s| s.surface_composited_alpha);
+                                    let want_surface_composited_alpha = effective_style
+                                        .as_ref()
+                                        .is_some_and(|s| s.surface_composited_alpha);
                                     if let Some(state) = self.windows.get_mut(window)
                                         && let Some(surface) = state.surface.as_mut()
                                     {

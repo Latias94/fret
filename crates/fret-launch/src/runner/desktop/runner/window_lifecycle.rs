@@ -115,16 +115,12 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             let _ = super::window::set_window_background_material(window.as_ref(), material);
         }
 
-        let requested_passthrough = match style.hit_test {
-            Some(fret_runtime::WindowHitTestRequestV1::PassthroughAll) => {
-                Some(caps.ui.window_hit_test_passthrough_all)
-            }
-            Some(fret_runtime::WindowHitTestRequestV1::Normal) => Some(false),
-            None => None,
-        };
-        if let Some(passthrough) = requested_passthrough {
-            let _ =
-                super::window::set_window_hit_test_passthrough_all(window.as_ref(), passthrough);
+        if let Some(hit_test) = style.hit_test.clone() {
+            let (effective, _reason) =
+                fret_runtime::RunnerWindowStyleDiagnosticsStore::clamp_hit_test_request(
+                    hit_test, caps,
+                );
+            let _ = super::window::set_window_hit_test(window.as_ref(), &effective);
         }
         if let Some(opacity) = style.opacity {
             let _ = super::window::set_window_opacity(window.as_ref(), opacity.as_f32());
@@ -219,21 +215,21 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         #[cfg(not(target_os = "macos"))]
         let parent_window = None;
 
-        let style = request.style;
+        let style = request.style.clone();
         let caps = self
             .app
             .global::<PlatformCapabilities>()
             .cloned()
             .unwrap_or_default();
         let (window, accessibility) =
-            self.create_os_window(event_loop, spec, style, parent_window, &caps)?;
+            self.create_os_window(event_loop, spec, style.clone(), parent_window, &caps)?;
         let surface = {
             let Some(context) = self.context.as_ref() else {
                 return Err(RunnerError::WgpuNotInitialized);
             };
             context.create_surface(window.clone())?
         };
-        let new_window = self.insert_window(window, accessibility, Some(surface), style)?;
+        let new_window = self.insert_window(window, accessibility, Some(surface), style.clone())?;
         self.app.with_global_mut(
             fret_runtime::RunnerWindowStyleDiagnosticsStore::default,
             |svc, _app| {

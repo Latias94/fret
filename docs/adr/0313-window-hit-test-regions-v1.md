@@ -1,6 +1,6 @@
 # ADR 0313: Window Hit Test Regions v1 (Passthrough Except Interactive Regions)
 
-Status: Proposed
+Status: Accepted
 
 ## Context
 
@@ -129,4 +129,3 @@ Cons:
 - Region support is uneven across platforms; the contract must remain best-effort.
 - Frequent region updates can be expensive or unsupported; some designs may still require a
   multi-window composition fallback.
-

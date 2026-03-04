@@ -5,7 +5,8 @@ use fret_core::AppWindowId;
 use crate::PlatformCapabilities;
 use crate::window_style::{
     ActivationPolicy, TaskbarVisibility, WindowBackgroundMaterialRequest, WindowDecorationsRequest,
-    WindowHitTestRequestV1, WindowStyleRequest, WindowZLevel,
+    WindowHitTestRequestV1, WindowStyleRequest, WindowZLevel, canonicalize_hit_test_regions_v1,
+    hit_test_regions_signature_v1,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -47,7 +48,7 @@ pub enum RunnerWindowHitTestClampReasonV1 {
     MissingPassthroughRegionsCapability,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct RunnerWindowStyleEffectiveSnapshotV1 {
     pub decorations: WindowDecorationsRequest,
     pub resizable: bool,
@@ -68,6 +69,12 @@ pub struct RunnerWindowStyleEffectiveSnapshotV1 {
     pub hit_test: WindowHitTestRequestV1,
     /// Last requested hit test policy (pre-clamp), if any.
     pub hit_test_requested: Option<WindowHitTestRequestV1>,
+    /// Stable signature string for effective `PassthroughRegions`, if any.
+    pub hit_test_regions_signature: Option<String>,
+    /// Stable FNV-1a 64-bit fingerprint of `hit_test_regions_signature`, if any.
+    pub hit_test_regions_fingerprint64: Option<u64>,
+    /// Stable FNV-1a 64-bit fingerprint of requested `PassthroughRegions`, if any.
+    pub hit_test_regions_requested_fingerprint64: Option<u64>,
     pub hit_test_source: RunnerWindowHitTestSourceV1,
     pub hit_test_clamp_reason: RunnerWindowHitTestClampReasonV1,
     pub taskbar: TaskbarVisibility,
@@ -87,6 +94,9 @@ impl Default for RunnerWindowStyleEffectiveSnapshotV1 {
             background_material: WindowBackgroundMaterialRequest::None,
             hit_test: WindowHitTestRequestV1::Normal,
             hit_test_requested: None,
+            hit_test_regions_signature: None,
+            hit_test_regions_fingerprint64: None,
+            hit_test_regions_requested_fingerprint64: None,
             hit_test_source: RunnerWindowHitTestSourceV1::Default,
             hit_test_clamp_reason: RunnerWindowHitTestClampReasonV1::None,
             taskbar: TaskbarVisibility::Show,
@@ -104,6 +114,25 @@ pub struct RunnerWindowStyleDiagnosticsStore {
 }
 
 impl RunnerWindowStyleDiagnosticsStore {
+    fn update_hit_test_region_signatures(snapshot: &mut RunnerWindowStyleEffectiveSnapshotV1) {
+        snapshot.hit_test_regions_signature = None;
+        snapshot.hit_test_regions_fingerprint64 = None;
+        snapshot.hit_test_regions_requested_fingerprint64 = None;
+
+        if let WindowHitTestRequestV1::PassthroughRegions { regions } = &snapshot.hit_test {
+            let (sig, fp) = hit_test_regions_signature_v1(regions);
+            snapshot.hit_test_regions_signature = Some(sig);
+            snapshot.hit_test_regions_fingerprint64 = Some(fp.fingerprint64);
+        }
+        if let Some(WindowHitTestRequestV1::PassthroughRegions { regions }) =
+            snapshot.hit_test_requested.as_ref()
+        {
+            let canonical = canonicalize_hit_test_regions_v1(regions.clone());
+            let (_sig, fp) = hit_test_regions_signature_v1(&canonical);
+            snapshot.hit_test_regions_requested_fingerprint64 = Some(fp.fingerprint64);
+        }
+    }
+
     fn derive_appearance(
         surface_composited_alpha: bool,
         background_material: WindowBackgroundMaterialRequest,
@@ -134,13 +163,35 @@ impl RunnerWindowStyleDiagnosticsStore {
                 WindowHitTestRequestV1::Normal,
                 RunnerWindowHitTestClampReasonV1::MissingPassthroughAllCapability,
             ),
+            WindowHitTestRequestV1::PassthroughRegions { regions }
+                if caps.ui.window_hit_test_passthrough_regions =>
+            {
+                (
+                    WindowHitTestRequestV1::PassthroughRegions {
+                        regions: canonicalize_hit_test_regions_v1(regions),
+                    },
+                    RunnerWindowHitTestClampReasonV1::None,
+                )
+            }
+            WindowHitTestRequestV1::PassthroughRegions { .. }
+                if caps.ui.window_hit_test_passthrough_all =>
+            {
+                (
+                    WindowHitTestRequestV1::PassthroughAll,
+                    RunnerWindowHitTestClampReasonV1::MissingPassthroughRegionsCapability,
+                )
+            }
+            WindowHitTestRequestV1::PassthroughRegions { .. } => (
+                WindowHitTestRequestV1::Normal,
+                RunnerWindowHitTestClampReasonV1::MissingPassthroughRegionsCapability,
+            ),
         }
     }
 
     fn requested_hit_test_from_request(
-        requested: WindowStyleRequest,
+        requested: &WindowStyleRequest,
     ) -> Option<(WindowHitTestRequestV1, RunnerWindowHitTestSourceV1)> {
-        if let Some(hit_test) = requested.hit_test {
+        if let Some(hit_test) = requested.hit_test.clone() {
             return Some((hit_test, RunnerWindowHitTestSourceV1::HitTestFacet));
         }
         None
@@ -150,7 +201,7 @@ impl RunnerWindowStyleDiagnosticsStore {
         &self,
         window: AppWindowId,
     ) -> Option<RunnerWindowStyleEffectiveSnapshotV1> {
-        self.effective.get(&window).copied()
+        self.effective.get(&window).cloned()
     }
 
     pub fn record_window_open(
@@ -220,12 +271,13 @@ impl RunnerWindowStyleDiagnosticsStore {
         next.appearance =
             Self::derive_appearance(next.surface_composited_alpha, next.background_material);
 
-        if let Some((hit_test, source)) = Self::requested_hit_test_from_request(requested) {
-            next.hit_test_requested = Some(hit_test);
+        if let Some((hit_test, source)) = Self::requested_hit_test_from_request(&requested) {
+            next.hit_test_requested = Some(hit_test.clone());
             let (effective, clamp_reason) = Self::clamp_hit_test_request(hit_test, caps);
             next.hit_test = effective;
             next.hit_test_source = source;
             next.hit_test_clamp_reason = clamp_reason;
+            Self::update_hit_test_region_signatures(&mut next);
         }
 
         if let Some(taskbar) = requested.taskbar {
@@ -338,11 +390,12 @@ impl RunnerWindowStyleDiagnosticsStore {
         }
 
         if let Some(hit_test) = patch.hit_test {
-            current.hit_test_requested = Some(hit_test);
+            current.hit_test_requested = Some(hit_test.clone());
             let (effective, clamp_reason) = Self::clamp_hit_test_request(hit_test, caps);
             current.hit_test = effective;
             current.hit_test_source = RunnerWindowHitTestSourceV1::HitTestFacet;
             current.hit_test_clamp_reason = clamp_reason;
+            Self::update_hit_test_region_signatures(current);
         }
 
         if let Some(taskbar) = patch.taskbar {

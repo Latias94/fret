@@ -190,7 +190,9 @@ pub use window_menu_bar_focus::WindowMenuBarFocusService;
 pub use window_metrics::apply_window_metrics_event;
 pub use window_style::{
     ActivationPolicy, TaskbarVisibility, WindowBackgroundMaterialRequest, WindowDecorationsRequest,
-    WindowHitTestRequestV1, WindowOpacity, WindowRole, WindowStyleRequest, WindowZLevel,
+    WindowHitTestRegionV1, WindowHitTestRegionsSignatureV1, WindowHitTestRequestV1, WindowOpacity,
+    WindowRole, WindowStyleRequest, WindowZLevel, canonicalize_hit_test_regions_v1,
+    hit_test_regions_signature_v1,
 };
 pub use window_text_boundary_mode::{WindowTextBoundaryModeHandle, WindowTextBoundaryModeService};
 pub use window_text_input_snapshot::{
