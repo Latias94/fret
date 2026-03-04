@@ -12,6 +12,9 @@ use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
+use fret_ui_kit::declarative::motion::{
+    drive_tween_color_for_element, drive_tween_f32_for_element,
+};
 use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::controllable_state;
@@ -23,6 +26,7 @@ use fret_ui_kit::{
     Size as ComponentSize, Space, WidgetState, WidgetStateProperty, WidgetStates, ui,
 };
 
+use crate::overlay_motion;
 use crate::test_id::test_id_slug;
 use crate::{
     CommandEntry, CommandGroup, CommandItem, CommandList, CommandSeparator, Popover, PopoverContent,
@@ -330,12 +334,12 @@ pub fn native_select<H: UiHost>(
             .map(|opt| (opt.label.clone(), true))
             .unwrap_or((placeholder.clone(), false));
 
-        let mut border_color = resolved.border_color;
+        let mut base_border_color = resolved.border_color;
         let mut focus_ring = decl_style::focus_ring(&theme, resolved.radius);
         if aria_invalid {
-            border_color = theme.color_token("destructive");
+            base_border_color = theme.color_token("destructive");
             focus_ring.color =
-                crate::theme_variants::invalid_control_ring_color(&theme, border_color);
+                crate::theme_variants::invalid_control_ring_color(&theme, base_border_color);
         }
 
         let layout = decl_style::layout_style(&theme, layout.relative().min_w_0());
@@ -371,6 +375,42 @@ pub fn native_select<H: UiHost>(
 
             let mut states = WidgetStates::from_pressable(cx, st, !disabled);
             states.set(WidgetState::Open, is_open);
+            let focus_visible = states.contains(WidgetStates::FOCUS_VISIBLE);
+
+            let duration = overlay_motion::shadcn_motion_duration_150(cx);
+
+            let border_color = drive_tween_color_for_element(
+                cx,
+                trigger_id,
+                "native_select.trigger.border",
+                if aria_invalid {
+                    base_border_color
+                } else if focus_visible {
+                    theme_for_trigger.color_token("ring")
+                } else {
+                    base_border_color
+                },
+                duration,
+                overlay_motion::shadcn_ease,
+            )
+            .value;
+
+            let ring_alpha = drive_tween_f32_for_element(
+                cx,
+                trigger_id,
+                "native_select.trigger.ring.alpha",
+                if focus_visible { 1.0 } else { 0.0 },
+                duration,
+                overlay_motion::shadcn_ease,
+            );
+            let mut focus_ring = focus_ring;
+            focus_ring.color.a = (focus_ring.color.a * ring_alpha.value).clamp(0.0, 1.0);
+            if let Some(offset_color) = focus_ring.offset_color {
+                focus_ring.offset_color = Some(Color {
+                    a: (offset_color.a * ring_alpha.value).clamp(0.0, 1.0),
+                    ..offset_color
+                });
+            }
             let bg = WidgetStateProperty::new(ColorRef::Token {
                 key: "component.input.bg",
                 fallback: ColorFallback::Color(Color::TRANSPARENT),
@@ -398,6 +438,7 @@ pub fn native_select<H: UiHost>(
                 enabled: !disabled,
                 focusable: !disabled,
                 focus_ring: Some(focus_ring),
+                focus_ring_always_paint: ring_alpha.animating,
                 a11y: PressableA11y {
                     role: Some(SemanticsRole::ComboBox),
                     label: a11y_label_for_trigger.clone(),
@@ -825,6 +866,204 @@ mod tests {
         let trigger = find_pressable_by_test_id(&element, "native-select-trigger")
             .expect("trigger pressable");
         assert_eq!(trigger.a11y.expanded, Some(true));
+    }
+
+    #[test]
+    fn native_select_trigger_focus_ring_tweens_in_and_out_like_a_transition() {
+        use std::cell::Cell;
+        use std::rc::Rc;
+        use std::time::Duration;
+
+        use fret_core::{Event, KeyCode, Modifiers, Size};
+        use fret_ui_kit::declarative::transition::ticks_60hz_for_duration;
+
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        crate::shadcn_themes::apply_shadcn_new_york(
+            &mut app,
+            crate::shadcn_themes::ShadcnBaseColor::Neutral,
+            crate::shadcn_themes::ShadcnColorScheme::Light,
+        );
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(200.0)),
+        );
+        let mut services = FakeServices;
+
+        let value = app.models_mut().insert(None::<Arc<str>>);
+        let open = app.models_mut().insert(false);
+
+        let ring_alpha_out: Rc<Cell<Option<f32>>> = Rc::new(Cell::new(None));
+        let always_paint_out: Rc<Cell<Option<bool>>> = Rc::new(Cell::new(None));
+
+        fn render_frame(
+            ui: &mut UiTree<App>,
+            app: &mut App,
+            services: &mut dyn fret_core::UiServices,
+            window: AppWindowId,
+            bounds: Rect,
+            value: Model<Option<Arc<str>>>,
+            open: Model<bool>,
+            ring_alpha_out: Rc<Cell<Option<f32>>>,
+            always_paint_out: Rc<Cell<Option<bool>>>,
+        ) -> fret_core::NodeId {
+            let root = fret_ui::declarative::render_root(
+                ui,
+                app,
+                services,
+                window,
+                bounds,
+                "native-select-focus-ring-tween",
+                move |cx| {
+                    let el = NativeSelect::new(value, open)
+                        .option(NativeSelectOption::new("a", "A"))
+                        .a11y_label("Choose")
+                        .trigger_test_id("native-select-trigger")
+                        .into_element(cx);
+
+                    let trigger = find_pressable_by_test_id(&el, "native-select-trigger")
+                        .expect("trigger pressable");
+                    let ring = trigger.focus_ring.expect("focus ring");
+                    ring_alpha_out.set(Some(ring.color.a));
+                    always_paint_out.set(Some(trigger.focus_ring_always_paint));
+
+                    vec![el]
+                },
+            );
+            ui.set_root(root);
+            ui.request_semantics_snapshot();
+            ui.layout_all(app, services, bounds, 1.0);
+            root
+        }
+
+        // Frame 1: baseline render (no focus-visible), ring alpha should be 0.
+        app.set_frame_id(FrameId(1));
+        let root = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            value.clone(),
+            open.clone(),
+            ring_alpha_out.clone(),
+            always_paint_out.clone(),
+        );
+        let a0 = ring_alpha_out.get().expect("a0");
+        assert!(
+            a0.abs() <= 1e-6,
+            "expected ring alpha to start at 0, got {a0}"
+        );
+
+        // Focus the trigger and mark focus-visible via a navigation key.
+        let focusable = ui
+            .first_focusable_descendant_including_declarative(&mut app, window, root)
+            .expect("focusable native select trigger");
+        ui.set_focus(Some(focusable));
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::KeyDown {
+                key: KeyCode::Tab,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+
+        // Frame 2: ring should be in-between (not snapped).
+        app.set_frame_id(FrameId(2));
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            value.clone(),
+            open.clone(),
+            ring_alpha_out.clone(),
+            always_paint_out.clone(),
+        );
+        let a1 = ring_alpha_out.get().expect("a1");
+        assert!(
+            a1 > 0.0,
+            "expected ring alpha to start animating in, got {a1}"
+        );
+
+        // Advance frames until the default 150ms transition settles.
+        let settle = ticks_60hz_for_duration(Duration::from_millis(150)) + 2;
+        for i in 0..settle {
+            app.set_frame_id(FrameId(3 + i));
+            let _ = render_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                value.clone(),
+                open.clone(),
+                ring_alpha_out.clone(),
+                always_paint_out.clone(),
+            );
+        }
+        let a_focused = ring_alpha_out.get().expect("a_focused");
+        assert!(
+            a_focused > a1 + 1e-4,
+            "expected ring alpha to increase over time, got a1={a1} a_focused={a_focused}"
+        );
+
+        // Blur and ensure ring animates out while still being painted.
+        ui.set_focus(None);
+        app.set_frame_id(FrameId(1000));
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            value.clone(),
+            open.clone(),
+            ring_alpha_out.clone(),
+            always_paint_out.clone(),
+        );
+        let a_blur = ring_alpha_out.get().expect("a_blur");
+        let always_paint = always_paint_out.get().expect("always_paint");
+        assert!(
+            a_blur > 0.0 && a_blur < a_focused,
+            "expected ring alpha to be intermediate after blur, got a_blur={a_blur} a_focused={a_focused}"
+        );
+        assert!(
+            always_paint,
+            "expected focus ring to request painting while animating out"
+        );
+
+        for i in 0..settle {
+            app.set_frame_id(FrameId(1001 + i));
+            let _ = render_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                value.clone(),
+                open.clone(),
+                ring_alpha_out.clone(),
+                always_paint_out.clone(),
+            );
+        }
+        let a_final = ring_alpha_out.get().expect("a_final");
+        let always_paint_final = always_paint_out.get().expect("always_paint_final");
+        assert!(
+            a_final.abs() <= 1e-4,
+            "expected ring alpha to settle at 0, got {a_final}"
+        );
+        assert!(
+            !always_paint_final,
+            "expected focus ring to stop requesting painting after settling"
+        );
     }
 
     #[test]
