@@ -1126,6 +1126,7 @@ mod tests {
     use fret_ui::elements;
     use fret_ui::tree::UiTree;
     use std::collections::HashMap;
+    use std::time::Duration;
 
     fn blend_over(fg: Color, bg: Color) -> Color {
         let a = fg.a.clamp(0.0, 1.0);

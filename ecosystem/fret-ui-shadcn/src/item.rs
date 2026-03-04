@@ -1087,6 +1087,7 @@ mod tests {
     use fret_ui_kit::declarative::transition::ticks_60hz_for_duration;
     use std::cell::Cell;
     use std::rc::Rc;
+    use std::time::Duration;
 
     fn bounds() -> Rect {
         Rect::new(

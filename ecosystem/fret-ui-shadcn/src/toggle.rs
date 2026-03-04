@@ -739,6 +739,7 @@ mod tests {
     };
     use fret_ui::UiTree;
     use std::collections::HashMap;
+    use std::time::Duration;
 
     #[derive(Default)]
     struct FakeServices;
