@@ -587,6 +587,8 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         windows_menu::unregister_window(state.window.as_ref());
         #[cfg(target_os = "macos")]
         macos_menu::unregister_window(state.window.as_ref());
+        #[cfg(all(target_os = "macos", feature = "macos-hit-test-regions"))]
+        macos_hit_test::unregister_window(state.window.as_ref());
         self.window_registry.remove(state.window.id());
         self.app.with_global_mut(
             fret_runtime::RunnerWindowLifecycleDiagnosticsStore::default,

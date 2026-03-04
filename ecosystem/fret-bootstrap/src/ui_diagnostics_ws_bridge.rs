@@ -59,7 +59,7 @@ impl UiDiagnosticsWsBridge {
         if !cfg!(target_arch = "wasm32") {
             caps.push("diag.multi_window".to_string());
             caps.push("diag.window_insets_override".to_string());
-            if cfg!(target_os = "windows") {
+            if cfg!(any(target_os = "windows", target_os = "macos")) {
                 caps.push("diag.window_style_patch_v1".to_string());
                 caps.push("diag.platform_window_receiver_at_cursor_v1".to_string());
             }

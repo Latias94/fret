@@ -986,6 +986,10 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                 RunnerUserEvent::MacosMenuWillOpen => {
                     macos_menu::sync_command_gating_from_app(&self.app);
                 }
+                #[cfg(all(target_os = "macos", feature = "macos-hit-test-regions"))]
+                RunnerUserEvent::MacosHitTestRefreshRegions => {
+                    macos_hit_test::apply_latest_mouse_location();
+                }
             }
         }
 

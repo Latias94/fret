@@ -401,10 +401,34 @@ pub(super) fn set_window_hit_test(
     #[cfg(target_os = "macos")]
     {
         match hit_test {
-            H::Normal => set_window_hit_test_passthrough_all(window, false),
-            H::PassthroughAll => set_window_hit_test_passthrough_all(window, true),
-            // Defensive fallback; the runner should clamp unsupported regions requests.
-            H::PassthroughRegions { .. } => set_window_hit_test_passthrough_all(window, true),
+            H::Normal => {
+                #[cfg(feature = "macos-hit-test-regions")]
+                super::macos_hit_test::clear_passthrough_regions(window);
+                set_window_hit_test_passthrough_all(window, false)
+            }
+            H::PassthroughAll => {
+                #[cfg(feature = "macos-hit-test-regions")]
+                super::macos_hit_test::clear_passthrough_regions(window);
+                set_window_hit_test_passthrough_all(window, true)
+            }
+            H::PassthroughRegions { regions } => {
+                #[cfg(not(feature = "macos-hit-test-regions"))]
+                {
+                    let _ = regions;
+                    // Until region passthrough is stabilized on macOS, fall back to passthrough-all.
+                    return set_window_hit_test_passthrough_all(window, true);
+                }
+
+                #[cfg(feature = "macos-hit-test-regions")]
+                {
+                    // Best-effort: if regions cannot be installed, fall back to passthrough all.
+                    if super::macos_hit_test::set_passthrough_regions(window, regions) {
+                        true
+                    } else {
+                        set_window_hit_test_passthrough_all(window, true)
+                    }
+                }
+            }
         }
     }
 
@@ -796,7 +820,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
     const WINDOW_VISIBILITY_PADDING_PX: f64 = 40.0;
 
     #[cfg(target_os = "macos")]
-    fn ns_window_number_for_window(window: &dyn Window) -> Option<i32> {
+    pub(super) fn ns_window_number_for_window(window: &dyn Window) -> Option<i32> {
         use objc::runtime::Object;
         use objc::{msg_send, sel, sel_impl};
         use winit::raw_window_handle::HasWindowHandle as _;
@@ -824,7 +848,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
     }
 
     #[cfg(target_os = "macos")]
-    fn ordered_ns_window_numbers_front_to_back() -> Vec<i32> {
+    pub(super) fn ordered_ns_window_numbers_front_to_back() -> Vec<i32> {
         use objc::runtime::Class;
         use objc::runtime::Object;
         use objc::{msg_send, sel, sel_impl};

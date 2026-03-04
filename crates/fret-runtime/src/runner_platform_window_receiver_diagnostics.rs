@@ -4,6 +4,7 @@ use fret_core::AppWindowId;
 pub enum RunnerPlatformWindowReceiverAtCursorSourceV1 {
     Unsupported,
     Win32WindowFromPoint,
+    MacosOrderedWindowsBestEffort,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

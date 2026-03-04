@@ -873,7 +873,7 @@ Supported selectors (v1 MVP):
 - `assert_clipboard_text` (schema v2 only; asserts OS clipboard text equals an expected value; capability-gated behind `diag.clipboard_text`)
 - `inspect_help_lock_best_match_and_copy_selector` (schema v2 only; in-app inspector helper: open help, search for `query`, lock the best match, and copy the best selector JSON to the clipboard; intended to avoid relying on shortcut injection in `--launch` runs)
 - `set_window_inner_size` (schema v2 only; optional `window` target)
-- `set_window_style` (schema v2 only; optional `window` target; best-effort OS window style patch; capability-gated behind `diag.window_style_patch_v1`; Windows-only as of 2026-03-04; supported patch fields: `z_level`, `background_material`, `hit_test`, `opacity_alpha_u8`)
+- `set_window_style` (schema v2 only; optional `window` target; best-effort OS window style patch; capability-gated behind `diag.window_style_patch_v1`; desktop-only as of 2026-03-04; supported patch fields: `z_level`, `background_material`, `hit_test`, `opacity_alpha_u8`)
 - `set_window_insets` (schema v2 only; overrides safe-area/occlusion insets; capability-gated behind `diag.window_insets_override`)
 - `set_window_outer_position` (schema v2 only; optional `window` target)
 - `raise_window` (schema v2 only; optional `window` target)
@@ -1159,7 +1159,7 @@ Window style predicates (require runner window style diagnostics, typically prov
 - `{"kind":"window_style_effective_is","window":{"kind":"current"},"style":{"hit_test":"passthrough_regions","hit_test_regions_fingerprint64":123}}`
 - `{"kind":"window_background_material_effective_is","window":{"kind":"current"},"material":"system_default"}`
 
-Platform receiver predicates (Windows-only; require runner cursor probe diagnostics):
+Platform receiver predicates (desktop-only; require runner cursor probe diagnostics):
 
 - `{"kind":"platform_window_receiver_at_cursor_is","window":{"kind":"current"}}`
 
@@ -1171,8 +1171,8 @@ Notes:
   a specific region shape without relying on pixels.
 - `platform_window_receiver_at_cursor_is` is capability-gated behind
   `diag.platform_window_receiver_at_cursor_v1` and is intended to validate runner-level hit-test
-  passthrough behavior (e.g. Win32 `WM_NCHITTEST`) without requiring OS mouse injection. Pair it
-  with cursor override steps like `set_cursor_in_window_logical`.
+  passthrough behavior without requiring OS mouse injection. Pair it with cursor override steps
+  like `set_cursor_in_window_logical`. (Win32 uses `WindowFromPoint`; macOS is best-effort.)
 
 ## Debugging recipes (Radix primitives / shadcn / overlays)
 

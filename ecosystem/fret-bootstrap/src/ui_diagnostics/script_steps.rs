@@ -52,7 +52,7 @@ pub(super) fn handle_window_effect_steps(
             window: target_window,
             style,
         } => {
-            if !cfg!(target_os = "windows") {
+            if !cfg!(any(target_os = "windows", target_os = "macos")) {
                 *force_dump_label = Some(format!(
                     "script-step-{step_index:04}-set_window_style-unsupported-platform"
                 ));
@@ -64,7 +64,7 @@ pub(super) fn handle_window_effect_steps(
                 output.request_redraw = true;
                 return;
             }
-            if let Err(fields) = validate_window_style_patch_supported_fields_windows(&style) {
+            if let Err(fields) = validate_window_style_patch_supported_fields_desktop(&style) {
                 *force_dump_label = Some(format!(
                     "script-step-{step_index:04}-set_window_style-unsupported-fields-{fields}"
                 ));
@@ -463,7 +463,7 @@ pub(super) fn handle_effect_only_steps(
     }
 }
 
-fn validate_window_style_patch_supported_fields_windows(
+fn validate_window_style_patch_supported_fields_desktop(
     patch: &fret_diag_protocol::UiWindowStylePatchV1,
 ) -> Result<(), String> {
     let mut unsupported: Vec<&'static str> = Vec::new();
@@ -483,7 +483,7 @@ fn validate_window_style_patch_supported_fields_windows(
         unsupported.push("transparent");
     }
 
-    // Supported (Windows-only, as of 2026-03-04):
+    // Supported (desktop, as of 2026-03-04):
     // - z_level
     // - background_material
     // - hit_test (including passthrough regions)

@@ -40,4 +40,6 @@ pub enum RunnerUserEvent {
     },
     #[cfg(target_os = "macos")]
     MacosMenuWillOpen,
+    #[cfg(all(target_os = "macos", feature = "macos-hit-test-regions"))]
+    MacosHitTestRefreshRegions,
 }

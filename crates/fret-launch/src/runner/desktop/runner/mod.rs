@@ -126,6 +126,8 @@ mod effects;
 mod event_routing;
 #[cfg(target_os = "ios")]
 mod ios_keyboard;
+#[cfg(all(target_os = "macos", feature = "macos-hit-test-regions"))]
+mod macos_hit_test;
 #[cfg(target_os = "macos")]
 mod macos_menu;
 mod no_services;
@@ -337,7 +339,8 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             caps.ui.window_transparent = cfg!(any(target_os = "windows", target_os = "macos"));
             caps.ui.window_hit_test_passthrough_all =
                 cfg!(any(target_os = "windows", target_os = "macos"));
-            caps.ui.window_hit_test_passthrough_regions = cfg!(target_os = "windows");
+            caps.ui.window_hit_test_passthrough_regions = cfg!(target_os = "windows")
+                || cfg!(all(target_os = "macos", feature = "macos-hit-test-regions"));
 
             // Background materials are capability-gated and intentionally conservative by default.
             // Runners should only advertise these once there is an end-to-end implementation
@@ -636,6 +639,137 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         );
     }
 
+    #[cfg(target_os = "macos")]
+    pub(super) fn refresh_platform_window_receiver_at_cursor_diagnostics(&mut self) {
+        use fret_runtime::{
+            RunnerPlatformWindowReceiverAtCursorSnapshotV1,
+            RunnerPlatformWindowReceiverAtCursorSourceV1,
+            RunnerPlatformWindowReceiverDiagnosticsStore, WindowHitTestRegionV1,
+            WindowHitTestRequestV1,
+        };
+        use std::collections::HashMap;
+
+        fn regions_contain_point(regions: &[WindowHitTestRegionV1], px: f32, py: f32) -> bool {
+            fn rect_contains(x: f32, y: f32, w: f32, h: f32, px: f32, py: f32) -> bool {
+                let x = if x.is_finite() { x } else { 0.0 };
+                let y = if y.is_finite() { y } else { 0.0 };
+                let w = if w.is_finite() { w.max(0.0) } else { 0.0 };
+                let h = if h.is_finite() { h.max(0.0) } else { 0.0 };
+                if w <= 0.0 || h <= 0.0 {
+                    return false;
+                }
+                px >= x && px < x + w && py >= y && py < y + h
+            }
+
+            fn rrect_contains(x: f32, y: f32, w: f32, h: f32, r: f32, px: f32, py: f32) -> bool {
+                if !rect_contains(x, y, w, h, px, py) {
+                    return false;
+                }
+                let r = if r.is_finite() { r.max(0.0) } else { 0.0 };
+                if r <= 0.0 {
+                    return true;
+                }
+
+                let max_r = 0.5 * w.min(h);
+                let r = r.min(max_r);
+
+                let left = x + r;
+                let right = x + w - r;
+                let top = y + r;
+                let bottom = y + h - r;
+
+                if (px >= left && px < right) || (py >= top && py < bottom) {
+                    return true;
+                }
+
+                let cx = if px < left { left } else { right };
+                let cy = if py < top { top } else { bottom };
+                let dx = px - cx;
+                let dy = py - cy;
+                dx * dx + dy * dy <= r * r
+            }
+
+            for r in regions {
+                match *r {
+                    WindowHitTestRegionV1::Rect {
+                        x,
+                        y,
+                        width,
+                        height,
+                    } => {
+                        if rect_contains(x, y, width, height, px, py) {
+                            return true;
+                        }
+                    }
+                    WindowHitTestRegionV1::RRect {
+                        x,
+                        y,
+                        width,
+                        height,
+                        radius,
+                    } => {
+                        if rrect_contains(x, y, width, height, radius, px, py) {
+                            return true;
+                        }
+                    }
+                }
+            }
+            false
+        }
+
+        let style_store = self
+            .app
+            .global::<fret_runtime::RunnerWindowStyleDiagnosticsStore>();
+
+        let mut number_to_window: HashMap<i32, fret_core::AppWindowId> = HashMap::new();
+        for (window, state) in self.windows.iter() {
+            let Some(number) = Self::ns_window_number_for_window(state.window.as_ref()) else {
+                continue;
+            };
+            number_to_window.insert(number, window);
+        }
+
+        let receiver_window = self.cursor_screen_pos.and_then(|screen_pos| {
+            let ordered = Self::ordered_ns_window_numbers_front_to_back();
+            for number in ordered {
+                let Some(&window) = number_to_window.get(&number) else {
+                    continue;
+                };
+                if !self.screen_pos_in_window(window, screen_pos) {
+                    continue;
+                }
+                let local = self.local_pos_for_window(window, screen_pos)?;
+                let hit_test = style_store
+                    .and_then(|s| s.effective_snapshot(window))
+                    .map(|s| s.hit_test)
+                    .unwrap_or(WindowHitTestRequestV1::Normal);
+
+                let interactive = match hit_test {
+                    WindowHitTestRequestV1::Normal => true,
+                    WindowHitTestRequestV1::PassthroughAll => false,
+                    WindowHitTestRequestV1::PassthroughRegions { regions } => {
+                        regions_contain_point(&regions, local.x.0, local.y.0)
+                    }
+                };
+                if interactive {
+                    return Some(window);
+                }
+            }
+            None
+        });
+
+        let snapshot = RunnerPlatformWindowReceiverAtCursorSnapshotV1 {
+            receiver_window,
+            source: RunnerPlatformWindowReceiverAtCursorSourceV1::MacosOrderedWindowsBestEffort,
+        };
+        self.app.with_global_mut(
+            RunnerPlatformWindowReceiverDiagnosticsStore::default,
+            |store, _app| {
+                store.set_latest_at_cursor(snapshot);
+            },
+        );
+    }
+
     /// Sets the event-loop proxy used to deliver asynchronous platform completions back into the
     /// window event stream.
     ///
@@ -652,6 +786,8 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         windows_menu::set_event_loop_proxy(proxy.clone(), self.proxy_events.clone());
         #[cfg(target_os = "macos")]
         macos_menu::set_event_loop_proxy(proxy.clone(), self.proxy_events.clone());
+        #[cfg(all(target_os = "macos", feature = "macos-hit-test-regions"))]
+        macos_hit_test::set_event_loop_proxy(proxy.clone(), self.proxy_events.clone());
         self.dispatcher.set_event_loop_proxy(proxy.clone());
         self.event_loop_proxy = Some(proxy);
 
