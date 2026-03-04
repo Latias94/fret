@@ -327,15 +327,24 @@ This phase is intentionally last.
     - Policy: `docs/workstreams/action-first-authoring-fearless-refactor-v1/MVU_POLICY.md`
     - Guidance: `docs/workstreams/action-first-authoring-fearless-refactor-v1/MIGRATION_GUIDE.md` (“When to use MVU vs View”)
 
-- [ ] AFA-clean-064 Add compile-time deprecation warnings for legacy MVU surfaces (if feasible).
+- [x] AFA-clean-064 Add compile-time deprecation warnings for legacy MVU surfaces (if feasible).
   - Rule: docs/templates must stop teaching it *before* adding warnings.
   - Candidate surfaces:
     - `ecosystem/fret/src/mvu.rs`
     - `ecosystem/fret/src/mvu_router.rs`
+  - Evidence:
+    - `ecosystem/fret/src/lib.rs` (deprecated `legacy`/`mvu`/`mvu_router` modules)
+    - `ecosystem/fret/src/app_entry.rs` (deprecated MVU entry points when `legacy-mvu` is enabled)
+    - `ecosystem/fret/src/interop/embedded_viewport.rs` (deprecated MVU embedding helpers when `legacy-mvu` is enabled)
 
-- [ ] AFA-clean-065 Consider feature-gating MVU behind an explicit legacy feature.
+- [x] AFA-clean-065 Consider feature-gating MVU behind an explicit legacy feature.
   - Goal: keep `fret::prelude::*` boring, and make MVU opt-in in downstream apps.
   - Non-goal: break existing users without a deprecation window.
+  - Evidence:
+    - `ecosystem/fret/Cargo.toml` (`legacy-mvu` feature)
+    - `ecosystem/fret/src/lib.rs` (MVU modules gated behind `legacy-mvu`)
+    - `apps/fret-examples/Cargo.toml` (in-tree demo opts in via `legacy-mvu`)
+    - `apps/fret-ui-gallery/Cargo.toml` (in-tree demo opts in via `legacy-mvu`)
 
 ---
 
@@ -380,27 +389,41 @@ practical steps:
 
 ### Payload actions v2 (prototype, post-v1)
 
-- [ ] AFA-actions-070 Lock the payload actions v2 contract (ADR 0312) and scope constraints.
+- [x] AFA-actions-070 Lock the payload actions v2 contract (ADR 0312) and scope constraints.
   - Constraints (prototype):
     - payload is pointer/programmatic-only (no keymap schema changes),
     - payload is transient (window-scoped pending store + TTL),
     - missing payload is safe (recommended: treat as not handled).
+  - Evidence:
+    - ADR: `docs/adr/0312-payload-actions-v2.md`
 
-- [ ] AFA-actions-071 Implement a window-scoped pending payload service (TTL) in `crates/fret-runtime`.
+- [x] AFA-actions-071 Implement a window-scoped pending payload service (TTL) in `crates/fret-runtime`.
   - Reference: `crates/fret-runtime/src/command_dispatch_diagnostics.rs` (`WindowPendingCommandDispatchSourceService`).
+  - Evidence:
+    - `crates/fret-runtime/src/action_payload.rs` (pending payload store + TTL)
 
-- [ ] AFA-actions-072 Expose an object-safe host API for recording/consuming payloads during action dispatch.
+- [x] AFA-actions-072 Expose an object-safe host API for recording/consuming payloads during action dispatch.
   - Surface: `crates/fret-ui/src/action.rs` (`UiActionHost`).
+  - Evidence:
+    - `crates/fret-ui/src/action.rs` (`record_pending_action_payload`, `consume_pending_action_payload`)
 
-- [ ] AFA-actions-073 Add ecosystem authoring sugar:
+- [x] AFA-actions-073 Add ecosystem authoring sugar:
   - typed payload action macro (additive; do not break `actions!`),
   - handler table support for payload actions (consume + downcast),
   - pressable helper to dispatch action + payload while preserving `*_if_enabled` gating.
+  - Evidence:
+    - `ecosystem/fret/src/actions.rs` (`payload_actions!`, payload handler hooks)
+    - `ecosystem/fret/src/view.rs` (`ViewCx::on_payload_action`)
+    - `ecosystem/fret-ui-kit/src/declarative/action_hooks.rs` (pressable helper)
+    - `ecosystem/fret-ui-shadcn/src/button.rs` (`action_payload*` helpers)
 
-- [ ] AFA-actions-074 Migrate at least one in-tree demo from MVU payload routing to payload actions.
+- [x] AFA-actions-074 Migrate at least one in-tree demo from MVU payload routing to payload actions.
   - Evidence:
     - demo compiles and behaves correctly,
     - diagnostics gate can still explain the dispatch decision (and best-effort payload presence).
+  - Evidence:
+    - `apps/fret-cookbook/examples/payload_actions_basics.rs`
+    - `tools/diag-scripts/cookbook/payload-actions-basics/cookbook-payload-actions-basics-remove.json`
 
 - Macro ergonomics (non-breaking, v1.x):
   - Keep `actions!` explicit-ID requirement (stable IDs must not drift with refactors).

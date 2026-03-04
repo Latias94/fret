@@ -167,6 +167,16 @@ If you choose MVU in 2026:
 - Prefer action-first IDs (`ActionId == CommandId` in v1) even inside MVU code where feasible, so
   keymap/palette/menus/diagnostics stay aligned.
 
+### 3.2) Enabling legacy MVU surfaces (opt-in)
+
+MVU is feature-gated and compile-time deprecated.
+
+To use it (legacy demos only), opt in explicitly:
+
+- Enable the `fret` feature `legacy-mvu` in your `Cargo.toml`.
+- Import MVU through `fret::legacy::prelude::*` (do not rely on `fret::prelude::*`).
+- Expect `deprecated` warnings; in in-tree legacy demo crates we typically add `#![allow(deprecated)]`.
+
 Inventory:
 
 - Track remaining in-tree MVU usage here:

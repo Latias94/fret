@@ -11,6 +11,11 @@ Scope:
   authoring surface).
 - This is an inventory, not a deletion plan. Deletion/quarantine is tracked by `AFA-clean-062`.
 
+Note:
+
+- MVU is feature-gated behind `fret` feature `legacy-mvu` and surfaces are compile-time deprecated.
+  Any in-tree legacy demo that uses MVU must explicitly opt in.
+
 ## Why this inventory exists
 
 - Keep docs/templates aligned to one boring golden path (View runtime + typed actions).

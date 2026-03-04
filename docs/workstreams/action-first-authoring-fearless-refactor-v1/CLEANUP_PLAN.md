@@ -19,6 +19,7 @@ v1 landed and the repo golden path is converged on **View runtime + typed action
 - Cookbook: view runtime + actions; MVU is gated out (`pwsh tools/gate_no_mvu_in_cookbook.ps1`).
 - Diagnostics gates: action-first scripted gates exist (`pwsh tools/diag_gate_action_first_authoring_v1.ps1`).
 - MVU remains available as an explicit compat surface: `fret::legacy::prelude::*`.
+- MVU is compile-time deprecated and opt-in behind `fret` feature `legacy-mvu` (in-tree legacy demos explicitly enable it).
 
 This plan remains relevant as a “don’t drift back” checklist and as guidance for future deletions.
 

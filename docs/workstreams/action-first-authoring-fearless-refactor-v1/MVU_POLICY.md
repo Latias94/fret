@@ -20,6 +20,7 @@ Normative implications:
   - edge cases where the v1/v2 action-first surfaces are not sufficient.
 - MVU must stay quarantined behind explicit imports:
   - use `fret::legacy::prelude::*` (do not rely on `fret::prelude::*`).
+  - enable the `fret` feature `legacy-mvu` (MVU is opt-in).
 
 Rationale:
 
@@ -79,3 +80,7 @@ This decision unblocks the MVU deprecation window milestone:
 This repo does **docs-first deprecation**: do not add warnings before docs/templates stop teaching
 the surface.
 
+Status (as of 2026-03-04):
+
+- MVU surfaces are compile-time deprecated.
+- MVU is feature-gated behind `legacy-mvu` to keep downstream opt-in explicit.

@@ -30,6 +30,8 @@ View runtime (v1):
 Legacy MVU quarantine (compat surface):
 
 - `ecosystem/fret/src/legacy.rs` (`fret::legacy::prelude::*`)
+- `ecosystem/fret/src/lib.rs` (MVU modules gated behind `legacy-mvu`)
+- `ecosystem/fret/src/lib.rs` (compile-time deprecations for `legacy`/`mvu`/`mvu_router` entry modules)
 
 UI gallery adoption (v1):
 
