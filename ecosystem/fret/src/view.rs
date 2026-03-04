@@ -248,6 +248,25 @@ impl<'cx, 'a, H: UiHost> ViewCx<'cx, 'a, H> {
         self.action_handlers = next;
     }
 
+    /// Register a typed payload action handler (v2 prototype; ADR 0312).
+    ///
+    /// Notes:
+    /// - Payload is pointer/programmatic-only in v2 (keymap/palette/menus remain unit actions).
+    /// - Missing/invalid payload should be treated as “not handled” by default.
+    pub fn on_payload_action<A: crate::actions::TypedPayloadAction>(
+        &mut self,
+        f: impl Fn(
+            &mut dyn fret_ui::action::UiFocusActionHost,
+            fret_ui::action::ActionCx,
+            A::Payload,
+        ) -> bool
+        + 'static,
+    ) {
+        self.action_handlers_used = true;
+        let next = std::mem::take(&mut self.action_handlers).on_payload::<A>(f);
+        self.action_handlers = next;
+    }
+
     /// Register a typed unit action availability handler.
     pub fn on_action_availability<A: crate::TypedAction>(
         &mut self,

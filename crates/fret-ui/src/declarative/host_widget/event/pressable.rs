@@ -599,6 +599,25 @@ pub(super) fn handle_pressable<H: UiHost>(
                                     },
                                 );
                             }
+
+                            fn record_pending_action_payload(
+                                &mut self,
+                                cx: action::ActionCx,
+                                action: &fret_runtime::ActionId,
+                                payload: Box<dyn std::any::Any + Send + Sync>,
+                            ) {
+                                self.app.with_global_mut(
+                                    fret_runtime::WindowPendingActionPayloadService::default,
+                                    |svc, app| {
+                                        svc.record(
+                                            cx.window,
+                                            app.tick_id(),
+                                            action.clone(),
+                                            payload,
+                                        );
+                                    },
+                                );
+                            }
                             #[track_caller]
                             fn notify(&mut self, _cx: action::ActionCx) {
                                 *self.notify_requested = true;
@@ -798,6 +817,20 @@ pub(super) fn handle_pressable<H: UiHost>(
                             fret_runtime::WindowPendingCommandDispatchSourceService::default,
                             |svc, app| {
                                 svc.record(cx.window, app.tick_id(), command.clone(), source);
+                            },
+                        );
+                    }
+
+                    fn record_pending_action_payload(
+                        &mut self,
+                        cx: action::ActionCx,
+                        action: &fret_runtime::ActionId,
+                        payload: Box<dyn std::any::Any + Send + Sync>,
+                    ) {
+                        self.app.with_global_mut(
+                            fret_runtime::WindowPendingActionPayloadService::default,
+                            |svc, app| {
+                                svc.record(cx.window, app.tick_id(), action.clone(), payload);
                             },
                         );
                     }

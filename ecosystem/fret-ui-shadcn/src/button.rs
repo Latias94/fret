@@ -1,3 +1,4 @@
+use std::any::Any;
 use std::sync::Arc;
 
 use fret_core::{
@@ -423,6 +424,7 @@ pub struct Button {
     content_justify: Justify,
     text_weight_override: Option<FontWeight>,
     command: Option<CommandId>,
+    action_payload: Option<Arc<dyn Fn() -> Box<dyn Any + Send + Sync> + 'static>>,
     on_activate: Option<OnActivate>,
     on_hover_change: Option<OnHoverChange>,
     toggle_model: Option<fret_runtime::Model<bool>>,
@@ -492,6 +494,7 @@ impl Button {
             content_justify: Justify::Center,
             text_weight_override: None,
             command: None,
+            action_payload: None,
             on_activate: None,
             on_hover_change: None,
             toggle_model: None,
@@ -599,6 +602,29 @@ impl Button {
     /// through the existing command pipeline.
     pub fn action(mut self, action: impl Into<fret_runtime::ActionId>) -> Self {
         self.command = Some(action.into());
+        self
+    }
+
+    /// Attach a payload for parameterized actions (ADR 0312).
+    ///
+    /// Notes:
+    /// - Payload is transient and best-effort (window-scoped pending store + TTL).
+    /// - Keymap/palette/menus remain unit-action surfaces in v2.
+    pub fn action_payload<T>(mut self, payload: T) -> Self
+    where
+        T: Any + Send + Sync + Clone + 'static,
+    {
+        let payload = Arc::new(payload);
+        self.action_payload = Some(Arc::new(move || Box::new(payload.as_ref().clone())));
+        self
+    }
+
+    /// Like [`Button::action_payload`], but allows callers to compute the payload at activation time.
+    pub fn action_payload_factory(
+        mut self,
+        payload: Arc<dyn Fn() -> Box<dyn Any + Send + Sync> + 'static>,
+    ) -> Self {
+        self.action_payload = Some(payload);
         self
     }
 
@@ -786,6 +812,7 @@ impl Button {
             );
 
             let command = self.command;
+            let action_payload = self.action_payload;
             let on_activate = self.on_activate;
             let on_hover_change = self.on_hover_change;
             let toggle_model = self.toggle_model;
@@ -846,7 +873,14 @@ impl Button {
             let label_axes_override = self.label_axes_override;
 
             let pressable = control_chrome_pressable_with_id_props(cx, move |cx, st, _id| {
-                cx.pressable_dispatch_command_if_enabled_opt(command);
+                if let Some(payload) = action_payload.clone() {
+                    cx.pressable_dispatch_command_with_payload_factory_if_enabled_opt(
+                        command.clone(),
+                        payload,
+                    );
+                } else {
+                    cx.pressable_dispatch_command_if_enabled_opt(command.clone());
+                }
                 if let Some(on_activate) = on_activate.clone() {
                     cx.pressable_on_activate(on_activate);
                 } else if let Some(on_activate) = render_on_activate.clone() {
@@ -1126,6 +1160,7 @@ mod tests {
     use fret_ui::elements;
     use fret_ui::tree::UiTree;
     use std::collections::HashMap;
+    use std::time::Duration;
 
     fn blend_over(fg: Color, bg: Color) -> Color {
         let a = fg.a.clamp(0.0, 1.0);

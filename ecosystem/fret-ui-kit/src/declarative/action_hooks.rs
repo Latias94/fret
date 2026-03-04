@@ -6,6 +6,7 @@ use fret_ui::action::UiActionHostExt;
 use crate::command::ElementCommandGatingExt as _;
 use crate::primitives::roving_focus_group;
 
+use std::any::Any;
 use std::cell::RefCell;
 use std::rc::Rc;
 use std::sync::Arc;
@@ -22,9 +23,49 @@ pub trait ActionHooksExt {
 
     fn pressable_dispatch_command_if_enabled_opt(&mut self, command: Option<CommandId>);
 
+    fn pressable_dispatch_command_with_payload_if_enabled<T>(
+        &mut self,
+        command: CommandId,
+        payload: T,
+    ) where
+        T: Any + Send + Sync + Clone + 'static;
+
+    fn pressable_dispatch_command_with_payload_if_enabled_opt<T>(
+        &mut self,
+        command: Option<CommandId>,
+        payload: T,
+    ) where
+        T: Any + Send + Sync + Clone + 'static;
+
+    fn pressable_dispatch_command_with_payload_factory_if_enabled(
+        &mut self,
+        command: CommandId,
+        payload: Arc<dyn Fn() -> Box<dyn Any + Send + Sync> + 'static>,
+    );
+
+    fn pressable_dispatch_command_with_payload_factory_if_enabled_opt(
+        &mut self,
+        command: Option<CommandId>,
+        payload: Arc<dyn Fn() -> Box<dyn Any + Send + Sync> + 'static>,
+    );
+
     fn pressable_dispatch_action_if_enabled(&mut self, action: ActionId);
 
     fn pressable_dispatch_action_if_enabled_opt(&mut self, action: Option<ActionId>);
+
+    fn pressable_dispatch_action_with_payload_if_enabled<T>(
+        &mut self,
+        action: ActionId,
+        payload: T,
+    ) where
+        T: Any + Send + Sync + Clone + 'static;
+
+    fn pressable_dispatch_action_with_payload_if_enabled_opt<T>(
+        &mut self,
+        action: Option<ActionId>,
+        payload: T,
+    ) where
+        T: Any + Send + Sync + Clone + 'static;
 
     fn pressable_update_model<T, F>(&mut self, model: &Model<T>, update: F)
     where
@@ -117,12 +158,85 @@ impl<H: UiHost> ActionHooksExt for ElementContext<'_, H> {
         self.pressable_dispatch_command_if_enabled(command);
     }
 
+    fn pressable_dispatch_command_with_payload_if_enabled<T>(
+        &mut self,
+        command: CommandId,
+        payload: T,
+    ) where
+        T: Any + Send + Sync + Clone + 'static,
+    {
+        if !self.command_is_enabled(&command) {
+            return;
+        }
+        self.pressable_add_on_activate(Arc::new(move |host, acx, reason| {
+            host.record_pending_command_dispatch_source(acx, &command, reason);
+            host.record_pending_action_payload(acx, &command, Box::new(payload.clone()));
+            host.dispatch_command(Some(acx.window), command.clone());
+        }));
+    }
+
+    fn pressable_dispatch_command_with_payload_if_enabled_opt<T>(
+        &mut self,
+        command: Option<CommandId>,
+        payload: T,
+    ) where
+        T: Any + Send + Sync + Clone + 'static,
+    {
+        let Some(command) = command else {
+            return;
+        };
+        self.pressable_dispatch_command_with_payload_if_enabled(command, payload);
+    }
+
+    fn pressable_dispatch_command_with_payload_factory_if_enabled(
+        &mut self,
+        command: CommandId,
+        payload: Arc<dyn Fn() -> Box<dyn Any + Send + Sync> + 'static>,
+    ) {
+        if !self.command_is_enabled(&command) {
+            return;
+        }
+        self.pressable_add_on_activate(Arc::new(move |host, acx, reason| {
+            host.record_pending_command_dispatch_source(acx, &command, reason);
+            host.record_pending_action_payload(acx, &command, payload());
+            host.dispatch_command(Some(acx.window), command.clone());
+        }));
+    }
+
+    fn pressable_dispatch_command_with_payload_factory_if_enabled_opt(
+        &mut self,
+        command: Option<CommandId>,
+        payload: Arc<dyn Fn() -> Box<dyn Any + Send + Sync> + 'static>,
+    ) {
+        let Some(command) = command else {
+            return;
+        };
+        self.pressable_dispatch_command_with_payload_factory_if_enabled(command, payload);
+    }
+
     fn pressable_dispatch_action_if_enabled(&mut self, action: ActionId) {
         self.pressable_dispatch_command_if_enabled(action);
     }
 
     fn pressable_dispatch_action_if_enabled_opt(&mut self, action: Option<ActionId>) {
         self.pressable_dispatch_command_if_enabled_opt(action);
+    }
+
+    fn pressable_dispatch_action_with_payload_if_enabled<T>(&mut self, action: ActionId, payload: T)
+    where
+        T: Any + Send + Sync + Clone + 'static,
+    {
+        self.pressable_dispatch_command_with_payload_if_enabled(action, payload);
+    }
+
+    fn pressable_dispatch_action_with_payload_if_enabled_opt<T>(
+        &mut self,
+        action: Option<ActionId>,
+        payload: T,
+    ) where
+        T: Any + Send + Sync + Clone + 'static,
+    {
+        self.pressable_dispatch_command_with_payload_if_enabled_opt(action, payload);
     }
 
     fn pressable_update_model<T, F>(&mut self, model: &Model<T>, update: F)

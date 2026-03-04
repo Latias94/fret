@@ -30,6 +30,7 @@ Scope:
   - `apps/fret-cookbook/examples/hello_counter.rs`
   - `apps/fret-cookbook/examples/effects_layer_basics.rs`
   - `apps/fret-cookbook/examples/markdown_and_code_basics.rs`
+  - `apps/fret-cookbook/examples/payload_actions_basics.rs`
   - `apps/fret-cookbook/examples/simple_todo.rs`
   - `apps/fret-cookbook/examples/text_input_basics.rs`
   - `apps/fret-cookbook/examples/theme_switching_basics.rs`

@@ -142,9 +142,19 @@ Recommended default (new code):
 Keep MVU (compat / legacy) when:
 
 - You need **per-item/payloaded** routing semantics that v1 typed actions do not support yet
-  (v1 is intentionally *unit actions only*; see ADR 0307 “v1 decision snapshot”).
+  (v1 is intentionally *unit actions only*; see ADR 0307 “v1 decision snapshot”),
+  and the payload actions v2 prototype (ADR 0312) is not sufficient for your use case.
 - You are maintaining an existing MVU-based demo and migration would not add new evidence/gates.
 - You are exploring authoring patterns quickly and want a minimal “single-file loop” while prototyping.
+
+Prefer payload actions v2 (post-v1) when:
+
+- You want action-first per-item dispatch without routers, and you can accept:
+  - payload is pointer/programmatic-only (no keymap schema changes),
+  - payload is transient/best-effort (pending store + TTL),
+  - missing payload should be handled safely (recommended: treat as not handled).
+- See: `docs/adr/0312-payload-actions-v2.md`
+- Example: `apps/fret-cookbook/examples/payload_actions_basics.rs`
 
 If you choose MVU in 2026:
 
