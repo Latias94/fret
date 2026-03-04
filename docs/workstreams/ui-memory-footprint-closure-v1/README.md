@@ -23,6 +23,18 @@ Using `tools/diag-scripts/todo-memory-steady.json` on macOS/Metal:
   - Before lazy color/subpixel text atlases: ~123 MiB
   - After lazy color/subpixel text atlases: ~58 MiB
 
+Using `tools/diag-scripts/empty-idle-memory-steady.json` on macOS/Metal (baseline):
+
+- Without UI diagnostics enabled (manual `vmmap -summary` on a plain run):
+  - Physical footprint (peak): ~241 MiB
+  - `owned unmapped memory` dirty: ~204 MiB
+  - Default malloc zone: ~13.6 MiB allocated, ~4.0 MiB frag
+- With `fretboard diag repro` (UI diagnostics enabled, plus tool-side `vmmap` capture):
+  - `macos_vmmap.physical_footprint_peak_bytes`: ~288 MB (tool JSON; `vmmap` prints ~275 MiB)
+  - `owned unmapped memory` dirty: ~216 MB
+  - Default malloc zone: ~24.5 MB allocated, ~15.4 MB frag
+  - `debug.stats.wgpu_metal_current_allocated_size_bytes`: ~30.7 MiB (requires `--env FRET_DIAG_WGPU_ALLOCATOR_REPORT=1`)
+
 Interpretation:
 
 - GPU memory can be substantial but may not be reflected by `physical footprint` in a stable way.
