@@ -18,6 +18,13 @@ Source of truth:
 This checklist is intentionally short and is meant to be used while iterating on docking and
 viewport tooling, to avoid late rewrites and accidental behavior drift.
 
+> [!NOTE]
+> Maintainer/labs document.
+>
+> This checklist uses the `apps/fret-demo` harness binaries to validate docking behavior and is not
+> part of the first-hour onboarding path. For onboarding, start with
+> [docs/first-hour.md](./first-hour.md) and [docs/examples/README.md](./examples/README.md).
+
 ---
 
 ## How to run the current demos

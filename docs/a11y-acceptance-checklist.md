@@ -14,6 +14,13 @@ The goal is to validate that:
 - Assistive technologies can **invoke** the focused item (Click/Invoke) end-to-end.
 - Overlay dismissal restores focus correctly (ADR 0067).
 
+> [!NOTE]
+> Maintainer/labs document.
+>
+> This checklist uses the `apps/fret-demo` harness (component gallery) and is not part of the
+> first-hour onboarding path. For onboarding, start with
+> [docs/first-hour.md](./first-hour.md) and [docs/examples/README.md](./examples/README.md).
+
 ## Quick start (run the harness)
 
 Run the demo harness (shadcn gallery):
