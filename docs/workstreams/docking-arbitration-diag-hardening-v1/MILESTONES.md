@@ -140,6 +140,9 @@ Status update (2026-03-04):
 - Dock routing evidence is self-healing:
   - `fretboard diag dock-routing <bundle_dir|bundle.schema2.json>` prefers regenerating `dock.routing.json` from the adjacent
     bundle artifact when available, so newly added bounded evidence keys do not require manual sidecar deletion.
+- Mixed-DPI multi-window runs no longer hang on release:
+  - `pointer_up` during an active cross-window dock drag is treated as a global "release" step, so the run does not depend
+    on the dock-destination window producing frames while the moving payload window is active.
 
 ## M1.4 — Rebuild reliability for docking demos (Windows/MSVC)
 
