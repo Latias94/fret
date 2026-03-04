@@ -2,7 +2,7 @@ use fret_icons::{IconId, ids};
 
 use fret_core::{Edges, Px};
 use fret_ui::element::InsetStyle;
-use fret_ui_kit::LayoutRefinement;
+use fret_ui_kit::{LayoutRefinement, Space};
 
 use crate::LayoutDirection;
 
@@ -103,6 +103,46 @@ pub(crate) fn inset_style_set_inline_start(inset: &mut InsetStyle, dir: LayoutDi
             inset.right = Some(px).into();
             inset.left = None.into();
         }
+    }
+}
+
+#[inline]
+pub(crate) fn layout_margin_inline_start_px(
+    layout: &mut fret_ui::element::LayoutStyle,
+    dir: LayoutDirection,
+    px: Px,
+) {
+    match dir {
+        LayoutDirection::Ltr => {
+            layout.margin.left = fret_ui::element::MarginEdge::Px(px);
+        }
+        LayoutDirection::Rtl => {
+            layout.margin.right = fret_ui::element::MarginEdge::Px(px);
+        }
+    }
+}
+
+#[inline]
+pub(crate) fn layout_refinement_apply_margin_inline_start_neg(
+    layout: LayoutRefinement,
+    dir: LayoutDirection,
+    space: Space,
+) -> LayoutRefinement {
+    match dir {
+        LayoutDirection::Ltr => layout.ml_neg(space),
+        LayoutDirection::Rtl => layout.mr_neg(space),
+    }
+}
+
+#[inline]
+pub(crate) fn layout_refinement_apply_margin_inline_end_neg(
+    layout: LayoutRefinement,
+    dir: LayoutDirection,
+    space: Space,
+) -> LayoutRefinement {
+    match dir {
+        LayoutDirection::Ltr => layout.mr_neg(space),
+        LayoutDirection::Rtl => layout.ml_neg(space),
     }
 }
 

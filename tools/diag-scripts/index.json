@@ -64,6 +64,27 @@
       "target_hints": []
     },
     {
+      "id": "cookbook-assets-reload-epoch-basics-smoke",
+      "path": "tools/diag-scripts/cookbook/assets-reload-epoch-basics/cookbook-assets-reload-epoch-basics-smoke.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "cookbook-assets-reload-epoch-basics"
+      ],
+      "tags": [
+        "assets",
+        "cookbook",
+        "cookbook.assets_reload_epoch_basics",
+        "smoke"
+      ],
+      "target_hints": [
+        "Waits for the root + status badges to exist.",
+        "Clicks the reload epoch button and captures a screenshot + bundle."
+      ]
+    },
+    {
       "id": "cookbook-async-inbox-basics-smoke",
       "path": "tools/diag-scripts/cookbook/async-inbox-basics/cookbook-async-inbox-basics-smoke.json",
       "required_capabilities": [
@@ -142,6 +163,27 @@
       ]
     },
     {
+      "id": "cookbook-compositing-alpha-basics-baseline",
+      "path": "tools/diag-scripts/cookbook/compositing-alpha-basics/cookbook-compositing-alpha-basics-baseline.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "cookbook-compositing-alpha-basics"
+      ],
+      "tags": [
+        "cookbook",
+        "cookbook.compositing_alpha_basics",
+        "renderer",
+        "screenshots"
+      ],
+      "target_hints": [
+        "Waits a short time for image registration to settle.",
+        "Captures a baseline screenshot + bundle for alpha compositing semantics."
+      ]
+    },
+    {
       "id": "cookbook-customv1-basics-smoke",
       "path": "tools/diag-scripts/cookbook/customv1-basics/cookbook-customv1-basics-smoke.json",
       "required_capabilities": [
@@ -216,6 +258,26 @@
         "smoke"
       ],
       "target_hints": []
+    },
+    {
+      "id": "cookbook-drop-shadow-basics-baseline",
+      "path": "tools/diag-scripts/cookbook/drop-shadow-basics/cookbook-drop-shadow-basics-baseline.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "cookbook-drop-shadow-basics"
+      ],
+      "tags": [
+        "cookbook",
+        "cookbook.drop_shadow_basics",
+        "renderer",
+        "screenshots"
+      ],
+      "target_hints": [
+        "Waits for the root to exist, then captures a baseline screenshot + bundle."
+      ]
     },
     {
       "id": "cookbook-effects-layer-basics-screenshots",
@@ -386,66 +448,6 @@
       ],
       "target_hints": [
         "Validates that icon + asset panels mount and that the reload epoch button is wired."
-      ]
-    },
-    {
-      "id": "cookbook-assets-reload-epoch-basics-smoke",
-      "path": "tools/diag-scripts/cookbook/assets-reload-epoch-basics/cookbook-assets-reload-epoch-basics-smoke.json",
-      "required_capabilities": [
-        "diag.screenshot_png",
-        "diag.script_v2"
-      ],
-      "suite_memberships": [
-        "cookbook-assets-reload-epoch-basics"
-      ],
-      "tags": [
-        "assets",
-        "cookbook",
-        "cookbook.assets_reload_epoch_basics",
-        "smoke"
-      ],
-      "target_hints": [
-        "Waits for the root + status badges to exist, clicks reload epoch, and captures a screenshot + bundle."
-      ]
-    },
-    {
-      "id": "cookbook-compositing-alpha-basics-baseline",
-      "path": "tools/diag-scripts/cookbook/compositing-alpha-basics/cookbook-compositing-alpha-basics-baseline.json",
-      "required_capabilities": [
-        "diag.screenshot_png",
-        "diag.script_v2"
-      ],
-      "suite_memberships": [
-        "cookbook-compositing-alpha-basics"
-      ],
-      "tags": [
-        "cookbook",
-        "cookbook.compositing_alpha_basics",
-        "renderer",
-        "screenshots"
-      ],
-      "target_hints": [
-        "Waits briefly and captures a baseline screenshot + bundle for alpha compositing semantics."
-      ]
-    },
-    {
-      "id": "cookbook-drop-shadow-basics-baseline",
-      "path": "tools/diag-scripts/cookbook/drop-shadow-basics/cookbook-drop-shadow-basics-baseline.json",
-      "required_capabilities": [
-        "diag.screenshot_png",
-        "diag.script_v2"
-      ],
-      "suite_memberships": [
-        "cookbook-drop-shadow-basics"
-      ],
-      "tags": [
-        "cookbook",
-        "cookbook.drop_shadow_basics",
-        "renderer",
-        "screenshots"
-      ],
-      "target_hints": [
-        "Waits for the root to exist, then captures a baseline screenshot + bundle."
       ]
     },
     {
@@ -4088,6 +4090,29 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-input-group-rtl-screenshot",
+      "path": "tools/diag-scripts/ui-gallery/input/ui-gallery-input-group-rtl-screenshot.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-rtl-smoke"
+      ],
+      "tags": [
+        "input_group",
+        "rtl",
+        "screenshots",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Navigates to the InputGroup page.",
+        "Scrolls to the RTL section.",
+        "Captures a screenshot to validate leading/trailing slot mirroring."
+      ]
+    },
+    {
       "id": "ui-gallery-input-group-text-non-overlap",
       "path": "tools/diag-scripts/ui-gallery/input/ui-gallery-input-group-text-non-overlap.json",
       "required_capabilities": [],
@@ -5080,6 +5105,29 @@
       ],
       "tags": [],
       "target_hints": []
+    },
+    {
+      "id": "ui-gallery-select-rtl-open-screenshot",
+      "path": "tools/diag-scripts/ui-gallery/select/ui-gallery-select-rtl-open-screenshot.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-rtl-smoke"
+      ],
+      "tags": [
+        "rtl",
+        "screenshots",
+        "select",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Navigates to the Select page.",
+        "Opens the RTL Select trigger.",
+        "Captures a screenshot to validate chevron/indicator inline-end mirroring and padding."
+      ]
     },
     {
       "id": "ui-gallery-select-typeahead-commit-banana",

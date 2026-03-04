@@ -1,4 +1,5 @@
 use crate::popper_arrow::{self, DiamondArrowStyle};
+use crate::rtl;
 use crate::test_id::attach_test_id;
 use fret_core::{
     Color, Corners, Edges, FontId, FontWeight, Point, Px, Rect, SemanticsRole, TextStyle,
@@ -3165,6 +3166,7 @@ fn select_impl<H: UiHost>(
                                                 .unwrap_or_else(|e| e.into_inner());
                                             state.scroll_handle.clone()
                                         };
+                                        let dir = crate::use_direction(cx, None);
 
                         let probe = cx.container(
                             ContainerProps {
@@ -3192,12 +3194,14 @@ fn select_impl<H: UiHost>(
                                     out.push(cx.container(
                                         ContainerProps {
                                             // new-york-v4: `py-1.5 pl-2 pr-8`
-                                            padding: Edges {
-                                                top: Px(6.0),
-                                                right: Px(32.0),
-                                                bottom: Px(6.0),
-                                                left: Px(8.0),
-                                            }.into(),
+                                            padding: rtl::padding_edges_with_inline_start_end(
+                                                dir,
+                                                Px(6.0),
+                                                Px(6.0),
+                                                Px(8.0),
+                                                Px(32.0),
+                                            )
+                                            .into(),
                                             ..Default::default()
                                         },
                                         |cx| {
@@ -3837,6 +3841,8 @@ fn select_impl<H: UiHost>(
                                                                                     } else {
                                                                                         fg_muted
                                                                                     };
+                                                                                    let dir =
+                                                                                        crate::use_direction(cx, None);
 
                                                                                     let icon = match item_indicator.clone() {
                                                                                         SelectItemIndicator::None => cx.container(
@@ -3896,12 +3902,15 @@ fn select_impl<H: UiHost>(
                                                                                                     // new-york-v4: `py-1.5 pl-2 pr-8`
                                                                                                     // Reserve the trailing `pr-8` space via an explicit slot so the
                                                                                                     // option's hit-test bounds match the visible row.
-                                                                                                    padding: Edges {
-                                                                                                        top: Px(6.0),
-                                                                                                        right: Px(0.0),
-                                                                                                        bottom: Px(6.0),
-                                                                                                        left: Px(8.0),
-                                                                                                    }.into(),
+                                                                                                    padding:
+                                                                                                        rtl::padding_edges_with_inline_start_end(
+                                                                                                            dir,
+                                                                                                            Px(6.0),
+                                                                                                            Px(6.0),
+                                                                                                            Px(8.0),
+                                                                                                            Px(0.0),
+                                                                                                        )
+                                                                                                        .into(),
                                                                                                     background: Some(bg),
                                                                                                     shadow: None,
                                                                                                     border: Edges::all(Px(0.0)),
@@ -4040,6 +4049,14 @@ fn select_impl<H: UiHost>(
                                                                                                     )]
                                                                                                 },
                                                                                             );
+                                                                                            let row_children = match dir {
+                                                                                                crate::LayoutDirection::Ltr => {
+                                                                                                    vec![text, indicator_slot]
+                                                                                                }
+                                                                                                crate::LayoutDirection::Rtl => {
+                                                                                                    vec![indicator_slot, text]
+                                                                                                }
+                                                                                            };
 
                                                                                             vec![cx.flex(
                                                                                                 FlexProps {
@@ -4059,7 +4076,7 @@ fn select_impl<H: UiHost>(
                                                                                                     align: CrossAlign::Center,
                                                                                                     wrap: false,
                                                                                                 },
-                                                                                                |_cx| vec![text, indicator_slot],
+                                                                                                move |_cx| row_children,
                                                                                             )]
                                                                                         },
                                                                                             )]
@@ -4423,6 +4440,7 @@ fn select_impl<H: UiHost>(
                 .clamp(0.0, 1.0);
 
             let content = move |cx: &mut ElementContext<'_, H>| {
+                let dir = crate::use_direction(cx, None);
                 vec![cx.flex(
                     FlexProps {
                         layout: {
@@ -4438,9 +4456,8 @@ fn select_impl<H: UiHost>(
                         align: CrossAlign::Center,
                         wrap: false,
                     },
-                    |cx| {
-                        vec![
-                            {
+                    move |cx| {
+                        let value_node = {
                                 let layout = {
                                     if auto_width_trigger {
                                         LayoutStyle::default()
@@ -4537,16 +4554,20 @@ fn select_impl<H: UiHost>(
                                 state.value_node = Some(value_node.id);
 
                                 value_node
-                            },
-                            cx.opacity(trigger_chevron_opacity, |cx| {
+                            };
+                        let chevron = cx.opacity(trigger_chevron_opacity, |cx| {
                                 vec![decl_icon::icon_with(
                                     cx,
                                     trigger_chevron_icon_override.unwrap_or(ids::ui::CHEVRON_DOWN),
                                     Some(trigger_chevron_size),
                                     Some(ColorRef::Color(fg_muted)),
                                 )]
-                            }),
-                        ]
+                            });
+
+                        match dir {
+                            crate::LayoutDirection::Ltr => vec![value_node, chevron],
+                            crate::LayoutDirection::Rtl => vec![chevron, value_node],
+                        }
                     },
                 )]
             };

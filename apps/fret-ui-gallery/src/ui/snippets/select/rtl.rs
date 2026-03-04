@@ -8,6 +8,7 @@ use std::sync::Arc;
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     with_direction_provider(cx, LayoutDirection::Rtl, |cx| {
         shadcn::Select::new_controllable(cx, None, None::<Arc<str>>, None, false)
+            .trigger_test_id("ui-gallery-select-rtl-trigger")
             .refine_layout(LayoutRefinement::default().w_px(Px(180.0)))
             .into_element_parts(
                 cx,
@@ -17,8 +18,12 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                     shadcn::SelectContent::new().with_entries([
                         shadcn::SelectGroup::new([
                             shadcn::SelectLabel::new("الفواكه").into(),
-                            shadcn::SelectItem::new("apple", "تفاح").into(),
-                            shadcn::SelectItem::new("banana", "موز").into(),
+                            shadcn::SelectItem::new("apple", "تفاح")
+                                .test_id("ui-gallery-select-rtl-item-apple")
+                                .into(),
+                            shadcn::SelectItem::new("banana", "موز")
+                                .test_id("ui-gallery-select-rtl-item-banana")
+                                .into(),
                             shadcn::SelectItem::new("blueberry", "توت أزرق").into(),
                         ])
                         .into(),

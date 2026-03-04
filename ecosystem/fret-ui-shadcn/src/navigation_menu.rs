@@ -37,6 +37,7 @@ use fret_ui_kit::{
 };
 
 use crate::overlay_motion;
+use crate::rtl;
 
 fn drive_navigation_menu_trigger_chevron_motion<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
@@ -1611,6 +1612,7 @@ impl NavigationMenu {
                                                     });
 
                                                 let fg_ref_for_chevron = fg_ref.clone();
+                                                let dir = crate::use_direction(cx, None);
                                                 let chevron_motion = drive_navigation_menu_trigger_chevron_motion(
                                                     cx,
                                                     item_value.clone(),
@@ -1637,8 +1639,11 @@ impl NavigationMenu {
                                                             layout.flex.shrink = 0.0;
                                                             layout.position = fret_ui::element::PositionStyle::Relative;
                                                             layout.inset.top = Some(Px(1.0)).into(); // `top-[1px]`
-                                                            layout.margin.left =
-                                                                fret_ui::element::MarginEdge::Px(Px(4.0)); // `ml-1`
+                                                            rtl::layout_margin_inline_start_px(
+                                                                &mut layout,
+                                                                dir,
+                                                                Px(4.0),
+                                                            ); // `ml-1`
                                                             layout
                                                         },
                                                         transform: chevron_transform,
@@ -1653,13 +1658,14 @@ impl NavigationMenu {
                                                     },
                                                 );
 
-                                                let mut row_children = content_children;
+                                                let mut row_children: Vec<AnyElement> =
+                                                    Vec::with_capacity(content_children.len() + 2);
                                                 // Upstream adds a literal `" "` text node between the label
                                                 // and the chevron icon, in addition to `ml-1` on the icon.
                                                 // We model the outcome as a spacer metric so the trigger
                                                 // width matches the extracted web goldens closely.
                                                 let space_px = nav_menu_trigger_space_px(&theme_for_item);
-                                                row_children.push(cx.container(
+                                                let spacer = cx.container(
                                                     ContainerProps {
                                                         layout: {
                                                             let mut layout = LayoutStyle::default();
@@ -1674,8 +1680,19 @@ impl NavigationMenu {
                                                         ..Default::default()
                                                     },
                                                     |_cx| Vec::new(),
-                                                ));
-                                                row_children.push(chevron);
+                                                );
+                                                match dir {
+                                                    crate::LayoutDirection::Ltr => {
+                                                        row_children.extend(content_children);
+                                                        row_children.push(spacer);
+                                                        row_children.push(chevron);
+                                                    }
+                                                    crate::LayoutDirection::Rtl => {
+                                                        row_children.push(chevron);
+                                                        row_children.push(spacer);
+                                                        row_children.extend(content_children);
+                                                    }
+                                                }
                                                 let row = cx.flex(
                                                     FlexProps {
                                                         layout: {
