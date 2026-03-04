@@ -1,0 +1,18 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "empty: idle memory steady",
+    "tags": ["empty", "memory", "steady"],
+    "required_capabilities": ["diag.script_v2"],
+    "target_hints": ["Captures a steady-state bundle after a short warmup window."]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "wait_frames", "n": 10 },
+
+    { "type": "reset_diagnostics" },
+    { "type": "wait_frames", "n": 600 },
+    { "type": "capture_bundle", "label": "empty-idle-memory-steady" }
+  ]
+}
+

@@ -86,6 +86,12 @@ try {
             ExampleName = "imui_action_basics"
         },
         @{
+            Name = "cookbook-payload-actions-basics-remove"
+            DirName = "p"
+            ScriptPath = "tools/diag-scripts/cookbook/payload-actions-basics/cookbook-payload-actions-basics-remove.json"
+            ExampleName = "payload_actions_basics"
+        },
+        @{
             Name = "workspace-shell-demo-tab-close-button-command-dispatch-trace"
             DirName = "w"
             ScriptPath = "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-button-closes-tab-smoke.json"

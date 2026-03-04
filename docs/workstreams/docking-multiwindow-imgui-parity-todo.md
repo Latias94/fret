@@ -257,7 +257,7 @@ Each TODO is labeled:
     - Docking tear-off windows request `TaskbarVisibility::Hide` and `ActivationPolicy::Activates`.
     - Docking follow applies temporary runtime style patches via `WindowRequest::SetStyle` (ImGui-style):
       - `z_level`: request `AlwaysOnTop` while following, patch back to `Normal` when follow stops (capability-gated).
-      - Optional transparent payload: `opacity` + `mouse=Passthrough` while following, patch back when follow stops.
+      - Optional transparent payload: `opacity` + `hit_test=PassthroughAll` while following, patch back when follow stops.
     - Desktop runner applies `with_active(...)` and Windows `skip_taskbar` at creation time.
   - Evidence anchors:
     - Portable request surface: `crates/fret-runtime/src/effect.rs` (`WindowStyleRequest`, `WindowRole`, `TaskbarVisibility`, `ActivationPolicy`)

@@ -108,11 +108,11 @@ fn main() -> anyhow::Result<()> {
 
 Template reference:
 
-- `fretboard new hello` uses this pattern (View runtime + typed unit actions):
+- `cargo run -p fretboard -- new hello` uses this pattern (View runtime + typed unit actions):
   `apps/fretboard/src/scaffold/templates.rs` (`hello_template_main_rs`)
-- `fretboard new todo` extends the same pattern with selector/query hooks:
+- `cargo run -p fretboard -- new todo` extends the same pattern with selector/query hooks:
   `apps/fretboard/src/scaffold/templates.rs` (`todo_template_main_rs`)
-- `fretboard new simple-todo` provides the smallest View+actions baseline:
+- `cargo run -p fretboard -- new simple-todo` provides the smallest View+actions baseline:
   `apps/fretboard/src/scaffold/templates.rs` (`simple_todo_template_main_rs`)
 
 UI gallery reference:
@@ -142,15 +142,40 @@ Recommended default (new code):
 Keep MVU (compat / legacy) when:
 
 - You need **per-item/payloaded** routing semantics that v1 typed actions do not support yet
-  (v1 is intentionally *unit actions only*; see ADR 0307 “v1 decision snapshot”).
+  (v1 is intentionally *unit actions only*; see ADR 0307 “v1 decision snapshot”),
+  and the payload actions v2 prototype (ADR 0312) is not sufficient for your use case.
 - You are maintaining an existing MVU-based demo and migration would not add new evidence/gates.
 - You are exploring authoring patterns quickly and want a minimal “single-file loop” while prototyping.
+
+Prefer payload actions v2 (post-v1) when:
+
+- You want action-first per-item dispatch without routers, and you can accept:
+  - payload is pointer/programmatic-only (no keymap schema changes),
+  - payload is transient/best-effort (pending store + TTL),
+  - missing payload should be handled safely (recommended: treat as not handled).
+- See: `docs/adr/0312-payload-actions-v2.md`
+- Example: `apps/fret-cookbook/examples/payload_actions_basics.rs`
+
+Policy note:
+
+- MVU is legacy-only (compat), not a supported alternative golden path.
+- See: `docs/workstreams/action-first-authoring-fearless-refactor-v1/MVU_POLICY.md`
 
 If you choose MVU in 2026:
 
 - Label it explicitly as legacy/compat in docs and avoid copy-pasting it into new templates.
 - Prefer action-first IDs (`ActionId == CommandId` in v1) even inside MVU code where feasible, so
   keymap/palette/menus/diagnostics stay aligned.
+
+### 3.2) Enabling legacy MVU surfaces (opt-in)
+
+MVU is feature-gated and compile-time deprecated.
+
+To use it (legacy demos only), opt in explicitly:
+
+- Enable the `fret` feature `legacy-mvu` in your `Cargo.toml`.
+- Import MVU through `fret::legacy::prelude::*` (do not rely on `fret::prelude::*`).
+- Expect `deprecated` warnings; in in-tree legacy demo crates we typically add `#![allow(deprecated)]`.
 
 Inventory:
 
@@ -172,6 +197,35 @@ Migration steps:
 3) Keep policy in ecosystem components, not in `fret-imui`.
 
 ---
+
+## 4.1) Stamping semantics/test IDs without early `into_element(cx)`
+
+Target outcome:
+
+- authoring code can attach `test_id` / a11y semantics decorations on *any* `UiIntoElement` value,
+  without forcing an early `into_element(cx)` call.
+
+Recommended pattern (ecosystem authoring surface, ADR 0160):
+
+```rust,ignore
+use fret_core::SemanticsRole;
+use fret_ui_kit::prelude::*;
+
+let button = shadcn::Button::new("Save")
+    .action(act::EditorSave)
+    .a11y_role(SemanticsRole::Button)
+    .test_id("editor.save")
+    .key_context("editor");
+
+// Only convert to `AnyElement` at the end:
+let el = button.into_element(cx);
+```
+
+Notes:
+
+- `a11y_*` decorations are applied via layout-transparent `SemanticsDecoration` on `AnyElement`
+  (no extra layout node required).
+- `key_context(...)` participates in `when` expressions via `keyctx.*` (ADR 0022).
 
 ## 5) GenUI alignment (spec bindings reuse action IDs)
 

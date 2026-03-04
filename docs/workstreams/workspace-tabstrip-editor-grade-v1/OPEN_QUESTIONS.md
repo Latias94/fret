@@ -33,6 +33,8 @@ Why it matters:
 Recommendation:
 - Prefer `drag_to` when a stable target exists.
 - Prefer `drag_pointer_until` for “find the edge preview” style gates.
+- For hover-driven edge preview routing, prefer `set_cursor_in_window_logical` (runner cursor override) plus a tiny
+  `pointer_move` nudge to keep the cursor **inside** the window while still triggering hover updates.
 - Only use raw `pointer_move` deltas for short, local motions.
 
 ## Q3: Where should “keep drag session position fresh” live long-term?
@@ -182,3 +184,25 @@ Recommendation:
 Status:
 - This reference split is already captured in `REFERENCE_NOTES.md` and `GAP_ANALYSIS.md`; keep it explicit so “fearless
   refactors” do not degrade editor outcomes while chasing dockview-style mechanics.
+
+## Q11: What is the contract for “close button click vs tab activation vs tab drag” under pointer jitter?
+
+Why it matters:
+- Close affordances are tiny and often adjacent to drag affordances.
+- In overflowed strips, the active tab width can change when the close button becomes visible, which can make the close
+  hit-test unstable (partially visible tab, end-drop surface overlaps, etc.).
+- We want editor-grade semantics: a close click should be focus-neutral and should not accidentally activate another tab
+  or start a drag session.
+
+Contract (v1 recommendation):
+- On left button down (no modifiers), if the pointer is in the close affordance hit region:
+  - capture the pointer and arm a `close_press` state (per-pointer),
+  - clear any in-scope tab DnD state for that pointer,
+  - stop propagation so the tab pressable does not arm activation or drag.
+- On pointer up, if the pointer moved within a small slop (e.g. 8px in window space), dispatch close and return
+  `SkipActivate` (do not activate a different tab as a side-effect).
+- Keep the active tab **fully visible** (not just partially visible) when not dragging, so the close target remains
+  reachable and diagnostics scripts remain stable under minor chrome width changes.
+
+Gate:
+- `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-button-does-not-start-drag.json`

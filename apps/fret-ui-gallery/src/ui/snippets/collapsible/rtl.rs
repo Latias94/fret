@@ -160,19 +160,15 @@ fn details_collapsible<H: UiHost>(
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let open = open_model(cx);
-    fret_ui_kit::primitives::direction::with_direction_provider(
-        cx,
-        fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
-        |cx| {
-            details_collapsible(
-                cx,
-                "ui-gallery-collapsible-rtl",
-                Some(open.clone()),
-                "Order #4189",
-                "Shipped",
-            )
-        },
-    )
+    with_direction_provider(cx, LayoutDirection::Rtl, |cx| {
+        details_collapsible(
+            cx,
+            "ui-gallery-collapsible-rtl",
+            Some(open.clone()),
+            "Order #4189",
+            "Shipped",
+        )
+    })
     .test_id("ui-gallery-collapsible-rtl")
 }
 // endregion: example

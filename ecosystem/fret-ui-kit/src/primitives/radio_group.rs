@@ -248,13 +248,38 @@ impl RadioGroupItem {
         self,
         cx: &mut ElementContext<'_, H>,
         root: &RadioGroupRoot,
-        mut props: PressableProps,
+        props: PressableProps,
         f: impl FnOnce(
             &mut ElementContext<'_, H>,
             PressableState,
             bool,
         ) -> Vec<fret_ui::element::AnyElement>,
     ) -> fret_ui::element::AnyElement {
+        self.into_element_with_props_hook(cx, root, props, move |cx, st, _id, checked, _props| {
+            f(cx, st, checked)
+        })
+    }
+
+    /// Like [`RadioGroupItem::into_element`], but allows the caller to mutate the computed
+    /// `PressableProps` after Radix-like selection/a11y wiring has been applied.
+    ///
+    /// This is primarily intended for recipe-layer motion/visual tweaks that need access to
+    /// the item's `GlobalElementId` and the current pressable state.
+    #[track_caller]
+    pub fn into_element_with_props_hook<H: UiHost>(
+        self,
+        cx: &mut ElementContext<'_, H>,
+        root: &RadioGroupRoot,
+        props: PressableProps,
+        f: impl FnOnce(
+            &mut ElementContext<'_, H>,
+            PressableState,
+            fret_ui::elements::GlobalElementId,
+            bool,
+            &mut PressableProps,
+        ) -> Vec<fret_ui::element::AnyElement>,
+    ) -> fret_ui::element::AnyElement {
+        let mut props = props;
         let model = root.model.clone();
         let value = self.value.clone();
         let label = self.label.clone();
@@ -284,7 +309,8 @@ impl RadioGroupItem {
             }
             props.a11y = a11y;
 
-            (props, f(cx, st, checked))
+            let children = f(cx, st, id, checked, &mut props);
+            (props, children)
         })
     }
 }

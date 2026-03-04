@@ -1,0 +1,71 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "Cookbook: router basics smoke",
+    "tags": ["cookbook", "cookbook.router_basics", "router", "smoke", "screenshots"],
+    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
+    "target_hints": [
+      "Waits for the root node to exist.",
+      "Navigates to Settings and back.",
+      "Captures a screenshot + diagnostics bundle."
+    ]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "set_window_inner_size", "width_px": 1040.0, "height_px": 620.0 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "cookbook.router_basics.root" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": { "kind": "test_id", "id": "cookbook.router_basics.location.label" },
+        "text": "/"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "cookbook.router_basics.link.settings" },
+      "stable_frames": 6,
+      "max_move_px": 0.5,
+      "timeout_frames": 600
+    },
+    { "type": "wait_frames", "n": 12 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": { "kind": "test_id", "id": "cookbook.router_basics.location.label" },
+        "text": "/settings"
+      },
+      "timeout_frames": 360
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "cookbook.router_basics.back.button" },
+      "stable_frames": 6,
+      "max_move_px": 0.5,
+      "timeout_frames": 600
+    },
+    { "type": "wait_frames", "n": 12 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": { "kind": "test_id", "id": "cookbook.router_basics.location.label" },
+        "text": "/"
+      },
+      "timeout_frames": 360
+    },
+    { "type": "capture_screenshot", "label": "cookbook-router-basics-smoke" },
+    { "type": "capture_bundle", "label": "cookbook-router-basics-smoke" }
+  ]
+}
+

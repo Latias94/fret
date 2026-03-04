@@ -33,7 +33,7 @@
       "predicate": {
         "kind": "exists",
         "target": {
-          "id": "workspace-shell-pane-pane-a-tab-doc-a-0",
+          "id": "workspace-shell-pane-pane-a-tab-doc-a-2",
           "kind": "test_id"
         }
       },
@@ -52,26 +52,38 @@
       "type": "wait_until"
     },
     {
-      "delta_x": 4000.0,
-      "delta_y": 140.0,
+      "type": "pointer_down",
+      "window": { "kind": "current" },
+      "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-2" },
+      "button": "left"
+    },
+    {
+      "type": "pointer_move",
+      "window": { "kind": "current" },
+      "delta_x": 420.0,
+      "delta_y": 0.0,
+      "steps": 42
+    },
+    {
+      "type": "set_cursor_in_window_logical",
+      "window": { "kind": "current" },
+      "x_px": 1278.0,
+      "y_px": 160.0
+    },
+    {
+      "type": "pointer_move",
+      "window": { "kind": "current" },
+      "delta_x": -1.0,
+      "delta_y": 0.0,
+      "steps": 1
+    },
+    {
+      "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": {
-          "id": "workspace-pane-pane-b.drop_preview.right",
-          "kind": "test_id"
-        }
+        "target": { "kind": "test_id", "id": "workspace-pane-pane-b.drop_preview.right" }
       },
-      "release_on_success": false,
-      "steps": 200,
-      "target": {
-        "id": "workspace-shell-pane-pane-a-tab-doc-a-0",
-        "kind": "test_id"
-      },
-      "timeout_frames": 480,
-      "type": "drag_pointer_until",
-      "window": {
-        "kind": "current"
-      }
+      "timeout_frames": 480
     },
     {
       "n": 8,
@@ -82,12 +94,21 @@
       "type": "capture_screenshot"
     },
     {
-      "key": "escape",
-      "type": "press_key"
+      "type": "set_cursor_in_window_logical",
+      "window": {
+        "kind": "current"
+      },
+      "x_px": 1100.0,
+      "y_px": 160.0
     },
     {
-      "n": 2,
-      "type": "wait_frames"
+      "delta_x": -1.0,
+      "delta_y": 0.0,
+      "steps": 1,
+      "type": "pointer_move",
+      "window": {
+        "kind": "current"
+      }
     },
     {
       "type": "pointer_up",

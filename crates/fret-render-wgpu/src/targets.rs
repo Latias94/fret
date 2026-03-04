@@ -23,6 +23,17 @@ pub struct RenderTargetRegistry {
     targets: SlotMap<RenderTargetId, RenderTargetEntry>,
 }
 
+fn estimate_texture_bytes(size: (u32, u32), format: wgpu::TextureFormat) -> u64 {
+    let (w, h) = size;
+    let (bw, bh) = format.block_dimensions();
+    let block_bytes = format.block_copy_size(None).unwrap_or(16) as u64;
+    let blocks_w = u64::from(w).div_ceil(u64::from(bw.max(1)));
+    let blocks_h = u64::from(h).div_ceil(u64::from(bh.max(1)));
+    blocks_w
+        .saturating_mul(blocks_h)
+        .saturating_mul(block_bytes)
+}
+
 impl RenderTargetRegistry {
     pub fn register(&mut self, desc: RenderTargetDescriptor) -> RenderTargetId {
         debug_assert_eq!(
@@ -66,5 +77,16 @@ impl RenderTargetRegistry {
 
     pub(crate) fn metadata(&self, id: RenderTargetId) -> Option<RenderTargetMetadata> {
         self.targets.get(id).map(|t| t.metadata)
+    }
+
+    pub(crate) fn diagnostics_estimated_bytes(&self) -> (u64, u64, u64) {
+        let mut total: u64 = 0;
+        let mut max: u64 = 0;
+        for entry in self.targets.values() {
+            let bytes = estimate_texture_bytes(entry.size, entry.format);
+            total = total.saturating_add(bytes);
+            max = max.max(bytes);
+        }
+        (self.targets.len() as u64, total, max)
     }
 }

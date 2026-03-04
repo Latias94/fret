@@ -1,0 +1,48 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "cookbook assets reload epoch: smoke",
+    "tags": ["cookbook", "cookbook.assets_reload_epoch_basics", "assets", "smoke"],
+    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
+    "target_hints": [
+      "Waits for the root + status badges to exist.",
+      "Clicks the reload epoch button and captures a screenshot + bundle."
+    ]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "set_window_inner_size", "width_px": 960.0, "height_px": 780.0 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "cookbook.assets_reload_epoch_basics.root" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "cookbook.assets_reload_epoch_basics.image.status" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "cookbook.assets_reload_epoch_basics.svg.status" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "cookbook.assets_reload_epoch_basics.bump_reload" }
+    },
+    { "type": "wait_frames", "n": 5 },
+    { "type": "capture_screenshot", "label": "cookbook-assets-reload-epoch-basics-smoke" },
+    { "type": "capture_bundle", "label": "cookbook-assets-reload-epoch-basics-smoke" }
+  ]
+}
+

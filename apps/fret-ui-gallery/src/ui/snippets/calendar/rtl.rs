@@ -57,17 +57,13 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         }
     };
 
-    fret_ui_kit::primitives::direction::with_direction_provider(
-        cx,
-        fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
-        |cx| {
-            shadcn::Calendar::new(month, selected)
-                .test_id_prefix("ui-gallery.calendar.rtl")
-                .cell_size(Px(36.0))
-                .caption_layout(shadcn::CalendarCaptionLayout::Dropdown)
-                .refine_style(ChromeRefinement::default().border_1().rounded(Radius::Lg))
-                .into_element(cx)
-        },
-    )
+    with_direction_provider(cx, LayoutDirection::Rtl, |cx| {
+        shadcn::Calendar::new(month, selected)
+            .test_id_prefix("ui-gallery.calendar.rtl")
+            .cell_size(Px(36.0))
+            .caption_layout(shadcn::CalendarCaptionLayout::Dropdown)
+            .refine_style(ChromeRefinement::default().border_1().rounded(Radius::Lg))
+            .into_element(cx)
+    })
 }
 // endregion: example

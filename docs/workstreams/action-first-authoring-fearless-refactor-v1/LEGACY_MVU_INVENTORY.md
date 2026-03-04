@@ -11,12 +11,22 @@ Scope:
   authoring surface).
 - This is an inventory, not a deletion plan. Deletion/quarantine is tracked by `AFA-clean-062`.
 
+Note:
+
+- MVU is feature-gated behind `fret` feature `legacy-mvu` and surfaces are compile-time deprecated.
+  Any in-tree legacy demo that uses MVU must explicitly opt in.
+
 ## Why this inventory exists
 
 - Keep docs/templates aligned to one boring golden path (View runtime + typed actions).
 - Prevent slow drift where new code keeps reintroducing per-frame command routing in places that are
   intended to be action-first.
 - Provide an explicit map for incremental migrations (don’t “fearlessly refactor” 200 files at once).
+
+Policy:
+
+- MVU is legacy-only (compat), not a supported alternative golden path.
+- See: `docs/workstreams/action-first-authoring-fearless-refactor-v1/MVU_POLICY.md`
 
 ## Already converged (golden path)
 
@@ -30,6 +40,7 @@ Scope:
   - `apps/fret-cookbook/examples/hello_counter.rs`
   - `apps/fret-cookbook/examples/effects_layer_basics.rs`
   - `apps/fret-cookbook/examples/markdown_and_code_basics.rs`
+  - `apps/fret-cookbook/examples/payload_actions_basics.rs`
   - `apps/fret-cookbook/examples/simple_todo.rs`
   - `apps/fret-cookbook/examples/text_input_basics.rs`
   - `apps/fret-cookbook/examples/theme_switching_basics.rs`
@@ -55,7 +66,6 @@ Recommendation:
 Examples that use `fret::mvu::app(...)` or implement `MvuProgram` include (non-exhaustive):
 
 - `apps/fret-examples/src/todo_demo.rs`
-- `apps/fret-examples/src/router_query_demo.rs`
 - `apps/fret-examples/src/query_demo.rs`
 - `apps/fret-examples/src/query_async_tokio_demo.rs`
 - `apps/fret-examples/src/hello_counter_demo.rs`

@@ -9,7 +9,6 @@ use fret_ui::element::{
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::primitives::direction as direction_prim;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space, ui};
 
 use crate::surface_slot::{ShadcnSurfaceSlot, surface_slot_in_scope};
@@ -202,11 +201,8 @@ impl KbdGroup {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).snapshot();
         let gap = MetricRef::space(Space::N1).resolve(&theme);
-        let direction = direction_prim::use_direction_in_scope(cx, None);
-        let children = match direction {
-            direction_prim::LayoutDirection::Ltr => self.children,
-            direction_prim::LayoutDirection::Rtl => self.children.into_iter().rev().collect(),
-        };
+        let direction = crate::use_direction(cx, None);
+        let children = crate::rtl::reverse_in_rtl(direction, self.children);
         let layout = decl_style::layout_style(&theme, self.layout);
 
         cx.flex(
@@ -228,6 +224,7 @@ impl KbdGroup {
 mod tests {
     use super::*;
 
+    use crate::LayoutDirection;
     use fret_app::App;
     use fret_core::{AppWindowId, Color, Point, Px, Rect, Size as CoreSize};
     use fret_ui::element::{ElementKind, Length, MarginEdge, SpacingLength};
@@ -368,17 +365,13 @@ mod tests {
 
         let element =
             fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
-                direction_prim::with_direction_provider(
-                    cx,
-                    direction_prim::LayoutDirection::Rtl,
-                    |cx| {
-                        KbdGroup::new([
-                            Kbd::new("A").into_element(cx).test_id("a"),
-                            Kbd::new("B").into_element(cx).test_id("b"),
-                        ])
-                        .into_element(cx)
-                    },
-                )
+                crate::with_direction_provider(cx, LayoutDirection::Rtl, |cx| {
+                    KbdGroup::new([
+                        Kbd::new("A").into_element(cx).test_id("a"),
+                        Kbd::new("B").into_element(cx).test_id("b"),
+                    ])
+                    .into_element(cx)
+                })
             });
 
         assert_eq!(element.children.len(), 2);

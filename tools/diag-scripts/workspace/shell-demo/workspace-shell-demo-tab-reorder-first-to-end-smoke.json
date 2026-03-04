@@ -51,17 +51,56 @@
     },
 
     {
-      "type": "pointer_down",
-      "window": { "kind": "current" },
-      "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-0" },
-      "button": "left"
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-strip.overflow_button" }
+      },
+      "timeout_frames": 240
     },
-    { "type": "pointer_move", "window": { "kind": "current" }, "delta_x": 20.0, "delta_y": 0.0, "steps": 12 },
-    { "type": "wait_frames", "n": 2 },
-    { "type": "pointer_move", "window": { "kind": "current" }, "delta_x": 380.0, "delta_y": 0.0, "steps": 64 },
-    { "type": "wait_frames", "n": 2 },
-    { "type": "pointer_up", "window": { "kind": "current" } },
-    { "type": "wait_frames", "n": 12 },
+    { "type": "click", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-strip.overflow_button" } },
+    { "type": "wait_frames", "n": 6 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-strip.overflow_entry.doc-a-0" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-strip.overflow_entry.doc-a-0" } },
+    { "type": "wait_frames", "n": 10 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "selected_is",
+        "selected": true,
+        "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-0" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "workspace_tab_strip_active_visible_is", "pane_id": "pane-a", "visible": true },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-strip.drop_end" }
+      },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "drag_to",
+      "from": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-0" },
+      "to": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-strip.drop_end" },
+      "steps": 84,
+      "timeout_frames": 240
+    },
+    { "type": "wait_frames", "n": 10 },
     {
       "type": "wait_until",
       "predicate": {

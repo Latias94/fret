@@ -531,6 +531,7 @@ fn view_cache_scroll_handle_window_update_marks_cache_root_needs_rerender() {
                     },
                 ),
                 semantics_decoration: None,
+                key_context: None,
             },
         );
     });
@@ -621,6 +622,7 @@ fn view_cache_scroll_windowed_paint_marks_cache_root_needs_rerender() {
                     },
                 ),
                 semantics_decoration: None,
+                key_context: None,
             },
         );
     });

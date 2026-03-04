@@ -250,7 +250,7 @@ backend guidance. It is not an API map: the goal is to preserve the *outcome* ac
       “no inputs” (ignore mouse) while following the cursor, to improve “peek behind” hand feel.
       - Anchor: `crates/fret-launch/src/runner/desktop/runner/docking.rs` (emits `WindowRequest::SetStyle`),
         `crates/fret-launch/src/runner/desktop/runner/effects.rs` (applies style),
-        `crates/fret-launch/src/runner/desktop/runner/window.rs` (`set_window_opacity`, `set_window_mouse_passthrough`).
+        `crates/fret-launch/src/runner/desktop/runner/window.rs` (`set_window_opacity`, `set_window_hit_test_passthrough_all`).
 
 - **Drop hint hit-testing uses a 5-way selection with hysteresis**
   - ImGui: `DockNodeCalcDropRectsAndTestMousePos()` has a custom radial/quadrant test to reduce diagonal flicker.

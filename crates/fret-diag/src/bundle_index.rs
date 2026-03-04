@@ -669,7 +669,7 @@ fn build_dock_routing_payload_from_json(
                 );
                 mix(
                     &mut fp,
-                    d.get("transparent_payload_mouse_passthrough_applied")
+                    d.get("transparent_payload_hit_test_passthrough_applied")
                         .and_then(|v| v.as_bool())
                         .unwrap_or(false) as u64,
                 );
@@ -768,7 +768,7 @@ fn build_dock_routing_payload_from_json(
                     "dragging": d.get("dragging").and_then(|v| v.as_bool()).unwrap_or(false),
                     "cross_window_hover": d.get("cross_window_hover").and_then(|v| v.as_bool()).unwrap_or(false),
                     "transparent_payload_applied": d.get("transparent_payload_applied").and_then(|v| v.as_bool()).unwrap_or(false),
-                    "transparent_payload_mouse_passthrough_applied": d.get("transparent_payload_mouse_passthrough_applied").and_then(|v| v.as_bool()).unwrap_or(false),
+                    "transparent_payload_hit_test_passthrough_applied": d.get("transparent_payload_hit_test_passthrough_applied").and_then(|v| v.as_bool()).unwrap_or(false),
                     "window_under_cursor_source": d.get("window_under_cursor_source").cloned().unwrap_or(Value::Null),
                     "moving_window": d.get("moving_window").cloned().unwrap_or(Value::Null),
                     "moving_window_scale_factor_x1000": d.get("moving_window_scale_factor_x1000").cloned().unwrap_or(Value::Null),
@@ -1665,7 +1665,7 @@ mod tests {
                                     "dragging": true,
                                     "cross_window_hover": true,
                                     "transparent_payload_applied": true,
-                                    "transparent_payload_mouse_passthrough_applied": true,
+                                    "transparent_payload_hit_test_passthrough_applied": true,
                                     "window_under_cursor_source": "heuristic_rects"
                                     ,
                                     "moving_window": 2,
@@ -1700,7 +1700,7 @@ mod tests {
                                     "dragging": true,
                                     "cross_window_hover": true,
                                     "transparent_payload_applied": true,
-                                    "transparent_payload_mouse_passthrough_applied": true,
+                                    "transparent_payload_hit_test_passthrough_applied": true,
                                     "window_under_cursor_source": "heuristic_rects"
                                     ,
                                     "moving_window": 2,

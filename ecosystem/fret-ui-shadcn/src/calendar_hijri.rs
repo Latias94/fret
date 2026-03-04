@@ -1,7 +1,6 @@
 use std::sync::Arc;
 
 use fret_core::{Color, FontWeight, Px, TextAlign, TextOverflow, TextWrap};
-use fret_icons::ids;
 use fret_runtime::Model;
 use fret_ui::element::{
     AnyElement, FlexProps, LayoutStyle, Length, MainAlign, Overflow, PressableA11y, PressableProps,
@@ -21,6 +20,7 @@ use fret_ui_kit::{
 };
 use time::{Date, Weekday};
 
+use crate::rtl;
 use crate::surface_slot::{ShadcnSurfaceSlot, surface_slot_in_scope};
 use crate::test_id::attach_test_id_suffix;
 
@@ -446,13 +446,16 @@ impl CalendarHijri {
                         .justify_start(),
                     move |cx| {
                         let nav_enabled = !disable_navigation;
+                        let direction = crate::use_direction(cx, None);
+                        let prev_icon = rtl::chevron_inline_start(direction);
+                        let next_icon = rtl::chevron_inline_end(direction);
 
                         let month_model_prev = month_model.clone();
                         let prev = calendar_nav_icon_button(
                             cx,
                             "Go to the Previous Month",
                             day_size,
-                            ids::ui::CHEVRON_RIGHT,
+                            prev_icon,
                             nav_enabled,
                             move |host| {
                                 if disable_navigation {
@@ -469,7 +472,7 @@ impl CalendarHijri {
                             cx,
                             "Go to the Next Month",
                             day_size,
-                            ids::ui::CHEVRON_LEFT,
+                            next_icon,
                             nav_enabled,
                             move |host| {
                                 if disable_navigation {
@@ -501,8 +504,8 @@ impl CalendarHijri {
                         title_props.layout.flex.basis = Length::Px(Px(0.0));
                         let title_el = cx.text_props(title_props);
 
-                        // RTL visual order: Next (left), Title (center), Previous (right).
-                        vec![next, title_el, prev]
+                        let (prev, next) = crate::rtl::inline_start_end_pair(direction, prev, next);
+                        vec![prev, title_el, next]
                     },
                 );
 

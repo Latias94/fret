@@ -12,6 +12,343 @@ use super::LaunchedDemo;
 use super::stats::BundleStatsSort;
 use super::util::{now_unix_ms, touch, write_json_value};
 
+#[cfg(target_os = "macos")]
+fn parse_vmmap_size_token_to_bytes(token: &str) -> Option<u64> {
+    let t = token.trim();
+    if t.is_empty() {
+        return None;
+    }
+
+    let (num, mul): (&str, u64) = match t.chars().last()? {
+        'K' | 'k' => (&t[..t.len() - 1], 1024),
+        'M' | 'm' => (&t[..t.len() - 1], 1024 * 1024),
+        'G' | 'g' => (&t[..t.len() - 1], 1024 * 1024 * 1024),
+        _ => (t, 1),
+    };
+
+    let v = num.parse::<f64>().ok()?;
+    if !v.is_finite() || v < 0.0 {
+        return None;
+    }
+    let bytes = (v * (mul as f64)).round();
+    if bytes < 0.0 || bytes > (u64::MAX as f64) {
+        return None;
+    }
+    Some(bytes as u64)
+}
+
+#[cfg(target_os = "macos")]
+fn parse_vmmap_u64_token(token: &str) -> Option<u64> {
+    let t = token.trim();
+    if t.is_empty() {
+        return None;
+    }
+    t.parse::<u64>().ok()
+}
+
+#[cfg(target_os = "macos")]
+fn parse_vmmap_percent_token(token: &str) -> Option<f64> {
+    let t = token.trim().trim_end_matches('%');
+    if t.is_empty() {
+        return None;
+    }
+    let v = t.parse::<f64>().ok()?;
+    if !v.is_finite() || v < 0.0 {
+        return None;
+    }
+    Some(v)
+}
+
+#[cfg(target_os = "macos")]
+#[derive(Debug, Clone, serde::Serialize)]
+struct VmmapRegionRow {
+    region_type: String,
+    virtual_bytes: u64,
+    resident_bytes: u64,
+    dirty_bytes: u64,
+    swapped_bytes: u64,
+    volatile_bytes: u64,
+    nonvol_bytes: u64,
+    empty_bytes: u64,
+    region_count: u64,
+}
+
+#[cfg(target_os = "macos")]
+fn parse_vmmap_regions_table(stdout: &str) -> Vec<VmmapRegionRow> {
+    let mut rows = Vec::new();
+    let mut in_table = false;
+
+    for line in stdout.lines() {
+        let l = line.trim();
+        if l.is_empty() {
+            continue;
+        }
+
+        if l.starts_with("REGION TYPE") {
+            in_table = true;
+            continue;
+        }
+        if !in_table {
+            continue;
+        }
+
+        if l.starts_with("TOTAL") || l.starts_with("TOTAL,") {
+            break;
+        }
+        if l.chars().all(|c| c == '=' || c == '-') {
+            continue;
+        }
+
+        let tokens: Vec<&str> = l.split_whitespace().collect();
+        let first_numeric = tokens
+            .iter()
+            .position(|t| t.chars().next().is_some_and(|c| c.is_ascii_digit()));
+        let Some(first_numeric) = first_numeric else {
+            continue;
+        };
+
+        // Region type may contain spaces; join tokens up to the first numeric.
+        let region_type = tokens[..first_numeric].join(" ");
+
+        // Expected 7 size columns + a count column.
+        if tokens.len() < first_numeric.saturating_add(8) {
+            continue;
+        }
+
+        let parse_size = |idx: usize| parse_vmmap_size_token_to_bytes(tokens[idx]).unwrap_or(0);
+
+        let virtual_bytes = parse_size(first_numeric);
+        let resident_bytes = parse_size(first_numeric + 1);
+        let dirty_bytes = parse_size(first_numeric + 2);
+        let swapped_bytes = parse_size(first_numeric + 3);
+        let volatile_bytes = parse_size(first_numeric + 4);
+        let nonvol_bytes = parse_size(first_numeric + 5);
+        let empty_bytes = parse_size(first_numeric + 6);
+        let region_count = parse_vmmap_u64_token(tokens[first_numeric + 7]).unwrap_or(0);
+
+        rows.push(VmmapRegionRow {
+            region_type,
+            virtual_bytes,
+            resident_bytes,
+            dirty_bytes,
+            swapped_bytes,
+            volatile_bytes,
+            nonvol_bytes,
+            empty_bytes,
+            region_count,
+        });
+    }
+
+    rows
+}
+
+#[cfg(target_os = "macos")]
+#[derive(Debug, Clone, serde::Serialize)]
+struct VmmapMallocZoneRow {
+    zone: String,
+    virtual_bytes: u64,
+    resident_bytes: u64,
+    dirty_bytes: u64,
+    swapped_bytes: u64,
+    allocation_count: u64,
+    allocated_bytes: u64,
+    frag_bytes: u64,
+    frag_percent: Option<f64>,
+    region_count: u64,
+}
+
+#[cfg(target_os = "macos")]
+fn parse_vmmap_malloc_zone_table(stdout: &str) -> Vec<VmmapMallocZoneRow> {
+    let mut rows = Vec::new();
+    let mut in_table = false;
+
+    for line in stdout.lines() {
+        let l = line.trim();
+        if l.is_empty() {
+            continue;
+        }
+
+        if l.starts_with("MALLOC ZONE") {
+            in_table = true;
+            continue;
+        }
+        if !in_table {
+            continue;
+        }
+
+        if l.starts_with("TOTAL") || l.starts_with("TOTAL,") {
+            break;
+        }
+        if l.starts_with("==========") || l.starts_with("===========") {
+            continue;
+        }
+
+        let tokens: Vec<&str> = l.split_whitespace().collect();
+        let first_numeric = tokens
+            .iter()
+            .position(|t| t.chars().next().is_some_and(|c| c.is_ascii_digit()));
+        let Some(first_numeric) = first_numeric else {
+            continue;
+        };
+
+        // Zone name may contain spaces; join tokens up to the first numeric.
+        let zone = tokens[..first_numeric].join(" ");
+
+        // Expected columns:
+        // VIRTUAL, RESIDENT, DIRTY, SWAPPED, ALLOCATION COUNT, ALLOCATED, FRAG SIZE, % FRAG, REGION COUNT
+        if tokens.len() < first_numeric.saturating_add(9) {
+            continue;
+        }
+
+        let parse_size = |idx: usize| parse_vmmap_size_token_to_bytes(tokens[idx]).unwrap_or(0);
+
+        let virtual_bytes = parse_size(first_numeric);
+        let resident_bytes = parse_size(first_numeric + 1);
+        let dirty_bytes = parse_size(first_numeric + 2);
+        let swapped_bytes = parse_size(first_numeric + 3);
+        let allocation_count = parse_vmmap_u64_token(tokens[first_numeric + 4]).unwrap_or(0);
+        let allocated_bytes = parse_size(first_numeric + 5);
+        let frag_bytes = parse_size(first_numeric + 6);
+        let frag_percent = parse_vmmap_percent_token(tokens[first_numeric + 7]);
+        let region_count = parse_vmmap_u64_token(tokens[first_numeric + 8]).unwrap_or(0);
+
+        rows.push(VmmapMallocZoneRow {
+            zone,
+            virtual_bytes,
+            resident_bytes,
+            dirty_bytes,
+            swapped_bytes,
+            allocation_count,
+            allocated_bytes,
+            frag_bytes,
+            frag_percent,
+            region_count,
+        });
+    }
+
+    rows
+}
+
+#[cfg(target_os = "macos")]
+fn collect_macos_vmmap_summary_best_effort(pid: u32, out_dir: &Path) -> Option<serde_json::Value> {
+    let out = Command::new("/usr/bin/vmmap")
+        .args(["-summary", &pid.to_string()])
+        .output()
+        .ok()?;
+    if !out.status.success() {
+        return None;
+    }
+
+    let stdout = String::from_utf8_lossy(&out.stdout).to_string();
+    let vmmap_file = out_dir.join("resource.vmmap_summary.txt");
+    let _ = std::fs::write(&vmmap_file, &stdout);
+
+    let mut physical_footprint_bytes: Option<u64> = None;
+    let mut physical_footprint_peak_bytes: Option<u64> = None;
+
+    let mut owned_unmapped_memory_dirty_bytes: Option<u64> = None;
+    let mut io_surface_dirty_bytes: Option<u64> = None;
+
+    let regions_table = parse_vmmap_regions_table(&stdout);
+    let malloc_zone_table = parse_vmmap_malloc_zone_table(&stdout);
+
+    for line in stdout.lines() {
+        let l = line.trim();
+        if let Some(rest) = l.strip_prefix("Physical footprint:") {
+            let token = rest.trim().split_whitespace().next().unwrap_or("");
+            physical_footprint_bytes = parse_vmmap_size_token_to_bytes(token);
+            continue;
+        }
+        if let Some(rest) = l.strip_prefix("Physical footprint (peak):") {
+            let token = rest.trim().split_whitespace().next().unwrap_or("");
+            physical_footprint_peak_bytes = parse_vmmap_size_token_to_bytes(token);
+            continue;
+        }
+
+        // Example:
+        // owned unmapped memory             224.1M   224.1M   224.1M       0K       0K       0K       0K        1
+        if l.to_ascii_lowercase().starts_with("owned unmapped memory") {
+            let tokens: Vec<&str> = l.split_whitespace().collect();
+            let numeric: Vec<&str> = tokens
+                .iter()
+                .rev()
+                .filter(|t| t.chars().next().is_some_and(|c| c.is_ascii_digit()))
+                .take(8)
+                .copied()
+                .collect::<Vec<_>>()
+                .into_iter()
+                .rev()
+                .collect();
+            if numeric.len() >= 3 {
+                owned_unmapped_memory_dirty_bytes =
+                    parse_vmmap_size_token_to_bytes(numeric.get(2).copied().unwrap_or(""));
+            }
+            continue;
+        }
+
+        // IOSurface is commonly used for Metal-backed surfaces/textures.
+        if l.starts_with("IOSurface") {
+            let tokens: Vec<&str> = l.split_whitespace().collect();
+            let numeric: Vec<&str> = tokens
+                .iter()
+                .rev()
+                .filter(|t| t.chars().next().is_some_and(|c| c.is_ascii_digit()))
+                .take(8)
+                .copied()
+                .collect::<Vec<_>>()
+                .into_iter()
+                .rev()
+                .collect();
+            if numeric.len() >= 3 {
+                io_surface_dirty_bytes =
+                    parse_vmmap_size_token_to_bytes(numeric.get(2).copied().unwrap_or(""));
+            }
+            continue;
+        }
+    }
+
+    let mut regions_top_dirty = regions_table.clone();
+    regions_top_dirty.sort_by_key(|r| std::cmp::Reverse(r.dirty_bytes));
+    regions_top_dirty.truncate(12);
+
+    let mut regions_top_resident = regions_table.clone();
+    regions_top_resident.sort_by_key(|r| std::cmp::Reverse(r.resident_bytes));
+    regions_top_resident.truncate(12);
+
+    let mut malloc_top_allocated = malloc_zone_table.clone();
+    malloc_top_allocated.sort_by_key(|r| std::cmp::Reverse(r.allocated_bytes));
+    malloc_top_allocated.truncate(12);
+
+    let mut malloc_top_frag = malloc_zone_table.clone();
+    malloc_top_frag.sort_by_key(|r| std::cmp::Reverse(r.frag_bytes));
+    malloc_top_frag.truncate(12);
+
+    Some(serde_json::json!({
+        "collector": "vmmap -summary",
+        "captured_unix_ms": now_unix_ms(),
+        "vmmap_summary_file": "resource.vmmap_summary.txt",
+        "physical_footprint_bytes": physical_footprint_bytes,
+        "physical_footprint_peak_bytes": physical_footprint_peak_bytes,
+        "regions": {
+            "owned_unmapped_memory_dirty_bytes": owned_unmapped_memory_dirty_bytes,
+            "io_surface_dirty_bytes": io_surface_dirty_bytes,
+        },
+        "tables": {
+            "regions": {
+                "rows_total": regions_table.len(),
+                "top_dirty": regions_top_dirty,
+                "top_resident": regions_top_resident,
+            },
+            "malloc_zones": {
+                "rows_total": malloc_zone_table.len(),
+                "top_allocated": malloc_top_allocated,
+                "top_frag": malloc_top_frag,
+            },
+        },
+        "note": "best-effort; values are captured at tool shutdown time and may differ from steady-state if the app reacts to exit.",
+    }))
+}
+
 #[derive(Debug, Clone, Copy)]
 pub(super) struct CompareOptions {
     pub(super) warmup_frames: u64,
@@ -1005,6 +1342,8 @@ pub(crate) fn maybe_launch_demo(
         launched_unix_ms,
         launched_instant,
         launch_cmd: launch.clone(),
+        #[cfg(not(windows))]
+        process_footprint_sampler: Some(ProcessFootprintSamplerHandle::spawn(pid)),
     };
 
     // Avoid racing cold-start compilation by waiting for the app to signal readiness.
@@ -1159,7 +1498,7 @@ impl SysinfoProcessFootprintSampler {
         let refresh_kind = ProcessRefreshKind::nothing().with_cpu().with_memory();
 
         let _ =
-            sys.refresh_processes_specifics(ProcessesToUpdate::Some(&[pid]), false, refresh_kind);
+            sys.refresh_processes_specifics(ProcessesToUpdate::Some(&[pid]), true, refresh_kind);
 
         let mut out = Self {
             sys,
@@ -1186,20 +1525,12 @@ impl SysinfoProcessFootprintSampler {
 
         let _ = self.sys.refresh_processes_specifics(
             ProcessesToUpdate::Some(&[self.pid]),
-            false,
+            true,
             self.refresh_kind,
         );
         self.refresh_count = self.refresh_count.saturating_add(1);
         self.last_refresh = std::time::Instant::now();
         self.capture_latest();
-    }
-
-    fn refresh_if_due(&mut self) {
-        let since = self.last_refresh.elapsed();
-        if since < sysinfo::MINIMUM_CPU_UPDATE_INTERVAL {
-            return;
-        }
-        self.refresh_force();
     }
 
     fn capture_latest(&mut self) {
@@ -1251,6 +1582,75 @@ impl SysinfoProcessFootprintSampler {
     }
 }
 
+#[cfg(not(windows))]
+#[derive(Debug)]
+pub(crate) struct ProcessFootprintSamplerHandle {
+    stop: std::sync::Arc<std::sync::atomic::AtomicBool>,
+    rx: std::sync::mpsc::Receiver<ObservedProcessFootprint>,
+    join: Option<std::thread::JoinHandle<()>>,
+}
+
+#[cfg(not(windows))]
+impl ProcessFootprintSamplerHandle {
+    fn spawn(pid: u32) -> Self {
+        use std::sync::atomic::Ordering;
+
+        let stop = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let (tx, rx) = std::sync::mpsc::channel::<ObservedProcessFootprint>();
+        let stop_for_thread = stop.clone();
+
+        let join = std::thread::spawn(move || {
+            let mut sampler = SysinfoProcessFootprintSampler::new(pid);
+            let interval = sysinfo::MINIMUM_CPU_UPDATE_INTERVAL;
+
+            loop {
+                if stop_for_thread.load(Ordering::Relaxed) {
+                    break;
+                }
+
+                std::thread::sleep(interval);
+                sampler.refresh_force();
+
+                // Stop once the process disappears from sysinfo.
+                if sampler.sys.process(sampler.pid).is_none() {
+                    break;
+                }
+            }
+
+            let _ = tx.send(sampler.finish());
+        });
+
+        Self {
+            stop,
+            rx,
+            join: Some(join),
+        }
+    }
+
+    fn finish_best_effort(mut self) -> Option<ObservedProcessFootprint> {
+        use std::sync::atomic::Ordering;
+
+        self.stop.store(true, Ordering::Relaxed);
+        if let Some(join) = self.join.take() {
+            let _ = join.join();
+        }
+        self.rx.try_recv().ok()
+    }
+}
+
+#[cfg(not(windows))]
+impl Drop for ProcessFootprintSamplerHandle {
+    fn drop(&mut self) {
+        use std::sync::atomic::Ordering;
+
+        self.stop.store(true, Ordering::Relaxed);
+        if let Some(join) = self.join.take() {
+            let _ = join.join();
+        }
+        let _ = self.rx.try_recv();
+    }
+}
+
 fn collect_demo_footprint_json(
     demo: &LaunchedDemo,
     killed: bool,
@@ -1281,6 +1681,20 @@ fn collect_demo_footprint_json(
         "killed": killed,
         "logical_cores": logical_cores,
     });
+
+    if demo
+        .launch_cmd
+        .first()
+        .is_some_and(|exe| exe.trim().eq_ignore_ascii_case("cargo"))
+        && let Some(obj) = out.as_object_mut()
+    {
+        obj.insert(
+            "notes".to_string(),
+            serde_json::json!([
+                "process_footprint tracks the launched PID. If you use `--launch -- cargo run ...`, this samples the cargo process (and can include compilation time). For app-only footprint, build first and launch the binary directly (e.g. `--launch -- target/release/<bin>`)."
+            ]),
+        );
+    }
 
     #[cfg(windows)]
     {
@@ -1464,30 +1878,39 @@ pub(crate) fn stop_launched_demo(
     let out_dir = exit_path.parent().unwrap_or_else(|| Path::new("."));
     let footprint_path = out_dir.join("resource.footprint.json");
 
+    #[cfg(target_os = "macos")]
+    let macos_vmmap = collect_macos_vmmap_summary_best_effort(demo.child.id(), out_dir);
+
     let _ = touch(exit_path);
-    #[cfg(not(windows))]
-    let mut sampler = SysinfoProcessFootprintSampler::new(demo.child.id());
 
     let deadline = Instant::now() + Duration::from_millis(20_000);
     while Instant::now() < deadline {
-        #[cfg(not(windows))]
-        sampler.refresh_if_due();
-
         let exited = demo.child.try_wait().ok().flatten().is_some();
         if exited {
             #[cfg(not(windows))]
-            sampler.refresh_force();
-
-            let footprint = Some(collect_demo_footprint_json(demo, false, {
+            let observed = demo
+                .process_footprint_sampler
+                .take()
+                .and_then(|h| h.finish_best_effort());
+            let mut footprint = collect_demo_footprint_json(demo, false, {
                 #[cfg(not(windows))]
                 {
-                    Some(sampler.finish())
+                    observed
                 }
                 #[cfg(windows)]
                 {
                     None
                 }
-            }));
+            });
+
+            #[cfg(target_os = "macos")]
+            if let Some(v) = macos_vmmap.as_ref() {
+                if let Some(obj) = footprint.as_object_mut() {
+                    obj.insert("macos_vmmap".to_string(), v.clone());
+                }
+            }
+
+            let footprint = Some(footprint);
             if let Some(footprint) = &footprint {
                 let _ = write_json_value(&footprint_path, footprint);
             }
@@ -1500,18 +1923,29 @@ pub(crate) fn stop_launched_demo(
     }
 
     #[cfg(not(windows))]
-    sampler.refresh_force();
-
-    let footprint = Some(collect_demo_footprint_json(demo, true, {
+    let observed = demo
+        .process_footprint_sampler
+        .take()
+        .and_then(|h| h.finish_best_effort());
+    let mut footprint = collect_demo_footprint_json(demo, true, {
         #[cfg(not(windows))]
         {
-            Some(sampler.finish())
+            observed
         }
         #[cfg(windows)]
         {
             None
         }
-    }));
+    });
+
+    #[cfg(target_os = "macos")]
+    if let Some(v) = macos_vmmap.as_ref() {
+        if let Some(obj) = footprint.as_object_mut() {
+            obj.insert("macos_vmmap".to_string(), v.clone());
+        }
+    }
+
+    let footprint = Some(footprint);
     if let Some(footprint) = &footprint {
         let _ = write_json_value(&footprint_path, footprint);
     }

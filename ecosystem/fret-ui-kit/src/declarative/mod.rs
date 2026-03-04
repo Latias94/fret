@@ -77,6 +77,8 @@ pub use reduced_motion_queries::prefers_reduced_motion;
 pub use reduced_transparency_queries::prefers_reduced_transparency;
 pub use safe_area_queries::{safe_area_insets, safe_area_insets_or_zero};
 pub use semantics::AnyElementSemanticsExt;
+pub use semantics::UiIntoElementA11yExt;
+pub use semantics::UiIntoElementKeyContextExt;
 pub use semantics::UiIntoElementTestIdExt;
 pub use text_scale_queries::text_scale_factor;
 pub use theme_access::ElementContextThemeExt;

@@ -10,6 +10,7 @@ use crate::{CommandId, CommandMeta, CommandScope, InputContext, WhenExpr};
 #[derive(Debug, Default, Clone)]
 pub struct WindowCommandGatingSnapshot {
     input_ctx: InputContext,
+    key_contexts: Vec<Arc<str>>,
     enabled_overrides: HashMap<CommandId, bool>,
     action_availability: Option<Arc<HashMap<CommandId, bool>>>,
 }
@@ -18,6 +19,7 @@ impl WindowCommandGatingSnapshot {
     pub fn new(input_ctx: InputContext, enabled_overrides: HashMap<CommandId, bool>) -> Self {
         Self {
             input_ctx,
+            key_contexts: Vec::new(),
             enabled_overrides,
             action_availability: None,
         }
@@ -27,8 +29,17 @@ impl WindowCommandGatingSnapshot {
         &self.input_ctx
     }
 
+    pub fn key_contexts(&self) -> &[Arc<str>] {
+        self.key_contexts.as_slice()
+    }
+
     pub fn with_input_ctx(mut self, input_ctx: InputContext) -> Self {
         self.input_ctx = input_ctx;
+        self
+    }
+
+    pub fn with_key_contexts(mut self, key_contexts: Vec<Arc<str>>) -> Self {
+        self.key_contexts = key_contexts;
         self
     }
 
@@ -71,7 +82,7 @@ impl WindowCommandGatingSnapshot {
         {
             return false;
         }
-        if when.is_some_and(|w| !w.eval(&self.input_ctx)) {
+        if when.is_some_and(|w| !w.eval_with_key_contexts(&self.input_ctx, &self.key_contexts)) {
             return false;
         }
         self.enabled_overrides.get(command).copied().unwrap_or(true)

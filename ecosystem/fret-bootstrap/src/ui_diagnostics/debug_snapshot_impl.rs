@@ -4,6 +4,8 @@ impl UiTreeDebugSnapshotV1 {
         window: AppWindowId,
         ui: &UiTree<App>,
         renderer_perf: Option<fret_render::RendererPerfFrameSample>,
+        wgpu_hub_report: Option<fret_render::WgpuHubReportFrameSample>,
+        wgpu_allocator_report: Option<fret_render::WgpuAllocatorReportFrameSample>,
         element_runtime_state: Option<&ElementRuntime>,
         hit_test: Option<UiHitTestSnapshotV1>,
         element_runtime_snapshot: Option<ElementDiagnosticsSnapshotV1>,
@@ -137,7 +139,12 @@ impl UiTreeDebugSnapshotV1 {
         }
 
         Self {
-            stats: UiFrameStatsV1::from_stats(ui.debug_stats(), renderer_perf),
+            stats: UiFrameStatsV1::from_stats(
+                ui.debug_stats(),
+                renderer_perf,
+                wgpu_hub_report,
+                wgpu_allocator_report,
+            ),
             invalidation_walks: ui
                 .debug_invalidation_walks()
                 .iter()

@@ -1,0 +1,20 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "cookbook image asset cache: baseline",
+    "tags": ["cookbook", "cookbook.image_asset_cache_basics", "assets", "screenshots"],
+    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
+    "target_hints": [
+      "Waits briefly for the first upload to settle.",
+      "Captures a baseline screenshot + bundle."
+    ]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "set_window_inner_size", "width_px": 520.0, "height_px": 380.0 },
+    { "type": "wait_frames", "n": 90 },
+    { "type": "capture_screenshot", "label": "cookbook-image-asset-cache-basics-baseline" },
+    { "type": "capture_bundle", "label": "cookbook-image-asset-cache-basics-baseline" }
+  ]
+}
+

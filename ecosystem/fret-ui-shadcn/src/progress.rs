@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use crate::LayoutDirection;
 use fret_core::{Edges, Px, SemanticsOrientation, SemanticsRole};
 use fret_runtime::Model;
 use fret_ui::element::{
@@ -9,7 +10,6 @@ use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::motion as decl_motion;
 use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::primitives::direction as direction_prim;
 use fret_ui_kit::primitives::progress as radix_progress;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius};
 
@@ -184,9 +184,9 @@ impl Progress {
                     // - it is shifted with a translate so the left edge is clipped by the track's
                     //   `overflow-hidden`, keeping the right edge rounded.
                     let motion_owner = cx.root_id();
-                    let dir = direction_prim::use_direction_in_scope(cx, None);
+                    let dir = crate::use_direction(cx, None);
                     let translate_x_fraction_target =
-                        if mirror_in_rtl && dir == direction_prim::LayoutDirection::Rtl {
+                        if mirror_in_rtl && dir == LayoutDirection::Rtl {
                             1.0 - t
                         } else {
                             t - 1.0
@@ -266,11 +266,11 @@ pub fn progress<H: UiHost>(cx: &mut ElementContext<'_, H>, model: Model<f32>) ->
 mod tests {
     use super::*;
 
+    use crate::LayoutDirection;
     use fret_app::App;
     use fret_core::{AppWindowId, Point, Px, Rect, Size, WindowFrameClockService};
     use fret_runtime::{FrameId, TickId};
     use fret_ui::element::ElementKind;
-    use fret_ui_kit::primitives::direction as direction_prim;
 
     fn bounds() -> Rect {
         Rect::new(
@@ -352,15 +352,11 @@ mod tests {
             let tx = find_translate_x_fraction(&el).expect("translate_x_fraction");
             assert!((tx + 0.75).abs() <= 1e-6);
 
-            let el = direction_prim::with_direction_provider(
-                cx,
-                direction_prim::LayoutDirection::Rtl,
-                |cx| {
-                    Progress::new(model.clone())
-                        .mirror_in_rtl(true)
-                        .into_element(cx)
-                },
-            );
+            let el = crate::with_direction_provider(cx, LayoutDirection::Rtl, |cx| {
+                Progress::new(model.clone())
+                    .mirror_in_rtl(true)
+                    .into_element(cx)
+            });
             let tx = find_translate_x_fraction(&el).expect("translate_x_fraction (rtl)");
             assert!((tx - 0.75).abs() <= 1e-6);
         });

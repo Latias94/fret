@@ -54,9 +54,9 @@ pub struct DockDragDiagnostics {
     /// True when the runner has applied an ImGui-style "transparent payload" treatment to the
     /// moving dock window (e.g. click-through/NoInputs while following the cursor).
     pub transparent_payload_applied: bool,
-    /// Best-effort diagnostics hint: true when the runner successfully applied click-through mouse
-    /// passthrough to the moving dock window while transparent payload is enabled.
-    pub transparent_payload_mouse_passthrough_applied: bool,
+    /// Best-effort diagnostics hint: true when the runner successfully applied click-through
+    /// hit-test passthrough to the moving dock window while transparent payload is enabled.
+    pub transparent_payload_hit_test_passthrough_applied: bool,
     /// Best-effort diagnostics hint: which mechanism was used to select the hovered window during
     /// cross-window drag routing (OS-backed vs heuristic).
     pub window_under_cursor_source: WindowUnderCursorSource,

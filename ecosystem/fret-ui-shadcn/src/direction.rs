@@ -47,6 +47,19 @@ pub fn use_direction<H: UiHost>(
     direction_prim::use_direction_in_scope(cx, local)
 }
 
+/// Fret convenience wrapper over the Radix-style `DirectionProvider`.
+///
+/// This mirrors the `with_direction_provider(...)` helper in `fret-ui-kit` so gallery snippets and
+/// recipes don't need to reach into the primitives layer directly.
+#[track_caller]
+pub fn with_direction_provider<H: UiHost, R>(
+    cx: &mut ElementContext<'_, H>,
+    dir: LayoutDirection,
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> R,
+) -> R {
+    direction_prim::with_direction_provider(cx, dir, f)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

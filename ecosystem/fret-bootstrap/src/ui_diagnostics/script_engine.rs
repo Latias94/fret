@@ -97,6 +97,7 @@ pub(super) fn active_script_needs_semantics_snapshot(active: &ActiveScript) -> b
         | UiActionStepV2::CaptureScreenshot { .. }
         | UiActionStepV2::CaptureLayoutSidecar { .. }
         | UiActionStepV2::SetWindowInnerSize { .. }
+        | UiActionStepV2::SetWindowStyle { .. }
         | UiActionStepV2::SetWindowInsets { .. }
         | UiActionStepV2::SetClipboardForceUnavailable { .. }
         | UiActionStepV2::SetClipboardText { .. }
@@ -153,6 +154,7 @@ pub(super) fn script_step_kind_name(step: &UiActionStepV2) -> &'static str {
         UiActionStepV2::InspectHelpTreeLockBestMatchAndCopySelector { .. } => {
             "inspect_help_tree_lock_best_match_and_copy_selector"
         }
+        UiActionStepV2::SetWindowStyle { .. } => "set_window_style",
         _ => "step",
     }
 }
@@ -363,6 +365,7 @@ pub(super) fn dispatch_drive_script_step(
             output.request_redraw = true;
         }
         step @ (UiActionStepV2::SetWindowInnerSize { .. }
+        | UiActionStepV2::SetWindowStyle { .. }
         | UiActionStepV2::SetWindowOuterPosition { .. }
         | UiActionStepV2::SetCursorScreenPos { .. }
         | UiActionStepV2::SetCursorInWindow { .. }
@@ -1460,6 +1463,11 @@ pub(super) fn shortcut_routing_trace_entry_matches_query(
     {
         return false;
     }
+    if let Some(key_context) = &query.key_context
+        && !entry.key_contexts.iter().any(|c| c == key_context)
+    {
+        return false;
+    }
     true
 }
 
@@ -2039,6 +2047,7 @@ impl UiDiagnosticsService {
                 );
             }
             step @ (UiActionStepV2::SetWindowInnerSize { .. }
+            | UiActionStepV2::SetWindowStyle { .. }
             | UiActionStepV2::SetWindowOuterPosition { .. }
             | UiActionStepV2::SetCursorScreenPos { .. }
             | UiActionStepV2::SetCursorInWindow { .. }

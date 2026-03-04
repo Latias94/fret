@@ -2,6 +2,7 @@ use std::sync::Arc;
 use std::time::Duration;
 use std::{cell::Cell, rc::Rc};
 
+use crate::LayoutDirection;
 use crate::popper_arrow::{self, DiamondArrowStyle};
 use fret_core::{Edges, Point, Px, Rect, SemanticsRole, Size, TextOverflow, TextWrap};
 use fret_runtime::Model;
@@ -16,7 +17,6 @@ use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::{primary_pointer_can_hover, scheduling, style as decl_style};
 use fret_ui_kit::headless::safe_hover;
 use fret_ui_kit::overlay;
-use fret_ui_kit::primitives::direction as direction_prim;
 use fret_ui_kit::primitives::focus_scope as focus_scope_prim;
 use fret_ui_kit::primitives::hover_intent::HoverIntentConfig;
 use fret_ui_kit::primitives::popover as radix_popover;
@@ -904,14 +904,14 @@ impl Popover {
                             PopoverSide::Bottom => Side::Bottom,
                             PopoverSide::Left => Side::Left,
                             PopoverSide::InlineStart => {
-                                if direction == direction_prim::LayoutDirection::Rtl {
+                                if direction == LayoutDirection::Rtl {
                                     Side::Right
                                 } else {
                                     Side::Left
                                 }
                             }
                             PopoverSide::InlineEnd => {
-                                if direction == direction_prim::LayoutDirection::Rtl {
+                                if direction == LayoutDirection::Rtl {
                                     Side::Left
                                 } else {
                                     Side::Right

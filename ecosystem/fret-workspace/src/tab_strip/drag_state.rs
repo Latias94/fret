@@ -8,14 +8,25 @@ use crate::tab_drag::WorkspaceTabHitRect;
 
 use super::kernel::WorkspaceTabStripDropTarget;
 
+#[derive(Debug, Clone)]
+pub(super) struct WorkspaceTabStripClosePress {
+    pub(super) pointer_id: PointerId,
+    pub(super) start_position: Point,
+    pub(super) start_position_window: Option<Point>,
+    pub(super) close_command: fret_runtime::CommandId,
+    pub(super) pane_activate_cmd: Option<fret_runtime::CommandId>,
+}
+
 #[derive(Debug, Default, Clone)]
 pub(super) struct WorkspaceTabStripDragState {
     pub(super) pointer: Option<PointerId>,
     pub(super) start_tick: TickId,
     pub(super) start_position: Point,
+    pub(super) start_position_window: Option<Point>,
     pub(super) dragged_tab: Option<Arc<str>>,
     pub(super) dragging: bool,
     pub(super) drop_target: WorkspaceTabStripDropTarget,
+    pub(super) close_press: Option<WorkspaceTabStripClosePress>,
     pub(super) tab_rects: Vec<WorkspaceTabHitRect>,
     pub(super) pinned_boundary_rect: Option<Rect>,
     pub(super) end_drop_target_rect: Option<Rect>,
@@ -29,6 +40,7 @@ pub(super) struct WorkspaceTabStripDragState {
 pub(super) struct WorkspaceTabStripDragSnapshot {
     pub(super) start_tick: TickId,
     pub(super) start_position: Point,
+    pub(super) start_position_window: Option<Point>,
     pub(super) dragging: bool,
     pub(super) dragged_tab: Option<Arc<str>>,
     pub(super) tab_rects: Vec<WorkspaceTabHitRect>,
@@ -53,6 +65,7 @@ pub(super) fn read_drag_snapshot_for_pointer(
         out = Some(WorkspaceTabStripDragSnapshot {
             start_tick: st.start_tick,
             start_position: st.start_position,
+            start_position_window: st.start_position_window,
             dragging: st.dragging,
             dragged_tab: st.dragged_tab.clone(),
             tab_rects: st.tab_rects.clone(),

@@ -1,21 +1,79 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "steps": [
-    { "type": "click", "target": { "kind": "test_id", "id": "todo-input" } },
-    { "type": "type_text", "text": "自动化任务" },
-    { "type": "wait_frames", "n": 2 },
-    { "type": "press_key", "key": "enter" },
     {
-      "type": "wait_until",
-      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "todo-item-3-done" } },
-      "timeout_frames": 60
+      "button": "left",
+      "target": {
+        "id": "todo-input",
+        "kind": "test_id"
+      },
+      "type": "click"
     },
-    { "type": "capture_bundle", "label": "todo-after-add" },
-    { "type": "click", "target": { "kind": "test_id", "id": "todo-item-3-done" } },
-    { "type": "wait_frames", "n": 2 },
-    { "type": "capture_bundle", "label": "todo-after-toggle-done" },
-    { "type": "click", "target": { "kind": "test_id", "id": "todo-item-3-remove" } },
-    { "type": "wait_frames", "n": 2 },
-    { "type": "capture_bundle", "label": "todo-after-remove" }
+    {
+      "text": "自动化任务",
+      "type": "type_text"
+    },
+    {
+      "n": 2,
+      "type": "wait_frames"
+    },
+    {
+      "key": "enter",
+      "modifiers": {
+        "alt": false,
+        "ctrl": false,
+        "meta": false,
+        "shift": false
+      },
+      "repeat": false,
+      "type": "press_key"
+    },
+    {
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "id": "todo-item-3-done",
+          "kind": "test_id"
+        }
+      },
+      "timeout_frames": 60,
+      "type": "wait_until"
+    },
+    {
+      "label": "todo-after-add",
+      "type": "capture_bundle"
+    },
+    {
+      "button": "left",
+      "target": {
+        "id": "todo-item-3-done",
+        "kind": "test_id"
+      },
+      "type": "click"
+    },
+    {
+      "n": 2,
+      "type": "wait_frames"
+    },
+    {
+      "label": "todo-after-toggle-done",
+      "type": "capture_bundle"
+    },
+    {
+      "button": "left",
+      "target": {
+        "id": "todo-item-3-remove",
+        "kind": "test_id"
+      },
+      "type": "click"
+    },
+    {
+      "n": 2,
+      "type": "wait_frames"
+    },
+    {
+      "label": "todo-after-remove",
+      "type": "capture_bundle"
+    }
   ]
 }

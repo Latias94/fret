@@ -1,0 +1,52 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "Workstream: launcher utility window hit-test regions (Windows)",
+    "tags": ["workstream", "launcher", "utility_window", "hit_test", "windows"],
+    "required_capabilities": [
+      "diag.script_v2",
+      "diag.window_style_snapshot",
+      "diag.window_style_patch_v1"
+    ],
+    "target_hints": [
+      "Windows-only: exercises runner hit-test passthrough regions via WM_NCHITTEST.",
+      "Asserts canonical fingerprint for a fixed passthrough region set."
+    ]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "utility-window.materials.root" }
+      },
+      "timeout_frames": 900
+    },
+    {
+      "type": "set_window_style",
+      "window": { "kind": "first_seen" },
+      "style": {
+        "hit_test": {
+          "kind": "passthrough_regions",
+          "regions": [
+            { "kind": "rect", "x": 10.0, "y": 20.0, "width": 300.0, "height": 200.0 }
+          ]
+        }
+      }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "window_style_effective_is",
+        "window": { "kind": "first_seen" },
+        "style": {
+          "hit_test": "passthrough_regions",
+          "hit_test_regions_fingerprint64": 9351183807452730419
+        }
+      },
+      "timeout_frames": 120
+    },
+    { "type": "capture_bundle", "label": "launcher-utility-window-hit-test-regions-windows" }
+  ]
+}

@@ -9,7 +9,7 @@ use fret_ui::action::{OnActivate, OnDismissRequest, PressablePointerDownResult};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, InsetStyle, LayoutStyle, Length, MainAlign,
     Overflow, PositionStyle, PressableProps, RingStyle, RovingFlexProps, RovingFocusProps,
-    ScrollAxis, ScrollProps, SizeStyle,
+    ScrollAxis, ScrollProps, SemanticsDecoration, SizeStyle,
 };
 use fret_ui::elements::GlobalElementId;
 use fret_ui::overlay_placement::{Align, Side};
@@ -22,7 +22,6 @@ use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::overlay;
-use fret_ui_kit::primitives::direction as direction_prim;
 use fret_ui_kit::primitives::dropdown_menu as menu;
 use fret_ui_kit::primitives::popper;
 use fret_ui_kit::primitives::popper_content;
@@ -35,6 +34,7 @@ use fret_ui_kit::{
 
 use crate::overlay_motion;
 use crate::popper_arrow::{self, DiamondArrowStyle};
+use crate::rtl;
 use crate::shortcut_display::command_shortcut_label;
 
 fn alpha_mul(mut c: fret_core::Color, mul: f32) -> fret_core::Color {
@@ -920,6 +920,7 @@ impl DropdownMenuShortcut {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).snapshot();
         let fg = theme.color_token("muted-foreground");
+        let dir = crate::use_direction(cx, None);
 
         let base_size = theme.metric_token("font.size");
         let base_line_height = theme.metric_token("font.line_height");
@@ -931,7 +932,7 @@ impl DropdownMenuShortcut {
             .unwrap_or_else(|| Px((base_line_height.0 - 2.0).max(font_size.0)));
 
         ui::text(cx, self.text)
-            .layout(LayoutRefinement::default().ml_auto())
+            .layout(rtl::layout_refinement_margin_inline_start_auto(dir))
             .text_size_px(font_size)
             .fixed_line_box_px(font_line_height)
             .line_box_in_bounds()
@@ -1263,6 +1264,7 @@ fn checkable_menu_row_children<H: UiHost>(
     pad_y: Px,
     radius_sm: Px,
 ) -> Vec<AnyElement> {
+    let dir = crate::use_direction(cx, None);
     let effective_fg = if disabled {
         alpha_mul(row_fg, 0.5)
     } else {
@@ -1278,13 +1280,14 @@ fn checkable_menu_row_children<H: UiHost>(
                     layout.size.width = Length::Fill;
                     layout
                 },
-                padding: Edges {
-                    top: pad_y,
-                    right: pad_x,
-                    bottom: pad_y,
+                padding: rtl::padding_edges_with_inline_start_end(
+                    dir,
+                    pad_y,
+                    pad_y,
                     // new-york-v4: checkbox/radio items use `pl-8`.
-                    left: pad_x_inset,
-                }
+                    pad_x_inset,
+                    pad_x,
+                )
                 .into(),
                 background: Some(row_bg),
                 corner_radii: fret_core::Corners::all(radius_sm),
@@ -1296,12 +1299,16 @@ fn checkable_menu_row_children<H: UiHost>(
                         ContainerProps {
                             layout: LayoutStyle {
                                 position: fret_ui::element::PositionStyle::Absolute,
-                                inset: fret_ui::element::InsetStyle {
-                                    top: Some(Px(0.0)).into(),
-                                    right: None.into(),
-                                    bottom: Some(Px(0.0)).into(),
+                                inset: {
+                                    let mut inset = fret_ui::element::InsetStyle {
+                                        top: Some(Px(0.0)).into(),
+                                        right: None.into(),
+                                        bottom: Some(Px(0.0)).into(),
+                                        left: None.into(),
+                                    };
                                     // new-york-v4: indicator slot uses `left-2`.
-                                    left: Some(pad_x).into(),
+                                    rtl::inset_style_set_inline_start(&mut inset, dir, pad_x);
+                                    inset
                                 },
                                 size: SizeStyle {
                                     width: Length::Px(Px(16.0)),
@@ -1428,10 +1435,8 @@ fn submenu_chevron_right_text<H: UiHost>(
     _font_size: Px,
     _font_line_height: Px,
 ) -> AnyElement {
-    let icon = match direction_prim::use_direction_in_scope(cx, None) {
-        direction_prim::LayoutDirection::Ltr => ids::ui::CHEVRON_RIGHT,
-        direction_prim::LayoutDirection::Rtl => ids::ui::CHEVRON_LEFT,
-    };
+    let dir = crate::use_direction(cx, None);
+    let icon = rtl::chevron_inline_end(dir);
     cx.flex(
         FlexProps {
             layout: {
@@ -1439,7 +1444,7 @@ fn submenu_chevron_right_text<H: UiHost>(
                 layout.size.width = Length::Px(Px(16.0));
                 layout.size.height = Length::Px(Px(16.0));
                 layout.flex.shrink = 0.0;
-                layout.margin.left = fret_ui::element::MarginEdge::Auto;
+                rtl::layout_margin_inline_start_auto(&mut layout, dir);
                 layout
             },
             direction: fret_core::Axis::Horizontal,
@@ -1930,6 +1935,7 @@ impl DropdownMenu {
                     });
 
             if overlay_presence.present {
+                let hide_semantics_when_closed = !overlay_presence.interactive;
                 let align = self.align;
                 let align_offset = self.align_offset;
                 let side = self.side;
@@ -2307,6 +2313,7 @@ impl DropdownMenu {
                                                         window_margin: Px,
                                                         submenu_min_width: Px,
                                                         submenu_max_height_metric: Option<Px>,
+                                                        hide_semantics_when_closed: bool,
                                                         open: Model<bool>,
                                                         submenu_for_content: menu::sub::MenuSubmenuModels,
                                                         submenu_cfg: menu::sub::MenuSubmenuConfig,
@@ -2321,6 +2328,7 @@ impl DropdownMenu {
                                                         item_ix: &mut usize,
                                                         env: &RenderEnv,
                                                     ) -> Vec<AnyElement> {
+                                                        let dir = crate::use_direction(cx, None);
                                                         let reserve_leading_slot_enabled =
                                                             env.reserve_leading_slot_enabled;
                                                         let scroll_id = env.scroll_id;
@@ -2347,6 +2355,8 @@ impl DropdownMenu {
                                                         let submenu_min_width = env.submenu_min_width;
                                                         let submenu_max_height_metric =
                                                             env.submenu_max_height_metric;
+                                                        let hide_semantics_when_closed =
+                                                            env.hide_semantics_when_closed;
                                                         let open_for_menu = env.open.clone();
                                                         let submenu_for_content =
                                                             env.submenu_for_content.clone();
@@ -2371,12 +2381,10 @@ impl DropdownMenu {
                                                         out.push(cx.container(
                                                             ContainerProps {
                                                                 layout: LayoutStyle::default(),
-                                                                padding: Edges {
-                                                                    top: pad_y,
-                                                                    right: pad_x,
-                                                                    bottom: pad_y,
-                                                                    left: pad_left,
-                                                                }.into(),
+                                                                padding: rtl::padding_edges_with_inline_start_end(
+                                                                    dir, pad_y, pad_y, pad_left, pad_x,
+                                                                )
+                                                                .into(),
                                                                 ..Default::default()
                                                             },
                                                             move |cx| {
@@ -2529,6 +2537,7 @@ impl DropdownMenu {
                                                                                 checked_now,
                                                                             );
                                                                             a11y.test_id = test_id.clone();
+                                                                            a11y.hidden = hide_semantics_when_closed;
                                                                             a11y.with_collection_position(
                                                                             collection_index,
                                                                             item_count,
@@ -2676,6 +2685,7 @@ impl DropdownMenu {
                                                                                 is_selected,
                                                                             );
                                                                             a11y.test_id = test_id.clone();
+                                                                            a11y.hidden = hide_semantics_when_closed;
                                                                             a11y.with_collection_position(
                                                                             collection_index,
                                                                             item_count,
@@ -2898,6 +2908,7 @@ impl DropdownMenu {
                                                                         controls,
                                                                     );
                                                                 a11y.test_id = test_id.clone();
+                                                                a11y.hidden = hide_semantics_when_closed;
                                                                 let props = PressableProps {
                                                                     layout: {
                                                                         let mut layout = LayoutStyle::default();
@@ -2959,12 +2970,19 @@ impl DropdownMenu {
                                                                     });
                                                                 }
 
-                                                                 let row_padding = padding_override.unwrap_or(Edges {
-                                                                     top: pad_y,
-                                                                     right: pad_x,
-                                                                     bottom: pad_y,
-                                                                     left: pad_left,
-                                                                 });
+                                                                let row_padding_logical = padding_override.unwrap_or(Edges {
+                                                                    top: pad_y,
+                                                                    right: pad_x,
+                                                                    bottom: pad_y,
+                                                                    left: pad_left,
+                                                                });
+                                                                let row_padding = rtl::padding_edges_with_inline_start_end(
+                                                                    dir,
+                                                                    row_padding_logical.top,
+                                                                    row_padding_logical.bottom,
+                                                                    row_padding_logical.left,
+                                                                    row_padding_logical.right,
+                                                                );
 
                                                                 if !has_submenu && !disabled {
                                                                     if let Some(trailing_cmd) =
@@ -2975,8 +2993,8 @@ impl DropdownMenu {
                                                                             trailing_close_on_select;
                                                                         let hit_width = trailing_hit_width
                                                                             .unwrap_or(Px(28.0));
-                                                                        let right_pad =
-                                                                            row_padding.right;
+                                                                        let inline_end_pad =
+                                                                            row_padding_logical.right;
                                                                         cx.pressable_add_on_pointer_down(
                                                                             Arc::new(
                                                                                 move |host, acx, down| {
@@ -2988,12 +3006,20 @@ impl DropdownMenu {
 
                                                                                     let bounds =
                                                                                         host.bounds();
-                                                                                    let threshold_x = bounds.size.width.0
-                                                                                        - right_pad.0
-                                                                                        - hit_width.0;
-                                                                                    if down.position_local.x.0
-                                                                                        >= threshold_x
-                                                                                    {
+                                                                                    let is_hit = match dir {
+                                                                                        crate::LayoutDirection::Ltr => {
+                                                                                            let threshold_x = bounds.size.width.0
+                                                                                                - inline_end_pad.0
+                                                                                                - hit_width.0;
+                                                                                            down.position_local.x.0 >= threshold_x
+                                                                                        }
+                                                                                        crate::LayoutDirection::Rtl => {
+                                                                                            let threshold_x =
+                                                                                                inline_end_pad.0 + hit_width.0;
+                                                                                            down.position_local.x.0 <= threshold_x
+                                                                                        }
+                                                                                    };
+                                                                                    if is_hit {
                                                                                         host.dispatch_command(
                                                                                             Some(acx.window),
                                                                                             trailing_cmd.clone(),
@@ -3184,6 +3210,7 @@ impl DropdownMenu {
                                                             .metric_by_key(
                                                                 "component.dropdown_menu.max_height",
                                                             ),
+                                                        hide_semantics_when_closed,
                                                         open: open_for_menu.clone(),
                                                         submenu_for_content:
                                                             submenu_for_content.clone(),
@@ -3221,6 +3248,14 @@ impl DropdownMenu {
                             )]
                         },
                     );
+                    let content = if hide_semantics_when_closed {
+                        content.attach_semantics(SemanticsDecoration {
+                            hidden: Some(true),
+                            ..Default::default()
+                        })
+                    } else {
+                        content
+                    };
                     content_focus_id_for_children.set(Some(content_id));
                     cx.key_on_key_down_for(
                         content_id,
@@ -3423,6 +3458,7 @@ impl DropdownMenu {
                                                         window_margin: Px,
                                                         submenu_min_width: Px,
                                                         submenu_max_height_metric: Option<Px>,
+                                                        hide_semantics_when_closed: bool,
                                                         open: Model<bool>,
                                                         submenu_models: menu::sub::MenuSubmenuModels,
                                                         submenu_cfg: menu::sub::MenuSubmenuConfig,
@@ -3435,6 +3471,7 @@ impl DropdownMenu {
                                                         item_ix: &mut usize,
                                                         env: &RenderEnv,
                                                     ) -> Vec<AnyElement> {
+                                                        let dir = crate::use_direction(cx, None);
                                                         let reserve_leading_slot_enabled =
                                                             env.reserve_leading_slot_enabled;
                                                         let item_count = env.item_count;
@@ -3458,6 +3495,8 @@ impl DropdownMenu {
                                                         let _submenu_min_width = env.submenu_min_width;
                                                         let _submenu_max_height_metric =
                                                             env.submenu_max_height_metric;
+                                                        let hide_semantics_when_closed =
+                                                            env.hide_semantics_when_closed;
                                                         let open_for_submenu = env.open.clone();
                                                         let submenu_models_for_panel =
                                                             env.submenu_models.clone();
@@ -3484,12 +3523,14 @@ impl DropdownMenu {
                                                                 rows.push(cx.container(
                                                                     ContainerProps {
                                                                         layout: LayoutStyle::default(),
-                                                                        padding: Edges {
-                                                                            top: pad_y,
-                                                                            right: pad_x,
-                                                                            bottom: pad_y,
-                                                                            left: pad_left,
-                                                                        }.into(),
+                                                                        padding: rtl::padding_edges_with_inline_start_end(
+                                                                            dir,
+                                                                            pad_y,
+                                                                            pad_y,
+                                                                            pad_left,
+                                                                            pad_x,
+                                                                        )
+                                                                        .into(),
                                                                         ..Default::default()
                                                                     },
                                                                     move |cx| {
@@ -3638,6 +3679,7 @@ impl DropdownMenu {
                                                                                         checked_now,
                                                                                     );
                                                                                     a11y.test_id = test_id.clone();
+                                                                                    a11y.hidden = hide_semantics_when_closed;
                                                                                     a11y.with_collection_position(
                                                                                     collection_index,
                                                                                     item_count,
@@ -3768,6 +3810,7 @@ impl DropdownMenu {
                                                                                         is_selected,
                                                                                     );
                                                                                     a11y.test_id = test_id.clone();
+                                                                                    a11y.hidden = hide_semantics_when_closed;
                                                                                     a11y.with_collection_position(
                                                                                     collection_index,
                                                                                     item_count,
@@ -3875,6 +3918,7 @@ impl DropdownMenu {
 
                                                                             let mut a11y = menu::item::menu_item_a11y(a11y_label, None);
                                                                             a11y.test_id = test_id.clone();
+                                                                            a11y.hidden = hide_semantics_when_closed;
                                                                             let props = PressableProps {
                                                                                 layout: {
                                                                                     let mut layout = LayoutStyle::default();
@@ -3939,12 +3983,14 @@ impl DropdownMenu {
                                                                                         layout.size.width = Length::Fill;
                                                                                         layout
                                                                                     },
-                                                                                    padding: Edges {
-                                                                                        top: pad_y,
-                                                                                        right: pad_x,
-                                                                                        bottom: pad_y,
-                                                                                        left: pad_left,
-                                                                                    }.into(),
+                                                                                    padding: rtl::padding_edges_with_inline_start_end(
+                                                                                        dir,
+                                                                                        pad_y,
+                                                                                        pad_y,
+                                                                                        pad_left,
+                                                                                        pad_x,
+                                                                                    )
+                                                                                    .into(),
                                                                                     background: Some(row_bg),
                                                                                 corner_radii: fret_core::Corners::all(radius_sm),
                                                                                 ..Default::default()
@@ -4075,6 +4121,7 @@ impl DropdownMenu {
                                                             .metric_by_key(
                                                                 "component.dropdown_menu.max_height",
                                                             ),
+                                                        hide_semantics_when_closed,
                                                         open: open_for_submenu.clone(),
                                                         submenu_models: submenu_models_for_panel.clone(),
                                                         submenu_cfg,
@@ -4131,6 +4178,14 @@ impl DropdownMenu {
                                             true,
                                         );
 
+                                        let submenu_panel = if hide_semantics_when_closed {
+                                            submenu_panel.attach_semantics(SemanticsDecoration {
+                                                hidden: Some(true),
+                                                ..Default::default()
+                                            })
+                                        } else {
+                                            submenu_panel
+                                        };
                                         let submenu_panel =
                                             overlay_motion::wrap_opacity_and_render_transform(
                                                 cx,
@@ -4225,10 +4280,11 @@ mod tests {
 
     use std::sync::atomic::{AtomicUsize, Ordering};
 
+    use crate::LayoutDirection;
     use fret_app::App;
     use fret_core::{
         AppWindowId, Event, KeyCode, Modifiers, MouseButtons, PathCommand, Point, PointerEvent,
-        Rect, SvgId, SvgService,
+        PointerType, Rect, SvgId, SvgService,
     };
     use fret_core::{PathConstraints, PathId, PathMetrics, PathService, PathStyle};
     use fret_core::{Px, SemanticsRole, Size as CoreSize};
@@ -4236,8 +4292,6 @@ mod tests {
     use fret_runtime::{Effect, FrameId};
     use fret_ui::UiTree;
     use fret_ui::element::PressableA11y;
-    use fret_ui_kit::primitives::direction as direction_prim;
-    use fret_ui_kit::primitives::direction::LayoutDirection;
 
     #[test]
     fn dropdown_menu_new_controllable_uses_controlled_model_when_provided() {
@@ -4761,7 +4815,7 @@ mod tests {
             bounds,
             "dropdown-menu-dir",
             move |cx| {
-                direction_prim::with_direction_provider(cx, dir, |cx| {
+                crate::with_direction_provider(cx, dir, |cx| {
                     vec![
                         cx.container(
                             ContainerProps {
@@ -5435,6 +5489,90 @@ mod tests {
     }
 
     #[test]
+    fn dropdown_menu_opens_on_mouse_down_and_does_not_toggle_on_mouse_up() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(false);
+        let trigger_id_out = app.models_mut().insert(None);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let build_entries = || vec![DropdownMenuEntry::Item(DropdownMenuItem::new("Alpha"))];
+
+        let (_, trigger_id) = render_frame_focusable_trigger_capture_id(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            trigger_id_out,
+            build_entries(),
+        );
+
+        let trigger_node = fret_ui::elements::node_for_element(&mut app, window, trigger_id)
+            .expect("trigger node");
+        let trigger_bounds = ui.debug_node_bounds(trigger_node).expect("trigger bounds");
+        let pos = Point::new(
+            Px(trigger_bounds.origin.x.0 + trigger_bounds.size.width.0 * 0.5),
+            Px(trigger_bounds.origin.y.0 + trigger_bounds.size.height.0 * 0.5),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: pos,
+                button: fret_core::MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position: pos,
+                button: fret_core::MouseButton::Left,
+                modifiers: Modifiers::default(),
+                is_click: true,
+                pointer_type: PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+
+        let open_now = app.models().get_copied(&open).expect("open model");
+        assert!(open_now, "expected dropdown menu to open on mouse down");
+
+        let _ = render_frame_focusable_trigger(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open,
+            build_entries(),
+        );
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        assert!(
+            snap.nodes
+                .iter()
+                .any(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Alpha")),
+            "menu items should render after mouse down opens the menu"
+        );
+    }
+
+    #[test]
     fn dropdown_menu_disabled_blocks_arrow_key_open_from_trigger() {
         let window = AppWindowId::default();
         let mut app = App::new();
@@ -5849,6 +5987,82 @@ mod tests {
                 n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Alpha")
             }),
             "expected menu item to exist after opening via trigger activation"
+        );
+    }
+
+    #[test]
+    fn dropdown_menu_trigger_activation_does_not_stack_across_rerenders() {
+        use fret_core::MouseButton;
+
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(false);
+        let trigger_id_out = app.models_mut().insert(None);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let build_entries = || vec![DropdownMenuEntry::Item(DropdownMenuItem::new("Alpha"))];
+
+        // Render closed a few times; if activation wiring stacks up, clicking would toggle open
+        // multiple times and end up closed.
+        let mut trigger_id = None;
+        for _ in 0..5 {
+            let (_, id) = render_frame_focusable_trigger_capture_id(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                open.clone(),
+                trigger_id_out.clone(),
+                build_entries(),
+            );
+            trigger_id = Some(id);
+        }
+        let trigger_id = trigger_id.expect("trigger id");
+
+        let trigger_node =
+            fret_ui::elements::node_for_element(&mut app, window, trigger_id).expect("trigger");
+        let trigger_bounds = ui.debug_node_bounds(trigger_node).expect("trigger bounds");
+        let click_pos = rect_center(trigger_bounds);
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: click_pos,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position: click_pos,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+
+        assert_eq!(
+            app.models().get_copied(&open),
+            Some(true),
+            "expected click to open menu after rerenders"
         );
     }
 

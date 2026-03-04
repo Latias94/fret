@@ -31,7 +31,7 @@ cargo run --manifest-path local/my-simple-todo/Cargo.toml
 If you prefer an in-tree example (no local scaffold), run the cookbook version:
 
 ```bash
-cargo run -p fret-cookbook --example simple_todo
+cargo run -p fretboard -- dev native --example simple_todo
 ```
 
 Why `simple-todo`?
@@ -170,6 +170,6 @@ If you are unsure, start with `Layout` and tighten later.
 
 | Template | Generate | Teaches | Avoids |
 | --- | --- | --- | --- |
-| `hello` | `fretboard new hello` | view runtime + typed actions (smallest runnable UI surface) | selectors/queries |
-| `simple-todo` | `fretboard new simple-todo` | view runtime + typed actions + keyed lists | selectors/queries |
-| `todo` | `fretboard new todo` | “best practice baseline” with selectors/queries | being minimal |
+| `hello` | `cargo run -p fretboard -- new hello` | view runtime + typed actions (smallest runnable UI surface) | selectors/queries |
+| `simple-todo` | `cargo run -p fretboard -- new simple-todo` | view runtime + typed actions + keyed lists | selectors/queries |
+| `todo` | `cargo run -p fretboard -- new todo` | “best practice baseline” with selectors/queries | being minimal |

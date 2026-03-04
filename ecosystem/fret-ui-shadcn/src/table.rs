@@ -15,6 +15,7 @@ use fret_ui_kit::primitives::scroll_area::ScrollAreaType;
 use fret_ui_kit::typography;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Space, ui};
 
+use crate::direction::{LayoutDirection, use_direction};
 use crate::layout as shadcn_layout;
 
 fn table_text_style(theme: &Theme) -> TextStyle {
@@ -436,7 +437,10 @@ impl TableRow {
         }
         let on_activate = self.on_activate.clone();
         let border_bottom = self.border_bottom;
-        let children = self.children;
+        let mut children = self.children;
+        if use_direction(cx, None) == LayoutDirection::Rtl {
+            children.reverse();
+        }
 
         let pressable_layout = {
             let theme = Theme::global(&*cx.app);
@@ -693,11 +697,12 @@ impl TableCell {
         }
 
         let props = decl_style::container_props(theme, chrome, layout);
-        let row_layout = decl_style::layout_style(theme, LayoutRefinement::default().w_full());
+        let row_layout =
+            decl_style::layout_style(theme, LayoutRefinement::default().w_full().h_full());
         let wrapper_props = decl_style::container_props(
             theme,
             ChromeRefinement::default(),
-            LayoutRefinement::default().w_full().h_full().min_w_0(),
+            LayoutRefinement::default().w_full().min_w_0(),
         );
         let child = apply_table_cell_text_defaults(self.child, self.text_align);
         cx.container(props, move |cx| {

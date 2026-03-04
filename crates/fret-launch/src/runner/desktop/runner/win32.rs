@@ -1,7 +1,10 @@
 use super::window::MonitorRectF64;
 use winit::dpi::PhysicalPosition;
 
+use fret_runtime::WindowHitTestRegionV1;
+use std::collections::HashMap;
 use std::ffi::c_void;
+use std::sync::{Arc, Mutex, OnceLock};
 
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default)]
@@ -45,6 +48,8 @@ unsafe extern "system" {
     fn GetWindow(hwnd: isize, cmd: u32) -> isize;
     fn GetWindowRect(hwnd: isize, lp_rect: *mut Rect) -> i32;
     fn ClientToScreen(hwnd: isize, lp_point: *mut Point) -> i32;
+    fn ScreenToClient(hwnd: isize, lp_point: *mut Point) -> i32;
+    fn GetDpiForWindow(hwnd: isize) -> u32;
     fn GetWindowLongW(hwnd: isize, index: i32) -> i32;
     fn SetWindowLongW(hwnd: isize, index: i32, new_long: i32) -> i32;
     fn SetLayeredWindowAttributes(hwnd: isize, cr_key: u32, alpha: u8, flags: u32) -> i32;
@@ -72,6 +77,213 @@ const SWP_NOMOVE: u32 = 0x0002;
 const SWP_NOSIZE: u32 = 0x0001;
 const SWP_NOZORDER: u32 = 0x0004;
 const SWP_SHOWWINDOW: u32 = 0x0040;
+
+const WM_NCHITTEST: u32 = 0x0084;
+const WM_NCDESTROY: u32 = 0x0082;
+const HTCLIENT: isize = 1;
+const HTTRANSPARENT: isize = -1;
+const DPI_DEFAULT: u32 = 96;
+const FRET_HIT_TEST_SUBCLASS_ID: usize = 0xF7E0_0313_0001;
+
+type SubclassProc = unsafe extern "system" fn(isize, u32, usize, isize, usize, usize) -> isize;
+
+#[link(name = "comctl32")]
+unsafe extern "system" {
+    fn SetWindowSubclass(
+        hwnd: isize,
+        pfn_subclass: SubclassProc,
+        id_subclass: usize,
+        ref_data: usize,
+    ) -> i32;
+    fn RemoveWindowSubclass(hwnd: isize, pfn_subclass: SubclassProc, id_subclass: usize) -> i32;
+    fn DefSubclassProc(hwnd: isize, msg: u32, wparam: usize, lparam: isize) -> isize;
+}
+
+#[derive(Clone, Debug)]
+struct WindowHitTestRegionsState {
+    regions: Arc<[WindowHitTestRegionV1]>,
+}
+
+static HIT_TEST_REGIONS: OnceLock<Mutex<HashMap<isize, WindowHitTestRegionsState>>> =
+    OnceLock::new();
+
+fn hit_test_regions() -> &'static Mutex<HashMap<isize, WindowHitTestRegionsState>> {
+    HIT_TEST_REGIONS.get_or_init(|| Mutex::new(HashMap::new()))
+}
+
+fn lparam_x(lp: isize) -> i32 {
+    (lp as u32 & 0xFFFF) as i16 as i32
+}
+
+fn lparam_y(lp: isize) -> i32 {
+    ((lp as u32 >> 16) & 0xFFFF) as i16 as i32
+}
+
+fn dpi_scale_for_hwnd(hwnd: isize) -> f32 {
+    let dpi = unsafe { GetDpiForWindow(hwnd) }.max(DPI_DEFAULT);
+    (dpi as f32) / (DPI_DEFAULT as f32)
+}
+
+fn rect_contains(x: f32, y: f32, w: f32, h: f32, px: f32, py: f32) -> bool {
+    if !(w.is_finite() && h.is_finite() && x.is_finite() && y.is_finite()) {
+        return false;
+    }
+    if w <= 0.0 || h <= 0.0 {
+        return false;
+    }
+    px >= x && px < x + w && py >= y && py < y + h
+}
+
+fn rrect_contains(x: f32, y: f32, w: f32, h: f32, r: f32, px: f32, py: f32) -> bool {
+    if !rect_contains(x, y, w, h, px, py) {
+        return false;
+    }
+    let r = if r.is_finite() { r.max(0.0) } else { 0.0 };
+    if r <= 0.0 {
+        return true;
+    }
+
+    let max_r = 0.5 * w.min(h);
+    let r = r.min(max_r);
+
+    let left = x + r;
+    let right = x + w - r;
+    let top = y + r;
+    let bottom = y + h - r;
+
+    // Fast path: inside center cross.
+    if (px >= left && px < right) || (py >= top && py < bottom) {
+        return true;
+    }
+
+    // Corner circle tests.
+    let cx = if px < left { left } else { right };
+    let cy = if py < top { top } else { bottom };
+    let dx = px - cx;
+    let dy = py - cy;
+    dx * dx + dy * dy <= r * r
+}
+
+fn regions_contain_point(regions: &[WindowHitTestRegionV1], px: f32, py: f32) -> bool {
+    for r in regions {
+        match *r {
+            WindowHitTestRegionV1::Rect {
+                x,
+                y,
+                width,
+                height,
+            } => {
+                if rect_contains(x, y, width, height, px, py) {
+                    return true;
+                }
+            }
+            WindowHitTestRegionV1::RRect {
+                x,
+                y,
+                width,
+                height,
+                radius,
+            } => {
+                if rrect_contains(x, y, width, height, radius, px, py) {
+                    return true;
+                }
+            }
+        }
+    }
+    false
+}
+
+unsafe extern "system" fn fret_hit_test_subclass_proc(
+    hwnd: isize,
+    msg: u32,
+    wparam: usize,
+    lparam: isize,
+    _id_subclass: usize,
+    _ref_data: usize,
+) -> isize {
+    if msg == WM_NCDESTROY {
+        let _ = unsafe {
+            RemoveWindowSubclass(hwnd, fret_hit_test_subclass_proc, FRET_HIT_TEST_SUBCLASS_ID)
+        };
+        if let Ok(mut map) = hit_test_regions().lock() {
+            map.remove(&hwnd);
+        }
+        return unsafe { DefSubclassProc(hwnd, msg, wparam, lparam) };
+    }
+
+    if msg != WM_NCHITTEST {
+        return unsafe { DefSubclassProc(hwnd, msg, wparam, lparam) };
+    }
+
+    let base = unsafe { DefSubclassProc(hwnd, msg, wparam, lparam) };
+    if base != HTCLIENT {
+        return base;
+    }
+
+    let regions = {
+        let Ok(map) = hit_test_regions().lock() else {
+            return base;
+        };
+        map.get(&hwnd).map(|s| s.regions.clone())
+    };
+    let Some(regions) = regions else {
+        return base;
+    };
+
+    // WM_NCHITTEST gives screen coordinates in physical pixels; convert to client coordinates.
+    let mut pt = Point {
+        x: lparam_x(lparam),
+        y: lparam_y(lparam),
+    };
+    if unsafe { ScreenToClient(hwnd, &mut pt) } == 0 {
+        return base;
+    }
+
+    let scale = dpi_scale_for_hwnd(hwnd);
+    let px = (pt.x as f32) / scale;
+    let py = (pt.y as f32) / scale;
+
+    if regions_contain_point(&regions, px, py) {
+        base
+    } else {
+        HTTRANSPARENT
+    }
+}
+
+pub(super) fn set_window_hit_test_passthrough_regions(
+    hwnd: isize,
+    regions: Option<&[WindowHitTestRegionV1]>,
+) -> bool {
+    if hwnd == 0 {
+        return false;
+    }
+
+    let Some(regions) = regions else {
+        let _ = unsafe {
+            RemoveWindowSubclass(hwnd, fret_hit_test_subclass_proc, FRET_HIT_TEST_SUBCLASS_ID)
+        };
+        if let Ok(mut map) = hit_test_regions().lock() {
+            map.remove(&hwnd);
+        }
+        return true;
+    };
+
+    let canonical = fret_runtime::canonicalize_hit_test_regions_v1(regions.to_vec());
+    let regions = Arc::<[WindowHitTestRegionV1]>::from(canonical.into_boxed_slice());
+
+    if let Ok(mut map) = hit_test_regions().lock() {
+        map.insert(hwnd, WindowHitTestRegionsState { regions });
+    }
+
+    unsafe {
+        SetWindowSubclass(
+            hwnd,
+            fret_hit_test_subclass_proc,
+            FRET_HIT_TEST_SUBCLASS_ID,
+            0,
+        ) != 0
+    }
+}
 
 // DWM system backdrop (Windows 11 22H2+).
 //
@@ -239,9 +451,12 @@ pub(super) fn is_left_mouse_down() -> bool {
 }
 
 pub(super) fn window_under_cursor_root(screen_pos: PhysicalPosition<f64>) -> Option<isize> {
+    if !screen_pos.x.is_finite() || !screen_pos.y.is_finite() {
+        return None;
+    }
     let pt = Point {
-        x: screen_pos.x.round() as i32,
-        y: screen_pos.y.round() as i32,
+        x: screen_pos.x.round().clamp(i32::MIN as f64, i32::MAX as f64) as i32,
+        y: screen_pos.y.round().clamp(i32::MIN as f64, i32::MAX as f64) as i32,
     };
     let hwnd = unsafe { WindowFromPoint(pt) };
     if hwnd == 0 {
@@ -346,7 +561,7 @@ pub(super) fn client_origin_screen_for_hwnd(hwnd: isize) -> Option<PhysicalPosit
     Some(PhysicalPosition::new(client.x as f64, client.y as f64))
 }
 
-pub(super) fn set_window_mouse_passthrough(hwnd: isize, enabled: bool) {
+pub(super) fn set_window_hit_test_passthrough_all(hwnd: isize, enabled: bool) {
     if hwnd == 0 {
         return;
     }

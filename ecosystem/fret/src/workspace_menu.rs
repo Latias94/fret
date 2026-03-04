@@ -317,7 +317,11 @@ fn command_item<H: UiHost>(
                     .global::<KeymapService>()
                     .and_then(|svc| {
                         svc.keymap
-                            .display_shortcut_for_command_sequence(shortcut_base_ctx, command)
+                            .display_shortcut_for_command_sequence_with_key_contexts(
+                                shortcut_base_ctx,
+                                gating.key_contexts(),
+                                command,
+                            )
                     })
                     .or_else(|| {
                         meta.default_keybindings
@@ -340,7 +344,7 @@ fn command_item<H: UiHost>(
     };
 
     let item_enabled = item_when
-        .map(|w| w.eval(gating.input_ctx()))
+        .map(|w| w.eval_with_key_contexts(gating.input_ctx(), gating.key_contexts()))
         .unwrap_or(true);
     let disabled = !meta_enabled || !item_enabled;
 
@@ -491,7 +495,9 @@ fn build_entries<H: UiHost>(
             MenuItem::Submenu { title, when, items } => {
                 let child_key = stable_menu_key(title.as_ref());
                 let value: Arc<str> = Arc::from(format!("{prefix}.submenu.{child_key}"));
-                let disabled = when.as_ref().is_some_and(|w| !w.eval(gating.input_ctx()));
+                let disabled = when.as_ref().is_some_and(|w| {
+                    !w.eval_with_key_contexts(gating.input_ctx(), gating.key_contexts())
+                });
                 let trigger = submenu_item(title.clone(), value, disabled);
                 let child_prefix = format!("{prefix}.submenu.{child_key}");
                 let entries =
