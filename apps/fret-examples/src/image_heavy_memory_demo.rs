@@ -3,7 +3,7 @@
 use std::sync::Arc;
 
 use fret_app::App;
-use fret_core::{AlphaMode, AppWindowId, ImageColorSpace, ImageId, Px};
+use fret_core::{AlphaMode, AppWindowId, ImageColorSpace, ImageId, Px, TextAlign, TextOverflow, TextWrap};
 use fret_render::{ImageDescriptor, Renderer, WgpuContext, write_rgba8_texture_region};
 use fret_ui::ElementContext;
 use fret_ui::element::{
@@ -131,13 +131,26 @@ fn view(
         .with_global_mut_untracked(ImageHeavyImages::default, |g, _app| g.clone());
 
     let header = cx.text_props(TextProps {
+        layout: LayoutStyle {
+            size: SizeStyle {
+                width: Length::Fill,
+                height: Length::Auto,
+                ..Default::default()
+            },
+            ..Default::default()
+        },
         text: Arc::from(format!(
             "image-heavy memory demo: images={} texture_size_px={} estimated_rgba8_bytes={}",
             images.images.len(),
             images.texture_size_px,
             images.estimated_rgba8_bytes
         )),
-        ..Default::default()
+        style: None,
+        color: None,
+        wrap: TextWrap::Word,
+        overflow: TextOverflow::Clip,
+        align: TextAlign::Start,
+        ink_overflow: Default::default(),
     });
 
     let grid = cx.flex(
