@@ -114,19 +114,16 @@ If you are new to it, start with the cookbook walkthrough:
 This is the interface style we optimize for: typed state, typed actions, and shadcn-based components.
 
 ```rust
-use std::sync::Arc;
 use fret::prelude::*;
 
 mod act {
     fret::actions!([Add = "app.todo.add.v1"]);
 }
 
-fn main() -> anyhow::Result<()> {
+fn main() -> fret::Result<()> {
     FretApp::new("todo")
         .window("todo", (560.0, 520.0))
         .run_view::<TodoView>()
-        .map_err(anyhow::Error::from)?;
-    Ok(())
 }
 ```
 
