@@ -6559,6 +6559,29 @@
       "target_hints": []
     },
     {
+      "id": "workspace-shell-demo-tab-drag-inactive-to-split-right-smoke",
+      "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-drag-inactive-to-split-right-smoke.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "diag-hardening-smoke-workspace"
+      ],
+      "tags": [
+        "drag_to_split",
+        "gate",
+        "inactive_tab",
+        "smoke",
+        "tabstrip",
+        "workspace"
+      ],
+      "target_hints": [
+        "Activates a different tab so the drag source tab is inactive.",
+        "Drags the inactive tab toward pane B's right edge until the split preview appears.",
+        "Drops to split and asserts the tab moved into the new pane."
+      ]
+    },
+    {
       "id": "workspace-shell-demo-tab-drag-to-split-right",
       "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-drag-to-split-right.json",
       "required_capabilities": [
@@ -6596,6 +6619,29 @@
         "Drags a tab from pane A toward the right edge of pane B.",
         "Waits for the right-edge drop preview indicator to appear.",
         "Captures a screenshot while the preview is visible (used to gate docking drop overlay tokens)."
+      ]
+    },
+    {
+      "id": "workspace-shell-demo-tab-drag-to-split-right-preview-invariants-smoke",
+      "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-drag-to-split-right-preview-invariants-smoke.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "diag-hardening-smoke-workspace"
+      ],
+      "tags": [
+        "drag_to_split",
+        "drop_preview",
+        "gate",
+        "smoke",
+        "tabstrip",
+        "workspace"
+      ],
+      "target_hints": [
+        "Starts a pointer session on an active tab.",
+        "Pins the cursor inside the window edge and asserts the right split preview appears.",
+        "Drops and asserts the preview disappears and the tab moves into the new split pane."
       ]
     },
     {

@@ -1,0 +1,117 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "Workspace shell demo: drag inactive tab to pane edge to split (right) (smoke)",
+    "tags": [
+      "workspace",
+      "tabstrip",
+      "drag_to_split",
+      "inactive_tab",
+      "smoke",
+      "gate"
+    ],
+    "required_capabilities": ["diag.script_v2"],
+    "target_hints": [
+      "Activates a different tab so the drag source tab is inactive.",
+      "Drags the inactive tab toward pane B's right edge until the split preview appears.",
+      "Drops to split and asserts the tab moved into the new pane."
+    ]
+  },
+  "steps": [
+    { "type": "set_window_inner_size", "width_px": 1280.0, "height_px": 720.0 },
+    { "type": "wait_frames", "n": 10 },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-1" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-2" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-b-root" }
+      },
+      "timeout_frames": 240
+    },
+
+    { "type": "click", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-1" } },
+    { "type": "wait_frames", "n": 10 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "selected_is",
+        "selected": true,
+        "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-1" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "selected_is",
+        "selected": false,
+        "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-2" }
+      },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "pointer_down",
+      "window": { "kind": "current" },
+      "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-2" },
+      "button": "left"
+    },
+    { "type": "pointer_move", "window": { "kind": "current" }, "delta_x": 420.0, "delta_y": 0.0, "steps": 42 },
+    { "type": "set_cursor_in_window_logical", "window": { "kind": "current" }, "x_px": 1278.0, "y_px": 160.0 },
+    { "type": "pointer_move", "window": { "kind": "current" }, "delta_x": -1.0, "delta_y": 0.0, "steps": 1 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "workspace-pane-pane-b.drop_preview.right" }
+      },
+      "timeout_frames": 480
+    },
+    { "type": "pointer_up", "window": { "kind": "current" } },
+
+    { "type": "wait_frames", "n": 10 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "workspace-shell-pane-window-1.pane.1-root" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "workspace-shell-pane-window-1.pane.1-tab-doc-a-2" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "not_exists",
+        "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-2" }
+      },
+      "timeout_frames": 240
+    },
+
+    { "type": "capture_bundle", "label": "workspace-shell-demo-tab-drag-inactive-to-split-right-smoke" }
+  ]
+}

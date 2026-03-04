@@ -38,6 +38,7 @@
         }
       },
       "timeout_frames": 240,
+      "timeout_ms": 15000,
       "type": "wait_until"
     },
     {
@@ -49,6 +50,7 @@
         }
       },
       "timeout_frames": 240,
+      "timeout_ms": 15000,
       "type": "wait_until"
     },
     {
@@ -83,7 +85,8 @@
         "kind": "exists",
         "target": { "kind": "test_id", "id": "workspace-pane-pane-b.drop_preview.right" }
       },
-      "timeout_frames": 480
+      "timeout_frames": 480,
+      "timeout_ms": 15000
     },
     {
       "n": 8,
@@ -117,10 +120,6 @@
       }
     },
     {
-      "n": 8,
-      "type": "wait_frames"
-    },
-    {
       "predicate": {
         "kind": "not_exists",
         "target": {
@@ -129,6 +128,7 @@
         }
       },
       "timeout_frames": 240,
+      "timeout_ms": 15000,
       "type": "wait_until"
     },
     {

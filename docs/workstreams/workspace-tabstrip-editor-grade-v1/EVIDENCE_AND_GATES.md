@@ -81,6 +81,8 @@ Add promoted scripts under `tools/diag-scripts/workspace/**`:
 4) Drag-to-split preview (bridge)
    - promoted scripts:
      - `workspace-shell-demo-tab-drag-to-split-right`
+     - `workspace-shell-demo-tab-drag-inactive-to-split-right-smoke`
+     - `workspace-shell-demo-tab-drag-to-split-right-preview-invariants-smoke`
      - `workspace-shell-demo-tab-drag-to-split-right-drop-preview-screenshot`
    - notes:
      - avoid large `pointer_move` deltas that can push the cursor outside the window (hit-test becomes `null`,
@@ -88,7 +90,7 @@ Add promoted scripts under `tools/diag-scripts/workspace/**`:
      - for “hover the edge while dragging” gates, prefer:
        - `set_cursor_in_window_logical` to pin the runner cursor within the window, then
        - a tiny `pointer_move` (1 step) to trigger hover updates deterministically.
-   - replace screenshot-only gating with an invariants-based gate once the preview snapshot surface is stable
+   - screenshot-only gating exists to lock tokens; prefer invariants gates for behavior
 
 ## Tooling checklist
 

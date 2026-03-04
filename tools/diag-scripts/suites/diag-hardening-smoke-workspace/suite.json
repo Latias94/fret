@@ -4,7 +4,9 @@
   "scripts": [
     "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-button-closes-tab-smoke.json",
     "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-mru-fallback-smoke.json",
+    "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-drag-inactive-to-split-right-smoke.json",
     "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-drag-to-split-right-drop-preview-screenshot.json",
+    "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-drag-to-split-right-preview-invariants-smoke.json",
     "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-drag-to-split-right-row-suppressed-smoke.json",
     "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-middle-click-close-smoke.json",
     "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-reorder-first-to-end-smoke.json"

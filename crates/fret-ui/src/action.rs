@@ -910,5 +910,5 @@ pub(crate) struct RovingActionHooks {
     pub on_active_change: Option<OnRovingActiveChange>,
     pub on_typeahead: Option<OnRovingTypeahead>,
     pub on_navigate: Option<OnRovingNavigate>,
-    pub on_key_down: Option<OnKeyDown>,
+    pub on_key_down: Vec<OnKeyDown>,
 }
