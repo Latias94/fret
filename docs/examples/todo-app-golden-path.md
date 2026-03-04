@@ -58,7 +58,7 @@ fretboard new todo --name my-todo --ui-assets
 
 Notes:
 
-- `fret` defaults to a practical desktop setup (diagnostics + icons + optional caches).
+- `fret` defaults to a practical desktop setup (`desktop` + `app`).
 - Advanced apps can depend on `fret-framework` + `fret-bootstrap` directly for finer-grained control.
 
 ## Invalidation rules of thumb (keep it simple)
@@ -90,7 +90,7 @@ edition = "2024"
 
 [dependencies]
 anyhow = "1"
-fret = { path = "../../ecosystem/fret" }
+fret = { path = "../../ecosystem/fret", features = ["state"] }
 fret-selector = { path = "../../ecosystem/fret-selector", features = ["ui"] } # optional
 fret-query = { path = "../../ecosystem/fret-query", features = ["ui"] } # optional
 ```

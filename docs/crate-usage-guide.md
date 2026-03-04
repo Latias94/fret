@@ -85,16 +85,24 @@ We treat feature naming as **recommended convention**, not a hard requirement fo
 `fret` is designed to let apps choose between “smooth by default” and “small when you opt out”.
 
 - `default` = `desktop` + `app` (recommended for native desktop apps).
-  - Includes: shadcn integration, view runtime state helpers (selector/query).
+  - Includes: shadcn integration.
   - Intentionally excludes: config files, UI asset caches, icon packs, icon preloading, command palette.
 - `batteries` = a bigger opt-in bundle for app/dev convenience:
   - includes diagnostics wiring, config files, UI assets, icons, and (optional) icon SVG preloading.
+  - includes `state` (selector/query helpers).
 
 Minimal / explicit profile (useful for embed/minimal builds that must avoid filesystem side effects):
 
 ```toml
 [dependencies]
 fret = { path = "../path/to/fret/ecosystem/fret", default-features = false, features = ["desktop", "shadcn"] }
+```
+
+Enable selector/query helpers (for `ViewCx::use_selector` / `ViewCx::use_query`):
+
+```toml
+[dependencies]
+fret = { path = "../path/to/fret/ecosystem/fret", features = ["state"] }
 ```
 
 Recommended app profile (golden path; easiest):

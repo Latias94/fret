@@ -31,6 +31,13 @@ With defaults (desktop + app):
 fret = { path = "../fret" } # path is relative to your Cargo.toml
 ```
 
+Enable selector/query helpers (optional):
+
+```toml
+[dependencies]
+fret = { path = "../fret", features = ["state"] }
+```
+
 If your crate lives under `apps/` in this repository:
 
 ```toml
@@ -60,7 +67,8 @@ fn main() -> fret::Result<()> {
 ## Features
 
 - `desktop`: enable the native desktop stack (winit + wgpu) via `fret-framework/native-wgpu`.
-- `app`: recommended baseline for apps (shadcn + state helpers).
+- `app`: recommended baseline for apps (shadcn).
+- `state`: enable selector/query helpers for `ViewCx` (`use_selector`, `use_query`).
 - `batteries`: “works out of the box” opt-in bundle (config files + UI assets + icons + preloading + diagnostics).
 - `config-files`: load layered config files from `.fret/` (settings/keymap/menubar).
 - `diagnostics`: enable default diagnostics wiring (tracing + panic hook; plus extra dev tooling).
