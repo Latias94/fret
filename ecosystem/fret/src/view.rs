@@ -254,6 +254,25 @@ impl<'cx, 'a, H: UiHost> ViewCx<'cx, 'a, H> {
         self.action_handlers = next;
     }
 
+    /// Register a typed unit action handler that requests redraw + notifies on `handled=true`.
+    ///
+    /// This is a small ergonomics helper: most action handlers that mutate models/state need both
+    /// `request_redraw(window)` and `notify(action_cx)` to participate in the view-cache closure.
+    pub fn on_action_notify<A: crate::TypedAction>(
+        &mut self,
+        f: impl Fn(&mut dyn fret_ui::action::UiFocusActionHost, fret_ui::action::ActionCx) -> bool
+        + 'static,
+    ) {
+        self.on_action::<A>(move |host, action_cx| {
+            let handled = f(host, action_cx);
+            if handled {
+                host.request_redraw(action_cx.window);
+                host.notify(action_cx);
+            }
+            handled
+        });
+    }
+
     /// Register a typed payload action handler (v2 prototype; ADR 0312).
     ///
     /// Notes:
@@ -271,6 +290,26 @@ impl<'cx, 'a, H: UiHost> ViewCx<'cx, 'a, H> {
         self.action_handlers_used = true;
         let next = std::mem::take(&mut self.action_handlers).on_payload::<A>(f);
         self.action_handlers = next;
+    }
+
+    /// Register a typed payload action handler that requests redraw + notifies on `handled=true`.
+    pub fn on_payload_action_notify<A: crate::actions::TypedPayloadAction>(
+        &mut self,
+        f: impl Fn(
+            &mut dyn fret_ui::action::UiFocusActionHost,
+            fret_ui::action::ActionCx,
+            A::Payload,
+        ) -> bool
+        + 'static,
+    ) {
+        self.on_payload_action::<A>(move |host, action_cx, payload| {
+            let handled = f(host, action_cx, payload);
+            if handled {
+                host.request_redraw(action_cx.window);
+                host.notify(action_cx);
+            }
+            handled
+        });
     }
 
     /// Register a typed unit action availability handler.

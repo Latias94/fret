@@ -127,6 +127,8 @@ Migration steps:
 2) Replace:
    - `msg.cmd(Msg::X)` with `act::X` action references.
 3) Replace `update(...)` with `cx.on_action(...)` handlers.
+   - Tip: for most state-mutating handlers, prefer `cx.on_action_notify::<A>(...)` to request a
+     redraw + notify automatically when `handled=true`.
 4) Replace manual “force refresh” hacks with:
    - `cx.notify()` and/or
    - selector/query hooks that carry proper dependency observation.
