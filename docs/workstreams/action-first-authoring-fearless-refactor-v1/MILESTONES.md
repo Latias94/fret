@@ -23,6 +23,7 @@ Related:
 Hardening follow-up (post-M1):
 
 - Key-context aware `when` evaluation (`keyctx.*`) is aligned across keymap matching, menus/palette gating, shortcut display, and diagnostics (see TODO `AFA-actions-019`).
+- Authoring ergonomics: semantics/test IDs/key contexts can be attached before `into_element(cx)` and cookbook demos demonstrate the pattern (see TODO “Reduce authoring noise”).
 
 ---
 
@@ -103,3 +104,27 @@ Exit criteria:
 - No in-tree demo requires stringly command routing glue.
 - `cargo nextest run` gates remain green.
 - “Risk matrix” items (R1–R6) have explicit mitigations/gates or are explicitly deferred.
+
+---
+
+## Post-v1 milestones (proposed)
+
+These milestones are intentionally outside the v1 closure, but define the safe path to reduce
+long-term surface area without breaking downstream users.
+
+### M7 — Payload actions (v2) decision + prototype
+
+Exit criteria:
+
+- A concrete contract exists for parameterized/payloaded actions, including determinism and
+  diagnostics expectations.
+- At least one in-tree demo migrates from MVU payload routing to payload actions (or an explicit
+  alternative is adopted).
+
+### M8 — MVU deprecation window (warn + migrate)
+
+Exit criteria:
+
+- MVU’s long-term stance is decided (supported vs legacy-only) and reflected in docs/templates.
+- If legacy-only: compile-time deprecations (or feature gating) are staged behind a deprecation
+  window and do not break in-tree demos.

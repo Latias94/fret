@@ -312,6 +312,26 @@ This phase is intentionally last.
     - `apps/fret-examples/src/todo_demo.rs` (example: legacy prelude import)
     - `tools/gate_no_mvu_in_cookbook.ps1`
 
+### Next cleanup steps (post-v1)
+
+- [ ] AFA-clean-063 Decide MVU’s long-term status (supported alternative vs legacy-only).
+  - Decision inputs:
+    - Payload/parameterized actions are not supported in typed actions v1 (ADR 0307 v1 scope),
+      which remains a practical reason to keep MVU for some demos/apps.
+    - Per-frame message routing must not regress view-cache reuse semantics.
+  - Exit criteria:
+    - A single, accurate “when to use MVU” policy exists and is reflected in docs/templates.
+
+- [ ] AFA-clean-064 Add compile-time deprecation warnings for legacy MVU surfaces (if feasible).
+  - Rule: docs/templates must stop teaching it *before* adding warnings.
+  - Candidate surfaces:
+    - `ecosystem/fret/src/mvu.rs`
+    - `ecosystem/fret/src/mvu_router.rs`
+
+- [ ] AFA-clean-065 Consider feature-gating MVU behind an explicit legacy feature.
+  - Goal: keep `fret::prelude::*` boring, and make MVU opt-in in downstream apps.
+  - Non-goal: break existing users without a deprecation window.
+
 ---
 
 ## Post-v1 follow-ups (tracked separately)
@@ -327,11 +347,15 @@ practical steps:
     - Diag protocol: `crates/fret-diag-protocol/src/lib.rs` (`UiShortcutRoutingTraceEntryV1.key_contexts`)
     - Gate: `tools/diag-scripts/cookbook/commands-keymap-basics/cookbook-commands-keymap-basics-shortcut-and-gating.json` (`wait_shortcut_routing_trace.query.key_context`)
 - Reduce authoring noise (status):
-  - Done: `UiIntoElement`-level `test_id` late-landing (`AUE-semantics-120`):
-    `ecosystem/fret-ui-kit/src/declarative/semantics.rs`
-  - Done: `UiBuilder`-level semantics late-landing (`AUE-semantics-121`, MVP3):
-    `ecosystem/fret-ui-kit/src/ui_builder.rs`
-  - Remaining: cookbook/demo refactors that remove “decorate-only” early landing (tracked as `AUE-semantics-123`).
+  - Done: attach `SemanticsDecoration`/`test_id`/`key_context` before `into_element(cx)`:
+    - Mechanism helpers: `crates/fret-ui/src/element.rs` (`AnyElement::a11y_*`)
+    - Ecosystem authoring ext: `ecosystem/fret-ui-kit/src/declarative/semantics.rs`
+    - Prelude import fix: `ecosystem/fret-ui-kit/src/lib.rs` (`UiIntoElement` in `prelude::*`)
+  - Done: cookbook demos updated to avoid decorate-only early landing:
+    - `apps/fret-cookbook/examples/hello.rs`
+    - `apps/fret-cookbook/examples/overlay_basics.rs`
+    - `apps/fret-cookbook/examples/commands_keymap_basics.rs`
+    - `apps/fret-cookbook/examples/hello_counter.rs`
 - Pointer-triggered explainability: stable selector → action mapping without relying on script stamping.
   - Status (as of 2026-03-03): `debug.command_dispatch_trace[*].source_test_id` is inferred from the
     current semantics snapshot when `source_element` is available (fallbacks remain for cases where
@@ -347,3 +371,8 @@ practical steps:
 - View runtime ergonomics: reduce `on_action` handler boilerplate (`request_redraw` + `notify`) without weakening
   determinism or layering (ecosystem-only).
 - Payload actions (v2+), behind strict determinism + validation rules.
+
+- Macro ergonomics (non-breaking, v1.x):
+  - Keep `actions!` explicit-ID requirement (stable IDs must not drift with refactors).
+  - Consider additive helpers that reduce repetition (e.g. prefix/namespace helpers), but do not
+    infer IDs from type paths/module names.
