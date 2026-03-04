@@ -202,6 +202,39 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
 
     let (scripts, suite_name) = scripts::resolve_repro_scripts(&rest, &workspace_root)?;
 
+    let mut launch_env = launch_env;
+    if !scripts.is_empty() {
+        use std::collections::BTreeMap;
+
+        let mut defaults: BTreeMap<String, String> = BTreeMap::new();
+        let mut conflicts: Vec<String> = Vec::new();
+        for script in &scripts {
+            for (key, value) in script_env_defaults(script) {
+                if let Some(prev) = defaults.insert(key.clone(), value.clone())
+                    && prev != value
+                {
+                    conflicts.push(format!(
+                        "meta.env_defaults conflict for {key}: {prev} vs {value} (script={})",
+                        script.display()
+                    ));
+                }
+            }
+        }
+        if !conflicts.is_empty() {
+            conflicts.sort();
+            return Err(format!(
+                "conflicting script meta.env_defaults in repro:\n- {}",
+                conflicts.join("\n- ")
+            ));
+        }
+        for (key, value) in defaults {
+            if launch_env.iter().any(|(k, _v)| k == &key) {
+                continue;
+            }
+            launch_env.push((key, value));
+        }
+    }
+
     let summary_path = resolved_out_dir.join("repro.summary.json");
 
     let required_caps = scripts::compute_required_caps(&scripts);
