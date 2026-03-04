@@ -111,6 +111,48 @@ fn resource_footprint_summary(path: &Path) -> Option<serde_json::Value> {
         .and_then(|v| v.get("allocated_bytes"))
         .and_then(|v| v.as_u64());
 
+    let macos_vmmap_top_dirty_regions = v
+        .get("macos_vmmap")
+        .and_then(|v| v.get("tables"))
+        .and_then(|v| v.get("regions"))
+        .and_then(|v| v.get("top_dirty"))
+        .and_then(|v| v.as_array())
+        .map(|rows| {
+            rows.iter()
+                .take(8)
+                .map(|row| {
+                    serde_json::json!({
+                        "region_type": row.get("region_type").and_then(|v| v.as_str()),
+                        "region_count": row.get("region_count").and_then(|v| v.as_u64()),
+                        "virtual_bytes": row.get("virtual_bytes").and_then(|v| v.as_u64()),
+                        "resident_bytes": row.get("resident_bytes").and_then(|v| v.as_u64()),
+                        "dirty_bytes": row.get("dirty_bytes").and_then(|v| v.as_u64()),
+                    })
+                })
+                .collect::<Vec<_>>()
+        });
+
+    let macos_vmmap_top_resident_regions = v
+        .get("macos_vmmap")
+        .and_then(|v| v.get("tables"))
+        .and_then(|v| v.get("regions"))
+        .and_then(|v| v.get("top_resident"))
+        .and_then(|v| v.as_array())
+        .map(|rows| {
+            rows.iter()
+                .take(8)
+                .map(|row| {
+                    serde_json::json!({
+                        "region_type": row.get("region_type").and_then(|v| v.as_str()),
+                        "region_count": row.get("region_count").and_then(|v| v.as_u64()),
+                        "virtual_bytes": row.get("virtual_bytes").and_then(|v| v.as_u64()),
+                        "resident_bytes": row.get("resident_bytes").and_then(|v| v.as_u64()),
+                        "dirty_bytes": row.get("dirty_bytes").and_then(|v| v.as_u64()),
+                    })
+                })
+                .collect::<Vec<_>>()
+        });
+
     Some(serde_json::json!({
         "pid": pid,
         "wall_time_ms": wall_time_ms,
@@ -125,6 +167,8 @@ fn resource_footprint_summary(path: &Path) -> Option<serde_json::Value> {
         "macos_owned_unmapped_memory_dirty_bytes": macos_owned_unmapped_memory_dirty_bytes,
         "macos_vmmap_top_dirty_region_type": macos_vmmap_top_dirty_region_type,
         "macos_vmmap_top_dirty_region_bytes": macos_vmmap_top_dirty_region_bytes,
+        "macos_vmmap_top_dirty_regions": macos_vmmap_top_dirty_regions,
+        "macos_vmmap_top_resident_regions": macos_vmmap_top_resident_regions,
         "macos_vmmap_top_allocated_malloc_zone": macos_vmmap_top_allocated_malloc_zone,
         "macos_vmmap_top_allocated_malloc_bytes": macos_vmmap_top_allocated_malloc_bytes,
     }))
