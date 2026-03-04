@@ -35,7 +35,7 @@
 
 ## README code samples (staleness audit)
 
-- [ ] Ensure the README “Todo App API Taste” still matches current APIs and conventions:
+- [x] Ensure the README “Todo App API Taste” still matches current APIs and conventions:
   - `Model<T>` + `ViewCx` patterns
   - typed action macro usage
   - shadcn authoring surface (constructors + builders)

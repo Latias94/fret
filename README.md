@@ -139,11 +139,22 @@ impl View for TodoView {
         let draft = cx.use_state::<String>();
         let enabled = !cx.watch_model(&draft).layout().cloned_or_default().trim().is_empty();
 
-        cx.on_action::<act::Add>(|_host, _acx| true);
+        cx.on_action::<act::Add>({
+            let draft = draft.clone();
+            move |host, acx| {
+                let _ = host.models_mut().update(&draft, String::clear);
+                host.request_redraw(acx.window);
+                host.notify(acx);
+                true
+            }
+        });
 
         ui::v_flex(cx, |cx| {
             ui::children![cx;
-                shadcn::Input::new(draft).placeholder("Add a task…"),
+                shadcn::Input::new(draft)
+                    .a11y_label("New task")
+                    .placeholder("Add a task…")
+                    .submit_command(act::Add.into()),
                 shadcn::Button::new("Add").disabled(!enabled).action(act::Add),
             ]
         })
