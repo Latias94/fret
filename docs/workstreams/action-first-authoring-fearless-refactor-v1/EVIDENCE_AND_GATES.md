@@ -162,7 +162,7 @@ Notes:
 
 Gate runner:
 
-- `pwsh tools/diag_gate_action_first_authoring_v1.ps1` (default output: `target/fret-diag-afa-v1/`)
+- `pwsh tools/diag_gate_action_first_authoring_v1.ps1` (default output: `target/fret-diag-afa-v1/`; runs under fixed frame delta via `FRET_DIAG_FIXED_FRAME_DELTA_MS=16` to avoid timeout flake when the app is not continuously rendering)
 
 ### 2.3 wasm smoke (build-only)
 
