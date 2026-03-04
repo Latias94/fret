@@ -14,6 +14,7 @@ use fret_ui::element::{
 };
 use fret_ui::{ElementContext, Theme, ThemeSnapshot, UiHost};
 use fret_ui_kit::declarative::icon as decl_icon;
+use fret_ui_kit::declarative::motion::drive_tween_f32_for_element;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::declarative::transition::{
     drive_transition_with_durations_and_cubic_bezier, ticks_60hz_for_duration,
@@ -22,7 +23,9 @@ use fret_ui_kit::primitives::accordion as radix_accordion;
 use fret_ui_kit::primitives::collapsible as radix_collapsible;
 use fret_ui_kit::primitives::direction::LayoutDirection;
 use fret_ui_kit::typography;
-use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space, ui};
+use fret_ui_kit::{
+    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space, WidgetStates, ui,
+};
 
 use crate::overlay_motion;
 
@@ -51,6 +54,11 @@ fn trigger_gap(theme: &ThemeSnapshot) -> Px {
     theme
         .metric_by_key("component.accordion.trigger.gap")
         .unwrap_or_else(|| MetricRef::space(Space::N4).resolve(theme))
+}
+
+fn tailwind_transition_ease_in_out(t: f32) -> f32 {
+    // Tailwind default `ease-in-out`: cubic-bezier(0.4, 0, 0.2, 1)
+    fret_ui_kit::headless::easing::CubicBezier::new(0.4, 0.0, 0.2, 1.0).sample(t)
 }
 
 fn apply_trigger_label_defaults(
@@ -302,15 +310,41 @@ pub mod composable {
                 .label(a11y_label.clone())
                 .disabled(!enabled)
                 .tab_stop(focusable)
-                .into_element(
+                .into_element_with_id_props(
                     cx,
                     root,
                     PressableProps {
                         layout: pressable_layout,
-                        focus_ring: Some(decl_style::focus_ring(&theme, radius)),
                         ..Default::default()
                     },
-                    move |cx, is_open| {
+                    move |cx, is_open, st, id, mut pressable_props| {
+                        let states = WidgetStates::from_pressable(cx, st, enabled);
+                        let duration = overlay_motion::shadcn_motion_duration_150(cx);
+                        let ring_alpha = drive_tween_f32_for_element(
+                            cx,
+                            id,
+                            "accordion.trigger.ring.alpha",
+                            if states.contains(WidgetStates::FOCUS_VISIBLE) {
+                                1.0
+                            } else {
+                                0.0
+                            },
+                            duration,
+                            tailwind_transition_ease_in_out,
+                        );
+
+                        let mut focus_ring = decl_style::focus_ring(&theme, radius);
+                        focus_ring.color.a =
+                            (focus_ring.color.a * ring_alpha.value).clamp(0.0, 1.0);
+                        if let Some(offset_color) = focus_ring.offset_color {
+                            focus_ring.offset_color = Some(Color {
+                                a: (offset_color.a * ring_alpha.value).clamp(0.0, 1.0),
+                                ..offset_color
+                            });
+                        }
+                        pressable_props.focus_ring = Some(focus_ring);
+                        pressable_props.focus_ring_always_paint = ring_alpha.animating;
+
                         let chrome = ChromeRefinement::default()
                             .px(Space::N0)
                             .py(Space::N4)
@@ -321,7 +355,7 @@ pub mod composable {
                         props.layout.size = container_layout.size;
                         props.layout.overflow = container_layout.overflow;
 
-                        vec![cx.container(
+                        let children = vec![cx.container(
                             ContainerProps {
                                 layout: props.layout,
                                 padding: props.padding.into(),
@@ -510,7 +544,9 @@ pub mod composable {
                                     },
                                 )]
                             },
-                        )]
+                        )];
+
+                        (pressable_props, children)
                     },
                 );
 
@@ -1260,15 +1296,40 @@ impl AccordionTrigger {
             .label(a11y_label.clone())
             .disabled(!enabled)
             .tab_stop(focusable)
-            .into_element(
+            .into_element_with_id_props(
                 cx,
                 root,
                 PressableProps {
                     layout: pressable_layout,
-                    focus_ring: Some(decl_style::focus_ring(&theme, radius)),
                     ..Default::default()
                 },
-                move |cx, is_open| {
+                move |cx, is_open, st, id, mut pressable_props| {
+                    let states = WidgetStates::from_pressable(cx, st, enabled);
+                    let duration = overlay_motion::shadcn_motion_duration_150(cx);
+                    let ring_alpha = drive_tween_f32_for_element(
+                        cx,
+                        id,
+                        "accordion.trigger.ring.alpha",
+                        if states.contains(WidgetStates::FOCUS_VISIBLE) {
+                            1.0
+                        } else {
+                            0.0
+                        },
+                        duration,
+                        tailwind_transition_ease_in_out,
+                    );
+
+                    let mut focus_ring = decl_style::focus_ring(&theme, radius);
+                    focus_ring.color.a = (focus_ring.color.a * ring_alpha.value).clamp(0.0, 1.0);
+                    if let Some(offset_color) = focus_ring.offset_color {
+                        focus_ring.offset_color = Some(Color {
+                            a: (offset_color.a * ring_alpha.value).clamp(0.0, 1.0),
+                            ..offset_color
+                        });
+                    }
+                    pressable_props.focus_ring = Some(focus_ring);
+                    pressable_props.focus_ring_always_paint = ring_alpha.animating;
+
                     let chrome = ChromeRefinement::default()
                         .px(Space::N0)
                         .py(Space::N4)
@@ -1278,7 +1339,7 @@ impl AccordionTrigger {
                     props.layout.size = container_layout.size;
                     props.layout.overflow = container_layout.overflow;
 
-                    vec![cx.container(
+                    let children = vec![cx.container(
                         ContainerProps {
                             layout: props.layout,
                             padding: props.padding.into(),
@@ -1461,7 +1522,9 @@ impl AccordionTrigger {
                                 },
                             )]
                         },
-                    )]
+                    )];
+
+                    (pressable_props, children)
                 },
             );
 
@@ -2180,6 +2243,263 @@ mod tests {
                 "expected AccordionTrigger label to inherit foreground color from scope (e.g. Card foreground)"
             );
         });
+    }
+
+    #[test]
+    fn accordion_trigger_focus_ring_alpha_tweens_in_and_out_like_transition_all() {
+        use std::cell::Cell;
+        use std::rc::Rc;
+        use std::time::Duration;
+
+        use fret_runtime::FrameId;
+        use fret_ui::element::AnyElement;
+        use fret_ui::elements;
+        use fret_ui::elements::GlobalElementId;
+        use fret_ui_kit::declarative::transition::ticks_60hz_for_duration;
+
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        crate::shadcn_themes::apply_shadcn_new_york(
+            &mut app,
+            crate::shadcn_themes::ShadcnBaseColor::Neutral,
+            crate::shadcn_themes::ShadcnColorScheme::Light,
+        );
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(520.0), Px(280.0)),
+        );
+        let mut services = FakeServices;
+
+        let theme = Theme::global(&app).snapshot();
+        let focus_radius = fret_ui_kit::MetricRef::radius(fret_ui_kit::Radius::Md).resolve(&theme);
+        let base_alpha = fret_ui_kit::declarative::style::focus_ring(&theme, focus_radius)
+            .color
+            .a;
+
+        let open = app.models_mut().insert::<Option<Arc<str>>>(None);
+
+        let trigger_id_out: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
+        let ring_alpha_out: Rc<Cell<Option<f32>>> = Rc::new(Cell::new(None));
+        let always_paint_out: Rc<Cell<Option<bool>>> = Rc::new(Cell::new(None));
+
+        fn find_element_by_test_id<'a>(
+            el: &'a AnyElement,
+            test_id: &str,
+        ) -> Option<&'a AnyElement> {
+            if el
+                .semantics_decoration
+                .as_ref()
+                .and_then(|s| s.test_id.as_deref())
+                == Some(test_id)
+            {
+                return Some(el);
+            }
+            for child in &el.children {
+                if let Some(found) = find_element_by_test_id(child, test_id) {
+                    return Some(found);
+                }
+            }
+            None
+        }
+
+        fn render_frame(
+            ui: &mut UiTree<App>,
+            app: &mut App,
+            services: &mut dyn fret_core::UiServices,
+            window: AppWindowId,
+            bounds: Rect,
+            open: fret_runtime::Model<Option<Arc<str>>>,
+            trigger_id_out: Rc<Cell<Option<GlobalElementId>>>,
+            ring_alpha_out: Rc<Cell<Option<f32>>>,
+            always_paint_out: Rc<Cell<Option<bool>>>,
+        ) {
+            let root = fret_ui::declarative::render_root(
+                ui,
+                app,
+                services,
+                window,
+                bounds,
+                "accordion-trigger-focus-ring-transition",
+                move |cx| {
+                    let item = AccordionItem::new(
+                        Arc::from("item-1"),
+                        AccordionTrigger::new(vec![cx.text("Item 1")]).test_id("accordion-trigger"),
+                        AccordionContent::new(vec![cx.text("Content 1")]),
+                    );
+
+                    let accordion = Accordion::single(open.clone())
+                        .collapsible(true)
+                        .items([item])
+                        .into_element(cx);
+
+                    let trigger = find_element_by_test_id(&accordion, "accordion-trigger")
+                        .expect("missing trigger test_id");
+                    trigger_id_out.set(Some(trigger.id));
+
+                    let ElementKind::Pressable(props) = &trigger.kind else {
+                        panic!("expected trigger to be a Pressable");
+                    };
+                    let alpha = props
+                        .focus_ring
+                        .as_ref()
+                        .map(|ring| ring.color.a)
+                        .unwrap_or(0.0);
+                    ring_alpha_out.set(Some(alpha));
+                    always_paint_out.set(Some(props.focus_ring_always_paint));
+
+                    vec![accordion]
+                },
+            );
+            ui.set_root(root);
+        }
+
+        // Frame 1: unfocused, ring should be fully hidden.
+        app.set_frame_id(FrameId(1));
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            trigger_id_out.clone(),
+            ring_alpha_out.clone(),
+            always_paint_out.clone(),
+        );
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        let trigger_id = trigger_id_out.get().expect("trigger element id");
+        let trigger_node =
+            elements::node_for_element(&mut app, window, trigger_id).expect("trigger node");
+
+        assert!(
+            ring_alpha_out.get().expect("alpha").abs() <= 1e-6,
+            "expected initial ring alpha to be 0; got {:?}",
+            ring_alpha_out.get()
+        );
+        assert_eq!(
+            always_paint_out.get().expect("always paint"),
+            false,
+            "expected initial focus_ring_always_paint=false"
+        );
+
+        // Focus it and switch modality to keyboard (focus-visible).
+        ui.set_focus(Some(trigger_node));
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::KeyDown {
+                key: fret_core::KeyCode::Tab,
+                modifiers: fret_core::Modifiers::default(),
+                repeat: false,
+            },
+        );
+
+        // Frame 2: focus-visible should start a tween (intermediate alpha) and paint-on-exit is ok.
+        app.set_frame_id(FrameId(2));
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            trigger_id_out.clone(),
+            ring_alpha_out.clone(),
+            always_paint_out.clone(),
+        );
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        let alpha2 = ring_alpha_out.get().expect("alpha2");
+        assert!(
+            alpha2 > 1e-6 && alpha2 < base_alpha - 1e-6,
+            "expected ring alpha to tween in (intermediate); got alpha={alpha2} base_alpha={base_alpha}"
+        );
+        assert!(
+            always_paint_out.get().expect("always paint2"),
+            "expected focus_ring_always_paint while animating"
+        );
+
+        // Advance frames until the default 150ms transition settles.
+        let settle = ticks_60hz_for_duration(Duration::from_millis(150)) + 2;
+        for i in 0..settle {
+            app.set_frame_id(FrameId(3 + i));
+            render_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                open.clone(),
+                trigger_id_out.clone(),
+                ring_alpha_out.clone(),
+                always_paint_out.clone(),
+            );
+            ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        }
+
+        let alpha_final = ring_alpha_out.get().expect("alpha_final");
+        assert!(
+            (alpha_final - base_alpha).abs() <= 1e-4,
+            "expected ring alpha to settle to base; got alpha={alpha_final} base_alpha={base_alpha}"
+        );
+        assert!(
+            !always_paint_out.get().expect("always paint final"),
+            "expected focus_ring_always_paint=false once settled"
+        );
+
+        // Blur: should animate out and keep painting while alpha decreases.
+        ui.set_focus(None);
+        app.set_frame_id(FrameId(3 + settle));
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            trigger_id_out.clone(),
+            ring_alpha_out.clone(),
+            always_paint_out.clone(),
+        );
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        let alpha_out = ring_alpha_out.get().expect("alpha_out");
+        assert!(
+            alpha_out > 1e-6 && alpha_out < base_alpha - 1e-6,
+            "expected ring alpha to tween out (intermediate); got alpha={alpha_out} base_alpha={base_alpha}"
+        );
+        assert!(
+            always_paint_out.get().expect("always paint out"),
+            "expected focus_ring_always_paint while animating out"
+        );
+
+        for i in 0..settle {
+            app.set_frame_id(FrameId(4 + settle + i));
+            render_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                open.clone(),
+                trigger_id_out.clone(),
+                ring_alpha_out.clone(),
+                always_paint_out.clone(),
+            );
+            ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        }
+
+        let alpha_zero = ring_alpha_out.get().expect("alpha_zero");
+        assert!(
+            alpha_zero.abs() <= 1e-4,
+            "expected ring alpha to settle to 0; got alpha={alpha_zero}"
+        );
+        assert!(
+            !always_paint_out.get().expect("always paint after out"),
+            "expected focus_ring_always_paint=false once ring alpha is 0"
+        );
     }
 
     #[test]
