@@ -1333,6 +1333,14 @@ pub enum UiMousePolicyV1 {
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
+pub enum UiWindowAppearanceV1 {
+    Opaque,
+    CompositedNoBackdrop,
+    CompositedBackdrop,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum UiWindowBackgroundMaterialRequestV1 {
     None,
     SystemDefault,
@@ -1349,6 +1357,10 @@ pub struct UiWindowStyleMatchV1 {
     pub resizable: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub transparent: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub visual_transparent: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub appearance: Option<UiWindowAppearanceV1>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub taskbar: Option<UiTaskbarVisibilityV1>,
     #[serde(default, skip_serializing_if = "Option::is_none")]

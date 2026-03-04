@@ -23,6 +23,16 @@ pub enum RunnerWindowCompositedAlphaSourceV1 {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RunnerWindowAppearanceV1 {
+    /// The OS window is not composited with alpha.
+    Opaque,
+    /// The OS window surface is composited with alpha, but no OS backdrop material is enabled.
+    CompositedNoBackdrop,
+    /// The OS window surface is composited with alpha and an OS backdrop material is enabled.
+    CompositedBackdrop,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct RunnerWindowStyleEffectiveSnapshotV1 {
     pub decorations: WindowDecorationsRequest,
     pub resizable: bool,
@@ -36,6 +46,8 @@ pub struct RunnerWindowStyleEffectiveSnapshotV1 {
     /// separated from `surface_composited_alpha` to avoid conflating "window can be composited"
     /// with "window is visually transparent".
     pub visual_transparent: bool,
+    /// A derived, user-facing summary of window background appearance facets.
+    pub appearance: RunnerWindowAppearanceV1,
     pub background_material: WindowBackgroundMaterialRequest,
     pub taskbar: TaskbarVisibility,
     pub activation: ActivationPolicy,
@@ -51,6 +63,7 @@ impl Default for RunnerWindowStyleEffectiveSnapshotV1 {
             surface_composited_alpha: false,
             surface_composited_alpha_source: RunnerWindowCompositedAlphaSourceV1::DefaultOpaque,
             visual_transparent: false,
+            appearance: RunnerWindowAppearanceV1::Opaque,
             background_material: WindowBackgroundMaterialRequest::None,
             taskbar: TaskbarVisibility::Show,
             activation: ActivationPolicy::Activates,
@@ -68,6 +81,19 @@ pub struct RunnerWindowStyleDiagnosticsStore {
 }
 
 impl RunnerWindowStyleDiagnosticsStore {
+    fn derive_appearance(
+        surface_composited_alpha: bool,
+        background_material: WindowBackgroundMaterialRequest,
+    ) -> RunnerWindowAppearanceV1 {
+        if !surface_composited_alpha {
+            return RunnerWindowAppearanceV1::Opaque;
+        }
+        if background_material != WindowBackgroundMaterialRequest::None {
+            return RunnerWindowAppearanceV1::CompositedBackdrop;
+        }
+        RunnerWindowAppearanceV1::CompositedNoBackdrop
+    }
+
     pub fn effective_snapshot(
         &self,
         window: AppWindowId,
@@ -139,6 +165,8 @@ impl RunnerWindowStyleDiagnosticsStore {
         // the caller explicitly requested a composited surface for visual transparency.
         next.visual_transparent = next.background_material != WindowBackgroundMaterialRequest::None
             || matches!(requested.transparent, Some(true));
+        next.appearance =
+            Self::derive_appearance(next.surface_composited_alpha, next.background_material);
 
         if let Some(taskbar) = requested.taskbar {
             next.taskbar = if taskbar == TaskbarVisibility::Hide && !caps.ui.window_skip_taskbar {
@@ -216,6 +244,10 @@ impl RunnerWindowStyleDiagnosticsStore {
             current.visual_transparent = current.background_material
                 != WindowBackgroundMaterialRequest::None
                 || matches!(explicit, Some(true));
+            current.appearance = Self::derive_appearance(
+                current.surface_composited_alpha,
+                current.background_material,
+            );
 
             // Keep composited alpha create-time and sticky. If the window was created composited
             // (explicitly or implied by a create-time material request), keep it for the lifetime.
@@ -245,6 +277,11 @@ impl RunnerWindowStyleDiagnosticsStore {
                 current.surface_composited_alpha_source =
                     RunnerWindowCompositedAlphaSourceV1::DefaultOpaque;
             }
+
+            current.appearance = Self::derive_appearance(
+                current.surface_composited_alpha,
+                current.background_material,
+            );
         }
 
         if let Some(taskbar) = patch.taskbar {
@@ -388,6 +425,10 @@ mod tests {
         let before = store.effective_snapshot(w).unwrap();
         assert!(before.surface_composited_alpha);
         assert!(before.visual_transparent);
+        assert_eq!(
+            before.appearance,
+            RunnerWindowAppearanceV1::CompositedBackdrop
+        );
 
         store.apply_style_patch(
             w,
@@ -403,6 +444,10 @@ mod tests {
         assert_eq!(
             after.background_material,
             WindowBackgroundMaterialRequest::None
+        );
+        assert_eq!(
+            after.appearance,
+            RunnerWindowAppearanceV1::CompositedNoBackdrop
         );
     }
 
@@ -426,6 +471,10 @@ mod tests {
         assert_eq!(
             have.background_material,
             WindowBackgroundMaterialRequest::None
+        );
+        assert_eq!(
+            have.appearance,
+            RunnerWindowAppearanceV1::CompositedNoBackdrop
         );
     }
 }

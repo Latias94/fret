@@ -332,6 +332,16 @@ fn window_style_effective_matches(
     {
         return false;
     }
+    if let Some(visual_transparent) = want.visual_transparent
+        && have.visual_transparent != visual_transparent
+    {
+        return false;
+    }
+    if let Some(appearance) = want.appearance
+        && !window_appearance_match(have.appearance, appearance)
+    {
+        return false;
+    }
     if let Some(taskbar) = want.taskbar
         && !taskbar_visibility_match(have.taskbar, taskbar)
     {
@@ -353,6 +363,20 @@ fn window_style_effective_matches(
         return false;
     }
     true
+}
+
+fn window_appearance_match(
+    have: fret_runtime::RunnerWindowAppearanceV1,
+    want: UiWindowAppearanceV1,
+) -> bool {
+    use fret_runtime::RunnerWindowAppearanceV1 as H;
+    use UiWindowAppearanceV1 as W;
+    match (have, want) {
+        (H::Opaque, W::Opaque) => true,
+        (H::CompositedNoBackdrop, W::CompositedNoBackdrop) => true,
+        (H::CompositedBackdrop, W::CompositedBackdrop) => true,
+        _ => false,
+    }
 }
 
 fn window_background_material_matches(

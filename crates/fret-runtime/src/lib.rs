@@ -133,8 +133,7 @@ pub use interaction_diagnostics::{
     DockTabStripActiveVisibilityDiagnostics, DockTabStripActiveVisibilityStatusDiagnostics,
     DockingInteractionDiagnostics, ViewportCaptureDiagnostics, WindowInteractionDiagnosticsStore,
     WorkspaceInteractionDiagnostics, WorkspaceTabStripActiveVisibilityDiagnostics,
-    WorkspaceTabStripActiveVisibilityStatusDiagnostics,
-    WorkspaceTabStripDragDiagnostics,
+    WorkspaceTabStripActiveVisibilityStatusDiagnostics, WorkspaceTabStripDragDiagnostics,
 };
 pub use keymap::{BindingV1, KeySpecV1, KeymapError, KeymapFileV1};
 pub use keymap::{DefaultKeybinding, Keymap, KeymapContinuation, KeymapService, PlatformFilter};
@@ -160,6 +159,7 @@ pub use runner_window_lifecycle_diagnostics::{
     RunnerWindowLifecycleDiagnosticsStore, RunnerWindowLifecycleSnapshot,
 };
 pub use runner_window_style_diagnostics::{
+    RunnerWindowAppearanceV1, RunnerWindowCompositedAlphaSourceV1,
     RunnerWindowStyleDiagnosticsStore, RunnerWindowStyleEffectiveSnapshotV1,
     clamp_background_material_request,
 };
