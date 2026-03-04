@@ -108,4 +108,3 @@ fn main() -> anyhow::Result<()> {
         .run_view::<PayloadActionsView>()
         .map_err(anyhow::Error::from)
 }
-

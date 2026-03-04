@@ -19,11 +19,18 @@ use fret_ui::element::SemanticsProps;
 use fret_ui::element::SizeStyle;
 use fret_ui::element::StackProps;
 use fret_ui::scroll::ScrollHandle;
-use fret_ui::{ElementContext, Theme, ThemeSnapshot, UiHost};
+use fret_ui::{ElementContext, Theme, ThemeSnapshot, UiHost, focus_visible};
 use fret_ui_kit::LayoutRefinement;
+use fret_ui_kit::declarative::motion;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::scroll_area::DEFAULT_SCROLL_HIDE_DELAY_TICKS;
 use fret_ui_kit::primitives::scroll_area::ScrollAreaType;
+
+fn tailwind_transition_ease_in_out(t: f32) -> f32 {
+    // Tailwind default transition timing function: cubic-bezier(0.4, 0, 0.2, 1).
+    // (Often described as `ease-in-out`-ish.)
+    fret_ui_headless::easing::SHADCN_EASE.sample(t)
+}
 
 fn shadcn_scrollbar_thumb(theme: &ThemeSnapshot) -> Color {
     theme.color_token("border")
@@ -353,12 +360,8 @@ impl ScrollAreaRoot {
                 );
 
                 let scroll_id = scroll.id;
-                let viewport_scroll = match viewport_test_id {
-                    Some(test_id) => scroll.test_id(test_id),
-                    None => scroll,
-                };
-
                 let viewport = if viewport_focus_ring {
+                    let viewport_scroll = scroll;
                     let radius = viewport_focus_ring_radius
                         .unwrap_or_else(|| theme.metric_token("metric.radius.md"));
                     let ring = decl_style::focus_ring(&theme, radius);
@@ -367,6 +370,57 @@ impl ScrollAreaRoot {
                         layout.overflow = Overflow::Visible;
                         layout
                     };
+
+                    let (viewport_id, viewport_semantics) = {
+                        use std::cell::Cell;
+                        use std::rc::Rc;
+
+                        let id_out: Rc<Cell<Option<fret_ui::GlobalElementId>>> =
+                            Rc::new(Cell::new(None));
+                        let id_out_for_closure = id_out.clone();
+                        let mut semantics = cx.semantics_with_id(
+                            SemanticsProps {
+                                layout: viewport_layout,
+                                role: SemanticsRole::Viewport,
+                                focusable: true,
+                                ..Default::default()
+                            },
+                            move |_cx, id| {
+                                id_out_for_closure.set(Some(id));
+                                vec![viewport_scroll]
+                            },
+                        );
+                        if let Some(test_id) = viewport_test_id.clone() {
+                            semantics = semantics.test_id(test_id);
+                        }
+                        (id_out.get().expect("viewport semantics id"), semantics)
+                    };
+
+                    let focus_visible_for_viewport = cx.is_focused_element(viewport_id)
+                        && focus_visible::is_focus_visible(cx.app, Some(cx.window));
+
+                    let duration = crate::overlay_motion::shadcn_motion_duration_150(cx);
+                    let ring_alpha = motion::drive_tween_f32_for_element(
+                        cx,
+                        viewport_id,
+                        "scroll_area.viewport.ring.alpha",
+                        if focus_visible_for_viewport { 1.0 } else { 0.0 },
+                        duration,
+                        tailwind_transition_ease_in_out,
+                    );
+
+                    let ring = {
+                        let mut ring = ring;
+                        ring.color.a = (ring.color.a * ring_alpha.value).clamp(0.0, 1.0);
+                        if let Some(offset) = ring.offset_color {
+                            ring.offset_color = Some(Color {
+                                a: (offset.a * ring_alpha.value).clamp(0.0, 1.0),
+                                ..offset
+                            });
+                        }
+                        ring
+                    };
+
                     cx.container(
                         ContainerProps {
                             layout: viewport_layout,
@@ -376,24 +430,19 @@ impl ScrollAreaRoot {
                             border: Edges::all(Px(0.0)),
                             border_color: None,
                             focus_ring: Some(ring),
+                            focus_ring_always_paint: ring_alpha.animating
+                                || (!focus_visible_for_viewport && ring_alpha.value > 1e-4),
                             focus_within: true,
                             corner_radii: Corners::all(radius),
                             ..Default::default()
                         },
-                        move |cx| {
-                            vec![cx.semantics(
-                                SemanticsProps {
-                                    layout: viewport_layout,
-                                    role: SemanticsRole::Viewport,
-                                    focusable: true,
-                                    ..Default::default()
-                                },
-                                move |_cx| vec![viewport_scroll],
-                            )]
-                        },
+                        move |_cx| vec![viewport_semantics],
                     )
                 } else {
-                    viewport_scroll
+                    match viewport_test_id {
+                        Some(test_id) => scroll.test_id(test_id),
+                        None => scroll,
+                    }
                 };
 
                 let mut children = vec![viewport];
@@ -745,13 +794,15 @@ mod tests {
     use super::*;
     use fret_app::App;
     use fret_core::{
-        AppWindowId, Modifiers, MouseButton, MouseButtons, Point, Px, Rect, Size, SvgId, SvgService,
+        AppWindowId, Event, FrameId, KeyCode, Modifiers, MouseButton, MouseButtons, Point, Px,
+        Rect, Size, SvgId, SvgService, WindowFrameClockService,
     };
     use fret_core::{PathCommand, PathConstraints, PathId, PathMetrics, PathService, PathStyle};
     use fret_core::{TextBlobId, TextConstraints, TextMetrics, TextService};
     use fret_runtime::TickId;
     use fret_ui::element::{ColumnProps, ContainerProps, ElementKind, LayoutStyle, Length};
     use fret_ui::tree::UiTree;
+    use std::time::Duration;
 
     #[derive(Default)]
     struct FakeServices;
@@ -870,10 +921,17 @@ mod tests {
                     );
                 };
 
+                let Some(ring) = container.focus_ring else {
+                    panic!(
+                        "expected shadcn ScrollArea viewport to mount focus ring wrapper by default"
+                    );
+                };
+                assert_eq!(ring.width, expected_ring.width);
+                assert_eq!(ring.offset, expected_ring.offset);
+                assert_eq!(ring.corner_radii, expected_ring.corner_radii);
                 assert_eq!(
-                    container.focus_ring,
-                    Some(expected_ring),
-                    "expected shadcn ScrollArea viewport to mount focus ring wrapper by default"
+                    ring.color.a, 0.0,
+                    "expected initial focus ring alpha to be 0 (tweened like transition-box-shadow)"
                 );
                 assert!(
                     container.focus_within,
@@ -884,6 +942,217 @@ mod tests {
             },
         );
         ui.set_root(root);
+    }
+
+    fn node_id_by_test_id(snap: &fret_core::SemanticsSnapshot, id: &str) -> fret_core::NodeId {
+        snap.nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some(id))
+            .unwrap_or_else(|| panic!("expected semantics node with test_id={id:?}"))
+            .id
+    }
+
+    fn find_scroll_area_viewport_ring_alpha_and_always_paint(
+        el: &AnyElement,
+    ) -> Option<(f32, bool)> {
+        let stack = el.children.first()?;
+        let viewport = stack.children.first()?;
+        match &viewport.kind {
+            ElementKind::Container(props) => {
+                Some((props.focus_ring?.color.a, props.focus_ring_always_paint))
+            }
+            _ => None,
+        }
+    }
+
+    #[test]
+    fn scroll_area_viewport_focus_ring_tweens_in_and_out_like_transition_box_shadow() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        crate::shadcn_themes::apply_shadcn_new_york(
+            &mut app,
+            crate::shadcn_themes::ShadcnBaseColor::Neutral,
+            crate::shadcn_themes::ShadcnColorScheme::Light,
+        );
+
+        app.with_global_mut(WindowFrameClockService::default, |svc, _app| {
+            svc.set_fixed_delta(window, Some(Duration::from_millis(16)));
+        });
+
+        let theme = Theme::global(&app).snapshot();
+        let expected_radius = theme.metric_token("metric.radius.md");
+        let expected_ring = decl_style::focus_ring(&theme, expected_radius);
+        let expected_alpha = expected_ring.color.a;
+
+        let mut services = FakeServices::default();
+
+        fn render_capture(
+            ui: &mut UiTree<App>,
+            app: &mut App,
+            services: &mut dyn fret_core::UiServices,
+            window: AppWindowId,
+            ring_alpha_out: &mut Option<f32>,
+            always_paint_out: &mut Option<bool>,
+        ) {
+            let root = fret_ui::declarative::render_root(
+                ui,
+                app,
+                services,
+                window,
+                bounds(),
+                "sa_focus_ring_tween",
+                |cx| {
+                    let el = ScrollArea::new([cx.text("Row")])
+                        .refine_layout(LayoutRefinement::default().size_full())
+                        .viewport_test_id("sa.viewport")
+                        .into_element(cx);
+                    let (alpha, always_paint) =
+                        find_scroll_area_viewport_ring_alpha_and_always_paint(&el)
+                            .expect("viewport focus ring container");
+                    *ring_alpha_out = Some(alpha);
+                    *always_paint_out = Some(always_paint);
+                    vec![el]
+                },
+            );
+            ui.set_root(root);
+            ui.request_semantics_snapshot();
+            ui.layout_all(app, services, bounds(), 1.0);
+        }
+
+        // Frame 1: unfocused => ring alpha is 0 and does not always paint.
+        app.set_tick_id(TickId(1));
+        app.set_frame_id(FrameId(1));
+        let mut ring_alpha_out: Option<f32> = None;
+        let mut always_paint_out: Option<bool> = None;
+        render_capture(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            &mut ring_alpha_out,
+            &mut always_paint_out,
+        );
+        assert!(
+            ring_alpha_out.unwrap_or(0.0) <= 1e-6,
+            "expected ring alpha 0 before focus, got {ring_alpha_out:?}"
+        );
+        assert_eq!(
+            always_paint_out,
+            Some(false),
+            "expected focus_ring_always_paint=false before focus"
+        );
+
+        // Keyboard navigation => focus-visible should become active on the next focus change.
+        focus_visible::update_for_event(
+            &mut app,
+            window,
+            &Event::KeyDown {
+                key: KeyCode::Tab,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let viewport = node_id_by_test_id(&snap, "sa.viewport");
+        ui.set_focus(Some(viewport));
+
+        // Frame 2: focused => alpha tweens in (intermediate) and always-paint should be active while animating.
+        app.set_tick_id(TickId(2));
+        app.set_frame_id(FrameId(2));
+        render_capture(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            &mut ring_alpha_out,
+            &mut always_paint_out,
+        );
+        let alpha1 = ring_alpha_out.expect("alpha1");
+        assert!(
+            alpha1 > 1e-6 && alpha1 < expected_alpha - 1e-6,
+            "expected ring alpha to tween in (intermediate), got {alpha1} expected_alpha={expected_alpha}"
+        );
+        assert_eq!(
+            always_paint_out,
+            Some(true),
+            "expected focus_ring_always_paint while animating in"
+        );
+
+        // Settle.
+        let settle = fret_ui_kit::declarative::transition::ticks_60hz_for_duration(
+            Duration::from_millis(150),
+        ) + 2;
+        for n in 0..settle {
+            app.set_tick_id(TickId(3 + n));
+            app.set_frame_id(FrameId(3 + n as u64));
+            render_capture(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                &mut ring_alpha_out,
+                &mut always_paint_out,
+            );
+        }
+        let alpha_final = ring_alpha_out.expect("alpha_final");
+        assert!(
+            (alpha_final - expected_alpha).abs() <= 1e-4,
+            "expected ring alpha to settle, got {alpha_final} expected_alpha={expected_alpha}"
+        );
+        assert_eq!(
+            always_paint_out,
+            Some(false),
+            "expected focus_ring_always_paint=false once settled"
+        );
+
+        // Blur => alpha tweens out (intermediate) and always-paint stays on during exit animation.
+        ui.set_focus(None);
+        app.set_tick_id(TickId(1000));
+        app.set_frame_id(FrameId(1000));
+        render_capture(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            &mut ring_alpha_out,
+            &mut always_paint_out,
+        );
+        let alpha_out1 = ring_alpha_out.expect("alpha_out1");
+        assert!(
+            alpha_out1 > 1e-6 && alpha_out1 < expected_alpha - 1e-6,
+            "expected ring alpha to tween out (intermediate), got {alpha_out1} expected_alpha={expected_alpha}"
+        );
+        assert_eq!(
+            always_paint_out,
+            Some(true),
+            "expected focus_ring_always_paint while animating out"
+        );
+
+        for n in 0..settle {
+            app.set_tick_id(TickId(1100 + n));
+            app.set_frame_id(FrameId(1100 + n as u64));
+            render_capture(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                &mut ring_alpha_out,
+                &mut always_paint_out,
+            );
+        }
+        assert!(
+            ring_alpha_out.unwrap_or(0.0) <= 1e-6,
+            "expected ring alpha to settle back to 0, got {ring_alpha_out:?}"
+        );
+        assert_eq!(
+            always_paint_out,
+            Some(false),
+            "expected focus_ring_always_paint=false once ring alpha is 0"
+        );
     }
 
     fn render_with<C, I>(

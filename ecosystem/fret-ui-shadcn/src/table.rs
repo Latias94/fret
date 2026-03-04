@@ -9,6 +9,7 @@ use fret_ui::element::{
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::command::ElementCommandGatingExt as _;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
+use fret_ui_kit::declarative::motion::drive_tween_color_for_element;
 use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::scroll_area::ScrollAreaType;
@@ -17,6 +18,13 @@ use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Space, ui};
 
 use crate::direction::{LayoutDirection, use_direction};
 use crate::layout as shadcn_layout;
+use crate::overlay_motion;
+
+fn tailwind_transition_ease_in_out(t: f32) -> f32 {
+    // Tailwind default transition timing function: cubic-bezier(0.4, 0, 0.2, 1).
+    // (Often described as `ease-in-out`-ish.)
+    fret_ui_headless::easing::SHADCN_EASE.sample(t)
+}
 
 fn table_text_style(theme: &Theme) -> TextStyle {
     let px = theme
@@ -452,12 +460,12 @@ impl TableRow {
             ..Default::default()
         };
 
-        cx.pressable(pressable, move |cx, state| {
+        cx.pressable_with_id_props(move |cx, state, id| {
             if let Some(on_activate) = on_activate.clone() {
                 cx.pressable_add_on_activate(on_activate);
             }
             cx.pressable_dispatch_command_if_enabled_opt(on_click);
-            let (props, row_layout) = {
+            let (mut props, row_layout, hover_bg, selected_bg) = {
                 let theme = Theme::global(&*cx.app);
 
                 let mut hover_bg = muted_bg(theme);
@@ -465,14 +473,9 @@ impl TableRow {
                 let selected_bg = muted_bg(theme);
 
                 let border = border_color(theme);
-                let mut chrome = ChromeRefinement::default()
+                let chrome = ChromeRefinement::default()
                     .border_1()
                     .border_color(ColorRef::Color(border));
-                if selected {
-                    chrome = chrome.bg(ColorRef::Color(selected_bg));
-                } else if state.hovered {
-                    chrome = chrome.bg(ColorRef::Color(hover_bg));
-                }
 
                 let layout = LayoutRefinement::default().w_full();
                 let mut props = decl_style::container_props(theme, chrome, layout);
@@ -491,10 +494,30 @@ impl TableRow {
                 let row_layout =
                     decl_style::layout_style(theme, LayoutRefinement::default().w_full());
 
-                (props, row_layout)
+                (props, row_layout, hover_bg, selected_bg)
             };
 
-            vec![cx.container(props, move |cx| {
+            // Upstream shadcn: `transition-colors` + `hover:bg-muted/50 data-[state=selected]:bg-muted`.
+            let duration = overlay_motion::shadcn_motion_duration_150(cx);
+            let target_bg = if selected {
+                selected_bg
+            } else if state.hovered && enabled {
+                hover_bg
+            } else {
+                fret_core::Color::TRANSPARENT
+            };
+            let bg_motion = drive_tween_color_for_element(
+                cx,
+                id,
+                "table.row.bg",
+                target_bg,
+                duration,
+                tailwind_transition_ease_in_out,
+            );
+            let wants_bg = bg_motion.animating || bg_motion.value.a > 0.0;
+            props.background = wants_bg.then_some(bg_motion.value);
+
+            let children = vec![cx.container(props, move |cx| {
                 let row = FlexProps {
                     layout: row_layout,
                     direction: Axis::Horizontal,
@@ -507,7 +530,9 @@ impl TableRow {
 
                 let _ = cols;
                 vec![cx.flex(row, move |_cx| children)]
-            })]
+            })];
+
+            (pressable, children)
         })
     }
 }
@@ -773,6 +798,8 @@ mod tests {
     use fret_core::{AppWindowId, Color, Point, Px, Rect, Size};
     use fret_ui::element::{ContainerProps, Length, Overflow, TextProps};
 
+    use fret_ui::UiTree;
+
     fn find_container_with_background(el: &AnyElement, bg: Color) -> Option<&ContainerProps> {
         match &el.kind {
             ElementKind::Container(props) => {
@@ -788,6 +815,66 @@ mod tests {
             }
         }
         None
+    }
+
+    #[derive(Default)]
+    struct FakeServices;
+
+    impl fret_core::TextService for FakeServices {
+        fn prepare(
+            &mut self,
+            _input: &fret_core::TextInput,
+            _constraints: fret_core::TextConstraints,
+        ) -> (fret_core::TextBlobId, fret_core::TextMetrics) {
+            (
+                fret_core::TextBlobId::default(),
+                fret_core::TextMetrics {
+                    size: fret_core::Size::new(Px(48.0), Px(16.0)),
+                    baseline: Px(12.0),
+                },
+            )
+        }
+
+        fn release(&mut self, _blob: fret_core::TextBlobId) {}
+    }
+
+    impl fret_core::PathService for FakeServices {
+        fn prepare(
+            &mut self,
+            _commands: &[fret_core::PathCommand],
+            _style: fret_core::PathStyle,
+            _constraints: fret_core::PathConstraints,
+        ) -> (fret_core::PathId, fret_core::PathMetrics) {
+            (
+                fret_core::PathId::default(),
+                fret_core::PathMetrics::default(),
+            )
+        }
+
+        fn release(&mut self, _path: fret_core::PathId) {}
+    }
+
+    impl fret_core::SvgService for FakeServices {
+        fn register_svg(&mut self, _bytes: &[u8]) -> fret_core::SvgId {
+            fret_core::SvgId::default()
+        }
+
+        fn unregister_svg(&mut self, _svg: fret_core::SvgId) -> bool {
+            true
+        }
+    }
+
+    impl fret_core::MaterialService for FakeServices {
+        fn register_material(
+            &mut self,
+            _desc: fret_core::MaterialDescriptor,
+        ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+            Ok(fret_core::MaterialId::default())
+        }
+
+        fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
+            true
+        }
     }
 
     #[test]
@@ -988,5 +1075,188 @@ mod tests {
             let weight = find_text_weight(&footer, "Total").expect("find Total text weight");
             assert_eq!(weight, FontWeight::MEDIUM);
         });
+    }
+
+    #[test]
+    fn table_row_hover_background_tweens_instead_of_snapping() {
+        use std::cell::Cell;
+        use std::rc::Rc;
+        use std::time::Duration;
+
+        use fret_core::{Modifiers, MouseButtons};
+        use fret_runtime::FrameId;
+        use fret_ui::elements::GlobalElementId;
+        use fret_ui_kit::declarative::transition::ticks_60hz_for_duration;
+
+        fn color_eq_eps(a: Color, b: Color, eps: f32) -> bool {
+            (a.r - b.r).abs() <= eps
+                && (a.g - b.g).abs() <= eps
+                && (a.b - b.b).abs() <= eps
+                && (a.a - b.a).abs() <= eps
+        }
+
+        fn find_row_border_container(el: &AnyElement) -> Option<&ContainerProps> {
+            match &el.kind {
+                ElementKind::Container(props) => {
+                    if props.border.top.0 == 0.0
+                        && props.border.right.0 == 0.0
+                        && props.border.left.0 == 0.0
+                        && props.border.bottom.0 >= 0.0
+                        && props.border_color.is_some()
+                    {
+                        return Some(props);
+                    }
+                }
+                _ => {}
+            }
+            for child in &el.children {
+                if let Some(found) = find_row_border_container(child) {
+                    return Some(found);
+                }
+            }
+            None
+        }
+
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        crate::shadcn_themes::apply_shadcn_new_york(
+            &mut app,
+            crate::shadcn_themes::ShadcnBaseColor::Neutral,
+            crate::shadcn_themes::ShadcnColorScheme::Light,
+        );
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(200.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let row_id_out: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
+        let bg_out: Rc<Cell<Option<Color>>> = Rc::new(Cell::new(None));
+
+        fn render_frame(
+            ui: &mut UiTree<App>,
+            app: &mut App,
+            services: &mut dyn fret_core::UiServices,
+            window: AppWindowId,
+            bounds: Rect,
+            row_id_out: Rc<Cell<Option<GlobalElementId>>>,
+            bg_out: Rc<Cell<Option<Color>>>,
+        ) {
+            let root = fret_ui::declarative::render_root(
+                ui,
+                app,
+                services,
+                window,
+                bounds,
+                "table-row-hover-bg-tween",
+                move |cx| {
+                    let cell = cx.container(
+                        ContainerProps {
+                            layout: {
+                                let mut layout = fret_ui::element::LayoutStyle::default();
+                                layout.size.width = fret_ui::element::Length::Px(Px(80.0));
+                                layout.size.height = fret_ui::element::Length::Px(Px(32.0));
+                                layout
+                            },
+                            ..Default::default()
+                        },
+                        |_cx| Vec::new(),
+                    );
+
+                    let el = TableRow::new(1, [cell]).into_element(cx);
+                    row_id_out.set(Some(el.id));
+                    let chrome = find_row_border_container(&el).expect("row chrome container");
+                    bg_out.set(Some(chrome.background.unwrap_or(Color::TRANSPARENT)));
+                    vec![el]
+                },
+            );
+            ui.set_root(root);
+            ui.layout_all(app, services, bounds, 1.0);
+        }
+
+        let theme = Theme::global(&app).snapshot();
+        let base_bg = Color::TRANSPARENT;
+        let mut hover_bg = theme.color_token("muted");
+        hover_bg.a *= 0.5;
+
+        // Frame 1: baseline render.
+        app.set_frame_id(FrameId(1));
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            row_id_out.clone(),
+            bg_out.clone(),
+        );
+        let bg0 = bg_out.get().expect("bg0");
+        assert!(
+            color_eq_eps(bg0, base_bg, 1e-6),
+            "expected base background to be transparent; got bg0={bg0:?}"
+        );
+
+        let id = row_id_out.get().expect("row id");
+        let node = fret_ui::elements::node_for_element(&mut app, window, id).expect("row node");
+        let b = ui.debug_node_bounds(node).expect("row bounds");
+        let center = Point::new(
+            Px(b.origin.x.0 + b.size.width.0 * 0.5),
+            Px(b.origin.y.0 + b.size.height.0 * 0.5),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+                pointer_id: fret_core::PointerId(0),
+                position: center,
+                buttons: MouseButtons::default(),
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+
+        // Frame 2: hover applied; the background should be in-between (not snapped).
+        app.set_frame_id(FrameId(2));
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            row_id_out.clone(),
+            bg_out.clone(),
+        );
+
+        let bg1 = bg_out.get().expect("bg1");
+        assert!(
+            !color_eq_eps(bg1, base_bg, 1e-6) && !color_eq_eps(bg1, hover_bg, 1e-6),
+            "expected hover background to tween (intermediate), got bg1={bg1:?} base={base_bg:?} hover={hover_bg:?}"
+        );
+
+        // Advance frames until the upstream `transition-colors` settles (Tailwind default ~150ms).
+        let settle = ticks_60hz_for_duration(Duration::from_millis(150)) + 2;
+        for i in 0..settle {
+            app.set_frame_id(FrameId(3 + i));
+            render_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                row_id_out.clone(),
+                bg_out.clone(),
+            );
+        }
+
+        let bg_final = bg_out.get().expect("bg_final");
+        assert!(
+            color_eq_eps(bg_final, hover_bg, 1e-4),
+            "expected hover background to settle; got bg={bg_final:?} hover={hover_bg:?}"
+        );
     }
 }

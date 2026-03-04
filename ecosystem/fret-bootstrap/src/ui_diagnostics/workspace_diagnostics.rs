@@ -2,6 +2,8 @@
 pub struct UiWorkspaceInteractionSnapshotV1 {
     #[serde(default)]
     pub tab_strip_active_visibility: Vec<UiWorkspaceTabStripActiveVisibilityDiagnosticsV1>,
+    #[serde(default)]
+    pub tab_strip_drag: Vec<UiWorkspaceTabStripDragDiagnosticsV1>,
 }
 
 impl UiWorkspaceInteractionSnapshotV1 {
@@ -13,6 +15,34 @@ impl UiWorkspaceInteractionSnapshotV1 {
                 .cloned()
                 .map(UiWorkspaceTabStripActiveVisibilityDiagnosticsV1::from_snapshot)
                 .collect(),
+            tab_strip_drag: snapshot
+                .tab_strip_drag
+                .iter()
+                .cloned()
+                .map(UiWorkspaceTabStripDragDiagnosticsV1::from_snapshot)
+                .collect(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiWorkspaceTabStripDragDiagnosticsV1 {
+    #[serde(default)]
+    pub pane_id: Option<String>,
+    #[serde(default)]
+    pub pointer_id: Option<u64>,
+    pub dragging: bool,
+    #[serde(default)]
+    pub dragged_tab_id: Option<String>,
+}
+
+impl UiWorkspaceTabStripDragDiagnosticsV1 {
+    fn from_snapshot(snapshot: fret_runtime::WorkspaceTabStripDragDiagnostics) -> Self {
+        Self {
+            pane_id: snapshot.pane_id.map(|s| s.as_ref().to_string()),
+            pointer_id: snapshot.pointer_id.map(|p| p.0),
+            dragging: snapshot.dragging,
+            dragged_tab_id: snapshot.dragged_tab_id.map(|s| s.as_ref().to_string()),
         }
     }
 }

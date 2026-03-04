@@ -60,6 +60,22 @@ Additional note:
   - Workspace gate: `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-button-does-not-start-drag.json`
   - Docking gate: `tools/diag-scripts/docking/arbitration/docking-arbitration-demo-tab-close-button-does-not-activate.json`
 
+## Q10: Should close affordances tolerate small pointer jitter (click slop)?
+
+Observed bug class:
+- Pointer-down begins on the close hit rect, but a small move causes pointer-up to miss the hit rect.
+- Result: close is canceled (and may fall back to activation/drag depending on adapter logic).
+
+Recommendation:
+- Yes: treat close as an explicit intent and accept a small “click slop” window.
+- Put the pure math in `fret-ui-headless` (e.g. `pointer_move_within_slop(start, end, slop)`), and keep the constant
+  and arbitration wiring in adapters (`fret-workspace` / `fret-docking`) so we can tune it without expanding
+  `fret-ui` contract surface.
+- Lock it with a diag gate that intentionally includes pointer movement (e.g. 8px) while asserting:
+  - close still happens,
+  - activation does not happen,
+  - drag does not start.
+
 ## Q6: Where should shared tabstrip controller code live?
 
 Options:

@@ -90,6 +90,7 @@ pub(super) fn active_script_needs_semantics_snapshot(active: &ActiveScript) -> b
         | UiActionStepV2::TypeText { .. }
         | UiActionStepV2::Ime { .. }
         | UiActionStepV2::WaitFrames { .. }
+        | UiActionStepV2::WaitMs { .. }
         | UiActionStepV2::WaitShortcutRoutingTrace { .. }
         | UiActionStepV2::WaitCommandDispatchTrace { .. }
         | UiActionStepV2::CaptureBundle { .. }
@@ -137,6 +138,7 @@ pub(super) fn script_step_kind_name(step: &UiActionStepV2) -> &'static str {
         UiActionStepV2::TypeTextInto { .. } => "type_text_into",
         UiActionStepV2::PasteTextInto { .. } => "paste_text_into",
         UiActionStepV2::WaitFrames { .. } => "wait_frames",
+        UiActionStepV2::WaitMs { .. } => "wait_ms",
         UiActionStepV2::WaitUntil { .. } => "wait_until",
         UiActionStepV2::WaitCommandDispatchTrace { .. } => "wait_command_dispatch_trace",
         UiActionStepV2::Assert { .. } => "assert",
@@ -388,6 +390,7 @@ pub(super) fn dispatch_drive_script_step(
         | UiActionStepV2::SetClipboardText { .. }
         | UiActionStepV2::InjectIncomingOpen { .. }
         | UiActionStepV2::WaitFrames { .. }
+        | UiActionStepV2::WaitMs { .. }
         | UiActionStepV2::ResetDiagnostics) => {
             let handled =
                 script_steps::handle_effect_only_steps(service, window, step, active, output);
@@ -1905,6 +1908,17 @@ impl UiDiagnosticsService {
 
         self.maybe_write_running_progress_for_active_window(window, &mut active);
 
+        if let Some(deadline) = active.wait_ms_deadline_unix_ms {
+            if unix_ms_now() < deadline {
+                self.active_scripts.insert(window, active);
+                return UiScriptFrameOutput {
+                    request_redraw: true,
+                    ..UiScriptFrameOutput::default()
+                };
+            }
+            active.wait_ms_deadline_unix_ms = None;
+        }
+
         if active.wait_frames_remaining > 0 {
             active.wait_frames_remaining = active.wait_frames_remaining.saturating_sub(1);
             self.active_scripts.insert(window, active);
@@ -2197,6 +2211,17 @@ impl UiDiagnosticsService {
 
         self.maybe_write_running_progress_for_active_window(window, &mut active);
 
+        if let Some(deadline) = active.wait_ms_deadline_unix_ms {
+            if unix_ms_now() < deadline {
+                self.active_scripts.insert(window, active);
+                return UiScriptFrameOutput {
+                    request_redraw: true,
+                    ..UiScriptFrameOutput::default()
+                };
+            }
+            active.wait_ms_deadline_unix_ms = None;
+        }
+
         if active.wait_frames_remaining > 0 {
             active.wait_frames_remaining = active.wait_frames_remaining.saturating_sub(1);
             self.active_scripts.insert(window, active);
@@ -2320,6 +2345,7 @@ impl UiDiagnosticsService {
             let wrote_events = output.events.len() > events_before;
 
             let entered_wait_state = active.wait_frames_remaining > 0
+                || active.wait_ms_deadline_unix_ms.is_some()
                 || active.wait_until.is_some()
                 || active.wait_shortcut_routing_trace.is_some()
                 || active.wait_command_dispatch_trace.is_some()

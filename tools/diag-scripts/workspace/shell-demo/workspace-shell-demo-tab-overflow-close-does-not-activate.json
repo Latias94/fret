@@ -12,6 +12,7 @@
     ]
   },
   "steps": [
+    { "type": "reset_diagnostics" },
     { "type": "set_window_inner_size", "width_px": 420.0, "height_px": 720.0 },
     { "type": "wait_frames", "n": 10 },
 
@@ -26,7 +27,27 @@
 
     {
       "type": "click",
-      "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-0" }
+      "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-strip.overflow_button" }
+    },
+    { "type": "wait_frames", "n": 20 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "workspace-shell-pane-pane-a-tab-strip.overflow_entry.doc-a-0"
+        }
+      },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "click",
+      "target": {
+        "kind": "test_id",
+        "id": "workspace-shell-pane-pane-a-tab-strip.overflow_entry.doc-a-0"
+      }
     },
     { "type": "wait_frames", "n": 10 },
     {
@@ -58,12 +79,46 @@
     },
 
     {
-      "type": "click",
+      "type": "move_pointer",
       "target": {
         "kind": "test_id",
         "id": "workspace-shell-pane-pane-a-tab-strip.overflow_entry.doc-a-2.close"
       }
     },
+    { "type": "wait_frames", "n": 1 },
+
+    {
+      "type": "pointer_down",
+      "window": { "kind": "current" },
+      "target": {
+        "kind": "test_id",
+        "id": "workspace-shell-pane-pane-a-tab-strip.overflow_entry.doc-a-2.close"
+      },
+      "button": "left"
+    },
+    { "type": "wait_frames", "n": 1 },
+
+    { "type": "pointer_move", "window": { "kind": "current" }, "delta_x": 8.0, "delta_y": 0.0, "steps": 8 },
+    { "type": "wait_frames", "n": 2 },
+
+    {
+      "type": "assert",
+      "predicate": { "kind": "workspace_tab_strip_drag_active_is", "active": false, "pane_id": "pane-a" }
+    },
+    {
+      "type": "assert",
+      "predicate": { "kind": "workspace_tab_strip_drag_armed_is", "armed": false, "pane_id": "pane-a" }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "selected_is",
+        "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-0" },
+        "selected": true
+      }
+    },
+
+    { "type": "pointer_up", "window": { "kind": "current" } },
     { "type": "wait_frames", "n": 20 },
 
     {
