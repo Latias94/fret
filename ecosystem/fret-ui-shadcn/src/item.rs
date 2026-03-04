@@ -1,7 +1,5 @@
 use std::sync::Arc;
 
-use std::time::Duration;
-
 use fret_core::{Color, Edges, Px, SemanticsRole, TextOverflow, TextWrap};
 use fret_runtime::{CommandId, Effect};
 use fret_ui::action::OnActivate;

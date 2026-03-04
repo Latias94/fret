@@ -1,5 +1,4 @@
 use std::sync::Arc;
-use std::time::Duration;
 
 use fret_core::{
     Color, Corners, Edges, FontId, FontWeight, Px, SemanticsRole, TextFontAxisSetting,
