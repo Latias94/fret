@@ -88,7 +88,7 @@ fn parse_list_all_flag(args: Vec<String>) -> Result<bool, String> {
 fn is_official_native_demo(id: &str) -> bool {
     // Keep this list small and intentional: it defines the user-facing story.
     // Maintainer/stress harnesses remain runnable via `--bin` and discoverable via `--all`.
-    matches!(id, "todo_demo" | "components_gallery")
+    matches!(id, "simple_todo_demo" | "todo_demo" | "components_gallery")
 }
 
 fn split_official_native_demos(all: &[String]) -> (Vec<String>, Vec<String>) {

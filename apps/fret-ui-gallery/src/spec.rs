@@ -645,6 +645,12 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 CMD_NAV_VIEW_CACHE,
                 &["cache", "performance", "gpui-parity"],
             ),
+        ],
+    },
+    #[cfg(feature = "gallery-dev")]
+    PageGroupSpec {
+        title: "Core (Dev)",
+        items: &[
             PageSpec::new(
                 PAGE_HIT_TEST_TORTURE,
                 "Hit Test (Torture)",
@@ -1975,6 +1981,7 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
             ),
         ],
     },
+    #[cfg(feature = "gallery-dev")]
     PageGroupSpec {
         title: "Shadcn (Extras)",
         items: &[
@@ -2052,6 +2059,7 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
             ),
         ],
     },
+    #[cfg(feature = "gallery-dev")]
     PageGroupSpec {
         title: "Magic",
         items: &[
@@ -2136,6 +2144,7 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
             ),
         ],
     },
+    #[cfg(feature = "gallery-material3")]
     PageGroupSpec {
         title: "Material 3",
         items: &[

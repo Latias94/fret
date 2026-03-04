@@ -161,6 +161,12 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
                     .into_element(cx)
                     .test_id("ui-gallery-scroll-area-drag-baseline-controls");
 
+                let instructions = shadcn::typography::muted(
+                    cx,
+                    "Drag the thumb, then click “Arm content growth”. Content will grow after ~120ms; the thumb should remain stable.",
+                )
+                .test_id("ui-gallery-scroll-area-drag-baseline-instructions");
+
                 // Deterministic sizing for diagnostics:
                 // - viewport height: 200px
                 // - baseline content height: 220px (11 * 20px), so max_offset_y = 20px
@@ -278,7 +284,7 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
                 );
 
                 vec![
-                    ui::v_flex(cx, |_cx| [controls, body])
+                    ui::v_flex(cx, |_cx| [controls, instructions, body])
                         .gap(Space::N2)
                         .into_element(cx),
                 ]

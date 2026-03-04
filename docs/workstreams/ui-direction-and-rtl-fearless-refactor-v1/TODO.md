@@ -1,0 +1,45 @@
+# UI Direction + RTL Parity (Fearless Refactor v1) — TODO
+
+Tracking doc: `docs/workstreams/ui-direction-and-rtl-fearless-refactor-v1/DESIGN.md`
+
+## A — Lock the minimal contract surface (kit + recipes)
+
+- [ ] Write down the public “direction vocabulary” we expect shadcn recipes to use
+  (provider install, local override, `Start/End` vs physical left/right).
+- [ ] Add a small “authoring helpers” section (recommended builders / helpers) to avoid repeated
+  per-component ad-hoc mappings.
+
+## B — Parity matrix (direction-sensitive components)
+
+Legend:
+
+- Status: `OK` (aligned), `Drift` (known mismatch), `Unknown` (not audited)
+- Gates: `Test` (unit test), `Diag` (scripted repro), `None` (no gate yet)
+
+| Component / area | Direction-sensitive behavior | Status | Gates | Evidence / anchor |
+| --- | --- | --- | --- | --- |
+| Text (kit builders) | `TextAlign::Start/End` logical flip under RTL | OK | Test | `ecosystem/fret-ui-kit/src/ui.rs` |
+| ScrollArea (gallery) | RTL padding + content alignment parity vs shadcn docs | OK | Diag | `apps/fret-ui-gallery/src/ui/snippets/scroll_area/rtl.rs` + `tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scroll-area-rtl-screenshot.json` |
+| ScrollArea (demo) | Horizontal scroll “blank space” at max scroll | OK | None | `apps/fret-ui-gallery/src/ui/snippets/scroll_area/horizontal.rs` |
+| Popper placement | `align=start/end` flips under RTL for vertical placements | OK | Test | `crates/fret-ui/src/overlay_placement/tests.rs` |
+| DropdownMenu | `align=start` respects direction provider through overlay root | OK | Test | `ecosystem/fret-ui-shadcn/src/dropdown_menu.rs` |
+| NavigationMenu | viewport `align=start` respects direction provider | OK | Test | `ecosystem/fret-ui-shadcn/src/navigation_menu.rs` |
+| Carousel | Drag sign + key behavior under RTL | Unknown | None | (see `docs/workstreams/carousel-embla-fearless-refactor-v1/plan.md`) |
+| Slider / Range | Arrow keys + track fill direction | Unknown | None | — |
+| Tabs | Arrow keys direction + indicator positioning | Unknown | None | — |
+| Pagination | Chevron semantics + “next/prev” physical ordering | Unknown | None | — |
+
+## C — Gates (add the missing ones)
+
+- [ ] Add at least 1 scripted diag gate that exercises direction across an overlay root boundary
+  (provider installed in root, overlay created, ensure direction-sensitive behavior is still correct).
+- [ ] Add at least 1 scripted diag gate for a “direction-sensitive keyboard nav” component (tabs or
+  slider), so future refactors can’t silently regress.
+
+## D — Shadcn docs alignment hygiene
+
+- [ ] For every shadcn doc page that includes an RTL example, ensure the gallery snippet:
+  - [ ] installs direction the same way,
+  - [ ] includes the same padding/wrappers (e.g. `p-4`),
+  - [ ] and uses the same “start/end” semantics for alignment.
+

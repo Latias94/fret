@@ -9,24 +9,49 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         cx,
         fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
         |cx| {
-            let content = stack::vstack(
-                cx,
-                stack::VStackProps::default()
-                    .gap(Space::N2)
-                    .layout(LayoutRefinement::default().w_full()),
-                |cx| {
-                    let mut rows: Vec<AnyElement> = vec![shadcn::typography::small(cx, "العلامات")];
-                    for idx in 1..=40 {
-                        rows.push(cx.text(format!("v1.2.0-beta.{:02}", 41 - idx)));
-                        rows.push(
-                            shadcn::Separator::new()
-                                .refine_layout(LayoutRefinement::default().w_full())
+            let content = ui::container(cx, |cx| {
+                vec![stack::vstack(
+                    cx,
+                    stack::VStackProps::default()
+                        .gap(Space::N0)
+                        .layout(LayoutRefinement::default().w_full()),
+                    |cx| {
+                        let mut rows: Vec<AnyElement> = vec![
+                            ui::text(cx, "العلامات")
+                                .text_sm()
+                                .line_height_px(Px(14.0))
+                                .line_height_policy(fret_core::TextLineHeightPolicy::FixedFromStyle)
+                                .font_medium()
+                                .w_full()
                                 .into_element(cx),
-                        );
-                    }
-                    rows
-                },
-            );
+                        ];
+
+                        for idx in 1..=40 {
+                            rows.push(
+                                ui::text(cx, format!("v1.2.0-beta.{:02}", 41 - idx))
+                                    .text_sm()
+                                    .line_height_px(Px(20.0))
+                                    .line_height_policy(
+                                        fret_core::TextLineHeightPolicy::FixedFromStyle,
+                                    )
+                                    .w_full()
+                                    .into_element(cx),
+                            );
+                            rows.push(
+                                shadcn::Separator::new()
+                                    .refine_layout(
+                                        LayoutRefinement::default().w_full().my(Space::N2),
+                                    )
+                                    .into_element(cx),
+                            );
+                        }
+                        rows
+                    },
+                )]
+            })
+            .p_4()
+            .w_full()
+            .into_element(cx);
 
             shadcn::ScrollArea::new([content])
                 .axis(fret_ui::element::ScrollAxis::Y)

@@ -93,6 +93,7 @@ mod input_otp;
 mod item;
 mod kbd;
 mod label;
+#[cfg(feature = "gallery-material3")]
 pub(super) mod material3;
 mod menubar;
 mod motion_presets;
