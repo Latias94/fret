@@ -2,8 +2,8 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use fret::prelude::*;
-use fret_ui::CommandAvailability;
 use fret_query::{QueryError, QueryKey, QueryPolicy, QueryState, QueryStatus, with_query_client};
+use fret_ui::CommandAvailability;
 
 mod act {
     fret::actions!([
@@ -186,10 +186,12 @@ impl View for QueryBasicsView {
             .into_element(cx)
             .test_id(TEST_ID_BTN_TOGGLE_MODE);
 
-        let buttons = ui::h_flex(cx, |_cx| [invalidate_btn, invalidate_ns_btn, toggle_mode_btn])
-            .gap(Space::N2)
-            .items_center()
-            .into_element(cx);
+        let buttons = ui::h_flex(cx, |_cx| {
+            [invalidate_btn, invalidate_ns_btn, toggle_mode_btn]
+        })
+        .gap(Space::N2)
+        .items_center()
+        .into_element(cx);
 
         let lines = ui::v_flex(cx, |cx| {
             let data = cx.text(data_line).test_id(TEST_ID_DATA_LINE);

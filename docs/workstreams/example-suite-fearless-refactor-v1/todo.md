@@ -62,6 +62,8 @@ Goal: create a lightweight, user-facing cookbook that does not pull “everythin
   - [x] async inbox + cancellation (`async_inbox_basics`)
   - [x] markdown + code (`markdown_and_code_basics`)
   - [x] effects layer basics (`effects_layer_basics`)
+  - [x] query basics (`query_basics`) (feature-gated: `cookbook-query`)
+  - [x] router basics (`router_basics`) (feature-gated: `cookbook-router`)
   - [x] chart interactions basics (`chart_interactions_basics`)
   - [x] toast basics (`toast_basics`)
   - [x] date picker basics (`date_picker_basics`)

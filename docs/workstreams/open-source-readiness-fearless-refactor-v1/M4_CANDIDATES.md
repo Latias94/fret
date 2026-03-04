@@ -178,6 +178,9 @@ These are the first “lesson-shaped” examples we actually landed in `fret-coo
 - Proposed cookbook example: `query_basics`
 - Cookbook label: `Lab`
 - Cookbook feature: `cookbook-query`
+- Status: Done
+  - Cookbook: [`apps/fret-cookbook/examples/query_basics.rs`](../../../apps/fret-cookbook/examples/query_basics.rs)
+  - Script: [`tools/diag-scripts/cookbook/query-basics/cookbook-query-basics-baseline.json`](../../../tools/diag-scripts/cookbook/query-basics/cookbook-query-basics-baseline.json)
 - Notes:
   - Implemented as an action-first view runtime example in `fret-cookbook`.
   - Keep it small and deterministic: one query key, invalidate, namespace invalidation, and a stable baseline screenshot.
@@ -189,6 +192,9 @@ These are the first “lesson-shaped” examples we actually landed in `fret-coo
 - Proposed cookbook example: `router_basics`
 - Cookbook label: `Lab`
 - Cookbook feature: `cookbook-router`
+- Status: Done
+  - Cookbook: [`apps/fret-cookbook/examples/router_basics.rs`](../../../apps/fret-cookbook/examples/router_basics.rs)
+  - Script: [`tools/diag-scripts/cookbook/router-basics/cookbook-router-basics-smoke.json`](../../../tools/diag-scripts/cookbook/router-basics/cookbook-router-basics-smoke.json)
 - Notes:
   - Implemented as an action-first router-only lesson in `fret-cookbook`.
   - Query integration is covered separately by `query_basics`.

@@ -2,9 +2,9 @@ use std::sync::Arc;
 
 use fret::prelude::*;
 use fret_router::{
-    HistoryAdapter as _,
-    MemoryHistory, NavigationAction, PathParam, RouteHooks, RouteLocation, RouteNode,
-    RoutePrefetchIntent, RouteSearchTable, RouteTree, Router, SearchMap, SearchValidationMode,
+    HistoryAdapter as _, MemoryHistory, NavigationAction, PathParam, RouteHooks, RouteLocation,
+    RouteNode, RoutePrefetchIntent, RouteSearchTable, RouteTree, Router, SearchMap,
+    SearchValidationMode,
 };
 use fret_router_ui::{RouterOutlet, RouterUiSnapshot, RouterUiStore, router_link_to_with_test_id};
 use fret_ui::{CommandAvailability, Invalidation};
@@ -328,10 +328,8 @@ impl View for RouterBasicsView {
                     shadcn::Card::new([
                         shadcn::CardHeader::new([
                             shadcn::CardTitle::new(title).into_element(cx),
-                            shadcn::CardDescription::new(format!(
-                                "matched_path={matched_path}"
-                            ))
-                            .into_element(cx),
+                            shadcn::CardDescription::new(format!("matched_path={matched_path}"))
+                                .into_element(cx),
                         ])
                         .into_element(cx),
                         shadcn::CardContent::new([
@@ -345,17 +343,15 @@ impl View for RouterBasicsView {
                     .into_element(cx)
                 },
                 |cx, snap| {
-                    shadcn::Card::new([
-                        shadcn::CardHeader::new([
-                            shadcn::CardTitle::new("Not found").into_element(cx),
-                            shadcn::CardDescription::new(format!(
-                                "location={}",
-                                snap.location.to_url()
-                            ))
-                            .into_element(cx),
-                        ])
+                    shadcn::Card::new([shadcn::CardHeader::new([
+                        shadcn::CardTitle::new("Not found").into_element(cx),
+                        shadcn::CardDescription::new(format!(
+                            "location={}",
+                            snap.location.to_url()
+                        ))
                         .into_element(cx),
                     ])
+                    .into_element(cx)])
                     .ui()
                     .w_full()
                     .into_element(cx)

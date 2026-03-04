@@ -12,6 +12,7 @@ Status legend:
 - [x] Ensure `README.md` links only canonical entry points (no scattered run commands).
 - [x] Add a short pointer from `docs/README.md` to this workstream.
 - [x] Add a short pointer from `docs/examples/README.md` to the cookbook “recommended order”.
+- [x] Ensure hotpatch is not part of onboarding story (mark as dev-only in `fretboard` help output).
 
 ## M1 — Cookbook curation (small, teachable, fast)
 
