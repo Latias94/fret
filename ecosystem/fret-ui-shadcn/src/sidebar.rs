@@ -12,8 +12,9 @@ use fret_runtime::{
 };
 use fret_ui::action::{OnActivate, OnCommand, OnCommandAvailability, OnKeyDown};
 use fret_ui::element::{
-    AnyElement, ContainerProps, CrossAlign, Elements, FlexProps, HoverRegionProps, MainAlign,
-    OpacityProps, Overflow, PressableProps, RingStyle, SemanticsDecoration, SpacerProps,
+    AnyElement, ContainerProps, CrossAlign, Elements, FlexProps, HoverRegionProps, LayoutStyle,
+    Length, MainAlign, OpacityProps, Overflow, PressableProps, RingStyle, SemanticsDecoration,
+    SizeStyle, SpacerProps,
 };
 use fret_ui::{CommandAvailability, ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::command::ElementCommandGatingExt as _;
@@ -1920,12 +1921,6 @@ impl SidebarGroupLabel {
         let collapsed = sidebar_collapsed_in_scope(cx);
         let collapsed = if self.collapsed { true } else { collapsed };
         let motion = sidebar_collapse_motion(cx, collapsed);
-        if !motion.present {
-            return cx.spacer(fret_ui::element::SpacerProps {
-                min: Px(0.0),
-                ..Default::default()
-            });
-        }
 
         let (fg, size, line_height) = {
             let theme = Theme::global(&*cx.app);
@@ -1949,13 +1944,53 @@ impl SidebarGroupLabel {
             .overflow(TextOverflow::Clip)
             .into_element(cx);
 
-        cx.opacity_props(
-            OpacityProps {
-                layout: fret_ui::element::LayoutStyle::default(),
-                opacity: motion.progress,
-            },
-            move |_cx| vec![text],
-        )
+        let (layout, props) = {
+            let theme = Theme::global(&*cx.app);
+            let collapsed_mt = transition_prim::lerp_px(Px(-32.0), Px(0.0), motion.progress);
+            let layout = LayoutRefinement::default()
+                .w_full()
+                .min_w_0()
+                .h_px(Px(32.0))
+                .mt_px(collapsed_mt);
+            let props = decl_style::container_props(
+                theme,
+                ChromeRefinement::default()
+                    .px(Space::N2)
+                    .rounded(Radius::Md),
+                layout,
+            );
+            (props.layout, props)
+        };
+
+        cx.container(props, move |cx| {
+            let row = FlexProps {
+                direction: fret_core::Axis::Horizontal,
+                gap: Px(0.0).into(),
+                align: CrossAlign::Center,
+                justify: MainAlign::Start,
+                padding: Edges::all(Px(0.0)).into(),
+                layout: LayoutStyle {
+                    size: SizeStyle {
+                        width: Length::Fill,
+                        height: Length::Fill,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                ..Default::default()
+            };
+
+            let text = text;
+            vec![cx.flex(row, move |cx| {
+                vec![cx.opacity_props(
+                    OpacityProps {
+                        layout,
+                        opacity: motion.progress,
+                    },
+                    move |_cx| vec![text],
+                )]
+            })]
+        })
     }
 }
 
@@ -4341,6 +4376,137 @@ mod tests {
                 .iter()
                 .any(|n| n.test_id.as_deref() == Some("sidebar-mobile-menu-button")),
             "expected mobile sidebar sheet content to render sidebar children"
+        );
+    }
+
+    #[test]
+    fn sidebar_group_label_collapses_with_negative_margin_like_shadcn_transition_margin_opacity() {
+        fn y_for_test_id(snap: &fret_core::SemanticsSnapshot, id: &str) -> Px {
+            snap.nodes
+                .iter()
+                .find(|n| n.test_id.as_deref() == Some(id))
+                .unwrap_or_else(|| panic!("expected semantics node with test_id={id:?}"))
+                .bounds
+                .origin
+                .y
+        }
+
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        let mut services = FakeServices;
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(1200.0), Px(720.0)),
+        );
+
+        let open_model = app.models_mut().insert(true);
+
+        fn render_frame(
+            ui: &mut UiTree<App>,
+            app: &mut App,
+            services: &mut FakeServices,
+            window: AppWindowId,
+            bounds: Rect,
+            open_model: Model<bool>,
+            frame: u64,
+        ) -> fret_core::SemanticsSnapshot {
+            app.set_frame_id(FrameId(frame));
+            app.set_tick_id(TickId(frame));
+            let root = fret_ui::declarative::render_root(
+                ui,
+                app,
+                services,
+                window,
+                bounds,
+                "shadcn-sidebar-group-label-motion",
+                |cx| {
+                    SidebarProvider::new()
+                        .open(Some(open_model.clone()))
+                        .with(cx, |cx| {
+                            let label = SidebarGroupLabel::new("Group")
+                                .into_element(cx)
+                                .test_id("sidebar.group_label");
+                            let marker = cx
+                                .container(ContainerProps::default(), |_cx| Vec::new())
+                                .test_id("sidebar.marker");
+                            let group = SidebarGroup::new([label, marker]).into_element(cx);
+                            let sidebar = Sidebar::new([group])
+                                .collapsible(SidebarCollapsible::Icon)
+                                .into_element(cx);
+                            vec![sidebar]
+                        })
+                },
+            );
+            ui.set_root(root);
+            ui.request_semantics_snapshot();
+            ui.layout_all(app, services, bounds, 1.0);
+            ui.semantics_snapshot()
+                .cloned()
+                .expect("expected semantics snapshot")
+        }
+
+        let mut snap = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open_model.clone(),
+            1,
+        );
+        for frame in 2..=24 {
+            snap = render_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                open_model.clone(),
+                frame,
+            );
+        }
+        let marker_expanded_y = y_for_test_id(&snap, "sidebar.marker");
+
+        let _ = app.models_mut().update(&open_model, |v| *v = false);
+
+        let snap_transition = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open_model.clone(),
+            25,
+        );
+        let marker_transition_y = y_for_test_id(&snap_transition, "sidebar.marker");
+
+        for frame in 26..=48 {
+            snap = render_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                open_model.clone(),
+                frame,
+            );
+        }
+        let marker_collapsed_y = y_for_test_id(&snap, "sidebar.marker");
+
+        let expected_shift = Px(32.0); // `-mt-8` cancels `h-8` in shadcn.
+        let actual_shift = Px(marker_expanded_y.0 - marker_collapsed_y.0);
+        assert!(
+            (actual_shift.0 - expected_shift.0).abs() <= 1.5,
+            "expected marker y to shift up by ~{expected_shift:?}, got {actual_shift:?} (expanded_y={marker_expanded_y:?}, collapsed_y={marker_collapsed_y:?})"
+        );
+        assert!(
+            marker_transition_y.0 < marker_expanded_y.0 - 0.1
+                && marker_transition_y.0 > marker_collapsed_y.0 + 0.1,
+            "expected marker y to tween (intermediate); expanded_y={marker_expanded_y:?} transition_y={marker_transition_y:?} collapsed_y={marker_collapsed_y:?}"
         );
     }
 
