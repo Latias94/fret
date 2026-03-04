@@ -12,9 +12,9 @@ use fret_ui_kit::headless::tab_strip_arbitration;
 
 use crate::tab_drag::DRAG_KIND_WORKSPACE_TAB;
 
-use super::drag_state::WorkspaceTabStripDragState;
-use super::drag_state::WorkspaceTabStripClosePress;
 use super::consts::{TAB_CHROME_PAD_RIGHT, TAB_CLOSE_CLICK_SLOP, TAB_CLOSE_SIZE};
+use super::drag_state::WorkspaceTabStripClosePress;
+use super::drag_state::WorkspaceTabStripDragState;
 use super::intent::{WorkspaceTabStripIntent, dispatch_intent};
 use super::kernel::WorkspaceTabStripDropTarget;
 
@@ -145,6 +145,7 @@ pub(super) fn tab_pointer_down_handler(
                 st.pointer = Some(down.pointer_id);
                 st.start_tick = down.tick_id;
                 st.start_position = down.position;
+                st.start_position_window = down.position_window;
                 st.dragged_tab = Some(tab_id.clone());
                 st.dragging = false;
                 st.drop_target = WorkspaceTabStripDropTarget::None;
@@ -210,47 +211,57 @@ pub(super) fn tab_close_pointer_down_handler(
 pub(super) fn tab_pointer_up_handler(
     drag_model: Model<WorkspaceTabStripDragState>,
 ) -> OnPressablePointerUp {
-    Arc::new(move |host: &mut dyn UiPointerActionHost, acx: ActionCx, up| {
-        if up.button != MouseButton::Left || up.modifiers != Modifiers::default() {
+    Arc::new(
+        move |host: &mut dyn UiPointerActionHost, acx: ActionCx, up| {
+            if up.button != MouseButton::Left || up.modifiers != Modifiers::default() {
+                let _ = host.models_mut().update(&drag_model, |st| {
+                    if st
+                        .close_press
+                        .as_ref()
+                        .is_some_and(|p| p.pointer_id == up.pointer_id)
+                    {
+                        st.close_press = None;
+                    }
+                });
+                return PressablePointerUpResult::Continue;
+            }
+
+            let mut press: Option<WorkspaceTabStripClosePress> = None;
             let _ = host.models_mut().update(&drag_model, |st| {
-                if st.close_press.as_ref().is_some_and(|p| p.pointer_id == up.pointer_id) {
-                    st.close_press = None;
+                if st
+                    .close_press
+                    .as_ref()
+                    .is_some_and(|p| p.pointer_id == up.pointer_id)
+                {
+                    press = st.close_press.take();
                 }
             });
-            return PressablePointerUpResult::Continue;
-        }
 
-        let mut press: Option<WorkspaceTabStripClosePress> = None;
-        let _ = host.models_mut().update(&drag_model, |st| {
-            if st.close_press.as_ref().is_some_and(|p| p.pointer_id == up.pointer_id) {
-                press = st.close_press.take();
+            let Some(press) = press else {
+                return PressablePointerUpResult::Continue;
+            };
+
+            let start = press.start_position_window.unwrap_or(press.start_position);
+            let end = up.position_window.unwrap_or(up.position);
+            let within_slop =
+                tab_strip_arbitration::pointer_move_within_slop(start, end, TAB_CLOSE_CLICK_SLOP);
+            if !within_slop {
+                return PressablePointerUpResult::Continue;
             }
-        });
 
-        let Some(press) = press else {
-            return PressablePointerUpResult::Continue;
-        };
+            if let Some(cmd) = press.pane_activate_cmd {
+                host.record_pending_command_dispatch_source(acx, &cmd, ActivateReason::Pointer);
+                host.dispatch_command(Some(acx.window), cmd);
+            }
 
-        let start = press.start_position_window.unwrap_or(press.start_position);
-        let end = up.position_window.unwrap_or(up.position);
-        let within_slop =
-            tab_strip_arbitration::pointer_move_within_slop(start, end, TAB_CLOSE_CLICK_SLOP);
-        if !within_slop {
-            return PressablePointerUpResult::Continue;
-        }
-
-        if let Some(cmd) = press.pane_activate_cmd {
-            host.record_pending_command_dispatch_source(acx, &cmd, ActivateReason::Pointer);
-            host.dispatch_command(Some(acx.window), cmd);
-        }
-
-        host.record_pending_command_dispatch_source(
-            acx,
-            &press.close_command,
-            ActivateReason::Pointer,
-        );
-        host.dispatch_command(Some(acx.window), press.close_command);
-        host.request_redraw(acx.window);
-        PressablePointerUpResult::SkipActivate
-    })
+            host.record_pending_command_dispatch_source(
+                acx,
+                &press.close_command,
+                ActivateReason::Pointer,
+            );
+            host.dispatch_command(Some(acx.window), press.close_command);
+            host.request_redraw(acx.window);
+            PressablePointerUpResult::SkipActivate
+        },
+    )
 }

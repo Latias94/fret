@@ -38,8 +38,8 @@ use crate::tab_drag::{
     resolve_workspace_tab_drop_intent,
 };
 
-mod drag_state;
 mod consts;
+mod drag_state;
 mod geometry;
 mod intent;
 mod interaction;
@@ -62,15 +62,17 @@ use kernel::{
     compute_workspace_tab_strip_drop_target,
 };
 
+use consts::TAB_CHROME_PAD_RIGHT;
 use drag_state::{WorkspaceTabStripDragState, get_drag_model, read_drag_snapshot_for_pointer};
 use geometry::{bounds_for_optional_element_id, collect_tab_hit_rects};
 use intent::{WorkspaceTabStripIntent, dispatch_intent};
-use interaction::{tab_close_pointer_down_handler, tab_pointer_down_handler, tab_pointer_up_handler};
+use interaction::{
+    tab_close_pointer_down_handler, tab_pointer_down_handler, tab_pointer_up_handler,
+};
 use layouts::{
     fill_grow_layout, fill_layout, row_layout, tab_list_semantics_layout,
     tab_strip_scroll_content_layout,
 };
-use consts::TAB_CHROME_PAD_RIGHT;
 use state::{WorkspaceTabStripState, get_focus_restore_model, get_reveal_hint_model};
 use theme::WorkspaceTabStripTheme;
 use utils::{
@@ -744,6 +746,8 @@ impl WorkspaceTabStrip {
                                                                 };
                                                                 let start_tick = snapshot.start_tick;
                                                                 let start_position = snapshot.start_position;
+                                                                let start_position_window =
+                                                                    snapshot.start_position_window;
                                                                 let dragging = snapshot.dragging;
                                                                 let dragged_tab = snapshot.dragged_tab;
                                                                 let tab_rects = snapshot.tab_rects;
@@ -767,6 +771,12 @@ impl WorkspaceTabStrip {
                                                                 let mut activate_on_drag_start = false;
 
                                                                 if !dragging {
+                                                                    let sensor_start =
+                                                                        start_position_window
+                                                                            .unwrap_or(start_position);
+                                                                    let sensor_position = mv
+                                                                        .position_window
+                                                                        .unwrap_or(mv.position);
                                                                     let sensor =
                                                                         ui_dnd::handle_sensor_move_or_init_in_scope(
                                                                             host.models_mut(),
@@ -776,8 +786,8 @@ impl WorkspaceTabStrip {
                                                                             dnd_scope,
                                                                             mv.pointer_id,
                                                                             start_tick,
-                                                                            start_position,
-                                                                            mv.position,
+                                                                            sensor_start,
+                                                                            sensor_position,
                                                                             mv.tick_id,
                                                                             ui_dnd::ActivationConstraint::Distance {
                                                                                 px: 6.0,
@@ -792,8 +802,12 @@ impl WorkspaceTabStrip {
                                                                         // DnD sensor in the way we expect (tick quirks, transport
                                                                         // differences). Keep the user-visible behavior stable by
                                                                         // falling back to a simple distance threshold.
-                                                                        let dx = mv.position.x.0 - start_position.x.0;
-                                                                        let dy = mv.position.y.0 - start_position.y.0;
+                                                                        let dx =
+                                                                            sensor_position.x.0
+                                                                                - sensor_start.x.0;
+                                                                        let dy =
+                                                                            sensor_position.y.0
+                                                                                - sensor_start.y.0;
                                                                         let dist2 = (dx * dx) + (dy * dy);
                                                                         if dist2 < (6.0 * 6.0) {
                                                                             return false;
@@ -1973,6 +1987,12 @@ impl WorkspaceTabStrip {
                             let can_scroll_right = scroll_x.0 + 0.5 < scroll_max_x.0;
                             let scroll_handle_for_wheel = scroll_handle.clone();
                             let scroll_handle_for_controls = scroll_handle.clone();
+                            let scroll_left_control_test_id = root_test_id
+                                .as_ref()
+                                .map(|root| Arc::<str>::from(format!("{root}.scroll_left")));
+                            let scroll_right_control_test_id = root_test_id
+                                .as_ref()
+                                .map(|root| Arc::<str>::from(format!("{root}.scroll_right")));
 
                             #[cfg(feature = "shadcn-context-menu")]
                             let overflow_button_text_style = text_style.clone();
@@ -2363,6 +2383,7 @@ impl WorkspaceTabStrip {
                                                     can_scroll_left,
                                                     "<",
                                                     "Scroll left",
+                                                    scroll_left_control_test_id.clone(),
                                                     -1.0,
                                                     scroll_step,
                                                     scroll_handle_for_controls.clone(),
@@ -2378,6 +2399,7 @@ impl WorkspaceTabStrip {
                                                     can_scroll_right,
                                                     ">",
                                                     "Scroll right",
+                                                    scroll_right_control_test_id.clone(),
                                                     1.0,
                                                     scroll_step,
                                                     scroll_handle_for_controls.clone(),

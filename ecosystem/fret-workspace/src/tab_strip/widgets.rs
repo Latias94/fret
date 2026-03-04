@@ -2,9 +2,7 @@ use std::cell::Cell;
 use std::rc::Rc;
 use std::sync::Arc;
 
-use fret_core::{
-    Color, Corners, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap,
-};
+use fret_core::{Color, Corners, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap};
 use fret_ui::action::{OnActivate, OnPressablePointerDown, OnPressablePointerUp};
 use fret_ui::element::{
     AnyElement, ContainerProps, FlexProps, LayoutStyle, MainAlign, PressableA11y, PressableProps,
@@ -168,6 +166,7 @@ pub(super) fn tab_strip_scroll_button<H: UiHost>(
     enabled: bool,
     glyph: &'static str,
     a11y_label: &'static str,
+    test_id: Option<Arc<str>>,
     delta_x_sign: f32,
     scroll_step: Px,
     scroll_handle: ScrollHandle,
@@ -185,6 +184,7 @@ pub(super) fn tab_strip_scroll_button<H: UiHost>(
             a11y: PressableA11y {
                 role: Some(SemanticsRole::Button),
                 label: Some(Arc::from(a11y_label)),
+                test_id,
                 ..Default::default()
             },
             ..Default::default()
