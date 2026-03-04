@@ -2270,20 +2270,22 @@ impl<H: UiHost> Widget<H> for DockSpace {
                     cursor_grab_offset: drag.cursor_grab_offset,
                     follow_window: drag.follow_window,
                     cursor_screen_pos_raw_physical_px: drag.diag_cursor_screen_pos_raw_physical_px,
-                    cursor_screen_pos_used_physical_px: drag.diag_cursor_screen_pos_used_physical_px,
+                    cursor_screen_pos_used_physical_px: drag
+                        .diag_cursor_screen_pos_used_physical_px,
                     cursor_screen_pos_was_clamped: drag.diag_cursor_screen_pos_was_clamped,
                     cursor_override_active: drag.diag_cursor_override_active,
-                    current_window_outer_pos_physical_px: drag.diag_current_window_outer_pos_physical_px,
-                    current_window_decoration_offset_physical_px:
-                        drag.diag_current_window_decoration_offset_physical_px,
-                    current_window_client_origin_screen_physical_px:
-                        drag.diag_current_window_client_origin_screen_physical_px,
-                    current_window_client_origin_source_platform:
-                        drag.diag_current_window_client_origin_source_platform,
-                    current_window_scale_factor_x1000_from_runner:
-                        drag.diag_current_window_scale_factor_x1000,
-                    current_window_local_pos_from_screen_logical_px:
-                        drag.diag_current_window_local_pos_from_screen_logical_px,
+                    current_window_outer_pos_physical_px: drag
+                        .diag_current_window_outer_pos_physical_px,
+                    current_window_decoration_offset_physical_px: drag
+                        .diag_current_window_decoration_offset_physical_px,
+                    current_window_client_origin_screen_physical_px: drag
+                        .diag_current_window_client_origin_screen_physical_px,
+                    current_window_client_origin_source_platform: drag
+                        .diag_current_window_client_origin_source_platform,
+                    current_window_scale_factor_x1000_from_runner: drag
+                        .diag_current_window_scale_factor_x1000,
+                    current_window_local_pos_from_screen_logical_px: drag
+                        .diag_current_window_local_pos_from_screen_logical_px,
                     current_window_scale_factor_x1000,
                     kind: drag.kind,
                     dragging: drag.dragging,
@@ -6792,20 +6794,22 @@ impl<H: UiHost> Widget<H> for DockSpace {
                     cursor_grab_offset: drag.cursor_grab_offset,
                     follow_window: drag.follow_window,
                     cursor_screen_pos_raw_physical_px: drag.diag_cursor_screen_pos_raw_physical_px,
-                    cursor_screen_pos_used_physical_px: drag.diag_cursor_screen_pos_used_physical_px,
+                    cursor_screen_pos_used_physical_px: drag
+                        .diag_cursor_screen_pos_used_physical_px,
                     cursor_screen_pos_was_clamped: drag.diag_cursor_screen_pos_was_clamped,
                     cursor_override_active: drag.diag_cursor_override_active,
-                    current_window_outer_pos_physical_px: drag.diag_current_window_outer_pos_physical_px,
-                    current_window_decoration_offset_physical_px:
-                        drag.diag_current_window_decoration_offset_physical_px,
-                    current_window_client_origin_screen_physical_px:
-                        drag.diag_current_window_client_origin_screen_physical_px,
-                    current_window_client_origin_source_platform:
-                        drag.diag_current_window_client_origin_source_platform,
-                    current_window_scale_factor_x1000_from_runner:
-                        drag.diag_current_window_scale_factor_x1000,
-                    current_window_local_pos_from_screen_logical_px:
-                        drag.diag_current_window_local_pos_from_screen_logical_px,
+                    current_window_outer_pos_physical_px: drag
+                        .diag_current_window_outer_pos_physical_px,
+                    current_window_decoration_offset_physical_px: drag
+                        .diag_current_window_decoration_offset_physical_px,
+                    current_window_client_origin_screen_physical_px: drag
+                        .diag_current_window_client_origin_screen_physical_px,
+                    current_window_client_origin_source_platform: drag
+                        .diag_current_window_client_origin_source_platform,
+                    current_window_scale_factor_x1000_from_runner: drag
+                        .diag_current_window_scale_factor_x1000,
+                    current_window_local_pos_from_screen_logical_px: drag
+                        .diag_current_window_local_pos_from_screen_logical_px,
                     current_window_scale_factor_x1000,
                     kind: drag.kind,
                     dragging: drag.dragging,
@@ -7089,20 +7093,22 @@ impl<H: UiHost> Widget<H> for DockSpace {
                     cursor_grab_offset: drag.cursor_grab_offset,
                     follow_window: drag.follow_window,
                     cursor_screen_pos_raw_physical_px: drag.diag_cursor_screen_pos_raw_physical_px,
-                    cursor_screen_pos_used_physical_px: drag.diag_cursor_screen_pos_used_physical_px,
+                    cursor_screen_pos_used_physical_px: drag
+                        .diag_cursor_screen_pos_used_physical_px,
                     cursor_screen_pos_was_clamped: drag.diag_cursor_screen_pos_was_clamped,
                     cursor_override_active: drag.diag_cursor_override_active,
-                    current_window_outer_pos_physical_px: drag.diag_current_window_outer_pos_physical_px,
-                    current_window_decoration_offset_physical_px:
-                        drag.diag_current_window_decoration_offset_physical_px,
-                    current_window_client_origin_screen_physical_px:
-                        drag.diag_current_window_client_origin_screen_physical_px,
-                    current_window_client_origin_source_platform:
-                        drag.diag_current_window_client_origin_source_platform,
-                    current_window_scale_factor_x1000_from_runner:
-                        drag.diag_current_window_scale_factor_x1000,
-                    current_window_local_pos_from_screen_logical_px:
-                        drag.diag_current_window_local_pos_from_screen_logical_px,
+                    current_window_outer_pos_physical_px: drag
+                        .diag_current_window_outer_pos_physical_px,
+                    current_window_decoration_offset_physical_px: drag
+                        .diag_current_window_decoration_offset_physical_px,
+                    current_window_client_origin_screen_physical_px: drag
+                        .diag_current_window_client_origin_screen_physical_px,
+                    current_window_client_origin_source_platform: drag
+                        .diag_current_window_client_origin_source_platform,
+                    current_window_scale_factor_x1000_from_runner: drag
+                        .diag_current_window_scale_factor_x1000,
+                    current_window_local_pos_from_screen_logical_px: drag
+                        .diag_current_window_local_pos_from_screen_logical_px,
                     current_window_scale_factor_x1000,
                     kind: drag.kind,
                     dragging: drag.dragging,
