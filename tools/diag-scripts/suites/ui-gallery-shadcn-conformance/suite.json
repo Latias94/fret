@@ -58,6 +58,7 @@
     "tools/diag-scripts/ui-gallery-popover-click-through-outside-press-focus-underlay.json",
     "tools/diag-scripts/ui-gallery-popover-dialog-escape-underlay.json",
     "tools/diag-scripts/ui-gallery/navigation-menu/ui-gallery-navigation-menu-docs-smoke.json",
+    "tools/diag-scripts/ui-gallery/navigation-menu/ui-gallery-navigation-menu-entry-key-focus-first.json",
     "tools/diag-scripts/ui-gallery/navigation-menu/ui-gallery-navigation-menu-escape-close-gate.json",
     "tools/diag-scripts/ui-gallery-radio-group-description-layout.json",
     "tools/diag-scripts/ui-gallery-scroll-into-view-padding-is-soft.json",

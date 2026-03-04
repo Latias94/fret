@@ -12,7 +12,7 @@ use std::sync::Mutex;
 use std::time::Duration;
 
 use fret_core::{Modifiers, Point, PointerType, Px, Rect, Size, Transform2D};
-use fret_runtime::{Effect, Model, TimerToken};
+use fret_runtime::{CommandId, Effect, Model, TimerToken};
 use fret_ui::action::{ActionCx, OnDismissiblePointerMove, UiActionHost};
 use fret_ui::element::{AnyElement, LayoutStyle};
 use fret_ui::elements::ContinuousFrames;
@@ -1014,6 +1014,35 @@ impl NavigationMenuTrigger {
                             entry.was_click_close = false;
                             entry.has_pointer_move_opened = false;
 
+                            true
+                        }),
+                    );
+
+                    let item_value_for_entry_key = item_value_for_registry.clone();
+                    let value_for_entry_key = value_model.clone();
+                    cx.key_add_on_key_down_for(
+                        element,
+                        Arc::new(move |host, action_cx, it| {
+                            if it.repeat || it.key != KeyCode::ArrowDown {
+                                return false;
+                            }
+
+                            let selected = host
+                                .models_mut()
+                                .read(&value_for_entry_key, |v| v.clone())
+                                .ok()
+                                .flatten();
+                            let open = selected
+                                .as_ref()
+                                .is_some_and(|v| v.as_ref() == item_value_for_entry_key.as_ref());
+                            if !open {
+                                return false;
+                            }
+
+                            host.dispatch_command(
+                                Some(action_cx.window),
+                                CommandId::from("focus.next"),
+                            );
                             true
                         }),
                     );
