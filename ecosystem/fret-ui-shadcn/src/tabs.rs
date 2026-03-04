@@ -8,7 +8,8 @@ use fret_icons::IconId;
 use fret_runtime::Model;
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign,
-    PressableProps, RovingFlexProps, RovingFocusProps, SpinnerProps, StackProps, SvgIconProps,
+    PressableProps, RovingFlexProps, RovingFocusProps, ShadowLayerStyle, ShadowStyle, SpinnerProps,
+    StackProps, SvgIconProps,
 };
 use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, Theme, ThemeSnapshot, UiHost};
@@ -18,6 +19,9 @@ use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
 use fret_ui_kit::declarative::current_color;
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
+use fret_ui_kit::declarative::motion::{
+    drive_tween_color_for_element, drive_tween_f32_for_element,
+};
 use fret_ui_kit::declarative::motion_springs::shared_indicator_spring_description;
 use fret_ui_kit::declarative::motion_value::{
     MotionToSpecF32, MotionValueF32Update, SpringSpecF32, drive_motion_value_f32,
@@ -30,6 +34,8 @@ use fret_ui_kit::{
     WidgetState, WidgetStateProperty, WidgetStates, resolve_override_slot,
     resolve_override_slot_opt, ui,
 };
+
+use crate::overlay_motion;
 
 #[derive(Debug, Default, Clone)]
 struct TabsListLayoutRuntime {
@@ -45,6 +51,36 @@ struct TabsContentPresenceRuntime {
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
     c.a *= mul;
     c
+}
+
+fn tailwind_transition_ease_in_out(t: f32) -> f32 {
+    // Tailwind default transition timing function: cubic-bezier(0.4, 0, 0.2, 1).
+    // (Often described as `ease-in-out`-ish.)
+    fret_ui_headless::easing::SHADCN_EASE.sample(t)
+}
+
+fn shadow_layer_with_presence(layer: ShadowLayerStyle, presence: f32) -> ShadowLayerStyle {
+    let presence = presence.clamp(0.0, 1.0);
+    ShadowLayerStyle {
+        color: Color {
+            a: (layer.color.a * presence).clamp(0.0, 1.0),
+            ..layer.color
+        },
+        offset_x: Px(layer.offset_x.0 * presence),
+        offset_y: Px(layer.offset_y.0 * presence),
+        blur: Px(layer.blur.0 * presence),
+        spread: Px(layer.spread.0 * presence),
+    }
+}
+
+fn shadow_with_presence(shadow: ShadowStyle, presence: f32) -> ShadowStyle {
+    ShadowStyle {
+        primary: shadow_layer_with_presence(shadow.primary, presence),
+        secondary: shadow
+            .secondary
+            .map(|layer| shadow_layer_with_presence(layer, presence)),
+        corner_radii: shadow.corner_radii,
+    }
 }
 
 fn apply_trigger_inherited_style(
@@ -1916,12 +1952,6 @@ impl Tabs {
                                     let default_trigger_border = default_trigger_border.clone();
                                     let theme = theme.clone();
 
-                                    let shadow = (!shared_indicator_motion
-                                        && list_variant == TabsListVariant::Default
-                                        && active
-                                        && !item_disabled)
-                                        .then(|| decl_style::shadow_sm(&theme, radius));
-
                                     let value = item.value.clone();
                                     let label = item.label.clone();
                                     let trigger_children = item.trigger.take();
@@ -2046,7 +2076,22 @@ impl Tabs {
                                             &default_trigger_fg,
                                             states,
                                         );
-                                        let fg = fg_ref.resolve(&theme);
+                                        let duration = overlay_motion::shadcn_motion_duration_150(cx);
+
+                                        let focus_visible =
+                                            states.contains(WidgetStates::FOCUS_VISIBLE);
+
+                                        let fg_motion = drive_tween_color_for_element(
+                                            cx,
+                                            id,
+                                            "tabs.trigger.fg",
+                                            fg_ref.resolve(&theme),
+                                            duration,
+                                            tailwind_transition_ease_in_out,
+                                        );
+                                        let fg = fg_motion.value;
+                                        let fg_ref = ColorRef::Color(fg);
+
                                         let default_icon_color = theme
                                             .color_by_key("muted-foreground")
                                             .unwrap_or_else(|| theme.color_token("muted-foreground"));
@@ -2073,6 +2118,64 @@ impl Tabs {
                                             border
                                         };
 
+                                        let border_motion = drive_tween_color_for_element(
+                                            cx,
+                                            id,
+                                            "tabs.trigger.border",
+                                            if focus_visible {
+                                                theme.color_token("ring")
+                                            } else {
+                                                border
+                                            },
+                                            duration,
+                                            tailwind_transition_ease_in_out,
+                                        );
+                                        let border = border_motion.value;
+
+                                        let ring_alpha = drive_tween_f32_for_element(
+                                            cx,
+                                            id,
+                                            "tabs.trigger.ring.alpha",
+                                            if focus_visible { 1.0 } else { 0.0 },
+                                            duration,
+                                            tailwind_transition_ease_in_out,
+                                        );
+                                        let mut ring = ring;
+                                        ring.color.a = (ring.color.a * ring_alpha.value)
+                                            .clamp(0.0, 1.0);
+                                        if let Some(offset_color) = ring.offset_color {
+                                            ring.offset_color = Some(Color {
+                                                a: (offset_color.a * ring_alpha.value)
+                                                    .clamp(0.0, 1.0),
+                                                ..offset_color
+                                            });
+                                        }
+
+                                        let shadow_presence = drive_tween_f32_for_element(
+                                            cx,
+                                            id,
+                                            "tabs.trigger.shadow.presence",
+                                            if !shared_indicator_motion
+                                                && list_variant == TabsListVariant::Default
+                                                && active
+                                                && !item_disabled
+                                            {
+                                                1.0
+                                            } else {
+                                                0.0
+                                            },
+                                            duration,
+                                            tailwind_transition_ease_in_out,
+                                        );
+                                        let wants_shadow =
+                                            shadow_presence.animating || shadow_presence.value > 0.0;
+                                        let shadow = wants_shadow.then(|| {
+                                            shadow_with_presence(
+                                                decl_style::shadow_sm(&theme, radius),
+                                                shadow_presence.value,
+                                            )
+                                        });
+
                                         let mut a11y =
                                             fret_ui_kit::primitives::tabs::tab_a11y_with_collection(
                                                 Some(label.clone()),
@@ -2089,6 +2192,7 @@ impl Tabs {
                                             enabled: !item_disabled,
                                             focusable: tab_stop || st.focused,
                                             focus_ring: Some(ring),
+                                            focus_ring_always_paint: ring_alpha.animating,
                                             a11y,
                                             ..Default::default()
                                         };
@@ -2778,6 +2882,215 @@ mod tests {
         assert!(
             wdiff <= 0.51,
             "expected vertical line variant triggers to share width: w0={w0:.3}, w1={w1:.3}, diff={wdiff:.3}"
+        );
+    }
+
+    #[test]
+    fn tabs_trigger_focus_ring_tweens_in_and_out_like_a_transition() {
+        use std::cell::Cell;
+        use std::rc::Rc;
+        use std::time::Duration;
+
+        use fret_core::KeyCode;
+        use fret_ui_kit::declarative::transition::ticks_60hz_for_duration;
+
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        crate::shadcn_themes::apply_shadcn_new_york(
+            &mut app,
+            crate::shadcn_themes::ShadcnBaseColor::Neutral,
+            crate::shadcn_themes::ShadcnColorScheme::Light,
+        );
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(200.0)),
+        );
+        let mut services = FakeServices::default();
+        let model = app.models_mut().insert(Some(Arc::from("alpha")));
+
+        let ring_alpha_out: Rc<Cell<Option<f32>>> = Rc::new(Cell::new(None));
+        let always_paint_out: Rc<Cell<Option<bool>>> = Rc::new(Cell::new(None));
+
+        fn find_pressable_with_test_id<'a>(
+            el: &'a AnyElement,
+            test_id: &str,
+        ) -> Option<&'a PressableProps> {
+            match &el.kind {
+                fret_ui::element::ElementKind::Pressable(props) => {
+                    if props.a11y.test_id.as_deref() == Some(test_id) {
+                        return Some(props);
+                    }
+                }
+                _ => {}
+            }
+            el.children
+                .iter()
+                .find_map(|child| find_pressable_with_test_id(child, test_id))
+        }
+
+        fn render_frame(
+            ui: &mut UiTree<App>,
+            app: &mut App,
+            services: &mut dyn fret_core::UiServices,
+            window: AppWindowId,
+            bounds: Rect,
+            model: Model<Option<Arc<str>>>,
+            ring_alpha_out: Rc<Cell<Option<f32>>>,
+            always_paint_out: Rc<Cell<Option<bool>>>,
+        ) -> fret_core::NodeId {
+            let root = fret_ui::declarative::render_root(
+                ui,
+                app,
+                services,
+                window,
+                bounds,
+                "tabs-trigger-focus-ring-tween",
+                move |cx| {
+                    let el = Tabs::new(model)
+                        .items([
+                            TabsItem::new("alpha", "Alpha", Vec::<AnyElement>::new())
+                                .trigger_test_id("tabs.trigger.alpha"),
+                            TabsItem::new("beta", "Beta", Vec::<AnyElement>::new()),
+                        ])
+                        .into_element(cx);
+
+                    let pressable = find_pressable_with_test_id(&el, "tabs.trigger.alpha")
+                        .expect("pressable with trigger test_id");
+                    let ring = pressable.focus_ring.expect("focus ring");
+                    ring_alpha_out.set(Some(ring.color.a));
+                    always_paint_out.set(Some(pressable.focus_ring_always_paint));
+
+                    vec![el]
+                },
+            );
+            ui.set_root(root);
+            ui.request_semantics_snapshot();
+            ui.layout_all(app, services, bounds, 1.0);
+            root
+        }
+
+        // Frame 1: baseline render (no focus-visible), ring alpha should be 0.
+        app.set_frame_id(FrameId(1));
+        let root = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            ring_alpha_out.clone(),
+            always_paint_out.clone(),
+        );
+        let a0 = ring_alpha_out.get().expect("a0");
+        assert!(
+            a0.abs() <= 1e-6,
+            "expected ring alpha to start at 0, got {a0}"
+        );
+
+        // Focus the trigger and mark focus-visible via a navigation key.
+        let focusable = ui
+            .first_focusable_descendant_including_declarative(&mut app, window, root)
+            .expect("focusable tab trigger");
+        ui.set_focus(Some(focusable));
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::KeyDown {
+                key: KeyCode::Tab,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+
+        // Frame 2: ring should be in-between (not snapped).
+        app.set_frame_id(FrameId(2));
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            ring_alpha_out.clone(),
+            always_paint_out.clone(),
+        );
+        let a1 = ring_alpha_out.get().expect("a1");
+        assert!(
+            a1 > 0.0,
+            "expected ring alpha to start animating in, got {a1}"
+        );
+
+        // Advance frames until the default 150ms transition settles.
+        let settle = ticks_60hz_for_duration(Duration::from_millis(150)) + 2;
+        for i in 0..settle {
+            app.set_frame_id(FrameId(3 + i));
+            let _ = render_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                model.clone(),
+                ring_alpha_out.clone(),
+                always_paint_out.clone(),
+            );
+        }
+        let a_focused = ring_alpha_out.get().expect("a_focused");
+        assert!(
+            a_focused > a1 + 1e-4,
+            "expected ring alpha to increase over time, got a1={a1} a_focused={a_focused}"
+        );
+
+        // Blur and ensure ring animates out while still being painted.
+        ui.set_focus(None);
+        app.set_frame_id(FrameId(1000));
+        let _ = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            ring_alpha_out.clone(),
+            always_paint_out.clone(),
+        );
+        let a_blur = ring_alpha_out.get().expect("a_blur");
+        let always_paint = always_paint_out.get().expect("always_paint");
+        assert!(
+            a_blur > 0.0 && a_blur < a_focused,
+            "expected ring alpha to be intermediate after blur, got a_blur={a_blur} a_focused={a_focused}"
+        );
+        assert!(
+            always_paint,
+            "expected focus ring to request painting while animating out"
+        );
+
+        for i in 0..settle {
+            app.set_frame_id(FrameId(1001 + i));
+            let _ = render_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                model.clone(),
+                ring_alpha_out.clone(),
+                always_paint_out.clone(),
+            );
+        }
+        let a_final = ring_alpha_out.get().expect("a_final");
+        let always_paint_final = always_paint_out.get().expect("always_paint_final");
+        assert!(
+            a_final.abs() <= 1e-4,
+            "expected ring alpha to settle at 0, got {a_final}"
+        );
+        assert!(
+            !always_paint_final,
+            "expected focus ring to stop requesting painting after settling"
         );
     }
 
