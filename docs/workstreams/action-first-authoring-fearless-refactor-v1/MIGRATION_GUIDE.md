@@ -205,6 +205,11 @@ Inventory:
 - Track remaining in-tree MVU usage here:
   `docs/workstreams/action-first-authoring-fearless-refactor-v1/LEGACY_MVU_INVENTORY.md`
 
+Removal-track note:
+
+- If milestone M9 (hard delete MVU) is adopted, this section will be removed and MVU will no longer
+  be available in-tree. Prefer migrating now rather than adding new MVU usage.
+
 ---
 
 ## 4) imui alignment (imui widgets dispatch actions)
