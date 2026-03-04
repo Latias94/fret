@@ -20,8 +20,10 @@ pub mod alpha_mode_demo;
 pub mod area_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod assets_demo;
-#[cfg(all(not(target_arch = "wasm32"), feature = "legacy-mvu-demos"))]
+#[cfg(not(target_arch = "wasm32"))]
 pub mod async_playground_demo;
+#[cfg(all(not(target_arch = "wasm32"), feature = "legacy-mvu-demos"))]
+pub mod async_playground_demo_legacy;
 pub mod bars_demo;
 pub mod candlestick_demo;
 #[cfg(not(target_arch = "wasm32"))]
@@ -63,16 +65,20 @@ pub mod docking_arbitration_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod docking_demo;
 pub mod drag_demo;
-#[cfg(all(not(target_arch = "wasm32"), feature = "legacy-mvu-demos"))]
+#[cfg(not(target_arch = "wasm32"))]
 pub mod drop_shadow_demo;
+#[cfg(all(not(target_arch = "wasm32"), feature = "legacy-mvu-demos"))]
+pub mod drop_shadow_demo_legacy;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod echarts_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod echarts_multi_grid_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod effects_demo;
-#[cfg(all(not(target_arch = "wasm32"), feature = "legacy-mvu-demos"))]
+#[cfg(not(target_arch = "wasm32"))]
 pub mod embedded_viewport_demo;
+#[cfg(all(not(target_arch = "wasm32"), feature = "legacy-mvu-demos"))]
+pub mod embedded_viewport_demo_legacy;
 pub mod emoji_conformance_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod empty_idle_demo;
@@ -97,8 +103,10 @@ pub mod genui_demo;
 pub mod gizmo3d_demo;
 pub mod grouped_bars_demo;
 pub mod heatmap_demo;
-#[cfg(all(not(target_arch = "wasm32"), feature = "legacy-mvu-demos"))]
+#[cfg(not(target_arch = "wasm32"))]
 pub mod hello_counter_demo;
+#[cfg(all(not(target_arch = "wasm32"), feature = "legacy-mvu-demos"))]
+pub mod hello_counter_demo_legacy;
 pub mod histogram2d_demo;
 pub mod histogram_demo;
 pub mod horizontal_bars_demo;
@@ -144,10 +152,16 @@ pub mod plot_image_demo;
 pub mod plot_stress_demo;
 #[cfg(all(not(target_arch = "wasm32"), feature = "legacy-mvu-demos"))]
 pub mod postprocess_theme_demo;
-#[cfg(all(not(target_arch = "wasm32"), feature = "legacy-mvu-demos"))]
+#[cfg(not(target_arch = "wasm32"))]
 pub mod query_async_tokio_demo;
-#[cfg(all(not(target_arch = "wasm32"), feature = "legacy-mvu-demos"))]
+#[cfg(not(target_arch = "wasm32"))]
 pub mod query_demo;
+
+#[cfg(all(not(target_arch = "wasm32"), feature = "legacy-mvu-demos"))]
+pub mod query_async_tokio_demo_legacy;
+
+#[cfg(all(not(target_arch = "wasm32"), feature = "legacy-mvu-demos"))]
+pub mod query_demo_legacy;
 pub mod shaded_demo;
 pub mod simple_todo_demo;
 #[cfg(not(target_arch = "wasm32"))]
@@ -166,8 +180,11 @@ pub mod table_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod table_stress_demo;
 pub mod tags_demo;
-#[cfg(all(not(target_arch = "wasm32"), feature = "legacy-mvu-demos"))]
+#[cfg(not(target_arch = "wasm32"))]
 pub mod todo_demo;
+
+#[cfg(all(not(target_arch = "wasm32"), feature = "legacy-mvu-demos"))]
+pub mod todo_demo_legacy;
 #[cfg(not(target_arch = "wasm32"))]
 #[cfg(not(target_arch = "wasm32"))]
 #[cfg(not(target_arch = "wasm32"))]

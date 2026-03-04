@@ -56,6 +56,19 @@ impl<'cx, 'a, H: UiHost> ViewCx<'cx, 'a, H> {
         }
     }
 
+    /// The element that owns view-level action handlers for this render pass.
+    pub fn action_root(&self) -> fret_ui::GlobalElementId {
+        self.action_root
+    }
+
+    /// Consume a transient event recorded for this view's action root.
+    ///
+    /// This is a lightweight scheduling primitive intended for “app effects” that need to run in
+    /// the next render pass (e.g. query invalidation) without allocating a dedicated model.
+    pub fn take_transient_on_action_root(&mut self, key: u64) -> bool {
+        self.cx.take_transient_for(self.action_root, key)
+    }
+
     /// Access the underlying element context.
     pub fn elements(&mut self) -> &mut ElementContext<'a, H> {
         self.cx
@@ -270,6 +283,18 @@ impl<'cx, 'a, H: UiHost> ViewCx<'cx, 'a, H> {
                 host.notify(action_cx);
             }
             handled
+        });
+    }
+
+    /// Register a typed action handler that records a transient event for this dispatch cycle.
+    ///
+    /// This is a convenience wrapper over `UiActionHost::record_transient_event`, commonly used
+    /// to schedule “app effects” that must be applied in `render()` (because the handler only
+    /// receives a restricted `UiActionHost`).
+    pub fn on_action_notify_transient<A: crate::TypedAction>(&mut self, transient_key: u64) {
+        self.on_action_notify::<A>(move |host, action_cx| {
+            host.record_transient_event(action_cx, transient_key);
+            true
         });
     }
 

@@ -77,4 +77,3 @@ required-features = ["legacy-mvu-demos"]
 [[bin]]
 name = "todo_demo"
 path = "src/bin/todo_demo.rs"
-required-features = ["legacy-mvu-demos"]

@@ -173,6 +173,14 @@ ID format:
     - `debug.dirty_views` + `debug.notify_requests`: `ecosystem/fret-bootstrap/src/ui_diagnostics/invalidation_diagnostics.rs`
     - `debug.cache_roots[*].reuse_reason`: `ecosystem/fret-bootstrap/src/ui_diagnostics/cache_root_diagnostics.rs`
     - view-cache reason source: `crates/fret-ui/src/declarative/mount.rs`
+- [x] AFA-view-026 Provide a safe “app effects” scheduling helper for views:
+  - Goal: allow `cx.on_action*` handlers to request `App`-scoped effects (e.g. `fret-query`
+    invalidation) with a boring, reusable pattern that avoids allocating a dedicated model for
+    simple “one-shot” effects.
+  - Implemented (v1): transient event scheduling at the view action root.
+  - Evidence:
+    - Helpers: `ecosystem/fret/src/view.rs` (`ViewCx::on_action_notify_transient`, `ViewCx::take_transient_on_action_root`)
+    - Adoption: `apps/fret-examples/src/query_demo.rs`, `apps/fret-examples/src/query_async_tokio_demo.rs`
 
 ---
 
@@ -254,6 +262,20 @@ ID format:
       `apps/fretboard/src/scaffold/templates.rs` (`todo_template_main_rs`)
     - `cargo run -p fretboard -- new simple-todo` uses View runtime + typed unit actions:
       `apps/fretboard/src/scaffold/templates.rs` (`simple_todo_template_main_rs`)
+
+- [x] AFA-adopt-044 Migrate `embedded_viewport_demo` to the view runtime (keep a legacy opt-in copy).
+  - Goal: prove view-runtime authoring composes cleanly with embedded viewport interop:
+    - `viewport_input(...)` forwarding,
+    - and a custom `record_engine_frame(...)` hook for offscreen engine passes.
+  - Why this matters: `UiAppDriver` only supports a single `record_engine_frame` hook; view runtime
+    currently uses it for view-cache enablement (v1), while embedded viewport needs it for engine
+    recording. The migrated demo should demonstrate the correct composition pattern.
+  - Evidence:
+    - `apps/fret-examples/src/embedded_viewport_demo.rs` (composed `record_engine_frame`)
+    - `apps/fret-examples/src/embedded_viewport_demo_legacy.rs`
+    - `apps/fret-demo/src/main.rs` (demo routing + legacy name)
+    - `ecosystem/fret/src/interop/embedded_viewport.rs`
+    - `ecosystem/fret/src/app_entry.rs`
 
 ---
 
