@@ -85,10 +85,10 @@ We treat feature naming as **recommended convention**, not a hard requirement fo
 `fret` is designed to let apps choose between “smooth by default” and “small when you opt out”.
 
 - `default` = `desktop` + `app` (recommended for native desktop apps).
-  - Includes: shadcn integration, diagnostics wiring, view runtime state helpers (selector/query).
+  - Includes: shadcn integration, view runtime state helpers (selector/query).
   - Intentionally excludes: config files, UI asset caches, icon packs, icon preloading, command palette.
 - `batteries` = a bigger opt-in bundle for app/dev convenience:
-  - includes config files, UI assets, icons, and (optional) icon SVG preloading.
+  - includes diagnostics wiring, config files, UI assets, icons, and (optional) icon SVG preloading.
 
 Minimal / explicit profile (useful for embed/minimal builds that must avoid filesystem side effects):
 
