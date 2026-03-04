@@ -284,14 +284,16 @@ fn collect_macos_vmmap_summary_best_effort(pid: u32, out_dir: &Path) -> Option<s
 
     let owned_unmapped_memory_dirty_bytes = region_dirty_bytes("owned unmapped memory");
     // IOSurface is commonly used for Metal-backed surfaces/textures.
-    let io_surface_dirty_bytes = region_dirty_bytes_sum_prefix("IOSurface")
-        .or_else(|| region_dirty_bytes("IOSurface"));
+    let io_surface_dirty_bytes =
+        region_dirty_bytes_sum_prefix("IOSurface").or_else(|| region_dirty_bytes("IOSurface"));
     // IOAccelerator is a common region type for GPU driver allocations.
     let io_accelerator_dirty_bytes = region_dirty_bytes_sum_prefix("IOAccelerator")
         .or_else(|| region_dirty_bytes("IOAccelerator"));
     // Heap buckets (useful for attributing CPU-side increases).
     let malloc_small_dirty_bytes = region_dirty_bytes_sum_prefix("MALLOC_SMALL")
         .or_else(|| region_dirty_bytes("MALLOC_SMALL"));
+    let malloc_dirty_bytes_total =
+        region_dirty_bytes_sum_prefix("MALLOC_").or_else(|| region_dirty_bytes("MALLOC"));
 
     let mut regions_top_dirty = regions_table.clone();
     regions_top_dirty.sort_by_key(|r| std::cmp::Reverse(r.dirty_bytes));
@@ -309,6 +311,26 @@ fn collect_macos_vmmap_summary_best_effort(pid: u32, out_dir: &Path) -> Option<s
     malloc_top_frag.sort_by_key(|r| std::cmp::Reverse(r.frag_bytes));
     malloc_top_frag.truncate(12);
 
+    let default_malloc_zone = malloc_zone_table
+        .iter()
+        .find(|r| r.zone.to_ascii_lowercase().contains("defaultmalloczone"))
+        .cloned();
+
+    let mut malloc_total_allocated_bytes: u64 = 0;
+    let mut malloc_total_frag_bytes: u64 = 0;
+    let mut malloc_total_dirty_bytes: u64 = 0;
+    let mut malloc_total_allocation_count: u64 = 0;
+    let mut malloc_total_region_count: u64 = 0;
+    for row in &malloc_zone_table {
+        malloc_total_allocated_bytes =
+            malloc_total_allocated_bytes.saturating_add(row.allocated_bytes);
+        malloc_total_frag_bytes = malloc_total_frag_bytes.saturating_add(row.frag_bytes);
+        malloc_total_dirty_bytes = malloc_total_dirty_bytes.saturating_add(row.dirty_bytes);
+        malloc_total_allocation_count =
+            malloc_total_allocation_count.saturating_add(row.allocation_count);
+        malloc_total_region_count = malloc_total_region_count.saturating_add(row.region_count);
+    }
+
     Some(serde_json::json!({
         "collector": "vmmap -summary",
         "captured_unix_ms": now_unix_ms(),
@@ -320,6 +342,7 @@ fn collect_macos_vmmap_summary_best_effort(pid: u32, out_dir: &Path) -> Option<s
             "io_surface_dirty_bytes": io_surface_dirty_bytes,
             "io_accelerator_dirty_bytes": io_accelerator_dirty_bytes,
             "malloc_small_dirty_bytes": malloc_small_dirty_bytes,
+            "malloc_dirty_bytes_total": malloc_dirty_bytes_total,
         },
         "tables": {
             "regions": {
@@ -329,6 +352,14 @@ fn collect_macos_vmmap_summary_best_effort(pid: u32, out_dir: &Path) -> Option<s
             },
             "malloc_zones": {
                 "rows_total": malloc_zone_table.len(),
+                "default_zone": default_malloc_zone,
+                "total": {
+                    "allocated_bytes": malloc_total_allocated_bytes,
+                    "frag_bytes": malloc_total_frag_bytes,
+                    "dirty_bytes": malloc_total_dirty_bytes,
+                    "allocation_count": malloc_total_allocation_count,
+                    "region_count": malloc_total_region_count,
+                },
                 "top_allocated": malloc_top_allocated,
                 "top_frag": malloc_top_frag,
             },
