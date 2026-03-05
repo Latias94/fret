@@ -57,6 +57,14 @@ Want the shortest onboarding path? Read [docs/first-hour.md](./docs/first-hour.m
 
 Need help choosing the right example entry point (templates vs cookbook vs gallery vs labs)? See [docs/examples/README.md](./docs/examples/README.md).
 
+For new app authors, keep the default authoring model small:
+
+- `on_action_notify_models` for most typed UI actions,
+- `on_action_notify_transient` when an action must trigger an `App`-only effect in `render()`,
+- `on_activate*` only for local pressable/widget glue.
+
+See [docs/README.md](./docs/README.md#state-management-authoring-ergonomics) for the full authoring map.
+
 ### 1) Run a lightweight cookbook example (recommended)
 
 ```bash
