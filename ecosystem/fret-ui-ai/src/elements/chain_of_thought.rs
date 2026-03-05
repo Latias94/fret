@@ -465,9 +465,26 @@ impl ChainOfThoughtContent {
     }
 }
 
+enum ChainOfThoughtStepSlot {
+    Text(Arc<str>),
+    Elements(Vec<AnyElement>),
+}
+
+impl std::fmt::Debug for ChainOfThoughtStepSlot {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Text(text) => f.debug_tuple("Text").field(&text.as_ref()).finish(),
+            Self::Elements(children) => f
+                .debug_struct("Elements")
+                .field("children_len", &children.len())
+                .finish(),
+        }
+    }
+}
+
 pub struct ChainOfThoughtStep {
-    label: Arc<str>,
-    description: Option<Arc<str>>,
+    label: ChainOfThoughtStepSlot,
+    description: Option<ChainOfThoughtStepSlot>,
     status: ChainOfThoughtStepStatus,
     children: Vec<AnyElement>,
     icon: fret_icons::IconId,
@@ -478,11 +495,8 @@ pub struct ChainOfThoughtStep {
 impl std::fmt::Debug for ChainOfThoughtStep {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("ChainOfThoughtStep")
-            .field("label", &self.label.as_ref())
-            .field(
-                "description",
-                &self.description.as_ref().map(|s| s.as_ref()),
-            )
+            .field("label", &self.label)
+            .field("description", &self.description)
             .field("status", &self.status)
             .field("children_len", &self.children.len())
             .field("icon", &self.icon)
@@ -495,7 +509,7 @@ impl std::fmt::Debug for ChainOfThoughtStep {
 impl ChainOfThoughtStep {
     pub fn new(label: impl Into<Arc<str>>) -> Self {
         Self {
-            label: label.into(),
+            label: ChainOfThoughtStepSlot::Text(label.into()),
             description: None,
             status: ChainOfThoughtStepStatus::Complete,
             children: Vec::new(),
@@ -505,8 +519,20 @@ impl ChainOfThoughtStep {
         }
     }
 
+    pub fn label_children(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {
+        self.label = ChainOfThoughtStepSlot::Elements(children.into_iter().collect());
+        self
+    }
+
     pub fn description(mut self, description: impl Into<Arc<str>>) -> Self {
-        self.description = Some(description.into());
+        self.description = Some(ChainOfThoughtStepSlot::Text(description.into()));
+        self
+    }
+
+    pub fn description_children(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {
+        self.description = Some(ChainOfThoughtStepSlot::Elements(
+            children.into_iter().collect(),
+        ));
         self
     }
 
@@ -585,31 +611,56 @@ impl ChainOfThoughtStep {
             move |_cx| vec![icon, line],
         );
 
-        let label = cx.text_props(TextProps {
-            layout: LayoutStyle::default(),
-            text: self.label,
-            style: Some(text_sm(&theme, FontWeight::NORMAL)),
-            color: Some(fg),
-            wrap: TextWrap::Word,
-            overflow: TextOverflow::Clip,
-            align: fret_core::TextAlign::Start,
-            ink_overflow: Default::default(),
-        });
+        let label = match self.label {
+            ChainOfThoughtStepSlot::Text(label) => cx.text_props(TextProps {
+                layout: LayoutStyle::default(),
+                text: label,
+                style: Some(text_sm(&theme, FontWeight::NORMAL)),
+                color: Some(fg),
+                wrap: TextWrap::Word,
+                overflow: TextOverflow::Clip,
+                align: fret_core::TextAlign::Start,
+                ink_overflow: Default::default(),
+            }),
+            ChainOfThoughtStepSlot::Elements(children) => cx.container(
+                ContainerProps {
+                    layout: decl_style::layout_style(
+                        &theme,
+                        LayoutRefinement::default().w_full().min_w_0(),
+                    ),
+                    ..Default::default()
+                },
+                move |_cx| children,
+            ),
+        };
 
         let mut body_children: Vec<AnyElement> = Vec::new();
         body_children.push(label);
 
         if let Some(description) = self.description {
-            body_children.push(cx.text_props(TextProps {
-                layout: LayoutStyle::default(),
-                text: description,
-                style: Some(text_xs(&theme, FontWeight::NORMAL)),
-                color: Some(base_fg),
-                wrap: TextWrap::Word,
-                overflow: TextOverflow::Clip,
-                align: fret_core::TextAlign::Start,
-                ink_overflow: Default::default(),
-            }));
+            let description = match description {
+                ChainOfThoughtStepSlot::Text(description) => cx.text_props(TextProps {
+                    layout: LayoutStyle::default(),
+                    text: description,
+                    style: Some(text_xs(&theme, FontWeight::NORMAL)),
+                    color: Some(base_fg),
+                    wrap: TextWrap::Word,
+                    overflow: TextOverflow::Clip,
+                    align: fret_core::TextAlign::Start,
+                    ink_overflow: Default::default(),
+                }),
+                ChainOfThoughtStepSlot::Elements(children) => cx.container(
+                    ContainerProps {
+                        layout: decl_style::layout_style(
+                            &theme,
+                            LayoutRefinement::default().w_full().min_w_0(),
+                        ),
+                        ..Default::default()
+                    },
+                    move |_cx| children,
+                ),
+            };
+            body_children.push(description);
         }
         body_children.extend(self.children);
 
@@ -901,6 +952,55 @@ mod tests {
                 props.wrap,
                 "expected ChainOfThoughtSearchResults to enable flex wrap"
             );
+        });
+    }
+
+    #[test]
+    fn chain_of_thought_step_supports_label_children_slot() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+            let step = ChainOfThoughtStep::new("label")
+                .label_children([cx.text("custom label")])
+                .description("desc");
+
+            match step.label {
+                ChainOfThoughtStepSlot::Elements(children) => {
+                    assert_eq!(children.len(), 1, "expected one custom label child");
+                }
+                other => panic!("expected label children slot, got {:?}", other),
+            }
+
+            match step.description {
+                Some(ChainOfThoughtStepSlot::Text(text)) => {
+                    assert_eq!(text.as_ref(), "desc");
+                }
+                other => panic!("expected text description slot, got {:?}", other),
+            }
+        });
+    }
+
+    #[test]
+    fn chain_of_thought_step_supports_description_children_slot() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+            let step = ChainOfThoughtStep::new("label")
+                .description_children([cx.text("custom description")]);
+
+            match step.label {
+                ChainOfThoughtStepSlot::Text(text) => assert_eq!(text.as_ref(), "label"),
+                other => panic!("expected text label slot, got {:?}", other),
+            }
+
+            match step.description {
+                Some(ChainOfThoughtStepSlot::Elements(children)) => {
+                    assert_eq!(children.len(), 1, "expected one custom description child");
+                }
+                other => panic!("expected description children slot, got {:?}", other),
+            }
         });
     }
 }
