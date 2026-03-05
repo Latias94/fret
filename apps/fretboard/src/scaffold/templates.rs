@@ -595,7 +595,7 @@ impl View for TodoView {
             .rounded_md()
             .into_element(cx);
 
-        let stats = ui::h_flex( |_cx| [progress, tip, refresh_tip_btn])
+        let stats = ui::h_flex(|_cx| [progress, tip, refresh_tip_btn])
             .gap(Space::N2)
             .items_center()
             .into_element(cx);
@@ -614,13 +614,13 @@ __ADD_BTN_DEF__
             .placeholder("Add a task…")
             .submit_command(act::Add.into());
 
-        let input_row = ui::h_flex( |cx| ui::children![cx; input, add_btn])
+        let input_row = ui::h_flex(|cx| ui::children![cx; input, add_btn])
             .gap(Space::N2)
             .items_center()
             .w_full()
             .into_element(cx);
 
-        let chips = ui::h_flex( |cx| {
+        let chips = ui::h_flex(|cx| {
             [
                 filter_chip(cx, TodoFilter::All, filter_value),
                 filter_chip(cx, TodoFilter::Active, filter_value),
@@ -631,7 +631,7 @@ __ADD_BTN_DEF__
         .items_center()
         .into_element(cx);
 
-        let rows = ui::v_flex_build( |cx, out| {
+        let rows = ui::v_flex_build(|cx, out| {
             for row in derived.rows.iter() {
                 out.push(cx.keyed(row.id, |cx| todo_row(cx, theme, row)));
             }
@@ -640,7 +640,7 @@ __ADD_BTN_DEF__
         .w_full()
         .into_element(cx);
 
-        let content = ui::v_flex( |cx| [
+        let content = ui::v_flex(|cx| [
             stats,
             chips,
             input_row,
@@ -669,8 +669,8 @@ __PALETTE_BUTTON__
         .max_w(Px(520.0))
         .into_element(cx);
 
-        let page = ui::container( |cx| {
-            [ui::v_flex( |_cx| [card])
+        let page = ui::container(|cx| {
+            [ui::v_flex(|_cx| [card])
                 .w_full()
                 .h_full()
                 .justify_center()
@@ -724,13 +724,13 @@ fn todo_row(cx: &mut ElementContext<'_, App>, theme: ThemeSnapshot, row: &TodoRo
         overflow: TextOverflow::Ellipsis,
     });
 
-    let row = ui::h_flex( |_cx| [checkbox.clone(), label])
+    let row = ui::h_flex(|_cx| [checkbox.clone(), label])
         .gap(Space::N3)
         .items_center()
         .w_full()
         .into_element(cx);
 
-    ui::container( |_cx| [row])
+    ui::container(|_cx| [row])
         .border_1()
         .border_color(ColorRef::Color(theme.color_token("border")))
         .rounded(Radius::Md)
@@ -808,7 +808,7 @@ impl View for HelloView {{
             }}
         }});
 
-        ui::v_flex( |cx| {{
+        ui::v_flex(|cx| {{
             [
                 shadcn::Label::new("Hello, world!").into_element(cx),
                 cx.text(format!("Clicks: {{click_count_value}}")),
@@ -1024,7 +1024,7 @@ impl View for TodoView {
             .ui()
             .rounded_md();
 
-        let header_actions = ui::h_flex( |cx| ui::children![cx; progress, clear_done_btn])
+        let header_actions = ui::h_flex(|cx| ui::children![cx; progress, clear_done_btn])
             .gap(Space::N2)
             .items_center();
 
@@ -1034,12 +1034,12 @@ __ADD_BTN_DEF__
             .placeholder("Add a task…")
             .submit_command(act::Add.into());
 
-        let input_row = ui::h_flex( |cx| ui::children![cx; input, add_btn])
+        let input_row = ui::h_flex(|cx| ui::children![cx; input, add_btn])
             .gap(Space::N2)
             .items_center()
             .w_full();
 
-        let rows = ui::v_flex_build( |cx, out| {
+        let rows = ui::v_flex_build(|cx, out| {
             for t in &todos {
                 out.push(cx.keyed(t.id, |cx| todo_row(cx, theme, t)));
             }
@@ -1047,7 +1047,7 @@ __ADD_BTN_DEF__
         .gap(Space::N3)
         .w_full();
 
-        let content = ui::v_flex( |cx| ui::children![cx; input_row, rows])
+        let content = ui::v_flex(|cx| ui::children![cx; input_row, rows])
             .gap(Space::N4)
             .w_full();
 
@@ -1068,9 +1068,9 @@ __ADD_BTN_DEF__
         .max_w(Px(520.0))
         ;
 
-        let page = ui::container( |cx| {
+        let page = ui::container(|cx| {
             ui::children![cx;
-                ui::v_flex( |cx| ui::children![cx;
+                ui::v_flex(|cx| ui::children![cx;
                     card,
 __PALETTE_BUTTON__
                 ])
@@ -1096,7 +1096,7 @@ fn todo_row(cx: &mut ElementContext<'_, App>, theme: ThemeSnapshot, item: &TodoI
 
     let checkbox = shadcn::Checkbox::new(item.done.clone());
 
-    let text = ui::raw_text( item.text.clone())
+    let text = ui::raw_text(item.text.clone())
         .truncate()
         .text_sm()
         .text_color(ColorRef::Color(if done {
@@ -1105,7 +1105,7 @@ fn todo_row(cx: &mut ElementContext<'_, App>, theme: ThemeSnapshot, item: &TodoI
             theme.color_token("foreground")
         }));
 
-    ui::h_flex( |cx| ui::children![cx; checkbox, text])
+    ui::h_flex(|cx| ui::children![cx; checkbox, text])
         .gap(Space::N2)
         .items_center()
         .w_full()
@@ -1328,6 +1328,10 @@ mod tests {
         let src = todo_template_main_rs("todo-app", opts());
         assert!(src.contains("ui::container("));
         assert!(src.contains("ui::h_flex("));
+        assert!(!src.contains("ui::container( |"));
+        assert!(!src.contains("ui::h_flex( |"));
+        assert!(!src.contains("ui::v_flex( |"));
+        assert!(!src.contains("ui::raw_text( "));
         assert!(src.contains("impl View for TodoView"));
         assert!(src.contains(".run_view::<TodoView>()"));
         assert!(src.contains("fret::actions!(["));
@@ -1339,6 +1343,7 @@ mod tests {
     fn hello_template_uses_default_authoring_dialect() {
         let src = hello_template_main_rs("hello-app", opts());
         assert!(src.contains("ui::v_flex("));
+        assert!(!src.contains("ui::v_flex( |"));
         assert!(src.contains("impl View for HelloView"));
         assert!(src.contains(".run_view::<HelloView>()"));
         assert!(src.contains(".into_element(cx)"));
@@ -1350,6 +1355,10 @@ mod tests {
         let src = simple_todo_template_main_rs("simple-todo-app", opts());
         assert!(src.contains("ui::children!["));
         assert!(src.contains("cx.keyed("));
+        assert!(!src.contains("ui::container( |"));
+        assert!(!src.contains("ui::h_flex( |"));
+        assert!(!src.contains("ui::v_flex( |"));
+        assert!(!src.contains("ui::raw_text( "));
         assert!(src.contains("impl View for TodoView"));
         assert!(src.contains(".run_view::<TodoView>()"));
         assert!(src.contains("fret::actions!(["));

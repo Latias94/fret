@@ -9,8 +9,8 @@ use crate::{Defaults, Result, UiAppBuilder, ViewElements};
 ///
 /// Notes:
 /// - This is an ecosystem-level convenience layer (not a kernel contract).
-/// - The builder composes existing `fret` entry points (`fret::mvu` / `fret::app`) and applies
-///   a default main window if none is configured.
+/// - The builder composes existing `fret` entry points (the view/runtime + driver wiring) and
+///   applies a default main window if none is configured.
 #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
 pub struct App {
     root_name: &'static str,

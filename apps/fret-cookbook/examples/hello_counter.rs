@@ -168,7 +168,7 @@ impl View for HelloCounterView {
         .justify_center()
         .into_element(cx);
 
-        let header_inner = ui::v_flex( |cx| {
+        let header_inner = ui::v_flex(|cx| {
         ui::children![
             cx;
             hero_icon,

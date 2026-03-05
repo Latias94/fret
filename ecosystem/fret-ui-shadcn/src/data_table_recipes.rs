@@ -1189,7 +1189,7 @@ impl<TData> DataTableToolbar<TData> {
                                         cx.opacity(0.6, move |_cx| vec![icon])
                                     });
 
-                                    let label = ui::raw_text( it.label.clone())
+                                    let label = ui::raw_text(it.label.clone())
                                         .nowrap()
                                         .into_element(cx);
 

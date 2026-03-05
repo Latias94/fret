@@ -281,7 +281,7 @@ fn render_image_panel(
     .overflow_hidden()
     .into_element(cx);
 
-    ui::v_flex( |cx| {
+    ui::v_flex(|cx| {
         let mut children = ui::children![cx; shadcn::Label::new(title), image_box];
             if let Some(msg) = error {
                 children.push(

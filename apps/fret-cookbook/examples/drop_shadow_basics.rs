@@ -56,8 +56,8 @@ impl View for DropShadowBasicsView {
         let enabled = cx.watch_model(&self.enabled).layout().copied_or(true);
         let stress = cx.watch_model(&self.stress).layout().copied_or(false);
 
-        let toolbar = ui::v_flex( |cx| {
-            let row_shadow = ui::h_flex( |cx| {
+        let toolbar = ui::v_flex(|cx| {
+            let row_shadow = ui::h_flex(|cx| {
                 [
                     shadcn::Label::new("Enable DropShadowV1:").into_element(cx),
                     shadcn::Switch::new(self.enabled.clone())
@@ -69,7 +69,7 @@ impl View for DropShadowBasicsView {
             .items_center()
             .into_element(cx);
 
-            let row_stress = ui::h_flex( |cx| {
+            let row_stress = ui::h_flex(|cx| {
                 [
                     shadcn::Label::new("Stress grid:").into_element(cx),
                     shadcn::Switch::new(self.stress.clone())
