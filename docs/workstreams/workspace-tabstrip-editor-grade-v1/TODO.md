@@ -22,11 +22,14 @@ This TODO list is scoped to this workstream folder and is intended to keep the r
   - [x] `workspace-shell-demo-tab-drag-to-split-right-preview-invariants-smoke`
 - [x] Add a two-row pinned reorder smoke script (debug-toggle only; not promoted yet):
   - Gate: `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-pinned-row-two-row-reorder-smoke.json`
-  - Note: uses `workspace-shell-pane-pane-a-debug-pin-doc-a-0/1` buttons because tab context menus
-    do not currently open deterministically in `diag --launch` runs via `click(button="right")`.
-- [ ] Investigate why tab context menus do not open in `diag --launch` runs (right click on tab):
-  - Evidence: `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-left-keeps-pinned-smoke.json`
-    times out waiting for the `Pin Tab` menu item after `click(button="right")` on a tab.
+  - Note: debug pins are still used here to keep the pinned-row reorder script short and policy-free.
+- [x] Diagnose tab context menu flake in `diag --launch` runs (right click on tab):
+  - Root cause: scripts were right-clicking a tab that existed in semantics but was not guaranteed to
+    be scrolled into view; additionally they waited on `role_and_name` menu items instead of the
+    stable `*.menu.*` `test_id` selectors.
+  - Fix: update workspace shell demo scripts to (1) reveal the target tab via `Ctrl+F6` + `Home`/`End`
+    before interaction and (2) select context menu items via `test_id` (e.g. `*.menu.pin`,
+    `*.menu.close_left`).
 
 ## Modularization (M1)
 
