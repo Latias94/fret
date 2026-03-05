@@ -208,11 +208,9 @@ impl ConfirmationRequest {
                 .gap(Space::N1)
                 .items(Items::Start)
                 .into_element(cx),
-            1 => {
-                children
-                    .pop()
-                    .expect("expected exactly one child after len() check")
-            }
+            1 => children
+                .pop()
+                .expect("expected exactly one child after len() check"),
             _ => ui::v_stack(move |_cx| children)
                 .layout(self.layout)
                 .gap(Space::N1)
@@ -273,11 +271,9 @@ impl ConfirmationAccepted {
                 .gap(Space::N1)
                 .items(Items::Center)
                 .into_element(cx),
-            1 => {
-                children
-                    .pop()
-                    .expect("expected exactly one child after len() check")
-            }
+            1 => children
+                .pop()
+                .expect("expected exactly one child after len() check"),
             _ => ui::h_row(move |_cx| children)
                 .layout(self.layout)
                 .gap(Space::N1)
@@ -338,11 +334,9 @@ impl ConfirmationRejected {
                 .gap(Space::N1)
                 .items(Items::Center)
                 .into_element(cx),
-            1 => {
-                children
-                    .pop()
-                    .expect("expected exactly one child after len() check")
-            }
+            1 => children
+                .pop()
+                .expect("expected exactly one child after len() check"),
             _ => ui::h_row(move |_cx| children)
                 .layout(self.layout)
                 .gap(Space::N1)

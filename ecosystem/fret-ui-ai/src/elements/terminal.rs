@@ -813,11 +813,13 @@ impl TerminalClearButton {
             chrome_props.padding = Edges::all(Px(0.0)).into();
 
             (pressable, chrome_props, move |cx| {
-                vec![ui::h_row(move |_cx| vec![icon])
-                    .items(Items::Center)
-                    .justify(Justify::Center)
-                    .layout(LayoutRefinement::default().w_full().h_full())
-                    .into_element(cx)]
+                vec![
+                    ui::h_row(move |_cx| vec![icon])
+                        .items(Items::Center)
+                        .justify(Justify::Center)
+                        .layout(LayoutRefinement::default().w_full().h_full())
+                        .into_element(cx),
+                ]
             })
         })
     }

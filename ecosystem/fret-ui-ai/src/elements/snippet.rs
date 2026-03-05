@@ -94,11 +94,13 @@ impl Snippet {
         let children = self.children;
         let test_id = self.test_id;
         let el = cx.container(props, move |cx| {
-            vec![ui::h_row(move |_cx| children)
-                .gap(Space::N0)
-                .items(Items::Center)
-                .layout(LayoutRefinement::default().w_full().min_w_0())
-                .into_element(cx)]
+            vec![
+                ui::h_row(move |_cx| children)
+                    .gap(Space::N0)
+                    .items(Items::Center)
+                    .layout(LayoutRefinement::default().w_full().min_w_0())
+                    .into_element(cx),
+            ]
         });
 
         let Some(test_id) = test_id else {

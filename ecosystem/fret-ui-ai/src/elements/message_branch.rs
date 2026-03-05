@@ -167,12 +167,12 @@ impl MessageBranch {
         let layout = self.layout;
         let test_id_root = self.test_id_root;
         let body = ui::v_stack(move |_cx| {
-                let mut out = vec![content];
-                if let Some(sel) = selector {
-                    out.push(sel);
-                }
-                out
-            })
+            let mut out = vec![content];
+            if let Some(sel) = selector {
+                out.push(sel);
+            }
+            out
+        })
         .layout(layout)
         .gap(Space::N2)
         .items_start()

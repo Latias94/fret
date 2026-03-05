@@ -488,11 +488,13 @@ impl SchemaDisplayHeader {
         props.border_color = Some(border_color(&theme));
 
         cx.container(props, move |cx| {
-            vec![ui::h_row(move |_cx| self.children)
-                .layout(LayoutRefinement::default().w_full().min_w_0())
-                .gap(Space::N3)
-                .items(Items::Center)
-                .into_element(cx)]
+            vec![
+                ui::h_row(move |_cx| self.children)
+                    .layout(LayoutRefinement::default().w_full().min_w_0())
+                    .gap(Space::N3)
+                    .items(Items::Center)
+                    .into_element(cx),
+            ]
         })
     }
 }

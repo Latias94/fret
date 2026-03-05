@@ -1533,6 +1533,84 @@
       "target_hints": []
     },
     {
+      "id": "image-heavy-memory-count-12-steady",
+      "path": "tools/diag-scripts/tooling/images/image-heavy-memory-count-12-steady.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "tooling-image-heavy-memory-sweep-count"
+      ],
+      "tags": [
+        "images",
+        "memory",
+        "steady",
+        "sweep"
+      ],
+      "target_hints": [
+        "Count sweep point for attributing macOS (graphics) unmapped footprint vs image pressure.",
+        "Run with `diag repro --session-auto` to collect a small sample distribution."
+      ]
+    },
+    {
+      "id": "image-heavy-memory-count-48-steady",
+      "path": "tools/diag-scripts/tooling/images/image-heavy-memory-count-48-steady.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "tooling-image-heavy-memory-sweep-count"
+      ],
+      "tags": [
+        "images",
+        "memory",
+        "steady",
+        "sweep"
+      ],
+      "target_hints": [
+        "Count sweep point for attributing macOS (graphics) unmapped footprint vs image pressure.",
+        "Run with `diag repro --session-auto` to collect a small sample distribution."
+      ]
+    },
+    {
+      "id": "image-heavy-memory-count-6-steady",
+      "path": "tools/diag-scripts/tooling/images/image-heavy-memory-count-6-steady.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "tooling-image-heavy-memory-sweep-count"
+      ],
+      "tags": [
+        "images",
+        "memory",
+        "steady",
+        "sweep"
+      ],
+      "target_hints": [
+        "Count sweep point for attributing macOS (graphics) unmapped footprint vs image pressure.",
+        "Run with `diag repro --session-auto` to collect a small sample distribution."
+      ]
+    },
+    {
+      "id": "image-heavy-memory-steady",
+      "path": "tools/diag-scripts/tooling/images/image-heavy-memory-steady.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "tooling-image-heavy-memory-sweep-count"
+      ],
+      "tags": [
+        "images",
+        "memory",
+        "steady"
+      ],
+      "target_hints": [
+        "Captures a steady-state bundle; intended to grow IOSurface/IOAccelerator (textures) and wgpu Metal allocation size."
+      ]
+    },
+    {
       "id": "liquid-glass-backdrop-warp-steady",
       "path": "tools/diag-scripts/renderer/effects/liquid-glass-backdrop-warp-steady.json",
       "required_capabilities": [],
@@ -2163,16 +2241,6 @@
       "target_hints": []
     },
     {
-      "id": "ui-gallery-ai-agent-demo-expand-tool",
-      "path": "tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-agent-demo-expand-tool.json",
-      "required_capabilities": [],
-      "suite_memberships": [
-        "ui-gallery-ai-agent"
-      ],
-      "tags": [],
-      "target_hints": []
-    },
-    {
       "id": "ui-gallery-ai-checkpoint-restore-tooltip",
       "path": "tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-checkpoint-restore-tooltip.json",
       "required_capabilities": [
@@ -2237,6 +2305,59 @@
         "Sends a long message to ensure the transcript can scroll.",
         "Scrolls up to assert the scroll-to-bottom button appears, then clicks it to assert it hides again."
       ]
+    },
+    {
+      "id": "ui-gallery-ai-file-tree-demo-actions",
+      "path": "tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-file-tree-demo-actions.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-ai-file-tree"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-ai-file-tree-demo-screenshot-zinc-dark",
+      "path": "tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-file-tree-demo-screenshot-zinc-dark.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-ai-file-tree"
+      ],
+      "tags": [
+        "ai-elements",
+        "file-tree",
+        "screenshots",
+        "ui-gallery",
+        "zinc-dark"
+      ],
+      "target_hints": [
+        "Sets theme preset to zinc/dark.",
+        "Navigates to the AI Elements file tree demo.",
+        "Expands a folder, selects a file, and captures screenshots."
+      ]
+    },
+    {
+      "id": "ui-gallery-ai-file-tree-demo-toggle",
+      "path": "tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-file-tree-demo-toggle.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-ai-file-tree"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-ai-file-tree-large-scroll",
+      "path": "tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-file-tree-large-scroll.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-ai-file-tree"
+      ],
+      "tags": [],
+      "target_hints": []
     },
     {
       "id": "ui-gallery-ai-sources-demo",

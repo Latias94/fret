@@ -841,11 +841,13 @@ impl AttachmentInfo {
         );
 
         let mut el = cx.container(props, move |cx| {
-            vec![ui::v_stack(move |_cx| rows)
-                .layout(LayoutRefinement::default().min_w_0())
-                .gap(Space::N0)
-                .items(Items::Start)
-                .into_element(cx)]
+            vec![
+                ui::v_stack(move |_cx| rows)
+                    .layout(LayoutRefinement::default().min_w_0())
+                    .gap(Space::N0)
+                    .items(Items::Start)
+                    .into_element(cx),
+            ]
         });
 
         if let Some(test_id) = self.test_id {

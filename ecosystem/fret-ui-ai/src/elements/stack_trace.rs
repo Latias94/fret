@@ -711,10 +711,12 @@ impl StackTraceFrames {
 
         let props = decl_style::container_props(&theme, self.chrome, self.layout);
         let list = cx.container(props, move |cx| {
-            vec![ui::v_stack(move |_cx| rows)
-                .layout(LayoutRefinement::default().w_full().min_w_0())
-                .gap(Space::N1)
-                .into_element(cx)]
+            vec![
+                ui::v_stack(move |_cx| rows)
+                    .layout(LayoutRefinement::default().w_full().min_w_0())
+                    .gap(Space::N1)
+                    .into_element(cx),
+            ]
         });
 
         let Some(test_id) = self.test_id else {

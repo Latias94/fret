@@ -339,11 +339,13 @@ impl ConversationTranscript {
                             ..Default::default()
                         },
                         move |cx| {
-                            vec![ui::h_row(move |_cx| vec![button])
-                                .layout(LayoutRefinement::default().w_full())
-                                .justify(Justify::Center)
-                                .items(Items::Center)
-                                .into_element(cx)]
+                            vec![
+                                ui::h_row(move |_cx| vec![button])
+                                    .layout(LayoutRefinement::default().w_full())
+                                    .justify(Justify::Center)
+                                    .items(Items::Center)
+                                    .into_element(cx),
+                            ]
                         },
                     ));
                 }
@@ -505,11 +507,13 @@ impl Conversation {
                 ..Default::default()
             },
             move |cx| {
-                vec![ui::v_stack(move |_cx| children)
-                    .gap(content_gap)
-                    .layout(LayoutRefinement::default().w_full())
-                    .items(Items::Stretch)
-                    .into_element(cx)]
+                vec![
+                    ui::v_stack(move |_cx| children)
+                        .gap(content_gap)
+                        .layout(LayoutRefinement::default().w_full())
+                        .items(Items::Stretch)
+                        .into_element(cx),
+                ]
             },
         );
 
@@ -565,11 +569,13 @@ impl Conversation {
                             ..Default::default()
                         },
                         move |cx| {
-                            vec![ui::h_row(move |_cx| vec![button])
-                                .layout(LayoutRefinement::default().w_full())
-                                .justify(Justify::Center)
-                                .items(Items::Center)
-                                .into_element(cx)]
+                            vec![
+                                ui::h_row(move |_cx| vec![button])
+                                    .layout(LayoutRefinement::default().w_full())
+                                    .justify(Justify::Center)
+                                    .items(Items::Center)
+                                    .into_element(cx),
+                            ]
                         },
                     ));
                 }

@@ -14,9 +14,9 @@ use fret_ui::element::{
     PressableA11y, PressableProps, SemanticsDecoration, TextProps, VisualTransformProps,
 };
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
+use fret_ui_kit::declarative::controllable_state;
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::declarative::controllable_state;
 use fret_ui_kit::ui;
 use fret_ui_kit::{
     ChromeRefinement, ColorRef, Items, Justify, LayoutRefinement, MetricRef, Radius, Space,
@@ -819,11 +819,13 @@ impl ChainOfThoughtImage {
                     .overflow_hidden(),
             ),
             move |cx| {
-                vec![ui::h_row(move |_cx| self.children)
-                    .layout(LayoutRefinement::default().w_full().h_full())
-                    .justify(Justify::Center)
-                    .items(Items::Center)
-                    .into_element(cx)]
+                vec![
+                    ui::h_row(move |_cx| self.children)
+                        .layout(LayoutRefinement::default().w_full().h_full())
+                        .justify(Justify::Center)
+                        .items(Items::Center)
+                        .into_element(cx),
+                ]
             },
         );
 

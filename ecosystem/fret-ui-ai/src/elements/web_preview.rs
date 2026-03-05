@@ -1181,12 +1181,12 @@ impl WebPreviewConsole {
         let clear_button: Option<AnyElement> = None;
 
         let header = ui::h_row(move |_cx| {
-                let mut items = vec![toggle_button];
-                if let Some(clear_button) = clear_button {
-                    items.push(clear_button);
-                }
-                items
-            })
+            let mut items = vec![toggle_button];
+            if let Some(clear_button) = clear_button {
+                items.push(clear_button);
+            }
+            items
+        })
         .layout(LayoutRefinement::default().w_full().min_w_0())
         .items_center()
         .gap(Space::N1)
