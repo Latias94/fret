@@ -2864,6 +2864,7 @@ mod tests {
                 pointer_type: PointerType::Mouse,
                 hit_is_text_input: false,
                 hit_is_pressable: false,
+                hit_pressable_target: None,
             },
             &open,
             true,
@@ -2896,6 +2897,7 @@ mod tests {
             is_click: true,
             click_count: 1,
             pointer_type: PointerType::Mouse,
+            down_hit_pressable_target: None,
         };
 
         assert_eq!(
@@ -2958,6 +2960,7 @@ mod tests {
                 pointer_type: PointerType::Touch,
                 hit_is_text_input: false,
                 hit_is_pressable: false,
+                hit_pressable_target: None,
             },
             &open,
             true,
@@ -2983,6 +2986,7 @@ mod tests {
                 is_click: true,
                 click_count: 1,
                 pointer_type: PointerType::Touch,
+                down_hit_pressable_target: None,
             },
             &open,
             true,
@@ -3022,6 +3026,7 @@ mod tests {
                 pointer_type: PointerType::Touch,
                 hit_is_text_input: false,
                 hit_is_pressable: false,
+                hit_pressable_target: None,
             },
             &open,
             true,
@@ -3068,6 +3073,7 @@ mod tests {
                 is_click: false,
                 click_count: 1,
                 pointer_type: PointerType::Touch,
+                down_hit_pressable_target: None,
             },
             &open,
             true,

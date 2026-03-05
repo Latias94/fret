@@ -3139,8 +3139,12 @@ where
                             let anchor_index_for_pointer_down = anchor_index.clone();
                             let row_key_for_anchor = row_key;
                             cx.pressable_add_on_pointer_down(Arc::new(
-                                move |_host, _action_cx, down| {
+                                move |_host, action_cx, down| {
                                     if down.button != fret_core::MouseButton::Left {
+                                        return PressablePointerDownResult::Continue;
+                                    }
+                                    if down.hit_pressable_target.is_some_and(|t| t != action_cx.target)
+                                    {
                                         return PressablePointerDownResult::Continue;
                                     }
                                     let next_anchor = if down.modifiers.shift {
@@ -3158,6 +3162,9 @@ where
 
                         cx.pressable_on_pointer_up(Arc::new(move |host, action_cx, up| {
                             if up.button != fret_core::MouseButton::Left || !up.is_click {
+                                return PressablePointerUpResult::Continue;
+                            }
+                            if up.down_hit_pressable_target.is_some_and(|t| t != action_cx.target) {
                                 return PressablePointerUpResult::Continue;
                             }
                             host.request_focus(focus_target);
@@ -3587,6 +3594,9 @@ where
                     let focus_id = list_id;
                     cx.pointer_region_on_pointer_up(Arc::new(move |host, action_cx, up| {
                         if up.button != fret_core::MouseButton::Left || !up.is_click {
+                            return false;
+                        }
+                        if up.down_hit_pressable_target.is_some() {
                             return false;
                         }
                         host.request_focus(focus_id);
