@@ -59,6 +59,11 @@ View/cache observability (diagnostics):
 - `ecosystem/fret-bootstrap/src/ui_diagnostics/invalidation_diagnostics.rs` (`dirty_views`, `notify_requests`)
 - `ecosystem/fret-bootstrap/src/ui_diagnostics/cache_root_diagnostics.rs` (`cache_roots[*].reuse_reason`)
 
+Teaching-surface ergonomics gates:
+
+- `tools/gate_no_models_mut_in_action_handlers.py` (guards cookbook/examples against regressing to verbose
+  `move |host, _acx| host.models_mut()...` patterns; prefers `ViewCx` helpers instead).
+
 Pointer-trigger authoring integration (v1 still dispatches through the command pipeline):
 
 - `crates/fret-ui/src/tree/commands.rs` (command dispatch bubbles from focus when available; otherwise uses pending source element metadata to start bubbling without requiring focus-steal; falls back from overlay roots to the window default root)
