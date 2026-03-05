@@ -2037,6 +2037,7 @@ impl WorkspaceTabStrip {
                                 let (button_test_id, entries) = compute_overflow_menu_entries(
                                     cx,
                                     root_test_id.as_ref(),
+                                    active.as_ref(),
                                     &tabs,
                                     tab_rects,
                                     viewport,
