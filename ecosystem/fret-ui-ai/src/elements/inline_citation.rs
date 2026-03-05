@@ -16,9 +16,7 @@ use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::typography;
 use fret_ui_kit::{ChromeRefinement, ColorFallback, ColorRef, LayoutRefinement, Radius, Space};
 
-use fret_ui_shadcn::{
-    Badge, BadgeVariant, Button, ButtonSize, ButtonVariant, HoverCard, HoverCardContent,
-};
+use fret_ui_shadcn::{Badge, BadgeVariant, HoverCard, HoverCardContent};
 
 use crate::model::SourceItem;
 
@@ -159,8 +157,9 @@ impl InlineCitation {
         let theme = Theme::global(&*cx.app).clone();
 
         #[derive(Default)]
-        struct PagerState {
+        struct InlineCitationState {
             index: Option<Model<usize>>,
+            open: Option<Model<bool>>,
         }
 
         let resolved_sources = self.sources.as_ref().map(|sources| {
@@ -195,7 +194,7 @@ impl InlineCitation {
                 }
             });
 
-        let badge_layout = LayoutRefinement::default().ml(Space::N1).merge(self.layout);
+        let badge_layout = LayoutRefinement::default().merge(self.layout);
 
         let badge = Badge::new(trigger_text.clone())
             .variant(BadgeVariant::Secondary)
@@ -207,7 +206,7 @@ impl InlineCitation {
         let trigger_test_id = self.test_id.clone();
         let trigger_label: Arc<str> = Arc::from(trigger_text);
 
-        let trigger = cx.pressable(
+        let badge_trigger = cx.pressable(
             PressableProps {
                 a11y: PressableA11y {
                     role: Some(SemanticsRole::Button),
@@ -225,16 +224,67 @@ impl InlineCitation {
             },
         );
 
+        let base_id = self.test_id.clone();
+        let label_test_id = base_id
+            .as_ref()
+            .map(|id| Arc::<str>::from(format!("{id}-label")));
+
+        let open_model = cx.with_state(InlineCitationState::default, |st| st.open.clone());
+        let open_model = match open_model {
+            Some(model) => model,
+            None => {
+                let model = cx.app.models_mut().insert(false);
+                cx.with_state(InlineCitationState::default, |st| {
+                    st.open = Some(model.clone())
+                });
+                model
+            }
+        };
+        let open_now = cx
+            .get_model_copied(&open_model, Invalidation::Paint)
+            .unwrap_or(false);
+
+        let mut label_chrome = ChromeRefinement::default().rounded(Radius::Sm);
+        if open_now {
+            label_chrome = label_chrome.bg(ColorRef::Token {
+                key: "accent",
+                fallback: ColorFallback::ThemeHoverBackground,
+            });
+        }
+        let label = cx.text(self.label.clone());
+        let label = cx.container(
+            decl_style::container_props(&theme, label_chrome, LayoutRefinement::default()),
+            move |_cx| vec![label],
+        );
+        let label = if let Some(test_id) = label_test_id {
+            cx.semantics(
+                SemanticsProps {
+                    role: SemanticsRole::Group,
+                    test_id: Some(test_id),
+                    ..Default::default()
+                },
+                move |_cx| vec![label],
+            )
+        } else {
+            label
+        };
+
         if resolved_sources.is_empty() {
-            return trigger;
+            return stack::hstack(
+                cx,
+                stack::HStackProps::default().gap(Space::N1).items_center(),
+                move |_cx| vec![label, badge_trigger],
+            );
         }
 
-        let index_model = cx.with_state(PagerState::default, |st| st.index.clone());
+        let index_model = cx.with_state(InlineCitationState::default, |st| st.index.clone());
         let index_model = match index_model {
             Some(model) => model,
             None => {
                 let model = cx.app.models_mut().insert(0usize);
-                cx.with_state(PagerState::default, |st| st.index = Some(model.clone()));
+                cx.with_state(InlineCitationState::default, |st| {
+                    st.index = Some(model.clone())
+                });
                 model
             }
         };
@@ -254,7 +304,6 @@ impl InlineCitation {
         let current = index_now.saturating_add(1);
         let total = resolved_sources.len().max(1);
 
-        let base_id = self.test_id.clone();
         let content_test_id = base_id
             .as_ref()
             .map(|id| Arc::<str>::from(format!("{id}-card")));
@@ -267,9 +316,6 @@ impl InlineCitation {
         let index_test_id = base_id
             .as_ref()
             .map(|id| Arc::<str>::from(format!("{id}-index")));
-
-        let prev_disabled = index_now == 0;
-        let next_disabled = index_now + 1 >= total;
 
         let on_prev: OnActivate = Arc::new({
             let index_model = index_model.clone();
@@ -298,16 +344,21 @@ impl InlineCitation {
                     fallback: ColorFallback::ThemeTextMuted,
                 }),
             );
-            let mut btn = Button::new("Previous source")
-                .variant(ButtonVariant::Ghost)
-                .size(ButtonSize::IconSm)
-                .disabled(prev_disabled)
-                .children([icon])
-                .on_activate(on_prev);
-            if let Some(id) = prev_test_id.clone() {
-                btn = btn.test_id(id);
-            }
-            btn.into_element(cx)
+            cx.pressable(
+                PressableProps {
+                    a11y: PressableA11y {
+                        role: Some(SemanticsRole::Button),
+                        label: Some(Arc::<str>::from("Previous")),
+                        test_id: prev_test_id.clone(),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                move |cx, _state| {
+                    cx.pressable_on_activate(on_prev.clone());
+                    [icon]
+                },
+            )
         };
 
         let next_btn = {
@@ -320,16 +371,21 @@ impl InlineCitation {
                     fallback: ColorFallback::ThemeTextMuted,
                 }),
             );
-            let mut btn = Button::new("Next source")
-                .variant(ButtonVariant::Ghost)
-                .size(ButtonSize::IconSm)
-                .disabled(next_disabled)
-                .children([icon])
-                .on_activate(on_next);
-            if let Some(id) = next_test_id.clone() {
-                btn = btn.test_id(id);
-            }
-            btn.into_element(cx)
+            cx.pressable(
+                PressableProps {
+                    a11y: PressableA11y {
+                        role: Some(SemanticsRole::Button),
+                        label: Some(Arc::<str>::from("Next")),
+                        test_id: next_test_id.clone(),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                move |cx, _state| {
+                    cx.pressable_on_activate(on_next.clone());
+                    [icon]
+                },
+            )
         };
 
         let index_label = match index_test_id.clone() {
@@ -612,9 +668,16 @@ impl InlineCitation {
             card
         };
 
-        HoverCard::new(trigger, card)
+        let hover = HoverCard::new(badge_trigger, card)
+            .open(Some(open_model))
             .open_delay_frames(0)
             .close_delay_frames(0)
-            .into_element(cx)
+            .into_element(cx);
+
+        stack::hstack(
+            cx,
+            stack::HStackProps::default().gap(Space::N1).items_center(),
+            move |_cx| vec![label, hover],
+        )
     }
 }

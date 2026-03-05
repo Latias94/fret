@@ -692,7 +692,10 @@ impl InputGroup {
                                 overlay.test_id(Arc::<str>::from(format!("{test_id}.chrome")));
                         }
 
-                        overlay
+                        // The chrome overlay paints focus/border affordances but should not
+                        // participate in hit-testing; otherwise it can intercept pointer clicks
+                        // intended for the underlying input/textarea.
+                        cx.hit_test_gate(false, move |_cx| vec![overlay])
                     };
 
                 if is_block_layout {
@@ -2215,6 +2218,55 @@ mod tests {
         );
 
         assert_eq!(ui.focus(), Some(control_node));
+    }
+
+    #[test]
+    fn input_group_chrome_overlay_does_not_intercept_hit_test_for_control() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let mut services = FakeServices;
+        let bounds = bounds();
+        let model: Model<String> = app.models_mut().insert(String::new());
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "shadcn-input-group-chrome-hit-test",
+            |cx| {
+                vec![
+                    InputGroup::new(model.clone())
+                        .test_id("input_group")
+                        .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let group_node = ui.children(root)[0];
+        let row_node = ui.children(group_node)[0];
+        let control_node = ui.children(row_node)[0];
+
+        let control_bounds = ui.debug_node_bounds(control_node).expect("control bounds");
+        let p = Point::new(
+            Px(control_bounds.origin.x.0 + control_bounds.size.width.0 * 0.5),
+            Px(control_bounds.origin.y.0 + control_bounds.size.height.0 * 0.5),
+        );
+
+        let hit = ui.debug_hit_test(p).hit;
+        assert_eq!(
+            hit,
+            Some(control_node),
+            "expected chrome overlay to be hit-test transparent (hit={hit:?} control={control_node:?} p={p:?})",
+        );
     }
 
     #[test]

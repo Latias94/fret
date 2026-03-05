@@ -418,8 +418,9 @@ impl AiChat {
                     .justify(Justify::End)
                     .gap(Space::N2),
                 move |cx| {
-                    let mut download =
-                        ConversationDownload::new("Export Markdown").disabled(disabled);
+                    let mut download = ConversationDownload::new("Export Markdown")
+                        .show_label(true)
+                        .disabled(disabled);
                     if let Some(on_download) = on_download.clone() {
                         download = download.on_activate(on_download);
                     }
