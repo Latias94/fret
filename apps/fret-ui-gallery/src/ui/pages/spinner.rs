@@ -4,6 +4,8 @@ use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::spinner as snippets;
 
 pub(super) fn preview_spinner(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    let demo = snippets::demo::render(cx);
+    let customization = snippets::customization::render(cx);
     let sizes = snippets::sizes::render(cx);
     let buttons = snippets::buttons::render(cx);
     let badges = snippets::badges::render(cx);
@@ -15,8 +17,8 @@ pub(super) fn preview_spinner(cx: &mut ElementContext<'_, App>) -> Vec<AnyElemen
     let notes = doc_layout::notes(
         cx,
         [
-            "Preview follows shadcn Spinner demo (new-york-v4).",
-            "The `Empty` section is not pixel-perfect (no anchor-as-child), but preserves the structure and semantics intent.",
+            "Preview follows shadcn Spinner docs/examples (new-york-v4): Demo, Customization, Size, Button, Badge, Input Group, Empty, RTL.",
+            "Extras are Fret-specific demos and regression gates.",
         ],
     );
 
@@ -24,6 +26,12 @@ pub(super) fn preview_spinner(cx: &mut ElementContext<'_, App>) -> Vec<AnyElemen
         cx,
         Some("An indicator that can be used to show a loading state."),
         vec![
+            DocSection::new("Demo", demo)
+                .test_id_prefix("ui-gallery-spinner-demo")
+                .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
+            DocSection::new("Customization", customization)
+                .test_id_prefix("ui-gallery-spinner-customization")
+                .code_rust_from_file_region(snippets::customization::SOURCE, "example"),
             DocSection::new("Sizes", sizes)
                 .test_id_prefix("ui-gallery-spinner-sizes")
                 .code_rust_from_file_region(snippets::sizes::SOURCE, "example"),
