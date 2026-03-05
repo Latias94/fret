@@ -26,6 +26,31 @@ Using `tools/diag-scripts/todo-memory-steady.json` on macOS/Metal:
     - `fretboard diag memory-summary --dir target/fret-diag-mem-todo-steady --vmmap-regions-sorted-agg`
     - If pointing at a parent dir with multiple dated runs, recursion is enabled by default (bounded); disable via `--no-recursive`.
 
+- Fresh baseline batch (local, 2026-03-05; outputs under `target/diag/mem-baseline-20260305/`):
+  - `empty-idle` (N=10; `target/release/empty_idle_demo`):
+    - `macos_physical_footprint_peak_bytes` p50=283,534,950 (~270.4 MiB), p90=286,156,390 (~273.0 MiB)
+    - `macos_owned_unmapped_memory_dirty_bytes` p50=213,594,931 (~203.7 MiB), p90=216,321,229 (~206.3 MiB)
+    - `wgpu_metal_current_allocated_size_bytes_max` p50=23,511,040 (~22.4 MiB)
+    - `vmmap_regions_sorted_agg` p90 top: `owned unmapped memory` (~206.3 MiB), `MALLOC_SMALL` (~24.0 MiB), `MALLOC_LARGE (empty)` (8.0 MiB)
+  - `text-heavy` (N=10; `target/release/text_heavy_memory_demo`):
+    - `macos_physical_footprint_peak_bytes` p50=361,863,578 (~345.1 MiB), p90=367,211,315 (~350.2 MiB)
+    - `macos_owned_unmapped_memory_dirty_bytes` p50=249,036,800 (~237.5 MiB), p90=254,384,538 (~242.6 MiB)
+    - `wgpu_metal_current_allocated_size_bytes_max` p50=126,500,864 (~120.6 MiB)
+    - `vmmap_regions_sorted_agg` p90 top: `owned unmapped memory` (~242.6 MiB), `IOSurface` (~32.8 MiB), `MALLOC_SMALL` (~29.4 MiB)
+  - `image-heavy` (N=5; `target/release/image_heavy_memory_demo`):
+    - `macos_physical_footprint_peak_bytes` p50=483,393,536 (~461.0 MiB)
+    - `macos_owned_unmapped_memory_dirty_bytes` p50=337,222,042 (~321.6 MiB)
+    - `wgpu_metal_current_allocated_size_bytes_max` p50=204,914,688 (~195.4 MiB), max=294,207,488 (~280.6 MiB)
+  - `todo` (N=5; `target/release/todo_demo`):
+    - `macos_physical_footprint_peak_bytes` p50=358,193,562 (~341.6 MiB)
+    - `macos_owned_unmapped_memory_dirty_bytes` p50=238,655,898 (~227.6 MiB)
+    - `wgpu_metal_current_allocated_size_bytes_max` p50=83,755,008 (~79.9 MiB)
+  - Summary JSON files:
+    - `target/diag/mem-baseline-20260305/empty-idle.memory-summary.json`
+    - `target/diag/mem-baseline-20260305/text-heavy.memory-summary.json`
+    - `target/diag/mem-baseline-20260305/image-heavy.memory-summary.json`
+    - `target/diag/mem-baseline-20260305/todo.memory-summary.json`
+
 - Repeat sample (N=5; `target/release/todo_demo`; `--env FRET_DIAG_WGPU_ALLOCATOR_REPORT=1`):
   - `macos_vmmap_steady.physical_footprint_peak_bytes`: 358,612,992 .. 419,325,542 (~342.0 .. 399.9 MiB)
     - Note: 4/5 runs clustered at ~342–346 MiB; 1/5 outlier correlated with higher GPU/driver-backed regions.
