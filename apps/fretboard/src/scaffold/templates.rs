@@ -437,45 +437,22 @@ impl View for TodoView {
             }
         });
 
-        cx.on_action_notify::<act::RefreshTip>({
-            let tip_nonce = self.tip_nonce.clone();
-            move |host, _action_cx| {
-                let _ = host
-                    .models_mut()
-                    .update(&tip_nonce, |v| *v = v.saturating_add(1));
-                true
-            }
+        cx.on_action_notify_model_update::<act::RefreshTip, u64>(self.tip_nonce.clone(), |v| {
+            *v = v.saturating_add(1);
         });
 
-        cx.on_action_notify::<act::FilterAll>({
-            let filter = self.filter.clone();
-            move |host, _action_cx| {
-                let _ = host
-                    .models_mut()
-                    .update(&filter, |v| *v = TodoFilter::All);
-                true
-            }
-        });
-
-        cx.on_action_notify::<act::FilterActive>({
-            let filter = self.filter.clone();
-            move |host, _action_cx| {
-                let _ = host
-                    .models_mut()
-                    .update(&filter, |v| *v = TodoFilter::Active);
-                true
-            }
-        });
-
-        cx.on_action_notify::<act::FilterCompleted>({
-            let filter = self.filter.clone();
-            move |host, _action_cx| {
-                let _ = host
-                    .models_mut()
-                    .update(&filter, |v| *v = TodoFilter::Completed);
-                true
-            }
-        });
+        cx.on_action_notify_model_set::<act::FilterAll, TodoFilter>(
+            self.filter.clone(),
+            TodoFilter::All,
+        );
+        cx.on_action_notify_model_set::<act::FilterActive, TodoFilter>(
+            self.filter.clone(),
+            TodoFilter::Active,
+        );
+        cx.on_action_notify_model_set::<act::FilterCompleted, TodoFilter>(
+            self.filter.clone(),
+            TodoFilter::Completed,
+        );
 
         let derived: TodoDerived = cx.use_selector(
             |cx| {
@@ -772,14 +749,8 @@ impl View for HelloView {{
         let click_count = cx.use_state::<u32>();
         let click_count_value = cx.watch_model(&click_count).layout().copied_or(0);
 
-        cx.on_action_notify::<act::Click>({{
-            let click_count = click_count.clone();
-            move |host, _action_cx| {{
-                let _ = host
-                    .models_mut()
-                    .update(&click_count, |v| *v = v.saturating_add(1));
-                true
-            }}
+        cx.on_action_notify_model_update::<act::Click, u32>(click_count.clone(), |v| {{
+            *v = v.saturating_add(1);
         }});
 
         ui::v_flex(|cx| {{
@@ -1308,7 +1279,7 @@ mod tests {
         assert!(src.contains(".ui()"));
         assert!(src.contains("cx.on_action_notify::<act::Add>"));
         assert!(src.contains("cx.on_action_notify::<act::ClearDone>"));
-        assert!(src.contains("cx.on_action_notify::<act::RefreshTip>"));
+        assert!(src.contains("cx.on_action_notify_model_update::<act::RefreshTip, u64>"));
         assert!(!src.contains("decl_style::container_props"));
 
         let into_element_count = src.matches(".into_element(cx)").count();
@@ -1325,7 +1296,7 @@ mod tests {
         assert!(!src.contains("ui::v_flex( |"));
         assert!(src.contains("impl View for HelloView"));
         assert!(src.contains(".run_view::<HelloView>()"));
-        assert!(src.contains("cx.on_action_notify::<act::Click>"));
+        assert!(src.contains("cx.on_action_notify_model_update::<act::Click, u32>"));
         assert!(src.contains(".into_element(cx)"));
         assert!(!src.contains("decl_style::container_props"));
     }
