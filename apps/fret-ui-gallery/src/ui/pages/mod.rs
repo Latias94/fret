@@ -56,6 +56,8 @@ mod ai_plan_demo;
 #[cfg(feature = "gallery-dev")]
 mod ai_prompt_input_action_menu_demo;
 #[cfg(feature = "gallery-dev")]
+mod ai_prompt_input_docs_demo;
+#[cfg(feature = "gallery-dev")]
 mod ai_prompt_input_provider_demo;
 #[cfg(feature = "gallery-dev")]
 mod ai_prompt_input_referenced_sources_demo;
@@ -492,6 +494,14 @@ pub(super) fn preview_ai_prompt_input_provider_demo(
 }
 
 #[cfg(feature = "gallery-dev")]
+pub(super) fn preview_ai_prompt_input_docs_demo(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
+    ai_prompt_input_docs_demo::preview_ai_prompt_input_docs_demo(cx, theme)
+}
+
+#[cfg(feature = "gallery-dev")]
 pub(super) fn preview_ai_prompt_input_action_menu_demo(
     cx: &mut ElementContext<'_, App>,
     theme: &Theme,
@@ -711,6 +721,7 @@ pub(super) fn preview_ai_by_id(
         PAGE_AI_TOOL_DEMO => preview_ai_tool_demo(cx, theme),
         PAGE_AI_WEB_PREVIEW_DEMO => preview_ai_web_preview_demo(cx, theme),
         PAGE_AI_PROMPT_INPUT_PROVIDER_DEMO => preview_ai_prompt_input_provider_demo(cx, theme),
+        PAGE_AI_PROMPT_INPUT_DOCS_DEMO => preview_ai_prompt_input_docs_demo(cx, theme),
         PAGE_AI_PROMPT_INPUT_ACTION_MENU_DEMO => {
             preview_ai_prompt_input_action_menu_demo(cx, theme)
         }

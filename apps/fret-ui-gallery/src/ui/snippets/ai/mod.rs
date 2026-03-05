@@ -25,6 +25,7 @@ pub mod package_info_demo;
 pub mod persona_demo;
 pub mod plan_demo;
 pub mod prompt_input_action_menu_demo;
+pub mod prompt_input_docs_demo;
 pub mod prompt_input_provider_demo;
 pub mod prompt_input_referenced_sources_demo;
 pub mod queue_demo;
