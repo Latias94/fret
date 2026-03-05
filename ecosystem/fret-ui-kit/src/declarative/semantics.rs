@@ -8,6 +8,7 @@ use crate::UiIntoElement;
 pub trait AnyElementSemanticsExt {
     fn a11y(self, decoration: SemanticsDecoration) -> AnyElement;
     fn a11y_role(self, role: SemanticsRole) -> AnyElement;
+    fn role(self, role: SemanticsRole) -> AnyElement;
     fn a11y_label(self, label: impl Into<Arc<str>>) -> AnyElement;
     fn test_id(self, id: impl Into<Arc<str>>) -> AnyElement;
     fn a11y_value(self, value: impl Into<Arc<str>>) -> AnyElement;
@@ -23,6 +24,10 @@ impl AnyElementSemanticsExt for AnyElement {
     }
 
     fn a11y_role(self, role: SemanticsRole) -> AnyElement {
+        self.a11y_role(role)
+    }
+
+    fn role(self, role: SemanticsRole) -> AnyElement {
         self.a11y_role(role)
     }
 
@@ -117,6 +122,10 @@ pub trait UiIntoElementA11yExt: UiIntoElement + Sized {
 
     fn a11y_role(self, role: SemanticsRole) -> UiIntoElementWithA11y<Self> {
         self.a11y(SemanticsDecoration::default().role(role))
+    }
+
+    fn role(self, role: SemanticsRole) -> UiIntoElementWithA11y<Self> {
+        self.a11y_role(role)
     }
 
     fn a11y_label(self, label: impl Into<Arc<str>>) -> UiIntoElementWithA11y<Self> {

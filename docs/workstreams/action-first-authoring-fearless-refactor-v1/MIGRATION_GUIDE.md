@@ -208,7 +208,7 @@ use fret_ui_kit::prelude::*;
 
 let button = shadcn::Button::new("Save")
     .action(act::EditorSave)
-    .a11y_role(SemanticsRole::Button)
+    .role(SemanticsRole::Button)
     .test_id("editor.save")
     .key_context("editor");
 
@@ -218,6 +218,8 @@ let el = button.into_element(cx);
 
 Notes:
 
+- `role(...)` is a convenience alias for `a11y_role(...)` on `UiIntoElement` values. The `a11y_*`
+  names remain supported.
 - `a11y_*` decorations are applied via layout-transparent `SemanticsDecoration` on `AnyElement`
   (no extra layout node required).
 - `key_context(...)` participates in `when` expressions via `keyctx.*` (ADR 0022).
