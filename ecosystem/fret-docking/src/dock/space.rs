@@ -565,6 +565,41 @@ impl DockSpace {
         layout
     }
 
+    fn layout_map_for_window_and_floatings(
+        &self,
+        dock: &DockManager,
+        root: Option<DockNodeId>,
+        dock_bounds: Rect,
+        split_handle_gap: Px,
+        split_handle_hit_thickness: Px,
+    ) -> std::collections::HashMap<DockNodeId, Rect> {
+        let mut layout = root
+            .map(|root| {
+                compute_layout_map(
+                    &dock.graph,
+                    root,
+                    dock_bounds,
+                    split_handle_gap,
+                    split_handle_hit_thickness,
+                )
+            })
+            .unwrap_or_default();
+        for floating in dock.graph.floating_windows(self.window) {
+            let chrome = Self::floating_chrome(floating.rect);
+            let floating_layout = compute_layout_map(
+                &dock.graph,
+                floating.floating,
+                chrome.inner,
+                split_handle_gap,
+                split_handle_hit_thickness,
+            );
+            for (k, v) in floating_layout {
+                layout.insert(k, v);
+            }
+        }
+        layout
+    }
+
     fn take_pressed_tab_close_for_pointer(
         &mut self,
         pointer_id: fret_core::PointerId,
@@ -600,6 +635,185 @@ impl DockSpace {
         *dock_hover = None;
         *invalidate_paint = true;
         pending_redraws.push(self.window);
+    }
+
+    fn handle_tab_overflow_menu_left_click(
+        &mut self,
+        dock: &DockManager,
+        theme: fret_ui::ThemeSnapshot,
+        layout_all: &std::collections::HashMap<DockNodeId, Rect>,
+        position: Point,
+        pending_effects: &mut Vec<Effect>,
+        request_focus_panel: &mut Option<PanelKey>,
+        invalidate_layout: &mut bool,
+        invalidate_paint: &mut bool,
+        pending_redraws: &mut Vec<fret_core::AppWindowId>,
+    ) -> bool {
+        let Some(menu) = self.tab_overflow_menu.clone() else {
+            return false;
+        };
+        let mut keep_open = true;
+        let mut handled = false;
+
+        let tabs_rect = layout_all.get(&menu.tabs).copied();
+        let node = dock.graph.node(menu.tabs);
+        if let (Some(tabs_rect), Some(DockNode::Tabs { tabs, .. })) = (tabs_rect, node) {
+            let (tab_bar, _content) = split_tab_bar(tabs_rect);
+            let item_count = menu.items.len();
+            let menu_rect = tab_overflow_menu_rect(theme.clone(), tab_bar, item_count);
+            let button_rect = tab_overflow_button_rect(theme.clone(), tab_bar);
+
+            if menu_rect.contains(position) {
+                handled = true;
+                let max_scroll = overflow_menu_max_scroll(tab_bar, item_count);
+                let scroll = Px(menu.scroll.0.clamp(0.0, max_scroll.0));
+                let row =
+                    overflow_menu_row_at_pos(menu_rect, tab_bar, item_count, scroll, position);
+                if let Some(row) = row
+                    && let Some(&tab_ix) = menu.items.get(row)
+                {
+                    let row_rect = overflow_menu_row_rect(menu_rect, tab_bar, scroll, row);
+                    let close_rect = overflow_menu_close_rect(theme.clone(), row_rect);
+                    let hit = if close_rect.contains(position) {
+                        tabstrip_controller::TabStripHitTarget::OverflowMenuRow {
+                            index: tab_ix,
+                            part: tabstrip_controller::OverflowMenuPart::Close,
+                        }
+                    } else {
+                        tabstrip_controller::TabStripHitTarget::OverflowMenuRow {
+                            index: tab_ix,
+                            part: tabstrip_controller::OverflowMenuPart::Content,
+                        }
+                    };
+
+                    match tabstrip_controller::intent_for_click(hit) {
+                        tabstrip_controller::TabStripIntent::Close { index } => {
+                            if let Some(panel) = tabs.get(index) {
+                                pending_effects.push(Effect::Dock(DockOp::ClosePanel {
+                                    window: self.window,
+                                    panel: panel.clone(),
+                                }));
+                                *invalidate_layout = true;
+                                *invalidate_paint = true;
+                                pending_redraws.push(self.window);
+                                keep_open = false;
+                            }
+                        }
+                        tabstrip_controller::TabStripIntent::Activate { index, .. } => {
+                            self.last_active_tabs = Some(menu.tabs);
+                            pending_effects.push(Effect::Dock(DockOp::SetActiveTab {
+                                tabs: menu.tabs,
+                                active: index,
+                            }));
+                            self.clamp_and_ensure_active_visible(
+                                theme.clone(),
+                                menu.tabs,
+                                tab_bar,
+                                tabs.len(),
+                                index,
+                            );
+                            if let Some(panel) = tabs.get(index) {
+                                *request_focus_panel = Some(panel.clone());
+                            }
+                            *invalidate_layout = true;
+                            *invalidate_paint = true;
+                            pending_redraws.push(self.window);
+                            keep_open = false;
+                        }
+                        tabstrip_controller::TabStripIntent::ToggleOverflowMenu
+                        | tabstrip_controller::TabStripIntent::None => {}
+                    }
+                }
+            } else if button_rect.contains(position) {
+                // Toggle: clicking the overflow button closes the menu.
+                keep_open = false;
+                *invalidate_paint = true;
+                pending_redraws.push(self.window);
+                handled = true;
+            } else {
+                // Click outside closes the menu, but does not swallow the click.
+                if keep_open {
+                    keep_open = false;
+                    *invalidate_paint = true;
+                    pending_redraws.push(self.window);
+                }
+            }
+        } else {
+            keep_open = false;
+        }
+
+        // Keep the menu state stable on unrelated clicks.
+        if keep_open {
+            self.tab_overflow_menu = Some(menu);
+        } else {
+            self.tab_overflow_menu = None;
+        }
+
+        handled
+    }
+
+    fn try_open_tab_overflow_menu_for_position(
+        &mut self,
+        dock: &DockManager,
+        theme: fret_ui::ThemeSnapshot,
+        layout_all: &std::collections::HashMap<DockNodeId, Rect>,
+        position: Point,
+        invalidate_paint: &mut bool,
+        pending_redraws: &mut Vec<fret_core::AppWindowId>,
+    ) -> bool {
+        // Open the overflow menu by clicking the overflow button on any overflowing tab bar.
+        for (&node_id, &rect) in layout_all.iter() {
+            let Some(DockNode::Tabs { tabs, active }) = dock.graph.node(node_id) else {
+                continue;
+            };
+            if tabs.is_empty() {
+                continue;
+            }
+            let (tab_bar, _content) = split_tab_bar(rect);
+            if !tab_bar.contains(position) {
+                continue;
+            }
+            let max_scroll = self.max_tab_scroll(theme.clone(), node_id, tab_bar, tabs.len());
+            if max_scroll.0 <= 0.0 {
+                continue;
+            }
+            let button_rect = tab_overflow_button_rect(theme.clone(), tab_bar);
+            if !button_rect.contains(position) {
+                continue;
+            }
+
+            let items = compute_tab_overflow_menu_items(
+                theme.clone(),
+                tab_bar,
+                tabs.len(),
+                self.tab_widths.get(&node_id),
+                self.tab_scroll_for(node_id),
+                *active,
+            );
+            if items.is_empty() {
+                continue;
+            }
+            let item_count = items.len();
+            let active_row = items.iter().position(|ix| *ix == *active).unwrap_or(0);
+            let row_h = overflow_menu_row_height(tab_bar).0;
+            let visible = overflow_menu_row_count(item_count) as f32;
+            let active_y = active_row as f32 * row_h;
+            let min_scroll = active_y - (visible - 1.0) * row_h;
+            let max_scroll_menu = overflow_menu_max_scroll(tab_bar, item_count);
+            let scroll = Px(min_scroll.clamp(0.0, max_scroll_menu.0.max(0.0)));
+
+            self.tab_overflow_menu = Some(TabOverflowMenuState {
+                tabs: node_id,
+                items,
+                scroll,
+                hovered: None,
+            });
+            *invalidate_paint = true;
+            pending_redraws.push(self.window);
+            return true;
+        }
+
+        false
     }
 
     fn handle_pressed_tab_close_pointer_up(
@@ -3821,30 +4035,13 @@ impl<H: UiHost> Widget<H> for DockSpace {
                             if *button == fret_core::MouseButton::Left
                                 && dock_bounds.contains(*position)
                             {
-                                let mut layout_all = root
-                                    .map(|root| {
-                                        compute_layout_map(
-                                            &dock.graph,
-                                            root,
-                                            dock_bounds,
-                                            split_handle_gap,
-                                            split_handle_hit_thickness,
-                                        )
-                                    })
-                                    .unwrap_or_default();
-                                for floating in dock.graph.floating_windows(self.window) {
-                                    let chrome = Self::floating_chrome(floating.rect);
-                                    let floating_layout = compute_layout_map(
-                                        &dock.graph,
-                                        floating.floating,
-                                        chrome.inner,
-                                        split_handle_gap,
-                                        split_handle_hit_thickness,
-                                    );
-                                    for (k, v) in floating_layout {
-                                        layout_all.insert(k, v);
-                                    }
-                                }
+                                let layout_all = self.layout_map_for_window_and_floatings(
+                                    dock,
+                                    root,
+                                    dock_bounds,
+                                    split_handle_gap,
+                                    split_handle_hit_thickness,
+                                );
 
                                 let hits_overflow_button = layout_all.iter().any(|(&node_id, &rect)| {
                                     let Some(DockNode::Tabs { tabs, .. }) = dock.graph.node(node_id)
@@ -3887,192 +4084,28 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                     handled = true;
                                 }
 
-                                if let Some(menu) = self.tab_overflow_menu.clone() {
-                                    let mut keep_open = true;
-
-                                    let tabs_rect = layout_all.get(&menu.tabs).copied();
-                                    let node = dock.graph.node(menu.tabs);
-                                    if let (Some(tabs_rect), Some(DockNode::Tabs { tabs, .. })) =
-                                        (tabs_rect, node)
-                                    {
-                                        let (tab_bar, _content) = split_tab_bar(tabs_rect);
-                                        let button_rect =
-                                            tab_overflow_button_rect(theme.clone(), tab_bar);
-                                        let item_count = menu.items.len();
-                                        let menu_rect = tab_overflow_menu_rect(
-                                            theme.clone(),
-                                            tab_bar,
-                                            item_count,
-                                        );
-
-                                        if menu_rect.contains(*position) {
-                                            let max_scroll =
-                                                overflow_menu_max_scroll(tab_bar, item_count);
-                                            let scroll = Px(
-                                                menu.scroll.0.clamp(0.0, max_scroll.0),
-                                            );
-                                            let row = overflow_menu_row_at_pos(
-                                                menu_rect,
-                                                tab_bar,
-                                                item_count,
-                                                scroll,
-                                                *position,
-                                            );
-                                            if let Some(row) = row
-                                                && let Some(&tab_ix) = menu.items.get(row)
-                                            {
-                                                let row_rect = overflow_menu_row_rect(
-                                                    menu_rect,
-                                                    tab_bar,
-                                                    scroll,
-                                                    row,
-                                                );
-	                                                let close_rect = overflow_menu_close_rect(
-	                                                    theme.clone(),
-	                                                    row_rect,
-	                                                );
-	                                                let hit = if close_rect.contains(*position) {
-	                                                    tabstrip_controller::TabStripHitTarget::OverflowMenuRow {
-	                                                        index: tab_ix,
-	                                                        part: tabstrip_controller::OverflowMenuPart::Close,
-	                                                    }
-	                                                } else {
-	                                                    tabstrip_controller::TabStripHitTarget::OverflowMenuRow {
-	                                                        index: tab_ix,
-	                                                        part: tabstrip_controller::OverflowMenuPart::Content,
-	                                                    }
-	                                                };
-
-	                                                match tabstrip_controller::intent_for_click(hit) {
-	                                                    tabstrip_controller::TabStripIntent::Close { index } => {
-	                                                        if let Some(panel) = tabs.get(index) {
-	                                                            pending_effects.push(Effect::Dock(
-	                                                                DockOp::ClosePanel {
-	                                                                    window: self.window,
-	                                                                    panel: panel.clone(),
-	                                                                },
-	                                                            ));
-	                                                            invalidate_layout = true;
-	                                                            invalidate_paint = true;
-	                                                            pending_redraws.push(self.window);
-	                                                            keep_open = false;
-	                                                        }
-	                                                    }
-	                                                    tabstrip_controller::TabStripIntent::Activate { index, .. } => {
-	                                                        self.last_active_tabs = Some(menu.tabs);
-	                                                        pending_effects.push(Effect::Dock(
-	                                                            DockOp::SetActiveTab {
-	                                                                tabs: menu.tabs,
-	                                                                active: index,
-	                                                            },
-	                                                        ));
-	                                                        self.clamp_and_ensure_active_visible(
-	                                                            theme.clone(),
-	                                                            menu.tabs,
-	                                                            tab_bar,
-	                                                            tabs.len(),
-	                                                            index,
-	                                                        );
-	                                                        if let Some(panel) = tabs.get(index) {
-	                                                            request_focus_panel = Some(panel.clone());
-	                                                        }
-	                                                        invalidate_layout = true;
-	                                                        invalidate_paint = true;
-	                                                        pending_redraws.push(self.window);
-	                                                        keep_open = false;
-	                                                    }
-	                                                    tabstrip_controller::TabStripIntent::ToggleOverflowMenu
-	                                                    | tabstrip_controller::TabStripIntent::None => {}
-	                                                }
-	                                            }
-	                                            handled = true;
-	                                        } else if button_rect.contains(*position) {
-                                            // Toggle: clicking the overflow button closes the menu.
-                                            keep_open = false;
-                                            invalidate_paint = true;
-                                            pending_redraws.push(self.window);
-                                            handled = true;
-                                        } else {
-                                            // Click outside closes the menu, but does not swallow the click.
-                                            if keep_open {
-                                                keep_open = false;
-                                                invalidate_paint = true;
-                                                pending_redraws.push(self.window);
-                                            }
-                                        }
-                                    } else {
-                                        keep_open = false;
-                                    }
-
-                                    if keep_open {
-                                        // Keep the menu state stable on unrelated clicks.
-                                        self.tab_overflow_menu = Some(menu);
-                                    } else {
-                                        self.tab_overflow_menu = None;
-                                    }
-                                }
+                                handled = handled
+                                    || self.handle_tab_overflow_menu_left_click(
+                                        dock,
+                                        theme.clone(),
+                                        &layout_all,
+                                        *position,
+                                        &mut pending_effects,
+                                        &mut request_focus_panel,
+                                        &mut invalidate_layout,
+                                        &mut invalidate_paint,
+                                        &mut pending_redraws,
+                                    );
 
                                 if !handled {
-                                    // Open the overflow menu by clicking the overflow button on any overflowing tab bar.
-                                    for (&node_id, &rect) in layout_all.iter() {
-                                        let Some(DockNode::Tabs { tabs, active }) =
-                                            dock.graph.node(node_id)
-                                        else {
-                                            continue;
-                                        };
-                                        if tabs.is_empty() {
-                                            continue;
-                                        }
-                                        let (tab_bar, _content) = split_tab_bar(rect);
-                                        if !tab_bar.contains(*position) {
-                                            continue;
-                                        }
-                                        let max_scroll =
-                                            self.max_tab_scroll(theme.clone(), node_id, tab_bar, tabs.len());
-                                        if max_scroll.0 <= 0.0 {
-                                            continue;
-                                        }
-                                        let button_rect = tab_overflow_button_rect(theme.clone(), tab_bar);
-                                        if !button_rect.contains(*position) {
-                                            continue;
-                                        }
-
-                                        let items = compute_tab_overflow_menu_items(
-                                            theme.clone(),
-                                            tab_bar,
-                                            tabs.len(),
-                                            self.tab_widths.get(&node_id),
-                                            self.tab_scroll_for(node_id),
-                                            *active,
-                                        );
-                                        if items.is_empty() {
-                                            continue;
-                                        }
-                                        let item_count = items.len();
-                                        let active_row = items
-                                            .iter()
-                                            .position(|ix| *ix == *active)
-                                            .unwrap_or(0);
-                                        let row_h = overflow_menu_row_height(tab_bar).0;
-                                        let visible = overflow_menu_row_count(item_count) as f32;
-                                        let active_y = active_row as f32 * row_h;
-                                        let min_scroll = active_y - (visible - 1.0) * row_h;
-                                        let max_scroll_menu =
-                                            overflow_menu_max_scroll(tab_bar, item_count);
-                                        let scroll =
-                                            Px(min_scroll.clamp(0.0, max_scroll_menu.0.max(0.0)));
-
-                                        self.tab_overflow_menu = Some(TabOverflowMenuState {
-                                            tabs: node_id,
-                                            items,
-                                            scroll,
-                                            hovered: None,
-                                        });
-                                        invalidate_paint = true;
-                                        pending_redraws.push(self.window);
-                                        handled = true;
-                                        break;
-                                    }
+                                    handled = self.try_open_tab_overflow_menu_for_position(
+                                        dock,
+                                        theme.clone(),
+                                        &layout_all,
+                                        *position,
+                                        &mut invalidate_paint,
+                                        &mut pending_redraws,
+                                    );
                                 }
                             }
 
