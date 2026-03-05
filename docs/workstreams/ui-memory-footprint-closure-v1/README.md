@@ -35,6 +35,7 @@ Using `tools/diag-scripts/todo-memory-steady.json` on macOS/Metal:
 - Evidence index notes:
   - `evidence.index.json.resources.bundle_last_frame_stats.wgpu_metal_current_allocated_size_bytes_{min,max}` reports the range across captured snapshots.
   - `evidence.index.json.resources.bundle_last_frame_stats.wgpu_hub_*` counters are available when `--env FRET_DIAG_WGPU_REPORT=1` is enabled.
+  - `evidence.index.json.resources.bundle_last_frame_stats.render_text_registered_font_blobs_{total_bytes,count}` helps validate whether font blobs are dominating the baseline (requires app-side fields present in the bundle).
   - `check.wgpu_metal_allocated_size.json` evaluates the max value across captured snapshots (not just the last frame).
   - `check.wgpu_hub_counts.json` evaluates the max values across captured snapshots (not just the last frame):
     - `--max-wgpu-hub-buffers`
