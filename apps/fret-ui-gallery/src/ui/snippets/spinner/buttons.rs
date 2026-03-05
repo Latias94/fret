@@ -15,7 +15,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         }
         btn.children([
             shadcn::Spinner::new().into_element(cx),
-            ui::text(cx, label).font_medium().nowrap().into_element(cx),
+            ui::text(label).font_medium().nowrap().into_element(cx),
         ])
         .into_element(cx)
     };

@@ -39,7 +39,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                     .control_id(id)
                     .refine_layout(LayoutRefinement::default().w_full())
                     .into_element(cx),
-                ui::text(cx, "Your message will be copied to the support team.")
+                ui::text("Your message will be copied to the support team.")
                     .text_sm()
                     .text_color(shadcn::ColorRef::Token {
                         key: "muted-foreground",

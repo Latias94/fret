@@ -1375,7 +1375,7 @@ mod tests {
         );
 
         let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
-            ItemMedia::new([ui::text(cx, "i").into_element(cx)])
+            ItemMedia::new([ui::text("i").into_element(cx)])
                 .variant(ItemMediaVariant::Icon)
                 .into_element(cx)
         });
