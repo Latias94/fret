@@ -46,6 +46,11 @@
 - [x] Attribution: sweep `FRET_WGPU_MEMORY_HINTS` (`performance` vs `memory`) on `text-heavy` and record the impact.
 - [x] Attribution: release images + idle (image-heavy) and confirm `Owned physical footprint (unmapped) (graphics)` returns close to baseline after `renderer.unregister_image`.
 - [x] Attribution: A/B `FRET_IMAGE_HEAVY_DEMO_POLL_AFTER_DROP` (1 vs 0; idle 1200 frames) and confirm no material delta in post-drop steady state.
+- [ ] Attribution: sweep `FRET_IMAGE_HEAVY_DEMO_COUNT` (6/12/24/48 at 1024px) and fit a simple slope:
+  - `Owned physical footprint (unmapped) (graphics)` vs `renderer_gpu_images_bytes_estimate`
+  - `wgpu_metal_current_allocated_size_bytes_max` vs `renderer_gpu_images_bytes_estimate`
+  - Goal: separate baseline intercept (swapchain/driver/allocator) from per-image growth.
+- [x] Captured initial sweep (local 2026-03-05; N=3 each) and observed ~1:1 scaling with a ~100 MiB Metal baseline and ~217 MiB footprint baseline.
 
 ### Evidence (captured)
 

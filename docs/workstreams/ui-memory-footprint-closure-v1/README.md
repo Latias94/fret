@@ -498,3 +498,30 @@ Note: these numbers are intentionally conservative and should be revisited when:
   - thread count / worker pools?
   - Metal / wgpu internal allocators?
 - Which cache(s) grow unbounded in real editor sessions, and how do we gate that without flakiness?
+
+## Next experiments (recommended)
+
+- **Count sweep (image-heavy):** run `tools/diag-scripts/suites/tooling-image-heavy-memory-sweep-count/suite.json` and
+  fit a simple slope:
+  - `Owned physical footprint (unmapped) (graphics)` vs `renderer_gpu_images_bytes_estimate`
+  - `wgpu_metal_current_allocated_size_bytes_max` vs `renderer_gpu_images_bytes_estimate`
+  - This helps separate a “baseline intercept” (swapchain/driver/allocator) from per-image growth, and tells us where
+    further instrumentation is worthwhile.
+
+### Count sweep (results; local 2026-03-05)
+
+Using `target/diag/mem-sweep-count-20260305/` (N=3 each; 1024×1024 RGBA8 images):
+
+- p50 table:
+  - count=6: images=24.0 MiB, `wgpu_metal_current_allocated_size_bytes_max`=122.9 MiB, `Owned physical footprint (unmapped) (graphics)`=240.9 MiB
+  - count=12: images=48.0 MiB, `wgpu_metal_current_allocated_size_bytes_max`=147.0 MiB, `Owned physical footprint (unmapped) (graphics)`=267.2 MiB
+  - count=24: images=96.0 MiB, `wgpu_metal_current_allocated_size_bytes_max`=195.4 MiB, `Owned physical footprint (unmapped) (graphics)`=315.6 MiB
+  - count=48: images=192.0 MiB, `wgpu_metal_current_allocated_size_bytes_max`=292.2 MiB, `Owned physical footprint (unmapped) (graphics)`=412.3 MiB
+- Linear fit (least squares; y = intercept + slope * images_bytes):
+  - `Owned physical footprint (unmapped) (graphics)`: intercept ≈ 217.5 MiB, slope ≈ 1.02 bytes/byte
+  - `wgpu_metal_current_allocated_size_bytes_max`: intercept ≈ 98.7 MiB, slope ≈ 1.01 bytes/byte
+
+Interpretation:
+
+- The headline bucket is dominated by **live texture pressure + a baseline intercept**, and scales ~1:1 with the estimated image bytes.
+- This strongly suggests our “high memory” in image-heavy scenarios is not primarily font/text heap; it is expected GPU resource pressure plus a platform/driver baseline.
