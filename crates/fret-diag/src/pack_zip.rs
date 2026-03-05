@@ -573,6 +573,7 @@ fn zip_add_root_artifacts(
         "check.resource_footprint.json",
         "check.view_cache_reuse_stable.json",
         "resource.footprint.json",
+        "resource.macos_footprint.steady.json",
         "resource.vmmap_summary.steady.txt",
         "resource.vmmap_regions_sorted.steady.txt",
         "resource.vmmap_summary.txt",

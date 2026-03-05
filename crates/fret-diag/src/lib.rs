@@ -55,6 +55,8 @@ mod launch_env_policy;
 mod layout_perf_summary;
 mod lint;
 #[cfg(target_os = "macos")]
+mod macos_footprint_tool;
+#[cfg(target_os = "macos")]
 mod macos_vmmap;
 mod math;
 mod pack_zip;

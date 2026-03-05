@@ -406,6 +406,10 @@ pub(crate) fn write_evidence_index(
     add_file("repro.summary", "repro.summary.json");
     add_file("repro.zip", "repro.zip");
     add_file("resource.footprint", "resource.footprint.json");
+    add_file(
+        "resource.macos_footprint.steady",
+        "resource.macos_footprint.steady.json",
+    );
     add_file("resource.vmmap_summary", "resource.vmmap_summary.txt");
     add_file(
         "resource.vmmap_summary.steady",
