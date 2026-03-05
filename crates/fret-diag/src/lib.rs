@@ -423,6 +423,10 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut max_macos_io_surface_dirty_bytes: Option<u64> = None;
     let mut max_macos_io_accelerator_dirty_bytes: Option<u64> = None;
     let mut max_macos_malloc_small_dirty_bytes: Option<u64> = None;
+    let mut max_macos_malloc_dirty_bytes_total: Option<u64> = None;
+    let mut max_macos_malloc_zones_total_allocated_bytes: Option<u64> = None;
+    let mut max_macos_malloc_zones_total_frag_bytes: Option<u64> = None;
+    let mut max_macos_malloc_zones_total_dirty_bytes: Option<u64> = None;
     let mut max_renderer_gpu_images_bytes_estimate: Option<u64> = None;
     let mut max_renderer_gpu_render_targets_bytes_estimate: Option<u64> = None;
     let mut max_renderer_intermediate_peak_in_use_bytes: Option<u64> = None;
@@ -1250,6 +1254,58 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 max_macos_malloc_small_dirty_bytes = Some(v.parse::<u64>().map_err(|_| {
                     "invalid value for --max-macos-malloc-small-dirty-bytes".to_string()
                 })?);
+                i += 1;
+            }
+            "--max-macos-malloc-dirty-bytes-total" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err(
+                        "missing value for --max-macos-malloc-dirty-bytes-total".to_string()
+                    );
+                };
+                max_macos_malloc_dirty_bytes_total = Some(v.parse::<u64>().map_err(|_| {
+                    "invalid value for --max-macos-malloc-dirty-bytes-total".to_string()
+                })?);
+                i += 1;
+            }
+            "--max-macos-malloc-zones-total-allocated-bytes" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err(
+                        "missing value for --max-macos-malloc-zones-total-allocated-bytes"
+                            .to_string(),
+                    );
+                };
+                max_macos_malloc_zones_total_allocated_bytes =
+                    Some(v.parse::<u64>().map_err(|_| {
+                        "invalid value for --max-macos-malloc-zones-total-allocated-bytes"
+                            .to_string()
+                    })?);
+                i += 1;
+            }
+            "--max-macos-malloc-zones-total-frag-bytes" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err(
+                        "missing value for --max-macos-malloc-zones-total-frag-bytes".to_string(),
+                    );
+                };
+                max_macos_malloc_zones_total_frag_bytes = Some(v.parse::<u64>().map_err(|_| {
+                    "invalid value for --max-macos-malloc-zones-total-frag-bytes".to_string()
+                })?);
+                i += 1;
+            }
+            "--max-macos-malloc-zones-total-dirty-bytes" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err(
+                        "missing value for --max-macos-malloc-zones-total-dirty-bytes".to_string(),
+                    );
+                };
+                max_macos_malloc_zones_total_dirty_bytes =
+                    Some(v.parse::<u64>().map_err(|_| {
+                        "invalid value for --max-macos-malloc-zones-total-dirty-bytes".to_string()
+                    })?);
                 i += 1;
             }
             "--max-renderer-gpu-images-bytes-estimate" => {
@@ -2391,6 +2447,10 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
         max_macos_io_surface_dirty_bytes,
         max_macos_io_accelerator_dirty_bytes,
         max_macos_malloc_small_dirty_bytes,
+        max_macos_malloc_dirty_bytes_total,
+        max_macos_malloc_zones_total_allocated_bytes,
+        max_macos_malloc_zones_total_frag_bytes,
+        max_macos_malloc_zones_total_dirty_bytes,
         max_cpu_avg_percent_total_cores,
     };
 
@@ -2430,7 +2490,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
         && (resource_footprint_thresholds.any() || renderer_gpu_budget_thresholds.any())
     {
         return Err(
-            "--max-working-set-bytes/--max-peak-working-set-bytes/--max-macos-physical-footprint-peak-bytes/--max-macos-owned-unmapped-memory-dirty-bytes/--max-macos-io-surface-dirty-bytes/--max-macos-io-accelerator-dirty-bytes/--max-macos-malloc-small-dirty-bytes/--max-cpu-avg-percent-total-cores/--max-renderer-gpu-images-bytes-estimate/--max-renderer-gpu-render-targets-bytes-estimate/--max-renderer-intermediate-peak-in-use-bytes are only supported with `diag repro` for now"
+            "--max-working-set-bytes/--max-peak-working-set-bytes/--max-macos-physical-footprint-peak-bytes/--max-macos-owned-unmapped-memory-dirty-bytes/--max-macos-io-surface-dirty-bytes/--max-macos-io-accelerator-dirty-bytes/--max-macos-malloc-small-dirty-bytes/--max-macos-malloc-dirty-bytes-total/--max-macos-malloc-zones-total-allocated-bytes/--max-macos-malloc-zones-total-frag-bytes/--max-macos-malloc-zones-total-dirty-bytes/--max-cpu-avg-percent-total-cores/--max-renderer-gpu-images-bytes-estimate/--max-renderer-gpu-render-targets-bytes-estimate/--max-renderer-intermediate-peak-in-use-bytes are only supported with `diag repro` for now"
                 .to_string(),
         );
     }

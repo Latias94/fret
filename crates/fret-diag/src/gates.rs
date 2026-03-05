@@ -10,6 +10,10 @@ pub(super) struct ResourceFootprintThresholds {
     pub(super) max_macos_io_surface_dirty_bytes: Option<u64>,
     pub(super) max_macos_io_accelerator_dirty_bytes: Option<u64>,
     pub(super) max_macos_malloc_small_dirty_bytes: Option<u64>,
+    pub(super) max_macos_malloc_dirty_bytes_total: Option<u64>,
+    pub(super) max_macos_malloc_zones_total_allocated_bytes: Option<u64>,
+    pub(super) max_macos_malloc_zones_total_frag_bytes: Option<u64>,
+    pub(super) max_macos_malloc_zones_total_dirty_bytes: Option<u64>,
     pub(super) max_cpu_avg_percent_total_cores: Option<f64>,
 }
 
@@ -22,6 +26,10 @@ impl ResourceFootprintThresholds {
             || self.max_macos_io_surface_dirty_bytes.is_some()
             || self.max_macos_io_accelerator_dirty_bytes.is_some()
             || self.max_macos_malloc_small_dirty_bytes.is_some()
+            || self.max_macos_malloc_dirty_bytes_total.is_some()
+            || self.max_macos_malloc_zones_total_allocated_bytes.is_some()
+            || self.max_macos_malloc_zones_total_frag_bytes.is_some()
+            || self.max_macos_malloc_zones_total_dirty_bytes.is_some()
             || self.max_cpu_avg_percent_total_cores.is_some()
     }
 }
@@ -960,6 +968,29 @@ pub(super) fn check_resource_footprint_thresholds(
         .and_then(|v| v.get("regions"))
         .and_then(|v| v.get("malloc_small_dirty_bytes"))
         .and_then(|v| v.as_u64());
+    let macos_malloc_dirty_bytes_total = macos_vmmap
+        .and_then(|v| v.get("regions"))
+        .and_then(|v| v.get("malloc_dirty_bytes_total"))
+        .and_then(|v| v.as_u64());
+
+    let macos_malloc_zones_total_allocated_bytes = macos_vmmap
+        .and_then(|v| v.get("tables"))
+        .and_then(|v| v.get("malloc_zones"))
+        .and_then(|v| v.get("total"))
+        .and_then(|v| v.get("allocated_bytes"))
+        .and_then(|v| v.as_u64());
+    let macos_malloc_zones_total_frag_bytes = macos_vmmap
+        .and_then(|v| v.get("tables"))
+        .and_then(|v| v.get("malloc_zones"))
+        .and_then(|v| v.get("total"))
+        .and_then(|v| v.get("frag_bytes"))
+        .and_then(|v| v.as_u64());
+    let macos_malloc_zones_total_dirty_bytes = macos_vmmap
+        .and_then(|v| v.get("tables"))
+        .and_then(|v| v.get("malloc_zones"))
+        .and_then(|v| v.get("total"))
+        .and_then(|v| v.get("dirty_bytes"))
+        .and_then(|v| v.as_u64());
 
     let cpu_avg_percent_total_cores = v
         .as_ref()
@@ -1118,6 +1149,82 @@ pub(super) fn check_resource_footprint_thresholds(
         }
     }
 
+    if let Some(thr) = thresholds.max_macos_malloc_dirty_bytes_total {
+        match macos_malloc_dirty_bytes_total {
+            Some(observed) if observed > thr => failures.push(serde_json::json!({
+                "kind": "macos_malloc_dirty_bytes_total",
+                "threshold": thr,
+                "observed": observed,
+                "reason": "exceeded",
+            })),
+            Some(_) => {}
+            None => failures.push(serde_json::json!({
+                "kind": "macos_malloc_dirty_bytes_total",
+                "threshold": thr,
+                "observed": serde_json::Value::Null,
+                "reason": missing_reason,
+                "field": format!("{macos_vmmap_field_prefix}.regions.malloc_dirty_bytes_total"),
+            })),
+        }
+    }
+
+    if let Some(thr) = thresholds.max_macos_malloc_zones_total_allocated_bytes {
+        match macos_malloc_zones_total_allocated_bytes {
+            Some(observed) if observed > thr => failures.push(serde_json::json!({
+                "kind": "macos_malloc_zones_total_allocated_bytes",
+                "threshold": thr,
+                "observed": observed,
+                "reason": "exceeded",
+            })),
+            Some(_) => {}
+            None => failures.push(serde_json::json!({
+                "kind": "macos_malloc_zones_total_allocated_bytes",
+                "threshold": thr,
+                "observed": serde_json::Value::Null,
+                "reason": missing_reason,
+                "field": format!("{macos_vmmap_field_prefix}.tables.malloc_zones.total.allocated_bytes"),
+            })),
+        }
+    }
+
+    if let Some(thr) = thresholds.max_macos_malloc_zones_total_frag_bytes {
+        match macos_malloc_zones_total_frag_bytes {
+            Some(observed) if observed > thr => failures.push(serde_json::json!({
+                "kind": "macos_malloc_zones_total_frag_bytes",
+                "threshold": thr,
+                "observed": observed,
+                "reason": "exceeded",
+            })),
+            Some(_) => {}
+            None => failures.push(serde_json::json!({
+                "kind": "macos_malloc_zones_total_frag_bytes",
+                "threshold": thr,
+                "observed": serde_json::Value::Null,
+                "reason": missing_reason,
+                "field": format!("{macos_vmmap_field_prefix}.tables.malloc_zones.total.frag_bytes"),
+            })),
+        }
+    }
+
+    if let Some(thr) = thresholds.max_macos_malloc_zones_total_dirty_bytes {
+        match macos_malloc_zones_total_dirty_bytes {
+            Some(observed) if observed > thr => failures.push(serde_json::json!({
+                "kind": "macos_malloc_zones_total_dirty_bytes",
+                "threshold": thr,
+                "observed": observed,
+                "reason": "exceeded",
+            })),
+            Some(_) => {}
+            None => failures.push(serde_json::json!({
+                "kind": "macos_malloc_zones_total_dirty_bytes",
+                "threshold": thr,
+                "observed": serde_json::Value::Null,
+                "reason": missing_reason,
+                "field": format!("{macos_vmmap_field_prefix}.tables.malloc_zones.total.dirty_bytes"),
+            })),
+        }
+    }
+
     if let Some(thr) = thresholds.max_cpu_avg_percent_total_cores {
         match cpu_avg_percent_total_cores {
             Some(observed) => {
@@ -1162,6 +1269,10 @@ pub(super) fn check_resource_footprint_thresholds(
             "max_macos_io_surface_dirty_bytes": thresholds.max_macos_io_surface_dirty_bytes,
             "max_macos_io_accelerator_dirty_bytes": thresholds.max_macos_io_accelerator_dirty_bytes,
             "max_macos_malloc_small_dirty_bytes": thresholds.max_macos_malloc_small_dirty_bytes,
+            "max_macos_malloc_dirty_bytes_total": thresholds.max_macos_malloc_dirty_bytes_total,
+            "max_macos_malloc_zones_total_allocated_bytes": thresholds.max_macos_malloc_zones_total_allocated_bytes,
+            "max_macos_malloc_zones_total_frag_bytes": thresholds.max_macos_malloc_zones_total_frag_bytes,
+            "max_macos_malloc_zones_total_dirty_bytes": thresholds.max_macos_malloc_zones_total_dirty_bytes,
             "max_cpu_avg_percent_total_cores": thresholds.max_cpu_avg_percent_total_cores,
         },
         "observed": {
@@ -1182,6 +1293,10 @@ pub(super) fn check_resource_footprint_thresholds(
             "macos_io_surface_dirty_bytes": macos_io_surface_dirty_bytes,
             "macos_io_accelerator_dirty_bytes": macos_io_accelerator_dirty_bytes,
             "macos_malloc_small_dirty_bytes": macos_malloc_small_dirty_bytes,
+            "macos_malloc_dirty_bytes_total": macos_malloc_dirty_bytes_total,
+            "macos_malloc_zones_total_allocated_bytes": macos_malloc_zones_total_allocated_bytes,
+            "macos_malloc_zones_total_frag_bytes": macos_malloc_zones_total_frag_bytes,
+            "macos_malloc_zones_total_dirty_bytes": macos_malloc_zones_total_dirty_bytes,
         },
         "failures": failures,
     });

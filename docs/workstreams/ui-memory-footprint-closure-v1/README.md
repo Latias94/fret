@@ -141,6 +141,11 @@ Interpretation:
       - `default_zone` (best-effort `DefaultMallocZone` row)
       - `total` (allocated/frag/dirty sums across all zones)
     - These are intended to support more actionable macOS gates than “just physical footprint”.
+    - `diag repro` now supports additional allocator-focused thresholds:
+      - `--max-macos-malloc-dirty-bytes-total`
+      - `--max-macos-malloc-zones-total-allocated-bytes`
+      - `--max-macos-malloc-zones-total-frag-bytes`
+      - `--max-macos-malloc-zones-total-dirty-bytes`
   - wgpu allocator sampling note:
     - Bundles may now report `wgpu_allocator_sample_present=true` even when
       `wgpu_allocator_report_present=false` (e.g. Metal-only `currentAllocatedSize` path).

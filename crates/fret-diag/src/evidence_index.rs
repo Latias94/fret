@@ -86,6 +86,29 @@ fn resource_footprint_summary(path: &Path) -> Option<serde_json::Value> {
         .and_then(|v| v.get("regions"))
         .and_then(|v| v.get("malloc_small_dirty_bytes"))
         .and_then(|v| v.as_u64());
+    let macos_malloc_dirty_bytes_total = macos_vmmap
+        .and_then(|v| v.get("regions"))
+        .and_then(|v| v.get("malloc_dirty_bytes_total"))
+        .and_then(|v| v.as_u64());
+
+    let macos_malloc_zones_total_allocated_bytes = macos_vmmap
+        .and_then(|v| v.get("tables"))
+        .and_then(|v| v.get("malloc_zones"))
+        .and_then(|v| v.get("total"))
+        .and_then(|v| v.get("allocated_bytes"))
+        .and_then(|v| v.as_u64());
+    let macos_malloc_zones_total_frag_bytes = macos_vmmap
+        .and_then(|v| v.get("tables"))
+        .and_then(|v| v.get("malloc_zones"))
+        .and_then(|v| v.get("total"))
+        .and_then(|v| v.get("frag_bytes"))
+        .and_then(|v| v.as_u64());
+    let macos_malloc_zones_total_dirty_bytes = macos_vmmap
+        .and_then(|v| v.get("tables"))
+        .and_then(|v| v.get("malloc_zones"))
+        .and_then(|v| v.get("total"))
+        .and_then(|v| v.get("dirty_bytes"))
+        .and_then(|v| v.as_u64());
 
     let macos_vmmap_top_dirty_region_type = macos_vmmap
         .and_then(|v| v.get("tables"))
@@ -179,6 +202,10 @@ fn resource_footprint_summary(path: &Path) -> Option<serde_json::Value> {
         "macos_io_surface_dirty_bytes": macos_io_surface_dirty_bytes,
         "macos_io_accelerator_dirty_bytes": macos_io_accelerator_dirty_bytes,
         "macos_malloc_small_dirty_bytes": macos_malloc_small_dirty_bytes,
+        "macos_malloc_dirty_bytes_total": macos_malloc_dirty_bytes_total,
+        "macos_malloc_zones_total_allocated_bytes": macos_malloc_zones_total_allocated_bytes,
+        "macos_malloc_zones_total_frag_bytes": macos_malloc_zones_total_frag_bytes,
+        "macos_malloc_zones_total_dirty_bytes": macos_malloc_zones_total_dirty_bytes,
         "macos_vmmap_top_dirty_region_type": macos_vmmap_top_dirty_region_type,
         "macos_vmmap_top_dirty_region_bytes": macos_vmmap_top_dirty_region_bytes,
         "macos_vmmap_top_dirty_regions": macos_vmmap_top_dirty_regions,
