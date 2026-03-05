@@ -498,3 +498,12 @@ Note: these numbers are intentionally conservative and should be revisited when:
   - thread count / worker pools?
   - Metal / wgpu internal allocators?
 - Which cache(s) grow unbounded in real editor sessions, and how do we gate that without flakiness?
+
+## Next experiments (recommended)
+
+- **Count sweep (image-heavy):** run `tools/diag-scripts/suites/tooling-image-heavy-memory-sweep-count/suite.json` and
+  fit a simple slope:
+  - `Owned physical footprint (unmapped) (graphics)` vs `renderer_gpu_images_bytes_estimate`
+  - `wgpu_metal_current_allocated_size_bytes_max` vs `renderer_gpu_images_bytes_estimate`
+  - This helps separate a “baseline intercept” (swapchain/driver/allocator) from per-image growth, and tells us where
+    further instrumentation is worthwhile.

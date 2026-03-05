@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "kind": "diag_script_suite_manifest",
+  "scripts": [
+    "tools/diag-scripts/tooling/images/image-heavy-memory-count-6-steady.json",
+    "tools/diag-scripts/tooling/images/image-heavy-memory-count-12-steady.json",
+    "tools/diag-scripts/image-heavy-memory-steady.json",
+    "tools/diag-scripts/tooling/images/image-heavy-memory-count-48-steady.json"
+  ]
+}
+
