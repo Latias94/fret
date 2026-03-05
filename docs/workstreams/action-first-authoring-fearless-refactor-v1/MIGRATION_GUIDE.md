@@ -267,6 +267,9 @@ This is a style guide, not a contract, but it is the repo’s default teaching b
   - `tools/gate_no_stack_in_cookbook.ps1`
   - `tools/gate_no_stack_in_examples.ps1`
   - `tools/gate_no_stack_in_ui_gallery_shell.ps1` (shell-only; preview pages migrate in batches)
+- Keep legacy stack helpers internal-only: `fret-ui-kit::declarative::stack` is not part of the
+  public API and is scheduled for hard deletion after internal migrations.
+  - Gate: `tools/gate_no_public_stack_in_ui_kit.ps1`
 - If host type inference fails, first try annotating the closure argument type
   (`|cx: &mut ElementContext<'_, App>| ...`) before reaching for turbofish.
 
