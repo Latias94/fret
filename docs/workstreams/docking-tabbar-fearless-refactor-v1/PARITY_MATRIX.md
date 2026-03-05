@@ -10,17 +10,19 @@ Status legend:
 | Feature | Fret docking TabBar | Fret workspace tab strip | Zed | gpui-component | dockview | VS Code |
 |---|---:|---:|---:|---:|---:|---:|
 | Drop at end (insert_index == tab_count) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Cross-pane tab move | 🟡 | ✅ | ✅ | 🟡 | ✅ | ✅ |
-| Drag-to-split from tab/content | 🟡 | ✅ | ✅ | 🟡 | ✅ | ✅ |
-| Overflow dropdown / menu | 🟡 | ❌ | ✅ | 🟡 | ✅ | ✅ |
-| Auto-scroll while dragging | 🟡 | 🟡 | ✅ | 🟡 | ✅ | ✅ |
+| Cross-pane tab move | ✅ | ✅ | ✅ | 🟡 | ✅ | ✅ |
+| Drag-to-split from tab/content | ✅ | ✅ | ✅ | 🟡 | ✅ | ✅ |
+| Overflow dropdown / menu | ✅ | ✅ | ✅ | 🟡 | ✅ | ✅ |
+| Auto-scroll while dragging | ✅ | ✅ | ✅ | 🟡 | ✅ | ✅ |
 | Pinned tabs | ❌ | ❌ | ✅ | ❌ | ❌ | ✅ |
 | Preview tabs | ❌ | ❌ | ✅ | ❌ | ❌ | ✅ |
-| Keyboard navigation | 🟡 | 🟡 | ✅ | 🟡 | 🟡 | ✅ |
-| Focus restore invariants | 🟡 | 🟡 | ✅ | 🟡 | 🟡 | ✅ |
-| Context menu | ❌ | ❌ | ✅ | ❌ | ✅ | ✅ |
+| Keyboard navigation | ❌ | ✅ | ✅ | 🟡 | 🟡 | ✅ |
+| Focus restore invariants | ❌ | ✅ | ✅ | 🟡 | 🟡 | ✅ |
+| Context menu | 🟡 | 🟡 | ✅ | ❌ | ✅ | ✅ |
 
 Notes:
 
-- “Fret docking TabBar” gates currently focus on drop resolution predicates.
-- “Fret workspace tab strip” already has explicit end-drop surfaces + split preview anchors.
+- Docking TabBar is currently **interaction-gated** (diag scripts + unit tests) for drop resolution,
+  overflow click arbitration, and edge auto-scroll while dragging.
+- Workspace tab strip has broader “editor” coverage (keyboard + focus restore) because it is a
+  focusable UI element in the workspace shells.
