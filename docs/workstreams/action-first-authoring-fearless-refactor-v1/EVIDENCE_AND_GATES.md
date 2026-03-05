@@ -37,6 +37,11 @@ UI gallery adoption (v1):
 - `apps/fret-ui-gallery/src/ui/snippets/command/action_first_view.rs` (action-first `.action(...)` + `cx.on_action::<...>(...)` via the view runtime)
 - `apps/fret-ui-gallery/src/ui/pages/command.rs` (wiring as a `DocSection` + code extraction region)
 
+Fretboard scaffolding templates (teaching surface):
+
+- `apps/fretboard/src/scaffold/templates.rs` (`hello_template_main_rs`, `todo_template_main_rs`, `simple_todo_template_main_rs`)
+  - Unit tests gate that templates use `ui::children![cx; ...]` and keep explicit `.into_element(cx)` calls low.
+
 Editor-grade adoption (workspace shell demo):
 
 - `ecosystem/fret-workspace/src/commands.rs` (`act::*` typed unit actions for workspace command IDs)

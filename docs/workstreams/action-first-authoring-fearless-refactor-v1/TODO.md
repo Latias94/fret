@@ -255,13 +255,16 @@ ID format:
       - `tools/diag_gate_action_first_authoring_v1.ps1` (includes workspace shell demo gate)
 - [x] AFA-adopt-043 Update `fretboard` scaffold templates to prefer action-first patterns (once v1 is stable).
   - Rule: do not ship two different default paradigms in templates.
-  - Status (as of 2026-03-03):
+  - Status (as of 2026-03-05):
     - `cargo run -p fretboard -- new hello` uses View runtime + typed unit actions:
       `apps/fretboard/src/scaffold/templates.rs` (`hello_template_main_rs`)
     - `cargo run -p fretboard -- new todo` uses View runtime + typed unit actions + selector/query hooks:
       `apps/fretboard/src/scaffold/templates.rs` (`todo_template_main_rs`)
     - `cargo run -p fretboard -- new simple-todo` uses View runtime + typed unit actions:
       `apps/fretboard/src/scaffold/templates.rs` (`simple_todo_template_main_rs`)
+    - All templates demonstrate “late `into_element(cx)` + `ui::children![cx; ...]`” (low adapter noise),
+      with unit tests guarding against `into_element(cx)` regression:
+      `apps/fretboard/src/scaffold/templates.rs` (template tests).
 
 - [x] AFA-adopt-044 Migrate `embedded_viewport_demo` to the view runtime.
   - Goal: prove view-runtime authoring composes cleanly with embedded viewport interop:
