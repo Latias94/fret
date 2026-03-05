@@ -18,7 +18,7 @@ struct SlideVisual {
 fn slide_card(cx: &mut ElementContext<'_, App>, idx: usize, visual: SlideVisual) -> AnyElement {
     let theme = Theme::global(&*cx.app).clone();
 
-    let number = ui::text(cx, format!("{idx}"))
+    let number = ui::text(format!("{idx}"))
         .text_size_px(visual.text_px)
         .line_height_px(visual.line_height_px)
         .line_height_policy(fret_core::TextLineHeightPolicy::FixedFromStyle)

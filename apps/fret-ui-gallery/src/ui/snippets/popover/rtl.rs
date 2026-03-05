@@ -28,7 +28,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                 )
         };
 
-        fret_ui_kit::ui::h_flex(cx, move |cx| {
+        fret_ui_kit::ui::h_flex(move |cx| {
             [
                 ("left", "يسار", shadcn::PopoverSide::Left),
                 ("top", "أعلى", shadcn::PopoverSide::Top),

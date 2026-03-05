@@ -327,6 +327,7 @@ impl UiDiagnosticsService {
         )) {
             caps.push("diag.cursor_screen_pos_override".to_string());
             caps.push("diag.mouse_buttons_override".to_string());
+            caps.push("diag.wheel_burst_inject".to_string());
         }
 
         let path = self.cfg.out_dir.join("capabilities.json");

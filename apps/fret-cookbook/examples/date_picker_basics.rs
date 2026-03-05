@@ -47,7 +47,7 @@ impl View for DatePickerBasicsView {
         .into_element(cx)
         .test_id(TEST_ID_PICKER);
 
-        let selected_row = ui::h_flex(cx, |cx| {
+        let selected_row = ui::h_flex(|cx| {
             [
                 shadcn::Label::new("Selected:").into_element(cx),
                 shadcn::Badge::new(selected)
@@ -62,7 +62,7 @@ impl View for DatePickerBasicsView {
 
         let card = shadcn::Card::new([
             header,
-            shadcn::CardContent::new([ui::v_flex(cx, |_cx| [picker, selected_row])
+            shadcn::CardContent::new([ui::v_flex(|_cx| [picker, selected_row])
                 .gap(Space::N3)
                 .into_element(cx)])
             .into_element(cx),

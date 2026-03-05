@@ -1,7 +1,7 @@
 # Action-First Authoring + View Runtime (Fearless Refactor v1) — Design
 
 Status: Landed (v1 implementation is in-tree; hardening follow-ups in progress; ADRs remain the source of truth)
-Last updated: 2026-03-04
+Last updated: 2026-03-05
 
 This workstream refactors Fret’s **user-facing authoring story** to close the ergonomics + correctness gap vs
 Zed/GPUI while preserving Fret’s non-negotiable layering rules:
@@ -392,7 +392,7 @@ impl View for MyView {
             |_cx| expensive_derive(&st),
         );
 
-        ui::v_flex(cx, |cx| {
+        ui::v_flex(|cx| {
             ui::children![
                 cx;
                 shadcn::Label::new(derived.title),

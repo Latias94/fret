@@ -1,6 +1,6 @@
 # Action-First Authoring + View Runtime (Fearless Refactor v1) — Evidence and Gates
 
-Last updated: 2026-03-04
+Last updated: 2026-03-05
 
 This file defines what “done” means beyond subjective UX feel.
 
@@ -15,7 +15,7 @@ small, deterministic gates (tests and scripted diagnostics), not just manual QA.
 - ADR (view runtime): `docs/adr/0308-view-authoring-runtime-and-hooks-v1.md`
 - Workstream: `docs/workstreams/action-first-authoring-fearless-refactor-v1/DESIGN.md`
 
-### Implementation anchors (as of 2026-03-04)
+### Implementation anchors (as of 2026-03-05)
 
 Action identity + typed unit actions:
 
@@ -27,11 +27,10 @@ View runtime (v1):
 - `ecosystem/fret/src/view.rs` (`View`, `ViewCx`, `use_state`/`use_state_keyed`/`use_selector`/`use_query`, view-cache reuse + handler keepalive)
 - `ecosystem/fret/src/app_entry.rs` (`App::run_view`)
 
-Legacy MVU quarantine (compat surface):
+Legacy MVU removal (M9):
 
-- `ecosystem/fret/src/legacy.rs` (`fret::legacy::prelude::*`)
-- `ecosystem/fret/src/lib.rs` (MVU modules gated behind `legacy-mvu`)
-- `ecosystem/fret/src/lib.rs` (compile-time deprecations for `legacy`/`mvu`/`mvu_router` entry modules)
+- MVU authoring surfaces were hard-deleted in-tree.
+- Gate: `tools/gate_no_mvu_in_tree.ps1` (added in M9 follow-up) prevents reintroduction.
 
 UI gallery adoption (v1):
 

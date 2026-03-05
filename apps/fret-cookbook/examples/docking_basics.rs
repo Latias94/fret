@@ -321,7 +321,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut DockingBasicsWindowState) -> 
     ])
     .into_element(cx);
 
-    let toolbar = ui::h_flex(cx, |cx| {
+    let toolbar = ui::h_flex(|cx| {
         let left_max = (left_count.saturating_sub(1)) as f64;
         let right_max = (right_count.saturating_sub(1)) as f64;
 
@@ -399,7 +399,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut DockingBasicsWindowState) -> 
             vec![cx.retained_subtree(props)]
         });
 
-    let content = ui::v_flex(cx, |_cx| vec![toolbar, dock_host])
+    let content = ui::v_flex(|_cx| vec![toolbar, dock_host])
         .gap(Space::N3)
         .w_full()
         .h_full()

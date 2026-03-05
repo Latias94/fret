@@ -49,13 +49,13 @@ impl View for PayloadActionsView {
     fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
         let rows_snapshot = cx.watch_model(&self.rows).layout().cloned_or_default();
 
-        let rows_el = ui::v_flex_build(cx, |cx, out| {
+        let rows_el = ui::v_flex_build(|cx, out| {
             for row in &rows_snapshot {
                 let row_id = row.id;
                 let row_label = row.label.clone();
 
                 out.push(cx.keyed(row_id, |cx| {
-                    let label = ui::text(cx, row_label).text_sm().into_element(cx);
+                    let label = ui::text(row_label).text_sm().into_element(cx);
 
                     let remove = shadcn::Button::new("Remove")
                         .variant(shadcn::ButtonVariant::Secondary)
@@ -64,7 +64,7 @@ impl View for PayloadActionsView {
                         .test_id(remove_test_id(row_id))
                         .into_element(cx);
 
-                    ui::h_flex(cx, |_cx| [label, remove])
+                    ui::h_flex(|_cx| [label, remove])
                         .gap(Space::N2)
                         .items_center()
                         .justify_between()

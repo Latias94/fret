@@ -509,7 +509,7 @@ pub fn native_select<H: UiHost>(
                             } else {
                                 ColorRef::Color(resolved.text_color)
                             };
-                            let mut content = ui::text(cx, label)
+                            let mut content = ui::text(label)
                                 .text_size_px(text_style.size)
                                 .fixed_line_box_px(
                                     text_style.line_height.unwrap_or(text_style.size),
@@ -640,7 +640,7 @@ pub fn native_select<H: UiHost>(
                             cx.opacity(if is_selected { 1.0 } else { 0.0 }, move |_cx| vec![icon]);
 
                         let text = {
-                            let mut label = ui::label(cx, label_text.clone())
+                            let mut label = ui::label(label_text.clone())
                                 .text_size_px(label_style.size)
                                 .font_weight(label_style.weight)
                                 .text_color(ColorRef::Color(if item_disabled {

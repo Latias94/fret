@@ -8,7 +8,7 @@ fn wrap_row<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     children: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
 ) -> AnyElement {
-    fret_ui_kit::ui::h_flex(cx, children)
+    fret_ui_kit::ui::h_flex(children)
         .gap(Space::N4)
         .wrap()
         .w_full()

@@ -21,7 +21,7 @@ impl ShadcnResolver {
             //
             // Note: `CardContent` is modeled after shadcn/ui's `p-6 pt-0`, which is intended to
             // follow a header. For "single-body" cards, we want top padding too.
-            let body = fret_ui_kit::ui::v_flex(cx, move |_cx| children)
+            let body = fret_ui_kit::ui::v_flex(move |_cx| children)
                 .gap(fret_ui_kit::Space::N0)
                 .items_start()
                 .w_full()
@@ -113,7 +113,7 @@ impl ShadcnResolver {
             "h3" => fret_ui_shadcn::typography::h3(cx, text),
             "h4" => fret_ui_shadcn::typography::h4(cx, text),
             "inlineCode" => fret_ui_shadcn::typography::inline_code(cx, text),
-            _ => fret_ui_kit::ui::text(cx, text).into_element(cx),
+            _ => fret_ui_kit::ui::text(text).into_element(cx),
         }
     }
 
@@ -150,7 +150,7 @@ impl ShadcnResolver {
             .and_then(|v| v.as_bool())
             .unwrap_or(false);
 
-        let mut v = fret_ui_kit::ui::v_flex(cx, move |_cx| children).gap(gap);
+        let mut v = fret_ui_kit::ui::v_flex(move |_cx| children).gap(gap);
         v = match items {
             Some("center") => v.items_center(),
             Some("end") => v.items_end(),
@@ -223,7 +223,7 @@ impl ShadcnResolver {
             .and_then(|v| v.as_bool())
             .unwrap_or(false);
 
-        let mut h = fret_ui_kit::ui::h_flex(cx, move |_cx| children).gap(gap);
+        let mut h = fret_ui_kit::ui::h_flex(move |_cx| children).gap(gap);
         h = match items {
             Some("start") => h.items_start(),
             Some("end") => h.items_end(),
@@ -289,7 +289,7 @@ impl ShadcnResolver {
             .and_then(|v| v.as_bool())
             .unwrap_or(false);
 
-        let mut b = fret_ui_kit::ui::container(cx, move |_cx| children);
+        let mut b = fret_ui_kit::ui::container(move |_cx| children);
         if w_full {
             b = b.w_full();
         }

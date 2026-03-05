@@ -120,6 +120,7 @@ mod diag_cursor_override;
 mod diag_mouse_buttons_override;
 #[cfg(feature = "diag-screenshots")]
 mod diag_screenshots;
+mod diag_wheel_burst_inject;
 mod dispatcher;
 mod docking;
 mod effects;
@@ -265,6 +266,7 @@ pub struct WinitRunner<D: WinitAppDriver> {
     diag_mouse_buttons_override: Option<diag_mouse_buttons_override::DiagMouseButtonsOverride>,
     diag_last_mouse_buttons_override_tick: Option<TickId>,
     diag_mouse_buttons_override_active: bool,
+    diag_wheel_burst_inject: Option<diag_wheel_burst_inject::DiagWheelBurstInject>,
     diag_isolate_pointer_input: bool,
     cursor_screen_pos: Option<PhysicalPosition<f64>>,
     #[cfg(target_os = "macos")]

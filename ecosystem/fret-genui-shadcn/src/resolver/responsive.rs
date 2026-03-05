@@ -273,12 +273,12 @@ impl ShadcnResolver {
             rows.push(cur);
         }
 
-        fret_ui_kit::ui::v_flex(cx, move |cx| {
+        fret_ui_kit::ui::v_flex(move |cx| {
             let mut out: Vec<AnyElement> = Vec::with_capacity(rows.len());
             for row_children in rows {
                 let mut cells: Vec<AnyElement> = Vec::with_capacity(cols);
                 for child in row_children {
-                    let cell = fret_ui_kit::ui::container(cx, move |_cx| [child])
+                    let cell = fret_ui_kit::ui::container(move |_cx| [child])
                         .flex_1()
                         .min_w_0()
                         .into_element(cx);
@@ -288,7 +288,7 @@ impl ShadcnResolver {
                     let missing = cols - cells.len();
                     for _ in 0..missing {
                         cells.push(
-                            fret_ui_kit::ui::container(cx, |_cx| Vec::<AnyElement>::new())
+                            fret_ui_kit::ui::container(|_cx| Vec::<AnyElement>::new())
                                 .flex_1()
                                 .min_w_0()
                                 .into_element(cx),
@@ -297,7 +297,7 @@ impl ShadcnResolver {
                 }
 
                 out.push(
-                    fret_ui_kit::ui::h_flex(cx, move |_cx| cells)
+                    fret_ui_kit::ui::h_flex(move |_cx| cells)
                         .gap(gap)
                         .items_start()
                         .w_full()
@@ -319,12 +319,12 @@ impl ShadcnResolver {
         children: Vec<AnyElement>,
     ) -> AnyElement {
         match direction {
-            StackDirection::Vertical => fret_ui_kit::ui::v_flex(cx, move |_cx| children)
+            StackDirection::Vertical => fret_ui_kit::ui::v_flex(move |_cx| children)
                 .gap(gap)
                 .items_start()
                 .w_full()
                 .into_element(cx),
-            StackDirection::Horizontal => fret_ui_kit::ui::h_flex(cx, move |_cx| children)
+            StackDirection::Horizontal => fret_ui_kit::ui::h_flex(move |_cx| children)
                 .gap(gap)
                 .items_center()
                 .w_full()

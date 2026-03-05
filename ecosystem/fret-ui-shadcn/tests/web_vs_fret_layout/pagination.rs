@@ -12,7 +12,7 @@ fn web_vs_fret_layout_pagination_demo_active_link_size_matches_web() {
     );
 
     let snap = run_fret_root(bounds, |cx| {
-        let link = fret_ui_shadcn::PaginationLink::new(vec![ui::text(cx, "2").into_element(cx)])
+        let link = fret_ui_shadcn::PaginationLink::new(vec![ui::text("2").into_element(cx)])
             .active(true)
             .into_element(cx);
         let link = cx.semantics(
@@ -60,7 +60,7 @@ fn web_vs_fret_layout_pagination_demo_inactive_link_size_matches_web() {
     );
 
     let snap = run_fret_root(bounds, |cx| {
-        let link = fret_ui_shadcn::PaginationLink::new(vec![ui::text(cx, "1").into_element(cx)])
+        let link = fret_ui_shadcn::PaginationLink::new(vec![ui::text("1").into_element(cx)])
             .active(false)
             .into_element(cx);
         let link = cx.semantics(

@@ -1386,7 +1386,7 @@ impl PopoverTitle {
             .or_else(|| theme.metric_by_key("font.line_height"))
             .unwrap_or_else(|| theme.metric_token("font.line_height"));
 
-        ui::text(cx, self.text)
+        ui::text(self.text)
             .text_size_px(px)
             .line_height_px(line_height)
             .font_medium()
@@ -1425,7 +1425,7 @@ impl PopoverDescription {
             .or_else(|| theme.metric_by_key("font.line_height"))
             .unwrap_or_else(|| theme.metric_token("font.line_height"));
 
-        ui::text(cx, self.text)
+        ui::text(self.text)
             .text_size_px(px)
             .line_height_px(line_height)
             .font_normal()
@@ -4691,7 +4691,7 @@ mod tests {
                                     |_cx| trigger,
                                     move |cx| {
                                         let content = PopoverContent::new(vec![
-                                            ui::raw_text(cx, "content").into_element(cx),
+                                            ui::raw_text("Content").into_element(cx),
                                         ])
                                         .into_element(cx);
                                         content_id_out.set(Some(content.id));

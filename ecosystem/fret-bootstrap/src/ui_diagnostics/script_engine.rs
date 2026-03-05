@@ -70,6 +70,7 @@ pub(super) fn active_script_needs_semantics_snapshot(active: &ActiveScript) -> b
         | UiActionStepV2::DragPointerUntil { .. }
         | UiActionStepV2::MovePointerSweep { .. }
         | UiActionStepV2::Wheel { .. }
+        | UiActionStepV2::WheelBurst { .. }
         | UiActionStepV2::WaitUntil { .. }
         | UiActionStepV2::WaitOverlayPlacementTrace { .. }
         | UiActionStepV2::Assert { .. }
@@ -134,6 +135,7 @@ pub(super) fn script_step_kind_name(step: &UiActionStepV2) -> &'static str {
         UiActionStepV2::PointerUp { .. } => "pointer_up",
         UiActionStepV2::PointerCancel { .. } => "pointer_cancel",
         UiActionStepV2::Wheel { .. } => "wheel",
+        UiActionStepV2::WheelBurst { .. } => "wheel_burst",
         UiActionStepV2::TypeText { .. } => "type_text",
         UiActionStepV2::TypeTextInto { .. } => "type_text_into",
         UiActionStepV2::PasteTextInto { .. } => "paste_text_into",
@@ -895,6 +897,25 @@ pub(super) fn dispatch_drive_script_step(
         }
         step @ UiActionStepV2::Wheel { .. } => {
             let should_return = script_steps_pointer::handle_wheel_step(
+                service,
+                app,
+                window,
+                window_bounds,
+                step_index,
+                step,
+                element_runtime,
+                semantics_snapshot,
+                ui.as_deref_mut(),
+                active,
+                output,
+                force_dump_label,
+            );
+            if should_return {
+                return DriveScriptStepDispatchOutcome::ReturnOutput;
+            }
+        }
+        step @ UiActionStepV2::WheelBurst { .. } => {
+            let should_return = script_steps_pointer::handle_wheel_burst_step(
                 service,
                 app,
                 window,

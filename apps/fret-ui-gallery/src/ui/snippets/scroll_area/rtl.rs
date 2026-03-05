@@ -6,7 +6,7 @@ use fret_ui_shadcn::{self as shadcn, prelude::*};
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let rtl_area = with_direction_provider(cx, LayoutDirection::Rtl, |cx| {
-        let content = ui::container(cx, |cx| {
+        let content = ui::container(|cx| {
             vec![stack::vstack(
                 cx,
                 stack::VStackProps::default()
@@ -14,7 +14,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                     .layout(LayoutRefinement::default().w_full()),
                 |cx| {
                     let mut rows: Vec<AnyElement> = vec![
-                        ui::text(cx, "العلامات")
+                        ui::text("العلامات")
                             .text_sm()
                             .line_height_px(Px(14.0))
                             .line_height_policy(fret_core::TextLineHeightPolicy::FixedFromStyle)
@@ -25,7 +25,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
 
                     for idx in 1..=40 {
                         rows.push(
-                            ui::text(cx, format!("v1.2.0-beta.{:02}", 41 - idx))
+                            ui::text((41 - idx).to_string())
                                 .text_sm()
                                 .line_height_px(Px(20.0))
                                 .line_height_policy(fret_core::TextLineHeightPolicy::FixedFromStyle)
@@ -67,6 +67,6 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             .overflow_hidden(),
     );
 
-    cx.container(props, move |_cx| [rtl_area])
+    cx.container(props, move |_cx| vec![rtl_area])
 }
 // endregion: example

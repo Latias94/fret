@@ -334,7 +334,7 @@ impl ModelSelectorLogo {
 
         let props = decl_style::container_props(&theme, chrome, layout);
         let mut element = cx.container(props, move |cx| {
-            let text = fret_ui_kit::ui::text(cx, initial)
+            let text = fret_ui_kit::ui::text( initial)
                 .text_size_px(Px(8.0))
                 .font_medium()
                 .nowrap()
@@ -471,7 +471,7 @@ impl ModelSelectorName {
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let mut element = fret_ui_kit::ui::text(cx, self.text)
+        let mut element = fret_ui_kit::ui::text( self.text)
             .layout(self.layout)
             .truncate()
             .into_element(cx);

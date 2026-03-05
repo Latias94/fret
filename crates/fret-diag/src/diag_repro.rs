@@ -181,6 +181,7 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
         check_vlist_window_shifts_have_prepaint_actions,
         check_vlist_window_shifts_non_retained_max,
         check_vlist_window_shifts_prefetch_max,
+        check_wheel_events_max_per_frame,
         check_wheel_scroll_hit_changes_test_id,
         check_wheel_scroll_test_id,
         check_windowed_rows_offset_changes_eps: _,
@@ -589,6 +590,7 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
                 || check_ui_gallery_code_editor_a11y_composition_wrap_scroll
                 || check_ui_gallery_code_editor_a11y_composition_drag
                 || check_semantics_changed_repainted
+                || check_wheel_events_max_per_frame.is_some()
                 || check_wheel_scroll_test_id.is_some()
                 || check_wheel_scroll_hit_changes_test_id.is_some()
                 || check_prepaint_actions_min.is_some()

@@ -254,7 +254,7 @@ fn view(
                             }));
 
                             vec![
-                                ui::text(cx, "Launcher Utility Window (drag here)")
+                                ui::text("Launcher Utility Window (drag here)")
                                     .font_semibold()
                                     .into_element(cx),
                             ]
@@ -319,14 +319,14 @@ fn view(
             stack::VStackProps::default().gap_y(Space::N3),
             move |cx| {
                 vec![
-                    ui::text(cx, style_text)
+                    ui::text(style_text)
                         .font_monospace()
                         .text_sm()
                         .into_element(cx)
                         .attach_semantics(
                             SemanticsDecoration::default().test_id(TEST_ID_STYLE_TEXT),
                         ),
-                    ui::text(cx, status)
+                    ui::text(status)
                         .text_sm()
                         .text_color(ColorRef::Color(color_muted_foreground))
                         .into_element(cx),
@@ -366,7 +366,7 @@ fn view(
                         true
                     }));
 
-                    vec![ui::text(cx, "↘").font_semibold().into_element(cx)]
+                    vec![ui::text("↘").font_semibold().into_element(cx)]
                 })
                 .attach_semantics(
                     SemanticsDecoration::default()

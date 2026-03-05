@@ -4,3 +4,4 @@ pub mod disabled;
 pub mod field;
 pub mod invalid;
 pub mod rtl;
+pub mod with_text;

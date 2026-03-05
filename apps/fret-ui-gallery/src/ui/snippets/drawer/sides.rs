@@ -78,7 +78,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let bottom_open = ensure_open(cx, st.bottom_open, |st, model| st.bottom_open = Some(model));
     let left_open = ensure_open(cx, st.left_open, |st, model| st.left_open = Some(model));
 
-    ui::h_flex(cx, |cx| {
+    ui::h_flex(|cx| {
         vec![
             side_button(
                 cx,

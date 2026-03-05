@@ -1606,7 +1606,7 @@ impl NavigationMenu {
 
                                     let content_children = trigger_children.unwrap_or_else(|| {
                                             let style = trigger_text_style.clone();
-                                            let mut label = ui::label(cx, item_label.clone())
+                                            let mut label = ui::label( item_label.clone())
                                                 .text_size_px(style.size)
                                                 .font_weight(style.weight)
                                                 .text_color(ColorRef::Color(fg))
@@ -1709,7 +1709,7 @@ impl NavigationMenu {
                                         let content_children =
                                             trigger_children.unwrap_or_else(|| {
                                                 let style = trigger_text_style.clone();
-                                                let mut label = ui::label(cx, item_label.clone())
+                                                let mut label = ui::label( item_label.clone())
                                                     .text_size_px(style.size)
                                                     .font_weight(style.weight)
                                                     .text_color(fg_ref.clone())

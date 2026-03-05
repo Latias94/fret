@@ -62,6 +62,15 @@
       "timeout_frames": 240
     },
     {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-ai-confirmation-approve" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "wait_frames", "n": 1 },
+    {
       "type": "click_stable",
       "target": { "kind": "test_id", "id": "ui-ai-confirmation-approve" }
     },
@@ -84,4 +93,3 @@
     { "type": "capture_bundle", "label": "ui-gallery-ai-confirmation-demo-approve" }
   ]
 }
-

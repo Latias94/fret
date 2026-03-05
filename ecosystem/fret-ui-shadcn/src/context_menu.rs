@@ -695,7 +695,7 @@ impl ContextMenuShortcut {
         let font_size = theme.metric_token("font.size");
         let font_line_height = theme.metric_token("font.line_height");
 
-        ui::text(cx, self.text)
+        ui::text(self.text)
             .layout(LayoutRefinement::default().flex_none())
             .text_size_px(font_size)
             .fixed_line_box_px(font_line_height)
@@ -1161,7 +1161,7 @@ impl ContextMenuRenderEnv {
             },
             move |cx| {
                 vec![
-                    ui::text(cx, text)
+                    ui::text(text)
                         .text_size_px(font_size)
                         .fixed_line_box_px(font_line_height)
                         .line_box_in_bounds()
@@ -1705,7 +1705,7 @@ impl ContextMenuContentRenderEnv {
             },
             move |cx| {
                 vec![
-                    ui::text(cx, text)
+                    ui::text(text)
                         .text_size_px(font_size)
                         .line_height_px(font_line_height)
                         .font_medium()
@@ -2306,7 +2306,7 @@ fn menu_row_children<H: UiHost>(
             }
 
             let style = text_style.clone();
-            let mut text = ui::text(cx, label.clone())
+            let mut text = ui::text(label.clone())
                 .layout(LayoutRefinement::default().min_w_0().flex_1())
                 .text_size_px(style.size)
                 .font_weight(style.weight)
@@ -3654,7 +3654,7 @@ impl ContextMenu {
                                                                 ..Default::default()
                                                             },
                                                             move |cx| {
-                                                                vec![ui::text(cx, text)
+                                                                vec![ui::text( text)
                                                                     .text_size_px(font_size)
                                                                     .line_height_px(font_line_height)
                                                                     .line_height_policy(

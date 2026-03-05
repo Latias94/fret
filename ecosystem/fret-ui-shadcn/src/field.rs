@@ -584,7 +584,7 @@ impl FieldLegend {
             (fg, size, line_height, layout)
         };
 
-        let text = ui::label(cx, self.text)
+        let text = ui::label(self.text)
             .w_full()
             .text_size_px(size)
             .line_height_px(line_height)
@@ -766,7 +766,7 @@ impl FieldTitle {
             LayoutDirection::Rtl => TextAlign::End,
             LayoutDirection::Ltr => TextAlign::Start,
         };
-        let el = ui::label(cx, self.text)
+        let el = ui::label(self.text)
             .w_full()
             .text_size_px(px)
             .line_height_px(line_height)
@@ -904,7 +904,7 @@ impl FieldLabel {
                 );
                 cx.container(wrapper, move |_cx| children)
             } else {
-                ui::label(cx, self.text)
+                ui::label(self.text)
                     .layout(self.layout)
                     .w_full()
                     .text_size_px(px)
@@ -1064,7 +1064,7 @@ impl FieldLabel {
                     LayoutDirection::Rtl => TextAlign::End,
                     LayoutDirection::Ltr => TextAlign::Start,
                 };
-                let mut builder = ui::label(cx, text.clone());
+                let mut builder = ui::label(text.clone());
                 if render_text_block {
                     builder = builder.w_full().min_w_0();
                 }
@@ -1159,7 +1159,7 @@ impl FieldDescription {
         };
         let wrap = self.wrap.unwrap_or(TextWrap::Word);
         let overflow = self.overflow.unwrap_or(TextOverflow::Clip);
-        let el = ui::text(cx, self.text)
+        let el = ui::text(self.text)
             .text_size_px(px)
             .line_height_px(line_height)
             .font_normal()
@@ -1254,7 +1254,7 @@ impl FieldError {
         };
         let wrap = self.wrap.unwrap_or(TextWrap::Word);
         let overflow = self.overflow.unwrap_or(TextOverflow::Clip);
-        let el = ui::text(cx, self.text)
+        let el = ui::text(self.text)
             .text_size_px(px)
             .line_height_px(line_height)
             .line_height_policy(fret_core::TextLineHeightPolicy::FixedFromStyle)

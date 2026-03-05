@@ -482,7 +482,7 @@ pub mod composable {
                                             move |cx| {
                                                 let left_children = if children.is_empty() {
                                                     let mut label_text =
-                                                        ui::text(cx, a11y_label.clone())
+                                                        ui::text( a11y_label.clone())
                                                             .text_size_px(text_style.size)
                                                             .font_weight(text_style.weight)
                                                             .wrap(TextWrap::Word)
@@ -1461,7 +1461,7 @@ impl AccordionTrigger {
                                         move |cx| {
                                             let left_children = if children.is_empty() {
                                                 let mut label_text =
-                                                    ui::text(cx, a11y_label.clone())
+                                                    ui::text( a11y_label.clone())
                                                         .text_size_px(text_style.size)
                                                         .font_weight(text_style.weight)
                                                         .wrap(TextWrap::Word)

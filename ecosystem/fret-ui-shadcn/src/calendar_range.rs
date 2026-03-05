@@ -977,7 +977,7 @@ fn calendar_range_multi_month_view<H: UiHost>(
     };
 
     let months_el = if is_row {
-        ui::h_flex(cx, move |cx| {
+        ui::h_flex(move |cx| {
             months
                 .iter()
                 .copied()
@@ -1030,7 +1030,7 @@ fn calendar_range_multi_month_view<H: UiHost>(
         .w_px(MetricRef::Px(months_span))
         .into_element(cx)
     } else {
-        ui::v_flex(cx, move |cx| {
+        ui::v_flex(move |cx| {
             months
                 .iter()
                 .copied()
@@ -1084,7 +1084,7 @@ fn calendar_range_multi_month_view<H: UiHost>(
         .into_element(cx)
     };
 
-    let stack = ui::stack(cx, move |_cx| vec![months_el, nav])
+    let stack = ui::stack(move |_cx| vec![months_el, nav])
         .relative()
         .w_px(MetricRef::Px(months_span))
         .into_element(cx);
@@ -1574,7 +1574,7 @@ fn calendar_icon_button<H: UiHost>(
 
         let style = text_style.clone();
         let children = move |cx: &mut ElementContext<'_, H>| {
-            let mut label = ui::label(cx, text.clone())
+            let mut label = ui::label(text.clone())
                 .text_size_px(style.size)
                 .font_weight(style.weight)
                 .text_color(ColorRef::Color(fg))
@@ -1825,7 +1825,7 @@ fn calendar_range_day_cell<H: UiHost>(
                     wrap: false,
                 },
                 move |cx| {
-                    let label = ui::label(cx, day_text.clone())
+                    let label = ui::label(day_text.clone())
                         .text_size_px(text_sm_px)
                         .line_height_px(text_sm_line_height)
                         .font_medium()

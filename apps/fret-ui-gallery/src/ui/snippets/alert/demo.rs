@@ -38,7 +38,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                     shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.circle-alert")),
                     shadcn::AlertTitle::new("Unable to process your payment.").into_element(cx),
                     shadcn::AlertDescription::new_children([
-                        ui::text(cx, "Please verify your billing information and try again.")
+                        ui::text("Please verify your billing information and try again.")
                             .wrap(TextWrap::Word)
                             .into_element(cx),
                         stack::vstack(
@@ -49,9 +49,15 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                                 .layout(LayoutRefinement::default().w_full()),
                             |cx| {
                                 vec![
-                                    ui::text(cx, "• Check your card details").into_element(cx),
-                                    ui::text(cx, "• Ensure sufficient funds").into_element(cx),
-                                    ui::text(cx, "• Verify billing address").into_element(cx),
+                                    ui::text("• Check your card number.")
+                                        .text_sm()
+                                        .into_element(cx),
+                                    ui::text("• Check the expiration date.")
+                                        .text_sm()
+                                        .into_element(cx),
+                                    ui::text("• Verify your billing address.")
+                                        .text_sm()
+                                        .into_element(cx),
                                 ]
                             },
                         ),

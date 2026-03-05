@@ -110,7 +110,7 @@ impl View for ImUiActionBasicsView {
 
         cx.on_action_availability::<act::Inc>(|_host, _acx| CommandAvailability::Available);
 
-        ui::v_flex(cx, |cx| {
+        ui::v_flex(|cx| {
             let genui_panel = cx.column(fret_ui::element::ColumnProps::default(), |cx| {
                 let runtime = GenUiRuntime {
                     state: self.genui_state.clone(),

@@ -56,8 +56,8 @@ impl View for DropShadowBasicsView {
         let enabled = cx.watch_model(&self.enabled).layout().copied_or(true);
         let stress = cx.watch_model(&self.stress).layout().copied_or(false);
 
-        let toolbar = ui::v_flex(cx, |cx| {
-            let row_shadow = ui::h_flex(cx, |cx| {
+        let toolbar = ui::v_flex( |cx| {
+            let row_shadow = ui::h_flex( |cx| {
                 [
                     shadcn::Label::new("Enable DropShadowV1:").into_element(cx),
                     shadcn::Switch::new(self.enabled.clone())
@@ -69,7 +69,7 @@ impl View for DropShadowBasicsView {
             .items_center()
             .into_element(cx);
 
-            let row_stress = ui::h_flex(cx, |cx| {
+            let row_stress = ui::h_flex( |cx| {
                 [
                     shadcn::Label::new("Stress grid:").into_element(cx),
                     shadcn::Switch::new(self.stress.clone())
@@ -100,7 +100,7 @@ impl View for DropShadowBasicsView {
         let chain = shadow_chain();
 
         let card = |cx: &mut ElementContext<'_, App>, title: String| -> AnyElement {
-            let surface = ui::v_flex(cx, |cx| {
+            let surface = ui::v_flex(|cx| {
                 [
                     shadcn::Label::new(title).into_element(cx),
                     shadcn::Badge::new("DropShadowV1")
@@ -118,12 +118,12 @@ impl View for DropShadowBasicsView {
             .into_element(cx);
 
             // Keep a fixed-size effect layer and pad inside it so the shadow has space.
-            let padded = ui::container(cx, |_cx| [surface])
+            let padded = ui::container(|_cx| [surface])
                 .p(Space::N5)
                 .size_full()
                 .into_element(cx);
 
-            let bounds = ui::container(cx, |_cx| [padded])
+            let bounds = ui::container(|_cx| [padded])
                 .w_px(Px(260.0))
                 .h_px(Px(160.0))
                 .overflow_hidden()
@@ -146,7 +146,7 @@ impl View for DropShadowBasicsView {
         let mut grid_rows: Vec<AnyElement> = Vec::with_capacity(rows);
         for r in 0..rows {
             grid_rows.push(
-                ui::h_flex(cx, |cx| {
+                ui::h_flex(|cx| {
                     let mut out: Vec<AnyElement> = Vec::with_capacity(cols);
                     for c in 0..cols {
                         let i = r * cols + c;
@@ -159,7 +159,7 @@ impl View for DropShadowBasicsView {
             );
         }
 
-        let stage = ui::v_flex(cx, |_cx| grid_rows)
+        let stage = ui::v_flex(|_cx| grid_rows)
             .gap(Space::N4)
             .items_center()
             .into_element(cx)
@@ -174,7 +174,7 @@ impl View for DropShadowBasicsView {
         ])
         .into_element(cx);
 
-        let content = shadcn::CardContent::new([ui::v_flex(cx, |_cx| [toolbar, stage])
+        let content = shadcn::CardContent::new([ui::v_flex(|_cx| [toolbar, stage])
             .gap(Space::N5)
             .into_element(cx)])
         .into_element(cx);

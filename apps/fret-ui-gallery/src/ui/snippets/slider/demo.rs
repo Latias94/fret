@@ -107,14 +107,12 @@ pub fn render<H: UiHost>(
 
     let controlled = controlled(cx, controlled_values).test_id("ui-gallery-slider-demo-controlled");
 
-    fret_ui_kit::ui::h_flex(cx, |_cx| {
-        vec![single, range, multiple, vertical, controlled]
-    })
-    .gap(Space::N6)
-    .wrap()
-    .w_full()
-    .items_start()
-    .into_element(cx)
-    .test_id("ui-gallery-slider-demo")
+    fret_ui_kit::ui::h_flex(|_cx| vec![single, range, multiple, vertical, controlled])
+        .gap(Space::N6)
+        .wrap()
+        .w_full()
+        .items_start()
+        .into_element(cx)
+        .test_id("ui-gallery-slider-demo")
 }
 // endregion: example

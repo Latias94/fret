@@ -709,7 +709,7 @@ mod tests {
                                         },
                                         ..Default::default()
                                     },
-                                    |cx| vec![crate::ui::text(cx, "Header").into_element(cx)],
+                                    |cx| vec![crate::ui::text("Header").into_element(cx)],
                                 )]
                             },
                         );
@@ -717,7 +717,7 @@ mod tests {
                     },
                     |cx, row, _col| {
                         let long = format!("Row{}-{}", row.index, "x".repeat(4096));
-                        let cell = crate::ui::text(cx, long).wrap(TextWrap::Grapheme);
+                        let cell = crate::ui::text(long).wrap(TextWrap::Grapheme);
                         let cell = cx.container(
                             ContainerProps {
                                 layout: LayoutStyle {
@@ -869,7 +869,7 @@ mod tests {
                                         },
                                         ..Default::default()
                                     },
-                                    |cx| vec![crate::ui::text(cx, label.as_ref()).into_element(cx)],
+                                    move |cx| vec![crate::ui::text(label.clone()).into_element(cx)],
                                 )]
                             },
                         );
@@ -891,7 +891,7 @@ mod tests {
                             "mem_mb" => "256 MB".to_string(),
                             _ => "?".to_string(),
                         };
-                        let cell = crate::ui::text(cx, text).wrap(TextWrap::Grapheme);
+                        let cell = crate::ui::text(text).wrap(TextWrap::Grapheme);
                         let cell = cx.semantics(
                             SemanticsProps {
                                 test_id: Some(test_id),
@@ -1553,7 +1553,7 @@ mod tests {
                     None,
                     Arc::new(
                         |cx: &mut ElementContext<'_, App>, _col: &ColumnDef<u32>, _row: &u32| {
-                            crate::ui::text(cx, "Row 0").into_element(cx)
+                            crate::ui::text("Row 0").into_element(cx)
                         },
                     ),
                     Some(Arc::<str>::from("table-test-header-")),
@@ -1662,7 +1662,7 @@ mod tests {
                     None,
                     Arc::new(
                         |cx: &mut ElementContext<'_, App>, _col: &ColumnDef<u32>, row: &u32| {
-                            crate::ui::text(cx, format!("Row {row}")).into_element(cx)
+                            crate::ui::text(format!("Row {row}")).into_element(cx)
                         },
                     ),
                     Some(Arc::<str>::from("table-test-header-")),

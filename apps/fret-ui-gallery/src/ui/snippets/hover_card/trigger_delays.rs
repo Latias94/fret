@@ -27,15 +27,15 @@ fn demo_content<H: UiHost>(
             .items_start(),
         move |cx| {
             vec![
-                ui::text(cx, title)
+                ui::text(title)
                     .font_semibold()
                     .into_element(cx)
                     .test_id(title_test_id.clone()),
-                ui::text(cx, desc)
+                ui::text(desc)
                     .wrap(TextWrap::WordBreak)
                     .into_element(cx)
                     .test_id(desc_test_id.clone()),
-                ui::text(cx, joined)
+                ui::text(joined)
                     .text_xs()
                     .text_color(ColorRef::Color(muted_fg))
                     .mt(Space::N1)

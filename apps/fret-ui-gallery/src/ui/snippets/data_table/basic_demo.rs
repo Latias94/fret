@@ -131,7 +131,7 @@ fn bottom_controls(
 
     let theme = Theme::global(&*cx.app);
     let muted_fg = theme.color_by_key("muted-foreground");
-    let mut text = ui::text(cx, label).text_sm().nowrap();
+    let mut text = ui::text(label).text_sm().nowrap();
     if let Some(color) = muted_fg {
         text = text.text_color(ColorRef::Color(color));
     }
@@ -349,7 +349,7 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
                             .gap_x(Space::N2),
                         move |cx| {
                             vec![
-                                ui::label(cx, Arc::<str>::from("Amount"))
+                                ui::label(Arc::<str>::from("Amount"))
                                     .text_sm()
                                     .nowrap()
                                     .into_element(cx),
@@ -454,7 +454,7 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
                 "email" => cx.text(row.email.as_ref()),
                 "amount" => {
                     let amount = Arc::<str>::from(format!("${}.00", row.amount_usd));
-                    let amount_text = ui::text(cx, amount)
+                    let amount_text = ui::text(amount)
                         .text_sm()
                         .tabular_nums()
                         .nowrap()

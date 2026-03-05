@@ -18,8 +18,8 @@ pub fn centered_page<H: UiHost>(
 ) -> AnyElement {
     let theme = Theme::global(&*cx.app).snapshot();
 
-    ui::container(cx, |cx| {
-        [ui::v_flex(cx, |_cx| [surface])
+    ui::container(|cx| {
+        [ui::v_flex(|_cx| [surface])
             .gap(Space::N6)
             .items_center()
             .justify_center()

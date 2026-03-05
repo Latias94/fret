@@ -134,7 +134,7 @@ impl AnnouncementTag {
 
         let props = decl_style::container_props(&theme, chrome, LayoutRefinement::default());
         let el = cx.container(props, |cx| {
-            vec![ui::text(cx, self.label).text_xs().into_element(cx)]
+            vec![ui::text(self.label).text_xs().into_element(cx)]
         });
         attach_test_id(
             el,

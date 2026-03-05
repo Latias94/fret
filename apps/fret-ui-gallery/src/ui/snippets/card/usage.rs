@@ -15,15 +15,13 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
         shadcn::CardHeader::new(vec![
             shadcn::CardTitle::new("Card Title").into_element(cx),
             shadcn::CardDescription::new("Card Description").into_element(cx),
-            shadcn::CardAction::new([ui::text(cx, "Card Action").text_sm().into_element(cx)])
+            shadcn::CardAction::new([ui::text("Card Action").text_sm().into_element(cx)])
                 .into_element(cx),
         ])
         .into_element(cx),
-        shadcn::CardContent::new(vec![
-            ui::text(cx, "Card Content").text_sm().into_element(cx),
-        ])
-        .into_element(cx),
-        shadcn::CardFooter::new(vec![ui::text(cx, "Card Footer").text_sm().into_element(cx)])
+        shadcn::CardContent::new(vec![ui::text("Card Content").text_sm().into_element(cx)])
+            .into_element(cx),
+        shadcn::CardFooter::new(vec![ui::text("Card Footer").text_sm().into_element(cx)])
             .into_element(cx),
     ])
     .refine_layout(max_w_sm)

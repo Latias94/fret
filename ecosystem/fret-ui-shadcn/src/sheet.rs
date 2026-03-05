@@ -1134,7 +1134,7 @@ impl SheetTitle {
             .or_else(|| theme.metric_by_key("font.line_height"))
             .unwrap_or_else(|| theme.metric_token("font.line_height"));
 
-        ui::text(cx, self.text)
+        ui::text(self.text)
             .text_size_px(px)
             .line_height_px(line_height)
             .font_semibold()
@@ -1174,7 +1174,7 @@ impl SheetDescription {
             .or_else(|| theme.metric_by_key("font.line_height"))
             .unwrap_or_else(|| theme.metric_token("font.line_height"));
 
-        ui::text(cx, self.text)
+        ui::text(self.text)
             .text_size_px(px)
             .line_height_px(line_height)
             .font_normal()
@@ -1992,7 +1992,7 @@ mod tests {
                         |_cx| trigger,
                         move |cx| {
                             let content =
-                                SheetContent::new(vec![ui::raw_text(cx, "sheet").into_element(cx)])
+                                SheetContent::new(vec![ui::raw_text("sheet").into_element(cx)])
                                     .into_element(cx);
                             content
                         },

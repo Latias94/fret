@@ -124,7 +124,7 @@ fn on_command(
 fn panel_shell(cx: &mut ElementContext<'_, App>, title: &str, body: AnyElement) -> AnyElement {
     let theme = Theme::global(&*cx.app).snapshot();
 
-    let inner = ui::container(cx, |_cx| vec![body])
+    let inner = ui::container(|_cx| vec![body])
         .bg(ColorRef::Color(theme.color_token("muted")))
         .rounded(Radius::Md)
         .border_1()
@@ -147,7 +147,7 @@ fn preview_content(cx: &mut ElementContext<'_, App>, label: &str) -> AnyElement 
     let theme = Theme::global(&*cx.app).snapshot();
 
     let swatch = |cx: &mut ElementContext<'_, App>, rgb: u32| -> AnyElement {
-        ui::container(cx, |_cx| Vec::<AnyElement>::new())
+        ui::container(|_cx| Vec::<AnyElement>::new())
             .bg(ColorRef::Color(Color::from_srgb_hex_rgb(rgb)))
             .rounded(Radius::Sm)
             .w_px(Px(44.0))
@@ -159,7 +159,7 @@ fn preview_content(cx: &mut ElementContext<'_, App>, label: &str) -> AnyElement 
         .variant(shadcn::BadgeVariant::Secondary)
         .into_element(cx);
 
-    let row = ui::h_flex(cx, |cx| {
+    let row = ui::h_flex(|cx| {
         [
             swatch(cx, 0x0EA5E9),
             swatch(cx, 0xA855F7),
@@ -172,16 +172,13 @@ fn preview_content(cx: &mut ElementContext<'_, App>, label: &str) -> AnyElement 
     .items_center()
     .into_element(cx);
 
-    ui::v_flex(cx, |cx| {
+    ui::v_flex(|cx| {
         [
             row,
-            ui::text(
-                cx,
-                "CustomV1 runs as a single-pass effect within EffectChain. Use params-only WGSL with bounded sampling.",
-            )
-            .text_sm()
-            .text_color(ColorRef::Color(theme.color_token("muted-foreground")))
-            .into_element(cx),
+            ui::text()
+                .text_sm()
+                .text_color(ColorRef::Color(theme.color_token("muted-foreground")))
+                .into_element(cx),
         ]
     })
     .gap(Space::N2)
@@ -304,7 +301,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut CustomV1BasicsWindowState) ->
     };
 
     let toggle_label = if enabled { "Disable" } else { "Enable" };
-    let toolbar = ui::h_flex(cx, |cx| {
+    let toolbar = ui::h_flex(|cx| {
         [
             shadcn::Button::new(toggle_label)
                 .variant(shadcn::ButtonVariant::Outline)
@@ -378,7 +375,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut CustomV1BasicsWindowState) ->
         panel_shell(cx, "CustomV1 (FilterContent)", disabled_body)
     };
 
-    let panels = ui::h_flex(cx, |_cx| [plain, custom_panel])
+    let panels = ui::h_flex(|_cx| [plain, custom_panel])
         .gap(Space::N3)
         .items_stretch()
         .into_element(cx);

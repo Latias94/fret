@@ -8,7 +8,7 @@ pub fn render<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     avatar_image: Model<Option<ImageId>>,
 ) -> AnyElement {
-    fret_ui_kit::ui::h_flex(cx, |cx| {
+    fret_ui_kit::ui::h_flex(|cx| {
         vec![with_direction_provider(cx, LayoutDirection::Rtl, |cx| {
             let image = shadcn::AvatarImage::model(avatar_image.clone()).into_element(cx);
             let fallback = shadcn::AvatarFallback::new("CN")

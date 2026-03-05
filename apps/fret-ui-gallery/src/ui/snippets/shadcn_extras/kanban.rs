@@ -35,7 +35,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         shadcn::extras::Kanban::new(columns, items)
             .test_id("ui-gallery-shadcn-extras-kanban")
             .into_element_with(cx, |cx, item, ctx| {
-                let title = ui::text(cx, item.name.clone())
+                let title = ui::text(item.name.clone())
                     .font_medium()
                     .w_full()
                     .min_w_0()

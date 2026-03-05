@@ -671,7 +671,7 @@ impl Toggle {
                             }
                             out.extend(styled_children);
                             if let Some(label) = label.clone() {
-                                let mut text = ui::label(cx, label)
+                                let mut text = ui::label(label)
                                     .text_size_px(text_style.size)
                                     .font_weight(text_style.weight)
                                     .nowrap();

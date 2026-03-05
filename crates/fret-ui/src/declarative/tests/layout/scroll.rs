@@ -261,7 +261,10 @@ fn scroll_wheel_bubbles_to_ancestor_when_axis_mismatch() {
                             for i in 0..16 {
                                 children.push(cx.text(format!("row{i}")));
                             }
-                            children.insert(6, inner);
+                            // Keep the nested scroll visible inside the outer viewport so hit
+                            // testing (which respects overflow clips) can route the wheel event to
+                            // the nested scroll first.
+                            children.insert(2, inner);
                             children
                         },
                     )]
@@ -294,7 +297,7 @@ fn scroll_wheel_bubbles_to_ancestor_when_axis_mismatch() {
 
     let outer_scroll_node = ui.children(root)[0];
     let outer_column_node = ui.children(outer_scroll_node)[0];
-    let inner_scroll_node = ui.children(outer_column_node)[6];
+    let inner_scroll_node = ui.children(outer_column_node)[2];
     let inner_bounds = ui
         .debug_node_bounds(inner_scroll_node)
         .expect("inner bounds");

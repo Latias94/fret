@@ -41,7 +41,7 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
                     .size(shadcn::ButtonSize::Sm)
                     .toggle_model(dropdown_open.clone())
                     .children([
-                        ui::text(cx, "Select").into_element(cx),
+                        ui::text("Select").text_sm().into_element(cx),
                         icon(cx, "lucide.chevron-down"),
                     ])
                     .test_id("ui-gallery-item-dropdown-trigger")

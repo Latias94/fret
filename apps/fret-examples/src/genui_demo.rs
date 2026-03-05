@@ -928,7 +928,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut GenUiState) -> Elements {
     let queue_len = queue_snapshot.len();
     let queue_lines: Vec<AnyElement> = queue_snapshot
         .into_iter()
-        .map(|line| ui::text(cx, line).text_sm().into_element(cx))
+        .map(|line| ui::text(line).text_sm().into_element(cx))
         .collect();
 
     let state_snapshot: Vec<Arc<str>> = cx
@@ -945,7 +945,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut GenUiState) -> Elements {
         .unwrap_or_else(|| vec![Arc::<str>::from("null")]);
     let state_lines: Vec<AnyElement> = state_snapshot
         .into_iter()
-        .map(|line| ui::text(cx, line).text_sm().into_element(cx))
+        .map(|line| ui::text(line).text_sm().into_element(cx))
         .collect();
 
     let (validation_issue_count, validation_snapshot): (usize, Vec<Arc<str>>) = cx
@@ -965,10 +965,10 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut GenUiState) -> Elements {
         .unwrap_or_else(|_| (0, vec![Arc::<str>::from("<validation unavailable>")]));
     let validation_lines: Vec<AnyElement> = validation_snapshot
         .into_iter()
-        .map(|line| ui::text(cx, line).text_sm().into_element(cx))
+        .map(|line| ui::text(line).text_sm().into_element(cx))
         .collect();
 
-    let toolbar = ui::h_flex(cx, move |cx| {
+    let toolbar = ui::h_flex(move |cx| {
         let mode_label: Arc<str> = Arc::from(if auto_apply_enabled {
             "Mode: live (auto-apply on)"
         } else {
@@ -986,7 +986,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut GenUiState) -> Elements {
         items.push(mode_badge);
 
         items.push(
-            ui::text(cx, Arc::<str>::from("auto-apply"))
+            ui::text(Arc::<str>::from("auto-apply"))
                 .text_sm()
                 .into_element(cx),
         );
@@ -998,7 +998,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut GenUiState) -> Elements {
         );
 
         items.push(
-            ui::text(cx, Arc::<str>::from("auto-fix on apply"))
+            ui::text(Arc::<str>::from("auto-fix on apply"))
                 .text_sm()
                 .into_element(cx),
         );
@@ -1008,7 +1008,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut GenUiState) -> Elements {
                 .into_element(cx),
         );
 
-        items.push(ui::text(cx, count_label.clone()).text_sm().into_element(cx));
+        items.push(ui::text(count_label.clone()).text_sm().into_element(cx));
 
         items.push(
             shadcn::Button::new("Clear queue")
@@ -1081,7 +1081,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut GenUiState) -> Elements {
                         "Auto-apply is off: pressing buttons will NOT change the UI. Actions are only appended to the queue. Apply the queue via executor, or switch back to live mode.",
                     )
                     .into_element(cx),
-                    ui::h_flex(cx, move |cx| {
+                    ui::h_flex( move |cx| {
                         vec![
                             shadcn::Button::new("Switch to live mode")
                                 .variant(shadcn::ButtonVariant::Secondary)
@@ -1113,13 +1113,13 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut GenUiState) -> Elements {
                 spec_issue_lines
                     .iter()
                     .cloned()
-                    .map(|s| ui::text(cx, s).text_sm().into_element(cx)),
+                    .map(|s| ui::text(s).text_sm().into_element(cx)),
             );
         }
         if let Some(root) = spec_root {
             body.push(root);
         }
-        let body = ui::v_flex(cx, move |_cx| body)
+        let body = ui::v_flex(move |_cx| body)
             .gap(Space::N3)
             .items_start()
             .w_full()
@@ -1139,7 +1139,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut GenUiState) -> Elements {
     let spec_lines: Vec<AnyElement> = spec_pretty
         .lines()
         .map(|line| {
-            ui::text(cx, Arc::<str>::from(line.to_string()))
+            ui::text(Arc::<str>::from(line.to_string()))
                 .text_sm()
                 .into_element(cx)
         })
@@ -1151,7 +1151,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut GenUiState) -> Elements {
     let schema_lines: Vec<AnyElement> = schema_pretty
         .lines()
         .map(|line| {
-            ui::text(cx, Arc::<str>::from(line.to_string()))
+            ui::text(Arc::<str>::from(line.to_string()))
                 .text_sm()
                 .into_element(cx)
         })
@@ -1161,7 +1161,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut GenUiState) -> Elements {
     let prompt_lines: Vec<AnyElement> = prompt
         .lines()
         .map(|line| {
-            ui::text(cx, Arc::<str>::from(line.to_string()))
+            ui::text(Arc::<str>::from(line.to_string()))
                 .text_sm()
                 .into_element(cx)
         })
@@ -1183,7 +1183,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut GenUiState) -> Elements {
     let stream_error = st.stream_error.clone();
 
     let right = {
-        let state_scroll = shadcn::ScrollArea::new([ui::v_flex(cx, |_cx| state_lines)
+        let state_scroll = shadcn::ScrollArea::new([ui::v_flex(|_cx| state_lines)
             .gap(Space::N0)
             .w_full()
             .items_start()
@@ -1193,7 +1193,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut GenUiState) -> Elements {
         .h_full()
         .into_element(cx);
 
-        let queue_scroll = shadcn::ScrollArea::new([ui::v_flex(cx, |_cx| queue_lines)
+        let queue_scroll = shadcn::ScrollArea::new([ui::v_flex(|_cx| queue_lines)
             .gap(Space::N1)
             .w_full()
             .items_start()
@@ -1202,7 +1202,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut GenUiState) -> Elements {
         .w_full()
         .h_full()
         .into_element(cx);
-        let queue_panel = ui::v_flex(cx, move |cx| {
+        let queue_panel = ui::v_flex(move |cx| {
             let mut out: Vec<AnyElement> = Vec::new();
             if let Some(summary) = queue_summary.clone() {
                 out.push(
@@ -1223,7 +1223,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut GenUiState) -> Elements {
 
         let issues_body = if spec_issue_count == 0 {
             vec![
-                ui::text(cx, Arc::<str>::from("No spec issues."))
+                ui::text(Arc::<str>::from("No spec issues."))
                     .text_sm()
                     .into_element(cx),
             ]
@@ -1231,10 +1231,10 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut GenUiState) -> Elements {
             spec_issue_lines
                 .iter()
                 .cloned()
-                .map(|s| ui::text(cx, s).text_sm().into_element(cx))
+                .map(|s| ui::text(s).text_sm().into_element(cx))
                 .collect()
         };
-        let issues_scroll = shadcn::ScrollArea::new([ui::v_flex(cx, |_cx| issues_body)
+        let issues_scroll = shadcn::ScrollArea::new([ui::v_flex(|_cx| issues_body)
             .gap(Space::N1)
             .w_full()
             .items_start()
@@ -1244,7 +1244,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut GenUiState) -> Elements {
         .h_full()
         .into_element(cx);
 
-        let validation_scroll = shadcn::ScrollArea::new([ui::v_flex(cx, |_cx| validation_lines)
+        let validation_scroll = shadcn::ScrollArea::new([ui::v_flex(|_cx| validation_lines)
             .gap(Space::N0)
             .w_full()
             .items_start()
@@ -1254,7 +1254,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut GenUiState) -> Elements {
         .h_full()
         .into_element(cx);
 
-        let spec_scroll = shadcn::ScrollArea::new([ui::v_flex(cx, |_cx| spec_lines)
+        let spec_scroll = shadcn::ScrollArea::new([ui::v_flex(|_cx| spec_lines)
             .gap(Space::N0)
             .w_full()
             .items_start()
@@ -1264,7 +1264,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut GenUiState) -> Elements {
         .h_full()
         .into_element(cx);
 
-        let schema_scroll = shadcn::ScrollArea::new([ui::v_flex(cx, |_cx| schema_lines)
+        let schema_scroll = shadcn::ScrollArea::new([ui::v_flex(|_cx| schema_lines)
             .gap(Space::N0)
             .w_full()
             .items_start()
@@ -1274,7 +1274,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut GenUiState) -> Elements {
         .h_full()
         .into_element(cx);
 
-        let prompt_scroll = shadcn::ScrollArea::new([ui::v_flex(cx, |_cx| prompt_lines)
+        let prompt_scroll = shadcn::ScrollArea::new([ui::v_flex(|_cx| prompt_lines)
             .gap(Space::N0)
             .w_full()
             .items_start()
@@ -1286,7 +1286,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut GenUiState) -> Elements {
 
         let mut editor_children: Vec<AnyElement> = Vec::new();
         editor_children.push(
-            ui::h_flex(cx, move |cx| {
+            ui::h_flex(move |cx| {
                 vec![
                     shadcn::Button::new("Apply spec")
                         .variant(shadcn::ButtonVariant::Secondary)
@@ -1302,14 +1302,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut GenUiState) -> Elements {
             .items_center()
             .into_element(cx),
         );
-        editor_children.push(
-            ui::text(
-                cx,
-                Arc::<str>::from("Apply parses SpecV1 JSON and resets state/queue to spec.state."),
-            )
-            .text_sm()
-            .into_element(cx),
-        );
+        editor_children.push(ui::text("").text_sm().into_element(cx));
         if let Some(summary) = auto_fix_summary.clone() {
             editor_children.push(
                 shadcn::Alert::new([
@@ -1334,7 +1327,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut GenUiState) -> Elements {
                 .into_element(cx),
             );
         }
-        let editor_panel = ui::v_flex(cx, move |_cx| editor_children)
+        let editor_panel = ui::v_flex(move |_cx| editor_children)
             .gap(Space::N2)
             .items_start()
             .w_full()
@@ -1347,7 +1340,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut GenUiState) -> Elements {
 
         let mut stream_children: Vec<AnyElement> = Vec::new();
         stream_children.push(
-            ui::h_flex(cx, move |cx| {
+            ui::h_flex(move |cx| {
                 vec![
                     shadcn::Button::new("Apply stream → spec")
                         .variant(shadcn::ButtonVariant::Secondary)
@@ -1364,15 +1357,12 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut GenUiState) -> Elements {
             .into_element(cx),
         );
         stream_children.push(
-            ui::h_flex(cx, move |cx| {
+            ui::h_flex(move |cx| {
                 vec![
-                    ui::text(
-                        cx,
-                        Arc::<str>::from(format!(
-                            "patch-only: {}",
-                            if stream_patch_only { "on" } else { "off" }
-                        )),
-                    )
+                    ui::text(Arc::<str>::from(format!(
+                        "patch-only: {}",
+                        if stream_patch_only { "on" } else { "off" }
+                    )))
                     .text_sm()
                     .into_element(cx),
                     shadcn::Switch::new(stream_patch_only_model.clone())
@@ -1385,9 +1375,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut GenUiState) -> Elements {
             .into_element(cx),
         );
         stream_children.push(
-            ui::text(
-                cx,
-                Arc::<str>::from(
+            ui::text(Arc::<str>::from(
                     "Paste json-render-style mixed streams here (text + JSONL RFC6902 patches). Supports ```spec fences.",
                 ),
             )
@@ -1401,7 +1389,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut GenUiState) -> Elements {
                 .into_element(cx),
         );
         if let Some(summary) = stream_summary {
-            stream_children.push(ui::text(cx, summary).text_sm().into_element(cx));
+            stream_children.push(ui::text(summary).text_sm().into_element(cx));
         }
         if let Some(summary) = auto_fix_summary {
             stream_children.push(
@@ -1421,7 +1409,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut GenUiState) -> Elements {
                 .into_element(cx),
             );
         }
-        let stream_panel = ui::v_flex(cx, move |_cx| stream_children)
+        let stream_panel = ui::v_flex(move |_cx| stream_children)
             .gap(Space::N2)
             .items_start()
             .w_full()
@@ -1455,7 +1443,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut GenUiState) -> Elements {
             ])
             .into_element(cx);
 
-        let body = ui::v_flex(cx, move |_cx| [tabs])
+        let body = ui::v_flex(move |_cx| [tabs])
             .gap(Space::N0)
             .w_full()
             .h_full()
@@ -1469,8 +1457,8 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut GenUiState) -> Elements {
             .into_element(cx)
     };
 
-    let page = ui::container(cx, move |cx| {
-        [ui::h_flex(cx, move |_cx| [left, right])
+    let page = ui::container(move |cx| {
+        [ui::h_flex(move |_cx| [left, right])
             .gap(Space::N3)
             .w_full()
             .h_full()

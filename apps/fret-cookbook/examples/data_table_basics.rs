@@ -108,7 +108,7 @@ impl View for DataTableBasicsView {
                 },
             );
 
-        let table_slot = ui::container(cx, |_cx| [data_table])
+        let table_slot = ui::container(|_cx| [data_table])
             .bg(ColorRef::Color(theme.color_token("card")))
             .border_1()
             .border_color(ColorRef::Color(theme.color_token("border")))
@@ -119,7 +119,7 @@ impl View for DataTableBasicsView {
             .test_id(TEST_ID_TABLE);
 
         let content =
-            shadcn::CardContent::new([ui::v_flex(cx, |_cx| [toolbar, table_slot, pagination])
+            shadcn::CardContent::new([ui::v_flex(|_cx| [toolbar, table_slot, pagination])
                 .gap(Space::N3)
                 .h_full()
                 .into_element(cx)])

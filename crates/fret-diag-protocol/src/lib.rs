@@ -621,6 +621,29 @@ pub enum UiActionStepV2 {
         #[serde(default)]
         delta_y: f32,
     },
+    /// Inject a burst of wheel events in a single frame via the native runner (best-effort).
+    ///
+    /// Unlike [`UiActionStepV2::Wheel`], which injects a single `pointer.wheel` event directly into
+    /// the UI event stream, this step is intended to exercise runner-level wheel coalescing by
+    /// synthesizing multiple raw wheel inputs in the same frame.
+    ///
+    /// Requires capability `diag.wheel_burst_inject`.
+    WheelBurst {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        window: Option<UiWindowTargetV1>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        pointer_kind: Option<UiPointerKindV1>,
+        target: UiSelectorV1,
+        #[serde(default)]
+        delta_x: f32,
+        #[serde(default)]
+        delta_y: f32,
+        #[serde(
+            default = "default_wheel_burst_count",
+            skip_serializing_if = "is_default_wheel_burst_count"
+        )]
+        count: u32,
+    },
     PressKey {
         key: String,
         #[serde(default)]
@@ -1213,6 +1236,14 @@ fn default_drag_steps() -> u32 {
 
 fn is_default_drag_steps(v: &u32) -> bool {
     *v == default_drag_steps()
+}
+
+fn default_wheel_burst_count() -> u32 {
+    8
+}
+
+fn is_default_wheel_burst_count(v: &u32) -> bool {
+    *v == default_wheel_burst_count()
 }
 
 fn default_move_frames_per_step() -> u32 {

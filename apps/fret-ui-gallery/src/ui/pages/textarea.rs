@@ -5,8 +5,9 @@ use crate::ui::snippets::textarea as snippets;
 
 pub(super) fn preview_textarea(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     let demo = snippets::demo::render(cx);
-    let field = snippets::field::render(cx);
     let disabled = snippets::disabled::render(cx);
+    let with_label = snippets::field::render(cx);
+    let with_text = snippets::with_text::render(cx);
     let invalid = snippets::invalid::render(cx);
     let button = snippets::button::render(cx);
     let rtl = snippets::rtl::render(cx);
@@ -23,22 +24,25 @@ pub(super) fn preview_textarea(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview follows the shadcn/ui Textarea docs examples: Demo, Field, Disabled, Invalid, Button, RTL.",
+            "Preview follows the shadcn/ui Textarea docs examples, plus extra Fret-only variants (Invalid, RTL).",
         ),
         vec![
             DocSection::new("Demo", demo)
                 .test_id_prefix("ui-gallery-textarea-demo")
                 .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
-            DocSection::new("Field", field)
+            DocSection::new("With Label", with_label)
                 .test_id_prefix("ui-gallery-textarea-field")
                 .code_rust_from_file_region(snippets::field::SOURCE, "example"),
             DocSection::new("Disabled", disabled)
                 .test_id_prefix("ui-gallery-textarea-disabled")
                 .code_rust_from_file_region(snippets::disabled::SOURCE, "example"),
+            DocSection::new("With Text", with_text)
+                .test_id_prefix("ui-gallery-textarea-with-text")
+                .code_rust_from_file_region(snippets::with_text::SOURCE, "example"),
             DocSection::new("Invalid", invalid)
                 .test_id_prefix("ui-gallery-textarea-invalid")
                 .code_rust_from_file_region(snippets::invalid::SOURCE, "example"),
-            DocSection::new("Button", button)
+            DocSection::new("With Button", button)
                 .test_id_prefix("ui-gallery-textarea-button")
                 .code_rust_from_file_region(snippets::button::SOURCE, "example"),
             DocSection::new("RTL", rtl)

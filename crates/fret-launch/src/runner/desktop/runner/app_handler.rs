@@ -1496,6 +1496,49 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                 );
                 let _redraw_guard = redraw_span.enter();
 
+                if let Some(req) = self.poll_diag_wheel_burst_inject(app_window) {
+                    let total_dx = req.delta_x * (req.count.max(1) as f32);
+                    let total_dy = req.delta_y * (req.count.max(1) as f32);
+                    let injected = PendingWheelEvent {
+                        pointer_id: fret_core::PointerId(0),
+                        position: req.position,
+                        delta: fret_core::Point::new(
+                            fret_core::Px(total_dx),
+                            fret_core::Px(total_dy),
+                        ),
+                        modifiers: req.modifiers,
+                        pointer_type: req.pointer_type,
+                    };
+
+                    if Self::wheel_coalescing_enabled() {
+                        if let Some(state) = self.windows.get_mut(app_window) {
+                            state.pending_wheel = Some(match state.pending_wheel.take() {
+                                Some(mut prev) => {
+                                    prev.delta = wheel_coalesce_delta(prev.delta, injected.delta);
+                                    prev.position = injected.position;
+                                    prev.modifiers = injected.modifiers;
+                                    prev.pointer_type = injected.pointer_type;
+                                    prev.pointer_id = injected.pointer_id;
+                                    prev
+                                }
+                                None => injected,
+                            });
+                        }
+                        self.app.request_redraw(app_window);
+                    } else {
+                        self.deliver_window_event_now(
+                            app_window,
+                            &Event::Pointer(fret_core::PointerEvent::Wheel {
+                                pointer_id: injected.pointer_id,
+                                position: injected.position,
+                                delta: injected.delta,
+                                modifiers: injected.modifiers,
+                                pointer_type: injected.pointer_type,
+                            }),
+                        );
+                    }
+                }
+
                 if Self::wheel_coalescing_enabled() {
                     let max_abs = Self::wheel_coalescing_max_abs_px();
                     let mut to_deliver: Option<PendingWheelEvent> = None;

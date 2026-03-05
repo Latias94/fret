@@ -345,28 +345,23 @@ This phase is intentionally last.
     - A single, accurate “when to use MVU” policy exists and is reflected in docs/templates.
   - Decision:
     - MVU is legacy-only (compat), not a supported alternative golden path.
-  - Evidence:
-    - Policy: `docs/workstreams/action-first-authoring-fearless-refactor-v1/MVU_POLICY.md`
-    - Guidance: `docs/workstreams/action-first-authoring-fearless-refactor-v1/MIGRATION_GUIDE.md` (“When to use MVU vs View”)
+   - Evidence:
+     - Policy: `docs/workstreams/action-first-authoring-fearless-refactor-v1/MVU_POLICY.md`
+     - Guidance: `docs/workstreams/action-first-authoring-fearless-refactor-v1/MIGRATION_GUIDE.md`
 
 - [x] AFA-clean-064 Add compile-time deprecation warnings for legacy MVU surfaces (if feasible).
   - Rule: docs/templates must stop teaching it *before* adding warnings.
   - Candidate surfaces:
     - `ecosystem/fret/src/mvu.rs`
     - `ecosystem/fret/src/mvu_router.rs`
-  - Evidence:
-    - `ecosystem/fret/src/lib.rs` (deprecated `legacy`/`mvu`/`mvu_router` modules)
-    - `ecosystem/fret/src/app_entry.rs` (deprecated MVU entry points when `legacy-mvu` is enabled)
-    - `ecosystem/fret/src/interop/embedded_viewport.rs` (deprecated MVU embedding helpers when `legacy-mvu` is enabled)
+   - Evidence:
+     - MVU surfaces were deprecated during v1 and later removed in M9.
 
 - [x] AFA-clean-065 Consider feature-gating MVU behind an explicit legacy feature.
   - Goal: keep `fret::prelude::*` boring, and make MVU opt-in in downstream apps.
   - Non-goal: break existing users without a deprecation window.
-  - Evidence:
-    - `ecosystem/fret/Cargo.toml` (`legacy-mvu` feature)
-    - `ecosystem/fret/src/lib.rs` (MVU modules gated behind `legacy-mvu`)
-    - `apps/fret-examples/Cargo.toml` (in-tree demo opts in via `legacy-mvu`)
-    - `apps/fret-ui-gallery/Cargo.toml` (in-tree demo opts in via `legacy-mvu`)
+   - Evidence:
+     - MVU was feature-gated during the v1 deprecation window and later removed in M9.
 
 ---
 
@@ -392,6 +387,12 @@ practical steps:
     - `apps/fret-cookbook/examples/overlay_basics.rs`
     - `apps/fret-cookbook/examples/commands_keymap_basics.rs`
     - `apps/fret-cookbook/examples/hello_counter.rs`
+  - Done: remove redundant outer `cx` arguments from ecosystem authoring constructors (`fret-ui-kit::ui::*`):
+    - Implementation: `ecosystem/fret-ui-kit/src/ui.rs` (`h_flex`, `v_flex`, `container`, `scroll_area`, `stack`, `text`, `label`, `raw_text`, …)
+    - Call-site migration: cookbook, examples, ui-gallery, shadcn/genui crates (workspace-wide)
+    - Note: a handful of “host type inference” edge cases need an explicit anchor.
+      Preferred: annotate the closure argument type (e.g. `ui::v_flex(|cx: &mut ElementContext<'_, App>| ...)`).
+      Alternative: turbofish (e.g. `ui::v_flex::<App, _, _>(...)`).
 - Pointer-triggered explainability: stable selector → action mapping without relying on script stamping.
   - Status (as of 2026-03-03): `debug.command_dispatch_trace[*].source_test_id` is inferred from the
     current semantics snapshot when `source_element` is available (fallbacks remain for cases where
@@ -466,7 +467,7 @@ migrated, then delete”, track the remaining steps here.
 Exit target:
 
 - no remaining MVU usage in-tree,
-- no `legacy-mvu` feature (and no demo-level MVU opt-in features like `legacy-mvu-demos`),
+- no MVU-related feature gates or demo-level opt-ins,
 - no `fret::legacy::*` module,
 - no MVU references in templates/docs.
 
@@ -482,14 +483,14 @@ Tasks:
   - `apps/fret-examples/src/embedded_viewport_demo_legacy.rs`
   - `apps/fret-examples/src/drop_shadow_demo_legacy.rs`
   - `apps/fret-examples/src/postprocess_theme_demo_legacy.rs`
-- [x] AFA-m9-003 Remove `apps/fret-examples` feature `legacy-mvu-demos` and any routing/printing branches in `apps/fret-demo`.
-- [x] AFA-m9-004 Remove `ecosystem/fret` feature `legacy-mvu` and delete MVU modules:
+- [x] AFA-m9-003 Remove the demo-level MVU opt-in and any routing/printing branches in `apps/fret-demo`.
+- [x] AFA-m9-004 Remove the `ecosystem/fret` MVU feature gate and delete MVU modules:
   - `ecosystem/fret/src/mvu.rs`
   - `ecosystem/fret/src/mvu_router.rs`
   - `ecosystem/fret/src/legacy.rs`
 - [x] AFA-m9-005 Remove any legacy MVU scaffolding sources from `apps/fretboard/src/scaffold/templates.rs`.
-- [ ] AFA-m9-006 Update docs to remove MVU guidance:
+- [x] AFA-m9-006 Update docs to remove MVU guidance:
   - `docs/workstreams/action-first-authoring-fearless-refactor-v1/MVU_POLICY.md`
   - `docs/workstreams/action-first-authoring-fearless-refactor-v1/MIGRATION_GUIDE.md`
   - `docs/workstreams/action-first-authoring-fearless-refactor-v1/CLEANUP_PLAN.md`
-- [ ] AFA-m9-007 Add a lightweight gate that fails if MVU identifiers reappear (file list + `git grep` is enough).
+- [x] AFA-m9-007 Add a lightweight gate that fails if MVU identifiers reappear (file list + `git grep` is enough).

@@ -302,7 +302,7 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
                         stack::HStackProps::default().gap(Space::N2).items_center(),
                         |cx| {
                             vec![
-                                ui::text(cx, "Trending up by 5.2% this month")
+                                ui::text("Trending up by 5.2% this month")
                                     .font_medium()
                                     .into_element(cx),
                                 icon,
@@ -375,7 +375,7 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
         "ui-gallery-chart-demo-line",
     );
 
-    fret_ui_kit::ui::h_flex(cx, |_cx| vec![area, bar, mixed, line])
+    fret_ui_kit::ui::h_flex(|_cx| vec![area, bar, mixed, line])
         .gap(Space::N4)
         .wrap()
         .w_full()
