@@ -441,24 +441,27 @@ impl ChainOfThoughtContent {
                     .gap(Space::N3)
                     .into_element(cx);
 
-                cx.container(
+                let mut content = cx.container(
                     ContainerProps {
                         layout: decl_style::layout_style(&theme, layout),
                         ..Default::default()
                     },
                     move |_cx| vec![body],
-                )
+                );
+
+                if let Some(test_id) = test_id.clone() {
+                    content = content.attach_semantics(
+                        SemanticsDecoration::default()
+                            .role(SemanticsRole::Group)
+                            .test_id(test_id),
+                    );
+                }
+
+                content
             },
         );
 
-        match test_id {
-            Some(test_id) => inner.attach_semantics(
-                SemanticsDecoration::default()
-                    .role(SemanticsRole::Group)
-                    .test_id(test_id),
-            ),
-            None => inner,
-        }
+        inner
     }
 }
 

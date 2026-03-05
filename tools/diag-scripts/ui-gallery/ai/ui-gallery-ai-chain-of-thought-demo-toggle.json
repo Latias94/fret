@@ -36,15 +36,24 @@
       },
       "timeout_frames": 240
     },
-    { "type": "click_stable", "target": { "kind": "test_id", "id": "ui-ai-chain-of-thought-header" } },
     {
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-ai-chain-of-thought-open-true" }
+        "target": { "kind": "test_id", "id": "ui-ai-chain-of-thought-content-marker" }
       },
       "timeout_frames": 240
     },
+    { "type": "click_stable", "target": { "kind": "test_id", "id": "ui-ai-chain-of-thought-header" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "not_exists",
+        "target": { "kind": "test_id", "id": "ui-ai-chain-of-thought-content-marker" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "click_stable", "target": { "kind": "test_id", "id": "ui-ai-chain-of-thought-header" } },
     {
       "type": "wait_until",
       "predicate": {
