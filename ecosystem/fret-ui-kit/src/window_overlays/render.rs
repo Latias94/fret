@@ -2482,13 +2482,13 @@ pub fn render<H: UiHost + 'static>(
                                                                 a11y: Default::default(),
                                                             },
                                                             move |cx, st| {
-                                                                cx.pressable_add_on_activate(Arc::new(
+                                                                cx.pressable_add_on_activate(crate::on_activate(
                                                                     move |host, cx, _reason| {
                                                                         host.dispatch_command(Some(cx.window), cmd.clone());
                                                                     },
                                                                 ));
                                                                 if dismiss_toast {
-                                                                    cx.pressable_add_on_activate(Arc::new(
+                                                                    cx.pressable_add_on_activate(crate::on_activate(
                                                                         move |host, cx, _reason| {
                                                                             let _ = dismiss_toast_action(
                                                                                 host,
@@ -2569,12 +2569,12 @@ pub fn render<H: UiHost + 'static>(
                                                                 a11y: Default::default(),
                                                             },
                                                             move |cx, st| {
-                                                                cx.pressable_add_on_activate(Arc::new(
+                                                                cx.pressable_add_on_activate(crate::on_activate(
                                                                     move |host, cx, _reason| {
                                                                         host.dispatch_command(Some(cx.window), cmd.clone());
                                                                     },
                                                                 ));
-                                                                cx.pressable_add_on_activate(Arc::new(
+                                                                cx.pressable_add_on_activate(crate::on_activate(
                                                                     move |host, cx, _reason| {
                                                                         let _ = dismiss_toast_action(
                                                                             host,
