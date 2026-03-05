@@ -118,6 +118,10 @@ impl<T> UiBuilder<T> {
         self.semantics(SemanticsDecoration::default().role(role))
     }
 
+    pub fn role(self, role: SemanticsRole) -> Self {
+        self.a11y_role(role)
+    }
+
     pub fn a11y_label(self, label: impl Into<Arc<str>>) -> Self {
         self.semantics(SemanticsDecoration::default().label(label))
     }

@@ -154,7 +154,7 @@ impl View for ImUiActionBasicsView {
                 shadcn::Button::new("Increment (declarative)")
                     .action(act::Inc)
                     .into_element(cx)
-                    .a11y_role(SemanticsRole::Button)
+                    .role(SemanticsRole::Button)
                     .test_id(TEST_ID_BUTTON_DECL),
                 genui_panel,
                 imui_panel,

@@ -18,9 +18,9 @@ use fret_ui::element::{
     SelectableTextProps, SemanticsDecoration, TextProps,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui_kit::Space;
 use fret_ui_kit::typography;
 use fret_ui_kit::ui;
-use fret_ui_kit::{LayoutRefinement, Space};
 
 pub use mdstream::BlockId;
 

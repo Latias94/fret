@@ -87,7 +87,7 @@ impl View for EffectsLayerBasicsView {
                 })
                 .action(action)
                 .into_element(cx)
-                .a11y_role(SemanticsRole::Button)
+                .role(SemanticsRole::Button)
                 .test_id(test_id)
         };
 
