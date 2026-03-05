@@ -25,6 +25,9 @@ Using `tools/diag-scripts/todo-memory-steady.json` on macOS/Metal:
   - `macos_vmmap_steady.tables.malloc_zones.total.frag_bytes`: 24,285,594 .. 28,165,325 (~23.2 .. 26.9 MiB)
   - `wgpu_metal_current_allocated_size_bytes`: 83,755,008 .. 137,232,384 (~79.9 .. 130.9 MiB)
   - `render_text_atlas_bytes_live_estimate_total`: 4,194,304 (4 MiB; mask atlas 1 page)
+- Evidence index notes:
+  - `evidence.index.json.resources.bundle_last_frame_stats.wgpu_metal_current_allocated_size_bytes_{min,max}` reports the range across captured snapshots.
+  - `evidence.index.json.resources.bundle_last_frame_stats.wgpu_hub_*` counters are available when `--env FRET_DIAG_WGPU_REPORT=1` is enabled.
 
 Using `tools/diag-scripts/empty-idle-memory-steady.json` on macOS/Metal (baseline):
 

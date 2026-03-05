@@ -226,6 +226,14 @@ fn bundle_stats_summary_from_path(path: &Path) -> Option<serde_json::Value> {
         .and_then(|v| v.get("stats"))
         .and_then(|v| v.as_object())?;
 
+    let snapshot_stats_u64 = |snapshot: &serde_json::Value, k: &str| -> Option<u64> {
+        snapshot
+            .get("debug")
+            .and_then(|v| v.get("stats"))
+            .and_then(|v| v.get(k))
+            .and_then(|v| v.as_u64())
+    };
+
     let get_u64 = |k: &str| stats.get(k).and_then(|v| v.as_u64());
     let get_bool = |k: &str| stats.get(k).and_then(|v| v.as_bool());
 
@@ -271,11 +279,39 @@ fn bundle_stats_summary_from_path(path: &Path) -> Option<serde_json::Value> {
         _ => None,
     };
 
+    let mut wgpu_metal_current_allocated_size_bytes_min: Option<u64> = None;
+    let mut wgpu_metal_current_allocated_size_bytes_max: Option<u64> = None;
+    for snapshot in snapshots {
+        let Some(v) = snapshot_stats_u64(snapshot, "wgpu_metal_current_allocated_size_bytes")
+        else {
+            continue;
+        };
+        wgpu_metal_current_allocated_size_bytes_min =
+            Some(wgpu_metal_current_allocated_size_bytes_min.map_or(v, |cur| cur.min(v)));
+        wgpu_metal_current_allocated_size_bytes_max =
+            Some(wgpu_metal_current_allocated_size_bytes_max.map_or(v, |cur| cur.max(v)));
+    }
+
     Some(serde_json::json!({
         "bundle_schema_version": v.get("schema_version").and_then(|v| v.as_u64()),
         "window": first_window.get("window").and_then(|v| v.as_u64()),
         "tick_id": last_snapshot.get("tick_id").and_then(|v| v.as_u64()),
         "frame_id": last_snapshot.get("frame_id").and_then(|v| v.as_u64()),
+
+        "wgpu_hub_tick_id": get_u64("wgpu_hub_tick_id"),
+        "wgpu_hub_frame_id": get_u64("wgpu_hub_frame_id"),
+        "wgpu_hub_adapters": get_u64("wgpu_hub_adapters"),
+        "wgpu_hub_devices": get_u64("wgpu_hub_devices"),
+        "wgpu_hub_queues": get_u64("wgpu_hub_queues"),
+        "wgpu_hub_command_encoders": get_u64("wgpu_hub_command_encoders"),
+        "wgpu_hub_buffers": get_u64("wgpu_hub_buffers"),
+        "wgpu_hub_textures": get_u64("wgpu_hub_textures"),
+        "wgpu_hub_texture_views": get_u64("wgpu_hub_texture_views"),
+        "wgpu_hub_samplers": get_u64("wgpu_hub_samplers"),
+        "wgpu_hub_shader_modules": get_u64("wgpu_hub_shader_modules"),
+        "wgpu_hub_render_pipelines": get_u64("wgpu_hub_render_pipelines"),
+        "wgpu_hub_compute_pipelines": get_u64("wgpu_hub_compute_pipelines"),
+
         "wgpu_allocator_tick_id": get_u64("wgpu_allocator_tick_id"),
         "wgpu_allocator_frame_id": get_u64("wgpu_allocator_frame_id"),
         "wgpu_allocator_sample_present": get_bool("wgpu_allocator_sample_present"),
@@ -284,6 +320,8 @@ fn bundle_stats_summary_from_path(path: &Path) -> Option<serde_json::Value> {
         "wgpu_allocator_total_reserved_bytes": get_u64("wgpu_allocator_total_reserved_bytes"),
         "wgpu_metal_current_allocated_size_present": get_bool("wgpu_metal_current_allocated_size_present"),
         "wgpu_metal_current_allocated_size_bytes": get_u64("wgpu_metal_current_allocated_size_bytes"),
+        "wgpu_metal_current_allocated_size_bytes_min": wgpu_metal_current_allocated_size_bytes_min,
+        "wgpu_metal_current_allocated_size_bytes_max": wgpu_metal_current_allocated_size_bytes_max,
         "renderer_intermediate_peak_in_use_bytes": get_u64("renderer_intermediate_peak_in_use_bytes"),
         "renderer_gpu_images_bytes_estimate": get_u64("renderer_gpu_images_bytes_estimate"),
         "renderer_gpu_render_targets_bytes_estimate": get_u64("renderer_gpu_render_targets_bytes_estimate"),
