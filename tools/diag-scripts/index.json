@@ -4660,6 +4660,16 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-input-group-button-click-focus",
+      "path": "tools/diag-scripts/ui-gallery/input/ui-gallery-input-group-button-click-focus.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-input-group-rtl-screenshot",
       "path": "tools/diag-scripts/ui-gallery/input/ui-gallery-input-group-rtl-screenshot.json",
       "required_capabilities": [
