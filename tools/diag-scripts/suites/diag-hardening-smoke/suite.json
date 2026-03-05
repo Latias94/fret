@@ -8,7 +8,9 @@
     "tools/diag-scripts/ui-gallery/incoming/ui-gallery-incoming-open-inject-smoke.json",
     "tools/diag-scripts/ui-gallery/diag/ui-gallery-pointer-kind-touch-click-smoke.json",
     "tools/diag-scripts/ui-gallery/label/ui-gallery-label-click-focus-input.json",
+    "tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scroll-area-expand-at-bottom.json",
     "tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scroll-area-nested-scroll-routing.json",
+    "tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-wheel-burst-coalescing.json",
     "tools/diag-scripts/ui-gallery/table/ui-gallery-table-smoke.json"
   ]
 }

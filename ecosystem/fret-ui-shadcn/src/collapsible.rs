@@ -186,7 +186,10 @@ impl Collapsible {
 
             let stack = cx.column(
                 ColumnProps {
-                    layout: decl_style::layout_style(&theme, layout),
+                    layout: decl_style::layout_style(
+                        &theme,
+                        LayoutRefinement::default().min_w_0().merge(layout),
+                    ),
                     ..Default::default()
                 },
                 move |cx| {
@@ -258,7 +261,11 @@ impl Collapsible {
                 },
             );
 
-            let wrapper = decl_style::container_props(&theme, chrome, LayoutRefinement::default());
+            let wrapper = decl_style::container_props(
+                &theme,
+                chrome,
+                LayoutRefinement::default().w_full().min_w_0(),
+            );
             let root = cx.container(wrapper, move |_cx| vec![stack]);
 
             root.attach_semantics(SemanticsDecoration {
@@ -372,14 +379,16 @@ impl CollapsibleContent {
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = fret_ui::Theme::global(&*cx.app).snapshot();
-        let wrapper = decl_style::container_props(&theme, self.chrome, LayoutRefinement::default());
-        let layout = self.layout;
+        let wrapper = decl_style::container_props(&theme, self.chrome, self.layout);
         let children = self.children;
 
         cx.container(wrapper, move |cx| {
             vec![cx.column(
                 ColumnProps {
-                    layout: decl_style::layout_style(&theme, layout),
+                    layout: decl_style::layout_style(
+                        &theme,
+                        LayoutRefinement::default().w_full().min_w_0(),
+                    ),
                     ..Default::default()
                 },
                 move |_cx| children,

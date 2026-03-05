@@ -19,5 +19,5 @@ pub(super) fn preview_ai_persona_demo(
         ],
     );
 
-    vec![body.test_id("ui-gallery-page-ai-persona-demo")]
+    vec![body]
 }

@@ -2163,6 +2163,29 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-ai-checkpoint-restore-tooltip",
+      "path": "tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-checkpoint-restore-tooltip.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-ai-checkpoint"
+      ],
+      "tags": [
+        "ai",
+        "checkpoint",
+        "restore",
+        "screenshots",
+        "tooltip",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Run `fret-ui-gallery` with `--features gallery-dev` so AI pages are wired.",
+        "Suite sets `FRET_UI_GALLERY_START_PAGE=ai_checkpoint_demo` to avoid sidebar navigation flake."
+      ]
+    },
+    {
       "id": "ui-gallery-ai-conversation-demo-screenshot-zinc-dark",
       "path": "tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-conversation-demo-screenshot-zinc-dark.json",
       "required_capabilities": [
@@ -2204,6 +2227,36 @@
         "Sends a long message to ensure the transcript can scroll.",
         "Scrolls up to assert the scroll-to-bottom button appears, then clicks it to assert it hides again."
       ]
+    },
+    {
+      "id": "ui-gallery-ai-sources-demo",
+      "path": "tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-sources-demo.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-ai-sources"
+      ],
+      "tags": [
+        "ai-elements",
+        "collapsible",
+        "sources",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Navigates to the AI Sources demo page.",
+        "Expands the sources block and asserts it stays intrinsic-width (AI Elements `w-fit` parity)."
+      ]
+    },
+    {
+      "id": "ui-gallery-ai-suggestions-demo-click",
+      "path": "tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-suggestions-demo-click.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-ai-suggestions"
+      ],
+      "tags": [],
+      "target_hints": []
     },
     {
       "id": "ui-gallery-ai-transcript-torture-scroll",
@@ -4599,6 +4652,16 @@
     {
       "id": "ui-gallery-input-group-addon-after-control-tab-focus",
       "path": "tools/diag-scripts/ui-gallery/input/ui-gallery-input-group-addon-after-control-tab-focus.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-input-group-button-click-focus",
+      "path": "tools/diag-scripts/ui-gallery/input/ui-gallery-input-group-button-click-focus.json",
       "required_capabilities": [],
       "suite_memberships": [
         "ui-gallery-shadcn-conformance"

@@ -19,5 +19,5 @@ pub(super) fn preview_ai_file_tree_demo(
         ],
     );
 
-    vec![body.test_id("ui-gallery-page-ai-file-tree-demo")]
+    vec![body]
 }

@@ -553,7 +553,12 @@ impl InputGroup {
                         )
                     };
 
-                    let should_click_to_focus = control_focus_target.is_some() && !has_button;
+                    let muted_foreground = {
+                        let theme = Theme::global(&*cx.app);
+                        theme.color_token("muted-foreground")
+                    };
+
+                    let should_click_to_focus = control_focus_target.is_some();
 
                     let on_down = should_click_to_focus.then(|| {
                         let control_focus_target =
@@ -563,7 +568,7 @@ impl InputGroup {
                                 move |host: &mut dyn UiPointerActionHost,
                                       _cx: fret_ui::action::ActionCx,
                                       down: fret_ui::action::PointerDownCx| {
-                                    if down.button == MouseButton::Left {
+                                    if down.button == MouseButton::Left && !down.hit_is_pressable {
                                         host.request_focus(control_focus_target);
                                     }
                                     false
@@ -608,7 +613,12 @@ impl InputGroup {
                                 cx.pointer_region_on_pointer_down(on_down);
                             }
                             cx.pointer_region_on_pointer_move(on_move.clone());
-                            vec![flex]
+                            let content = if disabled {
+                                cx.opacity(0.5, move |_cx| vec![flex])
+                            } else {
+                                flex
+                            };
+                            vec![cx.foreground_scope(muted_foreground, move |_cx| vec![content])]
                         },
                     )
                 };
@@ -911,26 +921,33 @@ impl InputGroup {
                                 ..Default::default()
                             },
                             move |cx| {
-                                vec![
-                                    cx.flex(
-                                        FlexProps {
-                                            layout: LayoutStyle::default(),
-                                            direction: Axis::Horizontal,
-                                            gap: gap.into(),
-                                            padding: Edges {
-                                                top: pt,
-                                                right: px_3,
-                                                bottom: pb,
-                                                left: px_3,
-                                            }
-                                            .into(),
-                                            justify: fret_ui::element::MainAlign::Start,
-                                            align: fret_ui::element::CrossAlign::Center,
-                                            wrap: false,
-                                        },
-                                        move |_cx| block_start,
-                                    ),
-                                ]
+                                let muted_foreground =
+                                    Theme::global(&*cx.app).color_token("muted-foreground");
+                                let row = cx.flex(
+                                    FlexProps {
+                                        layout: LayoutStyle::default(),
+                                        direction: Axis::Horizontal,
+                                        gap: gap.into(),
+                                        padding: Edges {
+                                            top: pt,
+                                            right: px_3,
+                                            bottom: pb,
+                                            left: px_3,
+                                        }
+                                        .into(),
+                                        justify: fret_ui::element::MainAlign::Start,
+                                        align: fret_ui::element::CrossAlign::Center,
+                                        wrap: false,
+                                    },
+                                    move |_cx| block_start,
+                                );
+
+                                let row = if disabled {
+                                    cx.opacity(0.5, move |_cx| vec![row])
+                                } else {
+                                    row
+                                };
+                                vec![cx.foreground_scope(muted_foreground, move |_cx| vec![row])]
                             },
                         )
                     });
@@ -973,26 +990,33 @@ impl InputGroup {
                                 ..Default::default()
                             },
                             move |cx| {
-                                vec![
-                                    cx.flex(
-                                        FlexProps {
-                                            layout: LayoutStyle::default(),
-                                            direction: Axis::Horizontal,
-                                            gap: gap.into(),
-                                            padding: Edges {
-                                                top: pt,
-                                                right: px_3,
-                                                bottom: pb,
-                                                left: px_3,
-                                            }
-                                            .into(),
-                                            justify: fret_ui::element::MainAlign::Start,
-                                            align: fret_ui::element::CrossAlign::Center,
-                                            wrap: false,
-                                        },
-                                        move |_cx| block_end,
-                                    ),
-                                ]
+                                let muted_foreground =
+                                    Theme::global(&*cx.app).color_token("muted-foreground");
+                                let row = cx.flex(
+                                    FlexProps {
+                                        layout: LayoutStyle::default(),
+                                        direction: Axis::Horizontal,
+                                        gap: gap.into(),
+                                        padding: Edges {
+                                            top: pt,
+                                            right: px_3,
+                                            bottom: pb,
+                                            left: px_3,
+                                        }
+                                        .into(),
+                                        justify: fret_ui::element::MainAlign::Start,
+                                        align: fret_ui::element::CrossAlign::Center,
+                                        wrap: false,
+                                    },
+                                    move |_cx| block_end,
+                                );
+
+                                let row = if disabled {
+                                    cx.opacity(0.5, move |_cx| vec![row])
+                                } else {
+                                    row
+                                };
+                                vec![cx.foreground_scope(muted_foreground, move |_cx| vec![row])]
                             },
                         )
                     });
@@ -1154,15 +1178,11 @@ impl InputGroup {
             },
         );
 
-        let Some(test_id) = test_id else {
-            return root;
-        };
-
-        root.attach_semantics(
-            SemanticsDecoration::default()
-                .role(SemanticsRole::Group)
-                .test_id(test_id),
-        )
+        let mut semantics = SemanticsDecoration::default().role(SemanticsRole::Group);
+        if let Some(test_id) = test_id {
+            semantics = semantics.test_id(test_id);
+        }
+        root.attach_semantics(semantics)
     }
 }
 
@@ -1430,7 +1450,8 @@ impl InputGroup {
     ///
     /// Note: In the upstream DOM implementation, addons can click-to-focus the inner input.
     /// In Fret we approximate this by requesting focus for the control on left-button pointer
-    /// down for non-button addons (suppressed when the addon hints `has_button=true`).
+    /// down, skipping requests when the pointer-down hit-test target is (or is inside) a
+    /// pressable subtree (e.g. an embedded button inside the addon).
     #[track_caller]
     pub fn into_element_parts<H: UiHost>(
         self,
@@ -1594,7 +1615,9 @@ impl InputGroupText {
         };
 
         let mut style = typography::fixed_line_box_style(FontId::ui(), px, line_height);
-        style.weight = FontWeight::NORMAL;
+        // Upstream `InputGroupAddon` sets `font-medium`, and `InputGroupText` inherits that
+        // weight when rendered inside an addon.
+        style.weight = FontWeight::MEDIUM;
 
         cx.text_props(TextProps {
             layout: decl_style::layout_style(theme, self.layout.h_px(line_height)),
@@ -2100,6 +2123,30 @@ mod tests {
             .find_map(|c| find_container_with_test_id(c, test_id))
     }
 
+    fn find_opacity(node: &AnyElement, opacity: f32) -> bool {
+        let matches = match &node.kind {
+            ElementKind::Opacity(props) => (props.opacity - opacity).abs() <= 1e-6,
+            _ => false,
+        };
+        if matches {
+            return true;
+        }
+        node.children.iter().any(|c| find_opacity(c, opacity))
+    }
+
+    fn find_foreground_scope_with_color(node: &AnyElement, color: Color) -> bool {
+        let matches = match &node.kind {
+            ElementKind::ForegroundScope(props) => props.foreground == Some(color),
+            _ => false,
+        };
+        if matches {
+            return true;
+        }
+        node.children
+            .iter()
+            .any(|c| find_foreground_scope_with_color(c, color))
+    }
+
     #[test]
     fn input_group_parts_apply_placeholder_to_control() {
         let window = AppWindowId::default();
@@ -2157,6 +2204,28 @@ mod tests {
                 assert!(
                     find_flex_with_text_and_order(&el, "trail", 1),
                     "expected inline-end addon flex to carry order=1"
+                );
+            },
+        );
+    }
+
+    #[test]
+    fn input_group_stamps_group_role_even_without_test_id() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+
+        fret_ui::elements::with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "input_group_group_role",
+            |cx| {
+                let model: Model<String> = cx.app.models_mut().insert(String::new());
+                let el = InputGroup::new(model).into_element(cx);
+                assert_eq!(
+                    el.semantics_decoration.as_ref().and_then(|d| d.role),
+                    Some(SemanticsRole::Group)
                 );
             },
         );
@@ -2273,7 +2342,62 @@ mod tests {
     }
 
     #[test]
-    fn input_group_inline_addon_with_button_hint_does_not_steal_focus() {
+    fn input_group_disabled_addons_render_at_half_opacity_like_shadcn() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+
+        fret_ui::elements::with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "input_group_disabled_addon_opacity",
+            |cx| {
+                let model: Model<String> = cx.app.models_mut().insert(String::new());
+                let el = InputGroup::new(model)
+                    .disabled(true)
+                    .leading([cx.text("lead")])
+                    .trailing([cx.text("trail")])
+                    .into_element(cx);
+
+                assert!(
+                    find_opacity(&el, 0.5),
+                    "expected disabled addons to include an opacity wrapper"
+                );
+            },
+        );
+    }
+
+    #[test]
+    fn input_group_addons_scope_muted_foreground_for_current_color_parity() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+
+        fret_ui::elements::with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "input_group_addon_muted_foreground",
+            |cx| {
+                let theme = Theme::global(&*cx.app);
+                let muted = theme.color_token("muted-foreground");
+
+                let model: Model<String> = cx.app.models_mut().insert(String::new());
+                let el = InputGroup::new(model)
+                    .leading([crate::Spinner::new().into_element(cx)])
+                    .into_element(cx);
+
+                assert!(
+                    find_foreground_scope_with_color(&el, muted),
+                    "expected addons to stamp a ForegroundScope with muted-foreground"
+                );
+            },
+        );
+    }
+
+    #[test]
+    fn input_group_inline_addon_click_to_focus_skips_pressable_descendants() {
         let window = AppWindowId::default();
         let mut app = App::new();
         apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
@@ -2284,6 +2408,7 @@ mod tests {
         let mut services = FakeServices;
         let bounds = bounds();
         let model: Model<String> = app.models_mut().insert(String::new());
+        let seen_pressable: Model<bool> = app.models_mut().insert(false);
 
         let root = fret_ui::declarative::render_root(
             &mut ui,
@@ -2291,38 +2416,154 @@ mod tests {
             &mut services,
             window,
             bounds,
-            "shadcn-input-group-addon-click-to-focus-suppressed-by-hint",
+            "shadcn-input-group-addon-click-to-focus-pressable-suppression",
             |cx| {
-                vec![
-                    InputGroup::new(model.clone())
-                        .leading([cx.text("lead")])
-                        .leading_has_button(true)
-                        .into_element(cx),
-                ]
+                let seen = seen_pressable.clone();
+                let on_down = Arc::new(
+                    move |host: &mut dyn fret_ui::action::UiPointerActionHost,
+                          _cx: fret_ui::action::ActionCx,
+                          down: fret_ui::action::PointerDownCx| {
+                        let _ = host
+                            .models_mut()
+                            .update(&seen, |v: &mut bool| *v = down.hit_is_pressable);
+                        false
+                    },
+                );
+
+                let mut wrapper_props = fret_ui::element::PointerRegionProps::default();
+                wrapper_props.layout.size.width = Length::Fill;
+                wrapper_props.layout.size.height = Length::Fill;
+                vec![cx.pointer_region(wrapper_props, move |cx| {
+                    cx.pointer_region_on_pointer_down(on_down.clone());
+                    vec![
+                        InputGroup::new(model.clone())
+                            .control_test_id("control")
+                            .leading([
+                                cx.text("lead"),
+                                cx.pressable(
+                                    fret_ui::element::PressableProps {
+                                        a11y: fret_ui::element::PressableA11y {
+                                            test_id: Some("addon.button".into()),
+                                            ..Default::default()
+                                        },
+                                        ..Default::default()
+                                    },
+                                    |cx, _state| vec![cx.text("button")],
+                                ),
+                            ])
+                            .leading_has_button(true)
+                            .into_element(cx),
+                    ]
+                })]
             },
         );
         ui.set_root(root);
+        ui.request_semantics_snapshot();
         ui.layout_all(&mut app, &mut services, bounds, 1.0);
 
-        let group_node = ui.children(root)[0];
+        let wrapper_node = ui.children(root)[0];
+        let group_node = ui.children(wrapper_node)[0];
         let row_node = ui.children(group_node)[0];
         let row_children = ui.children(row_node);
+        let control_node = row_children[0];
         let addon_node = row_children[1];
 
-        assert_eq!(ui.focus(), None);
+        let snap = ui.semantics_snapshot_arc().expect("semantics snapshot");
+        let button_node = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("addon.button"))
+            .map(|n| n.id)
+            .expect("expected addon button semantics node");
 
+        let center_of = |bounds: fret_core::Rect| {
+            Point::new(
+                Px(bounds.origin.x.0 + bounds.size.width.0 * 0.5),
+                Px(bounds.origin.y.0 + bounds.size.height.0 * 0.5),
+            )
+        };
+
+        let button_bounds = ui.debug_node_bounds(button_node).expect("button bounds");
         let addon_bounds = ui.debug_node_bounds(addon_node).expect("addon bounds");
-        let position = Point::new(
-            Px(addon_bounds.origin.x.0 + addon_bounds.size.width.0 * 0.5),
-            Px(addon_bounds.origin.y.0 + addon_bounds.size.height.0 * 0.5),
-        );
+        let control_bounds = ui.debug_node_bounds(control_node).expect("control bounds");
+
+        assert_eq!(ui.focus(), None);
 
         ui.dispatch_event(
             &mut app,
             &mut services,
             &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
                 pointer_id: fret_core::PointerId(0),
-                position,
+                position: center_of(button_bounds),
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position: center_of(button_bounds),
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+                is_click: true,
+            }),
+        );
+
+        assert_eq!(
+            app.models().get_copied(&seen_pressable),
+            Some(true),
+            "expected wrapper PointerRegion to observe hit_is_pressable=true when clicking the embedded pressable"
+        );
+        assert_ne!(ui.focus(), Some(control_node));
+
+        let _ = app
+            .models_mut()
+            .update(&seen_pressable, |v: &mut bool| *v = false);
+
+        let y_mid = Px(addon_bounds.origin.y.0 + addon_bounds.size.height.0 * 0.5);
+        let x0 = addon_bounds.origin.x.0;
+        let w = addon_bounds.size.width.0;
+        let candidates = [
+            Point::new(Px(x0 + 4.0), y_mid),
+            Point::new(Px(x0 + w * 0.25), y_mid),
+            Point::new(Px(x0 + w * 0.75), y_mid),
+            Point::new(Px(x0 + w - 4.0), y_mid),
+        ];
+        let focus_position = candidates
+            .into_iter()
+            .find(|p| !button_bounds.contains(*p) && !control_bounds.contains(*p))
+            .expect("expected a point in addon bounds outside the pressable bounds");
+
+        let hit = ui
+            .debug_hit_test(focus_position)
+            .hit
+            .expect("expected click-to-focus point to hit-test something");
+        let hit_path = ui.debug_node_path(hit);
+        assert!(
+            hit_path.contains(&addon_node),
+            "expected click-to-focus point to route through the addon subtree (hit={hit:?} path={hit_path:?} addon={addon_node:?} p={focus_position:?})"
+        );
+        assert!(
+            !hit_path.contains(&button_node),
+            "expected click-to-focus point to land outside the embedded pressable subtree (hit={hit:?} path={hit_path:?} button={button_node:?} p={focus_position:?})"
+        );
+        assert!(
+            !hit_path.contains(&control_node),
+            "expected click-to-focus point to land outside the control subtree (hit={hit:?} path={hit_path:?} control={control_node:?} p={focus_position:?})"
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(1),
+                position: focus_position,
                 button: MouseButton::Left,
                 modifiers: Modifiers::default(),
                 pointer_type: fret_core::PointerType::Mouse,
@@ -2330,7 +2571,12 @@ mod tests {
             }),
         );
 
-        assert_eq!(ui.focus(), None);
+        assert_eq!(
+            app.models().get_copied(&seen_pressable),
+            Some(false),
+            "expected wrapper PointerRegion to observe hit_is_pressable=false when clicking outside the embedded pressable"
+        );
+        assert_eq!(ui.focus(), Some(control_node));
     }
 
     #[test]

@@ -20,5 +20,5 @@ pub(super) fn preview_ai_workflow_canvas_demo(
         ],
     );
 
-    vec![body.test_id("ui-gallery-page-ai-workflow-canvas-demo")]
+    vec![body]
 }

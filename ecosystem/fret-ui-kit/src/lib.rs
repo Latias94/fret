@@ -255,8 +255,8 @@ pub use window_overlays::{
 pub mod prelude {
     pub use crate::command::ElementCommandGatingExt as _;
     pub use crate::declarative::prelude::*;
+    pub use crate::declarative::style;
     pub use crate::declarative::{CachedSubtreeExt, CachedSubtreeProps};
-    pub use crate::declarative::{stack, style};
     pub use crate::ui;
 
     #[cfg(feature = "imui")]

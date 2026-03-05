@@ -20,5 +20,5 @@ pub(super) fn preview_ai_canvas_world_layer_spike(
         ],
     );
 
-    vec![body.test_id("ui-gallery-page-ai-canvas-world-layer-spike")]
+    vec![body]
 }

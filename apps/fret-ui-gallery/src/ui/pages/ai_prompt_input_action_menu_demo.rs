@@ -22,5 +22,5 @@ pub(super) fn preview_ai_prompt_input_action_menu_demo(
         ],
     );
 
-    vec![body.test_id("ui-gallery-page-ai-prompt-input-action-menu-demo")]
+    vec![body]
 }

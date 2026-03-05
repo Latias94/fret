@@ -1,44 +1,176 @@
 pub const SOURCE: &str = include_str!("task_demo.rs");
 
 // region: example
-use fret_runtime::Model;
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::declarative::stack;
-use fret_ui_kit::{LayoutRefinement, Space};
-use fret_ui_shadcn::prelude::*;
+use fret_ui_kit::{ChromeRefinement, ColorFallback, ColorRef, LayoutRefinement, Radius, Space};
+use fret_ui_shadcn::{self as shadcn, prelude::*};
+use std::sync::Arc;
 
 #[derive(Default)]
 struct DemoModels {
-    open: Option<Model<bool>>,
+    preset: Option<Model<u8>>,
 }
 
 pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let open = cx.with_state(DemoModels::default, |st| st.open.clone());
-    let open = match open {
+    let preset = cx.with_state(DemoModels::default, |st| st.preset.clone());
+    let preset = match preset {
         Some(model) => model,
         None => {
-            let model = cx.app.models_mut().insert(false);
-            cx.with_state(DemoModels::default, |st| st.open = Some(model.clone()));
+            let model = cx.app.models_mut().insert(0_u8);
+            cx.with_state(DemoModels::default, |st| st.preset = Some(model.clone()));
             model
         }
     };
+    let preset_value = cx.app.models().read(&preset, |v| *v).unwrap_or(0);
 
-    let trigger = ui_ai::TaskTrigger::new("Indexing workspace")
-        .children([cx.text("Click to expand")])
-        .test_id("ui-ai-task-demo-trigger");
-
-    let content = ui_ai::TaskContent::new([
-        cx.text("Task content is app-owned; this is the collapsible chrome."),
-        cx.text("• step 1: scan"),
-        cx.text("• step 2: parse"),
-        cx.text("• step 3: index"),
-    ])
-    .test_id("ui-ai-task-demo-content");
-
-    let task = ui_ai::Task::new(trigger, content)
-        .open_model(open)
-        .default_open(false)
+    let preset_for_react = preset.clone();
+    let react_dev = shadcn::Button::new("React Development")
+        .variant(shadcn::ButtonVariant::Outline)
+        .on_activate(Arc::new(move |host, action_cx, _reason| {
+            let _ = host.models_mut().update(&preset_for_react, |v| *v = 0);
+            host.notify(action_cx);
+            host.request_redraw(action_cx.window);
+        }))
         .into_element(cx);
+
+    let preset_for_api = preset.clone();
+    let api_integration = shadcn::Button::new("API Integration")
+        .variant(shadcn::ButtonVariant::Outline)
+        .on_activate(Arc::new(move |host, action_cx, _reason| {
+            let _ = host.models_mut().update(&preset_for_api, |v| *v = 1);
+            host.notify(action_cx);
+            host.request_redraw(action_cx.window);
+        }))
+        .into_element(cx);
+
+    let tasks: Vec<(
+        &'static str,
+        Vec<(&'static str, Option<(&'static str, &'static str)>)>,
+    )> = match preset_value {
+        1 => vec![
+            (
+                "Integrate streaming API",
+                vec![
+                    (
+                        "Define request schema",
+                        Some(("schema.ts", "lucide.file-json")),
+                    ),
+                    ("Implement streaming transport", None),
+                    ("Add retry + backoff policy", None),
+                    ("Verify cancellation behavior", None),
+                ],
+            ),
+            (
+                "Ship UI conformance gate",
+                vec![
+                    ("Add stable test_id anchors", None),
+                    ("Author a diag script (toggle + bundle)", None),
+                    ("Review focus + dismiss outcomes", None),
+                    ("Document the expected invariant", None),
+                ],
+            ),
+        ],
+        _ => vec![
+            (
+                "Indexing workspace",
+                vec![
+                    ("Scan project files", Some(("Cargo.toml", "lucide.file"))),
+                    ("Parse Rust modules", None),
+                    ("Build symbol index", None),
+                    ("Emit diagnostics snapshot", None),
+                ],
+            ),
+            (
+                "Generate UI recipes",
+                vec![
+                    ("Extract layout constraints", None),
+                    ("Map tokens to theme refs", None),
+                    ("Add copyable code snippet", None),
+                ],
+            ),
+            (
+                "Verify interaction parity",
+                vec![
+                    ("Hover intent + outside press", None),
+                    ("Keyboard traversal", None),
+                    ("A11y role/flags sanity check", None),
+                ],
+            ),
+        ],
+    };
+
+    let task_list = stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .layout(LayoutRefinement::default().w_full().min_w_0())
+            .gap(Space::N4),
+        move |cx| {
+            tasks
+                .into_iter()
+                .enumerate()
+                .map(|(task_index, (title, items))| {
+                    let trigger = if task_index == 0 {
+                        ui_ai::TaskTrigger::new(title).test_id("ui-ai-task-demo-trigger")
+                    } else {
+                        ui_ai::TaskTrigger::new(title)
+                    };
+
+                    let content_children = items.into_iter().map(|(text, file)| {
+                        let row = if let Some((file_name, icon)) = file {
+                            ui_ai::TaskItem::new([
+                                cx.text(text),
+                                ui_ai::TaskItemFile::new([
+                                    shadcn::icon::icon_with(
+                                        cx,
+                                        fret_icons::IconId::new_static(icon),
+                                        Some(Px(16.0)),
+                                        None,
+                                    ),
+                                    cx.text(file_name),
+                                ])
+                                .into_element(cx),
+                            ])
+                            .into_element(cx)
+                        } else {
+                            ui_ai::TaskItem::new([cx.text(text)]).into_element(cx)
+                        };
+                        row
+                    });
+
+                    let content = if task_index == 0 {
+                        ui_ai::TaskContent::new(content_children).test_id("ui-ai-task-demo-content")
+                    } else {
+                        ui_ai::TaskContent::new(content_children)
+                    };
+
+                    ui_ai::Task::new(trigger, content)
+                        .default_open(task_index == 0)
+                        .into_element(cx)
+                })
+                .collect::<Vec<_>>()
+        },
+    );
+
+    let theme = Theme::global(&*cx.app);
+    let chrome = ChromeRefinement::default()
+        .p(Space::N6)
+        .rounded(Radius::Lg)
+        .border_1()
+        .bg(ColorRef::Token {
+            key: "background",
+            fallback: ColorFallback::ThemeSurfaceBackground,
+        });
+    let layout = LayoutRefinement::default()
+        .w_full()
+        .min_w_0()
+        .max_w(Px(896.0))
+        .h_px(Px(600.0));
+    let mut props = shadcn::decl_style::container_props(theme, chrome, layout);
+    props.border_color = Some(theme.color_token("border"));
+    props.background = Some(theme.color_token("background"));
+
+    let framed = cx.container(props, move |_cx| vec![task_list]);
 
     stack::vstack(
         cx,
@@ -48,8 +180,13 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
         move |cx| {
             vec![
                 cx.text("Task (AI Elements)"),
-                cx.text("Collapsible task surface (trigger + content)."),
-                task,
+                cx.text("Collapsible task list demo aligned with the AI Elements Task docs."),
+                stack::hstack(
+                    cx,
+                    stack::HStackProps::default().gap(Space::N2).items_center(),
+                    move |_cx| vec![react_dev, api_integration],
+                ),
+                framed,
             ]
         },
     )

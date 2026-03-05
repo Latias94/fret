@@ -19,5 +19,5 @@ pub(super) fn preview_ai_code_block_demo(
         ],
     );
 
-    vec![body.test_id("ui-gallery-page-ai-code-block-demo")]
+    vec![body]
 }

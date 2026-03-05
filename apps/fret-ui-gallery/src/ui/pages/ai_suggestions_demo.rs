@@ -19,5 +19,5 @@ pub(super) fn preview_ai_suggestions_demo(
         ],
     );
 
-    vec![body.test_id("ui-gallery-page-ai-suggestions-demo")]
+    vec![body]
 }

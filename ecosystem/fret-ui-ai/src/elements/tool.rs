@@ -1,9 +1,9 @@
 use std::sync::Arc;
 
 use fret_core::Color;
-use fret_core::{FontWeight, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap};
+use fret_core::{FontWeight, Px, TextOverflow, TextStyle, TextWrap};
 use fret_icons::{IconId, ids};
-use fret_ui::element::{AnyElement, LayoutStyle, SemanticsProps, TextProps};
+use fret_ui::element::{AnyElement, LayoutStyle, TextProps};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::stack;
@@ -288,17 +288,10 @@ impl ToolHeader {
             .a11y_label("Toggle tool details")
             .into_element(cx, is_open);
 
-        let Some(test_id) = self.test_id else {
-            return trigger;
-        };
-        cx.semantics(
-            SemanticsProps {
-                role: SemanticsRole::Button,
-                test_id: Some(test_id),
-                ..Default::default()
-            },
-            move |_cx| vec![trigger],
-        )
+        match self.test_id {
+            Some(test_id) => trigger.test_id(test_id),
+            None => trigger,
+        }
     }
 }
 

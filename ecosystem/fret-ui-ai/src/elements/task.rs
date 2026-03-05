@@ -4,17 +4,21 @@
 
 use std::sync::Arc;
 
-use fret_core::{Color, Edges, FontWeight, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap};
+use fret_core::{
+    Color, Edges, FontWeight, Point, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap,
+    Transform2D,
+};
 use fret_runtime::Model;
-use fret_ui::element::{AnyElement, LayoutStyle, SemanticsDecoration, TextProps};
+use fret_ui::element::{
+    AnyElement, ElementKind, HoverRegionProps, LayoutStyle, Length, SemanticsDecoration, TextProps,
+    VisualTransformProps,
+};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::typography;
-use fret_ui_kit::{
-    ChromeRefinement, ColorFallback, ColorRef, Justify, LayoutRefinement, Radius, Space,
-};
+use fret_ui_kit::{ChromeRefinement, ColorFallback, ColorRef, LayoutRefinement, Radius, Space};
 use fret_ui_shadcn::{Collapsible, CollapsibleContent, CollapsibleTrigger};
 
 fn muted_fg(theme: &Theme) -> Color {
@@ -36,6 +40,67 @@ fn text_sm(theme: &Theme, weight: FontWeight) -> TextStyle {
         typography::TypographyPreset::control_ui(typography::UiTextSize::Sm).resolve(theme);
     style.weight = weight;
     style
+}
+
+fn text_xs(theme: &Theme, weight: FontWeight) -> TextStyle {
+    let mut style =
+        typography::TypographyPreset::control_ui(typography::UiTextSize::Xs).resolve(theme);
+    style.weight = weight;
+    style
+}
+
+fn chevron_down_icon_rotated<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    progress: f32,
+    size: Px,
+) -> AnyElement {
+    let degrees = 180.0 * progress.clamp(0.0, 1.0);
+
+    let mut layout = LayoutStyle::default();
+    layout.size.width = Length::Px(size);
+    layout.size.height = Length::Px(size);
+
+    cx.visual_transform_props(
+        VisualTransformProps {
+            layout,
+            transform: Transform2D::rotation_about_degrees(
+                degrees,
+                Point::new(Px(size.0 * 0.5), Px(size.0 * 0.5)),
+            ),
+        },
+        move |cx| {
+            vec![decl_icon::icon_with(
+                cx,
+                fret_icons::ids::ui::CHEVRON_DOWN,
+                Some(size),
+                None,
+            )]
+        },
+    )
+}
+
+fn apply_text_style_if_missing(mut el: AnyElement, style: &TextStyle) -> AnyElement {
+    el.children = el
+        .children
+        .into_iter()
+        .map(|child| apply_text_style_if_missing(child, style))
+        .collect();
+
+    match &mut el.kind {
+        ElementKind::Text(props) => {
+            if props.style.is_none() {
+                props.style = Some(style.clone());
+            }
+        }
+        ElementKind::StyledText(props) => {
+            if props.style.is_none() {
+                props.style = Some(style.clone());
+            }
+        }
+        _ => {}
+    }
+
+    el
 }
 
 #[derive(Clone)]
@@ -223,54 +288,69 @@ impl TaskTrigger {
     ) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
 
-        let children = if self.children.is_empty() {
-            let fg = muted_fg(&theme);
-            let search = decl_icon::icon_with(
-                cx,
-                fret_icons::IconId::new_static("lucide.search"),
-                Some(Px(16.0)),
-                Some(ColorRef::Color(fg)),
-            );
-            let chevron = decl_icon::icon_with(
-                cx,
-                if is_open {
-                    fret_icons::ids::ui::CHEVRON_UP
-                } else {
-                    fret_icons::ids::ui::CHEVRON_DOWN
+        let trigger = if self.children.is_empty() {
+            let title = self.title;
+            let icon_size = Px(16.0);
+            let hover_layout =
+                decl_style::layout_style(&theme, LayoutRefinement::default().w_full().min_w_0());
+
+            let row = cx.hover_region(
+                HoverRegionProps {
+                    layout: hover_layout,
                 },
-                Some(Px(16.0)),
-                Some(ColorRef::Color(fg)),
+                move |cx, hovered| {
+                    let theme = Theme::global(&*cx.app).clone();
+
+                    let fg = if hovered {
+                        theme.color_token("foreground")
+                    } else {
+                        muted_fg(&theme)
+                    };
+
+                    vec![cx.foreground_scope(fg, |cx| {
+                        let search = decl_icon::icon_with(
+                            cx,
+                            fret_icons::IconId::new_static("lucide.search"),
+                            Some(icon_size),
+                            None,
+                        );
+
+                        let title = cx.text_props(TextProps {
+                            layout: LayoutStyle::default(),
+                            text: title,
+                            style: Some(text_sm(&theme, FontWeight::NORMAL)),
+                            color: None,
+                            wrap: TextWrap::None,
+                            overflow: TextOverflow::Clip,
+                            align: fret_core::TextAlign::Start,
+                            ink_overflow: Default::default(),
+                        });
+
+                        let chevron = chevron_down_icon_rotated(
+                            cx,
+                            if is_open { 1.0 } else { 0.0 },
+                            icon_size,
+                        );
+
+                        let row = stack::hstack(
+                            cx,
+                            stack::HStackProps::default()
+                                .layout(LayoutRefinement::default().w_full().min_w_0())
+                                .items_center()
+                                .gap(Space::N2),
+                            move |_cx| vec![search, title, chevron],
+                        );
+
+                        vec![row]
+                    })]
+                },
             );
-            let title = cx.text_props(TextProps {
-                layout: LayoutStyle::default(),
-                text: self.title,
-                style: Some(text_sm(&theme, FontWeight::NORMAL)),
-                color: Some(fg),
-                wrap: TextWrap::None,
-                overflow: TextOverflow::Clip,
-                align: fret_core::TextAlign::Start,
-                ink_overflow: Default::default(),
-            });
-            let left = stack::hstack(
-                cx,
-                stack::HStackProps::default().items_center().gap(Space::N2),
-                move |_cx| vec![search, title],
-            );
-            let row = stack::hstack(
-                cx,
-                stack::HStackProps::default()
-                    .layout(LayoutRefinement::default().w_full().min_w_0())
-                    .items_center()
-                    .justify(Justify::Between)
-                    .gap(Space::N2),
-                move |_cx| vec![left, chevron],
-            );
-            vec![row]
+
+            CollapsibleTrigger::new(open, [row]).a11y_label("Toggle task")
         } else {
-            self.children
+            CollapsibleTrigger::new(open, self.children).a11y_label("Toggle task")
         };
 
-        let trigger = CollapsibleTrigger::new(open, children).a11y_label("Toggle task");
         let el = trigger.into_element(cx, is_open);
         let el = cx.container(
             decl_style::container_props(&theme, self.chrome, self.layout),
@@ -409,13 +489,20 @@ impl TaskItem {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
 
+        let text_style = text_sm(&theme, FontWeight::NORMAL);
+        let children = self
+            .children
+            .into_iter()
+            .map(|child| apply_text_style_if_missing(child, &text_style))
+            .collect::<Vec<_>>();
+
         let row = stack::hstack(
             cx,
             stack::HStackProps::default()
                 .layout(LayoutRefinement::default().w_full().min_w_0())
                 .items_center()
                 .gap(Space::N1),
-            move |_cx| self.children,
+            move |_cx| children,
         );
 
         let chrome = ChromeRefinement::default()
@@ -426,7 +513,8 @@ impl TaskItem {
         props.border = Edges::all(Px(0.0));
         props.border_color = None;
 
-        cx.container(props, move |_cx| vec![row])
+        let out = cx.container(props, move |_cx| vec![row]);
+        cx.foreground_scope(muted_fg(&theme), move |_cx| vec![out])
     }
 }
 
@@ -467,6 +555,13 @@ impl TaskItemFile {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
 
+        let text_style = text_xs(&theme, FontWeight::NORMAL);
+        let children = self
+            .children
+            .into_iter()
+            .map(|child| apply_text_style_if_missing(child, &text_style))
+            .collect::<Vec<_>>();
+
         let chrome = ChromeRefinement::default()
             .rounded(Radius::Md)
             .border_1()
@@ -491,9 +586,10 @@ impl TaskItemFile {
                 .layout(LayoutRefinement::default())
                 .items_center()
                 .gap(Space::N1),
-            move |_cx| self.children,
+            move |_cx| children,
         );
 
-        cx.container(props, move |_cx| vec![content])
+        let out = cx.container(props, move |_cx| vec![content]);
+        cx.foreground_scope(theme.color_token("foreground"), move |_cx| vec![out])
     }
 }

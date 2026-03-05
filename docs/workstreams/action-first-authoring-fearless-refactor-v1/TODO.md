@@ -388,6 +388,9 @@ practical steps:
         - Started: `apps/fret-ui-gallery/src/ui/doc_layout.rs`, `apps/fret-ui-gallery/src/ui/content.rs`
         - Gate (shell-only): `tools/gate_no_stack_in_ui_gallery_shell.ps1`
       - As needed: shadcn/genui crates (only when they block teaching-surface convergence)
+  - In progress: hard delete legacy stack helpers once internal implementations are migrated.
+    - Current state: `fret-ui-kit::declarative::stack` is internal-only (not exported in `prelude::*`).
+    - Gate: `tools/gate_no_public_stack_in_ui_kit.ps1`
     - Note: a handful of “host type inference” edge cases need an explicit anchor.
       Preferred: annotate the closure argument type (e.g. `ui::v_flex(|cx: &mut ElementContext<'_, App>| ...)`).
       Alternative: turbofish (e.g. `ui::v_flex::<App, _, _>(...)`).
