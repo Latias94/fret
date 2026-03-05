@@ -14,13 +14,14 @@ use fret_ui::action::{
 use fret_ui::element::{AnyElement, ContainerProps, LayoutStyle, Length, PointerRegionProps};
 use fret_ui::{ElementContext, Theme, UiHost};
 
+use crate::Space;
 use crate::declarative::model_watch::ModelWatchExt as _;
 use crate::dnd;
 use crate::dnd::{
     ActivationConstraint, Axis, CollisionStrategy, DndItemId, DndScopeId, InsertionSide,
     SensorOutput, insertion_side_for_pointer,
 };
-use crate::{Items, Justify, LayoutRefinement, Space};
+use crate::ui;
 
 const DRAG_KIND_SORTABLE_REORDER: DragKindId = DragKindId(100);
 
@@ -378,7 +379,7 @@ where
         children.push(el);
     }
 
-    crate::ui::v_flex(|_cx| children)
+    ui::v_flex(|_cx| children)
         .gap(Space::N0)
         .justify_start()
         .items_stretch()

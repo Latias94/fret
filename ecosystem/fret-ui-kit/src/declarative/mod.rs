@@ -41,6 +41,8 @@ pub mod scroll;
 pub mod scroll_area_visibility;
 pub mod semantics;
 pub mod slider;
+// Legacy layout helpers kept for internal implementation only.
+// Prefer `fret_ui_kit::ui::{h_flex, v_flex, ...}` in component/app code.
 mod stack;
 pub mod style;
 pub mod table;
