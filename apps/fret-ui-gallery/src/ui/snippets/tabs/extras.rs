@@ -54,15 +54,12 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
         })
         .test_id("ui-gallery-tabs-rtl");
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N4)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full().min_w_0()),
-        move |_cx| vec![muted, flex_1_triggers, rtl],
-    )
-    .test_id("ui-gallery-tabs-extras")
+    ui::v_flex(move |_cx| vec![muted, flex_1_triggers, rtl])
+        .gap(Space::N4)
+        .items_start()
+        .layout(LayoutRefinement::default().w_full().min_w_0())
+        .into_element(cx)
+        .test_id("ui-gallery-tabs-extras")
 }
 
 // endregion: example

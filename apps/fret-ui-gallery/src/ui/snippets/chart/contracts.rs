@@ -48,35 +48,29 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
             .test_id(test_id)
     };
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N3)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full()),
-        |cx| {
-            vec![
-                shadcn::typography::muted(
-                    cx,
-                    "Chart UI contracts: Tooltip + Legend content recipes.",
-                ),
-                tooltip(
-                    cx,
-                    "January",
-                    shadcn::ChartTooltipIndicator::Dot,
-                    false,
-                    false,
-                    "ui-gallery-chart-demo-tooltip",
-                ),
-                legend(
-                    cx,
-                    shadcn::ChartLegendVerticalAlign::Bottom,
-                    true,
-                    false,
-                    "ui-gallery-chart-demo-legend",
-                ),
-            ]
-        },
-    )
+    ui::v_flex(|cx| {
+        vec![
+            shadcn::typography::muted(cx, "Chart UI contracts: Tooltip + Legend content recipes."),
+            tooltip(
+                cx,
+                "January",
+                shadcn::ChartTooltipIndicator::Dot,
+                false,
+                false,
+                "ui-gallery-chart-demo-tooltip",
+            ),
+            legend(
+                cx,
+                shadcn::ChartLegendVerticalAlign::Bottom,
+                true,
+                false,
+                "ui-gallery-chart-demo-legend",
+            ),
+        ]
+    })
+    .gap(Space::N3)
+    .items_start()
+    .layout(LayoutRefinement::default().w_full())
+    .into_element(cx)
 }
 // endregion: example

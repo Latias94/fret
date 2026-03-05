@@ -29,21 +29,13 @@ pub(super) fn build_header(
     let a11y_composition_drag_gate_handle = handles.a11y_composition_drag_gate.clone();
     let word_handle = handles.word_fixture.clone();
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .layout(LayoutRefinement::default().w_full())
-            .gap(Space::N2),
-        move |cx| {
+    ui::v_flex(move |cx| {
             vec![
                 cx.text(
                     "Goal: validate a paint-driven editable surface using TextInputRegion (focus + IME).",
                 ),
                 cx.text("Try: drag selection, Ctrl+C/Ctrl+V, arrows, Backspace/Delete, Enter/Tab, IME preedit."),
-                stack::hstack(
-                    cx,
-                    stack::HStackProps::default().gap(Space::N2).items_center(),
-                    move |cx| {
+                ui::h_row(move |cx| {
                         vec![
                             shadcn::Switch::new(syntax_rust_switch.clone())
                                 .a11y_label("Toggle Rust syntax highlighting")
@@ -54,12 +46,8 @@ pub(super) fn build_header(
                                 "Syntax: disabled"
                             }),
                         ]
-                    },
-                ),
-                stack::hstack(
-                    cx,
-                    stack::HStackProps::default().gap(Space::N2).items_center(),
-                    move |cx| {
+                    }).gap(Space::N2).items_center().into_element(cx),
+                ui::h_row(move |cx| {
                         vec![
                             shadcn::Switch::new(boundary_identifier_switch.clone())
                                 .a11y_label("Toggle identifier word boundaries")
@@ -71,12 +59,8 @@ pub(super) fn build_header(
                                 "Word boundaries: UnicodeWord"
                             }),
                         ]
-                    },
-                ),
-                stack::hstack(
-                    cx,
-                    stack::HStackProps::default().gap(Space::N2).items_center(),
-                    move |cx| {
+                    }).gap(Space::N2).items_center().into_element(cx),
+                ui::h_row(move |cx| {
                         vec![
                             shadcn::Button::new("Set Identifier")
                                 .variant(shadcn::ButtonVariant::Outline)
@@ -91,8 +75,7 @@ pub(super) fn build_header(
                                 .on_activate(set_unicode_mode.clone())
                                 .into_element(cx),
                         ]
-                    },
-                ),
+                    }).gap(Space::N2).items_center().into_element(cx),
                 doc_layout::wrap_controls_row(cx, theme, Space::N2, move |cx| {
                     vec![
                         shadcn::Button::new("Load fonts…")
@@ -166,6 +149,7 @@ pub(super) fn build_header(
                     )
                 }),
             ]
-        },
-    )
+        })
+            .layout(LayoutRefinement::default().w_full())
+            .gap(Space::N2).into_element(cx)
 }

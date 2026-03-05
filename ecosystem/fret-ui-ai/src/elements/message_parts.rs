@@ -4,8 +4,8 @@ use fret_core::{FontWeight, SemanticsRole, TextOverflow, TextStyle, TextWrap};
 use fret_runtime::Model;
 use fret_ui::element::{AnyElement, LayoutStyle, SemanticsDecoration, TextProps};
 use fret_ui::{ElementContext, Theme, UiHost};
-use fret_ui_kit::declarative::stack;
 use fret_ui_kit::typography;
+use fret_ui_kit::ui;
 use fret_ui_kit::{LayoutRefinement, Space};
 
 use crate::elements::{
@@ -113,12 +113,7 @@ impl MessageParts {
         let parts = self.parts;
         let selected_source_id = selected_source_id.clone();
 
-        let content = stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .layout(LayoutRefinement::default().min_w_0())
-                .gap(Space::N3),
-            move |cx| {
+        let content = ui::v_stack(move |cx| {
                 let mut out = Vec::new();
                 for (index, part) in parts.iter().enumerate() {
                     let part_id = test_id_prefix
@@ -212,41 +207,34 @@ impl MessageParts {
                             out.push(block.into_element(cx));
                         }
                         MessagePart::Citations(items) => {
-                            let row = stack::hstack(
-                                cx,
-                                stack::HStackProps::default()
-                                    .layout(LayoutRefinement::default().w_full())
-                                    .gap(Space::N2),
-                                |cx| {
-                                    let mut out = Vec::new();
-                                    for (citation_index, item) in items.iter().enumerate() {
-                                        out.push(cx.keyed(citation_index, |cx| {
-                                            let mut citation =
-                                                InlineCitation::new(item.label.clone())
-                                                    .source_ids(item.source_ids.clone())
-                                                    .select_source_model(
-                                                        selected_source_id.clone(),
-                                                    );
-                                            if let Some(sources) = sources_for_citations.clone() {
-                                                citation = citation.sources(sources);
-                                            }
-                                            if let Some(handler) = on_link_activate.clone() {
-                                                citation = citation.on_open_url(handler);
-                                            }
+                            let row = ui::h_row(|cx| {
+                                let mut out = Vec::new();
+                                for (citation_index, item) in items.iter().enumerate() {
+                                    out.push(cx.keyed(citation_index, |cx| {
+                                        let mut citation = InlineCitation::new(item.label.clone())
+                                            .source_ids(item.source_ids.clone())
+                                            .select_source_model(selected_source_id.clone());
+                                        if let Some(sources) = sources_for_citations.clone() {
+                                            citation = citation.sources(sources);
+                                        }
+                                        if let Some(handler) = on_link_activate.clone() {
+                                            citation = citation.on_open_url(handler);
+                                        }
 
-                                            if let Some(prefix) = test_id_prefix.clone() {
-                                                citation =
-                                                    citation.test_id(Arc::<str>::from(format!(
-                                                        "{prefix}citation-{index}-{citation_index}"
-                                                    )));
-                                            }
+                                        if let Some(prefix) = test_id_prefix.clone() {
+                                            citation = citation.test_id(Arc::<str>::from(format!(
+                                                "{prefix}citation-{index}-{citation_index}"
+                                            )));
+                                        }
 
-                                            citation.into_element(cx)
-                                        }));
-                                    }
-                                    out
-                                },
-                            );
+                                        citation.into_element(cx)
+                                    }));
+                                }
+                                out
+                            })
+                            .layout(LayoutRefinement::default().w_full())
+                            .gap(Space::N2)
+                            .into_element(cx);
 
                             let Some(test_id) = part_id else {
                                 out.push(row);
@@ -265,8 +253,10 @@ impl MessageParts {
                 }
 
                 out
-            },
-        );
+            })
+            .layout(LayoutRefinement::default().min_w_0())
+            .gap(Space::N3)
+            .into_element(cx);
 
         let content = MessageContent::new(self.role, [content])
             .refine_layout(self.layout)

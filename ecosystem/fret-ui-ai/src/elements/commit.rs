@@ -14,11 +14,12 @@ use fret_ui::element::{
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::chrome::centered_fixed_chrome_pressable_with_id_props;
 use fret_ui_kit::declarative::icon as decl_icon;
-use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::typography;
+use fret_ui_kit::ui;
 use fret_ui_kit::{
-    ChromeRefinement, ColorFallback, ColorRef, LayoutRefinement, MetricRef, Radius, Space,
+    ChromeRefinement, ColorFallback, ColorRef, Items, Justify, LayoutRefinement, MetricRef,
+    Radius, Space,
 };
 use fret_ui_shadcn::{Collapsible, CollapsibleContent};
 
@@ -214,15 +215,12 @@ impl CommitHeader {
         let layout = self.layout;
         let chrome = self.chrome;
 
-        let row = stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .layout(layout)
-                .gap(Space::N4)
-                .items_center()
-                .justify_between(),
-            move |_cx| children,
-        );
+        let row = ui::h_row(move |_cx| children)
+            .layout(layout)
+            .gap(Space::N4)
+            .items(Items::Center)
+            .justify(Justify::Between)
+            .into_element(cx);
 
         let row = cx.container(
             decl_style::container_props(&theme, chrome, LayoutRefinement::default()),
@@ -345,14 +343,11 @@ impl CommitHash {
             ink_overflow: Default::default(),
         });
 
-        stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .gap(Space::N1)
-                .items_center()
-                .layout(LayoutRefinement::default()),
-            move |_cx| vec![icon, text],
-        )
+        ui::h_row(move |_cx| vec![icon, text])
+            .gap(Space::N1)
+            .items(Items::Center)
+            .layout(LayoutRefinement::default())
+            .into_element(cx)
     }
 }
 
@@ -413,14 +408,11 @@ impl CommitMetadata {
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .layout(self.layout)
-                .gap(Space::N2)
-                .items_center(),
-            move |_cx| self.children,
-        )
+        ui::h_row(move |_cx| self.children)
+            .layout(self.layout)
+            .gap(Space::N2)
+            .items(Items::Center)
+            .into_element(cx)
     }
 }
 
@@ -476,13 +468,10 @@ impl CommitInfo {
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .layout(LayoutRefinement::default().flex_1().min_w_0())
-                .gap(Space::N1),
-            move |_cx| self.children,
-        )
+        ui::v_stack(move |_cx| self.children)
+            .layout(LayoutRefinement::default().flex_1().min_w_0())
+            .gap(Space::N1)
+            .into_element(cx)
     }
 }
 
@@ -500,14 +489,11 @@ impl CommitAuthor {
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .gap(Space::N2)
-                .items_center()
-                .layout(LayoutRefinement::default()),
-            move |_cx| self.children,
-        )
+        ui::h_row(move |_cx| self.children)
+            .gap(Space::N2)
+            .items(Items::Center)
+            .layout(LayoutRefinement::default())
+            .into_element(cx)
     }
 }
 
@@ -598,14 +584,11 @@ impl CommitActions {
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .gap(Space::N1)
-                .items_center()
-                .layout(LayoutRefinement::default().flex_shrink_0()),
-            move |_cx| self.children,
-        )
+        ui::h_row(move |_cx| self.children)
+            .gap(Space::N1)
+            .items(Items::Center)
+            .layout(LayoutRefinement::default().flex_shrink_0())
+            .into_element(cx)
     }
 }
 
@@ -792,14 +775,11 @@ impl CommitCopyButton {
             chrome_props.padding = Edges::all(Px(0.0)).into();
 
             (pressable, chrome_props, move |cx| {
-                let row = stack::hstack(
-                    cx,
-                    stack::HStackProps::default()
-                        .items_center()
-                        .justify_center()
-                        .layout(LayoutRefinement::default().w_full().h_full()),
-                    move |_cx| vec![icon],
-                );
+                let row = ui::h_row(move |_cx| vec![icon])
+                    .items(Items::Center)
+                    .justify(Justify::Center)
+                    .layout(LayoutRefinement::default().w_full().h_full())
+                    .into_element(cx);
 
                 let marker = copied_marker_test_id.clone().and_then(|marker_id| {
                     copied.then(|| {
@@ -859,13 +839,10 @@ impl CommitFiles {
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let el = stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .layout(LayoutRefinement::default().w_full().min_w_0())
-                .gap(Space::N1),
-            move |_cx| self.children,
-        );
+        let el = ui::v_stack(move |_cx| self.children)
+            .layout(LayoutRefinement::default().w_full().min_w_0())
+            .gap(Space::N1)
+            .into_element(cx);
 
         let Some(test_id) = self.test_id else {
             return el;
@@ -924,15 +901,12 @@ impl CommitFile {
                 props.background = bg;
                 props.corner_radii = Corners::all(MetricRef::radius(Radius::Sm).resolve(&theme));
 
-                let row = stack::hstack(
-                    cx,
-                    stack::HStackProps::default()
-                        .layout(LayoutRefinement::default().w_full().min_w_0())
-                        .gap(Space::N2)
-                        .items_center()
-                        .justify_between(),
-                    move |_cx| children,
-                );
+                let row = ui::h_row(move |_cx| children)
+                    .layout(LayoutRefinement::default().w_full().min_w_0())
+                    .gap(Space::N2)
+                    .items(Items::Center)
+                    .justify(Justify::Between)
+                    .into_element(cx);
                 vec![cx.container(props, move |_cx| vec![row])]
             },
         );
@@ -962,14 +936,11 @@ impl CommitFileInfo {
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .layout(LayoutRefinement::default().min_w_0())
-                .gap(Space::N2)
-                .items_center(),
-            move |_cx| self.children,
-        )
+        ui::h_row(move |_cx| self.children)
+            .layout(LayoutRefinement::default().min_w_0())
+            .gap(Space::N2)
+            .items(Items::Center)
+            .into_element(cx)
     }
 }
 
@@ -1148,14 +1119,11 @@ impl CommitFileChanges {
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .gap(Space::N1)
-                .items_center()
-                .layout(LayoutRefinement::default().flex_shrink_0()),
-            move |_cx| self.children,
-        )
+        ui::h_row(move |_cx| self.children)
+            .gap(Space::N1)
+            .items(Items::Center)
+            .layout(LayoutRefinement::default().flex_shrink_0())
+            .into_element(cx)
     }
 }
 
@@ -1194,14 +1162,11 @@ impl CommitFileAdditions {
             ink_overflow: Default::default(),
         });
 
-        stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .gap(Space::N0)
-                .items_center()
-                .layout(LayoutRefinement::default()),
-            move |_cx| vec![icon, text],
-        )
+        ui::h_row(move |_cx| vec![icon, text])
+            .gap(Space::N0)
+            .items(Items::Center)
+            .layout(LayoutRefinement::default())
+            .into_element(cx)
     }
 }
 
@@ -1240,13 +1205,10 @@ impl CommitFileDeletions {
             ink_overflow: Default::default(),
         });
 
-        stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .gap(Space::N0)
-                .items_center()
-                .layout(LayoutRefinement::default()),
-            move |_cx| vec![icon, text],
-        )
+        ui::h_row(move |_cx| vec![icon, text])
+            .gap(Space::N0)
+            .items(Items::Center)
+            .layout(LayoutRefinement::default())
+            .into_element(cx)
     }
 }

@@ -4,9 +4,9 @@ pub const SOURCE: &str = include_str!("attachments_demo.rs");
 use fret_runtime::Model;
 use fret_ui::Invalidation;
 use fret_ui_ai as ui_ai;
-use fret_ui_kit::declarative::stack;
+use fret_ui_kit::ui;
 use fret_ui_kit::{LayoutRefinement, Space};
-use fret_ui_shadcn::prelude::*;
+use fret_ui_shadcn::{self as shadcn, prelude::*};
 use std::sync::Arc;
 
 #[derive(Default)]
@@ -56,41 +56,113 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
         .get_model_cloned(&items, Invalidation::Layout)
         .unwrap_or_default();
 
-    let mut children = Vec::new();
-    for item in now {
+    let mut grid_children = Vec::new();
+    let mut inline_children = Vec::new();
+    let mut list_children = Vec::new();
+
+    for item in &now {
         let item_id = item.id().clone();
-        let key = Arc::<str>::from(format!("ai-attachments-demo-{}", item_id.as_ref()));
-        let on_remove = on_remove.clone();
-        children.push(cx.keyed(key, move |cx| {
+
+        let on_remove_grid = on_remove.clone();
+        let key = Arc::<str>::from(format!("ai-attachments-demo-grid-{}", item_id.as_ref()));
+        let item_grid = item.clone();
+        let item_id_grid = item_id.clone();
+        grid_children.push(cx.keyed(key, move |cx| {
             let mut el =
-                ui_ai::Attachment::new(item.clone()).variant(ui_ai::AttachmentVariant::Grid);
-            el = el.on_remove(on_remove.clone());
-            if item_id.as_ref() == "att-image" {
+                ui_ai::Attachment::new(item_grid.clone()).variant(ui_ai::AttachmentVariant::Grid);
+            el = el.on_remove(on_remove_grid.clone());
+            if item_id_grid.as_ref() == "att-image" {
                 el = el
                     .test_id("ui-ai-attachment-grid-att-image")
                     .remove_test_id("ui-ai-attachment-grid-att-image-remove");
             }
             el.into_element(cx)
         }));
+
+        let on_remove_inline = on_remove.clone();
+        let key = Arc::<str>::from(format!("ai-attachments-demo-inline-{}", item_id.as_ref()));
+        let item_inline = item.clone();
+        let item_id_inline = item_id.clone();
+        inline_children.push(cx.keyed(key, move |cx| {
+            let mut el = ui_ai::Attachment::new(item_inline.clone())
+                .variant(ui_ai::AttachmentVariant::Inline)
+                .on_remove(on_remove_inline.clone());
+            if item_id_inline.as_ref() == "att-image" {
+                el = el.test_id("ui-ai-attachment-inline-att-image");
+            }
+            let trigger = el.into_element(cx);
+
+            let hover_preview = ui_ai::AttachmentPreview::new(item_inline.clone())
+                .variant(ui_ai::AttachmentVariant::Grid)
+                .into_element(cx);
+            let hover_label = ui::text(ui_ai::get_attachment_label(&item_inline))
+                .text_sm()
+                .into_element(cx);
+            let hover_content = ui::v_stack(move |_cx| vec![hover_preview, hover_label])
+                .layout(LayoutRefinement::default().min_w_0())
+                .gap(Space::N2)
+                .items_start()
+                .into_element(cx);
+            let hover_content = shadcn::HoverCardContent::new(vec![hover_content])
+                .refine_style(ChromeRefinement::default().p(Space::N2))
+                .into_element(cx);
+
+            shadcn::HoverCard::new(trigger, hover_content)
+                .open_delay_frames(0)
+                .close_delay_frames(0)
+                .into_element(cx)
+        }));
+
+        let on_remove_list = on_remove.clone();
+        let key = Arc::<str>::from(format!("ai-attachments-demo-list-{}", item_id.as_ref()));
+        let item_list = item.clone();
+        let item_id_list = item_id.clone();
+        list_children.push(cx.keyed(key, move |cx| {
+            let mut el = ui_ai::Attachment::new(item_list.clone())
+                .variant(ui_ai::AttachmentVariant::List)
+                .show_media_type(true)
+                .on_remove(on_remove_list.clone());
+            if item_id_list.as_ref() == "att-image" {
+                el = el.test_id("ui-ai-attachment-list-att-image");
+            }
+            el.into_element(cx)
+        }));
     }
 
-    let grid = ui_ai::Attachments::new(children)
+    let grid = ui_ai::Attachments::new(grid_children)
         .variant(ui_ai::AttachmentVariant::Grid)
         .test_id("ui-ai-attachments-grid-root")
         .into_element(cx);
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .layout(LayoutRefinement::default().w_full().min_w_0())
-            .gap(Space::N4),
-        move |cx| {
+    let inline = ui_ai::Attachments::new(inline_children)
+        .variant(ui_ai::AttachmentVariant::Inline)
+        .test_id("ui-ai-attachments-inline-root")
+        .into_element(cx);
+
+    let list = ui_ai::Attachments::new(list_children)
+        .variant(ui_ai::AttachmentVariant::List)
+        .test_id("ui-ai-attachments-list-root")
+        .into_element(cx);
+
+    let empty = ui_ai::AttachmentEmpty::new(Vec::new())
+        .test_id("ui-ai-attachments-empty-root")
+        .into_element(cx);
+
+    ui::v_flex(move |cx| {
             vec![
                 cx.text("Attachments (AI Elements)"),
-                cx.text("Hover to reveal remove controls; remove mutates the attachment list."),
+                cx.text("Grid, inline, and list variants. Hover to reveal remove controls; remove mutates the attachment list."),
+                cx.text("Grid"),
                 grid,
+                cx.text("Inline (with hover preview)"),
+                inline,
+                cx.text("List"),
+                list,
+                cx.text("Empty state"),
+                empty,
             ]
-        },
-    )
+        })
+            .layout(LayoutRefinement::default().w_full().min_w_0())
+            .gap(Space::N4).into_element(cx)
 }
 // endregion: example

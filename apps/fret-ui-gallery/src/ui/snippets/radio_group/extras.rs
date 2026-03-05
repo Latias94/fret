@@ -170,13 +170,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     })
     .test_id("ui-gallery-radio-group-rtl");
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N6)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full().min_w_0()),
-        |cx| {
+    ui::v_flex(|cx| {
             vec![
                 shadcn::typography::muted(
                     cx,
@@ -188,8 +182,10 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                 invalid,
                 rtl,
             ]
-        },
-    )
+        })
+            .gap(Space::N6)
+            .items_start()
+            .layout(LayoutRefinement::default().w_full().min_w_0()).into_element(cx)
     .test_id("ui-gallery-radio-group-extras")
 }
 

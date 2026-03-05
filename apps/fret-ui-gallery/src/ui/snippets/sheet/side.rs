@@ -97,30 +97,27 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                     .into_element(cx)
             },
             |cx| {
-                let fields = stack::vstack(
-                    cx,
-                    stack::VStackProps::default()
-                        .gap(Space::N4)
-                        .layout(LayoutRefinement::default().w_full().min_w_0()),
-                    |cx| {
-                        vec![
-                            shadcn::Field::new([
-                                shadcn::FieldLabel::new("Name").into_element(cx),
-                                shadcn::Input::new(demo_name.clone())
-                                    .refine_layout(LayoutRefinement::default().w_full())
-                                    .into_element(cx),
-                            ])
-                            .into_element(cx),
-                            shadcn::Field::new([
-                                shadcn::FieldLabel::new("Username").into_element(cx),
-                                shadcn::Input::new(demo_username.clone())
-                                    .refine_layout(LayoutRefinement::default().w_full())
-                                    .into_element(cx),
-                            ])
-                            .into_element(cx),
-                        ]
-                    },
-                );
+                let fields = ui::v_flex(|cx| {
+                    vec![
+                        shadcn::Field::new([
+                            shadcn::FieldLabel::new("Name").into_element(cx),
+                            shadcn::Input::new(demo_name.clone())
+                                .refine_layout(LayoutRefinement::default().w_full())
+                                .into_element(cx),
+                        ])
+                        .into_element(cx),
+                        shadcn::Field::new([
+                            shadcn::FieldLabel::new("Username").into_element(cx),
+                            shadcn::Input::new(demo_username.clone())
+                                .refine_layout(LayoutRefinement::default().w_full())
+                                .into_element(cx),
+                        ])
+                        .into_element(cx),
+                    ]
+                })
+                .gap(Space::N4)
+                .layout(LayoutRefinement::default().w_full().min_w_0())
+                .into_element(cx);
 
                 let fields = {
                     let props = decl_style::container_props(
@@ -157,64 +154,58 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     };
 
     // Match upstream demo layout: a strict 2x2 grid of side triggers.
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N2)
-            .layout(LayoutRefinement::default().w_full().min_w_0()),
-        |cx| {
-            let row =
-                |cx: &mut ElementContext<'_, H>,
-                 a: (&'static str, &'static str, shadcn::SheetSide, Model<bool>),
-                 b: (&'static str, &'static str, shadcn::SheetSide, Model<bool>)| {
-                    let (id_a, label_a, side_a, open_a) = a;
-                    let (id_b, label_b, side_b, open_b) = b;
-                    stack::hstack_build(
-                        cx,
-                        stack::HStackProps::default()
-                            .gap(Space::N2)
-                            .items_center()
-                            .layout(LayoutRefinement::default().w_full().min_w_0()),
-                        |cx, out| {
-                            out.push(cx.keyed(id_a, |cx| {
-                                side_sheet(cx, id_a, label_a, side_a, open_a.clone())
-                            }));
-                            out.push(cx.keyed(id_b, |cx| {
-                                side_sheet(cx, id_b, label_b, side_b, open_b.clone())
-                            }));
-                        },
-                    )
-                };
+    ui::v_flex(|cx| {
+        let row =
+            |cx: &mut ElementContext<'_, H>,
+             a: (&'static str, &'static str, shadcn::SheetSide, Model<bool>),
+             b: (&'static str, &'static str, shadcn::SheetSide, Model<bool>)| {
+                let (id_a, label_a, side_a, open_a) = a;
+                let (id_b, label_b, side_b, open_b) = b;
+                ui::h_flex_build(|cx, out| {
+                    out.push(cx.keyed(id_a, |cx| {
+                        side_sheet(cx, id_a, label_a, side_a, open_a.clone())
+                    }));
+                    out.push(cx.keyed(id_b, |cx| {
+                        side_sheet(cx, id_b, label_b, side_b, open_b.clone())
+                    }));
+                })
+                .gap(Space::N2)
+                .items_center()
+                .layout(LayoutRefinement::default().w_full().min_w_0())
+                .into_element(cx)
+            };
 
-            vec![
-                row(
-                    cx,
-                    ("top", "top", shadcn::SheetSide::Top, side_top_open.clone()),
-                    (
-                        "right",
-                        "right",
-                        shadcn::SheetSide::Right,
-                        side_right_open.clone(),
-                    ),
+        vec![
+            row(
+                cx,
+                ("top", "top", shadcn::SheetSide::Top, side_top_open.clone()),
+                (
+                    "right",
+                    "right",
+                    shadcn::SheetSide::Right,
+                    side_right_open.clone(),
                 ),
-                row(
-                    cx,
-                    (
-                        "bottom",
-                        "bottom",
-                        shadcn::SheetSide::Bottom,
-                        side_bottom_open.clone(),
-                    ),
-                    (
-                        "left",
-                        "left",
-                        shadcn::SheetSide::Left,
-                        side_left_open.clone(),
-                    ),
+            ),
+            row(
+                cx,
+                (
+                    "bottom",
+                    "bottom",
+                    shadcn::SheetSide::Bottom,
+                    side_bottom_open.clone(),
                 ),
-            ]
-        },
-    )
+                (
+                    "left",
+                    "left",
+                    shadcn::SheetSide::Left,
+                    side_left_open.clone(),
+                ),
+            ),
+        ]
+    })
+    .gap(Space::N2)
+    .layout(LayoutRefinement::default().w_full().min_w_0())
+    .into_element(cx)
     .test_id("ui-gallery-sheet-side")
 }
 // endregion: example

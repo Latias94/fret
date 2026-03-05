@@ -21,6 +21,7 @@ use fret_ui::element::{
 };
 use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, Invalidation, UiHost};
+use fret_ui_headless::tab_strip_overflow_menu::OverflowMenuActivePolicy;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::dnd as ui_dnd;
 
@@ -46,7 +47,6 @@ mod interaction;
 mod kernel;
 mod layouts;
 mod state;
-mod surface;
 mod theme;
 mod utils;
 mod widgets;
@@ -59,7 +59,8 @@ use overflow::compute_overflow_menu_entries;
 
 use kernel::{
     WorkspaceTabStripDropTarget, compute_tab_strip_edge_auto_scroll_delta_x,
-    compute_workspace_tab_strip_drop_target,
+    compute_workspace_tab_strip_drop_target_scoped_to_pointer_row,
+    compute_workspace_tab_strip_drop_target_with_pinned_row,
 };
 
 use consts::TAB_CHROME_PAD_RIGHT;
@@ -71,7 +72,7 @@ use interaction::{
 };
 use layouts::{
     fill_grow_layout, fill_layout, row_layout, tab_list_semantics_layout,
-    tab_strip_scroll_content_layout,
+    tab_strip_scroll_content_layout, tab_strip_scroll_row_layout,
 };
 use state::{WorkspaceTabStripState, get_focus_restore_model, get_reveal_hint_model};
 use theme::WorkspaceTabStripTheme;
@@ -167,6 +168,8 @@ pub struct WorkspaceTabStrip {
     tab_drag: Option<Model<WorkspaceTabDragState>>,
     root_test_id: Option<Arc<str>>,
     tab_test_id_prefix: Option<Arc<str>>,
+    overflow_menu_active_policy: OverflowMenuActivePolicy,
+    separate_pinned_row: bool,
 }
 
 impl WorkspaceTabStrip {
@@ -180,6 +183,8 @@ impl WorkspaceTabStrip {
             tab_drag: None,
             root_test_id: None,
             tab_test_id_prefix: None,
+            overflow_menu_active_policy: OverflowMenuActivePolicy::Exclude,
+            separate_pinned_row: false,
         }
     }
 
@@ -193,6 +198,8 @@ impl WorkspaceTabStrip {
             tab_drag: None,
             root_test_id: None,
             tab_test_id_prefix: None,
+            overflow_menu_active_policy: OverflowMenuActivePolicy::Exclude,
+            separate_pinned_row: false,
         }
     }
 
@@ -227,6 +234,22 @@ impl WorkspaceTabStrip {
     /// Shape: `{prefix}-{tab_id}`.
     pub fn tab_test_id_prefix(mut self, prefix: impl Into<Arc<str>>) -> Self {
         self.tab_test_id_prefix = Some(prefix.into());
+        self
+    }
+
+    /// Controls whether the overflow dropdown should force-include the active tab.
+    ///
+    /// Default: `Exclude` (overflowed-only list).
+    pub fn overflow_menu_active_policy(mut self, policy: OverflowMenuActivePolicy) -> Self {
+        self.overflow_menu_active_policy = policy;
+        self
+    }
+
+    /// If enabled, pinned tabs are rendered in a separate row above unpinned tabs.
+    ///
+    /// Default: `false` (single row + pinned boundary).
+    pub fn separate_pinned_row(mut self, enabled: bool) -> Self {
+        self.separate_pinned_row = enabled;
         self
     }
 
@@ -270,9 +293,11 @@ impl WorkspaceTabStrip {
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let tabs = self.tabs;
+        let pinned_count = tabs.iter().take_while(|tab| tab.pinned).count();
         let set_size = tabs.len() as u32;
         let active = self.active;
         let mru = self.mru;
+        let row_height = self.height;
         let pane_id = self.pane_id;
         let pane_activate_cmd = pane_id
             .as_deref()
@@ -280,6 +305,17 @@ impl WorkspaceTabStrip {
         let tab_drag_model = self.tab_drag;
         let root_test_id = self.root_test_id;
         let tab_test_id_prefix = self.tab_test_id_prefix;
+        let overflow_menu_active_policy = self.overflow_menu_active_policy;
+        let separate_pinned_row_enabled = self.separate_pinned_row;
+        let use_separate_pinned_row =
+            separate_pinned_row_enabled && pinned_count > 0 && pinned_count < tabs.len();
+        let bar_height = if use_separate_pinned_row {
+            // The root container applies `padding: 2px` on all edges; add it back so each row can
+            // still use the full `row_height`.
+            Px((row_height.0 * 2.0) + 4.0)
+        } else {
+            row_height
+        };
 
         let drag_model = get_drag_model(cx);
         cx.observe_model(&drag_model, Invalidation::Paint);
@@ -403,7 +439,7 @@ impl WorkspaceTabStrip {
 
                 let root = cx.container(
                         ContainerProps {
-                            layout: row_layout(self.height),
+                            layout: row_layout(bar_height),
                             padding: Edges::all(Px(2.0)).into(),
                             background: bar_bg,
                             border: Edges {
@@ -505,13 +541,12 @@ impl WorkspaceTabStrip {
                                         ));
 
                                         let mut out: Vec<AnyElement> = Vec::new();
-                                        let pinned_count = tabs
-                                            .iter()
-                                            .take_while(|tab| tab.pinned)
-                                            .count();
+                                        let mut pinned_out: Vec<AnyElement> = Vec::new();
+                                        let mut unpinned_out: Vec<AnyElement> = Vec::new();
 
                                         for (index, tab) in tabs.iter().enumerate() {
-                                            if pinned_count > 0
+                                            if !use_separate_pinned_row
+                                                && pinned_count > 0
                                                 && pinned_count < tabs.len()
                                                 && index == pinned_count
                                             {
@@ -734,6 +769,7 @@ impl WorkspaceTabStrip {
                                                             let scroll_handle = scroll_handle.clone();
                                                             let pinned_by_id = pinned_by_id.clone();
                                                             let canonical_tab_order = canonical_tab_order.clone();
+                                                            let two_row_pinned = use_separate_pinned_row;
                                                             Arc::new(move |host, acx, mv| {
                                                                 let Some(snapshot) =
                                                                     read_drag_snapshot_for_pointer(
@@ -829,16 +865,18 @@ impl WorkspaceTabStrip {
 
                                                                 let dragged = dragged_tab;
                                                                 let mut drop_target =
-                                                                    compute_workspace_tab_strip_drop_target(
+                                                                    compute_workspace_tab_strip_drop_target_with_pinned_row(
                                                                         hit_position,
                                                                         dragged.as_ref(),
                                                                         &tab_rects,
+                                                                        pinned_by_id.as_ref(),
                                                                         pinned_boundary_rect,
                                                                         end_drop_target_rect,
                                                                         scroll_viewport_rect,
                                                                         overflow_control_rect,
                                                                         scroll_left_control_rect,
                                                                         scroll_right_control_rect,
+                                                                        two_row_pinned,
                                                                     );
                                                                 if matches!(drop_target, WorkspaceTabStripDropTarget::End) {
                                                                     drop_target = resolve_end_drop_target_in_canonical_order(
@@ -1011,6 +1049,7 @@ impl WorkspaceTabStrip {
                                                             let dnd = dnd.clone();
                                                             let pinned_by_id = pinned_by_id.clone();
                                                             let canonical_tab_order = canonical_tab_order.clone();
+                                                            let two_row_pinned = use_separate_pinned_row;
                                                             Arc::new(move |host, acx, up| {
                                                                 if up.button != MouseButton::Left {
                                                                     return PressablePointerUpResult::Continue;
@@ -1066,16 +1105,18 @@ impl WorkspaceTabStrip {
                                                                                 up.position;
 
                                                                             let mut next_drop =
-                                                                                compute_workspace_tab_strip_drop_target(
+                                                                                compute_workspace_tab_strip_drop_target_with_pinned_row(
                                                                                     pointer_pos_window,
                                                                                     dragged.as_ref(),
                                                                                     &st.tab_rects,
+                                                                                    pinned_by_id.as_ref(),
                                                                                     st.pinned_boundary_rect,
                                                                                     st.end_drop_target_rect,
                                                                                     st.scroll_viewport_rect,
                                                                                     st.overflow_control_rect,
                                                                                     st.scroll_left_control_rect,
                                                                                     st.scroll_right_control_rect,
+                                                                                    two_row_pinned,
                                                                                 );
                                                                             if matches!(
                                                                                 next_drop,
@@ -1084,16 +1125,18 @@ impl WorkspaceTabStrip {
                                                                                 != pointer_pos_window
                                                                             {
                                                                                 next_drop =
-                                                                                    compute_workspace_tab_strip_drop_target(
+                                                                                    compute_workspace_tab_strip_drop_target_with_pinned_row(
                                                                                         pointer_pos_layout,
                                                                                         dragged.as_ref(),
                                                                                         &st.tab_rects,
+                                                                                        pinned_by_id.as_ref(),
                                                                                         st.pinned_boundary_rect,
                                                                                         st.end_drop_target_rect,
                                                                                         st.scroll_viewport_rect,
                                                                                         st.overflow_control_rect,
                                                                                         st.scroll_left_control_rect,
                                                                                         st.scroll_right_control_rect,
+                                                                                        two_row_pinned,
                                                                                     );
                                                                             }
 
@@ -1872,10 +1915,88 @@ impl WorkspaceTabStrip {
                                                     tab_element
                                                 }
                                             });
-                                            out.push(element);
+                                            if use_separate_pinned_row {
+                                                if tab_pinned {
+                                                    pinned_out.push(element);
+                                                } else {
+                                                    unpinned_out.push(element);
+                                                }
+                                            } else {
+                                                out.push(element);
+                                            }
                                         }
 
-                                        out
+                                        if use_separate_pinned_row {
+                                            let pinned_row_test_id = root_test_id.as_ref().map(|root| {
+                                                Arc::<str>::from(format!("{root}.pinned_row"))
+                                            });
+                                            let unpinned_row_test_id = root_test_id.as_ref().map(|root| {
+                                                Arc::<str>::from(format!("{root}.unpinned_row"))
+                                            });
+
+                                            let pinned_row_layout = tab_strip_scroll_row_layout(row_height);
+                                            let unpinned_row_layout = tab_strip_scroll_row_layout(row_height);
+
+                                            let mut pinned_row = cx.flex(
+                                                FlexProps {
+                                                    layout: pinned_row_layout,
+                                                    direction: fret_core::Axis::Horizontal,
+                                                    gap: Px(2.0).into(),
+                                                    padding: Edges::all(Px(0.0)).into(),
+                                                    justify: MainAlign::Start,
+                                                    align: CrossAlign::Center,
+                                                    wrap: false,
+                                                    ..Default::default()
+                                                },
+                                                move |_cx| pinned_out,
+                                            );
+                                            if let Some(id) = pinned_row_test_id {
+                                                pinned_row = pinned_row.test_id(id);
+                                            }
+
+                                            let mut unpinned_row = cx.flex(
+                                                FlexProps {
+                                                    layout: unpinned_row_layout,
+                                                    direction: fret_core::Axis::Horizontal,
+                                                    gap: Px(2.0).into(),
+                                                    padding: Edges::all(Px(0.0)).into(),
+                                                    justify: MainAlign::Start,
+                                                    align: CrossAlign::Center,
+                                                    wrap: false,
+                                                    ..Default::default()
+                                                },
+                                                move |_cx| unpinned_out,
+                                            );
+                                            if let Some(id) = unpinned_row_test_id {
+                                                unpinned_row = unpinned_row.test_id(id);
+                                            }
+
+                                            let stack = cx.flex(
+                                                FlexProps {
+                                                    layout: fill_layout(),
+                                                    direction: fret_core::Axis::Vertical,
+                                                    gap: Px(0.0).into(),
+                                                    justify: MainAlign::Start,
+                                                    align: CrossAlign::Stretch,
+                                                    wrap: false,
+                                                    ..Default::default()
+                                                },
+                                                move |_cx| vec![pinned_row, unpinned_row],
+                                            );
+
+                                            let group = cx.semantics(
+                                                SemanticsProps {
+                                                    layout: fill_layout(),
+                                                    role: SemanticsRole::Group,
+                                                    ..Default::default()
+                                                },
+                                                move |_cx| vec![stack],
+                                            );
+
+                                            vec![group]
+                                        } else {
+                                            out
+                                        }
                                     },
                                 )];
 
@@ -2037,6 +2158,8 @@ impl WorkspaceTabStrip {
                                 let (button_test_id, entries) = compute_overflow_menu_entries(
                                     cx,
                                     root_test_id.as_ref(),
+                                    active.as_ref(),
+                                    overflow_menu_active_policy,
                                     &tabs,
                                     tab_rects,
                                     viewport,
@@ -2160,16 +2283,18 @@ impl WorkspaceTabStrip {
                                         && session_current_window == cx.window
                                     {
                                         let overflow_rect = overflow_control_rect_now;
-                                        let next = compute_workspace_tab_strip_drop_target(
+                                        let next = compute_workspace_tab_strip_drop_target_with_pinned_row(
                                             session_position,
                                             dragged,
                                             &rects_for_hit,
+                                            pinned_by_id.as_ref(),
                                             pinned_boundary_rect_now,
                                             end_drop_target_rect_now,
                                             viewport_for_hit,
                                             overflow_rect,
                                             scroll_left_control_rect_now,
                                             scroll_right_control_rect_now,
+                                            use_separate_pinned_row,
                                         );
                                     let next = match next {
                                         WorkspaceTabStripDropTarget::End => resolve_end_drop_target_in_canonical_order(
@@ -2244,16 +2369,18 @@ impl WorkspaceTabStrip {
                                         && session.current_window == cx.window
                                         && let Some(dragged) = tab_drag_snapshot.dragged_tab.as_deref()
                                     {
-                                        let mut drop = compute_workspace_tab_strip_drop_target(
+                                        let mut drop = compute_workspace_tab_strip_drop_target_scoped_to_pointer_row(
                                             session.position,
                                             dragged,
                                             &next_rects,
+                                            pinned_by_id.as_ref(),
                                             pinned_boundary_rect_now,
                                             end_drop_target_rect_now,
                                             viewport_for_hit,
                                             overflow_control_rect_now,
                                             scroll_left_control_rect_now,
                                             scroll_right_control_rect_now,
+                                            use_separate_pinned_row,
                                         );
 
                                         // Cross-pane drag policy: dropping in end-drop / header space inserts at the

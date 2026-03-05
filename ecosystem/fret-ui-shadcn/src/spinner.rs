@@ -41,7 +41,8 @@ impl Spinner {
             layout: LayoutRefinement::default(),
             color: None,
             icon: ids::ui::LOADER,
-            speed: 0.12,
+            // Match Tailwind `animate-spin` default: 1s per rotation.
+            speed: TAU / 60.0,
         }
     }
 
@@ -149,6 +150,15 @@ mod tests {
     use fret_ui::elements;
     use fret_ui::elements::ElementRuntime;
     use std::time::Duration;
+
+    #[test]
+    fn spinner_default_speed_matches_tailwind_animate_spin() {
+        let spinner = Spinner::new();
+        assert!(
+            (spinner.speed - (TAU / 60.0)).abs() <= 1e-6,
+            "expected Spinner::new() speed to match Tailwind `animate-spin` default (1s/rotation)"
+        );
+    }
 
     #[test]
     fn spinner_defaults_to_size_4_and_has_loading_semantics() {

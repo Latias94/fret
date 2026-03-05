@@ -20,5 +20,5 @@ pub(super) fn preview_ai_transcript_torture(
         ],
     );
 
-    vec![body.test_id("ui-gallery-page-ai-transcript-torture")]
+    vec![body]
 }

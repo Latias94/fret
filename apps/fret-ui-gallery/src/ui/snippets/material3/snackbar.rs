@@ -81,31 +81,28 @@ pub fn render<H: UiHost>(
         .get_cloned(&last_action)
         .unwrap_or_else(|| Arc::<str>::from("<none>"));
 
-    let buttons = stack::hstack(
-        cx,
-        stack::HStackProps::default()
-            .gap(Space::N4)
-            .layout(LayoutRefinement::default().w_full()),
-        |cx| {
-            vec![
-                material3::Button::new("Show (short)")
-                    .variant(material3::ButtonVariant::Outlined)
-                    .on_activate(show_short.clone())
-                    .test_id("ui-gallery-material3-snackbar-show-short")
-                    .into_element(cx),
-                material3::Button::new("Show (two-line)")
-                    .variant(material3::ButtonVariant::Outlined)
-                    .on_activate(show_two_line.clone())
-                    .test_id("ui-gallery-material3-snackbar-show-two-line")
-                    .into_element(cx),
-                material3::Button::new("Show (indefinite)")
-                    .variant(material3::ButtonVariant::Outlined)
-                    .on_activate(show_indefinite.clone())
-                    .test_id("ui-gallery-material3-snackbar-show-indefinite")
-                    .into_element(cx),
-            ]
-        },
-    );
+    let buttons = ui::h_flex(|cx| {
+        vec![
+            material3::Button::new("Show (short)")
+                .variant(material3::ButtonVariant::Outlined)
+                .on_activate(show_short.clone())
+                .test_id("ui-gallery-material3-snackbar-show-short")
+                .into_element(cx),
+            material3::Button::new("Show (two-line)")
+                .variant(material3::ButtonVariant::Outlined)
+                .on_activate(show_two_line.clone())
+                .test_id("ui-gallery-material3-snackbar-show-two-line")
+                .into_element(cx),
+            material3::Button::new("Show (indefinite)")
+                .variant(material3::ButtonVariant::Outlined)
+                .on_activate(show_indefinite.clone())
+                .test_id("ui-gallery-material3-snackbar-show-indefinite")
+                .into_element(cx),
+        ]
+    })
+    .gap(Space::N4)
+    .layout(LayoutRefinement::default().w_full())
+    .into_element(cx);
 
     shadcn::Card::new(vec![
         shadcn::CardHeader::new(vec![

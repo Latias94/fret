@@ -245,6 +245,8 @@ pub(super) fn handle_pointer_region<H: UiHost>(
                 click_count: *click_count,
                 pointer_type: *pointer_type,
                 hit_is_text_input: cx.pointer_hit_is_text_input,
+                hit_is_pressable: cx.pointer_hit_is_pressable,
+                hit_pressable_target: cx.pointer_hit_pressable_target,
             };
 
             let Some(h) = hook else {
@@ -533,6 +535,13 @@ pub(super) fn handle_pointer_region<H: UiHost>(
                 is_click: *is_click,
                 click_count: *click_count,
                 pointer_type: *pointer_type,
+                down_hit_pressable_target: crate::elements::with_element_state(
+                    &mut *cx.app,
+                    window,
+                    this.element,
+                    crate::element::PointerRegionState::default,
+                    |state| state.last_down.and_then(|d| d.hit_pressable_target),
+                ),
             };
 
             if let Some(h) = hook {

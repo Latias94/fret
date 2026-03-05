@@ -93,13 +93,10 @@ fn wire_selection_commands<H: UiHost + 'static>(
 }
 
 fn align_end(cx: &mut ElementContext<'_, App>, child: AnyElement) -> AnyElement {
-    stack::hstack(
-        cx,
-        stack::HStackProps::default()
-            .layout(LayoutRefinement::default().w_full())
-            .justify_end(),
-        move |_cx| [child],
-    )
+    ui::h_flex(move |_cx| [child])
+        .layout(LayoutRefinement::default().w_full())
+        .justify_end()
+        .into_element(cx)
 }
 
 fn legacy_demo_content(
@@ -627,14 +624,11 @@ fn legacy_demo_content(
 
 pub fn render(cx: &mut ElementContext<'_, App>, state: Model<TableState>) -> AnyElement {
     let legacy_content = legacy_demo_content(cx, state);
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N3)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full()),
-        |_cx| legacy_content,
-    )
-    .test_id("ui-gallery-data-table-guide-demo")
+    ui::v_flex(|_cx| legacy_content)
+        .gap(Space::N3)
+        .items_start()
+        .layout(LayoutRefinement::default().w_full())
+        .into_element(cx)
+        .test_id("ui-gallery-data-table-guide-demo")
 }
 // endregion: example

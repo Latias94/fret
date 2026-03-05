@@ -159,7 +159,13 @@ fn label_for_control<H: UiHost>(
             let control_registry_on_down = control_registry_inner.clone();
             let for_control_on_down = for_control_inner.clone();
             let control_snapshot_on_down = control_snapshot_inner.clone();
-            cx.pointer_region_add_on_pointer_down(Arc::new(move |host, acx, _down| {
+            cx.pointer_region_add_on_pointer_down(Arc::new(move |host, acx, down| {
+                // If the pointer-down hit-test chain includes a pressable (e.g. an embedded
+                // button), let that descendant own the interaction rather than capturing.
+                if down.hit_pressable_target.is_some() {
+                    return false;
+                }
+
                 let enabled = host
                     .models_mut()
                     .read(&control_registry_on_down, |reg| {
@@ -183,6 +189,9 @@ fn label_for_control<H: UiHost>(
                 host.release_pointer_capture();
                 if !up.is_click {
                     return true;
+                }
+                if up.down_hit_pressable_target.is_some() {
+                    return false;
                 }
 
                 let control = host

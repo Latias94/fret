@@ -15,7 +15,6 @@ use fret_ui::{ElementContext, Invalidation, Theme, ThemeSnapshot, UiHost};
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
-use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::theme_tokens;
 use fret_ui_kit::typography;
@@ -758,10 +757,8 @@ impl Calendar {
                             day_button.clone(),
                         );
                     }
-                    vec![stack::vstack(
-                        cx,
-                        stack::VStackProps::default().gap(Space::N4),
-                        move |cx| {
+                    vec![
+                        ui::v_stack(move |cx| {
                             let theme_header = theme.clone();
                             let theme_weekdays = theme.clone();
                             let theme_days_for_days = theme.clone();
@@ -1110,13 +1107,10 @@ impl Calendar {
                                                 }))
                                                 .into_element(cx);
 
-                                            stack::hstack(
-                                                cx,
-                                                stack::HStackProps::default()
-                                                    .gap(Space::N1p5)
-                                                    .items_center(),
-                                                move |_cx| vec![month_select, year_select],
-                                            )
+                                            ui::h_row(move |_cx| vec![month_select, year_select])
+                                                .gap(Space::N1p5)
+                                                .items_center()
+                                                .into_element(cx)
                                         }
                                         _ => {
                                             let mut title_props = TextProps::new(title.clone());
@@ -1448,15 +1442,15 @@ impl Calendar {
                                 days_grid
                             };
 
-                            let body = stack::vstack(
-                                cx,
-                                stack::VStackProps::default().gap(Space::N0),
-                                move |_cx| vec![weekday_row, days],
-                            );
+                            let body = ui::v_stack(move |_cx| vec![weekday_row, days])
+                                .gap(Space::N0)
+                                .into_element(cx);
 
                             vec![header, body]
-                        },
-                    )]
+                        })
+                        .gap(Space::N4)
+                        .into_element(cx),
+                    ]
                 })]
             },
         )
@@ -2066,17 +2060,13 @@ fn calendar_month_view<H: UiHost>(
         days_grid
     };
 
-    let body = stack::vstack(
-        cx,
-        stack::VStackProps::default().gap(Space::N0),
-        move |_cx| vec![weekday_row, days],
-    );
+    let body = ui::v_stack(move |_cx| vec![weekday_row, days])
+        .gap(Space::N0)
+        .into_element(cx);
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default().gap(Space::N4),
-        move |_cx| vec![month_caption, body],
-    )
+    ui::v_stack(move |_cx| vec![month_caption, body])
+        .gap(Space::N4)
+        .into_element(cx)
 }
 
 fn weekday_labels(locale: CalendarLocale, week_start: Weekday) -> Arc<[Arc<str>]> {

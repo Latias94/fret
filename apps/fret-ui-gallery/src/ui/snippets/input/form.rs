@@ -78,29 +78,26 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         ])
         .into_element(cx);
 
-    let row = stack::hstack(
-        cx,
-        stack::HStackProps::default()
-            .layout(LayoutRefinement::default().w_full())
-            .gap(Space::N4)
-            .items_start(),
-        |cx| {
-            vec![
-                shadcn::Field::new([
-                    shadcn::FieldLabel::new("Phone").into_element(cx),
-                    shadcn::Input::new(phone)
-                        .a11y_label("Phone")
-                        .placeholder("+1 (555) 123-4567")
-                        .into_element(cx),
-                ])
+    let row = ui::h_flex(|cx| {
+        vec![
+            shadcn::Field::new([
+                shadcn::FieldLabel::new("Phone").into_element(cx),
+                shadcn::Input::new(phone)
+                    .a11y_label("Phone")
+                    .placeholder("+1 (555) 123-4567")
+                    .into_element(cx),
+            ])
+            .refine_layout(LayoutRefinement::default().w_full())
+            .into_element(cx),
+            shadcn::Field::new([shadcn::FieldLabel::new("Country").into_element(cx), country])
                 .refine_layout(LayoutRefinement::default().w_full())
                 .into_element(cx),
-                shadcn::Field::new([shadcn::FieldLabel::new("Country").into_element(cx), country])
-                    .refine_layout(LayoutRefinement::default().w_full())
-                    .into_element(cx),
-            ]
-        },
-    );
+        ]
+    })
+    .layout(LayoutRefinement::default().w_full())
+    .gap(Space::N4)
+    .items_start()
+    .into_element(cx);
 
     shadcn::FieldGroup::new([
         shadcn::Field::new([

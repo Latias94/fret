@@ -7,9 +7,11 @@ use fret_ui::action::OnActivate;
 use fret_ui::element::{AnyElement, SemanticsDecoration};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::icon as decl_icon;
-use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Space};
+use fret_ui_kit::ui;
+use fret_ui_kit::{ChromeRefinement, ColorFallback, ColorRef, Items, LayoutRefinement, Space};
+use fret_ui_kit::{WidgetStateProperty, WidgetStates};
+use fret_ui_shadcn::button::ButtonStyle;
 use fret_ui_shadcn::{
     Button, ButtonSize, ButtonVariant, Separator, Tooltip, TooltipAlign, TooltipSide,
 };
@@ -28,7 +30,10 @@ impl Checkpoint {
         Self {
             children: children.into_iter().collect(),
             test_id: None,
-            layout: LayoutRefinement::default().w_full().min_w_0(),
+            layout: LayoutRefinement::default()
+                .w_full()
+                .min_w_0()
+                .overflow_hidden(),
             chrome: ChromeRefinement::default(),
         }
     }
@@ -50,23 +55,22 @@ impl Checkpoint {
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
-        let separator = Separator::new().into_element(cx);
+        let separator = Separator::new()
+            .refine_layout(LayoutRefinement::default().flex_1().min_w_0())
+            .into_element(cx);
 
         let children = self.children;
-        let mut row = stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .layout(self.layout)
-                .gap(Space::N1)
-                .items_center(),
-            move |_cx| {
-                let mut out = children;
-                out.push(separator);
-                out
-            },
-        );
-        row = cx.container(
-            decl_style::container_props(&theme, self.chrome, LayoutRefinement::default()),
+        let row = ui::h_row(move |_cx| {
+            let mut out = children;
+            out.push(separator);
+            out
+        })
+        .layout(LayoutRefinement::default().w_full().min_w_0())
+        .gap(Space::N0p5)
+        .items(Items::Center)
+        .into_element(cx);
+        let row = cx.container(
+            decl_style::container_props(&theme, self.chrome, self.layout),
             move |_cx| vec![row],
         );
 
@@ -93,7 +97,7 @@ pub struct CheckpointIcon {
 impl Default for CheckpointIcon {
     fn default() -> Self {
         Self {
-            icon: fret_icons::ids::ui::BOOK,
+            icon: fret_icons::IconId::new_static("lucide.bookmark"),
             size: Px(16.0),
             color: None,
             layout: LayoutRefinement::default().flex_shrink_0(),
@@ -146,6 +150,7 @@ pub struct CheckpointTrigger {
     on_activate: Option<OnActivate>,
     variant: ButtonVariant,
     size: ButtonSize,
+    muted_foreground: bool,
     test_id: Option<Arc<str>>,
     tooltip_panel_test_id: Option<Arc<str>>,
 }
@@ -172,11 +177,12 @@ impl CheckpointTrigger {
     pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
         Self {
             children: children.into_iter().collect(),
-            a11y_label: Arc::<str>::from("Checkpoint"),
+            a11y_label: Arc::<str>::from("Restore checkpoint"),
             tooltip: None,
             on_activate: None,
             variant: ButtonVariant::Ghost,
             size: ButtonSize::Sm,
+            muted_foreground: true,
             test_id: None,
             tooltip_panel_test_id: None,
         }
@@ -207,6 +213,13 @@ impl CheckpointTrigger {
         self
     }
 
+    /// When true (default), uses `text-muted-foreground` for the idle state while preserving
+    /// shadcn's hover/active foreground overrides (aligns AI Elements `Checkpoint` root text color).
+    pub fn muted_foreground(mut self, enabled: bool) -> Self {
+        self.muted_foreground = enabled;
+        self
+    }
+
     pub fn test_id(mut self, test_id: impl Into<Arc<str>>) -> Self {
         self.test_id = Some(test_id.into());
         self
@@ -219,10 +232,28 @@ impl CheckpointTrigger {
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let button = {
-            let mut b = Button::new(self.a11y_label)
-                .children(self.children)
-                .variant(self.variant)
-                .size(self.size);
+            let a11y_label = self.a11y_label;
+            let children = self.children;
+            let variant = self.variant;
+            let size = self.size;
+            let muted_foreground = self.muted_foreground;
+            let mut b = Button::new(a11y_label)
+                .children(children)
+                .variant(variant)
+                .size(size);
+            if muted_foreground && variant == ButtonVariant::Ghost {
+                let muted = ColorRef::Token {
+                    key: "muted-foreground",
+                    fallback: ColorFallback::ThemeTextMuted,
+                };
+                b = b.style(
+                    ButtonStyle::default().foreground(
+                        WidgetStateProperty::new(Some(muted))
+                            .when(WidgetStates::HOVERED, None)
+                            .when(WidgetStates::ACTIVE, None),
+                    ),
+                );
+            }
             if let Some(on_activate) = self.on_activate {
                 b = b.on_activate(on_activate);
             }

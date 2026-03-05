@@ -1,7 +1,7 @@
 use fret_core::time::{Duration, Instant};
 use std::sync::{Arc, Mutex};
 
-use fret_core::{Point, Px, SemanticsRole, Transform2D};
+use fret_core::{Point, Px, SemanticsRole, TextStyle, Transform2D};
 use fret_runtime::Model;
 use fret_ui::element::{
     AnyElement, ContainerProps, PressableA11y, PressableProps, SemanticsDecoration, TextProps,
@@ -9,8 +9,11 @@ use fret_ui::element::{
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::icon as decl_icon;
-use fret_ui_kit::declarative::stack;
-use fret_ui_kit::{ColorRef, LayoutRefinement, Space};
+use fret_ui_kit::declarative::transition::{
+    drive_transition_with_durations_and_cubic_bezier, ticks_60hz_for_duration,
+};
+use fret_ui_kit::ui;
+use fret_ui_kit::{ColorRef, Items, LayoutRefinement, Space, typography};
 
 use crate::elements::Shimmer;
 
@@ -78,7 +81,8 @@ impl Reasoning {
             default_open: None,
             duration_secs: None,
             test_id_root: None,
-            layout: LayoutRefinement::default(),
+            // Upstream default: `mb-4` via `cn("not-prose mb-4", className)`.
+            layout: LayoutRefinement::default().mb(Space::N4),
         }
     }
 
@@ -342,7 +346,41 @@ impl ReasoningTrigger {
                     default_thinking_message(cx, &theme, fg, is_streaming, duration_secs)
                 };
 
-                let chevron_rotation = if is_open { 180.0 } else { 0.0 };
+                let (toggle_ticks, toggle_easing) = {
+                    let theme_full = Theme::global(&*cx.app);
+                    let toggle_duration = {
+                        theme_full
+                            .duration_ms_by_key("duration.shadcn.motion.collapsible.toggle")
+                            .or_else(|| {
+                                theme_full.duration_ms_by_key("duration.motion.collapsible.toggle")
+                            })
+                            .or_else(|| theme_full.duration_ms_by_key("duration.shadcn.motion.200"))
+                    }
+                    .map(|ms| Duration::from_millis(ms as u64))
+                    .unwrap_or(Duration::from_millis(200));
+                    let ticks = ticks_60hz_for_duration(toggle_duration);
+                    let easing = theme_full
+                        .easing_by_key("easing.shadcn.motion.collapsible.toggle")
+                        .or_else(|| theme_full.easing_by_key("easing.motion.collapsible.toggle"))
+                        .or_else(|| theme_full.easing_by_key("easing.shadcn.motion"))
+                        .or_else(|| theme_full.easing_by_key("easing.motion.standard"))
+                        .unwrap_or(fret_ui::theme::CubicBezier {
+                            x1: 0.4,
+                            y1: 0.0,
+                            x2: 0.2,
+                            y2: 1.0,
+                        });
+                    (ticks, easing)
+                };
+
+                let chevron_motion = drive_transition_with_durations_and_cubic_bezier(
+                    cx,
+                    is_open,
+                    toggle_ticks,
+                    toggle_ticks,
+                    toggle_easing,
+                );
+                let chevron_rotation = 180.0 * chevron_motion.progress;
                 let center = Point::new(Px(8.0), Px(8.0));
                 let chevron_transform =
                     Transform2D::rotation_about_degrees(chevron_rotation, center);
@@ -367,14 +405,11 @@ impl ReasoningTrigger {
                     },
                 );
 
-                let row = stack::hstack(
-                    cx,
-                    stack::HStackProps::default()
-                        .layout(LayoutRefinement::default().w_full().min_w_0())
-                        .items_center()
-                        .gap(Space::N2),
-                    move |_cx| vec![brain, thinking, chevron],
-                );
+                let row = ui::h_row(move |_cx| vec![brain, thinking, chevron])
+                    .layout(LayoutRefinement::default().w_full().min_w_0())
+                    .items(Items::Center)
+                    .gap(Space::N2)
+                    .into_element(cx);
 
                 vec![row]
             },
@@ -384,14 +419,18 @@ impl ReasoningTrigger {
 
 fn default_thinking_message<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    _theme: &Theme,
+    theme: &Theme,
     fg: fret_core::Color,
     is_streaming: bool,
     duration_secs: Option<u32>,
 ) -> AnyElement {
+    let text_style: TextStyle =
+        typography::TypographyPreset::control_ui(typography::UiTextSize::Sm).resolve(theme);
+
     if is_streaming || duration_secs == Some(0) {
         return Shimmer::new("Thinking...")
             .duration_secs(1.0)
+            .text_style(text_style)
             .role(SemanticsRole::Text)
             .into_element(cx);
     }
@@ -405,7 +444,7 @@ fn default_thinking_message<H: UiHost>(
     cx.text_props(TextProps {
         layout: Default::default(),
         text,
-        style: None,
+        style: Some(text_style),
         color: Some(fg),
         wrap: fret_core::TextWrap::Word,
         overflow: fret_core::TextOverflow::Clip,
@@ -453,13 +492,15 @@ impl ReasoningContent {
 
     pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
+        let muted_fg = theme.color_token("muted-foreground");
 
         let mut components = fret_markdown::MarkdownComponents::<H>::default();
         // Reasoning content is usually non-interactive; keep links inert by default.
         components.on_link_activate = None;
 
-        let content =
-            fret_markdown::Markdown::new(self.markdown).into_element_with(cx, &components);
+        let content = cx.foreground_scope(muted_fg, move |cx| {
+            vec![fret_markdown::Markdown::new(self.markdown).into_element_with(cx, &components)]
+        });
 
         let inner = cx.container(
             fret_ui::element::ContainerProps {

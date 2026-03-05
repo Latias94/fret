@@ -18,39 +18,35 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             .font_medium()
             .into_element(cx);
 
-        let tags_list = stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .gap(Space::N0)
-                .layout(LayoutRefinement::default().w_full()),
-            move |cx| {
-                let mut out: Vec<AnyElement> = Vec::with_capacity(tags.len() * 2);
-                for tag in tags {
-                    out.push(
-                        ui::text(tag)
-                            .text_size_px(Px(14.0))
-                            .line_height_px(Px(20.0))
-                            .line_height_policy(fret_core::TextLineHeightPolicy::FixedFromStyle)
-                            .into_element(cx),
-                    );
-                    out.push(
-                        shadcn::Separator::new()
-                            .refine_layout(LayoutRefinement::default().w_full().my(Space::N2))
-                            .into_element(cx),
-                    );
-                }
-                out
-            },
-        );
+        let tags_list = ui::v_flex(move |cx| {
+            let mut out: Vec<AnyElement> = Vec::with_capacity(tags.len() * 2);
+            for tag in tags {
+                out.push(
+                    ui::text(tag)
+                        .text_size_px(Px(14.0))
+                        .line_height_px(Px(20.0))
+                        .line_height_policy(fret_core::TextLineHeightPolicy::FixedFromStyle)
+                        .into_element(cx),
+                );
+                out.push(
+                    shadcn::Separator::new()
+                        .refine_layout(LayoutRefinement::default().w_full().my(Space::N2))
+                        .into_element(cx),
+                );
+            }
+            out
+        })
+        .gap(Space::N0)
+        .layout(LayoutRefinement::default().w_full())
+        .into_element(cx);
 
-        vec![stack::vstack(
-            cx,
-            stack::VStackProps::default()
+        vec![
+            ui::v_flex(|_cx| vec![heading, tags_list])
                 .gap(Space::N4)
                 .items_start()
-                .layout(LayoutRefinement::default().w_full()),
-            |_cx| vec![heading, tags_list],
-        )]
+                .layout(LayoutRefinement::default().w_full())
+                .into_element(cx),
+        ]
     })
     .p_4()
     .into_element(cx);

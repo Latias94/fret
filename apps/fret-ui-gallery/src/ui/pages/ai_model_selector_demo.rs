@@ -19,5 +19,5 @@ pub(super) fn preview_ai_model_selector_demo(
         ],
     );
 
-    vec![body.test_id("ui-gallery-page-ai-model-selector-demo")]
+    vec![body]
 }

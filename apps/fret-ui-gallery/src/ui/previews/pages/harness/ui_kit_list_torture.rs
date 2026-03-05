@@ -25,20 +25,16 @@ pub(in crate::ui) fn preview_ui_kit_list_torture(
 
     let scroll_handle = cx.with_state(VirtualListScrollHandle::new, |h| h.clone());
 
-    let header = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .layout(LayoutRefinement::default().w_full())
-            .gap(Space::N2),
-        |cx| {
+    let header = ui::v_flex(|cx| {
             vec![
                 cx.text(
                     "Goal: validate fret-ui-kit list virtualization under view-cache + shell reuse (ADR 0177).",
                 ),
                 cx.text("Expect: scroll boundary shifts reconcile without scroll-window dirty views."),
             ]
-        },
-    );
+        })
+            .layout(LayoutRefinement::default().w_full())
+            .gap(Space::N2).into_element(cx);
 
     let len: usize = std::env::var("FRET_UI_GALLERY_UI_KIT_LIST_LEN")
         .ok()
@@ -106,13 +102,10 @@ pub(in crate::ui) fn preview_ui_kit_list_torture(
         )
         .test_id("ui-gallery-ui-kit-list-viewport");
 
-    let root = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .layout(LayoutRefinement::default().w_full())
-            .gap(Space::N3),
-        |_cx| vec![header, list],
-    );
+    let root = ui::v_flex(|_cx| vec![header, list])
+        .layout(LayoutRefinement::default().w_full())
+        .gap(Space::N3)
+        .into_element(cx);
 
     let root = root.attach_semantics(
         SemanticsDecoration::default()

@@ -69,14 +69,11 @@ fn field(
         .a11y_label(a11y)
         .refine_layout(LayoutRefinement::default().w_full().min_w_0())
         .into_element(cx);
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N2)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full().min_w_0()),
-        move |cx| vec![shadcn::Label::new(label).into_element(cx), input],
-    )
+    ui::v_flex(move |cx| vec![shadcn::Label::new(label).into_element(cx), input])
+        .gap(Space::N2)
+        .items_start()
+        .layout(LayoutRefinement::default().w_full().min_w_0())
+        .into_element(cx)
 }
 
 pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
@@ -92,19 +89,16 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
         ])
         .into_element(cx);
 
-        let content = stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .gap(Space::N4)
-                .items_start()
-                .layout(LayoutRefinement::default().w_full().min_w_0()),
-            move |cx| {
-                vec![
-                    field(cx, "Name", name.clone(), "Name"),
-                    field(cx, "Username", username.clone(), "Username"),
-                ]
-            },
-        );
+        let content = ui::v_flex(move |cx| {
+            vec![
+                field(cx, "Name", name.clone(), "Name"),
+                field(cx, "Username", username.clone(), "Username"),
+            ]
+        })
+        .gap(Space::N4)
+        .items_start()
+        .layout(LayoutRefinement::default().w_full().min_w_0())
+        .into_element(cx);
         let content = shadcn::CardContent::new(vec![content]).into_element(cx);
         let footer =
             shadcn::CardFooter::new(vec![shadcn::Button::new("Save changes").into_element(cx)])
@@ -122,24 +116,21 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
         ])
         .into_element(cx);
 
-        let content = stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .gap(Space::N4)
-                .items_start()
-                .layout(LayoutRefinement::default().w_full().min_w_0()),
-            move |cx| {
-                vec![
-                    field(
-                        cx,
-                        "Current password",
-                        current_password.clone(),
-                        "Current password",
-                    ),
-                    field(cx, "New password", new_password.clone(), "New password"),
-                ]
-            },
-        );
+        let content = ui::v_flex(move |cx| {
+            vec![
+                field(
+                    cx,
+                    "Current password",
+                    current_password.clone(),
+                    "Current password",
+                ),
+                field(cx, "New password", new_password.clone(), "New password"),
+            ]
+        })
+        .gap(Space::N4)
+        .items_start()
+        .layout(LayoutRefinement::default().w_full().min_w_0())
+        .into_element(cx);
         let content = shadcn::CardContent::new(vec![content]).into_element(cx);
         let footer =
             shadcn::CardFooter::new(vec![shadcn::Button::new("Save password").into_element(cx)])

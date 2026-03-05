@@ -4,7 +4,7 @@ pub const SOURCE: &str = include_str!("inline_citation_demo.rs");
 use fret_runtime::Model;
 use fret_ui::Invalidation;
 use fret_ui_ai as ui_ai;
-use fret_ui_kit::declarative::stack;
+use fret_ui_kit::ui;
 use fret_ui_kit::{LayoutRefinement, Space};
 use fret_ui_shadcn::prelude::*;
 use std::sync::Arc;
@@ -60,24 +60,18 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
         .test_id("ui-ai-inline-citation-demo-c1")
         .into_element(cx);
 
-    let title = cx.text("InlineCitation (AI Elements): hover card + pager + selection seam.");
-    let hint = cx.text("Hover a citation to preview sources; activate to select a source id. (Upstream uses hover-card + carousel header.)");
+    let title = cx.text("InlineCitation (AI Elements): inline label + hover card + pager.");
+    let hint = cx.text("Hover the badge to preview sources; activation emits a selected source id. (Upstream composes InlineCitationText + HoverCard + Carousel header.)");
     let row_label = cx.text("Citations:");
 
-    let row = stack::hstack(
-        cx,
-        stack::HStackProps::default()
-            .layout(LayoutRefinement::default().w_full().min_w_0())
-            .gap(Space::N2),
-        move |_cx| vec![row_label, c0, c1],
-    );
+    let row = ui::h_flex(move |_cx| vec![row_label, c0, c1])
+        .layout(LayoutRefinement::default().w_full().min_w_0())
+        .gap(Space::N2)
+        .into_element(cx);
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .layout(LayoutRefinement::default().w_full().min_w_0())
-            .gap(Space::N4),
-        move |_cx| vec![title, marker, row, hint],
-    )
+    ui::v_flex(move |_cx| vec![title, marker, row, hint])
+        .layout(LayoutRefinement::default().w_full().min_w_0())
+        .gap(Space::N4)
+        .into_element(cx)
 }
 // endregion: example

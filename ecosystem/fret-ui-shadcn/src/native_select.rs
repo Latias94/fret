@@ -15,7 +15,6 @@ use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::motion::{
     drive_tween_color_for_element, drive_tween_f32_for_element,
 };
-use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::controllable_state;
 use fret_ui_kit::primitives::popover as radix_popover;
@@ -532,20 +531,19 @@ pub fn native_select<H: UiHost>(
                                 icon = icon.test_id(format!("{prefix}-icon"));
                             }
 
-                            vec![stack::hstack(
-                                cx,
-                                stack::HStackProps::default()
-                                    .layout(LayoutRefinement::default().w_full().h_full().min_w_0())
-                                    .justify_between()
-                                    .items_center()
-                                    .gap_x(Space::N2),
-                                |cx| {
+                            vec![
+                                ui::h_row(|cx| {
                                     let content = content.flex_1().min_w_0().into_element(cx);
                                     let (a, b) =
                                         crate::rtl::inline_start_end_pair(dir, content, icon);
                                     vec![a, b]
-                                },
-                            )]
+                                })
+                                .layout(LayoutRefinement::default().w_full().h_full().min_w_0())
+                                .justify_between()
+                                .items_center()
+                                .gap(Space::N2)
+                                .into_element(cx),
+                            ]
                         })
                     };
 

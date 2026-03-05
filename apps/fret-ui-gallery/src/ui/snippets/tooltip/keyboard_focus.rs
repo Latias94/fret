@@ -33,12 +33,11 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             .test_id("ui-gallery-tooltip-focus");
 
             vec![
-                stack::hstack(
-                    cx,
-                    stack::HStackProps::default().gap(Space::N2).items_center(),
-                    |_cx| vec![focus_start, focus_tooltip],
-                )
-                .test_id("ui-gallery-tooltip-focus-row"),
+                ui::h_row(|_cx| vec![focus_start, focus_tooltip])
+                    .gap(Space::N2)
+                    .items_center()
+                    .into_element(cx)
+                    .test_id("ui-gallery-tooltip-focus-row"),
             ]
         })
         .into_iter()

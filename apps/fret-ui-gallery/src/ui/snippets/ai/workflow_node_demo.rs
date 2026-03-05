@@ -4,8 +4,8 @@ pub const SOURCE: &str = include_str!("workflow_node_demo.rs");
 use fret_core::Px;
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::declarative::ElementContextThemeExt;
-use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::ui;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, Space};
 use fret_ui_shadcn::prelude::*;
 
@@ -47,17 +47,14 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
         )
     });
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .layout(LayoutRefinement::default().w_full().min_w_0())
-            .gap(Space::N3),
-        move |cx| {
-            vec![
-                cx.text("WorkflowNode (AI Elements): header/content/footer chrome."),
-                cx.container(props, move |_cx| vec![node]),
-            ]
-        },
-    )
+    ui::v_flex(move |cx| {
+        vec![
+            cx.text("WorkflowNode (AI Elements): header/content/footer chrome."),
+            cx.container(props, move |_cx| vec![node]),
+        ]
+    })
+    .layout(LayoutRefinement::default().w_full().min_w_0())
+    .gap(Space::N3)
+    .into_element(cx)
 }
 // endregion: example

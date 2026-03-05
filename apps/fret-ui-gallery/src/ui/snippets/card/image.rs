@@ -164,32 +164,28 @@ pub fn render(
             .into_element(cx)
     };
 
-    let footer = stack::hstack(
-        cx,
-        stack::HStackProps::default()
-            .layout(LayoutRefinement::default().w_full().min_w_0())
-            .items_center()
-            .justify_between(),
-        |cx| {
-            let badges = stack::hstack(
-                cx,
-                stack::HStackProps::default().gap(Space::N2).items_center(),
-                |cx| {
-                    vec![
-                        badge(cx, "lucide.bed", "4"),
-                        badge(cx, "lucide.bath", "2"),
-                        badge(cx, "lucide.land-plot", "350m²"),
-                    ]
-                },
-            );
-            let price = ui::text("$200,000")
-                .font_medium()
-                .into_element(cx)
-                .test_id("ui-gallery-card-image-price");
+    let footer = ui::h_flex(|cx| {
+        let badges = ui::h_row(|cx| {
+            vec![
+                badge(cx, "lucide.bed", "4"),
+                badge(cx, "lucide.bath", "2"),
+                badge(cx, "lucide.land-plot", "350m²"),
+            ]
+        })
+        .gap(Space::N2)
+        .items_center()
+        .into_element(cx);
+        let price = ui::text("$200,000")
+            .font_medium()
+            .into_element(cx)
+            .test_id("ui-gallery-card-image-price");
 
-            vec![badges, price]
-        },
-    )
+        vec![badges, price]
+    })
+    .layout(LayoutRefinement::default().w_full().min_w_0())
+    .items_center()
+    .justify_between()
+    .into_element(cx)
     .test_id("ui-gallery-card-image-footer");
 
     shadcn::Card::new(vec![

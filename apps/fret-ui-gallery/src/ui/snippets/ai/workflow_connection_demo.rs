@@ -3,8 +3,8 @@ pub const SOURCE: &str = include_str!("workflow_connection_demo.rs");
 // region: example
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::declarative::ElementContextThemeExt;
-use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::ui;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, Space};
 use fret_ui_shadcn::prelude::*;
 
@@ -35,17 +35,14 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
         )
     });
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .layout(LayoutRefinement::default().w_full().min_w_0())
-            .gap(Space::N3),
-        move |cx| {
-            vec![
-                cx.text("WorkflowConnection (AI Elements): in-progress connection line chrome."),
-                cx.container(props, move |_cx| vec![conn]),
-            ]
-        },
-    )
+    ui::v_flex(move |cx| {
+        vec![
+            cx.text("WorkflowConnection (AI Elements): in-progress connection line chrome."),
+            cx.container(props, move |_cx| vec![conn]),
+        ]
+    })
+    .layout(LayoutRefinement::default().w_full().min_w_0())
+    .gap(Space::N3)
+    .into_element(cx)
 }
 // endregion: example

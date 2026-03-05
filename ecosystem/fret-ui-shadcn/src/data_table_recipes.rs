@@ -11,7 +11,6 @@ use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_headless::table::{ColumnDef, ColumnId, ColumnPinPosition, TableState, pin_column};
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
-use fret_ui_kit::declarative::stack::{HStackProps, hstack};
 use fret_ui_kit::declarative::table::TableViewOutput;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, Space, ui};
 use serde_json::Value;
@@ -1218,18 +1217,11 @@ impl<TData> DataTableToolbar<TData> {
                                         props.corner_radii = fret_core::Corners::all(Px(4.0));
                                         props.background = checked.then_some(primary);
 
-                                        let child = hstack(
-                                            cx,
-                                            HStackProps::default()
-                                                .layout(
-                                                    LayoutRefinement::default()
-                                                        .w_full()
-                                                        .h_full(),
-                                                )
-                                                .justify_center()
-                                                .items_center(),
-                                            move |_cx| vec![check],
-                                        );
+                                        let child = ui::h_row(move |_cx| vec![check])
+                                            .layout(LayoutRefinement::default().w_full().h_full())
+                                            .justify_center()
+                                            .items_center()
+                                            .into_element(cx);
                                         cx.container(props, move |_cx| vec![child])
                                     };
 
@@ -1244,26 +1236,20 @@ impl<TData> DataTableToolbar<TData> {
                                                 .nowrap()
                                                 .into_element(cx);
 
-                                            hstack(
-                                                cx,
-                                                HStackProps::default()
-                                                    .layout(
-                                                        LayoutRefinement::default()
-                                                            .w_px(Px(16.0))
-                                                            .h_px(Px(16.0))
-                                                            .min_w_0()
-                                                            .min_h_0(),
-                                                    )
-                                                    .items_center()
-                                                    .justify_center(),
-                                                move |_cx| vec![count],
-                                            )
+                                            ui::h_row(move |_cx| vec![count])
+                                                .layout(
+                                                    LayoutRefinement::default()
+                                                        .w_px(Px(16.0))
+                                                        .h_px(Px(16.0))
+                                                        .min_w_0()
+                                                        .min_h_0(),
+                                                )
+                                                .items_center()
+                                                .justify_center()
+                                                .into_element(cx)
                                         });
 
-                                    let left = hstack(
-                                        cx,
-                                        HStackProps::default().gap_x(Space::N2).items_center(),
-                                        move |_cx| {
+                                    let left = ui::h_row(move |_cx| {
                                             let mut out = Vec::new();
                                             out.push(indicator);
                                             if let Some(icon) = maybe_icon {
@@ -1271,23 +1257,22 @@ impl<TData> DataTableToolbar<TData> {
                                             }
                                             out.push(label);
                                             out
-                                        },
-                                    );
+                                        })
+                                    .gap(Space::N2)
+                                    .items_center()
+                                    .into_element(cx);
 
-                                    let row = hstack(
-                                        cx,
-                                        HStackProps::default()
-                                            .layout(LayoutRefinement::default().w_full())
-                                            .items_center()
-                                            .justify_between(),
-                                        move |_cx| {
+                                    let row = ui::h_row(move |_cx| {
                                             let mut out = vec![left];
                                             if let Some(count_el) = count_el {
                                                 out.push(count_el);
                                             }
                                             out
-                                        },
-                                    );
+                                        })
+                                    .layout(LayoutRefinement::default().w_full())
+                                    .items_center()
+                                    .justify_between()
+                                    .into_element(cx);
 
                                     CommandItem::new(it.label.clone())
                                         .value(it.value.clone())
@@ -1324,19 +1309,14 @@ impl<TData> DataTableToolbar<TData> {
                                 });
 
                                 entries.push(CommandSeparator::new().into());
-                                let clear_row = hstack(
-                                    cx,
-                                    HStackProps::default()
-                                        .layout(LayoutRefinement::default().w_full())
-                                        .items_center()
-                                        .justify_center(),
-                                    move |_cx| {
-                                        vec![
-                                            ui::text( Arc::<str>::from("Clear filters"))
-                                                .into_element(_cx),
-                                        ]
-                                    },
-                                );
+                                let clear_row = ui::h_row(move |_cx| {
+                                    vec![ui::text(Arc::<str>::from("Clear filters"))
+                                        .into_element(_cx)]
+                                })
+                                .layout(LayoutRefinement::default().w_full())
+                                .items_center()
+                                .justify_center()
+                                .into_element(cx);
                                 entries.push(
                                     CommandGroup::new(vec![
                                         CommandItem::new("Clear filters")
@@ -1468,61 +1448,58 @@ impl<TData> DataTableToolbar<TData> {
 
                 let trailing = self.trailing;
 
-                let left_group = hstack(
-                    cx,
-                    HStackProps::default().gap_x(Space::N2).items_center(),
-                    move |_cx| {
-                        let mut children = Vec::new();
-                        if let Some(global_filter) = global_filter {
-                            children.push(global_filter);
-                        }
-                        if let Some(filter) = column_filter {
-                            children.push(filter);
-                        }
-                        if let Some(menu) = faceted_menu {
-                            children.push(menu);
-                        }
-                        if let Some(btn) = reset_button {
-                            children.push(btn);
-                        }
-                        if let Some(sel) = selected_text {
-                            children.push(sel);
-                        }
-                        children
-                    },
-                );
+                let left_group = ui::h_row(move |_cx| {
+                    let mut children = Vec::new();
+                    if let Some(global_filter) = global_filter {
+                        children.push(global_filter);
+                    }
+                    if let Some(filter) = column_filter {
+                        children.push(filter);
+                    }
+                    if let Some(menu) = faceted_menu {
+                        children.push(menu);
+                    }
+                    if let Some(btn) = reset_button {
+                        children.push(btn);
+                    }
+                    if let Some(sel) = selected_text {
+                        children.push(sel);
+                    }
+                    children
+                })
+                .gap(Space::N2)
+                .items_center()
+                .into_element(cx);
 
-                let right_group = hstack(
-                    cx,
-                    HStackProps::default().gap_x(Space::N2).items_center(),
-                    move |_cx| {
-                        let mut children = Vec::new();
-                        if let Some(cols_menu) = cols_menu {
-                            children.push(cols_menu);
-                        }
-                        if let Some(pin_menu) = pin_menu {
-                            children.push(pin_menu);
-                        }
-                        children.extend(trailing);
-                        children
-                    },
-                );
+                let right_group = ui::h_row(move |_cx| {
+                    let mut children = Vec::new();
+                    if let Some(cols_menu) = cols_menu {
+                        children.push(cols_menu);
+                    }
+                    if let Some(pin_menu) = pin_menu {
+                        children.push(pin_menu);
+                    }
+                    children.extend(trailing);
+                    children
+                })
+                .gap(Space::N2)
+                .items_center()
+                .into_element(cx);
 
-                vec![hstack(
-                    cx,
-                    HStackProps::default()
-                        .layout(LayoutRefinement::default().w_full())
-                        .items_center()
-                        .justify_between()
-                        .gap_x(Space::N2),
-                    move |_cx| {
+                vec![
+                    ui::h_row(move |_cx| {
                         if is_rtl {
                             vec![right_group, left_group]
                         } else {
                             vec![left_group, right_group]
                         }
-                    },
-                )]
+                    })
+                    .layout(LayoutRefinement::default().w_full())
+                    .items_center()
+                    .justify_between()
+                    .gap(Space::N2)
+                    .into_element(cx),
+                ]
             },
         )
     }
@@ -1739,74 +1716,71 @@ impl DataTablePagination {
             },
         );
 
-        hstack(
-            cx,
-            HStackProps::default()
-                .layout(LayoutRefinement::default().w_full())
-                .items_center()
-                .gap_x(Space::N2),
-            move |cx| {
-                let theme = Theme::global(&*cx.app);
-                let dir = use_direction(cx, None);
-                let muted_fg = theme.color_by_key("muted-foreground");
-                let mut text = ui::text(selected_label.clone())
-                    .text_sm()
-                    .tabular_nums()
-                    .nowrap();
-                if let Some(color) = muted_fg {
-                    text = text.text_color(ColorRef::Color(color));
-                }
+        ui::h_row(move |cx| {
+            let theme = Theme::global(&*cx.app);
+            let dir = use_direction(cx, None);
+            let muted_fg = theme.color_by_key("muted-foreground");
+            let mut text = ui::text(selected_label.clone())
+                .text_sm()
+                .tabular_nums()
+                .nowrap();
+            if let Some(color) = muted_fg {
+                text = text.text_color(ColorRef::Color(color));
+            }
 
-                let selected_text = text.into_element(cx);
-                let spacer = cx.spacer(fret_ui::element::SpacerProps::default());
+            let selected_text = text.into_element(cx);
+            let spacer = cx.spacer(fret_ui::element::SpacerProps::default());
 
-                let first_btn = Button::new("Go to first page")
-                    .variant(ButtonVariant::Outline)
-                    .size(ButtonSize::Icon)
-                    .disabled(!first_enabled)
-                    .on_activate(first_on_activate.clone())
-                    .children([crate::icon::icon(cx, rtl::chevrons_inline_start(dir))])
-                    .into_element(cx);
-                let prev_btn = Button::new("Go to previous page")
-                    .variant(ButtonVariant::Outline)
-                    .size(ButtonSize::Icon)
-                    .disabled(!prev_enabled)
-                    .on_activate(prev_on_activate.clone())
-                    .children([crate::icon::icon(cx, rtl::chevron_inline_start(dir))])
-                    .into_element(cx);
-                let page_btn = Button::new(page_label.clone())
-                    .variant(ButtonVariant::Ghost)
-                    .size(ButtonSize::Sm)
-                    .label_tabular_nums()
-                    .into_element(cx);
-                let next_btn = Button::new("Go to next page")
-                    .variant(ButtonVariant::Outline)
-                    .size(ButtonSize::Icon)
-                    .disabled(!next_enabled)
-                    .on_activate(next_on_activate.clone())
-                    .children([crate::icon::icon(cx, rtl::chevron_inline_end(dir))])
-                    .into_element(cx);
-                let last_btn = Button::new("Go to last page")
-                    .variant(ButtonVariant::Outline)
-                    .size(ButtonSize::Icon)
-                    .disabled(!last_enabled)
-                    .on_activate(last_on_activate.clone())
-                    .children([crate::icon::icon(cx, rtl::chevrons_inline_end(dir))])
-                    .into_element(cx);
+            let first_btn = Button::new("Go to first page")
+                .variant(ButtonVariant::Outline)
+                .size(ButtonSize::Icon)
+                .disabled(!first_enabled)
+                .on_activate(first_on_activate.clone())
+                .children([crate::icon::icon(cx, rtl::chevrons_inline_start(dir))])
+                .into_element(cx);
+            let prev_btn = Button::new("Go to previous page")
+                .variant(ButtonVariant::Outline)
+                .size(ButtonSize::Icon)
+                .disabled(!prev_enabled)
+                .on_activate(prev_on_activate.clone())
+                .children([crate::icon::icon(cx, rtl::chevron_inline_start(dir))])
+                .into_element(cx);
+            let page_btn = Button::new(page_label.clone())
+                .variant(ButtonVariant::Ghost)
+                .size(ButtonSize::Sm)
+                .label_tabular_nums()
+                .into_element(cx);
+            let next_btn = Button::new("Go to next page")
+                .variant(ButtonVariant::Outline)
+                .size(ButtonSize::Icon)
+                .disabled(!next_enabled)
+                .on_activate(next_on_activate.clone())
+                .children([crate::icon::icon(cx, rtl::chevron_inline_end(dir))])
+                .into_element(cx);
+            let last_btn = Button::new("Go to last page")
+                .variant(ButtonVariant::Outline)
+                .size(ButtonSize::Icon)
+                .disabled(!last_enabled)
+                .on_activate(last_on_activate.clone())
+                .children([crate::icon::icon(cx, rtl::chevrons_inline_end(dir))])
+                .into_element(cx);
 
-                let items = vec![
-                    selected_text,
-                    spacer,
-                    first_btn,
-                    prev_btn,
-                    page_btn,
-                    next_btn,
-                    last_btn,
-                    page_size_menu,
-                ];
-                rtl::reverse_in_rtl(dir, items)
-            },
-        )
+            let items = vec![
+                selected_text,
+                spacer,
+                first_btn,
+                prev_btn,
+                page_btn,
+                next_btn,
+                last_btn,
+                page_size_menu,
+            ];
+            rtl::reverse_in_rtl(dir, items)
+        })
+        .layout(LayoutRefinement::default().w_full())
+        .items_center()
+        .gap(Space::N2)
+        .into_element(cx)
     }
 }
 

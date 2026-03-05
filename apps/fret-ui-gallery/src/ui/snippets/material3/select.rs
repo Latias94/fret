@@ -326,31 +326,18 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         },
     );
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .layout(LayoutRefinement::default().w_full().min_w_0())
-            .gap(Space::N4)
-            .items_start(),
-        move |cx| {
+    ui::v_flex(move |cx| {
             vec![
                 cx.text(
                     "Material 3 Select: token-driven trigger + listbox overlay + ADR 0220 style overrides.",
                 ),
-                stack::hstack(
-                    cx,
-                    stack::HStackProps::default().gap(Space::N4).items_center(),
-                    move |_cx| vec![default, overridden],
-                ),
+                ui::h_row(move |_cx| vec![default, overridden]).gap(Space::N4).items_center().into_element(cx),
                 cx.text("Option richness probe (Material Web select-option supporting slots):"),
                 rich_select,
                 cx.text(
                     "Menu width probe (Material Web min-width behavior + optional 210px floor):",
                 ),
-                stack::hstack(
-                    cx,
-                    stack::HStackProps::default().gap(Space::N2).items_center(),
-                    move |cx| {
+                ui::h_row(move |cx| {
                         vec![
                             cx.text("menu_width_floor=210px"),
                             floor_toggle,
@@ -360,32 +347,29 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                                 "off"
                             }),
                         ]
-                    },
-                ),
+                    }).gap(Space::N2).items_center().into_element(cx),
                 unclamped,
                 cx.text(format!(
                     "Typeahead delay probe (Material Web typeaheadDelay): current={}ms",
                     typeahead_delay_ms_now
                 )),
-                stack::hstack(
-                    cx,
-                    stack::HStackProps::default().gap(Space::N2).items_center(),
-                    move |cx| {
+                ui::h_row(move |cx| {
                         vec![
                             set_delay_button(cx, 200),
                             set_delay_button(cx, 500),
                             set_delay_button(cx, 1000),
                         ]
-                    },
-                ),
+                    }).gap(Space::N2).items_center().into_element(cx),
                 typeahead_select,
                 cx.text(
                     "Menu positioning probe (Material Web menuPositioning): select is render-transformed + clipped; overlay should still align and avoid clipping.",
                 ),
                 transformed_probe,
             ]
-        },
-    )
+        })
+            .layout(LayoutRefinement::default().w_full().min_w_0())
+            .gap(Space::N4)
+            .items_start().into_element(cx)
     .into()
 }
 

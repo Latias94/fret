@@ -14,24 +14,16 @@ pub(in crate::ui) fn preview_slider_legacy(cx: &mut ElementContext<'_, App>) -> 
         }
 
         let centered = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
-            stack::hstack(
-                cx,
-                stack::HStackProps::default()
+            ui::h_flex(move |_cx| [body])
                     .layout(LayoutRefinement::default().w_full())
-                    .justify_center(),
-                move |_cx| [body],
-            )
+                    .justify_center().into_element(cx)
         };
 
         let section = |cx: &mut ElementContext<'_, App>, title: &'static str, body: AnyElement| {
-            stack::vstack(
-                cx,
-                stack::VStackProps::default()
+            ui::v_flex(move |cx| vec![shadcn::typography::h4(cx, title), body])
                     .gap(Space::N2)
                     .items_start()
-                    .layout(LayoutRefinement::default().w_full()),
-                move |cx| vec![shadcn::typography::h4(cx, title), body],
-            )
+                    .layout(LayoutRefinement::default().w_full()).into_element(cx)
         };
 
         let max_width_xs = LayoutRefinement::default().w_full().max_w(Px(320.0));
@@ -87,13 +79,9 @@ pub(in crate::ui) fn preview_slider_legacy(cx: &mut ElementContext<'_, App>) -> 
             };
             let meta = shadcn::typography::muted(cx, format!("onValueCommit: {last_commit_text}"));
 
-            let body = stack::vstack(
-                cx,
-                stack::VStackProps::default()
+            let body = ui::v_flex(|_cx| vec![slider, meta])
                     .gap(Space::N3)
-                    .layout(LayoutRefinement::default().w_full().max_w(Px(320.0))),
-                |_cx| vec![slider, meta],
-            );
+                    .layout(LayoutRefinement::default().w_full().max_w(Px(320.0))).into_element(cx);
             let body = centered(cx, body);
             section(cx, "Demo", body)
         });
@@ -140,15 +128,11 @@ pub(in crate::ui) fn preview_slider_legacy(cx: &mut ElementContext<'_, App>) -> 
                 .a11y_label("Vertical slider")
                 .into_element(cx);
 
-            let body = stack::hstack(
-                cx,
-                stack::HStackProps::default()
+            let body = ui::h_flex(|_cx| vec![a, b])
                     .gap(Space::N6)
                     .items_center()
                     .justify_center()
-                    .layout(LayoutRefinement::default().w_full().max_w(Px(320.0))),
-                |_cx| vec![a, b],
-            );
+                    .layout(LayoutRefinement::default().w_full().max_w(Px(320.0))).into_element(cx);
 
             section(cx, "Vertical", body)
         });
@@ -165,19 +149,15 @@ pub(in crate::ui) fn preview_slider_legacy(cx: &mut ElementContext<'_, App>) -> 
                 .collect::<Vec<_>>()
                 .join(", ");
 
-            let header = stack::hstack(
-                cx,
-                stack::HStackProps::default()
-                    .layout(LayoutRefinement::default().w_full())
-                    .items_center()
-                    .justify_between(),
-                |cx| {
+            let header = ui::h_flex(|cx| {
                     vec![
                         shadcn::Label::new("Temperature").into_element(cx),
                         shadcn::typography::muted(cx, values_text),
                     ]
-                },
-            );
+                })
+                    .layout(LayoutRefinement::default().w_full())
+                    .items_center()
+                    .justify_between().into_element(cx);
             let slider = shadcn::Slider::new(controlled_values.clone())
                 .range(0.0, 1.0)
                 .step(0.1)
@@ -185,13 +165,9 @@ pub(in crate::ui) fn preview_slider_legacy(cx: &mut ElementContext<'_, App>) -> 
                 .a11y_label("Temperature")
                 .into_element(cx);
 
-            let body = stack::vstack(
-                cx,
-                stack::VStackProps::default()
+            let body = ui::v_flex(|_cx| vec![header, slider])
                     .gap(Space::N3)
-                    .layout(LayoutRefinement::default().w_full().max_w(Px(320.0))),
-                |_cx| vec![header, slider],
-            );
+                    .layout(LayoutRefinement::default().w_full().max_w(Px(320.0))).into_element(cx);
 
             let body = centered(cx, body);
             section(cx, "Controlled", body)
@@ -237,13 +213,7 @@ pub(in crate::ui) fn preview_slider_legacy(cx: &mut ElementContext<'_, App>) -> 
         });
 
         vec![
-            stack::vstack(
-                cx,
-                stack::VStackProps::default()
-                    .layout(LayoutRefinement::default().w_full())
-                    .gap(Space::N6)
-                    .items_start(),
-                |_cx| vec![
+            ui::v_flex(|_cx| vec![
                     demo,
                     range,
                     multiple,
@@ -252,8 +222,10 @@ pub(in crate::ui) fn preview_slider_legacy(cx: &mut ElementContext<'_, App>) -> 
                     disabled,
                     rtl,
                     inverted,
-                ],
-            ),
+                ])
+                    .layout(LayoutRefinement::default().w_full())
+                    .gap(Space::N6)
+                    .items_start().into_element(cx),
             shadcn::typography::muted(
                 cx,
                 "Note: demo/range/multiple/vertical/disabled/RTL are uncontrolled (element state). Controlled uses a shared model."

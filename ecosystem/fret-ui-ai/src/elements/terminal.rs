@@ -18,11 +18,11 @@ use fret_ui::scroll::ScrollHandle;
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::declarative::chrome::centered_fixed_chrome_pressable_with_id_props;
 use fret_ui_kit::declarative::icon as decl_icon;
-use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::typography;
+use fret_ui_kit::ui;
 use fret_ui_kit::{
-    ChromeRefinement, ColorFallback, ColorRef, Justify, LayoutRefinement, Radius, Space,
+    ChromeRefinement, ColorFallback, ColorRef, Items, Justify, LayoutRefinement, Radius, Space,
 };
 use fret_ui_shadcn::ScrollArea;
 
@@ -221,11 +221,9 @@ impl Terminal {
 
         let children = children(cx, controller.clone());
 
-        let inner = stack::vstack(
-            cx,
-            stack::VStackProps::default().layout(LayoutRefinement::default().w_full().min_w_0()),
-            move |_cx| children,
-        );
+        let inner = ui::v_stack(move |_cx| children)
+            .layout(LayoutRefinement::default().w_full().min_w_0())
+            .into_element(cx);
 
         let root = cx.container(
             decl_style::container_props(&theme, root_chrome, self.layout),
@@ -253,31 +251,26 @@ impl Terminal {
             let header = TerminalHeader::new()
                 .children([
                     TerminalTitle::new().into_element(cx),
-                    stack::hstack(
-                        cx,
-                        stack::HStackProps::default()
-                            .items_center()
-                            .gap(Space::N1)
-                            .justify(Justify::End),
-                        move |cx| {
-                            vec![
-                                TerminalStatus::new().into_element(cx),
-                                TerminalActions::new()
-                                    .children([
-                                        TerminalCopyButton::new()
-                                            .test_id_opt(test_id_copy.clone())
-                                            .copied_marker_test_id_opt(
-                                                copied_marker_test_id.clone(),
-                                            )
-                                            .into_element(cx),
-                                        TerminalClearButton::new()
-                                            .test_id_opt(test_id_clear.clone())
-                                            .into_element(cx),
-                                    ])
-                                    .into_element(cx),
-                            ]
-                        },
-                    ),
+                    ui::h_row(move |cx| {
+                        vec![
+                            TerminalStatus::new().into_element(cx),
+                            TerminalActions::new()
+                                .children([
+                                    TerminalCopyButton::new()
+                                        .test_id_opt(test_id_copy.clone())
+                                        .copied_marker_test_id_opt(copied_marker_test_id.clone())
+                                        .into_element(cx),
+                                    TerminalClearButton::new()
+                                        .test_id_opt(test_id_clear.clone())
+                                        .into_element(cx),
+                                ])
+                                .into_element(cx),
+                        ]
+                    })
+                    .items(Items::Center)
+                    .gap(Space::N1)
+                    .justify(Justify::End)
+                    .into_element(cx),
                 ])
                 .into_element(cx);
 
@@ -324,14 +317,11 @@ impl TerminalHeader {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
 
-        let hstack = stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .layout(self.layout)
-                .justify(Justify::Between)
-                .items_center(),
-            move |_cx| self.children,
-        );
+        let hstack = ui::h_row(move |_cx| self.children)
+            .layout(self.layout)
+            .justify(Justify::Between)
+            .items(Items::Center)
+            .into_element(cx);
 
         let chrome = ChromeRefinement::default()
             .px(Space::N4)
@@ -418,14 +408,11 @@ impl TerminalTitle {
             ink_overflow: Default::default(),
         });
 
-        stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .layout(self.layout)
-                .items_center()
-                .gap(Space::N2),
-            move |_cx| vec![icon, text],
-        )
+        ui::h_row(move |_cx| vec![icon, text])
+            .layout(self.layout)
+            .items(Items::Center)
+            .gap(Space::N2)
+            .into_element(cx)
     }
 }
 
@@ -478,14 +465,11 @@ impl TerminalStatus {
             self.children
         };
 
-        stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .layout(self.layout)
-                .items_center()
-                .gap(Space::N2),
-            move |_cx| children,
-        )
+        ui::h_row(move |_cx| children)
+            .layout(self.layout)
+            .items(Items::Center)
+            .gap(Space::N2)
+            .into_element(cx)
     }
 }
 
@@ -521,14 +505,11 @@ impl TerminalActions {
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .layout(self.layout)
-                .items_center()
-                .gap(Space::N1),
-            move |_cx| self.children,
-        )
+        ui::h_row(move |_cx| self.children)
+            .layout(self.layout)
+            .items(Items::Center)
+            .gap(Space::N1)
+            .into_element(cx)
     }
 }
 
@@ -712,14 +693,11 @@ impl TerminalCopyButton {
             chrome_props.padding = Edges::all(Px(0.0)).into();
 
             (pressable, chrome_props, move |cx| {
-                let row = stack::hstack(
-                    cx,
-                    stack::HStackProps::default()
-                        .items_center()
-                        .justify_center()
-                        .layout(LayoutRefinement::default().w_full().h_full()),
-                    move |_cx| vec![icon],
-                );
+                let row = ui::h_row(move |_cx| vec![icon])
+                    .items(Items::Center)
+                    .justify(Justify::Center)
+                    .layout(LayoutRefinement::default().w_full().h_full())
+                    .into_element(cx);
 
                 let marker = copied_marker_test_id.clone().and_then(|marker_id| {
                     copied.then(|| {
@@ -835,14 +813,11 @@ impl TerminalClearButton {
             chrome_props.padding = Edges::all(Px(0.0)).into();
 
             (pressable, chrome_props, move |cx| {
-                vec![stack::hstack(
-                    cx,
-                    stack::HStackProps::default()
-                        .items_center()
-                        .justify_center()
-                        .layout(LayoutRefinement::default().w_full().h_full()),
-                    move |_cx| vec![icon],
-                )]
+                vec![ui::h_row(move |_cx| vec![icon])
+                    .items(Items::Center)
+                    .justify(Justify::Center)
+                    .layout(LayoutRefinement::default().w_full().h_full())
+                    .into_element(cx)]
             })
         })
     }

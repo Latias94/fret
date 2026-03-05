@@ -158,24 +158,21 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
         None
     };
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N2)
-            .items_stretch()
-            .layout(
-                LayoutRefinement::default()
-                    .w_full()
-                    .max_w(max_w_xs)
-                    .mx_auto(),
-            ),
-        |_cx| {
-            let mut out = vec![focus_start, carousel, status_text];
-            if let Some(marker) = stopped_marker {
-                out.push(marker);
-            }
-            out
-        },
+    ui::v_flex(|_cx| {
+        let mut out = vec![focus_start, carousel, status_text];
+        if let Some(marker) = stopped_marker {
+            out.push(marker);
+        }
+        out
+    })
+    .gap(Space::N2)
+    .items_stretch()
+    .layout(
+        LayoutRefinement::default()
+            .w_full()
+            .max_w(max_w_xs)
+            .mx_auto(),
     )
+    .into_element(cx)
 }
 // endregion: example

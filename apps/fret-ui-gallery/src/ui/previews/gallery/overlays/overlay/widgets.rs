@@ -233,12 +233,11 @@ fn tooltip(cx: &mut ElementContext<'_, App>) -> AnyElement {
     .side(shadcn::TooltipSide::Top)
     .into_element(cx);
 
-    let row = stack::hstack(
-        cx,
-        stack::HStackProps::default().gap(Space::N2).items_center(),
-        |_cx| vec![tooltip_a, tooltip_b],
-    )
-    .test_id("ui-gallery-tooltip-delay-group-row");
+    let row = ui::h_row(|_cx| vec![tooltip_a, tooltip_b])
+        .gap(Space::N2)
+        .items_center()
+        .into_element(cx)
+        .test_id("ui-gallery-tooltip-delay-group-row");
 
     shadcn::TooltipProvider::new()
         .delay(Duration::from_millis(700))
@@ -320,14 +319,11 @@ fn popover(cx: &mut ElementContext<'_, App>, models: &OverlayModels) -> AnyEleme
                 ])
                 .into_element(cx);
 
-                let actions = stack::vstack(
-                    cx,
-                    stack::VStackProps::default()
-                        .gap(Space::N2)
-                        .items_start()
-                        .layout(LayoutRefinement::default().w_full()),
-                    move |_cx| vec![open_dialog, close],
-                );
+                let actions = ui::v_flex(move |_cx| vec![open_dialog, close])
+                    .gap(Space::N2)
+                    .items_start()
+                    .layout(LayoutRefinement::default().w_full())
+                    .into_element(cx);
 
                 shadcn::PopoverContent::new(vec![header, actions])
                     .into_element(cx)
@@ -360,17 +356,14 @@ fn dialog(cx: &mut ElementContext<'_, App>, models: &OverlayModels) -> AnyElemen
                 ])
                 .into_element(cx),
                 {
-                    let body = stack::vstack(
-                        cx,
-                        stack::VStackProps::default()
-                            .gap(Space::N2)
-                            .layout(LayoutRefinement::default().w_full().min_w_0().min_h_0()),
-                        |cx| {
-                            (0..64)
-                                .map(|i| cx.text(format!("Scrollable content line {}", i + 1)))
-                                .collect::<Vec<_>>()
-                        },
-                    );
+                    let body = ui::v_flex(|cx| {
+                        (0..64)
+                            .map(|i| cx.text(format!("Scrollable content line {}", i + 1)))
+                            .collect::<Vec<_>>()
+                    })
+                    .gap(Space::N2)
+                    .layout(LayoutRefinement::default().w_full().min_w_0().min_h_0())
+                    .into_element(cx);
 
                     shadcn::ScrollArea::new([body])
                         .refine_layout(
@@ -438,17 +431,14 @@ fn dialog_glass(cx: &mut ElementContext<'_, App>, models: &OverlayModels) -> Any
                     ])
                     .into_element(cx),
                     {
-                        let body = stack::vstack(
-                            cx,
-                            stack::VStackProps::default()
-                                .gap(Space::N2)
-                                .layout(LayoutRefinement::default().w_full().min_w_0().min_h_0()),
-                            |cx| {
-                                (0..64)
-                                    .map(|i| cx.text(format!("Scrollable content line {}", i + 1)))
-                                    .collect::<Vec<_>>()
-                            },
-                        );
+                        let body = ui::v_flex(|cx| {
+                            (0..64)
+                                .map(|i| cx.text(format!("Scrollable content line {}", i + 1)))
+                                .collect::<Vec<_>>()
+                        })
+                        .gap(Space::N2)
+                        .layout(LayoutRefinement::default().w_full().min_w_0().min_h_0())
+                        .into_element(cx);
 
                         shadcn::ScrollArea::new([body])
                             .refine_layout(
@@ -539,17 +529,14 @@ fn sheet(cx: &mut ElementContext<'_, App>, models: &OverlayModels) -> AnyElement
                     ])
                     .into_element(cx),
                     {
-                        let body = stack::vstack(
-                            cx,
-                            stack::VStackProps::default()
-                                .gap(Space::N2)
-                                .layout(LayoutRefinement::default().w_full().min_w_0().min_h_0()),
-                            |cx| {
-                                (0..96)
-                                    .map(|i| cx.text(format!("Sheet body line {}", i + 1)))
-                                    .collect::<Vec<_>>()
-                            },
-                        );
+                        let body = ui::v_flex(|cx| {
+                            (0..96)
+                                .map(|i| cx.text(format!("Sheet body line {}", i + 1)))
+                                .collect::<Vec<_>>()
+                        })
+                        .gap(Space::N2)
+                        .layout(LayoutRefinement::default().w_full().min_w_0().min_h_0())
+                        .into_element(cx);
                         let body = {
                             let props = decl_style::container_props(
                                 Theme::global(&*cx.app),
@@ -628,12 +615,14 @@ fn portal_geometry(cx: &mut ElementContext<'_, App>, models: &OverlayModels) -> 
         .map(|i| cx.text(format!("Scroll item {i:02}")))
         .collect::<Vec<_>>();
 
-    let body = stack::vstack(cx, stack::VStackProps::default().gap(Space::N2), |_cx| {
+    let body = ui::v_stack(|_cx| {
         let mut out: Vec<AnyElement> = Vec::with_capacity(items.len() + 2);
         out.push(popover);
         out.extend(items);
         out
-    });
+    })
+    .gap(Space::N2)
+    .into_element(cx);
 
     let scroll = shadcn::ScrollArea::new(vec![body])
         .refine_layout(LayoutRefinement::default().w_px(Px(240.0)).h_px(Px(160.0)))

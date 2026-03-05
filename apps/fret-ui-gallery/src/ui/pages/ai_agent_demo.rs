@@ -19,5 +19,5 @@ pub(super) fn preview_ai_agent_demo(
         ],
     );
 
-    vec![body.test_id("ui-gallery-page-ai-agent-demo")]
+    vec![body]
 }

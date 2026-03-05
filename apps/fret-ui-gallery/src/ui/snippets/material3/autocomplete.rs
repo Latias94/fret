@@ -80,24 +80,23 @@ pub fn render<H: UiHost>(
         .unwrap_or(None);
     let exposed_selected_label = exposed_selected_now.as_deref().unwrap_or("<none>");
 
-    let toggles = stack::hstack(
-        cx,
-        stack::HStackProps::default().gap(Space::N4).items_center(),
-        move |cx| {
-            vec![
-                cx.text("disabled"),
-                material3::Switch::new(disabled.clone())
-                    .a11y_label("Disable autocomplete")
-                    .test_id("ui-gallery-material3-autocomplete-disabled")
-                    .into_element(cx),
-                cx.text("error"),
-                material3::Switch::new(error.clone())
-                    .a11y_label("Toggle autocomplete error state")
-                    .test_id("ui-gallery-material3-autocomplete-error")
-                    .into_element(cx),
-            ]
-        },
-    );
+    let toggles = ui::h_row(move |cx| {
+        vec![
+            cx.text("disabled"),
+            material3::Switch::new(disabled.clone())
+                .a11y_label("Disable autocomplete")
+                .test_id("ui-gallery-material3-autocomplete-disabled")
+                .into_element(cx),
+            cx.text("error"),
+            material3::Switch::new(error.clone())
+                .a11y_label("Toggle autocomplete error state")
+                .test_id("ui-gallery-material3-autocomplete-error")
+                .into_element(cx),
+        ]
+    })
+    .gap(Space::N4)
+    .items_center()
+    .into_element(cx);
 
     let items: Arc<[material3::AutocompleteItem]> = Arc::from(vec![
         material3::AutocompleteItem::new("alpha", "Alpha"),
@@ -223,12 +222,7 @@ pub fn render<H: UiHost>(
         .into_element(
             cx,
             move |cx| {
-                stack::vstack(
-                    cx,
-                    stack::VStackProps::default()
-                        .layout(LayoutRefinement::default().w_full().h_full())
-                        .gap(Space::N4),
-                    move |cx| {
+                ui::v_flex(move |cx| {
                         vec![
                             material3::Button::new("Open dialog probe")
                                 .variant(material3::ButtonVariant::Filled)
@@ -239,8 +233,9 @@ pub fn render<H: UiHost>(
                                 "Tip: focus the autocomplete and press ArrowDown; keep typing while the menu is open.",
                             ),
                         ]
-                    },
-                )
+                    })
+                        .layout(LayoutRefinement::default().w_full().h_full())
+                        .gap(Space::N4).into_element(cx)
             },
             {
                 let items = items.clone();
@@ -260,12 +255,7 @@ pub fn render<H: UiHost>(
                         |_cx| Vec::<AnyElement>::new(),
                     );
 
-                    vec![stack::vstack(
-                        cx,
-                        stack::VStackProps::default()
-                            .layout(LayoutRefinement::default().w_full())
-                            .gap(Space::N4),
-                        move |cx| {
+                    vec![ui::v_flex(move |cx| {
                             vec![
                                 material3::Autocomplete::new(value.clone())
                                     .selected_value(selected_value.clone())
@@ -289,39 +279,37 @@ pub fn render<H: UiHost>(
                                     .test_id("ui-gallery-material3-autocomplete-dialog-field-bottom")
                                     .into_element(cx),
                             ]
-                        },
-                    )]
+                        })
+                            .layout(LayoutRefinement::default().w_full())
+                            .gap(Space::N4).into_element(cx)]
                 }
             },
         );
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .layout(LayoutRefinement::default().w_full().min_w_0())
-            .gap(Space::N3)
-            .items_start(),
-        move |cx| {
-            vec![
-                cx.text(
-                    "Material 3 Autocomplete: editable combobox input with a listbox popover menu.",
-                ),
-                toggles,
-                cx.text(Arc::from(format!(
-                    "Query: \"{}\" | Selected value: {}",
-                    query_now, selected_label
-                ))),
-                cx.text(Arc::from(format!(
-                    "Exposed dropdown committed value: {}",
-                    exposed_selected_label
-                ))),
-                exposed_card,
-                outlined_card,
-                filled_card,
-                dialog,
-            ]
-        },
-    )
+    ui::v_flex(move |cx| {
+        vec![
+            cx.text(
+                "Material 3 Autocomplete: editable combobox input with a listbox popover menu.",
+            ),
+            toggles,
+            cx.text(Arc::from(format!(
+                "Query: \"{}\" | Selected value: {}",
+                query_now, selected_label
+            ))),
+            cx.text(Arc::from(format!(
+                "Exposed dropdown committed value: {}",
+                exposed_selected_label
+            ))),
+            exposed_card,
+            outlined_card,
+            filled_card,
+            dialog,
+        ]
+    })
+    .layout(LayoutRefinement::default().w_full().min_w_0())
+    .gap(Space::N3)
+    .items_start()
+    .into_element(cx)
     .into()
 }
 

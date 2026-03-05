@@ -6,7 +6,7 @@ use fret_ui::action::ActionCx;
 use fret_ui::element::SemanticsProps;
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::declarative::ModelWatchExt;
-use fret_ui_kit::declarative::stack;
+use fret_ui_kit::ui;
 use fret_ui_kit::{LayoutRefinement, Space};
 use fret_ui_shadcn::prelude::*;
 use std::collections::HashSet;
@@ -105,19 +105,16 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
         )
     });
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .layout(LayoutRefinement::default().w_full().min_w_0())
-            .gap(Space::N3),
-        move |cx| {
-            vec![
-                cx.text("FileTree (AI Elements)"),
-                tree,
-                selected_label,
-                selected_marker.unwrap_or_else(|| cx.text("")),
-            ]
-        },
-    )
+    ui::v_flex(move |cx| {
+        vec![
+            cx.text("FileTree (AI Elements)"),
+            tree,
+            selected_label,
+            selected_marker.unwrap_or_else(|| cx.text("")),
+        ]
+    })
+    .layout(LayoutRefinement::default().w_full().min_w_0())
+    .gap(Space::N3)
+    .into_element(cx)
 }
 // endregion: example

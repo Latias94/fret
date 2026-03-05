@@ -22,5 +22,5 @@ pub(super) fn preview_ai_prompt_input_referenced_sources_demo(
         ],
     );
 
-    vec![body.test_id("ui-gallery-page-ai-prompt-input-referenced-sources-demo")]
+    vec![body]
 }

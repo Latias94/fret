@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
 use fret_core::{
-    Color, Corners, FontId, Point, Px, SemanticsRole, TextFontAxisSetting, TextFontFeatureSetting,
-    Transform2D,
+    Color, Corners, FontId, FontWeight, Point, Px, SemanticsRole, TextFontAxisSetting,
+    TextFontFeatureSetting, Transform2D,
 };
 use fret_icons::IconId;
 use fret_runtime::Effect;
@@ -19,7 +19,6 @@ use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::motion::{
     drive_tween_color_for_element, drive_tween_f32_for_element,
 };
-use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, Space, ui};
 
@@ -101,6 +100,7 @@ pub struct Badge {
     leading_icon: Option<IconId>,
     trailing_icon: Option<IconId>,
     label_font_override: Option<FontId>,
+    label_weight_override: Option<FontWeight>,
     label_features_override: Vec<TextFontFeatureSetting>,
     label_axes_override: Vec<TextFontAxisSetting>,
     children: Vec<AnyElement>,
@@ -138,6 +138,7 @@ impl Badge {
             leading_icon: None,
             trailing_icon: None,
             label_font_override: None,
+            label_weight_override: None,
             label_features_override: Vec::new(),
             label_axes_override: Vec::new(),
             children: Vec::new(),
@@ -212,6 +213,16 @@ impl Badge {
         self
     }
 
+    /// Overrides the badge label's font weight.
+    ///
+    /// Upstream shadcn badge defaults to `font-semibold`. Most Fret recipes map that to
+    /// `FontWeight::MEDIUM`, but some consumers (e.g. AI Elements chain-of-thought search
+    /// results) use `font-normal`.
+    pub fn label_weight(mut self, weight: FontWeight) -> Self {
+        self.label_weight_override = Some(weight);
+        self
+    }
+
     pub fn on_activate(mut self, on_activate: OnActivate) -> Self {
         self.on_activate = Some(on_activate);
         self
@@ -246,6 +257,7 @@ impl Badge {
             self.leading_icon,
             self.trailing_icon,
             self.label_font_override,
+            self.label_weight_override,
             self.label_features_override,
             self.label_axes_override,
             self.children,
@@ -389,6 +401,7 @@ pub fn badge<H: UiHost>(
         None,
         None,
         None,
+        None,
         Vec::new(),
         Vec::new(),
         Vec::new(),
@@ -410,6 +423,7 @@ fn badge_with_patch<H: UiHost>(
     leading_icon: Option<IconId>,
     trailing_icon: Option<IconId>,
     label_font_override: Option<FontId>,
+    label_weight_override: Option<FontWeight>,
     label_features_override: Vec<TextFontFeatureSetting>,
     label_axes_override: Vec<TextFontAxisSetting>,
     children: Vec<AnyElement>,
@@ -463,7 +477,7 @@ fn badge_with_patch<H: UiHost>(
                 .text_size_px(text_px)
                 .fixed_line_box_px(line_height)
                 .line_box_in_bounds()
-                .font_medium()
+                .font_weight(label_weight_override.unwrap_or(FontWeight::MEDIUM))
                 .nowrap()
                 .text_color(fg_ref.clone());
 
@@ -506,14 +520,13 @@ fn badge_with_patch<H: UiHost>(
                 content.push(decl_icon::icon_with(cx, icon, Some(icon_px), None));
             }
 
-            vec![stack::hstack(
-                cx,
-                stack::HStackProps::default()
+            vec![
+                ui::h_row(|_cx| content)
                     .justify_center()
                     .items_center()
-                    .gap_x(Space::N1),
-                |_cx| content,
-            )]
+                    .gap(Space::N1)
+                    .into_element(cx),
+            ]
         })
     };
 

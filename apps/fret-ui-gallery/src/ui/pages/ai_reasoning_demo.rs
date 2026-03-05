@@ -19,5 +19,5 @@ pub(super) fn preview_ai_reasoning_demo(
         ],
     );
 
-    vec![body.test_id("ui-gallery-page-ai-reasoning-demo")]
+    vec![body]
 }

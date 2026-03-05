@@ -45,40 +45,35 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         }
     };
 
-    shadcn::DropdownMenu::new_controllable(cx, None, false)
-        .into_element_parts(
-            cx,
-            |cx| {
-                shadcn::DropdownMenuTrigger::new(
-                    shadcn::Button::new("Open")
-                        .variant(shadcn::ButtonVariant::Outline)
-                        .test_id("ui-gallery-dropdown-menu-checkboxes-trigger")
-                        .into_element(cx),
-                )
-            },
-            shadcn::DropdownMenuContent::new()
-                .align(shadcn::DropdownMenuAlign::Start)
-                .side_offset(Px(4.0))
-                // shadcn/ui docs: `DropdownMenuContent className="w-40"`.
-                .min_width(Px(160.0)),
-            |_cx| {
-                [shadcn::DropdownMenuGroup::new([
-                    shadcn::DropdownMenuLabel::new("Appearance").into(),
-                    shadcn::DropdownMenuCheckboxItem::new(show_status_bar.clone(), "Status Bar")
-                        .test_id("ui-gallery-dropdown-menu-checkboxes-status-bar")
-                        .into(),
-                    shadcn::DropdownMenuCheckboxItem::new(
-                        show_activity_bar.clone(),
-                        "Activity Bar",
-                    )
+    shadcn::DropdownMenu::new_controllable(cx, None, false).into_element_parts(
+        cx,
+        |cx| {
+            shadcn::DropdownMenuTrigger::new(
+                shadcn::Button::new("Open")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .test_id("ui-gallery-dropdown-menu-checkboxes-trigger")
+                    .into_element(cx),
+            )
+        },
+        shadcn::DropdownMenuContent::new()
+            .align(shadcn::DropdownMenuAlign::Start)
+            .side_offset(Px(4.0))
+            // shadcn/ui docs: `DropdownMenuContent className="w-40"`.
+            .min_width(Px(160.0)),
+        |_cx| {
+            [shadcn::DropdownMenuGroup::new([
+                shadcn::DropdownMenuLabel::new("Appearance").into(),
+                shadcn::DropdownMenuCheckboxItem::new(show_status_bar.clone(), "Status Bar")
+                    .test_id("ui-gallery-dropdown-menu-checkboxes-status-bar")
+                    .into(),
+                shadcn::DropdownMenuCheckboxItem::new(show_activity_bar.clone(), "Activity Bar")
                     .disabled(true)
                     .test_id("ui-gallery-dropdown-menu-checkboxes-activity-bar")
                     .into(),
-                    shadcn::DropdownMenuCheckboxItem::new(show_panel.clone(), "Panel").into(),
-                ])
-                .into()]
-            },
-        )
-        .test_id("ui-gallery-dropdown-menu-checkboxes")
+                shadcn::DropdownMenuCheckboxItem::new(show_panel.clone(), "Panel").into(),
+            ])
+            .into()]
+        },
+    )
 }
 // endregion: example

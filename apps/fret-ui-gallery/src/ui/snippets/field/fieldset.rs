@@ -36,34 +36,31 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let (street, city, zip) = ensure_models(cx);
     let max_w_md = LayoutRefinement::default().w_full().max_w(Px(520.0));
 
-    let row = stack::hstack(
-        cx,
-        stack::HStackProps::default()
-            .layout(LayoutRefinement::default().w_full())
-            .gap(Space::N4),
-        |cx| {
-            vec![
-                shadcn::Field::new([
-                    shadcn::FieldLabel::new("City").into_element(cx),
-                    shadcn::Input::new(city)
-                        .placeholder("New York")
-                        .a11y_label("City")
-                        .into_element(cx),
-                ])
-                .refine_layout(LayoutRefinement::default().w_full())
-                .into_element(cx),
-                shadcn::Field::new([
-                    shadcn::FieldLabel::new("Postal Code").into_element(cx),
-                    shadcn::Input::new(zip)
-                        .placeholder("90502")
-                        .a11y_label("Postal Code")
-                        .into_element(cx),
-                ])
-                .refine_layout(LayoutRefinement::default().w_full())
-                .into_element(cx),
-            ]
-        },
-    );
+    let row = ui::h_flex(|cx| {
+        vec![
+            shadcn::Field::new([
+                shadcn::FieldLabel::new("City").into_element(cx),
+                shadcn::Input::new(city)
+                    .placeholder("New York")
+                    .a11y_label("City")
+                    .into_element(cx),
+            ])
+            .refine_layout(LayoutRefinement::default().w_full())
+            .into_element(cx),
+            shadcn::Field::new([
+                shadcn::FieldLabel::new("Postal Code").into_element(cx),
+                shadcn::Input::new(zip)
+                    .placeholder("90502")
+                    .a11y_label("Postal Code")
+                    .into_element(cx),
+            ])
+            .refine_layout(LayoutRefinement::default().w_full())
+            .into_element(cx),
+        ]
+    })
+    .layout(LayoutRefinement::default().w_full())
+    .gap(Space::N4)
+    .into_element(cx);
 
     shadcn::FieldSet::new([
         shadcn::FieldLegend::new("Address Information").into_element(cx),

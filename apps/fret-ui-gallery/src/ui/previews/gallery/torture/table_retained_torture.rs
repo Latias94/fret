@@ -201,56 +201,50 @@ pub(in crate::ui) fn preview_table_retained_torture(
         host.request_redraw(action_cx.window);
     });
 
-    let actions = stack::hstack(
-        cx,
-        stack::HStackProps::default().gap(Space::N2).items_center(),
-        |cx| {
-            vec![
-                shadcn::Button::new("Prev page")
-                    .variant(shadcn::ButtonVariant::Outline)
-                    .size(shadcn::ButtonSize::Sm)
-                    .test_id("ui-gallery-table-retained-prev-page")
-                    .on_activate(on_prev_page)
-                    .into_element(cx),
-                shadcn::Button::new("Next page")
-                    .variant(shadcn::ButtonVariant::Outline)
-                    .size(shadcn::ButtonSize::Sm)
-                    .test_id("ui-gallery-table-retained-next-page")
-                    .on_activate(on_next_page)
-                    .into_element(cx),
-                shadcn::Button::new("Pin top")
-                    .variant(shadcn::ButtonVariant::Outline)
-                    .size(shadcn::ButtonSize::Sm)
-                    .test_id("ui-gallery-table-retained-pin-top")
-                    .on_activate(on_pin_top)
-                    .into_element(cx),
-                shadcn::Button::new("Pin bottom")
-                    .variant(shadcn::ButtonVariant::Outline)
-                    .size(shadcn::ButtonSize::Sm)
-                    .test_id("ui-gallery-table-retained-pin-bottom")
-                    .on_activate(on_pin_bottom)
-                    .into_element(cx),
-                shadcn::Button::new("Unpin")
-                    .variant(shadcn::ButtonVariant::Ghost)
-                    .size(shadcn::ButtonSize::Sm)
-                    .test_id("ui-gallery-table-retained-unpin")
-                    .on_activate(on_unpin)
-                    .into_element(cx),
-                shadcn::Switch::new(keep_pinned_rows.clone())
-                    .a11y_label("Keep pinned rows")
-                    .test_id("ui-gallery-table-retained-keep-pinned-rows")
-                    .into_element(cx),
-                cx.text("Keep pinned rows"),
-            ]
-        },
-    );
+    let actions = ui::h_row(|cx| {
+        vec![
+            shadcn::Button::new("Prev page")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Sm)
+                .test_id("ui-gallery-table-retained-prev-page")
+                .on_activate(on_prev_page)
+                .into_element(cx),
+            shadcn::Button::new("Next page")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Sm)
+                .test_id("ui-gallery-table-retained-next-page")
+                .on_activate(on_next_page)
+                .into_element(cx),
+            shadcn::Button::new("Pin top")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Sm)
+                .test_id("ui-gallery-table-retained-pin-top")
+                .on_activate(on_pin_top)
+                .into_element(cx),
+            shadcn::Button::new("Pin bottom")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Sm)
+                .test_id("ui-gallery-table-retained-pin-bottom")
+                .on_activate(on_pin_bottom)
+                .into_element(cx),
+            shadcn::Button::new("Unpin")
+                .variant(shadcn::ButtonVariant::Ghost)
+                .size(shadcn::ButtonSize::Sm)
+                .test_id("ui-gallery-table-retained-unpin")
+                .on_activate(on_unpin)
+                .into_element(cx),
+            shadcn::Switch::new(keep_pinned_rows.clone())
+                .a11y_label("Keep pinned rows")
+                .test_id("ui-gallery-table-retained-keep-pinned-rows")
+                .into_element(cx),
+            cx.text("Keep pinned rows"),
+        ]
+    })
+    .gap(Space::N2)
+    .items_center()
+    .into_element(cx);
 
-    let header = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .layout(LayoutRefinement::default().w_full())
-            .gap(Space::N2),
-        |cx| {
+    let header = ui::v_flex(|cx| {
             vec![
                 cx.text(
                     "Goal: baseline harness for `fret-ui-kit::declarative::table` running on the virt-003 retained host path.",
@@ -284,8 +278,9 @@ pub(in crate::ui) fn preview_table_retained_torture(
                 ),
                 actions,
             ]
-        },
-    );
+        })
+            .layout(LayoutRefinement::default().w_full())
+            .gap(Space::N2).into_element(cx);
 
     let table =
         cx.cached_subtree_with(CachedSubtreeProps::default().contained_layout(true), |cx| {
@@ -321,19 +316,17 @@ pub(in crate::ui) fn preview_table_retained_torture(
                     match col.id.as_ref() {
                         "name" => {
                             if variable_height && row.id % 15 == 0 {
-                                stack::vstack(
-                                    cx,
-                                    stack::VStackProps::default().gap(Space::N0),
-                                    |cx| {
-                                        vec![
-                                            cx.text(row.name.as_ref()),
-                                            cx.text(format!(
-                                                "Details: id={} cpu={} mem={}",
-                                                row.id, row.cpu, row.mem_mb
-                                            )),
-                                        ]
-                                    },
-                                )
+                                ui::v_stack(|cx| {
+                                    vec![
+                                        cx.text(row.name.as_ref()),
+                                        cx.text(format!(
+                                            "Details: id={} cpu={} mem={}",
+                                            row.id, row.cpu, row.mem_mb
+                                        )),
+                                    ]
+                                })
+                                .gap(Space::N0)
+                                .into_element(cx)
                             } else {
                                 cx.text(row.name.as_ref())
                             }

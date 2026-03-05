@@ -8,13 +8,10 @@ use fret_ui_shadcn::{self as shadcn, prelude::*};
 const CMD_NAV_SONNER: &str = "ui_gallery.nav.select.sonner";
 
 fn centered(cx: &mut ElementContext<'_, App>, body: AnyElement) -> AnyElement {
-    stack::hstack(
-        cx,
-        stack::HStackProps::default()
-            .layout(LayoutRefinement::default().w_full())
-            .justify_center(),
-        move |_cx| [body],
-    )
+    ui::h_flex(move |_cx| [body])
+        .layout(LayoutRefinement::default().w_full())
+        .justify_center()
+        .into_element(cx)
 }
 
 pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {

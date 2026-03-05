@@ -5,7 +5,7 @@ use fret_runtime::Model;
 use fret_ui::Invalidation;
 use fret_ui::element::SemanticsProps;
 use fret_ui_ai as ui_ai;
-use fret_ui_kit::declarative::stack;
+use fret_ui_kit::ui;
 use fret_ui_kit::{ChromeRefinement, LayoutRefinement, Space};
 use fret_ui_shadcn::prelude::*;
 use std::sync::Arc;
@@ -135,48 +135,42 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
             .test_id("ui-ai-audio-player-demo-controls")
             .into_element(cx);
 
-            let time_row = stack::hstack(
-                cx,
-                stack::HStackProps::default()
-                    .layout(LayoutRefinement::default().w_full().min_w_0())
-                    .gap(Space::N2)
-                    .items_center(),
-                move |cx| {
-                    vec![
-                        ui_ai::AudioPlayerTimeDisplay::new().into_element(cx),
-                        ui_ai::AudioPlayerTimeRange::new()
-                            .test_id("ui-ai-audio-player-demo-time")
-                            .into_element(cx),
-                        ui_ai::AudioPlayerDurationDisplay::new().into_element(cx),
-                    ]
-                },
-            );
+            let time_row = ui::h_flex(move |cx| {
+                vec![
+                    ui_ai::AudioPlayerTimeDisplay::new().into_element(cx),
+                    ui_ai::AudioPlayerTimeRange::new()
+                        .test_id("ui-ai-audio-player-demo-time")
+                        .into_element(cx),
+                    ui_ai::AudioPlayerDurationDisplay::new().into_element(cx),
+                ]
+            })
+            .layout(LayoutRefinement::default().w_full().min_w_0())
+            .gap(Space::N2)
+            .items_center()
+            .into_element(cx);
 
             vec![controls, time_row]
         });
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .layout(LayoutRefinement::default().w_full().min_w_0())
-            .gap(Space::N4),
-        move |cx| {
-            let mut out = vec![
-                cx.text("AudioPlayer (AI Elements)"),
-                cx.text("Chrome-only controls: apps own playback + time driving."),
-                player,
-            ];
-            if let Some(m) = playing_marker {
-                out.push(m);
-            }
-            if let Some(m) = muted_marker {
-                out.push(m);
-            }
-            if let Some(m) = time_marker {
-                out.push(m);
-            }
-            out
-        },
-    )
+    ui::v_flex(move |cx| {
+        let mut out = vec![
+            cx.text("AudioPlayer (AI Elements)"),
+            cx.text("Chrome-only controls: apps own playback + time driving."),
+            player,
+        ];
+        if let Some(m) = playing_marker {
+            out.push(m);
+        }
+        if let Some(m) = muted_marker {
+            out.push(m);
+        }
+        if let Some(m) = time_marker {
+            out.push(m);
+        }
+        out
+    })
+    .layout(LayoutRefinement::default().w_full().min_w_0())
+    .gap(Space::N4)
+    .into_element(cx)
 }
 // endregion: example

@@ -1127,10 +1127,10 @@ impl Button {
                             children.take().unwrap_or_default()
                         };
 
-                        let mut props = fret_ui_kit::declarative::stack::HStackProps::default()
+                        let mut builder = ui::h_row(move |_cx| content)
                             .justify(content_justify)
                             .items_center()
-                            .gap_x(gap);
+                            .gap(gap);
                         if content_fill_w || content_fill_h {
                             // Match shadcn/ui's `inline-flex items-center justify-center` behavior:
                             // when the control resolves to a definite box (fixed size, `w-full`, or
@@ -1144,12 +1144,10 @@ impl Button {
                             if content_fill_h {
                                 layout = layout.h_full();
                             }
-                            props = props.layout(layout);
+                            builder = builder.layout(layout);
                         }
 
-                        vec![fret_ui_kit::declarative::stack::hstack(cx, props, |_cx| {
-                            content
-                        })]
+                        vec![builder.into_element(cx)]
                     })
                 };
 

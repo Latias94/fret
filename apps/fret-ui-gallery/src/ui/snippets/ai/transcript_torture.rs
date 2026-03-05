@@ -8,9 +8,9 @@ use fret_ui::action::OnActivate;
 use fret_ui::scroll::VirtualListScrollHandle;
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::declarative::ElementContextThemeExt;
-use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::declarative::{CachedSubtreeExt as _, CachedSubtreeProps};
+use fret_ui_kit::ui;
 use fret_ui_kit::{ChromeRefinement, LayoutRefinement, Space};
 use fret_ui_shadcn::prelude::*;
 use std::sync::Arc;
@@ -102,12 +102,7 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
         })
     };
 
-    let header = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .layout(LayoutRefinement::default().w_full())
-            .gap(Space::N2),
-        |cx| {
+    let header = ui::v_flex(|cx| {
             vec![
                 cx.text("Goal: baseline harness for long AI transcripts (scrolling + virtualization + caching)."),
                 cx.text("Use scripted wheel-scroll to validate view-cache reuse stability and stale-paint safety."),
@@ -116,8 +111,9 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
                     .on_activate(append_messages_on_activate)
                     .into_element(cx),
             ]
-        },
-    );
+        })
+            .layout(LayoutRefinement::default().w_full())
+            .gap(Space::N2).into_element(cx);
 
     let transcript =
         cx.cached_subtree_with(CachedSubtreeProps::default().contained_layout(true), |cx| {
@@ -160,17 +156,14 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
     });
     container_props.layout.overflow = fret_ui::element::Overflow::Clip;
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .layout(LayoutRefinement::default().w_full().min_w_0())
-            .gap(Space::N3),
-        move |cx| {
-            vec![
-                header,
-                cx.container(container_props, |_cx| vec![transcript]),
-            ]
-        },
-    )
+    ui::v_flex(move |cx| {
+        vec![
+            header,
+            cx.container(container_props, |_cx| vec![transcript]),
+        ]
+    })
+    .layout(LayoutRefinement::default().w_full().min_w_0())
+    .gap(Space::N3)
+    .into_element(cx)
 }
 // endregion: example

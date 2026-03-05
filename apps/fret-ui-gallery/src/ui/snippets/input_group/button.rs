@@ -22,7 +22,9 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
 
     shadcn::InputGroup::new(value)
         .a11y_label("Button example")
+        .control_test_id("ui-gallery-input-group-button-control")
         .trailing([shadcn::InputGroupButton::new("Search")
+            .test_id("ui-gallery-input-group-button-trailing-button")
             .variant(shadcn::ButtonVariant::Outline)
             .into_element(cx)])
         .trailing_has_button(true)

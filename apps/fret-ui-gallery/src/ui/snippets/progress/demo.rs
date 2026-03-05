@@ -37,13 +37,10 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
     let (value, timer_token) = ensure_models(cx);
 
     let centered = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
-        stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .layout(LayoutRefinement::default().w_full())
-                .justify_center(),
-            move |_cx| [body],
-        )
+        ui::h_flex(move |_cx| [body])
+            .layout(LayoutRefinement::default().w_full())
+            .justify_center()
+            .into_element(cx)
     };
 
     cx.keyed("ui_gallery.progress.demo", |cx| {

@@ -18,7 +18,7 @@ use fret_ui_kit::declarative::controllable_state;
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::visually_hidden::visually_hidden;
 use fret_ui_kit::typography;
-use fret_ui_kit::{ChromeRefinement, LayoutRefinement, Space};
+use fret_ui_kit::{ChromeRefinement, LayoutRefinement, Space, ui};
 use fret_ui_shadcn::{
     Button, ButtonSize, ButtonVariant, Command, CommandInput, CommandItem, CommandList, Popover,
     PopoverContent,
@@ -591,14 +591,11 @@ impl MicSelectorLabel {
                 ink_overflow: fret_ui::element::TextInkOverflow::None,
             });
 
-            return fret_ui_kit::declarative::stack::hstack(
-                cx,
-                fret_ui_kit::declarative::stack::HStackProps::default()
-                    .layout(LayoutRefinement::default().w_full().min_w_0())
-                    .items_center()
-                    .gap_x(Space::N1),
-                |_cx| vec![name_el, id_el],
-            );
+            return ui::h_row(|_cx| vec![name_el, id_el])
+                .layout(LayoutRefinement::default().w_full().min_w_0())
+                .items_center()
+                .gap(Space::N1)
+                .into_element(cx);
         }
 
         cx.text_props(TextProps {

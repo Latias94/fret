@@ -1,78 +1,176 @@
 pub const SOURCE: &str = include_str!("plan_demo.rs");
 
 // region: example
+use fret_icons::ids;
 use fret_runtime::Model;
 use fret_ui::Invalidation;
 use fret_ui_ai as ui_ai;
-use fret_ui_kit::declarative::stack;
+use fret_ui_kit::ui;
 use fret_ui_kit::{LayoutRefinement, Space};
-use fret_ui_shadcn::{Button, ButtonSize, ButtonVariant, prelude::*};
+use fret_ui_shadcn::{Button, ButtonSize, ButtonVariant, Kbd, prelude::*};
 
 #[derive(Default)]
 struct DemoModels {
-    open: Option<Model<bool>>,
+    streaming: Option<Model<bool>>,
 }
 
 pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let open = cx.with_state(DemoModels::default, |st| st.open.clone());
-    let open = match open {
+    let streaming = cx.with_state(DemoModels::default, |st| st.streaming.clone());
+    let streaming = match streaming {
         Some(model) => model,
         None => {
             let model = cx.app.models_mut().insert(false);
-            cx.with_state(DemoModels::default, |st| st.open = Some(model.clone()));
+            cx.with_state(DemoModels::default, |st| st.streaming = Some(model.clone()));
             model
         }
     };
 
-    let is_open = cx
-        .get_model_copied(&open, Invalidation::Layout)
+    let is_streaming = cx
+        .get_model_copied(&streaming, Invalidation::Layout)
         .unwrap_or(false);
 
     let body = ui_ai::Plan::new()
-        .open_model(open)
+        .default_open(false)
+        .is_streaming(is_streaming)
         .test_id_root("ui-ai-plan-root")
-        .into_element_with_children(cx, move |cx, _controller| {
-            let marker = is_open
-                .then(|| cx.text("").test_id("ui-ai-plan-open-true"))
-                .unwrap_or_else(|| cx.text(""));
+        .into_element_with_children(cx, move |cx, controller| {
+            let open = cx
+                .get_model_copied(&controller.open, Invalidation::Layout)
+                .unwrap_or(false);
+            let marker = open.then(|| cx.text("").test_id("ui-ai-plan-open-true"));
+
+            let file_icon = icon::icon_with(cx, ids::ui::FILE, Some(Px(16.0)), None);
+            let title_row = ui::h_flex(move |cx| {
+                    vec![
+                        file_icon,
+                        ui_ai::PlanTitle::new("Rewrite AI Elements to SolidJS").into_element(cx),
+                    ]
+                })
+                    .layout(LayoutRefinement::default().w_full().min_w_0().mb(Space::N4))
+                    .items_center()
+                    .gap(Space::N2).into_element(cx);
+
+            let left = ui::v_flex(move |cx| {
+                    vec![
+                        title_row,
+                        ui_ai::PlanDescription::new(
+                            "Rewrite the AI Elements component library from React to SolidJS while \
+maintaining compatibility with existing React-based shadcn/ui components using solid-js/compat, \
+updating all 29 components and their test suite.",
+                        )
+                        .into_element(cx),
+                    ]
+                })
+                    .layout(LayoutRefinement::default().w_full().min_w_0())
+                    .gap(Space::N2).into_element(cx);
 
             vec![
                 ui_ai::PlanHeader::new([
-                    ui_ai::PlanTitle::new("Plan").into_element(cx),
+                    left,
                     ui_ai::PlanTrigger::default()
                         .test_id("ui-ai-plan-trigger")
                         .into_element(cx),
                 ])
                 .into_element(cx),
-                marker,
+                marker.unwrap_or_else(|| cx.text("")),
                 ui_ai::PlanContent::new([
-                    cx.text("1) Identify the smallest surface."),
-                    cx.text("2) Land a gate (diag script)."),
-                    cx.text("3) Add evidence anchors."),
+                    ui::v_flex(move |cx| {
+                            vec![
+                                ui::v_flex(move |cx| {
+                                        vec![
+                                            ui::text("Overview")
+                                                .font_semibold()
+                                                .mb(Space::N2)
+                                                .into_element(cx),
+                                            ui::text(
+                                                "This plan outlines the migration strategy for converting the AI Elements \
+library from React to SolidJS, ensuring compatibility and maintaining existing functionality.",
+                                            )
+                                            .text_sm()
+                                            .wrap(TextWrap::Word)
+                                            .into_element(cx),
+                                        ]
+                                    })
+                                        .layout(LayoutRefinement::default().w_full().min_w_0())
+                                        .gap(Space::N2).into_element(cx),
+                                ui::v_flex(move |cx| {
+                                        vec![
+                                            ui::text("Key Steps")
+                                                .font_semibold()
+                                                .mb(Space::N2)
+                                                .into_element(cx),
+                                            ui::v_flex(move |cx| {
+                                                    let bullets = [
+                                                        "Set up SolidJS project structure",
+                                                        "Install solid-js/compat for React compatibility",
+                                                        "Migrate components one by one",
+                                                        "Update test suite for each component",
+                                                        "Verify compatibility with shadcn/ui",
+                                                    ];
+                                                    bullets
+                                                        .into_iter()
+                                                        .map(|item| {
+                                                            ui::text(format!("• {item}"))
+                                                                .text_sm()
+                                                                .wrap(TextWrap::Word)
+                                                                .into_element(cx)
+                                                        })
+                                                        .collect::<Vec<_>>()
+                                                })
+                                                    .layout(
+                                                        LayoutRefinement::default()
+                                                            .w_full()
+                                                            .min_w_0(),
+                                                    )
+                                                    .gap(Space::N1).into_element(cx),
+                                        ]
+                                    })
+                                        .layout(LayoutRefinement::default().w_full().min_w_0())
+                                        .gap(Space::N2).into_element(cx),
+                            ]
+                        })
+                            .layout(LayoutRefinement::default().w_full().min_w_0())
+                            .gap(Space::N4).into_element(cx),
                 ])
                 .test_id("ui-ai-plan-content-marker")
                 .into_element(cx),
-                ui_ai::PlanFooter::new([Button::new("Mark done")
-                    .variant(ButtonVariant::Secondary)
-                    .size(ButtonSize::Sm)
-                    .disabled(true)
-                    .into_element(cx)])
+                ui_ai::PlanFooter::new([
+                    ui::h_flex(move |cx| {
+                        vec![ui_ai::PlanAction::new([
+                            Button::new("Build")
+                                .variant(ButtonVariant::Secondary)
+                                .size(ButtonSize::Sm)
+                                .children([
+                                    ui::text("Build").into_element(cx),
+                                    Kbd::new("⌘↩").into_element(cx),
+                                ])
+                                .a11y_label("Build")
+                                .into_element(cx),
+                        ])
+                        .into_element(cx)]
+                    })
+                    .w_full()
+                    .justify_end()
+                    .into_element(cx),
+                ])
                 .into_element(cx),
             ]
         });
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .layout(LayoutRefinement::default().w_full().min_w_0())
-            .gap(Space::N4),
-        move |cx| {
-            vec![
-                cx.text("Plan (AI Elements)"),
-                cx.text("Toggle the chevron button to expand/collapse."),
-                body,
-            ]
-        },
-    )
+    ui::v_flex(move |cx| {
+        vec![
+            cx.text("Plan (AI Elements)"),
+            cx.text("Toggle the chevron button to expand/collapse."),
+            Button::new("Toggle streaming")
+                .variant(ButtonVariant::Secondary)
+                .size(ButtonSize::Sm)
+                .toggle_model(streaming.clone())
+                .into_element(cx),
+            body,
+        ]
+    })
+    .layout(LayoutRefinement::default().w_full().min_w_0())
+    .gap(Space::N4)
+    .into_element(cx)
 }
 // endregion: example

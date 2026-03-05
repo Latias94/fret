@@ -22,16 +22,17 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             vec![
                 shadcn::Tooltip::new(
                     keyboard_trigger,
-                    shadcn::TooltipContent::new(vec![stack::hstack(
-                        cx,
-                        stack::HStackProps::default().gap(Space::N2).items_center(),
-                        |cx| {
+                    shadcn::TooltipContent::new(vec![
+                        ui::h_row(|cx| {
                             vec![
                                 cx.text("Save Changes"),
                                 shadcn::Kbd::new("S").into_element(cx),
                             ]
-                        },
-                    )])
+                        })
+                        .gap(Space::N2)
+                        .items_center()
+                        .into_element(cx),
+                    ])
                     .into_element(cx),
                 )
                 .side(shadcn::TooltipSide::Top)

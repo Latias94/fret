@@ -21,26 +21,47 @@
       "timeout_frames": 240
     },
 
+    { "type": "click", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-content" } },
+    { "type": "wait_frames", "n": 6 },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "focus_is", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-content" } },
+      "timeout_frames": 240
+    },
+    { "type": "press_key", "key": "f6", "modifiers": { "ctrl": true }, "repeat": false },
+    { "type": "wait_frames", "n": 6 },
+    { "type": "press_key", "key": "home", "repeat": false },
+    { "type": "wait_frames", "n": 6 },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "selected_is", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-0" }, "selected": true },
+      "timeout_frames": 240
+    },
+
     { "type": "click", "button": "right", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-0" } },
     {
       "type": "wait_until",
-      "predicate": { "kind": "bounds_within_window", "target": { "kind": "role_and_name", "role": "menu_item", "name": "Pin Tab" } },
+      "predicate": { "kind": "bounds_within_window", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-0.menu.pin" } },
       "timeout_frames": 240
     },
-    { "type": "click", "target": { "kind": "role_and_name", "role": "menu_item", "name": "Pin Tab" } },
+    { "type": "click", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-0.menu.pin" } },
     {
       "type": "wait_until",
       "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-0.pinned" } },
       "timeout_frames": 240
     },
 
+    { "type": "click", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-content" } },
+    { "type": "wait_frames", "n": 6 },
     {
-      "type": "pointer_down",
-      "window": { "kind": "current" },
-      "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-2" },
-      "button": "left"
+      "type": "wait_until",
+      "predicate": { "kind": "focus_is", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-content" } },
+      "timeout_frames": 240
     },
-    { "type": "pointer_up", "window": { "kind": "current" } },
+    { "type": "press_key", "key": "f6", "modifiers": { "ctrl": true }, "repeat": false },
+    { "type": "wait_frames", "n": 6 },
+    { "type": "press_key", "key": "end", "repeat": false },
+    { "type": "wait_frames", "n": 6 },
     {
       "type": "wait_until",
       "predicate": { "kind": "selected_is", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-2" }, "selected": true },
@@ -50,10 +71,10 @@
     { "type": "click", "button": "right", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-2" } },
     {
       "type": "wait_until",
-      "predicate": { "kind": "bounds_within_window", "target": { "kind": "role_and_name", "role": "menu_item", "name": "Close Tabs to the Left" } },
+      "predicate": { "kind": "bounds_within_window", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-2.menu.close_left" } },
       "timeout_frames": 240
     },
-    { "type": "click", "target": { "kind": "role_and_name", "role": "menu_item", "name": "Close Tabs to the Left" } },
+    { "type": "click", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-2.menu.close_left" } },
     { "type": "wait_frames", "n": 10 },
 
     {

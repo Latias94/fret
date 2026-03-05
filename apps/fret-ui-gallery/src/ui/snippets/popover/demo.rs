@@ -14,13 +14,10 @@ struct Models {
 }
 
 fn centered<H: UiHost>(cx: &mut ElementContext<'_, H>, body: AnyElement) -> AnyElement {
-    stack::hstack(
-        cx,
-        stack::HStackProps::default()
-            .layout(LayoutRefinement::default().w_full())
-            .justify_center(),
-        move |_cx| [body],
-    )
+    ui::h_flex(move |_cx| [body])
+        .layout(LayoutRefinement::default().w_full())
+        .justify_center()
+        .into_element(cx)
 }
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
@@ -72,32 +69,25 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                 let row = |cx: &mut ElementContext<'_, H>,
                            label: &'static str,
                            model: Model<String>| {
-                    stack::hstack(
-                        cx,
-                        stack::HStackProps::default()
-                            .layout(LayoutRefinement::default().w_full())
-                            .gap(Space::N4)
-                            .items_center(),
-                        move |cx| {
-                            let label_cell = stack::hstack(
-                                cx,
-                                stack::HStackProps::default()
-                                    .layout(
-                                        LayoutRefinement::default().w_px(Px(96.0)).flex_shrink_0(),
-                                    )
-                                    .justify_end()
-                                    .items_center(),
-                                move |cx| vec![ui::label(label).into_element(cx)],
-                            );
-
-                            let input = shadcn::Input::new(model)
-                                .size(fret_ui_kit::Size::Small)
-                                .refine_layout(LayoutRefinement::default().flex_1().min_w_0())
+                    ui::h_flex(move |cx| {
+                        let label_cell =
+                            ui::h_row(move |cx| vec![ui::label(label).into_element(cx)])
+                                .layout(LayoutRefinement::default().w_px(Px(96.0)).flex_shrink_0())
+                                .justify_end()
+                                .items_center()
                                 .into_element(cx);
 
-                            vec![label_cell, input]
-                        },
-                    )
+                        let input = shadcn::Input::new(model)
+                            .size(fret_ui_kit::Size::Small)
+                            .refine_layout(LayoutRefinement::default().flex_1().min_w_0())
+                            .into_element(cx);
+
+                        vec![label_cell, input]
+                    })
+                    .layout(LayoutRefinement::default().w_full())
+                    .gap(Space::N4)
+                    .items_center()
+                    .into_element(cx)
                 };
 
                 let header = shadcn::PopoverHeader::new([
@@ -107,21 +97,18 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                 ])
                 .into_element(cx);
 
-                let fields = stack::vstack(
-                    cx,
-                    stack::VStackProps::default()
-                        .gap(Space::N2)
-                        .items_start()
-                        .layout(LayoutRefinement::default().w_full()),
-                    move |cx| {
-                        vec![
-                            row(cx, "Width", width.clone()),
-                            row(cx, "Max. width", max_width.clone()),
-                            row(cx, "Height", height.clone()),
-                            row(cx, "Max. height", max_height.clone()),
-                        ]
-                    },
-                );
+                let fields = ui::v_flex(move |cx| {
+                    vec![
+                        row(cx, "Width", width.clone()),
+                        row(cx, "Max. width", max_width.clone()),
+                        row(cx, "Height", height.clone()),
+                        row(cx, "Max. height", max_height.clone()),
+                    ]
+                })
+                .gap(Space::N2)
+                .items_start()
+                .layout(LayoutRefinement::default().w_full())
+                .into_element(cx);
 
                 shadcn::PopoverContent::new([header, fields])
                     .refine_layout(LayoutRefinement::default().w_px(Px(320.0)))

@@ -178,12 +178,12 @@ let ok = Button::new("OK")
 ### Layout-Only Cookbook (Stack / Flex)
 
 Layout-only code can use `ui::h_flex` / `ui::v_flex` for a patchable builder (so layout nodes participate in the
-same fluent `ui()` vocabulary as components). `stack::hstack/vstack` remain available as a lower-level helper.
+same fluent `ui()` vocabulary as components). For shrink-wrapping rows/columns, prefer `ui::h_row` / `ui::v_stack`.
 
 Horizontal row:
 
 ```rust
-let row = ui::h_flex(cx, move |cx| {
+let row = ui::h_flex(move |cx| {
     vec![
         Button::new("Cancel").ui().into_element(cx),
         Button::new("OK").ui().into_element(cx),
@@ -197,7 +197,7 @@ let row = ui::h_flex(cx, move |cx| {
 Vertical column:
 
 ```rust
-let col = ui::v_flex(cx, move |cx| {
+let col = ui::v_flex(move |cx| {
     vec![
         Input::new().ui().w_full().into_element(cx),
         Textarea::new().ui().w_full().into_element(cx),
@@ -210,10 +210,10 @@ let col = ui::v_flex(cx, move |cx| {
 Overlay stack (layered children):
 
 ```rust
-let overlay = ui::stack(cx, move |cx| {
+let overlay = ui::stack(move |cx| {
     vec![
         // Underlay (e.g. modal barrier)
-        ui::container(cx, |_cx| Vec::new())
+        ui::container(|_cx| Vec::new())
             .absolute()
             .inset(Space::N0)
             .into_element(cx),
@@ -227,13 +227,13 @@ let overlay = ui::stack(cx, move |cx| {
 Text (patchable):
 
 ```rust
-let title = ui::text(cx, "Settings")
+let title = ui::text("Settings")
     .text_base()
     .font_semibold()
     .truncate()
     .into_element(cx);
 
-let field_label = ui::label(cx, "Username").into_element(cx);
+let field_label = ui::label("Username").into_element(cx);
 ```
 
 ### Coverage Tracker (Update as we proceed)

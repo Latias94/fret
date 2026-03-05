@@ -27,6 +27,7 @@ mod ui_gallery_markdown_editor;
 mod ui_gallery_text_gates;
 mod view_cache_gates;
 mod vlist;
+mod wheel_events_streaming;
 mod wheel_scroll;
 mod wheel_scroll_streaming;
 mod windowed_rows;
@@ -96,6 +97,7 @@ pub(super) use vlist::{
     check_bundle_for_vlist_window_shifts_kind_max,
     check_bundle_for_vlist_window_shifts_non_retained_max,
 };
+pub(super) use wheel_events_streaming::check_bundle_for_wheel_events_max_per_frame;
 pub(super) use wheel_scroll::{
     check_bundle_for_wheel_scroll, check_bundle_for_wheel_scroll_hit_changes,
 };

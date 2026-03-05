@@ -9,7 +9,7 @@ fn build_shadcn_hover_card_demo_page(
 ) -> AnyElement {
     use fret_core::Px;
     use fret_ui::Theme;
-    use fret_ui_kit::declarative::stack;
+    use fret_ui_kit::ui;
     use fret_ui_kit::{ColorRef, LayoutRefinement, Space, ui};
     use fret_ui_shadcn::{
         Avatar, AvatarFallback, AvatarImage, Button, ButtonVariant, HoverCard, HoverCardContent,
@@ -51,21 +51,15 @@ fn build_shadcn_hover_card_demo_page(
         .text_color(ColorRef::Color(muted_fg))
         .into_element(cx);
 
-    let text_block = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N1)
-            .layout(LayoutRefinement::default().w_px(Px(238.0))),
-        move |_cx| vec![heading, body, joined],
-    );
+    let text_block = ui::v_stack(move |_cx| vec![heading, body, joined])
+        .gap(Space::N1)
+        .layout(LayoutRefinement::default().w_px(Px(238.0)))
+        .into_element(cx);
 
-    let row = stack::hstack(
-        cx,
-        stack::HStackProps::default()
-            .gap(Space::N4)
-            .layout(LayoutRefinement::default().w_full()),
-        move |_cx| vec![avatar, text_block],
-    );
+    let row = ui::h_flex(move |_cx| vec![avatar, text_block])
+        .gap(Space::N4)
+        .layout(LayoutRefinement::default().w_full())
+        .into_element(cx);
 
     let content_el = HoverCardContent::new([row])
         .refine_layout(LayoutRefinement::default().w_px(Px(320.0)))

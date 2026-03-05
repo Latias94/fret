@@ -170,25 +170,22 @@ pub fn render(cx: &mut ElementContext<'_, App>, theme: &Theme) -> AnyElement {
             .into_element(cx)
     };
 
-    let controls = stack::hstack(
-        cx,
-        stack::HStackProps::default()
-            .layout(LayoutRefinement::default().w_full())
-            .gap(Space::N3)
-            .items_center(),
-        move |cx| {
-            vec![
-                add,
-                remove,
-                shadcn::Badge::new(format!("active: {active_count}"))
-                    .variant(shadcn::BadgeVariant::Secondary)
-                    .into_element(cx),
-                shadcn::Badge::new(format!("exiting: {exiting_count}"))
-                    .variant(shadcn::BadgeVariant::Outline)
-                    .into_element(cx),
-            ]
-        },
-    )
+    let controls = ui::h_flex(move |cx| {
+        vec![
+            add,
+            remove,
+            shadcn::Badge::new(format!("active: {active_count}"))
+                .variant(shadcn::BadgeVariant::Secondary)
+                .into_element(cx),
+            shadcn::Badge::new(format!("exiting: {exiting_count}"))
+                .variant(shadcn::BadgeVariant::Outline)
+                .into_element(cx),
+        ]
+    })
+    .layout(LayoutRefinement::default().w_full())
+    .gap(Space::N3)
+    .items_center()
+    .into_element(cx)
     .test_id("ui-gallery-motion-presets-stack-shift-controls");
 
     let list_panel = cx.keyed("stack_shift_list_demo", |cx| {
@@ -375,13 +372,7 @@ pub fn render(cx: &mut ElementContext<'_, App>, theme: &Theme) -> AnyElement {
                                     .min_w_0(),
                             );
 
-                            let body = stack::hstack(
-                                cx,
-                                stack::HStackProps::default()
-                                    .layout(LayoutRefinement::default().w_full())
-                                    .justify_between()
-                                    .items_center(),
-                                move |cx| {
+                            let body = ui::h_flex(move |cx| {
                                     let left = cx.text(format!("Item {id}"));
                                     let right = if item.exiting {
                                         shadcn::Badge::new("Exiting")
@@ -393,8 +384,10 @@ pub fn render(cx: &mut ElementContext<'_, App>, theme: &Theme) -> AnyElement {
                                             .into_element(cx)
                                     };
                                     vec![left, right]
-                                },
-                            );
+                                })
+                                    .layout(LayoutRefinement::default().w_full())
+                                    .justify_between()
+                                    .items_center().into_element(cx);
 
                             vec![cx.container(props, move |_cx| [body])]
                         },
@@ -425,14 +418,11 @@ pub fn render(cx: &mut ElementContext<'_, App>, theme: &Theme) -> AnyElement {
             .test_id("ui-gallery-motion-presets-stack-shift-stage")
     });
 
-    let content = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .layout(LayoutRefinement::default().w_full())
-            .gap(Space::N3)
-            .items_start(),
-        move |_cx| vec![controls, list_panel],
-    );
+    let content = ui::v_flex(move |_cx| vec![controls, list_panel])
+        .layout(LayoutRefinement::default().w_full())
+        .gap(Space::N3)
+        .items_start()
+        .into_element(cx);
 
     shadcn::Card::new([
         shadcn::CardHeader::new([

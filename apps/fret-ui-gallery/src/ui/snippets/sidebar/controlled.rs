@@ -85,31 +85,28 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                     host.request_redraw(action_cx.window);
                 });
 
-            let header = stack::hstack(
-                cx,
-                stack::HStackProps::default()
-                    .gap(Space::N2)
-                    .items_center()
-                    .layout(LayoutRefinement::default().w_full()),
-                |cx| {
-                    vec![
-                        shadcn::Button::new(if open_now {
-                            "Close Sidebar"
-                        } else {
-                            "Open Sidebar"
-                        })
-                        .variant(shadcn::ButtonVariant::Outline)
-                        .size(shadcn::ButtonSize::Sm)
-                        .on_activate(on_toggle_open.clone())
-                        .test_id("ui-gallery-sidebar-controlled-toggle")
-                        .into_element(cx),
-                        shadcn::typography::muted(
-                            cx,
-                            "Controlled via SidebarProvider.open(Some(model)).",
-                        ),
-                    ]
-                },
-            );
+            let header = ui::h_flex(|cx| {
+                vec![
+                    shadcn::Button::new(if open_now {
+                        "Close Sidebar"
+                    } else {
+                        "Open Sidebar"
+                    })
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .size(shadcn::ButtonSize::Sm)
+                    .on_activate(on_toggle_open.clone())
+                    .test_id("ui-gallery-sidebar-controlled-toggle")
+                    .into_element(cx),
+                    shadcn::typography::muted(
+                        cx,
+                        "Controlled via SidebarProvider.open(Some(model)).",
+                    ),
+                ]
+            })
+            .gap(Space::N2)
+            .items_center()
+            .layout(LayoutRefinement::default().w_full())
+            .into_element(cx);
 
             let projects = shadcn::SidebarGroup::new([
                 shadcn::SidebarGroupLabel::new("Projects").into_element(cx),
@@ -200,28 +197,22 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             .into_element(cx)])
             .into_element(cx);
 
-            let frame = stack::hstack(
-                cx,
-                stack::HStackProps::default()
-                    .gap(Space::N4)
-                    .items_start()
-                    .layout(LayoutRefinement::default().w_full().h_px(Px(320.0))),
-                |_cx| vec![sidebar, inset],
-            )
-            .attach_semantics(
-                SemanticsDecoration::default()
-                    .role(fret_core::SemanticsRole::Group)
-                    .test_id("ui-gallery-sidebar-controlled"),
-            );
+            let frame = ui::h_flex(|_cx| vec![sidebar, inset])
+                .gap(Space::N4)
+                .items_start()
+                .layout(LayoutRefinement::default().w_full().h_px(Px(320.0)))
+                .into_element(cx)
+                .attach_semantics(
+                    SemanticsDecoration::default()
+                        .role(fret_core::SemanticsRole::Group)
+                        .test_id("ui-gallery-sidebar-controlled"),
+                );
 
-            let body = stack::vstack(
-                cx,
-                stack::VStackProps::default()
-                    .gap(Space::N3)
-                    .items_start()
-                    .layout(LayoutRefinement::default().w_full()),
-                |_cx| vec![header, trigger, frame],
-            );
+            let body = ui::v_flex(|_cx| vec![header, trigger, frame])
+                .gap(Space::N3)
+                .items_start()
+                .layout(LayoutRefinement::default().w_full())
+                .into_element(cx);
 
             vec![body]
         });

@@ -42,34 +42,26 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                 .into_element(cx)
         };
 
-        let inner_rail = stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .gap(Space::N4)
-                .items_center()
-                .layout(LayoutRefinement::default().w_px(Px(960.0))),
-            |cx| {
-                (0..24)
-                    .map(|i| {
-                        let card = shadcn::Skeleton::new()
-                            .refine_style(ChromeRefinement::default().rounded(Radius::Md))
-                            .refine_layout(
-                                LayoutRefinement::default().w_px(Px(160.0)).h_px(Px(96.0)),
-                            )
-                            .into_element(cx);
-                        let caption = shadcn::typography::muted(cx, format!("Item {i}"));
-                        stack::vstack(
-                            cx,
-                            stack::VStackProps::default()
-                                .gap(Space::N2)
-                                .items_start()
-                                .layout(LayoutRefinement::default().flex_none()),
-                            |_cx| vec![card, caption],
-                        )
-                    })
-                    .collect::<Vec<_>>()
-            },
-        );
+        let inner_rail = ui::h_row(|cx| {
+            (0..24)
+                .map(|i| {
+                    let card = shadcn::Skeleton::new()
+                        .refine_style(ChromeRefinement::default().rounded(Radius::Md))
+                        .refine_layout(LayoutRefinement::default().w_px(Px(160.0)).h_px(Px(96.0)))
+                        .into_element(cx);
+                    let caption = shadcn::typography::muted(cx, format!("Item {i}"));
+                    ui::v_stack(|_cx| vec![card, caption])
+                        .gap(Space::N2)
+                        .items_start()
+                        .layout(LayoutRefinement::default().flex_none())
+                        .into_element(cx)
+                })
+                .collect::<Vec<_>>()
+        })
+        .gap(Space::N4)
+        .items_center()
+        .layout(LayoutRefinement::default().w_px(Px(960.0)))
+        .into_element(cx);
 
         let inner = shadcn::ScrollArea::new([inner_rail])
             .axis(fret_ui::element::ScrollAxis::X)
@@ -103,25 +95,22 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             cx.container(props, |_cx| Vec::new())
         };
 
-        let outer_body = stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .layout(LayoutRefinement::default().w_full())
-                .gap(Space::N3),
-            |cx| {
-                let mut out: Vec<AnyElement> = Vec::new();
-                // Keep the nested horizontal rail visible without requiring an outer scroll first;
-                // diagnostics scripts target the inner viewport directly.
-                for i in 0..2 {
-                    out.push(row(cx, i));
-                }
-                out.push(inner);
-                for i in 2..36 {
-                    out.push(row(cx, i));
-                }
-                out
-            },
-        );
+        let outer_body = ui::v_flex(|cx| {
+            let mut out: Vec<AnyElement> = Vec::new();
+            // Keep the nested horizontal rail visible without requiring an outer scroll first;
+            // diagnostics scripts target the inner viewport directly.
+            for i in 0..2 {
+                out.push(row(cx, i));
+            }
+            out.push(inner);
+            for i in 2..36 {
+                out.push(row(cx, i));
+            }
+            out
+        })
+        .layout(LayoutRefinement::default().w_full())
+        .gap(Space::N3)
+        .into_element(cx);
 
         let outer = shadcn::ScrollArea::new([outer_body])
             .axis(fret_ui::element::ScrollAxis::Y)

@@ -3,7 +3,7 @@ pub const SOURCE: &str = include_str!("prompt_input_referenced_sources_demo.rs")
 // region: example
 use fret_runtime::Model;
 use fret_ui_ai as ui_ai;
-use fret_ui_kit::declarative::stack;
+use fret_ui_kit::ui;
 use fret_ui_kit::{LayoutRefinement, Space};
 use fret_ui_shadcn::prelude::*;
 use fret_ui_shadcn::{Button, ButtonSize, ButtonVariant};
@@ -59,19 +59,16 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
             block_end: Vec::new(),
         });
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .layout(LayoutRefinement::default().w_full().min_w_0())
-            .gap(Space::N4),
-        move |cx| {
-            vec![
-                cx.text("Prompt Input Referenced Sources (AI Elements)"),
-                cx.text("Add a source and remove it via the chip's hover affordance."),
-                add,
-                input,
-            ]
-        },
-    )
+    ui::v_flex(move |cx| {
+        vec![
+            cx.text("Prompt Input Referenced Sources (AI Elements)"),
+            cx.text("Add a source and remove it via the chip's hover affordance."),
+            add,
+            input,
+        ]
+    })
+    .layout(LayoutRefinement::default().w_full().min_w_0())
+    .gap(Space::N4)
+    .into_element(cx)
 }
 // endregion: example

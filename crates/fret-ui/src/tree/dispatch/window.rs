@@ -1328,6 +1328,40 @@ impl<H: UiHost> UiTree<H> {
                 } else {
                     false
                 };
+            let pointer_hit_is_pressable =
+                if matches!(event, Event::Pointer(PointerEvent::Down { .. }))
+                    && let Some(window) = self.window
+                {
+                    chain.iter().any(|(node_id, _)| {
+                        crate::declarative::element_record_for_node(app, window, *node_id)
+                            .is_some_and(|record| {
+                                matches!(
+                                    &record.instance,
+                                    crate::declarative::ElementInstance::Pressable(_)
+                                )
+                            })
+                    })
+                } else {
+                    false
+                };
+            let pointer_hit_pressable_target =
+                if matches!(event, Event::Pointer(PointerEvent::Down { .. }))
+                    && let Some(window) = self.window
+                {
+                    chain.iter().find_map(|(node_id, _)| {
+                        crate::declarative::element_record_for_node(app, window, *node_id).and_then(
+                            |record| {
+                                matches!(
+                                    &record.instance,
+                                    crate::declarative::ElementInstance::Pressable(_)
+                                )
+                                .then_some(record.element)
+                            },
+                        )
+                    })
+                } else {
+                    None
+                };
             let should_run_capture_phase = match event {
                 Event::Pointer(PointerEvent::Down { .. })
                 | Event::Pointer(PointerEvent::Up { .. })
@@ -1377,6 +1411,8 @@ impl<H: UiHost> UiTree<H> {
                                     event_window_wheel_delta,
                                     input_ctx: capture_ctx.clone(),
                                     pointer_hit_is_text_input,
+                                    pointer_hit_is_pressable,
+                                    pointer_hit_pressable_target,
                                     prevented_default_actions: &mut prevented_default_actions,
                                     children,
                                     focus: tree.focus,
@@ -1557,6 +1593,8 @@ impl<H: UiHost> UiTree<H> {
                                     event_window_wheel_delta,
                                     input_ctx: bubble_ctx.clone(),
                                     pointer_hit_is_text_input,
+                                    pointer_hit_is_pressable,
+                                    pointer_hit_pressable_target,
                                     prevented_default_actions: &mut prevented_default_actions,
                                     children,
                                     focus: tree.focus,
@@ -1777,6 +1815,8 @@ impl<H: UiHost> UiTree<H> {
                                     event_window_wheel_delta,
                                     input_ctx: capture_ctx.clone(),
                                     pointer_hit_is_text_input: false,
+                                    pointer_hit_is_pressable: false,
+                                    pointer_hit_pressable_target: None,
                                     prevented_default_actions: &mut prevented_default_actions,
                                     children,
                                     focus: tree.focus,
@@ -1919,6 +1959,8 @@ impl<H: UiHost> UiTree<H> {
                                     event_window_wheel_delta,
                                     input_ctx: bubble_ctx.clone(),
                                     pointer_hit_is_text_input: false,
+                                    pointer_hit_is_pressable: false,
+                                    pointer_hit_pressable_target: None,
                                     prevented_default_actions: &mut prevented_default_actions,
                                     children,
                                     focus: tree.focus,
@@ -2083,6 +2125,8 @@ impl<H: UiHost> UiTree<H> {
                         event_window_wheel_delta,
                         input_ctx: input_ctx.clone(),
                         pointer_hit_is_text_input: false,
+                        pointer_hit_is_pressable: false,
+                        pointer_hit_pressable_target: None,
                         prevented_default_actions: &mut prevented_default_actions,
                         children,
                         focus: tree.focus,

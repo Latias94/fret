@@ -1,6 +1,7 @@
 use fret_app::App;
 use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, Theme};
+use fret_ui_kit::ui;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 use std::sync::Arc;
 
@@ -51,29 +52,26 @@ pub(super) fn maybe_push_debug_hud(
             container_props.layout.size.height = fret_ui::element::Length::Fill;
             container_props.layout.overflow = fret_ui::element::Overflow::Clip;
 
-            let body = stack::vstack(
-                cx,
-                stack::VStackProps::default()
-                    .layout(LayoutRefinement::default().w_full())
-                    .gap(Space::N1),
-                |cx| {
-                    debug_hud_lines
-                        .iter()
-                        .map(|line| {
-                            cx.text_props(TextProps {
-                                layout: Default::default(),
-                                text: line.clone(),
-                                style: None,
-                                color: Some(theme.color_token("foreground")),
-                                wrap: TextWrap::Word,
-                                overflow: TextOverflow::Clip,
-                                align: fret_core::TextAlign::Start,
-                                ink_overflow: fret_ui::element::TextInkOverflow::None,
-                            })
+            let body = ui::v_stack(|cx| {
+                debug_hud_lines
+                    .iter()
+                    .map(|line| {
+                        cx.text_props(TextProps {
+                            layout: Default::default(),
+                            text: line.clone(),
+                            style: None,
+                            color: Some(theme.color_token("foreground")),
+                            wrap: TextWrap::Word,
+                            overflow: TextOverflow::Clip,
+                            align: fret_core::TextAlign::Start,
+                            ink_overflow: fret_ui::element::TextInkOverflow::None,
                         })
-                        .collect::<Vec<_>>()
-                },
-            );
+                    })
+                    .collect::<Vec<_>>()
+            })
+            .layout(LayoutRefinement::default().w_full())
+            .gap(Space::N1)
+            .into_element(cx);
 
             [cx.container(container_props, |cx| {
                 [shadcn::ScrollArea::new([body])

@@ -1,0 +1,169 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "UI gallery: AI conversation demo scroll-to-bottom button behavior",
+    "tags": ["ui-gallery", "ai-elements", "conversation", "scroll"],
+    "required_capabilities": ["diag.script_v2"],
+    "target_hints": [
+      "Navigates to the AI Elements Conversation demo page.",
+      "Sends a long message to ensure the transcript can scroll.",
+      "Scrolls up to assert the scroll-to-bottom button appears, then clicks it to assert it hides again."
+    ]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "set_window_inner_size", "width_px": 1280.0, "height_px": 1000.0 },
+    { "type": "wait_frames", "n": 20 },
+
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
+      "timeout_frames": 600
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
+    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
+    { "type": "press_key", "key": "backspace" },
+    { "type": "type_text", "text": "ai_conversation_demo" },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-nav-ai-conversation-demo" } },
+      "timeout_frames": 600
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-ai-conversation-demo" } },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-page-ai-conversation-demo" } },
+      "timeout_frames": 600
+    },
+
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-ai-conversation-demo-prompt-textarea" } },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-content-scroll" } },
+      "timeout_frames": 600
+    },
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": { "kind": "test_id", "id": "ui-ai-conversation-demo-prompt-textarea" },
+      "delta_y": 160.0,
+      "require_fully_within_container": true,
+      "require_fully_within_window": true,
+      "padding_px": 16.0,
+      "timeout_frames": 600
+    },
+    { "type": "click_stable", "target": { "kind": "test_id", "id": "ui-ai-conversation-demo-prompt-textarea" } },
+    {
+      "type": "type_text_into",
+      "target": { "kind": "test_id", "id": "ui-ai-conversation-demo-prompt-textarea" },
+      "text": "This is a long message to force scrolling.\\n\\n- line 1\\n- line 2\\n- line 3\\n- line 4\\n- line 5\\n- line 6\\n- line 7\\n- line 8\\n- line 9\\n- line 10\\n- line 11\\n- line 12\\n- line 13\\n- line 14\\n- line 15\\n- line 16\\n- line 17\\n- line 18\\n- line 19\\n- line 20\\n- line 21\\n- line 22\\n- line 23\\n- line 24\\n- line 25\\n- line 26\\n- line 27\\n- line 28\\n- line 29\\n- line 30\\n- line 31\\n- line 32\\n- line 33\\n- line 34\\n- line 35\\n- line 36\\n- line 37\\n- line 38\\n- line 39\\n- line 40"
+    },
+    { "type": "click_stable", "target": { "kind": "test_id", "id": "ui-ai-conversation-demo-prompt-send" } },
+    { "type": "wait_frames", "n": 4 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "semantics_numeric_approx_eq",
+        "target": { "kind": "test_id", "id": "ui-ai-conversation-demo-messages-len" },
+        "field": "value",
+        "value": 1.0,
+        "eps": 0.01
+      },
+      "timeout_frames": 600
+    },
+    { "type": "click_stable", "target": { "kind": "test_id", "id": "ui-ai-conversation-demo-prompt-textarea" } },
+    {
+      "type": "type_text_into",
+      "target": { "kind": "test_id", "id": "ui-ai-conversation-demo-prompt-textarea" },
+      "text": "This is a long message to force scrolling.\\n\\n- line 1\\n- line 2\\n- line 3\\n- line 4\\n- line 5\\n- line 6\\n- line 7\\n- line 8\\n- line 9\\n- line 10\\n- line 11\\n- line 12\\n- line 13\\n- line 14\\n- line 15\\n- line 16\\n- line 17\\n- line 18\\n- line 19\\n- line 20\\n- line 21\\n- line 22\\n- line 23\\n- line 24\\n- line 25\\n- line 26\\n- line 27\\n- line 28\\n- line 29\\n- line 30\\n- line 31\\n- line 32\\n- line 33\\n- line 34\\n- line 35\\n- line 36\\n- line 37\\n- line 38\\n- line 39\\n- line 40"
+    },
+    { "type": "click_stable", "target": { "kind": "test_id", "id": "ui-ai-conversation-demo-prompt-send" } },
+    { "type": "wait_frames", "n": 4 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "semantics_numeric_approx_eq",
+        "target": { "kind": "test_id", "id": "ui-ai-conversation-demo-messages-len" },
+        "field": "value",
+        "value": 2.0,
+        "eps": 0.01
+      },
+      "timeout_frames": 600
+    },
+    { "type": "click_stable", "target": { "kind": "test_id", "id": "ui-ai-conversation-demo-prompt-textarea" } },
+    {
+      "type": "type_text_into",
+      "target": { "kind": "test_id", "id": "ui-ai-conversation-demo-prompt-textarea" },
+      "text": "This is a long message to force scrolling.\\n\\n- line 1\\n- line 2\\n- line 3\\n- line 4\\n- line 5\\n- line 6\\n- line 7\\n- line 8\\n- line 9\\n- line 10\\n- line 11\\n- line 12\\n- line 13\\n- line 14\\n- line 15\\n- line 16\\n- line 17\\n- line 18\\n- line 19\\n- line 20\\n- line 21\\n- line 22\\n- line 23\\n- line 24\\n- line 25\\n- line 26\\n- line 27\\n- line 28\\n- line 29\\n- line 30\\n- line 31\\n- line 32\\n- line 33\\n- line 34\\n- line 35\\n- line 36\\n- line 37\\n- line 38\\n- line 39\\n- line 40"
+    },
+    { "type": "click_stable", "target": { "kind": "test_id", "id": "ui-ai-conversation-demo-prompt-send" } },
+    { "type": "wait_frames", "n": 4 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "semantics_numeric_approx_eq",
+        "target": { "kind": "test_id", "id": "ui-ai-conversation-demo-messages-len" },
+        "field": "value",
+        "value": 3.0,
+        "eps": 0.01
+      },
+      "timeout_frames": 600
+    },
+    { "type": "click_stable", "target": { "kind": "test_id", "id": "ui-ai-conversation-demo-prompt-textarea" } },
+    {
+      "type": "type_text_into",
+      "target": { "kind": "test_id", "id": "ui-ai-conversation-demo-prompt-textarea" },
+      "text": "This is a long message to force scrolling.\\n\\n- line 1\\n- line 2\\n- line 3\\n- line 4\\n- line 5\\n- line 6\\n- line 7\\n- line 8\\n- line 9\\n- line 10\\n- line 11\\n- line 12\\n- line 13\\n- line 14\\n- line 15\\n- line 16\\n- line 17\\n- line 18\\n- line 19\\n- line 20\\n- line 21\\n- line 22\\n- line 23\\n- line 24\\n- line 25\\n- line 26\\n- line 27\\n- line 28\\n- line 29\\n- line 30\\n- line 31\\n- line 32\\n- line 33\\n- line 34\\n- line 35\\n- line 36\\n- line 37\\n- line 38\\n- line 39\\n- line 40"
+    },
+    { "type": "click_stable", "target": { "kind": "test_id", "id": "ui-ai-conversation-demo-prompt-send" } },
+    { "type": "wait_frames", "n": 4 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "semantics_numeric_approx_eq",
+        "target": { "kind": "test_id", "id": "ui-ai-conversation-demo-messages-len" },
+        "field": "value",
+        "value": 4.0,
+        "eps": 0.01
+      },
+      "timeout_frames": 600
+    },
+
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-ai-conversation-demo-transcript-root" } },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "not_exists", "target": { "kind": "test_id", "id": "ui-ai-conversation-demo-scroll-bottom" } },
+      "timeout_frames": 240
+    },
+
+    { "type": "move_pointer", "target": { "kind": "test_id", "id": "ui-ai-conversation-demo-transcript-root" } },
+    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-ai-conversation-demo-transcript-root" }, "delta_y": 720.0 },
+    { "type": "wait_frames", "n": 4 },
+    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-ai-conversation-demo-transcript-root" }, "delta_y": 720.0 },
+    { "type": "wait_frames", "n": 4 },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-ai-conversation-demo-scroll-bottom" } },
+      "timeout_frames": 600
+    },
+
+    { "type": "click_stable", "target": { "kind": "test_id", "id": "ui-ai-conversation-demo-scroll-bottom" } },
+    { "type": "wait_frames", "n": 6 },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "not_exists", "target": { "kind": "test_id", "id": "ui-ai-conversation-demo-scroll-bottom" } },
+      "timeout_frames": 600
+    },
+
+    { "type": "capture_bundle", "label": "ui-gallery-ai-conversation-demo-scroll-button" }
+  ]
+}

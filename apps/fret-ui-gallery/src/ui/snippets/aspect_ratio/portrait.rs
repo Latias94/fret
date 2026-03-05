@@ -49,13 +49,10 @@ fn ratio_example<H: UiHost>(
         .into_element(cx)
         .test_id(test_id);
 
-    stack::hstack(
-        cx,
-        stack::HStackProps::default()
-            .layout(LayoutRefinement::default().w_full().min_w_0())
-            .justify_center(),
-        move |_cx| vec![frame],
-    )
+    ui::h_flex(move |_cx| vec![frame])
+        .layout(LayoutRefinement::default().w_full().min_w_0())
+        .justify_center()
+        .into_element(cx)
 }
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
@@ -108,11 +105,8 @@ pub fn render_preview<H: UiHost>(
         .into_element(cx)
         .test_id("ui-gallery-aspect-ratio-portrait");
 
-    stack::hstack(
-        cx,
-        stack::HStackProps::default()
-            .layout(LayoutRefinement::default().w_full().min_w_0())
-            .justify_center(),
-        move |_cx| vec![frame],
-    )
+    ui::h_flex(move |_cx| vec![frame])
+        .layout(LayoutRefinement::default().w_full().min_w_0())
+        .justify_center()
+        .into_element(cx)
 }

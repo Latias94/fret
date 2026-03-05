@@ -10,7 +10,6 @@ use fret_ui::element::{
 use fret_ui::overlay_placement::Side;
 use fret_ui::{ElementContext, Invalidation, Theme, ThemeNamedColorKey, ThemeSnapshot, UiHost};
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
-use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::declarative::{
     occlusion_insets_or_zero, safe_area_insets_or_zero, viewport_queries,
@@ -1040,7 +1039,7 @@ impl SheetContent {
                 shadow: Some(shadow),
                 ..props
             },
-            stack::VStackProps::default()
+            shadcn_layout::VStackProps::default()
                 .gap(Space::N4)
                 .layout(LayoutRefinement::default().w_full().min_w_0().min_h_0()),
             children,
@@ -1098,7 +1097,7 @@ impl SheetFooter {
         shadcn_layout::container_vstack(
             cx,
             props,
-            fret_ui_kit::declarative::stack::VStackProps::default()
+            shadcn_layout::VStackProps::default()
                 .gap(Space::N2)
                 .justify_start()
                 .items_stretch(),

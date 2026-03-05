@@ -80,13 +80,10 @@ fn wire_selection_commands<H: UiHost + 'static>(
 }
 
 fn align_end(cx: &mut ElementContext<'_, App>, child: AnyElement) -> AnyElement {
-    stack::hstack(
-        cx,
-        stack::HStackProps::default()
-            .layout(LayoutRefinement::default().w_full())
-            .justify_end(),
-        move |_cx| [child],
-    )
+    ui::h_flex(move |_cx| [child])
+        .layout(LayoutRefinement::default().w_full())
+        .justify_end()
+        .into_element(cx)
 }
 
 fn bottom_controls(
@@ -136,31 +133,28 @@ fn bottom_controls(
         text = text.text_color(ColorRef::Color(color));
     }
 
-    stack::hstack(
-        cx,
-        stack::HStackProps::default()
-            .layout(LayoutRefinement::default().w_full())
-            .items_center()
-            .gap_x(Space::N2),
-        move |cx| {
-            vec![
-                text.into_element(cx),
-                cx.spacer(fret_ui::element::SpacerProps::default()),
-                shadcn::Button::new("Previous")
-                    .variant(shadcn::ButtonVariant::Outline)
-                    .size(shadcn::ButtonSize::Sm)
-                    .disabled(!prev_enabled)
-                    .on_activate(prev_on_activate.clone())
-                    .into_element(cx),
-                shadcn::Button::new("Next")
-                    .variant(shadcn::ButtonVariant::Outline)
-                    .size(shadcn::ButtonSize::Sm)
-                    .disabled(!next_enabled)
-                    .on_activate(next_on_activate.clone())
-                    .into_element(cx),
-            ]
-        },
-    )
+    ui::h_flex(move |cx| {
+        vec![
+            text.into_element(cx),
+            cx.spacer(fret_ui::element::SpacerProps::default()),
+            shadcn::Button::new("Previous")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Sm)
+                .disabled(!prev_enabled)
+                .on_activate(prev_on_activate.clone())
+                .into_element(cx),
+            shadcn::Button::new("Next")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Sm)
+                .disabled(!next_enabled)
+                .on_activate(next_on_activate.clone())
+                .into_element(cx),
+        ]
+    })
+    .layout(LayoutRefinement::default().w_full())
+    .items_center()
+    .gap(Space::N2)
+    .into_element(cx)
 }
 
 pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
@@ -340,28 +334,25 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
                         None => "lucide.chevrons-up-down",
                     };
 
-                    let header = stack::hstack(
-                        cx,
-                        stack::HStackProps::default()
-                            .layout(LayoutRefinement::default().w_full().h_full())
-                            .justify_end()
-                            .items_center()
-                            .gap_x(Space::N2),
-                        move |cx| {
-                            vec![
-                                ui::label(Arc::<str>::from("Amount"))
-                                    .text_sm()
-                                    .nowrap()
-                                    .into_element(cx),
-                                fret_ui_kit::declarative::icon::icon_with(
-                                    cx,
-                                    fret_icons::IconId::new_static(icon_id),
-                                    Some(Px(16.0)),
-                                    Some(ColorRef::Color(sort_fg)),
-                                ),
-                            ]
-                        },
-                    );
+                    let header = ui::h_flex(move |cx| {
+                        vec![
+                            ui::label(Arc::<str>::from("Amount"))
+                                .text_sm()
+                                .nowrap()
+                                .into_element(cx),
+                            fret_ui_kit::declarative::icon::icon_with(
+                                cx,
+                                fret_icons::IconId::new_static(icon_id),
+                                Some(Px(16.0)),
+                                Some(ColorRef::Color(sort_fg)),
+                            ),
+                        ]
+                    })
+                    .layout(LayoutRefinement::default().w_full().h_full())
+                    .justify_end()
+                    .items_center()
+                    .gap(Space::N2)
+                    .into_element(cx);
 
                     return Some(vec![header]);
                 }
@@ -538,13 +529,10 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
 
     let controls = bottom_controls(cx, state, output).test_id("ui-gallery-data-table-basic-footer");
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N4)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full().min_w_0()),
-        move |_cx| vec![toolbar, table, controls],
-    )
+    ui::v_flex(move |_cx| vec![toolbar, table, controls])
+        .gap(Space::N4)
+        .items_start()
+        .layout(LayoutRefinement::default().w_full().min_w_0())
+        .into_element(cx)
 }
 // endregion: example

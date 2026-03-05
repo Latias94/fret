@@ -4,9 +4,9 @@ use fret_core::Px;
 use fret_ui::action::OnActivate;
 use fret_ui::element::{AnyElement, ContainerProps};
 use fret_ui::{ElementContext, Invalidation, UiHost};
-use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::{LayoutRefinement, Space};
+use fret_ui_kit::ui;
+use fret_ui_kit::{Items, LayoutRefinement, Space};
 
 use fret_markdown::BlockId;
 use fret_ui_shadcn::{Button, ButtonSize, ButtonVariant};
@@ -240,11 +240,10 @@ impl MessageResponse {
 
                 let expand = btn.into_element(cx);
 
-                stack::hstack(
-                    cx,
-                    stack::HStackProps::default().gap(Space::N2).items_center(),
-                    move |_cx| vec![copy, expand],
-                )
+                ui::h_row(move |_cx| vec![copy, expand])
+                    .gap(Space::N2)
+                    .items(Items::Center)
+                    .into_element(cx)
             }));
         }
 

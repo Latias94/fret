@@ -20,8 +20,8 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
     use fret_ui::action::OnActivate;
     use fret_ui::element::{LayoutStyle, SemanticsProps};
     use fret_ui::retained_bridge::RetainedSubtreeProps;
-    use fret_ui_kit::declarative::stack;
     use fret_ui_kit::declarative::style as decl_style;
+    use fret_ui_kit::ui;
     use fret_ui_kit::{
         ChromeRefinement, ColorFallback, ColorRef, Items, LayoutRefinement, MetricRef, Radius,
         Space,
@@ -419,14 +419,11 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
     .test_id("ui-ai-workflow-node-graph-demo-toolbar")
     .into_element(cx);
 
-    let overlay_panel = ui_ai::WorkflowPanel::new([stack::hstack(
-        cx,
-        stack::HStackProps::default()
-            .gap(Space::N3)
-            .items(Items::Center)
-            .layout(LayoutRefinement::default().w_full().min_w_0()),
-        move |_cx| vec![controls, toolbar],
-    )])
+    let overlay_panel = ui_ai::WorkflowPanel::new([ui::h_flex(move |_cx| vec![controls, toolbar])
+        .gap(Space::N3)
+        .items(Items::Center)
+        .layout(LayoutRefinement::default().w_full().min_w_0())
+        .into_element(cx)])
     .test_id("ui-ai-workflow-node-graph-demo-overlay-panel")
     .refine_layout(
         LayoutRefinement::default()
@@ -490,19 +487,16 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
         vec![subtree, overlay_panel]
     });
 
-    let body = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N3)
-            .layout(LayoutRefinement::default().w_full().min_w_0()),
-        move |cx| {
-            vec![
-                cx.text("Workflow editor (engine-backed)"),
-                cx.text("Uses fret-node for graph interaction + fret-ui-ai for chrome wrappers."),
-                stage,
-            ]
-        },
-    );
+    let body = ui::v_flex(move |cx| {
+        vec![
+            cx.text("Workflow editor (engine-backed)"),
+            cx.text("Uses fret-node for graph interaction + fret-ui-ai for chrome wrappers."),
+            stage,
+        ]
+    })
+    .gap(Space::N3)
+    .layout(LayoutRefinement::default().w_full().min_w_0())
+    .into_element(cx);
 
     let panel = ui_ai::WorkflowPanel::new([body])
         .test_id("ui-ai-workflow-node-graph-demo-root")

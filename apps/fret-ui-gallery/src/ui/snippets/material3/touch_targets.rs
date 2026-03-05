@@ -208,21 +208,17 @@ pub fn render<H: UiHost>(
         })
     };
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .layout(LayoutRefinement::default().w_full().min_w_0())
-            .gap(Space::N3)
-            .items_start(),
-        |cx| {
+    ui::v_flex(|cx| {
             vec![
                 cx.text(
                     "Touch target overlay legend: green=bounds, yellow=min 48x48, cyan=token chrome (if shown).",
                 ),
                 grid,
             ]
-        },
-    )
+        })
+            .layout(LayoutRefinement::default().w_full().min_w_0())
+            .gap(Space::N3)
+            .items_start().into_element(cx)
     .into()
 }
 

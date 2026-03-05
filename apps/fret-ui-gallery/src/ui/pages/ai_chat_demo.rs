@@ -21,5 +21,5 @@ pub(super) fn preview_ai_chat_demo(
         ],
     );
 
-    vec![body.test_id("ui-gallery-page-ai-chat-demo")]
+    vec![body]
 }

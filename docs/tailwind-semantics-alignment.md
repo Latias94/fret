@@ -123,9 +123,9 @@ This table is intentionally “semantic”, not a 1:1 class inventory.
   - **Inputs**: padding is truly per-edge (Tailwind-like) in both retained and declarative paths,
     because inputs frequently reserve space for leading/trailing icons.
 - `gap-*` → container layout (`FlexProps.gap`, `GridProps.gap`) via component-layer helpers
-- `gap-x-*` / `gap-y-*` → component-layer stack helpers:
-  - `HStackProps::gap_x(Space)` (horizontal stacks)
-  - `VStackProps::gap_y(Space)` (vertical stacks)
+- `gap-x-*` → horizontal row/flex containers: `ui::h_row(...).gap(Space)` / `ui::h_flex(...).gap(Space)`
+- `gap-y-*` → vertical stack/flex containers: `ui::v_stack(...).gap(Space)` / `ui::v_flex(...).gap(Space)`
+  - Note: flex containers use a single `gap` value along the main axis; use `Grid` when you need 2D gaps.
 - `m-*`, `mx-*`, `my-*`, `mt/mr/mb/ml-*` → `LayoutRefinement` (`m/mx/my/mt/mr/mb/ml`)
 - `m-auto`, `mx-auto`, `my-auto`, `mt-auto`, … → `LayoutRefinement::{m_auto,mx_auto,my_auto,mt_auto,...}`
 - `-m-*`, `-mx-*`, `-mt-*`, … → `LayoutRefinement::{m_neg,mx_neg,mt_neg,...}`

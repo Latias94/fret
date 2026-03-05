@@ -17,10 +17,10 @@ use fret_ui::action::ActionCx;
 use fret_ui::element::{AnyElement, SemanticsDecoration, TextProps};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::controllable_state;
-use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::visually_hidden::visually_hidden;
 use fret_ui_kit::typography;
-use fret_ui_kit::{ChromeRefinement, LayoutRefinement, Space};
+use fret_ui_kit::ui;
+use fret_ui_kit::{ChromeRefinement, Items, LayoutRefinement, Space};
 use fret_ui_shadcn::{
     Button, ButtonVariant, Command, CommandInput, CommandItem, CommandList, Dialog, DialogContent,
     DialogTitle,
@@ -539,17 +539,14 @@ impl VoiceSelectorList {
                     })
                 });
 
-                stack::vstack(
-                    cx,
-                    stack::VStackProps::default()
-                        .layout(LayoutRefinement::default().w_full().min_w_0())
-                        .gap(Space::N1)
-                        .items_start(),
-                    move |_cx| match desc_el {
-                        Some(desc_el) => vec![name_el, desc_el],
-                        None => vec![name_el],
-                    },
-                )
+                ui::v_stack(move |_cx| match desc_el {
+                    Some(desc_el) => vec![name_el, desc_el],
+                    None => vec![name_el],
+                })
+                .layout(LayoutRefinement::default().w_full().min_w_0())
+                .gap(Space::N1)
+                .items(Items::Start)
+                .into_element(cx)
             };
 
             let mut item = CommandItem::new(voice.name.clone())

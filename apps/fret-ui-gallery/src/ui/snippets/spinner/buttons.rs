@@ -1,52 +1,36 @@
 pub const SOURCE: &str = include_str!("buttons.rs");
 
 // region: example
-use fret_ui::element::SemanticsDecoration;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let spinner = |cx: &mut ElementContext<'_, H>| shadcn::Spinner::new().into_element(cx);
+    let button = |cx: &mut ElementContext<'_, H>,
+                  label: &'static str,
+                  variant: Option<shadcn::ButtonVariant>| {
+        let mut btn = shadcn::Button::new(label)
+            .disabled(true)
+            .size(shadcn::ButtonSize::Sm);
+        if let Some(variant) = variant {
+            btn = btn.variant(variant);
+        }
+        btn.children([
+            shadcn::Spinner::new().into_element(cx),
+            ui::text(label).font_medium().nowrap().into_element(cx),
+        ])
+        .into_element(cx)
+    };
 
-    stack::hstack(
-        cx,
-        stack::HStackProps::default()
-            .gap(Space::N2)
-            .items_center()
-            .layout(LayoutRefinement::default().w_full().min_w_0()),
-        |cx| {
-            vec![
-                shadcn::Button::new("Submit")
-                    .children([spinner(cx)])
-                    .into_element(cx),
-                shadcn::Button::new("Disabled")
-                    .disabled(true)
-                    .children([spinner(cx)])
-                    .into_element(cx),
-                shadcn::Button::new("Small")
-                    .size(shadcn::ButtonSize::Sm)
-                    .children([spinner(cx)])
-                    .into_element(cx),
-                shadcn::Button::new("Outline")
-                    .variant(shadcn::ButtonVariant::Outline)
-                    .disabled(true)
-                    .children([spinner(cx)])
-                    .into_element(cx),
-                shadcn::Button::new("")
-                    .variant(shadcn::ButtonVariant::Outline)
-                    .size(shadcn::ButtonSize::Icon)
-                    .disabled(true)
-                    .children([spinner(cx)])
-                    .into_element(cx)
-                    .attach_semantics(SemanticsDecoration::default().label("Loading..."))
-                    .test_id("ui-gallery-spinner-button-icon-only"),
-                shadcn::Button::new("Remove")
-                    .variant(shadcn::ButtonVariant::Destructive)
-                    .disabled(true)
-                    .children([spinner(cx)])
-                    .into_element(cx),
-            ]
-        },
-    )
+    ui::v_flex(|cx| {
+        vec![
+            button(cx, "Loading...", None),
+            button(cx, "Please wait", Some(shadcn::ButtonVariant::Outline)),
+            button(cx, "Processing", Some(shadcn::ButtonVariant::Secondary)),
+        ]
+    })
+    .gap(Space::N4)
+    .items_center()
+    .layout(LayoutRefinement::default().w_full().min_w_0())
+    .into_element(cx)
     .test_id("ui-gallery-spinner-buttons")
 }
 

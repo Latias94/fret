@@ -29,10 +29,9 @@ use fret_ui_kit::declarative::motion_springs::{
 use fret_ui_kit::declarative::motion_value::{
     MotionKickF32, MotionToSpecF32, MotionValueF32Update, SpringSpecF32, drive_motion_value_f32,
 };
-use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::dialog as radix_dialog;
-use fret_ui_kit::{ChromeRefinement, ColorRef, Items, LayoutRefinement, Space};
+use fret_ui_kit::{ChromeRefinement, ColorRef, Items, LayoutRefinement, Space, ui};
 
 type OnOpenChange = Arc<dyn Fn(bool) + Send + Sync + 'static>;
 
@@ -311,7 +310,7 @@ impl DrawerContent {
                     },
                     ..Default::default()
                 },
-                stack::HStackProps::default()
+                shadcn_layout::HStackProps::default()
                     .gap(Space::N0)
                     .justify_center()
                     .items_center(),
@@ -325,14 +324,13 @@ impl DrawerContent {
             DrawerSide::Top | DrawerSide::Bottom => LayoutRefinement::default().w_full(),
         };
         let content = cx.container(props, move |cx| {
-            vec![stack::vstack(
-                cx,
-                stack::VStackProps::default()
+            vec![
+                ui::v_stack(move |_cx| rows)
                     .gap(Space::N0)
                     .layout(stack_layout)
-                    .items_stretch(),
-                move |_cx| rows,
-            )]
+                    .items_stretch()
+                    .into_element(cx),
+            ]
         });
 
         content.attach_semantics(SemanticsDecoration::default().role(SemanticsRole::Dialog))
@@ -367,7 +365,7 @@ impl DrawerHeader {
         shadcn_layout::container_vstack(
             cx,
             props,
-            stack::VStackProps::default()
+            shadcn_layout::VStackProps::default()
                 .gap(Space::N1)
                 .layout(LayoutRefinement::default().w_full())
                 .items(items),

@@ -75,6 +75,19 @@ fn resolve_builtin_suite_scripts(
             let scripts = expand_script_inputs(workspace_root, &inputs)?;
             (scripts, Some(BuiltinSuite::UiGallery))
         }
+        "ui-gallery-ai-checkpoint" => {
+            // Keep this suite self-contained: start the gallery directly on the Checkpoint demo
+            // page so scripts do not depend on sidebar navigation ordering/virtualization.
+            push_env_if_missing(
+                launch_env,
+                "FRET_UI_GALLERY_START_PAGE",
+                "ai_checkpoint_demo",
+            );
+            // This harness captures a screenshot as evidence; enable GPU screenshots by default.
+            push_env_if_missing(launch_env, "FRET_DIAG_GPU_SCREENSHOTS", "1");
+            let scripts = scripts_from_suite_dir("ui-gallery-ai-checkpoint")?;
+            (scripts, Some(BuiltinSuite::UiGallery))
+        }
         "ui-gallery-text-ime" => {
             let inputs = diag_suite_scripts::ui_gallery_text_ime_suite_scripts();
             let scripts = expand_script_inputs(workspace_root, &inputs)?;
@@ -454,6 +467,7 @@ pub(crate) fn cmd_suite(ctx: SuiteCmdContext) -> Result<(), String> {
         check_vlist_window_shifts_have_prepaint_actions,
         check_vlist_window_shifts_non_retained_max,
         check_vlist_window_shifts_prefetch_max,
+        check_wheel_events_max_per_frame,
         check_wheel_scroll_hit_changes_test_id,
         check_wheel_scroll_test_id,
         check_windowed_rows_offset_changes_eps: _,
@@ -1404,6 +1418,7 @@ hint: list promoted scripts via `fretboard diag list scripts --contains {name}`"
             || check_ui_gallery_code_editor_a11y_composition_wrap_scroll
             || check_ui_gallery_code_editor_a11y_composition_drag
             || check_semantics_changed_repainted
+            || check_wheel_events_max_per_frame.is_some()
             || check_wheel_scroll_test_id.is_some()
             || check_wheel_scroll_hit_changes_test_id.is_some()
             || check_prepaint_actions_min.is_some()
@@ -1533,6 +1548,10 @@ hint: list promoted scripts via `fretboard diag list scripts --contains {name}`"
                 is_ui_gallery_vlist_no_window_shifts_small_scroll_suite
                     .then_some("ui-gallery-virtual-list-row-0-label")
                     .filter(|_| check_wheel_scroll_test_id.is_none());
+            let suite_wheel_events_max_per_frame =
+                diag_policy::ui_gallery_script_requires_wheel_events_max_per_frame_gate(&src)
+                    .then_some(1u64)
+                    .filter(|_| check_wheel_events_max_per_frame.is_none());
             let suite_components_gallery_stale_paint_test_id =
                 is_components_gallery_file_tree_suite
                     .then_some("components-gallery-file-tree-root")
@@ -2026,6 +2045,9 @@ hint: list promoted scripts via `fretboard diag list scripts --contains {name}`"
             checks_for_post_run.check_ui_gallery_code_editor_a11y_composition_drag |=
                 suite_ui_gallery_code_editor_a11y_composition_drag;
 
+            checks_for_post_run.check_wheel_events_max_per_frame = checks_for_post_run
+                .check_wheel_events_max_per_frame
+                .or(suite_wheel_events_max_per_frame);
             if checks_for_post_run.check_wheel_scroll_test_id.is_none() {
                 checks_for_post_run.check_wheel_scroll_test_id =
                     suite_wheel_scroll_test_id.map(|s| s.to_string());

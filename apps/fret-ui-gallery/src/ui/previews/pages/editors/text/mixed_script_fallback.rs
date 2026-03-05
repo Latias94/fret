@@ -30,19 +30,15 @@ pub(in crate::ui) fn preview_text_mixed_script_fallback(
         }
     }
 
-    let header = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .layout(LayoutRefinement::default().w_full())
-            .gap(Space::N2),
-        |cx| {
+    let header = ui::v_flex(|cx| {
             vec![
                 cx.text("Goal: ensure mixed-script fallback stays tofu-free with bundled fonts."),
                 cx.text("Tip: set FRET_TEXT_SYSTEM_FONTS=0 to validate the deterministic no-system-fonts path on native."),
                 cx.text("This page injects the bundled default font set once, then renders a few coverage strings."),
             ]
-        },
-    );
+        })
+            .layout(LayoutRefinement::default().w_full())
+            .gap(Space::N2).into_element(cx);
 
     fn sample_row(
         cx: &mut ElementContext<'_, App>,
@@ -69,13 +65,10 @@ pub(in crate::ui) fn preview_text_mixed_script_fallback(
             })
             .test_id(test_id);
 
-        stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .layout(LayoutRefinement::default().w_full())
-                .gap(Space::N1),
-            |_cx| vec![label, text],
-        )
+        ui::v_flex(|_cx| vec![label, text])
+            .layout(LayoutRefinement::default().w_full())
+            .gap(Space::N1)
+            .into_element(cx)
     }
 
     let panel = cx
@@ -119,13 +112,12 @@ pub(in crate::ui) fn preview_text_mixed_script_fallback(
                     "ui-gallery-text-mixed-script-fallback-mixed",
                 );
 
-                vec![stack::vstack(
-                    cx,
-                    stack::VStackProps::default()
+                vec![
+                    ui::v_flex(|_cx| vec![latin, cjk, emoji, mixed])
                         .layout(LayoutRefinement::default().w_full())
-                        .gap(Space::N4),
-                    |_cx| vec![latin, cjk, emoji, mixed],
-                )]
+                        .gap(Space::N4)
+                        .into_element(cx),
+                ]
             },
         )
         .attach_semantics(

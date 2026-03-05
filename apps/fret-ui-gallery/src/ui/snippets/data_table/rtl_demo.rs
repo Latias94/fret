@@ -75,12 +75,12 @@ const LANG_AR: Lang = Lang {
 
 fn align_inline_start(cx: &mut ElementContext<'_, App>, child: AnyElement) -> AnyElement {
     let dir = shadcn::use_direction(cx, None);
-    let mut props = stack::HStackProps::default().layout(LayoutRefinement::default().w_full());
-    props = match dir {
-        shadcn::LayoutDirection::Rtl => props.justify_end(),
-        shadcn::LayoutDirection::Ltr => props.justify_start(),
+    let row = ui::h_flex(move |_cx| [child]).layout(LayoutRefinement::default().w_full());
+    let row = match dir {
+        shadcn::LayoutDirection::Rtl => row.justify_end(),
+        shadcn::LayoutDirection::Ltr => row.justify_start(),
     };
-    stack::hstack(cx, props, move |_cx| [child])
+    row.into_element(cx)
 }
 
 fn bottom_controls(
@@ -132,31 +132,28 @@ fn bottom_controls(
         text = text.text_color(ColorRef::Color(color));
     }
 
-    stack::hstack(
-        cx,
-        stack::HStackProps::default()
-            .layout(LayoutRefinement::default().w_full())
-            .items_center()
-            .gap_x(Space::N2),
-        move |cx| {
-            vec![
-                text.into_element(cx),
-                cx.spacer(fret_ui::element::SpacerProps::default()),
-                shadcn::Button::new(lang.previous)
-                    .variant(shadcn::ButtonVariant::Outline)
-                    .size(shadcn::ButtonSize::Sm)
-                    .disabled(!prev_enabled)
-                    .on_activate(prev_on_activate.clone())
-                    .into_element(cx),
-                shadcn::Button::new(lang.next)
-                    .variant(shadcn::ButtonVariant::Outline)
-                    .size(shadcn::ButtonSize::Sm)
-                    .disabled(!next_enabled)
-                    .on_activate(next_on_activate.clone())
-                    .into_element(cx),
-            ]
-        },
-    )
+    ui::h_flex(move |cx| {
+        vec![
+            text.into_element(cx),
+            cx.spacer(fret_ui::element::SpacerProps::default()),
+            shadcn::Button::new(lang.previous)
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Sm)
+                .disabled(!prev_enabled)
+                .on_activate(prev_on_activate.clone())
+                .into_element(cx),
+            shadcn::Button::new(lang.next)
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Sm)
+                .disabled(!next_enabled)
+                .on_activate(next_on_activate.clone())
+                .into_element(cx),
+        ]
+    })
+    .layout(LayoutRefinement::default().w_full())
+    .items_center()
+    .gap(Space::N2)
+    .into_element(cx)
 }
 
 pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
@@ -275,23 +272,20 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
     let is_rtl = cx.watch_model(&dir_rtl).layout().copied().unwrap_or(true);
     let lang = if is_rtl { LANG_AR } else { LANG_EN };
 
-    let direction_toggle = stack::hstack(
-        cx,
-        stack::HStackProps::default()
-            .gap_x(Space::N3)
-            .items_center(),
-        move |cx| {
-            vec![
-                ui::label(Arc::<str>::from("RTL"))
-                    .text_sm()
-                    .into_element(cx),
-                shadcn::Switch::new(dir_rtl.clone())
-                    .a11y_label("Toggle RTL")
-                    .into_element(cx)
-                    .test_id("ui-gallery-data-table-rtl-toggle"),
-            ]
-        },
-    );
+    let direction_toggle = ui::h_row(move |cx| {
+        vec![
+            ui::label(Arc::<str>::from("RTL"))
+                .text_sm()
+                .into_element(cx),
+            shadcn::Switch::new(dir_rtl.clone())
+                .a11y_label("Toggle RTL")
+                .into_element(cx)
+                .test_id("ui-gallery-data-table-rtl-toggle"),
+        ]
+    })
+    .gap(Space::N3)
+    .items_center()
+    .into_element(cx);
 
     shadcn::DirectionProvider::new(lang.dir).into_element(cx, move |cx| {
         let toolbar = shadcn::DataTableToolbar::new(state.clone(), assets.1.clone(), |col| {
@@ -415,14 +409,10 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
 
         let controls = bottom_controls(cx, state, output, lang).test_id("ui-gallery-data-table-rtl-footer");
 
-        stack::vstack(
-            cx,
-            stack::VStackProps::default()
+        ui::v_flex(move |_cx| vec![direction_toggle, toolbar, table, controls])
                 .gap(Space::N4)
                 .items_start()
-                .layout(LayoutRefinement::default().w_full().min_w_0()),
-            move |_cx| vec![direction_toggle, toolbar, table, controls],
-        )
+                .layout(LayoutRefinement::default().w_full().min_w_0()).into_element(cx)
         .test_id("ui-gallery-data-table-rtl-root")
     })
 }

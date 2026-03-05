@@ -53,14 +53,11 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
         .into_element(cx)
         .test_id("ui-gallery-item-group");
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N6)
-            .items_start()
-            .layout(max_w_md),
-        |_cx| vec![group],
-    )
-    .test_id("ui-gallery-item-group-wrapper")
+    ui::v_stack(|_cx| vec![group])
+        .gap(Space::N6)
+        .items_start()
+        .layout(max_w_md)
+        .into_element(cx)
+        .test_id("ui-gallery-item-group-wrapper")
 }
 // endregion: example

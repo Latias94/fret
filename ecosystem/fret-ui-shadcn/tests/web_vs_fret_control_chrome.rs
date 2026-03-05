@@ -1,14 +1,14 @@
 use fret_app::App;
 use fret_core::{
-    AppWindowId, Color, Corners, Event, KeyCode, Modifiers, Paint, Point, Px, Rect, Scene, SceneOp,
-    SemanticsRole, Size as CoreSize,
+    AppWindowId, Color, Corners, Event, FrameId, KeyCode, Modifiers, Paint, Point, Px, Rect, Scene,
+    SceneOp, SemanticsRole, Size as CoreSize,
 };
 use fret_icons::ids;
 use fret_ui::tree::UiTree;
 use fret_ui_kit::ChromeRefinement;
 use fret_ui_kit::Space;
 use fret_ui_kit::declarative::icon as decl_icon;
-use fret_ui_kit::declarative::stack as decl_stack;
+use fret_ui_kit::ui as decl_stack;
 use std::sync::Arc;
 use time::{Date, Month};
 
@@ -277,18 +277,19 @@ fn setup_app_with_shadcn_theme(app: &mut App) {
 }
 
 fn render_and_paint(
-    render: impl FnOnce(&mut fret_ui::ElementContext<'_, App>) -> Vec<fret_ui::element::AnyElement>,
+    render: impl Fn(&mut fret_ui::ElementContext<'_, App>) -> Vec<fret_ui::element::AnyElement>,
 ) -> (fret_core::SemanticsSnapshot, Scene) {
     render_and_paint_in_bounds(CoreSize::new(Px(1024.0), Px(768.0)), render)
 }
 
 fn render_and_paint_in_bounds(
     size: CoreSize,
-    render: impl FnOnce(&mut fret_ui::ElementContext<'_, App>) -> Vec<fret_ui::element::AnyElement>,
+    render: impl Fn(&mut fret_ui::ElementContext<'_, App>) -> Vec<fret_ui::element::AnyElement>,
 ) -> (fret_core::SemanticsSnapshot, Scene) {
     let window = AppWindowId::default();
     let mut app = App::new();
     setup_app_with_shadcn_theme(&mut app);
+    app.set_frame_id(FrameId(1));
 
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
@@ -303,7 +304,7 @@ fn render_and_paint_in_bounds(
         window,
         bounds,
         "web-vs-fret-control-chrome",
-        render,
+        |cx| render(cx),
     );
     ui.set_root(root);
     ui.request_semantics_snapshot();
@@ -319,12 +320,13 @@ fn render_and_paint_in_bounds(
 
 fn render_and_paint_with_focus_in_bounds(
     size: CoreSize,
-    render: impl FnOnce(&mut fret_ui::ElementContext<'_, App>) -> Vec<fret_ui::element::AnyElement>,
+    render: impl Fn(&mut fret_ui::ElementContext<'_, App>) -> Vec<fret_ui::element::AnyElement>,
     focus: impl FnOnce(&fret_core::SemanticsSnapshot) -> fret_core::NodeId,
 ) -> (fret_core::SemanticsSnapshot, Scene) {
     let window = AppWindowId::default();
     let mut app = App::new();
     setup_app_with_shadcn_theme(&mut app);
+    app.set_frame_id(FrameId(1));
 
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
@@ -339,7 +341,7 @@ fn render_and_paint_with_focus_in_bounds(
         window,
         bounds,
         "web-vs-fret-control-chrome",
-        render,
+        |cx| render(cx),
     );
     ui.set_root(root);
     ui.request_semantics_snapshot();
@@ -360,8 +362,32 @@ fn render_and_paint_with_focus_in_bounds(
     );
     ui.set_focus(Some(focus_node));
 
+    // Some chrome (e.g. shadcn `transition-[color,box-shadow]`) is time-based. Headless tests need
+    // deterministic frame progression so tweens can settle to their target values.
+    let settle_frames = 12_u64;
     let mut scene = Scene::default();
-    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+    let mut snap = snap;
+    for i in 0..settle_frames {
+        let frame_id = FrameId(2 + i);
+        app.set_frame_id(frame_id);
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "web-vs-fret-control-chrome",
+            |cx| render(cx),
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
+
+        scene = Scene::default();
+        ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+    }
 
     (snap, scene)
 }
@@ -1625,19 +1651,18 @@ fn web_vs_fret_button_group_size_geometry_and_chrome_match() {
         ])
         .a11y_label("ButtonGroupSizeLg");
 
-        vec![decl_stack::vstack(
-            cx,
-            decl_stack::VStackProps::default()
-                .gap(Space::N8)
-                .items_start(),
-            move |cx| {
+        vec![
+            ui::v_stack(move |cx| {
                 vec![
                     group_sm.into_element(cx),
                     group_md.into_element(cx),
                     group_lg.into_element(cx),
                 ]
-            },
-        )]
+            })
+            .gap(Space::N8)
+            .items_start()
+            .into_element(cx),
+        ]
     });
 
     let group_sm = snap

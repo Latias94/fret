@@ -45,19 +45,15 @@ pub(in crate::ui) fn preview_text_outline_stroke(
         }
     }
 
-    let header = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .layout(LayoutRefinement::default().w_full())
-            .gap(Space::N2),
-        |cx| {
+    let header = ui::v_flex(|cx| {
             vec![
                 cx.text("Goal: exercise `SceneOp::Text.outline: Option<TextOutlineV1>` end-to-end."),
                 cx.text("This page draws the same text twice: fill-only vs fill+outline, on a high-contrast backdrop."),
                 cx.text("Tip: set FRET_TEXT_SYSTEM_FONTS=0 to validate deterministic bundled-font behavior."),
             ]
-        },
-    );
+        })
+            .layout(LayoutRefinement::default().w_full())
+            .gap(Space::N2).into_element(cx);
 
     fn toggle_button(
         cx: &mut ElementContext<'_, App>,
@@ -107,14 +103,11 @@ pub(in crate::ui) fn preview_text_outline_stroke(
             .into_element(cx)
             .test_id("ui-gallery-text-outline-stroke-width");
 
-        stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .layout(LayoutRefinement::default().w_full())
-                .gap(Space::N2)
-                .items_center(),
-            |_cx| vec![outline_btn, width_btn],
-        )
+        ui::h_flex(|_cx| vec![outline_btn, width_btn])
+            .layout(LayoutRefinement::default().w_full())
+            .gap(Space::N2)
+            .items_center()
+            .into_element(cx)
     };
 
     let panel = cx.container(

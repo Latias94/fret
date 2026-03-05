@@ -545,7 +545,7 @@ impl AlertDialogContent {
                 shadow: Some(shadow),
                 ..props
             },
-            fret_ui_kit::declarative::stack::VStackProps::default()
+            shadcn_layout::VStackProps::default()
                 .gap(Space::N4)
                 .layout(LayoutRefinement::default().w_full())
                 .items_stretch(),
@@ -587,8 +587,6 @@ impl AlertDialogHeader {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        use fret_ui_kit::declarative::stack;
-
         let content_max_w = crate::a11y_modal::modal_content_max_width_for_current_scope(cx.app);
         let content_is_sm = content_max_w.is_some_and(|w| (w.0 - 320.0).abs() < 0.5 || w.0 < 320.0);
 
@@ -614,7 +612,7 @@ impl AlertDialogHeader {
             return shadcn_layout::container_vstack(
                 cx,
                 props,
-                stack::VStackProps::default()
+                shadcn_layout::VStackProps::default()
                     .gap(Space::N1p5)
                     .layout(LayoutRefinement::default().w_full())
                     .items(if left_aligned {
@@ -634,7 +632,7 @@ impl AlertDialogHeader {
                     ChromeRefinement::default(),
                     LayoutRefinement::default().w_full().min_w_0(),
                 ),
-                stack::VStackProps::default()
+                shadcn_layout::VStackProps::default()
                     .gap(Space::N1p5)
                     .layout(LayoutRefinement::default().w_full().min_w_0())
                     .items_stretch(),
@@ -644,7 +642,7 @@ impl AlertDialogHeader {
             shadcn_layout::container_hstack(
                 cx,
                 props,
-                stack::HStackProps::default()
+                shadcn_layout::HStackProps::default()
                     .gap(Space::N6)
                     .layout(LayoutRefinement::default().w_full())
                     .items_start(),
@@ -656,7 +654,7 @@ impl AlertDialogHeader {
             shadcn_layout::container_vstack(
                 cx,
                 props,
-                stack::VStackProps::default()
+                shadcn_layout::VStackProps::default()
                     .gap(Space::N1p5)
                     .layout(LayoutRefinement::default().w_full())
                     .items_center(),
@@ -695,8 +693,6 @@ impl AlertDialogMedia {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        use fret_ui_kit::declarative::stack;
-
         let theme = Theme::global(&*cx.app);
         let bg = theme
             .color_by_key("muted")
@@ -718,7 +714,7 @@ impl AlertDialogMedia {
         shadcn_layout::container_hstack(
             cx,
             props,
-            stack::HStackProps::default()
+            shadcn_layout::HStackProps::default()
                 .layout(LayoutRefinement::default().w_full().h_full())
                 .justify_center()
                 .items_center(),
@@ -741,8 +737,6 @@ impl AlertDialogFooter {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        use fret_ui_kit::declarative::stack;
-
         let children = self.children;
         let content_max_w = crate::a11y_modal::modal_content_max_width_for_current_scope(cx.app);
         let content_is_sm = content_max_w.is_some_and(|w| (w.0 - 320.0).abs() < 0.5 || w.0 < 320.0);
@@ -767,7 +761,7 @@ impl AlertDialogFooter {
             shadcn_layout::container_hstack(
                 cx,
                 props,
-                stack::HStackProps::default()
+                shadcn_layout::HStackProps::default()
                     .gap(Space::N2)
                     .layout(LayoutRefinement::default().w_full())
                     .justify_end()
@@ -797,7 +791,7 @@ impl AlertDialogFooter {
             shadcn_layout::container_hstack(
                 cx,
                 props,
-                stack::HStackProps::default()
+                shadcn_layout::HStackProps::default()
                     .gap(Space::N2)
                     .layout(LayoutRefinement::default().w_full())
                     .items_stretch(),
@@ -809,7 +803,7 @@ impl AlertDialogFooter {
             shadcn_layout::container_vstack(
                 cx,
                 props,
-                stack::VStackProps::default()
+                shadcn_layout::VStackProps::default()
                     .gap(Space::N2)
                     .layout(LayoutRefinement::default().w_full())
                     .items_stretch(),

@@ -1,9 +1,13 @@
 use std::sync::Arc;
 
+use fret_core::{Corners, Edges, Px};
+use fret_icons::IconId;
 use fret_ui::action::OnActivate;
-use fret_ui::element::AnyElement;
-use fret_ui::{ElementContext, UiHost};
-use fret_ui_kit::LayoutRefinement;
+use fret_ui::element::{AnyElement, ContainerProps};
+use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::ui;
+use fret_ui_kit::{Items, Justify, LayoutRefinement, Space};
 
 use fret_ui_shadcn::{Button, ButtonSize, ButtonVariant};
 
@@ -18,6 +22,8 @@ pub struct ConversationDownload {
     on_activate: Option<OnActivate>,
     test_id: Option<Arc<str>>,
     layout: LayoutRefinement,
+    icon: IconId,
+    show_label: bool,
 }
 
 impl std::fmt::Debug for ConversationDownload {
@@ -40,7 +46,20 @@ impl ConversationDownload {
             on_activate: None,
             test_id: None,
             layout: LayoutRefinement::default(),
+            icon: IconId::new_static("lucide.download"),
+            show_label: false,
         }
+    }
+
+    pub fn icon(mut self, icon: IconId) -> Self {
+        self.icon = icon;
+        self
+    }
+
+    /// Show a text label (instead of the default icon-only affordance).
+    pub fn show_label(mut self, show: bool) -> Self {
+        self.show_label = show;
+        self
     }
 
     pub fn disabled(mut self, disabled: bool) -> Self {
@@ -64,11 +83,22 @@ impl ConversationDownload {
     }
 
     pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let mut btn = Button::new(self.label)
-            .variant(ButtonVariant::Outline)
-            .size(ButtonSize::Sm)
-            .disabled(self.disabled)
-            .refine_layout(self.layout);
+        let theme = Theme::global(&*cx.app).clone();
+        let layout = self.layout;
+
+        let mut btn = if self.show_label {
+            Button::new(self.label.clone())
+                .size(ButtonSize::Sm)
+                .refine_layout(layout.clone())
+        } else {
+            Button::new("")
+                .a11y_label(self.label)
+                .size(ButtonSize::Icon)
+                .leading_icon(self.icon)
+                .corner_radii_override(Corners::all(Px(999.0)))
+        }
+        .variant(ButtonVariant::Outline)
+        .disabled(self.disabled);
 
         if let Some(on_activate) = self.on_activate {
             btn = btn.on_activate(on_activate);
@@ -77,6 +107,36 @@ impl ConversationDownload {
             btn = btn.test_id(test_id);
         }
 
-        btn.into_element(cx)
+        let btn = btn.into_element(cx);
+
+        if self.show_label {
+            return btn;
+        }
+
+        let overlay_layout = decl_style::layout_style(
+            &theme,
+            LayoutRefinement::default()
+                .absolute()
+                .left(Space::N0)
+                .right(Space::N0)
+                .top(Space::N4)
+                .merge(layout),
+        );
+        let pad = decl_style::space(&theme, Space::N4);
+
+        cx.container(
+            ContainerProps {
+                layout: overlay_layout,
+                padding: Edges::symmetric(pad, Px(0.0)).into(),
+                ..Default::default()
+            },
+            move |cx| {
+                vec![ui::h_row(move |_cx| vec![btn])
+                    .layout(LayoutRefinement::default().w_full())
+                    .justify(Justify::End)
+                    .items(Items::Center)
+                    .into_element(cx)]
+            },
+        )
     }
 }

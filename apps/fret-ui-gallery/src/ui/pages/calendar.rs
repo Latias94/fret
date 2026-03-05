@@ -109,5 +109,5 @@ pub(super) fn preview_calendar(
         ],
     );
 
-    vec![body.test_id("ui-gallery-page-calendar")]
+    vec![body]
 }

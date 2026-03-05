@@ -133,19 +133,16 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
         .refine_layout(LayoutRefinement::default().w_full().h_full().min_w_0())
         .into_element(cx);
 
-        stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .gap(Space::N4)
-                .items_start()
-                .layout(LayoutRefinement::default().w_full().h_px(Px(320.0))),
-            |_cx| vec![content, sidebar],
-        )
-        .attach_semantics(
-            SemanticsDecoration::default()
-                .role(fret_core::SemanticsRole::Group)
-                .test_id("ui-gallery-sidebar-rtl"),
-        )
+        ui::h_flex(|_cx| vec![content, sidebar])
+            .gap(Space::N4)
+            .items_start()
+            .layout(LayoutRefinement::default().w_full().h_px(Px(320.0)))
+            .into_element(cx)
+            .attach_semantics(
+                SemanticsDecoration::default()
+                    .role(fret_core::SemanticsRole::Group)
+                    .test_id("ui-gallery-sidebar-rtl"),
+            )
     })
 }
 

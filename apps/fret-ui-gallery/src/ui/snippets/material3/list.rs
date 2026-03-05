@@ -56,32 +56,24 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>, value: Model<Arc<str>>)
     .refine_layout(LayoutRefinement::default().flex_1().min_w_0())
     .into_element(cx);
 
-    let variants = stack::hstack(
-        cx,
-        stack::HStackProps::default()
-            .layout(LayoutRefinement::default().w_full())
-            .gap(Space::N4)
-            .items_stretch(),
-        move |_cx| [standard, expressive],
-    );
+    let variants = ui::h_flex(move |_cx| [standard, expressive])
+        .layout(LayoutRefinement::default().w_full())
+        .gap(Space::N4)
+        .items_stretch()
+        .into_element(cx);
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .layout(LayoutRefinement::default().w_full().min_w_0())
-            .gap(Space::N3)
-            .items_start(),
-        |cx| {
-            vec![
-                cx.text(
-                    "Material 3 List: roving focus (Up/Down/Home/End) + selection follows focus.",
-                ),
-                cx.text("Compare Standard vs Expressive via subtree override (shape + icon size)."),
-                variants,
-                cx.text(format!("value={}", current.as_ref())),
-            ]
-        },
-    )
+    ui::v_flex(|cx| {
+        vec![
+            cx.text("Material 3 List: roving focus (Up/Down/Home/End) + selection follows focus."),
+            cx.text("Compare Standard vs Expressive via subtree override (shape + icon size)."),
+            variants,
+            cx.text(format!("value={}", current.as_ref())),
+        ]
+    })
+    .layout(LayoutRefinement::default().w_full().min_w_0())
+    .gap(Space::N3)
+    .items_start()
+    .into_element(cx)
     .into()
 }
 

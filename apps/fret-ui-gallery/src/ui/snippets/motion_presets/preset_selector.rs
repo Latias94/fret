@@ -44,21 +44,17 @@ pub fn render(
             .into_element(cx),
         ])
         .into_element(cx),
-        shadcn::CardContent::new([stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .layout(LayoutRefinement::default().w_full())
-                .gap(Space::N4)
-                .items_center(),
-            move |cx| {
+        shadcn::CardContent::new([ui::h_flex(move |cx| {
                 vec![
                     select,
                     shadcn::Badge::new(format!("active: {}", preset.as_ref()))
                         .variant(shadcn::BadgeVariant::Secondary)
                         .into_element(cx),
                 ]
-            },
-        )])
+            })
+                .layout(LayoutRefinement::default().w_full())
+                .gap(Space::N4)
+                .items_center().into_element(cx)])
         .into_element(cx),
     ])
     .refine_layout(LayoutRefinement::default().w_full().max_w(Px(760.0)).min_w_0())

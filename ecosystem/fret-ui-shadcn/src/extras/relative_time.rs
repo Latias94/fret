@@ -9,7 +9,6 @@ use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::controllable_state::use_controllable_model;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::scheduling;
-use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, Space, ui};
 use time::{OffsetDateTime, UtcOffset};
@@ -102,13 +101,10 @@ impl RelativeTime {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let layout = self.layout;
         let el = match self.kind {
-            RelativeTimeKind::StaticChildren(children) => stack::vstack(
-                cx,
-                stack::VStackProps::default()
-                    .gap_y(Space::N2)
-                    .layout(layout),
-                |_cx| children,
-            ),
+            RelativeTimeKind::StaticChildren(children) => ui::v_stack(|_cx| children)
+                .gap(Space::N2)
+                .layout(layout)
+                .into_element(cx),
             RelativeTimeKind::Clock(clock) => clock.into_element(cx, layout),
         };
         attach_test_id(
@@ -159,32 +155,26 @@ impl RelativeTimeZone {
         let date = self.date.clone();
         let time = self.time.clone();
 
-        let left = stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .items_center()
-                .gap_x(Space::N1p5)
-                .layout(LayoutRefinement::default().min_w_0()),
-            |cx| {
-                vec![
-                    RelativeTimeZoneLabel::new(self.label.clone()).into_element(cx),
-                    RelativeTimeZoneDate::new(self.date.clone()).into_element(cx),
-                ]
-            },
-        );
+        let left = ui::h_row(|cx| {
+            vec![
+                RelativeTimeZoneLabel::new(self.label.clone()).into_element(cx),
+                RelativeTimeZoneDate::new(self.date.clone()).into_element(cx),
+            ]
+        })
+        .items_center()
+        .gap(Space::N1p5)
+        .layout(LayoutRefinement::default().min_w_0())
+        .into_element(cx);
         let right = RelativeTimeZoneDisplay::new(self.time)
             .muted(true)
             .into_element(cx);
 
-        let el = stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .justify_between()
-                .items_center()
-                .gap_x(Space::N1p5)
-                .layout(LayoutRefinement::default().min_w_0().merge(self.layout)),
-            |_cx| vec![left, right],
-        );
+        let el = ui::h_row(|_cx| vec![left, right])
+            .justify_between()
+            .items_center()
+            .gap(Space::N1p5)
+            .layout(LayoutRefinement::default().min_w_0().merge(self.layout))
+            .into_element(cx);
 
         let el = attach_test_id(
             el,
@@ -329,13 +319,10 @@ impl RelativeTimeClock {
                     .push(RelativeTimeZone::new(zone.label.clone(), date, time).into_element(cx));
             }
 
-            stack::vstack(
-                cx,
-                stack::VStackProps::default()
-                    .gap_y(Space::N2)
-                    .layout(layout),
-                |_cx| children,
-            )
+            ui::v_stack(|_cx| children)
+                .gap(Space::N2)
+                .layout(layout)
+                .into_element(cx)
         })
     }
 }

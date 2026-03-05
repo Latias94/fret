@@ -1,12 +1,10 @@
 use std::sync::Arc;
 
+use crate::test_id::attach_test_id;
 use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, Theme, UiHost};
-use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{ChromeRefinement, ColorFallback, ColorRef, LayoutRefinement, Radius, Space, ui};
-
-use crate::test_id::attach_test_id;
 
 /// A small "announcement chip" block inspired by Kibo's shadcn blocks.
 ///
@@ -86,13 +84,12 @@ impl Announcement {
         let children = self.children;
 
         let el = cx.container(props, move |cx| {
-            vec![stack::hstack(
-                cx,
-                stack::HStackProps::default()
+            vec![
+                ui::h_row(|_cx| children)
                     .items_center()
-                    .gap_x(Space::N2),
-                |_cx| children,
-            )]
+                    .gap(Space::N2)
+                    .into_element(cx),
+            ]
         });
 
         attach_test_id(
@@ -176,13 +173,12 @@ impl AnnouncementTitle {
         let children = self.children;
 
         let el = cx.container(props, move |cx| {
-            vec![stack::hstack(
-                cx,
-                stack::HStackProps::default()
+            vec![
+                ui::h_row(|_cx| children)
                     .items_center()
-                    .gap_x(Space::N1),
-                |_cx| children,
-            )]
+                    .gap(Space::N1)
+                    .into_element(cx),
+            ]
         });
 
         attach_test_id(

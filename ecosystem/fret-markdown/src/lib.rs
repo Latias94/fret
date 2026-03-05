@@ -18,8 +18,8 @@ use fret_ui::element::{
     SelectableTextProps, SemanticsDecoration, TextProps,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
-use fret_ui_kit::declarative::stack;
 use fret_ui_kit::typography;
+use fret_ui_kit::ui;
 use fret_ui_kit::{LayoutRefinement, Space};
 
 pub use mdstream::BlockId;
@@ -197,7 +197,6 @@ fn render_heading_inline<H: UiHost>(
 ) -> AnyElement {
     let font_size = theme.metric_token("metric.font.size");
     let line_height = theme.metric_token("metric.font.line_height");
-    let fg = theme.color_token("foreground");
     let size = match info.level {
         1 => Px(font_size.0 * 1.6),
         2 => Px(font_size.0 * 1.4),
@@ -210,7 +209,6 @@ fn render_heading_inline<H: UiHost>(
         size,
         weight: FontWeight::SEMIBOLD,
         line_height: Some(Px(line_height.0 * 1.2)),
-        color: fg,
     };
 
     let mut pieces = inline_pieces_maybe_unwrapped(events);
@@ -260,13 +258,11 @@ fn render_paragraph_inline<H: UiHost>(
 ) -> AnyElement {
     let font_size = theme.metric_token("metric.font.size");
     let line_height = theme.metric_token("metric.font.line_height");
-    let fg = theme.color_token("foreground");
     let base = InlineBaseStyle {
         font: FontId::default(),
         size: font_size,
         weight: FontWeight::NORMAL,
         line_height: Some(line_height),
-        color: fg,
     };
 
     let pieces = inline_pieces_maybe_unwrapped(events);
@@ -325,7 +321,11 @@ fn render_rich_text_inline<H: UiHost>(
         letter_spacing_em: None,
         ..Default::default()
     }));
-    props.color = Some(base.color);
+    // Prefer inheriting the foreground color (DOM `currentColor`-style) so markdown can be used
+    // inside composition-level `ForegroundScope` wrappers (e.g. muted surfaces, cards).
+    //
+    // Explicit per-span colors (links / inline code) are still encoded into `AttributedText`.
+    props.color = None;
     // Markdown prose frequently contains long tokens (URLs, paths, identifiers). Default to a
     // break-words policy to prevent horizontal overflow in narrow surfaces.
     props.wrap = TextWrap::WordBreak;
@@ -540,7 +540,6 @@ struct InlineBaseStyle {
     size: Px,
     weight: FontWeight,
     line_height: Option<Px>,
-    color: fret_core::Color,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -859,28 +858,24 @@ fn render_inline_flow_with_layout<H: UiHost>(
     }
     lines.push(cur);
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N0)
-            .layout(LayoutRefinement::default().w_full()),
-        |cx| {
-            lines
-                .into_iter()
-                .map(|line| {
-                    render_inline_line_with_layout(
-                        cx,
-                        theme,
-                        markdown_theme,
-                        components,
-                        &base,
-                        line,
-                        justify,
-                    )
-                })
-                .collect::<Vec<_>>()
-        },
-    )
+    ui::v_flex(|cx| {
+        lines
+            .into_iter()
+            .map(|line| {
+                render_inline_line_with_layout(
+                    cx,
+                    theme,
+                    markdown_theme,
+                    components,
+                    &base,
+                    line,
+                    justify,
+                )
+            })
+            .collect::<Vec<_>>()
+    })
+    .gap(Space::N0)
+    .into_element(cx)
 }
 
 fn render_inline_line_with_layout<H: UiHost>(
@@ -957,11 +952,9 @@ fn render_inline_token<H: UiHost>(
         TextSlant::Normal
     };
 
-    let color = if style.link.is_some() {
-        markdown_theme.link
-    } else {
-        base.color
-    };
+    // Prefer inheriting the foreground color for normal text runs (DOM `currentColor`-style).
+    // Keep links explicitly colored.
+    let color = style.link.is_some().then_some(markdown_theme.link);
 
     if style.code {
         let mut props = ContainerProps::default();
@@ -1039,6 +1032,7 @@ fn render_inline_token<H: UiHost>(
 
                 vec![render_inline_text_token(
                     cx,
+                    theme,
                     font,
                     size,
                     weight,
@@ -1057,6 +1051,7 @@ fn render_inline_token<H: UiHost>(
 
     render_inline_text_token(
         cx,
+        theme,
         font,
         size,
         weight,
@@ -1071,12 +1066,13 @@ fn render_inline_token<H: UiHost>(
 
 fn render_inline_text_token<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
+    theme: &Theme,
     font: FontId,
     size: Px,
     weight: FontWeight,
     slant: TextSlant,
     line_height: Option<Px>,
-    color: fret_core::Color,
+    color: Option<fret_core::Color>,
     strikethrough: bool,
     wrap: TextWrap,
     text: Arc<str>,
@@ -1094,7 +1090,7 @@ fn render_inline_text_token<H: UiHost>(
                 letter_spacing_em: None,
                 ..Default::default()
             })),
-            color: Some(color),
+            color,
             wrap,
             overflow: TextOverflow::Clip,
             align: fret_core::TextAlign::Start,
@@ -1102,6 +1098,9 @@ fn render_inline_text_token<H: UiHost>(
         });
     }
 
+    // Escape hatch: strikethrough currently uses an explicit line element, which needs a concrete
+    // color. When no explicit color was requested, fall back to the theme foreground.
+    let effective_color = color.unwrap_or_else(|| theme.color_token("foreground"));
     let effective_line_height = line_height.unwrap_or(Px(size.0.max(1.0)));
     let line_y = Px(effective_line_height.0 * 0.55);
 
@@ -1123,7 +1122,7 @@ fn render_inline_text_token<H: UiHost>(
                 letter_spacing_em: None,
                 ..Default::default()
             })),
-            color: Some(color),
+            color: Some(effective_color),
             wrap,
             overflow: TextOverflow::Clip,
             align: fret_core::TextAlign::Start,
@@ -1141,7 +1140,7 @@ fn render_inline_text_token<H: UiHost>(
             ContainerProps {
                 layout: line_layout,
                 padding: Edges::all(Px(0.0)).into(),
-                background: Some(color),
+                background: Some(effective_color),
                 border: Edges::all(Px(0.0)),
                 ..Default::default()
             },

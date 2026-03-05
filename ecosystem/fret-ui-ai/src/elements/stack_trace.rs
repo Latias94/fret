@@ -17,9 +17,9 @@ use fret_ui::element::{
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::chrome::centered_fixed_chrome_pressable_with_id_props;
 use fret_ui_kit::declarative::icon as decl_icon;
-use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::typography;
+use fret_ui_kit::ui;
 use fret_ui_kit::{
     ChromeRefinement, ColorFallback, ColorRef, Items, Justify, LayoutRefinement, MetricRef, Radius,
     Space,
@@ -395,14 +395,11 @@ impl StackTraceCopyButton {
             chrome_props.padding = Edges::all(Px(0.0)).into();
 
             (pressable, chrome_props, move |cx| {
-                let row = stack::hstack(
-                    cx,
-                    stack::HStackProps::default()
-                        .items_center()
-                        .justify_center()
-                        .layout(LayoutRefinement::default().w_full().h_full()),
-                    move |_cx| vec![icon],
-                );
+                let row = ui::h_row(move |_cx| vec![icon])
+                    .items(Items::Center)
+                    .justify(Justify::Center)
+                    .layout(LayoutRefinement::default().w_full().h_full())
+                    .into_element(cx);
 
                 let marker = copied_marker_test_id.clone().and_then(|marker_id| {
                     copied.then(|| {
@@ -693,14 +690,11 @@ impl StackTraceFrames {
                             }));
                         }
 
-                        let row = stack::hstack(
-                            cx,
-                            stack::HStackProps::default()
-                                .layout(LayoutRefinement::default().w_full().min_w_0())
-                                .gap(Space::N0)
-                                .items(Items::Center),
-                            move |_cx| parts,
-                        );
+                        let row = ui::h_row(move |_cx| parts)
+                            .layout(LayoutRefinement::default().w_full().min_w_0())
+                            .gap(Space::N0)
+                            .items(Items::Center)
+                            .into_element(cx);
 
                         let Some(prefix) = frame_test_id_prefix.as_ref() else {
                             return row;
@@ -717,13 +711,10 @@ impl StackTraceFrames {
 
         let props = decl_style::container_props(&theme, self.chrome, self.layout);
         let list = cx.container(props, move |cx| {
-            vec![stack::vstack(
-                cx,
-                stack::VStackProps::default()
-                    .layout(LayoutRefinement::default().w_full().min_w_0())
-                    .gap(Space::N1),
-                move |_cx| rows,
-            )]
+            vec![ui::v_stack(move |_cx| rows)
+                .layout(LayoutRefinement::default().w_full().min_w_0())
+                .gap(Space::N1)
+                .into_element(cx)]
         });
 
         let Some(test_id) = self.test_id else {
@@ -1005,14 +996,11 @@ impl StackTrace {
                         ink_overflow: Default::default(),
                     });
 
-                    let error_row = stack::hstack(
-                        cx,
-                        stack::HStackProps::default()
-                            .layout(LayoutRefinement::default().flex_1().min_w_0())
-                            .gap(Space::N2)
-                            .items_center(),
-                        move |_cx| vec![icon, ty, msg],
-                    );
+                    let error_row = ui::h_row(move |_cx| vec![icon, ty, msg])
+                        .layout(LayoutRefinement::default().flex_1().min_w_0())
+                        .gap(Space::N2)
+                        .items(Items::Center)
+                        .into_element(cx);
 
                     let mut copy = StackTraceCopyButton::new(trace_raw.clone());
                     if let Some(test_id) = test_id_copy_button.clone() {
@@ -1049,24 +1037,18 @@ impl StackTrace {
                         },
                     );
 
-                    let actions = stack::hstack(
-                        cx,
-                        stack::HStackProps::default()
-                            .layout(LayoutRefinement::default().flex_shrink_0())
-                            .gap(Space::N1)
-                            .items_center(),
-                        move |_cx| vec![copy, chevron],
-                    );
+                    let actions = ui::h_row(move |_cx| vec![copy, chevron])
+                        .layout(LayoutRefinement::default().flex_shrink_0())
+                        .gap(Space::N1)
+                        .items(Items::Center)
+                        .into_element(cx);
 
-                    let row = stack::hstack(
-                        cx,
-                        stack::HStackProps::default()
-                            .layout(LayoutRefinement::default().w_full().min_w_0())
-                            .gap(Space::N3)
-                            .justify(Justify::Between)
-                            .items_center(),
-                        move |_cx| vec![error_row, actions],
-                    );
+                    let row = ui::h_row(move |_cx| vec![error_row, actions])
+                        .layout(LayoutRefinement::default().w_full().min_w_0())
+                        .gap(Space::N3)
+                        .justify(Justify::Between)
+                        .items(Items::Center)
+                        .into_element(cx);
 
                     let header = cx.container(
                         decl_style::container_props(

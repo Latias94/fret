@@ -28,13 +28,10 @@ pub fn render<H: UiHost>(
         .into_element(cx)
         .test_id("ui-gallery-native-select-disabled-native");
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .items_start()
-            .layout(LayoutRefinement::default().w_full().min_w_0()),
-        |_cx| vec![select],
-    )
-    .test_id("ui-gallery-native-select-disabled")
+    ui::v_flex(|_cx| vec![select])
+        .items_start()
+        .layout(LayoutRefinement::default().w_full().min_w_0())
+        .into_element(cx)
+        .test_id("ui-gallery-native-select-disabled")
 }
 // endregion: example

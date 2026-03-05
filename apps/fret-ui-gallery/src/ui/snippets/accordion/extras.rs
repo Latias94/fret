@@ -141,24 +141,23 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             .into_element(cx)
     });
 
-    let multiple = stack::vstack(
-        cx,
-        stack::VStackProps::default().gap(Space::N3).items_start(),
-        move |cx| {
-            vec![
-                shadcn::typography::h4(cx, "Multiple"),
-                multiple,
-                shadcn::typography::h4(cx, "Disabled"),
-                disabled,
-                shadcn::typography::h4(cx, "Borders"),
-                borders,
-                shadcn::typography::h4(cx, "Card"),
-                card,
-                shadcn::typography::h4(cx, "RTL"),
-                rtl,
-            ]
-        },
-    )
+    let multiple = ui::v_stack(move |cx| {
+        vec![
+            shadcn::typography::h4(cx, "Multiple"),
+            multiple,
+            shadcn::typography::h4(cx, "Disabled"),
+            disabled,
+            shadcn::typography::h4(cx, "Borders"),
+            borders,
+            shadcn::typography::h4(cx, "Card"),
+            card,
+            shadcn::typography::h4(cx, "RTL"),
+            rtl,
+        ]
+    })
+    .gap(Space::N3)
+    .items_start()
+    .into_element(cx)
     .test_id("ui-gallery-accordion-extras");
 
     multiple

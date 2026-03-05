@@ -25,18 +25,17 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let value = value_model(cx);
     let max_w_sm = LayoutRefinement::default().w_full().max_w(Px(420.0));
 
-    let label = stack::hstack(
-        cx,
-        stack::HStackProps::default().gap(Space::N2).items_center(),
-        |cx| {
-            vec![
-                shadcn::FieldLabel::new("Webhook URL").into_element(cx),
-                shadcn::Badge::new("Recommended")
-                    .variant(shadcn::BadgeVariant::Secondary)
-                    .into_element(cx),
-            ]
-        },
-    );
+    let label = ui::h_row(|cx| {
+        vec![
+            shadcn::FieldLabel::new("Webhook URL").into_element(cx),
+            shadcn::Badge::new("Recommended")
+                .variant(shadcn::BadgeVariant::Secondary)
+                .into_element(cx),
+        ]
+    })
+    .gap(Space::N2)
+    .items_center()
+    .into_element(cx);
 
     shadcn::Field::new([
         label,

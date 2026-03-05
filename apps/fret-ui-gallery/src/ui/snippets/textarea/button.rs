@@ -20,22 +20,19 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         }
     };
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N2)
-            .layout(LayoutRefinement::default().w_full().max_w(Px(320.0))),
-        |cx| {
-            vec![
-                shadcn::Textarea::new(value)
-                    .a11y_label("Send message")
-                    .placeholder("Type your message here.")
-                    .refine_layout(LayoutRefinement::default().w_full())
-                    .into_element(cx),
-                shadcn::Button::new("Send message").into_element(cx),
-            ]
-        },
-    )
+    ui::v_flex(|cx| {
+        vec![
+            shadcn::Textarea::new(value)
+                .a11y_label("Send message")
+                .placeholder("Type your message here.")
+                .refine_layout(LayoutRefinement::default().w_full())
+                .into_element(cx),
+            shadcn::Button::new("Send message").into_element(cx),
+        ]
+    })
+    .gap(Space::N2)
+    .layout(LayoutRefinement::default().w_full().max_w(Px(320.0)))
+    .into_element(cx)
     .test_id("ui-gallery-textarea-button")
 }
 // endregion: example

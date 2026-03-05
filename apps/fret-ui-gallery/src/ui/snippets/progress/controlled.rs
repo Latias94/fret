@@ -28,35 +28,29 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
     let values = ensure_values(cx);
 
     let centered = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
-        stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .layout(LayoutRefinement::default().w_full())
-                .justify_center(),
-            move |_cx| [body],
-        )
+        ui::h_flex(move |_cx| [body])
+            .layout(LayoutRefinement::default().w_full())
+            .justify_center()
+            .into_element(cx)
     };
 
     cx.keyed("ui_gallery.progress.controlled", |cx| {
-        let body = stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .gap(Space::N4)
-                .layout(LayoutRefinement::default().w_full().max_w(Px(384.0))),
-            |cx| {
-                vec![
-                    shadcn::Progress::new_values_first(values.clone())
-                        .into_element(cx)
-                        .test_id("ui-gallery-progress-controlled-bar"),
-                    shadcn::Slider::new(values.clone())
-                        .range(0.0, 100.0)
-                        .step(1.0)
-                        .a11y_label("Progress value")
-                        .into_element(cx)
-                        .test_id("ui-gallery-progress-controlled-slider"),
-                ]
-            },
-        );
+        let body = ui::v_flex(|cx| {
+            vec![
+                shadcn::Progress::new_values_first(values.clone())
+                    .into_element(cx)
+                    .test_id("ui-gallery-progress-controlled-bar"),
+                shadcn::Slider::new(values.clone())
+                    .range(0.0, 100.0)
+                    .step(1.0)
+                    .a11y_label("Progress value")
+                    .into_element(cx)
+                    .test_id("ui-gallery-progress-controlled-slider"),
+            ]
+        })
+        .gap(Space::N4)
+        .layout(LayoutRefinement::default().w_full().max_w(Px(384.0)))
+        .into_element(cx);
 
         centered(cx, body).test_id("ui-gallery-progress-controlled")
     })

@@ -1,0 +1,82 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "ui-gallery-ai-checkpoint-restore-tooltip",
+    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
+    "tags": ["ui_gallery", "ai", "checkpoint", "tooltip", "restore", "screenshots"],
+    "target_hints": [
+      "Run `fret-ui-gallery` with `--features gallery-dev` so AI pages are wired.",
+      "Suite sets `FRET_UI_GALLERY_START_PAGE=ai_checkpoint_demo` to avoid sidebar navigation flake."
+    ]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-page-ai-checkpoint-demo" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-content-scroll" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-ai-checkpoint-trigger" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": { "kind": "test_id", "id": "ui-ai-checkpoint-row" },
+      "delta_y": -240.0,
+      "require_fully_within_window": true,
+      "padding_px": 12.0,
+      "timeout_frames": 1200
+    },
+    {
+      "type": "move_pointer",
+      "pointer_kind": "mouse",
+      "target": { "kind": "test_id", "id": "ui-ai-checkpoint-trigger" }
+    },
+    {
+      "type": "move_pointer_sweep",
+      "pointer_kind": "mouse",
+      "target": { "kind": "test_id", "id": "ui-ai-checkpoint-trigger" },
+      "delta_x": 2.0,
+      "delta_y": 0.0,
+      "steps": 2,
+      "frames_per_step": 1
+    },
+    { "type": "wait_frames", "n": 20 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-ai-checkpoint-tooltip-panel" }
+      },
+      "timeout_frames": 600
+    },
+    { "type": "click_stable", "target": { "kind": "test_id", "id": "ui-ai-checkpoint-trigger" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-ai-checkpoint-restored-marker" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "capture_bundle", "label": "ui-gallery-ai-checkpoint-restore-tooltip" },
+    { "type": "capture_screenshot", "label": "ui-gallery-ai-checkpoint-restore-tooltip" }
+  ]
+}

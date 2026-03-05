@@ -98,14 +98,11 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         ]
     });
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N2)
-            .items_center()
-            .layout(LayoutRefinement::default().w_full().min_w_0()),
-        move |_cx| vec![row1, row2],
-    )
-    .test_id("ui-gallery-badge-demo")
+    ui::v_flex(move |_cx| vec![row1, row2])
+        .gap(Space::N2)
+        .items_center()
+        .layout(LayoutRefinement::default().w_full().min_w_0())
+        .into_element(cx)
+        .test_id("ui-gallery-badge-demo")
 }
 // endregion: example

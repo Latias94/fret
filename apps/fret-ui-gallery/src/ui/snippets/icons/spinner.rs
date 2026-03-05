@@ -4,17 +4,16 @@ pub const SOURCE: &str = include_str!("spinner.rs");
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    stack::hstack(
-        cx,
-        stack::HStackProps::default().gap(Space::N2).items_center(),
-        |cx| {
-            vec![
-                shadcn::Spinner::new().into_element(cx),
-                shadcn::Spinner::new().speed(0.0).into_element(cx),
-                cx.text("Spinner (animated / static)"),
-            ]
-        },
-    )
+    ui::h_row(|cx| {
+        vec![
+            shadcn::Spinner::new().into_element(cx),
+            shadcn::Spinner::new().speed(0.0).into_element(cx),
+            cx.text("Spinner (animated / static)"),
+        ]
+    })
+    .gap(Space::N2)
+    .items_center()
+    .into_element(cx)
     .test_id("ui-gallery-icons-spinner-row")
 }
 // endregion: example

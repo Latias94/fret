@@ -29,11 +29,7 @@ pub(in crate::ui) fn preview_avatar_legacy(
         .into_element(cx);
 
     vec![
-        stack::hstack(
-            cx,
-            stack::HStackProps::default().gap(Space::N3).items_center(),
-            |_cx| [a, b, c],
-        ),
+        ui::h_row(|_cx| [a, b, c]).gap(Space::N3).items_center().into_element(cx),
         cx.text("Tip: use AvatarImage when you have an ImageId; AvatarFallback covers missing/slow loads."),
     ]
 }

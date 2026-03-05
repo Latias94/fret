@@ -3,10 +3,9 @@ use std::sync::Arc;
 use fret_core::SemanticsRole;
 use fret_ui::element::{AnyElement, SemanticsProps};
 use fret_ui::{ElementContext, Theme, UiHost};
-use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{
-    ChromeRefinement, ColorFallback, ColorRef, Items, LayoutRefinement, Radius, Space,
+    ChromeRefinement, ColorFallback, ColorRef, Items, LayoutRefinement, Radius, Space, ui,
 };
 
 /// AI Elements-aligned workflow `Toolbar` chrome (UI-only).
@@ -75,14 +74,11 @@ impl WorkflowToolbar {
             .p(Space::N1p5);
 
         let children = self.children;
-        let row = stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .gap(Space::N1)
-                .items(Items::Center)
-                .layout(LayoutRefinement::default().min_w_0()),
-            move |_cx| children,
-        );
+        let row = ui::h_row(move |_cx| children)
+            .gap(Space::N1)
+            .items(Items::Center)
+            .layout(LayoutRefinement::default().min_w_0())
+            .into_element(cx);
 
         let props =
             decl_style::container_props(&theme, base_chrome.merge(self.chrome), self.layout);

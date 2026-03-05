@@ -1,13 +1,14 @@
 use std::sync::Arc;
 
-use fret_core::{Edges, Point, Px, SemanticsRole};
+use fret_core::{Corners, Edges, Point, Px, SemanticsRole};
+use fret_icons::IconId;
 use fret_ui::action::OnActivate;
 use fret_ui::element::{AnyElement, ContainerProps, LayoutStyle, SemanticsProps, StackProps};
 use fret_ui::scroll::{ScrollHandle, ScrollStrategy, VirtualListScrollHandle};
 use fret_ui::{ElementContext, Theme, UiHost};
-use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::{LayoutRefinement, Space};
+use fret_ui_kit::ui;
+use fret_ui_kit::{Items, Justify, LayoutRefinement, Space};
 
 use fret_ui_shadcn::{Button, ButtonSize, ButtonVariant, ScrollArea};
 
@@ -308,10 +309,12 @@ impl ConversationTranscript {
                         host.request_redraw(cx.window);
                     });
 
-                    let button = Button::new("Scroll to bottom")
+                    let button = Button::new("")
+                        .a11y_label("Scroll to bottom")
                         .variant(ButtonVariant::Outline)
                         .size(ButtonSize::Icon)
-                        .children(vec![cx.text("↓")])
+                        .leading_icon(IconId::new_static("lucide.arrow-down"))
+                        .corner_radii_override(Corners::all(Px(999.0)))
                         .on_activate(on_activate)
                         .into_element(cx);
 
@@ -336,13 +339,11 @@ impl ConversationTranscript {
                             ..Default::default()
                         },
                         move |cx| {
-                            vec![stack::hstack(
-                                cx,
-                                stack::HStackProps::default()
-                                    .layout(LayoutRefinement::default().w_full())
-                                    .justify_center(),
-                                move |_cx| vec![button],
-                            )]
+                            vec![ui::h_row(move |_cx| vec![button])
+                                .layout(LayoutRefinement::default().w_full())
+                                .justify(Justify::Center)
+                                .items(Items::Center)
+                                .into_element(cx)]
                         },
                     ));
                 }
@@ -504,14 +505,11 @@ impl Conversation {
                 ..Default::default()
             },
             move |cx| {
-                vec![stack::vstack(
-                    cx,
-                    stack::VStackProps::default()
-                        .gap(content_gap)
-                        .layout(LayoutRefinement::default().w_full())
-                        .items_stretch(),
-                    move |_cx| children,
-                )]
+                vec![ui::v_stack(move |_cx| children)
+                    .gap(content_gap)
+                    .layout(LayoutRefinement::default().w_full())
+                    .items(Items::Stretch)
+                    .into_element(cx)]
             },
         );
 
@@ -537,10 +535,12 @@ impl Conversation {
                         host.request_redraw(cx.window);
                     });
 
-                    let button = Button::new("Scroll to bottom")
+                    let button = Button::new("")
+                        .a11y_label("Scroll to bottom")
                         .variant(ButtonVariant::Outline)
                         .size(ButtonSize::Icon)
-                        .children(vec![cx.text("↓")])
+                        .leading_icon(IconId::new_static("lucide.arrow-down"))
+                        .corner_radii_override(Corners::all(Px(999.0)))
                         .on_activate(on_activate)
                         .into_element(cx);
 
@@ -565,13 +565,11 @@ impl Conversation {
                             ..Default::default()
                         },
                         move |cx| {
-                            vec![stack::hstack(
-                                cx,
-                                stack::HStackProps::default()
-                                    .layout(LayoutRefinement::default().w_full())
-                                    .justify_center(),
-                                move |_cx| vec![button],
-                            )]
+                            vec![ui::h_row(move |_cx| vec![button])
+                                .layout(LayoutRefinement::default().w_full())
+                                .justify(Justify::Center)
+                                .items(Items::Center)
+                                .into_element(cx)]
                         },
                     ));
                 }

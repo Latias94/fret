@@ -14,7 +14,12 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
         .max_w(MetricRef::Px(Px(448.0)));
 
     let icon = |cx: &mut ElementContext<'_, App>, id: &'static str| {
-        shadcn::icon::icon(cx, fret_icons::IconId::new_static(id))
+        let icon_id = fret_icons::IconId::new_static(id);
+        match id {
+            // shadcn/ui v4 demo: `BadgeCheckIcon className="size-5"`.
+            "lucide.badge-check" => shadcn::icon::icon_with(cx, icon_id, Some(Px(20.0)), None),
+            _ => shadcn::icon::icon(cx, icon_id),
+        }
     };
 
     let outline = shadcn::ItemVariant::Outline;
@@ -68,14 +73,11 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
             .test_id("ui-gallery-item-docs-demo-sm-link")
     };
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N6)
-            .items_start()
-            .layout(max_w_md),
-        |_cx| vec![item_basic, item_sm_link],
-    )
-    .test_id("ui-gallery-item-demo")
+    ui::v_stack(|_cx| vec![item_basic, item_sm_link])
+        .gap(Space::N6)
+        .items_start()
+        .layout(max_w_md)
+        .into_element(cx)
+        .test_id("ui-gallery-item-demo")
 }
 // endregion: example

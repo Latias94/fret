@@ -323,13 +323,13 @@ fn command_text_input<H: UiHost>(
     test_id: Option<Arc<str>>,
     active_descendant: Option<NodeId>,
     expanded: Option<bool>,
-    height: Px,
+    pad_y: Px,
+    height: Length,
 ) -> AnyElement {
     let theme = Theme::global(&*cx.app).snapshot();
 
     let fg = theme.color_token("popover-foreground");
     let placeholder_fg = theme.color_token("muted-foreground");
-    let pad_y = MetricRef::space(Space::N3).resolve(&theme);
 
     let mut chrome = TextInputStyle::from_theme(theme.clone());
     // shadcn/ui v4: cmdk input uses `py-3` and relies on the wrapper for horizontal padding.
@@ -364,7 +364,7 @@ fn command_text_input<H: UiHost>(
     props.text_style = item_text_style(&theme);
     props.layout.size = SizeStyle {
         width: Length::Auto,
-        height: Length::Px(height),
+        height,
         min_width: Some(Length::Px(Px(0.0))),
         min_height: Some(Length::Px(Px(0.0))),
         ..Default::default()
@@ -744,14 +744,22 @@ impl Command {
             )
         };
         let children = current_color::scope_children(cx, ColorRef::Color(fg_root), move |cx| {
-            vec![fret_ui_kit::declarative::stack::vstack(
-                cx,
-                fret_ui_kit::declarative::stack::VStackProps::default().gap(Space::N0),
-                move |_cx| self.children,
-            )]
+            vec![
+                ui::v_stack(move |_cx| self.children)
+                    .gap(Space::N0)
+                    .into_element(cx),
+            ]
         });
         shadcn_layout::container_flow(cx, props, children)
     }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum CommandInputHeightMode {
+    /// Use the shadcn theme metric defaults (`component.command.input.*`).
+    ThemePx,
+    /// Let layout size to content (web-like `h-auto`).
+    Auto,
 }
 
 #[derive(Clone)]
@@ -759,9 +767,13 @@ pub struct CommandInput {
     model: fret_runtime::Model<String>,
     a11y_label: Option<Arc<str>>,
     placeholder: Option<Arc<str>>,
+    input_test_id: Option<Arc<str>>,
     disabled: bool,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
+    wrapper_height_mode: CommandInputHeightMode,
+    input_height_mode: CommandInputHeightMode,
+    input_padding_y: Option<MetricRef>,
 }
 
 impl std::fmt::Debug for CommandInput {
@@ -781,14 +793,24 @@ impl CommandInput {
             model,
             a11y_label: None,
             placeholder: None,
+            input_test_id: None,
             disabled: false,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
+            wrapper_height_mode: CommandInputHeightMode::ThemePx,
+            input_height_mode: CommandInputHeightMode::ThemePx,
+            input_padding_y: None,
         }
     }
 
     pub fn a11y_label(mut self, label: impl Into<Arc<str>>) -> Self {
         self.a11y_label = Some(label.into());
+        self
+    }
+
+    /// Installs a stable `test_id` on the underlying text input (not the wrapper row).
+    pub fn input_test_id(mut self, test_id: impl Into<Arc<str>>) -> Self {
+        self.input_test_id = Some(test_id.into());
         self
     }
 
@@ -812,6 +834,29 @@ impl CommandInput {
         self
     }
 
+    /// Web-like `h-auto` for the wrapper row (`data-slot=command-input-wrapper`).
+    pub fn wrapper_height_auto(mut self) -> Self {
+        self.wrapper_height_mode = CommandInputHeightMode::Auto;
+        self
+    }
+
+    /// Web-like `h-auto` for the underlying text input (`data-slot=command-input`).
+    pub fn input_height_auto(mut self) -> Self {
+        self.input_height_mode = CommandInputHeightMode::Auto;
+        self
+    }
+
+    /// Overrides the text input's vertical padding (Tailwind-like `py-*`).
+    pub fn input_padding_y(mut self, pad_y: impl Into<MetricRef>) -> Self {
+        self.input_padding_y = Some(pad_y.into());
+        self
+    }
+
+    /// Convenience for `input_padding_y(Px(...))`.
+    pub fn input_padding_y_px(self, pad_y: Px) -> Self {
+        self.input_padding_y(pad_y)
+    }
+
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         cx.scope(|cx| {
@@ -827,6 +872,10 @@ impl CommandInput {
             let input_h = theme
                 .metric_by_key("component.command.input.height")
                 .unwrap_or(Px(40.0));
+            let input_pad_y = self
+                .input_padding_y
+                .unwrap_or_else(|| MetricRef::space(Space::N3))
+                .resolve(theme);
             let icon_size = theme
                 .metric_by_key("component.command.input.icon_size")
                 .unwrap_or(Px(16.0));
@@ -878,7 +927,9 @@ impl CommandInput {
             wrapper.border_color = Some(border_color);
             wrapper.background = background;
             wrapper.corner_radii = Corners::all(radius);
-            if matches!(wrapper.layout.size.height, Length::Auto) {
+            if self.wrapper_height_mode == CommandInputHeightMode::ThemePx
+                && matches!(wrapper.layout.size.height, Length::Auto)
+            {
                 wrapper.layout.size.height = Length::Px(wrapper_h);
             }
             wrapper.padding = rtl::padding_edges_with_inline_start_end(
@@ -892,6 +943,7 @@ impl CommandInput {
                     .clone()
                     .unwrap_or_else(|| Arc::from("Command input"));
                 let placeholder = self.placeholder.clone();
+                let input_test_id = self.input_test_id.clone();
 
                 let icon = decl_icon::icon_with(
                     cx,
@@ -907,18 +959,27 @@ impl CommandInput {
                     a11y_label,
                     placeholder,
                     Some(SemanticsRole::ComboBox),
+                    input_test_id,
                     None,
                     None,
-                    None,
-                    input_h,
+                    input_pad_y,
+                    match self.input_height_mode {
+                        CommandInputHeightMode::ThemePx => Length::Px(input_h),
+                        CommandInputHeightMode::Auto => Length::Auto,
+                    },
                 );
 
+                let row_height = if self.wrapper_height_mode == CommandInputHeightMode::Auto {
+                    Length::Auto
+                } else {
+                    Length::Fill
+                };
                 let mut row = cx.row(
                     RowProps {
                         layout: {
                             let mut layout = LayoutStyle::default();
                             layout.size.width = Length::Fill;
-                            layout.size.height = Length::Fill;
+                            layout.size.height = row_height;
                             layout
                         },
                         gap: gap.into(),
@@ -1410,6 +1471,7 @@ pub struct CommandList {
     entries: Vec<CommandEntry>,
     disabled: bool,
     empty_text: Arc<str>,
+    query: Option<Model<String>>,
     highlight_query: Option<Model<String>>,
     scroll: LayoutRefinement,
 }
@@ -1420,6 +1482,7 @@ impl std::fmt::Debug for CommandList {
             .field("entries_len", &self.entries.len())
             .field("disabled", &self.disabled)
             .field("empty_text", &self.empty_text.as_ref())
+            .field("query", &self.query.is_some())
             .field("scroll", &self.scroll)
             .finish()
     }
@@ -1432,6 +1495,7 @@ impl CommandList {
             entries,
             disabled: false,
             empty_text: Arc::from("No results."),
+            query: None,
             highlight_query: None,
             scroll: LayoutRefinement::default()
                 .max_h(Px(300.0))
@@ -1463,6 +1527,15 @@ impl CommandList {
         self
     }
 
+    /// Provide a query model for cmdk-style fuzzy filtering and sorting.
+    ///
+    /// This is a smaller surface than `CommandPalette`: it filters the static entry list, but it
+    /// does not adopt `active_descendant` input semantics.
+    pub fn query_model(mut self, model: Model<String>) -> Self {
+        self.query = Some(model);
+        self
+    }
+
     /// Provide an optional query model to render cmdk-style match highlighting for default rows.
     ///
     /// This is intended for legacy/roving lists that want cmdk-like visuals without adopting the
@@ -1482,19 +1555,38 @@ impl CommandList {
         cx.scope(|cx| {
             let disabled = self.disabled;
             let entries = self.entries;
+            let query_model = self.query;
             let highlight_query = self.highlight_query;
 
             // Note: `CommandList` is a simple list rendering helper (legacy roving-style semantics).
             // `CommandPalette` is the cmdk-style implementation that keeps focus in the input and
             // drives highlight via `active_descendant` (ADR 0073).
+            let query_for_filter: Arc<str> = query_model
+                .as_ref()
+                .and_then(|model| {
+                    cx.watch_model(model)
+                        .layout()
+                        .read_ref(|s| s.trim().to_ascii_lowercase())
+                        .ok()
+                })
+                .map(|trimmed| Arc::<str>::from(trimmed))
+                .unwrap_or_else(|| Arc::from(""));
+
+            let should_filter = query_model.is_some();
             let (render_rows, items, _item_groups) =
-                command_palette_render_rows_for_query_with_options(entries, "", false, None);
+                command_palette_render_rows_for_query_with_options(
+                    entries,
+                    query_for_filter.as_ref(),
+                    should_filter,
+                    None,
+                );
             let list_busy = render_rows
                 .iter()
                 .any(|row| matches!(row, CommandPaletteRenderRow::Loading(_)));
 
             let query_for_render: Arc<str> = highlight_query
                 .as_ref()
+                .or(query_model.as_ref())
                 .and_then(|model| {
                     cx.watch_model(model)
                         .layout()
@@ -3294,7 +3386,8 @@ impl CommandPalette {
                 effective_input_test_id.clone(),
                 active_descendant,
                 self.input_expanded,
-                input_h,
+                MetricRef::space(Space::N3).resolve(&theme),
+                Length::Px(input_h),
             );
             if let Some(test_id) = test_id_input.clone() {
                 input = input.attach_semantics(SemanticsDecoration::default().test_id(test_id));

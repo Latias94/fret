@@ -19,5 +19,5 @@ pub(super) fn preview_ai_schema_display_demo(
         ],
     );
 
-    vec![body.test_id("ui-gallery-page-ai-schema-display-demo")]
+    vec![body]
 }

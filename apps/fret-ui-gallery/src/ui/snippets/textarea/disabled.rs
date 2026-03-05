@@ -20,18 +20,12 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         }
     };
 
-    shadcn::Field::new([
-        shadcn::FieldLabel::new("Message").into_element(cx),
-        shadcn::Textarea::new(value)
-            .a11y_label("Message")
-            .placeholder("Type your message here.")
-            .disabled(true)
-            .refine_layout(LayoutRefinement::default().w_full())
-            .into_element(cx),
-    ])
-    .disabled(true)
-    .refine_layout(LayoutRefinement::default().w_full().max_w(Px(320.0)))
-    .into_element(cx)
-    .test_id("ui-gallery-textarea-disabled")
+    shadcn::Textarea::new(value)
+        .a11y_label("Message")
+        .placeholder("Type your message here.")
+        .disabled(true)
+        .refine_layout(LayoutRefinement::default().w_full().max_w(Px(320.0)))
+        .into_element(cx)
+        .test_id("ui-gallery-textarea-disabled")
 }
 // endregion: example

@@ -197,24 +197,16 @@ pub fn render<H: UiHost>(
     .refine_layout(LayoutRefinement::default().flex_1().min_w_0())
     .into_element(cx);
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .layout(LayoutRefinement::default().w_full().min_w_0())
-            .gap(Space::N3)
-            .items_start(),
-        |cx| {
+    ui::v_flex(|cx| {
             vec![
                 cx.text("Tip: Arrow keys / Home / End navigate; type to jump by prefix; Esc/outside press closes."),
-                stack::hstack(
-                    cx,
-                    stack::HStackProps::default().gap(Space::N4).items_center(),
-                    move |_cx| vec![card_default, card_override],
-                ),
+                ui::h_row(move |_cx| vec![card_default, card_override]).gap(Space::N4).items_center().into_element(cx),
                 cx.text(format!("last action: {last}")),
             ]
-        },
-    )
+        })
+            .layout(LayoutRefinement::default().w_full().min_w_0())
+            .gap(Space::N3)
+            .items_start().into_element(cx)
     .into()
 }
 

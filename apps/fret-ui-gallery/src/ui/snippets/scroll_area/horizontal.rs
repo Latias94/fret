@@ -6,10 +6,8 @@ use fret_ui_shadcn::{self as shadcn, prelude::*};
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let rail = ui::container(|cx| {
-        vec![stack::hstack(
-            cx,
-            stack::HStackProps::default().gap(Space::N4).items_start(),
-            |cx| {
+        vec![
+            ui::h_row(|cx| {
                 let artists = ["Ornella Binni", "Tom Byrom", "Vladimir Malyavko"];
                 artists
                     .iter()
@@ -24,14 +22,11 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
 
                         let caption = shadcn::typography::muted(cx, format!("Photo by {artist}"));
 
-                        let mut figure = stack::vstack(
-                            cx,
-                            stack::VStackProps::default()
-                                .gap(Space::N2)
-                                .items_start()
-                                .layout(LayoutRefinement::default().flex_none()),
-                            |_cx| vec![art, caption],
-                        );
+                        let mut figure = ui::v_stack(|_cx| vec![art, caption])
+                            .gap(Space::N2)
+                            .items_start()
+                            .layout(LayoutRefinement::default().flex_none())
+                            .into_element(cx);
 
                         if idx == artists.len() - 1 {
                             figure = figure.test_id("ui-gallery-scroll-area-horizontal-last");
@@ -40,8 +35,11 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                         figure
                     })
                     .collect::<Vec<_>>()
-            },
-        )]
+            })
+            .gap(Space::N4)
+            .items_start()
+            .into_element(cx),
+        ]
     })
     .p_4()
     .into_element(cx);

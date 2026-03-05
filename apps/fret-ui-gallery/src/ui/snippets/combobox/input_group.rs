@@ -68,19 +68,16 @@ fn state_rows(
     let selected_row_test_id: Arc<str> = Arc::from(format!("{test_id_prefix}-selected"));
     let query_row_test_id: Arc<str> = Arc::from(format!("{test_id_prefix}-query"));
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N1)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full().min_w_0()),
-        move |cx| {
-            vec![
-                state_row(cx, selected_row_text.clone(), selected_row_test_id.clone()),
-                state_row(cx, query_row_text.clone(), query_row_test_id.clone()),
-            ]
-        },
-    )
+    ui::v_flex(move |cx| {
+        vec![
+            state_row(cx, selected_row_text.clone(), selected_row_test_id.clone()),
+            state_row(cx, query_row_text.clone(), query_row_test_id.clone()),
+        ]
+    })
+    .gap(Space::N1)
+    .items_start()
+    .layout(LayoutRefinement::default().w_full().min_w_0())
+    .into_element(cx)
 }
 
 pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
@@ -105,40 +102,36 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
             ]
         });
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N2)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full().max_w(Px(360.0))),
-        move |cx| {
-            vec![
-                stack::hstack(
-                    cx,
-                    stack::HStackProps::default().gap(Space::N2).items_center(),
-                    |cx| {
-                        vec![
-                            {
-                                let props = cx.with_theme(|theme| {
-                                    decl_style::container_props(
-                                        theme,
-                                        ChromeRefinement::default()
-                                            .border_1()
-                                            .rounded(Radius::Sm)
-                                            .px(Space::N2)
-                                            .py(Space::N1),
-                                        LayoutRefinement::default(),
-                                    )
-                                });
-                                cx.container(props, |cx| vec![shadcn::typography::muted(cx, "Cmd")])
-                            },
-                            combo,
-                        ]
+    ui::v_flex(move |cx| {
+        vec![
+            ui::h_row(|cx| {
+                vec![
+                    {
+                        let props = cx.with_theme(|theme| {
+                            decl_style::container_props(
+                                theme,
+                                ChromeRefinement::default()
+                                    .border_1()
+                                    .rounded(Radius::Sm)
+                                    .px(Space::N2)
+                                    .py(Space::N1),
+                                LayoutRefinement::default(),
+                            )
+                        });
+                        cx.container(props, |cx| vec![shadcn::typography::muted(cx, "Cmd")])
                     },
-                ),
-                state_rows(cx, &value, &query, "ui-gallery-combobox-input-group"),
-            ]
-        },
-    )
+                    combo,
+                ]
+            })
+            .gap(Space::N2)
+            .items_center()
+            .into_element(cx),
+            state_rows(cx, &value, &query, "ui-gallery-combobox-input-group"),
+        ]
+    })
+    .gap(Space::N2)
+    .items_start()
+    .layout(LayoutRefinement::default().w_full().max_w(Px(360.0)))
+    .into_element(cx)
 }
 // endregion: example

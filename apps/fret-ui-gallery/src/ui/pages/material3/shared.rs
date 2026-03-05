@@ -58,22 +58,21 @@ pub(in crate::ui) fn material3_variant_toggle_row(
         .get_model_copied(&material3_expressive, Invalidation::Layout)
         .unwrap_or(false);
 
-    stack::hstack(
-        cx,
-        stack::HStackProps::default().gap(Space::N2).items_center(),
-        move |cx| {
-            vec![
-                shadcn::Switch::new(material3_expressive.clone())
-                    .a11y_label("Enable Material 3 Expressive variant")
-                    .test_id("ui-gallery-material3-design-variant-toggle")
-                    .into_element(cx),
-                ui::label(if enabled {
-                    "Variant: Expressive"
-                } else {
-                    "Variant: Standard"
-                })
+    ui::h_row(move |cx| {
+        vec![
+            shadcn::Switch::new(material3_expressive.clone())
+                .a11y_label("Enable Material 3 Expressive variant")
+                .test_id("ui-gallery-material3-design-variant-toggle")
                 .into_element(cx),
-            ]
-        },
-    )
+            ui::label(if enabled {
+                "Variant: Expressive"
+            } else {
+                "Variant: Standard"
+            })
+            .into_element(cx),
+        ]
+    })
+    .gap(Space::N2)
+    .items_center()
+    .into_element(cx)
 }

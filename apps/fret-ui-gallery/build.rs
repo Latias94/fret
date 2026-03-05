@@ -62,6 +62,12 @@ fn rel_path_str(base: &Path, path: &Path) -> String {
 }
 
 fn main() {
+    // The UI Gallery pulls in a large number of demo/spec surfaces. On Windows the default
+    // executable stack size can be small enough to trigger a runtime stack overflow during
+    // initialization. Bump the reserved stack size for this binary.
+    #[cfg(target_os = "windows")]
+    println!("cargo:rustc-link-arg=/STACK:16777216");
+
     let manifest_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR"));
     let out_dir = PathBuf::from(env::var("OUT_DIR").expect("OUT_DIR"));
 

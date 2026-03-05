@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::sync::Arc;
 
 use fret_core::{Point, Px, Rect};
@@ -7,8 +8,6 @@ use fret_ui_headless::tab_strip_drop_target::{
 };
 
 use crate::tab_drag::{WorkspaceTabHitRect, WorkspaceTabInsertionSide};
-
-use super::surface::{WorkspaceTabStripSurface, classify_workspace_tab_strip_surface};
 
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub(crate) enum WorkspaceTabStripDropTarget {
@@ -30,22 +29,7 @@ pub(crate) fn compute_workspace_tab_strip_drop_target(
     scroll_left_control_rect: Option<Rect>,
     scroll_right_control_rect: Option<Rect>,
 ) -> WorkspaceTabStripDropTarget {
-    let surface = classify_workspace_tab_strip_surface(
-        position,
-        dragged_tab_id,
-        tab_rects,
-        pinned_boundary_rect,
-        end_drop_target_rect,
-        scroll_viewport_rect,
-        overflow_control_rect,
-        scroll_left_control_rect,
-        scroll_right_control_rect,
-    );
-
     // Use the shared headless helper for the "tab vs boundary vs end" drop target.
-    //
-    // Note: We still surface `WorkspaceTabStripSurface` separately so other code can reason about
-    // e.g. `ScrollControls` explicitly when needed.
     match compute_tab_strip_drop_target_midpoint(
         position,
         tab_rects,
@@ -58,11 +42,7 @@ pub(crate) fn compute_workspace_tab_strip_drop_target(
         scroll_left_control_rect,
         scroll_right_control_rect,
     ) {
-        HeadlessTabStripDropTarget::None => match surface {
-            WorkspaceTabStripSurface::PinnedBoundary => WorkspaceTabStripDropTarget::PinnedBoundary,
-            WorkspaceTabStripSurface::HeaderSpace => WorkspaceTabStripDropTarget::End,
-            _ => WorkspaceTabStripDropTarget::None,
-        },
+        HeadlessTabStripDropTarget::None => WorkspaceTabStripDropTarget::None,
         HeadlessTabStripDropTarget::PinnedBoundary => WorkspaceTabStripDropTarget::PinnedBoundary,
         HeadlessTabStripDropTarget::End => WorkspaceTabStripDropTarget::End,
         HeadlessTabStripDropTarget::Tab { index, side } => tab_rects
@@ -70,6 +50,204 @@ pub(crate) fn compute_workspace_tab_strip_drop_target(
             .map(|r| WorkspaceTabStripDropTarget::Tab(r.id.clone(), side))
             .unwrap_or(WorkspaceTabStripDropTarget::None),
     }
+}
+
+pub(crate) fn compute_workspace_tab_strip_drop_target_with_pinned_row(
+    position: Point,
+    dragged_tab_id: &str,
+    tab_rects: &[WorkspaceTabHitRect],
+    pinned_by_id: &HashMap<Arc<str>, bool>,
+    pinned_boundary_rect: Option<Rect>,
+    end_drop_target_rect: Option<Rect>,
+    scroll_viewport_rect: Option<Rect>,
+    overflow_control_rect: Option<Rect>,
+    scroll_left_control_rect: Option<Rect>,
+    scroll_right_control_rect: Option<Rect>,
+    two_row_pinned: bool,
+) -> WorkspaceTabStripDropTarget {
+    if !two_row_pinned {
+        return compute_workspace_tab_strip_drop_target(
+            position,
+            dragged_tab_id,
+            tab_rects,
+            pinned_boundary_rect,
+            end_drop_target_rect,
+            scroll_viewport_rect,
+            overflow_control_rect,
+            scroll_left_control_rect,
+            scroll_right_control_rect,
+        );
+    }
+
+    let dragged_is_pinned = pinned_by_id.get(dragged_tab_id).copied().unwrap_or(false);
+
+    // When rendering pinned tabs in a separate row, midpoint-x drop math must be row-scoped.
+    //
+    // We treat the end-drop surface as an explicit escape hatch: it always resolves "drop at end"
+    // within the dragged tab's group.
+    if end_drop_target_rect.is_none_or(|r| !r.contains(position)) {
+        let mut min_y: Option<f32> = None;
+        let mut max_y: Option<f32> = None;
+        for r in tab_rects.iter() {
+            if r.id.as_ref() == dragged_tab_id {
+                continue;
+            }
+            let pinned = pinned_by_id.get(r.id.as_ref()).copied().unwrap_or(false);
+            if pinned != dragged_is_pinned {
+                continue;
+            }
+            let top = r.rect.origin.y.0;
+            let bottom = r.rect.origin.y.0 + r.rect.size.height.0;
+            min_y = Some(min_y.map_or(top, |prev| prev.min(top)));
+            max_y = Some(max_y.map_or(bottom, |prev| prev.max(bottom)));
+        }
+
+        if let (Some(min_y), Some(max_y)) = (min_y, max_y) {
+            if position.y.0 < min_y || position.y.0 > max_y {
+                return WorkspaceTabStripDropTarget::None;
+            }
+        } else {
+            // No other tabs in the group means there's no meaningful in-row reorder target.
+            return WorkspaceTabStripDropTarget::None;
+        }
+    }
+
+    let candidates: Vec<WorkspaceTabHitRect> = tab_rects
+        .iter()
+        .filter(|r| pinned_by_id.get(r.id.as_ref()).copied().unwrap_or(false) == dragged_is_pinned)
+        .cloned()
+        .collect();
+
+    compute_workspace_tab_strip_drop_target(
+        position,
+        dragged_tab_id,
+        &candidates,
+        pinned_boundary_rect,
+        end_drop_target_rect,
+        scroll_viewport_rect,
+        overflow_control_rect,
+        scroll_left_control_rect,
+        scroll_right_control_rect,
+    )
+}
+
+pub(crate) fn compute_workspace_tab_strip_drop_target_scoped_to_pointer_row(
+    position: Point,
+    dragged_tab_id: &str,
+    tab_rects: &[WorkspaceTabHitRect],
+    pinned_by_id: &HashMap<Arc<str>, bool>,
+    pinned_boundary_rect: Option<Rect>,
+    end_drop_target_rect: Option<Rect>,
+    scroll_viewport_rect: Option<Rect>,
+    overflow_control_rect: Option<Rect>,
+    scroll_left_control_rect: Option<Rect>,
+    scroll_right_control_rect: Option<Rect>,
+    two_row_pinned: bool,
+) -> WorkspaceTabStripDropTarget {
+    if !two_row_pinned {
+        return compute_workspace_tab_strip_drop_target(
+            position,
+            dragged_tab_id,
+            tab_rects,
+            pinned_boundary_rect,
+            end_drop_target_rect,
+            scroll_viewport_rect,
+            overflow_control_rect,
+            scroll_left_control_rect,
+            scroll_right_control_rect,
+        );
+    }
+
+    if end_drop_target_rect.is_some_and(|r| r.contains(position)) {
+        return compute_workspace_tab_strip_drop_target(
+            position,
+            dragged_tab_id,
+            tab_rects,
+            pinned_boundary_rect,
+            end_drop_target_rect,
+            scroll_viewport_rect,
+            overflow_control_rect,
+            scroll_left_control_rect,
+            scroll_right_control_rect,
+        );
+    }
+
+    #[derive(Clone, Copy)]
+    enum Row {
+        Pinned,
+        Unpinned,
+    }
+
+    fn band_for_row(
+        tab_rects: &[WorkspaceTabHitRect],
+        pinned_by_id: &HashMap<Arc<str>, bool>,
+        row: Row,
+        dragged_tab_id: &str,
+    ) -> Option<(f32, f32)> {
+        let mut min_y: Option<f32> = None;
+        let mut max_y: Option<f32> = None;
+        for r in tab_rects {
+            if r.id.as_ref() == dragged_tab_id {
+                continue;
+            }
+            let pinned = pinned_by_id.get(r.id.as_ref()).copied().unwrap_or(false);
+            let in_row = match row {
+                Row::Pinned => pinned,
+                Row::Unpinned => !pinned,
+            };
+            if !in_row {
+                continue;
+            }
+            let top = r.rect.origin.y.0;
+            let bottom = r.rect.origin.y.0 + r.rect.size.height.0;
+            min_y = Some(min_y.map_or(top, |prev| prev.min(top)));
+            max_y = Some(max_y.map_or(bottom, |prev| prev.max(bottom)));
+        }
+        Some((min_y?, max_y?))
+    }
+
+    let pinned_band = band_for_row(tab_rects, pinned_by_id, Row::Pinned, dragged_tab_id);
+    let unpinned_band = band_for_row(tab_rects, pinned_by_id, Row::Unpinned, dragged_tab_id);
+
+    let row = if pinned_band
+        .is_some_and(|(min_y, max_y)| position.y.0 >= min_y && position.y.0 <= max_y)
+    {
+        Some(Row::Pinned)
+    } else if unpinned_band
+        .is_some_and(|(min_y, max_y)| position.y.0 >= min_y && position.y.0 <= max_y)
+    {
+        Some(Row::Unpinned)
+    } else {
+        None
+    };
+
+    let Some(row) = row else {
+        return WorkspaceTabStripDropTarget::None;
+    };
+
+    let candidates: Vec<WorkspaceTabHitRect> = tab_rects
+        .iter()
+        .filter(|r| {
+            let pinned = pinned_by_id.get(r.id.as_ref()).copied().unwrap_or(false);
+            match row {
+                Row::Pinned => pinned,
+                Row::Unpinned => !pinned,
+            }
+        })
+        .cloned()
+        .collect();
+
+    compute_workspace_tab_strip_drop_target(
+        position,
+        dragged_tab_id,
+        &candidates,
+        pinned_boundary_rect,
+        end_drop_target_rect,
+        scroll_viewport_rect,
+        overflow_control_rect,
+        scroll_left_control_rect,
+        scroll_right_control_rect,
+    )
 }
 
 pub(crate) fn compute_tab_strip_edge_auto_scroll_delta_x(
@@ -90,6 +268,7 @@ pub(crate) fn compute_tab_strip_edge_auto_scroll_delta_x(
 mod tests {
     use super::*;
     use fret_core::{Px, Size};
+    use std::collections::HashMap;
 
     fn rect(x: f32, y: f32, w: f32, h: f32) -> Rect {
         Rect::new(Point::new(Px(x), Px(y)), Size::new(Px(w), Px(h)))
@@ -283,5 +462,67 @@ mod tests {
             ),
             Px(0.0)
         );
+    }
+
+    #[test]
+    fn two_row_drop_target_is_scoped_to_dragged_group_row() {
+        let tab_rects = vec![
+            WorkspaceTabHitRect {
+                id: Arc::from("p1"),
+                rect: rect(0.0, 0.0, 80.0, 20.0),
+            },
+            WorkspaceTabHitRect {
+                id: Arc::from("p2"),
+                rect: rect(90.0, 0.0, 80.0, 20.0),
+            },
+            WorkspaceTabHitRect {
+                id: Arc::from("u1"),
+                rect: rect(0.0, 24.0, 80.0, 20.0),
+            },
+        ];
+        let pinned_by_id: HashMap<Arc<str>, bool> = [
+            (Arc::from("p1"), true),
+            (Arc::from("p2"), true),
+            (Arc::from("u1"), false),
+        ]
+        .into_iter()
+        .collect();
+
+        // Pointer is in the unpinned row band, so dragging a pinned tab should not resolve to a tab target.
+        let pos = Point::new(Px(10.0), Px(30.0));
+        let target = compute_workspace_tab_strip_drop_target_with_pinned_row(
+            pos,
+            "p1",
+            &tab_rects,
+            &pinned_by_id,
+            None,
+            None,
+            Some(rect(0.0, 0.0, 400.0, 48.0)),
+            None,
+            None,
+            None,
+            true,
+        );
+        assert!(matches!(target, WorkspaceTabStripDropTarget::None));
+
+        // Pointer is in the pinned row band, so it resolves against pinned tabs.
+        let pos = Point::new(Px(10.0), Px(10.0));
+        let target = compute_workspace_tab_strip_drop_target_with_pinned_row(
+            pos,
+            "p1",
+            &tab_rects,
+            &pinned_by_id,
+            None,
+            None,
+            Some(rect(0.0, 0.0, 400.0, 48.0)),
+            None,
+            None,
+            None,
+            true,
+        );
+        assert!(matches!(
+            target,
+            WorkspaceTabStripDropTarget::Tab(id, _) if id.as_ref() == "p2"
+        ));
     }
 }

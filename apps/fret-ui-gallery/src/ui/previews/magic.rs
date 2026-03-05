@@ -33,41 +33,35 @@ pub(in crate::ui) fn preview_magic_lens(cx: &mut ElementContext<'_, App>) -> Vec
     };
 
     let lens = magic::lens(cx, props, |cx| {
-        let body = stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .gap(Space::N4)
-                .layout(LayoutRefinement::default().w_full().h_full())
-                .items_start(),
-            |cx| {
-                vec![
-                    shadcn::typography::h4(cx, "Lens"),
-                    shadcn::typography::p(
-                        cx,
-                        "Move the pointer to reveal a masked zoomed copy of the content.",
-                    ),
-                    stack::hstack(
-                        cx,
-                        stack::HStackProps::default()
-                            .layout(LayoutRefinement::default().w_full())
-                            .justify_between()
-                            .items_center(),
-                        |cx| {
-                            vec![
-                                shadcn::Badge::new("left target")
-                                    .variant(shadcn::BadgeVariant::Secondary)
-                                    .into_element(cx)
-                                    .test_id("ui-gallery-magic-lens-target-left"),
-                                shadcn::Badge::new("right target")
-                                    .variant(shadcn::BadgeVariant::Secondary)
-                                    .into_element(cx)
-                                    .test_id("ui-gallery-magic-lens-target-right"),
-                            ]
-                        },
-                    ),
-                ]
-            },
-        );
+        let body = ui::v_flex(|cx| {
+            vec![
+                shadcn::typography::h4(cx, "Lens"),
+                shadcn::typography::p(
+                    cx,
+                    "Move the pointer to reveal a masked zoomed copy of the content.",
+                ),
+                ui::h_flex(|cx| {
+                    vec![
+                        shadcn::Badge::new("left target")
+                            .variant(shadcn::BadgeVariant::Secondary)
+                            .into_element(cx)
+                            .test_id("ui-gallery-magic-lens-target-left"),
+                        shadcn::Badge::new("right target")
+                            .variant(shadcn::BadgeVariant::Secondary)
+                            .into_element(cx)
+                            .test_id("ui-gallery-magic-lens-target-right"),
+                    ]
+                })
+                .layout(LayoutRefinement::default().w_full())
+                .justify_between()
+                .items_center()
+                .into_element(cx),
+            ]
+        })
+        .gap(Space::N4)
+        .layout(LayoutRefinement::default().w_full().h_full())
+        .items_start()
+        .into_element(cx);
 
         vec![body]
     })
@@ -75,13 +69,8 @@ pub(in crate::ui) fn preview_magic_lens(cx: &mut ElementContext<'_, App>) -> Vec
 
     let demo = cx.container(surface, |_cx| vec![lens]);
 
-    vec![stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N6)
-            .layout(LayoutRefinement::default().w_full())
-            .items_start(),
-        |cx| {
+    vec![
+        ui::v_flex(|cx| {
             vec![
                 shadcn::typography::h4(cx, "Lens (Phase 0)"),
                 shadcn::typography::p(
@@ -91,8 +80,12 @@ pub(in crate::ui) fn preview_magic_lens(cx: &mut ElementContext<'_, App>) -> Vec
                 ),
                 demo,
             ]
-        },
-    )]
+        })
+        .gap(Space::N6)
+        .layout(LayoutRefinement::default().w_full())
+        .items_start()
+        .into_element(cx),
+    ]
 }
 
 pub(in crate::ui) fn preview_magic_border_beam(
@@ -119,13 +112,8 @@ pub(in crate::ui) fn preview_magic_border_beam(
             ..Default::default()
         },
         |cx| {
-            vec![stack::vstack(
-                cx,
-                stack::VStackProps::default()
-                    .gap(Space::N3)
-                    .layout(LayoutRefinement::default().w_full().h_full())
-                    .items_start(),
-                |cx| {
+            vec![
+                ui::v_flex(|cx| {
                     vec![
                         shadcn::typography::h4(cx, "BorderBeam"),
                         shadcn::typography::p(
@@ -133,39 +121,39 @@ pub(in crate::ui) fn preview_magic_border_beam(
                             "The beam is animated using the runner-owned frame clock; \
                              glow uses blur + additive compositing.",
                         ),
-                        stack::hstack(
-                            cx,
-                            stack::HStackProps::default()
-                                .layout(LayoutRefinement::default().w_full())
-                                .justify_between()
-                                .items_center(),
-                            |cx| {
-                                vec![
-                                    shadcn::Badge::new("left")
-                                        .variant(shadcn::BadgeVariant::Secondary)
-                                        .into_element(cx)
-                                        .test_id("ui-gallery-magic-border-beam-target-left"),
-                                    shadcn::Badge::new("right")
-                                        .variant(shadcn::BadgeVariant::Secondary)
-                                        .into_element(cx)
-                                        .test_id("ui-gallery-magic-border-beam-target-right"),
-                                ]
-                            },
-                        ),
+                        ui::h_flex(|cx| {
+                            vec![
+                                shadcn::Badge::new("left")
+                                    .variant(shadcn::BadgeVariant::Secondary)
+                                    .into_element(cx)
+                                    .test_id("ui-gallery-magic-border-beam-target-left"),
+                                shadcn::Badge::new("right")
+                                    .variant(shadcn::BadgeVariant::Secondary)
+                                    .into_element(cx)
+                                    .test_id("ui-gallery-magic-border-beam-target-right"),
+                            ]
+                        })
+                        .layout(LayoutRefinement::default().w_full())
+                        .justify_between()
+                        .items_center()
+                        .into_element(cx),
                     ]
-                },
-            )]
+                })
+                .gap(Space::N3)
+                .layout(LayoutRefinement::default().w_full().h_full())
+                .items_start()
+                .into_element(cx),
+            ]
         },
     )
     .test_id("ui-gallery-magic-border-beam");
 
-    vec![stack::hstack(
-        cx,
-        stack::HStackProps::default()
+    vec![
+        ui::h_flex(|_cx| [card])
             .layout(LayoutRefinement::default().w_full())
-            .justify_center(),
-        |_cx| [card],
-    )]
+            .justify_center()
+            .into_element(cx),
+    ]
 }
 
 pub(in crate::ui) fn preview_magic_dock(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
@@ -202,13 +190,8 @@ pub(in crate::ui) fn preview_magic_dock(cx: &mut ElementContext<'_, App>) -> Vec
     )
     .test_id("ui-gallery-magic-dock");
 
-    vec![stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N6)
-            .layout(LayoutRefinement::default().w_full())
-            .items_start(),
-        |cx| {
+    vec![
+        ui::v_flex(|cx| {
             vec![
                 shadcn::typography::h4(cx, "Dock (Phase 0)"),
                 shadcn::typography::p(
@@ -216,16 +199,17 @@ pub(in crate::ui) fn preview_magic_dock(cx: &mut ElementContext<'_, App>) -> Vec
                     "Pointer-proximity magnification. Phase 0 uses a fixed-size layout; \
                      hover gates magnification and reduced-motion is respected for ambient motion.",
                 ),
-                stack::hstack(
-                    cx,
-                    stack::HStackProps::default()
-                        .layout(LayoutRefinement::default().w_full())
-                        .justify_center(),
-                    |_cx| [dock],
-                ),
+                ui::h_flex(|_cx| [dock])
+                    .layout(LayoutRefinement::default().w_full())
+                    .justify_center()
+                    .into_element(cx),
             ]
-        },
-    )]
+        })
+        .gap(Space::N6)
+        .layout(LayoutRefinement::default().w_full())
+        .items_start()
+        .into_element(cx),
+    ]
 }
 
 pub(in crate::ui) fn preview_magic_bloom(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
@@ -265,25 +249,19 @@ pub(in crate::ui) fn preview_magic_bloom(cx: &mut ElementContext<'_, App>) -> Ve
                 )
                 .test_id("ui-gallery-magic-bloom-target");
 
-            vec![stack::hstack(
-                cx,
-                stack::HStackProps::default()
+            vec![
+                ui::h_flex(|_cx| [target])
                     .layout(LayoutRefinement::default().w_full().h_full())
                     .justify_center()
-                    .items_center(),
-                |_cx| [target],
-            )]
+                    .items_center()
+                    .into_element(cx),
+            ]
         },
     )
     .test_id("ui-gallery-magic-bloom");
 
-    vec![stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N6)
-            .layout(LayoutRefinement::default().w_full())
-            .items_start(),
-        |cx| {
+    vec![
+        ui::v_flex(|cx| {
             vec![
                 shadcn::typography::h4(cx, "Bloom (Tier B recipe example)"),
                 shadcn::typography::p(
@@ -293,8 +271,12 @@ pub(in crate::ui) fn preview_magic_bloom(cx: &mut ElementContext<'_, App>) -> Ve
                 ),
                 panel,
             ]
-        },
-    )]
+        })
+        .gap(Space::N6)
+        .layout(LayoutRefinement::default().w_full())
+        .items_start()
+        .into_element(cx),
+    ]
 }
 
 pub(in crate::ui) fn preview_magic_marquee(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
@@ -321,22 +303,19 @@ pub(in crate::ui) fn preview_magic_marquee(cx: &mut ElementContext<'_, App>) -> 
     };
 
     let marquee = magic::marquee(cx, props, |cx| {
-        let row = stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .gap(Space::N6)
-                .items_center()
-                .layout(LayoutRefinement::default().h_full()),
-            |cx| {
-                (0..12)
-                    .map(|i| {
-                        shadcn::Badge::new(format!("MAGIC-{i}"))
-                            .variant(shadcn::BadgeVariant::Secondary)
-                            .into_element(cx)
-                    })
-                    .collect::<Vec<_>>()
-            },
-        );
+        let row = ui::h_row(|cx| {
+            (0..12)
+                .map(|i| {
+                    shadcn::Badge::new(format!("MAGIC-{i}"))
+                        .variant(shadcn::BadgeVariant::Secondary)
+                        .into_element(cx)
+                })
+                .collect::<Vec<_>>()
+        })
+        .gap(Space::N6)
+        .items_center()
+        .layout(LayoutRefinement::default().h_full())
+        .into_element(cx);
 
         vec![row]
     })
@@ -344,13 +323,8 @@ pub(in crate::ui) fn preview_magic_marquee(cx: &mut ElementContext<'_, App>) -> 
 
     let demo = cx.container(surface, |_cx| vec![marquee]);
 
-    vec![stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N6)
-            .layout(LayoutRefinement::default().w_full())
-            .items_start(),
-        |cx| {
+    vec![
+        ui::v_flex(|cx| {
             vec![
                 shadcn::typography::h4(cx, "Marquee (Phase 0)"),
                 shadcn::typography::p(
@@ -360,8 +334,12 @@ pub(in crate::ui) fn preview_magic_marquee(cx: &mut ElementContext<'_, App>) -> 
                 ),
                 demo,
             ]
-        },
-    )]
+        })
+        .gap(Space::N6)
+        .layout(LayoutRefinement::default().w_full())
+        .items_start()
+        .into_element(cx),
+    ]
 }
 
 pub(in crate::ui) fn preview_magic_card(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
@@ -391,52 +369,47 @@ pub(in crate::ui) fn preview_magic_card(cx: &mut ElementContext<'_, App>) -> Vec
             ..Default::default()
         },
         |cx| {
-            vec![stack::vstack(
-                cx,
-                stack::VStackProps::default()
-                    .gap(Space::N3)
-                    .layout(LayoutRefinement::default().w_full())
-                    .items_start(),
-                |cx| {
+            vec![
+                ui::v_flex(|cx| {
                     vec![
                         shadcn::typography::h4(cx, "MagicCard"),
                         shadcn::typography::p(
                             cx,
                             "Move the pointer over the card to drive the radial highlight.",
                         ),
-                        stack::hstack(
-                            cx,
-                            stack::HStackProps::default()
-                                .layout(LayoutRefinement::default().w_full())
-                                .justify_between()
-                                .items_center(),
-                            |cx| {
-                                vec![
-                                    shadcn::Badge::new("left")
-                                        .variant(shadcn::BadgeVariant::Secondary)
-                                        .into_element(cx)
-                                        .test_id("ui-gallery-magic-card-target-left"),
-                                    shadcn::Badge::new("right")
-                                        .variant(shadcn::BadgeVariant::Secondary)
-                                        .into_element(cx)
-                                        .test_id("ui-gallery-magic-card-target-right"),
-                                ]
-                            },
-                        ),
+                        ui::h_flex(|cx| {
+                            vec![
+                                shadcn::Badge::new("left")
+                                    .variant(shadcn::BadgeVariant::Secondary)
+                                    .into_element(cx)
+                                    .test_id("ui-gallery-magic-card-target-left"),
+                                shadcn::Badge::new("right")
+                                    .variant(shadcn::BadgeVariant::Secondary)
+                                    .into_element(cx)
+                                    .test_id("ui-gallery-magic-card-target-right"),
+                            ]
+                        })
+                        .layout(LayoutRefinement::default().w_full())
+                        .justify_between()
+                        .items_center()
+                        .into_element(cx),
                     ]
-                },
-            )]
+                })
+                .gap(Space::N3)
+                .layout(LayoutRefinement::default().w_full())
+                .items_start()
+                .into_element(cx),
+            ]
         },
     )
     .test_id("ui-gallery-magic-card");
 
-    vec![stack::hstack(
-        cx,
-        stack::HStackProps::default()
+    vec![
+        ui::h_flex(|_cx| [card])
             .layout(LayoutRefinement::default().w_full())
-            .justify_center(),
-        |_cx| [card],
-    )]
+            .justify_center()
+            .into_element(cx),
+    ]
 }
 
 pub(in crate::ui) fn preview_magic_patterns(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
@@ -502,34 +475,28 @@ pub(in crate::ui) fn preview_magic_patterns(cx: &mut ElementContext<'_, App>) ->
         },
     );
 
-    let row = stack::hstack(
-        cx,
-        stack::HStackProps::default()
-            .gap(Space::N4)
-            .layout(LayoutRefinement::default().w_full())
-            .items_start(),
-        |_cx| [dot, grid, stripe],
-    );
+    let row = ui::h_flex(|_cx| [dot, grid, stripe])
+        .gap(Space::N4)
+        .layout(LayoutRefinement::default().w_full())
+        .items_start()
+        .into_element(cx);
 
     vec![
-        stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .gap(Space::N6)
-                .layout(LayoutRefinement::default().w_full())
-                .items_start(),
-            |cx| {
-                vec![
-                    shadcn::typography::h4(cx, "Patterns (Tier B materials)"),
-                    shadcn::typography::p(
-                        cx,
-                        "These backgrounds are Tier B procedural paints registered by the renderer \
+        ui::v_flex(|cx| {
+            vec![
+                shadcn::typography::h4(cx, "Patterns (Tier B materials)"),
+                shadcn::typography::p(
+                    cx,
+                    "These backgrounds are Tier B procedural paints registered by the renderer \
                      and referenced via an app-owned VisualCatalog.",
-                    ),
-                    row,
-                ]
-            },
-        )
+                ),
+                row,
+            ]
+        })
+        .gap(Space::N6)
+        .layout(LayoutRefinement::default().w_full())
+        .items_start()
+        .into_element(cx)
         .test_id("ui-gallery-magic-patterns"),
     ]
 }
@@ -615,41 +582,31 @@ pub(in crate::ui) fn preview_magic_patterns_torture(
             panels.push(panel);
         }
 
-        grid_rows.push(stack::hstack(
-            cx,
-            stack::HStackProps::default()
+        grid_rows.push(
+            ui::h_flex(|_cx| panels)
                 .gap(Space::N4)
                 .layout(LayoutRefinement::default().w_full())
-                .items_start(),
-            |_cx| panels,
-        ));
+                .items_start()
+                .into_element(cx),
+        );
     }
 
-    let surface_grid = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N4)
-            .layout(LayoutRefinement::default().w_full())
-            .items_start(),
-        |cx| {
-            let mut out = Vec::with_capacity(1 + grid_rows.len());
-            out.push(
-                shadcn::typography::p(cx, "Material grid (animated stripes)")
-                    .test_id("ui-gallery-magic-patterns-torture-label"),
-            );
-            out.extend(grid_rows);
-            out
-        },
-    );
+    let surface_grid = ui::v_flex(|cx| {
+        let mut out = Vec::with_capacity(1 + grid_rows.len());
+        out.push(
+            shadcn::typography::p(cx, "Material grid (animated stripes)")
+                .test_id("ui-gallery-magic-patterns-torture-label"),
+        );
+        out.extend(grid_rows);
+        out
+    })
+    .gap(Space::N4)
+    .layout(LayoutRefinement::default().w_full())
+    .items_start()
+    .into_element(cx);
 
     vec![
-        stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .gap(Space::N6)
-                .layout(LayoutRefinement::default().w_full())
-                .items_start(),
-            |cx| {
+        ui::v_flex(|cx| {
                 vec![
                     shadcn::typography::h4(cx, "Patterns (fill-rate torture)"),
                     shadcn::typography::p(
@@ -673,8 +630,10 @@ pub(in crate::ui) fn preview_magic_patterns_torture(
                     )
                     .test_id("ui-gallery-magic-patterns-torture"),
                 ]
-            },
-        )
+            })
+                .gap(Space::N6)
+                .layout(LayoutRefinement::default().w_full())
+                .items_start().into_element(cx)
         .test_id("ui-gallery-magic-patterns-torture-root"),
     ]
 }
@@ -709,25 +668,20 @@ pub(in crate::ui) fn preview_magic_sparkles_text(
     inner_layout.size.width = Length::Fill;
     inner_layout.size.height = Length::Fill;
 
-    let sparkles = magic::sparkles_text(
-        cx,
-        magic::SparklesTextProps {
-            layout: inner_layout,
-            padding: Edges::all(Px(20.0)),
-            corner_radii: Corners::all(Px(14.0)),
-            base: fret_core::Color::TRANSPARENT,
-            sparkles: sparkles_color,
-            seed: 42,
-            ..Default::default()
-        },
-        |cx| {
-            vec![stack::vstack(
-                cx,
-                stack::VStackProps::default()
-                    .gap(Space::N3)
-                    .layout(LayoutRefinement::default().w_full())
-                    .items_start(),
-                |cx| {
+    let sparkles =
+        magic::sparkles_text(
+            cx,
+            magic::SparklesTextProps {
+                layout: inner_layout,
+                padding: Edges::all(Px(20.0)),
+                corner_radii: Corners::all(Px(14.0)),
+                base: fret_core::Color::TRANSPARENT,
+                sparkles: sparkles_color,
+                seed: 42,
+                ..Default::default()
+            },
+            |cx| {
+                vec![ui::v_flex(|cx| {
                     vec![
                         shadcn::typography::h3(cx, "SparklesText")
                             .test_id("ui-gallery-magic-sparkles-text-title"),
@@ -737,19 +691,15 @@ pub(in crate::ui) fn preview_magic_sparkles_text(
                                  Future: clip to glyph alpha when alpha masks mature.",
                         ),
                     ]
-                },
-            )]
-        },
-    )
-    .test_id("ui-gallery-magic-sparkles-text");
+                })
+                    .gap(Space::N3)
+                    .layout(LayoutRefinement::default().w_full())
+                    .items_start().into_element(cx)]
+            },
+        )
+        .test_id("ui-gallery-magic-sparkles-text");
 
-    vec![stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N6)
-            .layout(LayoutRefinement::default().w_full())
-            .items_start(),
-        |cx| {
+    vec![ui::v_flex(|cx| {
             vec![
                 shadcn::typography::h4(cx, "SparklesText (Phase 0)"),
                 shadcn::typography::p(
@@ -758,6 +708,8 @@ pub(in crate::ui) fn preview_magic_sparkles_text(
                 ),
                 cx.container(surface, |_cx| vec![sparkles]),
             ]
-        },
-    )]
+        })
+            .gap(Space::N6)
+            .layout(LayoutRefinement::default().w_full())
+            .items_start().into_element(cx)]
 }

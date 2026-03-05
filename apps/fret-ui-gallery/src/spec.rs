@@ -137,6 +137,7 @@ pub(crate) const PAGE_AI_WORKFLOW_TOOLBAR_DEMO: &str = "ai_workflow_toolbar_demo
 pub(crate) const PAGE_AI_WORKFLOW_NODE_GRAPH_DEMO: &str = "ai_workflow_node_graph_demo";
 pub(crate) const PAGE_AI_CANVAS_WORLD_LAYER_SPIKE: &str = "ai_canvas_world_layer_spike";
 pub(crate) const PAGE_AI_PROMPT_INPUT_PROVIDER_DEMO: &str = "ai_prompt_input_provider_demo";
+pub(crate) const PAGE_AI_PROMPT_INPUT_DOCS_DEMO: &str = "ai_prompt_input_docs_demo";
 pub(crate) const PAGE_AI_PROMPT_INPUT_ACTION_MENU_DEMO: &str = "ai_prompt_input_action_menu_demo";
 pub(crate) const PAGE_AI_PROMPT_INPUT_REFERENCED_SOURCES_DEMO: &str =
     "ai_prompt_input_referenced_sources_demo";
@@ -352,6 +353,8 @@ pub(crate) const CMD_NAV_AI_CANVAS_WORLD_LAYER_SPIKE: &str =
     "ui_gallery.nav.select.ai_canvas_world_layer_spike";
 pub(crate) const CMD_NAV_AI_PROMPT_INPUT_PROVIDER_DEMO: &str =
     "ui_gallery.nav.select.ai_prompt_input_provider_demo";
+pub(crate) const CMD_NAV_AI_PROMPT_INPUT_DOCS_DEMO: &str =
+    "ui_gallery.nav.select.ai_prompt_input_docs_demo";
 pub(crate) const CMD_NAV_AI_PROMPT_INPUT_ACTION_MENU_DEMO: &str =
     "ui_gallery.nav.select.ai_prompt_input_action_menu_demo";
 pub(crate) const CMD_NAV_AI_PROMPT_INPUT_REFERENCED_SOURCES_DEMO: &str =
@@ -1191,6 +1194,16 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
                 "fret-ui-ai (prompt input parts)",
                 CMD_NAV_AI_PROMPT_INPUT_PROVIDER_DEMO,
                 &["ai", "prompt", "input", "provider", "parts", "demo"],
+            ),
+            PageSpec::new(
+                PAGE_AI_PROMPT_INPUT_DOCS_DEMO,
+                "AI Prompt Input (Docs-aligned)",
+                "Docs-aligned PromptInput composition (tools + model select + tooltips) Demo",
+                "fret-ui-ai (prompt input)",
+                CMD_NAV_AI_PROMPT_INPUT_DOCS_DEMO,
+                &[
+                    "ai", "prompt", "input", "docs", "tooltips", "select", "demo",
+                ],
             ),
             PageSpec::new(
                 PAGE_AI_PROMPT_INPUT_ACTION_MENU_DEMO,

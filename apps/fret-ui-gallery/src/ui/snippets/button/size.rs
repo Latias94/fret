@@ -38,35 +38,32 @@ fn row<H: UiHost>(
 }
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N3)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full().min_w_0()),
-        |cx| {
-            vec![
-                row(
-                    cx,
-                    "Small",
-                    shadcn::ButtonSize::Sm,
-                    shadcn::ButtonSize::IconSm,
-                ),
-                row(
-                    cx,
-                    "Default",
-                    shadcn::ButtonSize::Default,
-                    shadcn::ButtonSize::Icon,
-                ),
-                row(
-                    cx,
-                    "Large",
-                    shadcn::ButtonSize::Lg,
-                    shadcn::ButtonSize::IconLg,
-                ),
-            ]
-        },
-    )
+    ui::v_flex(|cx| {
+        vec![
+            row(
+                cx,
+                "Small",
+                shadcn::ButtonSize::Sm,
+                shadcn::ButtonSize::IconSm,
+            ),
+            row(
+                cx,
+                "Default",
+                shadcn::ButtonSize::Default,
+                shadcn::ButtonSize::Icon,
+            ),
+            row(
+                cx,
+                "Large",
+                shadcn::ButtonSize::Lg,
+                shadcn::ButtonSize::IconLg,
+            ),
+        ]
+    })
+    .gap(Space::N3)
+    .items_start()
+    .layout(LayoutRefinement::default().w_full().min_w_0())
+    .into_element(cx)
     .test_id("ui-gallery-button-size")
 }
 // endregion: example

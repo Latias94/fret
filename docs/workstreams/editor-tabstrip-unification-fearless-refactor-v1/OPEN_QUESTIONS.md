@@ -10,6 +10,9 @@ Options:
 Recommendation:
 - Keep policy in adapters; default to “overflowed + active” because it prevents a common editor
   failure mode where the active tab becomes unreachable in the dropdown.
+  - Docking default: includes active (`ecosystem/fret-docking/src/dock/tab_overflow.rs`).
+  - Workspace default: overflowed-only (dockview-like), but can opt into include-active if needed
+    (`WorkspaceTabStrip::overflow_menu_active_policy(...)`).
 
 ## Q2: Should overflow dropdown support close buttons?
 
@@ -84,8 +87,9 @@ Options:
 3) Keep duplicated per adapter — simplest short-term, but drifts quickly.
 
 Recommendation:
-- Put the **TabStripController** in `fret-ui-kit` (option 2).
-- Keep pure geometry/helpers in `fret-ui-headless` (e.g. surface classification, canonical end-drop).
+- Keep the **TabStripController** in `fret-ui-headless` (small shared arbitration rules).
+- Re-export from `fret-ui-kit` for adapter convenience.
+  - Code: `ecosystem/fret-ui-kit/src/headless/tab_strip_controller.rs`
 
 ## Q7: How should dropdown menu rows support trailing “action slots” (close, pin, etc.)?
 

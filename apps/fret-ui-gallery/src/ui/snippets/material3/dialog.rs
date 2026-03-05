@@ -157,12 +157,7 @@ pub fn render<H: UiHost>(
         dialog.into_element(
             cx,
             move |cx| {
-                stack::vstack(
-                    cx,
-                    stack::VStackProps::default()
-                        .layout(LayoutRefinement::default().w_full().h_full())
-                        .gap(Space::N4),
-                    move |cx| {
+                ui::v_flex(move |cx| {
                         vec![
                             material3::Button::new("Open dialog")
                                 .variant(material3::ButtonVariant::Filled)
@@ -175,8 +170,9 @@ pub fn render<H: UiHost>(
                                 .into_element(cx),
                             cx.text("Tip: press Esc or click the scrim to close; Tab should stay inside the dialog while open."),
                         ]
-                    },
-                )
+                    })
+                        .layout(LayoutRefinement::default().w_full().h_full())
+                        .gap(Space::N4).into_element(cx)
             },
             {
                 let selected = selected.clone();
@@ -195,12 +191,7 @@ pub fn render<H: UiHost>(
                         |_cx| Vec::<AnyElement>::new(),
                     );
 
-                    vec![stack::vstack(
-                        cx,
-                        stack::VStackProps::default()
-                            .layout(LayoutRefinement::default().w_full().min_w_0())
-                            .gap(Space::N4),
-                        move |cx| {
+                    vec![ui::v_flex(move |cx| {
                             vec![
                                 material3::Select::new(selected.clone())
                                     .a11y_label("Material 3 Select (dialog)")
@@ -221,8 +212,9 @@ pub fn render<H: UiHost>(
                                     .test_id(format!("{id_prefix}-select-bottom"))
                                     .into_element(cx),
                             ]
-                        },
-                    )]
+                        })
+                            .layout(LayoutRefinement::default().w_full().min_w_0())
+                            .gap(Space::N4).into_element(cx)]
                 }
             },
         )
@@ -266,24 +258,17 @@ pub fn render<H: UiHost>(
         )
     };
 
-    let containers = stack::hstack(
-        cx,
-        stack::HStackProps::default().gap(Space::N4).items_center(),
-        move |cx| {
-            vec![
-                build_container(cx, default_dialog),
-                build_container(cx, override_dialog),
-            ]
-        },
-    );
+    let containers = ui::h_row(move |cx| {
+        vec![
+            build_container(cx, default_dialog),
+            build_container(cx, override_dialog),
+        ]
+    })
+    .gap(Space::N4)
+    .items_center()
+    .into_element(cx);
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .layout(LayoutRefinement::default().w_full().min_w_0())
-            .gap(Space::N3)
-            .items_start(),
-        |cx| {
+    ui::v_flex(|cx| {
             vec![
                 cx.text(
                     "Material 3 Dialog: modal barrier + focus trap/restore + token-shaped dialog actions.",
@@ -296,8 +281,10 @@ pub fn render<H: UiHost>(
                     last.as_ref()
                 )),
             ]
-        },
-    )
+        })
+            .layout(LayoutRefinement::default().w_full().min_w_0())
+            .gap(Space::N3)
+            .items_start().into_element(cx)
     .into()
 }
 

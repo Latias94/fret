@@ -30,107 +30,95 @@ pub(in crate::ui) fn preview_view_cache(
         .get_model_copied(&view_cache_continuous, Invalidation::Layout)
         .unwrap_or(false);
 
-    let toggles = stack::vstack(
-        cx,
-        stack::VStackProps::default().gap(Space::N2).items_start(),
-        |cx| {
-            vec![
-                stack::hstack(
-                    cx,
-                    stack::HStackProps::default().gap(Space::N2).items_center(),
-                    |cx| {
-                        vec![
-                            shadcn::Switch::new(view_cache_enabled.clone())
-                                .a11y_label("Enable view-cache mode")
-                                .test_id("ui-gallery-view-cache-enabled")
-                                .into_element(cx),
-                            cx.text("Enable view-cache mode (global UiTree flag)"),
-                        ]
-                    },
-                ),
-                stack::hstack(
-                    cx,
-                    stack::HStackProps::default().gap(Space::N2).items_center(),
-                    |cx| {
-                        vec![
-                            shadcn::Switch::new(view_cache_cache_shell.clone())
-                                .a11y_label("Cache the gallery shell")
-                                .test_id("ui-gallery-view-cache-cache-shell")
-                                .into_element(cx),
-                            cx.text("Cache shell (sidebar/content wrappers)"),
-                        ]
-                    },
-                ),
-                stack::hstack(
-                    cx,
-                    stack::HStackProps::default().gap(Space::N2).items_center(),
-                    |cx| {
-                        vec![
-                            shadcn::Switch::new(view_cache_cache_content.clone())
-                                .a11y_label("Cache the gallery content root")
-                                .test_id("ui-gallery-view-cache-cache-content")
-                                .into_element(cx),
-                            cx.text("Cache content root (requires 'Cache shell')"),
-                        ]
-                    },
-                ),
-                stack::hstack(
-                    cx,
-                    stack::HStackProps::default().gap(Space::N2).items_center(),
-                    |cx| {
-                        vec![
-                            shadcn::Switch::new(view_cache_inner_enabled.clone())
-                                .a11y_label("Enable inner ViewCache boundary")
-                                .test_id("ui-gallery-view-cache-inner-cache")
-                                .into_element(cx),
-                            cx.text("Enable inner ViewCache boundary (torture subtree)"),
-                        ]
-                    },
-                ),
-                stack::hstack(
-                    cx,
-                    stack::HStackProps::default().gap(Space::N2).items_center(),
-                    |cx| {
-                        vec![
-                            shadcn::Switch::new(view_cache_continuous.clone())
-                                .a11y_label("Request continuous frames")
-                                .test_id("ui-gallery-view-cache-continuous")
-                                .into_element(cx),
-                            cx.text("Continuous frames (cache-hit should still keep state alive)"),
-                        ]
-                    },
-                ),
-            ]
-        },
-    );
+    let toggles = ui::v_stack(|cx| {
+        vec![
+            ui::h_row(|cx| {
+                vec![
+                    shadcn::Switch::new(view_cache_enabled.clone())
+                        .a11y_label("Enable view-cache mode")
+                        .test_id("ui-gallery-view-cache-enabled")
+                        .into_element(cx),
+                    cx.text("Enable view-cache mode (global UiTree flag)"),
+                ]
+            })
+            .gap(Space::N2)
+            .items_center()
+            .into_element(cx),
+            ui::h_row(|cx| {
+                vec![
+                    shadcn::Switch::new(view_cache_cache_shell.clone())
+                        .a11y_label("Cache the gallery shell")
+                        .test_id("ui-gallery-view-cache-cache-shell")
+                        .into_element(cx),
+                    cx.text("Cache shell (sidebar/content wrappers)"),
+                ]
+            })
+            .gap(Space::N2)
+            .items_center()
+            .into_element(cx),
+            ui::h_row(|cx| {
+                vec![
+                    shadcn::Switch::new(view_cache_cache_content.clone())
+                        .a11y_label("Cache the gallery content root")
+                        .test_id("ui-gallery-view-cache-cache-content")
+                        .into_element(cx),
+                    cx.text("Cache content root (requires 'Cache shell')"),
+                ]
+            })
+            .gap(Space::N2)
+            .items_center()
+            .into_element(cx),
+            ui::h_row(|cx| {
+                vec![
+                    shadcn::Switch::new(view_cache_inner_enabled.clone())
+                        .a11y_label("Enable inner ViewCache boundary")
+                        .test_id("ui-gallery-view-cache-inner-cache")
+                        .into_element(cx),
+                    cx.text("Enable inner ViewCache boundary (torture subtree)"),
+                ]
+            })
+            .gap(Space::N2)
+            .items_center()
+            .into_element(cx),
+            ui::h_row(|cx| {
+                vec![
+                    shadcn::Switch::new(view_cache_continuous.clone())
+                        .a11y_label("Request continuous frames")
+                        .test_id("ui-gallery-view-cache-continuous")
+                        .into_element(cx),
+                    cx.text("Continuous frames (cache-hit should still keep state alive)"),
+                ]
+            })
+            .gap(Space::N2)
+            .items_center()
+            .into_element(cx),
+        ]
+    })
+    .gap(Space::N2)
+    .items_start()
+    .into_element(cx);
 
-    let actions = stack::hstack(
-        cx,
-        stack::HStackProps::default().gap(Space::N2).items_center(),
-        |cx| {
-            vec![
-                shadcn::Button::new("Bump counter")
-                    .variant(shadcn::ButtonVariant::Outline)
-                    .size(shadcn::ButtonSize::Sm)
-                    .test_id("ui-gallery-view-cache-bump-counter")
-                    .on_click(CMD_VIEW_CACHE_BUMP)
-                    .into_element(cx),
-                shadcn::Button::new("Reset counter")
-                    .variant(shadcn::ButtonVariant::Outline)
-                    .size(shadcn::ButtonSize::Sm)
-                    .test_id("ui-gallery-view-cache-reset-counter")
-                    .on_click(CMD_VIEW_CACHE_RESET)
-                    .into_element(cx),
-            ]
-        },
-    );
+    let actions = ui::h_row(|cx| {
+        vec![
+            shadcn::Button::new("Bump counter")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Sm)
+                .test_id("ui-gallery-view-cache-bump-counter")
+                .on_click(CMD_VIEW_CACHE_BUMP)
+                .into_element(cx),
+            shadcn::Button::new("Reset counter")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Sm)
+                .test_id("ui-gallery-view-cache-reset-counter")
+                .on_click(CMD_VIEW_CACHE_RESET)
+                .into_element(cx),
+        ]
+    })
+    .gap(Space::N2)
+    .items_center()
+    .into_element(cx);
 
-    let header = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .layout(LayoutRefinement::default().w_full())
-            .gap(Space::N3),
-        |cx| {
+    let header = ui::v_flex(|cx| {
             vec![
                 cx.text("Goal: validate cached-subtree correctness under real interaction."),
                 cx.text(format!(
@@ -144,8 +132,9 @@ pub(in crate::ui) fn preview_view_cache(
                 toggles,
                 actions,
             ]
-        },
-    );
+        })
+            .layout(LayoutRefinement::default().w_full())
+            .gap(Space::N3).into_element(cx);
 
     let subtree_body = |cx: &mut ElementContext<'_, App>| -> Vec<AnyElement> {
         let render_count = cx.with_state(
@@ -227,13 +216,10 @@ pub(in crate::ui) fn preview_view_cache(
             }));
         }
 
-        let list = shadcn::ScrollArea::new([stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .layout(LayoutRefinement::default().w_full())
-                .gap(Space::N1),
-            |_cx| rows,
-        )])
+        let list = shadcn::ScrollArea::new([ui::v_flex(|_cx| rows)
+            .layout(LayoutRefinement::default().w_full())
+            .gap(Space::N1)
+            .into_element(cx)])
         .refine_layout(LayoutRefinement::default().w_full().h_px(Px(280.0)))
         .into_element(cx);
 
@@ -269,30 +255,27 @@ pub(in crate::ui) fn preview_view_cache(
         .into_element(cx)
     };
 
-    let root = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .layout(LayoutRefinement::default().w_full())
-            .gap(Space::N3),
-        move |cx| {
-            vec![
-                shadcn::Card::new(vec![
-                    shadcn::CardHeader::new(vec![
-                        shadcn::CardTitle::new("View Cache Torture").into_element(cx),
-                        shadcn::CardDescription::new(
-                            "Compare cached vs uncached subtree execution and state retention.",
-                        )
-                        .into_element(cx),
-                    ])
+    let root = ui::v_flex(move |cx| {
+        vec![
+            shadcn::Card::new(vec![
+                shadcn::CardHeader::new(vec![
+                    shadcn::CardTitle::new("View Cache Torture").into_element(cx),
+                    shadcn::CardDescription::new(
+                        "Compare cached vs uncached subtree execution and state retention.",
+                    )
                     .into_element(cx),
-                    shadcn::CardContent::new(vec![header]).into_element(cx),
                 ])
-                .refine_layout(LayoutRefinement::default().w_full())
                 .into_element(cx),
-                subtree,
-            ]
-        },
-    )
+                shadcn::CardContent::new(vec![header]).into_element(cx),
+            ])
+            .refine_layout(LayoutRefinement::default().w_full())
+            .into_element(cx),
+            subtree,
+        ]
+    })
+    .layout(LayoutRefinement::default().w_full())
+    .gap(Space::N3)
+    .into_element(cx)
     .attach_semantics(
         SemanticsDecoration::default()
             .role(fret_core::SemanticsRole::Generic)

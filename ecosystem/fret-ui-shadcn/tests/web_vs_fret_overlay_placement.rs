@@ -17,7 +17,7 @@ use fret_ui::elements::{GlobalElementId, bounds_for_element};
 use fret_ui::scroll::ScrollHandle;
 use fret_ui::tree::UiTree;
 use fret_ui::{ElementContext, UiHost};
-use fret_ui_kit::declarative::stack;
+use fret_ui_kit::ui;
 use fret_ui_kit::{LayoutRefinement, OverlayController, Space};
 use serde::Deserialize;
 use std::cell::Cell;

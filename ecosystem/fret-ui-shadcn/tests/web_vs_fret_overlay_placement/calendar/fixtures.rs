@@ -60,11 +60,9 @@ fn build_calendar_22_open_overlay(
             },
         );
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default().gap(Space::N3),
-        move |_cx| vec![label, popover],
-    )
+    ui::v_stack(move |_cx| vec![label, popover])
+        .gap(Space::N3)
+        .into_element(cx)
 }
 
 fn build_calendar_23_open_overlay(
@@ -104,11 +102,9 @@ fn build_calendar_23_open_overlay(
             },
         );
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default().gap(Space::N3),
-        move |_cx| vec![label, popover],
-    )
+    ui::v_stack(move |_cx| vec![label, popover])
+        .gap(Space::N3)
+        .into_element(cx)
 }
 
 fn build_calendar_24_open_overlay(
@@ -148,11 +144,9 @@ fn build_calendar_24_open_overlay(
             },
         );
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default().gap(Space::N3),
-        move |_cx| vec![label, popover],
-    )
+    ui::v_stack(move |_cx| vec![label, popover])
+        .gap(Space::N3)
+        .into_element(cx)
 }
 
 fn build_calendar_25_open_overlay(
@@ -192,11 +186,9 @@ fn build_calendar_25_open_overlay(
             },
         );
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default().gap(Space::N3),
-        move |_cx| vec![label, popover],
-    )
+    ui::v_stack(move |_cx| vec![label, popover])
+        .gap(Space::N3)
+        .into_element(cx)
 }
 
 fn build_calendar_26_open_overlay(
@@ -238,11 +230,9 @@ fn build_calendar_26_open_overlay(
             },
         );
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default().gap(Space::N3),
-        move |_cx| vec![label, popover],
-    )
+    ui::v_stack(move |_cx| vec![label, popover])
+        .gap(Space::N3)
+        .into_element(cx)
 }
 
 fn build_calendar_27_open_overlay(
@@ -279,13 +269,10 @@ fn build_calendar_27_open_overlay(
             },
         );
 
-    stack::hstack(
-        cx,
-        stack::HStackProps::default()
-            .layout(LayoutRefinement::default().w_full())
-            .justify_end(),
-        move |_cx| vec![popover],
-    )
+    ui::h_flex(move |_cx| vec![popover])
+        .layout(LayoutRefinement::default().w_full())
+        .justify_end()
+        .into_element(cx)
 }
 
 fn build_calendar_28_open_overlay(
@@ -320,13 +307,10 @@ fn build_calendar_28_open_overlay(
             },
         );
 
-    stack::hstack(
-        cx,
-        stack::HStackProps::default()
-            .layout(LayoutRefinement::default().w_full())
-            .justify_end(),
-        move |_cx| vec![popover],
-    )
+    ui::h_flex(move |_cx| vec![popover])
+        .layout(LayoutRefinement::default().w_full())
+        .justify_end()
+        .into_element(cx)
 }
 
 fn build_calendar_29_open_overlay(
@@ -357,13 +341,10 @@ fn build_calendar_29_open_overlay(
             },
         );
 
-    stack::hstack(
-        cx,
-        stack::HStackProps::default()
-            .layout(LayoutRefinement::default().w_full())
-            .justify_end(),
-        move |_cx| vec![popover],
-    )
+    ui::h_flex(move |_cx| vec![popover])
+        .layout(LayoutRefinement::default().w_full())
+        .justify_end()
+        .into_element(cx)
 }
 
 fn build_calendar_30_open_overlay(
@@ -411,11 +392,9 @@ fn build_calendar_30_open_overlay(
             },
         );
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default().gap(Space::N3),
-        move |_cx| vec![label, popover],
-    )
+    ui::v_stack(move |_cx| vec![label, popover])
+        .gap(Space::N3)
+        .into_element(cx)
 }
 
 fn assert_calendar_32_open_drawer_insets_match() {

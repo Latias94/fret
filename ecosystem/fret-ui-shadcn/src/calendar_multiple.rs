@@ -11,7 +11,6 @@ use fret_ui::element::{
 use fret_ui::{ElementContext, Invalidation, Theme, ThemeSnapshot, UiHost};
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
-use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::theme_tokens;
 use fret_ui_kit::typography;
@@ -878,17 +877,13 @@ fn calendar_month_view<H: UiHost>(
         days_grid
     };
 
-    let body = stack::vstack(
-        cx,
-        stack::VStackProps::default().gap(Space::N2),
-        move |_cx| vec![weekday_row, days],
-    );
+    let body = ui::v_stack(move |_cx| vec![weekday_row, days])
+        .gap(Space::N2)
+        .into_element(cx);
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default().gap(Space::N4),
-        move |_cx| vec![month_caption, body],
-    )
+    ui::v_stack(move |_cx| vec![month_caption, body])
+        .gap(Space::N4)
+        .into_element(cx)
 }
 
 fn weekday_labels(locale: CalendarLocale, week_start: Weekday) -> Arc<[Arc<str>]> {

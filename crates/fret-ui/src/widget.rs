@@ -62,6 +62,19 @@ pub struct EventCx<'a, H: UiHost> {
     /// (e.g. `PointerRegion`) so action payloads can carry enough information for policy-level
     /// gesture arbitration without exposing widget internals.
     pub pointer_hit_is_text_input: bool,
+    /// `true` when the pointer hit-test target is (or is inside) a pressable element subtree
+    /// (`Pressable`).
+    ///
+    /// This is computed by the UI runtime during dispatch and is available to mechanism widgets
+    /// (e.g. `PointerRegion`) so action payloads can carry enough information for policy-level
+    /// gesture arbitration without exposing widget internals.
+    pub pointer_hit_is_pressable: bool,
+    /// The deepest pressable element in the pointer-down hit-test chain (if any).
+    ///
+    /// This is computed by the UI runtime during dispatch and is available to mechanism widgets
+    /// (e.g. `PointerRegion`, `Pressable`) so policy-level hooks can distinguish nested pressable
+    /// targets (e.g. "row click" vs "button inside row").
+    pub pointer_hit_pressable_target: Option<crate::GlobalElementId>,
     pub prevented_default_actions: &'a mut DefaultActionSet,
     pub children: &'a [NodeId],
     pub focus: Option<NodeId>,

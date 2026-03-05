@@ -1,13 +1,14 @@
 use std::sync::Arc;
 
 use fret_core::{Corners, Edges, Px};
+use fret_icons::IconId;
 use fret_ui::action::OnActivate;
 use fret_ui::element::{AnyElement, ContainerProps};
 use fret_ui::scroll::{ScrollStrategy, VirtualListScrollHandle};
 use fret_ui::{ElementContext, Theme, UiHost};
-use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::{Justify, LayoutRefinement, Space};
+use fret_ui_kit::ui;
+use fret_ui_kit::{Items, Justify, LayoutRefinement, Space};
 
 use fret_ui_shadcn::{Button, ButtonSize, ButtonVariant};
 
@@ -108,10 +109,12 @@ impl ConversationScrollButton {
             host.request_redraw(action_cx.window);
         });
 
-        let mut button = Button::new(self.label)
+        let mut button = Button::new("")
+            .a11y_label(self.label)
             .variant(ButtonVariant::Outline)
             .size(ButtonSize::Icon)
-            .children(vec![cx.text("↓")])
+            .leading_icon(IconId::new_static("lucide.arrow-down"))
+            .corner_radii_override(Corners::all(Px(999.0)))
             .on_activate(on_activate);
 
         if let Some(test_id) = self.test_id {
@@ -120,13 +123,11 @@ impl ConversationScrollButton {
 
         let button = button.into_element(cx);
 
-        let row = stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .layout(LayoutRefinement::default().w_full())
-                .justify(Justify::Center),
-            move |_cx| vec![button],
-        );
+        let row = ui::h_row(move |_cx| vec![button])
+            .layout(LayoutRefinement::default().w_full())
+            .justify(Justify::Center)
+            .items(Items::Center)
+            .into_element(cx);
 
         cx.container(
             ContainerProps {

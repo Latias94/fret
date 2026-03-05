@@ -1,5 +1,7 @@
 pub mod badges;
 pub mod buttons;
+pub mod customization;
+pub mod demo;
 pub mod empty;
 pub mod extras;
 pub mod input_group;

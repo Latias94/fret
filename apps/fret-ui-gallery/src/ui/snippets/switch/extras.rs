@@ -90,14 +90,11 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         )
         .into_element(cx);
 
-        stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .gap(Space::N3)
-                .layout(LayoutRefinement::default().w_full().max_w(Px(520.0))),
-            |_cx| vec![share, notifications],
-        )
-        .test_id("ui-gallery-switch-choice-card")
+        ui::v_flex(|_cx| vec![share, notifications])
+            .gap(Space::N3)
+            .layout(LayoutRefinement::default().w_full().max_w(Px(520.0)))
+            .into_element(cx)
+            .test_id("ui-gallery-switch-choice-card")
     };
 
     let disabled_section = {
@@ -144,13 +141,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         .test_id("ui-gallery-switch-invalid")
     };
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N4)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full().min_w_0()),
-        |cx| {
+    ui::v_flex(|cx| {
             vec![
                 shadcn::typography::muted(
                     cx,
@@ -160,8 +151,10 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                 disabled_section,
                 invalid_section,
             ]
-        },
-    )
+        })
+            .gap(Space::N4)
+            .items_start()
+            .layout(LayoutRefinement::default().w_full().min_w_0()).into_element(cx)
     .test_id("ui-gallery-switch-extras")
 }
 

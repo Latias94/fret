@@ -93,11 +93,10 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
             ink_overflow: fret_ui::element::TextInkOverflow::None,
         });
 
-        let body = stack::vstack(
-            cx,
-            stack::VStackProps::default().gap(Space::N1).items_start(),
-            move |_cx| [title_el, description_el],
-        );
+        let body = ui::v_stack(move |_cx| [title_el, description_el])
+            .gap(Space::N1)
+            .items_start()
+            .into_element(cx);
 
         shadcn::NavigationMenuLink::new(model, [body])
             .label(title)
@@ -114,11 +113,10 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
                     command: &'static str| {
         let icon_el = shadcn::icon::icon(cx, fret_icons::IconId::new_static(icon));
         let label_el = cx.text(label);
-        let row = stack::hstack(
-            cx,
-            stack::HStackProps::default().gap(Space::N2).items_center(),
-            move |_cx| [icon_el, label_el],
-        );
+        let row = ui::h_row(move |_cx| [icon_el, label_el])
+            .gap(Space::N2)
+            .items_center()
+            .into_element(cx);
         shadcn::NavigationMenuLink::new(model, [row])
             .label(label)
             .test_id(test_id)
@@ -129,41 +127,38 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
     let getting_started = shadcn::NavigationMenuItem::new(
         "getting_started",
         "Getting started",
-        [stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .gap(Space::N0)
-                .items_start()
-                .layout(LayoutRefinement::default().w_px(Px(384.0)).min_w_0()),
-            |cx| {
-                vec![
-                    list_item(
-                        cx,
-                        demo_value.clone(),
-                        "Introduction",
-                        "Re-usable components built with Tailwind CSS.",
-                        "ui-gallery-navigation-menu-docs-demo-link-introduction",
-                        CMD_APP_OPEN,
-                    ),
-                    list_item(
-                        cx,
-                        demo_value.clone(),
-                        "Installation",
-                        "How to install dependencies and structure your app.",
-                        "ui-gallery-navigation-menu-docs-demo-link-installation",
-                        CMD_APP_OPEN,
-                    ),
-                    list_item(
-                        cx,
-                        demo_value.clone(),
-                        "Typography",
-                        "Styles for headings, paragraphs, lists...etc",
-                        "ui-gallery-navigation-menu-docs-demo-link-typography",
-                        CMD_APP_OPEN,
-                    ),
-                ]
-            },
-        )],
+        [ui::v_stack(|cx| {
+            vec![
+                list_item(
+                    cx,
+                    demo_value.clone(),
+                    "Introduction",
+                    "Re-usable components built with Tailwind CSS.",
+                    "ui-gallery-navigation-menu-docs-demo-link-introduction",
+                    CMD_APP_OPEN,
+                ),
+                list_item(
+                    cx,
+                    demo_value.clone(),
+                    "Installation",
+                    "How to install dependencies and structure your app.",
+                    "ui-gallery-navigation-menu-docs-demo-link-installation",
+                    CMD_APP_OPEN,
+                ),
+                list_item(
+                    cx,
+                    demo_value.clone(),
+                    "Typography",
+                    "Styles for headings, paragraphs, lists...etc",
+                    "ui-gallery-navigation-menu-docs-demo-link-typography",
+                    CMD_APP_OPEN,
+                ),
+            ]
+        })
+        .gap(Space::N0)
+        .items_start()
+        .layout(LayoutRefinement::default().w_px(Px(384.0)).min_w_0())
+        .into_element(cx)],
     )
     .trigger_test_id("ui-gallery-navigation-menu-docs-demo-trigger-getting-started");
 
@@ -226,50 +221,42 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
             }
         }
 
-        stack::hstack(
-            cx,
-            stack::HStackProps::default()
+        ui::h_row(move |cx| {
+            let left = ui::v_stack(move |_cx| col_left)
                 .gap(Space::N2)
                 .items_start()
-                .layout(LayoutRefinement::default().w_px(components_w_px).min_w_0()),
-            move |cx| {
-                let left = stack::vstack(
-                    cx,
-                    stack::VStackProps::default().gap(Space::N2).items_start(),
-                    move |_cx| col_left,
-                );
-                let right = stack::vstack(
-                    cx,
-                    stack::VStackProps::default().gap(Space::N2).items_start(),
-                    move |_cx| col_right,
-                );
-                vec![left, right]
-            },
-        )
+                .into_element(cx);
+            let right = ui::v_stack(move |_cx| col_right)
+                .gap(Space::N2)
+                .items_start()
+                .into_element(cx);
+            vec![left, right]
+        })
+        .gap(Space::N2)
+        .items_start()
+        .layout(LayoutRefinement::default().w_px(components_w_px).min_w_0())
+        .into_element(cx)
     } else {
         let demo_value_for_components = demo_value.clone();
-        stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .gap(Space::N2)
-                .items_start()
-                .layout(LayoutRefinement::default().w_px(components_w_px).min_w_0()),
-            move |cx| {
-                components_specs
-                    .into_iter()
-                    .map(|(title, desc, test_id, command)| {
-                        list_item(
-                            cx,
-                            demo_value_for_components.clone(),
-                            title,
-                            desc,
-                            test_id,
-                            command,
-                        )
-                    })
-                    .collect::<Vec<_>>()
-            },
-        )
+        ui::v_stack(move |cx| {
+            components_specs
+                .into_iter()
+                .map(|(title, desc, test_id, command)| {
+                    list_item(
+                        cx,
+                        demo_value_for_components.clone(),
+                        title,
+                        desc,
+                        test_id,
+                        command,
+                    )
+                })
+                .collect::<Vec<_>>()
+        })
+        .gap(Space::N2)
+        .items_start()
+        .layout(LayoutRefinement::default().w_px(components_w_px).min_w_0())
+        .into_element(cx)
     };
 
     let components =
@@ -279,41 +266,38 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
     let with_icon = shadcn::NavigationMenuItem::new(
         "with_icon",
         "With Icon",
-        [stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .gap(Space::N0)
-                .items_start()
-                .layout(LayoutRefinement::default().w_px(Px(200.0)).min_w_0()),
-            |cx| {
-                vec![
-                    icon_row(
-                        cx,
-                        demo_value.clone(),
-                        "lucide.circle-question-mark",
-                        "Backlog",
-                        "ui-gallery-navigation-menu-docs-demo-link-backlog",
-                        CMD_APP_OPEN,
-                    ),
-                    icon_row(
-                        cx,
-                        demo_value.clone(),
-                        "lucide.circle",
-                        "To Do",
-                        "ui-gallery-navigation-menu-docs-demo-link-to-do",
-                        CMD_APP_OPEN,
-                    ),
-                    icon_row(
-                        cx,
-                        demo_value.clone(),
-                        "lucide.circle-check",
-                        "Done",
-                        "ui-gallery-navigation-menu-docs-demo-link-done",
-                        CMD_APP_OPEN,
-                    ),
-                ]
-            },
-        )],
+        [ui::v_stack(|cx| {
+            vec![
+                icon_row(
+                    cx,
+                    demo_value.clone(),
+                    "lucide.circle-question-mark",
+                    "Backlog",
+                    "ui-gallery-navigation-menu-docs-demo-link-backlog",
+                    CMD_APP_OPEN,
+                ),
+                icon_row(
+                    cx,
+                    demo_value.clone(),
+                    "lucide.circle",
+                    "To Do",
+                    "ui-gallery-navigation-menu-docs-demo-link-to-do",
+                    CMD_APP_OPEN,
+                ),
+                icon_row(
+                    cx,
+                    demo_value.clone(),
+                    "lucide.circle-check",
+                    "Done",
+                    "ui-gallery-navigation-menu-docs-demo-link-done",
+                    CMD_APP_OPEN,
+                ),
+            ]
+        })
+        .gap(Space::N0)
+        .items_start()
+        .layout(LayoutRefinement::default().w_px(Px(200.0)).min_w_0())
+        .into_element(cx)],
     )
     .trigger_test_id("ui-gallery-navigation-menu-docs-demo-trigger-with-icon");
 

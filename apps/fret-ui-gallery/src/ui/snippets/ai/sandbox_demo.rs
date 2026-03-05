@@ -5,8 +5,8 @@ use fret_core::Px;
 use fret_ui::element::SemanticsDecoration;
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::declarative::ElementContextThemeExt;
-use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::ui;
 use fret_ui_kit::{ChromeRefinement, LayoutRefinement, MetricRef, Radius, Space};
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 
@@ -39,22 +39,19 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
         )));
 
     let console_panel = {
-        let panel = stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .gap(Space::N2)
-                .layout(LayoutRefinement::default().w_full().min_w_0()),
-            move |cx| {
-                vec![
-                    cx.text("Sandbox console output (demo).").attach_semantics(
-                        SemanticsDecoration::default()
-                            .role(fret_core::SemanticsRole::Generic)
-                            .test_id("ui-ai-sandbox-demo-panel-console"),
-                    ),
-                    cx.text("Apps own execution backends; this is UI-only."),
-                ]
-            },
-        );
+        let panel = ui::v_flex(move |cx| {
+            vec![
+                cx.text("Sandbox console output (demo).").attach_semantics(
+                    SemanticsDecoration::default()
+                        .role(fret_core::SemanticsRole::Generic)
+                        .test_id("ui-ai-sandbox-demo-panel-console"),
+                ),
+                cx.text("Apps own execution backends; this is UI-only."),
+            ]
+        })
+        .gap(Space::N2)
+        .layout(LayoutRefinement::default().w_full().min_w_0())
+        .into_element(cx);
 
         let props = cx.with_theme(|theme| {
             decl_style::container_props(
@@ -67,22 +64,19 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
     };
 
     let files_panel = {
-        let panel = stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .gap(Space::N2)
-                .layout(LayoutRefinement::default().w_full().min_w_0()),
-            move |cx| {
-                vec![
-                    cx.text("Sandbox files view (demo).").attach_semantics(
-                        SemanticsDecoration::default()
-                            .role(fret_core::SemanticsRole::Generic)
-                            .test_id("ui-ai-sandbox-demo-panel-files"),
-                    ),
-                    cx.text("Tabs are composable; provide your own panels."),
-                ]
-            },
-        );
+        let panel = ui::v_flex(move |cx| {
+            vec![
+                cx.text("Sandbox files view (demo).").attach_semantics(
+                    SemanticsDecoration::default()
+                        .role(fret_core::SemanticsRole::Generic)
+                        .test_id("ui-ai-sandbox-demo-panel-files"),
+                ),
+                cx.text("Tabs are composable; provide your own panels."),
+            ]
+        })
+        .gap(Space::N2)
+        .layout(LayoutRefinement::default().w_full().min_w_0())
+        .into_element(cx);
 
         let props = cx.with_theme(|theme| {
             decl_style::container_props(
@@ -112,18 +106,15 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
     .refine_style(ChromeRefinement::default().rounded(Radius::Md))
     .into_element(cx);
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .layout(LayoutRefinement::default().w_full().min_w_0())
-            .gap(Space::N4),
-        move |cx| {
-            vec![
-                cx.text("Sandbox (AI Elements)"),
-                cx.text("Collapsible + tabs chrome. Apps own the sandbox backend."),
-                sandbox,
-            ]
-        },
-    )
+    ui::v_flex(move |cx| {
+        vec![
+            cx.text("Sandbox (AI Elements)"),
+            cx.text("Collapsible + tabs chrome. Apps own the sandbox backend."),
+            sandbox,
+        ]
+    })
+    .layout(LayoutRefinement::default().w_full().min_w_0())
+    .gap(Space::N4)
+    .into_element(cx)
 }
 // endregion: example

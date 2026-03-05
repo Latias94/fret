@@ -17,7 +17,6 @@ use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
 use fret_ui_kit::declarative::glass::{GlassPanelProps, glass_panel};
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
-use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::dialog as radix_dialog;
 use fret_ui_kit::primitives::portal_inherited;
@@ -706,7 +705,7 @@ impl DialogContent {
         let container = shadcn_layout::container_vstack(
             cx,
             props,
-            stack::VStackProps::default()
+            shadcn_layout::VStackProps::default()
                 .gap(Space::N4)
                 .layout(LayoutRefinement::default().w_full().min_w_0().min_h_0()),
             children,
@@ -848,13 +847,12 @@ impl DialogClose {
                     );
                     let icon = cx.opacity(opacity, move |_cx| vec![icon]);
 
-                    vec![fret_ui_kit::declarative::stack::hstack(
-                        cx,
-                        fret_ui_kit::declarative::stack::HStackProps::default()
+                    vec![
+                        ui::h_row(|_cx| vec![icon])
                             .justify_center()
-                            .items_center(),
-                        |_cx| vec![icon],
-                    )]
+                            .items_center()
+                            .into_element(cx),
+                    ]
                 };
 
                 (pressable_props, chrome_props, children)
@@ -963,8 +961,6 @@ impl DialogFooter {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        use fret_ui_kit::declarative::stack;
-
         // Upstream shadcn uses Tailwind `sm:` (viewport breakpoint), so match it via viewport
         // queries (ADR 0232).
         let sm_breakpoint = fret_ui_kit::declarative::viewport_width_at_least(
@@ -985,7 +981,7 @@ impl DialogFooter {
             shadcn_layout::container_hstack(
                 cx,
                 props,
-                stack::HStackProps::default()
+                shadcn_layout::HStackProps::default()
                     .gap(Space::N2)
                     .layout(LayoutRefinement::default().w_full())
                     .justify_end()
@@ -998,7 +994,7 @@ impl DialogFooter {
             shadcn_layout::container_vstack(
                 cx,
                 props,
-                stack::VStackProps::default()
+                shadcn_layout::VStackProps::default()
                     .gap(Space::N2)
                     .layout(LayoutRefinement::default().w_full())
                     .items_stretch(),
