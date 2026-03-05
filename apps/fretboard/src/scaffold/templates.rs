@@ -223,8 +223,7 @@ pub(super) fn todo_template_main_rs(package_name: &str, opts: ScaffoldOptions) -
     let palette_button = if opts.command_palette {
         r#"
                 shadcn::Button::new("Command palette")
-                    .action("app.command_palette")
-                    .into_element(cx),"#
+                    .action("app.command_palette"),"#
     } else {
         ""
     };
@@ -809,10 +808,10 @@ impl View for HelloView {{
         }});
 
         ui::v_flex(|cx| {{
-            [
-                shadcn::Label::new("Hello, world!").into_element(cx),
+            ui::children![cx;
+                shadcn::Label::new("Hello, world!"),
                 cx.text(format!("Clicks: {{click_count_value}}")),
-                shadcn::Button::new("Click me").action(act::Click).into_element(cx),
+                shadcn::Button::new("Click me").action(act::Click),
 __PALETTE_BUTTON__
             ]
         }})
