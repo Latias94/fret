@@ -30,7 +30,7 @@ View runtime (v1):
 Legacy MVU removal (M9):
 
 - MVU authoring surfaces were hard-deleted in-tree.
-- Gate: `tools/gate_no_mvu_in_tree.ps1` (added in M9 follow-up) prevents reintroduction.
+- Gate: `tools/gate_no_mvu_in_tree.py` (or `tools/gate_no_mvu_in_tree.ps1`) (added in M9 follow-up) prevents reintroduction.
 
 UI gallery adoption (v1):
 
@@ -210,12 +210,13 @@ Prefer `cargo nextest run` when available.
 - Run the Action-first authoring diagnostics gate set (commands/keymap + modal barrier + cross-frontend):
   - `pwsh tools/diag_gate_action_first_authoring_v1.ps1`
 - Prevent legacy MVU drift in the cookbook (compile-time grep gate):
-  - `pwsh tools/gate_no_mvu_in_cookbook.ps1`
+  - `python tools/gate_no_mvu_in_cookbook.py` (or `pwsh tools/gate_no_mvu_in_cookbook.ps1`)
 - Prevent `stack::*` authoring drift (cookbook/examples stay on `fret-ui-kit::ui::*` builders):
-  - `pwsh tools/gate_no_stack_in_cookbook.ps1`
-  - `pwsh tools/gate_no_stack_in_examples.ps1`
-  - `pwsh tools/gate_no_stack_in_ui_gallery_shell.ps1`
-  - `pwsh tools/gate_no_public_stack_in_ui_kit.ps1` (keep legacy stack helpers internal-only)
+  - `python tools/gate_no_stack_in_cookbook.py` (or `pwsh tools/gate_no_stack_in_cookbook.ps1`)
+  - `python tools/gate_no_stack_in_examples.py` (or `pwsh tools/gate_no_stack_in_examples.ps1`)
+  - `python tools/gate_no_stack_in_ui_gallery_shell.py` (or `pwsh tools/gate_no_stack_in_ui_gallery_shell.ps1`)
+  - `python tools/gate_no_public_stack_in_ui_kit.py` (asserts legacy stack helpers are hard-deleted)
+  - Note: the Python gate scripts share helpers in `tools/_gate_lib.py`.
 
 ---
 

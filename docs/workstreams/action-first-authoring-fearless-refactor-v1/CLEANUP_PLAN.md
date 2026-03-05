@@ -16,7 +16,7 @@ This workstream is only “done” if we leave a **clean architecture** behind.
 v1 landed and the repo golden path is converged on **View runtime + typed actions**:
 
 - Templates: `fretboard new` scaffolds generate View+actions by default.
-- Cookbook: view runtime + actions; MVU is gated out (`pwsh tools/gate_no_mvu_in_cookbook.ps1`).
+- Cookbook: view runtime + actions; MVU is gated out (`python tools/gate_no_mvu_in_cookbook.py` or `pwsh tools/gate_no_mvu_in_cookbook.ps1`).
 - Diagnostics gates: action-first scripted gates exist (`pwsh tools/diag_gate_action_first_authoring_v1.ps1`).
 - MVU authoring surfaces were hard-deleted in-tree as part of milestone M9.
 

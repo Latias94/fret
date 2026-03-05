@@ -297,6 +297,21 @@ where
     UiBuilder::new(FlexBox::new(Axis::Vertical, children))
 }
 
+/// Returns a patchable vertical flex layout builder that does **not** force `width: fill`.
+///
+/// Use this when you want the column to shrink-wrap its contents (or to avoid inflating child hit
+/// boxes due to a fill-width flex root).
+pub fn v_stack<H: UiHost, F, I>(children: F) -> UiBuilder<FlexBox<H, F>>
+where
+    F: FnOnce(&mut ElementContext<'_, H>) -> I,
+    I: IntoIterator,
+    I::Item: UiIntoElement,
+{
+    let mut flex = FlexBox::new(Axis::Vertical, children);
+    flex.force_width_fill = false;
+    UiBuilder::new(flex)
+}
+
 /// Variant of [`v_flex`] that avoids iterator borrow pitfalls by collecting into a sink.
 ///
 /// Use this when the natural authoring form is an iterator that captures `&mut cx` (e.g.
@@ -306,6 +321,16 @@ where
     B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
 {
     UiBuilder::new(FlexBoxBuild::new(Axis::Vertical, build))
+}
+
+/// Variant of [`v_stack`] that avoids iterator borrow pitfalls by collecting into a sink.
+pub fn v_stack_build<H: UiHost, B>(build: B) -> UiBuilder<FlexBoxBuild<H, B>>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    let mut flex = FlexBoxBuild::new(Axis::Vertical, build);
+    flex.force_width_fill = false;
+    UiBuilder::new(flex)
 }
 
 /// A patchable container constructor for authoring ergonomics.

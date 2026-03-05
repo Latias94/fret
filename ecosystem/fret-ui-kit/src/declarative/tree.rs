@@ -12,10 +12,10 @@ use fret_ui::{ElementContext, Theme, UiHost};
 
 use crate::declarative::action_hooks::ActionHooksExt;
 use crate::declarative::model_watch::ModelWatchExt as _;
-use crate::declarative::stack;
+use crate::ui;
 use crate::{
-    Items, Justify, MetricRef, Size, Space, TreeEntry, TreeItemId, TreeRowRenderer, TreeRowState,
-    TreeState, flatten_tree,
+    MetricRef, Size, Space, TreeEntry, TreeItemId, TreeRowRenderer, TreeRowState, TreeState,
+    flatten_tree,
 };
 
 type RetainedTreeRowFn<H> = dyn for<'a> Fn(&mut ElementContext<'a, H>, usize) -> AnyElement;
@@ -291,65 +291,74 @@ pub fn tree_view_with_renderer<H: UiHost>(
                                 None
                             };
 
-                            vec![cx.container(
-                                ContainerProps {
-                                    padding: Edges {
-                                        top: row_py,
-                                        right: row_px,
-                                        bottom: row_py,
-                                        left: pad_left,
-                                    }
-                                    .into(),
-                                    background: row_bg,
-                                    ..Default::default()
-                                },
-                                |cx| {
-                                    vec![stack::hstack(
-                                        cx,
-                                        stack::HStackProps::default()
-                                            .gap_x(Space::N2)
-                                            .justify(Justify::Start)
-                                            .items(Items::Center),
-                                        |cx| {
-                                            let mut out = Vec::new();
+                            vec![
+                                cx.container(
+                                    ContainerProps {
+                                        padding: Edges {
+                                            top: row_py,
+                                            right: row_px,
+                                            bottom: row_py,
+                                            left: pad_left,
+                                        }
+                                        .into(),
+                                        background: row_bg,
+                                        ..Default::default()
+                                    },
+                                    |cx| {
+                                        vec![
+                                            ui::h_row(|cx| {
+                                                let mut out = Vec::new();
 
-                                            if entry.has_children {
-                                                // Toggle button (kept separate so click target is predictable).
-                                                let glyph: Arc<str> =
-                                                    Arc::from(if is_expanded { "v" } else { ">" });
-                                                out.push(cx.pressable(
-                                                    PressableProps {
-                                                        enabled: toggle_cmd.is_some(),
-                                                        a11y: PressableA11y {
-                                                            role: Some(SemanticsRole::Button),
-                                                            label: Some(Arc::from("Toggle")),
-                                                            selected: false,
-                                                            ..Default::default()
-                                                        },
+                                                if entry.has_children {
+                                                    // Toggle button (kept separate so click target is predictable).
+                                                    let glyph: Arc<str> =
+                                                        Arc::from(if is_expanded {
+                                                            "v"
+                                                        } else {
+                                                            ">"
+                                                        });
+                                                    out.push(cx.pressable(
+                                                PressableProps {
+                                                    enabled: toggle_cmd.is_some(),
+                                                    a11y: PressableA11y {
+                                                        role: Some(SemanticsRole::Button),
+                                                        label: Some(Arc::from("Toggle")),
+                                                        selected: false,
                                                         ..Default::default()
                                                     },
-                                                    |cx, _st| {
-                                                        cx.pressable_dispatch_command_if_enabled_opt(toggle_cmd);
-                                                        vec![cx.text(glyph.as_ref())]
-                                                    },
-                                                ));
-                                            } else {
-                                                out.push(cx.spacer(SpacerProps {
-                                                    min: Px(14.0),
                                                     ..Default::default()
-                                                }));
-                                            }
+                                                },
+                                                |cx, _st| {
+                                                    cx.pressable_dispatch_command_if_enabled_opt(
+                                                        toggle_cmd,
+                                                    );
+                                                    vec![cx.text(glyph.as_ref())]
+                                                },
+                                            ));
+                                                } else {
+                                                    out.push(cx.spacer(SpacerProps {
+                                                        min: Px(14.0),
+                                                        ..Default::default()
+                                                    }));
+                                                }
 
-                                            out.extend(renderer.render_row(cx, &entry, row_state));
-                                            out.push(cx.spacer(SpacerProps::default()));
-                                            out.extend(
-                                                renderer.render_trailing(cx, &entry, row_state),
-                                            );
-                                            out
-                                        },
-                                    )]
-                                },
-                            )]
+                                                out.extend(
+                                                    renderer.render_row(cx, &entry, row_state),
+                                                );
+                                                out.push(cx.spacer(SpacerProps::default()));
+                                                out.extend(
+                                                    renderer.render_trailing(cx, &entry, row_state),
+                                                );
+                                                out
+                                            })
+                                            .gap(Space::N2)
+                                            .justify_start()
+                                            .items_center()
+                                            .into_element(cx),
+                                        ]
+                                    },
+                                ),
+                            ]
                         },
                     )
                 },
@@ -517,58 +526,50 @@ fn tree_view_retained_impl<H: UiHost + 'static>(
                                         ..Default::default()
                                     },
                                     |cx| {
-                                        vec![stack::hstack(
-                                            cx,
-                                            stack::HStackProps::default()
-                                                .gap_x(Space::N2)
-                                                .justify(Justify::Start)
-                                                .items(Items::Center),
-                                            |cx| {
-                                                let mut out = Vec::new();
+                                        vec![ui::h_row(|cx| {
+                                            let mut out = Vec::new();
 
-                                                if entry.has_children {
-                                                    let glyph: Arc<str> =
-                                                        Arc::from(if is_expanded {
-                                                            "v"
-                                                        } else {
-                                                            ">"
-                                                        });
-                                                    out.push(cx.pressable(
-                                                PressableProps {
-                                                    enabled: toggle_cmd.is_some(),
-                                                    a11y: PressableA11y {
-                                                        role: Some(SemanticsRole::Button),
-                                                        label: Some(Arc::from("Toggle")),
-                                                        selected: false,
-                                                        test_id: debug_toggle_test_id.clone(),
+                                            if entry.has_children {
+                                                let glyph: Arc<str> = Arc::from(if is_expanded {
+                                                    "v"
+                                                } else {
+                                                    ">"
+                                                });
+                                                out.push(cx.pressable(
+                                                    PressableProps {
+                                                        enabled: toggle_cmd.is_some(),
+                                                        a11y: PressableA11y {
+                                                            role: Some(SemanticsRole::Button),
+                                                            label: Some(Arc::from("Toggle")),
+                                                            selected: false,
+                                                            test_id: debug_toggle_test_id.clone(),
+                                                            ..Default::default()
+                                                        },
                                                         ..Default::default()
                                                     },
+                                                    |cx, _st| {
+                                                        cx.pressable_dispatch_command_if_enabled_opt(
+                                                            toggle_cmd,
+                                                        );
+                                                        vec![cx.text(glyph.as_ref())]
+                                                    },
+                                                ));
+                                            } else {
+                                                out.push(cx.spacer(SpacerProps {
+                                                    min: Px(14.0),
                                                     ..Default::default()
-                                                },
-                                                |cx, _st| {
-                                                    cx.pressable_dispatch_command_if_enabled_opt(
-                                                        toggle_cmd,
-                                                    );
-                                                    vec![cx.text(glyph.as_ref())]
-                                                },
-                                            ));
-                                                } else {
-                                                    out.push(cx.spacer(SpacerProps {
-                                                        min: Px(14.0),
-                                                        ..Default::default()
-                                                    }));
-                                                }
+                                                }));
+                                            }
 
-                                                out.extend(
-                                                    renderer.render_row(cx, &entry, row_state),
-                                                );
-                                                out.push(cx.spacer(SpacerProps::default()));
-                                                out.extend(
-                                                    renderer.render_trailing(cx, &entry, row_state),
-                                                );
-                                                out
-                                            },
-                                        )]
+                                            out.extend(renderer.render_row(cx, &entry, row_state));
+                                            out.push(cx.spacer(SpacerProps::default()));
+                                            out.extend(renderer.render_trailing(cx, &entry, row_state));
+                                            out
+                                        })
+                                        .gap(Space::N2)
+                                        .justify_start()
+                                        .items_center()
+                                        .into_element(cx)]
                                     },
                                 ),
                             ]

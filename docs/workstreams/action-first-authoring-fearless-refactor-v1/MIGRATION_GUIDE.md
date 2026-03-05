@@ -256,6 +256,7 @@ This is a style guide, not a contract, but it is the repo’s default teaching b
 
 - Prefer `ui::v_flex(|cx| ...)` / `ui::h_flex(|cx| ...)` (no outer `cx` argument).
 - If you need a horizontal row that does not force `width: fill`, prefer `ui::h_row(|cx| ...)`.
+- If you need a vertical stack that does not force `width: fill`, prefer `ui::v_stack(|cx| ...)`.
 - Prefer `ui::children![cx; ...]` for heterogeneous child lists to avoid decorate-only early
   `into_element(cx)` calls.
 - When rendering dynamic lists, prefer `*_build(|cx, out| ...)` + `cx.keyed(id, |cx| ...)` to keep
@@ -264,12 +265,11 @@ This is a style guide, not a contract, but it is the repo’s default teaching b
   `AnyElement` at the end of a subtree boundary.
 - Keep the teaching surfaces consistent: the repo gates forbid `stack::*` authoring helpers in
   cookbook/examples (and the UI gallery shell):
-  - `tools/gate_no_stack_in_cookbook.ps1`
-  - `tools/gate_no_stack_in_examples.ps1`
-  - `tools/gate_no_stack_in_ui_gallery_shell.ps1` (shell-only; preview pages migrate in batches)
-- Keep legacy stack helpers internal-only: `fret-ui-kit::declarative::stack` is not part of the
-  public API and is scheduled for hard deletion after internal migrations.
-  - Gate: `tools/gate_no_public_stack_in_ui_kit.ps1`
+  - `tools/gate_no_stack_in_cookbook.py` (or `tools/gate_no_stack_in_cookbook.ps1`)
+  - `tools/gate_no_stack_in_examples.py` (or `tools/gate_no_stack_in_examples.ps1`)
+  - `tools/gate_no_stack_in_ui_gallery_shell.py` (or `tools/gate_no_stack_in_ui_gallery_shell.ps1`) (shell-only; preview pages migrate in batches)
+- Legacy stack helpers are hard-deleted from `fret-ui-kit` and gated to prevent regressions.
+  - Gate: `tools/gate_no_public_stack_in_ui_kit.py` (or `tools/gate_no_public_stack_in_ui_kit.ps1`)
 - If host type inference fails, first try annotating the closure argument type
   (`|cx: &mut ElementContext<'_, App>| ...`) before reaching for turbofish.
 
