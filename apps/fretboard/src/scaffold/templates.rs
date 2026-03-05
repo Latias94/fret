@@ -209,14 +209,16 @@ pub(super) fn todo_template_main_rs(package_name: &str, opts: ScaffoldOptions) -
         .size(shadcn::ButtonSize::Icon)
         .disabled(!add_enabled)
         .action(act::Add)
-        .children([icon::icon(cx, IconId::new("lucide.plus"))])
-        .into_element(cx);
+        .children(ui::children![cx; icon::icon(cx, IconId::new("lucide.plus"))])
+        .ui()
+        .rounded_md();
 "#
     } else {
         r#"    let add_btn = shadcn::Button::new("Add")
         .disabled(!add_enabled)
         .action(act::Add)
-        .into_element(cx);
+        .ui()
+        .rounded_md();
 "#
     };
 
@@ -578,34 +580,29 @@ impl View for TodoView {
         };
 
         let progress = shadcn::Badge::new(format!("{}/{} done", derived.completed, derived.total))
-            .variant(shadcn::BadgeVariant::Secondary)
-            .into_element(cx);
+            .variant(shadcn::BadgeVariant::Secondary);
 
         let tip = shadcn::Badge::new(tip_text.clone())
             .variant(shadcn::BadgeVariant::Outline)
             .ui()
-            .text_color(ColorRef::Color(theme.color_token(tip_color_key)))
-            .into_element(cx);
+            .text_color(ColorRef::Color(theme.color_token(tip_color_key)));
 
         let refresh_tip_btn = shadcn::Button::new("Refresh tip")
             .variant(shadcn::ButtonVariant::Secondary)
             .action(act::RefreshTip)
             .ui()
-            .rounded_md()
-            .into_element(cx);
+            .rounded_md();
 
-        let stats = ui::h_flex(|_cx| [progress, tip, refresh_tip_btn])
+        let stats = ui::h_flex(|cx| ui::children![cx; progress, tip, refresh_tip_btn])
             .gap(Space::N2)
-            .items_center()
-            .into_element(cx);
+            .items_center();
 
         let clear_done_btn = shadcn::Button::new("Clear done")
             .variant(shadcn::ButtonVariant::Secondary)
             .disabled(derived.completed == 0)
             .action(act::ClearDone)
             .ui()
-            .rounded_md()
-            .into_element(cx);
+            .rounded_md();
 
 __ADD_BTN_DEF__
 
@@ -616,19 +613,15 @@ __ADD_BTN_DEF__
         let input_row = ui::h_flex(|cx| ui::children![cx; input, add_btn])
             .gap(Space::N2)
             .items_center()
-            .w_full()
-            .into_element(cx);
+            .w_full();
 
-        let chips = ui::h_flex(|cx| {
-            [
-                filter_chip(cx, TodoFilter::All, filter_value),
-                filter_chip(cx, TodoFilter::Active, filter_value),
-                filter_chip(cx, TodoFilter::Completed, filter_value),
-            ]
-        })
+        let chips = ui::h_flex(|cx| ui::children![cx;
+            filter_chip(cx, TodoFilter::All, filter_value),
+            filter_chip(cx, TodoFilter::Active, filter_value),
+            filter_chip(cx, TodoFilter::Completed, filter_value),
+        ])
         .gap(Space::N1)
-        .items_center()
-        .into_element(cx);
+        .items_center();
 
         let rows = ui::v_flex_build(|cx, out| {
             for row in derived.rows.iter() {
@@ -636,10 +629,9 @@ __ADD_BTN_DEF__
             }
         })
         .gap(Space::N3)
-        .w_full()
-        .into_element(cx);
+        .w_full();
 
-        let content = ui::v_flex(|cx| [
+        let content = ui::v_flex(|cx| ui::children![cx;
             stats,
             chips,
             input_row,
@@ -648,16 +640,14 @@ __ADD_BTN_DEF__
 __PALETTE_BUTTON__
         ])
         .gap(Space::N4)
-        .w_full()
-        .into_element(cx);
+        .w_full();
 
-        let card = shadcn::Card::new([
-            shadcn::CardHeader::new([
+        let card = shadcn::Card::new(ui::children![cx;
+            shadcn::CardHeader::new(ui::children![cx;
                 shadcn::CardTitle::new("Todo"),
                 shadcn::CardDescription::new("View runtime + typed actions + selector + query (v1)."),
-            ])
-            .into_element(cx),
-            shadcn::CardContent::new([content]).into_element(cx),
+            ]),
+            shadcn::CardContent::new(ui::children![cx; content]),
         ])
         .ui()
         .bg(ColorRef::Color(theme.color_token("background")))
@@ -666,23 +656,23 @@ __PALETTE_BUTTON__
         .border_color(ColorRef::Color(theme.color_token("border")))
         .w_full()
         .max_w(Px(520.0))
-        .into_element(cx);
+        ;
 
-        let page = ui::container(|cx| {
-            [ui::v_flex(|_cx| [card])
+        let page = ui::container(|cx| ui::children![cx;
+            ui::v_flex(|cx| ui::children![cx; card])
                 .w_full()
                 .h_full()
                 .justify_center()
                 .items_center()
-                .into_element(cx)]
-        })
+                ,
+        ])
         .bg(ColorRef::Color(theme.color_token("muted")))
         .p(Space::N6)
         .w_full()
         .h_full()
-        .into_element(cx);
+        ;
 
-        page.into()
+        page.into_element(cx).into()
     }
 }
 
@@ -1327,6 +1317,7 @@ mod tests {
         let src = todo_template_main_rs("todo-app", opts());
         assert!(src.contains("ui::container("));
         assert!(src.contains("ui::h_flex("));
+        assert!(src.contains("ui::children!["));
         assert!(!src.contains("ui::container( |"));
         assert!(!src.contains("ui::h_flex( |"));
         assert!(!src.contains("ui::v_flex( |"));
@@ -1336,6 +1327,12 @@ mod tests {
         assert!(src.contains("fret::actions!(["));
         assert!(src.contains(".ui()"));
         assert!(!src.contains("decl_style::container_props"));
+
+        let into_element_count = src.matches(".into_element(cx)").count();
+        assert!(
+            into_element_count <= 18,
+            "expected <= 18 explicit `.into_element(cx)` calls, got {into_element_count}"
+        );
     }
 
     #[test]
