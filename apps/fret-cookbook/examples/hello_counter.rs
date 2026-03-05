@@ -244,7 +244,7 @@ impl View for HelloCounterView {
         let step_input = shadcn::Input::new(self.step.clone())
             .placeholder("Step (e.g. 1)")
             .submit_command(act::Inc.into())
-            .a11y_role(SemanticsRole::TextField)
+            .role(SemanticsRole::TextField)
             .test_id(TEST_ID_STEP_INPUT)
             .into_element(cx);
 
@@ -288,7 +288,7 @@ impl View for HelloCounterView {
                     .corner_radii_override(Corners::all(Px(9999.0)))
                     .action(act::Dec)
                     .children([icon::icon(cx, IconId::new("lucide.minus"))])
-                    .a11y_role(SemanticsRole::Button)
+                    .role(SemanticsRole::Button)
                     .a11y_label("Decrement")
                     .test_id(TEST_ID_DEC)
                     .into_element(cx),
@@ -296,7 +296,7 @@ impl View for HelloCounterView {
                     .variant(shadcn::ButtonVariant::Outline)
                     .action(act::Reset)
                     .children([icon::icon(cx, IconId::new("lucide.rotate-ccw"))])
-                    .a11y_role(SemanticsRole::Button)
+                    .role(SemanticsRole::Button)
                     .test_id(TEST_ID_RESET)
                     .into_element(cx),
                 shadcn::Button::new("")
@@ -305,7 +305,7 @@ impl View for HelloCounterView {
                     .corner_radii_override(Corners::all(Px(9999.0)))
                     .action(act::Inc)
                     .children([icon::icon(cx, IconId::new("lucide.plus"))])
-                    .a11y_role(SemanticsRole::Button)
+                    .role(SemanticsRole::Button)
                     .a11y_label("Increment")
                     .test_id(TEST_ID_INC)
                     .into_element(cx),

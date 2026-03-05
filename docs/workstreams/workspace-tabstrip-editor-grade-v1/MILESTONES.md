@@ -36,6 +36,8 @@ Outcomes:
 - Pinned tabs behavior is complete:
   - configurable “separate pinned row” vs “single row + boundary”
   - reorder and pin/unpin are unambiguous and gated
+  - add a pinned reorder smoke gate (not promoted yet):
+    - `workspace-shell-demo-tab-pinned-row-two-row-reorder-smoke`
 - Overflow menu is complete and stable under resize/scroll.
 - Keyboard navigation is solid:
   - roving focus

@@ -3022,7 +3022,9 @@ impl SidebarMenuSub {
         shadcn_layout::container_vstack(
             cx,
             props,
-            shadcn_layout::VStackProps::default().gap(Space::N1),
+            shadcn_layout::VStackProps::default()
+                .gap(Space::N1)
+                .layout(LayoutRefinement::default().w_full()),
             children,
         )
         .attach_semantics(SemanticsDecoration::default().role(SemanticsRole::List))

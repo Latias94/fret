@@ -149,7 +149,7 @@ impl View for CommandsKeymapBasicsView {
         let dispatch_button = shadcn::Button::new("Dispatch command")
             .variant(shadcn::ButtonVariant::Outline)
             .action(act::TogglePanel)
-            .a11y_role(SemanticsRole::Button)
+            .role(SemanticsRole::Button)
             .test_id(TEST_ID_DISPATCH)
             .into_element(cx);
 
