@@ -16,140 +16,126 @@ pub(crate) fn content_view(
     // ViewCache root (`FRET_UI_GALLERY_VIEW_CACHE_SHELL=1`). Querying viewport bounds with
     // `Invalidation::Layout` would churn the view-cache key during interactive resize and defeat
     // reuse.
-    let header = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .layout(LayoutRefinement::default().w_full())
+    let header = ui::v_flex(|cx| {
+        let left = ui::v_flex(|cx| {
+            [
+                cx.text_props(TextProps {
+                    layout: {
+                        let mut layout = fret_ui::element::LayoutStyle::default();
+                        layout.size.width = fret_ui::element::Length::Fill;
+                        layout
+                    },
+                    text: Arc::from(title),
+                    style: None,
+                    color: None,
+                    wrap: TextWrap::None,
+                    overflow: TextOverflow::Ellipsis,
+                    align: fret_core::TextAlign::Start,
+                    ink_overflow: fret_ui::element::TextInkOverflow::None,
+                }),
+                cx.text_props(TextProps {
+                    layout: {
+                        let mut layout = fret_ui::element::LayoutStyle::default();
+                        layout.size.width = fret_ui::element::Length::Fill;
+                        layout
+                    },
+                    text: Arc::from(origin),
+                    style: None,
+                    color: Some(theme.color_token("muted-foreground")),
+                    wrap: TextWrap::None,
+                    overflow: TextOverflow::Ellipsis,
+                    align: fret_core::TextAlign::Start,
+                    ink_overflow: fret_ui::element::TextInkOverflow::None,
+                }),
+            ]
+        })
+        .layout(LayoutRefinement::default().w_full().min_w_0())
+        .gap(Space::N1)
+        .items_start()
+        .into_element(cx);
+
+        let theme_select = shadcn::Select::new(
+            models.theme_preset.clone(),
+            models.theme_preset_open.clone(),
+        )
+        .value(shadcn::SelectValue::new().placeholder("Theme preset"))
+        .trigger_test_id("ui-gallery-theme-preset-trigger")
+        .items([
+            shadcn::SelectItem::new("zinc/light", "Zinc (light)")
+                .test_id("ui-gallery-theme-preset-item-zinc-light"),
+            shadcn::SelectItem::new("zinc/dark", "Zinc (dark)")
+                .test_id("ui-gallery-theme-preset-item-zinc-dark"),
+            shadcn::SelectItem::new("slate/light", "Slate (light)")
+                .test_id("ui-gallery-theme-preset-item-slate-light"),
+            shadcn::SelectItem::new("slate/dark", "Slate (dark)")
+                .test_id("ui-gallery-theme-preset-item-slate-dark"),
+            shadcn::SelectItem::new("neutral/light", "Neutral (light)")
+                .test_id("ui-gallery-theme-preset-item-neutral-light"),
+            shadcn::SelectItem::new("neutral/dark", "Neutral (dark)")
+                .test_id("ui-gallery-theme-preset-item-neutral-dark"),
+        ])
+        .refine_layout(
+            LayoutRefinement::default()
+                .w_px(Px(180.0))
+                .max_w(Px(220.0))
+                .flex_shrink(1.0),
+        )
+        .into_element(cx);
+
+        let motion_select = shadcn::Select::new(
+            models.motion_preset.clone(),
+            models.motion_preset_open.clone(),
+        )
+        .value(shadcn::SelectValue::new().placeholder("Motion preset"))
+        .trigger_test_id("ui-gallery-motion-preset-trigger")
+        .items([
+            shadcn::SelectItem::new("theme", "Theme (baseline)")
+                .test_id("ui-gallery-motion-preset-item-theme"),
+            shadcn::SelectItem::new("reduced", "Reduced motion (0)")
+                .test_id("ui-gallery-motion-preset-item-reduced"),
+            shadcn::SelectItem::new("snappy", "Snappy")
+                .test_id("ui-gallery-motion-preset-item-snappy"),
+            shadcn::SelectItem::new("bouncy", "Bouncy")
+                .test_id("ui-gallery-motion-preset-item-bouncy"),
+            shadcn::SelectItem::new("gentle", "Gentle")
+                .test_id("ui-gallery-motion-preset-item-gentle"),
+        ])
+        .refine_layout(
+            LayoutRefinement::default()
+                .w_px(Px(180.0))
+                .max_w(Px(220.0))
+                .flex_shrink(1.0),
+        )
+        .into_element(cx);
+
+        let presets = ui::h_row(|_cx| [theme_select, motion_select])
+            .layout(LayoutRefinement::default().w_full().min_w_0())
+            .gap(Space::N3)
+            .items_center()
+            .into_element(cx);
+
+        let right = ui::v_flex(|_cx| [presets])
+            .layout(LayoutRefinement::default().w_full().min_w_0())
             .gap(Space::N2)
-            .items_start(),
-        |cx| {
-            let left = stack::vstack(
-                cx,
-                stack::VStackProps::default()
-                    .layout(LayoutRefinement::default().w_full().min_w_0())
-                    .gap(Space::N1)
-                    .items_start(),
-                |cx| {
-                    vec![
-                        cx.text_props(TextProps {
-                            layout: {
-                                let mut layout = fret_ui::element::LayoutStyle::default();
-                                layout.size.width = fret_ui::element::Length::Fill;
-                                layout
-                            },
-                            text: Arc::from(title),
-                            style: None,
-                            color: None,
-                            wrap: TextWrap::None,
-                            overflow: TextOverflow::Ellipsis,
-                            align: fret_core::TextAlign::Start,
-                            ink_overflow: fret_ui::element::TextInkOverflow::None,
-                        }),
-                        cx.text_props(TextProps {
-                            layout: {
-                                let mut layout = fret_ui::element::LayoutStyle::default();
-                                layout.size.width = fret_ui::element::Length::Fill;
-                                layout
-                            },
-                            text: Arc::from(origin),
-                            style: None,
-                            color: Some(theme.color_token("muted-foreground")),
-                            wrap: TextWrap::None,
-                            overflow: TextOverflow::Ellipsis,
-                            align: fret_core::TextAlign::Start,
-                            ink_overflow: fret_ui::element::TextInkOverflow::None,
-                        }),
-                    ]
-                },
-            );
-
-            let theme_select = shadcn::Select::new(
-                models.theme_preset.clone(),
-                models.theme_preset_open.clone(),
-            )
-            .value(shadcn::SelectValue::new().placeholder("Theme preset"))
-            .trigger_test_id("ui-gallery-theme-preset-trigger")
-            .items([
-                shadcn::SelectItem::new("zinc/light", "Zinc (light)")
-                    .test_id("ui-gallery-theme-preset-item-zinc-light"),
-                shadcn::SelectItem::new("zinc/dark", "Zinc (dark)")
-                    .test_id("ui-gallery-theme-preset-item-zinc-dark"),
-                shadcn::SelectItem::new("slate/light", "Slate (light)")
-                    .test_id("ui-gallery-theme-preset-item-slate-light"),
-                shadcn::SelectItem::new("slate/dark", "Slate (dark)")
-                    .test_id("ui-gallery-theme-preset-item-slate-dark"),
-                shadcn::SelectItem::new("neutral/light", "Neutral (light)")
-                    .test_id("ui-gallery-theme-preset-item-neutral-light"),
-                shadcn::SelectItem::new("neutral/dark", "Neutral (dark)")
-                    .test_id("ui-gallery-theme-preset-item-neutral-dark"),
-            ])
-            .refine_layout(
-                LayoutRefinement::default()
-                    .w_px(Px(180.0))
-                    .max_w(Px(220.0))
-                    .flex_shrink(1.0),
-            )
+            .items_start()
             .into_element(cx);
 
-            let motion_select = shadcn::Select::new(
-                models.motion_preset.clone(),
-                models.motion_preset_open.clone(),
-            )
-            .value(shadcn::SelectValue::new().placeholder("Motion preset"))
-            .trigger_test_id("ui-gallery-motion-preset-trigger")
-            .items([
-                shadcn::SelectItem::new("theme", "Theme (baseline)")
-                    .test_id("ui-gallery-motion-preset-item-theme"),
-                shadcn::SelectItem::new("reduced", "Reduced motion (0)")
-                    .test_id("ui-gallery-motion-preset-item-reduced"),
-                shadcn::SelectItem::new("snappy", "Snappy")
-                    .test_id("ui-gallery-motion-preset-item-snappy"),
-                shadcn::SelectItem::new("bouncy", "Bouncy")
-                    .test_id("ui-gallery-motion-preset-item-bouncy"),
-                shadcn::SelectItem::new("gentle", "Gentle")
-                    .test_id("ui-gallery-motion-preset-item-gentle"),
-            ])
-            .refine_layout(
-                LayoutRefinement::default()
-                    .w_px(Px(180.0))
-                    .max_w(Px(220.0))
-                    .flex_shrink(1.0),
-            )
-            .into_element(cx);
-
-            let presets = stack::hstack(
-                cx,
-                stack::HStackProps::default()
-                    .layout(LayoutRefinement::default().w_full().min_w_0())
-                    .gap(Space::N3)
-                    .items_center(),
-                |_cx| [theme_select, motion_select],
-            );
-            let right = stack::vstack(
-                cx,
-                stack::VStackProps::default()
-                    .layout(LayoutRefinement::default().w_full().min_w_0())
-                    .gap(Space::N2)
-                    .items_start(),
-                |_cx| [presets],
-            );
-
-            vec![left, right]
-        },
-    );
+        [left, right]
+    })
+    .layout(LayoutRefinement::default().w_full())
+    .gap(Space::N2)
+    .items_start()
+    .into_element(cx);
 
     let preview_panel = page_preview(cx, theme, selected, models);
 
     let content = if (bisect & BISECT_DISABLE_CONTENT_SCROLL) != 0 {
         // When content scroll is disabled, keep the header and page body in one static stack.
-        stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .layout(LayoutRefinement::default().w_full())
-                .gap(Space::N6),
-            |_cx| [header, preview_panel],
-        )
-        .test_id("ui-gallery-content-scroll")
+        ui::v_flex(|_cx| [header, preview_panel])
+            .layout(LayoutRefinement::default().w_full())
+            .gap(Space::N6)
+            .into_element(cx)
+            .test_id("ui-gallery-content-scroll")
     } else {
         // Keep the page header (theme/motion presets) pinned above the scroll viewport so scripts
         // can toggle themes without scrolling back to the top.
@@ -210,13 +196,10 @@ pub(crate) fn content_view(
             move |_cx| [scroll_body],
         );
 
-        stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .layout(LayoutRefinement::default().w_full().h_full())
-                .gap(Space::N6),
-            |_cx| [header, scroll],
-        )
+        ui::v_flex(|_cx| [header, scroll])
+            .layout(LayoutRefinement::default().w_full().h_full())
+            .gap(Space::N6)
+            .into_element(cx)
     };
 
     cx.named("ui_gallery.content_view_root", |cx| {
