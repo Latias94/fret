@@ -20,6 +20,8 @@ This TODO list is scoped to this workstream folder and is intended to keep the r
 - [x] Add an inactive-tab drag-to-split smoke gate (`workspace-shell-demo-tab-drag-inactive-to-split-right-smoke`).
 - [x] Add a non-screenshot invariants-based split gate (post-split layout assertions + tab ownership):
   - [x] `workspace-shell-demo-tab-drag-to-split-right-preview-invariants-smoke`
+- [ ] Add a two-row pinned reorder smoke script (debug-toggle only; not promoted yet):
+  - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-pinned-row-two-row-reorder-smoke.json`
 
 ## Modularization (M1)
 
