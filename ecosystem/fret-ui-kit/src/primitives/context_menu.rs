@@ -434,6 +434,7 @@ mod tests {
                 click_count: 1,
                 pointer_type: PointerType::Touch,
                 hit_is_text_input: false,
+                hit_is_pressable: false,
             },
         );
         assert!(!handled);
@@ -484,6 +485,7 @@ mod tests {
                 click_count: 1,
                 pointer_type: PointerType::Touch,
                 hit_is_text_input: false,
+                hit_is_pressable: false,
             },
         );
 
@@ -557,6 +559,7 @@ mod tests {
                 click_count: 1,
                 pointer_type: PointerType::Touch,
                 hit_is_text_input: false,
+                hit_is_pressable: false,
             },
         );
 
