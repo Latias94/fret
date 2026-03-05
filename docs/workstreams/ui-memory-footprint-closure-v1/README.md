@@ -69,6 +69,23 @@ Using `tools/diag-scripts/todo-memory-steady.json` on macOS/Metal:
     - `target/diag/mem-baseline-20260305-footprint/image-heavy.memory-summary.json`
     - `target/diag/mem-baseline-20260305-footprint/todo.memory-summary.json`
 
+- Attribution experiments (local, 2026-03-05; outputs under `target/diag/mem-attrib-20260305/`):
+  - Surface frame latency sweep (empty-idle; N=5 each; see scripts under `tools/diag-scripts/tooling/empty/`):
+    - `desired_maximum_frame_latency=1`: `Owned physical footprint (unmapped) (graphics)` p90=~202.6 MiB
+    - `desired_maximum_frame_latency=2`: `Owned physical footprint (unmapped) (graphics)` p90=~202.6 MiB
+    - `desired_maximum_frame_latency=3`: `Owned physical footprint (unmapped) (graphics)` p90=~201.8 MiB
+    - Conclusion: no material change observed for the headline bucket in this baseline.
+  - WGPU memory hints sweep (text-heavy; N=5 each; see scripts under `tools/diag-scripts/tooling/text/`):
+    - `FRET_WGPU_MEMORY_HINTS=performance`: `Owned physical footprint (unmapped) (graphics)` p90=~236.6 MiB
+    - `FRET_WGPU_MEMORY_HINTS=memory`: `Owned physical footprint (unmapped) (graphics)` p90=~237.1 MiB
+    - Conclusion: small deltas only; does not explain the baseline headline.
+  - Summary JSON files:
+    - `target/diag/mem-attrib-20260305/latency1.memory-summary.json`
+    - `target/diag/mem-attrib-20260305/latency2.memory-summary.json`
+    - `target/diag/mem-attrib-20260305/latency3.memory-summary.json`
+    - `target/diag/mem-attrib-20260305/memory-hints-performance.memory-summary.json`
+    - `target/diag/mem-attrib-20260305/memory-hints-memory.memory-summary.json`
+
 - Repeat sample (N=5; `target/release/todo_demo`; `--env FRET_DIAG_WGPU_ALLOCATOR_REPORT=1`):
   - `macos_vmmap_steady.physical_footprint_peak_bytes`: 358,612,992 .. 419,325,542 (~342.0 .. 399.9 MiB)
     - Note: 4/5 runs clustered at ~342–346 MiB; 1/5 outlier correlated with higher GPU/driver-backed regions.

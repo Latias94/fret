@@ -1,5 +1,33 @@
 use crate::RenderError;
 
+fn env_var_trimmed(name: &str) -> Option<String> {
+    let raw = std::env::var(name).ok()?;
+    let trimmed = raw.trim();
+    (!trimmed.is_empty()).then(|| trimmed.to_string())
+}
+
+fn parse_env_u32(name: &str) -> Option<u32> {
+    let raw = env_var_trimmed(name)?;
+    raw.parse::<u32>().ok()
+}
+
+fn present_mode_from_env(caps: &wgpu::SurfaceCapabilities) -> Option<wgpu::PresentMode> {
+    let raw = env_var_trimmed("FRET_RENDER_WGPU_SURFACE_PRESENT_MODE")?;
+    let token = raw.to_ascii_lowercase().replace(['-', ' '], "_");
+    let desired = match token.as_str() {
+        "auto_vsync" | "autovsync" => wgpu::PresentMode::AutoVsync,
+        "auto_no_vsync" | "autonovsync" | "auto_novsync" => wgpu::PresentMode::AutoNoVsync,
+        "fifo" => wgpu::PresentMode::Fifo,
+        "fifo_relaxed" | "fiforelaxed" => wgpu::PresentMode::FifoRelaxed,
+        "immediate" => wgpu::PresentMode::Immediate,
+        "mailbox" => wgpu::PresentMode::Mailbox,
+        _ => return None,
+    };
+
+    // Only accept modes supported by the surface capabilities.
+    caps.present_modes.iter().copied().find(|m| *m == desired)
+}
+
 pub struct SurfaceState<'window> {
     pub surface: wgpu::Surface<'window>,
     pub config: wgpu::SurfaceConfiguration,
@@ -32,13 +60,20 @@ impl<'window> SurfaceState<'window> {
             .find(|format| format.is_srgb())
             .unwrap_or(capabilities.formats[0]);
 
+        let present_mode =
+            present_mode_from_env(&capabilities).unwrap_or(capabilities.present_modes[0]);
+        let desired_maximum_frame_latency =
+            parse_env_u32("FRET_RENDER_WGPU_SURFACE_DESIRED_MAX_FRAME_LATENCY")
+                .unwrap_or(2)
+                .clamp(1, 8);
+
         let config = wgpu::SurfaceConfiguration {
             usage,
             format,
             width: width.max(1),
             height: height.max(1),
-            present_mode: capabilities.present_modes[0],
-            desired_maximum_frame_latency: 2,
+            present_mode,
+            desired_maximum_frame_latency,
             alpha_mode: capabilities.alpha_modes[0],
             view_formats: vec![],
         };

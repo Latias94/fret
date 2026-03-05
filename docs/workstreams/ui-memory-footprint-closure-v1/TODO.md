@@ -40,6 +40,9 @@
   - Determine which `footprint` categories rise/fall with `owned unmapped memory` across scenarios.
   - If one category dominates, add a dedicated gate for it (monitor-only at first).
 
+- [x] Attribution: sweep `FRET_RENDER_WGPU_SURFACE_DESIRED_MAX_FRAME_LATENCY` (1/2/3) on `empty-idle` and record the impact.
+- [x] Attribution: sweep `FRET_WGPU_MEMORY_HINTS` (`performance` vs `memory`) on `text-heavy` and record the impact.
+
 ### Evidence (captured)
 
 - `empty-idle-memory-steady` (macOS native)
