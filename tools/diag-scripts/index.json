@@ -2360,6 +2360,73 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-ai-package-info-demo-basics",
+      "path": "tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-package-info-demo-basics.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-ai-elements"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-ai-package-info-demo-screenshot-zinc-dark",
+      "path": "tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-package-info-demo-screenshot-zinc-dark.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-ai-elements"
+      ],
+      "tags": [
+        "ai-elements",
+        "package-info",
+        "screenshots",
+        "ui-gallery",
+        "zinc-dark"
+      ],
+      "target_hints": [
+        "Sets theme preset to zinc/dark.",
+        "Navigates to the AI Elements package info demo.",
+        "Captures a screenshot to gate badge and version contrast."
+      ]
+    },
+    {
+      "id": "ui-gallery-ai-sandbox-demo-screenshots-zinc-dark",
+      "path": "tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-sandbox-demo-screenshots-zinc-dark.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-ai-elements"
+      ],
+      "tags": [
+        "ai-elements",
+        "sandbox",
+        "screenshots",
+        "tabs",
+        "ui-gallery",
+        "zinc-dark"
+      ],
+      "target_hints": [
+        "Sets theme preset to zinc/dark.",
+        "Navigates to the AI Elements sandbox demo.",
+        "Opens the disclosure and switches tabs to capture screenshots."
+      ]
+    },
+    {
+      "id": "ui-gallery-ai-sandbox-demo-switch-tab",
+      "path": "tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-sandbox-demo-switch-tab.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-ai-elements"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-ai-sources-demo",
       "path": "tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-sources-demo.json",
       "required_capabilities": [
