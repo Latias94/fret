@@ -142,7 +142,7 @@ impl View for CanvasPanZoomBasicsView {
                     .numeric_value(node_drag_count as f64),
             );
 
-        let toolbar = ui::h_flex(cx, |cx| {
+        let toolbar = ui::h_flex(|cx| {
             [
                 shadcn::Button::new("Reset view")
                     .variant(shadcn::ButtonVariant::Outline)
@@ -434,7 +434,7 @@ impl View for CanvasPanZoomBasicsView {
                 .into_element(cx),
             ])
             .into_element(cx),
-            shadcn::CardContent::new([ui::v_flex(cx, |_cx| [toolbar, hint, canvas])
+            shadcn::CardContent::new([ui::v_flex(|_cx| [toolbar, hint, canvas])
                 .gap(Space::N3)
                 .w_full()
                 .into_element(cx)])

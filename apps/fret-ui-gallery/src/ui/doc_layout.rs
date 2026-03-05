@@ -135,38 +135,32 @@ pub(in crate::ui) fn render_doc_page(
         .fold(Px(0.0), |a, b| Px(a.0.max(b.0)));
     let page_max_w = Px(Px(760.0).0.max(max_section_w.0));
 
-    let body = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N6)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full().min_w_0()),
-        move |cx| {
-            let mut out: Vec<AnyElement> = Vec::with_capacity(sections.len() + 1);
-            if let Some(intro) = intro {
-                out.push(muted_full_width(cx, intro));
-            }
-            out.extend(
-                sections
-                    .into_iter()
-                    .map(|section| render_section(cx, section)),
-            );
-            out
-        },
-    );
+    let body = ui::v_flex(move |cx| {
+        let mut out: Vec<AnyElement> = Vec::with_capacity(sections.len() + 1);
+        if let Some(intro) = intro {
+            out.push(muted_full_width(cx, intro));
+        }
+        out.extend(
+            sections
+                .into_iter()
+                .map(|section| render_section(cx, section)),
+        );
+        out
+    })
+    .gap(Space::N6)
+    .items_start()
+    .layout(LayoutRefinement::default().w_full().min_w_0())
+    .into_element(cx);
 
-    stack::hstack(
-        cx,
-        stack::HStackProps::default()
-            .layout(LayoutRefinement::default().w_full().min_w_0())
-            .justify_center(),
-        move |cx| {
-            [ui::container(cx, move |_cx| vec![body])
-                .w_full()
-                .max_w(page_max_w)
-                .into_element(cx)]
-        },
-    )
+    ui::h_flex(move |cx| {
+        [ui::container(move |_cx| vec![body])
+            .w_full()
+            .max_w(page_max_w)
+            .into_element(cx)]
+    })
+    .layout(LayoutRefinement::default().w_full().min_w_0())
+    .justify_center()
+    .into_element(cx)
 }
 
 pub(in crate::ui) fn wrap_preview_page(
@@ -175,14 +169,11 @@ pub(in crate::ui) fn wrap_preview_page(
     section_title: &'static str,
     elements: Vec<AnyElement>,
 ) -> AnyElement {
-    let preview = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .layout(LayoutRefinement::default().w_full().min_w_0())
-            .gap(Space::N4)
-            .items_start(),
-        |_cx| elements,
-    );
+    let preview = ui::v_flex(move |_cx| elements)
+        .layout(LayoutRefinement::default().w_full().min_w_0())
+        .gap(Space::N4)
+        .items_start()
+        .into_element(cx);
 
     render_doc_page(
         cx,
@@ -197,7 +188,8 @@ pub(in crate::ui) fn wrap_preview_page(
 
 /// A flex row that wraps on narrow widths.
 ///
-/// Prefer this over `stack::hstack` for "control bars" that can contain many toggles/buttons.
+/// Prefer this over the legacy stack-based hstack helper for "control bars" that can contain many
+/// toggles/buttons.
 pub(in crate::ui) fn wrap_row(
     cx: &mut ElementContext<'_, App>,
     theme: &Theme,
@@ -378,29 +370,23 @@ where
         })
     }
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N1)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full().min_w_0()),
-        move |cx| {
-            lines
-                .iter()
-                .cloned()
-                .map(|line| {
-                    stack::hstack(
-                        cx,
-                        stack::HStackProps::default()
-                            .gap(Space::N1)
-                            .items_start()
-                            .layout(LayoutRefinement::default().w_full().min_w_0()),
-                        move |cx| [muted_inline(cx, "•"), muted_flex_1_min_w_0(cx, line)],
-                    )
-                })
-                .collect::<Vec<_>>()
-        },
-    )
+    ui::v_flex(move |cx| {
+        lines
+            .iter()
+            .cloned()
+            .map(|line| {
+                ui::h_row(move |cx| [muted_inline(cx, "•"), muted_flex_1_min_w_0(cx, line)])
+                    .gap(Space::N1)
+                    .items_start()
+                    .layout(LayoutRefinement::default().w_full().min_w_0())
+                    .into_element(cx)
+            })
+            .collect::<Vec<_>>()
+    })
+    .gap(Space::N1)
+    .items_start()
+    .layout(LayoutRefinement::default().w_full().min_w_0())
+    .into_element(cx)
 }
 
 pub(in crate::ui) fn rtl(
@@ -479,53 +465,47 @@ fn render_section(cx: &mut ElementContext<'_, App>, section: DocSection) -> AnyE
     };
 
     let section_max_w = max_w;
-    let section_body = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N2)
+    let section_body = ui::v_flex(move |cx| {
+        let mut out: Vec<AnyElement> = Vec::with_capacity(3);
+        let title_el = section_title(cx, title);
+        out.push(match (title_test_id, test_id_prefix.as_deref()) {
+            (Some(test_id), _) => title_el.test_id(test_id),
+            (None, Some(prefix)) => title_el.test_id(format!("{prefix}-title")),
+            (None, None) => title_el,
+        });
+        if !description.is_empty() {
+            let description_stack = ui::v_flex(move |cx| {
+                description
+                    .into_iter()
+                    .map(|line| muted_full_width(cx, line))
+                    .collect::<Vec<_>>()
+            })
+            .gap(Space::N1)
             .items_start()
-            .layout(
-                LayoutRefinement::default()
-                    .w_full()
-                    .min_w_0()
-                    .max_w(section_max_w),
-            ),
-        move |cx| {
-            let mut out: Vec<AnyElement> = Vec::with_capacity(3);
-            let title_el = section_title(cx, title);
-            out.push(match (title_test_id, test_id_prefix.as_deref()) {
-                (Some(test_id), _) => title_el.test_id(test_id),
-                (None, Some(prefix)) => title_el.test_id(format!("{prefix}-title")),
-                (None, None) => title_el,
-            });
-            if !description.is_empty() {
-                let description_stack = stack::vstack(
-                    cx,
-                    stack::VStackProps::default()
-                        .gap(Space::N1)
-                        .items_start()
-                        .layout(LayoutRefinement::default().w_full().min_w_0()),
-                    move |cx| {
-                        description
-                            .into_iter()
-                            .map(|line| muted_full_width(cx, line))
-                            .collect::<Vec<_>>()
-                    },
-                );
-                out.push(if let Some(prefix) = test_id_prefix.as_deref() {
-                    description_stack.test_id(format!("{prefix}-description"))
-                } else {
-                    description_stack
-                });
-            }
+            .layout(LayoutRefinement::default().w_full().min_w_0())
+            .into_element(cx);
             out.push(if let Some(prefix) = test_id_prefix.as_deref() {
-                content.test_id(format!("{prefix}-content"))
+                description_stack.test_id(format!("{prefix}-description"))
             } else {
-                content
+                description_stack
             });
-            out
-        },
-    );
+        }
+        out.push(if let Some(prefix) = test_id_prefix.as_deref() {
+            content.test_id(format!("{prefix}-content"))
+        } else {
+            content
+        });
+        out
+    })
+    .gap(Space::N2)
+    .items_start()
+    .layout(
+        LayoutRefinement::default()
+            .w_full()
+            .min_w_0()
+            .max_w(section_max_w),
+    )
+    .into_element(cx);
 
     section_body
 }
@@ -670,22 +650,19 @@ fn code_block_shell(
         copy = copy.test_id(format!("{prefix}-code-block-copy"));
     }
 
-    let header = stack::hstack(
-        cx,
-        stack::HStackProps::default()
-            .layout(LayoutRefinement::default().w_full())
-            .items_center()
-            .justify_between()
-            .gap(Space::N2),
-        |cx| {
-            vec![
-                shadcn::Badge::new(block.language)
-                    .variant(shadcn::BadgeVariant::Secondary)
-                    .into_element(cx),
-                copy,
-            ]
-        },
-    );
+    let header = ui::h_flex(|cx| {
+        [
+            shadcn::Badge::new(block.language)
+                .variant(shadcn::BadgeVariant::Secondary)
+                .into_element(cx),
+            copy,
+        ]
+    })
+    .layout(LayoutRefinement::default().w_full())
+    .items_center()
+    .justify_between()
+    .gap(Space::N2)
+    .into_element(cx);
 
     let theme = Theme::global(&*cx.app);
     let monospace = fret_core::TextStyle {

@@ -313,7 +313,7 @@ fn view(
         .paint()
         .copied_or(ViewportFit::Contain);
 
-    let header = ui::v_flex(cx, |cx| {
+    let header = ui::v_flex(|cx| {
         ui::children![
             cx;
             shadcn::CardTitle::new("Tier A interop: embedded viewport (basics)"),
@@ -325,7 +325,7 @@ fn view(
     .gap(Space::N1)
     .into_element(cx);
 
-    let size_controls = ui::h_flex(cx, |cx| {
+    let size_controls = ui::h_flex(|cx| {
         ui::children![
             cx;
             shadcn::Button::new("640×360")
@@ -433,9 +433,9 @@ fn view(
                 .numeric_value(kind),
         );
 
-    let info = ui::h_flex(cx, |cx| {
+    let info = ui::h_flex(|cx| {
         [
-            ui::text(cx, format!("target_px_size preset: {preset_label}"))
+            ui::text(format!("target_px_size preset: {preset_label}"))
                 .text_xs()
                 .into_element(cx),
             clicks_badge,
@@ -473,7 +473,7 @@ Input does not arrive as normal UI pointer events; it is forwarded as ViewportIn
         )
         .test_id(TEST_ID_SURFACE);
 
-    let viewport_panel = ui::container(cx, |_cx| vec![viewport])
+    let viewport_panel = ui::container(|_cx| vec![viewport])
         .bg(ColorRef::Color(theme.color_token("muted")))
         .rounded(Radius::Md)
         .border_1()
@@ -482,7 +482,7 @@ Input does not arrive as normal UI pointer events; it is forwarded as ViewportIn
         .h_px(Px(420.0))
         .into_element(cx);
 
-    let content = ui::v_flex(cx, |_cx| vec![hint, viewport_panel])
+    let content = ui::v_flex(|_cx| vec![hint, viewport_panel])
         .gap(Space::N3)
         .into_element(cx);
 

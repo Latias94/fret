@@ -59,7 +59,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
 
             vec![
                 otp.test_id("ui-gallery-input-otp-controlled"),
-                ui::label(cx, message)
+                ui::label(message)
                     .text_size_px(Px(14.0))
                     .text_color(shadcn::ColorRef::Color(
                         theme.color_token("muted-foreground"),

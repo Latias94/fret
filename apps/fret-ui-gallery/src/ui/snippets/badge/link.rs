@@ -6,7 +6,7 @@ use fret_ui_shadcn::{self as shadcn, prelude::*};
 use std::sync::Arc;
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    fret_ui_kit::ui::h_flex(cx, |cx| {
+    fret_ui_kit::ui::h_flex(|cx| {
         vec![
             // Upstream shadcn: `<Badge asChild><Link href="/">Badge</Link></Badge>`.
             shadcn::Badge::new("Open Link")

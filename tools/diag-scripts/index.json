@@ -2163,6 +2163,102 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-ai-checkpoint-restore-tooltip",
+      "path": "tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-checkpoint-restore-tooltip.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-ai-checkpoint"
+      ],
+      "tags": [
+        "ai",
+        "checkpoint",
+        "restore",
+        "screenshots",
+        "tooltip",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Run `fret-ui-gallery` with `--features gallery-dev` so AI pages are wired.",
+        "Suite sets `FRET_UI_GALLERY_START_PAGE=ai_checkpoint_demo` to avoid sidebar navigation flake."
+      ]
+    },
+    {
+      "id": "ui-gallery-ai-conversation-demo-screenshot-zinc-dark",
+      "path": "tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-conversation-demo-screenshot-zinc-dark.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-ai-transcript-retained"
+      ],
+      "tags": [
+        "ai-elements",
+        "conversation",
+        "screenshots",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Sets theme preset to zinc/dark.",
+        "Navigates to the AI Elements Conversation demo page.",
+        "Captures a screenshot for quick visual parity checks."
+      ]
+    },
+    {
+      "id": "ui-gallery-ai-conversation-demo-scroll-button",
+      "path": "tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-conversation-demo-scroll-button.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-ai-transcript-retained"
+      ],
+      "tags": [
+        "ai-elements",
+        "conversation",
+        "scroll",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Navigates to the AI Elements Conversation demo page.",
+        "Sends a long message to ensure the transcript can scroll.",
+        "Scrolls up to assert the scroll-to-bottom button appears, then clicks it to assert it hides again."
+      ]
+    },
+    {
+      "id": "ui-gallery-ai-sources-demo",
+      "path": "tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-sources-demo.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-ai-sources"
+      ],
+      "tags": [
+        "ai-elements",
+        "collapsible",
+        "sources",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Navigates to the AI Sources demo page.",
+        "Expands the sources block and asserts it stays intrinsic-width (AI Elements `w-fit` parity)."
+      ]
+    },
+    {
+      "id": "ui-gallery-ai-suggestions-demo-click",
+      "path": "tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-suggestions-demo-click.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-ai-suggestions"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-ai-transcript-torture-scroll",
       "path": "tools/diag-scripts/ui-gallery/perf/ui-gallery-ai-transcript-torture-scroll.json",
       "required_capabilities": [],
@@ -4564,6 +4660,16 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-input-group-button-click-focus",
+      "path": "tools/diag-scripts/ui-gallery/input/ui-gallery-input-group-button-click-focus.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-input-group-rtl-screenshot",
       "path": "tools/diag-scripts/ui-gallery/input/ui-gallery-input-group-rtl-screenshot.json",
       "required_capabilities": [
@@ -4691,6 +4797,36 @@
         "ui-gallery-inspector-torture-keep-alive"
       ],
       "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-item-docs-smoke",
+      "path": "tools/diag-scripts/ui-gallery/item/ui-gallery-item-docs-smoke.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-item-link-render",
+      "path": "tools/diag-scripts/ui-gallery/item/ui-gallery-item-link-render.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "item",
+        "link",
+        "render",
+        "shadcn",
+        "ui_gallery"
+      ],
       "target_hints": []
     },
     {
@@ -5457,6 +5593,23 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-scroll-area-expand-at-bottom",
+      "path": "tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scroll-area-expand-at-bottom.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "diag-hardening-smoke"
+      ],
+      "tags": [
+        "extents",
+        "regression_pack",
+        "scroll",
+        "ui_gallery"
+      ],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-scroll-area-horizontal-max-scroll-screenshot",
       "path": "tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scroll-area-horizontal-max-scroll-screenshot.json",
       "required_capabilities": [
@@ -5907,6 +6060,28 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-switch-docs-smoke",
+      "path": "tools/diag-scripts/ui-gallery/switch/ui-gallery-switch-docs-smoke.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "docs-smoke",
+        "screenshots",
+        "shadcn",
+        "switch",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Sets theme preset to zinc/light, navigates to Switch, captures a screenshot and bundle.",
+        "Sets theme preset to zinc/dark, re-captures the Switch Sizes section to validate dark-mode thumb/track parity."
+      ]
+    },
+    {
       "id": "ui-gallery-table-retained-keyboard-typeahead",
       "path": "tools/diag-scripts/ui-gallery/table/ui-gallery-table-retained-keyboard-typeahead.json",
       "required_capabilities": [],
@@ -6149,6 +6324,24 @@
       "target_hints": [
         "fret-ui-gallery"
       ]
+    },
+    {
+      "id": "ui-gallery-textarea-docs-screenshot",
+      "path": "tools/diag-scripts/ui-gallery/textarea/ui-gallery-textarea-docs-screenshot.json",
+      "required_capabilities": [
+        "diag.screenshot_png"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "docs_parity",
+        "screenshot",
+        "shadcn",
+        "textarea",
+        "ui_gallery"
+      ],
+      "target_hints": []
     },
     {
       "id": "ui-gallery-textarea-ime-delete-surrounding-emoji",
@@ -6421,6 +6614,26 @@
         "ui-gallery-virt-retained-measured"
       ],
       "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-wheel-burst-coalescing",
+      "path": "tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-wheel-burst-coalescing.json",
+      "required_capabilities": [
+        "diag.script_v2",
+        "diag.wheel_burst_inject"
+      ],
+      "suite_memberships": [
+        "diag-hardening-smoke"
+      ],
+      "tags": [
+        "coalescing",
+        "regression_pack",
+        "runner",
+        "scroll",
+        "ui_gallery",
+        "wheel"
+      ],
       "target_hints": []
     },
     {

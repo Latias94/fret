@@ -165,7 +165,7 @@ impl View for TextInputBasicsView {
             }
         });
 
-        let buttons = ui::h_flex(cx, |cx| {
+        let buttons = ui::h_flex(|cx| {
             [
                 shadcn::Button::new("Submit")
                     .variant(shadcn::ButtonVariant::Default)
@@ -180,7 +180,7 @@ impl View for TextInputBasicsView {
         .gap(Space::N2)
         .into_element(cx);
 
-        let stats = ui::h_flex(cx, |_cx| [len_badge, submitted_badge])
+        let stats = ui::h_flex(|_cx| [len_badge, submitted_badge])
             .gap(Space::N2)
             .items_center()
             .into_element(cx);
@@ -195,7 +195,7 @@ impl View for TextInputBasicsView {
             ])
             .into_element(cx),
             shadcn::CardContent::new([
-                ui::v_flex(cx, |_cx| [input, buttons, stats])
+                ui::v_flex(|_cx| [input, buttons, stats])
                     .gap(Space::N3)
                     .into_element(cx),
             ])

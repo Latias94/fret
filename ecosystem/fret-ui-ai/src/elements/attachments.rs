@@ -18,6 +18,8 @@ use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::typography;
 use fret_ui_kit::{ChromeRefinement, ColorRef, Items, LayoutRefinement, MetricRef, Radius, Space};
+use fret_ui_kit::{WidgetStateProperty, WidgetStates};
+use fret_ui_shadcn::button::ButtonStyle;
 use fret_ui_shadcn::{Button, ButtonSize, ButtonVariant};
 
 pub type OnAttachmentActivate = Arc<dyn Fn(&mut dyn UiActionHost, ActionCx, Arc<str>) + 'static>;
@@ -202,6 +204,12 @@ pub fn media_category_for(data: &AttachmentData) -> AttachmentMediaCategory {
     }
 }
 
+/// Upstream parity alias for AI Elements `getMediaCategory`.
+#[inline]
+pub fn get_media_category(data: &AttachmentData) -> AttachmentMediaCategory {
+    media_category_for(data)
+}
+
 pub fn attachment_label_for(data: &AttachmentData) -> Arc<str> {
     match data {
         AttachmentData::SourceDocument(src) => src
@@ -219,6 +227,12 @@ pub fn attachment_label_for(data: &AttachmentData) -> Arc<str> {
             }
         }
     }
+}
+
+/// Upstream parity alias for AI Elements `getAttachmentLabel`.
+#[inline]
+pub fn get_attachment_label(data: &AttachmentData) -> Arc<str> {
+    attachment_label_for(data)
 }
 
 fn media_category_icon(category: AttachmentMediaCategory) -> IconId {
@@ -270,7 +284,11 @@ impl Attachments {
 
         let gap = MetricRef::space(Space::N2).resolve(&theme);
         let mut flex_layout = LayoutStyle::default();
-        flex_layout.size.width = Length::Fill;
+        flex_layout.size.width = match self.variant {
+            // Upstream shadcn: `variant=grid` => `ml-auto w-fit`.
+            AttachmentVariant::Grid => Length::Auto,
+            AttachmentVariant::Inline | AttachmentVariant::List => Length::Fill,
+        };
 
         if self.variant == AttachmentVariant::Grid {
             flex_layout.margin.left = MarginEdge::Auto;
@@ -539,8 +557,8 @@ impl Attachment {
                             &theme,
                             LayoutRefinement::default()
                                 .absolute()
-                                .top_px(Px(4.0))
-                                .right_px(Px(4.0)),
+                                .top_px(Px(8.0))
+                                .right_px(Px(8.0)),
                         );
                         let remove = cx.interactivity_gate_props(
                             InteractivityGateProps {
@@ -853,6 +871,7 @@ impl AttachmentInfo {
 #[derive(Clone)]
 pub struct AttachmentRemove {
     id: Arc<str>,
+    label: Arc<str>,
     on_remove: Option<OnAttachmentRemove>,
     visible: bool,
     test_id: Option<Arc<str>>,
@@ -875,11 +894,17 @@ impl AttachmentRemove {
     pub fn new(id: impl Into<Arc<str>>) -> Self {
         Self {
             id: id.into(),
+            label: Arc::<str>::from("Remove"),
             on_remove: None,
             visible: true,
             test_id: None,
             variant: AttachmentVariant::Grid,
         }
+    }
+
+    pub fn label(mut self, label: impl Into<Arc<str>>) -> Self {
+        self.label = label.into();
+        self
     }
 
     pub fn on_remove(mut self, on_remove: OnAttachmentRemove) -> Self {
@@ -917,13 +942,17 @@ impl AttachmentRemove {
             return cx.text("");
         };
 
+        let theme = Theme::global(&*cx.app).clone();
+
         let id = self.id.clone();
+        let label = self.label.clone();
         let mut btn = Button::new("")
-            .a11y_label("Remove attachment")
+            .a11y_label(label.clone())
             .variant(ButtonVariant::Ghost)
             .size(match self.variant {
+                AttachmentVariant::Grid => ButtonSize::IconXs,
+                AttachmentVariant::Inline => ButtonSize::IconXs,
                 AttachmentVariant::List => ButtonSize::Icon,
-                AttachmentVariant::Grid | AttachmentVariant::Inline => ButtonSize::IconSm,
             })
             .icon(IconId::new("lucide.x"))
             .on_activate(Arc::new(move |host, action_cx, _reason| {
@@ -931,6 +960,35 @@ impl AttachmentRemove {
                 host.notify(action_cx);
                 host.request_redraw(action_cx.window);
             }));
+
+        match self.variant {
+            AttachmentVariant::Grid => {
+                // Upstream:
+                // - `size-6` (24px),
+                // - `rounded-full`,
+                // - `bg-background/80` and `hover:bg-background`.
+                let bg = theme.color_token("background");
+                btn = btn
+                    .refine_style(ChromeRefinement::default().rounded(Radius::Full))
+                    .style(
+                        ButtonStyle::default().background(
+                            WidgetStateProperty::new(Some(ColorRef::Color(alpha(bg, 0.8))))
+                                .when(WidgetStates::HOVERED, Some(ColorRef::Color(bg))),
+                        ),
+                    );
+            }
+            AttachmentVariant::Inline => {
+                // Upstream: `size-5` (20px) with a slightly smaller icon.
+                btn = btn.leading_icon_size(Px(10.0)).refine_layout(
+                    LayoutRefinement::default()
+                        .w_px(MetricRef::Px(Px(20.0)))
+                        .h_px(MetricRef::Px(Px(20.0)))
+                        .min_w(MetricRef::Px(Px(20.0)))
+                        .min_h(MetricRef::Px(Px(20.0))),
+                );
+            }
+            AttachmentVariant::List => {}
+        }
 
         if let Some(test_id) = self.test_id {
             btn = btn.test_id(test_id);

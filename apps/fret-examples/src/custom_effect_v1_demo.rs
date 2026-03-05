@@ -365,14 +365,11 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut CustomEffectV1State) -> Eleme
         grain_scale,
     );
 
-    let root = shadcn::stack::hstack(
-        cx,
-        shadcn::stack::HStackProps::default()
-            .layout(LayoutRefinement::default().size_full())
-            .items_stretch()
-            .gap(Space::N0),
-        move |_cx| vec![inspector, stage],
-    );
+    let root = ui::h_flex(move |_cx| [inspector, stage])
+        .size_full()
+        .items_stretch()
+        .gap(Space::N0)
+        .into_element(cx);
 
     vec![root].into()
 }
@@ -412,39 +409,36 @@ fn stage(
         "The lens on the right runs a custom WGSL function and is clipped/scissored.",
     );
 
-    let stripes = shadcn::stack::hstack(
-        cx,
-        shadcn::stack::HStackProps::default()
-            .layout(LayoutRefinement::default().size_full())
-            .gap(Space::N0)
-            .items_stretch(),
-        |cx| {
-            (0..10)
-                .map(|i| {
-                    let t = (i as f32) / 9.0;
-                    let c = Color {
-                        r: (t * std::f32::consts::TAU).sin() * 0.5 + 0.5,
-                        g: ((t + 0.33) * std::f32::consts::TAU).sin() * 0.5 + 0.5,
-                        b: ((t + 0.66) * std::f32::consts::TAU).sin() * 0.5 + 0.5,
-                        a: 1.0,
-                    };
+    let stripes = ui::h_flex(|cx| {
+        (0..10)
+            .map(|i| {
+                let t = (i as f32) / 9.0;
+                let c = Color {
+                    r: (t * std::f32::consts::TAU).sin() * 0.5 + 0.5,
+                    g: ((t + 0.33) * std::f32::consts::TAU).sin() * 0.5 + 0.5,
+                    b: ((t + 0.66) * std::f32::consts::TAU).sin() * 0.5 + 0.5,
+                    a: 1.0,
+                };
 
-                    let mut stripe_layout = LayoutStyle::default();
-                    stripe_layout.flex.grow = 1.0;
-                    stripe_layout.size.height = Length::Fill;
+                let mut stripe_layout = LayoutStyle::default();
+                stripe_layout.flex.grow = 1.0;
+                stripe_layout.size.height = Length::Fill;
 
-                    cx.container(
-                        ContainerProps {
-                            layout: stripe_layout,
-                            background: Some(c),
-                            ..Default::default()
-                        },
-                        |_cx| Vec::<AnyElement>::new(),
-                    )
-                })
-                .collect::<Vec<_>>()
-        },
-    );
+                cx.container(
+                    ContainerProps {
+                        layout: stripe_layout,
+                        background: Some(c),
+                        ..Default::default()
+                    },
+                    |_cx| Vec::<AnyElement>::new(),
+                )
+            })
+            .collect::<Vec<_>>()
+    })
+    .size_full()
+    .gap(Space::N0)
+    .items_stretch()
+    .into_element(cx);
 
     let mut stripes_layer_layout = LayoutStyle::default();
     stripes_layer_layout.position = PositionStyle::Absolute;
@@ -484,11 +478,11 @@ fn stage(
                     ..Default::default()
                 },
                 move |cx| {
-                    vec![shadcn::stack::vstack(
-                        cx,
-                        shadcn::stack::VStackProps::default().gap(Space::N1),
-                        |_cx| vec![title, subtitle],
-                    )]
+                    vec![
+                        ui::v_flex(|_cx| [title, subtitle])
+                            .gap(Space::N1)
+                            .into_element(cx),
+                    ]
                 },
             );
 
@@ -509,13 +503,12 @@ fn stage(
                     ..Default::default()
                 },
                 move |cx| {
-                    vec![shadcn::stack::vstack(
-                        cx,
-                        shadcn::stack::VStackProps::default()
+                    vec![
+                        ui::v_flex(move |_cx| [header, lenses])
                             .gap(Space::N4)
-                            .items_start(),
-                        move |_cx| vec![header, lenses],
-                    )]
+                            .items_start()
+                            .into_element(cx),
+                    ]
                 },
             );
 
@@ -539,35 +532,32 @@ fn lens_row(
     grain_scale: f32,
 ) -> AnyElement {
     let radius = Px(corner_radius_px.clamp(0.0, 64.0));
-    shadcn::stack::hstack(
-        cx,
-        shadcn::stack::HStackProps::default()
-            .gap(Space::N3)
-            .items_start(),
-        move |cx| {
-            vec![
-                plain_lens(cx, "Plain (no effect)", radius),
-                if enabled {
-                    custom_effect_lens(
-                        cx,
-                        "CustomV1 lens",
-                        effect,
-                        blur_radius_px,
-                        blur_downsample,
-                        refraction_height_px,
-                        refraction_amount_px,
-                        depth_effect,
-                        chromatic_aberration,
-                        corner_radius_px,
-                        grain_strength,
-                        grain_scale,
-                    )
-                } else {
-                    plain_lens(cx, "CustomV1 lens (disabled)", radius)
-                },
-            ]
-        },
-    )
+    ui::h_flex(move |cx| {
+        [
+            plain_lens(cx, "Plain (no effect)", radius),
+            if enabled {
+                custom_effect_lens(
+                    cx,
+                    "CustomV1 lens",
+                    effect,
+                    blur_radius_px,
+                    blur_downsample,
+                    refraction_height_px,
+                    refraction_amount_px,
+                    depth_effect,
+                    chromatic_aberration,
+                    corner_radius_px,
+                    grain_strength,
+                    grain_scale,
+                )
+            } else {
+                plain_lens(cx, "CustomV1 lens (disabled)", radius)
+            },
+        ]
+    })
+    .gap(Space::N3)
+    .items_start()
+    .into_element(cx)
 }
 
 fn lens_shell(
@@ -769,21 +759,18 @@ fn inspector(
         },
         move |cx| {
             let label_row = |cx: &mut ElementContext<'_, App>, label: &str, value: String| {
-                shadcn::stack::hstack(
-                    cx,
-                    shadcn::stack::HStackProps::default()
-                        .gap(Space::N2)
-                        .items_center(),
-                    move |cx| {
-                        vec![
-                            shadcn::Label::new(label).into_element(cx),
-                            cx.spacer(SpacerProps::default()),
-                            shadcn::Badge::new(value)
-                                .variant(shadcn::BadgeVariant::Secondary)
-                                .into_element(cx),
-                        ]
-                    },
-                )
+                ui::h_flex(move |cx| {
+                    [
+                        shadcn::Label::new(label).into_element(cx),
+                        cx.spacer(SpacerProps::default()),
+                        shadcn::Badge::new(value)
+                            .variant(shadcn::BadgeVariant::Secondary)
+                            .into_element(cx),
+                    ]
+                })
+                .gap(Space::N2)
+                .items_center()
+                .into_element(cx)
             };
 
             let header = shadcn::CardHeader::new([
@@ -795,194 +782,170 @@ fn inspector(
             ])
             .into_element(cx);
 
-            let content = shadcn::CardContent::new([shadcn::stack::vstack(
-                cx,
-                shadcn::stack::VStackProps::default()
-                    .gap(Space::N3)
-                    .items_stretch(),
-                move |cx| {
-                    let blur_radius_row = shadcn::stack::vstack(
-                        cx,
-                        shadcn::stack::VStackProps::default().gap(Space::N2),
-                        move |cx| {
-                            vec![
-                                label_row(
-                                    cx,
-                                    "Blur radius (px)",
-                                    format!("{:.1}", blur_radius_px.clamp(0.0, 64.0)),
-                                ),
-                                shadcn::Slider::new(blur_radius_model.clone())
-                                    .range(0.0, 48.0)
-                                    .step(0.5)
-                                    .into_element(cx),
-                            ]
-                        },
-                    );
-
-                    let blur_downsample_row = shadcn::stack::vstack(
-                        cx,
-                        shadcn::stack::VStackProps::default().gap(Space::N2),
-                        move |cx| {
-                            let v = blur_downsample.round().clamp(1.0, 4.0) as u32;
-                            vec![
-                                label_row(cx, "Blur downsample", format!("{v}x")),
-                                shadcn::Slider::new(blur_downsample_model.clone())
-                                    .range(1.0, 4.0)
-                                    .step(1.0)
-                                    .into_element(cx),
-                            ]
-                        },
-                    );
-
-                    let refraction_height_row = shadcn::stack::vstack(
-                        cx,
-                        shadcn::stack::VStackProps::default().gap(Space::N2),
-                        move |cx| {
-                            vec![
-                                label_row(
-                                    cx,
-                                    "Refraction height (px)",
-                                    format!("{:.1}", refraction_height_px.clamp(0.0, 64.0)),
-                                ),
-                                shadcn::Slider::new(refraction_height_model.clone())
-                                    .range(0.0, 64.0)
-                                    .step(0.5)
-                                    .into_element(cx),
-                            ]
-                        },
-                    );
-
-                    let refraction_amount_row = shadcn::stack::vstack(
-                        cx,
-                        shadcn::stack::VStackProps::default().gap(Space::N2),
-                        move |cx| {
-                            vec![
-                                label_row(
-                                    cx,
-                                    "Refraction amount (px)",
-                                    format!("{:.1}", refraction_amount_px.clamp(0.0, 32.0)),
-                                ),
-                                shadcn::Slider::new(refraction_amount_model.clone())
-                                    .range(0.0, 24.0)
-                                    .step(0.25)
-                                    .into_element(cx),
-                            ]
-                        },
-                    );
-
-                    let depth_effect_row = shadcn::stack::vstack(
-                        cx,
-                        shadcn::stack::VStackProps::default().gap(Space::N2),
-                        move |cx| {
-                            vec![
-                                label_row(cx, "Depth effect", format!("{depth_effect:.2}")),
-                                shadcn::Slider::new(depth_effect_model.clone())
-                                    .range(0.0, 1.0)
-                                    .step(0.01)
-                                    .into_element(cx),
-                            ]
-                        },
-                    );
-
-                    let chromatic_row = shadcn::stack::vstack(
-                        cx,
-                        shadcn::stack::VStackProps::default().gap(Space::N2),
-                        move |cx| {
-                            vec![
-                                label_row(
-                                    cx,
-                                    "Chromatic aberration",
-                                    format!("{chromatic_aberration:.2}"),
-                                ),
-                                shadcn::Slider::new(chromatic_model.clone())
-                                    .range(0.0, 1.0)
-                                    .step(0.01)
-                                    .into_element(cx),
-                            ]
-                        },
-                    );
-
-                    let corner_radius_row = shadcn::stack::vstack(
-                        cx,
-                        shadcn::stack::VStackProps::default().gap(Space::N2),
-                        move |cx| {
-                            vec![
-                                label_row(
-                                    cx,
-                                    "Corner radius (px)",
-                                    format!("{:.1}", corner_radius_px.clamp(0.0, 64.0)),
-                                ),
-                                shadcn::Slider::new(corner_radius_model.clone())
-                                    .range(0.0, 48.0)
-                                    .step(0.5)
-                                    .into_element(cx),
-                            ]
-                        },
-                    );
-
-                    let grain_strength_row = shadcn::stack::vstack(
-                        cx,
-                        shadcn::stack::VStackProps::default().gap(Space::N2),
-                        move |cx| {
-                            vec![
-                                label_row(cx, "Grain strength", format!("{grain_strength:.2}")),
-                                shadcn::Slider::new(grain_strength_model.clone())
-                                    .range(0.0, 0.2)
-                                    .step(0.01)
-                                    .into_element(cx),
-                            ]
-                        },
-                    );
-
-                    let grain_scale_row = shadcn::stack::vstack(
-                        cx,
-                        shadcn::stack::VStackProps::default().gap(Space::N2),
-                        move |cx| {
-                            vec![
-                                label_row(cx, "Grain scale", format!("{grain_scale:.2}")),
-                                shadcn::Slider::new(grain_scale_model.clone())
-                                    .range(0.25, 6.0)
-                                    .step(0.05)
-                                    .into_element(cx),
-                            ]
-                        },
-                    );
-
-                    vec![
-                        shadcn::stack::hstack(
+            let content = shadcn::CardContent::new([ui::v_flex(move |cx| {
+                let blur_radius_row = ui::v_flex(move |cx| {
+                    [
+                        label_row(
                             cx,
-                            shadcn::stack::HStackProps::default()
-                                .gap(Space::N2)
-                                .items_center(),
-                            |cx| {
-                                vec![
-                                    shadcn::Switch::new(enabled_model.clone())
-                                        .a11y_label("Enable custom effect")
-                                        .test_id("custom-effect-v1.enabled")
-                                        .into_element(cx),
-                                    shadcn::Label::new("Enable").into_element(cx),
-                                ]
-                            },
+                            "Blur radius (px)",
+                            format!("{:.1}", blur_radius_px.clamp(0.0, 64.0)),
                         ),
-                        blur_radius_row,
-                        blur_downsample_row,
-                        shadcn::Separator::new().into_element(cx),
-                        refraction_height_row,
-                        refraction_amount_row,
-                        depth_effect_row,
-                        chromatic_row,
-                        corner_radius_row,
-                        shadcn::Separator::new().into_element(cx),
-                        grain_strength_row,
-                        grain_scale_row,
-                        shadcn::Button::new("Reset")
-                            .variant(shadcn::ButtonVariant::Secondary)
-                            .action(act::Reset)
-                            .test_id("custom-effect-v1.reset")
+                        shadcn::Slider::new(blur_radius_model.clone())
+                            .range(0.0, 48.0)
+                            .step(0.5)
                             .into_element(cx),
                     ]
-                },
-            )])
+                })
+                .gap(Space::N2)
+                .into_element(cx);
+
+                let blur_downsample_row = ui::v_flex(move |cx| {
+                    let v = blur_downsample.round().clamp(1.0, 4.0) as u32;
+                    [
+                        label_row(cx, "Blur downsample", format!("{v}x")),
+                        shadcn::Slider::new(blur_downsample_model.clone())
+                            .range(1.0, 4.0)
+                            .step(1.0)
+                            .into_element(cx),
+                    ]
+                })
+                .gap(Space::N2)
+                .into_element(cx);
+
+                let refraction_height_row = ui::v_flex(move |cx| {
+                    [
+                        label_row(
+                            cx,
+                            "Refraction height (px)",
+                            format!("{:.1}", refraction_height_px.clamp(0.0, 64.0)),
+                        ),
+                        shadcn::Slider::new(refraction_height_model.clone())
+                            .range(0.0, 64.0)
+                            .step(0.5)
+                            .into_element(cx),
+                    ]
+                })
+                .gap(Space::N2)
+                .into_element(cx);
+
+                let refraction_amount_row = ui::v_flex(move |cx| {
+                    [
+                        label_row(
+                            cx,
+                            "Refraction amount (px)",
+                            format!("{:.1}", refraction_amount_px.clamp(0.0, 32.0)),
+                        ),
+                        shadcn::Slider::new(refraction_amount_model.clone())
+                            .range(0.0, 24.0)
+                            .step(0.25)
+                            .into_element(cx),
+                    ]
+                })
+                .gap(Space::N2)
+                .into_element(cx);
+
+                let depth_effect_row = ui::v_flex(move |cx| {
+                    [
+                        label_row(cx, "Depth effect", format!("{depth_effect:.2}")),
+                        shadcn::Slider::new(depth_effect_model.clone())
+                            .range(0.0, 1.0)
+                            .step(0.01)
+                            .into_element(cx),
+                    ]
+                })
+                .gap(Space::N2)
+                .into_element(cx);
+
+                let chromatic_row = ui::v_flex(move |cx| {
+                    [
+                        label_row(
+                            cx,
+                            "Chromatic aberration",
+                            format!("{chromatic_aberration:.2}"),
+                        ),
+                        shadcn::Slider::new(chromatic_model.clone())
+                            .range(0.0, 1.0)
+                            .step(0.01)
+                            .into_element(cx),
+                    ]
+                })
+                .gap(Space::N2)
+                .into_element(cx);
+
+                let corner_radius_row = ui::v_flex(move |cx| {
+                    [
+                        label_row(
+                            cx,
+                            "Corner radius (px)",
+                            format!("{:.1}", corner_radius_px.clamp(0.0, 64.0)),
+                        ),
+                        shadcn::Slider::new(corner_radius_model.clone())
+                            .range(0.0, 48.0)
+                            .step(0.5)
+                            .into_element(cx),
+                    ]
+                })
+                .gap(Space::N2)
+                .into_element(cx);
+
+                let grain_strength_row = ui::v_flex(move |cx| {
+                    [
+                        label_row(cx, "Grain strength", format!("{grain_strength:.2}")),
+                        shadcn::Slider::new(grain_strength_model.clone())
+                            .range(0.0, 0.2)
+                            .step(0.01)
+                            .into_element(cx),
+                    ]
+                })
+                .gap(Space::N2)
+                .into_element(cx);
+
+                let grain_scale_row = ui::v_flex(move |cx| {
+                    [
+                        label_row(cx, "Grain scale", format!("{grain_scale:.2}")),
+                        shadcn::Slider::new(grain_scale_model.clone())
+                            .range(0.25, 6.0)
+                            .step(0.05)
+                            .into_element(cx),
+                    ]
+                })
+                .gap(Space::N2)
+                .into_element(cx);
+
+                [
+                    ui::h_flex(|cx| {
+                        [
+                            shadcn::Switch::new(enabled_model.clone())
+                                .a11y_label("Enable custom effect")
+                                .test_id("custom-effect-v1.enabled")
+                                .into_element(cx),
+                            shadcn::Label::new("Enable").into_element(cx),
+                        ]
+                    })
+                    .gap(Space::N2)
+                    .items_center()
+                    .into_element(cx),
+                    blur_radius_row,
+                    blur_downsample_row,
+                    shadcn::Separator::new().into_element(cx),
+                    refraction_height_row,
+                    refraction_amount_row,
+                    depth_effect_row,
+                    chromatic_row,
+                    corner_radius_row,
+                    shadcn::Separator::new().into_element(cx),
+                    grain_strength_row,
+                    grain_scale_row,
+                    shadcn::Button::new("Reset")
+                        .variant(shadcn::ButtonVariant::Secondary)
+                        .action(act::Reset)
+                        .test_id("custom-effect-v1.reset")
+                        .into_element(cx),
+                ]
+            })
+            .gap(Space::N3)
+            .items_stretch()
+            .into_element(cx)])
             .into_element(cx);
 
             vec![

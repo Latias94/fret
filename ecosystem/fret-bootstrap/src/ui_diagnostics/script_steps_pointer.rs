@@ -1797,6 +1797,208 @@ pub(super) fn handle_wheel_step(
     false
 }
 
+pub(super) fn handle_wheel_burst_step(
+    svc: &mut UiDiagnosticsService,
+    app: &App,
+    window: AppWindowId,
+    window_bounds: Rect,
+    step_index: usize,
+    step: UiActionStepV2,
+    element_runtime: Option<&ElementRuntime>,
+    semantics_snapshot: Option<&fret_core::SemanticsSnapshot>,
+    mut ui: Option<&mut UiTree<App>>,
+    active: &mut ActiveScript,
+    output: &mut UiScriptFrameOutput,
+    force_dump_label: &mut Option<String>,
+) -> bool {
+    let UiActionStepV2::WheelBurst {
+        window: _,
+        pointer_kind,
+        target,
+        delta_x,
+        delta_y,
+        count,
+    } = step
+    else {
+        return false;
+    };
+
+    let Some(snapshot) = semantics_snapshot else {
+        output.request_redraw = true;
+        let label = format!("script-step-{step_index:04}-wheel_burst-no-semantics");
+        if svc.cfg.script_auto_dump {
+            svc.dump_bundle(Some(&label));
+        }
+        push_script_event_log(
+            active,
+            &svc.cfg,
+            UiScriptEventLogEntryV1 {
+                unix_ms: unix_ms_now(),
+                kind: "script_failed".to_string(),
+                step_index: Some(step_index as u32),
+                note: Some("no_semantics_snapshot".to_string()),
+                bundle_dir: None,
+                window: Some(window.data().as_ffi()),
+                tick_id: Some(app.tick_id().0),
+                frame_id: Some(app.frame_id().0),
+                window_snapshot_seq: None,
+            },
+        );
+        svc.write_script_result(UiScriptResultV1 {
+            schema_version: 1,
+            run_id: active.run_id,
+            updated_unix_ms: unix_ms_now(),
+            window: Some(window.data().as_ffi()),
+            stage: UiScriptStageV1::Failed,
+            step_index: Some(step_index as u32),
+            reason_code: Some("semantics.missing".to_string()),
+            reason: Some("no_semantics_snapshot".to_string()),
+            evidence: script_evidence_for_active(active),
+            last_bundle_dir: svc
+                .last_dump_dir
+                .as_ref()
+                .map(|p| display_path(&svc.cfg.out_dir, p)),
+            last_bundle_artifact: svc.last_dump_artifact_stats.clone(),
+        });
+        return true;
+    };
+    let Some(node) = select_semantics_node_with_trace(
+        snapshot,
+        window,
+        element_runtime,
+        &target,
+        active.scope_root_for_window(window),
+        step_index as u32,
+        svc.cfg.redact_text,
+        &mut active.selector_resolution_trace,
+    ) else {
+        output.request_redraw = true;
+        let label = format!("script-step-{step_index:04}-wheel_burst-no-semantics-match");
+        if svc.cfg.script_auto_dump {
+            svc.dump_bundle(Some(&label));
+        }
+        push_script_event_log(
+            active,
+            &svc.cfg,
+            UiScriptEventLogEntryV1 {
+                unix_ms: unix_ms_now(),
+                kind: "script_failed".to_string(),
+                step_index: Some(step_index as u32),
+                note: Some("wheel_burst_no_semantics_match".to_string()),
+                bundle_dir: None,
+                window: Some(window.data().as_ffi()),
+                tick_id: Some(app.tick_id().0),
+                frame_id: Some(app.frame_id().0),
+                window_snapshot_seq: None,
+            },
+        );
+        svc.write_script_result(UiScriptResultV1 {
+            schema_version: 1,
+            run_id: active.run_id,
+            updated_unix_ms: unix_ms_now(),
+            window: Some(window.data().as_ffi()),
+            stage: UiScriptStageV1::Failed,
+            step_index: Some(step_index as u32),
+            reason_code: Some("selector.not_found".to_string()),
+            reason: Some("wheel_burst_no_semantics_match".to_string()),
+            evidence: script_evidence_for_active(active),
+            last_bundle_dir: svc
+                .last_dump_dir
+                .as_ref()
+                .map(|p| display_path(&svc.cfg.out_dir, p)),
+            last_bundle_artifact: svc.last_dump_artifact_stats.clone(),
+        });
+        return true;
+    };
+
+    let pos = center_of_rect_clamped_to_rect(node.bounds, window_bounds);
+    if let Some(ui) = ui.as_deref_mut() {
+        let note = format!("wheel_burst dx={delta_x} dy={delta_y} count={count}");
+        record_hit_test_trace_for_selector(
+            &mut active.hit_test_trace,
+            ui,
+            element_runtime,
+            window,
+            Some(snapshot),
+            &target,
+            step_index as u32,
+            pos,
+            Some(node),
+            Some(note.as_str()),
+            svc.cfg.max_debug_string_bytes,
+        );
+    }
+
+    let kind = pointer_kind.unwrap_or(UiPointerKindV1::Mouse);
+    let kind_label = match kind {
+        UiPointerKindV1::Mouse => "mouse",
+        UiPointerKindV1::Touch => "touch",
+        UiPointerKindV1::Pen => "pen",
+    };
+    let payload = format!(
+        "schema_version=1\nwindow={}\nx_px={}\ny_px={}\ndelta_x={}\ndelta_y={}\ncount={}\npointer_kind={}\n",
+        window.data().as_ffi(),
+        pos.x.0,
+        pos.y.0,
+        delta_x,
+        delta_y,
+        count,
+        kind_label
+    );
+    let text_path = svc.cfg.out_dir.join("wheel_burst.request.txt");
+    let trigger_path = svc.cfg.out_dir.join("wheel_burst.touch");
+    let _ = std::fs::create_dir_all(&svc.cfg.out_dir);
+
+    if std::fs::write(text_path, payload).is_ok() && touch_file(&trigger_path).is_ok() {
+        active.wait_until = None;
+        active.screenshot_wait = None;
+        active.next_step = active.next_step.saturating_add(1);
+        output.request_redraw = true;
+        if svc.cfg.script_auto_dump {
+            *force_dump_label = Some(format!("script-step-{step_index:04}-wheel_burst"));
+        }
+        return false;
+    }
+
+    output.request_redraw = true;
+    let label = format!("script-step-{step_index:04}-wheel_burst-write-failed");
+    if svc.cfg.script_auto_dump {
+        svc.dump_bundle(Some(&label));
+    }
+    push_script_event_log(
+        active,
+        &svc.cfg,
+        UiScriptEventLogEntryV1 {
+            unix_ms: unix_ms_now(),
+            kind: "script_failed".to_string(),
+            step_index: Some(step_index as u32),
+            note: Some("wheel_burst_write_failed".to_string()),
+            bundle_dir: None,
+            window: Some(window.data().as_ffi()),
+            tick_id: Some(app.tick_id().0),
+            frame_id: Some(app.frame_id().0),
+            window_snapshot_seq: None,
+        },
+    );
+    svc.write_script_result(UiScriptResultV1 {
+        schema_version: 1,
+        run_id: active.run_id,
+        updated_unix_ms: unix_ms_now(),
+        window: Some(window.data().as_ffi()),
+        stage: UiScriptStageV1::Failed,
+        step_index: Some(step_index as u32),
+        reason_code: Some("wheel_burst.write_failed".to_string()),
+        reason: Some("wheel_burst_write_failed".to_string()),
+        evidence: script_evidence_for_active(active),
+        last_bundle_dir: svc
+            .last_dump_dir
+            .as_ref()
+            .map(|p| display_path(&svc.cfg.out_dir, p)),
+        last_bundle_artifact: svc.last_dump_artifact_stats.clone(),
+    });
+    true
+}
+
 pub(super) fn handle_move_pointer_step(
     svc: &mut UiDiagnosticsService,
     app: &App,

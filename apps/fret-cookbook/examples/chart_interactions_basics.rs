@@ -314,7 +314,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut ChartInteractionsWindowState)
         (x_span, hover_index)
     };
 
-    let toolbar = ui::h_flex(cx, |cx| {
+    let toolbar = ui::h_flex(|cx| {
         let x_span_badge = shadcn::Badge::new(format!("X span: {x_span:.2}"))
             .variant(shadcn::BadgeVariant::Secondary)
             .into_element(cx)
@@ -393,7 +393,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut ChartInteractionsWindowState)
 
     let canvas = chart_canvas(cx, st);
 
-    let canvas_shell = ui::container(cx, |_cx| vec![canvas])
+    let canvas_shell = ui::container(|_cx| vec![canvas])
         .bg(ColorRef::Color(theme.color_token("card")))
         .border_1()
         .rounded(Radius::Lg)
@@ -403,7 +403,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut ChartInteractionsWindowState)
         .min_h(Px(420.0))
         .into_element(cx);
 
-    let content = ui::v_flex(cx, |_cx| vec![toolbar, canvas_shell])
+    let content = ui::v_flex(|_cx| vec![toolbar, canvas_shell])
         .gap(Space::N3)
         .w_full()
         .h_full()

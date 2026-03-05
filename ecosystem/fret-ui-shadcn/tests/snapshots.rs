@@ -1361,7 +1361,7 @@ fn snapshot_extras_kanban_custom_cards() {
         let board = fret_ui_shadcn::extras::Kanban::new(columns, items).into_element_with(
             cx,
             |cx, item, ctx| {
-                let title = fret_ui_kit::ui::text(cx, item.name.clone())
+                let title = fret_ui_kit::ui::text(item.name.clone())
                     .font_medium()
                     .w_full()
                     .min_w_0()
@@ -1374,11 +1374,7 @@ fn snapshot_extras_kanban_custom_cards() {
 
                 let mut children = vec![title, badge];
                 if ctx.mode == fret_ui_shadcn::extras::KanbanCardMode::Overlay {
-                    children.push(
-                        fret_ui_kit::ui::text(cx, "overlay")
-                            .nowrap()
-                            .into_element(cx),
-                    );
+                    children.push(fret_ui_kit::ui::text("overlay").nowrap().into_element(cx));
                 }
 
                 fret_ui_kit::declarative::stack::vstack(

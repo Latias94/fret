@@ -14,9 +14,8 @@ use std::sync::Arc;
 use fret_core::{Color, Px, SemanticsRole};
 use fret_runtime::Model;
 use fret_ui::action::{ActionCx, UiActionHost};
-use fret_ui::element::{AnyElement, PressableA11y, PressableProps, SemanticsDecoration};
+use fret_ui::element::{AnyElement, SemanticsDecoration};
 use fret_ui::{ElementContext, Theme, UiHost};
-use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::declarative::visually_hidden::visually_hidden;
@@ -128,29 +127,35 @@ impl ModelSelectorTrigger {
 
     pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let open = self.open;
-        let child = self.child;
         let disabled = self.disabled;
         let test_id = self.test_id;
 
-        let trigger = cx.pressable(
-            PressableProps {
-                enabled: !disabled,
-                focusable: true,
-                a11y: PressableA11y {
-                    role: Some(SemanticsRole::Button),
-                    test_id,
-                    ..Default::default()
-                },
-                ..Default::default()
-            },
-            move |cx, _st| {
-                if !disabled {
-                    cx.pressable_set_bool(&open, true);
-                }
-                vec![child]
-            },
-        );
-        trigger
+        let mut element = self.child;
+
+        let mut semantics = SemanticsDecoration::default().role(SemanticsRole::Button);
+        if let Some(test_id) = test_id {
+            semantics = semantics.test_id(test_id);
+        }
+        if disabled {
+            semantics = semantics.disabled(true);
+        }
+        element = element.attach_semantics(semantics);
+
+        if !disabled {
+            cx.pressable_add_on_activate_for(
+                element.id,
+                Arc::new(
+                    move |host: &mut dyn fret_ui::action::UiActionHost,
+                          acx: fret_ui::action::ActionCx,
+                          _reason: fret_ui::action::ActivateReason| {
+                        let _ = host.models_mut().update(&open, |v| *v = true);
+                        host.request_redraw(acx.window);
+                    },
+                ),
+            );
+        }
+
+        element
     }
 }
 
@@ -187,7 +192,11 @@ impl ModelSelectorContent {
             test_id_root: None,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
-            command_chrome: ChromeRefinement::default(),
+            // Upstream `Command` surface is borderless; the surrounding DialogContent applies an
+            // outline-like stroke. Keep Fret's shadcn `Command` chrome but drop its border here.
+            command_chrome: ChromeRefinement::default()
+                .border_width(Px(0.0))
+                .rounded(Radius::Md),
             command_layout: LayoutRefinement::default().w_full().min_w_0(),
         }
     }
@@ -334,7 +343,7 @@ impl ModelSelectorLogo {
 
         let props = decl_style::container_props(&theme, chrome, layout);
         let mut element = cx.container(props, move |cx| {
-            let text = fret_ui_kit::ui::text(cx, initial)
+            let text = fret_ui_kit::ui::text(initial)
                 .text_size_px(Px(8.0))
                 .font_medium()
                 .nowrap()
@@ -471,7 +480,7 @@ impl ModelSelectorName {
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let mut element = fret_ui_kit::ui::text(cx, self.text)
+        let mut element = fret_ui_kit::ui::text(self.text)
             .layout(self.layout)
             .truncate()
             .into_element(cx);
@@ -495,7 +504,68 @@ pub fn close_model_selector_dialog(
 
 // ---- shadcn command taxonomy (names match AI Elements exports) ----
 
-pub type ModelSelectorInput = fret_ui_shadcn::CommandInput;
+/// AI Elements-aligned `ModelSelectorInput`.
+///
+/// Upstream applies `h-auto py-3.5` to the underlying shadcn `CommandInput`. This wrapper bakes
+/// those defaults in while still exposing the same customization hooks (`placeholder`, `disabled`,
+/// `refine_*`).
+#[derive(Clone)]
+pub struct ModelSelectorInput {
+    inner: fret_ui_shadcn::CommandInput,
+}
+
+impl std::fmt::Debug for ModelSelectorInput {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ModelSelectorInput").finish_non_exhaustive()
+    }
+}
+
+impl ModelSelectorInput {
+    pub fn new(model: fret_runtime::Model<String>) -> Self {
+        Self {
+            inner: fret_ui_shadcn::CommandInput::new(model)
+                .wrapper_height_auto()
+                .input_height_auto()
+                // Tailwind `py-3.5` ≈ 14px.
+                .input_padding_y_px(Px(14.0)),
+        }
+    }
+
+    pub fn input_test_id(mut self, test_id: impl Into<Arc<str>>) -> Self {
+        self.inner = self.inner.input_test_id(test_id);
+        self
+    }
+
+    pub fn a11y_label(mut self, label: impl Into<Arc<str>>) -> Self {
+        self.inner = self.inner.a11y_label(label);
+        self
+    }
+
+    pub fn placeholder(mut self, placeholder: impl Into<Arc<str>>) -> Self {
+        self.inner = self.inner.placeholder(placeholder);
+        self
+    }
+
+    pub fn disabled(mut self, disabled: bool) -> Self {
+        self.inner = self.inner.disabled(disabled);
+        self
+    }
+
+    pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
+        self.inner = self.inner.refine_style(style);
+        self
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.inner = self.inner.refine_layout(layout);
+        self
+    }
+
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        self.inner.into_element(cx)
+    }
+}
+
 pub type ModelSelectorList = fret_ui_shadcn::CommandList;
 pub type ModelSelectorEmpty = fret_ui_shadcn::CommandEmpty;
 pub type ModelSelectorGroup = fret_ui_shadcn::CommandGroup;

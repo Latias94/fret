@@ -382,7 +382,7 @@ let add_button = shadcn::Button::new("Add")
     .on_click(add_cmd)
     .into_element(cx);
 
-let row = ui::h_flex(cx, |_cx| [input, add_button])
+let row = ui::h_flex(|_cx| [input, add_button])
     .gap(Space::N2)
     .into_element(cx);
 ```
@@ -397,7 +397,7 @@ let input = shadcn::Input::new(st.draft.clone())
 let add_button = shadcn::Button::new("Add")
     .on_click(add_cmd);
 
-let row = ui::h_flex(cx, |_cx| [input, add_button])
+let row = ui::h_flex(|_cx| [input, add_button])
     .gap(Space::N2)
     .into_element(cx);
 ```

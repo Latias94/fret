@@ -197,21 +197,19 @@ impl View for VirtualListBasicsView {
                     row_layout.size.width = Length::Fill;
                     row_layout.size.height = Length::Px(row_height_at(mapped, tall_rows));
 
-                    let content = stack::hstack(
-                        cx,
-                        stack::HStackProps::default()
-                            .layout(LayoutRefinement::default().w_full().h_full())
-                            .gap_x(Space::N2)
-                            .items_center(),
-                        |cx| {
-                            [
-                                cx.text(item.label.clone()),
-                                shadcn::Badge::new(format!("#{mapped}"))
-                                    .variant(shadcn::BadgeVariant::Secondary)
-                                    .into_element(cx),
-                            ]
-                        },
-                    );
+                    let content = ui::h_flex(|cx| {
+                        [
+                            cx.text(item.label.clone()),
+                            shadcn::Badge::new(format!("#{mapped}"))
+                                .variant(shadcn::BadgeVariant::Secondary)
+                                .into_element(cx),
+                        ]
+                    })
+                    .gap(Space::N2)
+                    .items_center()
+                    .w_full()
+                    .h_full()
+                    .into_element(cx);
 
                     let mut row = cx.container(
                         ContainerProps {
@@ -319,22 +317,17 @@ impl View for VirtualListBasicsView {
             .into_element(cx)
             .test_id(TEST_ID_MODE);
 
-        let controls = ui::v_flex(cx, |cx| {
+        let controls = ui::v_flex(|cx| {
             [
-                ui::h_flex(cx, |cx| {
-                    [shadcn::Label::new("Measure mode:").into_element(cx)]
-                })
-                .items_center()
-                .into_element(cx),
-                stack::hstack(
-                    cx,
-                    stack::HStackProps::default()
-                        .layout(LayoutRefinement::default().w_full())
-                        .justify_center(),
-                    |_cx| [mode_toggle],
-                ),
+                ui::h_flex(|cx| [shadcn::Label::new("Measure mode:").into_element(cx)])
+                    .items_center()
+                    .into_element(cx),
+                ui::h_row(|_cx| [mode_toggle])
+                    .justify_center()
+                    .w_full()
+                    .into_element(cx),
                 shadcn::Separator::new().into_element(cx),
-                ui::h_flex(cx, |cx| {
+                ui::h_flex(|cx| {
                     [
                         shadcn::Label::new("Tall rows:").into_element(cx),
                         shadcn::Switch::new(self.tall_rows.clone())
@@ -345,7 +338,7 @@ impl View for VirtualListBasicsView {
                 .gap(Space::N2)
                 .items_center()
                 .into_element(cx),
-                ui::h_flex(cx, |cx| {
+                ui::h_flex(|cx| {
                     [
                         shadcn::Label::new("Reversed:").into_element(cx),
                         shadcn::Switch::new(self.reversed.clone())
@@ -356,7 +349,7 @@ impl View for VirtualListBasicsView {
                 .gap(Space::N2)
                 .items_center()
                 .into_element(cx),
-                ui::h_flex(cx, |cx| {
+                ui::h_flex(|cx| {
                     [
                         shadcn::Label::new("Use index keys (bad):").into_element(cx),
                         shadcn::Switch::new(self.index_keys.clone())
@@ -367,7 +360,7 @@ impl View for VirtualListBasicsView {
                 .gap(Space::N2)
                 .items_center()
                 .into_element(cx),
-                ui::h_flex(cx, |cx| {
+                ui::h_flex(|cx| {
                     [
                         shadcn::Label::new("Key cache: visible only").into_element(cx),
                         shadcn::Switch::new(self.visible_only_keys.clone())
@@ -393,7 +386,7 @@ impl View for VirtualListBasicsView {
                     .action(act::ScrollToTarget)
                     .into_element(cx)
                     .test_id(TEST_ID_SCROLL_TARGET),
-                ui::h_flex(cx, |cx| {
+                ui::h_flex(|cx| {
                     [
                         shadcn::Input::new(self.jump.clone())
                             .a11y_label("Scroll to index")
@@ -416,7 +409,7 @@ impl View for VirtualListBasicsView {
         .w_full()
         .into_element(cx);
 
-        let left = ui::v_flex_build(cx, |cx, out| {
+        let left = ui::v_flex_build(|cx, out| {
             out.push(controls);
             if index_keys {
                 out.push(
@@ -452,7 +445,7 @@ impl View for VirtualListBasicsView {
             |_cx| [list],
         );
 
-        let body = ui::h_flex(cx, |_cx| [left, list_slot])
+        let body = ui::h_flex(|_cx| [left, list_slot])
             .gap(Space::N6)
             .w_full()
             .into_element(cx);

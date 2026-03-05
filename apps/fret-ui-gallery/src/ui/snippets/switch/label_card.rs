@@ -2,6 +2,7 @@ pub const SOURCE: &str = include_str!("label_card.rs");
 
 // region: example
 use fret_core::Px;
+use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 
 #[derive(Default)]
@@ -20,11 +21,21 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         }
     };
 
+    let checked = cx.watch_model(&description).copied().unwrap_or(false);
+
     let blue = ColorRef::Color(fret_ui_kit::colors::linear_from_hex_rgb(0x3B_82_F6));
     let style = shadcn::switch::SwitchStyle::default().track_background(
         fret_ui_kit::WidgetStateProperty::new(None)
-            .when(fret_ui_kit::WidgetStates::SELECTED, Some(blue)),
+            .when(fret_ui_kit::WidgetStates::SELECTED, Some(blue.clone())),
     );
+
+    let mut chrome = ChromeRefinement::default()
+        .border_1()
+        .rounded(Radius::Lg)
+        .p(Space::N4);
+    if checked {
+        chrome = chrome.border_color(blue);
+    }
 
     shadcn::Field::new([
         shadcn::FieldContent::new([
@@ -42,12 +53,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             .into_element(cx),
     ])
     .orientation(shadcn::FieldOrientation::Horizontal)
-    .refine_style(
-        ChromeRefinement::default()
-            .border_1()
-            .rounded(Radius::Lg)
-            .p(Space::N4),
-    )
+    .refine_style(chrome)
     .refine_layout(LayoutRefinement::default().w_full().max_w(Px(520.0)))
     .into_element(cx)
     .test_id("ui-gallery-switch-label-card")

@@ -152,7 +152,7 @@ impl View for HelloCounterView {
             }
         });
 
-        let hero_icon = ui::h_flex(cx, |cx| {
+        let hero_icon = ui::h_flex(|cx| {
             [icon::icon_with(
                 cx,
                 IconId::new("lucide.party-popper"),
@@ -168,7 +168,7 @@ impl View for HelloCounterView {
         .justify_center()
         .into_element(cx);
 
-        let header_inner = ui::v_flex(cx, |cx| {
+        let header_inner = ui::v_flex(|cx| {
         ui::children![
             cx;
             hero_icon,
@@ -248,7 +248,7 @@ impl View for HelloCounterView {
             .test_id(TEST_ID_STEP_INPUT)
             .into_element(cx);
 
-        let presets = ui::h_flex(cx, |cx| {
+        let presets = ui::h_flex(|cx| {
             [
                 shadcn::Button::new("1")
                     .variant(shadcn::ButtonVariant::Secondary)
@@ -274,13 +274,13 @@ impl View for HelloCounterView {
         .items_center()
         .into_element(cx);
 
-        let step_row = ui::v_flex(cx, |_cx| [step_input, presets])
+        let step_row = ui::v_flex(|_cx| [step_input, presets])
             .gap(Space::N2)
             .w_full()
             .items_center()
             .into_element(cx);
 
-        let actions = ui::h_flex(cx, |cx| {
+        let actions = ui::h_flex(|cx| {
             [
                 shadcn::Button::new("")
                     .variant(shadcn::ButtonVariant::Outline)
@@ -315,16 +315,13 @@ impl View for HelloCounterView {
         .items_center()
         .into_element(cx);
 
-        let content_body = ui::v_flex(cx, |cx| {
+        let content_body = ui::v_flex(|cx| {
             [
-                ui::v_flex(
-                    cx,
-                    |cx| ui::children![cx; count_text, status_line, step_badge],
-                )
-                .gap(Space::N2)
-                .items_center()
-                .into_element(cx),
-                ui::v_flex(cx, |_cx| [step_row, step_help])
+                ui::v_flex(|cx| ui::children![cx; count_text, status_line, step_badge])
+                    .gap(Space::N2)
+                    .items_center()
+                    .into_element(cx),
+                ui::v_flex(|_cx| [step_row, step_help])
                     .gap(Space::N2)
                     .w_full()
                     .items_center()

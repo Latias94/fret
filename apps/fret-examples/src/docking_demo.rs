@@ -19,7 +19,7 @@ use fret_runtime::PlatformCapabilities;
 use fret_ui::element::{ContainerProps, LayoutStyle, Length};
 use fret_ui::retained_bridge::{LayoutCx, PaintCx, SemanticsCx, UiTreeRetainedExt as _, Widget};
 use fret_ui::{Theme, UiTree};
-use fret_ui_kit::declarative::stack::{VStackProps, vstack};
+use fret_ui_kit::ui;
 use fret_ui_kit::{LayoutRefinement, Space};
 use fret_ui_shadcn as shadcn;
 use std::sync::Arc;
@@ -156,28 +156,25 @@ impl DockPanelRegistry<App> for DemoDockPanelRegistry {
                                     .into_element(cx),
                                 ])
                                 .into_element(cx),
-                                shadcn::CardContent::new(vec![vstack(
-                                    cx,
-                                    VStackProps::default()
-                                        .gap(Space::N1)
-                                        .layout(LayoutRefinement::default().w_full()),
-                                    |cx| {
-                                        vec![
-                                            shadcn::Button::new(
-                                                "Toggle collapse (layout.expand motion)",
-                                            )
-                                            .variant(shadcn::ButtonVariant::Outline)
-                                            .size(shadcn::ButtonSize::Sm)
-                                            .on_click(CMD_DOCK_DEMO_SPLIT_TOGGLE)
-                                            .test_id("dock-demo-split-toggle")
-                                            .into_element(cx),
-                                            cx.text("Scene"),
-                                            cx.text("  • Camera"),
-                                            cx.text("  • Directional Light"),
-                                            cx.text("  • Player"),
-                                        ]
-                                    },
-                                )])
+                                shadcn::CardContent::new([ui::v_flex(|cx| {
+                                    [
+                                        shadcn::Button::new(
+                                            "Toggle collapse (layout.expand motion)",
+                                        )
+                                        .variant(shadcn::ButtonVariant::Outline)
+                                        .size(shadcn::ButtonSize::Sm)
+                                        .on_click(CMD_DOCK_DEMO_SPLIT_TOGGLE)
+                                        .test_id("dock-demo-split-toggle")
+                                        .into_element(cx),
+                                        cx.text("Scene"),
+                                        cx.text("  • Camera"),
+                                        cx.text("  • Directional Light"),
+                                        cx.text("  • Player"),
+                                    ]
+                                })
+                                .gap(Space::N1)
+                                .layout(LayoutRefinement::default().w_full())
+                                .into_element(cx)])
                                 .into_element(cx),
                             ])
                             .size(shadcn::CardSize::Sm)
@@ -188,19 +185,16 @@ impl DockPanelRegistry<App> for DemoDockPanelRegistry {
                                     shadcn::CardDescription::new(label).into_element(cx),
                                 ])
                                 .into_element(cx),
-                                shadcn::CardContent::new(vec![vstack(
-                                    cx,
-                                    VStackProps::default()
-                                        .gap(Space::N1)
-                                        .layout(LayoutRefinement::default().w_full()),
-                                    |cx| {
-                                        vec![
-                                            cx.text("Name: Player"),
-                                            cx.text("Position: (12.0, 3.0, -8.0)"),
-                                            cx.text("Rotation: (0.0, 90.0, 0.0)"),
-                                        ]
-                                    },
-                                )])
+                                shadcn::CardContent::new([ui::v_flex(|cx| {
+                                    [
+                                        cx.text("Name: Player"),
+                                        cx.text("Position: (12.0, 3.0, -8.0)"),
+                                        cx.text("Rotation: (0.0, 90.0, 0.0)"),
+                                    ]
+                                })
+                                .gap(Space::N1)
+                                .layout(LayoutRefinement::default().w_full())
+                                .into_element(cx)])
                                 .into_element(cx),
                             ])
                             .size(shadcn::CardSize::Sm)

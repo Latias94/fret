@@ -123,7 +123,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
 
         shadcn::Field::new([
             shadcn::FieldContent::new([
-                ui::label(cx, "Accept terms and conditions")
+                ui::label("Accept terms and conditions")
                     .text_color(ColorRef::Color(destructive))
                     .into_element(cx),
                 shadcn::FieldDescription::new(

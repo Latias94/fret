@@ -175,7 +175,7 @@ fn view(cx: &mut ElementContext<'_, App>, _st: &mut ()) -> fret::ViewElements {
     );
     let right = render_svg_panel(cx, &theme, svg);
 
-    let stats = ui::v_flex_build(cx, |cx, out| {
+    let stats = ui::v_flex_build(|cx, out| {
         let lines = [
             format!(
                 "Images: ready={} pending={} failed={} bytes={} / {}",
@@ -216,7 +216,7 @@ fn view(cx: &mut ElementContext<'_, App>, _st: &mut ()) -> fret::ViewElements {
     .into_element(cx);
 
     let content = shadcn::CardContent::new([
-        ui::h_flex(cx, |_cx| [left, right])
+        ui::h_flex(|_cx| [left, right])
             .w_full()
             .gap(Space::N4)
             .items_start()
@@ -231,8 +231,8 @@ fn view(cx: &mut ElementContext<'_, App>, _st: &mut ()) -> fret::ViewElements {
         .max_w(fret_core::Px(560.0))
         .into_element(cx);
 
-    let page = ui::container(cx, |cx| {
-        [ui::v_flex(cx, |_cx| [card])
+    let page = ui::container(|cx| {
+        [ui::v_flex(|_cx| [card])
             .w_full()
             .h_full()
             .justify_center()
@@ -264,7 +264,7 @@ fn render_image_panel(
         image_asset_state::ImageLoadingStatus::Error => "Image (error)",
     };
 
-    let image_box = ui::container(cx, |cx| {
+    let image_box = ui::container(|cx| {
         if let Some(image) = image {
             let mut img = ImageProps::new(image);
             img.layout = decl_style::layout_style(theme, LayoutRefinement::default().size_full());
@@ -281,7 +281,7 @@ fn render_image_panel(
     .overflow_hidden()
     .into_element(cx);
 
-    ui::v_flex(cx, |cx| {
+    ui::v_flex(|cx| {
         let mut children = ui::children![cx; shadcn::Label::new(title), image_box];
             if let Some(msg) = error {
                 children.push(
@@ -343,7 +343,7 @@ fn render_svg_panel(
         "SVG (waiting for gpu...)"
     };
 
-    let box_el = ui::container(cx, |cx| match icon.as_ref() {
+    let box_el = ui::container(|cx| match icon.as_ref() {
         Some(props) => [cx.svg_icon_props(props.clone())],
         None => [cx.spinner()],
     })
@@ -353,13 +353,11 @@ fn render_svg_panel(
     .p(Space::N4)
     .into_element(cx);
 
-    ui::v_flex(cx, |cx| {
-        [shadcn::Label::new(title).into_element(cx), box_el]
-    })
-    .flex_1()
-    .gap(Space::N3)
-    .items_start()
-    .into_element(cx)
+    ui::v_flex(|cx| [shadcn::Label::new(title).into_element(cx), box_el])
+        .flex_1()
+        .gap(Space::N3)
+        .items_start()
+        .into_element(cx)
 }
 
 fn checkerboard_rgba8(width: u32, height: u32, cell: u32) -> Vec<u8> {

@@ -198,7 +198,7 @@ fn view(
     ])
     .into_element(cx);
 
-    let controls = ui::h_flex(cx, |cx| {
+    let controls = ui::h_flex(|cx| {
         [
             shadcn::Button::new("640×360")
                 .variant(shadcn::ButtonVariant::Secondary)
@@ -283,9 +283,9 @@ fn view(
                 .numeric_value(ingest),
         );
 
-    let info = ui::h_flex(cx, |cx| {
+    let info = ui::h_flex(|cx| {
         [
-            ui::text(cx, format!("target_px_size preset: {preset_label}"))
+            ui::text(format!("target_px_size preset: {preset_label}"))
                 .text_xs()
                 .into_element(cx),
             target_w_badge,
@@ -323,7 +323,7 @@ EngineFrameUpdate target updates (ImportedViewportRenderTarget). This keeps regi
         })
         .test_id(TEST_ID_SURFACE);
 
-    let surface_panel = ui::container(cx, |_cx| vec![surface])
+    let surface_panel = ui::container(|_cx| vec![surface])
         .bg(ColorRef::Color(theme.color_token("muted")))
         .rounded(Radius::Md)
         .border_1()
@@ -332,7 +332,7 @@ EngineFrameUpdate target updates (ImportedViewportRenderTarget). This keeps regi
         .h_px(Px(420.0))
         .into_element(cx);
 
-    let content = ui::v_flex(cx, |_cx| vec![controls, info, hint, surface_panel])
+    let content = ui::v_flex(|_cx| vec![controls, info, hint, surface_panel])
         .gap(Space::N3)
         .into_element(cx);
 

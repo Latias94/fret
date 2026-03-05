@@ -174,6 +174,12 @@ pub struct PointerDownCx {
     /// This is a mechanism-provided classification intended for component policy decisions like
     /// Embla-style "do not arm drag when interacting with focus nodes".
     pub hit_is_text_input: bool,
+    /// `true` when the pointer-down hit-test target is (or is inside) a pressable element subtree
+    /// (`Pressable`).
+    ///
+    /// This is a mechanism-provided classification intended for policy-level decisions like
+    /// "click-to-focus unless interacting with an embedded button".
+    pub hit_is_pressable: bool,
 }
 
 /// Pointer move payload for component-owned pointer handlers.

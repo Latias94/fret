@@ -36,6 +36,7 @@ use fret_ui::element::{
 use fret_ui::{ElementContext, Invalidation, Theme, UiTree};
 use fret_ui_kit::custom_effects::CustomEffectProgramV2;
 use fret_ui_kit::declarative::ModelWatchExt as _;
+use fret_ui_kit::ui;
 use fret_ui_kit::{Space, UiExt};
 use fret_ui_shadcn as shadcn;
 
@@ -632,21 +633,18 @@ impl CustomEffectV2WebDriver {
             },
             move |cx| {
                 let label_row = |cx: &mut ElementContext<'_, App>, label: &str, value: String| {
-                    shadcn::stack::hstack(
-                        cx,
-                        shadcn::stack::HStackProps::default()
-                            .gap(Space::N2)
-                            .items_center(),
-                        move |cx| {
-                            vec![
-                                shadcn::Label::new(label).into_element(cx),
-                                cx.spacer(SpacerProps::default()),
-                                shadcn::Badge::new(value)
-                                    .variant(shadcn::BadgeVariant::Secondary)
-                                    .into_element(cx),
-                            ]
-                        },
-                    )
+                    ui::h_row(|cx| {
+                        [
+                            shadcn::Label::new(label).into_element(cx),
+                            cx.spacer(SpacerProps::default()),
+                            shadcn::Badge::new(value)
+                                .variant(shadcn::BadgeVariant::Secondary)
+                                .into_element(cx),
+                        ]
+                    })
+                    .gap(Space::N2)
+                    .items_center()
+                    .into_element(cx)
                 };
 
                 let header = shadcn::CardHeader::new([
@@ -658,271 +656,234 @@ impl CustomEffectV2WebDriver {
                 ])
                 .into_element(cx);
 
-                let mode_row = shadcn::stack::vstack(
-                    cx,
-                    shadcn::stack::VStackProps::default().gap(Space::N2),
-                    move |cx| {
-                        vec![
-                            label_row(cx, "Effect mode", mode_value.clone()),
-                            shadcn::Select::new(controls.mode.clone(), controls.mode_open.clone())
-                                .value(shadcn::SelectValue::new().placeholder("Pick mode"))
-                                .items([
-                                    shadcn::SelectItem::new("backdrop", "Backdrop"),
-                                    shadcn::SelectItem::new("filter_content", "FilterContent"),
-                                ])
-                                .into_element(cx),
-                        ]
-                    },
-                );
-
-                let quality_row = shadcn::stack::vstack(
-                    cx,
-                    shadcn::stack::VStackProps::default().gap(Space::N2),
-                    move |cx| {
-                        vec![
-                            label_row(cx, "Effect quality", quality_value.clone()),
-                            shadcn::Select::new(
-                                controls.quality.clone(),
-                                controls.quality_open.clone(),
-                            )
-                            .value(shadcn::SelectValue::new().placeholder("Pick quality"))
+                let mode_row = ui::v_flex(move |cx| {
+                    vec![
+                        label_row(cx, "Effect mode", mode_value.clone()),
+                        shadcn::Select::new(controls.mode.clone(), controls.mode_open.clone())
+                            .value(shadcn::SelectValue::new().placeholder("Pick mode"))
                             .items([
-                                shadcn::SelectItem::new("auto", "Auto"),
-                                shadcn::SelectItem::new("low", "Low"),
-                                shadcn::SelectItem::new("medium", "Medium"),
-                                shadcn::SelectItem::new("high", "High"),
+                                shadcn::SelectItem::new("backdrop", "Backdrop"),
+                                shadcn::SelectItem::new("filter_content", "FilterContent"),
                             ])
                             .into_element(cx),
-                        ]
-                    },
-                );
+                    ]
+                })
+                .gap(Space::N2)
+                .into_element(cx);
 
-                let sampling_row = shadcn::stack::vstack(
-                    cx,
-                    shadcn::stack::VStackProps::default().gap(Space::N2),
-                    move |cx| {
-                        vec![
-                            label_row(cx, "Input sampling", sampling_value.clone()),
-                            shadcn::Select::new(
-                                controls.sampling.clone(),
-                                controls.sampling_open.clone(),
-                            )
-                            .value(shadcn::SelectValue::new().placeholder("Pick sampling"))
-                            .items([
-                                shadcn::SelectItem::new("default", "Default"),
-                                shadcn::SelectItem::new("linear", "Linear"),
-                                shadcn::SelectItem::new("nearest", "Nearest"),
-                            ])
+                let quality_row = ui::v_flex(move |cx| {
+                    vec![
+                        label_row(cx, "Effect quality", quality_value.clone()),
+                        shadcn::Select::new(
+                            controls.quality.clone(),
+                            controls.quality_open.clone(),
+                        )
+                        .value(shadcn::SelectValue::new().placeholder("Pick quality"))
+                        .items([
+                            shadcn::SelectItem::new("auto", "Auto"),
+                            shadcn::SelectItem::new("low", "Low"),
+                            shadcn::SelectItem::new("medium", "Medium"),
+                            shadcn::SelectItem::new("high", "High"),
+                        ])
+                        .into_element(cx),
+                    ]
+                })
+                .gap(Space::N2)
+                .into_element(cx);
+
+                let sampling_row = ui::v_flex(move |cx| {
+                    vec![
+                        label_row(cx, "Input sampling", sampling_value.clone()),
+                        shadcn::Select::new(
+                            controls.sampling.clone(),
+                            controls.sampling_open.clone(),
+                        )
+                        .value(shadcn::SelectValue::new().placeholder("Pick sampling"))
+                        .items([
+                            shadcn::SelectItem::new("default", "Default"),
+                            shadcn::SelectItem::new("linear", "Linear"),
+                            shadcn::SelectItem::new("nearest", "Nearest"),
+                        ])
+                        .into_element(cx),
+                    ]
+                })
+                .gap(Space::N2)
+                .into_element(cx);
+
+                let uv_span_row = ui::v_flex(move |cx| {
+                    vec![
+                        label_row(cx, "Input UV span", format!("{uv_span:.2}")),
+                        shadcn::Slider::new(controls.uv_span.clone())
+                            .range(0.05, 1.0)
+                            .step(0.01)
                             .into_element(cx),
-                        ]
-                    },
-                );
+                    ]
+                })
+                .gap(Space::N2)
+                .into_element(cx);
 
-                let uv_span_row = shadcn::stack::vstack(
-                    cx,
-                    shadcn::stack::VStackProps::default().gap(Space::N2),
-                    move |cx| {
-                        vec![
-                            label_row(cx, "Input UV span", format!("{uv_span:.2}")),
-                            shadcn::Slider::new(controls.uv_span.clone())
-                                .range(0.05, 1.0)
-                                .step(0.01)
-                                .into_element(cx),
-                        ]
-                    },
-                );
-
-                let strength_row = shadcn::stack::vstack(
-                    cx,
-                    shadcn::stack::VStackProps::default().gap(Space::N2),
-                    move |cx| {
-                        vec![
-                            label_row(cx, "Strength (px)", format!("{strength_px:.1}")),
-                            shadcn::Slider::new(controls.strength_px.clone())
-                                .range(0.0, 24.0)
-                                .step(0.25)
-                                .into_element(cx),
-                        ]
-                    },
-                );
-
-                let max_sample_offset_row = shadcn::stack::vstack(
-                    cx,
-                    shadcn::stack::VStackProps::default().gap(Space::N2),
-                    move |cx| {
-                        vec![
-                            label_row(
-                                cx,
-                                "Max sample offset (px)",
-                                format!("{max_sample_offset_px:.1}"),
-                            ),
-                            shadcn::Slider::new(controls.max_sample_offset_px.clone())
-                                .range(0.0, 96.0)
-                                .step(0.5)
-                                .into_element(cx),
-                        ]
-                    },
-                );
-
-                let tint_row = shadcn::stack::vstack(
-                    cx,
-                    shadcn::stack::VStackProps::default().gap(Space::N2),
-                    move |cx| {
-                        vec![
-                            label_row(cx, "Tint strength", format!("{tint_strength:.2}")),
-                            shadcn::Slider::new(controls.tint_strength.clone())
-                                .range(0.0, 1.0)
-                                .step(0.01)
-                                .into_element(cx),
-                        ]
-                    },
-                );
-
-                let blur_radius_row = shadcn::stack::vstack(
-                    cx,
-                    shadcn::stack::VStackProps::default().gap(Space::N2),
-                    move |cx| {
-                        vec![
-                            label_row(cx, "Blur radius (px)", format!("{blur_radius_px:.1}")),
-                            shadcn::Slider::new(controls.blur_radius_px.clone())
-                                .range(0.0, 32.0)
-                                .step(0.5)
-                                .into_element(cx),
-                        ]
-                    },
-                );
-
-                let blur_downsample_row = shadcn::stack::vstack(
-                    cx,
-                    shadcn::stack::VStackProps::default().gap(Space::N2),
-                    move |cx| {
-                        vec![
-                            label_row(cx, "Blur downsample", format!("{blur_downsample}x")),
-                            shadcn::Slider::new(controls.blur_downsample.clone())
-                                .range(1.0, 4.0)
-                                .step(1.0)
-                                .into_element(cx),
-                        ]
-                    },
-                );
-
-                let lens_corner_row = shadcn::stack::vstack(
-                    cx,
-                    shadcn::stack::VStackProps::default().gap(Space::N2),
-                    move |cx| {
-                        vec![
-                            label_row(
-                                cx,
-                                "Lens corner radius (px)",
-                                format!("{lens_corner_radius_px:.1}"),
-                            ),
-                            shadcn::Slider::new(controls.lens_corner_radius_px.clone())
-                                .range(0.0, 48.0)
-                                .step(0.5)
-                                .into_element(cx),
-                        ]
-                    },
-                );
-
-                let tile_corner_row = shadcn::stack::vstack(
-                    cx,
-                    shadcn::stack::VStackProps::default().gap(Space::N2),
-                    move |cx| {
-                        vec![
-                            label_row(
-                                cx,
-                                "Tile corner radius (px)",
-                                format!("{tile_corner_radius_px:.1}"),
-                            ),
-                            shadcn::Slider::new(controls.tile_corner_radius_px.clone())
-                                .range(0.0, 48.0)
-                                .step(0.5)
-                                .into_element(cx),
-                        ]
-                    },
-                );
-
-                let content = shadcn::CardContent::new([shadcn::stack::vstack(
-                    cx,
-                    shadcn::stack::VStackProps::default()
-                        .gap(Space::N3)
-                        .items_stretch(),
-                    move |cx| {
-                        let supported = cx
-                            .app
-                            .global::<RendererCapabilities>()
-                            .map(|c| c.custom_effect_v2_user_image)
-                            .unwrap_or(false);
-                        vec![
-                            shadcn::stack::hstack(
-                                cx,
-                                shadcn::stack::HStackProps::default()
-                                    .gap(Space::N2)
-                                    .items_center(),
-                                |cx| {
-                                    vec![
-                                        shadcn::Switch::new(controls.enabled.clone())
-                                            .a11y_label("Enable the effect layer")
-                                            .test_id("custom-effect-v2-web.enabled")
-                                            .into_element(cx),
-                                        shadcn::Label::new("Enable").into_element(cx),
-                                    ]
-                                },
-                            ),
-                            mode_row,
-                            quality_row,
-                            sampling_row,
-                            uv_span_row,
-                            strength_row,
-                            max_sample_offset_row,
-                            tint_row,
-                            blur_radius_row,
-                            blur_downsample_row,
-                            shadcn::Separator::new().into_element(cx),
-                            lens_corner_row,
-                            tile_corner_row,
-                            shadcn::stack::hstack(
-                                cx,
-                                shadcn::stack::HStackProps::default()
-                                    .gap(Space::N2)
-                                    .items_center(),
-                                |cx| {
-                                    vec![
-                                        shadcn::Switch::new(controls.debug_input.clone())
-                                            .a11y_label("Show the input image")
-                                            .test_id("custom-effect-v2-web.debug-input")
-                                            .into_element(cx),
-                                        shadcn::Label::new("Show input").into_element(cx),
-                                    ]
-                                },
-                            ),
-                            shadcn::Button::new("Reset")
-                                .variant(shadcn::ButtonVariant::Secondary)
-                                .on_activate(reset.clone())
-                                .test_id("custom-effect-v2-web.reset")
-                                .into_element(cx),
-                            shadcn::stack::hstack(
-                                cx,
-                                shadcn::stack::HStackProps::default()
-                                    .gap(Space::N2)
-                                    .items_center(),
-                                move |cx| {
-                                    vec![
-                                        shadcn::Label::new("Supported").into_element(cx),
-                                        cx.spacer(SpacerProps::default()),
-                                        shadcn::Badge::new(format!("{supported}"))
-                                            .variant(shadcn::BadgeVariant::Secondary)
-                                            .into_element(cx),
-                                    ]
-                                },
-                            ),
-                            shadcn::CardDescription::new(
-                                "Keys: V toggle surface, R reset controls.",
-                            )
+                let strength_row = ui::v_flex(move |cx| {
+                    vec![
+                        label_row(cx, "Strength (px)", format!("{strength_px:.1}")),
+                        shadcn::Slider::new(controls.strength_px.clone())
+                            .range(0.0, 24.0)
+                            .step(0.25)
                             .into_element(cx),
-                        ]
-                    },
-                )])
+                    ]
+                })
+                .gap(Space::N2)
+                .into_element(cx);
+
+                let max_sample_offset_row = ui::v_flex(move |cx| {
+                    vec![
+                        label_row(
+                            cx,
+                            "Max sample offset (px)",
+                            format!("{max_sample_offset_px:.1}"),
+                        ),
+                        shadcn::Slider::new(controls.max_sample_offset_px.clone())
+                            .range(0.0, 96.0)
+                            .step(0.5)
+                            .into_element(cx),
+                    ]
+                })
+                .gap(Space::N2)
+                .into_element(cx);
+
+                let tint_row = ui::v_flex(move |cx| {
+                    vec![
+                        label_row(cx, "Tint strength", format!("{tint_strength:.2}")),
+                        shadcn::Slider::new(controls.tint_strength.clone())
+                            .range(0.0, 1.0)
+                            .step(0.01)
+                            .into_element(cx),
+                    ]
+                })
+                .gap(Space::N2)
+                .into_element(cx);
+
+                let blur_radius_row = ui::v_flex(move |cx| {
+                    vec![
+                        label_row(cx, "Blur radius (px)", format!("{blur_radius_px:.1}")),
+                        shadcn::Slider::new(controls.blur_radius_px.clone())
+                            .range(0.0, 32.0)
+                            .step(0.5)
+                            .into_element(cx),
+                    ]
+                })
+                .gap(Space::N2)
+                .into_element(cx);
+
+                let blur_downsample_row = ui::v_flex(move |cx| {
+                    vec![
+                        label_row(cx, "Blur downsample", format!("{blur_downsample}x")),
+                        shadcn::Slider::new(controls.blur_downsample.clone())
+                            .range(1.0, 4.0)
+                            .step(1.0)
+                            .into_element(cx),
+                    ]
+                })
+                .gap(Space::N2)
+                .into_element(cx);
+
+                let lens_corner_row = ui::v_flex(move |cx| {
+                    vec![
+                        label_row(
+                            cx,
+                            "Lens corner radius (px)",
+                            format!("{lens_corner_radius_px:.1}"),
+                        ),
+                        shadcn::Slider::new(controls.lens_corner_radius_px.clone())
+                            .range(0.0, 48.0)
+                            .step(0.5)
+                            .into_element(cx),
+                    ]
+                })
+                .gap(Space::N2)
+                .into_element(cx);
+
+                let tile_corner_row = ui::v_flex(move |cx| {
+                    vec![
+                        label_row(
+                            cx,
+                            "Tile corner radius (px)",
+                            format!("{tile_corner_radius_px:.1}"),
+                        ),
+                        shadcn::Slider::new(controls.tile_corner_radius_px.clone())
+                            .range(0.0, 48.0)
+                            .step(0.5)
+                            .into_element(cx),
+                    ]
+                })
+                .gap(Space::N2)
+                .into_element(cx);
+
+                let content = shadcn::CardContent::new([ui::v_flex(move |cx| {
+                    let supported = cx
+                        .app
+                        .global::<RendererCapabilities>()
+                        .map(|c| c.custom_effect_v2_user_image)
+                        .unwrap_or(false);
+                    vec![
+                        ui::h_row(|cx| {
+                            [
+                                shadcn::Switch::new(controls.enabled.clone())
+                                    .a11y_label("Enable the effect layer")
+                                    .test_id("custom-effect-v2-web.enabled")
+                                    .into_element(cx),
+                                shadcn::Label::new("Enable").into_element(cx),
+                            ]
+                        })
+                        .gap(Space::N2)
+                        .items_center()
+                        .into_element(cx),
+                        mode_row,
+                        quality_row,
+                        sampling_row,
+                        uv_span_row,
+                        strength_row,
+                        max_sample_offset_row,
+                        tint_row,
+                        blur_radius_row,
+                        blur_downsample_row,
+                        shadcn::Separator::new().into_element(cx),
+                        lens_corner_row,
+                        tile_corner_row,
+                        ui::h_row(|cx| {
+                            [
+                                shadcn::Switch::new(controls.debug_input.clone())
+                                    .a11y_label("Show the input image")
+                                    .test_id("custom-effect-v2-web.debug-input")
+                                    .into_element(cx),
+                                shadcn::Label::new("Show input").into_element(cx),
+                            ]
+                        })
+                        .gap(Space::N2)
+                        .items_center()
+                        .into_element(cx),
+                        shadcn::Button::new("Reset")
+                            .variant(shadcn::ButtonVariant::Secondary)
+                            .on_activate(reset.clone())
+                            .test_id("custom-effect-v2-web.reset")
+                            .into_element(cx),
+                        ui::h_row(move |cx| {
+                            [
+                                shadcn::Label::new("Supported").into_element(cx),
+                                cx.spacer(SpacerProps::default()),
+                                shadcn::Badge::new(format!("{supported}"))
+                                    .variant(shadcn::BadgeVariant::Secondary)
+                                    .into_element(cx),
+                            ]
+                        })
+                        .gap(Space::N2)
+                        .items_center()
+                        .into_element(cx),
+                        shadcn::CardDescription::new("Keys: V toggle surface, R reset controls.")
+                            .into_element(cx),
+                    ]
+                })
+                .gap(Space::N3)
+                .items_stretch()])
                 .into_element(cx);
 
                 vec![

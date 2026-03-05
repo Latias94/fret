@@ -1073,14 +1073,12 @@ impl CardFooter {
                         .take()
                         .unwrap_or_else(|| panic!("expected CardFooter children to be available"));
                     if wrap {
-                        ui::h_flex(cx, move |_cx| children)
+                        ui::h_flex(move |_cx| children)
                             .wrap()
                             .gap(gap)
                             .into_element(cx)
                     } else {
-                        ui::h_flex(cx, move |_cx| children)
-                            .gap(gap)
-                            .into_element(cx)
+                        ui::h_flex(move |_cx| children).gap(gap).into_element(cx)
                     }
                 }
                 CardFooterDirection::Column => {
@@ -1088,9 +1086,7 @@ impl CardFooter {
                         .take()
                         .unwrap_or_else(|| panic!("expected CardFooter children to be available"));
                     // shadcn/ui v4: `flex-col` uses the default `items-stretch` behavior.
-                    ui::v_flex(cx, move |_cx| children)
-                        .gap(gap)
-                        .into_element(cx)
+                    ui::v_flex(move |_cx| children).gap(gap).into_element(cx)
                 }
             }]
         });
@@ -1152,7 +1148,7 @@ impl CardTitle {
             (fg, px, line_height)
         };
 
-        ui::text(cx, self.text)
+        ui::text(self.text)
             .w_full()
             .text_size_px(px)
             .line_height_px(line_height)
@@ -1189,7 +1185,7 @@ impl CardDescription {
             (fg, px, line_height)
         };
 
-        ui::text(cx, self.text)
+        ui::text(self.text)
             .w_full()
             .text_size_px(px)
             .line_height_px(line_height)

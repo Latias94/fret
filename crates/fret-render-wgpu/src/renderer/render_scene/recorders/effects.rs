@@ -26,6 +26,37 @@ fn pack_effect_params_v1(params: fret_core::EffectParamsV1) -> [u8; 64] {
     out
 }
 
+fn resolve_custom_effect_filterable_user_image_view<'a>(
+    renderer: &'a Renderer,
+    device_features: wgpu::Features,
+    image: Option<fret_core::ImageId>,
+    incompatible: &mut bool,
+) -> &'a wgpu::TextureView {
+    let Some(id) = image else {
+        return &renderer.globals.custom_effect_input_fallback_view;
+    };
+    let Some(view) = renderer.gpu_resources.image_view(id) else {
+        return &renderer.globals.custom_effect_input_fallback_view;
+    };
+    let Some(format) = renderer.gpu_resources.image_format(id) else {
+        return &renderer.globals.custom_effect_input_fallback_view;
+    };
+
+    let f = renderer.adapter.get_texture_format_features(format);
+    let ok_usage = f
+        .allowed_usages
+        .contains(wgpu::TextureUsages::TEXTURE_BINDING);
+    let ok_sample_type = format.sample_type(None, Some(device_features))
+        == Some(wgpu::TextureSampleType::Float { filterable: true });
+
+    if ok_usage && ok_sample_type {
+        view
+    } else {
+        *incompatible = true;
+        &renderer.globals.custom_effect_input_fallback_view
+    }
+}
+
 #[allow(clippy::too_many_arguments)]
 fn record_fullscreen_param_effect_pass<
     ParamBuffer,
@@ -849,25 +880,12 @@ pub(in super::super) fn record_custom_effect_v2_pass(
     let dst_view = dst_view_owned.as_ref().unwrap_or(exec.target_view);
 
     let mut input_incompatible = false;
-    let input_view = pass
-        .input_image
-        .and_then(|id| {
-            let view = exec.renderer.gpu_resources.image_view(id)?;
-            let format = exec.renderer.gpu_resources.image_format(id)?;
-            let f = exec.renderer.adapter.get_texture_format_features(format);
-            let ok_usage = f
-                .allowed_usages
-                .contains(wgpu::TextureUsages::TEXTURE_BINDING);
-            let ok_sample_type = format.sample_type(None, Some(exec.device.features()))
-                == Some(wgpu::TextureSampleType::Float { filterable: true });
-            if ok_usage && ok_sample_type {
-                Some(view)
-            } else {
-                input_incompatible = true;
-                None
-            }
-        })
-        .unwrap_or(&exec.renderer.globals.custom_effect_input_fallback_view);
+    let input_view = resolve_custom_effect_filterable_user_image_view(
+        &exec.renderer,
+        exec.device.features(),
+        pass.input_image,
+        &mut input_incompatible,
+    );
     if exec.perf_enabled && input_incompatible {
         exec.frame_perf
             .custom_effect_v2_user_image_incompatible_fallbacks = exec
@@ -1302,25 +1320,12 @@ pub(in super::super) fn record_custom_effect_v3_pass(
     let dst_view = dst_view_owned.as_ref().unwrap_or(exec.target_view);
 
     let mut user0_incompatible = false;
-    let user0_view = pass
-        .user0_image
-        .and_then(|id| {
-            let view = exec.renderer.gpu_resources.image_view(id)?;
-            let format = exec.renderer.gpu_resources.image_format(id)?;
-            let f = exec.renderer.adapter.get_texture_format_features(format);
-            let ok_usage = f
-                .allowed_usages
-                .contains(wgpu::TextureUsages::TEXTURE_BINDING);
-            let ok_sample_type = format.sample_type(None, Some(exec.device.features()))
-                == Some(wgpu::TextureSampleType::Float { filterable: true });
-            if ok_usage && ok_sample_type {
-                Some(view)
-            } else {
-                user0_incompatible = true;
-                None
-            }
-        })
-        .unwrap_or(&exec.renderer.globals.custom_effect_input_fallback_view);
+    let user0_view = resolve_custom_effect_filterable_user_image_view(
+        &exec.renderer,
+        exec.device.features(),
+        pass.user0_image,
+        &mut user0_incompatible,
+    );
     if exec.perf_enabled && user0_incompatible {
         exec.frame_perf
             .custom_effect_v3_user0_image_incompatible_fallbacks = exec
@@ -1330,25 +1335,12 @@ pub(in super::super) fn record_custom_effect_v3_pass(
     }
 
     let mut user1_incompatible = false;
-    let user1_view = pass
-        .user1_image
-        .and_then(|id| {
-            let view = exec.renderer.gpu_resources.image_view(id)?;
-            let format = exec.renderer.gpu_resources.image_format(id)?;
-            let f = exec.renderer.adapter.get_texture_format_features(format);
-            let ok_usage = f
-                .allowed_usages
-                .contains(wgpu::TextureUsages::TEXTURE_BINDING);
-            let ok_sample_type = format.sample_type(None, Some(exec.device.features()))
-                == Some(wgpu::TextureSampleType::Float { filterable: true });
-            if ok_usage && ok_sample_type {
-                Some(view)
-            } else {
-                user1_incompatible = true;
-                None
-            }
-        })
-        .unwrap_or(&exec.renderer.globals.custom_effect_input_fallback_view);
+    let user1_view = resolve_custom_effect_filterable_user_image_view(
+        &exec.renderer,
+        exec.device.features(),
+        pass.user1_image,
+        &mut user1_incompatible,
+    );
     if exec.perf_enabled && user1_incompatible {
         exec.frame_perf
             .custom_effect_v3_user1_image_incompatible_fallbacks = exec

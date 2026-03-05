@@ -416,7 +416,7 @@ impl RelativeTimeZoneLabel {
                     align: fret_ui::element::CrossAlign::Center,
                     wrap: false,
                 },
-                move |cx| vec![ui::text(cx, label.clone()).text_xs().into_element(cx)],
+                move |cx| vec![ui::text(label.clone()).text_xs().into_element(cx)],
             )]
         });
         attach_test_id(
@@ -448,7 +448,7 @@ impl RelativeTimeZoneDate {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let el = ui::text(cx, self.text).text_xs().into_element(cx);
+        let el = ui::text(self.text).text_xs().into_element(cx);
         attach_test_id(
             el,
             self.test_id
@@ -498,7 +498,7 @@ impl RelativeTimeZoneDisplay {
 
         let el = cx.container(props, move |cx| {
             vec![
-                ui::text(cx, text.clone())
+                ui::text(text.clone())
                     .text_xs()
                     .text_color(ColorRef::Color(fg))
                     .into_element(cx),

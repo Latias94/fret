@@ -72,7 +72,7 @@ impl View for ThemeSwitchingBasicsView {
         ])
         .into_element(cx);
 
-        let scheme_row = ui::h_flex(cx, |cx| {
+        let scheme_row = ui::h_flex(|cx| {
             [
                 shadcn::Label::new("Active scheme:").into_element(cx),
                 shadcn::Badge::new(scheme_label)
@@ -97,15 +97,12 @@ impl View for ThemeSwitchingBasicsView {
             .into_element(cx)
             .test_id(TEST_ID_TOGGLE);
 
-        // Avoid `ui::h_flex` here: its internal flex sizing is always `width: fill`, which can
-        // cause children to get a much larger hit box than intended.
-        let toggle_row = stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .justify_center()
-                .layout(LayoutRefinement::default().w_full()),
-            |_cx| [scheme_toggle],
-        );
+        // Avoid `ui::h_flex` here: its internal flex sizing forces `width: fill` by default, which
+        // can cause children to get a much larger hit box than intended.
+        let toggle_row = ui::h_row(|_cx| [scheme_toggle])
+            .justify_center()
+            .w_full()
+            .into_element(cx);
 
         let sample = shadcn::Card::new([
             shadcn::CardHeader::new([
@@ -114,7 +111,7 @@ impl View for ThemeSwitchingBasicsView {
                     .into_element(cx),
             ])
             .into_element(cx),
-            shadcn::CardContent::new([ui::h_flex(cx, |cx| {
+            shadcn::CardContent::new([ui::h_flex(|cx| {
                 [
                     shadcn::Button::new("Default").into_element(cx),
                     shadcn::Button::new("Outline")
@@ -134,7 +131,7 @@ impl View for ThemeSwitchingBasicsView {
         .into_element(cx)
         .test_id(TEST_ID_SAMPLE_CARD);
 
-        let content_body = ui::v_flex(cx, |_cx| [scheme_row, toggle_row, sample])
+        let content_body = ui::v_flex(|_cx| [scheme_row, toggle_row, sample])
             .gap(Space::N5)
             .w_full()
             .into_element(cx);

@@ -193,7 +193,7 @@ impl CjkConformanceDriver {
             .into_element(cx)])
             .into_element(cx);
 
-            let scroll = shadcn::ScrollArea::new([ui::v_flex(cx, |_cx| rows)
+            let scroll = shadcn::ScrollArea::new([ui::v_flex(|_cx| rows)
                 .w_full()
                 .gap(Space::N2)
                 .items_start()
@@ -211,8 +211,8 @@ impl CjkConformanceDriver {
                 .max_w(Px(960.0))
                 .into_element(cx);
 
-            let page = ui::container(cx, |cx| {
-                [ui::v_flex(cx, |_cx| [card])
+            let page = ui::container(|cx| {
+                [ui::v_flex(|_cx| [card])
                     .w_full()
                     .h_full()
                     .justify_center()

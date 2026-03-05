@@ -19,5 +19,5 @@ pub(super) fn preview_ai_audio_player_demo(
         ],
     );
 
-    vec![body.test_id("ui-gallery-page-ai-audio-player-demo")]
+    vec![body]
 }

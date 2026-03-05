@@ -18,7 +18,7 @@ pub(in crate::ui) fn preview_layout(
                 // probes and can cause transient wrap widths (0px) to leak into final layout.
                 LayoutRefinement::default().flex_1().min_w_0(),
             ),
-            |cx| [ui::label(cx, label).w_full().into_element(cx)],
+            |cx| vec![ui::label(label).into_element(cx)],
         )
     };
 

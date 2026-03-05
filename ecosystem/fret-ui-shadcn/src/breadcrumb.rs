@@ -384,7 +384,7 @@ fn breadcrumb_text<H: UiHost>(
     } else {
         (TextWrap::Word, TextOverflow::Clip)
     };
-    let mut el = ui::text(cx, text)
+    let mut el = ui::text(text)
         .text_size_px(base_style.size)
         .font_weight(base_style.weight)
         .text_color(ColorRef::Color(color))
@@ -841,7 +841,7 @@ pub mod primitives {
                             decl_style::container_props(theme, chrome.clone(), layout.clone())
                         },
                         move |cx| {
-                            let mut text = ui::text(cx, label.clone())
+                            let mut text = ui::text(label.clone())
                                 .text_size_px(text_px)
                                 .font_weight(font_weight)
                                 .text_color(ColorRef::Color(color))
@@ -874,7 +874,7 @@ pub mod primitives {
                     decl_style::container_props(theme, chrome, layout)
                 };
                 cx.container(props, move |cx| {
-                    let mut text = ui::text(cx, label)
+                    let mut text = ui::text(label)
                         .text_size_px(text_px)
                         .font_weight(font_weight)
                         .text_color(ColorRef::Color(muted))
@@ -949,7 +949,7 @@ pub mod primitives {
                 (TextWrap::Word, TextOverflow::Clip)
             };
             cx.container(props, move |cx| {
-                let mut text = ui::text(cx, label)
+                let mut text = ui::text(label)
                     .text_size_px(text_px)
                     .font_weight(font_weight)
                     .text_color(ColorRef::Color(fg))

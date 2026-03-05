@@ -40,6 +40,7 @@ pub mod carousel;
 pub mod chart;
 pub mod checkbox;
 pub mod collapsible;
+pub mod collapsible_primitives;
 pub mod combobox;
 pub mod combobox_chips;
 pub mod command;

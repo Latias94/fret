@@ -28,6 +28,7 @@ use fret_ui::element::{
 use fret_ui_assets::image_asset_cache::{ImageAssetCacheHostExt, ImageAssetKey};
 use fret_ui_kit::Space;
 use fret_ui_kit::custom_effects::{CustomEffectProgramV2, CustomEffectProgramV3};
+use fret_ui_kit::ui;
 use fret_ui_shadcn as shadcn;
 
 use crate::custom_effect_v3_wgsl::CUSTOM_EFFECT_V3_LENS_WGSL;
@@ -1203,12 +1204,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut LiquidGlassState) -> Elements
                                     ..Default::default()
                                 },
                                 move |cx| {
-                                    vec![shadcn::stack::vstack(
-                                        cx,
-                                        shadcn::stack::VStackProps::default()
-                                            .gap(Space::N2)
-                                            .items_stretch(),
-                                        |cx| {
+                                    vec![ui::v_flex(|cx| {
                                             vec![
                                                 shadcn::typography::h4(cx, "Liquid glass"),
                                                 shadcn::typography::muted(
@@ -1216,12 +1212,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut LiquidGlassState) -> Elements
                                                     "BackdropWarpV2 (bounded), WebGPU-safe.",
                                                 ),
                                                 shadcn::Separator::new().into_element(cx),
-                                                shadcn::stack::hstack(
-                                                    cx,
-                                                    shadcn::stack::HStackProps::default()
-                                                        .gap(Space::N2)
-                                                        .items_center(),
-                                                    |cx| {
+                                                ui::h_row(|cx| {
                                                         vec![
                                                             shadcn::Switch::new(
                                                                 show_fake_model.clone(),
@@ -1252,14 +1243,11 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut LiquidGlassState) -> Elements
                                                             shadcn::Label::new("Warp v2")
                                                                 .into_element(cx),
                                                         ]
-                                                    },
-                                                ),
-                                                shadcn::stack::hstack(
-                                                    cx,
-                                                    shadcn::stack::HStackProps::default()
-                                                        .gap(Space::N2)
-                                                        .items_center(),
-                                                    |cx| {
+                                                    })
+                                                    .gap(Space::N2)
+                                                    .items_center()
+                                                    .into_element(cx),
+                                                ui::h_row(|cx| {
                                                         vec![
                                                             shadcn::Switch::new(
                                                                 show_custom_v2_model.clone(),
@@ -1282,14 +1270,11 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut LiquidGlassState) -> Elements
                                                             shadcn::Label::new("Custom v3")
                                                                 .into_element(cx),
                                                         ]
-                                                    },
-                                                ),
-                                                shadcn::stack::hstack(
-                                                    cx,
-                                                    shadcn::stack::HStackProps::default()
-                                                        .gap(Space::N2)
-                                                        .items_center(),
-                                                    |cx| {
+                                                    })
+                                                    .gap(Space::N2)
+                                                    .items_center()
+                                                    .into_element(cx),
+                                                ui::h_row(|cx| {
                                                         vec![
                                                             shadcn::Switch::new(
                                                                 custom_v3_pair_model.clone(),
@@ -1317,14 +1302,11 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut LiquidGlassState) -> Elements
                                                             shadcn::Label::new("V3 group")
                                                                 .into_element(cx),
                                                         ]
-                                                    },
-                                                ),
-                                                shadcn::stack::hstack(
-                                                    cx,
-                                                    shadcn::stack::HStackProps::default()
-                                                        .gap(Space::N2)
-                                                        .items_center(),
-                                                    |cx| {
+                                                    })
+                                                    .gap(Space::N2)
+                                                    .items_center()
+                                                    .into_element(cx),
+                                                ui::h_row(|cx| {
                                                         vec![
                                                             shadcn::Switch::new(
                                                                 use_backdrop_model.clone(),
@@ -1355,14 +1337,11 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut LiquidGlassState) -> Elements
                                                             shadcn::Label::new("Animate")
                                                                 .into_element(cx),
                                                         ]
-                                                    },
-                                                ),
-                                                shadcn::stack::hstack(
-                                                    cx,
-                                                    shadcn::stack::HStackProps::default()
-                                                        .gap(Space::N2)
-                                                        .items_center(),
-                                                    |cx| {
+                                                    })
+                                                    .gap(Space::N2)
+                                                    .items_center()
+                                                    .into_element(cx),
+                                                ui::h_row(|cx| {
                                                         vec![
                                                             shadcn::Switch::new(
                                                                 show_inspector_model.clone(),
@@ -1396,11 +1375,15 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut LiquidGlassState) -> Elements
                                                                 )
                                                                 .into_element(cx),
                                                         ]
-                                                    },
-                                                ),
+                                                    })
+                                                    .gap(Space::N2)
+                                                    .items_center()
+                                                    .into_element(cx),
                                             ]
-                                        },
-                                    )]
+                                        })
+                                        .gap(Space::N2)
+                                        .items_stretch()
+                                        .into_element(cx)]
                                 },
                             );
 
@@ -1582,461 +1565,392 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut LiquidGlassState) -> Elements
                                     |cx: &mut ElementContext<'_, App>,
                                      label: &str,
                                      value: String| {
-                                        shadcn::stack::hstack(
-                                            cx,
-                                            shadcn::stack::HStackProps::default()
-                                                .gap(Space::N2)
-                                                .items_center(),
-                                            move |cx| {
-                                                vec![
-                                                    shadcn::Label::new(label).into_element(cx),
-                                                    cx.spacer(SpacerProps::default()),
-                                                    shadcn::Badge::new(value)
-                                                        .variant(shadcn::BadgeVariant::Secondary)
-                                                        .into_element(cx),
-                                                ]
-                                            },
-                                        )
+                                        ui::h_row(move |cx| {
+                                            vec![
+                                                shadcn::Label::new(label).into_element(cx),
+                                                cx.spacer(SpacerProps::default()),
+                                                shadcn::Badge::new(value)
+                                                    .variant(shadcn::BadgeVariant::Secondary)
+                                                    .into_element(cx),
+                                            ]
+                                        })
+                                        .gap(Space::N2)
+                                        .items_center()
+                                        .into_element(cx)
                                     };
 
-                                let lens_radius_row = shadcn::stack::vstack(
-                                    cx,
-                                    shadcn::stack::VStackProps::default().gap(Space::N2),
-                                    |cx| {
-                                        vec![
-                                            label_row(
-                                                cx,
-                                                "Lens radius (px)",
-                                                format!("{lens_radius_px:.1}"),
-                                            ),
-                                            shadcn::Slider::new(lens_radius_model.clone())
-                                                .range(0.0, 64.0)
-                                                .step(0.5)
-                                                .into_element(cx),
-                                        ]
-                                    },
-                                );
+                                let lens_radius_row = ui::v_flex(|cx| {
+                                    vec![
+                                        label_row(
+                                            cx,
+                                            "Lens radius (px)",
+                                            format!("{lens_radius_px:.1}"),
+                                        ),
+                                        shadcn::Slider::new(lens_radius_model.clone())
+                                            .range(0.0, 64.0)
+                                            .step(0.5)
+                                            .into_element(cx),
+                                    ]
+                                })
+                                .gap(Space::N2)
+                                .into_element(cx);
 
-                                let warp_strength_row = shadcn::stack::vstack(
-                                    cx,
-                                    shadcn::stack::VStackProps::default().gap(Space::N2),
-                                    |cx| {
-                                        vec![
-                                            label_row(
-                                                cx,
-                                                "Warp strength (px)",
-                                                format!("{warp_strength_px:.1}"),
-                                            ),
-                                            shadcn::Slider::new(warp_strength_model.clone())
-                                                .range(0.0, BackdropWarpV1::MAX_STRENGTH_PX.0)
-                                                .step(0.25)
-                                                .into_element(cx),
-                                        ]
-                                    },
-                                );
+                                let warp_strength_row = ui::v_flex(|cx| {
+                                    vec![
+                                        label_row(
+                                            cx,
+                                            "Warp strength (px)",
+                                            format!("{warp_strength_px:.1}"),
+                                        ),
+                                        shadcn::Slider::new(warp_strength_model.clone())
+                                            .range(0.0, BackdropWarpV1::MAX_STRENGTH_PX.0)
+                                            .step(0.25)
+                                            .into_element(cx),
+                                    ]
+                                })
+                                .gap(Space::N2)
+                                .into_element(cx);
 
-                                let warp_scale_row = shadcn::stack::vstack(
-                                    cx,
-                                    shadcn::stack::VStackProps::default().gap(Space::N2),
-                                    |cx| {
-                                        vec![
-                                            label_row(
-                                                cx,
-                                                "Warp scale (px)",
-                                                format!("{warp_scale_px:.0}"),
-                                            ),
-                                            shadcn::Slider::new(warp_scale_model.clone())
-                                                .range(BackdropWarpV1::MIN_SCALE_PX.0, 256.0)
-                                                .step(1.0)
-                                                .into_element(cx),
-                                        ]
-                                    },
-                                );
+                                let warp_scale_row = ui::v_flex(|cx| {
+                                    vec![
+                                        label_row(cx, "Warp scale (px)", format!("{warp_scale_px:.0}")),
+                                        shadcn::Slider::new(warp_scale_model.clone())
+                                            .range(BackdropWarpV1::MIN_SCALE_PX.0, 256.0)
+                                            .step(1.0)
+                                            .into_element(cx),
+                                    ]
+                                })
+                                .gap(Space::N2)
+                                .into_element(cx);
 
-                                let chroma_row = shadcn::stack::vstack(
-                                    cx,
-                                    shadcn::stack::VStackProps::default().gap(Space::N2),
-                                    |cx| {
-                                        vec![
-                                            label_row(
-                                                cx,
-                                                "Chromatic aberration (px)",
-                                                format!("{warp_chroma_px:.2}"),
-                                            ),
-                                            shadcn::Slider::new(warp_chroma_model.clone())
-                                                .range(
-                                                    0.0,
-                                                    BackdropWarpV1::MAX_CHROMATIC_ABERRATION_PX.0,
-                                                )
-                                                .step(0.05)
-                                                .into_element(cx),
-                                        ]
-                                    },
-                                );
-
-                                let custom_edge_row = shadcn::stack::vstack(
-                                    cx,
-                                    shadcn::stack::VStackProps::default().gap(Space::N2),
-                                    |cx| {
-                                        vec![
-                                            label_row(
-                                                cx,
-                                                "CustomV2 edge falloff (px)",
-                                                format!("{custom_edge_falloff_px:.1}"),
-                                            ),
-                                            shadcn::Slider::new(custom_edge_model.clone())
-                                                .range(0.0, 64.0)
-                                                .step(0.25)
-                                                .into_element(cx),
-                                        ]
-                                    },
-                                );
-
-                                let custom_rim_row = shadcn::stack::vstack(
-                                    cx,
-                                    shadcn::stack::VStackProps::default().gap(Space::N2),
-                                    |cx| {
-                                        vec![
-                                            label_row(
-                                                cx,
-                                                "CustomV2 rim strength",
-                                                format!("{custom_rim_strength:.2}"),
-                                            ),
-                                            shadcn::Slider::new(custom_rim_model.clone())
-                                                .range(0.0, 1.0)
-                                                .step(0.01)
-                                                .into_element(cx),
-                                        ]
-                                    },
-                                );
-
-                                let custom_shadow_row = shadcn::stack::vstack(
-                                    cx,
-                                    shadcn::stack::VStackProps::default().gap(Space::N2),
-                                    |cx| {
-                                        vec![
-                                            label_row(
-                                                cx,
-                                                "CustomV2 shadow strength",
-                                                format!("{custom_shadow_strength:.2}"),
-                                            ),
-                                            shadcn::Slider::new(custom_shadow_model.clone())
-                                                .range(0.0, 1.0)
-                                                .step(0.01)
-                                                .into_element(cx),
-                                        ]
-                                    },
-                                );
-
-                                let custom_grain_row = shadcn::stack::vstack(
-                                    cx,
-                                    shadcn::stack::VStackProps::default().gap(Space::N2),
-                                    |cx| {
-                                        vec![
-                                            label_row(
-                                                cx,
-                                                "CustomV2 grain strength",
-                                                format!("{custom_grain_strength:.2}"),
-                                            ),
-                                            shadcn::Slider::new(custom_grain_model.clone())
-                                                .range(0.0, 0.25)
-                                                .step(0.01)
-                                                .into_element(cx),
-                                        ]
-                                    },
-                                );
-
-                                let custom_grain_scale_row = shadcn::stack::vstack(
-                                    cx,
-                                    shadcn::stack::VStackProps::default().gap(Space::N2),
-                                    |cx| {
-                                        vec![
-                                            label_row(
-                                                cx,
-                                                "CustomV2 grain scale",
-                                                format!("{custom_grain_scale:.2}"),
-                                            ),
-                                            shadcn::Slider::new(custom_grain_scale_model.clone())
-                                                .range(0.25, 6.0)
-                                                .step(0.05)
-                                                .into_element(cx),
-                                        ]
-                                    },
-                                );
-
-                                let custom_v3_bevel_strength_row = shadcn::stack::vstack(
-                                    cx,
-                                    shadcn::stack::VStackProps::default().gap(Space::N2),
-                                    |cx| {
-                                        vec![
-                                            label_row(
-                                                cx,
-                                                "CustomV3 bevel strength",
-                                                format!("{custom_v3_bevel_strength:.2}"),
-                                            ),
-                                            shadcn::Slider::new(
-                                                custom_v3_bevel_strength_model.clone(),
+                                let chroma_row = ui::v_flex(|cx| {
+                                    vec![
+                                        label_row(
+                                            cx,
+                                            "Chromatic aberration (px)",
+                                            format!("{warp_chroma_px:.2}"),
+                                        ),
+                                        shadcn::Slider::new(warp_chroma_model.clone())
+                                            .range(
+                                                0.0,
+                                                BackdropWarpV1::MAX_CHROMATIC_ABERRATION_PX.0,
                                             )
+                                            .step(0.05)
+                                            .into_element(cx),
+                                    ]
+                                })
+                                .gap(Space::N2)
+                                .into_element(cx);
+
+                                let custom_edge_row = ui::v_flex(|cx| {
+                                    vec![
+                                        label_row(
+                                            cx,
+                                            "CustomV2 edge falloff (px)",
+                                            format!("{custom_edge_falloff_px:.1}"),
+                                        ),
+                                        shadcn::Slider::new(custom_edge_model.clone())
+                                            .range(0.0, 64.0)
+                                            .step(0.25)
+                                            .into_element(cx),
+                                    ]
+                                })
+                                .gap(Space::N2)
+                                .into_element(cx);
+
+                                let custom_rim_row = ui::v_flex(|cx| {
+                                    vec![
+                                        label_row(
+                                            cx,
+                                            "CustomV2 rim strength",
+                                            format!("{custom_rim_strength:.2}"),
+                                        ),
+                                        shadcn::Slider::new(custom_rim_model.clone())
+                                            .range(0.0, 1.0)
+                                            .step(0.01)
+                                            .into_element(cx),
+                                    ]
+                                })
+                                .gap(Space::N2)
+                                .into_element(cx);
+
+                                let custom_shadow_row = ui::v_flex(|cx| {
+                                    vec![
+                                        label_row(
+                                            cx,
+                                            "CustomV2 shadow strength",
+                                            format!("{custom_shadow_strength:.2}"),
+                                        ),
+                                        shadcn::Slider::new(custom_shadow_model.clone())
+                                            .range(0.0, 1.0)
+                                            .step(0.01)
+                                            .into_element(cx),
+                                    ]
+                                })
+                                .gap(Space::N2)
+                                .into_element(cx);
+
+                                let custom_grain_row = ui::v_flex(|cx| {
+                                    vec![
+                                        label_row(
+                                            cx,
+                                            "CustomV2 grain strength",
+                                            format!("{custom_grain_strength:.2}"),
+                                        ),
+                                        shadcn::Slider::new(custom_grain_model.clone())
+                                            .range(0.0, 0.25)
+                                            .step(0.01)
+                                            .into_element(cx),
+                                    ]
+                                })
+                                .gap(Space::N2)
+                                .into_element(cx);
+
+                                let custom_grain_scale_row = ui::v_flex(|cx| {
+                                    vec![
+                                        label_row(
+                                            cx,
+                                            "CustomV2 grain scale",
+                                            format!("{custom_grain_scale:.2}"),
+                                        ),
+                                        shadcn::Slider::new(custom_grain_scale_model.clone())
+                                            .range(0.25, 6.0)
+                                            .step(0.05)
+                                            .into_element(cx),
+                                    ]
+                                })
+                                .gap(Space::N2)
+                                .into_element(cx);
+
+                                let custom_v3_bevel_strength_row = ui::v_flex(|cx| {
+                                    vec![
+                                        label_row(
+                                            cx,
+                                            "CustomV3 bevel strength",
+                                            format!("{custom_v3_bevel_strength:.2}"),
+                                        ),
+                                        shadcn::Slider::new(custom_v3_bevel_strength_model.clone())
                                             .range(0.0, 1.0)
                                             .step(0.01)
                                             .into_element(cx)
                                             .test_id(
                                                 "liquid-glass-slider-custom-v3-bevel-strength",
                                             ),
-                                        ]
-                                    },
-                                );
+                                    ]
+                                })
+                                .gap(Space::N2)
+                                .into_element(cx);
 
-                                let custom_v3_bevel_angle_row = shadcn::stack::vstack(
-                                    cx,
-                                    shadcn::stack::VStackProps::default().gap(Space::N2),
-                                    |cx| {
-                                        vec![
-                                            label_row(
-                                                cx,
-                                                "CustomV3 bevel light angle (deg)",
-                                                format!("{custom_v3_bevel_angle_deg:.0}"),
-                                            ),
-                                            shadcn::Slider::new(
-                                                custom_v3_bevel_angle_model.clone(),
-                                            )
+                                let custom_v3_bevel_angle_row = ui::v_flex(|cx| {
+                                    vec![
+                                        label_row(
+                                            cx,
+                                            "CustomV3 bevel light angle (deg)",
+                                            format!("{custom_v3_bevel_angle_deg:.0}"),
+                                        ),
+                                        shadcn::Slider::new(custom_v3_bevel_angle_model.clone())
                                             .range(0.0, 360.0)
                                             .step(1.0)
                                             .into_element(cx)
                                             .test_id(
                                                 "liquid-glass-slider-custom-v3-bevel-angle-deg",
                                             ),
-                                        ]
-                                    },
-                                );
+                                    ]
+                                })
+                                .gap(Space::N2)
+                                .into_element(cx);
 
-                                let custom_v3_bevel_secondary_row = shadcn::stack::vstack(
-                                    cx,
-                                    shadcn::stack::VStackProps::default().gap(Space::N2),
-                                    |cx| {
-                                        vec![
-                                            label_row(
-                                                cx,
-                                                "CustomV3 bevel secondary strength",
-                                                format!("{custom_v3_bevel_secondary:.2}"),
-                                            ),
-                                            shadcn::Slider::new(
-                                                custom_v3_bevel_secondary_model.clone(),
-                                            )
+                                let custom_v3_bevel_secondary_row = ui::v_flex(|cx| {
+                                    vec![
+                                        label_row(
+                                            cx,
+                                            "CustomV3 bevel secondary strength",
+                                            format!("{custom_v3_bevel_secondary:.2}"),
+                                        ),
+                                        shadcn::Slider::new(
+                                            custom_v3_bevel_secondary_model.clone(),
+                                        )
+                                        .range(0.0, 1.0)
+                                        .step(0.01)
+                                        .into_element(cx)
+                                        .test_id(
+                                            "liquid-glass-slider-custom-v3-bevel-secondary",
+                                        ),
+                                    ]
+                                })
+                                .gap(Space::N2)
+                                .into_element(cx);
+
+                                let custom_v3_dispersion_row = ui::v_flex(|cx| {
+                                    vec![
+                                        label_row(
+                                            cx,
+                                            "CustomV3 dispersion",
+                                            format!("{custom_v3_dispersion:.2}"),
+                                        ),
+                                        shadcn::Slider::new(custom_v3_dispersion_model.clone())
                                             .range(0.0, 1.0)
                                             .step(0.01)
                                             .into_element(cx)
                                             .test_id(
-                                                "liquid-glass-slider-custom-v3-bevel-secondary",
+                                                "liquid-glass-slider-custom-v3-dispersion",
                                             ),
-                                        ]
-                                    },
-                                );
+                                    ]
+                                })
+                                .gap(Space::N2)
+                                .into_element(cx);
 
-                                let custom_v3_dispersion_row = shadcn::stack::vstack(
-                                    cx,
-                                    shadcn::stack::VStackProps::default().gap(Space::N2),
-                                    |cx| {
-                                        vec![
-                                            label_row(
-                                                cx,
-                                                "CustomV3 dispersion",
-                                                format!("{custom_v3_dispersion:.2}"),
-                                            ),
-                                            shadcn::Slider::new(custom_v3_dispersion_model.clone())
-                                                .range(0.0, 1.0)
-                                                .step(0.01)
-                                                .into_element(cx)
-                                                .test_id(
-                                                    "liquid-glass-slider-custom-v3-dispersion",
-                                                ),
-                                        ]
-                                    },
-                                );
+                                let phase_row = ui::v_flex(|cx| {
+                                    vec![
+                                        label_row(cx, "Phase", format!("{phase:.2}")),
+                                        shadcn::Slider::new(warp_phase_model.clone())
+                                            .range(0.0, 12.0)
+                                            .step(0.01)
+                                            .into_element(cx),
+                                    ]
+                                })
+                                .gap(Space::N2)
+                                .into_element(cx);
 
-                                let phase_row = shadcn::stack::vstack(
-                                    cx,
-                                    shadcn::stack::VStackProps::default().gap(Space::N2),
-                                    |cx| {
-                                        vec![
-                                            label_row(cx, "Phase", format!("{phase:.2}")),
-                                            shadcn::Slider::new(warp_phase_model.clone())
-                                                .range(0.0, 12.0)
-                                                .step(0.01)
-                                                .into_element(cx),
-                                        ]
-                                    },
-                                );
+                                let speed_row = ui::v_flex(|cx| {
+                                    vec![
+                                        label_row(cx, "Phase speed", format!("{phase_speed:.2}")),
+                                        shadcn::Slider::new(phase_speed_model.clone())
+                                            .range(0.0, 2.0)
+                                            .step(0.01)
+                                            .into_element(cx),
+                                    ]
+                                })
+                                .gap(Space::N2)
+                                .into_element(cx);
 
-                                let speed_row = shadcn::stack::vstack(
-                                    cx,
-                                    shadcn::stack::VStackProps::default().gap(Space::N2),
-                                    |cx| {
-                                        vec![
-                                            label_row(
-                                                cx,
-                                                "Phase speed",
-                                                format!("{phase_speed:.2}"),
-                                            ),
-                                            shadcn::Slider::new(phase_speed_model.clone())
-                                                .range(0.0, 2.0)
-                                                .step(0.01)
-                                                .into_element(cx),
-                                        ]
-                                    },
-                                );
+                                let blur_row = ui::v_flex(|cx| {
+                                    vec![
+                                        label_row(
+                                            cx,
+                                            "Blur radius (px)",
+                                            format!("{:.1}", blur_radius_px.clamp(0.0, 64.0)),
+                                        ),
+                                        shadcn::Slider::new(blur_radius_model.clone())
+                                            .range(0.0, 48.0)
+                                            .step(0.5)
+                                            .into_element(cx),
+                                    ]
+                                })
+                                .gap(Space::N2)
+                                .into_element(cx);
 
-                                let blur_row = shadcn::stack::vstack(
-                                    cx,
-                                    shadcn::stack::VStackProps::default().gap(Space::N2),
-                                    |cx| {
-                                        vec![
-                                            label_row(
-                                                cx,
-                                                "Blur radius (px)",
-                                                format!("{:.1}", blur_radius_px.clamp(0.0, 64.0)),
-                                            ),
-                                            shadcn::Slider::new(blur_radius_model.clone())
-                                                .range(0.0, 48.0)
-                                                .step(0.5)
-                                                .into_element(cx),
-                                        ]
-                                    },
-                                );
+                                let downsample_row = ui::v_flex(|cx| {
+                                    vec![
+                                        label_row(cx, "Blur downsample", format!("{blur_downsample}x")),
+                                        shadcn::Slider::new(blur_downsample_model.clone())
+                                            .range(1.0, 4.0)
+                                            .step(1.0)
+                                            .into_element(cx),
+                                    ]
+                                })
+                                .gap(Space::N2)
+                                .into_element(cx);
 
-                                let downsample_row = shadcn::stack::vstack(
-                                    cx,
-                                    shadcn::stack::VStackProps::default().gap(Space::N2),
-                                    |cx| {
-                                        vec![
-                                            label_row(
-                                                cx,
-                                                "Blur downsample",
-                                                format!("{blur_downsample}x"),
-                                            ),
-                                            shadcn::Slider::new(blur_downsample_model.clone())
-                                                .range(1.0, 4.0)
-                                                .step(1.0)
-                                                .into_element(cx),
-                                        ]
-                                    },
-                                );
+                                let sat_row = ui::v_flex(|cx| {
+                                    vec![
+                                        label_row(cx, "Saturation", format!("{saturation:.2}")),
+                                        shadcn::Slider::new(saturation_model.clone())
+                                            .range(0.6, 1.8)
+                                            .step(0.01)
+                                            .into_element(cx),
+                                    ]
+                                })
+                                .gap(Space::N2)
+                                .into_element(cx);
 
-                                let sat_row = shadcn::stack::vstack(
-                                    cx,
-                                    shadcn::stack::VStackProps::default().gap(Space::N2),
-                                    |cx| {
-                                        vec![
-                                            label_row(cx, "Saturation", format!("{saturation:.2}")),
-                                            shadcn::Slider::new(saturation_model.clone())
-                                                .range(0.6, 1.8)
-                                                .step(0.01)
-                                                .into_element(cx),
-                                        ]
-                                    },
-                                );
+                                let bright_row = ui::v_flex(|cx| {
+                                    vec![
+                                        label_row(cx, "Brightness", format!("{brightness:.2}")),
+                                        shadcn::Slider::new(brightness_model.clone())
+                                            .range(0.8, 1.3)
+                                            .step(0.01)
+                                            .into_element(cx),
+                                    ]
+                                })
+                                .gap(Space::N2)
+                                .into_element(cx);
 
-                                let bright_row = shadcn::stack::vstack(
-                                    cx,
-                                    shadcn::stack::VStackProps::default().gap(Space::N2),
-                                    |cx| {
-                                        vec![
-                                            label_row(cx, "Brightness", format!("{brightness:.2}")),
-                                            shadcn::Slider::new(brightness_model.clone())
-                                                .range(0.8, 1.3)
-                                                .step(0.01)
-                                                .into_element(cx),
-                                        ]
-                                    },
-                                );
+                                let contrast_row = ui::v_flex(|cx| {
+                                    vec![
+                                        label_row(cx, "Contrast", format!("{contrast:.2}")),
+                                        shadcn::Slider::new(contrast_model.clone())
+                                            .range(0.8, 1.3)
+                                            .step(0.01)
+                                            .into_element(cx),
+                                    ]
+                                })
+                                .gap(Space::N2)
+                                .into_element(cx);
 
-                                let contrast_row = shadcn::stack::vstack(
-                                    cx,
-                                    shadcn::stack::VStackProps::default().gap(Space::N2),
-                                    |cx| {
-                                        vec![
-                                            label_row(cx, "Contrast", format!("{contrast:.2}")),
-                                            shadcn::Slider::new(contrast_model.clone())
-                                                .range(0.8, 1.3)
-                                                .step(0.01)
-                                                .into_element(cx),
-                                        ]
-                                    },
-                                );
+                                let footer = ui::h_row(|cx| {
+                                    vec![
+                                        shadcn::Button::new("Bevel preset")
+                                            .variant(shadcn::ButtonVariant::Secondary)
+                                            .size(shadcn::ButtonSize::Sm)
+                                            .on_click(bevel_preset)
+                                            .test_id(
+                                                "liquid-glass-button-custom-v3-bevel-preset",
+                                            )
+                                            .into_element(cx),
+                                        shadcn::Button::new("Bevel off")
+                                            .variant(shadcn::ButtonVariant::Secondary)
+                                            .size(shadcn::ButtonSize::Sm)
+                                            .on_click(bevel_off)
+                                            .test_id("liquid-glass-button-custom-v3-bevel-off")
+                                            .into_element(cx),
+                                        cx.spacer(SpacerProps::default()),
+                                        shadcn::Button::new("Reset")
+                                            .variant(shadcn::ButtonVariant::Secondary)
+                                            .size(shadcn::ButtonSize::Sm)
+                                            .on_click(reset_inspector)
+                                            .test_id("liquid-glass-button-reset-inspector")
+                                            .into_element(cx),
+                                    ]
+                                })
+                                .gap(Space::N2)
+                                .items_center()
+                                .into_element(cx);
 
-                                let footer = shadcn::stack::hstack(
-                                    cx,
-                                    shadcn::stack::HStackProps::default()
-                                        .gap(Space::N2)
-                                        .items_center(),
-                                    |cx| {
-                                        vec![
-                                            shadcn::Button::new("Bevel preset")
-                                                .variant(shadcn::ButtonVariant::Secondary)
-                                                .size(shadcn::ButtonSize::Sm)
-                                                .on_click(bevel_preset)
-                                                .test_id(
-                                                    "liquid-glass-button-custom-v3-bevel-preset",
-                                                )
-                                                .into_element(cx),
-                                            shadcn::Button::new("Bevel off")
-                                                .variant(shadcn::ButtonVariant::Secondary)
-                                                .size(shadcn::ButtonSize::Sm)
-                                                .on_click(bevel_off)
-                                                .test_id(
-                                                    "liquid-glass-button-custom-v3-bevel-off",
-                                                )
-                                                .into_element(cx),
-                                            cx.spacer(SpacerProps::default()),
-                                            shadcn::Button::new("Reset")
-                                                .variant(shadcn::ButtonVariant::Secondary)
-                                                .size(shadcn::ButtonSize::Sm)
-                                                .on_click(reset_inspector)
-                                                .test_id(
-                                                    "liquid-glass-button-reset-inspector",
-                                                )
-                                                .into_element(cx),
-                                        ]
-                                    },
-                                );
-
-                                let body = shadcn::stack::vstack(
-                                    cx,
-                                    shadcn::stack::VStackProps::default()
-                                        .gap(Space::N4)
-                                        .items_stretch(),
-                                    |cx| {
-                                        vec![
-                                            header.into_element(cx),
-                                            shadcn::Separator::new().into_element(cx),
-                                            lens_radius_row,
-                                            shadcn::Separator::new().into_element(cx),
-                                            warp_strength_row,
-                                            warp_scale_row,
-                                            chroma_row,
-                                            phase_row,
-                                            speed_row,
-                                            shadcn::Separator::new().into_element(cx),
-                                            custom_edge_row,
-                                            custom_rim_row,
-                                            custom_shadow_row,
-                                            custom_grain_row,
-                                            custom_grain_scale_row,
-                                            custom_v3_bevel_strength_row,
-                                            custom_v3_bevel_angle_row,
-                                            custom_v3_bevel_secondary_row,
-                                            custom_v3_dispersion_row,
-                                            shadcn::Separator::new().into_element(cx),
-                                            blur_row,
-                                            downsample_row,
-                                            sat_row,
-                                            bright_row,
-                                            contrast_row,
-                                            shadcn::Separator::new().into_element(cx),
-                                            footer,
-                                        ]
-                                    },
-                                );
+                                let body = ui::v_flex(|cx| {
+                                    vec![
+                                        header.into_element(cx),
+                                        shadcn::Separator::new().into_element(cx),
+                                        lens_radius_row,
+                                        shadcn::Separator::new().into_element(cx),
+                                        warp_strength_row,
+                                        warp_scale_row,
+                                        chroma_row,
+                                        phase_row,
+                                        speed_row,
+                                        shadcn::Separator::new().into_element(cx),
+                                        custom_edge_row,
+                                        custom_rim_row,
+                                        custom_shadow_row,
+                                        custom_grain_row,
+                                        custom_grain_scale_row,
+                                        custom_v3_bevel_strength_row,
+                                        custom_v3_bevel_angle_row,
+                                        custom_v3_bevel_secondary_row,
+                                        custom_v3_dispersion_row,
+                                        shadcn::Separator::new().into_element(cx),
+                                        blur_row,
+                                        downsample_row,
+                                        sat_row,
+                                        bright_row,
+                                        contrast_row,
+                                        shadcn::Separator::new().into_element(cx),
+                                        footer,
+                                    ]
+                                })
+                                .gap(Space::N4)
+                                .items_stretch()
+                                .into_element(cx);
 
                                 vec![body]
                             },

@@ -24,7 +24,7 @@ use fret_ui::retained_bridge::resizable_panel_group as resizable;
 use fret_ui::retained_bridge::{LayoutCx, PaintCx, SemanticsCx, UiTreeRetainedExt as _, Widget};
 use fret_ui::{Invalidation, Theme, UiTree};
 use fret_ui_kit::OverlayController;
-use fret_ui_kit::declarative::stack::{HStackProps, VStackProps, hstack, vstack};
+use fret_ui_kit::ui;
 use fret_ui_kit::{LayoutRefinement, Space};
 use fret_ui_shadcn as shadcn;
 use serde_json::json;
@@ -1270,13 +1270,9 @@ impl DockPanelRegistry<App> for DockingArbitrationDockPanelRegistry {
                             shadcn::CardDescription::new("ADR 0072").into_element(cx),
                         ])
                         .into_element(cx),
-                        shadcn::CardContent::new(vec![vstack(
-                            cx,
-                            VStackProps::default()
-                                .gap(Space::N1)
-                                .layout(LayoutRefinement::default().w_full()),
-                            |cx| {
-                                vec![
+                        shadcn::CardContent::new([
+                            ui::v_flex(|cx| {
+                                [
                                     shadcn::CardDescription::new(
                                         "Open a popover, then drag a dock tab.",
                                     )
@@ -1290,8 +1286,11 @@ impl DockPanelRegistry<App> for DockingArbitrationDockPanelRegistry {
                                     )
                                     .into_element(cx),
                                 ]
-                            },
-                        )])
+                            })
+                            .gap(Space::N1)
+                            .layout(LayoutRefinement::default().w_full())
+                            .into_element(cx),
+                        ])
                         .into_element(cx),
                     ])
                     .size(shadcn::CardSize::Sm)
@@ -1300,13 +1299,9 @@ impl DockPanelRegistry<App> for DockingArbitrationDockPanelRegistry {
                     let state_card = shadcn::Card::new(vec![
                         shadcn::CardHeader::new(vec![shadcn::CardTitle::new("State").into_element(cx)])
                             .into_element(cx),
-                        shadcn::CardContent::new(vec![vstack(
-                            cx,
-                            VStackProps::default()
-                                .gap(Space::N2)
-                                .layout(LayoutRefinement::default().w_full()),
-                            |cx| {
-                                vec![
+                        shadcn::CardContent::new([
+                            ui::v_flex(|cx| {
+                                [
                                     shadcn::CardDescription::new(drag_state).into_element(cx),
                                     shadcn::CardDescription::new(captured.clone()).into_element(cx),
                                     shadcn::CardDescription::new(format!(
@@ -1391,32 +1386,21 @@ impl DockPanelRegistry<App> for DockingArbitrationDockPanelRegistry {
                                         },
                                     ),
                                 ]
-                            },
-                        )])
+                            })
+                            .gap(Space::N2)
+                            .layout(LayoutRefinement::default().w_full())
+                            .into_element(cx),
+                        ])
                         .into_element(cx),
                     ])
                     .size(shadcn::CardSize::Sm)
                     .into_element(cx);
 
 	                let actions_card = shadcn::Card::new(vec![
-	                    shadcn::CardContent::new(vec![hstack(
-	                        cx,
-	                        HStackProps::default()
-	                            .gap(Space::N2)
-	                            .layout(LayoutRefinement::default().w_full().min_w_0()),
-	                        |cx| {
+	                    shadcn::CardContent::new([
+	                        ui::h_flex(|cx| {
 	                            vec![
-	                                vstack(
-	                                    cx,
-	                                    VStackProps::default()
-	                                        .gap(Space::N1)
-	                                        .layout(
-	                                            LayoutRefinement::default()
-	                                                .flex_1()
-	                                                .min_w_0()
-	                                                .w_full(),
-	                                        ),
-	                                    |cx| {
+	                                ui::v_flex(|cx| {
 	                                        vec![
 	                                            cx.keyed("dock-arb-action-close-left", |cx| {
 	                                                shadcn::Button::new("Close viewport left (panel)")
@@ -1500,19 +1484,16 @@ impl DockPanelRegistry<App> for DockingArbitrationDockPanelRegistry {
 	                                                .into_element(cx)
 	                                            }),
 	                                        ]
-	                                    },
-	                                ),
-	                                vstack(
-	                                    cx,
-	                                    VStackProps::default()
-	                                        .gap(Space::N1)
-	                                        .layout(
-	                                            LayoutRefinement::default()
-	                                                .flex_1()
-	                                                .min_w_0()
-	                                                .w_full(),
-	                                        ),
-	                                    |cx| {
+	                                    })
+	                                    .gap(Space::N1)
+	                                    .layout(
+	                                        LayoutRefinement::default()
+	                                            .flex_1()
+	                                            .min_w_0()
+	                                            .w_full(),
+	                                    )
+	                                    .into_element(cx),
+	                                ui::v_flex(|cx| {
 	                                        vec![
 	                                            cx.keyed("dock-arb-action-popover", |_cx| popover),
 	                                            cx.keyed("dock-arb-action-dialog", |_cx| dialog),
@@ -1525,11 +1506,21 @@ impl DockPanelRegistry<App> for DockingArbitrationDockPanelRegistry {
 	                                                .into_element(cx)
 	                                            }),
 	                                        ]
-	                                    },
-	                                ),
+	                                    })
+	                                    .gap(Space::N1)
+	                                    .layout(
+	                                        LayoutRefinement::default()
+	                                            .flex_1()
+	                                            .min_w_0()
+	                                            .w_full(),
+	                                    )
+	                                    .into_element(cx),
 	                            ]
-	                        },
-	                    )])
+	                        })
+	                        .gap(Space::N2)
+	                        .layout(LayoutRefinement::default().w_full().min_w_0())
+	                        .into_element(cx),
+	                    ])
 	                        .into_element(cx),
 	                    ])
 	                    .size(shadcn::CardSize::Sm)
@@ -1554,21 +1545,18 @@ impl DockPanelRegistry<App> for DockingArbitrationDockPanelRegistry {
                                     .into_element(cx)
                                 },
                                 |cx| {
-                                    let content = vstack(
-                                        cx,
-                                        VStackProps::default()
-                                            .gap(Space::N1)
-                                            .layout(LayoutRefinement::default().w_full()),
-                                        |cx| {
-                                            layer_lines
-                                                .iter()
-                                                .cloned()
-                                                .map(|v| cx.text(v))
-                                                .collect::<Vec<_>>()
-                                        },
-                                    );
+                                    let content = ui::v_flex(|cx| {
+                                        layer_lines
+                                            .iter()
+                                            .cloned()
+                                            .map(|v| cx.text(v))
+                                            .collect::<Vec<_>>()
+                                    })
+                                    .gap(Space::N1)
+                                    .layout(LayoutRefinement::default().w_full())
+                                    .into_element(cx);
 
-                                    shadcn::ScrollArea::new(vec![content])
+                                    shadcn::ScrollArea::new([content])
                                         .refine_layout(
                                             LayoutRefinement::default()
                                                 .w_full()
@@ -1584,13 +1572,15 @@ impl DockPanelRegistry<App> for DockingArbitrationDockPanelRegistry {
                     .size(shadcn::CardSize::Sm)
                     .into_element(cx);
 
-                    vec![vstack(
-                        cx,
-                        VStackProps::default()
-                            .gap(Space::N3)
-                            .layout(LayoutRefinement::default().size_full().min_w_0().min_h_0()),
-                        |_cx| vec![actions_card, header_card, state_card, debug_layers_card],
-                    ), shadcn::Toaster::new().into_element(cx)]
+                    vec![
+                        ui::v_flex(|_cx| {
+                            vec![actions_card, header_card, state_card, debug_layers_card]
+                        })
+                        .gap(Space::N3)
+                        .layout(LayoutRefinement::default().size_full().min_w_0().min_h_0())
+                        .into_element(cx),
+                        shadcn::Toaster::new().into_element(cx),
+                    ]
                 },
             )]
                 },

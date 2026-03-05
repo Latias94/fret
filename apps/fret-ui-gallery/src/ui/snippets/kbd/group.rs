@@ -14,7 +14,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         stack::HStackProps::default().gap(Space::N1).items_center(),
         |cx| {
             vec![
-                ui::text(cx, "Use")
+                ui::text("Use")
                     .text_sm()
                     .text_color(ColorRef::Color(muted_fg))
                     .into_element(cx),
@@ -23,7 +23,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                     shadcn::Kbd::new("Ctrl + K").into_element(cx),
                 ])
                 .into_element(cx),
-                ui::text(cx, "to open the command palette")
+                ui::text("to open the command palette")
                     .text_sm()
                     .text_color(ColorRef::Color(muted_fg))
                     .into_element(cx),

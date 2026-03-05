@@ -47,11 +47,11 @@ impl ShadcnResolver {
             _ => fret_ui_kit::Space::N4,
         };
         match direction {
-            "horizontal" => fret_ui_kit::ui::h_flex(cx, move |_cx| children)
+            "horizontal" => fret_ui_kit::ui::h_flex(move |_cx| children)
                 .gap(gap)
                 .items_center()
                 .into_element(cx),
-            _ => fret_ui_kit::ui::v_flex(cx, move |_cx| children)
+            _ => fret_ui_kit::ui::v_flex(move |_cx| children)
                 .gap(gap)
                 .items_start()
                 .into_element(cx),
@@ -114,7 +114,7 @@ impl ShadcnResolver {
 
         let msg = Arc::<str>::from(format!("{ty} placeholder (not implemented yet): {:?}", key));
 
-        let body = fret_ui_kit::ui::v_flex(cx, move |_cx| {
+        let body = fret_ui_kit::ui::v_flex(move |_cx| {
             vec![
                 fret_ui_shadcn::CardTitle::new(title).into_element(_cx),
                 fret_ui_shadcn::CardDescription::new(msg).into_element(_cx),

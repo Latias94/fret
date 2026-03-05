@@ -647,7 +647,7 @@ impl MenubarShortcut {
         let font_line_height = theme.metric_token("font.line_height");
         let dir = crate::use_direction(cx, None);
 
-        ui::text(cx, self.text)
+        ui::text(self.text)
             // new-york-v4: `ml-auto` to push shortcut to the trailing edge.
             .layout(rtl::layout_refinement_margin_inline_start_auto(dir).flex_shrink_0())
             .text_size_px(font_size)
@@ -1017,7 +1017,7 @@ fn menu_row_children<H: UiHost>(
                 row.push(menu_icon_slot_empty(cx));
             }
 
-            let mut label_text = ui::text(cx, label.clone())
+            let mut label_text = ui::text(label.clone())
                 .w_full()
                 .min_w_0()
                 .flex_1()
@@ -2142,7 +2142,7 @@ impl MenubarMenuEntries {
                                                                     ..Default::default()
                                                                 },
                                                                 move |cx| {
-                                                                        vec![ui::text(cx, text)
+                                                                        vec![ui::text( text)
                                                                             .text_size_px(font_size)
                                                                             .line_height_px(font_line_height)
                                                                             .line_height_policy(
@@ -2912,7 +2912,7 @@ impl MenubarMenuEntries {
                                                                             ),
                                                                         },
                                                                         move |cx| {
-                                                                            let mut label_text = ui::text(cx, label.clone())
+                                                                            let mut label_text = ui::text( label.clone())
                                                                                 .text_size_px(text_style.size)
                                                                                 .font_weight(text_style.weight)
                                                                                 .text_color(ColorRef::Color(fg))
@@ -3288,7 +3288,7 @@ impl MenubarMenuEntries {
                                                                                 ..Default::default()
                                                                             },
                                                                             move |cx| {
-                                                                                vec![ui::text(cx, text)
+                                                                                vec![ui::text( text)
                                                                                     .text_size_px(font_size)
                                                                                     .line_height_px(font_line_height)
                                                                                     .line_height_policy(
@@ -3911,7 +3911,7 @@ impl MenubarMenuEntries {
                     props,
                     chrome,
                     move |cx| {
-                        let mut label_text = ui::text(cx, label.clone())
+                        let mut label_text = ui::text( label.clone())
                             .text_size_px(text_style.size)
                             .font_weight(text_style.weight)
                             .text_color(ColorRef::Color(if enabled { fg } else { fg_muted }))

@@ -140,13 +140,13 @@ impl Ticker {
             ])
             .into_element(cx);
 
-            let symbol_text = ui::text(cx, symbol.clone())
+            let symbol_text = ui::text(symbol.clone())
                 .font_medium()
                 .nowrap()
                 .into_element(cx);
 
             let muted = theme.color_token("muted-foreground");
-            let price_text = ui::text(cx, self.price)
+            let price_text = ui::text(self.price)
                 .text_color(ColorRef::Color(muted))
                 .nowrap()
                 .into_element(cx);
@@ -156,7 +156,7 @@ impl Ticker {
                 TickerChangeKind::Down => theme.color_token("destructive"),
                 TickerChangeKind::Flat => muted,
             };
-            let change_text = ui::text(cx, self.change)
+            let change_text = ui::text(self.change)
                 .text_color(ColorRef::Color(change_color))
                 .nowrap()
                 .into_element(cx);

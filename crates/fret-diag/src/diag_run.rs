@@ -176,6 +176,7 @@ pub(crate) struct RunChecks {
     pub check_vlist_window_shifts_have_prepaint_actions: bool,
     pub check_vlist_window_shifts_non_retained_max: Option<u64>,
     pub check_vlist_window_shifts_prefetch_max: Option<u64>,
+    pub check_wheel_events_max_per_frame: Option<u64>,
     pub check_wheel_scroll_hit_changes_test_id: Option<String>,
     pub check_wheel_scroll_test_id: Option<String>,
     pub check_windowed_rows_offset_changes_eps: f32,
@@ -280,6 +281,7 @@ impl Default for RunChecks {
             check_vlist_window_shifts_have_prepaint_actions: false,
             check_vlist_window_shifts_non_retained_max: None,
             check_vlist_window_shifts_prefetch_max: None,
+            check_wheel_events_max_per_frame: None,
             check_wheel_scroll_hit_changes_test_id: None,
             check_wheel_scroll_test_id: None,
             check_windowed_rows_offset_changes_eps: 0.5,
@@ -365,7 +367,7 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
         checks,
     } = ctx;
 
-    let checks_for_post_run = checks.clone();
+    let mut checks_for_post_run = checks.clone();
 
     let RunChecks {
         check_chart_sampling_window_shifts_min: _,
@@ -460,6 +462,7 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
         check_vlist_window_shifts_have_prepaint_actions: _,
         check_vlist_window_shifts_non_retained_max: _,
         check_vlist_window_shifts_prefetch_max: _,
+        check_wheel_events_max_per_frame: _,
         check_wheel_scroll_hit_changes_test_id: _,
         check_wheel_scroll_test_id: _,
         check_windowed_rows_offset_changes_eps: _,
@@ -504,6 +507,14 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
         || pack_include_triage
         || pack_include_screenshots;
     let wants_post_run_bundle = wants_pack_zip || ensure_ai_packet;
+    let src = resolve_run_script_source(&workspace_root, &src)?;
+    let policy_wheel_events_max_per_frame =
+        crate::diag_policy::ui_gallery_script_requires_wheel_events_max_per_frame_gate(&src)
+            .then_some(1);
+    checks_for_post_run.check_wheel_events_max_per_frame = checks_for_post_run
+        .check_wheel_events_max_per_frame
+        .or(policy_wheel_events_max_per_frame);
+
     let check_registry = crate::registry::checks::CheckRegistry::builtin();
     let wants_post_run_checks = check_registry.wants_post_run_checks(&checks_for_post_run);
 
@@ -518,8 +529,6 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
     if pack_after_run && !pack_defaults.0 && !pack_defaults.1 && !pack_defaults.2 {
         pack_defaults = (true, true, true);
     }
-
-    let src = resolve_run_script_source(&workspace_root, &src)?;
     let use_devtools_ws =
         devtools_ws_url.is_some() || devtools_token.is_some() || devtools_session_id.is_some();
     if use_devtools_ws {

@@ -87,7 +87,7 @@ impl ShadcnResolver {
         if children.is_empty() {
             spinner
         } else {
-            fret_ui_kit::ui::v_flex(cx, move |_cx| {
+            fret_ui_kit::ui::v_flex(move |_cx| {
                 let mut out = Vec::with_capacity(children.len().saturating_add(1));
                 out.push(spinner);
                 out.extend(children);
@@ -139,7 +139,7 @@ impl ShadcnResolver {
         if children.is_empty() {
             sk
         } else {
-            fret_ui_kit::ui::v_flex(cx, move |_cx| {
+            fret_ui_kit::ui::v_flex(move |_cx| {
                 let mut out = Vec::with_capacity(children.len().saturating_add(1));
                 out.push(sk);
                 out.extend(children);
@@ -193,7 +193,7 @@ impl ShadcnResolver {
         if children.is_empty() {
             progress
         } else {
-            fret_ui_kit::ui::v_flex(cx, move |_cx| {
+            fret_ui_kit::ui::v_flex(move |_cx| {
                 let mut out = Vec::with_capacity(children.len().saturating_add(1));
                 out.push(progress);
                 out.extend(children);

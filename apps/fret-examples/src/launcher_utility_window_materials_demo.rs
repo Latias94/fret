@@ -10,7 +10,6 @@ use fret_runtime::{
 use fret_ui::ElementContext;
 use fret_ui::element::{LayoutStyle, Length, SemanticsDecoration, SizeStyle};
 use fret_ui_kit::declarative::ModelWatchExt as _;
-use fret_ui_kit::declarative::stack;
 use fret_ui_kit::{ColorRef, LayoutRefinement, Space, ui};
 use fret_ui_shadcn::button::{Button, ButtonSize, ButtonVariant};
 use fret_ui_shadcn::{Card, CardContent, CardDescription, CardHeader, CardTitle};
@@ -162,7 +161,7 @@ fn view(
         },
         move |cx| {
             vec![
-                ui::text(cx, "Utility Window Materials (Mica/Acrylic)")
+                ui::text("Utility Window Materials (Mica/Acrylic)")
                     .font_semibold()
                     .into_element(cx),
             ]
@@ -178,58 +177,53 @@ fn view(
             .into_element(cx),
         ])
         .into_element(cx),
-        CardContent::new([stack::vstack(
-            cx,
-            stack::VStackProps::default().gap_y(Space::N3),
-            move |cx| {
-                let style_line = ui::text(cx, style_text)
-                    .font_monospace()
-                    .text_sm()
-                    .into_element(cx)
-                    .attach_semantics(SemanticsDecoration::default().test_id(TEST_ID_STYLE_TEXT));
-                let status_line = ui::text(cx, status)
-                    .text_sm()
-                    .text_color(ColorRef::Color(color_muted_foreground))
-                    .into_element(cx);
+        CardContent::new([ui::v_flex(move |cx| {
+            let style_line = ui::text(style_text)
+                .font_monospace()
+                .text_sm()
+                .into_element(cx)
+                .attach_semantics(SemanticsDecoration::default().test_id(TEST_ID_STYLE_TEXT));
+            let status_line = ui::text(status)
+                .text_sm()
+                .text_color(ColorRef::Color(color_muted_foreground))
+                .into_element(cx);
 
-                let buttons_row = stack::hstack(
-                    cx,
-                    stack::HStackProps::default()
-                        .gap(Space::N2)
-                        .items_center()
-                        .layout(LayoutRefinement::default().w_full()),
-                    move |cx| {
-                        vec![
-                            Button::new("None")
-                                .variant(ButtonVariant::Secondary)
-                                .size(ButtonSize::Sm)
-                                .on_click(CommandId::from(CMD_TO_NONE))
-                                .test_id(TEST_ID_TO_NONE)
-                                .into_element(cx),
-                            Button::new("Mica")
-                                .variant(ButtonVariant::Secondary)
-                                .size(ButtonSize::Sm)
-                                .on_click(CommandId::from(CMD_TO_MICA))
-                                .test_id(TEST_ID_TO_MICA)
-                                .into_element(cx),
-                            Button::new("Acrylic")
-                                .variant(ButtonVariant::Secondary)
-                                .size(ButtonSize::Sm)
-                                .on_click(CommandId::from(CMD_TO_ACRYLIC))
-                                .test_id(TEST_ID_TO_ACRYLIC)
-                                .into_element(cx),
-                            Button::new("Quit")
-                                .variant(ButtonVariant::Destructive)
-                                .size(ButtonSize::Sm)
-                                .on_click(CommandId::from(CMD_QUIT))
-                                .into_element(cx),
-                        ]
-                    },
-                );
+            let buttons_row = ui::h_flex(move |cx| {
+                [
+                    Button::new("None")
+                        .variant(ButtonVariant::Secondary)
+                        .size(ButtonSize::Sm)
+                        .on_click(CommandId::from(CMD_TO_NONE))
+                        .test_id(TEST_ID_TO_NONE)
+                        .into_element(cx),
+                    Button::new("Mica")
+                        .variant(ButtonVariant::Secondary)
+                        .size(ButtonSize::Sm)
+                        .on_click(CommandId::from(CMD_TO_MICA))
+                        .test_id(TEST_ID_TO_MICA)
+                        .into_element(cx),
+                    Button::new("Acrylic")
+                        .variant(ButtonVariant::Secondary)
+                        .size(ButtonSize::Sm)
+                        .on_click(CommandId::from(CMD_TO_ACRYLIC))
+                        .test_id(TEST_ID_TO_ACRYLIC)
+                        .into_element(cx),
+                    Button::new("Quit")
+                        .variant(ButtonVariant::Destructive)
+                        .size(ButtonSize::Sm)
+                        .on_click(CommandId::from(CMD_QUIT))
+                        .into_element(cx),
+                ]
+            })
+            .gap(Space::N2)
+            .items_center()
+            .layout(LayoutRefinement::default().w_full())
+            .into_element(cx);
 
-                vec![style_line, status_line, buttons_row]
-            },
-        )])
+            vec![style_line, status_line, buttons_row]
+        })
+        .gap(Space::N3)
+        .into_element(cx)])
         .into_element(cx),
     ])
     .into_element(cx);
@@ -248,13 +242,12 @@ fn view(
                 ..Default::default()
             },
             move |cx| {
-                vec![stack::vstack(
-                    cx,
-                    stack::VStackProps::default()
-                        .gap_y(Space::N4)
-                        .layout(LayoutRefinement::default().w_full().h_full()),
-                    move |_cx| vec![header, content],
-                )]
+                vec![
+                    ui::v_flex(move |_cx| [header, content])
+                        .gap(Space::N4)
+                        .layout(LayoutRefinement::default().w_full().h_full())
+                        .into_element(cx),
+                ]
             },
         )
         .attach_semantics(SemanticsDecoration::default().test_id(TEST_ID_ROOT));

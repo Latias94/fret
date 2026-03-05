@@ -18,7 +18,7 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
         ])
         .into_element(cx),
         shadcn::CardContent::new(vec![
-            ui::text(cx, "Card Content").text_sm().into_element(cx),
+            ui::text("CardContent text.").text_sm().into_element(cx),
         ])
         .into_element(cx),
     ])
@@ -33,7 +33,7 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
         ])
         .into_element(cx),
         shadcn::CardContent::new(vec![
-            ui::text(cx, "Card Content").text_sm().into_element(cx),
+            ui::text("CardContent text.").text_sm().into_element(cx),
         ])
         .into_element(cx),
     ])

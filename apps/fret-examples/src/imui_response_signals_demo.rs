@@ -100,24 +100,20 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut ImUiResponseSignalsState) -> 
         use fret_ui_kit::imui::UiWriterImUiFacadeExt as _;
         use fret_ui_kit::imui::UiWriterUiKitExt as _;
 
-        let title = fret_ui_kit::ui::text(ui.cx_mut(), "imui response signals demo (facade)")
+        let title = fret_ui_kit::ui::text("imui response signals demo (facade)")
             .text_sm()
             .font_semibold();
         ui.add_ui(title);
 
-        let hint = fret_ui_kit::ui::text(
-            ui.cx_mut(),
-            "Left click, right click, double click, drag, and open a context menu.",
-        )
-        .text_xs();
+        let hint =
+            fret_ui_kit::ui::text("Right click, double click, drag, and open a context menu.")
+                .text_xs();
         ui.add_ui(hint);
 
         ui.separator();
 
         // Click variants.
-        let click_report = fret_ui_kit::ui::text(
-            ui.cx_mut(),
-            format!(
+        let click_report = fret_ui_kit::ui::text(format!(
                 "clicks: left={left_clicks} secondary={secondary_clicks} double={double_clicks} long={long_presses} holding={press_holding}"
             ),
         )
@@ -162,13 +158,10 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut ImUiResponseSignalsState) -> 
         ui.separator();
 
         // Drag lifecycle + deltas.
-        let drag_report = fret_ui_kit::ui::text(
-            ui.cx_mut(),
-            format!(
-                "drag: starts={drag_starts} stops={drag_stops} offset=({:.1},{:.1})",
-                drag_offset.x.0, drag_offset.y.0
-            ),
-        )
+        let drag_report = fret_ui_kit::ui::text(format!(
+            "drag: starts={drag_starts} stops={drag_stops} offset=({:.1},{:.1})",
+            drag_offset.x.0, drag_offset.y.0
+        ))
         .text_sm()
         .font_medium();
         ui.add_ui(drag_report);
@@ -199,30 +192,24 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut ImUiResponseSignalsState) -> 
         let drag_delta = drag.drag_delta();
         let drag_total = drag.drag_total();
         let drag_rect: Option<Rect> = drag.core.rect;
-        let drag_details = fret_ui_kit::ui::text(
-            ui.cx_mut(),
-            format!(
-                "drag delta=({:.1},{:.1}) total=({:.1},{:.1}) rect={}",
-                drag_delta.x.0,
-                drag_delta.y.0,
-                drag_total.x.0,
-                drag_total.y.0,
-                format_rect_short(drag_rect)
-            ),
-        )
+        let drag_details = fret_ui_kit::ui::text(format!(
+            "drag delta=({:.1},{:.1}) total=({:.1},{:.1}) rect={}",
+            drag_delta.x.0,
+            drag_delta.y.0,
+            drag_total.x.0,
+            drag_total.y.0,
+            format_rect_short(drag_rect)
+        ))
         .text_xs();
         ui.add_ui(drag_details);
 
         ui.separator();
 
         // Context menu request + anchor.
-        let ctx_report = fret_ui_kit::ui::text(
-            ui.cx_mut(),
-            format!(
-                "context menu: last_anchor={} toggle={menu_toggle}",
-                format_point_short(last_anchor)
-            ),
-        )
+        let ctx_report = fret_ui_kit::ui::text(format!(
+            "context menu: last_anchor={} toggle={menu_toggle}",
+            format_point_short(last_anchor)
+        ))
         .text_sm()
         .font_medium();
         ui.add_ui(ctx_report);

@@ -5,7 +5,7 @@ use fret_ui::element::SemanticsDecoration;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let rail = ui::container(cx, |cx| {
+    let rail = ui::container(|cx| {
         vec![stack::hstack(
             cx,
             stack::HStackProps::default().gap(Space::N4).items_start(),

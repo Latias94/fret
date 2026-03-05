@@ -156,7 +156,7 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
                         .test_id("ui-gallery-scroll-area-drag-baseline-idle")
                 };
 
-                let controls = ui::h_flex(cx, |_cx| [reset, arm, status])
+                let controls = ui::h_flex(|_cx| [reset, arm, status])
                     .gap(Space::N2)
                     .into_element(cx)
                     .test_id("ui-gallery-scroll-area-drag-baseline-controls");
@@ -284,7 +284,7 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
                 );
 
                 vec![
-                    ui::v_flex(cx, |_cx| [controls, instructions, body])
+                    ui::v_flex(|_cx| [controls, instructions, body])
                         .gap(Space::N2)
                         .into_element(cx),
                 ]

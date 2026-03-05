@@ -60,7 +60,7 @@ pub(in crate::ui) fn preview_intro(
             LayoutRefinement::default().w_full().min_w_0(),
         );
         cx.container(props, |cx| {
-            vec![ui::text_block(cx, "Phase 1: fixed two-pane layout + hardcoded docs strings (focus on validating component usability). Docking/multi-window views will come later.")
+            vec![ui::text_block( "Phase 1: fixed two-pane layout + hardcoded docs strings (focus on validating component usability). Docking/multi-window views will come later.")
                 .text_color(text_color)
                 .into_element(cx)]
         })

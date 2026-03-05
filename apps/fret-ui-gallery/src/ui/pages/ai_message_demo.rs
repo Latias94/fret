@@ -19,5 +19,5 @@ pub(super) fn preview_ai_message_demo(
         ],
     );
 
-    vec![body.test_id("ui-gallery-page-ai-message-demo")]
+    vec![body]
 }

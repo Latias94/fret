@@ -20,7 +20,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                         stack::HStackProps::default().gap(Space::N2).items_center(),
                         |cx| {
                             vec![
-                                ui::text(cx, "Save Changes").into_element(cx),
+                                ui::text("Shortcut:").text_sm().into_element(cx),
                                 shadcn::Kbd::new("S").into_element(cx),
                             ]
                         },
@@ -43,7 +43,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                         stack::HStackProps::default().gap(Space::N2).items_center(),
                         |cx| {
                             vec![
-                                ui::text(cx, "Print Document").into_element(cx),
+                                ui::text("Shortcut:").text_sm().into_element(cx),
                                 shadcn::KbdGroup::new([
                                     shadcn::Kbd::new("Ctrl").into_element(cx),
                                     shadcn::Kbd::new("P").into_element(cx),

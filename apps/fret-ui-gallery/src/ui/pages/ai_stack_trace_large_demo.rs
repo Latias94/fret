@@ -19,5 +19,5 @@ pub(super) fn preview_ai_stack_trace_large_demo(
         ],
     );
 
-    vec![body.test_id("ui-gallery-page-ai-stack-trace-large-demo")]
+    vec![body]
 }

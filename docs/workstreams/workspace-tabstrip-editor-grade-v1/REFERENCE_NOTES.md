@@ -24,6 +24,10 @@ Primary reference for editor-grade outcomes:
 Evidence anchor:
 
 - `repo-ref/zed/crates/workspace/src/pane.rs`
+  - `render_two_row_tab_bar(...)` (separate pinned row mode)
+  - `render_tab_bar_drop_target(...)` (`id("tab_bar_drop_target")` flex-grow end-drop surface)
+  - `render_pinned_tab_bar_drop_target(...)` (pinned row end-drop surface + pinned boundary styling)
+  - `handle_drag_move(...)` (split-zone preview routing; useful for row-suppression expectations)
 
 ### gpui-component (wiring shape + end-drop surface)
 
@@ -49,6 +53,8 @@ Evidence anchors:
 
 - `repo-ref/dockview/packages/dockview-core/src/dockview/components/titlebar/tabsContainer.ts`
 - `repo-ref/dockview/packages/dockview-core/src/__tests__/dockview/components/titlebar/tabsContainer.spec.ts`
+- `repo-ref/dockview/packages/dockview-core/src/dockview/components/titlebar/voidContainer.ts`
+  - `kind: 'header_space'` overlay events (header space is a first-class drop surface)
 
 ## External OSS references (not vendored)
 

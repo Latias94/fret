@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use fret_core::{Corners, Edges, Px};
+use fret_icons::IconId;
 use fret_ui::action::OnActivate;
 use fret_ui::element::{AnyElement, ContainerProps};
 use fret_ui::scroll::{ScrollStrategy, VirtualListScrollHandle};
@@ -108,10 +109,12 @@ impl ConversationScrollButton {
             host.request_redraw(action_cx.window);
         });
 
-        let mut button = Button::new(self.label)
+        let mut button = Button::new("")
+            .a11y_label(self.label)
             .variant(ButtonVariant::Outline)
             .size(ButtonSize::Icon)
-            .children(vec![cx.text("↓")])
+            .leading_icon(IconId::new_static("lucide.arrow-down"))
+            .corner_radii_override(Corners::all(Px(999.0)))
             .on_activate(on_activate);
 
         if let Some(test_id) = self.test_id {

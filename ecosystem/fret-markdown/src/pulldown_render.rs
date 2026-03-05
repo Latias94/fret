@@ -371,7 +371,6 @@ fn render_table_cell<H: UiHost>(
 
     let font_size = theme.metric_token("metric.font.size");
     let line_height = theme.metric_token("metric.font.line_height");
-    let fg = theme.color_token("foreground");
     let base = InlineBaseStyle {
         font: FontId::default(),
         size: font_size,
@@ -381,7 +380,6 @@ fn render_table_cell<H: UiHost>(
             FontWeight::NORMAL
         },
         line_height: Some(line_height),
-        color: fg,
     };
 
     cx.container(props, |cx| {

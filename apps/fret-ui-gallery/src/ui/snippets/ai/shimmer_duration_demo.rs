@@ -1,0 +1,45 @@
+pub const SOURCE: &str = include_str!("shimmer_duration_demo.rs");
+
+// region: example
+use fret_ui_ai as ui_ai;
+use fret_ui_kit::declarative::stack;
+use fret_ui_kit::{LayoutRefinement, Space};
+use fret_ui_shadcn::{self as shadcn, prelude::*};
+use std::sync::Arc;
+
+pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+    let item =
+        |cx: &mut ElementContext<'_, H>, label: &'static str, secs: f32, text: &'static str| {
+            stack::vstack(
+                cx,
+                stack::VStackProps::default().gap(Space::N2).items_center(),
+                move |cx| {
+                    vec![
+                        shadcn::Badge::new(label)
+                            .variant(shadcn::BadgeVariant::Secondary)
+                            .into_element(cx),
+                        ui_ai::Shimmer::new(Arc::<str>::from(text))
+                            .duration_secs(secs)
+                            .into_element(cx),
+                    ]
+                },
+            )
+        };
+
+    stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .layout(LayoutRefinement::default().w_full().min_w_0())
+            .gap(Space::N6),
+        move |cx| {
+            vec![
+                item(cx, "Fast (1 second)", 1.0, "Loading quickly..."),
+                item(cx, "Default (2 seconds)", 2.0, "Loading at normal speed..."),
+                item(cx, "Slow (4 seconds)", 4.0, "Loading slowly..."),
+                item(cx, "Very Slow (6 seconds)", 6.0, "Loading very slowly..."),
+            ]
+        },
+    )
+    .test_id("ui-ai-shimmer-duration-root")
+}
+// endregion: example

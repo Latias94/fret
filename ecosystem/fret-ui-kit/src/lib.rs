@@ -10,7 +10,7 @@
 /// Build a heterogeneous `Vec<AnyElement>` without repetitive `.into_element(cx)` boilerplate.
 ///
 /// Intended for ergonomic authoring inside layout builders, e.g.:
-/// `ui::h_flex(cx, |cx| ui::children![cx; Button::new("OK").ui(), cx.text("...")])`.
+/// `ui::h_flex(|cx| ui::children![cx; Button::new("OK").ui(), cx.text("...")])`.
 #[macro_export]
 macro_rules! children {
     ($cx:ident;) => {
@@ -255,8 +255,8 @@ pub use window_overlays::{
 pub mod prelude {
     pub use crate::command::ElementCommandGatingExt as _;
     pub use crate::declarative::prelude::*;
+    pub use crate::declarative::style;
     pub use crate::declarative::{CachedSubtreeExt, CachedSubtreeProps};
-    pub use crate::declarative::{stack, style};
     pub use crate::ui;
 
     #[cfg(feature = "imui")]

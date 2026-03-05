@@ -221,7 +221,7 @@ impl View for RouterBasicsView {
 
         let location = cx.text(location_label).test_id(TEST_ID_LOCATION_LABEL);
 
-        let header_row = ui::h_flex(cx, |_cx| [back, forward, location])
+        let header_row = ui::h_flex(|_cx| [back, forward, location])
             .gap(Space::N2)
             .items_center()
             .into_element(cx);
@@ -293,7 +293,7 @@ impl View for RouterBasicsView {
                     .into_element(cx),
             ])
             .into_element(cx),
-            shadcn::CardContent::new([ui::v_flex(cx, |_cx| {
+            shadcn::CardContent::new([ui::v_flex(|_cx| {
                 [home_link, settings_link, user_link, missing_link]
             })
             .gap(Space::N2)
@@ -370,7 +370,7 @@ impl View for RouterBasicsView {
                     .test_id(TEST_ID_BTN_CLEAR_INTENTS),
             ])
             .into_element(cx),
-            shadcn::CardContent::new([ui::v_flex(cx, |cx| {
+            shadcn::CardContent::new([ui::v_flex(|cx| {
                 if intents.is_empty() {
                     return vec![cx.text("<none>")];
                 }
@@ -396,10 +396,10 @@ impl View for RouterBasicsView {
         .w_px(Px(320.0))
         .into_element(cx);
 
-        let content = ui::v_flex(cx, |cx| {
+        let content = ui::v_flex(|cx| {
             [
                 header_row,
-                ui::h_flex(cx, |_cx| [nav, outlet, intents_panel])
+                ui::h_flex(|_cx| [nav, outlet, intents_panel])
                     .gap(Space::N3)
                     .items_start()
                     .into_element(cx),

@@ -88,15 +88,12 @@ impl<H: UiHost> UiTree<H> {
         }
 
         let default_root = barrier_root.unwrap_or(base_root);
-        let focus = self.focus;
-        let focus_in_default_root = focus.is_some_and(|n| self.is_descendant(default_root, n));
-        let start = focus.unwrap_or(default_root);
+        let start = self.focus.unwrap_or(default_root);
         let mut availability = self.command_availability_from_node(app, &input_ctx, start, command);
-        if availability == CommandAvailability::NotHandled
-            && focus.is_some()
-            && !focus_in_default_root
-            && start != default_root
-        {
+        // When focus lives in a non-default layer (e.g. a non-modal overlay), we still want
+        // widget-scoped command availability to fall back to the default root so global shortcuts
+        // and menus remain usable.
+        if availability == CommandAvailability::NotHandled && start != default_root {
             availability =
                 self.command_availability_from_node(app, &input_ctx, default_root, command);
         }

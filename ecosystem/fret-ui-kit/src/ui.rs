@@ -61,6 +61,7 @@ pub struct FlexBox<H, F> {
     pub(crate) chrome: ChromeRefinement,
     pub(crate) layout: LayoutRefinement,
     pub(crate) direction: Axis,
+    pub(crate) force_width_fill: bool,
     pub(crate) gap: MetricRef,
     pub(crate) gap_length: Option<LengthRefinement>,
     pub(crate) justify: Justify,
@@ -76,6 +77,7 @@ pub struct FlexBoxBuild<H, B> {
     pub(crate) chrome: ChromeRefinement,
     pub(crate) layout: LayoutRefinement,
     pub(crate) direction: Axis,
+    pub(crate) force_width_fill: bool,
     pub(crate) gap: MetricRef,
     pub(crate) gap_length: Option<LengthRefinement>,
     pub(crate) justify: Justify,
@@ -95,6 +97,7 @@ impl<H, F> FlexBox<H, F> {
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
             direction,
+            force_width_fill: true,
             gap: MetricRef::space(Space::N0),
             gap_length: None,
             justify: Justify::Start,
@@ -116,6 +119,7 @@ impl<H, B> FlexBoxBuild<H, B> {
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
             direction,
+            force_width_fill: true,
             gap: MetricRef::space(Space::N0),
             gap_length: None,
             justify: Justify::Start,
@@ -178,7 +182,9 @@ where
             wrap: self.wrap,
             ..Default::default()
         };
-        flex_props.layout.size.width = Length::Fill;
+        if self.force_width_fill {
+            flex_props.layout.size.width = Length::Fill;
+        }
 
         let children = self.children.expect("expected flex children closure");
         cx.container(container, move |cx| {
@@ -217,7 +223,9 @@ where
             wrap: self.wrap,
             ..Default::default()
         };
-        flex_props.layout.size.width = Length::Fill;
+        if self.force_width_fill {
+            flex_props.layout.size.width = Length::Fill;
+        }
 
         let build = self.build.expect("expected flex build closure");
         cx.container(container, move |cx| {
@@ -233,11 +241,8 @@ where
 /// Returns a patchable horizontal flex layout builder.
 ///
 /// Usage:
-/// - `ui::h_flex(cx, |cx| vec![...]).gap(Space::N2).px_2().into_element(cx)`
-pub fn h_flex<H: UiHost, F, I>(
-    _cx: &mut ElementContext<'_, H>,
-    children: F,
-) -> UiBuilder<FlexBox<H, F>>
+/// - `ui::h_flex(|cx| vec![...]).gap(Space::N2).px_2().into_element(cx)`
+pub fn h_flex<H: UiHost, F, I>(children: F) -> UiBuilder<FlexBox<H, F>>
 where
     F: FnOnce(&mut ElementContext<'_, H>) -> I,
     I: IntoIterator,
@@ -246,25 +251,44 @@ where
     UiBuilder::new(FlexBox::new(Axis::Horizontal, children))
 }
 
+/// Returns a patchable horizontal flex layout builder that does **not** force `width: fill`.
+///
+/// Use this when you want the row to shrink-wrap its contents (or to avoid inflating child hit
+/// boxes due to a fill-width flex root).
+pub fn h_row<H: UiHost, F, I>(children: F) -> UiBuilder<FlexBox<H, F>>
+where
+    F: FnOnce(&mut ElementContext<'_, H>) -> I,
+    I: IntoIterator,
+    I::Item: UiIntoElement,
+{
+    let mut flex = FlexBox::new(Axis::Horizontal, children);
+    flex.force_width_fill = false;
+    UiBuilder::new(flex)
+}
+
 /// Variant of [`h_flex`] that avoids iterator borrow pitfalls by collecting into a sink.
 ///
 /// Use this when the natural authoring form is an iterator that captures `&mut cx` (e.g.
 /// `items.iter().map(|it| cx.keyed(...))`), which cannot be returned directly.
-pub fn h_flex_build<H: UiHost, B>(
-    _cx: &mut ElementContext<'_, H>,
-    build: B,
-) -> UiBuilder<FlexBoxBuild<H, B>>
+pub fn h_flex_build<H: UiHost, B>(build: B) -> UiBuilder<FlexBoxBuild<H, B>>
 where
     B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
 {
     UiBuilder::new(FlexBoxBuild::new(Axis::Horizontal, build))
 }
 
+/// Variant of [`h_row`] that avoids iterator borrow pitfalls by collecting into a sink.
+pub fn h_row_build<H: UiHost, B>(build: B) -> UiBuilder<FlexBoxBuild<H, B>>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    let mut flex = FlexBoxBuild::new(Axis::Horizontal, build);
+    flex.force_width_fill = false;
+    UiBuilder::new(flex)
+}
+
 /// Returns a patchable vertical flex layout builder.
-pub fn v_flex<H: UiHost, F, I>(
-    _cx: &mut ElementContext<'_, H>,
-    children: F,
-) -> UiBuilder<FlexBox<H, F>>
+pub fn v_flex<H: UiHost, F, I>(children: F) -> UiBuilder<FlexBox<H, F>>
 where
     F: FnOnce(&mut ElementContext<'_, H>) -> I,
     I: IntoIterator,
@@ -277,10 +301,7 @@ where
 ///
 /// Use this when the natural authoring form is an iterator that captures `&mut cx` (e.g.
 /// `items.iter().map(|it| cx.keyed(...))`), which cannot be returned directly.
-pub fn v_flex_build<H: UiHost, B>(
-    _cx: &mut ElementContext<'_, H>,
-    build: B,
-) -> UiBuilder<FlexBoxBuild<H, B>>
+pub fn v_flex_build<H: UiHost, B>(build: B) -> UiBuilder<FlexBoxBuild<H, B>>
 where
     B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
 {
@@ -389,11 +410,8 @@ where
 /// Returns a patchable container builder.
 ///
 /// Usage:
-/// - `ui::container(cx, |cx| vec![...]).px_2().into_element(cx)`
-pub fn container<H: UiHost, F, I>(
-    _cx: &mut ElementContext<'_, H>,
-    children: F,
-) -> UiBuilder<ContainerBox<H, F>>
+/// - `ui::container(|cx| vec![...]).px_2().into_element(cx)`
+pub fn container<H: UiHost, F, I>(children: F) -> UiBuilder<ContainerBox<H, F>>
 where
     F: FnOnce(&mut ElementContext<'_, H>) -> I,
     I: IntoIterator,
@@ -403,10 +421,7 @@ where
 }
 
 /// Variant of [`container`] that avoids iterator borrow pitfalls by collecting into a sink.
-pub fn container_build<H: UiHost, B>(
-    _cx: &mut ElementContext<'_, H>,
-    build: B,
-) -> UiBuilder<ContainerBoxBuild<H, B>>
+pub fn container_build<H: UiHost, B>(build: B) -> UiBuilder<ContainerBoxBuild<H, B>>
 where
     B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
 {
@@ -805,10 +820,7 @@ where
 /// Defaults:
 /// - axis: vertical
 /// - scrollbar: Y on, X off
-pub fn scroll_area<H: UiHost, F, I>(
-    _cx: &mut ElementContext<'_, H>,
-    children: F,
-) -> UiBuilder<ScrollAreaBox<H, F>>
+pub fn scroll_area<H: UiHost, F, I>(children: F) -> UiBuilder<ScrollAreaBox<H, F>>
 where
     F: FnOnce(&mut ElementContext<'_, H>) -> I,
     I: IntoIterator,
@@ -818,10 +830,7 @@ where
 }
 
 /// Variant of [`scroll_area`] that avoids iterator borrow pitfalls by collecting into a sink.
-pub fn scroll_area_build<H: UiHost, B>(
-    _cx: &mut ElementContext<'_, H>,
-    build: B,
-) -> UiBuilder<ScrollAreaBoxBuild<H, B>>
+pub fn scroll_area_build<H: UiHost, B>(build: B) -> UiBuilder<ScrollAreaBoxBuild<H, B>>
 where
     B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
 {
@@ -886,11 +895,8 @@ where
 /// Returns a patchable stack layout builder.
 ///
 /// Usage:
-/// - `ui::stack(cx, |cx| vec![...]).inset(Space::N2).into_element(cx)`
-pub fn stack<H: UiHost, F, I>(
-    _cx: &mut ElementContext<'_, H>,
-    children: F,
-) -> UiBuilder<StackBox<H, F>>
+/// - `ui::stack(|cx| vec![...]).inset(Space::N2).into_element(cx)`
+pub fn stack<H: UiHost, F, I>(children: F) -> UiBuilder<StackBox<H, F>>
 where
     F: FnOnce(&mut ElementContext<'_, H>) -> I,
     I: IntoIterator,
@@ -1120,11 +1126,8 @@ impl UiIntoElement for TextBox {
 /// Returns a patchable text builder (shadcn-aligned defaults).
 ///
 /// Usage:
-/// - `ui::text(cx, "Hello").text_sm().font_medium().into_element(cx)`
-pub fn text<H: UiHost>(
-    _cx: &mut ElementContext<'_, H>,
-    text: impl Into<Arc<str>>,
-) -> UiBuilder<TextBox> {
+/// - `ui::text("Hello").text_sm().font_medium().into_element(cx)`
+pub fn text(text: impl Into<Arc<str>>) -> UiBuilder<TextBox> {
     UiBuilder::new(TextBox::new(text, TextPreset::Sm))
 }
 
@@ -1132,11 +1135,8 @@ pub fn text<H: UiHost>(
 ///
 /// Use this for paragraph-like text that should wrap against the available inner width of its
 /// containing block.
-pub fn text_block<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    content: impl Into<Arc<str>>,
-) -> UiBuilder<TextBox> {
-    text(cx, content).w_full()
+pub fn text_block(content: impl Into<Arc<str>>) -> UiBuilder<TextBox> {
+    text(content).w_full()
 }
 
 /// Returns a patchable selectable text builder (drag-to-select + `edit.copy`).
@@ -1144,26 +1144,17 @@ pub fn text_block<H: UiHost>(
 /// Prefer this for read-only values (paths/IDs/snippets) and documentation-like content.
 /// Avoid using it inside pressable/clickable rows: it intentionally captures left-drag selection
 /// gestures and stops propagation (use a dedicated copy button instead).
-pub fn selectable_text<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    text: impl Into<Arc<str>>,
-) -> UiBuilder<TextBox> {
-    crate::ui::text(cx, text).selectable_on()
+pub fn selectable_text(text: impl Into<Arc<str>>) -> UiBuilder<TextBox> {
+    crate::ui::text(text).selectable_on()
 }
 
 /// Returns a patchable selectable block text builder (full-width; drag-to-select + `edit.copy`).
-pub fn selectable_text_block<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    content: impl Into<Arc<str>>,
-) -> UiBuilder<TextBox> {
-    selectable_text(cx, content).w_full()
+pub fn selectable_text_block(content: impl Into<Arc<str>>) -> UiBuilder<TextBox> {
+    selectable_text(content).w_full()
 }
 
 /// Returns a patchable label builder (single-line, medium weight).
-pub fn label<H: UiHost>(
-    _cx: &mut ElementContext<'_, H>,
-    text: impl Into<Arc<str>>,
-) -> UiBuilder<TextBox> {
+pub fn label(text: impl Into<Arc<str>>) -> UiBuilder<TextBox> {
     UiBuilder::new(TextBox::new(text, TextPreset::Label))
 }
 
@@ -1238,10 +1229,7 @@ impl UiIntoElement for RawTextBox {
 }
 
 /// Returns a patchable unstyled text builder matching `TextProps::new(...)` defaults.
-pub fn raw_text<H: UiHost>(
-    _cx: &mut ElementContext<'_, H>,
-    text: impl Into<Arc<str>>,
-) -> UiBuilder<RawTextBox> {
+pub fn raw_text(text: impl Into<Arc<str>>) -> UiBuilder<RawTextBox> {
     UiBuilder::new(RawTextBox::new(text))
 }
 
@@ -1281,7 +1269,7 @@ mod tests {
     // (e.g. `UiBuilder<TextBox>`) without requiring call-site `.into_element(cx)`.
     #[allow(dead_code)]
     fn h_flex_accepts_ui_builder_children<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-        h_flex(cx, |cx| [text(cx, "a"), text(cx, "b")])
+        h_flex(|cx| [text("a"), text("b")])
             .gap(Space::N2)
             .into_element(cx)
     }

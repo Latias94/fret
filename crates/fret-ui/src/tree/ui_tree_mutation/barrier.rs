@@ -26,6 +26,10 @@ impl<H: UiHost> UiTree<H> {
                     n.parent = Some(parent);
                 }
             }
+            // `set_children_barrier` is used by explicit layout barriers (scroll/virtualization)
+            // that may be remounted without changing the child list. Ensure the subtree dirty
+            // aggregation stays consistent even when the structural list is identical.
+            self.recompute_node_subtree_layout_dirty_count_and_propagate(parent);
             return;
         }
 

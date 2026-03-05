@@ -19,6 +19,7 @@ use fret_ui::element::{
     TextProps,
 };
 use fret_ui_kit::custom_effects::CustomEffectProgramV1;
+use fret_ui_kit::ui;
 use fret_ui_kit::{Space, UiIntoElement};
 
 mod act {
@@ -286,14 +287,11 @@ impl View for ThemePostprocessView {
             }
         });
 
-        let root = shadcn::stack::hstack(
-            cx,
-            shadcn::stack::HStackProps::default()
-                .layout(LayoutRefinement::default().size_full())
-                .items_stretch()
-                .gap(Space::N0),
-            move |_cx| vec![inspector, stage],
-        );
+        let root = ui::h_flex(move |_cx| [inspector, stage])
+            .layout(LayoutRefinement::default().size_full())
+            .items_stretch()
+            .gap(Space::N0)
+            .into_element(cx);
 
         vec![root].into()
     }
@@ -384,21 +382,18 @@ fn inspector(
         },
         move |cx| {
             let label_row = |cx: &mut ElementContext<'_, App>, label: &str, value: String| {
-                shadcn::stack::hstack(
-                    cx,
-                    shadcn::stack::HStackProps::default()
-                        .gap(Space::N2)
-                        .items_center(),
-                    move |cx| {
-                        vec![
-                            shadcn::Label::new(label).into_element(cx),
-                            cx.spacer(SpacerProps::default()),
-                            shadcn::Badge::new(value)
-                                .variant(shadcn::BadgeVariant::Secondary)
-                                .into_element(cx),
-                        ]
-                    },
-                )
+                ui::h_row(|cx| {
+                    [
+                        shadcn::Label::new(label).into_element(cx),
+                        cx.spacer(SpacerProps::default()),
+                        shadcn::Badge::new(value)
+                            .variant(shadcn::BadgeVariant::Secondary)
+                            .into_element(cx),
+                    ]
+                })
+                .gap(Space::N2)
+                .items_center()
+                .into_element(cx)
             };
 
             let header = shadcn::CardHeader::new([
@@ -410,23 +405,21 @@ fn inspector(
             ])
             .into_element(cx);
 
-            let theme_row = shadcn::stack::vstack(
-                cx,
-                shadcn::stack::VStackProps::default().gap(Space::N2),
-                move |cx| {
-                    vec![
-                        label_row(cx, "Theme", theme.to_string()),
-                        shadcn::Select::new(theme_model.clone(), theme_open_model.clone())
-                            .value(shadcn::SelectValue::new().placeholder("Pick a theme"))
-                            .items([
-                                shadcn::SelectItem::new("none", "None"),
-                                shadcn::SelectItem::new("cyberpunk", "Cyberpunk"),
-                                shadcn::SelectItem::new("retro", "Retro"),
-                            ])
-                            .into_element(cx),
-                    ]
-                },
-            );
+            let theme_row = ui::v_flex(move |cx| {
+                vec![
+                    label_row(cx, "Theme", theme.to_string()),
+                    shadcn::Select::new(theme_model.clone(), theme_open_model.clone())
+                        .value(shadcn::SelectValue::new().placeholder("Pick a theme"))
+                        .items([
+                            shadcn::SelectItem::new("none", "None"),
+                            shadcn::SelectItem::new("cyberpunk", "Cyberpunk"),
+                            shadcn::SelectItem::new("retro", "Retro"),
+                        ])
+                        .into_element(cx),
+                ]
+            })
+            .gap(Space::N2)
+            .into_element(cx);
 
             let chromatic_row = label_row(
                 cx,
@@ -445,60 +438,46 @@ fn inspector(
 
             let retro_pixel_row =
                 label_row(cx, "Retro pixel scale", format!("{retro_pixel_scale:.2}"));
-            let retro_dither_row = shadcn::stack::hstack(
-                cx,
-                shadcn::stack::HStackProps::default()
-                    .gap(Space::N2)
-                    .items_center(),
-                move |cx| {
-                    vec![
-                        shadcn::Switch::new(retro_dither_model.clone())
-                            .a11y_label("Enable retro dither")
-                            .test_id("postprocess.retro.dither")
-                            .into_element(cx),
-                        shadcn::Label::new(format!("Retro dither ({retro_dither})")).into_element(cx),
-                    ]
-                },
-            );
+            let retro_dither_row = ui::h_row(move |cx| {
+                [
+                    shadcn::Switch::new(retro_dither_model.clone())
+                        .a11y_label("Enable retro dither")
+                        .test_id("postprocess.retro.dither")
+                        .into_element(cx),
+                    shadcn::Label::new(format!("Retro dither ({retro_dither})")).into_element(cx),
+                ]
+            })
+            .gap(Space::N2)
+            .items_center()
+            .into_element(cx);
 
-            let content = shadcn::CardContent::new([shadcn::stack::vstack(
-                cx,
-                shadcn::stack::VStackProps::default()
-                    .gap(Space::N3)
-                    .items_stretch(),
-                move |cx| {
-                    vec![
-                        shadcn::stack::hstack(
-                            cx,
-                            shadcn::stack::HStackProps::default()
-                                .gap(Space::N2)
-                                .items_center(),
-                            |cx| {
-                                vec![
-                                    shadcn::Switch::new(enabled_model.clone())
-                                        .a11y_label("Enable postprocess")
-                                        .test_id("postprocess.enabled")
-                                        .into_element(cx),
-                                    shadcn::Label::new("Enable").into_element(cx),
-                                ]
-                            },
-                        ),
-                        shadcn::stack::hstack(
-                            cx,
-                            shadcn::stack::HStackProps::default()
-                                .gap(Space::N2)
-                                .items_center(),
-                            |cx| {
-                                vec![
-                                    shadcn::Switch::new(compare_model.clone())
-                                        .a11y_label("Compare raw vs processed")
-                                        .test_id("postprocess.compare")
-                                        .into_element(cx),
-                                    shadcn::Label::new("Compare (Raw vs Processed)")
-                                        .into_element(cx),
-                                ]
-                            },
-                        ),
+            let content = shadcn::CardContent::new([ui::v_flex(move |cx| {
+                vec![
+                    ui::h_row(|cx| {
+                        [
+                            shadcn::Switch::new(enabled_model.clone())
+                                .a11y_label("Enable postprocess")
+                                .test_id("postprocess.enabled")
+                                .into_element(cx),
+                            shadcn::Label::new("Enable").into_element(cx),
+                        ]
+                    })
+                    .gap(Space::N2)
+                    .items_center()
+                    .into_element(cx),
+                    ui::h_row(|cx| {
+                        [
+                            shadcn::Switch::new(compare_model.clone())
+                                .a11y_label("Compare raw vs processed")
+                                .test_id("postprocess.compare")
+                                .into_element(cx),
+                            shadcn::Label::new("Compare (Raw vs Processed)")
+                                .into_element(cx),
+                        ]
+                    })
+                    .gap(Space::N2)
+                    .items_center()
+                    .into_element(cx),
                         theme_row,
                         shadcn::Separator::new().into_element(cx),
                         chromatic_row,
@@ -544,9 +523,11 @@ fn inspector(
                             .action(act::Reset)
                             .test_id("postprocess.reset")
                             .into_element(cx),
-                    ]
-                },
-            )])
+                ]
+            })
+            .gap(Space::N3)
+            .items_stretch()
+            .into_element(cx)])
             .into_element(cx);
 
             vec![
@@ -657,40 +638,37 @@ fn stage(
         return processed;
     }
 
-    shadcn::stack::hstack(
-        cx,
-        shadcn::stack::HStackProps::default()
-            .layout(LayoutRefinement::default().size_full())
-            .items_stretch()
-            .gap(Space::N0),
-        move |cx| {
-            let mut cell_layout = LayoutStyle::default();
-            cell_layout.size.width = Length::Fill;
-            cell_layout.size.height = Length::Fill;
-            cell_layout.flex.grow = 1.0;
+    ui::h_flex(move |cx| {
+        let mut cell_layout = LayoutStyle::default();
+        cell_layout.size.width = Length::Fill;
+        cell_layout.size.height = Length::Fill;
+        cell_layout.flex.grow = 1.0;
 
-            vec![
-                cx.container(
-                    ContainerProps {
-                        layout: cell_layout,
-                        ..Default::default()
-                    },
-                    move |_cx| vec![raw_body],
-                ),
-                shadcn::Separator::new()
-                    .orientation(shadcn::SeparatorOrientation::Vertical)
-                    .flex_stretch_cross_axis(true)
-                    .into_element(cx),
-                cx.container(
-                    ContainerProps {
-                        layout: cell_layout,
-                        ..Default::default()
-                    },
-                    move |_cx| vec![processed],
-                ),
-            ]
-        },
-    )
+        vec![
+            cx.container(
+                ContainerProps {
+                    layout: cell_layout,
+                    ..Default::default()
+                },
+                move |_cx| vec![raw_body],
+            ),
+            shadcn::Separator::new()
+                .orientation(shadcn::SeparatorOrientation::Vertical)
+                .flex_stretch_cross_axis(true)
+                .into_element(cx),
+            cx.container(
+                ContainerProps {
+                    layout: cell_layout,
+                    ..Default::default()
+                },
+                move |_cx| vec![processed],
+            ),
+        ]
+    })
+    .layout(LayoutRefinement::default().size_full())
+    .items_stretch()
+    .gap(Space::N0)
+    .into_element(cx)
 }
 
 fn stage_body(
@@ -767,13 +745,10 @@ fn stage_body(
                 },
                 move |cx| {
                     vec![
-                        shadcn::stack::hstack(
-                            cx,
-                            shadcn::stack::HStackProps::default()
-                                .gap(Space::N2)
-                                .items_center(),
-                            move |_cx| vec![title, enabled_badge],
-                        ),
+                        ui::h_row(move |_cx| [title, enabled_badge])
+                            .gap(Space::N2)
+                            .items_center()
+                            .into_element(cx),
                         subtitle,
                         shadcn::typography::muted(cx, label).into_element(cx),
                     ]
@@ -832,23 +807,20 @@ fn stage_cards(cx: &mut ElementContext<'_, App>) -> AnyElement {
             ..Default::default()
         },
         move |cx| {
-            let row = shadcn::stack::hstack(
-                cx,
-                shadcn::stack::HStackProps::default()
-                    .gap(Space::N4)
-                    .items_start()
-                    .layout(LayoutRefinement::default().w_full()),
-                move |cx| {
-                    vec![
-                        card(cx, "UI sample", "Buttons + text to reveal postprocess."),
-                        card(
-                            cx,
-                            "Small details",
-                            "Scanlines + dither make edges obvious.",
-                        ),
-                    ]
-                },
-            );
+            let row = ui::h_flex(move |cx| {
+                vec![
+                    card(cx, "UI sample", "Buttons + text to reveal postprocess."),
+                    card(
+                        cx,
+                        "Small details",
+                        "Scanlines + dither make edges obvious.",
+                    ),
+                ]
+            })
+            .gap(Space::N4)
+            .items_start()
+            .layout(LayoutRefinement::default().w_full())
+            .into_element(cx);
 
             vec![row]
         },

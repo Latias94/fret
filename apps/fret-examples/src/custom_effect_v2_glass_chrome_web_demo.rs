@@ -289,37 +289,34 @@ impl CustomEffectV2GlassChromeWebDriver {
     fn label_row(cx: &mut ElementContext<'_, App>, label: &str, value: String) -> AnyElement {
         let theme = Theme::global(&*cx.app).snapshot();
 
-        shadcn::stack::hstack(
-            cx,
-            shadcn::stack::HStackProps::default()
-                .gap(Space::N2)
-                .items_center()
-                .justify_between(),
-            |cx| {
-                vec![
-                    cx.text_props(TextProps {
-                        layout: Default::default(),
-                        text: label.into(),
-                        style: None,
-                        color: Some(theme.color_token("muted_foreground")),
-                        align: fret_core::TextAlign::Start,
-                        wrap: fret_core::TextWrap::None,
-                        overflow: fret_core::TextOverflow::Clip,
-                        ink_overflow: Default::default(),
-                    }),
-                    cx.text_props(TextProps {
-                        layout: Default::default(),
-                        text: value.into(),
-                        style: None,
-                        color: Some(theme.color_token("foreground")),
-                        align: fret_core::TextAlign::End,
-                        wrap: fret_core::TextWrap::None,
-                        overflow: fret_core::TextOverflow::Clip,
-                        ink_overflow: Default::default(),
-                    }),
-                ]
-            },
-        )
+        ui::h_flex(|cx| {
+            [
+                cx.text_props(TextProps {
+                    layout: Default::default(),
+                    text: label.into(),
+                    style: None,
+                    color: Some(theme.color_token("muted_foreground")),
+                    align: fret_core::TextAlign::Start,
+                    wrap: fret_core::TextWrap::None,
+                    overflow: fret_core::TextOverflow::Clip,
+                    ink_overflow: Default::default(),
+                }),
+                cx.text_props(TextProps {
+                    layout: Default::default(),
+                    text: value.into(),
+                    style: None,
+                    color: Some(theme.color_token("foreground")),
+                    align: fret_core::TextAlign::End,
+                    wrap: fret_core::TextWrap::None,
+                    overflow: fret_core::TextOverflow::Clip,
+                    ink_overflow: Default::default(),
+                }),
+            ]
+        })
+        .gap(Space::N2)
+        .items_center()
+        .justify_between()
+        .into_element(cx)
     }
 
     fn lens(cx: &mut ElementContext<'_, App>, controls: &DemoControls) -> AnyElement {
@@ -512,139 +509,119 @@ impl CustomEffectV2GlassChromeWebDriver {
         ])
         .into_element(cx);
 
-        let mode_row = shadcn::stack::hstack(
-            cx,
-            shadcn::stack::HStackProps::default()
-                .gap(Space::N2)
-                .items_center()
-                .justify_between(),
-            move |cx| {
-                vec![
-                    shadcn::Label::new("Mode").into_element(cx),
-                    shadcn::Select::new(mode_model.clone(), mode_open_model.clone())
-                        .value(shadcn::SelectValue::new().placeholder("Pick mode"))
-                        .items([
-                            shadcn::SelectItem::new("backdrop", "Backdrop"),
-                            shadcn::SelectItem::new("filter_content", "FilterContent"),
-                        ])
-                        .into_element(cx),
-                ]
-            },
-        );
+        let mode_row = ui::h_flex(move |cx| {
+            [
+                shadcn::Label::new("Mode").into_element(cx),
+                shadcn::Select::new(mode_model.clone(), mode_open_model.clone())
+                    .value(shadcn::SelectValue::new().placeholder("Pick mode"))
+                    .items([
+                        shadcn::SelectItem::new("backdrop", "Backdrop"),
+                        shadcn::SelectItem::new("filter_content", "FilterContent"),
+                    ])
+                    .into_element(cx),
+            ]
+        })
+        .gap(Space::N2)
+        .items_center()
+        .justify_between()
+        .into_element(cx);
 
-        let quality_row = shadcn::stack::hstack(
-            cx,
-            shadcn::stack::HStackProps::default()
-                .gap(Space::N2)
-                .items_center()
-                .justify_between(),
-            move |cx| {
-                vec![
-                    shadcn::Label::new("Quality").into_element(cx),
-                    shadcn::Select::new(quality_model.clone(), quality_open_model.clone())
-                        .value(shadcn::SelectValue::new().placeholder("Pick quality"))
-                        .items([
-                            shadcn::SelectItem::new("high", "High"),
-                            shadcn::SelectItem::new("auto", "Auto"),
-                            shadcn::SelectItem::new("low", "Low"),
-                        ])
-                        .into_element(cx),
-                ]
-            },
-        );
+        let quality_row = ui::h_flex(move |cx| {
+            [
+                shadcn::Label::new("Quality").into_element(cx),
+                shadcn::Select::new(quality_model.clone(), quality_open_model.clone())
+                    .value(shadcn::SelectValue::new().placeholder("Pick quality"))
+                    .items([
+                        shadcn::SelectItem::new("high", "High"),
+                        shadcn::SelectItem::new("auto", "Auto"),
+                        shadcn::SelectItem::new("low", "Low"),
+                    ])
+                    .into_element(cx),
+            ]
+        })
+        .gap(Space::N2)
+        .items_center()
+        .justify_between()
+        .into_element(cx);
 
-        let sampling_row = shadcn::stack::hstack(
-            cx,
-            shadcn::stack::HStackProps::default()
-                .gap(Space::N2)
-                .items_center()
-                .justify_between(),
-            move |cx| {
-                vec![
-                    shadcn::Label::new("Input sampling").into_element(cx),
-                    shadcn::Select::new(sampling_model.clone(), sampling_open_model.clone())
-                        .value(shadcn::SelectValue::new().placeholder("Pick sampling"))
-                        .items([
-                            shadcn::SelectItem::new("default", "Default"),
-                            shadcn::SelectItem::new("linear", "Linear"),
-                            shadcn::SelectItem::new("nearest", "Nearest"),
-                        ])
-                        .into_element(cx),
-                ]
-            },
-        );
+        let sampling_row = ui::h_flex(move |cx| {
+            [
+                shadcn::Label::new("Input sampling").into_element(cx),
+                shadcn::Select::new(sampling_model.clone(), sampling_open_model.clone())
+                    .value(shadcn::SelectValue::new().placeholder("Pick sampling"))
+                    .items([
+                        shadcn::SelectItem::new("default", "Default"),
+                        shadcn::SelectItem::new("linear", "Linear"),
+                        shadcn::SelectItem::new("nearest", "Nearest"),
+                    ])
+                    .into_element(cx),
+            ]
+        })
+        .gap(Space::N2)
+        .items_center()
+        .justify_between()
+        .into_element(cx);
 
-        let uv_span_row = shadcn::stack::vstack(
-            cx,
-            shadcn::stack::VStackProps::default().gap(Space::N2),
-            move |cx| {
-                vec![
-                    Self::label_row(cx, "Uv span", format!("{uv_span:.2}")),
-                    shadcn::Slider::new(uv_span_model.clone())
-                        .range(0.05, 1.0)
-                        .step(0.01)
-                        .into_element(cx),
-                ]
-            },
-        );
+        let uv_span_row = ui::v_flex(move |cx| {
+            [
+                Self::label_row(cx, "Uv span", format!("{uv_span:.2}")),
+                shadcn::Slider::new(uv_span_model.clone())
+                    .range(0.05, 1.0)
+                    .step(0.01)
+                    .into_element(cx),
+            ]
+        })
+        .gap(Space::N2)
+        .into_element(cx);
 
-        let strength_row = shadcn::stack::vstack(
-            cx,
-            shadcn::stack::VStackProps::default().gap(Space::N2),
-            move |cx| {
-                vec![
-                    Self::label_row(cx, "Strength", format!("{strength:.2}")),
-                    shadcn::Slider::new(strength_model.clone())
-                        .range(0.0, 2.0)
-                        .step(0.01)
-                        .into_element(cx),
-                ]
-            },
-        );
+        let strength_row = ui::v_flex(move |cx| {
+            [
+                Self::label_row(cx, "Strength", format!("{strength:.2}")),
+                shadcn::Slider::new(strength_model.clone())
+                    .range(0.0, 2.0)
+                    .step(0.01)
+                    .into_element(cx),
+            ]
+        })
+        .gap(Space::N2)
+        .into_element(cx);
 
-        let shininess_row = shadcn::stack::vstack(
-            cx,
-            shadcn::stack::VStackProps::default().gap(Space::N2),
-            move |cx| {
-                vec![
-                    Self::label_row(cx, "Shininess", format!("{shininess:.0}")),
-                    shadcn::Slider::new(shininess_model.clone())
-                        .range(1.0, 128.0)
-                        .step(1.0)
-                        .into_element(cx),
-                ]
-            },
-        );
+        let shininess_row = ui::v_flex(move |cx| {
+            [
+                Self::label_row(cx, "Shininess", format!("{shininess:.0}")),
+                shadcn::Slider::new(shininess_model.clone())
+                    .range(1.0, 128.0)
+                    .step(1.0)
+                    .into_element(cx),
+            ]
+        })
+        .gap(Space::N2)
+        .into_element(cx);
 
-        let mix_row = shadcn::stack::vstack(
-            cx,
-            shadcn::stack::VStackProps::default().gap(Space::N2),
-            move |cx| {
-                vec![
-                    Self::label_row(cx, "Mix", format!("{mix01:.2}")),
-                    shadcn::Slider::new(mix01_model.clone())
-                        .range(0.0, 1.0)
-                        .step(0.01)
-                        .into_element(cx),
-                ]
-            },
-        );
+        let mix_row = ui::v_flex(move |cx| {
+            [
+                Self::label_row(cx, "Mix", format!("{mix01:.2}")),
+                shadcn::Slider::new(mix01_model.clone())
+                    .range(0.0, 1.0)
+                    .step(0.01)
+                    .into_element(cx),
+            ]
+        })
+        .gap(Space::N2)
+        .into_element(cx);
 
-        let debug_row = shadcn::stack::hstack(
-            cx,
-            shadcn::stack::HStackProps::default()
-                .gap(Space::N2)
-                .items_center(),
-            move |cx| {
-                vec![
-                    shadcn::Switch::new(debug_input_model.clone())
-                        .a11y_label("Debug input texture")
-                        .test_id("customv2.glass_chrome.debug_input")
-                        .into_element(cx),
-                    shadcn::Label::new(format!("Debug input ({debug_input})")).into_element(cx),
-                ]
-            },
-        );
+        let debug_row = ui::h_flex(move |cx| {
+            [
+                shadcn::Switch::new(debug_input_model.clone())
+                    .a11y_label("Debug input texture")
+                    .test_id("customv2.glass_chrome.debug_input")
+                    .into_element(cx),
+                shadcn::Label::new(format!("Debug input ({debug_input})")).into_element(cx),
+            ]
+        })
+        .gap(Space::N2)
+        .items_center()
+        .into_element(cx);
 
         let reset_controls = controls.clone();
         let reset: fret_ui::action::OnActivate = Arc::new(move |host, acx, _reason| {
@@ -661,45 +638,39 @@ impl CustomEffectV2GlassChromeWebDriver {
             host.request_redraw(acx.window);
         });
 
-        let content = shadcn::CardContent::new([shadcn::stack::vstack(
-            cx,
-            shadcn::stack::VStackProps::default()
-                .gap(Space::N3)
-                .items_stretch(),
-            move |cx| {
-                vec![
-                    shadcn::stack::hstack(
-                        cx,
-                        shadcn::stack::HStackProps::default()
-                            .gap(Space::N2)
-                            .items_center(),
-                        |cx| {
-                            vec![
-                                shadcn::Switch::new(enabled_model.clone())
-                                    .a11y_label("Enable glass/chrome effect")
-                                    .test_id("customv2.glass_chrome.enabled")
-                                    .into_element(cx),
-                                shadcn::Label::new("Enable").into_element(cx),
-                            ]
-                        },
-                    ),
-                    mode_row,
-                    quality_row,
-                    sampling_row,
-                    shadcn::Separator::new().into_element(cx),
-                    uv_span_row,
-                    strength_row,
-                    shininess_row,
-                    mix_row,
-                    debug_row,
-                    shadcn::Button::new("Reset")
-                        .variant(shadcn::ButtonVariant::Secondary)
-                        .on_activate(reset.clone())
-                        .test_id("customv2.glass_chrome.reset")
-                        .into_element(cx),
-                ]
-            },
-        )])
+        let content = shadcn::CardContent::new([ui::v_flex(move |cx| {
+            [
+                ui::h_flex(|cx| {
+                    [
+                        shadcn::Switch::new(enabled_model.clone())
+                            .a11y_label("Enable glass/chrome effect")
+                            .test_id("customv2.glass_chrome.enabled")
+                            .into_element(cx),
+                        shadcn::Label::new("Enable").into_element(cx),
+                    ]
+                })
+                .gap(Space::N2)
+                .items_center()
+                .into_element(cx),
+                mode_row,
+                quality_row,
+                sampling_row,
+                shadcn::Separator::new().into_element(cx),
+                uv_span_row,
+                strength_row,
+                shininess_row,
+                mix_row,
+                debug_row,
+                shadcn::Button::new("Reset")
+                    .variant(shadcn::ButtonVariant::Secondary)
+                    .on_activate(reset.clone())
+                    .test_id("customv2.glass_chrome.reset")
+                    .into_element(cx),
+            ]
+        })
+        .gap(Space::N3)
+        .items_stretch()
+        .into_element(cx)])
         .into_element(cx);
 
         shadcn::Card::new([header, content])

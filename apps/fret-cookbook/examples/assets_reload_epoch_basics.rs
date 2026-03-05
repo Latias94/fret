@@ -93,7 +93,7 @@ impl View for AssetsReloadEpochBasicsView {
         ])
         .into_element(cx);
 
-        let actions = ui::h_flex(cx, |cx| {
+        let actions = ui::h_flex(|cx| {
             [
                 shadcn::Button::new("Bump assets reload epoch")
                     .variant(shadcn::ButtonVariant::Secondary)
@@ -141,7 +141,7 @@ impl View for AssetsReloadEpochBasicsView {
             .into_element(cx)
         };
 
-        let content = ui::v_flex(cx, |_cx| [actions, image_panel, svg_panel, stats])
+        let content = ui::v_flex(|_cx| [actions, image_panel, svg_panel, stats])
             .gap(Space::N4)
             .items_stretch()
             .into_element(cx);
@@ -169,7 +169,7 @@ fn render_image_panel(
         fret_ui_assets::image_asset_state::ImageLoadingStatus::Error => "error",
     };
 
-    let image_box = ui::container(cx, |cx| {
+    let image_box = ui::container(|cx| {
         if let Some(image) = st.image {
             let mut img = ImageProps::new(image);
             img.layout = LayoutStyle {
@@ -195,7 +195,7 @@ fn render_image_panel(
 
     let mut body: Vec<AnyElement> = Vec::new();
     body.push(
-        ui::h_flex(cx, |cx| {
+        ui::h_flex(|cx| {
             [
                 shadcn::Label::new("File image status:").into_element(cx),
                 shadcn::Badge::new(status)
@@ -231,7 +231,7 @@ fn render_image_panel(
         ])
         .into_element(cx),
         shadcn::CardContent::new([
-            ui::v_flex(cx, |_cx| body)
+            ui::v_flex(|_cx| body)
                 .gap(Space::N3)
                 .items_start()
                 .into_element(cx),
@@ -256,9 +256,9 @@ fn render_svg_panel(
         "missing"
     };
 
-    let box_el = ui::container(cx, |cx| {
+    let box_el = ui::container(|cx| {
         if let Some(err) = st.error.clone() {
-            [ui::text(cx, format!("Failed to read SVG: {err}"))
+            [ui::text(format!("Failed to read SVG: {err}"))
                 .text_color(ColorRef::Color(theme.color_token("destructive")))
                 .into_element(cx)]
         } else if let Some(bytes) = st.bytes.clone() {
@@ -295,9 +295,9 @@ fn render_svg_panel(
             .into_element(cx),
         ])
         .into_element(cx),
-        shadcn::CardContent::new([ui::v_flex(cx, |cx| {
+        shadcn::CardContent::new([ui::v_flex(|cx| {
             [
-                ui::h_flex(cx, |cx| {
+                ui::h_flex(|cx| {
                     [
                         shadcn::Label::new("SVG status:").into_element(cx),
                         shadcn::Badge::new(status)

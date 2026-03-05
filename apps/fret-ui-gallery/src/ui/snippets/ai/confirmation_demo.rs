@@ -3,8 +3,12 @@ pub const SOURCE: &str = include_str!("confirmation_demo.rs");
 // region: example
 use fret_runtime::Model;
 use fret_ui::Invalidation;
+use fret_ui::Theme;
 use fret_ui_ai as ui_ai;
+use fret_ui_kit::ColorRef;
+use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::stack;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::{LayoutRefinement, Space};
 use fret_ui_shadcn::{Button, ButtonSize, ButtonVariant, prelude::*};
 use std::sync::Arc;
@@ -68,9 +72,28 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
         }))
         .into_element(cx);
 
-    let approve_btn = Button::new("Approve")
+    let reject_btn = ui_ai::ConfirmationAction::new("Reject")
+        .variant(ButtonVariant::Outline)
+        .test_id("ui-ai-confirmation-reject")
+        .on_activate(Arc::new({
+            let state = state.clone();
+            let approval = approval.clone();
+            move |host, action_cx, _reason| {
+                let _ = host
+                    .models_mut()
+                    .update(&state, |v| *v = ui_ai::ToolUiPartState::OutputDenied);
+                let _ = host.models_mut().update(&approval, |v| {
+                    if let Some(current) = v.clone() {
+                        *v = Some(current.approved(false));
+                    }
+                });
+                host.notify(action_cx);
+            }
+        }))
+        .into_element(cx);
+
+    let approve_btn = ui_ai::ConfirmationAction::new("Approve")
         .variant(ButtonVariant::Default)
-        .size(ButtonSize::Sm)
         .test_id("ui-ai-confirmation-approve")
         .on_activate(Arc::new({
             let state = state.clone();
@@ -89,23 +112,69 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
         }))
         .into_element(cx);
 
-    let actions = stack::hstack(
-        cx,
-        stack::HStackProps::default().gap(Space::N2).items_center(),
-        move |_cx| vec![approve_btn],
-    );
+    let actions = ui_ai::ConfirmationActions::new(state_now, [reject_btn, approve_btn])
+        .test_id("ui-ai-confirmation-actions")
+        .into_element(cx);
 
-    let accepted = cx.text("Approved");
+    let theme = Theme::global(&*cx.app).snapshot();
+    let success = theme
+        .color_by_key("success")
+        .unwrap_or_else(|| theme.color_token("primary"));
+    let destructive = theme.color_token("destructive");
+
+    let accepted = [
+        decl_icon::icon_with(
+            cx,
+            fret_icons::IconId::new_static("lucide.check"),
+            Some(fret_core::Px(16.0)),
+            Some(ColorRef::Color(success)),
+        ),
+        cx.text("You approved this tool execution"),
+    ];
+
+    let rejected = [
+        decl_icon::icon_with(
+            cx,
+            fret_icons::IconId::new_static("lucide.x"),
+            Some(fret_core::Px(16.0)),
+            Some(ColorRef::Color(destructive)),
+        ),
+        cx.text("You rejected this tool execution"),
+    ];
+
+    let request = ui_ai::ConfirmationRequest::new(
+        state_now,
+        [
+            cx.text("This tool wants to execute a query on the production database:"),
+            stack::vstack(
+                cx,
+                stack::VStackProps::default()
+                    .layout(LayoutRefinement::default().mt(Space::N2).w_full().min_w_0())
+                    .gap(Space::N1),
+                |cx| {
+                    vec![decl_text::text_code_wrap(
+                        cx,
+                        "SELECT * FROM users WHERE role = 'admin'",
+                    )]
+                },
+            ),
+        ],
+    )
+    .into_element(cx);
 
     let mut confirmation = ui_ai::Confirmation::new(state_now)
         .children([
-            ui_ai::ConfirmationTitle::new("Tool approval required").into_element(cx),
-            ui_ai::ConfirmationRequest::new(state_now, [actions])
-                .test_id("ui-ai-confirmation-actions")
-                .into_element(cx),
-            ui_ai::ConfirmationAccepted::new(approval_now.clone(), state_now, [accepted])
-                .test_id("ui-ai-confirmation-accepted")
-                .into_element(cx),
+            ui_ai::ConfirmationTitle::new([
+                request,
+                ui_ai::ConfirmationAccepted::new(approval_now.clone(), state_now, accepted)
+                    .test_id("ui-ai-confirmation-accepted")
+                    .into_element(cx),
+                ui_ai::ConfirmationRejected::new(approval_now.clone(), state_now, rejected)
+                    .test_id("ui-ai-confirmation-rejected")
+                    .into_element(cx),
+            ])
+            .into_element(cx),
+            actions,
         ])
         .test_id("ui-ai-confirmation-root");
     if let Some(approval) = approval_now {

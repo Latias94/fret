@@ -19,5 +19,5 @@ pub(super) fn preview_ai_task_demo(
         ],
     );
 
-    vec![body.test_id("ui-gallery-page-ai-task-demo")]
+    vec![body]
 }

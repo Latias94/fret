@@ -111,7 +111,7 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
     let demo_slide = |cx: &mut ElementContext<'_, App>, idx: usize, visual: SlideVisual| {
         let theme = Theme::global(&*cx.app).clone();
 
-        let number = ui::text(cx, format!("{idx}"))
+        let number = ui::text(format!("{idx}"))
             .text_size_px(visual.text_px)
             .line_height_px(visual.line_height_px)
             .line_height_policy(fret_core::TextLineHeightPolicy::FixedFromStyle)
@@ -611,7 +611,7 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
         let content = cx.container(props, move |_cx| layered);
 
         let card = shadcn::Card::new([content]).into_element(cx);
-        ui::container(cx, move |_cx| vec![card])
+        ui::container(move |_cx| vec![card])
             .w_full()
             .p_1()
             .into_element(cx)

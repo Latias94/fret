@@ -47,7 +47,7 @@ fn group_with_count<H: UiHost>(
         .collect::<Vec<_>>();
 
     let count =
-        shadcn::AvatarGroupCount::new([ui::text(cx, "+3").font_medium().nowrap().into_element(cx)])
+        shadcn::AvatarGroupCount::new([ui::text("+3").font_medium().nowrap().into_element(cx)])
             .into_element(cx);
 
     shadcn::AvatarGroup::new(avatars.into_iter().chain([count]).collect::<Vec<_>>())

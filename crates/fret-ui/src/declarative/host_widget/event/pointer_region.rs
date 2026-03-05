@@ -245,6 +245,7 @@ pub(super) fn handle_pointer_region<H: UiHost>(
                 click_count: *click_count,
                 pointer_type: *pointer_type,
                 hit_is_text_input: cx.pointer_hit_is_text_input,
+                hit_is_pressable: cx.pointer_hit_is_pressable,
             };
 
             let Some(h) = hook else {

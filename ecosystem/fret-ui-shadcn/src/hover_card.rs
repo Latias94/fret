@@ -1353,9 +1353,8 @@ mod tests {
             bounds,
             "test",
             move |cx| {
-                let content =
-                    HoverCardContent::new(vec![ui::raw_text(cx, "content").into_element(cx)])
-                        .into_element(cx);
+                let content = HoverCardContent::new(vec![ui::raw_text("content").into_element(cx)])
+                    .into_element(cx);
                 content_id_out_for_render.set(Some(content.id));
 
                 let container = cx.flex(
@@ -1412,9 +1411,8 @@ mod tests {
             bounds,
             "test",
             move |cx| {
-                let content =
-                    HoverCardContent::new(vec![ui::raw_text(cx, "content").into_element(cx)])
-                        .into_element(cx);
+                let content = HoverCardContent::new(vec![ui::raw_text("content").into_element(cx)])
+                    .into_element(cx);
                 content_id_out_for_render.set(Some(content.id));
 
                 let container = cx.flex(
@@ -1509,7 +1507,7 @@ mod tests {
                     },
                     |cx| {
                         vec![
-                            HoverCardContent::new(vec![ui::raw_text(cx, "card").into_element(cx)])
+                            HoverCardContent::new(vec![ui::raw_text("card").into_element(cx)])
                                 .into_element(cx),
                         ]
                     },
@@ -1696,7 +1694,7 @@ mod tests {
                     },
                     |cx| {
                         vec![
-                            HoverCardContent::new(vec![ui::raw_text(cx, "card").into_element(cx)])
+                            HoverCardContent::new(vec![ui::raw_text("card").into_element(cx)])
                                 .into_element(cx),
                         ]
                     },
@@ -1796,7 +1794,7 @@ mod tests {
                         |cx| {
                             vec![
                                 HoverCardContent::new(vec![
-                                    ui::raw_text(cx, "card").into_element(cx),
+                                    ui::raw_text("Content").into_element(cx),
                                 ])
                                 .into_element(cx),
                             ]
@@ -2027,7 +2025,7 @@ mod tests {
                         |cx| {
                             vec![
                                 HoverCardContent::new(vec![
-                                    ui::raw_text(cx, "card").into_element(cx),
+                                    ui::raw_text("Content").into_element(cx),
                                 ])
                                 .into_element(cx),
                             ]
@@ -2579,7 +2577,7 @@ mod tests {
                                 |cx| {
                                     vec![
                                         HoverCardContent::new(vec![
-                                            ui::raw_text(cx, "card").into_element(cx),
+                                            ui::raw_text("Content").into_element(cx),
                                         ])
                                         .into_element(cx),
                                     ]
@@ -2859,7 +2857,7 @@ mod tests {
                                 |cx| {
                                     vec![
                                         HoverCardContent::new(vec![
-                                            ui::raw_text(cx, "card").into_element(cx),
+                                            ui::raw_text("Content").into_element(cx),
                                         ])
                                         .into_element(cx),
                                     ]
@@ -3073,7 +3071,7 @@ mod tests {
                             |cx| {
                                 vec![
                                     HoverCardContent::new(vec![
-                                        ui::raw_text(cx, "card").into_element(cx),
+                                        ui::raw_text("Content").into_element(cx),
                                     ])
                                     .into_element(cx),
                                 ]

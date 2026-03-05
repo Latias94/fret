@@ -205,7 +205,7 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
 
     let item_download = {
         let header =
-            shadcn::ItemHeader::new([ui::text(cx, "Your download has started.").into_element(cx)])
+            shadcn::ItemHeader::new([ui::text("Your download has started.").into_element(cx)])
                 .into_element(cx);
         let media = shadcn::ItemMedia::new([shadcn::Spinner::new().into_element(cx)])
             .variant(shadcn::ItemMediaVariant::Icon)
@@ -555,7 +555,7 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
             .into_element(cx);
 
             let number_text: Arc<str> = Arc::from(format!("#{number}"));
-            let number_col = shadcn::ItemContent::new([ui::text(cx, number_text).into_element(cx)])
+            let number_col = shadcn::ItemContent::new([ui::text(number_text).into_element(cx)])
                 .refine_layout(LayoutRefinement::default().flex_none())
                 .into_element(cx);
 
@@ -587,15 +587,14 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
         .test_id("ui-gallery-item-column-issues")
     };
 
-    let gallery_demo = ui::h_flex(cx, |_cx| {
-        vec![column_basic, column_people, column_music, column_issues]
-    })
-    .gap(Space::N6)
-    .wrap()
-    .w_full()
-    .items_start()
-    .into_element(cx)
-    .test_id("ui-gallery-item-gallery-demo");
+    let gallery_demo =
+        ui::h_flex(|_cx| vec![column_basic, column_people, column_music, column_issues])
+            .gap(Space::N6)
+            .wrap()
+            .w_full()
+            .items_start()
+            .into_element(cx)
+            .test_id("ui-gallery-item-gallery-demo");
 
     gallery_demo
 }

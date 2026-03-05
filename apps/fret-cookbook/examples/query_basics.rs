@@ -186,14 +186,12 @@ impl View for QueryBasicsView {
             .into_element(cx)
             .test_id(TEST_ID_BTN_TOGGLE_MODE);
 
-        let buttons = ui::h_flex(cx, |_cx| {
-            [invalidate_btn, invalidate_ns_btn, toggle_mode_btn]
-        })
-        .gap(Space::N2)
-        .items_center()
-        .into_element(cx);
+        let buttons = ui::h_flex(|_cx| [invalidate_btn, invalidate_ns_btn, toggle_mode_btn])
+            .gap(Space::N2)
+            .items_center()
+            .into_element(cx);
 
-        let lines = ui::v_flex(cx, |cx| {
+        let lines = ui::v_flex(|cx| {
             let data = cx.text(data_line).test_id(TEST_ID_DATA_LINE);
             let mut out: Vec<AnyElement> = vec![data];
             if let Some(err) = state.error {
@@ -210,14 +208,14 @@ impl View for QueryBasicsView {
                 "A tiny async resource example using fret-query (invalidate + error mode).",
             )
             .into_element(cx),
-            ui::h_flex(cx, |_cx| [status_badge, mode_badge])
+            ui::h_flex(|_cx| [status_badge, mode_badge])
                 .gap(Space::N2)
                 .items_center()
                 .into_element(cx),
         ])
         .into_element(cx);
 
-        let content = shadcn::CardContent::new([ui::v_flex(cx, |_cx| [buttons, lines])
+        let content = shadcn::CardContent::new([ui::v_flex(|_cx| [buttons, lines])
             .gap(Space::N4)
             .w_full()
             .into_element(cx)])

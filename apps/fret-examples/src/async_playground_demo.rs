@@ -359,7 +359,7 @@ impl View for AsyncPlaygroundView {
         cx.on_action_notify_transient::<act::CancelSelected>(TRANSIENT_CANCEL_SELECTED);
         cx.on_action_notify_transient::<act::InvalidateNamespace>(TRANSIENT_INVALIDATE_NAMESPACE);
 
-        ui::v_flex(cx, |_cx| [header, body])
+        ui::v_flex(|_cx| [header, body])
             .w_full()
             .h_full()
             .into_element(cx)
@@ -374,20 +374,20 @@ fn header_bar(
     global_slow: bool,
     dark: bool,
 ) -> AnyElement {
-    let title = ui::text(cx, "Async Playground")
+    let title = ui::text("Async Playground")
         .text_sm()
         .font_semibold()
         .truncate()
         .into_element(cx);
 
-    let slow_label = ui::text(cx, "Slow network (x2)")
+    let slow_label = ui::text("Slow network (x2)")
         .text_sm()
         .text_color(ColorRef::Color(theme.color_token("muted-foreground")))
         .into_element(cx);
     let slow_switch = shadcn::Switch::new(st.global_slow.clone())
         .a11y_label("Simulate slow network")
         .into_element(cx);
-    let slow_row = ui::h_flex(cx, |_cx| [slow_label, slow_switch])
+    let slow_row = ui::h_flex(|_cx| [slow_label, slow_switch])
         .gap(Space::N2)
         .items_center()
         .into_element(cx);
@@ -398,16 +398,16 @@ fn header_bar(
         .action(act::ToggleTheme)
         .into_element(cx);
 
-    let right = ui::h_flex(cx, |_cx| [slow_row, theme_btn])
+    let right = ui::h_flex(|_cx| [slow_row, theme_btn])
         .gap(Space::N4)
         .items_center()
         .into_element(cx);
 
-    let spacer = ui::container(cx, |_cx| Vec::<AnyElement>::new())
+    let spacer = ui::container(|_cx| Vec::<AnyElement>::new())
         .flex_grow(1.0)
         .into_element(cx);
 
-    ui::h_flex(cx, |_cx| [title, spacer, right])
+    ui::h_flex(|_cx| [title, spacer, right])
         .px(Space::N6)
         .py(Space::N3)
         .bg(ColorRef::Color(theme.color_token("card")))
@@ -437,7 +437,7 @@ fn body(
         .flex_stretch_cross_axis(true)
         .into_element(cx);
 
-    ui::h_flex(cx, |_cx| [left, sep_1, mid, sep_2, right])
+    ui::h_flex(|_cx| [left, sep_1, mid, sep_2, right])
         .w_full()
         .h_full()
         .items_stretch()
@@ -450,17 +450,17 @@ fn catalog_panel(
     theme: ThemeSnapshot,
     selected: QueryId,
 ) -> AnyElement {
-    let header = ui::text(cx, "Catalog")
+    let header = ui::text("Catalog")
         .font_semibold()
         .text_sm()
         .into_element(cx);
-    let header_row = ui::container(cx, |_cx| vec![header])
+    let header_row = ui::container(|_cx| vec![header])
         .px(Space::N4)
         .py(Space::N3)
         .bg(ColorRef::Color(theme.color_token("card")))
         .into_element(cx);
 
-    let list = shadcn::ScrollArea::new([ui::v_flex_build(cx, |cx, out| {
+    let list = shadcn::ScrollArea::new([ui::v_flex_build(|cx, out| {
         for id in QueryId::ALL {
             out.push(catalog_item(cx, st, theme.clone(), selected, id));
         }
@@ -475,7 +475,7 @@ fn catalog_panel(
     .refine_layout(LayoutRefinement::default().size_full())
     .into_element(cx);
 
-    ui::v_flex(cx, |_cx| [header_row, list])
+    ui::v_flex(|_cx| [header_row, list])
         .w_px(Px(288.0))
         .h_full()
         .bg(ColorRef::Color(theme.color_token("muted")))
@@ -518,15 +518,15 @@ fn catalog_item(
                 bg_idle
             };
 
-            let title = ui::text(cx, id.label())
+            let title = ui::text(id.label())
                 .font_medium()
                 .text_sm()
                 .truncate()
                 .into_element(cx);
             let badge = status_badge(cx, diag.as_ref());
 
-            let row = ui::h_flex(cx, |cx| {
-                let spacer = ui::container(cx, |_cx| Vec::<AnyElement>::new())
+            let row = ui::h_flex(|cx| {
+                let spacer = ui::container(|_cx| Vec::<AnyElement>::new())
                     .flex_grow(1.0)
                     .into_element(cx);
                 [title, spacer, badge]
@@ -535,7 +535,7 @@ fn catalog_item(
             .into_element(cx);
 
             vec![
-                ui::container(cx, |_cx| vec![row])
+                ui::container(|_cx| vec![row])
                     .bg(ColorRef::Color(bg))
                     .border_1()
                     .border_color(ColorRef::Color(theme.color_token("border")))
@@ -566,7 +566,7 @@ fn main_panel(
 ) -> AnyElement {
     let mode = active_mode(cx, st);
 
-    let title = ui::text(cx, selected.label())
+    let title = ui::text(selected.label())
         .font_semibold()
         .text_sm()
         .into_element(cx);
@@ -581,13 +581,13 @@ fn main_panel(
         .size(shadcn::ButtonSize::Sm)
         .action(act::InvalidateSelected)
         .into_element(cx);
-    let actions = ui::h_flex(cx, |_cx| [cancel, invalidate])
+    let actions = ui::h_flex(|_cx| [cancel, invalidate])
         .gap(Space::N2)
         .items_center()
         .into_element(cx);
 
-    let header_row = ui::h_flex(cx, |cx| {
-        let spacer = ui::container(cx, |_cx| Vec::<AnyElement>::new())
+    let header_row = ui::h_flex(|cx| {
+        let spacer = ui::container(|_cx| Vec::<AnyElement>::new())
             .flex_grow(1.0)
             .into_element(cx);
         [title, spacer, actions]
@@ -620,7 +620,7 @@ fn main_panel(
             FetchMode::Sync,
         )
     } else {
-        ui::container(cx, |_cx| Vec::<AnyElement>::new())
+        ui::container(|_cx| Vec::<AnyElement>::new())
             .h_full()
             .into_element(cx)
     };
@@ -634,7 +634,7 @@ fn main_panel(
             FetchMode::Async,
         )
     } else {
-        ui::container(cx, |_cx| Vec::<AnyElement>::new())
+        ui::container(|_cx| Vec::<AnyElement>::new())
             .h_full()
             .into_element(cx)
     };
@@ -649,7 +649,7 @@ fn main_panel(
         .w_full()
         .into_element(cx);
 
-    let content = ui::v_flex(cx, |_cx| [callout, tabs])
+    let content = ui::v_flex(|_cx| [callout, tabs])
         .gap(Space::N3)
         .p(Space::N4)
         .w_full()
@@ -662,7 +662,7 @@ fn main_panel(
         .refine_layout(LayoutRefinement::default().size_full())
         .into_element(cx);
 
-    ui::v_flex(cx, |_cx| [header_row, scroll])
+    ui::v_flex(|_cx| [header_row, scroll])
         .flex_grow(1.0)
         .h_full()
         .bg(ColorRef::Color(theme.color_token("background")))
@@ -682,40 +682,29 @@ fn inspector_panel(
     let status = snap.as_ref().map(|s| s.status).unwrap_or(QueryStatus::Idle);
     let stale = snap.as_ref().map(|s| s.stale);
 
-    let summary = ui::v_flex_build(cx, |cx, out| {
+    let summary = ui::v_flex_build(|cx, out| {
+        out.push(ui::text(key.namespace()).text_xs().into_element(cx));
+        out.push(ui::text(key.hash().to_string()).text_xs().into_element(cx));
         out.push(
-            ui::text(cx, format!("namespace: {}", key.namespace()))
-                .text_xs()
-                .into_element(cx),
-        );
-        out.push(
-            ui::text(cx, format!("hash: {:016x}", key.hash()))
-                .text_xs()
-                .into_element(cx),
-        );
-        out.push(
-            ui::text(cx, format!("status: {status:?}"))
+            ui::text(format!("status: {status:?}"))
                 .text_xs()
                 .into_element(cx),
         );
         if let Some(stale) = stale {
             out.push(
-                ui::text(cx, format!("stale: {stale}"))
+                ui::text(format!("stale: {stale}"))
                     .text_xs()
                     .into_element(cx),
             );
         }
         out.push(
-            ui::text(
-                cx,
-                format!(
-                    "policy: stale={}s, cache={}s, keep_prev={}, cancel_mode={:?}",
-                    policy.stale_time.as_secs(),
-                    policy.cache_time.as_secs(),
-                    policy.keep_previous_data_while_loading,
-                    policy.cancel_mode
-                ),
-            )
+            ui::text(format!(
+                "policy: stale={}s, cache={}s, keep_prev={}, cancel_mode={:?}",
+                policy.stale_time.as_secs(),
+                policy.cache_time.as_secs(),
+                policy.keep_previous_data_while_loading,
+                policy.cancel_mode
+            ))
             .text_xs()
             .text_color(ColorRef::Color(theme.color_token("muted-foreground")))
             .into_element(cx),
@@ -728,7 +717,7 @@ fn inspector_panel(
 
     let policy_editor = policy_editor(cx, st, theme.clone(), selected);
 
-    let ns_row = ui::h_flex(cx, |cx| {
+    let ns_row = ui::h_flex(|cx| {
         let input = shadcn::Input::new(st.namespace_input.clone())
             .placeholder("tip/search/stock/status")
             .refine_layout(LayoutRefinement::default().flex_grow(1.0))
@@ -766,7 +755,7 @@ fn inspector_panel(
         .refine_layout(LayoutRefinement::default().size_full())
         .into_element(cx);
 
-    ui::v_flex(cx, |_cx| [scroll])
+    ui::v_flex(|_cx| [scroll])
         .w_px(Px(320.0))
         .h_full()
         .bg(ColorRef::Color(theme.color_token("muted")))
@@ -788,7 +777,7 @@ fn policy_editor(
         .placeholder("cache_time (s)")
         .into_element(cx);
 
-    let keep_prev_label = ui::text(cx, "keepPreviousDataWhileLoading")
+    let keep_prev_label = ui::text("keepPreviousDataWhileLoading")
         .text_xs()
         .text_color(ColorRef::Color(theme.color_token("muted-foreground")))
         .into_element(cx);
@@ -796,7 +785,7 @@ fn policy_editor(
         .a11y_label("Keep previous data while loading")
         .into_element(cx);
 
-    let fail_label = ui::text(cx, "fail mode")
+    let fail_label = ui::text("fail mode")
         .text_xs()
         .text_color(ColorRef::Color(theme.color_token("muted-foreground")))
         .into_element(cx);
@@ -816,17 +805,17 @@ fn policy_editor(
     ])
     .into_element(cx);
 
-    ui::v_flex(cx, |cx| {
+    ui::v_flex(|cx| {
         [
             shadcn::Separator::new().into_element(cx),
-            ui::text(cx, "Policy")
+            ui::text("Policy")
                 .font_semibold()
                 .text_sm()
                 .into_element(cx),
-            ui::h_flex(cx, |_cx| [stale, cache])
+            ui::h_flex(|_cx| [stale, cache])
                 .gap(Space::N2)
                 .into_element(cx),
-            ui::h_flex(cx, |_cx| [keep_prev_label, keep_prev, fail_label, fail])
+            ui::h_flex(|_cx| [keep_prev_label, keep_prev, fail_label, fail])
                 .gap(Space::N2)
                 .items_center()
                 .into_element(cx),
@@ -901,7 +890,7 @@ fn query_panel_for_mode(
 
     let inputs = query_inputs_row(cx, st, theme.clone(), id);
     let view = query_result_view(cx, theme, id, key, &state, snap.as_ref(), &policy);
-    ui::v_flex(cx, |_cx| [inputs, view])
+    ui::v_flex(|_cx| [inputs, view])
         .gap(Space::N4)
         .w_full()
         .items_stretch()
@@ -916,14 +905,11 @@ fn query_inputs_row(
 ) -> AnyElement {
     let mut children: Vec<AnyElement> = Vec::new();
     children.push(
-        ui::text(
-            cx,
-            match id {
-                QueryId::Tip | QueryId::Status => "No params (key is stable).",
-                QueryId::Search => "Type to change key and trigger a new query.",
-                QueryId::Stock => "Change symbol to create a new key.",
-            },
-        )
+        ui::text(match id {
+            QueryId::Tip | QueryId::Status => "No params (key is stable).",
+            QueryId::Search => "Type to change key and trigger a new query.",
+            QueryId::Stock => "Change symbol to create a new key.",
+        })
         .text_xs()
         .text_color(ColorRef::Color(theme.color_token("muted-foreground")))
         .into_element(cx),
@@ -949,7 +935,7 @@ fn query_inputs_row(
         QueryId::Tip | QueryId::Status => {}
     }
 
-    ui::v_flex(cx, |_cx| children)
+    ui::v_flex(|_cx| children)
         .gap(Space::N2)
         .w_full()
         .items_stretch()
@@ -974,12 +960,12 @@ fn query_result_view(
         }),
     );
 
-    let meta = ui::h_flex(cx, |cx| {
-        let left = ui::text(cx, format!("namespace: {}", id.namespace()))
+    let meta = ui::h_flex(|cx| {
+        let left = ui::text(id.namespace())
             .text_xs()
             .text_color(ColorRef::Color(theme.color_token("muted-foreground")))
             .into_element(cx);
-        let right = ui::text(cx, format!("hash: {:016x}", key.hash()))
+        let right = ui::text(key.hash().to_string())
             .text_xs()
             .text_color(ColorRef::Color(theme.color_token("muted-foreground")))
             .into_element(cx);
@@ -989,19 +975,16 @@ fn query_result_view(
     .into_element(cx);
 
     let body = match state.status {
-        QueryStatus::Idle => ui::text(cx, "Idle (not fetched yet).")
+        QueryStatus::Idle => ui::text("Idle (not fetched yet).")
             .text_sm()
             .into_element(cx),
         QueryStatus::Loading => {
             let kept = policy.keep_previous_data_while_loading && state.data.is_some();
-            ui::text(
-                cx,
-                if kept {
-                    "Loading… (keepPreviousDataWhileLoading=true)"
-                } else {
-                    "Loading…"
-                },
-            )
+            ui::text(if kept {
+                "Loading… (keepPreviousDataWhileLoading=true)"
+            } else {
+                "Loading…"
+            })
             .text_sm()
             .into_element(cx)
         }
@@ -1019,23 +1002,22 @@ fn query_result_view(
             .into_element(cx)
         }
         QueryStatus::Success => ui::text(
-            cx,
             state
                 .data
                 .as_deref()
-                .map(|v| v.as_ref())
-                .unwrap_or("<no data>"),
+                .cloned()
+                .unwrap_or_else(|| Arc::from("<no data>")),
         )
         .text_sm()
         .into_element(cx),
     };
 
-    let header = ui::h_flex(cx, |cx| {
-        let title = ui::text(cx, "Result")
+    let header = ui::h_flex(|cx| {
+        let title = ui::text("Result")
             .font_semibold()
             .text_sm()
             .into_element(cx);
-        let spacer = ui::container(cx, |_cx| Vec::<AnyElement>::new())
+        let spacer = ui::container(|_cx| Vec::<AnyElement>::new())
             .flex_grow(1.0)
             .into_element(cx);
         [title, spacer, badge]

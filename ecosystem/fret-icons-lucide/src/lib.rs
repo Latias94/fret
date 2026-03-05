@@ -92,6 +92,10 @@ mod semantic_ui {
         let _ = reg.alias_if_missing(ids::ui::CHEVRON_DOWN, IconId::new("lucide.chevron-down"));
         let _ = reg.alias_if_missing(ids::ui::CHEVRON_RIGHT, IconId::new("lucide.chevron-right"));
         let _ = reg.alias_if_missing(ids::ui::CHEVRON_UP, IconId::new("lucide.chevron-up"));
+        let _ = reg.alias_if_missing(
+            ids::ui::CHEVRONS_UP_DOWN,
+            IconId::new("lucide.chevrons-up-down"),
+        );
         let _ = reg.alias_if_missing(ids::ui::CLOSE, IconId::new("lucide.x"));
         let _ = reg.alias_if_missing(ids::ui::FILE, IconId::new("lucide.file"));
         let _ = reg.alias_if_missing(ids::ui::EYE, IconId::new("lucide.eye"));

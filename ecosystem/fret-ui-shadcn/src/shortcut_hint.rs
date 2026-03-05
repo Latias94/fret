@@ -95,9 +95,9 @@ fn shortcut_hint_label<H: UiHost>(
 
     cx.container(props, |cx| {
         vec![
-            ui::h_flex(cx, |cx| {
+            ui::h_flex(|cx| {
                 vec![
-                    ui::label(cx, label)
+                    ui::label(label)
                         .text_size_px(px)
                         .fixed_line_box_px(line_height)
                         .line_box_in_bounds()

@@ -121,7 +121,7 @@ impl View for OverlayBasicsView {
         let dialog = shadcn::Dialog::new(dialog_open_for_dialog).into_element(
             cx,
             move |cx| {
-                let content = ui::v_flex(cx, |cx| {
+                let content = ui::v_flex(|cx| {
                     let bump = shadcn::Button::new("Bump underlay")
                         .variant(shadcn::ButtonVariant::Outline)
                         .action(act::BumpUnderlay)
@@ -136,7 +136,7 @@ impl View for OverlayBasicsView {
                             .a11y_role(SemanticsRole::Button)
                             .test_id(TEST_ID_DIALOG_TRIGGER)
                             .into_element(cx),
-                        ui::v_flex(cx, |cx| {
+                        ui::v_flex(|cx| {
                             [
                                 cx.text(format!("Shortcut: {shortcut}"))
                                     .test_id(TEST_ID_UNDERLAY_SHORTCUT),

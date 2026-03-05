@@ -26,7 +26,7 @@ struct SlideVisual {
 fn slide(cx: &mut ElementContext<'_, App>, idx: usize, visual: SlideVisual) -> AnyElement {
     let theme = Theme::global(&*cx.app).clone();
 
-    let number = ui::text(cx, format!("{idx}"))
+    let number = ui::text(format!("{idx}"))
         .text_size_px(visual.text_px)
         .line_height_px(visual.line_height_px)
         .line_height_policy(fret_core::TextLineHeightPolicy::FixedFromStyle)
@@ -57,7 +57,7 @@ fn slide(cx: &mut ElementContext<'_, App>, idx: usize, visual: SlideVisual) -> A
     );
 
     let card = shadcn::Card::new([content]).into_element(cx);
-    ui::container(cx, move |_cx| vec![card])
+    ui::container(move |_cx| vec![card])
         .w_full()
         .p_1()
         .into_element(cx)
@@ -141,9 +141,7 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
             ink_overflow: fret_ui::element::TextInkOverflow::None,
         });
 
-        ui::container(cx, move |_cx| vec![text])
-            .py_1()
-            .into_element(cx)
+        ui::container(move |_cx| vec![text]).py_1().into_element(cx)
     };
 
     let stopped_marker = if autoplay.stopped_by_interaction {
@@ -152,7 +150,7 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
             .test_id("ui-gallery-carousel-plugin-stop-on-interaction-focus-stopped")
             .into_element(cx);
         Some(
-            ui::container(cx, move |_cx| vec![badge])
+            ui::container(move |_cx| vec![badge])
                 .py_1()
                 .into_element(cx),
         )

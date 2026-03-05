@@ -36,7 +36,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut ImUiHelloState) -> fret::View
         use fret_ui_kit::imui::UiWriterImUiFacadeExt as _;
         use fret_ui_kit::imui::UiWriterUiKitExt as _;
 
-        let count_line = fret_ui_kit::ui::text(ui.cx_mut(), format!("Count: {count}"))
+        let count_line = fret_ui_kit::ui::text(format!("Count: {count}"))
             .text_sm()
             .font_medium();
         ui.add_ui(count_line);
@@ -46,7 +46,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut ImUiHelloState) -> fret::View
 
         ui.separator();
 
-        let enabled_line = fret_ui_kit::ui::text(ui.cx_mut(), format!("Enabled: {enabled}"))
+        let enabled_line = fret_ui_kit::ui::text(format!("Enabled: {enabled}"))
             .text_sm()
             .font_medium();
         ui.add_ui(enabled_line);
@@ -58,7 +58,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut ImUiHelloState) -> fret::View
                 .models()
                 .get_copied(&st.enabled)
                 .unwrap_or_default();
-            let toggled_line = fret_ui_kit::ui::text(ui.cx_mut(), format!("Toggled to: {enabled}"));
+            let toggled_line = fret_ui_kit::ui::text(format!("Toggled to: {enabled}"));
             ui.add_ui(toggled_line);
         }
     })

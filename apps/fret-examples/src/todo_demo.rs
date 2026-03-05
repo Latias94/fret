@@ -109,7 +109,7 @@ impl View for TodoDemoView {
             .into_element(cx)
             .test_id(TEST_ID_CLEAR_DONE);
 
-        let header_actions = ui::h_flex(cx, |_cx| [progress, clear_done_btn])
+        let header_actions = ui::h_flex(|_cx| [progress, clear_done_btn])
             .gap(Space::N2)
             .items_center()
             .into_element(cx);
@@ -127,13 +127,13 @@ impl View for TodoDemoView {
             .into_element(cx)
             .test_id(TEST_ID_DRAFT);
 
-        let input_row = ui::h_flex(cx, |_cx| [input, add_btn])
+        let input_row = ui::h_flex(|_cx| [input, add_btn])
             .gap(Space::N2)
             .items_center()
             .w_full()
             .into_element(cx);
 
-        let rows = ui::v_flex_build(cx, |cx, out| {
+        let rows = ui::v_flex_build(|cx, out| {
             for t in &todos {
                 let theme = theme_for_rows.clone();
                 out.push(cx.keyed(t.id, |cx| todo_row(cx, theme, t)));
@@ -144,7 +144,7 @@ impl View for TodoDemoView {
         .into_element(cx)
         .test_id(TEST_ID_ROWS);
 
-        let content = ui::v_flex(cx, |_cx| [input_row, rows])
+        let content = ui::v_flex(|_cx| [input_row, rows])
             .gap(Space::N4)
             .w_full()
             .into_element(cx);
@@ -237,8 +237,8 @@ impl View for TodoDemoView {
             }
         });
 
-        ui::container(cx, |cx| {
-            let centered = ui::v_flex(cx, |_cx| [card])
+        ui::container(|cx| {
+            let centered = ui::v_flex(|_cx| [card])
                 .w_full()
                 .h_full()
                 .justify_center()
@@ -263,7 +263,7 @@ fn todo_row(cx: &mut ElementContext<'_, App>, theme: ThemeSnapshot, item: &TodoI
         .into_element(cx)
         .test_id(format!("{TEST_ID_DONE_PREFIX}{}", item.id));
 
-    let text = ui::text(cx, item.text.clone())
+    let text = ui::text(item.text.clone())
         .truncate()
         .text_sm()
         .text_color(ColorRef::Color(if done {
@@ -280,7 +280,7 @@ fn todo_row(cx: &mut ElementContext<'_, App>, theme: ThemeSnapshot, item: &TodoI
         .test_id(format!("{TEST_ID_REMOVE_PREFIX}{}", item.id))
         .into_element(cx);
 
-    ui::h_flex(cx, |_cx| [checkbox, text, remove])
+    ui::h_flex(|_cx| [checkbox, text, remove])
         .gap(Space::N2)
         .items_center()
         .justify_between()

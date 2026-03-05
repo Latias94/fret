@@ -9,6 +9,7 @@ use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::declarative::controllable_state;
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::ui;
 use fret_ui_kit::{
     ColorFallback, ColorRef, LayoutRefinement, MetricRef, Space, WidgetStateProperty, WidgetStates,
 };
@@ -16,7 +17,7 @@ use fret_ui_kit::{
 use fret_ui_shadcn::button::ButtonStyle;
 use fret_ui_shadcn::{
     Button, ButtonSize, ButtonVariant, DropdownMenu, DropdownMenuAlign, DropdownMenuEntry,
-    DropdownMenuItem, DropdownMenuSide, InputGroup,
+    DropdownMenuItem, DropdownMenuSide, InputGroup, Kbd, Tooltip, TooltipContent, TooltipSide,
 };
 
 use crate::elements::attachments::{
@@ -72,6 +73,7 @@ struct PromptInputLocalState {
 pub struct PromptInputConfig {
     pub disabled: bool,
     pub loading: bool,
+    pub status: Option<PromptInputStatus>,
     pub clear_on_send: bool,
     pub clear_attachments_on_send: bool,
     pub on_send: Option<OnActivate>,
@@ -89,6 +91,27 @@ pub struct PromptInputConfig {
     pub test_id_attachments: Option<Arc<str>>,
     pub test_id_referenced_sources: Option<Arc<str>>,
     pub test_id_add_attachments: Option<Arc<str>>,
+}
+
+/// PromptInput submission state aligned with AI Elements `ChatStatus`-driven outcomes.
+///
+/// Reference: `repo-ref/ai-elements/packages/elements/src/prompt-input.tsx` (`PromptInputSubmit`).
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum PromptInputStatus {
+    #[default]
+    Idle,
+    Submitted,
+    Streaming,
+    Error,
+}
+
+impl PromptInputStatus {
+    fn is_generating(self) -> bool {
+        matches!(
+            self,
+            PromptInputStatus::Submitted | PromptInputStatus::Streaming
+        )
+    }
 }
 
 #[derive(Default, Clone)]
@@ -586,6 +609,7 @@ pub struct PromptInputRoot {
     textarea_max_height: Option<Px>,
     disabled: bool,
     loading: bool,
+    status: Option<PromptInputStatus>,
     clear_on_send: bool,
     clear_attachments_on_send: bool,
     on_send: Option<OnActivate>,
@@ -616,6 +640,7 @@ impl PromptInputRoot {
             textarea_max_height: None,
             disabled: false,
             loading: false,
+            status: None,
             clear_on_send: true,
             clear_attachments_on_send: true,
             on_send: None,
@@ -646,6 +671,7 @@ impl PromptInputRoot {
             textarea_max_height: None,
             disabled: false,
             loading: false,
+            status: None,
             clear_on_send: true,
             clear_attachments_on_send: true,
             on_send: None,
@@ -686,6 +712,16 @@ impl PromptInputRoot {
 
     pub fn loading(mut self, loading: bool) -> Self {
         self.loading = loading;
+        self
+    }
+
+    /// Overrides the prompt input submission state (icon + stop behavior).
+    ///
+    /// Notes:
+    /// - When unset, `loading=true` is treated as `Streaming` for backwards compatibility.
+    /// - When set to a generating state (`Submitted`/`Streaming`), Enter-to-send is suppressed.
+    pub fn status(mut self, status: PromptInputStatus) -> Self {
+        self.status = Some(status);
         self
     }
 
@@ -828,6 +864,7 @@ impl PromptInputRoot {
             st.config = Some(PromptInputConfig {
                 disabled: self.disabled,
                 loading: self.loading,
+                status: self.status,
                 clear_on_send: self.clear_on_send,
                 clear_attachments_on_send: self.clear_attachments_on_send,
                 on_send: self.on_send.clone(),
@@ -847,6 +884,13 @@ impl PromptInputRoot {
                 test_id_add_attachments: self.test_id_add_attachments.clone(),
             });
         });
+
+        let status = self.status.unwrap_or(if self.loading {
+            PromptInputStatus::Streaming
+        } else {
+            PromptInputStatus::Idle
+        });
+        let generating = status.is_generating();
 
         let textarea_min_height = if self.textarea_min_height == Px(96.0) {
             theme
@@ -872,7 +916,7 @@ impl PromptInputRoot {
             text_model.clone(),
             attachments_model.clone(),
             self.disabled,
-            self.loading,
+            self.loading || generating,
             send_activate,
         );
 
@@ -1790,6 +1834,7 @@ impl PromptInputTools {
 pub struct PromptInputButton {
     label: Arc<str>,
     icon: Option<IconId>,
+    tooltip: Option<PromptInputButtonTooltip>,
     children: Vec<AnyElement>,
     disabled: bool,
     on_activate: Option<OnActivate>,
@@ -1805,6 +1850,7 @@ impl PromptInputButton {
         Self {
             label: label.into(),
             icon: None,
+            tooltip: None,
             children: Vec::new(),
             disabled: false,
             on_activate: None,
@@ -1823,6 +1869,15 @@ impl PromptInputButton {
 
     pub fn icon(mut self, icon: IconId) -> Self {
         self.icon = Some(icon);
+        self
+    }
+
+    /// Adds a tooltip aligned with AI Elements `PromptInputButton` `tooltip` prop.
+    ///
+    /// This is intended for compact toolbar actions (e.g. "Search the web", "New chat"), where a
+    /// short hint + optional shortcut improves discoverability without adding chrome.
+    pub fn tooltip(mut self, tooltip: PromptInputButtonTooltip) -> Self {
+        self.tooltip = Some(tooltip);
         self
     }
 
@@ -1963,10 +2018,76 @@ impl PromptInputButton {
         if let Some(on_activate) = self.on_activate {
             btn = btn.on_activate(on_activate);
         }
+        let button_test_id = self.test_id.clone();
         if let Some(id) = self.test_id {
             btn = btn.test_id(id);
         }
-        btn.into_element(cx)
+
+        let trigger = btn.into_element(cx);
+        let Some(tooltip) = self.tooltip else {
+            return trigger;
+        };
+
+        let content = TooltipContent::with(cx, |cx| {
+            let text = TooltipContent::text(cx, tooltip.content.clone());
+            if let Some(shortcut) = tooltip.shortcut.clone() {
+                let kbd = Kbd::new(shortcut).into_element(cx);
+                vec![
+                    ui::h_flex(|_cx| vec![text, kbd])
+                        .gap(Space::N2)
+                        .items_center()
+                        .into_element(cx),
+                ]
+            } else {
+                vec![text]
+            }
+        });
+
+        let mut tooltip_el = Tooltip::new(trigger, content);
+        if let Some(side) = tooltip.side {
+            tooltip_el = tooltip_el.side(side);
+        }
+        if let Some(panel_test_id) = tooltip
+            .panel_test_id
+            .or_else(|| button_test_id.map(|id| Arc::<str>::from(format!("{id}-tooltip-panel"))))
+        {
+            tooltip_el = tooltip_el.panel_test_id(panel_test_id);
+        }
+        tooltip_el.into_element(cx)
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct PromptInputButtonTooltip {
+    content: Arc<str>,
+    shortcut: Option<Arc<str>>,
+    side: Option<TooltipSide>,
+    panel_test_id: Option<Arc<str>>,
+}
+
+impl PromptInputButtonTooltip {
+    pub fn new(content: impl Into<Arc<str>>) -> Self {
+        Self {
+            content: content.into(),
+            shortcut: None,
+            side: None,
+            panel_test_id: None,
+        }
+    }
+
+    pub fn shortcut(mut self, shortcut: impl Into<Arc<str>>) -> Self {
+        self.shortcut = Some(shortcut.into());
+        self
+    }
+
+    pub fn side(mut self, side: TooltipSide) -> Self {
+        self.side = Some(side);
+        self
+    }
+
+    pub fn panel_test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.panel_test_id = Some(id.into());
+        self
     }
 }
 
@@ -2508,6 +2629,11 @@ impl PromptInputSubmit {
 
         let disabled = cfg.as_ref().map(|c| c.disabled).unwrap_or(true);
         let loading = cfg.as_ref().map(|c| c.loading).unwrap_or(false);
+        let status = cfg.as_ref().and_then(|c| c.status).unwrap_or(if loading {
+            PromptInputStatus::Streaming
+        } else {
+            PromptInputStatus::Idle
+        });
         let on_send = cfg.as_ref().and_then(|c| c.on_send.clone());
         let on_stop = cfg.as_ref().and_then(|c| c.on_stop.clone());
 
@@ -2525,11 +2651,11 @@ impl PromptInputSubmit {
             .map(|v| v.len())
             .unwrap_or(0);
 
-        let (label, icon, activate, test_id) = if loading {
-            let icon = if on_stop.is_some() {
-                decl_icon::icon(cx, IconId::new("lucide.square"))
-            } else {
-                fret_ui_shadcn::Spinner::new().into_element(cx)
+        let (label, icon, activate, test_id) = if status.is_generating() {
+            let icon = match status {
+                PromptInputStatus::Submitted => fret_ui_shadcn::Spinner::new().into_element(cx),
+                PromptInputStatus::Streaming => decl_icon::icon(cx, IconId::new("lucide.square")),
+                _ => fret_ui_shadcn::Spinner::new().into_element(cx),
             };
             (
                 Arc::<str>::from("Stop"),
@@ -2539,7 +2665,10 @@ impl PromptInputSubmit {
             )
         } else {
             let send_disabled = disabled || on_send.is_none() || (is_empty && attachments_len == 0);
-            let icon = decl_icon::icon(cx, IconId::new("lucide.corner-down-left"));
+            let icon = match status {
+                PromptInputStatus::Error => decl_icon::icon(cx, IconId::new("lucide.x")),
+                _ => decl_icon::icon(cx, IconId::new("lucide.corner-down-left")),
+            };
             let activate = if send_disabled {
                 None
             } else {

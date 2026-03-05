@@ -126,7 +126,7 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
 
                     vec![cx.container(props, move |cx| {
                         vec![
-                            ui::text(cx, add_external_label.clone())
+                            ui::text(add_external_label.clone())
                                 .text_color(ColorRef::Color(fg))
                                 .into_element(cx),
                         ]

@@ -26,7 +26,9 @@ This file is an execution checklist for the design in `DESIGN.md`.
 - [x] Add overflow list panel:
   - [x] stable `test_id` for open button and entries
   - [x] select entry activates tab and scrolls into view
-  - [ ] optional close button in overflow list
+  - [x] close button in overflow list (close does not activate)
+    - Unit gate: `ecosystem/fret-workspace/tests/tab_strip_overflow_menu_lists_overflowed_tabs.rs`
+    - Diag gate: `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-overflow-close-does-not-activate.json`
 - [ ] Gates:
   - [x] test: overflow membership stable under resize + scroll offset changes
   - [x] diag script: open overflow list, select an overflowed tab, assert active

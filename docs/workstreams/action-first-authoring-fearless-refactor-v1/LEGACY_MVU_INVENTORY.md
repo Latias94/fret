@@ -1,20 +1,23 @@
 # Legacy MVU Inventory (Action-First Authoring v1)
 
-Last updated: 2026-03-04
+Last updated: 2026-03-05
 
 This document tracks remaining in-tree usage of legacy MVU/message-routing helpers after the
 action-first + view runtime v1 adoption.
 
 Scope:
 
-- “Legacy MVU” refers to `fret::mvu` and `fret::mvu_router` (and their `MessageRouter`/`MvuProgram`
-  authoring surface).
+- “Legacy MVU” refers to the former `fret::mvu` / `fret::mvu_router` surfaces (and their
+  `MessageRouter`/`MvuProgram` authoring surface), plus any remaining in-tree references to them.
 - This is an inventory, not a deletion plan. Deletion/quarantine is tracked by `AFA-clean-062`.
 
 Note:
 
-- MVU is feature-gated behind `fret` feature `legacy-mvu` and surfaces are compile-time deprecated.
-  Any in-tree legacy demo that uses MVU must explicitly opt in.
+- MVU surfaces were removed from `ecosystem/fret` (feature gate + `mvu` / `mvu_router` / `legacy`
+  modules) as part of M9.
+- In-tree demos no longer carry a separate demo-level opt-in feature.
+- Any remaining MVU references are expected to be limited to internal scaffolding sources and docs
+  until M9 completes.
 
 ## Why this inventory exists
 
@@ -25,7 +28,7 @@ Note:
 
 Policy:
 
-- MVU is legacy-only (compat), not a supported alternative golden path.
+- MVU is not an available authoring path in-tree. Do not reintroduce it.
 - See: `docs/workstreams/action-first-authoring-fearless-refactor-v1/MVU_POLICY.md`
 
 Removal-track note:
@@ -53,70 +56,31 @@ Removal-track note:
   - `apps/fret-cookbook/examples/virtual_list_basics.rs`
   - `apps/fret-cookbook/examples/icons_and_assets_basics.rs`
 
-## Remaining legacy MVU usage (as of 2026-03-04)
+## Remaining legacy MVU usage (as of 2026-03-05)
 
 ### 1) Cookbook examples (still MVU)
 
 These examples implement `MvuProgram` and/or use `MessageRouter`:
 
-- None (as of 2026-03-04). All cookbook examples now use the view runtime + typed actions.
+- None (as of 2026-03-05). All cookbook examples now use the view runtime + typed actions.
 
 Recommendation:
 
 - Keep any future MVU cookbook examples explicitly labeled as legacy/compat.
 - Avoid introducing new MVU usage in the cookbook unless we need a specific payload-routing teaching sample.
 
-### 2) `apps/fret-examples/*` demos (still MVU)
+### 2) `apps/fret-examples/*` demos (legacy MVU copies removed)
 
-Examples that use `fret::mvu::app(...)` or implement `MvuProgram` include (non-exhaustive):
+Current status:
 
-- These demos are now **opt-in** behind the `apps/fret-examples` feature `legacy-mvu-demos` (which
-  enables `fret/legacy-mvu`). This keeps the default demo surface action-first.
-- `apps/fret-demo` forwards the same opt-in as `fret-demo/legacy-mvu-demos`.
-  - Run legacy demos via:
-    - `cargo run -p fret-demo --features legacy-mvu-demos -- <demo-name>`
-    - For the old MVU todo demo specifically: `cargo run -p fret-demo --features legacy-mvu-demos -- todo_demo_legacy`
-- Migration note:
-  - `apps/fret-examples/src/todo_demo.rs` is now view runtime + typed actions.
-  - The legacy MVU implementation remains at `apps/fret-examples/src/todo_demo_legacy.rs`.
-  - `apps/fret-examples/src/query_demo.rs` is now view runtime + typed actions.
-  - The legacy MVU implementation remains at `apps/fret-examples/src/query_demo_legacy.rs`.
-  - `apps/fret-examples/src/query_async_tokio_demo.rs` is now view runtime + typed actions.
-  - The legacy MVU implementation remains at `apps/fret-examples/src/query_async_tokio_demo_legacy.rs`.
-  - `apps/fret-examples/src/hello_counter_demo.rs` is now view runtime + typed actions.
-  - The legacy MVU implementation remains at `apps/fret-examples/src/hello_counter_demo_legacy.rs`.
-  - `apps/fret-examples/src/async_playground_demo.rs` is now view runtime + typed actions.
-  - The legacy MVU implementation remains at `apps/fret-examples/src/async_playground_demo_legacy.rs`.
-  - `apps/fret-examples/src/embedded_viewport_demo.rs` is now view runtime + typed actions.
-  - The legacy MVU implementation remains at `apps/fret-examples/src/embedded_viewport_demo_legacy.rs`.
-  - `apps/fret-examples/src/drop_shadow_demo.rs` is now view runtime + typed actions.
-  - The legacy MVU implementation remains at `apps/fret-examples/src/drop_shadow_demo_legacy.rs`.
-  - `apps/fret-examples/src/custom_effect_v1_demo.rs` is now view runtime + typed actions.
-  - `apps/fret-examples/src/custom_effect_v2_demo.rs` is now view runtime + typed actions.
-  - `apps/fret-examples/src/custom_effect_v3_demo.rs` is now view runtime + typed actions.
-  - `apps/fret-examples/src/liquid_glass_demo.rs` is now view runtime + typed actions.
-  - `apps/fret-examples/src/genui_demo.rs` is now view runtime + typed actions.
-  - `apps/fret-examples/src/markdown_demo.rs` is now view runtime + typed actions.
-  - `apps/fret-examples/src/postprocess_theme_demo.rs` is now view runtime + typed actions.
-  - The legacy MVU implementation remains at `apps/fret-examples/src/postprocess_theme_demo_legacy.rs`.
-
-Legacy MVU demos (feature-gated, safe to delete in M9):
-
-- `apps/fret-examples/src/todo_demo_legacy.rs`
-- `apps/fret-examples/src/query_demo_legacy.rs`
-- `apps/fret-examples/src/query_async_tokio_demo_legacy.rs`
-- `apps/fret-examples/src/hello_counter_demo_legacy.rs`
-- `apps/fret-examples/src/async_playground_demo_legacy.rs`
-- `apps/fret-examples/src/embedded_viewport_demo_legacy.rs`
-- `apps/fret-examples/src/drop_shadow_demo_legacy.rs`
-- `apps/fret-examples/src/postprocess_theme_demo_legacy.rs`
+- None (as of 2026-03-05). All `apps/fret-examples` demos are view runtime + typed actions.
+- Legacy MVU demo copies (`*_legacy.rs`) were deleted as part of M9.
+- The former demo-level opt-in feature and `apps/fret-demo` legacy routing were removed.
 
 Recommendation:
 
-- If the goal is M9 (hard delete MVU), migrate all remaining MVU-only demos to View+actions and
-  delete the legacy copies once migrated.
-- Until M9 is completed, prefer `use fret::legacy::prelude::*;` in MVU-based demos to make the
-  legacy authoring surface explicit (do not rely on `fret::prelude::*`).
+- Avoid adding new MVU-based demos. If MVU must be used temporarily (before M9 completes), keep it
+  explicitly labeled as legacy/compat and do not document it as a golden path.
 
 ### 3) UI gallery legacy glue (`mvu_router`)
 
@@ -131,21 +95,17 @@ Recommendation:
 
 ### 4) Scaffold internal legacy references
 
-`apps/fretboard/src/scaffold/templates.rs` still contains legacy MVU template sources as internal,
-unused helpers (`*_legacy_mvu`). These are not generated by default and exist only as reference.
+Current status:
+
+- None (as of 2026-03-05). Internal legacy MVU scaffolding sources were removed from
+  `apps/fretboard/src/scaffold/templates.rs`.
 
 Recommendation:
 
-- If we keep them, ensure they remain clearly marked “legacy” and do not show up in user-facing
-  docs.
-- If we drop them later, do so only after ensuring we have equivalent view+actions teaching samples.
+- Keep scaffold templates limited to the view runtime + typed actions golden path.
 
 ## Suggested next migrations (low-risk, high-value)
 
-0) Done: `apps/fret-examples/src/embedded_viewport_demo.rs` is migrated to the view runtime; the legacy MVU
-   copy remains at `apps/fret-examples/src/embedded_viewport_demo_legacy.rs` (opt-in).
-
-1) Move or label `docs/examples/*` to only show view+actions golden path (no MVU in “golden path” docs).
-2) For cookbook: migrate 1–2 of the most frequently copied MVU examples to view+actions (optional),
-   and explicitly label the remaining MVU pages as legacy.
-3) For ui-gallery: keep legacy pages in a clearly named module/file to avoid “accidental reuse”.
+1) Update docs/templates to stop mentioning MVU as an available authoring path (keep a short history
+   note instead).
+2) Add a lightweight gate that fails if MVU identifiers reappear (grep-based).

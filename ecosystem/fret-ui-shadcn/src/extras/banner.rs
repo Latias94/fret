@@ -284,7 +284,7 @@ impl BannerTitle {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let el = ui::text(cx, self.text)
+        let el = ui::text(self.text)
             .text_sm()
             .flex_1()
             .min_w_0()

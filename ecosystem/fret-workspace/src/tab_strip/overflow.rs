@@ -32,6 +32,8 @@ fn compute_overflowed_tab_indices_for_tabs(
 pub(crate) fn compute_overflow_menu_entries<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     root_test_id: Option<&Arc<str>>,
+    active: Option<&Arc<str>>,
+    active_policy: OverflowMenuActivePolicy,
     tabs: &[WorkspaceTab],
     tab_rects: &[WorkspaceTabHitRect],
     viewport: Option<Rect>,
@@ -42,14 +44,19 @@ pub(crate) fn compute_overflow_menu_entries<H: UiHost>(
 ) -> (Option<Arc<str>>, Vec<DropdownMenuEntry>) {
     let button_test_id = root_test_id.map(|id| Arc::<str>::from(format!("{id}.overflow_button")));
 
+    let active_index = active.and_then(|active| {
+        tabs.iter()
+            .position(|tab| tab.id.as_ref() == active.as_ref())
+    });
+
     let overflowed_indices = viewport
         .map(|viewport| compute_overflowed_tab_indices_for_tabs(tabs, tab_rects, viewport, Px(2.0)))
         .unwrap_or_default();
     let item_indices = compute_overflow_menu_item_indices(
         tabs.len(),
         &overflowed_indices,
-        None,
-        OverflowMenuActivePolicy::Exclude,
+        active_index,
+        active_policy,
         if is_overflowing {
             OverflowMenuEmptyOverflowedPolicy::AllTabs
         } else {

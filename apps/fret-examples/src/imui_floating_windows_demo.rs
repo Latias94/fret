@@ -32,14 +32,13 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut ImUiFloatingWindowsState) -> 
         use fret_ui_kit::imui::UiWriterImUiFacadeExt as _;
         use fret_ui_kit::imui::UiWriterUiKitExt as _;
 
-        let title = fret_ui_kit::ui::text(ui.cx_mut(), "imui floating windows demo (diagnostics)")
+        let title = fret_ui_kit::ui::text("imui floating windows demo (diagnostics)")
             .text_sm()
             .font_semibold();
         ui.add_ui(title);
 
         let hint = fret_ui_kit::ui::text(
-            ui.cx_mut(),
-            "Drag the title bar onto the drop zone, double-click title to collapse/expand, resize from the corner, open the context menu, and test the select popup.",
+            "Double-click title to collapse/expand, resize from the corner, open the context menu, and test the select popup.",
         )
         .text_xs();
         ui.add_ui(hint);

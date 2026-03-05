@@ -1057,7 +1057,7 @@ impl<TData> DataTableToolbar<TData> {
                                             fret_icons::IconId::new_static("lucide.circle-plus"),
                                         ));
                                         children.push(
-                                            ui::text(cx, trigger_button_label.clone())
+                                            ui::text( trigger_button_label.clone())
                                                 .into_element(cx),
                                         );
                                         if trigger_selected_count > 0 {
@@ -1189,7 +1189,7 @@ impl<TData> DataTableToolbar<TData> {
                                         cx.opacity(0.6, move |_cx| vec![icon])
                                     });
 
-                                    let label = ui::raw_text(cx, it.label.clone())
+                                    let label = ui::raw_text(it.label.clone())
                                         .nowrap()
                                         .into_element(cx);
 
@@ -1238,7 +1238,7 @@ impl<TData> DataTableToolbar<TData> {
                                         .copied()
                                         .map(|n| {
                                             let fg_muted = theme.color_token("muted-foreground");
-                                            let count = ui::text(cx, Arc::<str>::from(n.to_string()))
+                                            let count = ui::text( Arc::<str>::from(n.to_string()))
                                                 .text_xs()
                                                 .text_color(ColorRef::Color(fg_muted))
                                                 .nowrap()
@@ -1332,7 +1332,7 @@ impl<TData> DataTableToolbar<TData> {
                                         .justify_center(),
                                     move |_cx| {
                                         vec![
-                                            ui::text(_cx, Arc::<str>::from("Clear filters"))
+                                            ui::text( Arc::<str>::from("Clear filters"))
                                                 .into_element(_cx),
                                         ]
                                     },
@@ -1448,9 +1448,9 @@ impl<TData> DataTableToolbar<TData> {
                         .variant(ButtonVariant::Ghost)
                         .size(ButtonSize::Sm)
                         .test_id("data-table-toolbar-reset-filters")
-                        .children([
-                            ui::text(cx, Arc::<str>::from("Reset")).into_element(cx),
+                        .children(vec![
                             crate::icon::icon(cx, fret_icons::IconId::new_static("lucide.x")),
+                            ui::text("Reset").into_element(cx),
                         ])
                         .on_activate(on_activate)
                         .into_element(cx)
@@ -1459,8 +1459,7 @@ impl<TData> DataTableToolbar<TData> {
                 let selected_text: Option<AnyElement> =
                     (self.show_selected_text && selected_count > 0).then(|| {
                         let mut text =
-                            ui::raw_text(cx, Arc::from(format!("Selected: {selected_count}")))
-                                .nowrap();
+                            ui::raw_text(Arc::from(format!("Selected: {selected_count}"))).nowrap();
                         if let Some(color) = theme.color_by_key("muted-foreground") {
                             text = text.text_color(ColorRef::Color(color));
                         }
@@ -1750,7 +1749,7 @@ impl DataTablePagination {
                 let theme = Theme::global(&*cx.app);
                 let dir = use_direction(cx, None);
                 let muted_fg = theme.color_by_key("muted-foreground");
-                let mut text = ui::text(cx, selected_label.clone())
+                let mut text = ui::text(selected_label.clone())
                     .text_sm()
                     .tabular_nums()
                     .nowrap();

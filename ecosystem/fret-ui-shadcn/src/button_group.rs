@@ -184,7 +184,7 @@ impl ButtonGroupText {
                             TextIntent::Control,
                         );
 
-                        let mut el = ui::text(cx, text)
+                        let mut el = ui::text(text)
                             .text_size_px(style.size)
                             .font_weight(style.weight)
                             .text_color(ColorRef::Color(text_color))
