@@ -166,6 +166,8 @@ Using `tools/diag-scripts/text-heavy-memory-steady.json` on macOS/Metal (fonts +
   - `macos_vmmap_steady.physical_footprint_peak_bytes`: 359,976,141 .. 366,162,739 (~343.3 .. 349.3 MiB)
   - `macos_vmmap_steady.regions.owned_unmapped_memory_dirty_bytes`: 249,036,800 .. 254,384,538 (~237.5 .. 242.6 MiB)
   - `render_text_atlas_bytes_live_estimate_total`: ~20 MiB (after lazy mask atlas page allocation)
+- Text cache byte estimates (`resource_caches.render_text`, last snapshot; local 2026-03-05):
+  - `shape_cache_bytes_estimate_total`: ~0.26 MiB (best-effort; excludes allocator overhead)
 - Default malloc zone: ~26.6 MB allocated, ~20.9 MB frag (system allocator)
 - `wgpu_metal_current_allocated_size_bytes`: 127,418,368 (~121.6 MiB; requires `--env FRET_DIAG_WGPU_ALLOCATOR_REPORT=1`)
 
@@ -194,6 +196,7 @@ Using `tools/diag-scripts/image-heavy-memory-steady-after-drop.json` on macOS/Me
 
 Using `tools/diag-scripts/ui-gallery/memory/ui-gallery-code-editor-torture-memory-steady.json` on macOS/Metal (UI Gallery, editor-grade stress):
 
+- Note: this page is behind `fret-ui-gallery`'s `gallery-dev` feature; launch with that enabled (or `gallery-full`) or the nav item will not exist.
 - Repeat sample (N=5; captured via `fretboard diag repro --launch`):
   - `macos_vmmap_steady.physical_footprint_peak_bytes`: 387,343,974 .. 390,804,275 (~369.4 .. 372.7 MiB)
   - `macos_vmmap_steady.regions.owned_unmapped_memory_dirty_bytes`: 236,349,030 .. 236,978,176 (~225.4 .. 226.0 MiB)
@@ -216,6 +219,8 @@ Using `tools/diag-scripts/ui-gallery/memory/ui-gallery-code-editor-torture-memor
 - Text system attribution (`resource_caches.render_text`, last snapshot; single run):
   - `registered_font_blobs_total_bytes`: 0 (no injected memory-backed fonts observed)
   - `baseline_metrics_cache_entries`: 5
+  - `shape_cache_bytes_estimate_total`: ~6.3 MiB (best-effort; excludes allocator overhead)
+  - `blob_paint_palette_bytes_estimate_total`: ~0.06 MiB (best-effort)
 
 Interpretation:
 
@@ -223,6 +228,7 @@ Interpretation:
   the measured code editor paint caches (tens of KiB). The dominant CPU-side contributors remain:
   - `owned unmapped memory` dirty (allocator retention / sticky reservations), and
   - `MALLOC_SMALL` dirty (heap allocations + fragmentation).
+- The new best-effort text cache byte estimates (shape cache + blob payload slices) are **single-digit MiB** even in the editor torture scenario, which further weakens the hypothesis that “font/text caches explain the high footprint”.
 - Allocator A/B spot-check (single-run, `apps/fret-demo` `ui_gallery` binary, `--release`):
   - `system`:
     - `owned unmapped memory` dirty: 236,349,030 (~225.4 MiB)
