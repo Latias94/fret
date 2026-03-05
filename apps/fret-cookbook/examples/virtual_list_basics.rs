@@ -197,21 +197,19 @@ impl View for VirtualListBasicsView {
                     row_layout.size.width = Length::Fill;
                     row_layout.size.height = Length::Px(row_height_at(mapped, tall_rows));
 
-                    let content = stack::hstack(
-                        cx,
-                        stack::HStackProps::default()
-                            .layout(LayoutRefinement::default().w_full().h_full())
-                            .gap_x(Space::N2)
-                            .items_center(),
-                        |cx| {
-                            [
-                                cx.text(item.label.clone()),
-                                shadcn::Badge::new(format!("#{mapped}"))
-                                    .variant(shadcn::BadgeVariant::Secondary)
-                                    .into_element(cx),
-                            ]
-                        },
-                    );
+                    let content = ui::h_flex(|cx| {
+                        [
+                            cx.text(item.label.clone()),
+                            shadcn::Badge::new(format!("#{mapped}"))
+                                .variant(shadcn::BadgeVariant::Secondary)
+                                .into_element(cx),
+                        ]
+                    })
+                    .gap(Space::N2)
+                    .items_center()
+                    .w_full()
+                    .h_full()
+                    .into_element(cx);
 
                     let mut row = cx.container(
                         ContainerProps {
@@ -324,13 +322,10 @@ impl View for VirtualListBasicsView {
                 ui::h_flex(|cx| [shadcn::Label::new("Measure mode:").into_element(cx)])
                     .items_center()
                     .into_element(cx),
-                stack::hstack(
-                    cx,
-                    stack::HStackProps::default()
-                        .layout(LayoutRefinement::default().w_full())
-                        .justify_center(),
-                    |_cx| [mode_toggle],
-                ),
+                ui::h_row(|_cx| [mode_toggle])
+                    .justify_center()
+                    .w_full()
+                    .into_element(cx),
                 shadcn::Separator::new().into_element(cx),
                 ui::h_flex(|cx| {
                     [

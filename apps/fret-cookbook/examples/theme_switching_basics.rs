@@ -97,15 +97,12 @@ impl View for ThemeSwitchingBasicsView {
             .into_element(cx)
             .test_id(TEST_ID_TOGGLE);
 
-        // Avoid `ui::h_flex` here: its internal flex sizing is always `width: fill`, which can
-        // cause children to get a much larger hit box than intended.
-        let toggle_row = stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .justify_center()
-                .layout(LayoutRefinement::default().w_full()),
-            |_cx| [scheme_toggle],
-        );
+        // Avoid `ui::h_flex` here: its internal flex sizing forces `width: fill` by default, which
+        // can cause children to get a much larger hit box than intended.
+        let toggle_row = ui::h_row(|_cx| [scheme_toggle])
+            .justify_center()
+            .w_full()
+            .into_element(cx);
 
         let sample = shadcn::Card::new([
             shadcn::CardHeader::new([

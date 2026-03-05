@@ -119,13 +119,10 @@ impl View for MarkdownAndCodeBasicsView {
                 ui::h_flex(|cx| {
                     [
                         shadcn::Label::new("Code wrap:").into_element(cx),
-                        stack::hstack(
-                            cx,
-                            stack::HStackProps::default()
-                                .layout(LayoutRefinement::default().w_full())
-                                .justify_center(),
-                            |_cx| [wrap_toggle],
-                        ),
+                        ui::h_flex(|_cx| [wrap_toggle])
+                            .w_full()
+                            .justify_center()
+                            .into_element(cx),
                     ]
                 })
                 .gap(Space::N2)
@@ -175,14 +172,11 @@ impl View for MarkdownAndCodeBasicsView {
             .min_w_0()
             .into_element(cx);
 
-        let panels = stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .gap_x(Space::N4)
-                .items_stretch()
-                .layout(LayoutRefinement::default().w_full()),
-            |_cx| [left, right],
-        );
+        let panels = ui::h_flex(|_cx| [left, right])
+            .gap(Space::N4)
+            .items_stretch()
+            .w_full()
+            .into_element(cx);
 
         let body = ui::v_flex(|cx| [controls, shadcn::Separator::new().into_element(cx), panels])
             .gap(Space::N3)
