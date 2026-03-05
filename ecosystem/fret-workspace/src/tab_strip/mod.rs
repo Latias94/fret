@@ -47,7 +47,6 @@ mod interaction;
 mod kernel;
 mod layouts;
 mod state;
-mod surface;
 mod theme;
 mod utils;
 mod widgets;

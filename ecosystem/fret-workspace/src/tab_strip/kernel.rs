@@ -8,8 +8,6 @@ use fret_ui_headless::tab_strip_drop_target::{
 
 use crate::tab_drag::{WorkspaceTabHitRect, WorkspaceTabInsertionSide};
 
-use super::surface::{WorkspaceTabStripSurface, classify_workspace_tab_strip_surface};
-
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub(crate) enum WorkspaceTabStripDropTarget {
     #[default]
@@ -30,22 +28,7 @@ pub(crate) fn compute_workspace_tab_strip_drop_target(
     scroll_left_control_rect: Option<Rect>,
     scroll_right_control_rect: Option<Rect>,
 ) -> WorkspaceTabStripDropTarget {
-    let surface = classify_workspace_tab_strip_surface(
-        position,
-        dragged_tab_id,
-        tab_rects,
-        pinned_boundary_rect,
-        end_drop_target_rect,
-        scroll_viewport_rect,
-        overflow_control_rect,
-        scroll_left_control_rect,
-        scroll_right_control_rect,
-    );
-
     // Use the shared headless helper for the "tab vs boundary vs end" drop target.
-    //
-    // Note: We still surface `WorkspaceTabStripSurface` separately so other code can reason about
-    // e.g. `ScrollControls` explicitly when needed.
     match compute_tab_strip_drop_target_midpoint(
         position,
         tab_rects,
@@ -58,11 +41,7 @@ pub(crate) fn compute_workspace_tab_strip_drop_target(
         scroll_left_control_rect,
         scroll_right_control_rect,
     ) {
-        HeadlessTabStripDropTarget::None => match surface {
-            WorkspaceTabStripSurface::PinnedBoundary => WorkspaceTabStripDropTarget::PinnedBoundary,
-            WorkspaceTabStripSurface::HeaderSpace => WorkspaceTabStripDropTarget::End,
-            _ => WorkspaceTabStripDropTarget::None,
-        },
+        HeadlessTabStripDropTarget::None => WorkspaceTabStripDropTarget::None,
         HeadlessTabStripDropTarget::PinnedBoundary => WorkspaceTabStripDropTarget::PinnedBoundary,
         HeadlessTabStripDropTarget::End => WorkspaceTabStripDropTarget::End,
         HeadlessTabStripDropTarget::Tab { index, side } => tab_rects
