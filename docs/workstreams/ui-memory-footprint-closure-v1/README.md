@@ -86,6 +86,24 @@ Interpretation:
   the measured code editor paint caches (tens of KiB). The dominant CPU-side contributors remain:
   - `owned unmapped memory` dirty (allocator retention / sticky reservations), and
   - `MALLOC_SMALL` dirty (heap allocations + fragmentation).
+- Allocator A/B spot-check (single-run, `apps/fret-demo` `ui_gallery` binary, `--release`):
+  - `system`:
+    - `owned unmapped memory` dirty: 236,349,030 (~225.4 MiB)
+    - `MALLOC_SMALL` dirty: 79,491,891 (~75.8 MiB)
+    - `malloc_dirty_bytes_total`: 95,984,025 (~91.5 MiB)
+    - malloc zones total frag: 14,505,165 (~13.8 MiB)
+  - `mimalloc`:
+    - `owned unmapped memory` dirty: 236,978,176 (~226.0 MiB)
+    - `MALLOC_SMALL` dirty: 81,317,069 (~77.5 MiB)
+    - `malloc_dirty_bytes_total`: 97,671,578 (~93.1 MiB)
+    - malloc zones total frag: 16,006,963 (~15.3 MiB)
+  - `jemalloc`:
+    - `owned unmapped memory` dirty: 236,978,176 (~226.0 MiB)
+    - `MALLOC_SMALL` dirty: 81,631,642 (~77.9 MiB)
+    - `malloc_dirty_bytes_total`: 98,212,250 (~93.7 MiB)
+    - malloc zones total frag: 16,725,606 (~16.0 MiB)
+  - In this workload, switching Rust's global allocator does not materially change the headline
+    `owned unmapped memory` bucket, and slightly increases `MALLOC_*` / frag signals.
 - Diagnostics stability note:
   - Full debug snapshot capture can make bundle dumps prohibitively expensive in editor torture scenarios.
     This script therefore sets env defaults (via `meta.env_defaults`) to record **stats-only** debug
