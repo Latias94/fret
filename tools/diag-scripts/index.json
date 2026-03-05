@@ -5907,6 +5907,28 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-switch-docs-smoke",
+      "path": "tools/diag-scripts/ui-gallery/switch/ui-gallery-switch-docs-smoke.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "docs-smoke",
+        "screenshots",
+        "shadcn",
+        "switch",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Sets theme preset to zinc/light, navigates to Switch, captures a screenshot and bundle.",
+        "Sets theme preset to zinc/dark, re-captures the Switch Sizes section to validate dark-mode thumb/track parity."
+      ]
+    },
+    {
       "id": "ui-gallery-table-retained-keyboard-typeahead",
       "path": "tools/diag-scripts/ui-gallery/table/ui-gallery-table-retained-keyboard-typeahead.json",
       "required_capabilities": [],
