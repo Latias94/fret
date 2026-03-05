@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "kind": "diag_script_suite_manifest",
+  "scripts": [
+    "tools/diag-scripts/ui-gallery-ai-file-tree-demo-toggle.json",
+    "tools/diag-scripts/ui-gallery-ai-file-tree-demo-actions.json",
+    "tools/diag-scripts/ui-gallery-ai-file-tree-large-scroll.json",
+    "tools/diag-scripts/ui-gallery-ai-file-tree-demo-screenshot-zinc-dark.json"
+  ]
+}
+

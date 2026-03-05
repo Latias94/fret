@@ -3,34 +3,49 @@ pub const SOURCE: &str = include_str!("file_tree_demo.rs");
 // region: example
 use fret_runtime::Model;
 use fret_ui::action::ActionCx;
-use fret_ui::element::SemanticsProps;
+use fret_ui::element::{AnyElement, Length, SemanticsDecoration, SizeStyle, TextProps};
+use fret_ui::{ElementContext, UiHost};
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::declarative::ModelWatchExt;
 use fret_ui_kit::ui;
 use fret_ui_kit::{LayoutRefinement, Space};
-use fret_ui_shadcn::prelude::*;
-use std::collections::HashSet;
 use std::sync::Arc;
 
 #[derive(Default)]
 struct FileTreeModels {
-    expanded: Option<Model<HashSet<Arc<str>>>>,
     selected: Option<Model<Option<Arc<str>>>>,
+    copied: Option<Model<bool>>,
+}
+
+fn invisible_marker<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    test_id: &'static str,
+) -> AnyElement {
+    cx.text_props(TextProps {
+        layout: fret_ui::element::LayoutStyle {
+            size: SizeStyle {
+                width: Length::Px(fret_core::Px(0.0)),
+                height: Length::Px(fret_core::Px(0.0)),
+                ..Default::default()
+            },
+            ..Default::default()
+        },
+        text: Arc::<str>::from(""),
+        style: None,
+        color: None,
+        wrap: fret_core::TextWrap::None,
+        overflow: fret_core::TextOverflow::Clip,
+        align: fret_core::TextAlign::Start,
+        ink_overflow: Default::default(),
+    })
+    .attach_semantics(
+        SemanticsDecoration::default()
+            .role(fret_core::SemanticsRole::Group)
+            .test_id(Arc::<str>::from(test_id)),
+    )
 }
 
 pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let expanded = cx.with_state(FileTreeModels::default, |st| st.expanded.clone());
-    let expanded = match expanded {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(HashSet::<Arc<str>>::new());
-            cx.with_state(FileTreeModels::default, |st| {
-                st.expanded = Some(model.clone())
-            });
-            model
-        }
-    };
-
     let selected = cx.with_state(FileTreeModels::default, |st| st.selected.clone());
     let selected = match selected {
         Some(model) => model,
@@ -45,30 +60,65 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
 
     let selected_value = cx.watch_model(&selected).layout().cloned().flatten();
 
+    let copied = cx.with_state(FileTreeModels::default, |st| st.copied.clone());
+    let copied = match copied {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(false);
+            cx.with_state(FileTreeModels::default, |st| {
+                st.copied = Some(model.clone())
+            });
+            model
+        }
+    };
+    let copied_value = cx.watch_model(&copied).layout().copied().unwrap_or(false);
+
     let tree = ui_ai::FileTree::new([
         ui_ai::FileTreeFolder::new("src", "src")
             .test_id("ui-ai-file-tree-folder-src")
+            .action(
+                ui_ai::FileTreeAction::new(
+                    fret_icons::ids::ui::COPY,
+                    "Copy path",
+                    Arc::new({
+                        let copied = copied.clone();
+                        move |host, _action_cx: ActionCx, _path| {
+                            let _ = host.models_mut().update(&copied, |v| *v = true);
+                        }
+                    }),
+                )
+                .test_id("ui-ai-file-tree-folder-src-action-copy"),
+            )
             .children([
+                ui_ai::FileTreeFolder::new("src/components", "components")
+                    .children([
+                        ui_ai::FileTreeFile::new("src/components/button.tsx", "button.tsx").into(),
+                        ui_ai::FileTreeFile::new("src/components/input.tsx", "input.tsx").into(),
+                        ui_ai::FileTreeFile::new("src/components/modal.tsx", "modal.tsx").into(),
+                    ])
+                    .into(),
+                ui_ai::FileTreeFolder::new("src/hooks", "hooks")
+                    .children([
+                        ui_ai::FileTreeFile::new("src/hooks/use-auth.ts", "use-auth.ts").into(),
+                        ui_ai::FileTreeFile::new("src/hooks/use-theme.ts", "use-theme.ts").into(),
+                    ])
+                    .into(),
+                ui_ai::FileTreeFolder::new("src/lib", "lib")
+                    .children([ui_ai::FileTreeFile::new("src/lib/utils.ts", "utils.ts").into()])
+                    .into(),
+                ui_ai::FileTreeFile::new("src/app.tsx", "app.tsx").into(),
+                ui_ai::FileTreeFile::new("src/main.tsx", "main.tsx")
+                    .test_id("ui-ai-file-tree-file-main")
+                    .into(),
                 ui_ai::FileTreeFile::new("src/lib.rs", "lib.rs")
                     .test_id("ui-ai-file-tree-file-lib")
                     .into(),
-                ui_ai::FileTreeFile::new("src/main.rs", "main.rs")
-                    .test_id("ui-ai-file-tree-file-main")
-                    .into(),
             ])
             .into(),
-        ui_ai::FileTreeFile::new("Cargo.toml", "Cargo.toml")
-            .test_id("ui-ai-file-tree-file-cargo-toml")
-            .into(),
-        ui_ai::FileTreeFolder::new("tests", "tests")
-            .test_id("ui-ai-file-tree-folder-tests")
-            .child(
-                ui_ai::FileTreeFile::new("tests/file_tree.rs", "file_tree.rs")
-                    .test_id("ui-ai-file-tree-file-tests-file-tree"),
-            )
-            .into(),
+        ui_ai::FileTreeFile::new("package.json", "package.json").into(),
+        ui_ai::FileTreeFile::new("tsconfig.json", "tsconfig.json").into(),
+        ui_ai::FileTreeFile::new("README.md", "README.md").into(),
     ])
-    .expanded_paths(expanded.clone())
     .selected_path(selected_value.clone())
     .on_select(Arc::new({
         let selected = selected.clone();
@@ -80,41 +130,17 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
     .refine_layout(LayoutRefinement::default().w_full().min_w_0())
     .into_element(cx);
 
-    let selected_label_text = selected_value
-        .as_deref()
-        .map(|s| format!("Selected: {s}"))
-        .unwrap_or_else(|| "Selected: <none>".to_string());
+    let mut out = vec![tree];
+    if selected_value.as_deref() == Some("src/lib.rs") {
+        out.push(invisible_marker(cx, "ui-ai-file-tree-selected-marker"));
+    }
+    if copied_value {
+        out.push(invisible_marker(cx, "ui-ai-file-tree-action-marker"));
+    }
 
-    let selected_label = cx.semantics(
-        SemanticsProps {
-            role: fret_core::SemanticsRole::Text,
-            test_id: Some(Arc::<str>::from("ui-ai-file-tree-selected-label")),
-            ..Default::default()
-        },
-        move |cx| vec![cx.text(selected_label_text)],
-    );
-
-    let selected_marker = (selected_value.as_deref() == Some("src/lib.rs")).then(|| {
-        cx.semantics(
-            SemanticsProps {
-                role: fret_core::SemanticsRole::Generic,
-                test_id: Some(Arc::<str>::from("ui-ai-file-tree-selected-marker")),
-                ..Default::default()
-            },
-            move |_cx| vec![],
-        )
-    });
-
-    ui::v_flex(move |cx| {
-        vec![
-            cx.text("FileTree (AI Elements)"),
-            tree,
-            selected_label,
-            selected_marker.unwrap_or_else(|| cx.text("")),
-        ]
-    })
-    .layout(LayoutRefinement::default().w_full().min_w_0())
-    .gap(Space::N3)
-    .into_element(cx)
+    ui::v_flex(move |_cx| out)
+        .layout(LayoutRefinement::default().w_full().min_w_0())
+        .gap(Space::N0)
+        .into_element(cx)
 }
 // endregion: example
