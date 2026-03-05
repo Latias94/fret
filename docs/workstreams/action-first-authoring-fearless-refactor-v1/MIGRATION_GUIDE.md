@@ -170,6 +170,14 @@ cx.on_action_notify_models::<act::Add>({
 });
 ```
 
+Choosing the helper:
+
+- Use `on_action_notify_model_update` / `on_action_notify_model_set` / `on_action_notify_toggle_bool` when a handler only touches one model.
+- Use `on_action_notify_models` when you need to coordinate multiple models in one handler.
+- Use `on_action_notify` (or `on_action`) when you need host-only operations (focus, timers, clipboard,
+  effects) in the handler; keep model updates minimal and prefer a single `models_mut()` access if
+  possible.
+
 Side effects that need `App` access (v1 note):
 
 - Some operations (e.g. `fret-query` invalidation via `with_query_client`) require `&mut App`.
