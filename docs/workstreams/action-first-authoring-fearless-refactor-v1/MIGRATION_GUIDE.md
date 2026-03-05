@@ -218,8 +218,8 @@ let el = button.into_element(cx);
 
 Notes:
 
-- `role(...)` is a convenience alias for `a11y_role(...)` on `UiIntoElement` values. The `a11y_*`
-  names remain supported.
+- `role(...)` is available on `UiBuilder<T>` and on `AnyElement` (after `into_element(cx)`).
+  - For arbitrary `UiIntoElement` values, prefer `a11y_role(...)` / `a11y(...)`.
 - `a11y_*` decorations are applied via layout-transparent `SemanticsDecoration` on `AnyElement`
   (no extra layout node required).
 - `key_context(...)` participates in `when` expressions via `keyctx.*` (ADR 0022).

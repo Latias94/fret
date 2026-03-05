@@ -171,7 +171,7 @@ impl View for TodoView {
             .action(act::Add)
             .into_element(cx);
 
-        ui::h_flex(cx, |_cx| [input, add_btn])
+        ui::h_flex(|_cx| [input, add_btn])
             .gap(Space::N2)
             .items_center()
             .into_element(cx)
