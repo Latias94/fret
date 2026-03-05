@@ -356,6 +356,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut layout_sidecar_out: Option<PathBuf> = None;
     let mut extensions_out: Option<PathBuf> = None;
     let mut layout_perf_summary_out: Option<PathBuf> = None;
+    let mut memory_summary_out: Option<PathBuf> = None;
     let mut slice_out: Option<PathBuf> = None;
     let mut ai_packet_out: Option<PathBuf> = None;
     let mut script_path: Option<PathBuf> = None;
@@ -881,6 +882,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 layout_sidecar_out = Some(p.clone());
                 extensions_out = Some(p.clone());
                 layout_perf_summary_out = Some(p.clone());
+                memory_summary_out = Some(p.clone());
                 slice_out = Some(p.clone());
                 ai_packet_out = Some(p.clone());
                 test_ids_out = Some(p);
@@ -3513,6 +3515,13 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             warmup_frames,
             stats_json,
             layout_perf_summary_out.as_deref(),
+        ),
+        "memory-summary" | "memory_summary" => commands::memory_summary::cmd_memory_summary(
+            &rest,
+            &resolved_out_dir,
+            &workspace_root,
+            stats_json,
+            memory_summary_out.as_deref(),
         ),
         "layout-sidecar" | "layout_sidecar" => commands::layout_sidecar::cmd_layout_sidecar(
             &rest,

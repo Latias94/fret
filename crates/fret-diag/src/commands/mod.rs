@@ -15,6 +15,7 @@ pub(crate) mod index;
 pub(crate) mod inspect;
 pub(crate) mod layout_perf_summary;
 pub(crate) mod layout_sidecar;
+pub(crate) mod memory_summary;
 pub(crate) mod pick;
 pub(crate) mod query;
 pub(crate) mod registry;
