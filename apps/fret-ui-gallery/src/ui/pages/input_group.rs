@@ -84,7 +84,7 @@ pub(super) fn preview_input_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
                 .code_rust_from_file_region(snippets::spinner::SOURCE, "example"),
             DocSection::new("Label", label)
                 .description(
-                    "Helper labels inside input groups (pair with `a11y_label` for semantics).",
+                    "Use `Label::for_control` + `InputGroup::control_id` for focus forwarding and `labelled-by` semantics.",
                 )
                 .test_id_prefix("ui-gallery-input-group-label")
                 .code_rust_from_file_region(snippets::label::SOURCE, "example"),

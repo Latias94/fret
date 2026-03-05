@@ -23,6 +23,9 @@ use fret_ui_kit::declarative::motion::{
     drive_tween_color_for_element, drive_tween_f32_for_element,
 };
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::primitives::control_registry::{
+    ControlAction, ControlEntry, ControlId, control_registry_model,
+};
 use fret_ui_kit::recipes::input::{InputTokenKeys, resolve_input_chrome};
 use fret_ui_kit::typography;
 use fret_ui_kit::{ChromeRefinement, LayoutRefinement, Size as ComponentSize, Space};
@@ -47,6 +50,7 @@ pub struct InputGroup {
     control: InputGroupControlKind,
     test_id: Option<Arc<str>>,
     control_test_id: Option<Arc<str>>,
+    control_id: Option<ControlId>,
     control_on_key_down: Option<OnKeyDown>,
     placeholder: Option<Arc<str>>,
     disabled: bool,
@@ -80,6 +84,10 @@ impl std::fmt::Debug for InputGroup {
             .field("control", &self.control)
             .field("test_id", &self.test_id.as_deref())
             .field("control_test_id", &self.control_test_id.as_deref())
+            .field(
+                "control_id",
+                &self.control_id.as_ref().map(|id| id.as_str()),
+            )
             .field("control_on_key_down", &self.control_on_key_down.is_some())
             .field("leading_len", &self.leading.len())
             .field("trailing_len", &self.trailing.len())
@@ -111,6 +119,7 @@ impl InputGroup {
             control: InputGroupControlKind::Input,
             test_id: None,
             control_test_id: None,
+            control_id: None,
             control_on_key_down: None,
             placeholder: None,
             disabled: false,
@@ -154,6 +163,13 @@ impl InputGroup {
 
     pub fn control_test_id(mut self, id: impl Into<Arc<str>>) -> Self {
         self.control_test_id = Some(id.into());
+        self
+    }
+
+    /// Associates this group with a logical form control id so related elements (e.g. labels,
+    /// helper text) can forward activation and attach `labelled-by` / `described-by` semantics.
+    pub fn control_id(mut self, id: impl Into<ControlId>) -> Self {
+        self.control_id = Some(id.into());
         self
     }
 
@@ -439,6 +455,7 @@ impl InputGroup {
         let test_id = self.test_id;
         let overlay_test_id = test_id.clone();
         let control_test_id = self.control_test_id;
+        let control_id = self.control_id;
         let control_on_key_down = self.control_on_key_down;
         let disabled = self.disabled;
         let border_width_override = self.border_width_override;
@@ -480,6 +497,8 @@ impl InputGroup {
                 ..Default::default()
             },
             |cx| {
+                let has_a11y_label = a11y_label.is_some();
+                let control_registry = control_id.as_ref().map(|_| control_registry_model(cx));
                 let dir = crate::use_direction(cx, None);
                 let build_inline_addon = |cx: &mut ElementContext<'_, H>,
                                           children: Vec<AnyElement>,
@@ -714,7 +733,7 @@ impl InputGroup {
                     };
 
                 if is_block_layout {
-                    let control_el = match control {
+                    let mut control_el = match control {
                         InputGroupControlKind::Input => {
                             let (resolved_pad_inline_start, resolved_pad_inline_end) =
                                 rtl::inline_start_end_pair(
@@ -816,12 +835,63 @@ impl InputGroup {
                         }
                     };
 
-                    let control_id = control_el.id;
-                    let control_focus_target = (!disabled).then_some(control_id);
+                    let control_element_id = control_el.id;
+                    let control_focus_target = (!disabled).then_some(control_element_id);
+
+                    if let (Some(logical_control_id), Some(control_registry)) =
+                        (control_id.clone(), control_registry.clone())
+                    {
+                        let entry = ControlEntry {
+                            element: control_element_id,
+                            enabled: !disabled,
+                            action: ControlAction::Noop,
+                        };
+                        let _ = cx.app.models_mut().update(&control_registry, |reg| {
+                            reg.register_control(
+                                cx.window,
+                                cx.frame_id,
+                                logical_control_id.clone(),
+                                entry,
+                            );
+                        });
+
+                        let labelled_by_element = if has_a11y_label {
+                            None
+                        } else {
+                            cx.app
+                                .models()
+                                .read(&control_registry, |reg| {
+                                    reg.label_for(cx.window, &logical_control_id)
+                                        .map(|l| l.element)
+                                })
+                                .ok()
+                                .flatten()
+                        };
+
+                        let described_by_element = cx
+                            .app
+                            .models()
+                            .read(&control_registry, |reg| {
+                                reg.described_by_for(cx.window, &logical_control_id)
+                            })
+                            .ok()
+                            .flatten();
+
+                        if labelled_by_element.is_some() || described_by_element.is_some() {
+                            let mut decoration = SemanticsDecoration::default();
+                            if let Some(label) = labelled_by_element {
+                                decoration = decoration.labelled_by_element(label.0);
+                            }
+                            if let Some(desc) = described_by_element {
+                                decoration = decoration.described_by_element(desc.0);
+                            }
+                            control_el = control_el.attach_semantics(decoration);
+                        }
+                    }
                     if let Some(handler) = control_on_key_down {
                         // Run before the control's internal key handling so callers can
                         // consume keys like Enter/Backspace and prevent default behavior.
-                        cx.key_prepend_on_key_down_for(control_id, handler);
+                        cx.key_prepend_on_key_down_for(control_element_id, handler);
                     }
 
                     let inline_start = (control == InputGroupControlKind::Input
@@ -1052,7 +1122,7 @@ impl InputGroup {
                         },
                     );
 
-                    let overlay = build_wrapper_motion_overlay(cx, control_id);
+                    let overlay = build_wrapper_motion_overlay(cx, control_element_id);
                     vec![layout, overlay]
                 } else {
                     let (resolved_pad_inline_start, resolved_pad_inline_end) =
@@ -1114,14 +1184,65 @@ impl InputGroup {
                         )
                     };
 
-                    let control_el = cx.text_input(input);
-                    let control_id = control_el.id;
-                    let control_focus_target = (!disabled).then_some(control_id);
+                    let mut control_el = cx.text_input(input);
+                    let control_element_id = control_el.id;
+                    let control_focus_target = (!disabled).then_some(control_element_id);
+
+                    if let (Some(logical_control_id), Some(control_registry)) =
+                        (control_id.clone(), control_registry.clone())
+                    {
+                        let entry = ControlEntry {
+                            element: control_element_id,
+                            enabled: !disabled,
+                            action: ControlAction::Noop,
+                        };
+                        let _ = cx.app.models_mut().update(&control_registry, |reg| {
+                            reg.register_control(
+                                cx.window,
+                                cx.frame_id,
+                                logical_control_id.clone(),
+                                entry,
+                            );
+                        });
+
+                        let labelled_by_element = if has_a11y_label {
+                            None
+                        } else {
+                            cx.app
+                                .models()
+                                .read(&control_registry, |reg| {
+                                    reg.label_for(cx.window, &logical_control_id)
+                                        .map(|l| l.element)
+                                })
+                                .ok()
+                                .flatten()
+                        };
+
+                        let described_by_element = cx
+                            .app
+                            .models()
+                            .read(&control_registry, |reg| {
+                                reg.described_by_for(cx.window, &logical_control_id)
+                            })
+                            .ok()
+                            .flatten();
+
+                        if labelled_by_element.is_some() || described_by_element.is_some() {
+                            let mut decoration = SemanticsDecoration::default();
+                            if let Some(label) = labelled_by_element {
+                                decoration = decoration.labelled_by_element(label.0);
+                            }
+                            if let Some(desc) = described_by_element {
+                                decoration = decoration.described_by_element(desc.0);
+                            }
+                            control_el = control_el.attach_semantics(decoration);
+                        }
+                    }
 
                     if let Some(handler) = control_on_key_down {
                         // Run before the control's internal key handling so callers can
                         // consume keys like Enter/Backspace and prevent default behavior.
-                        cx.key_prepend_on_key_down_for(control_id, handler);
+                        cx.key_prepend_on_key_down_for(control_element_id, handler);
                     }
 
                     let leading = (!leading.is_empty()).then(|| {
@@ -1174,7 +1295,7 @@ impl InputGroup {
                         },
                     );
 
-                    let overlay = build_wrapper_motion_overlay(cx, control_id);
+                    let overlay = build_wrapper_motion_overlay(cx, control_element_id);
                     vec![layout, overlay]
                 }
             },

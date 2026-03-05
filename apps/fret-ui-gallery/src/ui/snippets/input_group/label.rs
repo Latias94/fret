@@ -3,6 +3,7 @@ pub const SOURCE: &str = include_str!("label.rs");
 // region: example
 use fret_core::Px;
 use fret_icons::IconId;
+use fret_ui_kit::primitives::control_registry::ControlId;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 use std::time::Duration;
 
@@ -30,6 +31,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     };
 
     let max_w = LayoutRefinement::default().w_full().max_w(Px(420.0));
+    let email_id = ControlId::from("ui-gallery-input-group-label-email");
 
     shadcn::TooltipProvider::new()
         .delay(Duration::ZERO)
@@ -65,20 +67,26 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                 .into_element(cx)
             };
 
-            let header =
-                ui::h_flex(|cx| vec![shadcn::Label::new("Email").into_element(cx), help_tooltip])
-                    .layout(LayoutRefinement::default().w_full())
-                    .justify_between()
-                    .items_center()
-                    .into_element(cx);
+            let header = ui::h_flex(|cx| {
+                vec![
+                    shadcn::Label::new("Email")
+                        .for_control(email_id.clone())
+                        .test_id("ui-gallery-input-group-label-email-label")
+                        .into_element(cx),
+                    help_tooltip,
+                ]
+            })
+            .layout(LayoutRefinement::default().w_full())
+            .justify_between()
+            .items_center()
+            .into_element(cx);
 
             let email_group = shadcn::InputGroup::new(email)
-                .a11y_label("Email")
                 .placeholder("shadcn@vercel.com")
                 .control_test_id("ui-gallery-input-group-label-email-control")
+                .control_id(email_id.clone())
                 .block_start([header])
                 .block_start_border_bottom(true)
-                .leading_has_button(false)
                 .refine_layout(LayoutRefinement::default().w_full().min_w_0())
                 .into_element(cx);
 
