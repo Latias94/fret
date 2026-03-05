@@ -286,6 +286,39 @@ impl<'cx, 'a, H: UiHost> ViewCx<'cx, 'a, H> {
         });
     }
 
+    /// Register a typed unit action handler that updates a model and participates in the view-cache
+    /// closure (`request_redraw` + `notify`) when the update succeeds.
+    ///
+    /// This is the recommended helper for simple state mutations (counter increments, toggles,
+    /// flags, and small structs).
+    pub fn on_action_notify_model_update<A, T>(
+        &mut self,
+        model: Model<T>,
+        update: impl Fn(&mut T) + 'static,
+    ) where
+        A: crate::TypedAction,
+        T: Any,
+    {
+        self.on_action_notify::<A>(move |host, _action_cx| {
+            host.models_mut().update(&model, |v| update(v)).is_ok()
+        });
+    }
+
+    /// Register a typed unit action handler that sets a model to a fixed value and participates in
+    /// the view-cache closure (`request_redraw` + `notify`) when the update succeeds.
+    pub fn on_action_notify_model_set<A, T>(&mut self, model: Model<T>, value: T)
+    where
+        A: crate::TypedAction,
+        T: Any + Clone,
+    {
+        self.on_action_notify_model_update::<A, T>(model, move |v| *v = value.clone());
+    }
+
+    /// Convenience helper: register a typed unit action handler that toggles a `Model<bool>`.
+    pub fn on_action_notify_toggle_bool<A: crate::TypedAction>(&mut self, model: Model<bool>) {
+        self.on_action_notify_model_update::<A, bool>(model, |v| *v = !*v);
+    }
+
     /// Register a typed action handler that records a transient event for this dispatch cycle.
     ///
     /// This is a convenience wrapper over `UiActionHost::record_transient_event`, commonly used
