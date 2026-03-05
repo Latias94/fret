@@ -1,0 +1,97 @@
+pub const SOURCE: &str = include_str!("label.rs");
+
+// region: example
+use fret_core::Px;
+use fret_icons::IconId;
+use fret_ui_shadcn::{self as shadcn, prelude::*};
+use std::time::Duration;
+
+#[derive(Default)]
+struct Models {
+    username: Option<Model<String>>,
+    email: Option<Model<String>>,
+}
+
+pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+    let (username, email) = cx.with_state(Models::default, |st| {
+        (st.username.clone(), st.email.clone())
+    });
+    let (username, email) = match (username, email) {
+        (Some(username), Some(email)) => (username, email),
+        _ => {
+            let username = cx.app.models_mut().insert(String::new());
+            let email = cx.app.models_mut().insert(String::new());
+            cx.with_state(Models::default, |st| {
+                st.username = Some(username.clone());
+                st.email = Some(email.clone());
+            });
+            (username, email)
+        }
+    };
+
+    let max_w = LayoutRefinement::default().w_full().max_w(Px(420.0));
+
+    shadcn::TooltipProvider::new()
+        .delay(Duration::ZERO)
+        .timeout_duration(Duration::from_millis(400))
+        .with(cx, |cx| {
+            let at_group = shadcn::InputGroup::new(username)
+                .a11y_label("Username")
+                .placeholder("shadcn")
+                .control_test_id("ui-gallery-input-group-label-at-control")
+                .trailing([shadcn::InputGroupText::new("@").into_element(cx)])
+                .refine_layout(LayoutRefinement::default().w_full().min_w_0())
+                .into_element(cx);
+
+            let help_tooltip = {
+                let button = shadcn::InputGroupButton::new("")
+                    .a11y_label("Help")
+                    .variant(shadcn::ButtonVariant::Ghost)
+                    .size(shadcn::InputGroupButtonSize::IconXs)
+                    .icon(IconId::new_static("lucide.info"))
+                    .test_id("ui-gallery-input-group-label-help")
+                    .into_element(cx);
+
+                shadcn::Tooltip::new(
+                    button,
+                    shadcn::TooltipContent::new(vec![shadcn::TooltipContent::text(
+                        cx,
+                        "We'll use this to send you notifications",
+                    )])
+                    .into_element(cx),
+                )
+                .arrow(true)
+                .side(shadcn::TooltipSide::Top)
+                .into_element(cx)
+            };
+
+            let header =
+                ui::h_flex(|cx| vec![shadcn::Label::new("Email").into_element(cx), help_tooltip])
+                    .layout(LayoutRefinement::default().w_full())
+                    .justify_between()
+                    .items_center()
+                    .into_element(cx);
+
+            let email_group = shadcn::InputGroup::new(email)
+                .a11y_label("Email")
+                .placeholder("shadcn@vercel.com")
+                .control_test_id("ui-gallery-input-group-label-email-control")
+                .block_start([header])
+                .block_start_border_bottom(true)
+                .leading_has_button(false)
+                .refine_layout(LayoutRefinement::default().w_full().min_w_0())
+                .into_element(cx);
+
+            vec![
+                ui::v_flex(|_cx| vec![at_group, email_group])
+                    .gap(Space::N4)
+                    .layout(max_w)
+                    .into_element(cx)
+                    .test_id("ui-gallery-input-group-label"),
+            ]
+        })
+        .into_iter()
+        .next()
+        .expect("tooltip provider returns one root element")
+}
+// endregion: example

@@ -1,0 +1,157 @@
+pub const SOURCE: &str = include_str!("tooltip.rs");
+
+// region: example
+use fret_core::Px;
+use fret_icons::IconId;
+use fret_ui_shadcn::{self as shadcn, prelude::*};
+use std::time::Duration;
+
+#[derive(Default)]
+struct Models {
+    password: Option<Model<String>>,
+    email: Option<Model<String>>,
+    api_key: Option<Model<String>>,
+}
+
+pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+    let (password, email, api_key) = cx.with_state(Models::default, |st| {
+        (st.password.clone(), st.email.clone(), st.api_key.clone())
+    });
+
+    let (password, email, api_key) = match (password, email, api_key) {
+        (Some(password), Some(email), Some(api_key)) => (password, email, api_key),
+        _ => {
+            let password = cx.app.models_mut().insert(String::new());
+            let email = cx.app.models_mut().insert(String::new());
+            let api_key = cx.app.models_mut().insert(String::new());
+            cx.with_state(Models::default, |st| {
+                st.password = Some(password.clone());
+                st.email = Some(email.clone());
+                st.api_key = Some(api_key.clone());
+            });
+            (password, email, api_key)
+        }
+    };
+
+    let max_w = LayoutRefinement::default().w_full().max_w(Px(420.0));
+
+    shadcn::TooltipProvider::new()
+        .delay(Duration::ZERO)
+        .timeout_duration(Duration::from_millis(400))
+        .with(cx, |cx| {
+            let info_icon = |cx: &mut ElementContext<'_, H>| {
+                shadcn::icon::icon(cx, IconId::new_static("lucide.info"))
+            };
+
+            let password_tooltip = {
+                let button = shadcn::InputGroupButton::new("")
+                    .a11y_label("Info")
+                    .variant(shadcn::ButtonVariant::Ghost)
+                    .size(shadcn::InputGroupButtonSize::IconXs)
+                    .children([info_icon(cx)])
+                    .test_id("ui-gallery-input-group-tooltip-password-info")
+                    .into_element(cx);
+
+                shadcn::Tooltip::new(
+                    button,
+                    shadcn::TooltipContent::new(vec![shadcn::TooltipContent::text(
+                        cx,
+                        "Password must be at least 8 characters",
+                    )])
+                    .into_element(cx),
+                )
+                .arrow(true)
+                .side(shadcn::TooltipSide::Top)
+                .into_element(cx)
+            };
+
+            let email_tooltip = {
+                let button = shadcn::InputGroupButton::new("")
+                    .a11y_label("Help")
+                    .variant(shadcn::ButtonVariant::Ghost)
+                    .size(shadcn::InputGroupButtonSize::IconXs)
+                    .children([shadcn::icon::icon(
+                        cx,
+                        IconId::new_static("lucide.circle-help"),
+                    )])
+                    .test_id("ui-gallery-input-group-tooltip-email-help")
+                    .into_element(cx);
+
+                shadcn::Tooltip::new(
+                    button,
+                    shadcn::TooltipContent::new(vec![shadcn::TooltipContent::text(
+                        cx,
+                        "We'll use this to send you notifications",
+                    )])
+                    .into_element(cx),
+                )
+                .arrow(true)
+                .side(shadcn::TooltipSide::Top)
+                .into_element(cx)
+            };
+
+            let api_key_tooltip = {
+                let button = shadcn::InputGroupButton::new("")
+                    .a11y_label("Help")
+                    .variant(shadcn::ButtonVariant::Ghost)
+                    .size(shadcn::InputGroupButtonSize::IconXs)
+                    .children([shadcn::icon::icon(
+                        cx,
+                        IconId::new_static("lucide.circle-help"),
+                    )])
+                    .test_id("ui-gallery-input-group-tooltip-api-key-help")
+                    .into_element(cx);
+
+                shadcn::Tooltip::new(
+                    button,
+                    shadcn::TooltipContent::new(vec![shadcn::TooltipContent::text(
+                        cx,
+                        "Click for help with API keys",
+                    )])
+                    .into_element(cx),
+                )
+                .arrow(true)
+                .side(shadcn::TooltipSide::Left)
+                .into_element(cx)
+            };
+
+            let password_group = shadcn::InputGroup::new(password)
+                .a11y_label("Password")
+                .placeholder("Enter password")
+                .control_test_id("ui-gallery-input-group-tooltip-password-control")
+                .trailing([password_tooltip])
+                .trailing_has_button(true)
+                .refine_layout(LayoutRefinement::default().w_full().min_w_0())
+                .into_element(cx);
+
+            let email_group = shadcn::InputGroup::new(email)
+                .a11y_label("Email")
+                .placeholder("Your email address")
+                .control_test_id("ui-gallery-input-group-tooltip-email-control")
+                .trailing([email_tooltip])
+                .trailing_has_button(true)
+                .refine_layout(LayoutRefinement::default().w_full().min_w_0())
+                .into_element(cx);
+
+            let api_key_group = shadcn::InputGroup::new(api_key)
+                .a11y_label("API key")
+                .placeholder("Enter API key")
+                .control_test_id("ui-gallery-input-group-tooltip-api-key-control")
+                .trailing([api_key_tooltip])
+                .trailing_has_button(true)
+                .refine_layout(LayoutRefinement::default().w_full().min_w_0())
+                .into_element(cx);
+
+            vec![
+                ui::v_flex(|_cx| vec![password_group, email_group, api_key_group])
+                    .gap(Space::N4)
+                    .layout(max_w)
+                    .into_element(cx)
+                    .test_id("ui-gallery-input-group-tooltip"),
+            ]
+        })
+        .into_iter()
+        .next()
+        .expect("tooltip provider returns one root element")
+}
+// endregion: example

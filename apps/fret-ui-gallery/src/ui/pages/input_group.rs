@@ -12,8 +12,11 @@ pub(super) fn preview_input_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
     let icon = snippets::icon::render(cx);
     let text = snippets::text::render(cx);
     let button = snippets::button::render(cx);
+    let tooltip = snippets::tooltip::render(cx);
     let kbd = snippets::kbd::render(cx);
+    let label = snippets::label::render(cx);
     let dropdown = snippets::dropdown::render(cx);
+    let button_group = snippets::button_group::render(cx);
     let spinner = snippets::spinner::render(cx);
     let textarea = snippets::textarea::render(cx);
     let custom_input = snippets::custom_input::render(cx);
@@ -32,7 +35,7 @@ pub(super) fn preview_input_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview follows shadcn Input Group docs order: Demo, Align (inline-start/inline-end/block-start/block-end), Icon, Text, Button, Kbd, Dropdown, Spinner, Textarea, Custom Input, RTL.",
+            "Preview follows shadcn Input Group docs order: Demo, Align (inline-start/inline-end/block-start/block-end), Icon, Text, Button, Tooltip, Textarea, Spinner, Label, Dropdown, Button Group, Custom Input, RTL (plus an extra Kbd section).",
         ),
         vec![
             DocSection::new("Demo", demo)
@@ -67,22 +70,38 @@ pub(super) fn preview_input_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
                 .description("Trailing button; set `trailing_has_button(true)` for layout.")
                 .test_id_prefix("ui-gallery-input-group-button")
                 .code_rust_from_file_region(snippets::button::SOURCE, "example"),
-            DocSection::new("Kbd", kbd)
-                .description("Kbd-like addons (layout hints for monospace pills).")
-                .test_id_prefix("ui-gallery-input-group-kbd")
-                .code_rust_from_file_region(snippets::kbd::SOURCE, "example"),
-            DocSection::new("Dropdown", dropdown)
-                .description("Leading button with a chevron icon (wire it to a menu in app code).")
-                .test_id_prefix("ui-gallery-input-group-dropdown")
-                .code_rust_from_file_region(snippets::dropdown::SOURCE, "example"),
-            DocSection::new("Spinner", spinner)
-                .description("Leading spinner while fetching results.")
-                .test_id_prefix("ui-gallery-input-group-spinner")
-                .code_rust_from_file_region(snippets::spinner::SOURCE, "example"),
+            DocSection::new("Tooltip", tooltip)
+                .description("Tooltips can wrap icon buttons inside input group addons.")
+                .test_id_prefix("ui-gallery-input-group-tooltip")
+                .code_rust_from_file_region(snippets::tooltip::SOURCE, "example"),
             DocSection::new("Textarea", textarea)
                 .description("Textarea mode with a footer row and min height.")
                 .test_id_prefix("ui-gallery-input-group-textarea")
                 .code_rust_from_file_region(snippets::textarea::SOURCE, "example"),
+            DocSection::new("Spinner", spinner)
+                .description("Leading spinner while fetching results.")
+                .test_id_prefix("ui-gallery-input-group-spinner")
+                .code_rust_from_file_region(snippets::spinner::SOURCE, "example"),
+            DocSection::new("Label", label)
+                .description(
+                    "Helper labels inside input groups (pair with `a11y_label` for semantics).",
+                )
+                .test_id_prefix("ui-gallery-input-group-label")
+                .code_rust_from_file_region(snippets::label::SOURCE, "example"),
+            DocSection::new("Dropdown", dropdown)
+                .description("Leading button with a chevron icon (wire it to a menu in app code).")
+                .test_id_prefix("ui-gallery-input-group-dropdown")
+                .code_rust_from_file_region(snippets::dropdown::SOURCE, "example"),
+            DocSection::new("Button Group", button_group)
+                .description(
+                    "Wrap input groups with button groups to create prefixes and suffixes.",
+                )
+                .test_id_prefix("ui-gallery-input-group-button-group")
+                .code_rust_from_file_region(snippets::button_group::SOURCE, "example"),
+            DocSection::new("Kbd", kbd)
+                .description("Kbd-like addons (layout hints for monospace pills).")
+                .test_id_prefix("ui-gallery-input-group-kbd")
+                .code_rust_from_file_region(snippets::kbd::SOURCE, "example"),
             DocSection::new("Custom Input", custom_input)
                 .description("Custom/extended input chrome via slots.")
                 .test_id_prefix("ui-gallery-input-group-custom-input")
