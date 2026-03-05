@@ -17,7 +17,17 @@
 
 - [x] Add `tools/diag-scripts/tooling/empty/empty-idle-memory-steady.json` (schema v2).
 - [x] Add `tools/diag-scripts/tooling/text/text-heavy-memory-steady.json` (forces emoji/color glyphs).
-- [ ] Add `tools/diag-scripts/tooling/images/image-heavy-memory-steady.json` (forces texture cache).
+- [x] Add `tools/diag-scripts/tooling/images/image-heavy-memory-steady.json` (forces texture cache).
+
+## Attribution experiments (macOS / Metal)
+
+- [ ] Sweep `FRET_DIAG_WGPU_ALLOCATOR_REPORT_EVERY_N_FRAMES` and `FRET_DIAG_WGPU_REPORT_EVERY_N_FRAMES`
+  (e.g. 60 vs 600) and measure:
+  - outlier frequency for `wgpu_metal_current_allocated_size_bytes_{min,max}`
+  - stability of `macos_vmmap_steady.regions.io_surface_dirty_bytes` / `io_accelerator_dirty_bytes`
+  - overhead (bundle size + tooling time)
+- [ ] If reporting cadence perturbs memory, set memory scripts to a conservative cadence (e.g. 600)
+  and keep a separate “high-frequency attribution” script for deep dives.
 
 ### Evidence (captured)
 
@@ -50,5 +60,6 @@
 
 - [x] Calibrate a macOS footprint gate for `empty-idle` and `text-heavy` (repeat samples captured under `target/fret-diag-mem-*-sample5/`).
 - [x] Calibrate a Metal allocated size gate for `empty-idle` and `text-heavy` (requires `--env FRET_DIAG_WGPU_ALLOCATOR_REPORT=1`).
+- [x] Add a wgpu hub counts gate (`check.wgpu_hub_counts.json`; requires `--env FRET_DIAG_WGPU_REPORT=1`).
 - [x] Add a text-atlas-focused gate (`--max-render-text-atlas-bytes-live-estimate-total`) for more stable attribution vs total Metal bytes.
 - [ ] Document acceptable drift policy (e.g. +X MiB allowed with justification).
