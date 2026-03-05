@@ -25,6 +25,8 @@ struct MemorySampleRow {
     wgpu_allocator_total_allocated_bytes: Option<u64>,
     wgpu_allocator_total_reserved_bytes: Option<u64>,
     render_text_atlas_bytes_live_estimate_total: Option<u64>,
+    render_text_registered_font_blobs_total_bytes: Option<u64>,
+    render_text_registered_font_blobs_count: Option<u64>,
 
     // Optional: deeper vmmap attribution hints (macOS-only)
     macos_vmmap_regions_sorted_top_dirty_region_type: Option<String>,
@@ -297,6 +299,14 @@ fn read_sample_row(
             bundle,
             "render_text_atlas_bytes_live_estimate_total",
         ),
+        render_text_registered_font_blobs_total_bytes: get_u64(
+            bundle,
+            "render_text_registered_font_blobs_total_bytes",
+        ),
+        render_text_registered_font_blobs_count: get_u64(
+            bundle,
+            "render_text_registered_font_blobs_count",
+        ),
         macos_vmmap_regions_sorted_top_dirty_region_type: None,
         macos_vmmap_regions_sorted_top_dirty_detail: None,
         macos_vmmap_regions_sorted_top_dirty_bytes: None,
@@ -350,6 +360,8 @@ fn build_report(
         "wgpu_allocator_total_allocated_bytes": stats_u64(rows.iter().filter_map(|r| r.wgpu_allocator_total_allocated_bytes).collect()),
         "wgpu_allocator_total_reserved_bytes": stats_u64(rows.iter().filter_map(|r| r.wgpu_allocator_total_reserved_bytes).collect()),
         "render_text_atlas_bytes_live_estimate_total": stats_u64(rows.iter().filter_map(|r| r.render_text_atlas_bytes_live_estimate_total).collect()),
+        "render_text_registered_font_blobs_total_bytes": stats_u64(rows.iter().filter_map(|r| r.render_text_registered_font_blobs_total_bytes).collect()),
+        "render_text_registered_font_blobs_count": stats_u64(rows.iter().filter_map(|r| r.render_text_registered_font_blobs_count).collect()),
     });
 
     let top_rows = sorted
@@ -379,13 +391,15 @@ fn validate_sort_key(key: &str) -> Result<(), String> {
         "macos_malloc_dirty_bytes_total",
         "wgpu_metal_current_allocated_size_bytes_max",
         "render_text_atlas_bytes_live_estimate_total",
+        "render_text_registered_font_blobs_total_bytes",
+        "render_text_registered_font_blobs_count",
     ];
 
     if VALID.contains(&key) {
         return Ok(());
     }
     Err(format!(
-        "unknown --sort key: {key}\n\
+        "unknown --sort-key: {key}\n\
 valid keys:\n  {}",
         VALID.join("\n  ")
     ))
@@ -410,6 +424,8 @@ fn row_to_json(r: &MemorySampleRow) -> serde_json::Value {
         "wgpu_allocator_total_allocated_bytes": r.wgpu_allocator_total_allocated_bytes,
         "wgpu_allocator_total_reserved_bytes": r.wgpu_allocator_total_reserved_bytes,
         "render_text_atlas_bytes_live_estimate_total": r.render_text_atlas_bytes_live_estimate_total,
+        "render_text_registered_font_blobs_total_bytes": r.render_text_registered_font_blobs_total_bytes,
+        "render_text_registered_font_blobs_count": r.render_text_registered_font_blobs_count,
         "macos_vmmap_regions_sorted_top_dirty_region_type": r.macos_vmmap_regions_sorted_top_dirty_region_type,
         "macos_vmmap_regions_sorted_top_dirty_detail": r.macos_vmmap_regions_sorted_top_dirty_detail,
         "macos_vmmap_regions_sorted_top_dirty_bytes": r.macos_vmmap_regions_sorted_top_dirty_bytes,
@@ -463,6 +479,10 @@ fn sort_u64_for_key(row: &MemorySampleRow, key: &str) -> u64 {
         "render_text_atlas_bytes_live_estimate_total" => {
             row.render_text_atlas_bytes_live_estimate_total
         }
+        "render_text_registered_font_blobs_total_bytes" => {
+            row.render_text_registered_font_blobs_total_bytes
+        }
+        "render_text_registered_font_blobs_count" => row.render_text_registered_font_blobs_count,
         _ => row.macos_physical_footprint_peak_bytes,
     }
     .unwrap_or(0)

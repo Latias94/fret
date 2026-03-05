@@ -342,6 +342,8 @@ fn bundle_stats_summary_from_path(path: &Path) -> Option<serde_json::Value> {
         "render_text_blob_cache_entries": rt_u64("blob_cache_entries"),
         "render_text_shape_cache_entries": rt_u64("shape_cache_entries"),
         "render_text_measure_cache_buckets": rt_u64("measure_cache_buckets"),
+        "render_text_registered_font_blobs_total_bytes": rt_u64("registered_font_blobs_total_bytes"),
+        "render_text_registered_font_blobs_count": rt_u64("registered_font_blobs_count"),
 
         "render_text_mask_atlas_width_px": atlas_u64(mask_atlas, "width"),
         "render_text_mask_atlas_height_px": atlas_u64(mask_atlas, "height"),
