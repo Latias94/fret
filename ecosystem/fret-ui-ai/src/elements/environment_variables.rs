@@ -4,14 +4,14 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use fret_core::{
-    Color, Corners, Edges, FontId, FontWeight, Px, SemanticsRole, TextOverflow, TextStyle,
-    TextWrap, TimerToken,
+    AttributedText, Color, Corners, Edges, FontId, FontWeight, Px, SemanticsRole, TextOverflow,
+    TextSpan, TextStyle, TextWrap, TimerToken,
 };
 use fret_icons::ids;
 use fret_runtime::{Effect, Model};
 use fret_ui::element::{
     AnyElement, ContainerProps, InteractivityGateProps, LayoutStyle, Length, PressableProps,
-    SemanticsDecoration, SizeStyle, TextProps,
+    SelectableTextProps, SemanticsDecoration, SizeStyle, TextProps,
 };
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::declarative::chrome::centered_fixed_chrome_pressable_with_id_props;
@@ -691,16 +691,32 @@ impl EnvironmentVariableValue {
         let px = theme.metric_token("font.size");
         let style = monospace_style(&theme, px, FontWeight::NORMAL);
 
-        cx.text_props(TextProps {
-            layout: LayoutStyle::default(),
-            text: display_value,
-            style: Some(style),
-            color: Some(fg),
-            wrap: TextWrap::None,
-            overflow: TextOverflow::Clip,
-            align: fret_core::TextAlign::Start,
-            ink_overflow: Default::default(),
-        })
+        if show_values {
+            let spans: Arc<[TextSpan]> = Arc::from([TextSpan::new(display_value.len())]);
+            let rich = AttributedText::new(display_value, spans);
+            cx.selectable_text_props(SelectableTextProps {
+                layout: LayoutStyle::default(),
+                rich,
+                style: Some(style),
+                color: Some(fg),
+                wrap: TextWrap::None,
+                overflow: TextOverflow::Clip,
+                align: fret_core::TextAlign::Start,
+                ink_overflow: Default::default(),
+                interactive_spans: Arc::from([]),
+            })
+        } else {
+            cx.text_props(TextProps {
+                layout: LayoutStyle::default(),
+                text: display_value,
+                style: Some(style),
+                color: Some(fg),
+                wrap: TextWrap::None,
+                overflow: TextOverflow::Clip,
+                align: fret_core::TextAlign::Start,
+                ink_overflow: Default::default(),
+            })
+        }
     }
 }
 
@@ -1060,4 +1076,83 @@ fn environment_variable_divider<H: UiHost>(
         ),
         |_cx| Vec::new(),
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_app::App;
+    use fret_core::{AppWindowId, Point, Rect, Size};
+    use fret_ui::element::ElementKind;
+
+    fn bounds() -> Rect {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(480.0), Px(240.0)),
+        )
+    }
+
+    fn any_descendant_matches(el: &AnyElement, f: &impl Fn(&ElementKind) -> bool) -> bool {
+        if f(&el.kind) {
+            return true;
+        }
+        el.children
+            .iter()
+            .any(|child| any_descendant_matches(child, f))
+    }
+
+    #[test]
+    fn environment_variable_value_is_selectable_only_when_shown() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let shown_model = app.models_mut().insert(true);
+        let shown = fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+            EnvironmentVariables::new()
+                .show_values_model(shown_model)
+                .into_element_with_children(cx, |cx, _controller| {
+                    let row = EnvironmentVariable::new("API_KEY", "sk-123")
+                        .into_element_with_children(cx, |cx| {
+                            vec![EnvironmentVariableValue::new().into_element(cx)]
+                        });
+                    let content = EnvironmentVariablesContent::new([row]).into_element(cx);
+                    vec![content]
+                })
+        });
+
+        assert!(
+            any_descendant_matches(&shown, &|kind| matches!(
+                kind,
+                ElementKind::SelectableText(_)
+            )),
+            "expected shown value to be selectable"
+        );
+
+        let hidden_model = app.models_mut().insert(false);
+        let hidden = fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+            EnvironmentVariables::new()
+                .show_values_model(hidden_model)
+                .into_element_with_children(cx, |cx, _controller| {
+                    let row = EnvironmentVariable::new("API_KEY", "sk-123")
+                        .into_element_with_children(cx, |cx| {
+                            vec![EnvironmentVariableValue::new().into_element(cx)]
+                        });
+                    let content = EnvironmentVariablesContent::new([row]).into_element(cx);
+                    vec![content]
+                })
+        });
+
+        assert!(
+            any_descendant_matches(&hidden, &|kind| matches!(kind, ElementKind::Text(_))),
+            "expected hidden value to render as non-selectable text"
+        );
+        assert!(
+            !any_descendant_matches(&hidden, &|kind| matches!(
+                kind,
+                ElementKind::SelectableText(_)
+            )),
+            "expected hidden value to be non-selectable"
+        );
+    }
 }

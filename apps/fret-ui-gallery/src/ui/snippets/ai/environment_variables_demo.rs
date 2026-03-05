@@ -2,9 +2,8 @@ pub const SOURCE: &str = include_str!("environment_variables_demo.rs");
 
 // region: example
 use fret_ui_ai as ui_ai;
-use fret_ui_kit::ui;
-use fret_ui_kit::{LayoutRefinement, Space};
 use fret_ui_shadcn::prelude::*;
+use std::sync::Arc;
 
 struct Variable {
     name: &'static str,
@@ -36,7 +35,7 @@ const VARIABLES: &[Variable] = &[
 ];
 
 pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let env = ui_ai::EnvironmentVariables::new()
+    ui_ai::EnvironmentVariables::new()
         .default_show_values(false)
         .test_id_root("ui-ai-env-vars-root")
         .into_element_with_children(cx, move |cx, _controller| {
@@ -64,6 +63,9 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
                                 .test_id("ui-ai-env-var-copy-export")
                                 .copied_marker_test_id("ui-ai-env-var-copy-export-copied");
                         }
+                        copy = copy.on_copy(Arc::new(|host, action_cx| {
+                            host.notify(action_cx);
+                        }));
                         let copy = copy.into_element(cx);
 
                         let mut name_children =
@@ -91,17 +93,5 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
             let content = ui_ai::EnvironmentVariablesContent::new(rows).into_element(cx);
             vec![header, content]
         })
-        ;
-
-    ui::v_flex(move |cx| {
-        vec![
-            cx.text("Environment Variables (AI Elements)"),
-            cx.text("Toggle to reveal values; copy uses a clipboard effect."),
-            env,
-        ]
-    })
-    .layout(LayoutRefinement::default().w_full().min_w_0())
-    .gap(Space::N4)
-    .into_element(cx)
 }
 // endregion: example
