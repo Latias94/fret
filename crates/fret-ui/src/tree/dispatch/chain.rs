@@ -443,10 +443,11 @@ impl<H: UiHost> UiTree<H> {
                     .copied()
                     .flatten()
             } else {
-                debug_assert!(
-                    false,
-                    "dispatch/chain: node missing from input snapshot (node={node_id:?}, frame_id={:?}, window={:?})",
-                    dispatch_cx.input_snapshot.frame_id, dispatch_cx.input_snapshot.window
+                tracing::warn!(
+                    node = ?node_id,
+                    frame_id = ?dispatch_cx.input_snapshot.frame_id,
+                    window = ?dispatch_cx.input_snapshot.window,
+                    "dispatch/chain: node missing from input snapshot"
                 );
                 self.nodes.get(node_id).and_then(|n| n.parent)
             };

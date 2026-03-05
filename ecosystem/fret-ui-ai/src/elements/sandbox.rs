@@ -14,6 +14,7 @@ use fret_ui_kit::{
     ChromeRefinement, ColorFallback, ColorRef, Items, Justify, LayoutRefinement, Radius, Space,
     WidgetStateProperty, WidgetStates,
 };
+use fret_ui_shadcn::tabs::{TabsListHeightOverride, TabsListVariant};
 use fret_ui_shadcn::{Badge, Collapsible, CollapsibleContent, CollapsibleTrigger};
 use fret_ui_shadcn::{TabsContent, TabsList, TabsRoot};
 
@@ -295,8 +296,8 @@ impl SandboxContent {
 
 /// A tabs surface pre-styled to match AI Elements `sandbox.tsx`.
 ///
-/// Note: Fret's shadcn `Tabs` currently hardcodes the list background to `muted`. We still align
-/// trigger border/active styling here; list background parity can be tightened later if needed.
+/// Note: This uses the shadcn `TabsListVariant::Line` affordance to approximate the AI Elements
+/// underline-style triggers.
 #[derive(Debug)]
 pub struct SandboxTabs {
     inner: TabsRoot,
@@ -308,18 +309,39 @@ impl SandboxTabs {
             key: "primary",
             fallback: ColorFallback::ThemeAccent,
         };
+        let muted_fg = ColorRef::Token {
+            key: "muted-foreground",
+            fallback: ColorFallback::ThemeTextMuted,
+        };
+        let fg = ColorRef::Token {
+            key: "foreground",
+            fallback: ColorFallback::ThemeTextPrimary,
+        };
         let line_style = fret_ui_shadcn::tabs::TabsStyle::default()
             .trigger_background(WidgetStateProperty::new(Some(ColorRef::Color(
                 Color::TRANSPARENT,
             ))))
+            .trigger_foreground(
+                WidgetStateProperty::new(Some(muted_fg)).when(WidgetStates::SELECTED, Some(fg)),
+            )
             .trigger_border_color(
                 WidgetStateProperty::new(Some(ColorRef::Color(Color::TRANSPARENT)))
-                    .when(WidgetStates::SELECTED, Some(primary)),
+                    .when(WidgetStates::SELECTED, Some(primary.clone())),
             );
 
         Self {
             inner: TabsRoot::uncontrolled(default_value)
+                .list_variant(TabsListVariant::Line)
                 .style(line_style)
+                .gap_px(Px(0.0))
+                .list_padding_px(Px(0.0))
+                .list_height_override(TabsListHeightOverride::Auto)
+                .indicator_line_color(primary)
+                .indicator_line_outset(Px(0.0))
+                .trigger_padding(Px(16.0), Px(8.0))
+                .trigger_radius(Px(0.0))
+                .trigger_border_width(Px(0.0))
+                .list_bar_borders(true)
                 .refine_style(ChromeRefinement::default().bg(ColorRef::Color(Color::TRANSPARENT)))
                 .refine_layout(LayoutRefinement::default().w_full().min_w_0()),
         }

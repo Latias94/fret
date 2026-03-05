@@ -255,6 +255,12 @@ pub enum TabsListVariant {
     Line,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum TabsListHeightOverride {
+    Auto,
+    Px(Px),
+}
+
 type OnValueChange = Arc<dyn Fn(Option<Arc<str>>) + Send + Sync + 'static>;
 type OnValueChangeWithSource =
     Arc<dyn Fn(Option<Arc<str>>, TabsValueChangeSource) + Send + Sync + 'static>;
@@ -359,6 +365,8 @@ fn tabs_shared_indicator<H: UiHost>(
     selected_idx: Option<usize>,
     indicator_test_id: Option<Arc<str>>,
     disabled: bool,
+    indicator_line_color_override: Option<ColorRef>,
+    indicator_line_outset_override: Option<Px>,
     style_override: &TabsStyle,
 ) -> AnyElement {
     cx.named("tabs_shared_indicator", move |cx| {
@@ -516,7 +524,10 @@ fn tabs_shared_indicator<H: UiHost>(
                     };
 
                     let bg = if !disabled && selected_idx.is_some() {
-                        theme.color_token("foreground")
+                        indicator_line_color_override
+                            .as_ref()
+                            .map(|color| color.resolve(&theme))
+                            .unwrap_or_else(|| theme.color_token("foreground"))
                     } else {
                         Color::TRANSPARENT
                     };
@@ -605,12 +616,21 @@ fn tabs_shared_indicator<H: UiHost>(
             // - vertical: `-right-1` (4px)
             //
             // Extend the indicator canvas so we can paint into that extra area.
+            let outset = indicator_line_outset_override.unwrap_or_else(|| match orientation {
+                TabsOrientation::Horizontal => Px(5.0),
+                TabsOrientation::Vertical => Px(4.0),
+            });
+            let outset = Px(outset.0.max(0.0));
             match orientation {
                 TabsOrientation::Horizontal => {
-                    props.layout.inset.bottom = Some(Px(-5.0)).into();
+                    if outset.0 > 0.0 {
+                        props.layout.inset.bottom = Some(Px(-outset.0)).into();
+                    }
                 }
                 TabsOrientation::Vertical => {
-                    props.layout.inset.right = Some(Px(-4.0)).into();
+                    if outset.0 > 0.0 {
+                        props.layout.inset.right = Some(Px(-outset.0)).into();
+                    }
                 }
             }
         }
@@ -714,7 +734,7 @@ fn tabs_shared_indicator<H: UiHost>(
             indicator = indicator.test_id(test_id.clone());
         }
 
-        indicator
+        cx.hit_test_gate(false, move |_cx| [indicator])
     })
 }
 
@@ -840,6 +860,7 @@ pub struct TabsTrigger {
     value: Arc<str>,
     label: Arc<str>,
     children: Option<Vec<AnyElement>>,
+    test_id: Option<Arc<str>>,
     disabled: bool,
 }
 
@@ -849,8 +870,14 @@ impl TabsTrigger {
             value: value.into(),
             label: label.into(),
             children: None,
+            test_id: None,
             disabled: false,
         }
+    }
+
+    pub fn test_id(mut self, test_id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(test_id.into());
+        self
     }
 
     /// Overrides the default trigger contents (the label text) to match shadcn usage patterns where
@@ -927,11 +954,20 @@ pub struct TabsRoot {
     activation_mode: TabsActivationMode,
     loop_navigation: bool,
     list_variant: TabsListVariant,
+    gap_px_override: Option<Px>,
+    list_padding_px_override: Option<Px>,
+    list_height_override: Option<TabsListHeightOverride>,
     style: TabsStyle,
+    indicator_line_color_override: Option<ColorRef>,
+    indicator_line_outset_override: Option<Px>,
+    trigger_padding_override: Option<(Px, Px)>,
+    trigger_radius_override: Option<Px>,
+    trigger_border_width_override: Option<Px>,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
     force_mount_content: bool,
     list_full_width: bool,
+    list_bar_borders: bool,
     content_fill_remaining: bool,
     shared_indicator_motion: bool,
     content_presence_motion: bool,
@@ -988,11 +1024,20 @@ impl TabsRoot {
             activation_mode: TabsActivationMode::default(),
             loop_navigation: true,
             list_variant: TabsListVariant::default(),
+            gap_px_override: None,
+            list_padding_px_override: None,
+            list_height_override: None,
             style: TabsStyle::default(),
+            indicator_line_color_override: None,
+            indicator_line_outset_override: None,
+            trigger_padding_override: None,
+            trigger_radius_override: None,
+            trigger_border_width_override: None,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
             force_mount_content: false,
             list_full_width: false,
+            list_bar_borders: false,
             content_fill_remaining: true,
             shared_indicator_motion: false,
             content_presence_motion: false,
@@ -1016,11 +1061,20 @@ impl TabsRoot {
             activation_mode: TabsActivationMode::default(),
             loop_navigation: true,
             list_variant: TabsListVariant::default(),
+            gap_px_override: None,
+            list_padding_px_override: None,
+            list_height_override: None,
             style: TabsStyle::default(),
+            indicator_line_color_override: None,
+            indicator_line_outset_override: None,
+            trigger_padding_override: None,
+            trigger_radius_override: None,
+            trigger_border_width_override: None,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
             force_mount_content: false,
             list_full_width: false,
+            list_bar_borders: false,
             content_fill_remaining: true,
             shared_indicator_motion: false,
             content_presence_motion: false,
@@ -1063,6 +1117,46 @@ impl TabsRoot {
 
     pub fn list_variant(mut self, variant: TabsListVariant) -> Self {
         self.list_variant = variant;
+        self
+    }
+
+    pub fn gap_px(mut self, gap_px: Px) -> Self {
+        self.gap_px_override = Some(gap_px);
+        self
+    }
+
+    pub fn list_padding_px(mut self, padding_px: Px) -> Self {
+        self.list_padding_px_override = Some(padding_px);
+        self
+    }
+
+    pub fn list_height_override(mut self, height: TabsListHeightOverride) -> Self {
+        self.list_height_override = Some(height);
+        self
+    }
+
+    pub fn indicator_line_color(mut self, color: ColorRef) -> Self {
+        self.indicator_line_color_override = Some(color);
+        self
+    }
+
+    pub fn indicator_line_outset(mut self, outset: Px) -> Self {
+        self.indicator_line_outset_override = Some(outset);
+        self
+    }
+
+    pub fn trigger_padding(mut self, pad_x: Px, pad_y: Px) -> Self {
+        self.trigger_padding_override = Some((pad_x, pad_y));
+        self
+    }
+
+    pub fn trigger_radius(mut self, radius: Px) -> Self {
+        self.trigger_radius_override = Some(radius);
+        self
+    }
+
+    pub fn trigger_border_width(mut self, border_width: Px) -> Self {
+        self.trigger_border_width_override = Some(border_width);
         self
     }
 
@@ -1110,6 +1204,13 @@ impl TabsRoot {
     /// `w-fit`).
     pub fn list_full_width(mut self, full_width: bool) -> Self {
         self.list_full_width = full_width;
+        self
+    }
+
+    /// When `true`, paints 1px top/bottom border lines across the full available width around the
+    /// tab list (AI Elements `SandboxTabsBar` affordance).
+    pub fn list_bar_borders(mut self, enabled: bool) -> Self {
+        self.list_bar_borders = enabled;
         self
     }
 
@@ -1194,11 +1295,20 @@ impl TabsRoot {
             activation_mode,
             loop_navigation,
             list_variant,
+            gap_px_override,
+            list_padding_px_override,
+            list_height_override,
             style,
+            indicator_line_color_override,
+            indicator_line_outset_override,
+            trigger_padding_override,
+            trigger_radius_override,
+            trigger_border_width_override,
             chrome,
             layout,
             force_mount_content,
             list_full_width,
+            list_bar_borders,
             content_fill_remaining,
             shared_indicator_motion,
             content_presence_motion,
@@ -1222,9 +1332,13 @@ impl TabsRoot {
                 let content = content_by_value
                     .remove(trigger.value.as_ref())
                     .unwrap_or_default();
-                TabsItem::new(trigger.value, trigger.label, content)
+                let mut item = TabsItem::new(trigger.value, trigger.label, content)
                     .trigger_children(trigger.children.unwrap_or_default())
-                    .disabled(trigger.disabled)
+                    .disabled(trigger.disabled);
+                if let Some(test_id) = trigger.test_id {
+                    item = item.trigger_test_id(test_id);
+                }
+                item
             })
             .collect();
 
@@ -1239,6 +1353,14 @@ impl TabsRoot {
             .activation_mode(activation_mode)
             .loop_navigation(loop_navigation)
             .list_variant(list_variant)
+            .gap_px_opt(gap_px_override)
+            .list_padding_px_opt(list_padding_px_override)
+            .list_height_override_opt(list_height_override)
+            .indicator_line_color_opt(indicator_line_color_override)
+            .indicator_line_outset_opt(indicator_line_outset_override)
+            .trigger_padding_opt(trigger_padding_override)
+            .trigger_radius_opt(trigger_radius_override)
+            .trigger_border_width_opt(trigger_border_width_override)
             .on_value_change(on_value_change)
             .on_value_change_with_source(on_value_change_with_source)
             .on_value_change_with_details(on_value_change_with_details)
@@ -1248,6 +1370,7 @@ impl TabsRoot {
             .refine_layout(layout)
             .force_mount_content(force_mount_content)
             .list_full_width(list_full_width)
+            .list_bar_borders(list_bar_borders)
             .content_fill_remaining(content_fill_remaining)
             .shared_indicator_motion(shared_indicator_motion)
             .content_presence_motion(content_presence_motion)
@@ -1338,11 +1461,20 @@ pub struct Tabs {
     activation_mode: TabsActivationMode,
     loop_navigation: bool,
     list_variant: TabsListVariant,
+    gap_px_override: Option<Px>,
+    list_padding_px_override: Option<Px>,
+    list_height_override: Option<TabsListHeightOverride>,
     style: TabsStyle,
+    indicator_line_color_override: Option<ColorRef>,
+    indicator_line_outset_override: Option<Px>,
+    trigger_padding_override: Option<(Px, Px)>,
+    trigger_radius_override: Option<Px>,
+    trigger_border_width_override: Option<Px>,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
     force_mount_content: bool,
     list_full_width: bool,
+    list_bar_borders: bool,
     content_fill_remaining: bool,
     shared_indicator_motion: bool,
     content_presence_motion: bool,
@@ -1397,11 +1529,20 @@ impl Tabs {
             activation_mode: TabsActivationMode::default(),
             loop_navigation: true,
             list_variant: TabsListVariant::default(),
+            gap_px_override: None,
+            list_padding_px_override: None,
+            list_height_override: None,
             style: TabsStyle::default(),
+            indicator_line_color_override: None,
+            indicator_line_outset_override: None,
+            trigger_padding_override: None,
+            trigger_radius_override: None,
+            trigger_border_width_override: None,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
             force_mount_content: false,
             list_full_width: false,
+            list_bar_borders: false,
             content_fill_remaining: true,
             shared_indicator_motion: false,
             content_presence_motion: false,
@@ -1424,11 +1565,20 @@ impl Tabs {
             activation_mode: TabsActivationMode::default(),
             loop_navigation: true,
             list_variant: TabsListVariant::default(),
+            gap_px_override: None,
+            list_padding_px_override: None,
+            list_height_override: None,
             style: TabsStyle::default(),
+            indicator_line_color_override: None,
+            indicator_line_outset_override: None,
+            trigger_padding_override: None,
+            trigger_radius_override: None,
+            trigger_border_width_override: None,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
             force_mount_content: false,
             list_full_width: false,
+            list_bar_borders: false,
             content_fill_remaining: true,
             shared_indicator_motion: false,
             content_presence_motion: false,
@@ -1474,6 +1624,46 @@ impl Tabs {
         self
     }
 
+    pub fn gap_px_opt(mut self, gap_px: Option<Px>) -> Self {
+        self.gap_px_override = gap_px;
+        self
+    }
+
+    pub fn list_padding_px_opt(mut self, padding_px: Option<Px>) -> Self {
+        self.list_padding_px_override = padding_px;
+        self
+    }
+
+    pub fn list_height_override_opt(mut self, height: Option<TabsListHeightOverride>) -> Self {
+        self.list_height_override = height;
+        self
+    }
+
+    pub fn indicator_line_color_opt(mut self, color: Option<ColorRef>) -> Self {
+        self.indicator_line_color_override = color;
+        self
+    }
+
+    pub fn indicator_line_outset_opt(mut self, outset: Option<Px>) -> Self {
+        self.indicator_line_outset_override = outset;
+        self
+    }
+
+    pub fn trigger_padding_opt(mut self, padding: Option<(Px, Px)>) -> Self {
+        self.trigger_padding_override = padding;
+        self
+    }
+
+    pub fn trigger_radius_opt(mut self, radius: Option<Px>) -> Self {
+        self.trigger_radius_override = radius;
+        self
+    }
+
+    pub fn trigger_border_width_opt(mut self, border_width: Option<Px>) -> Self {
+        self.trigger_border_width_override = border_width;
+        self
+    }
+
     pub fn style(mut self, style: TabsStyle) -> Self {
         self.style = self.style.merged(style);
         self
@@ -1513,6 +1703,13 @@ impl Tabs {
     /// `w-fit`).
     pub fn list_full_width(mut self, full_width: bool) -> Self {
         self.list_full_width = full_width;
+        self
+    }
+
+    /// When `true`, paints 1px top/bottom border lines across the full available width around the
+    /// tab list (AI Elements `SandboxTabsBar` affordance).
+    pub fn list_bar_borders(mut self, enabled: bool) -> Self {
+        self.list_bar_borders = enabled;
         self
     }
 
@@ -1595,11 +1792,20 @@ impl Tabs {
         let activation_mode = self.activation_mode;
         let loop_navigation = self.loop_navigation;
         let list_variant = self.list_variant;
+        let gap_px_override = self.gap_px_override;
+        let list_padding_px_override = self.list_padding_px_override;
+        let list_height_override = self.list_height_override;
         let style_override = self.style;
+        let indicator_line_color_override = self.indicator_line_color_override;
+        let indicator_line_outset_override = self.indicator_line_outset_override;
+        let trigger_padding_override = self.trigger_padding_override;
+        let trigger_radius_override = self.trigger_radius_override;
+        let trigger_border_width_override = self.trigger_border_width_override;
         let chrome = self.chrome;
         let layout = self.layout;
         let force_mount_content = self.force_mount_content;
         let list_full_width = self.list_full_width;
+        let list_bar_borders = self.list_bar_borders;
         let content_fill_remaining = self.content_fill_remaining;
         let shared_indicator_motion = self.shared_indicator_motion;
         let content_presence_motion = self.content_presence_motion;
@@ -1615,7 +1821,10 @@ impl Tabs {
                 .model();
 
         let theme = Theme::global(&*cx.app).snapshot();
-        let gap = tabs_gap(&theme);
+        let mut gap = tabs_gap(&theme);
+        if let Some(gap_px_override) = gap_px_override {
+            gap = gap_px_override;
+        }
         let text_style = tabs_trigger_text_style(&theme);
 
         let selected: Option<Arc<str>> = cx.watch_model(&model).layout().cloned().flatten();
@@ -1646,15 +1855,24 @@ impl Tabs {
             padding_px: list_padding,
             trigger_row_gap_px: trigger_row_gap,
         } = tabs_list_variants(&theme, list_variant);
+        let list_padding = list_padding_px_override.unwrap_or(list_padding);
         // shadcn new-york-v4:
         // - horizontal: `group-data-[orientation=horizontal]/tabs:h-9`
         // - vertical: `group-data-[orientation=vertical]/tabs:h-fit`
         //
         // The horizontal list has a fixed height so the active pill can be vertically centered.
         // In vertical orientation, the list must grow to fit all triggers.
-        let list_layout = match orientation {
-            TabsOrientation::Horizontal => LayoutRefinement::default().h_px(list_height),
-            TabsOrientation::Vertical => LayoutRefinement::default(),
+        let list_height_opt = match orientation {
+            TabsOrientation::Horizontal => match list_height_override {
+                Some(TabsListHeightOverride::Auto) => None,
+                Some(TabsListHeightOverride::Px(height)) => Some(height),
+                None => Some(list_height),
+            },
+            TabsOrientation::Vertical => None,
+        };
+        let list_layout = match (orientation, list_height_opt) {
+            (TabsOrientation::Horizontal, Some(height)) => LayoutRefinement::default().h_px(height),
+            _ => LayoutRefinement::default(),
         };
         let mut list_props = decl_style::container_props(&theme, list_chrome, list_layout);
         list_props.padding = Edges::all(list_padding).into();
@@ -1717,6 +1935,10 @@ impl Tabs {
             .and_then(|active| items_frame.get(active))
             .map(|item| item.value.clone());
 
+        let tab_list_bar_border_color = theme
+            .color_by_key("border")
+            .unwrap_or_else(|| theme.color_token("border"));
+
         let root_props = decl_style::container_props(&theme, chrome, layout);
 
         let mut root = cx.container(root_props, move |cx| {
@@ -1735,14 +1957,14 @@ impl Tabs {
 
             let tab_list_semantics =
                 radix_tabs::tab_list_semantics_props(list_props.layout, orientation);
-            children.push(cx.semantics(tab_list_semantics, |cx| {
+            let tab_list = cx.semantics(tab_list_semantics, |cx| {
                 vec![cx.container(list_props, |cx| {
-                        let list_container_id = cx.root_id();
-                        let indicator_test_id = root_test_id_for_children
-                            .as_ref()
-                            .map(|id| Arc::<str>::from(format!("{id}-shared-indicator")));
+                    let list_container_id = cx.root_id();
+                    let indicator_test_id = root_test_id_for_children
+                        .as_ref()
+                        .map(|id| Arc::<str>::from(format!("{id}-shared-indicator")));
 
-                        let mut list_children: Vec<AnyElement> = Vec::new();
+                    let mut list_children: Vec<AnyElement> = Vec::new();
                         let indicator_kind = if list_variant == TabsListVariant::Line {
                             Some(TabsSharedIndicatorKind::Line)
                         } else if shared_indicator_motion {
@@ -1763,6 +1985,8 @@ impl Tabs {
                                 active_idx,
                                 indicator_test_id.clone(),
                                 tabs_disabled,
+                                indicator_line_color_override.clone(),
+                                indicator_line_outset_override,
                                 &style_override,
                             ));
                         }
@@ -1879,13 +2103,15 @@ impl Tabs {
                                 let fg_active = ColorRef::Color(theme.color_token("foreground"));
                                 let fg_disabled =
                                     ColorRef::Color(alpha_mul(theme.color_token("foreground"), 0.5));
-                                let radius = tabs_trigger_radius(&theme);
+                                let radius =
+                                    trigger_radius_override.unwrap_or_else(|| tabs_trigger_radius(&theme));
                                 let ring = decl_style::focus_ring(&theme, radius);
                                 let bg_active =
                                     ColorRef::Color(tabs_trigger_bg_active(&theme));
                                 let border_active =
                                     ColorRef::Color(tabs_trigger_border_active(&theme));
-                                let border_w = tabs_trigger_border_width(&theme);
+                                let border_w = trigger_border_width_override
+                                    .unwrap_or_else(|| tabs_trigger_border_width(&theme));
 
                                 let default_trigger_fg = WidgetStateProperty::new(fg_inactive)
                                     .when(WidgetStates::SELECTED, fg_active)
@@ -1904,8 +2130,13 @@ impl Tabs {
                                         .when(WidgetStates::SELECTED, Some(border_active))
                                 };
 
-                                let pad_x = MetricRef::space(Space::N2).resolve(&theme);
-                                let pad_y = MetricRef::space(Space::N1).resolve(&theme);
+                                let (pad_x, pad_y) =
+                                    trigger_padding_override.unwrap_or_else(|| {
+                                        (
+                                            MetricRef::space(Space::N2).resolve(&theme),
+                                            MetricRef::space(Space::N1).resolve(&theme),
+                                        )
+                                    });
                                 // new-york-v4: trigger uses `h-[calc(100%-1px)]` relative to the list
                                 // content box (after list padding).
                                 //
@@ -1918,12 +2149,16 @@ impl Tabs {
                                 // Prefer filling the list content box by default; this preserves a
                                 // stable baseline for vertical centering while keeping the list's
                                 // outer padding (`p-[3px]`) as the primary visual inset.
-                                let trigger_h = Px((list_height.0 - list_padding.0 * 2.0).max(0.0));
-                                let trigger_refinement = if list_full_width {
-                                    LayoutRefinement::default().flex_1().h_px(trigger_h)
-                                } else {
-                                    LayoutRefinement::default().h_px(trigger_h)
-                                };
+                                let trigger_h = list_height_opt.map(|list_height| {
+                                    Px((list_height.0 - list_padding.0 * 2.0).max(0.0))
+                                });
+                                let mut trigger_refinement = LayoutRefinement::default();
+                                if list_full_width {
+                                    trigger_refinement = trigger_refinement.flex_1();
+                                }
+                                if let Some(trigger_h) = trigger_h {
+                                    trigger_refinement = trigger_refinement.h_px(trigger_h);
+                                }
                                 let trigger_layout =
                                     decl_style::layout_style(&theme, trigger_refinement);
 
@@ -2343,12 +2578,81 @@ impl Tabs {
                                 active_idx,
                                 indicator_test_id,
                                 tabs_disabled,
+                                indicator_line_color_override.clone(),
+                                indicator_line_outset_override,
                                 &style_override,
                             ));
                         }
-                        list_children
-                    })]
-            }));
+                    list_children
+                })]
+            });
+
+            if list_bar_borders {
+                let border_color = tab_list_bar_border_color;
+                let bar = cx.container(
+                    ContainerProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Fill;
+                            layout
+                        },
+                        ..Default::default()
+                    },
+                    move |cx| {
+                        let mut out: Vec<AnyElement> = Vec::with_capacity(3);
+                        let border_top = border_color;
+                        let border_bottom = border_color;
+
+                        out.push(cx.named("tabs_list_bar_border_top", move |cx| {
+                            let mut layout = LayoutStyle::default();
+                            layout.position = fret_ui::element::PositionStyle::Absolute;
+                            layout.inset.top = Some(Px(0.0)).into();
+                            layout.inset.left = Some(Px(0.0)).into();
+                            layout.inset.right = Some(Px(0.0)).into();
+                            layout.size.width = Length::Fill;
+                            layout.size.height = Length::Px(Px(1.0));
+
+                            let line = cx.container(
+                                ContainerProps {
+                                    layout,
+                                    background: Some(border_top),
+                                    ..Default::default()
+                                },
+                                |_cx| Vec::new(),
+                            );
+
+                            cx.hit_test_gate(false, move |_cx| [line])
+                        }));
+
+                        out.push(cx.named("tabs_list_bar_border_bottom", move |cx| {
+                            let mut layout = LayoutStyle::default();
+                            layout.position = fret_ui::element::PositionStyle::Absolute;
+                            layout.inset.bottom = Some(Px(0.0)).into();
+                            layout.inset.left = Some(Px(0.0)).into();
+                            layout.inset.right = Some(Px(0.0)).into();
+                            layout.size.width = Length::Fill;
+                            layout.size.height = Length::Px(Px(1.0));
+
+                            let line = cx.container(
+                                ContainerProps {
+                                    layout,
+                                    background: Some(border_bottom),
+                                    ..Default::default()
+                                },
+                                |_cx| Vec::new(),
+                            );
+
+                            cx.hit_test_gate(false, move |_cx| [line])
+                        }));
+
+                        out.push(tab_list);
+                        out
+                    },
+                );
+                children.push(bar);
+            } else {
+                children.push(tab_list);
+            }
 
             if !force_mount_content {
                 let active_label_opt = (!active_label.is_empty()).then_some(active_label.clone());

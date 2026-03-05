@@ -676,13 +676,10 @@ pub(super) fn handle_capture_steps(
                 };
 
                 if state.is_none() {
-                    if svc.last_dump_dir.is_none() {
-                        let dump_label =
-                            label.as_deref().map(sanitize_label).unwrap_or_else(|| {
-                                format!("script-step-{step_index:04}-capture_screenshot")
-                            });
-                        svc.dump_bundle(Some(&dump_label));
-                    }
+                    let dump_label = label.as_deref().map(sanitize_label).unwrap_or_else(|| {
+                        format!("script-step-{step_index:04}-capture_screenshot")
+                    });
+                    svc.dump_bundle(Some(&dump_label));
 
                     let bundle_dir_name = svc
                         .last_dump_dir
