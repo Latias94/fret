@@ -73,6 +73,24 @@ impl<H: UiHost> UiTree<H> {
                 } else {
                     false
                 };
+            let pointer_hit_pressable_target =
+                if matches!(event, Event::Pointer(PointerEvent::Down { .. }))
+                    && let Some(window) = self.window
+                {
+                    chain.iter().find_map(|(node_id, _)| {
+                        crate::declarative::element_record_for_node(app, window, *node_id).and_then(
+                            |record| {
+                                matches!(
+                                    &record.instance,
+                                    crate::declarative::ElementInstance::Pressable(_)
+                                )
+                                .then_some(record.element)
+                            },
+                        )
+                    })
+                } else {
+                    None
+                };
             for (node_id, event_for_node) in chain {
                 let (
                     invalidations,
@@ -100,6 +118,7 @@ impl<H: UiHost> UiTree<H> {
                         input_ctx: input_ctx.clone(),
                         pointer_hit_is_text_input,
                         pointer_hit_is_pressable,
+                        pointer_hit_pressable_target,
                         prevented_default_actions: &mut prevented_default_actions,
                         children,
                         focus: tree.focus,
@@ -279,6 +298,7 @@ impl<H: UiHost> UiTree<H> {
                     input_ctx: input_ctx.clone(),
                     pointer_hit_is_text_input: false,
                     pointer_hit_is_pressable: false,
+                    pointer_hit_pressable_target: None,
                     prevented_default_actions: &mut prevented_default_actions,
                     children,
                     focus: tree.focus,

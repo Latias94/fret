@@ -180,6 +180,12 @@ pub struct PointerDownCx {
     /// This is a mechanism-provided classification intended for policy-level decisions like
     /// "click-to-focus unless interacting with an embedded button".
     pub hit_is_pressable: bool,
+    /// The deepest pressable element in the pointer-down hit-test chain (if any).
+    ///
+    /// This can be used by composite widgets to implement DOM-style policies like
+    /// "click-to-focus unless the event target is inside a button" without requiring selector
+    /// mechanisms in the component layer.
+    pub hit_pressable_target: Option<crate::GlobalElementId>,
 }
 
 /// Pointer move payload for component-owned pointer handlers.
@@ -314,6 +320,12 @@ pub struct PointerUpCx {
     /// See `PointerEvent::{Down,Up}.click_count` for normalization rules.
     pub click_count: u8,
     pub pointer_type: PointerType,
+    /// The deepest pressable element in the pointer-down hit-test chain (if any).
+    ///
+    /// This is populated from the pressable/pointer-region state recorded on pointer down, and is
+    /// intended for policy decisions like suppressing row selection when the click started inside
+    /// a nested button.
+    pub down_hit_pressable_target: Option<crate::GlobalElementId>,
 }
 
 /// Key down payload for component-owned key handlers.
