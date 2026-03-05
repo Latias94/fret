@@ -51,6 +51,8 @@ pub struct Shimmer {
     text: Arc<str>,
     duration_secs: f32,
     spread: f32,
+    text_style: Option<TextStyle>,
+    wrap: TextWrap,
     role: SemanticsRole,
     test_id: Option<Arc<str>>,
     layout: LayoutRefinement,
@@ -75,6 +77,8 @@ impl Shimmer {
             text: text.into(),
             duration_secs: 2.0,
             spread: 2.0,
+            text_style: None,
+            wrap: TextWrap::None,
             role: SemanticsRole::Text,
             test_id: None,
             layout: LayoutRefinement::default(),
@@ -88,6 +92,20 @@ impl Shimmer {
 
     pub fn spread(mut self, spread: f32) -> Self {
         self.spread = spread;
+        self
+    }
+
+    /// Override the text style used for both the base text and the overlaid "erase band".
+    ///
+    /// This is important for callers that want shimmer to inherit typography from a wrapper
+    /// (e.g. shadcn CardTitle/CardDescription in AI Elements).
+    pub fn text_style(mut self, style: TextStyle) -> Self {
+        self.text_style = Some(style);
+        self
+    }
+
+    pub fn wrap(mut self, wrap: TextWrap) -> Self {
+        self.wrap = wrap;
         self
     }
 
@@ -112,10 +130,31 @@ impl Shimmer {
         let layout = decl_style::layout_style(&theme, self.layout);
         let role = self.role;
         let test_id = self.test_id;
+        let wrap = self.wrap;
 
         let text = Arc::clone(&self.text);
         let duration_secs = self.duration_secs;
         let spread = self.spread;
+
+        let style = match self.text_style {
+            Some(style) => style,
+            None => {
+                let font_size = theme
+                    .metric_by_key("font.size")
+                    .unwrap_or(theme.metrics.font_size);
+                let line_height = theme
+                    .metric_by_key("font.line_height")
+                    .unwrap_or(theme.metrics.font_line_height);
+                TextStyle {
+                    font: FontId::ui(),
+                    size: font_size,
+                    line_height: Some(line_height),
+                    ..Default::default()
+                }
+            }
+        };
+        let style = typography::as_control_text(style);
+        let style_for_paint = style.clone();
 
         cx.semantics(
             SemanticsProps {
@@ -131,9 +170,9 @@ impl Shimmer {
                 let base = cx.text_props(TextProps {
                     layout: Default::default(),
                     text: Arc::clone(&text),
-                    style: None,
+                    style: Some(style.clone()),
                     color: Some(base_color),
-                    wrap: TextWrap::None,
+                    wrap,
                     overflow: TextOverflow::Clip,
                     align: fret_core::TextAlign::Start,
 
@@ -195,30 +234,19 @@ impl Shimmer {
 
                         let highlight_color = resolve_background(painter.theme());
 
-                        let theme = painter.theme();
-                        let font_size = theme
-                            .metric_by_key("font.size")
-                            .unwrap_or(theme.metrics.font_size);
-                        let line_height = theme
-                            .metric_by_key("font.line_height")
-                            .unwrap_or(theme.metrics.font_line_height);
-                        let style = typography::as_control_text(TextStyle {
-                            font: FontId::default(),
-                            size: font_size,
-                            line_height: Some(line_height),
-                            ..Default::default()
-                        });
-
                         let constraints = TextConstraints {
                             max_width: Some(bounds.size.width),
-                            wrap: TextWrap::None,
+                            wrap,
                             overflow: TextOverflow::Clip,
                             align: fret_core::TextAlign::Start,
                             scale_factor: painter.scale_factor(),
                         };
                         let baseline = {
                             let (services, _scene) = painter.services_and_scene();
-                            let input = TextInput::plain(Arc::clone(&shimmer_text), style.clone());
+                            let input = TextInput::plain(
+                                Arc::clone(&shimmer_text),
+                                style_for_paint.clone(),
+                            );
                             services.text().measure(&input, constraints).baseline
                         };
                         let origin =
@@ -226,7 +254,7 @@ impl Shimmer {
 
                         let canvas_constraints = CanvasTextConstraints {
                             max_width: Some(bounds.size.width),
-                            wrap: TextWrap::None,
+                            wrap,
                             overflow: TextOverflow::Clip,
                         };
                         let raster_scale_factor = painter.scale_factor();
@@ -236,7 +264,7 @@ impl Shimmer {
                                 DrawOrder(0),
                                 origin,
                                 Arc::clone(&shimmer_text),
-                                style,
+                                style_for_paint.clone(),
                                 highlight_color,
                                 canvas_constraints,
                                 raster_scale_factor,

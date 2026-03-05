@@ -691,7 +691,7 @@ impl SchemaDisplayDescription {
         let text = self.text;
         cx.container(props, move |cx| {
             vec![
-                ui::text( text)
+                ui::text(text)
                     .text_color(ColorRef::Color(muted_fg(&theme)))
                     .into_element(cx),
             ]
@@ -1379,7 +1379,7 @@ fn schema_inline_description<H: UiHost>(
 
     cx.container(props, move |cx| {
         vec![
-            ui::text( text)
+            ui::text(text)
                 .text_color(ColorRef::Color(muted_fg(theme)))
                 .into_element(cx),
         ]
@@ -1436,9 +1436,7 @@ fn schema_section_trigger<H: UiHost + 'static>(
         let chevron =
             decl_icon::icon_with(cx, chevron_id, Some(Px(16.0)), Some(ColorRef::Color(fg)));
 
-        let title_text = ui::text( title_arc.clone())
-            .font_medium()
-            .into_element(cx);
+        let title_text = ui::text(title_arc.clone()).font_medium().into_element(cx);
 
         let count_badge = count.clone().map(|c| {
             Badge::new(c)
