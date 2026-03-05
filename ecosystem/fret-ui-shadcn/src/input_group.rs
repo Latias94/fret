@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use crate::button::{ButtonVariant, variant_colors};
+use crate::button::{variant_colors, ButtonVariant};
 use crate::rtl;
 use fret_core::{
     Axis, Color, Corners, CursorIcon, Edges, FontId, FontWeight, MouseButton, Px, SemanticsRole,
@@ -13,7 +13,7 @@ use fret_ui::element::{
     AnyElement, ContainerProps, FlexProps, LayoutStyle, Length, Overflow, PointerRegionProps,
     PressableA11y, PressableProps, SemanticsDecoration, TextAreaProps, TextInputProps, TextProps,
 };
-use fret_ui::{ElementContext, TextAreaStyle, TextInputStyle, Theme, UiHost, focus_visible};
+use fret_ui::{focus_visible, ElementContext, TextAreaStyle, TextInputStyle, Theme, UiHost};
 use fret_ui_kit::command::ElementCommandGatingExt as _;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
@@ -23,7 +23,7 @@ use fret_ui_kit::declarative::motion::{
     drive_tween_color_for_element, drive_tween_f32_for_element,
 };
 use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::recipes::input::{InputTokenKeys, resolve_input_chrome};
+use fret_ui_kit::recipes::input::{resolve_input_chrome, InputTokenKeys};
 use fret_ui_kit::typography;
 use fret_ui_kit::{ChromeRefinement, LayoutRefinement, Size as ComponentSize, Space};
 
@@ -608,7 +608,12 @@ impl InputGroup {
                                 cx.pointer_region_on_pointer_down(on_down);
                             }
                             cx.pointer_region_on_pointer_move(on_move.clone());
-                            vec![flex]
+                            let content = if disabled {
+                                cx.opacity(0.5, move |_cx| vec![flex])
+                            } else {
+                                flex
+                            };
+                            vec![content]
                         },
                     )
                 };
@@ -911,26 +916,30 @@ impl InputGroup {
                                 ..Default::default()
                             },
                             move |cx| {
-                                vec![
-                                    cx.flex(
-                                        FlexProps {
-                                            layout: LayoutStyle::default(),
-                                            direction: Axis::Horizontal,
-                                            gap: gap.into(),
-                                            padding: Edges {
-                                                top: pt,
-                                                right: px_3,
-                                                bottom: pb,
-                                                left: px_3,
-                                            }
-                                            .into(),
-                                            justify: fret_ui::element::MainAlign::Start,
-                                            align: fret_ui::element::CrossAlign::Center,
-                                            wrap: false,
-                                        },
-                                        move |_cx| block_start,
-                                    ),
-                                ]
+                                let row = cx.flex(
+                                    FlexProps {
+                                        layout: LayoutStyle::default(),
+                                        direction: Axis::Horizontal,
+                                        gap: gap.into(),
+                                        padding: Edges {
+                                            top: pt,
+                                            right: px_3,
+                                            bottom: pb,
+                                            left: px_3,
+                                        }
+                                        .into(),
+                                        justify: fret_ui::element::MainAlign::Start,
+                                        align: fret_ui::element::CrossAlign::Center,
+                                        wrap: false,
+                                    },
+                                    move |_cx| block_start,
+                                );
+
+                                if disabled {
+                                    vec![cx.opacity(0.5, move |_cx| vec![row])]
+                                } else {
+                                    vec![row]
+                                }
                             },
                         )
                     });
@@ -973,26 +982,30 @@ impl InputGroup {
                                 ..Default::default()
                             },
                             move |cx| {
-                                vec![
-                                    cx.flex(
-                                        FlexProps {
-                                            layout: LayoutStyle::default(),
-                                            direction: Axis::Horizontal,
-                                            gap: gap.into(),
-                                            padding: Edges {
-                                                top: pt,
-                                                right: px_3,
-                                                bottom: pb,
-                                                left: px_3,
-                                            }
-                                            .into(),
-                                            justify: fret_ui::element::MainAlign::Start,
-                                            align: fret_ui::element::CrossAlign::Center,
-                                            wrap: false,
-                                        },
-                                        move |_cx| block_end,
-                                    ),
-                                ]
+                                let row = cx.flex(
+                                    FlexProps {
+                                        layout: LayoutStyle::default(),
+                                        direction: Axis::Horizontal,
+                                        gap: gap.into(),
+                                        padding: Edges {
+                                            top: pt,
+                                            right: px_3,
+                                            bottom: pb,
+                                            left: px_3,
+                                        }
+                                        .into(),
+                                        justify: fret_ui::element::MainAlign::Start,
+                                        align: fret_ui::element::CrossAlign::Center,
+                                        wrap: false,
+                                    },
+                                    move |_cx| block_end,
+                                );
+
+                                if disabled {
+                                    vec![cx.opacity(0.5, move |_cx| vec![row])]
+                                } else {
+                                    vec![row]
+                                }
                             },
                         )
                     });
@@ -1154,15 +1167,11 @@ impl InputGroup {
             },
         );
 
-        let Some(test_id) = test_id else {
-            return root;
-        };
-
-        root.attach_semantics(
-            SemanticsDecoration::default()
-                .role(SemanticsRole::Group)
-                .test_id(test_id),
-        )
+        let mut semantics = SemanticsDecoration::default().role(SemanticsRole::Group);
+        if let Some(test_id) = test_id {
+            semantics = semantics.test_id(test_id);
+        }
+        root.attach_semantics(semantics)
     }
 }
 
@@ -1594,7 +1603,9 @@ impl InputGroupText {
         };
 
         let mut style = typography::fixed_line_box_style(FontId::ui(), px, line_height);
-        style.weight = FontWeight::NORMAL;
+        // Upstream `InputGroupAddon` sets `font-medium`, and `InputGroupText` inherits that
+        // weight when rendered inside an addon.
+        style.weight = FontWeight::MEDIUM;
 
         cx.text_props(TextProps {
             layout: decl_style::layout_style(theme, self.layout.h_px(line_height)),
@@ -1984,7 +1995,7 @@ mod tests {
     use fret_ui::element::{ElementKind, TextInputProps, TextProps};
     use fret_ui::tree::UiTree;
 
-    use crate::shadcn_themes::{ShadcnBaseColor, ShadcnColorScheme, apply_shadcn_new_york};
+    use crate::shadcn_themes::{apply_shadcn_new_york, ShadcnBaseColor, ShadcnColorScheme};
 
     fn bounds() -> Rect {
         Rect::new(
@@ -2100,6 +2111,17 @@ mod tests {
             .find_map(|c| find_container_with_test_id(c, test_id))
     }
 
+    fn find_opacity(node: &AnyElement, opacity: f32) -> bool {
+        let matches = match &node.kind {
+            ElementKind::Opacity(props) => (props.opacity - opacity).abs() <= 1e-6,
+            _ => false,
+        };
+        if matches {
+            return true;
+        }
+        node.children.iter().any(|c| find_opacity(c, opacity))
+    }
+
     #[test]
     fn input_group_parts_apply_placeholder_to_control() {
         let window = AppWindowId::default();
@@ -2163,6 +2185,28 @@ mod tests {
     }
 
     #[test]
+    fn input_group_stamps_group_role_even_without_test_id() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+
+        fret_ui::elements::with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "input_group_group_role",
+            |cx| {
+                let model: Model<String> = cx.app.models_mut().insert(String::new());
+                let el = InputGroup::new(model).into_element(cx);
+                assert_eq!(
+                    el.semantics_decoration.as_ref().and_then(|d| d.role),
+                    Some(SemanticsRole::Group)
+                );
+            },
+        );
+    }
+
+    #[test]
     fn input_group_inline_addon_click_to_focus_requests_focus_for_control() {
         let window = AppWindowId::default();
         let mut app = App::new();
@@ -2183,11 +2227,9 @@ mod tests {
             bounds,
             "shadcn-input-group-addon-click-to-focus",
             |cx| {
-                vec![
-                    InputGroup::new(model.clone())
-                        .leading([cx.text("lead")])
-                        .into_element(cx),
-                ]
+                vec![InputGroup::new(model.clone())
+                    .leading([cx.text("lead")])
+                    .into_element(cx)]
             },
         );
         ui.set_root(root);
@@ -2244,11 +2286,9 @@ mod tests {
             bounds,
             "shadcn-input-group-chrome-hit-test",
             |cx| {
-                vec![
-                    InputGroup::new(model.clone())
-                        .test_id("input_group")
-                        .into_element(cx),
-                ]
+                vec![InputGroup::new(model.clone())
+                    .test_id("input_group")
+                    .into_element(cx)]
             },
         );
         ui.set_root(root);
@@ -2273,6 +2313,33 @@ mod tests {
     }
 
     #[test]
+    fn input_group_disabled_addons_render_at_half_opacity_like_shadcn() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+
+        fret_ui::elements::with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "input_group_disabled_addon_opacity",
+            |cx| {
+                let model: Model<String> = cx.app.models_mut().insert(String::new());
+                let el = InputGroup::new(model)
+                    .disabled(true)
+                    .leading([cx.text("lead")])
+                    .trailing([cx.text("trail")])
+                    .into_element(cx);
+
+                assert!(
+                    find_opacity(&el, 0.5),
+                    "expected disabled addons to include an opacity wrapper"
+                );
+            },
+        );
+    }
+
+    #[test]
     fn input_group_inline_addon_with_button_hint_does_not_steal_focus() {
         let window = AppWindowId::default();
         let mut app = App::new();
@@ -2293,12 +2360,10 @@ mod tests {
             bounds,
             "shadcn-input-group-addon-click-to-focus-suppressed-by-hint",
             |cx| {
-                vec![
-                    InputGroup::new(model.clone())
-                        .leading([cx.text("lead")])
-                        .leading_has_button(true)
-                        .into_element(cx),
-                ]
+                vec![InputGroup::new(model.clone())
+                    .leading([cx.text("lead")])
+                    .leading_has_button(true)
+                    .into_element(cx)]
             },
         );
         ui.set_root(root);
