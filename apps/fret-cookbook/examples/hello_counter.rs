@@ -74,83 +74,47 @@ impl View for HelloCounterView {
             theme.color_token("foreground")
         };
 
-        cx.on_action::<act::Inc>({
+        cx.on_action_notify_models::<act::Inc>({
             let count = self.count.clone();
             let step = self.step.clone();
-            move |host, acx| {
-                let step_text = host
-                    .models_mut()
+            move |models| {
+                let step_text = models
                     .read(&step, Clone::clone)
                     .ok()
                     .unwrap_or_else(|| "1".to_string());
                 let (step_value, _) = parse_step(&step_text);
-                let _ = host
-                    .models_mut()
-                    .update(&count, |v| *v = v.saturating_add(step_value));
-                host.request_redraw(acx.window);
-                host.notify(acx);
+                let _ = models.update(&count, |v| *v = v.saturating_add(step_value));
                 true
             }
         });
 
-        cx.on_action::<act::Dec>({
+        cx.on_action_notify_models::<act::Dec>({
             let count = self.count.clone();
             let step = self.step.clone();
-            move |host, acx| {
-                let step_text = host
-                    .models_mut()
+            move |models| {
+                let step_text = models
                     .read(&step, Clone::clone)
                     .ok()
                     .unwrap_or_else(|| "1".to_string());
                 let (step_value, _) = parse_step(&step_text);
-                let _ = host
-                    .models_mut()
-                    .update(&count, |v| *v = v.saturating_sub(step_value));
-                host.request_redraw(acx.window);
-                host.notify(acx);
+                let _ = models.update(&count, |v| *v = v.saturating_sub(step_value));
                 true
             }
         });
 
-        cx.on_action::<act::Reset>({
-            let count = self.count.clone();
-            move |host, acx| {
-                let _ = host.models_mut().update(&count, |v| *v = 0);
-                host.request_redraw(acx.window);
-                host.notify(acx);
-                true
-            }
-        });
-
-        cx.on_action::<act::StepPreset1>({
-            let step = self.step.clone();
-            move |host, acx| {
-                let _ = host.models_mut().update(&step, |v| *v = "1".to_string());
-                host.request_redraw(acx.window);
-                host.notify(acx);
-                true
-            }
-        });
-
-        cx.on_action::<act::StepPreset5>({
-            let step = self.step.clone();
-            move |host, acx| {
-                let _ = host.models_mut().update(&step, |v| *v = "5".to_string());
-                host.request_redraw(acx.window);
-                host.notify(acx);
-                true
-            }
-        });
-
-        cx.on_action::<act::StepPreset10>({
-            let step = self.step.clone();
-            move |host, acx| {
-                let _ = host.models_mut().update(&step, |v| *v = "10".to_string());
-                host.request_redraw(acx.window);
-                host.notify(acx);
-                true
-            }
-        });
+        cx.on_action_notify_model_set::<act::Reset, i64>(self.count.clone(), 0);
+        cx.on_action_notify_model_set::<act::StepPreset1, String>(
+            self.step.clone(),
+            "1".to_string(),
+        );
+        cx.on_action_notify_model_set::<act::StepPreset5, String>(
+            self.step.clone(),
+            "5".to_string(),
+        );
+        cx.on_action_notify_model_set::<act::StepPreset10, String>(
+            self.step.clone(),
+            "10".to_string(),
+        );
 
         let hero_icon = ui::h_flex(|cx| {
             [icon::icon_with(

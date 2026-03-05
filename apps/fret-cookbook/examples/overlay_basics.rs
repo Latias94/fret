@@ -71,25 +71,9 @@ impl View for OverlayBasicsView {
         let dialog_open = cx.use_state::<bool>();
         let underlay_bumps = cx.use_state::<u32>();
 
-        cx.on_action::<act::OpenDialog>({
-            let dialog_open = dialog_open.clone();
-            move |host, acx| {
-                let _ = host.models_mut().update(&dialog_open, |v| *v = true);
-                host.request_redraw(acx.window);
-                host.notify(acx);
-                true
-            }
-        });
-        cx.on_action::<act::BumpUnderlay>({
-            let underlay_bumps = underlay_bumps.clone();
-            move |host, acx| {
-                let _ = host
-                    .models_mut()
-                    .update(&underlay_bumps, |v| *v = v.saturating_add(1));
-                host.request_redraw(acx.window);
-                host.notify(acx);
-                true
-            }
+        cx.on_action_notify_model_set::<act::OpenDialog, bool>(dialog_open.clone(), true);
+        cx.on_action_notify_model_update::<act::BumpUnderlay, u32>(underlay_bumps.clone(), |v| {
+            *v = v.saturating_add(1);
         });
         cx.on_action_availability::<act::OpenDialog>(|_host, _acx| CommandAvailability::Available);
         cx.on_action_availability::<act::BumpUnderlay>(|_host, _acx| {
