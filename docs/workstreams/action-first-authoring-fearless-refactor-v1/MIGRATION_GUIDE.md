@@ -255,6 +255,7 @@ Notes:
 This is a style guide, not a contract, but it is the repo’s default teaching baseline.
 
 - Prefer `ui::v_flex(|cx| ...)` / `ui::h_flex(|cx| ...)` (no outer `cx` argument).
+- If you need a horizontal row that does not force `width: fill`, prefer `ui::h_row(|cx| ...)`.
 - Prefer `ui::children![cx; ...]` for heterogeneous child lists to avoid decorate-only early
   `into_element(cx)` calls.
 - When rendering dynamic lists, prefer `*_build(|cx, out| ...)` + `cx.keyed(id, |cx| ...)` to keep

@@ -386,6 +386,9 @@ practical steps:
     - Note: a handful of “host type inference” edge cases need an explicit anchor.
       Preferred: annotate the closure argument type (e.g. `ui::v_flex(|cx: &mut ElementContext<'_, App>| ...)`).
       Alternative: turbofish (e.g. `ui::v_flex::<App, _, _>(...)`).
+  - Done: cookbook examples no longer use `stack::hstack/vstack` authoring helpers; the repo teaches
+    one layout authoring surface for demos (`fret-ui-kit::ui::*` builders).
+    - Gate: `tools/gate_no_stack_in_cookbook.ps1`
 - Pointer-triggered explainability: stable selector → action mapping without relying on script stamping.
   - Status (as of 2026-03-03): `debug.command_dispatch_trace[*].source_test_id` is inferred from the
     current semantics snapshot when `source_element` is available (fallbacks remain for cases where
