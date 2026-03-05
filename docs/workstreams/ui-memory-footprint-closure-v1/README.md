@@ -19,7 +19,7 @@ Using `tools/diag-scripts/todo-memory-steady.json` on macOS/Metal:
 - Tooling helper:
   - Summarize multiple `--session-auto` samples under a base dir:
     - `fretboard diag memory-summary --dir target/fret-diag-mem-todo-steady`
-    - `fretboard diag memory-summary --dir target/fret-diag-mem-todo-steady --sort wgpu_metal_current_allocated_size_bytes_max --top 5`
+    - `fretboard diag memory-summary --dir target/fret-diag-mem-todo-steady --sort-key wgpu_metal_current_allocated_size_bytes_max --top 5`
   - Optional macOS-only hint for the largest `vmmap` buckets:
     - `fretboard diag memory-summary --dir target/fret-diag-mem-todo-steady --vmmap-regions-sorted-top`
 
