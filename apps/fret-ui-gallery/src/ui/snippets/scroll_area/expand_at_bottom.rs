@@ -153,7 +153,7 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
                 );
 
                 vec![
-                    ui::v_flex(cx, |_cx| [toggle, stack])
+                    ui::v_flex(|_cx| [toggle, stack])
                         .gap(Space::N2)
                         .into_element(cx)
                         .test_id("ui-gallery-scroll-area-expand-at-bottom-root"),

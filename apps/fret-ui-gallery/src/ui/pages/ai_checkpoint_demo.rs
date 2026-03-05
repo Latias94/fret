@@ -19,5 +19,5 @@ pub(super) fn preview_ai_checkpoint_demo(
         ],
     );
 
-    vec![body.test_id("ui-gallery-page-ai-checkpoint-demo")]
+    vec![body]
 }
