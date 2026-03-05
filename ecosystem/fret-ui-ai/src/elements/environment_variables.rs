@@ -679,7 +679,7 @@ impl EnvironmentVariableValue {
 
         let show_values = use_environment_variables_controller(cx)
             .and_then(|c| cx.get_model_copied(&c.show_values, Invalidation::Paint))
-            .unwrap_or(true);
+            .unwrap_or(false);
 
         let display_value = if show_values {
             value.clone()

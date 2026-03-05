@@ -3,7 +3,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
-use fret_diag_protocol::builder::{role_and_name, test_id, text_composition_is, ScriptV2Builder};
+use fret_diag_protocol::builder::{ScriptV2Builder, role_and_name, test_id, text_composition_is};
 use fret_diag_protocol::{
     UiActionScriptV2, UiActionStepV2, UiKeyModifiersV1, UiOverlayPlacementTraceKindV1,
     UiOverlayPlacementTraceQueryV1, UiPredicateV1, UiScriptMetaV1, UiSelectorV1,

@@ -59,12 +59,25 @@
       "timeout_frames": 1800
     },
     { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "checked_is",
+        "target": { "kind": "test_id", "id": "ui-ai-env-vars-toggle-switch" },
+        "checked": false
+      },
+      "timeout_frames": 600
+    },
     { "type": "capture_screenshot", "label": "ui-gallery-ai-env-vars-hidden-zinc-dark" },
 
     { "type": "click_stable", "target": { "kind": "test_id", "id": "ui-ai-env-vars-toggle-switch" } },
     {
       "type": "wait_until",
-      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-ai-env-vars-show-values-true" } },
+      "predicate": {
+        "kind": "checked_is",
+        "target": { "kind": "test_id", "id": "ui-ai-env-vars-toggle-switch" },
+        "checked": true
+      },
       "timeout_frames": 600
     },
     { "type": "wait_frames", "n": 2 },
@@ -81,4 +94,3 @@
     { "type": "capture_bundle", "label": "ui-gallery-ai-env-vars-zinc-dark", "max_snapshots": 240 }
   ]
 }
-

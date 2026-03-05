@@ -9,7 +9,7 @@ use fret_ui_kit::declarative::ElementContextThemeExt;
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::ui;
-use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Space, ui};
+use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Space};
 use fret_ui_shadcn::prelude::*;
 use fret_ui_shadcn::{
     ButtonVariant, Radius, Select, SelectContent, SelectItem, SelectTrigger, SelectTriggerSize,
