@@ -3,8 +3,8 @@ use std::sync::Arc;
 use fret_core::SemanticsRole;
 use fret_ui::element::{AnyElement, SemanticsDecoration};
 use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui_kit::Space;
 use fret_ui_kit::ui;
-use fret_ui_kit::{LayoutRefinement, Space};
 
 use crate::theme::MarkdownTheme;
 use crate::{

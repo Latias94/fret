@@ -30,9 +30,7 @@ pub(super) fn render_pulldown_events_root<H: UiHost + 'static>(
         return children.into_iter().next().unwrap();
     }
 
-    ui::v_stack(|_cx| children)
-        .gap(Space::N2)
-        .into_element(cx)
+    ui::v_stack(|_cx| children).gap(Space::N2).into_element(cx)
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -814,9 +812,7 @@ fn render_pulldown_footnote_definition<H: UiHost + 'static>(
     let body = if children.len() == 1 {
         children.into_iter().next().unwrap()
     } else {
-        ui::v_stack(|_cx| children)
-            .gap(Space::N1)
-            .into_element(cx)
+        ui::v_stack(|_cx| children).gap(Space::N1).into_element(cx)
     };
 
     let el = ui::h_row(|_cx| vec![label_el, body])
