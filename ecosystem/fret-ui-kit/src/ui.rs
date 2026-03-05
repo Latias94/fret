@@ -61,6 +61,7 @@ pub struct FlexBox<H, F> {
     pub(crate) chrome: ChromeRefinement,
     pub(crate) layout: LayoutRefinement,
     pub(crate) direction: Axis,
+    pub(crate) force_width_fill: bool,
     pub(crate) gap: MetricRef,
     pub(crate) gap_length: Option<LengthRefinement>,
     pub(crate) justify: Justify,
@@ -76,6 +77,7 @@ pub struct FlexBoxBuild<H, B> {
     pub(crate) chrome: ChromeRefinement,
     pub(crate) layout: LayoutRefinement,
     pub(crate) direction: Axis,
+    pub(crate) force_width_fill: bool,
     pub(crate) gap: MetricRef,
     pub(crate) gap_length: Option<LengthRefinement>,
     pub(crate) justify: Justify,
@@ -95,6 +97,7 @@ impl<H, F> FlexBox<H, F> {
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
             direction,
+            force_width_fill: true,
             gap: MetricRef::space(Space::N0),
             gap_length: None,
             justify: Justify::Start,
@@ -116,6 +119,7 @@ impl<H, B> FlexBoxBuild<H, B> {
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
             direction,
+            force_width_fill: true,
             gap: MetricRef::space(Space::N0),
             gap_length: None,
             justify: Justify::Start,
@@ -178,7 +182,9 @@ where
             wrap: self.wrap,
             ..Default::default()
         };
-        flex_props.layout.size.width = Length::Fill;
+        if self.force_width_fill {
+            flex_props.layout.size.width = Length::Fill;
+        }
 
         let children = self.children.expect("expected flex children closure");
         cx.container(container, move |cx| {
@@ -217,7 +223,9 @@ where
             wrap: self.wrap,
             ..Default::default()
         };
-        flex_props.layout.size.width = Length::Fill;
+        if self.force_width_fill {
+            flex_props.layout.size.width = Length::Fill;
+        }
 
         let build = self.build.expect("expected flex build closure");
         cx.container(container, move |cx| {
@@ -243,6 +251,21 @@ where
     UiBuilder::new(FlexBox::new(Axis::Horizontal, children))
 }
 
+/// Returns a patchable horizontal flex layout builder that does **not** force `width: fill`.
+///
+/// Use this when you want the row to shrink-wrap its contents (or to avoid inflating child hit
+/// boxes due to a fill-width flex root).
+pub fn h_row<H: UiHost, F, I>(children: F) -> UiBuilder<FlexBox<H, F>>
+where
+    F: FnOnce(&mut ElementContext<'_, H>) -> I,
+    I: IntoIterator,
+    I::Item: UiIntoElement,
+{
+    let mut flex = FlexBox::new(Axis::Horizontal, children);
+    flex.force_width_fill = false;
+    UiBuilder::new(flex)
+}
+
 /// Variant of [`h_flex`] that avoids iterator borrow pitfalls by collecting into a sink.
 ///
 /// Use this when the natural authoring form is an iterator that captures `&mut cx` (e.g.
@@ -252,6 +275,16 @@ where
     B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
 {
     UiBuilder::new(FlexBoxBuild::new(Axis::Horizontal, build))
+}
+
+/// Variant of [`h_row`] that avoids iterator borrow pitfalls by collecting into a sink.
+pub fn h_row_build<H: UiHost, B>(build: B) -> UiBuilder<FlexBoxBuild<H, B>>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    let mut flex = FlexBoxBuild::new(Axis::Horizontal, build);
+    flex.force_width_fill = false;
+    UiBuilder::new(flex)
 }
 
 /// Returns a patchable vertical flex layout builder.
