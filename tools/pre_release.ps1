@@ -63,7 +63,30 @@ Invoke-Checked `
   "Stringly command parsing policy" `
   "python" `
   @(
-    (Join-Path $repoRoot "tools/check_stringly_command_parsing.py")
+      (Join-Path $repoRoot "tools/check_stringly_command_parsing.py")
+  )
+
+Invoke-Checked `
+  "Teaching surfaces policy (prefer action helpers)" `
+  "python" `
+  @(
+    (Join-Path $repoRoot "tools/gate_no_on_action_in_teaching_surfaces.py")
+  )
+
+Invoke-Checked `
+  "Teaching surfaces policy (no verbose models_mut action handlers)" `
+  "python" `
+  @(
+    (Join-Path $repoRoot "tools/gate_no_models_mut_in_action_handlers.py")
+  )
+
+Invoke-Checked `
+  "Teaching surfaces policy (no legacy stack helpers)" `
+  "python" `
+  @(
+    (Join-Path $repoRoot "tools/gate_no_stack_in_cookbook.py"),
+    (Join-Path $repoRoot "tools/gate_no_stack_in_examples.py"),
+    (Join-Path $repoRoot "tools/gate_no_public_stack_in_ui_kit.py")
   )
 
 if (-not $SkipPortableTime) {

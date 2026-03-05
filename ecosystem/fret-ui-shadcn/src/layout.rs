@@ -195,6 +195,25 @@ pub(crate) fn container_flow<H: UiHost>(
     container_vstack(cx, props, VStackProps::default().gap(Space::N0), children)
 }
 
+/// Flow stack variant that forces `width: fill`.
+///
+/// Use this for panel/content roots (popover/hover-card-like surfaces) where wrapped text should
+/// resolve its wrap width against the container's inner width rather than shrink-wrapping to its
+/// min-content size.
+pub(crate) fn container_flow_fill_width<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    props: ContainerProps,
+    children: Vec<AnyElement>,
+) -> AnyElement {
+    cx.container(props, move |cx| {
+        vec![
+            ui::v_flex(move |_cx| children)
+                .gap(Space::N0)
+                .into_element(cx),
+        ]
+    })
+}
+
 pub(crate) fn container_hstack<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     props: ContainerProps,

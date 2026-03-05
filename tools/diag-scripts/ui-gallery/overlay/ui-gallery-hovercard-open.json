@@ -3,9 +3,14 @@
   "meta": {
     "name": "ui-gallery-hovercard-open",
     "required_capabilities": ["diag.script_v2"],
-    "tags": ["ui_gallery", "overlay", "hovercard", "hover", "gate"]
+    "tags": ["ui_gallery", "hover_card", "hovercard", "hover", "gate"],
+    "target_hints": [
+      "Navigates to the Hover Card page (available in the default ui-gallery build).",
+      "Opens the instant-delay HoverCard via pointer hover and captures a bundle."
+    ]
   },
   "steps": [
+    { "type": "reset_diagnostics" },
     {
       "type": "wait_until",
       "predicate": {
@@ -29,45 +34,49 @@
     { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
     { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
     { "type": "press_key", "key": "backspace" },
-    { "type": "type_text", "text": "overlay" },
+    { "type": "type_text", "text": "hover card" },
     { "type": "wait_frames", "n": 2 },
 
     {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-nav-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-nav-hover-card" },
+      "delta_y": -240.0,
+      "timeout_frames": 600
+    },
+    {
       "type": "click_stable",
-      "target": { "kind": "test_id", "id": "ui-gallery-nav-overlay" },
-      "button": "left",
-      "stable_frames": 10,
-      "max_move_px": 0.5,
+      "target": { "kind": "test_id", "id": "ui-gallery-nav-hover-card" },
       "timeout_frames": 600
     },
     {
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-page-overlay" }
+        "target": { "kind": "test_id", "id": "ui-gallery-page-hover-card" }
       },
       "timeout_frames": 600
     },
     { "type": "wait_frames", "n": 10 },
 
-    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-overlay-reset" } },
-    { "type": "wait_frames", "n": 10 },
-
     {
       "type": "move_pointer",
-      "target": { "kind": "test_id", "id": "ui-gallery-overlay-underlay" }
+      "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
     },
     { "type": "wait_frames", "n": 5 },
     {
       "type": "move_pointer",
-      "target": { "kind": "test_id", "id": "ui-gallery-hovercard-trigger" }
+      "target": { "kind": "test_id", "id": "ui-gallery-hover-card-delay-instant-trigger" }
     },
     { "type": "wait_frames", "n": 30 },
     {
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-hovercard-content" }
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-hover-card-delay-instant-content"
+        }
       },
       "timeout_frames": 600
     },
@@ -75,4 +84,3 @@
     { "type": "capture_bundle", "label": "ui-gallery-hovercard-open" }
   ]
 }
-

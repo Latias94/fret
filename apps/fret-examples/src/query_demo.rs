@@ -216,13 +216,7 @@ impl View for QueryDemoView {
             .max_w(Px(520.0))
             .into_element(cx);
 
-        cx.on_action_notify::<act::ToggleFailMode>({
-            let fail_mode = self.st.fail_mode.clone();
-            move |host, _acx| {
-                let _ = host.models_mut().update(&fail_mode, |v| *v = !*v);
-                true
-            }
-        });
+        cx.on_action_notify_toggle_bool::<act::ToggleFailMode>(self.st.fail_mode.clone());
 
         cx.on_action_notify_transient::<act::Invalidate>(TRANSIENT_INVALIDATE_KEY);
         cx.on_action_notify_transient::<act::InvalidateNamespace>(TRANSIENT_INVALIDATE_NAMESPACE);

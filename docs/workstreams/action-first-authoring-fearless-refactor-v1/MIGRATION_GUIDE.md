@@ -138,6 +138,46 @@ Migration steps:
    - `cx.notify()` and/or
    - selector/query hooks that carry proper dependency observation.
 
+Small ergonomics helpers (recommended for simple state):
+
+- For common “update a single model” handlers (counters, toggles, flags), prefer `ViewCx` helpers:
+
+```rust,ignore
+let count = cx.use_state::<u32>();
+cx.on_action_notify_model_update::<act::Click, u32>(count.clone(), |v| {
+    *v = v.saturating_add(1);
+});
+
+let open = cx.use_state::<bool>();
+cx.on_action_notify_toggle_bool::<act::TogglePanel>(open.clone());
+```
+
+- For common multi-model flows, prefer `on_action_notify_models::<A>(|models| ...)`:
+
+```rust,ignore
+cx.on_action_notify_models::<act::Add>({
+    let todos = self.todos.clone();
+    let draft = self.draft.clone();
+    move |models| {
+        let text = models.read(&draft, |v| v.trim().to_string()).ok().unwrap_or_default();
+        if text.is_empty() {
+            return false;
+        }
+        let _ = models.update(&todos, |todos| todos.push(text));
+        let _ = models.update(&draft, String::clear);
+        true
+    }
+});
+```
+
+Choosing the helper:
+
+- Use `on_action_notify_model_update` / `on_action_notify_model_set` / `on_action_notify_toggle_bool` when a handler only touches one model.
+- Use `on_action_notify_models` when you need to coordinate multiple models in one handler.
+- Use `on_action_notify` (or `on_action`) when you need host-only operations (focus, timers, clipboard,
+  effects) in the handler; keep model updates minimal and prefer a single `models_mut()` access if
+  possible.
+
 Side effects that need `App` access (v1 note):
 
 - Some operations (e.g. `fret-query` invalidation via `with_query_client`) require `&mut App`.
@@ -169,13 +209,26 @@ If you previously relied on MVU routers for per-item/payloaded routing, prefer p
 - See: `docs/adr/0312-payload-actions-v2.md`
 - Example: `apps/fret-cookbook/examples/payload_actions_basics.rs`
 
-## 3.2) MVU removal note
+## 3.2) MVU deprecation / removal plan (M8/M9)
 
-MVU authoring surfaces were hard-deleted in-tree as part of milestone M9.
+MVU authoring still exists in-tree today as a compatibility surface, but it is not the recommended
+golden path for new code.
 
-- Do not add MVU back into this repo.
-- If you are migrating an external MVU-based codebase, treat this guide as the mapping reference and
-  prefer converging on View runtime + typed actions.
+Policy:
+
+- Do not add new MVU demos or expand MVU API surface.
+- Prefer migrating MVU demos to View runtime + typed actions as part of the adoption milestones.
+- Use this guide as the mapping reference when migrating an external MVU-based codebase.
+
+Planned sequence (subject to the workstream exit gates):
+
+- **M8**: MVU deprecation window (warn + migrate).
+- **M9**: hard delete legacy MVU in-tree (remove modules, templates/docs cleanup, add a regression gate).
+
+Evidence anchors:
+
+- `ecosystem/fret/src/mvu.rs` (current MVU compat)
+- `docs/workstreams/action-first-authoring-fearless-refactor-v1/TODO.md` (planned M9 checklist)
 
 ---
 
@@ -218,8 +271,8 @@ let el = button.into_element(cx);
 
 Notes:
 
-- `role(...)` is a convenience alias for `a11y_role(...)` on `UiIntoElement` values. The `a11y_*`
-  names remain supported.
+- `role(...)` is available on `UiBuilder<T>` and on `AnyElement` (after `into_element(cx)`).
+  - For arbitrary `UiIntoElement` values, prefer `a11y_role(...)` / `a11y(...)`.
 - `a11y_*` decorations are applied via layout-transparent `SemanticsDecoration` on `AnyElement`
   (no extra layout node required).
 - `key_context(...)` participates in `when` expressions via `keyctx.*` (ADR 0022).
@@ -234,8 +287,8 @@ Target outcome:
 Migration examples:
 
 ```rust,ignore
-// Before:
-ui::v_flex(cx, |cx| ui::children![cx; shadcn::Label::new("Title")])
+// Before (older signature; removed):
+// ui::v_flex(cx, |cx| ui::children![cx; shadcn::Label::new("Title")])
 
 // After:
 ui::v_flex(|cx| ui::children![cx; shadcn::Label::new("Title")])
@@ -261,6 +314,12 @@ This is a style guide, not a contract, but it is the repo’s default teaching b
 - If you need a vertical stack that does not force `width: fill`, prefer `ui::v_stack(|cx| ...)`.
 - Prefer `ui::children![cx; ...]` for heterogeneous child lists to avoid decorate-only early
   `into_element(cx)` calls.
+- For old `stack::*` call sites, the mapping is typically:
+  - `stack::v_flex(...)` → `ui::v_flex(...)` (forces `width: fill`)
+  - `stack::v_stack(...)` → `ui::v_stack(...)` (does **not** force `width: fill`)
+  - `stack::h_flex(...)` → `ui::h_flex(...)` (forces `width: fill`)
+  - `stack::h_row(...)` → `ui::h_row(...)` (does **not** force `width: fill`)
+  - `stack::container_vstack(...)` → `ui::container(...)` + `ui::v_stack(...)` (explicit composition)
 - When rendering dynamic lists, prefer `*_build(|cx, out| ...)` + `cx.keyed(id, |cx| ...)` to keep
   identity stable and reduce allocation noise.
 - Attach `test_id` / `a11y_*` / `key_context` on builders before `into_element(cx)`; only land to

@@ -30,23 +30,36 @@ fn ensure_models<H: UiHost>(cx: &mut ElementContext<'_, H>) -> (Model<String>, M
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let (username, password) = ensure_models(cx);
     let max_w_md = LayoutRefinement::default().w_full().max_w(Px(520.0));
+    let username_id = "username";
+    let password_id = "password";
 
     shadcn::FieldSet::new([shadcn::FieldGroup::new([
         shadcn::Field::new([
-            shadcn::FieldLabel::new("Username").into_element(cx),
-            shadcn::Input::new(username)
-                .placeholder("Max Leiter")
-                .a11y_label("Username")
+            shadcn::FieldLabel::new("Username")
+                .for_control(username_id)
                 .into_element(cx),
-            shadcn::FieldDescription::new("Choose a unique username.").into_element(cx),
+            shadcn::Input::new(username)
+                .control_id(username_id)
+                .placeholder("Max Leiter")
+                .test_id("ui-gallery-field-input-username")
+                .into_element(cx),
+            shadcn::FieldDescription::new("Choose a unique username for your account.")
+                .for_control(username_id)
+                .into_element(cx),
         ])
         .into_element(cx),
         shadcn::Field::new([
-            shadcn::FieldLabel::new("Password").into_element(cx),
-            shadcn::FieldDescription::new("Must be at least 8 characters long.").into_element(cx),
+            shadcn::FieldLabel::new("Password")
+                .for_control(password_id)
+                .into_element(cx),
+            shadcn::FieldDescription::new("Must be at least 8 characters long.")
+                .for_control(password_id)
+                .into_element(cx),
             shadcn::Input::new(password)
+                .control_id(password_id)
+                .password()
                 .placeholder("••••••••")
-                .a11y_label("Password")
+                .test_id("ui-gallery-field-input-password")
                 .into_element(cx),
         ])
         .into_element(cx),

@@ -14,7 +14,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
 
     let body = ui::v_flex(|cx| {
         vec![
-            ui::text("HoverCard content: multiline description with WordBreak wrapping.")
+            ui::text_block("HoverCard content: multiline description with WordBreak wrapping.")
                 .text_sm()
                 .wrap(TextWrap::WordBreak)
                 .into_element(cx)
@@ -28,7 +28,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     })
     .layout(LayoutRefinement::default().w_full().min_w_0())
     .gap(Space::N1)
-    .items_start()
+    .items_stretch()
     .into_element(cx);
 
     let content = shadcn::HoverCardContent::new(vec![body])

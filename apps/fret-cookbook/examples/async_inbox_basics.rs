@@ -299,21 +299,16 @@ impl View for AsyncInboxBasicsView {
             .max_w(Px(720.0))
             .into_element(cx);
 
-        cx.on_action::<act::ClearLog>({
-            let log = self.st.log.clone();
-            move |host, acx| {
-                let _ = host.models_mut().update(&log, String::clear);
-                host.request_redraw(acx.window);
-                host.notify(acx);
-                true
-            }
-        });
+        cx.on_action_notify_model_update::<act::ClearLog, String>(
+            self.st.log.clone(),
+            String::clear,
+        );
 
-        cx.on_action::<act::Cancel>({
+        cx.on_action_notify::<act::Cancel>({
             let task = self.st.task.clone();
             let running = self.st.running.clone();
             let status = self.st.status.clone();
-            move |host, acx| {
+            move |host, _acx| {
                 let _ = host.models_mut().update(&task, |slot| {
                     if let Some(task) = slot.take() {
                         task.cancel();
@@ -325,13 +320,11 @@ impl View for AsyncInboxBasicsView {
                     .models_mut()
                     .update(&status, |v| *v = Arc::<str>::from("Cancelling…"));
 
-                host.request_redraw(acx.window);
-                host.notify(acx);
                 true
             }
         });
 
-        cx.on_action::<act::Start>({
+        cx.on_action_notify::<act::Start>({
             let dispatcher = self.st.dispatcher.clone();
             let current_job = self.st.current_job.clone();
             let active_job = self.st.active_job.clone();
@@ -343,13 +336,11 @@ impl View for AsyncInboxBasicsView {
             let inbox_sender = self.st.inbox.clone().sender();
             let window = self.st.window;
 
-            move |host, acx| {
+            move |host, _acx| {
                 let Some(dispatcher) = dispatcher.clone() else {
                     let _ = host.models_mut().update(&status, |v| {
                         *v = Arc::<str>::from("Missing DispatcherHandle global (runner bug?)");
                     });
-                    host.request_redraw(acx.window);
-                    host.notify(acx);
                     return true;
                 };
 
@@ -414,8 +405,6 @@ impl View for AsyncInboxBasicsView {
                 let _ = host
                     .models_mut()
                     .update(&task, |slot| *slot = Some(bg_task));
-                host.request_redraw(acx.window);
-                host.notify(acx);
                 true
             }
         });

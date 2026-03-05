@@ -60,40 +60,33 @@ impl View for FormBasicsView {
 
         let can_submit = FormBasicsView::validate(&name, &email).is_none();
 
-        cx.on_action::<act::Submit>({
+        cx.on_action_notify_models::<act::Submit>({
             let name_model = self.name.clone();
             let email_model = self.email.clone();
             let error_model = self.error.clone();
-            move |host, acx| {
-                let name = host
-                    .models_mut()
+            move |models| {
+                let name = models
                     .read(&name_model, Clone::clone)
                     .ok()
                     .unwrap_or_default();
-                let email = host
-                    .models_mut()
+                let email = models
                     .read(&email_model, Clone::clone)
                     .ok()
                     .unwrap_or_default();
                 let err = FormBasicsView::validate(&name, &email);
-                let _ = host.models_mut().update(&error_model, |v| *v = err);
-                host.request_redraw(acx.window);
-                host.notify(acx);
-                true
+                models.update(&error_model, |v| *v = err).is_ok()
             }
         });
 
-        cx.on_action::<act::Reset>({
+        cx.on_action_notify_models::<act::Reset>({
             let name_model = self.name.clone();
             let email_model = self.email.clone();
             let error_model = self.error.clone();
-            move |host, acx| {
-                let _ = host.models_mut().update(&name_model, String::clear);
-                let _ = host.models_mut().update(&email_model, String::clear);
-                let _ = host.models_mut().update(&error_model, |v| *v = None);
-                host.request_redraw(acx.window);
-                host.notify(acx);
-                true
+            move |models| {
+                let ok = models.update(&name_model, String::clear).is_ok();
+                let ok = models.update(&email_model, String::clear).is_ok() && ok;
+                let ok = models.update(&error_model, |v| *v = None).is_ok() && ok;
+                ok
             }
         });
 

@@ -25,7 +25,7 @@ fn demo_content<H: UiHost>(
                 .font_semibold()
                 .into_element(cx)
                 .test_id(title_test_id.clone()),
-            ui::text(desc)
+            ui::text_block(desc)
                 .wrap(TextWrap::WordBreak)
                 .into_element(cx)
                 .test_id(desc_test_id.clone()),
@@ -39,7 +39,7 @@ fn demo_content<H: UiHost>(
     })
     .layout(LayoutRefinement::default().w_full().min_w_0())
     .gap(Space::N0p5)
-    .items_start()
+    .items_stretch()
     .into_element(cx);
 
     shadcn::HoverCardContent::new(vec![body])

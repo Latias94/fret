@@ -279,71 +279,47 @@ impl View for HelloCounterView {
             .max_w(Px(480.0))
             .into_element(cx);
 
-        cx.on_action_notify::<act::Inc>({
+        cx.on_action_notify_models::<act::Inc>({
             let count = self.st.count.clone();
             let step = self.st.step.clone();
-            move |host, _acx| {
-                let step_text = host
-                    .models_mut()
+            move |models| {
+                let step_text = models
                     .read(&step, Clone::clone)
                     .ok()
                     .unwrap_or_else(|| "1".to_string());
                 let (step, _) = parse_step(&step_text);
-                let _ = host
-                    .models_mut()
-                    .update(&count, |v| *v = v.saturating_add(step));
+                let _ = models.update(&count, |v| *v = v.saturating_add(step));
                 true
             }
         });
 
-        cx.on_action_notify::<act::Dec>({
+        cx.on_action_notify_models::<act::Dec>({
             let count = self.st.count.clone();
             let step = self.st.step.clone();
-            move |host, _acx| {
-                let step_text = host
-                    .models_mut()
+            move |models| {
+                let step_text = models
                     .read(&step, Clone::clone)
                     .ok()
                     .unwrap_or_else(|| "1".to_string());
                 let (step, _) = parse_step(&step_text);
-                let _ = host
-                    .models_mut()
-                    .update(&count, |v| *v = v.saturating_sub(step));
+                let _ = models.update(&count, |v| *v = v.saturating_sub(step));
                 true
             }
         });
 
-        cx.on_action_notify::<act::Reset>({
-            let count = self.st.count.clone();
-            move |host, _acx| {
-                let _ = host.models_mut().update(&count, |v| *v = 0);
-                true
-            }
-        });
-
-        cx.on_action_notify::<act::SetStep1>({
-            let step = self.st.step.clone();
-            move |host, _acx| {
-                let _ = host.models_mut().update(&step, |v| *v = "1".to_string());
-                true
-            }
-        });
-
-        cx.on_action_notify::<act::SetStep5>({
-            let step = self.st.step.clone();
-            move |host, _acx| {
-                let _ = host.models_mut().update(&step, |v| *v = "5".to_string());
-                true
-            }
-        });
-
-        cx.on_action_notify::<act::SetStep10>({
-            let step = self.st.step.clone();
-            move |host, _acx| {
-                let _ = host.models_mut().update(&step, |v| *v = "10".to_string());
-                true
-            }
-        });
+        cx.on_action_notify_model_set::<act::Reset, i64>(self.st.count.clone(), 0);
+        cx.on_action_notify_model_set::<act::SetStep1, String>(
+            self.st.step.clone(),
+            "1".to_string(),
+        );
+        cx.on_action_notify_model_set::<act::SetStep5, String>(
+            self.st.step.clone(),
+            "5".to_string(),
+        );
+        cx.on_action_notify_model_set::<act::SetStep10, String>(
+            self.st.step.clone(),
+            "10".to_string(),
+        );
 
         ui::container(|cx| {
             [ui::v_flex(|_cx| [card])

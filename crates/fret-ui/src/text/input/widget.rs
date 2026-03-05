@@ -611,6 +611,9 @@ impl<H: UiHost> Widget<H> for TextInput {
                         .text_blob
                         .map(|blob| cx.services.hit_test_x(blob, local_x))
                         .unwrap_or_else(|| self.caret_from_x(local_x));
+                    if self.text_blob.is_some() && self.obscure_text_enabled_for_paint() {
+                        caret = self.paint_to_base_index(caret);
+                    }
 
                     // While IME preedit is active, the displayed text is the base buffer with the
                     // preedit spliced at the caret (ADR 0071). Pointer hit-testing is performed
@@ -682,6 +685,12 @@ impl<H: UiHost> Widget<H> for TextInput {
                         .text_blob
                         .map(|blob| cx.services.hit_test_x(blob, local_x))
                         .unwrap_or_else(|| self.caret_from_x(local_x));
+                    let caret_at_point =
+                        if self.text_blob.is_some() && self.obscure_text_enabled_for_paint() {
+                            self.paint_to_base_index(caret_at_point)
+                        } else {
+                            caret_at_point
+                        };
 
                     // Preserve an existing selection when right-clicking inside it so "Copy" and
                     // friends remain enabled in upstream context menus.
@@ -731,6 +740,12 @@ impl<H: UiHost> Widget<H> for TextInput {
                         .text_blob
                         .map(|blob| cx.services.hit_test_x(blob, local_x))
                         .unwrap_or_else(|| self.caret_from_x(local_x));
+                    let caret = if self.text_blob.is_some() && self.obscure_text_enabled_for_paint()
+                    {
+                        self.paint_to_base_index(caret)
+                    } else {
+                        caret
+                    };
                     self.caret = caret;
                     self.selection_anchor = caret;
                     self.clear_ime_composition();
@@ -766,6 +781,9 @@ impl<H: UiHost> Widget<H> for TextInput {
                     .text_blob
                     .map(|blob| cx.services.hit_test_x(blob, local_x))
                     .unwrap_or_else(|| self.caret_from_x(local_x));
+                if self.text_blob.is_some() && self.obscure_text_enabled_for_paint() {
+                    self.caret = self.paint_to_base_index(self.caret);
+                }
                 self.clear_ime_composition();
                 self.selection_autoscroll_tick(cx);
                 cx.invalidate_self(Invalidation::Paint);
@@ -1349,10 +1367,16 @@ impl<H: UiHost> Widget<H> for TextInput {
         // Text inputs want stable line metrics even when the field is empty (caret/placeholder
         // alignment). Measure the actual text first, then fall back to a single space if the text
         // backend reports degenerate metrics.
-        let mut metrics =
-            cx.services
-                .text()
-                .measure_str(self.text.as_str(), &self.style, base_constraints);
+        let paint_text = if self.obscure_text_enabled_for_paint() {
+            self.ensure_obscure_cache();
+            self.obscure_text_cache.masked.as_str()
+        } else {
+            self.text.as_str()
+        };
+        let mut metrics = cx
+            .services
+            .text()
+            .measure_str(paint_text, &self.style, base_constraints);
         if metrics.size.height.0 <= 0.01 {
             metrics = cx
                 .services
@@ -1448,13 +1472,20 @@ impl<H: UiHost> Widget<H> for TextInput {
         }
 
         if self.text_blob.is_none() {
+            let paint_text = if self.obscure_text_enabled_for_paint() {
+                self.ensure_obscure_cache();
+                self.obscure_text_cache.masked.as_str()
+            } else {
+                self.text.as_str()
+            };
             let (blob, metrics) =
                 cx.services
                     .text()
-                    .prepare_str(self.text.as_str(), &self.style, constraints);
+                    .prepare_str(paint_text, &self.style, constraints);
             self.text_blob = Some(blob);
             self.text_metrics = Some(metrics);
             cx.services.caret_stops(blob, &mut self.caret_stops);
+            self.remap_caret_stops_from_paint_to_base();
         }
 
         let show_placeholder = self.preedit.is_empty()
@@ -1481,13 +1512,20 @@ impl<H: UiHost> Widget<H> for TextInput {
                 self.queue_release_all_text_blobs();
                 // The call above also clears `text_blob`, so re-prepare it.
                 self.flush_pending_releases(cx.services);
+                let paint_text = if self.obscure_text_enabled_for_paint() {
+                    self.ensure_obscure_cache();
+                    self.obscure_text_cache.masked.as_str()
+                } else {
+                    self.text.as_str()
+                };
                 let (blob, metrics) =
                     cx.services
                         .text()
-                        .prepare_str(self.text.as_str(), &self.style, constraints);
+                        .prepare_str(paint_text, &self.style, constraints);
                 self.text_blob = Some(blob);
                 self.text_metrics = Some(metrics);
                 cx.services.caret_stops(blob, &mut self.caret_stops);
+                self.remap_caret_stops_from_paint_to_base();
             }
         } else if self.prefix_blob.is_none()
             || self.suffix_blob.is_none()
@@ -1497,22 +1535,42 @@ impl<H: UiHost> Widget<H> for TextInput {
             self.queue_release_all_text_blobs();
             self.flush_pending_releases(cx.services);
 
-            let (blob, metrics) =
+            let caret_paint = self.base_to_paint_index(self.caret);
+            let (blob, metrics) = {
+                let paint_text = if self.obscure_text_enabled_for_paint() {
+                    self.ensure_obscure_cache();
+                    self.obscure_text_cache.masked.as_str()
+                } else {
+                    self.text.as_str()
+                };
                 cx.services
                     .text()
-                    .prepare_str(self.text.as_str(), &self.style, constraints);
+                    .prepare_str(paint_text, &self.style, constraints)
+            };
             self.text_blob = Some(blob);
             self.text_metrics = Some(metrics);
             cx.services.caret_stops(blob, &mut self.caret_stops);
 
-            let (prefix_blob, prefix_metrics) =
-                cx.services
-                    .text()
-                    .prepare_str(&self.text[..self.caret], &self.style, constraints);
-            let (suffix_blob, suffix_metrics) =
-                cx.services
-                    .text()
-                    .prepare_str(&self.text[self.caret..], &self.style, constraints);
+            let (prefix_blob, prefix_metrics, suffix_blob, suffix_metrics) = {
+                let paint_text = if self.obscure_text_enabled_for_paint() {
+                    self.ensure_obscure_cache();
+                    self.obscure_text_cache.masked.as_str()
+                } else {
+                    self.text.as_str()
+                };
+                let (prefix_blob, prefix_metrics) = cx.services.text().prepare_str(
+                    &paint_text[..caret_paint],
+                    &self.style,
+                    constraints,
+                );
+                let (suffix_blob, suffix_metrics) = cx.services.text().prepare_str(
+                    &paint_text[caret_paint..],
+                    &self.style,
+                    constraints,
+                );
+                (prefix_blob, prefix_metrics, suffix_blob, suffix_metrics)
+            };
+            self.remap_caret_stops_from_paint_to_base();
             let (pre_blob, pre_metrics) =
                 cx.services
                     .text()
@@ -1589,7 +1647,10 @@ impl<H: UiHost> Widget<H> for TextInput {
                 .min(inner_width.0 * 0.45);
             let caret_x = self
                 .text_blob
-                .map(|blob| cx.services.caret_x(blob, self.caret))
+                .map(|blob| {
+                    cx.services
+                        .caret_x(blob, self.base_to_paint_index(self.caret))
+                })
                 .unwrap_or(Px(0.0));
             let caret_x = if self.is_ime_composing() && !self.preedit.is_empty() {
                 let cursor_end =
@@ -1607,7 +1668,10 @@ impl<H: UiHost> Widget<H> for TextInput {
 
             let text_end_x = self
                 .text_blob
-                .map(|blob| cx.services.caret_x(blob, self.text.len()))
+                .map(|blob| {
+                    cx.services
+                        .caret_x(blob, self.base_to_paint_index(self.text.len()))
+                })
                 .unwrap_or(Px(0.0));
             let preedit_w = if self.is_ime_composing() && !self.preedit.is_empty() {
                 cx.services
@@ -1632,7 +1696,10 @@ impl<H: UiHost> Widget<H> for TextInput {
         } else {
             let text_end_x = self
                 .text_blob
-                .map(|blob| cx.services.caret_x(blob, self.text.len()))
+                .map(|blob| {
+                    cx.services
+                        .caret_x(blob, self.base_to_paint_index(self.text.len()))
+                })
                 .unwrap_or(Px(0.0));
             let preedit_w = if self.is_ime_composing() && !self.preedit.is_empty() {
                 cx.services
@@ -1666,11 +1733,11 @@ impl<H: UiHost> Widget<H> for TextInput {
             let (a, b) = self.selection_range();
             let start_x = self
                 .text_blob
-                .map(|blob| cx.services.caret_x(blob, a))
+                .map(|blob| cx.services.caret_x(blob, self.base_to_paint_index(a)))
                 .unwrap_or(Px(0.0));
             let end_x = self
                 .text_blob
-                .map(|blob| cx.services.caret_x(blob, b))
+                .map(|blob| cx.services.caret_x(blob, self.base_to_paint_index(b)))
                 .unwrap_or(Px(0.0));
 
             let (selection_top, selection_height) = if let Some(blob) = self.text_blob {
@@ -1734,7 +1801,10 @@ impl<H: UiHost> Widget<H> for TextInput {
         } else {
             let prefix_w = self
                 .text_blob
-                .map(|blob| cx.services.caret_x(blob, self.caret))
+                .map(|blob| {
+                    cx.services
+                        .caret_x(blob, self.base_to_paint_index(self.caret))
+                })
                 .unwrap_or(Px(0.0));
             let pre_w = self
                 .preedit_metrics
@@ -2004,10 +2074,16 @@ impl TextInput {
             align: fret_core::TextAlign::Start,
             scale_factor: cx.scale_factor,
         };
+        let paint_text = if self.obscure_text_enabled_for_paint() {
+            self.ensure_obscure_cache();
+            self.obscure_text_cache.masked.as_str()
+        } else {
+            self.text.as_str()
+        };
         let content_w = cx
             .services
             .text()
-            .measure_str(self.text.as_str(), &self.style, constraints)
+            .measure_str(paint_text, &self.style, constraints)
             .size
             .width
             .0;
@@ -2029,6 +2105,9 @@ impl TextInput {
             .text_blob
             .map(|blob| cx.services.hit_test_x(blob, local_x))
             .unwrap_or_else(|| self.caret_from_x(local_x));
+        if self.text_blob.is_some() && self.obscure_text_enabled_for_paint() {
+            self.caret = self.paint_to_base_index(self.caret);
+        }
         self.clear_ime_composition();
 
         cx.invalidate_self(Invalidation::Paint);

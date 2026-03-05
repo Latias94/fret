@@ -7,6 +7,7 @@ use super::TextInput;
 use super::cx::TextInputUiCx;
 use crate::widget::{EventCx, PaintCx};
 use crate::{Invalidation, TextInputStyle, UiHost};
+use unicode_segmentation::UnicodeSegmentation as _;
 
 impl TextInput {
     pub fn new() -> Self {
@@ -15,6 +16,8 @@ impl TextInput {
             enabled: true,
             focusable: true,
             focus_ring_always_paint: false,
+            obscure_text: false,
+            obscure_text_cache: Default::default(),
             text: String::new(),
             base_text_revision: 0,
             ime_surrounding_text_cache: std::cell::RefCell::default(),
@@ -81,6 +84,14 @@ impl TextInput {
 
     pub fn set_focus_ring_always_paint(&mut self, always_paint: bool) {
         self.focus_ring_always_paint = always_paint;
+    }
+
+    pub fn set_obscure_text(&mut self, obscure: bool) {
+        if self.obscure_text == obscure {
+            return;
+        }
+        self.obscure_text = obscure;
+        self.mark_text_blobs_dirty();
     }
 
     pub fn set_placeholder(&mut self, placeholder: Option<std::sync::Arc<str>>) {
@@ -189,6 +200,95 @@ impl TextInput {
 
     pub fn text(&self) -> &str {
         &self.text
+    }
+
+    pub(super) fn obscure_text_enabled_for_paint(&self) -> bool {
+        // Keep IME behavior stable for now: when a preedit is active we paint the real base text
+        // (plus the preedit run) rather than trying to combine IME display mapping with obscuring.
+        self.obscure_text && self.preedit.is_empty()
+    }
+
+    pub(super) fn ensure_obscure_cache(&mut self) {
+        if !self.obscure_text_enabled_for_paint() {
+            return;
+        }
+
+        let key = super::ObscureTextCacheKey {
+            text_revision: self.base_text_revision,
+        };
+        if self.obscure_text_cache.key.as_ref() == Some(&key) {
+            return;
+        }
+
+        let text = self.text.as_str();
+        let mut boundaries: Vec<usize> = text.grapheme_indices(true).map(|(idx, _)| idx).collect();
+        if boundaries.first().copied() != Some(0) {
+            boundaries.insert(0, 0);
+        }
+        if boundaries.last().copied() != Some(text.len()) {
+            boundaries.push(text.len());
+        }
+        boundaries.dedup();
+
+        let graphemes = boundaries.len().saturating_sub(1);
+        self.obscure_text_cache.masked = super::OBSCURE_MASK.repeat(graphemes);
+        self.obscure_text_cache.base_grapheme_boundaries = boundaries;
+        self.obscure_text_cache.key = Some(key);
+    }
+
+    pub(super) fn paint_text(&mut self) -> &str {
+        if !self.obscure_text_enabled_for_paint() {
+            return self.text.as_str();
+        }
+        self.ensure_obscure_cache();
+        self.obscure_text_cache.masked.as_str()
+    }
+
+    pub(super) fn base_to_paint_index(&mut self, base_index: usize) -> usize {
+        if !self.obscure_text_enabled_for_paint() {
+            return base_index;
+        }
+        self.ensure_obscure_cache();
+        let boundaries = &self.obscure_text_cache.base_grapheme_boundaries;
+        if boundaries.is_empty() {
+            return base_index;
+        }
+        // The caller is expected to keep indices clamped to grapheme boundaries. If the index is
+        // not present, clamp down to the nearest boundary (best-effort).
+        let ordinal = boundaries
+            .partition_point(|&b| b <= base_index)
+            .saturating_sub(1);
+        ordinal.saturating_mul(super::OBSCURE_MASK_BYTES)
+    }
+
+    pub(super) fn paint_to_base_index(&mut self, paint_index: usize) -> usize {
+        if !self.obscure_text_enabled_for_paint() {
+            return paint_index;
+        }
+        self.ensure_obscure_cache();
+        let boundaries = &self.obscure_text_cache.base_grapheme_boundaries;
+        if boundaries.is_empty() {
+            return 0;
+        }
+        let ordinal = (paint_index / super::OBSCURE_MASK_BYTES).min(boundaries.len() - 1);
+        boundaries[ordinal]
+    }
+
+    pub(super) fn remap_caret_stops_from_paint_to_base(&mut self) {
+        if !self.obscure_text_enabled_for_paint() {
+            return;
+        }
+        self.ensure_obscure_cache();
+        let mut out: Vec<(usize, Px)> = Vec::with_capacity(self.caret_stops.len());
+        let caret_stops = std::mem::take(&mut self.caret_stops);
+        for (idx, px) in caret_stops {
+            let base = self.paint_to_base_index(idx);
+            if out.last().is_some_and(|(last, _)| *last == base) {
+                continue;
+            }
+            out.push((base, px));
+        }
+        self.caret_stops = out;
     }
 
     pub fn set_text(&mut self, text: impl Into<String>) {
@@ -312,6 +412,9 @@ impl TextInput {
 
     pub(super) fn mark_text_blobs_dirty(&mut self) {
         self.queue_release_all_text_blobs();
+        self.obscure_text_cache.key = None;
+        self.obscure_text_cache.masked.clear();
+        self.obscure_text_cache.base_grapheme_boundaries.clear();
         self.last_sent_cursor = None;
     }
 
@@ -403,7 +506,7 @@ impl TextInput {
     }
 
     pub(super) fn caret_rect<H: UiHost>(
-        &self,
+        &mut self,
         cx: &mut PaintCx<'_, H>,
         bounds: Rect,
         scale_factor: f32,
@@ -414,7 +517,10 @@ impl TextInput {
 
         let caret_x = self
             .text_blob
-            .map(|blob| cx.services.caret_x(blob, self.caret))
+            .map(|blob| {
+                cx.services
+                    .caret_x(blob, self.base_to_paint_index(self.caret))
+            })
             .unwrap_or(Px(0.0));
 
         let mut x = padding_left + caret_x - self.offset_x;

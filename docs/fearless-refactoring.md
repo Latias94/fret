@@ -64,21 +64,19 @@ code toward generic-heavy patterns that are harder to version over time:
 Instead, we keep `Elements` concrete and provide small ergonomics (e.g. `root.into()` and array /
 iterator conversions) so call sites stay compact without paying the generic tax.
 
-### 2) Prefer typed message routing patterns
+### 2) Prefer typed actions (golden path)
 
-If you want MVU-style clarity (like `iced`) while keeping a command system:
+If you want MVU-style clarity while keeping a unified command/key/palette pipeline, prefer typed
+actions:
 
-- Use `fret::mvu::Program` + `MessageRouter<M>` to build typed commands in `view`.
-- Let the driver clear the router once per frame.
-- Use `Program::on_command(...)` for framework-level `CommandId`s that are not produced by
-  `MessageRouter` (e.g. router navigation commands / keybindings).
+- Define typed unit actions with stable IDs via `fret::actions!([..])`.
+- Bind UI triggers via `.action(act::Something)` (or `cx.dispatch(...)` for programmatic dispatch).
+- Handle actions via `ViewCx::on_action*` hooks.
 
-Avoid:
+MVU note:
 
-- parsing strings out of `CommandId` in app code.
-- relying on per-frame router state inside a subtree that can be reused via view caching.
-  If you need commands inside a cached subtree, prefer a keyed/stable router (see
-  `fret::mvu::KeyedMessageRouter<K, M>`).
+- `fret::mvu::*` remains a compatibility surface for older codebases, but new templates and docs
+  should prefer `View` + typed actions.
 
 ### 3) Use identity helpers early
 
@@ -124,7 +122,7 @@ Use `rg` to find patterns:
 - `.into_element(cx)` call sites
 - `Theme::global(...)` usage
 - `watch_model(...).layout()` chains
-- `MessageRouter` usage
+- typed action handlers (`on_action*`) and action IDs
 
 ### Prefer templates and golden demos as migration references
 

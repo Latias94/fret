@@ -74,83 +74,47 @@ impl View for HelloCounterView {
             theme.color_token("foreground")
         };
 
-        cx.on_action::<act::Inc>({
+        cx.on_action_notify_models::<act::Inc>({
             let count = self.count.clone();
             let step = self.step.clone();
-            move |host, acx| {
-                let step_text = host
-                    .models_mut()
+            move |models| {
+                let step_text = models
                     .read(&step, Clone::clone)
                     .ok()
                     .unwrap_or_else(|| "1".to_string());
                 let (step_value, _) = parse_step(&step_text);
-                let _ = host
-                    .models_mut()
-                    .update(&count, |v| *v = v.saturating_add(step_value));
-                host.request_redraw(acx.window);
-                host.notify(acx);
+                let _ = models.update(&count, |v| *v = v.saturating_add(step_value));
                 true
             }
         });
 
-        cx.on_action::<act::Dec>({
+        cx.on_action_notify_models::<act::Dec>({
             let count = self.count.clone();
             let step = self.step.clone();
-            move |host, acx| {
-                let step_text = host
-                    .models_mut()
+            move |models| {
+                let step_text = models
                     .read(&step, Clone::clone)
                     .ok()
                     .unwrap_or_else(|| "1".to_string());
                 let (step_value, _) = parse_step(&step_text);
-                let _ = host
-                    .models_mut()
-                    .update(&count, |v| *v = v.saturating_sub(step_value));
-                host.request_redraw(acx.window);
-                host.notify(acx);
+                let _ = models.update(&count, |v| *v = v.saturating_sub(step_value));
                 true
             }
         });
 
-        cx.on_action::<act::Reset>({
-            let count = self.count.clone();
-            move |host, acx| {
-                let _ = host.models_mut().update(&count, |v| *v = 0);
-                host.request_redraw(acx.window);
-                host.notify(acx);
-                true
-            }
-        });
-
-        cx.on_action::<act::StepPreset1>({
-            let step = self.step.clone();
-            move |host, acx| {
-                let _ = host.models_mut().update(&step, |v| *v = "1".to_string());
-                host.request_redraw(acx.window);
-                host.notify(acx);
-                true
-            }
-        });
-
-        cx.on_action::<act::StepPreset5>({
-            let step = self.step.clone();
-            move |host, acx| {
-                let _ = host.models_mut().update(&step, |v| *v = "5".to_string());
-                host.request_redraw(acx.window);
-                host.notify(acx);
-                true
-            }
-        });
-
-        cx.on_action::<act::StepPreset10>({
-            let step = self.step.clone();
-            move |host, acx| {
-                let _ = host.models_mut().update(&step, |v| *v = "10".to_string());
-                host.request_redraw(acx.window);
-                host.notify(acx);
-                true
-            }
-        });
+        cx.on_action_notify_model_set::<act::Reset, i64>(self.count.clone(), 0);
+        cx.on_action_notify_model_set::<act::StepPreset1, String>(
+            self.step.clone(),
+            "1".to_string(),
+        );
+        cx.on_action_notify_model_set::<act::StepPreset5, String>(
+            self.step.clone(),
+            "5".to_string(),
+        );
+        cx.on_action_notify_model_set::<act::StepPreset10, String>(
+            self.step.clone(),
+            "10".to_string(),
+        );
 
         let hero_icon = ui::h_flex(|cx| {
             [icon::icon_with(
@@ -244,7 +208,7 @@ impl View for HelloCounterView {
         let step_input = shadcn::Input::new(self.step.clone())
             .placeholder("Step (e.g. 1)")
             .submit_command(act::Inc.into())
-            .role(SemanticsRole::TextField)
+            .a11y_role(SemanticsRole::TextField)
             .test_id(TEST_ID_STEP_INPUT)
             .into_element(cx);
 
@@ -288,7 +252,7 @@ impl View for HelloCounterView {
                     .corner_radii_override(Corners::all(Px(9999.0)))
                     .action(act::Dec)
                     .children([icon::icon(cx, IconId::new("lucide.minus"))])
-                    .role(SemanticsRole::Button)
+                    .a11y_role(SemanticsRole::Button)
                     .a11y_label("Decrement")
                     .test_id(TEST_ID_DEC)
                     .into_element(cx),
@@ -296,7 +260,7 @@ impl View for HelloCounterView {
                     .variant(shadcn::ButtonVariant::Outline)
                     .action(act::Reset)
                     .children([icon::icon(cx, IconId::new("lucide.rotate-ccw"))])
-                    .role(SemanticsRole::Button)
+                    .a11y_role(SemanticsRole::Button)
                     .test_id(TEST_ID_RESET)
                     .into_element(cx),
                 shadcn::Button::new("")
@@ -305,7 +269,7 @@ impl View for HelloCounterView {
                     .corner_radii_override(Corners::all(Px(9999.0)))
                     .action(act::Inc)
                     .children([icon::icon(cx, IconId::new("lucide.plus"))])
-                    .role(SemanticsRole::Button)
+                    .a11y_role(SemanticsRole::Button)
                     .a11y_label("Increment")
                     .test_id(TEST_ID_INC)
                     .into_element(cx),

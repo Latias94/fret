@@ -31,7 +31,7 @@ pub fn render<H: UiHost>(
         .font_semibold()
         .into_element(cx)
         .test_id("ui-gallery-hover-card-demo-content-title");
-    let body = ui::text("The React Framework – created and maintained by @vercel.")
+    let body = ui::text_block("The React Framework – created and maintained by @vercel.")
         .text_sm()
         .wrap(TextWrap::WordBreak)
         .into_element(cx)
@@ -43,10 +43,15 @@ pub fn render<H: UiHost>(
         .test_id("ui-gallery-hover-card-demo-content-joined");
 
     let text_block = ui::v_flex(|_cx| vec![heading, body, joined])
-        .layout(LayoutRefinement::default().w_full().min_w_0())
+        // In a horizontal flex row, ensure the text column participates in flex sizing so wrapped
+        // text does not collapse to its min-content width (which can be a single grapheme).
+        .layout(LayoutRefinement::default().w_full().flex_1().min_w_0())
         .gap(Space::N1)
-        .items_start()
+        // Keep children (text runs) stretched to the column width so `TextWrap` uses the expected
+        // wrap width rather than collapsing to min-content.
+        .items_stretch()
         .into_element(cx);
+    let text_block = text_block.test_id("ui-gallery-hover-card-demo-text-block");
 
     let row = ui::h_flex(|_cx| vec![avatar, text_block])
         .gap(Space::N4)
@@ -54,6 +59,7 @@ pub fn render<H: UiHost>(
         .items_start()
         .justify_between()
         .into_element(cx);
+    let row = row.test_id("ui-gallery-hover-card-demo-row");
 
     let content = shadcn::HoverCardContent::new(vec![row])
         .refine_layout(LayoutRefinement::default().max_w(Px(320.0)))

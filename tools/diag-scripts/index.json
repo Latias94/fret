@@ -4751,11 +4751,14 @@
       "tags": [
         "gate",
         "hover",
+        "hover_card",
         "hovercard",
-        "overlay",
         "ui_gallery"
       ],
-      "target_hints": []
+      "target_hints": [
+        "Navigates to the Hover Card page (available in the default ui-gallery build).",
+        "Opens the instant-delay HoverCard via pointer hover and captures a bundle."
+      ]
     },
     {
       "id": "ui-gallery-incoming-open-inject-smoke",

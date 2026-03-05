@@ -1,6 +1,6 @@
 # Action-First Authoring + View Runtime (Fearless Refactor v1) — Cleanup Plan
 
-Last updated: 2026-03-05
+Last updated: 2026-03-06
 
 This document exists to prevent a common failure mode of fearless refactors:
 
@@ -11,16 +11,18 @@ This workstream is only “done” if we leave a **clean architecture** behind.
 
 ---
 
-## Status (as of 2026-03-05)
+## Status (as of 2026-03-06)
 
-v1 landed and the repo golden path is converged on **View runtime + typed actions**:
+The repo is converging on the golden path (**View runtime + typed actions**) but cleanup/deletion is
+not complete yet:
 
-- Templates: `fretboard new` scaffolds generate View+actions by default.
-- Cookbook: view runtime + actions; MVU is gated out (`python tools/gate_no_mvu_in_cookbook.py` or `pwsh tools/gate_no_mvu_in_cookbook.ps1`).
-- Diagnostics gates: action-first scripted gates exist (`pwsh tools/diag_gate_action_first_authoring_v1.ps1`).
-- MVU authoring surfaces were hard-deleted in-tree as part of milestone M9.
+- Templates: `fretboard new` scaffolds prefer View + typed actions.
+- Cookbook/examples: migrations are ongoing; keep teaching surfaces consistent and regression-gated.
+- MVU: still exists in-tree as a compatibility surface, but it is not the recommended authoring path.
+  - Planned: MVU deprecation window (M8), then hard delete (M9) once adoption gates are met.
 
-This plan remains relevant as a “don’t drift back” checklist and as guidance for future deletions.
+This plan exists to keep the refactor boring at the end: no drift, no split teaching surfaces, and a
+clear deprecation → deletion sequence.
 
 ---
 
@@ -69,13 +71,14 @@ These should remain disallowed in golden-path code:
 
 Repo already has checks for these patterns; keep them and update them to the new golden path.
 
-### 3.2 MVU typed command routers (`MessageRouter`, `KeyedMessageRouter`) — removed
+### 3.2 MVU typed command routers (`MessageRouter`, `KeyedMessageRouter`) — planned removal
 
 These legacy routers existed as a first-party ecosystem surface during the v1 transition.
 
-Status:
+Status (as of 2026-03-06):
 
-- Removed in-tree as part of M9.
+- Compatibility-only today.
+- Planned removal at M9 once all in-tree teaching surfaces and ecosystem defaults have migrated.
 
 Replacement guidance:
 

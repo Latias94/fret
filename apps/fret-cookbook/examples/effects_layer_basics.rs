@@ -41,37 +41,18 @@ impl View for EffectsLayerBasicsView {
             .layout()
             .copied_or(EffectKind::None);
 
-        cx.on_action::<act::None>({
-            let effect = self.effect.clone();
-            move |host, acx| {
-                let _ = host.models_mut().update(&effect, |v| *v = EffectKind::None);
-                host.request_redraw(acx.window);
-                host.notify(acx);
-                true
-            }
-        });
-
-        cx.on_action::<act::Pixelate>({
-            let effect = self.effect.clone();
-            move |host, acx| {
-                let _ = host
-                    .models_mut()
-                    .update(&effect, |v| *v = EffectKind::Pixelate);
-                host.request_redraw(acx.window);
-                host.notify(acx);
-                true
-            }
-        });
-
-        cx.on_action::<act::Blur>({
-            let effect = self.effect.clone();
-            move |host, acx| {
-                let _ = host.models_mut().update(&effect, |v| *v = EffectKind::Blur);
-                host.request_redraw(acx.window);
-                host.notify(acx);
-                true
-            }
-        });
+        cx.on_action_notify_model_set::<act::None, EffectKind>(
+            self.effect.clone(),
+            EffectKind::None,
+        );
+        cx.on_action_notify_model_set::<act::Pixelate, EffectKind>(
+            self.effect.clone(),
+            EffectKind::Pixelate,
+        );
+        cx.on_action_notify_model_set::<act::Blur, EffectKind>(
+            self.effect.clone(),
+            EffectKind::Blur,
+        );
 
         let button = |cx: &mut ElementContext<'_, App>,
                       label: &'static str,
