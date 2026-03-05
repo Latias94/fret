@@ -70,5 +70,5 @@ pub(super) fn preview_context_menu(cx: &mut ElementContext<'_, App>) -> Vec<AnyE
         ],
     );
 
-    vec![body.test_id("ui-gallery-page-context-menu")]
+    vec![body]
 }

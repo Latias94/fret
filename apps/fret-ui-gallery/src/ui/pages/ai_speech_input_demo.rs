@@ -19,5 +19,5 @@ pub(super) fn preview_ai_speech_input_demo(
         ],
     );
 
-    vec![body.test_id("ui-gallery-page-ai-speech-input-demo")]
+    vec![body]
 }

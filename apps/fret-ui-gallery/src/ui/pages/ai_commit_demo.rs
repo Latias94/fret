@@ -19,5 +19,5 @@ pub(super) fn preview_ai_commit_demo(
         ],
     );
 
-    vec![body.test_id("ui-gallery-page-ai-commit-demo")]
+    vec![body]
 }

@@ -47,7 +47,7 @@ pub(super) fn preview_ai_shimmer_demo(
         ],
     );
 
-    vec![body.test_id("ui-gallery-page-ai-shimmer-demo")]
+    vec![body]
 }
 
 fn shimmer_props_table(cx: &mut ElementContext<'_, App>) -> AnyElement {

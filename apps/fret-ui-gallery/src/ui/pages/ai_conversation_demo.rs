@@ -19,5 +19,5 @@ pub(super) fn preview_ai_conversation_demo(
         ],
     );
 
-    vec![body.test_id("ui-gallery-page-ai-conversation-demo")]
+    vec![body]
 }
