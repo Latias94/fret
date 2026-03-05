@@ -45,6 +45,7 @@
       },
       "timeout_frames": 240
     },
+    { "type": "capture_screenshot", "label": "ui-gallery-ai-model-selector-open" },
     { "type": "click", "target": { "kind": "test_id", "id": "ui-ai-model-selector-input" } },
     { "type": "type_text", "text": "claude" },
     {
@@ -58,6 +59,14 @@
       },
       "timeout_frames": 240
     },
+    { "type": "capture_screenshot", "label": "ui-gallery-ai-model-selector-filtered" },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "not_exists",
+        "target": { "kind": "test_id", "id": "ui-ai-model-selector-item-openai-gpt-4o-mini" }
+      }
+    },
     {
       "type": "click_stable",
       "target": {
@@ -69,11 +78,23 @@
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-ai-model-selector-selected-some" }
+        "target": {
+          "kind": "test_id",
+          "id": "ui-ai-model-selector-selected-anthropic-claude-3-5-sonnet"
+        }
       },
       "timeout_frames": 240
     },
+    { "type": "capture_screenshot", "label": "ui-gallery-ai-model-selector-selected" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "not_exists",
+        "target": { "kind": "test_id", "id": "ui-ai-model-selector-input" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "capture_screenshot", "label": "ui-gallery-ai-model-selector-after-close" },
     { "type": "capture_bundle", "label": "ui-gallery-ai-model-selector-demo-open-filter-select" }
   ]
 }
-
