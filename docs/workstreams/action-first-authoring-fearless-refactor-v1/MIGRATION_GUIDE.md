@@ -234,8 +234,8 @@ Target outcome:
 Migration examples:
 
 ```rust,ignore
-// Before:
-ui::v_flex(cx, |cx| ui::children![cx; shadcn::Label::new("Title")])
+// Before (older signature; removed):
+// ui::v_flex(cx, |cx| ui::children![cx; shadcn::Label::new("Title")])
 
 // After:
 ui::v_flex(|cx| ui::children![cx; shadcn::Label::new("Title")])
