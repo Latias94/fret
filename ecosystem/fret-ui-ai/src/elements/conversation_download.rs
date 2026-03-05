@@ -5,9 +5,9 @@ use fret_icons::IconId;
 use fret_ui::action::OnActivate;
 use fret_ui::element::{AnyElement, ContainerProps};
 use fret_ui::{ElementContext, Theme, UiHost};
-use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::{Justify, LayoutRefinement, Space};
+use fret_ui_kit::ui;
+use fret_ui_kit::{Items, Justify, LayoutRefinement, Space};
 
 use fret_ui_shadcn::{Button, ButtonSize, ButtonVariant};
 
@@ -131,13 +131,11 @@ impl ConversationDownload {
                 ..Default::default()
             },
             move |cx| {
-                vec![stack::hstack(
-                    cx,
-                    stack::HStackProps::default()
-                        .layout(LayoutRefinement::default().w_full())
-                        .justify(Justify::End),
-                    move |_cx| vec![btn],
-                )]
+                vec![ui::h_row(move |_cx| vec![btn])
+                    .layout(LayoutRefinement::default().w_full())
+                    .justify(Justify::End)
+                    .items(Items::Center)
+                    .into_element(cx)]
             },
         )
     }

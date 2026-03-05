@@ -13,11 +13,11 @@ use fret_ui::element::{
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::icon as decl_icon;
-use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::typography;
+use fret_ui_kit::ui;
 use fret_ui_kit::{
-    ChromeRefinement, ColorFallback, ColorRef, Justify, LayoutRefinement, Radius, Space,
+    ChromeRefinement, ColorFallback, ColorRef, Items, Justify, LayoutRefinement, Radius, Space,
 };
 use fret_ui_shadcn::{Badge, BadgeVariant};
 
@@ -337,14 +337,11 @@ impl PackageInfoHeader {
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let row = stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .items_center()
-                .justify(Justify::Between)
-                .gap(Space::N2),
-            move |_cx| self.children,
-        );
+        let row = ui::h_row(move |_cx| self.children)
+            .items(Items::Center)
+            .justify(Justify::Between)
+            .gap(Space::N2)
+            .into_element(cx);
 
         let theme = Theme::global(&*cx.app).clone();
         cx.container(
@@ -425,11 +422,10 @@ impl PackageInfoName {
             ink_overflow: Default::default(),
         });
 
-        let row = stack::hstack(
-            cx,
-            stack::HStackProps::default().items_center().gap(Space::N2),
-            move |_cx| vec![icon, text],
-        );
+        let row = ui::h_row(move |_cx| vec![icon, text])
+            .items(Items::Center)
+            .gap(Space::N2)
+            .into_element(cx);
 
         cx.container(
             decl_style::container_props(&theme, self.chrome, self.layout),
@@ -596,14 +592,11 @@ impl PackageInfoVersion {
             }));
         }
 
-        let row = stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .layout(self.layout)
-                .items_center()
-                .gap(Space::N2),
-            move |_cx| parts,
-        );
+        let row = ui::h_row(move |_cx| parts)
+            .layout(self.layout)
+            .items(Items::Center)
+            .gap(Space::N2)
+            .into_element(cx);
 
         let chrome = ChromeRefinement::default()
             .text_color(ColorRef::Color(muted_fg(&theme)))
@@ -781,21 +774,15 @@ impl PackageInfoDependencies {
             ink_overflow: Default::default(),
         });
 
-        let list = stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .layout(LayoutRefinement::default().w_full().min_w_0())
-                .gap(Space::N1),
-            move |_cx| self.children,
-        );
+        let list = ui::v_stack(move |_cx| self.children)
+            .layout(LayoutRefinement::default().w_full().min_w_0())
+            .gap(Space::N1)
+            .into_element(cx);
 
-        let body = stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .layout(self.layout)
-                .gap(Space::N2),
-            move |_cx| vec![label, list],
-        );
+        let body = ui::v_stack(move |_cx| vec![label, list])
+            .layout(self.layout)
+            .gap(Space::N2)
+            .into_element(cx);
 
         let chrome = ChromeRefinement::default().merge(self.chrome);
         let layout = LayoutRefinement::default().w_full().min_w_0();
@@ -882,13 +869,10 @@ impl PackageInfoDependency {
             }));
         }
 
-        let row = stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .items_center()
-                .justify(Justify::Between),
-            move |_cx| items,
-        );
+        let row = ui::h_row(move |_cx| items)
+            .items(Items::Center)
+            .justify(Justify::Between)
+            .into_element(cx);
 
         cx.container(
             decl_style::container_props(&theme, self.chrome, self.layout),

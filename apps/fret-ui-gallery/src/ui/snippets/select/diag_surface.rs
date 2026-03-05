@@ -86,15 +86,12 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             .test_id("ui-gallery-select-selected-label")
     });
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N2)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full().min_w_0()),
-        |_cx| vec![select, selected_label],
-    )
-    .test_id("ui-gallery-select-diag-surface")
+    ui::v_flex(|_cx| vec![select, selected_label])
+        .gap(Space::N2)
+        .items_start()
+        .layout(LayoutRefinement::default().w_full().min_w_0())
+        .into_element(cx)
+        .test_id("ui-gallery-select-diag-surface")
 }
 
 // endregion: example

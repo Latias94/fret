@@ -14,13 +14,7 @@ fn lorem_block<H: UiHost>(
     prefix: &'static str,
     lines: usize,
 ) -> AnyElement {
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N2)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full()),
-        |cx| {
+    ui::v_flex(|cx| {
             (0..lines)
                 .map(|index| {
                     cx.text(format!(
@@ -29,8 +23,10 @@ fn lorem_block<H: UiHost>(
                     ))
                 })
                 .collect::<Vec<_>>()
-        },
-    )
+        })
+            .gap(Space::N2)
+            .items_start()
+            .layout(LayoutRefinement::default().w_full()).into_element(cx)
 }
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {

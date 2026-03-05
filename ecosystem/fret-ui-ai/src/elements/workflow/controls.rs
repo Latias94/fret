@@ -7,10 +7,9 @@ use fret_ui::action::OnActivate;
 use fret_ui::element::{AnyElement, SemanticsProps};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::icon as decl_icon;
-use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{
-    ChromeRefinement, ColorFallback, ColorRef, Items, LayoutRefinement, Radius, Space,
+    ChromeRefinement, ColorFallback, ColorRef, Items, LayoutRefinement, Radius, Space, ui,
 };
 use fret_ui_shadcn::{Button, ButtonSize, ButtonVariant};
 
@@ -80,14 +79,11 @@ impl WorkflowControls {
             .p(Space::N1);
 
         let children = self.children;
-        let content = stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .gap(Space::N0)
-                .items(Items::Stretch)
-                .layout(LayoutRefinement::default().min_w_0()),
-            move |_cx| children,
-        );
+        let content = ui::v_stack(move |_cx| children)
+            .gap(Space::N0)
+            .items(Items::Stretch)
+            .layout(LayoutRefinement::default().min_w_0())
+            .into_element(cx);
 
         let props =
             decl_style::container_props(&theme, base_chrome.merge(self.chrome), self.layout);

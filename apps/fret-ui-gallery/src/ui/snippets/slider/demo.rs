@@ -16,19 +16,16 @@ fn controlled<H: UiHost>(
         .collect::<Vec<_>>()
         .join(", ");
 
-    let header = stack::hstack(
-        cx,
-        stack::HStackProps::default()
-            .layout(LayoutRefinement::default().w_full())
-            .items_center()
-            .justify_between(),
-        |cx| {
-            vec![
-                shadcn::Label::new("Temperature").into_element(cx),
-                shadcn::typography::muted(cx, values_text),
-            ]
-        },
-    );
+    let header = ui::h_flex(|cx| {
+        vec![
+            shadcn::Label::new("Temperature").into_element(cx),
+            shadcn::typography::muted(cx, values_text),
+        ]
+    })
+    .layout(LayoutRefinement::default().w_full())
+    .items_center()
+    .justify_between()
+    .into_element(cx);
     let slider = shadcn::Slider::new(controlled_values)
         .range(0.0, 1.0)
         .step(0.1)
@@ -36,13 +33,10 @@ fn controlled<H: UiHost>(
         .a11y_label("Temperature")
         .into_element(cx);
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N3)
-            .layout(LayoutRefinement::default().w_full().max_w(Px(320.0))),
-        |_cx| vec![header, slider],
-    )
+    ui::v_flex(|_cx| vec![header, slider])
+        .gap(Space::N3)
+        .layout(LayoutRefinement::default().w_full().max_w(Px(320.0)))
+        .into_element(cx)
 }
 
 pub fn render<H: UiHost>(
@@ -94,15 +88,12 @@ pub fn render<H: UiHost>(
             .a11y_label("Vertical slider")
             .into_element(cx);
 
-        stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .gap(Space::N6)
-                .items_center()
-                .layout(LayoutRefinement::default().w_full().min_w_0()),
-            |_cx| vec![a, b],
-        )
-        .test_id("ui-gallery-slider-demo-vertical")
+        ui::h_flex(|_cx| vec![a, b])
+            .gap(Space::N6)
+            .items_center()
+            .layout(LayoutRefinement::default().w_full().min_w_0())
+            .into_element(cx)
+            .test_id("ui-gallery-slider-demo-vertical")
     };
 
     let controlled = controlled(cx, controlled_values).test_id("ui-gallery-slider-demo-controlled");

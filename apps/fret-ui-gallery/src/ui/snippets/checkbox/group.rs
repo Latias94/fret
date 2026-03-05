@@ -65,38 +65,35 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         .into_element(cx)
     };
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N3)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full().max_w(Px(460.0))),
-        |cx| {
-            vec![
-                group_item(
-                    cx,
-                    "Security alerts",
-                    "Critical account changes and sign-in events.",
-                    group_security,
-                    "ui-gallery-checkbox-group-security",
-                ),
-                group_item(
-                    cx,
-                    "Product updates",
-                    "Major feature releases and migration notices.",
-                    group_updates,
-                    "ui-gallery-checkbox-group-updates",
-                ),
-                group_item(
-                    cx,
-                    "Marketing emails",
-                    "Tips, webinars, and promotional announcements.",
-                    group_marketing,
-                    "ui-gallery-checkbox-group-marketing",
-                ),
-            ]
-        },
-    )
+    ui::v_flex(|cx| {
+        vec![
+            group_item(
+                cx,
+                "Security alerts",
+                "Critical account changes and sign-in events.",
+                group_security,
+                "ui-gallery-checkbox-group-security",
+            ),
+            group_item(
+                cx,
+                "Product updates",
+                "Major feature releases and migration notices.",
+                group_updates,
+                "ui-gallery-checkbox-group-updates",
+            ),
+            group_item(
+                cx,
+                "Marketing emails",
+                "Tips, webinars, and promotional announcements.",
+                group_marketing,
+                "ui-gallery-checkbox-group-marketing",
+            ),
+        ]
+    })
+    .gap(Space::N3)
+    .items_start()
+    .layout(LayoutRefinement::default().w_full().max_w(Px(460.0)))
+    .into_element(cx)
     .test_id("ui-gallery-checkbox-group")
 }
 // endregion: example

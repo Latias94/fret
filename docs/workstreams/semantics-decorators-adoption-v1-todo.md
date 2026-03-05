@@ -99,7 +99,7 @@ layout. This workstream is about making that the default across ecosystem code.
       `ui-gallery-text-measure-overlay-root`, `ui-gallery-chart-torture-root`, `ui-gallery-windowed-rows-root`,
       `ui-gallery-canvas-cull-root`, `ui-gallery-resizable-panels`, `ui-gallery-data-table-root`
   - Note: avoid using `Semantics` as a layout fragment (it is an overlay wrapper). When a preview needs a semantics-stamped
-    group root, create an explicit layout root (e.g. `stack::vstack`) and attach the decoration there.
+    group root, create an explicit layout root (e.g. `ui::v_stack`) and attach the decoration there.
 - [ ] SDC-gal-310 Add notes to the shadcn UI Gallery tracker pointing to this workstream.
 
 ---

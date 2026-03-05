@@ -4,8 +4,8 @@ use fret_core::SemanticsRole;
 use fret_ui::element::{AnyElement, SemanticsProps};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::current_color;
-use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::ui;
 use fret_ui_kit::{ChromeRefinement, ColorRef, Justify, LayoutRefinement, Radius, Space};
 
 use crate::model::MessageRole;
@@ -84,20 +84,16 @@ impl Message {
             LayoutRefinement::default().w_full().min_w_0()
         };
 
-        let inner = stack::vstack(
-            cx,
-            stack::VStackProps::default().layout(inner_layout).gap(gap),
-            move |_cx| children,
-        );
+        let inner = ui::v_stack(move |_cx| children)
+            .layout(inner_layout)
+            .gap(gap)
+            .into_element(cx);
 
-        let row = stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .layout(layout)
-                .gap(Space::N0)
-                .justify(justify),
-            move |_cx| vec![inner],
-        );
+        let row = ui::h_row(move |_cx| vec![inner])
+            .layout(layout)
+            .gap(Space::N0)
+            .justify(justify)
+            .into_element(cx);
 
         let Some(test_id) = self.test_id else {
             return row;
@@ -208,13 +204,10 @@ impl MessageContent {
 
         let props = decl_style::container_props(&theme, chrome, layout);
         let content = cx.container(props, move |cx| {
-            let stack = stack::vstack(
-                cx,
-                stack::VStackProps::default()
-                    .layout(LayoutRefinement::default().min_w_0())
-                    .gap(Space::N2),
-                move |_cx| children,
-            );
+            let stack = ui::v_stack(move |_cx| children)
+                .layout(LayoutRefinement::default().min_w_0())
+                .gap(Space::N2)
+                .into_element(cx);
 
             match bubble_fg.clone() {
                 Some(fg) => current_color::scope_children(cx, fg, move |_cx| vec![stack]),

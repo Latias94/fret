@@ -15,10 +15,12 @@ use fret_ui::element::{
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::icon as decl_icon;
-use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::typography;
-use fret_ui_kit::{ChromeRefinement, ColorFallback, ColorRef, LayoutRefinement, Radius, Space};
+use fret_ui_kit::ui;
+use fret_ui_kit::{
+    ChromeRefinement, ColorFallback, ColorRef, Items, LayoutRefinement, Radius, Space,
+};
 use fret_ui_shadcn::{Collapsible, CollapsibleContent, CollapsibleTrigger};
 
 fn muted_fg(theme: &Theme) -> Color {
@@ -332,14 +334,11 @@ impl TaskTrigger {
                             icon_size,
                         );
 
-                        let row = stack::hstack(
-                            cx,
-                            stack::HStackProps::default()
-                                .layout(LayoutRefinement::default().w_full().min_w_0())
-                                .items_center()
-                                .gap(Space::N2),
-                            move |_cx| vec![search, title, chevron],
-                        );
+                        let row = ui::h_row(move |_cx| vec![search, title, chevron])
+                            .layout(LayoutRefinement::default().w_full().min_w_0())
+                            .items(Items::Center)
+                            .gap(Space::N2)
+                            .into_element(cx);
 
                         vec![row]
                     })]
@@ -413,13 +412,10 @@ impl TaskContent {
     fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
 
-        let body = stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .layout(LayoutRefinement::default().w_full().min_w_0())
-                .gap(Space::N2),
-            move |_cx| self.children,
-        );
+        let body = ui::v_stack(move |_cx| self.children)
+            .layout(LayoutRefinement::default().w_full().min_w_0())
+            .gap(Space::N2)
+            .into_element(cx);
 
         let chrome = ChromeRefinement::default().pl(Space::N4).merge(self.chrome);
         let layout = LayoutRefinement::default()
@@ -496,14 +492,11 @@ impl TaskItem {
             .map(|child| apply_text_style_if_missing(child, &text_style))
             .collect::<Vec<_>>();
 
-        let row = stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .layout(LayoutRefinement::default().w_full().min_w_0())
-                .items_center()
-                .gap(Space::N1),
-            move |_cx| children,
-        );
+        let row = ui::h_row(move |_cx| children)
+            .layout(LayoutRefinement::default().w_full().min_w_0())
+            .items(Items::Center)
+            .gap(Space::N1)
+            .into_element(cx);
 
         let chrome = ChromeRefinement::default()
             .text_color(ColorRef::Color(muted_fg(&theme)))
@@ -580,14 +573,11 @@ impl TaskItemFile {
         let mut props = decl_style::container_props(&theme, chrome, self.layout);
         props.border_color = Some(theme.color_token("border"));
 
-        let content = stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .layout(LayoutRefinement::default())
-                .items_center()
-                .gap(Space::N1),
-            move |_cx| children,
-        );
+        let content = ui::h_row(move |_cx| children)
+            .layout(LayoutRefinement::default())
+            .items(Items::Center)
+            .gap(Space::N1)
+            .into_element(cx);
 
         let out = cx.container(props, move |_cx| vec![content]);
         cx.foreground_scope(theme.color_token("foreground"), move |_cx| vec![out])

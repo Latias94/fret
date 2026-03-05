@@ -81,41 +81,38 @@ pub fn render<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     avatar_image: Model<Option<ImageId>>,
 ) -> AnyElement {
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N4)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full().min_w_0()),
-        move |cx| {
-            vec![
-                group_with_count(
-                    cx,
-                    avatar_image.clone(),
-                    shadcn::AvatarSize::Sm,
-                    "ui-gallery-avatar-group-count-sm",
-                ),
-                group_with_count(
-                    cx,
-                    avatar_image.clone(),
-                    shadcn::AvatarSize::Default,
-                    "ui-gallery-avatar-group-count-default",
-                ),
-                group_with_count(
-                    cx,
-                    avatar_image.clone(),
-                    shadcn::AvatarSize::Lg,
-                    "ui-gallery-avatar-group-count-lg",
-                ),
-                group_with_icon_count(
-                    cx,
-                    avatar_image.clone(),
-                    shadcn::AvatarSize::Default,
-                    "ui-gallery-avatar-group-count-icon",
-                ),
-            ]
-        },
-    )
+    ui::v_flex(move |cx| {
+        vec![
+            group_with_count(
+                cx,
+                avatar_image.clone(),
+                shadcn::AvatarSize::Sm,
+                "ui-gallery-avatar-group-count-sm",
+            ),
+            group_with_count(
+                cx,
+                avatar_image.clone(),
+                shadcn::AvatarSize::Default,
+                "ui-gallery-avatar-group-count-default",
+            ),
+            group_with_count(
+                cx,
+                avatar_image.clone(),
+                shadcn::AvatarSize::Lg,
+                "ui-gallery-avatar-group-count-lg",
+            ),
+            group_with_icon_count(
+                cx,
+                avatar_image.clone(),
+                shadcn::AvatarSize::Default,
+                "ui-gallery-avatar-group-count-icon",
+            ),
+        ]
+    })
+    .gap(Space::N4)
+    .items_start()
+    .layout(LayoutRefinement::default().w_full().min_w_0())
+    .into_element(cx)
     .test_id("ui-gallery-avatar-group-count")
 }
 // endregion: example

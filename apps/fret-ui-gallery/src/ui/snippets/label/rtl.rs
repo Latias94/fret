@@ -27,24 +27,21 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let control_id = "full_name";
 
     with_direction_provider(cx, LayoutDirection::Rtl, move |cx| {
-        stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .gap(Space::N2)
-                .items_start()
-                .layout(max_w.clone()),
-            |cx| {
-                vec![
-                    shadcn::Label::new("الاسم الكامل")
-                        .for_control(control_id)
-                        .into_element(cx),
-                    shadcn::Input::new(name)
-                        .placeholder("اكتب هنا")
-                        .control_id(control_id)
-                        .into_element(cx),
-                ]
-            },
-        )
+        ui::v_stack(|cx| {
+            vec![
+                shadcn::Label::new("الاسم الكامل")
+                    .for_control(control_id)
+                    .into_element(cx),
+                shadcn::Input::new(name)
+                    .placeholder("اكتب هنا")
+                    .control_id(control_id)
+                    .into_element(cx),
+            ]
+        })
+        .gap(Space::N2)
+        .items_start()
+        .layout(max_w.clone())
+        .into_element(cx)
     })
     .test_id("ui-gallery-label-rtl")
 }

@@ -1,6 +1,8 @@
 {
   "schema_version": 2,
   "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "set_window_inner_size", "width_px": 980.0, "height_px": 760.0 },
     {
       "type": "wait_until",
       "predicate": {
@@ -57,6 +59,19 @@
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-content-scroll" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": { "kind": "test_id", "id": "ui-ai-snippet-root" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
         "target": { "kind": "test_id", "id": "ui-ai-snippet-root" }
       },
       "timeout_frames": 240
@@ -85,4 +100,3 @@
     { "type": "capture_bundle", "label": "ui-gallery-ai-code-block-demo-copy" }
   ]
 }
-

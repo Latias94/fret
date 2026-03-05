@@ -85,18 +85,14 @@ pub(in crate::ui) fn preview_tree_torture(
         }
     };
 
-    let header = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .layout(LayoutRefinement::default().w_full())
-            .gap(Space::N2),
-        |cx| {
+    let header = ui::v_flex(|cx| {
             vec![
                 cx.text("Goal: baseline perf harness for a virtualized tree (expand/collapse + selection + scroll)."),
                 cx.text("Use scripted scroll + bundle stats to validate cache-root reuse and prepaint-driven windowing refactors."),
             ]
-        },
-    );
+        })
+            .layout(LayoutRefinement::default().w_full())
+            .gap(Space::N2).into_element(cx);
 
     let tree = cx.cached_subtree_with(CachedSubtreeProps::default().contained_layout(true), |cx| {
         let retained = std::env::var_os("FRET_UI_GALLERY_TREE_RETAINED")

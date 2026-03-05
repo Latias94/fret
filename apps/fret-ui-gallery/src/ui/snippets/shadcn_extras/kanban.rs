@@ -46,38 +46,29 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                     .variant(shadcn::BadgeVariant::Secondary)
                     .into_element(cx);
 
-                let meta = stack::hstack(
-                    cx,
-                    stack::HStackProps::default()
-                        .gap_x(Space::N2)
-                        .items_center()
-                        .layout(LayoutRefinement::default().w_full()),
-                    move |_cx| vec![badge],
-                );
+                let meta = ui::h_flex(move |_cx| vec![badge])
+                    .gap(Space::N2)
+                    .items_center()
+                    .layout(LayoutRefinement::default().w_full())
+                    .into_element(cx);
 
                 let header = if ctx.mode == shadcn::extras::KanbanCardMode::Board {
                     let checkbox =
                         shadcn::Checkbox::new_controllable(cx, None, false).into_element(cx);
-                    stack::hstack(
-                        cx,
-                        stack::HStackProps::default()
-                            .gap_x(Space::N2)
-                            .items_center()
-                            .layout(LayoutRefinement::default().w_full()),
-                        move |_cx| vec![checkbox, title],
-                    )
+                    ui::h_flex(move |_cx| vec![checkbox, title])
+                        .gap(Space::N2)
+                        .items_center()
+                        .layout(LayoutRefinement::default().w_full())
+                        .into_element(cx)
                 } else {
                     title
                 };
 
-                stack::vstack(
-                    cx,
-                    stack::VStackProps::default()
-                        .gap(Space::N1)
-                        .items_stretch()
-                        .layout(LayoutRefinement::default().w_full()),
-                    move |_cx| vec![header, meta],
-                )
+                ui::v_flex(move |_cx| vec![header, meta])
+                    .gap(Space::N1)
+                    .items_stretch()
+                    .layout(LayoutRefinement::default().w_full())
+                    .into_element(cx)
             })
     })
 }

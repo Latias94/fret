@@ -26,30 +26,24 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
     let value = ensure_value(cx);
 
     let centered = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
-        stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .layout(LayoutRefinement::default().w_full())
-                .justify_center(),
-            move |_cx| [body],
-        )
+        ui::h_flex(move |_cx| [body])
+            .layout(LayoutRefinement::default().w_full())
+            .justify_center()
+            .into_element(cx)
     };
 
     cx.keyed("ui_gallery.progress.label", |cx| {
-        let label_row = stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .layout(LayoutRefinement::default().w_full())
-                .items_center(),
-            |cx| {
-                vec![
-                    shadcn::FieldLabel::new("Upload progress").into_element(cx),
-                    shadcn::FieldLabel::new("66%")
-                        .refine_layout(LayoutRefinement::default().ml_auto())
-                        .into_element(cx),
-                ]
-            },
-        );
+        let label_row = ui::h_flex(|cx| {
+            vec![
+                shadcn::FieldLabel::new("Upload progress").into_element(cx),
+                shadcn::FieldLabel::new("66%")
+                    .refine_layout(LayoutRefinement::default().ml_auto())
+                    .into_element(cx),
+            ]
+        })
+        .layout(LayoutRefinement::default().w_full())
+        .items_center()
+        .into_element(cx);
 
         let field = shadcn::Field::new(vec![
             label_row,

@@ -70,20 +70,12 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         .into_element(cx);
 
         vec![
-            stack::hstack(
-                cx,
-                stack::HStackProps::default()
+            ui::h_flex(|_cx| [top, right, bottom, left])
                     .gap(Space::N4)
-                    .layout(LayoutRefinement::default().w_full()),
-                |_cx| [top, right, bottom, left],
-            ),
-            stack::hstack(
-                cx,
-                stack::HStackProps::default()
+                    .layout(LayoutRefinement::default().w_full()).into_element(cx),
+            ui::h_flex(|_cx| [rich, rich_no_title])
                     .gap(Space::N4)
-                    .layout(LayoutRefinement::default().w_full()),
-                |_cx| [rich, rich_no_title],
-            ),
+                    .layout(LayoutRefinement::default().w_full()).into_element(cx),
             cx.text("Note: Tooltip open delay is controlled via Material3 TooltipProvider (delay-group)."),
         ]
     });

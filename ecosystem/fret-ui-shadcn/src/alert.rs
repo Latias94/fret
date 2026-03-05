@@ -6,7 +6,6 @@ use fret_ui::element::{
     SemanticsDecoration,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
-use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space, ui};
 
@@ -232,13 +231,10 @@ fn alert_with_patch<H: UiHost>(
         LayoutRefinement::default().w_full().merge(layout_override),
     );
 
-    let body = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N0p5)
-            .layout(LayoutRefinement::default().w_full().flex_1().min_w_0()),
-        |_cx| body_children,
-    );
+    let body = ui::v_flex(move |_cx| body_children)
+        .gap(Space::N0p5)
+        .layout(LayoutRefinement::default().w_full().flex_1().min_w_0())
+        .into_element(cx);
 
     let main = if let Some(mut icon) = icon {
         patch_svg_icon_to_inherit_current_color(&mut icon, fg, Px(16.0));
@@ -251,14 +247,11 @@ fn alert_with_patch<H: UiHost>(
             move |_cx| [icon],
         );
 
-        stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .gap(Space::N3)
-                .items_start()
-                .layout(LayoutRefinement::default().w_full()),
-            move |_cx| vec![icon, body],
-        )
+        ui::h_flex(move |_cx| vec![icon, body])
+            .gap(Space::N3)
+            .items_start()
+            .layout(LayoutRefinement::default().w_full())
+            .into_element(cx)
     } else {
         body
     };
@@ -359,14 +352,13 @@ impl AlertDescription {
                 ]
             }),
             AlertDescriptionContent::Children(children) => cx.foreground_scope(fg, move |cx| {
-                vec![stack::vstack(
-                    cx,
-                    stack::VStackProps::default()
+                vec![
+                    ui::v_flex(move |_cx| children)
                         .gap(Space::N1)
                         .items_start()
-                        .layout(LayoutRefinement::default().w_full()),
-                    move |_cx| children,
-                )]
+                        .layout(LayoutRefinement::default().w_full())
+                        .into_element(cx),
+                ]
             }),
         }
     }

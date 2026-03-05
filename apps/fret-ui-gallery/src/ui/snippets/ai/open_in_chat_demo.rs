@@ -2,7 +2,7 @@ pub const SOURCE: &str = include_str!("open_in_chat_demo.rs");
 
 // region: example
 use fret_ui_ai as ui_ai;
-use fret_ui_kit::declarative::stack;
+use fret_ui_kit::ui;
 use fret_ui_kit::{LayoutRefinement, Space};
 use fret_ui_shadcn::prelude::*;
 use std::sync::Arc;
@@ -35,18 +35,15 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
             ]
         });
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .layout(LayoutRefinement::default().w_full().min_w_0())
-            .gap(Space::N4),
-        move |cx| {
-            vec![
-                cx.text("OpenIn (AI Elements)"),
-                cx.text("Selecting a provider emits Effect::OpenUrl (URLs match upstream)."),
-                menu,
-            ]
-        },
-    )
+    ui::v_flex(move |cx| {
+        vec![
+            cx.text("OpenIn (AI Elements)"),
+            cx.text("Selecting a provider emits Effect::OpenUrl (URLs match upstream)."),
+            menu,
+        ]
+    })
+    .layout(LayoutRefinement::default().w_full().min_w_0())
+    .gap(Space::N4)
+    .into_element(cx)
 }
 // endregion: example

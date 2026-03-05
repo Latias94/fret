@@ -26,14 +26,11 @@ pub fn render<H: UiHost>(
             .into_element(cx)
             .test_id(format!("ui-gallery-image-object-fit-cell-{:?}", fit).to_lowercase());
 
-        stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .gap(Space::N2)
-                .items_start()
-                .layout(LayoutRefinement::default()),
-            |_cx| vec![label, image],
-        )
+        ui::v_stack(|_cx| vec![label, image])
+            .gap(Space::N2)
+            .items_start()
+            .layout(LayoutRefinement::default())
+            .into_element(cx)
     };
 
     let row = |cx: &mut ElementContext<'_, H>,
@@ -61,30 +58,24 @@ pub fn render<H: UiHost>(
             .items_start()
             .into_element(cx);
 
-        stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .gap(Space::N3)
-                .items_start()
-                .layout(LayoutRefinement::default().w_full().min_w_0()),
-            move |cx| vec![cx.text(title), grid],
-        )
+        ui::v_flex(move |cx| vec![cx.text(title), grid])
+            .gap(Space::N3)
+            .items_start()
+            .layout(LayoutRefinement::default().w_full().min_w_0())
+            .into_element(cx)
     };
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N6)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full().min_w_0()),
-        |cx| {
-            vec![
-                row(cx, "Wide source → fixed 160×96", wide_image.clone()),
-                row(cx, "Tall source → fixed 160×96", tall_image.clone()),
-                row(cx, "Square source → fixed 160×96", square_image.clone()),
-            ]
-        },
-    )
+    ui::v_flex(|cx| {
+        vec![
+            row(cx, "Wide source → fixed 160×96", wide_image.clone()),
+            row(cx, "Tall source → fixed 160×96", tall_image.clone()),
+            row(cx, "Square source → fixed 160×96", square_image.clone()),
+        ]
+    })
+    .gap(Space::N6)
+    .items_start()
+    .layout(LayoutRefinement::default().w_full().min_w_0())
+    .into_element(cx)
     .test_id("ui-gallery-image-object-fit-mapping")
 }
 // endregion: example

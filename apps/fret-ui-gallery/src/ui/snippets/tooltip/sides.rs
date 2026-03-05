@@ -28,23 +28,17 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         .timeout_duration(Duration::from_millis(400))
         .with(cx, |cx| {
             vec![
-                stack::hstack(
-                    cx,
-                    stack::HStackProps::default().gap(Space::N2).items_center(),
-                    |cx| {
-                        vec![
-                            make_tooltip(cx, "Left", shadcn::TooltipSide::Left, "Add to library"),
-                            make_tooltip(cx, "Top", shadcn::TooltipSide::Top, "Add to library"),
-                            make_tooltip(
-                                cx,
-                                "Bottom",
-                                shadcn::TooltipSide::Bottom,
-                                "Add to library",
-                            ),
-                            make_tooltip(cx, "Right", shadcn::TooltipSide::Right, "Add to library"),
-                        ]
-                    },
-                )
+                ui::h_row(|cx| {
+                    vec![
+                        make_tooltip(cx, "Left", shadcn::TooltipSide::Left, "Add to library"),
+                        make_tooltip(cx, "Top", shadcn::TooltipSide::Top, "Add to library"),
+                        make_tooltip(cx, "Bottom", shadcn::TooltipSide::Bottom, "Add to library"),
+                        make_tooltip(cx, "Right", shadcn::TooltipSide::Right, "Add to library"),
+                    ]
+                })
+                .gap(Space::N2)
+                .items_center()
+                .into_element(cx)
                 .test_id("ui-gallery-tooltip-sides"),
             ]
         })

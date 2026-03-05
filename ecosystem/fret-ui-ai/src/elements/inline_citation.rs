@@ -11,10 +11,12 @@ use fret_ui::element::{
 };
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::declarative::icon as decl_icon;
-use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::typography;
-use fret_ui_kit::{ChromeRefinement, ColorFallback, ColorRef, LayoutRefinement, Radius, Space};
+use fret_ui_kit::ui;
+use fret_ui_kit::{
+    ChromeRefinement, ColorFallback, ColorRef, Items, Justify, LayoutRefinement, Radius, Space,
+};
 
 use fret_ui_shadcn::{Badge, BadgeVariant, HoverCard, HoverCardContent};
 
@@ -270,11 +272,10 @@ impl InlineCitation {
         };
 
         if resolved_sources.is_empty() {
-            return stack::hstack(
-                cx,
-                stack::HStackProps::default().gap(Space::N1).items_center(),
-                move |_cx| vec![label, badge_trigger],
-            );
+            return ui::h_row(move |_cx| vec![label, badge_trigger])
+                .gap(Space::N1)
+                .items(Items::Center)
+                .into_element(cx);
         }
 
         let index_model = cx.with_state(InlineCitationState::default, |st| st.index.clone());
@@ -423,14 +424,11 @@ impl InlineCitation {
                     move |_cx| vec![index_inner],
                 );
 
-                stack::hstack(
-                    cx,
-                    stack::HStackProps::default()
-                        .layout(LayoutRefinement::default().flex_grow(1.0))
-                        .justify_end()
-                        .items_center(),
-                    move |_cx| vec![labelled],
-                )
+                ui::h_row(move |_cx| vec![labelled])
+                    .layout(LayoutRefinement::default().flex_grow(1.0))
+                    .justify(Justify::End)
+                    .items(Items::Center)
+                    .into_element(cx)
             }
             None => {
                 let index_text = cx.text_props(TextProps {
@@ -457,25 +455,19 @@ impl InlineCitation {
                     move |_cx| vec![index_text],
                 );
 
-                stack::hstack(
-                    cx,
-                    stack::HStackProps::default()
-                        .layout(LayoutRefinement::default().flex_grow(1.0))
-                        .justify_end()
-                        .items_center(),
-                    move |_cx| vec![index_inner],
-                )
+                ui::h_row(move |_cx| vec![index_inner])
+                    .layout(LayoutRefinement::default().flex_grow(1.0))
+                    .justify(Justify::End)
+                    .items(Items::Center)
+                    .into_element(cx)
             }
         };
 
-        let header_row = stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .layout(LayoutRefinement::default().w_full())
-                .gap(Space::N2)
-                .items_center(),
-            move |_cx| vec![prev_btn, next_btn, index_label],
-        );
+        let header_row = ui::h_row(move |_cx| vec![prev_btn, next_btn, index_label])
+            .layout(LayoutRefinement::default().w_full())
+            .gap(Space::N2)
+            .items(Items::Center)
+            .into_element(cx);
 
         let header = cx.container(
             decl_style::container_props(
@@ -604,30 +596,26 @@ impl InlineCitation {
                 )
             });
 
-            let source_block = stack::vstack(
-                cx,
-                stack::VStackProps::default().gap(Space::N1),
-                move |_cx| {
-                    let mut out = Vec::new();
-                    out.push(title_text);
-                    if let Some(url_text) = url_text {
-                        out.push(url_text);
-                    }
-                    out
-                },
-            );
+            let source_block = ui::v_stack(move |_cx| {
+                let mut out = Vec::new();
+                out.push(title_text);
+                if let Some(url_text) = url_text {
+                    out.push(url_text);
+                }
+                out
+            })
+            .gap(Space::N1)
+            .into_element(cx);
 
-            let body_inner = stack::vstack(
-                cx,
-                stack::VStackProps::default().gap(Space::N2),
-                move |_cx| {
-                    let mut out = vec![source_block];
-                    if let Some(quote) = quote {
-                        out.push(quote);
-                    }
-                    out
-                },
-            );
+            let body_inner = ui::v_stack(move |_cx| {
+                let mut out = vec![source_block];
+                if let Some(quote) = quote {
+                    out.push(quote);
+                }
+                out
+            })
+            .gap(Space::N2)
+            .into_element(cx);
 
             cx.container(
                 decl_style::container_props(
@@ -641,13 +629,10 @@ impl InlineCitation {
             cx.text(self.label)
         };
 
-        let content = stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .layout(LayoutRefinement::default().w_full())
-                .gap(Space::N0),
-            move |_cx| vec![header, body],
-        );
+        let content = ui::v_stack(move |_cx| vec![header, body])
+            .layout(LayoutRefinement::default().w_full())
+            .gap(Space::N0)
+            .into_element(cx);
 
         let card = HoverCardContent::new(vec![content])
             .refine_style(ChromeRefinement::default().p(Space::N0))
@@ -674,10 +659,9 @@ impl InlineCitation {
             .close_delay_frames(0)
             .into_element(cx);
 
-        stack::hstack(
-            cx,
-            stack::HStackProps::default().gap(Space::N1).items_center(),
-            move |_cx| vec![label, hover],
-        )
+        ui::h_row(move |_cx| vec![label, hover])
+            .gap(Space::N1)
+            .items(Items::Center)
+            .into_element(cx)
     }
 }

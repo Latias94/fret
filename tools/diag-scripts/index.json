@@ -2163,6 +2163,16 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-ai-agent-demo-expand-tool",
+      "path": "tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-agent-demo-expand-tool.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-ai-agent"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-ai-checkpoint-restore-tooltip",
       "path": "tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-checkpoint-restore-tooltip.json",
       "required_capabilities": [
@@ -4652,16 +4662,6 @@
     {
       "id": "ui-gallery-input-group-addon-after-control-tab-focus",
       "path": "tools/diag-scripts/ui-gallery/input/ui-gallery-input-group-addon-after-control-tab-focus.json",
-      "required_capabilities": [],
-      "suite_memberships": [
-        "ui-gallery-shadcn-conformance"
-      ],
-      "tags": [],
-      "target_hints": []
-    },
-    {
-      "id": "ui-gallery-input-group-button-click-focus",
-      "path": "tools/diag-scripts/ui-gallery/input/ui-gallery-input-group-button-click-focus.json",
       "required_capabilities": [],
       "suite_memberships": [
         "ui-gallery-shadcn-conformance"

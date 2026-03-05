@@ -32,7 +32,7 @@ fn web_vs_fret_date_picker_with_presets_select_listbox_scroll_matches_web_scroll
         let value = value.clone();
 
         move |cx: &mut ElementContext<'_, App>| {
-            use fret_ui_kit::declarative::stack;
+            use fret_ui_kit::ui;
             use fret_ui_kit::{ChromeRefinement, LengthRefinement, MetricRef, Space};
             use fret_ui_shadcn::select::SelectPosition;
 
@@ -69,11 +69,10 @@ fn web_vs_fret_date_picker_with_presets_select_listbox_scroll_matches_web_scroll
                                 ])
                                 .into_element(cx);
 
-                            let body = stack::vstack(
-                                cx,
-                                stack::VStackProps::default().gap(Space::N2).items_stretch(),
-                                move |_cx| vec![select],
-                            );
+                            let body = ui::v_stack(move |_cx| vec![select])
+                                .gap(Space::N2)
+                                .items_stretch()
+                                .into_element(cx);
 
                             fret_ui_shadcn::PopoverContent::new([body])
                                 .refine_style(ChromeRefinement::default().p(Space::N2))

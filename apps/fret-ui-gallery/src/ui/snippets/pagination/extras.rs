@@ -121,25 +121,16 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             .refine_layout(LayoutRefinement::default().w(fret_ui_kit::LengthRefinement::Auto))
             .into_element(cx);
 
-        stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .layout(LayoutRefinement::default().w_full())
-                .items_center()
-                .justify_between()
-                .gap(Space::N4),
-            move |_cx| [rows_field, pagination],
-        )
-        .test_id("ui-gallery-pagination-icons-only")
+        ui::h_flex(move |_cx| [rows_field, pagination])
+            .layout(LayoutRefinement::default().w_full())
+            .items_center()
+            .justify_between()
+            .gap(Space::N4)
+            .into_element(cx)
+            .test_id("ui-gallery-pagination-icons-only")
     };
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N4)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full().min_w_0()),
-        |cx| {
+    ui::v_flex(|cx| {
             vec![
                 shadcn::typography::muted(
                     cx,
@@ -148,8 +139,10 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                 simple,
                 icons_only,
             ]
-        },
-    )
+        })
+            .gap(Space::N4)
+            .items_start()
+            .layout(LayoutRefinement::default().w_full().min_w_0()).into_element(cx)
     .test_id("ui-gallery-pagination-extras")
 }
 

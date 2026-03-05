@@ -65,55 +65,50 @@ pub fn render(cx: &mut ElementContext<'_, App>, theme: &Theme) -> AnyElement {
         fret_ui_headless::motion::stagger::StaggerFrom::Last
     };
 
-    let row = stack::hstack(
-        cx,
-        stack::HStackProps::default()
-            .layout(LayoutRefinement::default().w_full().min_w_0())
-            .gap(Space::N2)
-            .items_center(),
-        move |cx| {
-            (0..count)
-                .map(|i| {
-                    let local_linear =
-                        fret_ui_headless::motion::stagger::staggered_progress_for_duration(
-                            global.linear,
-                            i,
-                            count,
-                            each_delay,
-                            duration,
-                            from,
-                        );
-                    let local = easing_headless.sample(local_linear);
-                    let dy_px = (1.0 - local) * 10.0;
-                    let transform = fret_core::Transform2D::translation(fret_core::Point::new(
-                        Px(0.0),
-                        Px(dy_px),
-                    ));
+    let row = ui::h_flex(move |cx| {
+        (0..count)
+            .map(|i| {
+                let local_linear =
+                    fret_ui_headless::motion::stagger::staggered_progress_for_duration(
+                        global.linear,
+                        i,
+                        count,
+                        each_delay,
+                        duration,
+                        from,
+                    );
+                let local = easing_headless.sample(local_linear);
+                let dy_px = (1.0 - local) * 10.0;
+                let transform =
+                    fret_core::Transform2D::translation(fret_core::Point::new(Px(0.0), Px(dy_px)));
 
-                    cx.opacity_props(
-                        fret_ui::element::OpacityProps {
-                            layout: LayoutStyle::default(),
-                            opacity: local,
-                        },
-                        move |cx| {
-                            let badge = shadcn::Badge::new(format!("Item {}", i + 1))
-                                .variant(shadcn::BadgeVariant::Secondary)
-                                .into_element(cx)
-                                .test_id(format!("ui-gallery-motion-presets-stagger-item-{i}"));
+                cx.opacity_props(
+                    fret_ui::element::OpacityProps {
+                        layout: LayoutStyle::default(),
+                        opacity: local,
+                    },
+                    move |cx| {
+                        let badge = shadcn::Badge::new(format!("Item {}", i + 1))
+                            .variant(shadcn::BadgeVariant::Secondary)
+                            .into_element(cx)
+                            .test_id(format!("ui-gallery-motion-presets-stagger-item-{i}"));
 
-                            vec![cx.visual_transform_props(
-                                fret_ui::element::VisualTransformProps {
-                                    layout: LayoutStyle::default(),
-                                    transform,
-                                },
-                                |_cx| vec![badge],
-                            )]
-                        },
-                    )
-                })
-                .collect::<Vec<_>>()
-        },
-    );
+                        vec![cx.visual_transform_props(
+                            fret_ui::element::VisualTransformProps {
+                                layout: LayoutStyle::default(),
+                                transform,
+                            },
+                            |_cx| vec![badge],
+                        )]
+                    },
+                )
+            })
+            .collect::<Vec<_>>()
+    })
+    .layout(LayoutRefinement::default().w_full().min_w_0())
+    .gap(Space::N2)
+    .items_center()
+    .into_element(cx);
 
     let toggle = shadcn::Button::new("Toggle sequence")
         .variant(shadcn::ButtonVariant::Secondary)
@@ -121,14 +116,11 @@ pub fn render(cx: &mut ElementContext<'_, App>, theme: &Theme) -> AnyElement {
         .test_id("ui-gallery-motion-presets-stagger-toggle")
         .into_element(cx);
 
-    let content = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .layout(LayoutRefinement::default().w_full())
-            .gap(Space::N3)
-            .items_start(),
-        move |_cx| vec![toggle, row],
-    );
+    let content = ui::v_flex(move |_cx| vec![toggle, row])
+        .layout(LayoutRefinement::default().w_full())
+        .gap(Space::N3)
+        .items_start()
+        .into_element(cx);
 
     shadcn::Card::new([
         shadcn::CardHeader::new([

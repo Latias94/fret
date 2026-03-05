@@ -88,63 +88,54 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                     .test_id("ui-gallery-collapsible-settings-trigger")
                     .into_element(cx);
 
-                let fields = stack::hstack(
-                    cx,
-                    stack::HStackProps::default()
-                        .gap(Space::N2)
-                        .items_start()
-                        .layout(LayoutRefinement::default().w_full().min_w_0()),
-                    |cx| {
-                        vec![
-                            radius_input(
-                                cx,
-                                "ui-gallery-collapsible-settings-radius-x",
-                                "Radius X",
-                                radius_x.clone(),
-                            ),
-                            radius_input(
-                                cx,
-                                "ui-gallery-collapsible-settings-radius-y",
-                                "Radius Y",
-                                radius_y.clone(),
-                            ),
-                        ]
-                    },
-                );
+                let fields = ui::h_flex(|cx| {
+                    vec![
+                        radius_input(
+                            cx,
+                            "ui-gallery-collapsible-settings-radius-x",
+                            "Radius X",
+                            radius_x.clone(),
+                        ),
+                        radius_input(
+                            cx,
+                            "ui-gallery-collapsible-settings-radius-y",
+                            "Radius Y",
+                            radius_y.clone(),
+                        ),
+                    ]
+                })
+                .gap(Space::N2)
+                .items_start()
+                .layout(LayoutRefinement::default().w_full().min_w_0())
+                .into_element(cx);
 
-                stack::hstack(
-                    cx,
-                    stack::HStackProps::default()
-                        .gap(Space::N2)
-                        .items_start()
-                        .layout(LayoutRefinement::default().w_full().min_w_0()),
-                    |_cx| vec![fields, toggle],
-                )
+                ui::h_flex(|_cx| vec![fields, toggle])
+                    .gap(Space::N2)
+                    .items_start()
+                    .layout(LayoutRefinement::default().w_full().min_w_0())
+                    .into_element(cx)
             },
             |cx| {
-                let fields = stack::hstack(
-                    cx,
-                    stack::HStackProps::default()
-                        .gap(Space::N2)
-                        .items_start()
-                        .layout(LayoutRefinement::default().w_full().min_w_0()),
-                    |cx| {
-                        vec![
-                            radius_input(
-                                cx,
-                                "ui-gallery-collapsible-settings-radius-bl",
-                                "Bottom-left",
-                                radius_bl.clone(),
-                            ),
-                            radius_input(
-                                cx,
-                                "ui-gallery-collapsible-settings-radius-br",
-                                "Bottom-right",
-                                radius_br.clone(),
-                            ),
-                        ]
-                    },
-                );
+                let fields = ui::h_flex(|cx| {
+                    vec![
+                        radius_input(
+                            cx,
+                            "ui-gallery-collapsible-settings-radius-bl",
+                            "Bottom-left",
+                            radius_bl.clone(),
+                        ),
+                        radius_input(
+                            cx,
+                            "ui-gallery-collapsible-settings-radius-br",
+                            "Bottom-right",
+                            radius_br.clone(),
+                        ),
+                    ]
+                })
+                .gap(Space::N2)
+                .items_start()
+                .layout(LayoutRefinement::default().w_full().min_w_0())
+                .into_element(cx);
 
                 shadcn::CollapsibleContent::new([fields])
                     .refine_layout(LayoutRefinement::default().w_full().mt(Space::N2))

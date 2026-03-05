@@ -17,10 +17,12 @@ use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::declarative::chrome::centered_fixed_chrome_pressable_with_id_props;
 use fret_ui_kit::declarative::controllable_state;
 use fret_ui_kit::declarative::icon as decl_icon;
-use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::typography;
-use fret_ui_kit::{ChromeRefinement, ColorFallback, ColorRef, LayoutRefinement, Radius, Space};
+use fret_ui_kit::ui;
+use fret_ui_kit::{
+    ChromeRefinement, ColorFallback, ColorRef, Items, Justify, LayoutRefinement, Radius, Space,
+};
 use fret_ui_shadcn::{Badge, BadgeVariant, Switch};
 
 pub type OnShowValuesChange =
@@ -210,13 +212,10 @@ impl EnvironmentVariables {
                     st.controller = Some(controller.clone());
                 });
 
-                let body = stack::vstack(
-                    cx,
-                    stack::VStackProps::default()
-                        .layout(LayoutRefinement::default().w_full().min_w_0())
-                        .gap(Space::N0),
-                    move |cx| children(cx, controller),
-                );
+                let body = ui::v_stack(move |cx| children(cx, controller))
+                    .layout(LayoutRefinement::default().w_full().min_w_0())
+                    .gap(Space::N0)
+                    .into_element(cx);
                 vec![body]
             },
         );
@@ -273,15 +272,12 @@ impl EnvironmentVariablesHeader {
             fallback: ColorFallback::ThemePanelBorder,
         });
 
-        let row = stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .layout(self.layout)
-                .items_center()
-                .justify_between()
-                .gap(Space::N3),
-            move |_cx| self.children,
-        );
+        let row = ui::h_row(move |_cx| self.children)
+            .layout(self.layout)
+            .items(Items::Center)
+            .justify(Justify::Between)
+            .gap(Space::N3)
+            .into_element(cx);
 
         let mut props = decl_style::container_props(&theme, chrome, LayoutRefinement::default());
         props.border.bottom = Px(1.0);
@@ -452,14 +448,11 @@ impl EnvironmentVariablesToggle {
             );
         }
 
-        let row = stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .layout(self.layout)
-                .gap(Space::N2)
-                .items_center(),
-            move |_cx| vec![icon, switch],
-        );
+        let row = ui::h_row(move |_cx| vec![icon, switch])
+            .layout(self.layout)
+            .gap(Space::N2)
+            .items(Items::Center)
+            .into_element(cx);
 
         let Some(test_id) = self.test_id else {
             return row;
@@ -568,15 +561,12 @@ impl EnvironmentVariable {
                     st.data = Some(data);
                 });
 
-                let row = stack::hstack(
-                    cx,
-                    stack::HStackProps::default()
-                        .layout(layout)
-                        .gap(Space::N4)
-                        .items_center()
-                        .justify_between(),
-                    move |cx| children(cx),
-                );
+                let row = ui::h_row(move |cx| children(cx))
+                    .layout(layout)
+                    .gap(Space::N4)
+                    .items(Items::Center)
+                    .justify(Justify::Between)
+                    .into_element(cx);
 
                 vec![row]
             },
@@ -607,14 +597,11 @@ impl EnvironmentVariableGroup {
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .gap(Space::N2)
-                .items_center()
-                .layout(LayoutRefinement::default().min_w_0()),
-            move |_cx| self.children,
-        )
+        ui::h_row(move |_cx| self.children)
+            .gap(Space::N2)
+            .items(Items::Center)
+            .layout(LayoutRefinement::default().min_w_0())
+            .into_element(cx)
     }
 }
 
@@ -935,14 +922,11 @@ impl EnvironmentVariableCopyButton {
             chrome_props.padding = Edges::all(Px(0.0)).into();
 
             (pressable, chrome_props, move |cx| {
-                let row = stack::hstack(
-                    cx,
-                    stack::HStackProps::default()
-                        .items_center()
-                        .justify_center()
-                        .layout(LayoutRefinement::default().w_full().h_full()),
-                    move |_cx| vec![icon],
-                );
+                let row = ui::h_row(move |_cx| vec![icon])
+                    .items(Items::Center)
+                    .justify(Justify::Center)
+                    .layout(LayoutRefinement::default().w_full().h_full())
+                    .into_element(cx);
 
                 let marker = copied_marker_test_id.clone().and_then(|marker_id| {
                     copied.then(|| {
@@ -1042,13 +1026,10 @@ impl EnvironmentVariablesContent {
             divided.push(child);
         }
 
-        let body = stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .layout(self.layout)
-                .gap(Space::N0),
-            move |_cx| divided,
-        );
+        let body = ui::v_stack(move |_cx| divided)
+            .layout(self.layout)
+            .gap(Space::N0)
+            .into_element(cx);
 
         let el = cx.container(
             decl_style::container_props(&theme, self.chrome, LayoutRefinement::default()),

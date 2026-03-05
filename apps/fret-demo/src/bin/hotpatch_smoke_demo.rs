@@ -111,11 +111,7 @@ mod hotpatch {
                 shadcn::CardDescription::new(format!("debug: {debug}")).into_element(cx),
             ])
             .into_element(cx),
-            shadcn::CardContent::new([fret_ui_kit::declarative::stack::vstack(
-                cx,
-                fret_ui_kit::declarative::stack::VStackProps::default()
-                    .gap_y(fret_ui_kit::Space::N2),
-                |cx| {
+            shadcn::CardContent::new([ui::v_stack(|cx| {
                     [
                         shadcn::Button::new("Increment")
                             .on_click(CMD_INC)
@@ -125,8 +121,8 @@ mod hotpatch {
                             .variant(shadcn::ButtonVariant::Secondary)
                             .into_element(cx),
                     ]
-                },
-            )])
+                })
+                    .gap(fret_ui_kit::Space::N2).into_element(cx)])
             .into_element(cx),
         ])
         .into_element(cx);

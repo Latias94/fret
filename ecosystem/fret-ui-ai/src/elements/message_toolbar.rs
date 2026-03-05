@@ -3,8 +3,8 @@ use std::sync::Arc;
 use fret_core::SemanticsRole;
 use fret_ui::element::{AnyElement, SemanticsProps};
 use fret_ui::{ElementContext, UiHost};
-use fret_ui_kit::declarative::stack;
-use fret_ui_kit::{Justify, LayoutRefinement, Space};
+use fret_ui_kit::ui;
+use fret_ui_kit::{Items, Justify, LayoutRefinement, Space};
 
 /// A horizontal toolbar row for per-message action buttons.
 pub struct MessageToolbar {
@@ -63,15 +63,12 @@ impl MessageToolbar {
         let gap = self.gap;
         let children = self.children;
 
-        let row = stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .layout(layout)
-                .gap(gap)
-                .justify(justify)
-                .items_center(),
-            |_cx| children,
-        );
+        let row = ui::h_row(|_cx| children)
+            .layout(layout)
+            .gap(gap)
+            .justify(justify)
+            .items(Items::Center)
+            .into_element(cx);
 
         let Some(test_id) = self.test_id else {
             return row;

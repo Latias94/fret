@@ -15,16 +15,17 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                     .size(shadcn::ButtonSize::Sm)
                     .into_element(cx),
                 shadcn::TooltipContent::with(cx, |cx| {
-                    vec![stack::hstack(
-                        cx,
-                        stack::HStackProps::default().gap(Space::N2).items_center(),
-                        |cx| {
+                    vec![
+                        ui::h_row(|cx| {
                             vec![
                                 ui::text("Shortcut:").text_sm().into_element(cx),
                                 shadcn::Kbd::new("S").into_element(cx),
                             ]
-                        },
-                    )]
+                        })
+                        .gap(Space::N2)
+                        .items_center()
+                        .into_element(cx),
+                    ]
                 }),
             )
             .arrow(true)
@@ -38,10 +39,8 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                     .size(shadcn::ButtonSize::Sm)
                     .into_element(cx),
                 shadcn::TooltipContent::with(cx, |cx| {
-                    vec![stack::hstack(
-                        cx,
-                        stack::HStackProps::default().gap(Space::N2).items_center(),
-                        |cx| {
+                    vec![
+                        ui::h_row(|cx| {
                             vec![
                                 ui::text("Shortcut:").text_sm().into_element(cx),
                                 shadcn::KbdGroup::new([
@@ -50,8 +49,11 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                                 ])
                                 .into_element(cx),
                             ]
-                        },
-                    )]
+                        })
+                        .gap(Space::N2)
+                        .items_center()
+                        .into_element(cx),
+                    ]
                 }),
             )
             .arrow(true)

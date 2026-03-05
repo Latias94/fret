@@ -9,15 +9,16 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         .delay(Duration::ZERO)
         .timeout_duration(Duration::from_millis(400))
         .with(cx, |cx| {
-            let disabled_trigger =
-                stack::hstack(cx, stack::HStackProps::default().items_center(), |cx| {
-                    vec![
-                        shadcn::Button::new("Disabled")
-                            .variant(shadcn::ButtonVariant::Outline)
-                            .disabled(true)
-                            .into_element(cx),
-                    ]
-                });
+            let disabled_trigger = ui::h_row(|cx| {
+                vec![
+                    shadcn::Button::new("Disabled")
+                        .variant(shadcn::ButtonVariant::Outline)
+                        .disabled(true)
+                        .into_element(cx),
+                ]
+            })
+            .items_center()
+            .into_element(cx);
 
             vec![
                 shadcn::Tooltip::new(

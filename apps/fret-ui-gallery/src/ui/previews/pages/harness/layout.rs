@@ -22,20 +22,17 @@ pub(in crate::ui) fn preview_layout(
         )
     };
 
-    let row = stack::hstack(
-        cx,
-        stack::HStackProps::default()
-            .layout(LayoutRefinement::default().w_full())
-            .gap(Space::N3)
-            .items_stretch(),
-        |cx| {
-            vec![
-                boxy(cx, "Left (fill)", theme.color_token("accent")),
-                boxy(cx, "Center (fill)", theme.color_token("muted")),
-                boxy(cx, "Right (fill)", theme.color_token("card")),
-            ]
-        },
-    );
+    let row = ui::h_flex(|cx| {
+        vec![
+            boxy(cx, "Left (fill)", theme.color_token("accent")),
+            boxy(cx, "Center (fill)", theme.color_token("muted")),
+            boxy(cx, "Right (fill)", theme.color_token("card")),
+        ]
+    })
+    .layout(LayoutRefinement::default().w_full())
+    .gap(Space::N3)
+    .items_stretch()
+    .into_element(cx);
 
     let page = doc_layout::render_doc_page(
         cx,

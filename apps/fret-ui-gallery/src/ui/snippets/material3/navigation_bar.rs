@@ -30,20 +30,17 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>, value: Model<Arc<str>>)
         ])
         .into_element(cx);
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .layout(LayoutRefinement::default().w_full().min_w_0())
-            .gap(Space::N3)
-            .items_start(),
-        |cx| {
-            vec![
-                cx.text("Material 3 Navigation Bar: roving focus + state layer + bounded ripple."),
-                bar,
-                cx.text(format!("value={}", current.as_ref())),
-            ]
-        },
-    )
+    ui::v_flex(|cx| {
+        vec![
+            cx.text("Material 3 Navigation Bar: roving focus + state layer + bounded ripple."),
+            bar,
+            cx.text(format!("value={}", current.as_ref())),
+        ]
+    })
+    .layout(LayoutRefinement::default().w_full().min_w_0())
+    .gap(Space::N3)
+    .items_start()
+    .into_element(cx)
     .into()
 }
 

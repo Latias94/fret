@@ -42,7 +42,7 @@ fn build_date_picker_with_presets_select_open(
     cx: &mut ElementContext<'_, App>,
     open: &Model<bool>,
 ) -> AnyElement {
-    use fret_ui_kit::declarative::stack;
+    use fret_ui_kit::ui;
     use fret_ui_kit::{ChromeRefinement, LayoutRefinement, LengthRefinement, MetricRef, Space};
     use fret_ui_shadcn::select::SelectPosition;
 
@@ -72,11 +72,10 @@ fn build_date_picker_with_presets_select_open(
                     ])
                     .into_element(cx);
 
-                let body = stack::vstack(
-                    cx,
-                    stack::VStackProps::default().gap(Space::N2).items_stretch(),
-                    move |_cx| vec![select],
-                );
+                let body = ui::v_stack(move |_cx| vec![select])
+                    .gap(Space::N2)
+                    .items_stretch()
+                    .into_element(cx);
 
                 fret_ui_shadcn::PopoverContent::new([body])
                     .refine_style(ChromeRefinement::default().p(Space::N2))

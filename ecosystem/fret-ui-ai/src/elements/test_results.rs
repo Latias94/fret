@@ -14,9 +14,9 @@ use fret_ui::element::{
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::icon as decl_icon;
-use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::typography;
+use fret_ui_kit::ui;
 use fret_ui_kit::{
     ChromeRefinement, ColorFallback, ColorRef, Items, Justify, LayoutRefinement, MetricRef, Radius,
     Space,
@@ -197,14 +197,11 @@ fn status_badge<H: UiHost>(
             ink_overflow: Default::default(),
         });
 
-        vec![stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .items_center()
-                .justify_center()
-                .gap(Space::N1),
-            move |_cx| vec![icon, text],
-        )]
+        vec![ui::h_row(move |_cx| vec![icon, text])
+            .items(Items::Center)
+            .justify(Justify::Center)
+            .gap(Space::N1)
+            .into_element(cx)]
     })
 }
 
@@ -357,15 +354,12 @@ impl TestResultsHeader {
         let theme = Theme::global(&*cx.app).clone();
         let border = theme.color_token("border");
 
-        let row = stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .layout(self.layout)
-                .gap(Space::N2)
-                .justify(Justify::Between)
-                .items_center(),
-            move |_cx| self.children,
-        );
+        let row = ui::h_row(move |_cx| self.children)
+            .layout(self.layout)
+            .gap(Space::N2)
+            .justify(Justify::Between)
+            .items(Items::Center)
+            .into_element(cx);
 
         let mut props =
             decl_style::container_props(&theme, self.chrome, LayoutRefinement::default());
@@ -449,14 +443,11 @@ impl TestResultsSummary {
             ));
         }
 
-        let row = stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .layout(self.layout)
-                .gap(Space::N3)
-                .items_center(),
-            move |_cx| badges,
-        );
+        let row = ui::h_row(move |_cx| badges)
+            .layout(self.layout)
+            .gap(Space::N3)
+            .items(Items::Center)
+            .into_element(cx);
 
         cx.container(
             decl_style::container_props(&theme, self.chrome, LayoutRefinement::default()),
@@ -617,14 +608,11 @@ impl TestResultsProgress {
                     cx.container(props, |_cx| Vec::new())
                 };
 
-                vec![stack::hstack(
-                    cx,
-                    stack::HStackProps::default()
-                        .layout(LayoutRefinement::default().w_full().h_full())
-                        .gap(Space::N0)
-                        .items(Items::Stretch),
-                    move |_cx| vec![passed_seg, failed_seg],
-                )]
+                vec![ui::h_row(move |_cx| vec![passed_seg, failed_seg])
+                    .layout(LayoutRefinement::default().w_full().h_full())
+                    .gap(Space::N0)
+                    .items(Items::Stretch)
+                    .into_element(cx)]
             })
         };
 
@@ -635,47 +623,41 @@ impl TestResultsProgress {
         let text_right: Arc<str> = Arc::from(format!("{:.0}%", passed_percent));
         let fg = theme.color_token("muted-foreground");
 
-        let labels = stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .layout(LayoutRefinement::default().w_full().min_w_0())
-                .gap(Space::N2)
-                .justify(Justify::Between)
-                .items_center(),
-            move |cx| {
-                vec![
-                    cx.text_props(TextProps {
-                        layout: LayoutStyle::default(),
-                        text: text_left.clone(),
-                        style: None,
-                        color: Some(fg),
-                        wrap: TextWrap::None,
-                        overflow: TextOverflow::Clip,
-                        align: fret_core::TextAlign::Start,
-                        ink_overflow: Default::default(),
-                    }),
-                    cx.text_props(TextProps {
-                        layout: LayoutStyle::default(),
-                        text: text_right.clone(),
-                        style: None,
-                        color: Some(fg),
-                        wrap: TextWrap::None,
-                        overflow: TextOverflow::Clip,
-                        align: fret_core::TextAlign::Start,
-                        ink_overflow: Default::default(),
-                    }),
-                ]
-            },
-        );
+        let labels = ui::h_row(move |cx| {
+            vec![
+                cx.text_props(TextProps {
+                    layout: LayoutStyle::default(),
+                    text: text_left.clone(),
+                    style: None,
+                    color: Some(fg),
+                    wrap: TextWrap::None,
+                    overflow: TextOverflow::Clip,
+                    align: fret_core::TextAlign::Start,
+                    ink_overflow: Default::default(),
+                }),
+                cx.text_props(TextProps {
+                    layout: LayoutStyle::default(),
+                    text: text_right.clone(),
+                    style: None,
+                    color: Some(fg),
+                    wrap: TextWrap::None,
+                    overflow: TextOverflow::Clip,
+                    align: fret_core::TextAlign::Start,
+                    ink_overflow: Default::default(),
+                }),
+            ]
+        })
+        .layout(LayoutRefinement::default().w_full().min_w_0())
+        .gap(Space::N2)
+        .justify(Justify::Between)
+        .items(Items::Center)
+        .into_element(cx);
 
-        let content = stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .layout(self.layout)
-                .gap(Space::N2)
-                .items(Items::Stretch),
-            move |_cx| vec![bar, labels],
-        );
+        let content = ui::v_stack(move |_cx| vec![bar, labels])
+            .layout(self.layout)
+            .gap(Space::N2)
+            .items(Items::Stretch)
+            .into_element(cx);
 
         let wrapper = cx.container(
             decl_style::container_props(&theme, self.chrome, LayoutRefinement::default()),
@@ -928,14 +910,13 @@ impl TestSuiteName {
             if parts.is_empty() {
                 None
             } else {
-                Some(stack::hstack(
-                    cx,
-                    stack::HStackProps::default()
+                Some(
+                    ui::h_row(move |_cx| parts)
                         .layout(LayoutRefinement::default().flex_shrink_0())
                         .gap(Space::N2)
-                        .items_center(),
-                    move |_cx| parts,
-                ))
+                        .items(Items::Center)
+                        .into_element(cx),
+                )
             }
         };
 
@@ -944,14 +925,11 @@ impl TestSuiteName {
             left.push(stats);
         }
 
-        let row = stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .layout(self.layout)
-                .gap(Space::N2)
-                .items_center(),
-            move |_cx| left,
-        );
+        let row = ui::h_row(move |_cx| left)
+            .layout(self.layout)
+            .gap(Space::N2)
+            .items(Items::Center)
+            .into_element(cx);
 
         let row = cx.container(
             decl_style::container_props(&theme, self.chrome, LayoutRefinement::default()),
@@ -1073,14 +1051,11 @@ impl Test {
         let name_for_content = name.clone();
         let content_factory = move |cx: &mut ElementContext<'_, H>| {
             if let Some(children) = children {
-                return stack::hstack(
-                    cx,
-                    stack::HStackProps::default()
-                        .layout(LayoutRefinement::default().w_full().min_w_0())
-                        .gap(Space::N2)
-                        .items_center(),
-                    move |_cx| children,
-                );
+                return ui::h_row(move |_cx| children)
+                    .layout(LayoutRefinement::default().w_full().min_w_0())
+                    .gap(Space::N2)
+                    .items(Items::Center)
+                    .into_element(cx);
             }
 
             let status_el = status_icon(cx, &theme_for_content, status, Px(16.0));
@@ -1121,14 +1096,11 @@ impl Test {
                 children.push(duration_el);
             }
 
-            stack::hstack(
-                cx,
-                stack::HStackProps::default()
-                    .layout(LayoutRefinement::default().w_full().min_w_0())
-                    .gap(Space::N2)
-                    .items_center(),
-                move |_cx| children,
-            )
+            ui::h_row(move |_cx| children)
+                .layout(LayoutRefinement::default().w_full().min_w_0())
+                .gap(Space::N2)
+                .items(Items::Center)
+                .into_element(cx)
         };
 
         let Some(on_activate) = self.on_activate else {
@@ -1395,14 +1367,11 @@ impl TestSuiteContent {
         let wrapper = cx.container(
             decl_style::container_props(&theme, self.chrome, LayoutRefinement::default()),
             move |cx| {
-                let content = stack::vstack(
-                    cx,
-                    stack::VStackProps::default()
-                        .layout(self.layout)
-                        .gap(Space::N0)
-                        .items(Items::Stretch),
-                    move |_cx| divided,
-                );
+                let content = ui::v_stack(move |_cx| divided)
+                    .layout(self.layout)
+                    .gap(Space::N0)
+                    .items(Items::Stretch)
+                    .into_element(cx);
                 vec![content]
             },
         );
@@ -1466,14 +1435,11 @@ impl TestResultsContent {
         let content = cx.container(
             decl_style::container_props(&theme, self.chrome, LayoutRefinement::default()),
             move |cx| {
-                vec![stack::vstack(
-                    cx,
-                    stack::VStackProps::default()
-                        .layout(layout)
-                        .gap(Space::N2)
-                        .items(Items::Stretch),
-                    move |_cx| children,
-                )]
+                vec![ui::v_stack(move |_cx| children)
+                    .layout(layout)
+                    .gap(Space::N2)
+                    .items(Items::Stretch)
+                    .into_element(cx)]
             },
         );
 

@@ -2,7 +2,7 @@ pub const SOURCE: &str = include_str!("stack_trace_demo.rs");
 
 // region: example
 use fret_ui_ai as ui_ai;
-use fret_ui_kit::declarative::stack;
+use fret_ui_kit::ui;
 use fret_ui_kit::{LayoutRefinement, Space};
 use fret_ui_shadcn::prelude::*;
 use std::sync::Arc;
@@ -22,18 +22,15 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
         .test_id_frames("ui-ai-stack-trace-frames")
         .into_element(cx);
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .layout(LayoutRefinement::default().w_full().min_w_0())
-            .gap(Space::N4),
-        move |cx| {
-            vec![
-                cx.text("StackTrace (AI Elements)"),
-                cx.text("Disclosure + copy surface; file paths are link-like."),
-                stack,
-            ]
-        },
-    )
+    ui::v_flex(move |cx| {
+        vec![
+            cx.text("StackTrace (AI Elements)"),
+            cx.text("Disclosure + copy surface; file paths are link-like."),
+            stack,
+        ]
+    })
+    .layout(LayoutRefinement::default().w_full().min_w_0())
+    .gap(Space::N4)
+    .into_element(cx)
 }
 // endregion: example

@@ -8,7 +8,7 @@ use fret_ui::tree::UiTree;
 use fret_ui_kit::ChromeRefinement;
 use fret_ui_kit::Space;
 use fret_ui_kit::declarative::icon as decl_icon;
-use fret_ui_kit::declarative::stack as decl_stack;
+use fret_ui_kit::ui as decl_stack;
 use std::sync::Arc;
 use time::{Date, Month};
 
@@ -1651,19 +1651,18 @@ fn web_vs_fret_button_group_size_geometry_and_chrome_match() {
         ])
         .a11y_label("ButtonGroupSizeLg");
 
-        vec![decl_stack::vstack(
-            cx,
-            decl_stack::VStackProps::default()
-                .gap(Space::N8)
-                .items_start(),
-            move |cx| {
+        vec![
+            ui::v_stack(move |cx| {
                 vec![
                     group_sm.into_element(cx),
                     group_md.into_element(cx),
                     group_lg.into_element(cx),
                 ]
-            },
-        )]
+            })
+            .gap(Space::N8)
+            .items_start()
+            .into_element(cx),
+        ]
     });
 
     let group_sm = snap

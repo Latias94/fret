@@ -4,12 +4,12 @@ use fret_core::{
     Color, FontWeight, Px, SemanticsRole, TextAlign, TextOverflow, TextStyle, TextWrap,
 };
 use fret_icons::IconId;
-use fret_ui::element::{AnyElement, LayoutStyle, SemanticsDecoration, SemanticsProps, TextProps};
+use fret_ui::element::{AnyElement, LayoutStyle, SemanticsProps, TextProps};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::icon as decl_icon;
-use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::typography;
+use fret_ui_kit::ui;
 use fret_ui_kit::{
     ChromeRefinement, ColorFallback, ColorRef, Items, LayoutRefinement, Radius, Space,
 };
@@ -212,23 +212,21 @@ impl AgentHeader {
         let model_badge = model.map(|m| {
             Badge::new(m)
                 .variant(BadgeVariant::Secondary)
+                .label_font_monospace()
                 .refine_style(ChromeRefinement::default().rounded(Radius::Full))
                 .into_element(cx)
         });
 
-        let left = stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .gap(Space::N2)
-                .items(Items::Center),
-            move |_cx| {
-                let mut out = vec![bot_icon, name_text];
-                if let Some(badge) = model_badge {
-                    out.push(badge);
-                }
-                out
-            },
-        );
+        let left = ui::h_row(move |_cx| {
+            let mut out = vec![bot_icon, name_text];
+            if let Some(badge) = model_badge {
+                out.push(badge);
+            }
+            out
+        })
+        .gap(Space::N2)
+        .items(Items::Center)
+        .into_element(cx);
 
         let props = decl_style::container_props(
             &theme,
@@ -291,13 +289,10 @@ impl AgentContent {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
         let children = self.children;
-        let body = stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .gap(Space::N4)
-                .layout(LayoutRefinement::default().w_full().min_w_0()),
-            move |_cx| children,
-        );
+        let body = ui::v_stack(move |_cx| children)
+            .gap(Space::N4)
+            .layout(LayoutRefinement::default().w_full().min_w_0())
+            .into_element(cx);
 
         let props = decl_style::container_props(
             &theme,
@@ -386,13 +381,10 @@ impl AgentInstructions {
         );
         let card = cx.container(props, move |_cx| [body_text]);
 
-        stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .gap(Space::N2)
-                .layout(LayoutRefinement::default().w_full().min_w_0()),
-            move |_cx| vec![label, card],
-        )
+        ui::v_stack(move |_cx| vec![label, card])
+            .gap(Space::N2)
+            .layout(LayoutRefinement::default().w_full().min_w_0())
+            .into_element(cx)
     }
 }
 
@@ -464,13 +456,10 @@ impl AgentTools {
             cx.container(props, move |_cx| [accordion])
         };
 
-        stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .gap(Space::N2)
-                .layout(LayoutRefinement::default().w_full().min_w_0()),
-            move |_cx| vec![label, bordered],
-        )
+        ui::v_stack(move |_cx| vec![label, bordered])
+            .gap(Space::N2)
+            .layout(LayoutRefinement::default().w_full().min_w_0())
+            .into_element(cx)
     }
 }
 
@@ -520,18 +509,13 @@ impl AgentTool {
             .unwrap_or_else(|| Arc::from("No description"));
         let schema = self.tool.schema_json().clone();
 
-        let mut desc_el = cx.text(desc);
-        if let Some(test_id) = self.trigger_test_id {
-            desc_el = desc_el.attach_semantics(
-                SemanticsDecoration::default()
-                    .role(SemanticsRole::Generic)
-                    .test_id(test_id),
-            );
-        }
-
-        let trigger = AccordionTrigger::new(vec![desc_el])
+        let desc_el = cx.text(desc);
+        let mut trigger = AccordionTrigger::new(vec![desc_el])
             .refine_style(ChromeRefinement::default().px(Space::N3).py(Space::N2))
             .refine_layout(LayoutRefinement::default().w_full().min_w_0());
+        if let Some(test_id) = self.trigger_test_id {
+            trigger = trigger.test_id(test_id);
+        }
 
         let pretty = serde_json::to_string_pretty(&schema).unwrap_or_else(|_| schema.to_string());
         let code = CodeBlock::new(Arc::<str>::from(pretty))
@@ -626,12 +610,9 @@ impl AgentOutput {
         );
         let card = cx.container(props, move |_cx| [code]);
 
-        stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .gap(Space::N2)
-                .layout(LayoutRefinement::default().w_full().min_w_0()),
-            move |_cx| vec![label, card],
-        )
+        ui::v_stack(move |_cx| vec![label, card])
+            .gap(Space::N2)
+            .layout(LayoutRefinement::default().w_full().min_w_0())
+            .into_element(cx)
     }
 }

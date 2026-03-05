@@ -7,11 +7,11 @@ use fret_icons::{IconId, ids};
 use fret_ui::element::{AnyElement, LayoutStyle, SemanticsProps, TextProps};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::icon as decl_icon;
-use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::typography;
+use fret_ui_kit::ui;
 use fret_ui_kit::{
-    ChromeRefinement, ColorFallback, ColorRef, Justify, LayoutRefinement, Radius, Space,
+    ChromeRefinement, ColorFallback, ColorRef, Items, Justify, LayoutRefinement, Radius, Space,
     WidgetStateProperty, WidgetStates,
 };
 use fret_ui_shadcn::{Badge, Collapsible, CollapsibleContent, CollapsibleTrigger};
@@ -193,11 +193,10 @@ impl SandboxHeader {
 
         let status_badge = tool_status_badge(cx, self.status);
 
-        let left = stack::hstack(
-            cx,
-            stack::HStackProps::default().gap(Space::N2),
-            move |_cx| vec![code_icon, label_text, status_badge],
-        );
+        let left = ui::h_row(move |_cx| vec![code_icon, label_text, status_badge])
+            .gap(Space::N2)
+            .items(Items::Center)
+            .into_element(cx);
 
         let chevron = decl_icon::icon_with(
             cx,
@@ -210,14 +209,12 @@ impl SandboxHeader {
             Some(ColorRef::Color(muted)),
         );
 
-        let row = stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .gap(Space::N2)
-                .justify(Justify::Between)
-                .layout(LayoutRefinement::default().w_full().min_w_0()),
-            move |_cx| vec![left, chevron],
-        );
+        let row = ui::h_row(move |_cx| vec![left, chevron])
+            .gap(Space::N2)
+            .justify(Justify::Between)
+            .layout(LayoutRefinement::default().w_full().min_w_0())
+            .items(Items::Center)
+            .into_element(cx);
 
         let trigger_row = cx.container(
             decl_style::container_props(
@@ -284,13 +281,10 @@ impl SandboxContent {
 
     fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let children = self.children;
-        let body = stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .gap(Space::N0)
-                .layout(LayoutRefinement::default().w_full().min_w_0()),
-            move |_cx| children,
-        );
+        let body = ui::v_stack(move |_cx| children)
+            .gap(Space::N0)
+            .layout(LayoutRefinement::default().w_full().min_w_0())
+            .into_element(cx);
 
         CollapsibleContent::new([body])
             .refine_layout(self.layout)

@@ -54,41 +54,40 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         .with(cx, |cx| {
             vec![
                 with_direction_provider(cx, LayoutDirection::Rtl, |cx| {
-                    stack::hstack(
-                        cx,
-                        stack::HStackProps::default().gap(Space::N2).items_center(),
-                        |cx| {
-                            vec![
-                                make_tooltip(
-                                    cx,
-                                    "يسار",
-                                    shadcn::TooltipSide::Left,
-                                    "إضافة إلى المكتبة",
-                                ),
-                                make_tooltip_with_test_ids(
-                                    cx,
-                                    "أعلى",
-                                    "ui-gallery-tooltip-rtl-top-trigger",
-                                    shadcn::TooltipSide::Top,
-                                    "إضافة إلى المكتبة",
-                                    "ui-gallery-tooltip-rtl-top-panel",
-                                    "ui-gallery-tooltip-rtl-top-text",
-                                ),
-                                make_tooltip(
-                                    cx,
-                                    "أسفل",
-                                    shadcn::TooltipSide::Bottom,
-                                    "إضافة إلى المكتبة",
-                                ),
-                                make_tooltip(
-                                    cx,
-                                    "يمين",
-                                    shadcn::TooltipSide::Right,
-                                    "إضافة إلى المكتبة",
-                                ),
-                            ]
-                        },
-                    )
+                    ui::h_row(|cx| {
+                        vec![
+                            make_tooltip(
+                                cx,
+                                "يسار",
+                                shadcn::TooltipSide::Left,
+                                "إضافة إلى المكتبة",
+                            ),
+                            make_tooltip_with_test_ids(
+                                cx,
+                                "أعلى",
+                                "ui-gallery-tooltip-rtl-top-trigger",
+                                shadcn::TooltipSide::Top,
+                                "إضافة إلى المكتبة",
+                                "ui-gallery-tooltip-rtl-top-panel",
+                                "ui-gallery-tooltip-rtl-top-text",
+                            ),
+                            make_tooltip(
+                                cx,
+                                "أسفل",
+                                shadcn::TooltipSide::Bottom,
+                                "إضافة إلى المكتبة",
+                            ),
+                            make_tooltip(
+                                cx,
+                                "يمين",
+                                shadcn::TooltipSide::Right,
+                                "إضافة إلى المكتبة",
+                            ),
+                        ]
+                    })
+                    .gap(Space::N2)
+                    .items_center()
+                    .into_element(cx)
                 })
                 .test_id("ui-gallery-tooltip-rtl"),
             ]

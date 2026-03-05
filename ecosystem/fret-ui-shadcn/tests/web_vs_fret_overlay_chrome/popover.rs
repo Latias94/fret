@@ -9,7 +9,7 @@ fn build_shadcn_popover_demo_page(
 ) -> AnyElement {
     use fret_core::Px;
     use fret_ui::Theme;
-    use fret_ui_kit::declarative::stack;
+    use fret_ui_kit::ui;
     use fret_ui_kit::{ColorRef, LayoutRefinement, Space, ui};
     use fret_ui_shadcn::{Button, ButtonVariant, Popover, PopoverContent};
 
@@ -39,11 +39,9 @@ fn build_shadcn_popover_demo_page(
                 .line_height_px(sm_line_height)
                 .text_color(ColorRef::Color(muted_fg))
                 .into_element(cx);
-            let header = stack::vstack(
-                cx,
-                stack::VStackProps::default().gap(Space::N2),
-                move |_cx| vec![title, description],
-            );
+            let header = ui::v_stack(move |_cx| vec![title, description])
+                .gap(Space::N2)
+                .into_element(cx);
 
             fn labeled_input_row<H: fret_ui::UiHost>(
                 cx: &mut ElementContext<'_, H>,
@@ -51,7 +49,7 @@ fn build_shadcn_popover_demo_page(
                 value: &str,
             ) -> AnyElement {
                 use fret_core::Px;
-                use fret_ui_kit::declarative::stack;
+                use fret_ui_kit::ui;
                 use fret_ui_kit::{LayoutRefinement, Space};
                 use fret_ui_shadcn::{Input, Label};
 
@@ -62,11 +60,10 @@ fn build_shadcn_popover_demo_page(
                     .refine_layout(LayoutRefinement::default().h_px(Px(32.0)).flex_grow(1.0))
                     .into_element(cx);
 
-                stack::hstack(
-                    cx,
-                    stack::HStackProps::default().gap(Space::N4).items_center(),
-                    move |_cx| vec![label_el, input_el],
-                )
+                ui::h_row(move |_cx| vec![label_el, input_el])
+                    .gap(Space::N4)
+                    .items_center()
+                    .into_element(cx)
             }
 
             let rows = vec![
@@ -75,11 +72,7 @@ fn build_shadcn_popover_demo_page(
                 labeled_input_row(cx, "Height", "25px"),
                 labeled_input_row(cx, "Max. height", "none"),
             ];
-            let fields = stack::vstack(
-                cx,
-                stack::VStackProps::default().gap(Space::N2),
-                move |_cx| rows,
-            );
+            let fields = ui::v_stack(move |_cx| rows).gap(Space::N2).into_element(cx);
 
             PopoverContent::new([header, fields])
                 .refine_layout(LayoutRefinement::default().w_px(Px(320.0)))

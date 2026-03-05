@@ -18,28 +18,24 @@ fn round<H: UiHost>(cx: &mut ElementContext<'_, H>, size: f32) -> AnyElement {
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     with_direction_provider(cx, LayoutDirection::Rtl, |cx| {
-        let text_lines = stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .gap(Space::N2)
-                .layout(LayoutRefinement::default().w_px(Px(250.0))),
-            |cx| {
-                vec![
-                    shadcn::Skeleton::new()
-                        .refine_layout(LayoutRefinement::default().w_full().h_px(Px(16.0)))
-                        .into_element(cx),
-                    shadcn::Skeleton::new()
-                        .refine_layout(LayoutRefinement::default().w_px(Px(200.0)).h_px(Px(16.0)))
-                        .into_element(cx),
-                ]
-            },
-        );
+        let text_lines = ui::v_stack(|cx| {
+            vec![
+                shadcn::Skeleton::new()
+                    .refine_layout(LayoutRefinement::default().w_full().h_px(Px(16.0)))
+                    .into_element(cx),
+                shadcn::Skeleton::new()
+                    .refine_layout(LayoutRefinement::default().w_px(Px(200.0)).h_px(Px(16.0)))
+                    .into_element(cx),
+            ]
+        })
+        .gap(Space::N2)
+        .layout(LayoutRefinement::default().w_px(Px(250.0)))
+        .into_element(cx);
 
-        stack::hstack(
-            cx,
-            stack::HStackProps::default().gap(Space::N4).items_center(),
-            |cx| vec![round(cx, 48.0), text_lines],
-        )
+        ui::h_row(|cx| vec![round(cx, 48.0), text_lines])
+            .gap(Space::N4)
+            .items_center()
+            .into_element(cx)
     })
     .attach_semantics(
         SemanticsDecoration::default()

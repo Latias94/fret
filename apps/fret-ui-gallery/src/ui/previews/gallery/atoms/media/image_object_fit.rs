@@ -33,14 +33,10 @@ pub(in crate::ui) fn preview_image_object_fit_legacy(
     streaming_image: Model<Option<ImageId>>,
 ) -> Vec<AnyElement> {
     let section = |cx: &mut ElementContext<'_, App>, title: &'static str, body: AnyElement| {
-        stack::vstack(
-            cx,
-            stack::VStackProps::default()
+        ui::v_flex(move |cx| vec![shadcn::typography::h4(cx, title), body])
                 .gap(Space::N2)
                 .items_start()
-                .layout(LayoutRefinement::default().w_full()),
-            move |cx| vec![shadcn::typography::h4(cx, title), body],
-        )
+                .layout(LayoutRefinement::default().w_full()).into_element(cx)
     };
 
     let image_cell = |cx: &mut ElementContext<'_, App>,
@@ -57,14 +53,10 @@ pub(in crate::ui) fn preview_image_object_fit_legacy(
             .into_element(cx)
             .test_id(format!("ui-gallery-image-object-fit-cell-{:?}", fit).to_lowercase());
 
-        stack::vstack(
-            cx,
-            stack::VStackProps::default()
+        ui::v_stack(|_cx| vec![label, image])
                 .gap(Space::N2)
                 .items_start()
-                .layout(LayoutRefinement::default()),
-            |_cx| vec![label, image],
-        )
+                .layout(LayoutRefinement::default()).into_element(cx)
     };
 
     let image_cell_opt = |cx: &mut ElementContext<'_, App>,
@@ -81,14 +73,10 @@ pub(in crate::ui) fn preview_image_object_fit_legacy(
             .into_element(cx)
             .test_id(format!("ui-gallery-image-object-fit-cell-source-{:?}", fit).to_lowercase());
 
-        stack::vstack(
-            cx,
-            stack::VStackProps::default()
+        ui::v_stack(|_cx| vec![label, image])
                 .gap(Space::N2)
                 .items_start()
-                .layout(LayoutRefinement::default()),
-            |_cx| vec![label, image],
-        )
+                .layout(LayoutRefinement::default()).into_element(cx)
     };
 
     let row = |cx: &mut ElementContext<'_, App>,
@@ -110,33 +98,19 @@ pub(in crate::ui) fn preview_image_object_fit_legacy(
         let cover = image_cell(cx, "Cover", image, fret_core::ViewportFit::Cover);
 
         let header = cx.text(title);
-        let grid = stack::hstack(
-            cx,
-            stack::HStackProps::default()
+        let grid = ui::h_flex(|_cx| vec![stretch, contain, cover])
                 .gap(Space::N4)
                 .items_start()
-                .layout(LayoutRefinement::default().w_full()),
-            |_cx| vec![stretch, contain, cover],
-        );
+                .layout(LayoutRefinement::default().w_full()).into_element(cx);
 
-        stack::vstack(
-            cx,
-            stack::VStackProps::default()
+        ui::v_flex(|_cx| vec![header, grid])
                 .gap(Space::N3)
                 .items_start()
-                .layout(LayoutRefinement::default().w_full()),
-            |_cx| vec![header, grid],
-        )
+                .layout(LayoutRefinement::default().w_full()).into_element(cx)
     };
 
     let mapping = {
-        let body = stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .gap(Space::N6)
-                .items_start()
-                .layout(LayoutRefinement::default().w_full()),
-            |cx| {
+        let body = ui::v_flex(|cx| {
                 vec![
                     row(
                         cx,
@@ -154,8 +128,10 @@ pub(in crate::ui) fn preview_image_object_fit_legacy(
                         square_image.clone(),
                     ),
                 ]
-            },
-        );
+            })
+                .gap(Space::N6)
+                .items_start()
+                .layout(LayoutRefinement::default().w_full()).into_element(cx);
         section(cx, "SceneOp::Image fit mapping", body)
     };
 
@@ -181,32 +157,18 @@ pub(in crate::ui) fn preview_image_object_fit_legacy(
             let cover = image_cell_opt(cx, "Cover", image, fret_core::ViewportFit::Cover);
 
             let header = cx.text(title);
-            let grid = stack::hstack(
-                cx,
-                stack::HStackProps::default()
+            let grid = ui::h_flex(|_cx| vec![stretch, contain, cover])
                     .gap(Space::N4)
                     .items_start()
-                    .layout(LayoutRefinement::default().w_full()),
-                |_cx| vec![stretch, contain, cover],
-            );
+                    .layout(LayoutRefinement::default().w_full()).into_element(cx);
 
-            stack::vstack(
-                cx,
-                stack::VStackProps::default()
+            ui::v_flex(|_cx| vec![header, grid])
                     .gap(Space::N3)
                     .items_start()
-                    .layout(LayoutRefinement::default().w_full()),
-                |_cx| vec![header, grid],
-            )
+                    .layout(LayoutRefinement::default().w_full()).into_element(cx)
         };
 
-        let body = stack::vstack(
-                cx,
-                stack::VStackProps::default()
-                    .gap(Space::N4)
-                    .items_start()
-                    .layout(LayoutRefinement::default().w_full()),
-                |cx| {
+        let body = ui::v_flex(|cx| {
                     vec![
                         cx.text("Loads PNG bytes via `ImageSource` → decode (background) → `ImageAssetCache` → ImageId."),
                         status,
@@ -236,61 +198,43 @@ pub(in crate::ui) fn preview_image_object_fit_legacy(
                                 .into_element(cx)
                                 .test_id("ui-gallery-image-sampling-nearest");
 
-                            let grid = stack::hstack(
-                                cx,
-                                stack::HStackProps::default()
+                            let grid = ui::h_flex(move |cx| {
+                                    vec![
+                                        ui::v_stack(move |cx| vec![cx.text("Linear (explicit)"), linear])
+                                                .gap(Space::N2)
+                                                .items_start()
+                                                .layout(LayoutRefinement::default()).into_element(cx),
+                                        ui::v_stack(move |cx| vec![cx.text("Nearest (opt-in)"), nearest])
+                                                .gap(Space::N2)
+                                                .items_start()
+                                                .layout(LayoutRefinement::default()).into_element(cx),
+                                    ]
+                                })
                                     .gap(Space::N4)
                                     .items_start()
-                                    .layout(LayoutRefinement::default().w_full()),
-                                move |cx| {
-                                    vec![
-                                        stack::vstack(
-                                            cx,
-                                            stack::VStackProps::default()
-                                                .gap(Space::N2)
-                                                .items_start()
-                                                .layout(LayoutRefinement::default()),
-                                            move |cx| vec![cx.text("Linear (explicit)"), linear],
-                                        ),
-                                        stack::vstack(
-                                            cx,
-                                            stack::VStackProps::default()
-                                                .gap(Space::N2)
-                                                .items_start()
-                                                .layout(LayoutRefinement::default()),
-                                            move |cx| vec![cx.text("Nearest (opt-in)"), nearest],
-                                        ),
-                                    ]
-                                },
-                            );
+                                    .layout(LayoutRefinement::default().w_full()).into_element(cx);
 
-                            stack::vstack(
-                                cx,
-                                stack::VStackProps::default()
+                            ui::v_flex(move |cx| {
+                                    vec![cx.text("Sampling hints (16×16 → 160×160)"), grid]
+                                })
                                     .gap(Space::N3)
                                     .items_start()
-                                    .layout(LayoutRefinement::default().w_full()),
-                                move |cx| {
-                                    vec![cx.text("Sampling hints (16×16 → 160×160)"), grid]
-                                },
-                            )
+                                    .layout(LayoutRefinement::default().w_full()).into_element(cx)
                         },
                     ]
-                },
-            )
+                })
+                    .gap(Space::N4)
+                    .items_start()
+                    .layout(LayoutRefinement::default().w_full()).into_element(cx)
             .test_id("ui-gallery-image-object-fit-image-source-demo");
 
         section(cx, "Ecosystem ImageSource (bytes decode)", body)
     } else {
         let note = cx.text("ImageSource demo assets missing (expected UiGalleryDriver init).");
-        let body = stack::vstack(
-            cx,
-            stack::VStackProps::default()
+        let body = ui::v_flex(|_cx| vec![note])
                 .gap(Space::N2)
                 .items_start()
-                .layout(LayoutRefinement::default().w_full()),
-            |_cx| vec![note],
-        )
+                .layout(LayoutRefinement::default().w_full()).into_element(cx)
         .test_id("ui-gallery-image-object-fit-image-source-demo");
         section(cx, "Ecosystem ImageSource (bytes decode)", body)
     };
@@ -328,26 +272,18 @@ pub(in crate::ui) fn preview_image_object_fit_legacy(
             .into_element(cx)
             .test_id("ui-gallery-image-object-fit-intrinsic-tall");
 
-        let body = stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .gap(Space::N3)
-                .items_start()
-                .layout(LayoutRefinement::default().w_full()),
-            |cx| {
+        let body = ui::v_flex(|cx| {
                 vec![
                     header,
-                    stack::hstack(
-                        cx,
-                        stack::HStackProps::default()
+                    ui::h_flex(|_cx| vec![wide_intrinsic, tall_intrinsic])
                             .gap(Space::N4)
                             .items_start()
-                            .layout(LayoutRefinement::default().w_full()),
-                        |_cx| vec![wide_intrinsic, tall_intrinsic],
-                    ),
+                            .layout(LayoutRefinement::default().w_full()).into_element(cx),
                 ]
-            },
-        );
+            })
+                .gap(Space::N3)
+                .items_start()
+                .layout(LayoutRefinement::default().w_full()).into_element(cx);
         section(cx, "Intrinsic aspect ratio (metadata)", body)
     };
 
@@ -363,14 +299,10 @@ pub(in crate::ui) fn preview_image_object_fit_legacy(
             .into_element(cx)
             .test_id("ui-gallery-image-object-fit-streaming");
 
-        let body = stack::vstack(
-            cx,
-            stack::VStackProps::default()
+        let body = ui::v_flex(|_cx| vec![note, image])
                 .gap(Space::N3)
                 .items_start()
-                .layout(LayoutRefinement::default().w_full()),
-            |_cx| vec![note, image],
-        );
+                .layout(LayoutRefinement::default().w_full()).into_element(cx);
         section(cx, "Streaming updates", body)
     };
 
@@ -419,26 +351,18 @@ pub(in crate::ui) fn preview_image_object_fit_legacy(
                     "tall → cover"
                 });
 
-                let row = stack::hstack(
-                    cx,
-                    stack::HStackProps::default()
-                        .gap(Space::N3)
-                        .items_center()
-                        .layout(LayoutRefinement::default().w_full()),
-                    |cx| {
+                let row = ui::h_flex(|cx| {
                         vec![
                             thumb,
-                            stack::vstack(
-                                cx,
-                                stack::VStackProps::default()
+                            ui::v_flex(|_cx| vec![title, subtitle])
                                     .gap(Space::N1)
                                     .items_start()
-                                    .layout(LayoutRefinement::default().w_full().min_w_0()),
-                                |_cx| vec![title, subtitle],
-                            ),
+                                    .layout(LayoutRefinement::default().w_full().min_w_0()).into_element(cx),
                         ]
-                    },
-                );
+                    })
+                        .gap(Space::N3)
+                        .items_center()
+                        .layout(LayoutRefinement::default().w_full()).into_element(cx);
 
                 cx.container(
                     decl_style::container_props(
@@ -463,22 +387,10 @@ pub(in crate::ui) fn preview_image_object_fit_legacy(
             host.request_redraw(action_cx.window);
         });
 
-        let body = stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .gap(Space::N3)
-                .items_start()
-                .layout(LayoutRefinement::default().w_full()),
-            |cx| {
+        let body = ui::v_flex(|cx| {
                 vec![
                     cx.text("Virtualized thumbnails list (alternating wide/tall sources)."),
-                    stack::hstack(
-                        cx,
-                        stack::HStackProps::default()
-                            .gap(Space::N2)
-                            .items_center()
-                            .layout(LayoutRefinement::default()),
-                        |cx| {
+                    ui::h_row(|cx| {
                             vec![
                                 shadcn::Button::new("Jump 80")
                                     .variant(shadcn::ButtonVariant::Outline)
@@ -487,22 +399,22 @@ pub(in crate::ui) fn preview_image_object_fit_legacy(
                                     .on_activate(on_jump_80)
                                     .into_element(cx),
                             ]
-                        },
-                    ),
+                        })
+                            .gap(Space::N2)
+                            .items_center()
+                            .layout(LayoutRefinement::default()).into_element(cx),
                     list.test_id("ui-gallery-image-object-fit-virtual-list"),
                 ]
-            },
-        );
+            })
+                .gap(Space::N3)
+                .items_start()
+                .layout(LayoutRefinement::default().w_full()).into_element(cx);
 
         section(cx, "Thumbnails (VirtualList)", body)
     };
 
-    vec![stack::vstack(
-        cx,
-        stack::VStackProps::default()
+    vec![ui::v_flex(|_cx| vec![mapping, image_source_demo, intrinsic, streaming, thumbnails])
             .gap(Space::N8)
             .items_start()
-            .layout(LayoutRefinement::default().w_full()),
-        |_cx| vec![mapping, image_source_demo, intrinsic, streaming, thumbnails],
-    )]
+            .layout(LayoutRefinement::default().w_full()).into_element(cx)]
 }

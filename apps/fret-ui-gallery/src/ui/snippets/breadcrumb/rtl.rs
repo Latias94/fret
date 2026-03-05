@@ -72,13 +72,12 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                                                 Some(fret_ui_kit::ColorRef::Color(color)),
                                             );
 
-                                            vec![stack::hstack(
-                                                cx,
-                                                stack::HStackProps::default()
-                                                    .gap_x(Space::N1)
-                                                    .items_center(),
-                                                move |_cx| vec![label, chevron],
-                                            )]
+                                            vec![
+                                                ui::h_row(move |_cx| vec![label, chevron])
+                                                    .gap(Space::N1)
+                                                    .items_center()
+                                                    .into_element(cx),
+                                            ]
                                         })
                                     },
                                     |_cx| {

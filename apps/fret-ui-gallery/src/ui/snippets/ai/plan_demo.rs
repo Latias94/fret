@@ -5,7 +5,7 @@ use fret_icons::ids;
 use fret_runtime::Model;
 use fret_ui::Invalidation;
 use fret_ui_ai as ui_ai;
-use fret_ui_kit::declarative::stack;
+use fret_ui_kit::ui;
 use fret_ui_kit::{LayoutRefinement, Space};
 use fret_ui_shadcn::{Button, ButtonSize, ButtonVariant, Kbd, prelude::*};
 
@@ -40,26 +40,17 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
             let marker = open.then(|| cx.text("").test_id("ui-ai-plan-open-true"));
 
             let file_icon = icon::icon_with(cx, ids::ui::FILE, Some(Px(16.0)), None);
-            let title_row = stack::hstack(
-                cx,
-                stack::HStackProps::default()
-                    .layout(LayoutRefinement::default().w_full().min_w_0().mb(Space::N4))
-                    .items_center()
-                    .gap(Space::N2),
-                move |cx| {
+            let title_row = ui::h_flex(move |cx| {
                     vec![
                         file_icon,
                         ui_ai::PlanTitle::new("Rewrite AI Elements to SolidJS").into_element(cx),
                     ]
-                },
-            );
+                })
+                    .layout(LayoutRefinement::default().w_full().min_w_0().mb(Space::N4))
+                    .items_center()
+                    .gap(Space::N2).into_element(cx);
 
-            let left = stack::vstack(
-                cx,
-                stack::VStackProps::default()
-                    .layout(LayoutRefinement::default().w_full().min_w_0())
-                    .gap(Space::N2),
-                move |cx| {
+            let left = ui::v_flex(move |cx| {
                     vec![
                         title_row,
                         ui_ai::PlanDescription::new(
@@ -69,8 +60,9 @@ updating all 29 components and their test suite.",
                         )
                         .into_element(cx),
                     ]
-                },
-            );
+                })
+                    .layout(LayoutRefinement::default().w_full().min_w_0())
+                    .gap(Space::N2).into_element(cx);
 
             vec![
                 ui_ai::PlanHeader::new([
@@ -82,19 +74,9 @@ updating all 29 components and their test suite.",
                 .into_element(cx),
                 marker.unwrap_or_else(|| cx.text("")),
                 ui_ai::PlanContent::new([
-                    stack::vstack(
-                        cx,
-                        stack::VStackProps::default()
-                            .layout(LayoutRefinement::default().w_full().min_w_0())
-                            .gap(Space::N4),
-                        move |cx| {
+                    ui::v_flex(move |cx| {
                             vec![
-                                stack::vstack(
-                                    cx,
-                                    stack::VStackProps::default()
-                                        .layout(LayoutRefinement::default().w_full().min_w_0())
-                                        .gap(Space::N2),
-                                    move |cx| {
+                                ui::v_flex(move |cx| {
                                         vec![
                                             ui::text("Overview")
                                                 .font_semibold()
@@ -108,29 +90,16 @@ library from React to SolidJS, ensuring compatibility and maintaining existing f
                                             .wrap(TextWrap::Word)
                                             .into_element(cx),
                                         ]
-                                    },
-                                ),
-                                stack::vstack(
-                                    cx,
-                                    stack::VStackProps::default()
+                                    })
                                         .layout(LayoutRefinement::default().w_full().min_w_0())
-                                        .gap(Space::N2),
-                                    move |cx| {
+                                        .gap(Space::N2).into_element(cx),
+                                ui::v_flex(move |cx| {
                                         vec![
                                             ui::text("Key Steps")
                                                 .font_semibold()
                                                 .mb(Space::N2)
                                                 .into_element(cx),
-                                            stack::vstack(
-                                                cx,
-                                                stack::VStackProps::default()
-                                                    .layout(
-                                                        LayoutRefinement::default()
-                                                            .w_full()
-                                                            .min_w_0(),
-                                                    )
-                                                    .gap(Space::N1),
-                                                move |cx| {
+                                            ui::v_flex(move |cx| {
                                                     let bullets = [
                                                         "Set up SolidJS project structure",
                                                         "Install solid-js/compat for React compatibility",
@@ -147,14 +116,21 @@ library from React to SolidJS, ensuring compatibility and maintaining existing f
                                                                 .into_element(cx)
                                                         })
                                                         .collect::<Vec<_>>()
-                                                },
-                                            ),
+                                                })
+                                                    .layout(
+                                                        LayoutRefinement::default()
+                                                            .w_full()
+                                                            .min_w_0(),
+                                                    )
+                                                    .gap(Space::N1).into_element(cx),
                                         ]
-                                    },
-                                ),
+                                    })
+                                        .layout(LayoutRefinement::default().w_full().min_w_0())
+                                        .gap(Space::N2).into_element(cx),
                             ]
-                        },
-                    ),
+                        })
+                            .layout(LayoutRefinement::default().w_full().min_w_0())
+                            .gap(Space::N4).into_element(cx),
                 ])
                 .test_id("ui-ai-plan-content-marker")
                 .into_element(cx),
@@ -181,23 +157,20 @@ library from React to SolidJS, ensuring compatibility and maintaining existing f
             ]
         });
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .layout(LayoutRefinement::default().w_full().min_w_0())
-            .gap(Space::N4),
-        move |cx| {
-            vec![
-                cx.text("Plan (AI Elements)"),
-                cx.text("Toggle the chevron button to expand/collapse."),
-                Button::new("Toggle streaming")
-                    .variant(ButtonVariant::Secondary)
-                    .size(ButtonSize::Sm)
-                    .toggle_model(streaming.clone())
-                    .into_element(cx),
-                body,
-            ]
-        },
-    )
+    ui::v_flex(move |cx| {
+        vec![
+            cx.text("Plan (AI Elements)"),
+            cx.text("Toggle the chevron button to expand/collapse."),
+            Button::new("Toggle streaming")
+                .variant(ButtonVariant::Secondary)
+                .size(ButtonSize::Sm)
+                .toggle_model(streaming.clone())
+                .into_element(cx),
+            body,
+        ]
+    })
+    .layout(LayoutRefinement::default().w_full().min_w_0())
+    .gap(Space::N4)
+    .into_element(cx)
 }
 // endregion: example

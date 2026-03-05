@@ -9,24 +9,16 @@ pub(in crate::ui) fn preview_scroll_area_legacy(
     cx: &mut ElementContext<'_, App>,
 ) -> Vec<AnyElement> {
     let centered = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
-        stack::hstack(
-            cx,
-            stack::HStackProps::default()
+        ui::h_flex(move |_cx| [body])
                 .layout(LayoutRefinement::default().w_full())
-                .justify_center(),
-            move |_cx| [body],
-        )
+                .justify_center().into_element(cx)
     };
 
     let section = |cx: &mut ElementContext<'_, App>, title: &'static str, body: AnyElement| {
-        stack::vstack(
-            cx,
-            stack::VStackProps::default()
+        ui::v_flex(move |cx| vec![shadcn::typography::h4(cx, title), body])
                 .gap(Space::N2)
                 .items_start()
-                .layout(LayoutRefinement::default().w_full()),
-            move |cx| vec![shadcn::typography::h4(cx, title), body],
-        )
+                .layout(LayoutRefinement::default().w_full()).into_element(cx)
     };
 
     let shell = |cx: &mut ElementContext<'_, App>, layout: LayoutRefinement, body: AnyElement| {
@@ -45,12 +37,7 @@ pub(in crate::ui) fn preview_scroll_area_legacy(
             .map(|idx| Arc::<str>::from(format!("v1.2.0-beta.{:02}", 51 - idx)))
             .collect();
 
-        let content = stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .gap(Space::N2)
-                .layout(LayoutRefinement::default().w_full()),
-            |cx| {
+        let content = ui::v_flex(|cx| {
                 let mut rows: Vec<AnyElement> = Vec::with_capacity(versions.len() * 2 + 1);
                 rows.push(shadcn::typography::small(cx, "Tags"));
                 for tag in versions {
@@ -62,8 +49,9 @@ pub(in crate::ui) fn preview_scroll_area_legacy(
                     );
                 }
                 rows
-            },
-        );
+            })
+                .gap(Space::N2)
+                .layout(LayoutRefinement::default().w_full()).into_element(cx);
 
         let scroll = shadcn::ScrollArea::new([content])
             .axis(fret_ui::element::ScrollAxis::Y)
@@ -81,13 +69,7 @@ pub(in crate::ui) fn preview_scroll_area_legacy(
     };
 
     let horizontal = {
-        let rail = stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .gap(Space::N4)
-                .items_start()
-                .layout(LayoutRefinement::default().w_px(Px(760.0))),
-            |cx| {
+        let rail = ui::h_row(|cx| {
                 let artists = [
                     "Ornella Binni",
                     "Tom Byrom",
@@ -122,8 +104,10 @@ pub(in crate::ui) fn preview_scroll_area_legacy(
                         .into_element(cx)
                     })
                     .collect::<Vec<_>>()
-            },
-        );
+            })
+                .gap(Space::N4)
+                .items_start()
+                .layout(LayoutRefinement::default().w_px(Px(760.0))).into_element(cx);
 
         let scroll = shadcn::ScrollArea::new([rail])
             .axis(fret_ui::element::ScrollAxis::X)
@@ -145,12 +129,7 @@ pub(in crate::ui) fn preview_scroll_area_legacy(
             cx,
             fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
             |cx| {
-                let content = stack::vstack(
-                    cx,
-                    stack::VStackProps::default()
-                        .gap(Space::N2)
-                        .layout(LayoutRefinement::default().w_full()),
-                    |cx| {
+                let content = ui::v_flex(|cx| {
                         let mut rows: Vec<AnyElement> =
                             vec![shadcn::typography::small(cx, "العلامات")];
                         for idx in 1..=40 {
@@ -162,8 +141,9 @@ pub(in crate::ui) fn preview_scroll_area_legacy(
                             );
                         }
                         rows
-                    },
-                );
+                    })
+                        .gap(Space::N2)
+                        .layout(LayoutRefinement::default().w_full()).into_element(cx);
 
                 shadcn::ScrollArea::new([content])
                     .axis(fret_ui::element::ScrollAxis::Y)
@@ -184,8 +164,8 @@ pub(in crate::ui) fn preview_scroll_area_legacy(
 
     vec![
         cx.text("Scrollable region with custom scrollbars and nested content."),
-        stack::vstack(cx, stack::VStackProps::default().gap(Space::N6), |_cx| {
+        ui::v_stack(|_cx| {
             vec![demo, horizontal, rtl]
-        }),
+        }).gap(Space::N6).into_element(cx),
     ]
 }

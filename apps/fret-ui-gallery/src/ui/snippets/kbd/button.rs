@@ -24,11 +24,10 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         .into_element(cx)
         .test_id("ui-gallery-kbd-button-cancel");
 
-    stack::hstack(
-        cx,
-        stack::HStackProps::default().gap(Space::N4).items_center(),
-        move |_cx| vec![accept, cancel],
-    )
-    .test_id("ui-gallery-kbd-button")
+    ui::h_row(move |_cx| vec![accept, cancel])
+        .gap(Space::N4)
+        .items_center()
+        .into_element(cx)
+        .test_id("ui-gallery-kbd-button")
 }
 // endregion: example

@@ -154,12 +154,7 @@ pub(in crate::ui) fn preview_virtual_list_torture(
         )
     });
 
-    let header = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .layout(LayoutRefinement::default().w_full())
-            .gap(Space::N2),
-        |cx| {
+    let header = ui::v_flex(|cx| {
             let mut out = vec![
                 cx.text("Goal: deterministic virtualization torture surface (10k rows + scroll-to-item + inline edit)."),
                 cx.text(if retained_host {
@@ -191,8 +186,9 @@ pub(in crate::ui) fn preview_virtual_list_torture(
             }
 
             out
-        },
-    );
+        })
+            .layout(LayoutRefinement::default().w_full())
+            .gap(Space::N2).into_element(cx);
 
     let list_layout = fret_ui::element::LayoutStyle {
         size: fret_ui::element::SizeStyle {
@@ -385,14 +381,11 @@ pub(in crate::ui) fn preview_virtual_list_torture(
                             props.placeholder = Some(Arc::<str>::from("Type to edit…"));
                             props.layout.size.width = fret_ui::element::Length::Fill;
 
-                            stack::hstack(
-                                cx,
-                                stack::HStackProps::default()
-                                    .layout(LayoutRefinement::default().w_full())
-                                    .gap(Space::N2)
-                                    .items_center(),
-                                |cx| [cx.text_input(props)],
-                            )
+                            ui::h_flex(|cx| [cx.text_input(props)])
+                                .layout(LayoutRefinement::default().w_full())
+                                .gap(Space::N2)
+                                .items_center()
+                                .into_element(cx)
                         } else {
                             let edit_button = shadcn::Button::new("Edit")
                                 .variant(shadcn::ButtonVariant::Outline)
@@ -401,11 +394,10 @@ pub(in crate::ui) fn preview_virtual_list_torture(
                                 .on_activate(on_select_row)
                                 .into_element(cx);
 
-                            stack::hstack(
-                                cx,
-                                stack::HStackProps::default().gap(Space::N2).items_center(),
-                                |_cx| [edit_button],
-                            )
+                            ui::h_row(|_cx| [edit_button])
+                                .gap(Space::N2)
+                                .items_center()
+                                .into_element(cx)
                         };
 
                         let mut container_props = decl_style::container_props(
@@ -418,14 +410,11 @@ pub(in crate::ui) fn preview_virtual_list_torture(
                         container_props.layout.overflow = fret_ui::element::Overflow::Clip;
 
                         cx.container(container_props, |cx| {
-                            [stack::hstack(
-                                cx,
-                                stack::HStackProps::default()
-                                    .layout(LayoutRefinement::default().w_full().h_full())
-                                    .gap(Space::N2)
-                                    .items_center(),
-                                |_cx| [row_label, right],
-                            )]
+                            [ui::h_flex(|_cx| [row_label, right])
+                                .layout(LayoutRefinement::default().w_full().h_full())
+                                .gap(Space::N2)
+                                .items_center()
+                                .into_element(cx)]
                         })
                     };
 
@@ -509,14 +498,11 @@ pub(in crate::ui) fn preview_virtual_list_torture(
                                 props.placeholder = Some(Arc::<str>::from("Type to edit…"));
                                 props.layout.size.width = fret_ui::element::Length::Fill;
 
-                                stack::hstack(
-                                    cx,
-                                    stack::HStackProps::default()
-                                        .layout(LayoutRefinement::default().w_full())
-                                        .gap(Space::N2)
-                                        .items_center(),
-                                    |cx| vec![cx.text_input(props)],
-                                )
+                                ui::h_flex(|cx| vec![cx.text_input(props)])
+                                    .layout(LayoutRefinement::default().w_full())
+                                    .gap(Space::N2)
+                                    .items_center()
+                                    .into_element(cx)
                             } else {
                                 let edit_button = shadcn::Button::new("Edit")
                                     .variant(shadcn::ButtonVariant::Outline)
@@ -525,11 +511,10 @@ pub(in crate::ui) fn preview_virtual_list_torture(
                                     .on_activate(on_select_row)
                                     .into_element(cx);
 
-                                stack::hstack(
-                                    cx,
-                                    stack::HStackProps::default().gap(Space::N2).items_center(),
-                                    |_cx| vec![edit_button],
-                                )
+                                ui::h_row(|_cx| vec![edit_button])
+                                    .gap(Space::N2)
+                                    .items_center()
+                                    .into_element(cx)
                             };
 
                             let mut container_props = decl_style::container_props(
@@ -544,14 +529,13 @@ pub(in crate::ui) fn preview_virtual_list_torture(
                             container_props.layout.overflow = fret_ui::element::Overflow::Clip;
 
                             cx.container(container_props, |cx| {
-                                vec![stack::hstack(
-                                    cx,
-                                    stack::HStackProps::default()
+                                vec![
+                                    ui::h_flex(|_cx| vec![row_label, right])
                                         .layout(LayoutRefinement::default().w_full().h_full())
                                         .gap(Space::N2)
-                                        .items_center(),
-                                    |_cx| vec![row_label, right],
-                                )]
+                                        .items_center()
+                                        .into_element(cx),
+                                ]
                             })
                         };
 
@@ -579,13 +563,10 @@ pub(in crate::ui) fn preview_virtual_list_torture(
         },
     );
 
-    let root = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .layout(LayoutRefinement::default().w_full())
-            .gap(Space::N3),
-        |_cx| vec![header, list],
-    );
+    let root = ui::v_flex(|_cx| vec![header, list])
+        .layout(LayoutRefinement::default().w_full())
+        .gap(Space::N3)
+        .into_element(cx);
 
     let root = root.attach_semantics(
         SemanticsDecoration::default()

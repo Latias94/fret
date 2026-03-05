@@ -42,41 +42,37 @@ pub(super) fn compose_body(
     cx: &mut ElementContext<'_, App>,
     widgets: OverlayWidgets,
 ) -> AnyElement {
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N2)
-            .layout(LayoutRefinement::default().w_full()),
-        |cx| {
-            let gap =
-                cx.with_theme(|theme| fret_ui_kit::MetricRef::space(Space::N2).resolve(theme));
+    ui::v_flex(|cx| {
+        let gap = cx.with_theme(|theme| fret_ui_kit::MetricRef::space(Space::N2).resolve(theme));
 
-            vec![
-                row_end(cx, gap, vec![widgets.underlay]),
-                row(
-                    cx,
-                    gap,
-                    vec![
-                        widgets.dropdown,
-                        widgets.context_menu,
-                        widgets.overlay_reset,
-                    ],
-                ),
-                row_end(cx, gap, vec![widgets.context_menu_edge]),
-                row(
-                    cx,
-                    gap,
-                    vec![
-                        widgets.tooltip,
-                        widgets.hover_card,
-                        widgets.popover,
-                        widgets.dialog,
-                        widgets.dialog_glass,
-                    ],
-                ),
-                row(cx, gap, vec![widgets.alert_dialog, widgets.sheet]),
-                widgets.portal_geometry,
-            ]
-        },
-    )
+        vec![
+            row_end(cx, gap, vec![widgets.underlay]),
+            row(
+                cx,
+                gap,
+                vec![
+                    widgets.dropdown,
+                    widgets.context_menu,
+                    widgets.overlay_reset,
+                ],
+            ),
+            row_end(cx, gap, vec![widgets.context_menu_edge]),
+            row(
+                cx,
+                gap,
+                vec![
+                    widgets.tooltip,
+                    widgets.hover_card,
+                    widgets.popover,
+                    widgets.dialog,
+                    widgets.dialog_glass,
+                ],
+            ),
+            row(cx, gap, vec![widgets.alert_dialog, widgets.sheet]),
+            widgets.portal_geometry,
+        ]
+    })
+    .gap(Space::N2)
+    .layout(LayoutRefinement::default().w_full())
+    .into_element(cx)
 }

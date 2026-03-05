@@ -169,12 +169,7 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
                                             ..Default::default()
                                         },
                                         move |cx| {
-                                            vec![stack::vstack(
-                                                cx,
-                                                stack::VStackProps::default()
-                                                    .gap(Space::N1)
-                                                    .items_stretch(),
-                                                move |cx| {
+                                            vec![ui::v_stack(move |cx| {
                                                     overflow_items
                                                         .iter()
                                                         .map(|(label, _href)| {
@@ -182,8 +177,9 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
                                                                 .into_element(cx)
                                                         })
                                                         .collect::<Vec<_>>()
-                                                },
-                                            )]
+                                                })
+                                                    .gap(Space::N1)
+                                                    .items_stretch().into_element(cx)]
                                         },
                                     ),
                                     shadcn::DrawerFooter::new([shadcn::Button::new("Close")

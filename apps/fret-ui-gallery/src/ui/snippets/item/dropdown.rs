@@ -84,19 +84,16 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
             },
         );
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N6)
-            .items_center()
-            .layout(
-                LayoutRefinement::default()
-                    .w_full()
-                    .min_w_0()
-                    .min_h(Px(256.0)),
-            ),
-        |_cx| vec![menu],
-    )
-    .test_id("ui-gallery-item-dropdown")
+    ui::v_flex(|_cx| vec![menu])
+        .gap(Space::N6)
+        .items_center()
+        .layout(
+            LayoutRefinement::default()
+                .w_full()
+                .min_w_0()
+                .min_h(Px(256.0)),
+        )
+        .into_element(cx)
+        .test_id("ui-gallery-item-dropdown")
 }
 // endregion: example

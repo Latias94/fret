@@ -178,7 +178,7 @@ let ok = Button::new("OK")
 ### Layout-Only Cookbook (Stack / Flex)
 
 Layout-only code can use `ui::h_flex` / `ui::v_flex` for a patchable builder (so layout nodes participate in the
-same fluent `ui()` vocabulary as components). `stack::hstack/vstack` remain available as a lower-level helper.
+same fluent `ui()` vocabulary as components). For shrink-wrapping rows/columns, prefer `ui::h_row` / `ui::v_stack`.
 
 Horizontal row:
 

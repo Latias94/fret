@@ -2,6 +2,7 @@ use fret_app::{App, Model};
 use fret_ui::ElementContext;
 use fret_ui::element::AnyElement;
 use fret_ui::element::{Length, TextProps};
+use fret_ui_kit::ui;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 use std::sync::Arc;
 
@@ -81,118 +82,94 @@ pub(super) fn push_settings_sheet(
                     .refine_layout(LayoutRefinement::default().w_full())
                     .into_element(cx);
 
-                    let body = stack::vstack(
-                        cx,
-                        stack::VStackProps::default()
-                            .layout(LayoutRefinement::default().w_full())
-                            .gap(Space::N4),
-                        |cx| {
-                            vec![
-                                stack::vstack(
-                                    cx,
-                                    stack::VStackProps::default()
-                                        .layout(LayoutRefinement::default().w_full())
-                                        .gap(Space::N2),
-                                    |cx| {
+                    let body = ui::v_stack(|cx| {
+                        vec![
+                            ui::v_stack(|cx| {
+                                vec![
+                                    shadcn::SheetHeader::new(vec![
+                                        shadcn::SheetTitle::new("Settings").into_element(cx),
+                                        shadcn::SheetDescription::new(
+                                            "Menu bar presentation (OS vs in-window) + chrome toggles.",
+                                        )
+                                        .into_element(cx),
+                                    ])
+                                    .into_element(cx),
+                                    shadcn::Separator::new().into_element(cx),
+                                    cx.text("Menu bar surfaces"),
+                                    os_select,
+                                    in_window_select,
+                                    cx.text("Chrome"),
+                                    ui::h_row(|cx| {
                                         vec![
-                                            shadcn::SheetHeader::new(vec![
-                                                shadcn::SheetTitle::new("Settings")
-                                                    .into_element(cx),
-                                                shadcn::SheetDescription::new(
-                                                    "Menu bar presentation (OS vs in-window) + chrome toggles.",
-                                                )
-                                                .into_element(cx),
-                                            ])
+                                            shadcn::Switch::new(
+                                                chrome_show_workspace_tab_strip.clone(),
+                                            )
+                                            .a11y_label("Show workspace tab strip")
                                             .into_element(cx),
-                                            shadcn::Separator::new().into_element(cx),
-                                            cx.text("Menu bar surfaces"),
-                                            os_select,
-                                            in_window_select,
-                                            cx.text("Chrome"),
-                                            stack::hstack(
+                                            flex_row_wrap_label(cx, "Workspace tabs in the top bar"),
+                                        ]
+                                    })
+                                    .gap(Space::N2)
+                                    .items_center()
+                                    .into_element(cx),
+                                    cx.text("Command availability (debug)"),
+                                    ui::h_row(|cx| {
+                                        vec![
+                                            shadcn::Switch::new(settings_edit_can_undo.clone())
+                                                .a11y_label("Can Undo")
+                                                .disabled(true)
+                                                .into_element(cx),
+                                            flex_row_wrap_label(
                                                 cx,
-                                                stack::HStackProps::default()
-                                                    .gap(Space::N2)
-                                                    .items_center(),
-                                                |cx| {
-                                                    vec![
-                                                        shadcn::Switch::new(
-                                                            chrome_show_workspace_tab_strip
-                                                                .clone(),
-                                                        )
-                                                        .a11y_label("Show workspace tab strip")
-                                                        .into_element(cx),
-                                                        flex_row_wrap_label(
-                                                            cx,
-                                                            "Workspace tabs in the top bar",
-                                                        ),
-                                                    ]
-                                                },
-                                            ),
-                                            cx.text("Command availability (debug)"),
-                                            stack::hstack(
-                                                cx,
-                                                stack::HStackProps::default()
-                                                    .gap(Space::N2)
-                                                    .items_center(),
-                                                |cx| {
-                                                    vec![
-                                                        shadcn::Switch::new(
-                                                            settings_edit_can_undo.clone(),
-                                                        )
-                                                        .a11y_label("Can Undo")
-                                                        .disabled(true)
-                                                        .into_element(cx),
-                                                        flex_row_wrap_label(
-                                                            cx,
-                                                            "edit.can_undo (enables OS/in-window Undo)",
-                                                        ),
-                                                    ]
-                                                },
-                                            ),
-                                            stack::hstack(
-                                                cx,
-                                                stack::HStackProps::default()
-                                                    .gap(Space::N2)
-                                                    .items_center(),
-                                                |cx| {
-                                                    vec![
-                                                        shadcn::Switch::new(
-                                                            settings_edit_can_redo.clone(),
-                                                        )
-                                                        .a11y_label("Can Redo")
-                                                        .disabled(true)
-                                                        .into_element(cx),
-                                                        flex_row_wrap_label(
-                                                            cx,
-                                                            "edit.can_redo (enables OS/in-window Redo)",
-                                                        ),
-                                                    ]
-                                                },
+                                                "edit.can_undo (enables OS/in-window Undo)",
                                             ),
                                         ]
-                                    },
-                                ),
-                                shadcn::Separator::new().into_element(cx),
-                                shadcn::SheetFooter::new(vec![
-                                    shadcn::Button::new("Apply (in memory)")
-                                        .variant(shadcn::ButtonVariant::Secondary)
-                                        .test_id("ui-gallery-settings-apply")
-                                        .on_click(CMD_APP_SETTINGS_APPLY)
-                                        .into_element(cx),
-                                    shadcn::Button::new("Write project .fret/settings.json")
-                                        .variant(shadcn::ButtonVariant::Outline)
-                                        .on_click(CMD_APP_SETTINGS_WRITE_PROJECT)
-                                        .into_element(cx),
-                                    shadcn::Button::new("Close")
-                                        .variant(shadcn::ButtonVariant::Ghost)
-                                        .toggle_model(settings_open.clone())
-                                        .into_element(cx),
-                                ])
-                                .into_element(cx),
-                            ]
-                        },
-                    );
+                                    })
+                                    .gap(Space::N2)
+                                    .items_center()
+                                    .into_element(cx),
+                                    ui::h_row(|cx| {
+                                        vec![
+                                            shadcn::Switch::new(settings_edit_can_redo.clone())
+                                                .a11y_label("Can Redo")
+                                                .disabled(true)
+                                                .into_element(cx),
+                                            flex_row_wrap_label(
+                                                cx,
+                                                "edit.can_redo (enables OS/in-window Redo)",
+                                            ),
+                                        ]
+                                    })
+                                    .gap(Space::N2)
+                                    .items_center()
+                                    .into_element(cx),
+                                ]
+                            })
+                            .layout(LayoutRefinement::default().w_full())
+                            .gap(Space::N2)
+                            .into_element(cx),
+                            shadcn::Separator::new().into_element(cx),
+                            shadcn::SheetFooter::new(vec![
+                                shadcn::Button::new("Apply (in memory)")
+                                    .variant(shadcn::ButtonVariant::Secondary)
+                                    .test_id("ui-gallery-settings-apply")
+                                    .on_click(CMD_APP_SETTINGS_APPLY)
+                                    .into_element(cx),
+                                shadcn::Button::new("Write project .fret/settings.json")
+                                    .variant(shadcn::ButtonVariant::Outline)
+                                    .on_click(CMD_APP_SETTINGS_WRITE_PROJECT)
+                                    .into_element(cx),
+                                shadcn::Button::new("Close")
+                                    .variant(shadcn::ButtonVariant::Ghost)
+                                    .toggle_model(settings_open.clone())
+                                    .into_element(cx),
+                            ])
+                            .into_element(cx),
+                        ]
+                    })
+                    .layout(LayoutRefinement::default().w_full())
+                    .gap(Space::N4)
+                    .into_element(cx);
 
                     shadcn::SheetContent::new(vec![body]).into_element(cx)
                 },

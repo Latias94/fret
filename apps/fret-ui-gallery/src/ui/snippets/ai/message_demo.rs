@@ -5,7 +5,7 @@ use fret_runtime::Model;
 use fret_ui::Invalidation;
 use fret_ui::action::OnActivate;
 use fret_ui_ai as ui_ai;
-use fret_ui_kit::declarative::stack;
+use fret_ui_kit::ui;
 use fret_ui_kit::{Justify, LayoutRefinement, Space};
 use fret_ui_shadcn::prelude::*;
 use std::sync::Arc;
@@ -121,12 +121,9 @@ fn streamed_demo() {\n\
 
     let title = cx.text("Message (AI Elements): alignment + bubble + actions + markdown response.");
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .layout(LayoutRefinement::default().w_full().min_w_0())
-            .gap(Space::N4),
-        move |_cx| vec![title, marker, assistant, user],
-    )
+    ui::v_flex(move |_cx| vec![title, marker, assistant, user])
+        .layout(LayoutRefinement::default().w_full().min_w_0())
+        .gap(Space::N4)
+        .into_element(cx)
 }
 // endregion: example

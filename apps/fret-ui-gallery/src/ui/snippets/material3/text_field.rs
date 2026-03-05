@@ -34,24 +34,23 @@ pub fn render<H: UiHost>(
         .get_model_copied(&error, Invalidation::Layout)
         .unwrap_or(false);
 
-    let toggles = stack::hstack(
-        cx,
-        stack::HStackProps::default().gap(Space::N4).items_center(),
-        move |cx| {
-            vec![
-                cx.text("disabled"),
-                material3::Switch::new(disabled.clone())
-                    .a11y_label("Disable text field")
-                    .test_id("ui-gallery-material3-text-field-disabled")
-                    .into_element(cx),
-                cx.text("error"),
-                material3::Switch::new(error.clone())
-                    .a11y_label("Toggle error state")
-                    .test_id("ui-gallery-material3-text-field-error")
-                    .into_element(cx),
-            ]
-        },
-    );
+    let toggles = ui::h_row(move |cx| {
+        vec![
+            cx.text("disabled"),
+            material3::Switch::new(disabled.clone())
+                .a11y_label("Disable text field")
+                .test_id("ui-gallery-material3-text-field-disabled")
+                .into_element(cx),
+            cx.text("error"),
+            material3::Switch::new(error.clone())
+                .a11y_label("Toggle error state")
+                .test_id("ui-gallery-material3-text-field-error")
+                .into_element(cx),
+        ]
+    })
+    .gap(Space::N4)
+    .items_center()
+    .into_element(cx);
 
     let supporting = if error_now {
         "Error: required"
@@ -146,13 +145,7 @@ pub fn render<H: UiHost>(
     .refine_layout(LayoutRefinement::default().w_full().min_w_0())
     .into_element(cx);
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .layout(LayoutRefinement::default().w_full().min_w_0())
-            .gap(Space::N3)
-            .items_start(),
-        |cx| {
+    ui::v_flex(|cx| {
             vec![
                 cx.text(
                     "Material 3 Text Field: outlined + filled variants (token-driven chrome + label/placeholder outcomes).",
@@ -189,8 +182,10 @@ pub fn render<H: UiHost>(
                 .refine_layout(LayoutRefinement::default().w_full().min_w_0())
                 .into_element(cx),
             ]
-        },
-    )
+        })
+            .layout(LayoutRefinement::default().w_full().min_w_0())
+            .gap(Space::N3)
+            .items_start().into_element(cx)
     .into()
 }
 

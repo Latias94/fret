@@ -7,8 +7,8 @@ use fret_runtime::Model;
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::declarative::ElementContextThemeExt;
 use fret_ui_kit::declarative::icon as decl_icon;
-use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::ui;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Space, ui};
 use fret_ui_shadcn::prelude::*;
 use fret_ui_shadcn::{
@@ -220,18 +220,14 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
 
     let frame = cx.container(props, move |_cx| vec![body]);
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .layout(LayoutRefinement::default().w_full().min_w_0())
-            .gap(Space::N4),
-        move |cx| {
+    ui::v_flex(move |cx| {
             vec![
                 cx.text("Prompt Input (AI Elements)"),
                 cx.text("Docs-aligned parts composition: attachments header + tools + model picker + submit."),
                 frame,
             ]
-        },
-    )
+        })
+            .layout(LayoutRefinement::default().w_full().min_w_0())
+            .gap(Space::N4).into_element(cx)
 }
 // endregion: example

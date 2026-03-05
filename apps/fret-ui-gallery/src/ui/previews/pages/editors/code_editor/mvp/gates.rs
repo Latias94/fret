@@ -177,11 +177,10 @@ pub(super) fn a11y_composition_gate(
                 .label("Clear preedit"),
         );
 
-    let controls = stack::hstack(
-        cx,
-        stack::HStackProps::default().gap(Space::N2).items_center(),
-        move |_cx| vec![inject, clear],
-    );
+    let controls = ui::h_row(move |_cx| vec![inject, clear])
+        .gap(Space::N2)
+        .items_center()
+        .into_element(cx);
 
     let platform_controls = {
         let start = cx
@@ -216,22 +215,18 @@ pub(super) fn a11y_composition_gate(
                     .label("IME cancel (empty marked text)"),
             );
 
-        stack::hstack(
-            cx,
-            stack::HStackProps::default().gap(Space::N2).items_center(),
-            move |_cx| vec![start, cancel],
-        )
+        ui::h_row(move |_cx| vec![start, cancel])
+            .gap(Space::N2)
+            .items_center()
+            .into_element(cx)
     };
 
     let panel = gate_panel(cx, theme, gate_editor);
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .layout(LayoutRefinement::default().w_full())
-            .gap(Space::N1),
-        |_cx| vec![controls, platform_controls, panel],
-    )
+    ui::v_flex(|_cx| vec![controls, platform_controls, panel])
+        .layout(LayoutRefinement::default().w_full())
+        .gap(Space::N1)
+        .into_element(cx)
 }
 
 pub(super) fn a11y_selection_wrap_gate(
@@ -328,21 +323,17 @@ pub(super) fn a11y_composition_wrap_gate(
                 .label("Clear preedit (wrap)"),
         );
 
-    let controls = stack::hstack(
-        cx,
-        stack::HStackProps::default().gap(Space::N2).items_center(),
-        move |_cx| vec![inject, clear],
-    );
+    let controls = ui::h_row(move |_cx| vec![inject, clear])
+        .gap(Space::N2)
+        .items_center()
+        .into_element(cx);
 
     let panel = gate_panel(cx, theme, gate_editor);
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .layout(LayoutRefinement::default().w_full())
-            .gap(Space::N1),
-        |_cx| vec![controls, panel],
-    )
+    ui::v_flex(|_cx| vec![controls, panel])
+        .layout(LayoutRefinement::default().w_full())
+        .gap(Space::N1)
+        .into_element(cx)
 }
 
 pub(super) fn a11y_composition_drag_gate(
@@ -424,19 +415,15 @@ pub(super) fn a11y_composition_drag_gate(
                 .label("Clear preedit (drag)"),
         );
 
-    let controls = stack::hstack(
-        cx,
-        stack::HStackProps::default().gap(Space::N2).items_center(),
-        move |_cx| vec![inject, clear],
-    );
+    let controls = ui::h_row(move |_cx| vec![inject, clear])
+        .gap(Space::N2)
+        .items_center()
+        .into_element(cx);
 
     let panel = gate_panel(cx, theme, gate_editor);
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .layout(LayoutRefinement::default().w_full())
-            .gap(Space::N1),
-        |_cx| vec![controls, panel],
-    )
+    ui::v_flex(|_cx| vec![controls, panel])
+        .layout(LayoutRefinement::default().w_full())
+        .gap(Space::N1)
+        .into_element(cx)
 }

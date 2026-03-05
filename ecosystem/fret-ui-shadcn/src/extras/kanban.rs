@@ -11,7 +11,6 @@ use fret_ui::element::{
 };
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
-use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::declarative::transition;
 use fret_ui_kit::dnd::{
@@ -1120,13 +1119,10 @@ impl Kanban {
                             card_elems.push(el);
                         }
 
-                        let cards = stack::vstack(
-                            cx,
-                            stack::VStackProps::default()
-                                .gap(Space::N2)
-                                .layout(LayoutRefinement::default().w_full()),
-                            |_cx| card_elems,
-                        );
+                        let cards = ui::v_stack(|_cx| card_elems)
+                            .gap(Space::N2)
+                            .layout(LayoutRefinement::default().w_full())
+                            .into_element(cx);
                         let cards =
                             attach_test_id(cards, Arc::<str>::from(format!("{col_test_id}.cards")));
 
@@ -1167,14 +1163,11 @@ impl Kanban {
                     cols.push(col_el);
                 }
 
-                let board = stack::hstack(
-                    cx,
-                    stack::HStackProps::default()
-                        .gap_x(board_gap_x)
-                        .items_start()
-                        .layout(LayoutRefinement::default()),
-                    |_cx| cols,
-                );
+                let board = ui::h_row(|_cx| cols)
+                    .gap(board_gap_x)
+                    .items_start()
+                    .layout(LayoutRefinement::default())
+                    .into_element(cx);
                 let board = ScrollArea::new([board])
                     .axis(ScrollAxis::X)
                     .refine_layout(LayoutRefinement::default().w_full())

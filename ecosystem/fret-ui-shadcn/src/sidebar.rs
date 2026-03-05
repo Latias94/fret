@@ -1889,7 +1889,7 @@ impl SidebarGroup {
         shadcn_layout::container_vstack(
             cx,
             props,
-            fret_ui_kit::declarative::stack::VStackProps::default()
+            shadcn_layout::VStackProps::default()
                 .gap(Space::N0)
                 .layout(LayoutRefinement::default().w_full()),
             children,
@@ -3022,7 +3022,7 @@ impl SidebarMenuSub {
         shadcn_layout::container_vstack(
             cx,
             props,
-            fret_ui_kit::declarative::stack::VStackProps::default().gap(Space::N1),
+            shadcn_layout::VStackProps::default().gap(Space::N1),
             children,
         )
         .attach_semantics(SemanticsDecoration::default().role(SemanticsRole::List))

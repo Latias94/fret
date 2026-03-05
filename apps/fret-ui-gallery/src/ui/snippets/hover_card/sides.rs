@@ -9,20 +9,17 @@ fn side_content<H: UiHost>(
     side_label: &'static str,
     test_id: &'static str,
 ) -> shadcn::HoverCardContent {
-    let body = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .layout(LayoutRefinement::default().w_full().min_w_0())
-            .gap(Space::N1)
-            .items_start(),
-        move |cx| {
-            vec![
-                ui::text(side_label)
-                    .wrap(TextWrap::WordBreak)
-                    .into_element(cx),
-            ]
-        },
-    );
+    let body = ui::v_flex(move |cx| {
+        vec![
+            ui::text(side_label)
+                .wrap(TextWrap::WordBreak)
+                .into_element(cx),
+        ]
+    })
+    .layout(LayoutRefinement::default().w_full().min_w_0())
+    .gap(Space::N1)
+    .items_start()
+    .into_element(cx);
 
     shadcn::HoverCardContent::new(vec![body]).test_id(test_id)
 }
@@ -81,79 +78,70 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         ),
     ];
 
-    let row_1 = stack::hstack(
-        cx,
-        stack::HStackProps::default()
-            .layout(LayoutRefinement::default().w_full().min_w_0())
-            .gap(Space::N3)
-            .justify_center()
-            .items_center(),
-        move |cx| {
-            let (side, label, trigger_test_id, content_test_id, root_test_id) = entries[0];
-            let left = card(
-                cx,
-                side,
-                label,
-                trigger_test_id,
-                content_test_id,
-                root_test_id,
-            );
-            let (side, label, trigger_test_id, content_test_id, root_test_id) = entries[1];
-            let top = card(
-                cx,
-                side,
-                label,
-                trigger_test_id,
-                content_test_id,
-                root_test_id,
-            );
-            vec![left, top]
-        },
-    );
+    let row_1 = ui::h_flex(move |cx| {
+        let (side, label, trigger_test_id, content_test_id, root_test_id) = entries[0];
+        let left = card(
+            cx,
+            side,
+            label,
+            trigger_test_id,
+            content_test_id,
+            root_test_id,
+        );
+        let (side, label, trigger_test_id, content_test_id, root_test_id) = entries[1];
+        let top = card(
+            cx,
+            side,
+            label,
+            trigger_test_id,
+            content_test_id,
+            root_test_id,
+        );
+        vec![left, top]
+    })
+    .layout(LayoutRefinement::default().w_full().min_w_0())
+    .gap(Space::N3)
+    .justify_center()
+    .items_center()
+    .into_element(cx);
 
-    let row_2 = stack::hstack(
-        cx,
-        stack::HStackProps::default()
-            .layout(LayoutRefinement::default().w_full().min_w_0())
-            .gap(Space::N3)
-            .justify_center()
-            .items_center(),
-        move |cx| {
-            let (side, label, trigger_test_id, content_test_id, root_test_id) = entries[2];
-            let bottom = card(
-                cx,
-                side,
-                label,
-                trigger_test_id,
-                content_test_id,
-                root_test_id,
-            );
-            let (side, label, trigger_test_id, content_test_id, root_test_id) = entries[3];
-            let right = card(
-                cx,
-                side,
-                label,
-                trigger_test_id,
-                content_test_id,
-                root_test_id,
-            );
-            vec![bottom, right]
-        },
-    );
+    let row_2 = ui::h_flex(move |cx| {
+        let (side, label, trigger_test_id, content_test_id, root_test_id) = entries[2];
+        let bottom = card(
+            cx,
+            side,
+            label,
+            trigger_test_id,
+            content_test_id,
+            root_test_id,
+        );
+        let (side, label, trigger_test_id, content_test_id, root_test_id) = entries[3];
+        let right = card(
+            cx,
+            side,
+            label,
+            trigger_test_id,
+            content_test_id,
+            root_test_id,
+        );
+        vec![bottom, right]
+    })
+    .layout(LayoutRefinement::default().w_full().min_w_0())
+    .gap(Space::N3)
+    .justify_center()
+    .items_center()
+    .into_element(cx);
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .layout(
-                LayoutRefinement::default()
-                    .w_full()
-                    .min_w_0()
-                    .min_h(Px(240.0)),
-            )
-            .gap(Space::N3)
-            .justify_center()
-            .items_center(),
-        move |_cx| vec![row_1, row_2],
-    )
+    ui::v_flex(move |_cx| vec![row_1, row_2])
+        .layout(
+            LayoutRefinement::default()
+                .w_full()
+                .min_w_0()
+                .min_h(Px(240.0)),
+        )
+        .gap(Space::N3)
+        .justify_center()
+        .items_center()
+        .into_element(cx)
 }
 // endregion: example

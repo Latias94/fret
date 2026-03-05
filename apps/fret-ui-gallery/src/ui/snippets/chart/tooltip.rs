@@ -30,40 +30,37 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
             .test_id(test_id)
     };
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N3)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full()),
-        |cx| {
-            vec![
-                tooltip(
-                    cx,
-                    "January",
-                    shadcn::ChartTooltipIndicator::Dot,
-                    false,
-                    false,
-                    "ui-gallery-chart-tooltip-dot",
-                ),
-                tooltip(
-                    cx,
-                    "January",
-                    shadcn::ChartTooltipIndicator::Line,
-                    false,
-                    false,
-                    "ui-gallery-chart-tooltip-line",
-                ),
-                tooltip(
-                    cx,
-                    "January",
-                    shadcn::ChartTooltipIndicator::Dashed,
-                    true,
-                    false,
-                    "ui-gallery-chart-tooltip-dashed",
-                ),
-            ]
-        },
-    )
+    ui::v_flex(|cx| {
+        vec![
+            tooltip(
+                cx,
+                "January",
+                shadcn::ChartTooltipIndicator::Dot,
+                false,
+                false,
+                "ui-gallery-chart-tooltip-dot",
+            ),
+            tooltip(
+                cx,
+                "January",
+                shadcn::ChartTooltipIndicator::Line,
+                false,
+                false,
+                "ui-gallery-chart-tooltip-line",
+            ),
+            tooltip(
+                cx,
+                "January",
+                shadcn::ChartTooltipIndicator::Dashed,
+                true,
+                false,
+                "ui-gallery-chart-tooltip-dashed",
+            ),
+        ]
+    })
+    .gap(Space::N3)
+    .items_start()
+    .layout(LayoutRefinement::default().w_full())
+    .into_element(cx)
 }
 // endregion: example

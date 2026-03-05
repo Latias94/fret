@@ -60,13 +60,10 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
             ]
         });
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N2)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full().max_w(Px(340.0))),
-        move |_cx| vec![combo],
-    )
+    ui::v_flex(move |_cx| vec![combo])
+        .gap(Space::N2)
+        .items_start()
+        .layout(LayoutRefinement::default().w_full().max_w(Px(340.0)))
+        .into_element(cx)
 }
 // endregion: example

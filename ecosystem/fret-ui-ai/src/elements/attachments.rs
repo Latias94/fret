@@ -14,9 +14,9 @@ use fret_ui::element::{
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
 use fret_ui_kit::declarative::icon as decl_icon;
-use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::typography;
+use fret_ui_kit::ui;
 use fret_ui_kit::{ChromeRefinement, ColorRef, Items, LayoutRefinement, MetricRef, Radius, Space};
 use fret_ui_kit::{WidgetStateProperty, WidgetStates};
 use fret_ui_shadcn::button::ButtonStyle;
@@ -572,25 +572,19 @@ impl Attachment {
                         vec![overlay]
                     }
                     AttachmentVariant::Inline => {
-                        let row = stack::hstack(
-                            cx,
-                            stack::HStackProps::default()
-                                .layout(LayoutRefinement::default().min_w_0())
-                                .gap(Space::N2)
-                                .items(Items::Center),
-                            move |_cx| vec![preview, info, remove],
-                        );
+                        let row = ui::h_row(move |_cx| vec![preview, info, remove])
+                            .layout(LayoutRefinement::default().min_w_0())
+                            .gap(Space::N2)
+                            .items(Items::Center)
+                            .into_element(cx);
                         vec![row]
                     }
                     AttachmentVariant::List => {
-                        let row = stack::hstack(
-                            cx,
-                            stack::HStackProps::default()
-                                .layout(LayoutRefinement::default().w_full().min_w_0())
-                                .gap(Space::N3)
-                                .items(Items::Center),
-                            move |_cx| vec![preview, info, remove],
-                        );
+                        let row = ui::h_row(move |_cx| vec![preview, info, remove])
+                            .layout(LayoutRefinement::default().w_full().min_w_0())
+                            .gap(Space::N3)
+                            .items(Items::Center)
+                            .into_element(cx);
                         vec![row]
                     }
                 };
@@ -847,14 +841,11 @@ impl AttachmentInfo {
         );
 
         let mut el = cx.container(props, move |cx| {
-            vec![stack::vstack(
-                cx,
-                stack::VStackProps::default()
-                    .layout(LayoutRefinement::default().min_w_0())
-                    .gap(Space::N0)
-                    .items(Items::Start),
-                move |_cx| rows,
-            )]
+            vec![ui::v_stack(move |_cx| rows)
+                .layout(LayoutRefinement::default().min_w_0())
+                .gap(Space::N0)
+                .items(Items::Start)
+                .into_element(cx)]
         });
 
         if let Some(test_id) = self.test_id {

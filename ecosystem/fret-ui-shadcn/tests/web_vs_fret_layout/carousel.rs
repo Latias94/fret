@@ -256,12 +256,9 @@ fn carousel_slide(
             .w_full()
             .into_element(cx)
     } else {
-        fret_ui_kit::declarative::stack::vstack(
-            cx,
-            fret_ui_kit::declarative::stack::VStackProps::default()
-                .layout(LayoutRefinement::default().w_full()),
-            move |_cx| vec![card],
-        )
+        ui::v_flex(move |_cx| vec![card])
+            .layout(LayoutRefinement::default().w_full())
+            .into_element(cx)
     }
 }
 

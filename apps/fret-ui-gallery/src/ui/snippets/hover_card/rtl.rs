@@ -8,21 +8,18 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let muted_fg = theme.color_token("muted-foreground");
 
     with_direction_provider(cx, LayoutDirection::Rtl, |cx| {
-        let body = stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .layout(LayoutRefinement::default().w_full().min_w_0())
-                .gap(Space::N1)
-                .items_start(),
-            move |cx| {
-                vec![
-                    ui::text("تحقق من محاذاة HoverCard تحت RTL.")
-                        .wrap(TextWrap::WordBreak)
-                        .text_color(ColorRef::Color(muted_fg))
-                        .into_element(cx),
-                ]
-            },
-        );
+        let body = ui::v_flex(move |cx| {
+            vec![
+                ui::text("تحقق من محاذاة HoverCard تحت RTL.")
+                    .wrap(TextWrap::WordBreak)
+                    .text_color(ColorRef::Color(muted_fg))
+                    .into_element(cx),
+            ]
+        })
+        .layout(LayoutRefinement::default().w_full().min_w_0())
+        .gap(Space::N1)
+        .items_start()
+        .into_element(cx);
 
         shadcn::HoverCard::new(
             shadcn::Button::new("مرر هنا")

@@ -189,10 +189,7 @@ pub(in crate::ui) fn preview_material3_chip(
 
     vec![
         cx.text("Material 3 AssistChip: token-driven shape/colors + state layer + bounded ripple."),
-        stack::hstack(
-            cx,
-            stack::HStackProps::default().gap(Space::N2).items_center(),
-            move |cx| {
+        ui::h_row(move |cx| {
                 vec![
                     material3::AssistChip::new("Flat")
                         .on_activate(activate_row1.clone())
@@ -213,12 +210,8 @@ pub(in crate::ui) fn preview_material3_chip(
                         .test_id("ui-gallery-material3-chip-flat-hover-override")
                         .into_element(cx),
                 ]
-            },
-        ),
-        stack::hstack(
-            cx,
-            stack::HStackProps::default().gap(Space::N2).items_center(),
-            move |cx| {
+            }).gap(Space::N2).items_center().into_element(cx),
+        ui::h_row(move |cx| {
                 vec![
                     material3::AssistChip::new("Elevated")
                         .variant(material3::AssistChipVariant::Elevated)
@@ -247,12 +240,8 @@ pub(in crate::ui) fn preview_material3_chip(
                         .test_id("ui-gallery-material3-chip-elevated-hover-override")
                         .into_element(cx),
                 ]
-            },
-        ),
-        stack::hstack(
-            cx,
-            stack::HStackProps::default().gap(Space::N2).items_center(),
-            move |cx| {
+            }).gap(Space::N2).items_center().into_element(cx),
+        ui::h_row(move |cx| {
                 vec![
                     material3::SuggestionChip::new("Suggestion")
                         .on_activate(activate_row3.clone())
@@ -269,12 +258,8 @@ pub(in crate::ui) fn preview_material3_chip(
                         .test_id("ui-gallery-material3-suggestion-chip-disabled")
                         .into_element(cx),
                 ]
-            },
-        ),
-        stack::hstack(
-            cx,
-            stack::HStackProps::default().gap(Space::N2).items_center(),
-            move |cx| {
+            }).gap(Space::N2).items_center().into_element(cx),
+        ui::h_row(move |cx| {
                 vec![
                     material3::FilterChip::new(filter_selected_row1.clone(), "Filter")
                         .trailing_icon(ids::ui::CLOSE)
@@ -297,12 +282,8 @@ pub(in crate::ui) fn preview_material3_chip(
                         .test_id("ui-gallery-material3-filter-chip-disabled")
                         .into_element(cx),
                 ]
-            },
-        ),
-        stack::hstack(
-            cx,
-            stack::HStackProps::default().gap(Space::N2).items_center(),
-            move |cx| {
+            }).gap(Space::N2).items_center().into_element(cx),
+        ui::h_row(move |cx| {
                 vec![
                     material3::InputChip::new(input_selected_row1.clone(), "Input")
                         .leading_icon(ids::ui::SETTINGS)
@@ -320,8 +301,7 @@ pub(in crate::ui) fn preview_material3_chip(
                         .test_id("ui-gallery-material3-input-chip-disabled")
                         .into_element(cx),
                 ]
-            },
-        ),
+            }).gap(Space::N2).items_center().into_element(cx),
         cx.text(
             "Material 3 ChipSet: roving focus (ArrowLeft/Right + Home/End). Multi-action chips use ArrowLeft/Right to move focus between primary/trailing actions, then roving continues to the next chip.",
         ),

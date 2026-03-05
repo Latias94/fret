@@ -2,7 +2,7 @@ pub const SOURCE: &str = include_str!("tool_demo.rs");
 
 // region: example
 use fret_ui_ai as ui_ai;
-use fret_ui_kit::declarative::stack;
+use fret_ui_kit::ui;
 use fret_ui_kit::{LayoutRefinement, Space};
 use fret_ui_shadcn::prelude::*;
 use std::sync::Arc;
@@ -71,25 +71,22 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
     .default_open(true)
     .into_element(cx);
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .layout(LayoutRefinement::default().w_full().min_w_0())
-            .gap(Space::N4),
-        move |cx| {
-            vec![
-                cx.text("Tool (AI Elements)"),
-                cx.text("Toggle the disclosure to show/hide content."),
-                cx.text("Output Available (Completed)"),
-                completed,
-                cx.text("Input Streaming (Pending)"),
-                pending,
-                cx.text("Input Available (Running)"),
-                running,
-                cx.text("Output Error"),
-                error,
-            ]
-        },
-    )
+    ui::v_flex(move |cx| {
+        vec![
+            cx.text("Tool (AI Elements)"),
+            cx.text("Toggle the disclosure to show/hide content."),
+            cx.text("Output Available (Completed)"),
+            completed,
+            cx.text("Input Streaming (Pending)"),
+            pending,
+            cx.text("Input Available (Running)"),
+            running,
+            cx.text("Output Error"),
+            error,
+        ]
+    })
+    .layout(LayoutRefinement::default().w_full().min_w_0())
+    .gap(Space::N4)
+    .into_element(cx)
 }
 // endregion: example

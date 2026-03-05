@@ -42,14 +42,11 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
     .into_element(cx)
     .test_id("ui-gallery-card-size-sm");
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N4)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full().min_w_0()),
-        |_cx| vec![default_card, sm_card],
-    )
-    .test_id("ui-gallery-card-size")
+    ui::v_flex(|_cx| vec![default_card, sm_card])
+        .gap(Space::N4)
+        .items_start()
+        .layout(LayoutRefinement::default().w_full().min_w_0())
+        .into_element(cx)
+        .test_id("ui-gallery-card-size")
 }
 // endregion: example

@@ -33,19 +33,15 @@ pub(in crate::ui) fn preview_text_feature_toggles(
         }
     }
 
-    let header = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .layout(LayoutRefinement::default().w_full())
-            .gap(Space::N2),
-        |cx| {
+    let header = ui::v_flex(|cx| {
             vec![
                 cx.text("Goal: validate OpenType feature overrides (`TextShapingStyle.features`) end-to-end."),
                 cx.text("This is best-effort: visible differences depend on the chosen font. Inter typically shows `liga` (fi/fl/ffi/ffl)."),
                 cx.text("Tip: set FRET_TEXT_SYSTEM_FONTS=0 to validate the deterministic no-system-fonts path on native."),
             ]
-        },
-    );
+        })
+            .layout(LayoutRefinement::default().w_full())
+            .gap(Space::N2).into_element(cx);
 
     fn toggle_button(
         cx: &mut ElementContext<'_, App>,
@@ -108,14 +104,11 @@ pub(in crate::ui) fn preview_text_feature_toggles(
             on_ss01,
         );
 
-        stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .layout(LayoutRefinement::default().w_full())
-                .gap(Space::N2)
-                .items_center(),
-            |_cx| vec![liga_btn, calt_btn, ss01_btn],
-        )
+        ui::h_flex(|_cx| vec![liga_btn, calt_btn, ss01_btn])
+            .layout(LayoutRefinement::default().w_full())
+            .gap(Space::N2)
+            .items_center()
+            .into_element(cx)
     };
 
     fn sample_text(
@@ -162,13 +155,10 @@ pub(in crate::ui) fn preview_text_feature_toggles(
 
         let text = cx.selectable_text_props(props).test_id(test_id);
 
-        stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .layout(LayoutRefinement::default().w_full())
-                .gap(Space::N1),
-            |_cx| vec![label, text],
-        )
+        ui::v_flex(|_cx| vec![label, text])
+            .layout(LayoutRefinement::default().w_full())
+            .gap(Space::N1)
+            .into_element(cx)
     }
 
     let panel = cx.container(
@@ -208,13 +198,12 @@ pub(in crate::ui) fn preview_text_feature_toggles(
                 "ui-gallery-text-feature-toggles-overrides",
             );
 
-            vec![stack::vstack(
-                cx,
-                stack::VStackProps::default()
+            vec![
+                ui::v_flex(|_cx| vec![toolbar, baseline, overridden])
                     .layout(LayoutRefinement::default().w_full())
-                    .gap(Space::N4),
-                |_cx| vec![toolbar, baseline, overridden],
-            )]
+                    .gap(Space::N4)
+                    .into_element(cx),
+            ]
         },
     );
 

@@ -4,19 +4,16 @@ pub const SOURCE: &str = include_str!("code_outline.rs");
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N2)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full().min_w_0()),
-        |cx| {
-            vec![shadcn::typography::muted(
-                cx,
-                "Key snippets for the guide-aligned recipe surface.",
-            )]
-        },
-    )
+    ui::v_flex(|cx| {
+        vec![shadcn::typography::muted(
+            cx,
+            "Key snippets for the guide-aligned recipe surface.",
+        )]
+    })
+    .gap(Space::N2)
+    .items_start()
+    .layout(LayoutRefinement::default().w_full().min_w_0())
+    .into_element(cx)
 }
 
 // Basic Table (guide outline)

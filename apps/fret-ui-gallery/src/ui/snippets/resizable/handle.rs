@@ -23,14 +23,11 @@ fn box_group<H: UiHost>(
 }
 
 fn panel<H: UiHost>(cx: &mut ElementContext<'_, H>, label: &'static str) -> AnyElement {
-    let body = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .layout(LayoutRefinement::default().w_full().h_full())
-            .items_center()
-            .justify_center(),
-        move |cx| vec![shadcn::typography::small(cx, label)],
-    );
+    let body = ui::v_flex(move |cx| vec![shadcn::typography::small(cx, label)])
+        .layout(LayoutRefinement::default().w_full().h_full())
+        .items_center()
+        .justify_center()
+        .into_element(cx);
 
     let props = decl_style::container_props(
         cx.theme(),

@@ -39,10 +39,7 @@ pub(in crate::ui) fn preview_material3_fab(
               variant: material3::FabVariant,
               label: &'static str| {
             let last_action = last_action.clone();
-            stack::hstack(
-                cx,
-                stack::HStackProps::default().gap(Space::N2).items_center(),
-                move |cx| {
+            ui::h_row(move |cx| {
                     vec![
                         material3::Fab::new(ids::ui::SEARCH)
                             .variant(variant)
@@ -85,17 +82,13 @@ pub(in crate::ui) fn preview_material3_fab(
                             .disabled(true)
                             .into_element(cx),
                     ]
-                },
-            )
+                }).gap(Space::N2).items_center().into_element(cx)
         }
     };
 
     let extended = {
         let last_action = last_action.clone();
-        stack::hstack(
-            cx,
-            stack::HStackProps::default().gap(Space::N2).items_center(),
-            move |cx| {
+        ui::h_row(move |cx| {
                 vec![
                     material3::Fab::new(ids::ui::SEARCH)
                         .variant(material3::FabVariant::Surface)
@@ -123,8 +116,7 @@ pub(in crate::ui) fn preview_material3_fab(
                         ))
                         .into_element(cx),
                 ]
-            },
-        )
+            }).gap(Space::N2).items_center().into_element(cx)
     };
 
     vec![

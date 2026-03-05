@@ -29,19 +29,15 @@ pub(in crate::ui) fn preview_text_selection_perf(
         |st| st.clone(),
     );
 
-    let header = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .layout(LayoutRefinement::default().w_full())
-            .gap(Space::N2),
-        |cx| {
+    let header = ui::v_flex(|cx| {
             vec![
                 cx.text("Goal: track selection rect count for large selections."),
                 cx.text("Expectation: rect generation scales with visible lines when clipped to the viewport (not document length)."),
                 cx.text("Scroll with the mouse wheel over the demo surface."),
             ]
-        },
-    );
+        })
+            .layout(LayoutRefinement::default().w_full())
+            .gap(Space::N2).into_element(cx);
 
     let source = selection_perf_source();
     let source_len = source.len();

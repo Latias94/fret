@@ -233,12 +233,7 @@ pub(in crate::ui) fn preview_data_table_torture(
             ]),
         );
 
-    let header = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .layout(LayoutRefinement::default().w_full())
-            .gap(Space::N2),
-        move |cx| {
+    let header = ui::v_flex(move |cx| {
             vec![
                 cx.text("Goal: baseline perf harness for a virtualized business table (TanStack-aligned headless engine + VirtualList)."),
                 cx.text("Use scripted scroll + bundle stats to validate cache-root reuse and prepaint-driven windowing refactors."),
@@ -274,8 +269,9 @@ pub(in crate::ui) fn preview_data_table_torture(
                 ),
                 toolbar.into_element(cx),
             ]
-        },
-    );
+        })
+            .layout(LayoutRefinement::default().w_full())
+            .gap(Space::N2).into_element(cx);
 
     let state_for_table = state.clone();
     let table =
@@ -302,19 +298,17 @@ pub(in crate::ui) fn preview_data_table_torture(
                         move |cx, col, row| match col.id.as_ref() {
                             "name" => {
                                 if variable_height && row.id % 15 == 0 {
-                                    stack::vstack(
-                                        cx,
-                                        stack::VStackProps::default().gap(Space::N0),
-                                        |cx| {
-                                            vec![
-                                                cx.text(row.name.as_ref()),
-                                                cx.text(format!(
-                                                    "Details: id={} cpu={} mem={}",
-                                                    row.id, row.cpu, row.mem_mb
-                                                )),
-                                            ]
-                                        },
-                                    )
+                                    ui::v_stack(|cx| {
+                                        vec![
+                                            cx.text(row.name.as_ref()),
+                                            cx.text(format!(
+                                                "Details: id={} cpu={} mem={}",
+                                                row.id, row.cpu, row.mem_mb
+                                            )),
+                                        ]
+                                    })
+                                    .gap(Space::N0)
+                                    .into_element(cx)
                                 } else {
                                     cx.text(row.name.as_ref())
                                 }
@@ -348,19 +342,17 @@ pub(in crate::ui) fn preview_data_table_torture(
                         move |cx, col, row| match col.id.as_ref() {
                             "name" => {
                                 if variable_height && row.id % 15 == 0 {
-                                    stack::vstack(
-                                        cx,
-                                        stack::VStackProps::default().gap(Space::N0),
-                                        |cx| {
-                                            vec![
-                                                cx.text(row.name.as_ref()),
-                                                cx.text(format!(
-                                                    "Details: id={} cpu={} mem={}",
-                                                    row.id, row.cpu, row.mem_mb
-                                                )),
-                                            ]
-                                        },
-                                    )
+                                    ui::v_stack(|cx| {
+                                        vec![
+                                            cx.text(row.name.as_ref()),
+                                            cx.text(format!(
+                                                "Details: id={} cpu={} mem={}",
+                                                row.id, row.cpu, row.mem_mb
+                                            )),
+                                        ]
+                                    })
+                                    .gap(Space::N0)
+                                    .into_element(cx)
                                 } else {
                                     cx.text(row.name.as_ref())
                                 }

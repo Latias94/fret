@@ -3,7 +3,7 @@ pub const SOURCE: &str = include_str!("agent_demo.rs");
 // region: example
 use fret_core::Px;
 use fret_ui_ai as ui_ai;
-use fret_ui_kit::declarative::stack;
+use fret_ui_kit::ui;
 use fret_ui_kit::{LayoutRefinement, MetricRef, Space};
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 use serde_json::json;
@@ -15,59 +15,61 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
         .max_w(MetricRef::Px(Px(760.0)))
         .min_w_0();
 
-    let tool_search = ui_ai::AgentToolDefinition {
-        description: Some(Arc::from("Search the codebase")),
+    let tool_web_search = ui_ai::AgentToolDefinition {
+        description: Some(Arc::from("Search the web for information")),
         input_schema: json!({
             "type": "object",
             "properties": {
-                "query": { "type": "string" },
-                "limit": { "type": "number" }
+                "query": { "type": "string", "description": "The search query" }
             },
             "required": ["query"]
         }),
         json_schema: None,
     };
 
-    let tool_read_file = ui_ai::AgentToolDefinition {
-        description: Some(Arc::from("Read a file from disk")),
+    let tool_read_url = ui_ai::AgentToolDefinition {
+        description: Some(Arc::from("Read and parse content from a URL")),
         input_schema: json!({
             "type": "object",
             "properties": {
-                "path": { "type": "string" }
+                "url": { "type": "string", "format": "uri", "description": "The URL to read" }
             },
-            "required": ["path"]
+            "required": ["url"]
         }),
         json_schema: None,
     };
 
     let tools = {
-        let item_1 = ui_ai::AgentTool::new("tool-search", tool_search)
+        let item_1 = ui_ai::AgentTool::new("web_search", tool_web_search)
             .trigger_test_id("ui-ai-agent-demo-tool-search-trigger")
             .into_item(cx);
-        let item_2 = ui_ai::AgentTool::new("tool-read-file", tool_read_file)
+        let item_2 = ui_ai::AgentTool::new("read_url", tool_read_url)
             .trigger_test_id("ui-ai-agent-demo-tool-read-file-trigger")
             .into_item(cx);
 
-        let accordion =
-            shadcn::Accordion::multiple_uncontrolled(["tool-search"]).items([item_1, item_2]);
+        let accordion = shadcn::Accordion::multiple_uncontrolled([] as [&'static str; 0])
+            .items([item_1, item_2]);
 
         ui_ai::AgentTools::new(accordion).into_element(cx)
     };
 
+    let output_schema = Arc::from(
+        "z.object({\n  sentiment: z.enum(['positive', 'negative', 'neutral']),\n  score: z.number(),\n  summary: z.string(),\n})",
+    );
+
     let content = ui_ai::AgentContent::new([
         ui_ai::AgentInstructions::new(
-            "You are an AI agent integrated into an editor. Follow the user's instructions and use tools responsibly.",
+            "Analyze the sentiment of the provided text and return a structured analysis with sentiment classification, confidence score, and summary.",
         )
         .into_element(cx),
         tools,
-        ui_ai::AgentOutput::new("export type Output = { summary: string; files: string[] };")
-            .into_element(cx),
+        ui_ai::AgentOutput::new(output_schema).into_element(cx),
     ])
     .into_element(cx);
 
     let agent = ui_ai::Agent::new([
-        ui_ai::AgentHeader::new("Fret Agent")
-            .model("gpt-4.1")
+        ui_ai::AgentHeader::new("Sentiment Analyzer")
+            .model("anthropic/claude-sonnet-4-5")
             .test_id("ui-ai-agent-demo-header")
             .into_element(cx),
         content,
@@ -76,18 +78,15 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
     .refine_layout(max_w)
     .into_element(cx);
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .layout(LayoutRefinement::default().w_full().min_w_0())
-            .gap(Space::N4),
-        move |cx| {
-            vec![
-                cx.text("Agent (AI Elements)"),
-                cx.text("Schema + tools disclosure chrome. Apps own tool execution."),
-                agent,
-            ]
-        },
-    )
+    ui::v_flex(move |cx| {
+        vec![
+            cx.text("Agent (AI Elements)"),
+            cx.text("Schema + tools disclosure chrome. Apps own tool execution."),
+            agent,
+        ]
+    })
+    .layout(LayoutRefinement::default().w_full().min_w_0())
+    .gap(Space::N4)
+    .into_element(cx)
 }
 // endregion: example

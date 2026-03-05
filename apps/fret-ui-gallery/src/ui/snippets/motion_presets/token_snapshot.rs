@@ -155,35 +155,29 @@ pub fn render(cx: &mut ElementContext<'_, App>, theme: &Theme) -> AnyElement {
         ),
     ];
 
-    let content = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .layout(LayoutRefinement::default().w_full())
-            .gap(Space::N3)
-            .items_start(),
-        move |cx| {
-            rows.into_iter()
-                .map(|(key, value)| {
-                    stack::hstack(
-                        cx,
-                        stack::HStackProps::default()
-                            .layout(LayoutRefinement::default().w_full())
-                            .justify_between()
-                            .items_center()
-                            .gap(Space::N4),
-                        move |cx| {
-                            vec![
-                                cx.text(key),
-                                shadcn::Badge::new(value)
-                                    .variant(shadcn::BadgeVariant::Outline)
-                                    .into_element(cx),
-                            ]
-                        },
-                    )
+    let content = ui::v_flex(move |cx| {
+        rows.into_iter()
+            .map(|(key, value)| {
+                ui::h_flex(move |cx| {
+                    vec![
+                        cx.text(key),
+                        shadcn::Badge::new(value)
+                            .variant(shadcn::BadgeVariant::Outline)
+                            .into_element(cx),
+                    ]
                 })
-                .collect::<Vec<_>>()
-        },
-    );
+                .layout(LayoutRefinement::default().w_full())
+                .justify_between()
+                .items_center()
+                .gap(Space::N4)
+                .into_element(cx)
+            })
+            .collect::<Vec<_>>()
+    })
+    .layout(LayoutRefinement::default().w_full())
+    .gap(Space::N3)
+    .items_start()
+    .into_element(cx);
 
     shadcn::Card::new([
         shadcn::CardHeader::new([

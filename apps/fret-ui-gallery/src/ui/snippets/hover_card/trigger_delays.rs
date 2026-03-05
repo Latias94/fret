@@ -19,31 +19,28 @@ fn demo_content<H: UiHost>(
     let desc_test_id: Arc<str> = Arc::from(format!("{test_id}-desc"));
     let joined_test_id: Arc<str> = Arc::from(format!("{test_id}-joined"));
 
-    let body = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .layout(LayoutRefinement::default().w_full().min_w_0())
-            .gap(Space::N0p5)
-            .items_start(),
-        move |cx| {
-            vec![
-                ui::text(title)
-                    .font_semibold()
-                    .into_element(cx)
-                    .test_id(title_test_id.clone()),
-                ui::text(desc)
-                    .wrap(TextWrap::WordBreak)
-                    .into_element(cx)
-                    .test_id(desc_test_id.clone()),
-                ui::text(joined)
-                    .text_xs()
-                    .text_color(ColorRef::Color(muted_fg))
-                    .mt(Space::N1)
-                    .into_element(cx)
-                    .test_id(joined_test_id.clone()),
-            ]
-        },
-    );
+    let body = ui::v_flex(move |cx| {
+        vec![
+            ui::text(title)
+                .font_semibold()
+                .into_element(cx)
+                .test_id(title_test_id.clone()),
+            ui::text(desc)
+                .wrap(TextWrap::WordBreak)
+                .into_element(cx)
+                .test_id(desc_test_id.clone()),
+            ui::text(joined)
+                .text_xs()
+                .text_color(ColorRef::Color(muted_fg))
+                .mt(Space::N1)
+                .into_element(cx)
+                .test_id(joined_test_id.clone()),
+        ]
+    })
+    .layout(LayoutRefinement::default().w_full().min_w_0())
+    .gap(Space::N0p5)
+    .items_start()
+    .into_element(cx);
 
     shadcn::HoverCardContent::new(vec![body])
         .into_element(cx)
@@ -87,10 +84,9 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     .into_element(cx)
     .test_id("ui-gallery-hover-card-delay-delayed");
 
-    stack::hstack(
-        cx,
-        stack::HStackProps::default().gap(Space::N3).items_center(),
-        |_cx| vec![instant, delayed],
-    )
+    ui::h_row(|_cx| vec![instant, delayed])
+        .gap(Space::N3)
+        .items_center()
+        .into_element(cx)
 }
 // endregion: example

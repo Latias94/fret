@@ -6,8 +6,8 @@ use fret_runtime::Model;
 use fret_ui::element::SemanticsProps;
 use fret_ui::{Invalidation, Theme};
 use fret_ui_ai as ui_ai;
-use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::ui;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Space};
 use fret_ui_shadcn::prelude::*;
 use std::sync::Arc;
@@ -109,30 +109,26 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
         props.corner_radii = Corners::all(theme.metric_token("metric.radius.lg"));
 
         cx.container(props, move |cx| {
-            vec![stack::vstack(
-                cx,
-                stack::VStackProps::default()
-                    .layout(
-                        LayoutRefinement::default()
-                            .w_full()
-                            .h_full()
-                            .min_w_0()
-                            .min_h_0(),
-                    )
-                    .gap(Space::N4),
-                move |cx| {
+            vec![
+                ui::v_flex(move |cx| {
                     vec![
                         suggestions,
-                        stack::hstack(
-                            cx,
-                            stack::HStackProps::default()
-                                .layout(LayoutRefinement::default().w_full())
-                                .justify_center(),
-                            move |_cx| vec![prompt_input],
-                        ),
+                        ui::h_flex(move |_cx| vec![prompt_input])
+                            .layout(LayoutRefinement::default().w_full())
+                            .justify_center()
+                            .into_element(cx),
                     ]
-                },
-            )]
+                })
+                .layout(
+                    LayoutRefinement::default()
+                        .w_full()
+                        .h_full()
+                        .min_w_0()
+                        .min_h_0(),
+                )
+                .gap(Space::N4)
+                .into_element(cx),
+            ]
         })
     };
 
@@ -145,12 +141,9 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
         out.push(m);
     }
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .layout(LayoutRefinement::default().w_full().min_w_0())
-            .gap(Space::N4),
-        move |_cx| out,
-    )
+    ui::v_flex(move |_cx| out)
+        .layout(LayoutRefinement::default().w_full().min_w_0())
+        .gap(Space::N4)
+        .into_element(cx)
 }
 // endregion: example

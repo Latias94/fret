@@ -23,6 +23,7 @@ use fret_ui::scroll::ScrollStrategy;
 use fret_ui::scroll::VirtualListScrollHandle;
 use fret_ui::{ElementContext, Invalidation};
 use fret_ui_kit::declarative::ElementContextThemeExt as _;
+use fret_ui_kit::ui;
 use fret_ui_shadcn as shadcn;
 
 mod pack;
@@ -552,14 +553,7 @@ fn header_bar(
         ws_url_with_token, st.cfg.token, st.cfg.ws_port
     ));
 
-    let actions = fret_ui_kit::declarative::stack::hstack(
-        cx,
-        fret_ui_kit::declarative::stack::HStackProps::default()
-            .gap_x(fret_ui_kit::Space::N2)
-            .layout(fret_ui_kit::LayoutRefinement::default().w_full())
-            .items_center()
-            .justify_between(),
-        |cx| {
+    let actions = ui::h_row(|cx: &mut ElementContext<'_, App>| {
             let has_session = cx
                 .app
                 .models()
@@ -584,78 +578,76 @@ fn header_bar(
                 })
                 .unwrap_or_default();
 
-	            let session_select = shadcn::Select::new(
-	                st.selected_session_id.clone(),
-	                st.selected_session_open.clone(),
-	            )
-	            .value(shadcn::SelectValue::new().placeholder("Session"))
-	            .items(session_items)
-	            .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(220.0)))
-	            .into_element(cx);
+ 	            let session_select = shadcn::Select::new(
+ 	                st.selected_session_id.clone(),
+ 	                st.selected_session_open.clone(),
+ 	            )
+ 	            .value(shadcn::SelectValue::new().placeholder("Session"))
+ 	            .items(session_items)
+ 	            .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(220.0)))
+ 	            .into_element(cx);
 
-            let left = fret_ui_kit::declarative::stack::hstack(
-                cx,
-                fret_ui_kit::declarative::stack::HStackProps::default()
-                    .gap_x(fret_ui_kit::Space::N2)
-                    .items_center(),
-                |_cx| [title, subtitle],
-            );
+            let left = ui::h_row(|_cx| [title, subtitle])
+                .gap(fret_ui_kit::Space::N2)
+                .items_center()
+                .into_element(cx);
 
-            let right = fret_ui_kit::declarative::stack::hstack(
-                cx,
-                fret_ui_kit::declarative::stack::HStackProps::default()
-                    .gap_x(fret_ui_kit::Space::N2)
-                    .items_center(),
-                |cx| {
-                    [
-                        session_select,
-                        shadcn::Button::new("Copy WS URL")
-                            .variant(shadcn::ButtonVariant::Secondary)
-                            .size(shadcn::ButtonSize::Sm)
-                            .on_click(CMD_COPY_WS_URL)
-                            .into_element(cx),
-                        shadcn::Button::new("Copy Token")
-                            .variant(shadcn::ButtonVariant::Secondary)
-                            .size(shadcn::ButtonSize::Sm)
-                            .on_click(CMD_COPY_TOKEN)
-                            .into_element(cx),
-                        shadcn::Button::new("Inspect On")
-                            .variant(shadcn::ButtonVariant::Outline)
-                            .size(shadcn::ButtonSize::Sm)
-                            .disabled(!has_session)
-                            .on_click(CMD_INSPECT_ENABLE)
-                            .into_element(cx),
-                        shadcn::Button::new("Inspect Off")
-                            .variant(shadcn::ButtonVariant::Outline)
-                            .size(shadcn::ButtonSize::Sm)
-                            .disabled(!has_session)
-                            .on_click(CMD_INSPECT_DISABLE)
-                            .into_element(cx),
-                        shadcn::Button::new("Pick")
-                            .variant(shadcn::ButtonVariant::Outline)
-                            .size(shadcn::ButtonSize::Sm)
-                            .disabled(!has_session)
-                            .on_click(CMD_PICK_ARM)
-                            .into_element(cx),
-                        shadcn::Button::new("Dump Bundle")
-                            .variant(shadcn::ButtonVariant::Outline)
-                            .size(shadcn::ButtonSize::Sm)
-                            .disabled(!has_session)
-                            .on_click(CMD_BUNDLE_DUMP)
-                            .into_element(cx),
-                        shadcn::Button::new("Screenshot")
-                            .variant(shadcn::ButtonVariant::Outline)
-                            .size(shadcn::ButtonSize::Sm)
-                            .disabled(!has_session)
-                            .on_click(CMD_SCREENSHOT_REQUEST)
-                            .into_element(cx),
-                    ]
-                },
-            );
+            let right = ui::h_row(|cx| {
+                [
+                    session_select,
+                    shadcn::Button::new("Copy WS URL")
+                        .variant(shadcn::ButtonVariant::Secondary)
+                        .size(shadcn::ButtonSize::Sm)
+                        .on_click(CMD_COPY_WS_URL)
+                        .into_element(cx),
+                    shadcn::Button::new("Copy Token")
+                        .variant(shadcn::ButtonVariant::Secondary)
+                        .size(shadcn::ButtonSize::Sm)
+                        .on_click(CMD_COPY_TOKEN)
+                        .into_element(cx),
+                    shadcn::Button::new("Inspect On")
+                        .variant(shadcn::ButtonVariant::Outline)
+                        .size(shadcn::ButtonSize::Sm)
+                        .disabled(!has_session)
+                        .on_click(CMD_INSPECT_ENABLE)
+                        .into_element(cx),
+                    shadcn::Button::new("Inspect Off")
+                        .variant(shadcn::ButtonVariant::Outline)
+                        .size(shadcn::ButtonSize::Sm)
+                        .disabled(!has_session)
+                        .on_click(CMD_INSPECT_DISABLE)
+                        .into_element(cx),
+                    shadcn::Button::new("Pick")
+                        .variant(shadcn::ButtonVariant::Outline)
+                        .size(shadcn::ButtonSize::Sm)
+                        .disabled(!has_session)
+                        .on_click(CMD_PICK_ARM)
+                        .into_element(cx),
+                    shadcn::Button::new("Dump Bundle")
+                        .variant(shadcn::ButtonVariant::Outline)
+                        .size(shadcn::ButtonSize::Sm)
+                        .disabled(!has_session)
+                        .on_click(CMD_BUNDLE_DUMP)
+                        .into_element(cx),
+                    shadcn::Button::new("Screenshot")
+                        .variant(shadcn::ButtonVariant::Outline)
+                        .size(shadcn::ButtonSize::Sm)
+                        .disabled(!has_session)
+                        .on_click(CMD_SCREENSHOT_REQUEST)
+                        .into_element(cx),
+                ]
+            })
+            .gap(fret_ui_kit::Space::N2)
+            .items_center()
+            .into_element(cx);
 
             [left, right]
-        },
-    );
+        })
+        .gap(fret_ui_kit::Space::N2)
+        .layout(fret_ui_kit::LayoutRefinement::default().w_full())
+        .items_center()
+        .justify_between()
+        .into_element(cx);
 
     let bg = theme.color_token("muted");
     let chrome = fret_ui_kit::ChromeRefinement::default()
@@ -719,13 +711,12 @@ fn left_panel(
         rows.push(cx.keyed(i as u64, |cx| cx.text(line.as_ref())));
     }
 
-    let list = shadcn::ScrollArea::new([fret_ui_kit::declarative::stack::vstack(
-        cx,
-        fret_ui_kit::declarative::stack::VStackProps::default()
-            .gap_y(fret_ui_kit::Space::N1)
-            .layout(fret_ui_kit::LayoutRefinement::default().w_full()),
-        |_cx| rows,
-    )])
+    let list = shadcn::ScrollArea::new([
+        ui::v_stack(|_cx| rows)
+            .gap(fret_ui_kit::Space::N1)
+            .layout(fret_ui_kit::LayoutRefinement::default().w_full())
+            .into_element(cx),
+    ])
     .into_element(cx);
 
     let tabs = shadcn::Tabs::new(st.left_tab.clone())
@@ -789,13 +780,10 @@ fn semantics_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement {
         .placeholder("Search role/test_id/label/value...")
         .into_element(cx);
 
-    let header = fret_ui_kit::declarative::stack::hstack(
-        cx,
-        fret_ui_kit::declarative::stack::HStackProps::default()
-            .gap_x(fret_ui_kit::Space::N2)
-            .items_center(),
-        |_cx| [search_input],
-    );
+    let header = ui::h_row(|_cx| [search_input])
+        .gap(fret_ui_kit::Space::N2)
+        .items_center()
+        .into_element(cx);
 
     let content: AnyElement = match (index, error) {
         (_index, Some(err)) => cx.text(format!("semantics error: {err}")),
@@ -965,34 +953,25 @@ fn semantics_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement {
                         )
                         .into_element(cx);
 
-                    fret_ui_kit::declarative::stack::hstack(
-                        cx,
-                        fret_ui_kit::declarative::stack::HStackProps::default()
-                            .gap_x(fret_ui_kit::Space::N1)
-                            .items_center()
-                            .layout(fret_ui_kit::LayoutRefinement::default().w_full()),
-                        |_cx| [toggle, row_button],
-                    )
+                    ui::h_row(|_cx| [toggle, row_button])
+                        .gap(fret_ui_kit::Space::N1)
+                        .items_center()
+                        .layout(fret_ui_kit::LayoutRefinement::default().w_full())
+                        .into_element(cx)
                 },
             );
 
-            fret_ui_kit::declarative::stack::vstack(
-                cx,
-                fret_ui_kit::declarative::stack::VStackProps::default()
-                    .gap_y(fret_ui_kit::Space::N1)
-                    .layout(fret_ui_kit::LayoutRefinement::default().w_full().h_full()),
-                |_cx| [stats, list],
-            )
+            ui::v_stack(|_cx| [stats, list])
+                .gap(fret_ui_kit::Space::N1)
+                .layout(fret_ui_kit::LayoutRefinement::default().w_full().h_full())
+                .into_element(cx)
         }
     };
 
-    fret_ui_kit::declarative::stack::vstack(
-        cx,
-        fret_ui_kit::declarative::stack::VStackProps::default()
-            .gap_y(fret_ui_kit::Space::N2)
-            .layout(fret_ui_kit::LayoutRefinement::default().w_full().h_full()),
-        |_cx| [header, content],
-    )
+    ui::v_stack(|_cx| [header, content])
+        .gap(fret_ui_kit::Space::N2)
+        .layout(fret_ui_kit::LayoutRefinement::default().w_full().h_full())
+        .into_element(cx)
 }
 
 fn center_panel(
@@ -1173,12 +1152,7 @@ fn center_panel(
         )
     };
 
-    let buttons = fret_ui_kit::declarative::stack::hstack(
-        cx,
-        fret_ui_kit::declarative::stack::HStackProps::default()
-            .gap_x(fret_ui_kit::Space::N2)
-            .items_center(),
-        |cx| {
+    let buttons = ui::h_row(|cx| {
             [
                 shadcn::Button::new("Push Script")
                     .variant(shadcn::ButtonVariant::Secondary)
@@ -1221,15 +1195,12 @@ fn center_panel(
                     if consume_clicks { "true" } else { "false" }
                 )),
             ]
-        },
-    );
+        })
+        .gap(fret_ui_kit::Space::N2)
+        .items_center()
+        .into_element(cx);
 
-    let pack_row = fret_ui_kit::declarative::stack::hstack(
-        cx,
-        fret_ui_kit::declarative::stack::HStackProps::default()
-            .gap_x(fret_ui_kit::Space::N2)
-            .items_center(),
-        |cx| {
+    let pack_row = ui::h_row(|cx| {
             let copy_enabled = last_pack_path.is_some();
             [
                 cx.text("Artifacts:"),
@@ -1253,15 +1224,12 @@ fn center_panel(
                     .on_click(CMD_OPEN_VIEWER_URL)
                     .into_element(cx),
             ]
-        },
-    );
+        })
+        .gap(fret_ui_kit::Space::N2)
+        .items_center()
+        .into_element(cx);
 
-    let apply_row = fret_ui_kit::declarative::stack::hstack(
-        cx,
-        fret_ui_kit::declarative::stack::HStackProps::default()
-            .gap_x(fret_ui_kit::Space::N2)
-            .items_center(),
-        |cx| {
+    let apply_row = ui::h_row(|cx| {
             [
                 cx.text("Pick-to-fill:"),
                 pointer_input,
@@ -1272,8 +1240,10 @@ fn center_panel(
                     .on_click(CMD_SCRIPT_APPLY_PICK)
                     .into_element(cx),
             ]
-        },
-    );
+        })
+        .gap(fret_ui_kit::Space::N2)
+        .items_center()
+        .into_element(cx);
 
     let loaded_line = match (loaded_origin, loaded_path.as_deref()) {
         (Some(origin), Some(path)) => format!("Loaded: [{}] {path}", origin.label()),
@@ -1353,13 +1323,12 @@ fn center_panel(
         );
     }
 
-    let scripts_list = shadcn::ScrollArea::new([fret_ui_kit::declarative::stack::vstack(
-        cx,
-        fret_ui_kit::declarative::stack::VStackProps::default()
-            .gap_y(fret_ui_kit::Space::N1)
-            .layout(fret_ui_kit::LayoutRefinement::default().w_full()),
-        |_cx| script_rows,
-    )])
+    let scripts_list = shadcn::ScrollArea::new([
+        ui::v_stack(|_cx| script_rows)
+            .gap(fret_ui_kit::Space::N1)
+            .layout(fret_ui_kit::LayoutRefinement::default().w_full())
+            .into_element(cx),
+    ])
     .into_element(cx);
 
     let script_schema_version = infer_script_schema_version(&script_text).unwrap_or(1);
@@ -1437,12 +1406,8 @@ fn center_panel(
         );
     }
 
-    let steps_tab = shadcn::ScrollArea::new([fret_ui_kit::declarative::stack::vstack(
-        cx,
-        fret_ui_kit::declarative::stack::VStackProps::default()
-            .gap_y(fret_ui_kit::Space::N2)
-            .layout(fret_ui_kit::LayoutRefinement::default().w_full()),
-        |cx| {
+    let steps_tab = shadcn::ScrollArea::new([
+        ui::v_stack(|cx| {
             let mut out: Vec<AnyElement> = Vec::new();
             out.push(cx.text(format!("Schema v{script_schema_version} step palette")));
             out.push(step_index_input);
@@ -1472,8 +1437,11 @@ fn center_panel(
                 }
             }
             out
-        },
-    )])
+        })
+        .gap(fret_ui_kit::Space::N2)
+        .layout(fret_ui_kit::LayoutRefinement::default().w_full())
+        .into_element(cx),
+    ])
     .into_element(cx);
 
     let selector_kind_items = [
@@ -1562,41 +1530,35 @@ fn center_panel(
         on_activate
     };
 
-    let selector_tab = fret_ui_kit::declarative::stack::vstack(
-        cx,
-        fret_ui_kit::declarative::stack::VStackProps::default()
-            .gap_y(fret_ui_kit::Space::N2)
-            .layout(fret_ui_kit::LayoutRefinement::default().w_full()),
-        |cx| {
+    let selector_tab = ui::v_stack(|cx| {
             let fields = selector_fields(cx, st, selector_kind.as_ref());
             let preview = text_blob(cx, selector_json.clone());
             [
                 selector_kind_select,
                 fields,
-                fret_ui_kit::declarative::stack::hstack(
-                    cx,
-                    fret_ui_kit::declarative::stack::HStackProps::default()
-                        .gap_x(fret_ui_kit::Space::N2)
-                        .items_center(),
-                    |cx| {
-                        [
-                            shadcn::Button::new("Apply to pointer")
-                                .variant(shadcn::ButtonVariant::Secondary)
-                                .size(shadcn::ButtonSize::Sm)
-                                .on_activate(selector_apply)
-                                .into_element(cx),
-                            shadcn::Button::new("Copy JSON")
-                                .variant(shadcn::ButtonVariant::Outline)
-                                .size(shadcn::ButtonSize::Sm)
-                                .on_activate(selector_copy)
-                                .into_element(cx),
-                        ]
-                    },
-                ),
+                ui::h_row(|cx| {
+                    [
+                        shadcn::Button::new("Apply to pointer")
+                            .variant(shadcn::ButtonVariant::Secondary)
+                            .size(shadcn::ButtonSize::Sm)
+                            .on_activate(selector_apply)
+                            .into_element(cx),
+                        shadcn::Button::new("Copy JSON")
+                            .variant(shadcn::ButtonVariant::Outline)
+                            .size(shadcn::ButtonSize::Sm)
+                            .on_activate(selector_copy)
+                            .into_element(cx),
+                    ]
+                })
+                .gap(fret_ui_kit::Space::N2)
+                .items_center()
+                .into_element(cx),
                 preview,
             ]
-        },
-    );
+        })
+        .gap(fret_ui_kit::Space::N2)
+        .layout(fret_ui_kit::LayoutRefinement::default().w_full())
+        .into_element(cx);
 
     let predicate_kind_items = [
         shadcn::SelectItem::new("exists", "exists"),
@@ -1698,41 +1660,35 @@ fn center_panel(
         on_activate
     };
 
-    let predicate_tab = fret_ui_kit::declarative::stack::vstack(
-        cx,
-        fret_ui_kit::declarative::stack::VStackProps::default()
-            .gap_y(fret_ui_kit::Space::N2)
-            .layout(fret_ui_kit::LayoutRefinement::default().w_full()),
-        |cx| {
+    let predicate_tab = ui::v_stack(|cx| {
             let fields = predicate_fields(cx, st, predicate_kind.as_ref());
             let preview = text_blob(cx, predicate_json.clone());
             [
                 predicate_kind_select,
                 fields,
-                fret_ui_kit::declarative::stack::hstack(
-                    cx,
-                    fret_ui_kit::declarative::stack::HStackProps::default()
-                        .gap_x(fret_ui_kit::Space::N2)
-                        .items_center(),
-                    |cx| {
-                        [
-                            shadcn::Button::new("Apply to pointer")
-                                .variant(shadcn::ButtonVariant::Secondary)
-                                .size(shadcn::ButtonSize::Sm)
-                                .on_activate(predicate_apply)
-                                .into_element(cx),
-                            shadcn::Button::new("Copy JSON")
-                                .variant(shadcn::ButtonVariant::Outline)
-                                .size(shadcn::ButtonSize::Sm)
-                                .on_activate(predicate_copy)
-                                .into_element(cx),
-                        ]
-                    },
-                ),
+                ui::h_row(|cx| {
+                    [
+                        shadcn::Button::new("Apply to pointer")
+                            .variant(shadcn::ButtonVariant::Secondary)
+                            .size(shadcn::ButtonSize::Sm)
+                            .on_activate(predicate_apply)
+                            .into_element(cx),
+                        shadcn::Button::new("Copy JSON")
+                            .variant(shadcn::ButtonVariant::Outline)
+                            .size(shadcn::ButtonSize::Sm)
+                            .on_activate(predicate_copy)
+                            .into_element(cx),
+                    ]
+                })
+                .gap(fret_ui_kit::Space::N2)
+                .items_center()
+                .into_element(cx),
                 preview,
             ]
-        },
-    );
+        })
+        .gap(fret_ui_kit::Space::N2)
+        .layout(fret_ui_kit::LayoutRefinement::default().w_full())
+        .into_element(cx);
 
     let helpers_tabs = shadcn::Tabs::new(st.script_studio_helper_tab.clone())
         .refine_layout(fret_ui_kit::LayoutRefinement::default().w_full())
@@ -1743,48 +1699,42 @@ fn center_panel(
         ])
         .into_element(cx);
 
-    let split = fret_ui_kit::declarative::stack::hstack(
-        cx,
-        fret_ui_kit::declarative::stack::HStackProps::default()
-            .gap_x(fret_ui_kit::Space::N2)
-            .layout(fret_ui_kit::LayoutRefinement::default().w_full().h_full())
-            .items_start(),
-        |cx| {
-            [
-                cx.container(
-                    fret_ui_kit::declarative::style::container_props(
-                        &theme,
-                        fret_ui_kit::ChromeRefinement::default(),
-                        fret_ui_kit::LayoutRefinement::default()
-                            .w_px(Px(240.0))
-                            .h_full(),
-                    ),
-                    |_cx| [scripts_list],
+    let split = ui::h_row(|cx| {
+        [
+            cx.container(
+                fret_ui_kit::declarative::style::container_props(
+                    &theme,
+                    fret_ui_kit::ChromeRefinement::default(),
+                    fret_ui_kit::LayoutRefinement::default()
+                        .w_px(Px(240.0))
+                        .h_full(),
                 ),
-                cx.container(
-                    fret_ui_kit::declarative::style::container_props(
-                        &theme,
-                        fret_ui_kit::ChromeRefinement::default(),
-                        fret_ui_kit::LayoutRefinement::default()
-                            .flex_1()
-                            .min_w_0()
-                            .h_full(),
-                    ),
-                    |_cx| [textarea],
+                |_cx| [scripts_list],
+            ),
+            cx.container(
+                fret_ui_kit::declarative::style::container_props(
+                    &theme,
+                    fret_ui_kit::ChromeRefinement::default(),
+                    fret_ui_kit::LayoutRefinement::default().flex_1().min_w_0().h_full(),
                 ),
-                cx.container(
-                    fret_ui_kit::declarative::style::container_props(
-                        &theme,
-                        fret_ui_kit::ChromeRefinement::default(),
-                        fret_ui_kit::LayoutRefinement::default()
-                            .w_px(Px(320.0))
-                            .h_full(),
-                    ),
-                    |_cx| [helpers_tabs],
+                |_cx| [textarea],
+            ),
+            cx.container(
+                fret_ui_kit::declarative::style::container_props(
+                    &theme,
+                    fret_ui_kit::ChromeRefinement::default(),
+                    fret_ui_kit::LayoutRefinement::default()
+                        .w_px(Px(320.0))
+                        .h_full(),
                 ),
-            ]
-        },
-    );
+                |_cx| [helpers_tabs],
+            ),
+        ]
+    })
+    .gap(fret_ui_kit::Space::N2)
+    .layout(fret_ui_kit::LayoutRefinement::default().w_full().h_full())
+    .items_start()
+    .into_element(cx);
 
     shadcn::Card::new([
         shadcn::CardHeader::new([
@@ -1988,14 +1938,11 @@ fn sem_node_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement {
         .into_element(cx);
     let status_elem = cx.text(status_line);
 
-    let header = fret_ui_kit::declarative::stack::hstack(
-        cx,
-        fret_ui_kit::declarative::stack::HStackProps::default()
-            .gap_x(fret_ui_kit::Space::N2)
-            .items_center()
-            .layout(fret_ui_kit::LayoutRefinement::default().w_full()),
-        |_cx| [live_toggle_btn, refresh_btn, status_elem],
-    );
+    let header = ui::h_row(|_cx| [live_toggle_btn, refresh_btn, status_elem])
+        .gap(fret_ui_kit::Space::N2)
+        .items_center()
+        .layout(fret_ui_kit::LayoutRefinement::default().w_full())
+        .into_element(cx);
 
     let mut child_buttons: Vec<AnyElement> = Vec::new();
     child_buttons.reserve(children.len().min(64));
@@ -2052,13 +1999,12 @@ fn sem_node_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement {
     let children_panel = if child_buttons.is_empty() {
         cx.text("children: <none>")
     } else {
-        shadcn::ScrollArea::new([fret_ui_kit::declarative::stack::vstack(
-            cx,
-            fret_ui_kit::declarative::stack::VStackProps::default()
-                .gap_y(fret_ui_kit::Space::N1)
-                .layout(fret_ui_kit::LayoutRefinement::default().w_full()),
-            |_cx| child_buttons,
-        )])
+        shadcn::ScrollArea::new([
+            ui::v_stack(|_cx| child_buttons)
+                .gap(fret_ui_kit::Space::N1)
+                .layout(fret_ui_kit::LayoutRefinement::default().w_full())
+                .into_element(cx),
+        ])
         .refine_layout(
             fret_ui_kit::LayoutRefinement::default()
                 .w_full()
@@ -2070,13 +2016,10 @@ fn sem_node_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement {
     let json_text = if !live.is_empty() { live } else { fallback };
     let body = text_blob(cx, json_text);
 
-    fret_ui_kit::declarative::stack::vstack(
-        cx,
-        fret_ui_kit::declarative::stack::VStackProps::default()
-            .gap_y(fret_ui_kit::Space::N2)
-            .layout(fret_ui_kit::LayoutRefinement::default().w_full().h_full()),
-        |_cx| [header, children_panel, body],
-    )
+    ui::v_stack(|_cx| [header, children_panel, body])
+        .gap(fret_ui_kit::Space::N2)
+        .layout(fret_ui_kit::LayoutRefinement::default().w_full().h_full())
+        .into_element(cx)
 }
 
 fn on_command(
@@ -2918,41 +2861,26 @@ fn selector_fields(cx: &mut ElementContext<'_, App>, st: &State, kind: &str) -> 
         .into_element(cx);
 
     match kind {
-        "test_id" => fret_ui_kit::declarative::stack::vstack(
-            cx,
-            fret_ui_kit::declarative::stack::VStackProps::default()
-                .gap_y(fret_ui_kit::Space::N1)
-                .layout(fret_ui_kit::LayoutRefinement::default().w_full()),
-            |_cx| [test_id],
-        ),
-        "role_and_name" => fret_ui_kit::declarative::stack::vstack(
-            cx,
-            fret_ui_kit::declarative::stack::VStackProps::default()
-                .gap_y(fret_ui_kit::Space::N1)
-                .layout(fret_ui_kit::LayoutRefinement::default().w_full()),
-            |_cx| [role, name],
-        ),
-        "role_and_path" => fret_ui_kit::declarative::stack::vstack(
-            cx,
-            fret_ui_kit::declarative::stack::VStackProps::default()
-                .gap_y(fret_ui_kit::Space::N1)
-                .layout(fret_ui_kit::LayoutRefinement::default().w_full()),
-            |_cx| [role, name, ancestors],
-        ),
-        "node_id" => fret_ui_kit::declarative::stack::vstack(
-            cx,
-            fret_ui_kit::declarative::stack::VStackProps::default()
-                .gap_y(fret_ui_kit::Space::N1)
-                .layout(fret_ui_kit::LayoutRefinement::default().w_full()),
-            |_cx| [node_id],
-        ),
-        "global_element_id" => fret_ui_kit::declarative::stack::vstack(
-            cx,
-            fret_ui_kit::declarative::stack::VStackProps::default()
-                .gap_y(fret_ui_kit::Space::N1)
-                .layout(fret_ui_kit::LayoutRefinement::default().w_full()),
-            |_cx| [element_id],
-        ),
+        "test_id" => ui::v_stack(|_cx| [test_id])
+            .gap(fret_ui_kit::Space::N1)
+            .layout(fret_ui_kit::LayoutRefinement::default().w_full())
+            .into_element(cx),
+        "role_and_name" => ui::v_stack(|_cx| [role, name])
+            .gap(fret_ui_kit::Space::N1)
+            .layout(fret_ui_kit::LayoutRefinement::default().w_full())
+            .into_element(cx),
+        "role_and_path" => ui::v_stack(|_cx| [role, name, ancestors])
+            .gap(fret_ui_kit::Space::N1)
+            .layout(fret_ui_kit::LayoutRefinement::default().w_full())
+            .into_element(cx),
+        "node_id" => ui::v_stack(|_cx| [node_id])
+            .gap(fret_ui_kit::Space::N1)
+            .layout(fret_ui_kit::LayoutRefinement::default().w_full())
+            .into_element(cx),
+        "global_element_id" => ui::v_stack(|_cx| [element_id])
+            .gap(fret_ui_kit::Space::N1)
+            .layout(fret_ui_kit::LayoutRefinement::default().w_full())
+            .into_element(cx),
         _ => cx.text("unknown selector kind"),
     }
 }
@@ -3109,28 +3037,19 @@ fn predicate_fields(cx: &mut ElementContext<'_, App>, st: &State, kind: &str) ->
                     .min_height(Px(96.0))
                     .into_element(cx);
 
-            fret_ui_kit::declarative::stack::vstack(
-                cx,
-                fret_ui_kit::declarative::stack::VStackProps::default()
-                    .gap_y(fret_ui_kit::Space::N1)
-                    .layout(fret_ui_kit::LayoutRefinement::default().w_full()),
-                |_cx| [barrier_root, focus_root, require_equal, other_selector],
-            )
+            ui::v_stack(|_cx| [barrier_root, focus_root, require_equal, other_selector])
+                .gap(fret_ui_kit::Space::N1)
+                .layout(fret_ui_kit::LayoutRefinement::default().w_full())
+                .into_element(cx)
         }
-        "bounds_within_window" => fret_ui_kit::declarative::stack::vstack(
-            cx,
-            fret_ui_kit::declarative::stack::VStackProps::default()
-                .gap_y(fret_ui_kit::Space::N1)
-                .layout(fret_ui_kit::LayoutRefinement::default().w_full()),
-            |_cx| [padding, eps],
-        ),
-        "bounds_min_size" => fret_ui_kit::declarative::stack::vstack(
-            cx,
-            fret_ui_kit::declarative::stack::VStackProps::default()
-                .gap_y(fret_ui_kit::Space::N1)
-                .layout(fret_ui_kit::LayoutRefinement::default().w_full()),
-            |_cx| [min_w, min_h, eps],
-        ),
+        "bounds_within_window" => ui::v_stack(|_cx| [padding, eps])
+            .gap(fret_ui_kit::Space::N1)
+            .layout(fret_ui_kit::LayoutRefinement::default().w_full())
+            .into_element(cx),
+        "bounds_min_size" => ui::v_stack(|_cx| [min_w, min_h, eps])
+            .gap(fret_ui_kit::Space::N1)
+            .layout(fret_ui_kit::LayoutRefinement::default().w_full())
+            .into_element(cx),
         "bounds_non_overlapping"
         | "bounds_overlapping"
         | "bounds_overlapping_x"
@@ -3140,13 +3059,10 @@ fn predicate_fields(cx: &mut ElementContext<'_, App>, st: &State, kind: &str) ->
                     .a11y_label("selector B (JSON)")
                     .min_height(Px(120.0))
                     .into_element(cx);
-            fret_ui_kit::declarative::stack::vstack(
-                cx,
-                fret_ui_kit::declarative::stack::VStackProps::default()
-                    .gap_y(fret_ui_kit::Space::N1)
-                    .layout(fret_ui_kit::LayoutRefinement::default().w_full()),
-                |_cx| [eps, other_selector],
-            )
+            ui::v_stack(|_cx| [eps, other_selector])
+                .gap(fret_ui_kit::Space::N1)
+                .layout(fret_ui_kit::LayoutRefinement::default().w_full())
+                .into_element(cx)
         }
         _ => cx.text(""),
     }

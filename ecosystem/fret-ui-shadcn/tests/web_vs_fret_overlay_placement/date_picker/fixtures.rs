@@ -89,11 +89,10 @@ fn build_date_picker_with_presets_select_listbox_overlay(
                     ])
                     .into_element(cx);
 
-                let body = stack::vstack(
-                    cx,
-                    stack::VStackProps::default().gap(Space::N2).items_stretch(),
-                    move |_cx| vec![select],
-                );
+                let body = ui::v_stack(move |_cx| vec![select])
+                    .gap(Space::N2)
+                    .items_stretch()
+                    .into_element(cx);
 
                 fret_ui_shadcn::PopoverContent::new([body])
                     .refine_style(ChromeRefinement::default().p(Space::N2))

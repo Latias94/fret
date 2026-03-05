@@ -7,7 +7,7 @@ use fret_ui::Invalidation;
 use fret_ui_ai as ui_ai;
 use fret_ui_assets::{ImageSource, ui::ImageSourceElementContextExt as _};
 use fret_ui_kit::declarative::icon as decl_icon;
-use fret_ui_kit::declarative::stack;
+use fret_ui_kit::ui;
 use fret_ui_kit::{LayoutRefinement, Space};
 use fret_ui_shadcn::prelude::*;
 use std::sync::Arc;
@@ -270,14 +270,11 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
 
                         let indicator = ui_ai::QueueItemIndicator::new().into_element(cx);
                         let content = ui_ai::QueueItemContent::new(summary).into_element(cx);
-                        let left = stack::hstack(
-                            cx,
-                            stack::HStackProps::default()
-                                .layout(LayoutRefinement::default().flex_1().min_w_0())
-                                .gap(Space::N2)
-                                .items_center(),
-                            move |_cx| vec![indicator, content],
-                        );
+                        let left = ui::h_row(move |_cx| vec![indicator, content])
+                            .layout(LayoutRefinement::default().flex_1().min_w_0())
+                            .gap(Space::N2)
+                            .items_center()
+                            .into_element(cx);
 
                         let actions_visible = st.hovered;
                         let remove_icon = decl_icon::icon_with(
@@ -316,15 +313,12 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
                             actions = actions.test_id(hover_marker_id.clone());
                         }
 
-                        let row = stack::hstack(
-                            cx,
-                            stack::HStackProps::default()
-                                .layout(LayoutRefinement::default().w_full().min_w_0())
-                                .items_center()
-                                .justify_between()
-                                .gap(Space::N2),
-                            move |_cx| vec![left, actions],
-                        );
+                        let row = ui::h_flex(move |_cx| vec![left, actions])
+                            .layout(LayoutRefinement::default().w_full().min_w_0())
+                            .items_center()
+                            .justify_between()
+                            .gap(Space::N2)
+                            .into_element(cx);
 
                         let mut children = vec![row];
 
@@ -388,14 +382,11 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
                     let content = ui_ai::QueueItemContent::new(todo.title.clone())
                         .completed(todo.completed)
                         .into_element(cx);
-                    let left = stack::hstack(
-                        cx,
-                        stack::HStackProps::default()
-                            .layout(LayoutRefinement::default().flex_1().min_w_0())
-                            .gap(Space::N2)
-                            .items_center(),
-                        move |_cx| vec![indicator, content],
-                    );
+                    let left = ui::h_row(move |_cx| vec![indicator, content])
+                        .layout(LayoutRefinement::default().flex_1().min_w_0())
+                        .gap(Space::N2)
+                        .items_center()
+                        .into_element(cx);
 
                     let actions_visible = st.hovered;
                     let remove_icon = decl_icon::icon_with(
@@ -413,15 +404,12 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
                         .refine_layout(LayoutRefinement::default().flex_none())
                         .into_element(cx);
 
-                    let row = stack::hstack(
-                        cx,
-                        stack::HStackProps::default()
-                            .layout(LayoutRefinement::default().w_full().min_w_0())
-                            .items_center()
-                            .justify_between()
-                            .gap(Space::N2),
-                        move |_cx| vec![left, actions],
-                    );
+                    let row = ui::h_flex(move |_cx| vec![left, actions])
+                        .layout(LayoutRefinement::default().w_full().min_w_0())
+                        .items_center()
+                        .justify_between()
+                        .gap(Space::N2)
+                        .into_element(cx);
 
                     let mut out = vec![row];
                     if let Some(desc) = todo.description.as_ref() {
@@ -479,19 +467,16 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
     .test_id("ui-ai-queue-root")
     .into_element(cx);
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .layout(LayoutRefinement::default().w_full().min_w_0())
-            .gap(Space::N4),
-        move |cx| {
-            vec![
-                cx.text("Queue (AI Elements)"),
-                cx.text("Hover an item to reveal actions; actions increment a demo marker."),
-                queue,
-                action_marker,
-            ]
-        },
-    )
+    ui::v_flex(move |cx| {
+        vec![
+            cx.text("Queue (AI Elements)"),
+            cx.text("Hover an item to reveal actions; actions increment a demo marker."),
+            queue,
+            action_marker,
+        ]
+    })
+    .layout(LayoutRefinement::default().w_full().min_w_0())
+    .gap(Space::N4)
+    .into_element(cx)
 }
 // endregion: example

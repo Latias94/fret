@@ -103,14 +103,11 @@ pub fn render<H: UiHost>(
     })
     .test_id("ui-gallery-avatar-badge-icon-row");
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N4)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full().min_w_0()),
-        |_cx| vec![dot_row, icon_row],
-    )
-    .test_id("ui-gallery-avatar-badge")
+    ui::v_flex(|_cx| vec![dot_row, icon_row])
+        .gap(Space::N4)
+        .items_start()
+        .layout(LayoutRefinement::default().w_full().min_w_0())
+        .into_element(cx)
+        .test_id("ui-gallery-avatar-badge")
 }
 // endregion: example

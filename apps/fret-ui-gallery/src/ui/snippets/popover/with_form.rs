@@ -11,13 +11,10 @@ struct Models {
 }
 
 fn centered<H: UiHost>(cx: &mut ElementContext<'_, H>, body: AnyElement) -> AnyElement {
-    stack::hstack(
-        cx,
-        stack::HStackProps::default()
-            .layout(LayoutRefinement::default().w_full())
-            .justify_center(),
-        move |_cx| [body],
-    )
+    ui::h_flex(move |_cx| [body])
+        .layout(LayoutRefinement::default().w_full())
+        .justify_center()
+        .into_element(cx)
 }
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {

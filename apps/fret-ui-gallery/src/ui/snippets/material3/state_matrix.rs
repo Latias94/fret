@@ -201,10 +201,7 @@ fn render_chips<H: UiHost>(
 
     vec![
         cx.text("Material 3 Chips: assist + suggestion + filter + input + chip-set roving focus."),
-        stack::hstack(
-            cx,
-            stack::HStackProps::default().gap(Space::N2).items_center(),
-            move |cx| {
+        ui::h_row(move |cx| {
                 vec![
                     material3::AssistChip::new("Flat")
                         .on_activate(activate_row1.clone())
@@ -225,12 +222,8 @@ fn render_chips<H: UiHost>(
                         .test_id("ui-gallery-material3-chip-flat-hover-override")
                         .into_element(cx),
                 ]
-            },
-        ),
-        stack::hstack(
-            cx,
-            stack::HStackProps::default().gap(Space::N2).items_center(),
-            move |cx| {
+            }).gap(Space::N2).items_center().into_element(cx),
+        ui::h_row(move |cx| {
                 vec![
                     material3::AssistChip::new("Elevated")
                         .variant(material3::AssistChipVariant::Elevated)
@@ -259,12 +252,8 @@ fn render_chips<H: UiHost>(
                         .test_id("ui-gallery-material3-chip-elevated-hover-override")
                         .into_element(cx),
                 ]
-            },
-        ),
-        stack::hstack(
-            cx,
-            stack::HStackProps::default().gap(Space::N2).items_center(),
-            move |cx| {
+            }).gap(Space::N2).items_center().into_element(cx),
+        ui::h_row(move |cx| {
                 vec![
                     material3::SuggestionChip::new("Suggestion")
                         .on_activate(activate_row3.clone())
@@ -281,12 +270,8 @@ fn render_chips<H: UiHost>(
                         .test_id("ui-gallery-material3-suggestion-chip-disabled")
                         .into_element(cx),
                 ]
-            },
-        ),
-        stack::hstack(
-            cx,
-            stack::HStackProps::default().gap(Space::N2).items_center(),
-            move |cx| {
+            }).gap(Space::N2).items_center().into_element(cx),
+        ui::h_row(move |cx| {
                 vec![
                     material3::FilterChip::new(filter_selected_row.clone(), "Filter")
                         .trailing_icon(ids::ui::CLOSE)
@@ -309,12 +294,8 @@ fn render_chips<H: UiHost>(
                         .test_id("ui-gallery-material3-filter-chip-disabled")
                         .into_element(cx),
                 ]
-            },
-        ),
-        stack::hstack(
-            cx,
-            stack::HStackProps::default().gap(Space::N2).items_center(),
-            move |cx| {
+            }).gap(Space::N2).items_center().into_element(cx),
+        ui::h_row(move |cx| {
                 vec![
                     material3::InputChip::new(input_selected_row.clone(), "Input")
                         .leading_icon(ids::ui::SETTINGS)
@@ -332,8 +313,7 @@ fn render_chips<H: UiHost>(
                         .test_id("ui-gallery-material3-input-chip-disabled")
                         .into_element(cx),
                 ]
-            },
-        ),
+            }).gap(Space::N2).items_center().into_element(cx),
         cx.text(
             "Material 3 ChipSet: ArrowLeft/Right + Home/End roving focus. Multi-action chips use ArrowLeft/Right to move focus between primary/trailing actions.",
         ),
@@ -442,10 +422,7 @@ fn render_cards<H: UiHost>(
         cx.text(
             "Material 3 Card: token-driven surface + outline + ink (interactive only when on_activate is set).",
         ),
-        stack::hstack(
-            cx,
-            stack::HStackProps::default().gap(Space::N2).items_center(),
-            move |cx| {
+        ui::h_row(move |cx| {
                 vec![
                     material3::Card::new()
                         .variant(material3::CardVariant::Filled)
@@ -465,12 +442,8 @@ fn render_cards<H: UiHost>(
                         .test_id("ui-gallery-material3-card-filled-disabled")
                         .into_element(cx, |cx| vec![card_content_row1(cx, "Disabled")]),
                 ]
-            },
-        ),
-        stack::hstack(
-            cx,
-            stack::HStackProps::default().gap(Space::N2).items_center(),
-            move |cx| {
+            }).gap(Space::N2).items_center().into_element(cx),
+        ui::h_row(move |cx| {
                 vec![
                     material3::Card::new()
                         .variant(material3::CardVariant::Elevated)
@@ -489,8 +462,7 @@ fn render_cards<H: UiHost>(
                         .test_id("ui-gallery-material3-card-outlined-override")
                         .into_element(cx, |cx| vec![card_content_row2(cx, "Outline override")]),
                 ]
-            },
-        ),
+            }).gap(Space::N2).items_center().into_element(cx),
     ]
 }
 
@@ -512,92 +484,87 @@ fn render_fab<H: UiHost>(
               variant: material3::FabVariant,
               label: &'static str| {
             let last_action = last_action.clone();
-            stack::hstack(
-                cx,
-                stack::HStackProps::default().gap(Space::N2).items_center(),
-                move |cx| {
-                    vec![
-                        material3::Fab::new(ids::ui::SEARCH)
-                            .variant(variant)
-                            .a11y_label(label)
-                            .on_activate(on_activate(
-                                "material3.fab.activated",
-                                last_action.clone(),
-                            ))
-                            .into_element(cx),
-                        material3::Fab::new(ids::ui::SEARCH)
-                            .variant(variant)
-                            .a11y_label("Small")
-                            .size(material3::FabSize::Small)
-                            .on_activate(on_activate(
-                                "material3.fab.small.activated",
-                                last_action.clone(),
-                            ))
-                            .into_element(cx),
-                        material3::Fab::new(ids::ui::SEARCH)
-                            .variant(variant)
-                            .a11y_label("Large")
-                            .size(material3::FabSize::Large)
-                            .on_activate(on_activate(
-                                "material3.fab.large.activated",
-                                last_action.clone(),
-                            ))
-                            .into_element(cx),
-                        material3::Fab::new(ids::ui::SEARCH)
-                            .variant(variant)
-                            .a11y_label("Lowered")
-                            .lowered(true)
-                            .on_activate(on_activate(
-                                "material3.fab.lowered.activated",
-                                last_action.clone(),
-                            ))
-                            .into_element(cx),
-                        material3::Fab::new(ids::ui::SEARCH)
-                            .variant(variant)
-                            .a11y_label("Disabled")
-                            .disabled(true)
-                            .into_element(cx),
-                    ]
-                },
-            )
+            ui::h_row(move |cx| {
+                vec![
+                    material3::Fab::new(ids::ui::SEARCH)
+                        .variant(variant)
+                        .a11y_label(label)
+                        .on_activate(on_activate("material3.fab.activated", last_action.clone()))
+                        .into_element(cx),
+                    material3::Fab::new(ids::ui::SEARCH)
+                        .variant(variant)
+                        .a11y_label("Small")
+                        .size(material3::FabSize::Small)
+                        .on_activate(on_activate(
+                            "material3.fab.small.activated",
+                            last_action.clone(),
+                        ))
+                        .into_element(cx),
+                    material3::Fab::new(ids::ui::SEARCH)
+                        .variant(variant)
+                        .a11y_label("Large")
+                        .size(material3::FabSize::Large)
+                        .on_activate(on_activate(
+                            "material3.fab.large.activated",
+                            last_action.clone(),
+                        ))
+                        .into_element(cx),
+                    material3::Fab::new(ids::ui::SEARCH)
+                        .variant(variant)
+                        .a11y_label("Lowered")
+                        .lowered(true)
+                        .on_activate(on_activate(
+                            "material3.fab.lowered.activated",
+                            last_action.clone(),
+                        ))
+                        .into_element(cx),
+                    material3::Fab::new(ids::ui::SEARCH)
+                        .variant(variant)
+                        .a11y_label("Disabled")
+                        .disabled(true)
+                        .into_element(cx),
+                ]
+            })
+            .gap(Space::N2)
+            .items_center()
+            .into_element(cx)
         }
     };
 
     let extended = {
         let last_action = last_action.clone();
-        stack::hstack(
-            cx,
-            stack::HStackProps::default().gap(Space::N2).items_center(),
-            move |cx| {
-                vec![
-                    material3::Fab::new(ids::ui::SEARCH)
-                        .variant(material3::FabVariant::Surface)
-                        .label("Create")
-                        .on_activate(on_activate(
-                            "material3.extended_fab.activated",
-                            last_action.clone(),
-                        ))
-                        .into_element(cx),
-                    material3::Fab::new(ids::ui::SEARCH)
-                        .variant(material3::FabVariant::Primary)
-                        .label("Create")
-                        .on_activate(on_activate(
-                            "material3.extended_fab.primary.activated",
-                            last_action.clone(),
-                        ))
-                        .into_element(cx),
-                    material3::Fab::new(ids::ui::SEARCH)
-                        .variant(material3::FabVariant::Surface)
-                        .label("Reroute")
-                        .icon(None)
-                        .on_activate(on_activate(
-                            "material3.extended_fab.no_icon.activated",
-                            last_action.clone(),
-                        ))
-                        .into_element(cx),
-                ]
-            },
-        )
+        ui::h_row(move |cx| {
+            vec![
+                material3::Fab::new(ids::ui::SEARCH)
+                    .variant(material3::FabVariant::Surface)
+                    .label("Create")
+                    .on_activate(on_activate(
+                        "material3.extended_fab.activated",
+                        last_action.clone(),
+                    ))
+                    .into_element(cx),
+                material3::Fab::new(ids::ui::SEARCH)
+                    .variant(material3::FabVariant::Primary)
+                    .label("Create")
+                    .on_activate(on_activate(
+                        "material3.extended_fab.primary.activated",
+                        last_action.clone(),
+                    ))
+                    .into_element(cx),
+                material3::Fab::new(ids::ui::SEARCH)
+                    .variant(material3::FabVariant::Surface)
+                    .label("Reroute")
+                    .icon(None)
+                    .on_activate(on_activate(
+                        "material3.extended_fab.no_icon.activated",
+                        last_action.clone(),
+                    ))
+                    .into_element(cx),
+            ]
+        })
+        .gap(Space::N2)
+        .items_center()
+        .into_element(cx)
     };
 
     vec![
@@ -758,52 +725,50 @@ pub fn render<H: UiHost>(
         .get_cloned(&last_action)
         .unwrap_or_else(|| Arc::<str>::from("<none>"));
 
-    let buttons_row = stack::hstack(
-        cx,
-        stack::HStackProps::default().gap(Space::N2).items_center(),
-        |cx| {
-            vec![
-                material3::Button::new("Filled")
-                    .variant(material3::ButtonVariant::Filled)
-                    .into_element(cx),
-                material3::Button::new("Tonal")
-                    .variant(material3::ButtonVariant::Tonal)
-                    .into_element(cx),
-                material3::Button::new("Outlined")
-                    .variant(material3::ButtonVariant::Outlined)
-                    .into_element(cx),
-                material3::Button::new("Text")
-                    .variant(material3::ButtonVariant::Text)
-                    .into_element(cx),
-                material3::Button::new("Disabled")
-                    .variant(material3::ButtonVariant::Filled)
-                    .disabled(true)
-                    .into_element(cx),
-            ]
-        },
-    );
+    let buttons_row = ui::h_row(|cx| {
+        vec![
+            material3::Button::new("Filled")
+                .variant(material3::ButtonVariant::Filled)
+                .into_element(cx),
+            material3::Button::new("Tonal")
+                .variant(material3::ButtonVariant::Tonal)
+                .into_element(cx),
+            material3::Button::new("Outlined")
+                .variant(material3::ButtonVariant::Outlined)
+                .into_element(cx),
+            material3::Button::new("Text")
+                .variant(material3::ButtonVariant::Text)
+                .into_element(cx),
+            material3::Button::new("Disabled")
+                .variant(material3::ButtonVariant::Filled)
+                .disabled(true)
+                .into_element(cx),
+        ]
+    })
+    .gap(Space::N2)
+    .items_center()
+    .into_element(cx);
 
-    let icon_buttons = stack::hstack(
-        cx,
-        stack::HStackProps::default().gap(Space::N2).items_center(),
-        |cx| {
-            vec![
-                material3::IconButton::new(ids::ui::SEARCH)
-                    .a11y_label("Search")
-                    .into_element(cx),
-                material3::IconButton::new(ids::ui::SETTINGS)
-                    .a11y_label("Settings")
-                    .into_element(cx),
-                material3::IconButton::new(ids::ui::CLOSE)
-                    .a11y_label("Close")
-                    .into_element(cx),
-                material3::IconButton::new(ids::ui::SEARCH)
-                    .a11y_label("Disabled")
-                    .disabled(true)
-                    .into_element(cx),
-            ]
-        },
-    );
+    let icon_buttons = ui::h_row(|cx| {
+        vec![
+            material3::IconButton::new(ids::ui::SEARCH)
+                .a11y_label("Search")
+                .into_element(cx),
+            material3::IconButton::new(ids::ui::SETTINGS)
+                .a11y_label("Settings")
+                .into_element(cx),
+            material3::IconButton::new(ids::ui::CLOSE)
+                .a11y_label("Close")
+                .into_element(cx),
+            material3::IconButton::new(ids::ui::SEARCH)
+                .a11y_label("Disabled")
+                .disabled(true)
+                .into_element(cx),
+        ]
+    })
+    .gap(Space::N2)
+    .items_center()
+    .into_element(cx);
 
     let radio_group = material3::RadioGroup::new(material3_radio_value.clone())
         .a11y_label("Material 3 RadioGroup")
@@ -826,22 +791,21 @@ pub fn render<H: UiHost>(
             .get_model_copied(&material3_text_field_error, Invalidation::Layout)
             .unwrap_or(false);
 
-        let toggles = stack::hstack(
-            cx,
-            stack::HStackProps::default().gap(Space::N3).items_center(),
-            move |cx| {
-                vec![
-                    material3::Switch::new(material3_text_field_disabled.clone())
-                        .a11y_label("Text field disabled")
-                        .into_element(cx),
-                    cx.text(format!("disabled={disabled}")),
-                    material3::Switch::new(material3_text_field_error.clone())
-                        .a11y_label("Text field error")
-                        .into_element(cx),
-                    cx.text(format!("error={error}")),
-                ]
-            },
-        );
+        let toggles = ui::h_row(move |cx| {
+            vec![
+                material3::Switch::new(material3_text_field_disabled.clone())
+                    .a11y_label("Text field disabled")
+                    .into_element(cx),
+                cx.text(format!("disabled={disabled}")),
+                material3::Switch::new(material3_text_field_error.clone())
+                    .a11y_label("Text field error")
+                    .into_element(cx),
+                cx.text(format!("error={error}")),
+            ]
+        })
+        .gap(Space::N3)
+        .items_center()
+        .into_element(cx);
 
         let field = material3::TextField::new(material3_text_field_value)
             .variant(material3::TextFieldVariant::Outlined)
@@ -944,15 +908,12 @@ pub fn render<H: UiHost>(
 
     out.push(cx.text(format!("last action: {last}")));
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .layout(LayoutRefinement::default().w_full().min_w_0())
-            .gap(Space::N3)
-            .items_start(),
-        move |_cx| out,
-    )
-    .into()
+    ui::v_flex(move |_cx| out)
+        .layout(LayoutRefinement::default().w_full().min_w_0())
+        .gap(Space::N3)
+        .items_start()
+        .into_element(cx)
+        .into()
 }
 
 // endregion: example

@@ -5,7 +5,7 @@ use fret_runtime::Model;
 use fret_ui::Invalidation;
 use fret_ui::element::{ContainerProps, LayoutStyle, Length, SemanticsProps, SizeStyle};
 use fret_ui_ai as ui_ai;
-use fret_ui_kit::declarative::stack;
+use fret_ui_kit::ui;
 use fret_ui_kit::{LayoutRefinement, Space};
 use fret_ui_shadcn::prelude::*;
 use std::sync::Arc;
@@ -73,22 +73,19 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
         .refine_layout(LayoutRefinement::default().w_full().min_w_0())
         .into_element(cx);
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .layout(LayoutRefinement::default().w_full().min_w_0())
-            .gap(Space::N4),
-        move |cx| {
-            let mut out = vec![
-                cx.text("Terminal (AI Elements)"),
-                cx.text("Chrome-only viewer: apps own streaming + clear behavior."),
-                terminal,
-            ];
-            if let Some(marker) = empty_marker {
-                out.push(marker);
-            }
-            out
-        },
-    )
+    ui::v_flex(move |cx| {
+        let mut out = vec![
+            cx.text("Terminal (AI Elements)"),
+            cx.text("Chrome-only viewer: apps own streaming + clear behavior."),
+            terminal,
+        ];
+        if let Some(marker) = empty_marker {
+            out.push(marker);
+        }
+        out
+    })
+    .layout(LayoutRefinement::default().w_full().min_w_0())
+    .gap(Space::N4)
+    .into_element(cx)
 }
 // endregion: example

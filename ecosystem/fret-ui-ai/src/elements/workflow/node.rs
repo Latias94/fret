@@ -4,10 +4,9 @@ use fret_core::Px;
 use fret_core::SemanticsRole;
 use fret_ui::element::{AnyElement, ElementKind, SemanticsProps};
 use fret_ui::{ElementContext, Theme, UiHost};
-use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{
-    ChromeRefinement, ColorFallback, ColorRef, Items, Justify, LayoutRefinement, Radius, Space,
+    ChromeRefinement, ColorFallback, ColorRef, Items, Justify, LayoutRefinement, Radius, Space, ui,
 };
 use fret_ui_shadcn::{Separator, SeparatorOrientation};
 
@@ -135,13 +134,12 @@ impl WorkflowNode {
                 ));
             }
 
-            out.push(stack::vstack(
-                cx,
-                stack::VStackProps::default()
+            out.push(
+                ui::v_stack(move |_cx| content_children)
                     .gap(Space::N0)
-                    .layout(LayoutRefinement::default().w_full().min_w_0()),
-                move |_cx| content_children,
-            ));
+                    .layout(LayoutRefinement::default().w_full().min_w_0())
+                    .into_element(cx),
+            );
 
             out
         });
@@ -210,14 +208,11 @@ fn workflow_node_handle_indicator<H: UiHost>(
 
     let dot = cx.container(dot_props, |_cx| Vec::new());
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .layout(overlay_layout)
-            .items(Items::Center)
-            .justify(Justify::Center),
-        move |_cx| vec![dot],
-    )
+    ui::v_stack(move |_cx| vec![dot])
+        .layout(overlay_layout)
+        .items(Items::Center)
+        .justify(Justify::Center)
+        .into_element(cx)
 }
 
 /// AI Elements-aligned workflow `NodeHeader` chrome (UI-only).
@@ -291,30 +286,21 @@ impl WorkflowNodeHeader {
         }
 
         let content = if let Some(action) = action {
-            let left_col = stack::vstack(
-                cx,
-                stack::VStackProps::default()
-                    .gap(Space::N0p5)
-                    .layout(LayoutRefinement::default().flex_1().min_w_0()),
-                move |_cx| left,
-            );
-            stack::hstack(
-                cx,
-                stack::HStackProps::default()
-                    .gap(Space::N2)
-                    .layout(LayoutRefinement::default().w_full().min_w_0())
-                    .justify_between()
-                    .items_start(),
-                move |_cx| vec![left_col, action],
-            )
+            let left_col = ui::v_stack(move |_cx| left)
+                .gap(Space::N0p5)
+                .layout(LayoutRefinement::default().flex_1().min_w_0())
+                .into_element(cx);
+            ui::h_row(move |_cx| vec![left_col, action])
+                .gap(Space::N2)
+                .layout(LayoutRefinement::default().w_full().min_w_0())
+                .justify_between()
+                .items_start()
+                .into_element(cx)
         } else {
-            stack::vstack(
-                cx,
-                stack::VStackProps::default()
-                    .gap(Space::N0p5)
-                    .layout(LayoutRefinement::default().w_full().min_w_0()),
-                move |_cx| left,
-            )
+            ui::v_stack(move |_cx| left)
+                .gap(Space::N0p5)
+                .layout(LayoutRefinement::default().w_full().min_w_0())
+                .into_element(cx)
         };
 
         let header_body = cx.container(body_props, move |_cx| vec![content]);
@@ -323,13 +309,10 @@ impl WorkflowNodeHeader {
             .orientation(SeparatorOrientation::Horizontal)
             .into_element(cx);
 
-        let mut out = stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .gap(Space::N0)
-                .layout(LayoutRefinement::default().w_full().min_w_0()),
-            move |_cx| vec![header_body, sep],
-        );
+        let mut out = ui::v_stack(move |_cx| vec![header_body, sep])
+            .gap(Space::N0)
+            .layout(LayoutRefinement::default().w_full().min_w_0())
+            .into_element(cx);
 
         if let Some(test_id) = self.test_id {
             out = out.test_id(test_id);
@@ -520,12 +503,9 @@ impl WorkflowNodeFooter {
             footer_body = footer_body.test_id(test_id);
         }
 
-        stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .gap(Space::N0)
-                .layout(LayoutRefinement::default().w_full().min_w_0()),
-            move |_cx| vec![sep, footer_body],
-        )
+        ui::v_stack(move |_cx| vec![sep, footer_body])
+            .gap(Space::N0)
+            .layout(LayoutRefinement::default().w_full().min_w_0())
+            .into_element(cx)
     }
 }

@@ -18,38 +18,35 @@ fn wrap_row<H: UiHost>(
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     wrap_row(cx, |cx| {
         vec![with_direction_provider(cx, LayoutDirection::Rtl, |cx| {
-            stack::hstack(
-                cx,
-                stack::HStackProps::default()
-                    .gap_x(Space::N2)
-                    .items_center()
-                    .layout(LayoutRefinement::default().w_full()),
-                |cx| {
-                    vec![
-                        shadcn::Button::new("Default")
-                            .test_id("ui-gallery-button-rtl-default")
-                            .into_element(cx),
-                        shadcn::Button::new("Secondary")
-                            .variant(shadcn::ButtonVariant::Secondary)
-                            .test_id("ui-gallery-button-rtl-secondary")
-                            .into_element(cx),
-                        shadcn::Button::new("Destructive")
-                            .variant(shadcn::ButtonVariant::Destructive)
-                            .test_id("ui-gallery-button-rtl-destructive")
-                            .into_element(cx),
-                        shadcn::Button::new("Back")
-                            .variant(shadcn::ButtonVariant::Outline)
-                            .leading_icon(IconId::new_static("lucide.arrow-left"))
-                            .test_id("ui-gallery-button-rtl-back")
-                            .into_element(cx),
-                        shadcn::Button::new("Next")
-                            .variant(shadcn::ButtonVariant::Outline)
-                            .trailing_icon(IconId::new_static("lucide.arrow-right"))
-                            .test_id("ui-gallery-button-rtl-next")
-                            .into_element(cx),
-                    ]
-                },
-            )
+            ui::h_flex(|cx| {
+                vec![
+                    shadcn::Button::new("Default")
+                        .test_id("ui-gallery-button-rtl-default")
+                        .into_element(cx),
+                    shadcn::Button::new("Secondary")
+                        .variant(shadcn::ButtonVariant::Secondary)
+                        .test_id("ui-gallery-button-rtl-secondary")
+                        .into_element(cx),
+                    shadcn::Button::new("Destructive")
+                        .variant(shadcn::ButtonVariant::Destructive)
+                        .test_id("ui-gallery-button-rtl-destructive")
+                        .into_element(cx),
+                    shadcn::Button::new("Back")
+                        .variant(shadcn::ButtonVariant::Outline)
+                        .leading_icon(IconId::new_static("lucide.arrow-left"))
+                        .test_id("ui-gallery-button-rtl-back")
+                        .into_element(cx),
+                    shadcn::Button::new("Next")
+                        .variant(shadcn::ButtonVariant::Outline)
+                        .trailing_icon(IconId::new_static("lucide.arrow-right"))
+                        .test_id("ui-gallery-button-rtl-next")
+                        .into_element(cx),
+                ]
+            })
+            .gap(Space::N2)
+            .items_center()
+            .layout(LayoutRefinement::default().w_full())
+            .into_element(cx)
             .test_id("ui-gallery-button-rtl-row-inner")
         })]
     })

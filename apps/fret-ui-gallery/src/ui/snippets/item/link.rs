@@ -56,14 +56,11 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
     .into_element(cx)
     .test_id("ui-gallery-item-link-row-b");
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N4)
-            .items_start()
-            .layout(max_w_md),
-        |_cx| vec![row_a, row_b],
-    )
-    .test_id("ui-gallery-item-link")
+    ui::v_stack(|_cx| vec![row_a, row_b])
+        .gap(Space::N4)
+        .items_start()
+        .layout(max_w_md)
+        .into_element(cx)
+        .test_id("ui-gallery-item-link")
 }
 // endregion: example

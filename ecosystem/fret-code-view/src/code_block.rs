@@ -17,11 +17,10 @@ use fret_ui::element::{
 };
 use fret_ui::scroll::{ScrollHandle, VirtualListScrollHandle};
 use fret_ui::{ElementContext, Theme, UiHost};
-use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::typography;
 use fret_ui_kit::{
-    ChromeRefinement, ColorRef, Items, Justify, LayoutRefinement, MetricRef, Radius, Space,
+    ChromeRefinement, ColorRef, Items, Justify, LayoutRefinement, MetricRef, Radius, Space, ui,
 };
 
 use crate::copy_button::{CopyFeedbackRef, render_copy_button, render_copy_button_overlay};
@@ -521,61 +520,57 @@ pub fn code_block_with_header_slots<H: UiHost + 'static>(
                 scrollbar_y_enabled && (!options.scrollbar_y_on_hover || hovered);
 
             let header_visible = options.show_header
-                || language.is_some()
                 || !header.left.is_empty()
-                || !header.right.is_empty();
+                || !header.right.is_empty()
+                || (header.show_language && language.is_some());
 
             if !header_visible {
                 header.show_language = false;
             }
 
-            let content = stack::vstack(
-                cx,
-                stack::VStackProps::default()
-                    .gap(Space::N0)
-                    .layout(LayoutRefinement::default().w_full()),
-                |cx| {
-                    let mut out = Vec::new();
-                    if header_visible {
-                        out.push(render_code_block_header(
-                            cx,
-                            &theme,
-                            language,
-                            header,
-                            options.header_divider,
-                            options.header_background,
-                            if options.show_copy_button
-                                && options.copy_button_placement
-                                    == CodeBlockCopyButtonPlacement::Header
-                            {
-                                Some(CopyButtonInHeader {
-                                    feedback: feedback.clone(),
-                                    code: code.clone(),
-                                    visible: copy_visible,
-                                })
-                            } else {
-                                None
-                            },
-                        ));
-                    }
-                    out.push(render_code_block_body(
+            let content = ui::v_flex(|cx| {
+                let mut out = Vec::new();
+                if header_visible {
+                    out.push(render_code_block_header(
                         cx,
                         &theme,
-                        prepared.clone(),
-                        options.wrap,
-                        options.windowed_lines,
-                        options.windowed_lines_overscan,
-                        scrollbar_x_enabled,
-                        scrollbar_x_visible,
-                        scrollbar_y_enabled,
-                        scrollbar_y_visible,
-                        options.max_height,
-                        options.disable_ligatures,
-                        options.disable_contextual_alternates,
+                        language,
+                        header,
+                        options.header_divider,
+                        options.header_background,
+                        if options.show_copy_button
+                            && options.copy_button_placement == CodeBlockCopyButtonPlacement::Header
+                        {
+                            Some(CopyButtonInHeader {
+                                feedback: feedback.clone(),
+                                code: code.clone(),
+                                visible: copy_visible,
+                            })
+                        } else {
+                            None
+                        },
                     ));
-                    out
-                },
-            );
+                }
+                out.push(render_code_block_body(
+                    cx,
+                    &theme,
+                    prepared.clone(),
+                    options.wrap,
+                    options.windowed_lines,
+                    options.windowed_lines_overscan,
+                    scrollbar_x_enabled,
+                    scrollbar_x_visible,
+                    scrollbar_y_enabled,
+                    scrollbar_y_visible,
+                    options.max_height,
+                    options.disable_ligatures,
+                    options.disable_contextual_alternates,
+                ));
+                out
+            })
+            .gap(Space::N0)
+            .layout(LayoutRefinement::default().w_full())
+            .into_element(cx);
 
             let mut out = vec![content];
             if options.show_copy_button
@@ -605,8 +600,9 @@ fn render_code_block_header<H: UiHost>(
     background: CodeBlockHeaderBackground,
     copy: Option<CopyButtonInHeader>,
 ) -> AnyElement {
-    let pad_x = MetricRef::space(Space::N2).resolve(theme);
-    let pad_y = MetricRef::space(Space::N1).resolve(theme);
+    // shadcn/AI Elements baseline: `px-3 py-2`.
+    let pad_x = MetricRef::space(Space::N3).resolve(theme);
+    let pad_y = MetricRef::space(Space::N2).resolve(theme);
 
     let mut props = ContainerProps::default();
     props.layout.size.width = Length::Fill;
@@ -632,14 +628,8 @@ fn render_code_block_header<H: UiHost>(
     }
 
     cx.container(props, |cx| {
-        vec![stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .gap(Space::N2)
-                .justify(Justify::Between)
-                .items(Items::Center)
-                .layout(LayoutRefinement::default().w_full()),
-            |cx| {
+        vec![
+            ui::h_flex(|cx| {
                 let mut left = Vec::new();
                 if header.show_language
                     && let Some(lang) = language
@@ -673,15 +663,19 @@ fn render_code_block_header<H: UiHost>(
                 }
 
                 vec![
-                    stack::hstack(cx, stack::HStackProps::default().gap(Space::N1), |_| left),
-                    stack::hstack(
-                        cx,
-                        stack::HStackProps::default().gap(Space::N1).justify_end(),
-                        |_| right,
-                    ),
+                    ui::h_row(move |_cx| left).gap(Space::N1).into_element(cx),
+                    ui::h_row(move |_cx| right)
+                        .gap(Space::N1)
+                        .justify_end()
+                        .into_element(cx),
                 ]
-            },
-        )]
+            })
+            .gap(Space::N2)
+            .justify(Justify::Between)
+            .items(Items::Center)
+            .layout(LayoutRefinement::default().w_full())
+            .into_element(cx),
+        ]
     })
 }
 
@@ -701,7 +695,8 @@ fn render_code_block_body<H: UiHost + 'static>(
     disable_ligatures: bool,
     disable_contextual_alternates: bool,
 ) -> AnyElement {
-    let pad = MetricRef::space(Space::N2).resolve(theme);
+    // shadcn/AI Elements baseline: `p-4`.
+    let pad = MetricRef::space(Space::N4).resolve(theme);
 
     let mut props = ContainerProps::default();
     props.layout.size.width = Length::Fill;
@@ -1147,14 +1142,11 @@ fn render_code_block_line_row<H: UiHost>(
         |_cx| vec![number],
     );
 
-    stack::hstack(
-        cx,
-        stack::HStackProps::default()
-            .gap(Space::N2)
-            .items(Items::Center)
-            .layout(LayoutRefinement::default()),
-        |_cx| vec![gutter, code],
-    )
+    ui::h_row(|_cx| vec![gutter, code])
+        .gap(Space::N2)
+        .items(Items::Center)
+        .layout(LayoutRefinement::default())
+        .into_element(cx)
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -1456,14 +1448,11 @@ fn render_code_block_with_line_numbers<H: UiHost>(
         |_cx| vec![line_numbers_text],
     );
 
-    stack::hstack(
-        cx,
-        stack::HStackProps::default()
-            .gap(Space::N2)
-            .items_stretch()
-            .layout(LayoutRefinement::default().w_full()),
-        |_cx| vec![gutter, code],
-    )
+    ui::h_flex(|_cx| vec![gutter, code])
+        .gap(Space::N2)
+        .items_stretch()
+        .layout(LayoutRefinement::default().w_full())
+        .into_element(cx)
 }
 
 fn render_code_block_text<H: UiHost>(

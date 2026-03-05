@@ -5,8 +5,8 @@ use fret_ui::action::OnActivate;
 use fret_ui::element::{AnyElement, StackProps};
 use fret_ui::scroll::VirtualListScrollHandle;
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
-use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::ui;
 use fret_ui_kit::{ChromeRefinement, Justify, LayoutRefinement, Space};
 
 use crate::elements::attachments::AttachmentData;
@@ -411,25 +411,22 @@ impl AiChat {
             let disabled = self.disabled;
             let on_download = self.on_download.clone();
             let test_id = self.download_test_id.clone();
-            stack::hstack(
-                cx,
-                stack::HStackProps::default()
-                    .layout(LayoutRefinement::default().w_full())
-                    .justify(Justify::End)
-                    .gap(Space::N2),
-                move |cx| {
-                    let mut download = ConversationDownload::new("Export Markdown")
-                        .show_label(true)
-                        .disabled(disabled);
-                    if let Some(on_download) = on_download.clone() {
-                        download = download.on_activate(on_download);
-                    }
-                    if let Some(id) = test_id.clone() {
-                        download = download.test_id(id);
-                    }
-                    vec![download.into_element(cx)]
-                },
-            )
+            ui::h_row(move |cx| {
+                let mut download = ConversationDownload::new("Export Markdown")
+                    .show_label(true)
+                    .disabled(disabled);
+                if let Some(on_download) = on_download.clone() {
+                    download = download.on_activate(on_download);
+                }
+                if let Some(id) = test_id.clone() {
+                    download = download.test_id(id);
+                }
+                vec![download.into_element(cx)]
+            })
+            .layout(LayoutRefinement::default().w_full())
+            .justify(Justify::End)
+            .gap(Space::N2)
+            .into_element(cx)
         });
 
         let mut prompt = PromptInput::new(self.prompt)
@@ -469,33 +466,27 @@ impl AiChat {
 
         let prompt = prompt.into_element(cx);
 
-        let footer = stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .layout(LayoutRefinement::default().w_full())
-                .gap(Space::N2),
-            |_cx| {
-                let mut out = Vec::new();
-                if let Some(download_row) = download_row {
-                    out.push(download_row);
-                }
-                out.push(prompt);
-                out
-            },
-        );
+        let footer = ui::v_stack(|_cx| {
+            let mut out = Vec::new();
+            if let Some(download_row) = download_row {
+                out.push(download_row);
+            }
+            out.push(prompt);
+            out
+        })
+        .layout(LayoutRefinement::default().w_full())
+        .gap(Space::N2)
+        .into_element(cx);
 
-        let root = stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .layout(
-                    LayoutRefinement::default()
-                        .w_full()
-                        .h_full()
-                        .merge(self.root_layout),
-                )
-                .gap(Space::N2),
-            |_cx| vec![transcript_container, footer],
-        );
+        let root = ui::v_stack(|_cx| vec![transcript_container, footer])
+            .layout(
+                LayoutRefinement::default()
+                    .w_full()
+                    .h_full()
+                    .merge(self.root_layout),
+            )
+            .gap(Space::N2)
+            .into_element(cx);
 
         let Some(test_id) = self.root_test_id else {
             return root;

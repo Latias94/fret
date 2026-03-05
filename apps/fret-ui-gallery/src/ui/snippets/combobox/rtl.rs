@@ -39,36 +39,33 @@ fn ensure_models(
 pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
     let (value, open, query) = ensure_models(cx);
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N2)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full().max_w(Px(320.0))),
-        move |cx| {
-            vec![with_direction_provider(cx, LayoutDirection::Rtl, |cx| {
-                shadcn::Combobox::new(value.clone(), open.clone())
-                    .a11y_label("Combobox RTL")
-                    .query_model(query.clone())
-                    .test_id_prefix("ui-gallery-combobox-rtl")
-                    .trigger_test_id("ui-gallery-combobox-rtl-trigger")
-                    .items([
-                        shadcn::ComboboxItem::new("next", "Next.js"),
-                        shadcn::ComboboxItem::new("nuxt", "Nuxt.js"),
-                        shadcn::ComboboxItem::new("svelte", "SvelteKit"),
-                    ])
-                    .into_element_parts(cx, |_cx| {
-                        vec![
-                            shadcn::ComboboxPart::from(
-                                shadcn::ComboboxTrigger::new().width_px(Px(260.0)),
-                            ),
-                            shadcn::ComboboxPart::from(
-                                shadcn::ComboboxInput::new().placeholder("ابحث عن إطار عمل"),
-                            ),
-                        ]
-                    })
-            })]
-        },
-    )
+    ui::v_flex(move |cx| {
+        vec![with_direction_provider(cx, LayoutDirection::Rtl, |cx| {
+            shadcn::Combobox::new(value.clone(), open.clone())
+                .a11y_label("Combobox RTL")
+                .query_model(query.clone())
+                .test_id_prefix("ui-gallery-combobox-rtl")
+                .trigger_test_id("ui-gallery-combobox-rtl-trigger")
+                .items([
+                    shadcn::ComboboxItem::new("next", "Next.js"),
+                    shadcn::ComboboxItem::new("nuxt", "Nuxt.js"),
+                    shadcn::ComboboxItem::new("svelte", "SvelteKit"),
+                ])
+                .into_element_parts(cx, |_cx| {
+                    vec![
+                        shadcn::ComboboxPart::from(
+                            shadcn::ComboboxTrigger::new().width_px(Px(260.0)),
+                        ),
+                        shadcn::ComboboxPart::from(
+                            shadcn::ComboboxInput::new().placeholder("ابحث عن إطار عمل"),
+                        ),
+                    ]
+                })
+        })]
+    })
+    .gap(Space::N2)
+    .items_start()
+    .layout(LayoutRefinement::default().w_full().max_w(Px(320.0)))
+    .into_element(cx)
 }
 // endregion: example

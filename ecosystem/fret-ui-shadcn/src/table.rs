@@ -10,7 +10,6 @@ use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::command::ElementCommandGatingExt as _;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::motion::drive_tween_color_for_element;
-use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::scroll_area::ScrollAreaType;
 use fret_ui_kit::typography;
@@ -214,7 +213,7 @@ impl Table {
         let table = shadcn_layout::container_vstack(
             cx,
             props,
-            stack::VStackProps::default().layout(LayoutRefinement::default().w_full()),
+            shadcn_layout::VStackProps::default().layout(LayoutRefinement::default().w_full()),
             children,
         );
 
@@ -251,7 +250,7 @@ impl TableHeader {
         shadcn_layout::container_vstack(
             cx,
             props,
-            stack::VStackProps::default().layout(LayoutRefinement::default().w_full()),
+            shadcn_layout::VStackProps::default().layout(LayoutRefinement::default().w_full()),
             children,
         )
     }
@@ -285,7 +284,7 @@ impl TableBody {
         shadcn_layout::container_vstack(
             cx,
             props,
-            stack::VStackProps::default().layout(LayoutRefinement::default().w_full()),
+            shadcn_layout::VStackProps::default().layout(LayoutRefinement::default().w_full()),
             children,
         )
     }
@@ -341,7 +340,7 @@ impl TableFooter {
         shadcn_layout::container_vstack(
             cx,
             props,
-            stack::VStackProps::default().layout(LayoutRefinement::default().w_full()),
+            shadcn_layout::VStackProps::default().layout(LayoutRefinement::default().w_full()),
             children,
         )
     }

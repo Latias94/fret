@@ -70,99 +70,92 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
             .test_id("ui-gallery-card-notes-avatars")
     };
 
-    let list = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N2)
-            .items_stretch()
-            .layout(LayoutRefinement::default().w_full()),
-        |cx| {
-            let paragraph = ui::text("Here are the meeting notes:")
-                .text_sm()
-                .into_element(cx);
+    let list = ui::v_flex(|cx| {
+        let paragraph = ui::text("Here are the meeting notes:")
+            .text_sm()
+            .into_element(cx);
 
-            let ordered_list = {
-                let props = decl_style::container_props(
-                    &theme,
-                    ChromeRefinement::default().pt(Space::N4),
-                    LayoutRefinement::default().w_full(),
-                );
+        let ordered_list = {
+            let props = decl_style::container_props(
+                &theme,
+                ChromeRefinement::default().pt(Space::N4),
+                LayoutRefinement::default().w_full(),
+            );
 
-                cx.container(props, |cx| {
-                    vec![stack::vstack(
-                        cx,
-                        stack::VStackProps::default()
-                            .gap(Space::N2)
-                            .items_stretch()
-                            .layout(LayoutRefinement::default().w_full()),
-                        |cx| {
-                            let marker = |cx: &mut ElementContext<'_, App>, text: &str| {
-                                ui::text(text)
-                                    .text_sm()
-                                    .w_space(Space::N4)
-                                    .text_align(fret_core::TextAlign::End)
-                                    .into_element(cx)
+            cx.container(props, |cx| {
+                vec![
+                    ui::v_flex(|cx| {
+                        let marker = |cx: &mut ElementContext<'_, App>, text: &str| {
+                            ui::text(text)
+                                .text_sm()
+                                .w_space(Space::N4)
+                                .text_align(fret_core::TextAlign::End)
+                                .into_element(cx)
+                        };
+
+                        let item =
+                            |cx: &mut ElementContext<'_, App>,
+                             n: &str,
+                             content: &str,
+                             test_id: Option<&'static str>| {
+                                let row = ui::h_flex(|cx| {
+                                    vec![
+                                        marker(cx, n),
+                                        ui::text(content)
+                                            .text_sm()
+                                            .flex_1()
+                                            .min_w_0()
+                                            .into_element(cx),
+                                    ]
+                                })
+                                .gap(Space::N2)
+                                .items_start()
+                                .layout(LayoutRefinement::default().w_full())
+                                .into_element(cx);
+
+                                match test_id {
+                                    Some(id) => row.test_id(id),
+                                    None => row,
+                                }
                             };
 
-                            let item =
-                                |cx: &mut ElementContext<'_, App>,
-                                 n: &str,
-                                 content: &str,
-                                 test_id: Option<&'static str>| {
-                                    let row = stack::hstack(
-                                        cx,
-                                        stack::HStackProps::default()
-                                            .gap(Space::N2)
-                                            .items_start()
-                                            .layout(LayoutRefinement::default().w_full()),
-                                        |cx| {
-                                            vec![
-                                                marker(cx, n),
-                                                ui::text(content)
-                                                    .text_sm()
-                                                    .flex_1()
-                                                    .min_w_0()
-                                                    .into_element(cx),
-                                            ]
-                                        },
-                                    );
+                        vec![
+                            item(
+                                cx,
+                                "1.",
+                                "New analytics widgets for daily/weekly metrics",
+                                None,
+                            ),
+                            item(cx, "2.", "Simplified navigation menu", None),
+                            item(
+                                cx,
+                                "3.",
+                                "Dark mode support",
+                                Some("ui-gallery-card-notes-item-dark-mode"),
+                            ),
+                            item(cx, "4.", "Timeline: 6 weeks", None),
+                            item(
+                                cx,
+                                "5.",
+                                "Follow-up meeting scheduled for next Tuesday",
+                                None,
+                            ),
+                        ]
+                    })
+                    .gap(Space::N2)
+                    .items_stretch()
+                    .layout(LayoutRefinement::default().w_full())
+                    .into_element(cx),
+                ]
+            })
+        };
 
-                                    match test_id {
-                                        Some(id) => row.test_id(id),
-                                        None => row,
-                                    }
-                                };
-
-                            vec![
-                                item(
-                                    cx,
-                                    "1.",
-                                    "New analytics widgets for daily/weekly metrics",
-                                    None,
-                                ),
-                                item(cx, "2.", "Simplified navigation menu", None),
-                                item(
-                                    cx,
-                                    "3.",
-                                    "Dark mode support",
-                                    Some("ui-gallery-card-notes-item-dark-mode"),
-                                ),
-                                item(cx, "4.", "Timeline: 6 weeks", None),
-                                item(
-                                    cx,
-                                    "5.",
-                                    "Follow-up meeting scheduled for next Tuesday",
-                                    None,
-                                ),
-                            ]
-                        },
-                    )]
-                })
-            };
-
-            vec![paragraph, ordered_list]
-        },
-    )
+        vec![paragraph, ordered_list]
+    })
+    .gap(Space::N2)
+    .items_stretch()
+    .layout(LayoutRefinement::default().w_full())
+    .into_element(cx)
     .test_id("ui-gallery-card-notes-list");
 
     shadcn::Card::new(vec![

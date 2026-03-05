@@ -26,20 +26,19 @@ fn item_team(
     test_id: &'static str,
     action_test_id: &'static str,
 ) -> AnyElement {
-    let avatars = stack::hstack(
-        cx,
-        stack::HStackProps::default().gap(Space::N1).items_center(),
-        |cx| {
-            vec![
-                shadcn::Avatar::new([shadcn::AvatarFallback::new("CN").into_element(cx)])
-                    .into_element(cx),
-                shadcn::Avatar::new([shadcn::AvatarFallback::new("LR").into_element(cx)])
-                    .into_element(cx),
-                shadcn::Avatar::new([shadcn::AvatarFallback::new("ER").into_element(cx)])
-                    .into_element(cx),
-            ]
-        },
-    );
+    let avatars = ui::h_row(|cx| {
+        vec![
+            shadcn::Avatar::new([shadcn::AvatarFallback::new("CN").into_element(cx)])
+                .into_element(cx),
+            shadcn::Avatar::new([shadcn::AvatarFallback::new("LR").into_element(cx)])
+                .into_element(cx),
+            shadcn::Avatar::new([shadcn::AvatarFallback::new("ER").into_element(cx)])
+                .into_element(cx),
+        ]
+    })
+    .gap(Space::N1)
+    .items_center()
+    .into_element(cx);
     let media = shadcn::ItemMedia::new([avatars]).into_element(cx);
     let content = shadcn::ItemContent::new([
         shadcn::ItemTitle::new("Design Department").into_element(cx),
@@ -103,14 +102,11 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
         "ui-gallery-item-avatar-team-action",
     );
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N6)
-            .items_start()
-            .layout(max_w_lg),
-        |_cx| vec![item_one, team],
-    )
-    .test_id("ui-gallery-item-avatar")
+    ui::v_stack(|_cx| vec![item_one, team])
+        .gap(Space::N6)
+        .items_start()
+        .layout(max_w_lg)
+        .into_element(cx)
+        .test_id("ui-gallery-item-avatar")
 }
 // endregion: example

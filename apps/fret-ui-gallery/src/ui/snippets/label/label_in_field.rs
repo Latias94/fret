@@ -26,34 +26,31 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let max_w = LayoutRefinement::default().w_full().max_w(Px(420.0));
     let control_id = "work_email";
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N2)
-            .items_start()
-            .layout(max_w),
-        |cx| {
-            vec![
-                shadcn::typography::muted(
-                    cx,
-                    "For forms, prefer Field + FieldLabel for built-in description/error structure.",
-                ),
-                shadcn::Field::new([
-                    shadcn::FieldLabel::new("Work email")
-                        .for_control(control_id)
-                        .into_element(cx),
-                    shadcn::Input::new(email)
-                        .placeholder("name@company.com")
-                        .control_id(control_id)
-                        .into_element(cx),
-                    shadcn::FieldDescription::new("We use this email for notifications.")
-                        .for_control(control_id)
-                        .into_element(cx),
-                ])
-                .into_element(cx),
-            ]
-        },
-    )
+    ui::v_stack(|cx| {
+        vec![
+            shadcn::typography::muted(
+                cx,
+                "For forms, prefer Field + FieldLabel for built-in description/error structure.",
+            ),
+            shadcn::Field::new([
+                shadcn::FieldLabel::new("Work email")
+                    .for_control(control_id)
+                    .into_element(cx),
+                shadcn::Input::new(email)
+                    .placeholder("name@company.com")
+                    .control_id(control_id)
+                    .into_element(cx),
+                shadcn::FieldDescription::new("We use this email for notifications.")
+                    .for_control(control_id)
+                    .into_element(cx),
+            ])
+            .into_element(cx),
+        ]
+    })
+    .gap(Space::N2)
+    .items_start()
+    .layout(max_w)
+    .into_element(cx)
     .test_id("ui-gallery-label-field")
 }
 // endregion: example

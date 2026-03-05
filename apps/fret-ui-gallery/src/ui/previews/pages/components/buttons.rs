@@ -28,23 +28,13 @@ pub(in crate::ui) fn preview_button_legacy(cx: &mut ElementContext<'_, App>) -> 
     };
 
     let section = |cx: &mut ElementContext<'_, App>, title: &'static str, body: AnyElement| {
-        stack::vstack(
-            cx,
-            stack::VStackProps::default().gap(Space::N2).items_start(),
-            move |cx| vec![shadcn::typography::h4(cx, title), body],
-        )
+        ui::v_stack(move |cx| vec![shadcn::typography::h4(cx, title), body]).gap(Space::N2).items_start().into_element(cx)
     };
 
     let size = {
-        let body = stack::vstack(
-            cx,
-            stack::VStackProps::default().gap(Space::N3).items_start(),
-            |cx| {
+        let body = ui::v_stack(|cx| {
                 vec![
-                    stack::hstack(
-                        cx,
-                        stack::HStackProps::default().gap(Space::N2).items_center(),
-                        |cx| {
+                    ui::h_row(|cx| {
                             vec![
                                 shadcn::Button::new("Small")
                                     .variant(shadcn::ButtonVariant::Outline)
@@ -60,12 +50,8 @@ pub(in crate::ui) fn preview_button_legacy(cx: &mut ElementContext<'_, App>) -> 
                                     )])
                                     .into_element(cx),
                             ]
-                        },
-                    ),
-                    stack::hstack(
-                        cx,
-                        stack::HStackProps::default().gap(Space::N2).items_center(),
-                        |cx| {
+                        }).gap(Space::N2).items_center().into_element(cx),
+                    ui::h_row(|cx| {
                             vec![
                                 shadcn::Button::new("Default")
                                     .variant(shadcn::ButtonVariant::Outline)
@@ -80,12 +66,8 @@ pub(in crate::ui) fn preview_button_legacy(cx: &mut ElementContext<'_, App>) -> 
                                     )])
                                     .into_element(cx),
                             ]
-                        },
-                    ),
-                    stack::hstack(
-                        cx,
-                        stack::HStackProps::default().gap(Space::N2).items_center(),
-                        |cx| {
+                        }).gap(Space::N2).items_center().into_element(cx),
+                    ui::h_row(|cx| {
                             vec![
                                 shadcn::Button::new("Large")
                                     .variant(shadcn::ButtonVariant::Outline)
@@ -101,11 +83,9 @@ pub(in crate::ui) fn preview_button_legacy(cx: &mut ElementContext<'_, App>) -> 
                                     )])
                                     .into_element(cx),
                             ]
-                        },
-                    ),
+                        }).gap(Space::N2).items_center().into_element(cx),
                 ]
-            },
-        );
+            }).gap(Space::N3).items_start().into_element(cx);
         section(cx, "Size", body)
     };
 
@@ -113,13 +93,7 @@ pub(in crate::ui) fn preview_button_legacy(cx: &mut ElementContext<'_, App>) -> 
     let default = section(cx, "Default", default_body);
 
     let flex_1 = {
-        let body = stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .gap(Space::N2)
-                .items_center()
-                .layout(LayoutRefinement::default().w_full().max_w(Px(520.0))),
-            |cx| {
+        let body = ui::h_flex(|cx| {
                 vec![
                     shadcn::Button::new("Flex 1")
                         .variant(shadcn::ButtonVariant::Outline)
@@ -132,19 +106,15 @@ pub(in crate::ui) fn preview_button_legacy(cx: &mut ElementContext<'_, App>) -> 
                         .test_id("ui-gallery-button-flex1-right")
                         .into_element(cx),
                 ]
-            },
-        );
+            })
+                .gap(Space::N2)
+                .items_center()
+                .layout(LayoutRefinement::default().w_full().max_w(Px(520.0))).into_element(cx);
         section(cx, "Flex 1 (chrome fill)", body)
     };
 
     let flex_1_centered_fixed_chrome = {
-        let body = stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .gap(Space::N2)
-                .items_center()
-                .layout(LayoutRefinement::default().w_full().max_w(Px(520.0))),
-            |cx| {
+        let body = ui::h_flex(|cx| {
                 let centered = |cx: &mut ElementContext<'_, App>, id: &'static str| {
                     fret_ui_kit::declarative::chrome::centered_fixed_chrome_pressable_with_id_props(
                         cx,
@@ -170,8 +140,10 @@ pub(in crate::ui) fn preview_button_legacy(cx: &mut ElementContext<'_, App>) -> 
                     centered(cx, "ui-gallery-centered-fixed-chrome-flex1-left"),
                     centered(cx, "ui-gallery-centered-fixed-chrome-flex1-right"),
                 ]
-            },
-        );
+            })
+                .gap(Space::N2)
+                .items_center()
+                .layout(LayoutRefinement::default().w_full().max_w(Px(520.0))).into_element(cx);
         section(cx, "Flex 1 (centered fixed chrome)", body)
     };
 
@@ -231,10 +203,7 @@ pub(in crate::ui) fn preview_button_legacy(cx: &mut ElementContext<'_, App>) -> 
     let rounded = section(cx, "Rounded", rounded_body);
 
     let spinner = {
-        let body = stack::hstack(
-            cx,
-            stack::HStackProps::default().gap(Space::N2).items_center(),
-            |cx| {
+        let body = ui::h_row(|cx| {
                 vec![
                     shadcn::Button::new("Generating")
                         .variant(shadcn::ButtonVariant::Outline)
@@ -257,8 +226,7 @@ pub(in crate::ui) fn preview_button_legacy(cx: &mut ElementContext<'_, App>) -> 
                         ])
                         .into_element(cx),
                 ]
-            },
-        );
+            }).gap(Space::N2).items_center().into_element(cx);
         section(cx, "Spinner", body)
     };
 
@@ -271,10 +239,7 @@ pub(in crate::ui) fn preview_button_legacy(cx: &mut ElementContext<'_, App>) -> 
     };
 
     let render_link = {
-        let body = stack::vstack(
-            cx,
-            stack::VStackProps::default().gap(Space::N2).items_start(),
-            |cx| {
+        let body = ui::v_stack(|cx| {
                 vec![
                     shadcn::Button::new("Documentation")
                         .variant(shadcn::ButtonVariant::Outline)
@@ -289,8 +254,7 @@ pub(in crate::ui) fn preview_button_legacy(cx: &mut ElementContext<'_, App>) -> 
                         .text_color(muted_fg.clone())
                         .into_element(cx),
                 ]
-            },
-        );
+            }).gap(Space::N2).items_start().into_element(cx);
         section(cx, "Link (render)", body)
     };
 
@@ -299,10 +263,7 @@ pub(in crate::ui) fn preview_button_legacy(cx: &mut ElementContext<'_, App>) -> 
             cx,
             fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
             |cx| {
-                stack::hstack(
-                    cx,
-                    stack::HStackProps::default().gap(Space::N2).items_center(),
-                    |cx| {
+                ui::h_row(|cx| {
                         vec![
                             shadcn::Button::new("التالي")
                                 .variant(shadcn::ButtonVariant::Outline)
@@ -311,17 +272,13 @@ pub(in crate::ui) fn preview_button_legacy(cx: &mut ElementContext<'_, App>) -> 
                                 .variant(shadcn::ButtonVariant::Outline)
                                 .into_element(cx),
                         ]
-                    },
-                )
+                    }).gap(Space::N2).items_center().into_element(cx)
             },
         );
         section(cx, "RTL", body)
     };
 
-    vec![stack::vstack(
-        cx,
-        stack::VStackProps::default().gap(Space::N4).items_start(),
-        |_cx| {
+    vec![ui::v_stack(|_cx| {
             vec![
                 size,
                 default,
@@ -340,6 +297,5 @@ pub(in crate::ui) fn preview_button_legacy(cx: &mut ElementContext<'_, App>) -> 
                 render_link,
                 rtl,
             ]
-        },
-    )]
+        }).gap(Space::N4).items_start().into_element(cx)]
 }

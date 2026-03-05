@@ -9,7 +9,6 @@ use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::controllable_state::use_controllable_model;
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
-use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{
     ChromeRefinement, ColorRef, LayoutRefinement, Radius, Space, WidgetStateProperty, WidgetStates,
@@ -201,15 +200,14 @@ impl Banner {
 
             let el = with_banner_scope_provider(cx, scope, |cx| {
                 cx.container(props, move |cx| {
-                    vec![stack::hstack(
-                        cx,
-                        stack::HStackProps::default()
+                    vec![
+                        ui::h_row(|_cx| children)
                             .justify_between()
                             .items_center()
-                            .gap_x(Space::N2)
-                            .layout(LayoutRefinement::default().w_full().min_w_0()),
-                        |_cx| children,
-                    )]
+                            .gap(Space::N2)
+                            .layout(LayoutRefinement::default().w_full().min_w_0())
+                            .into_element(cx),
+                    ]
                 })
             });
 

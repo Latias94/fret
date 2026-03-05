@@ -15,12 +15,11 @@ use fret_ui::element::{
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::icon as decl_icon;
-use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::typography;
 use fret_ui_kit::{
-    ChromeRefinement, ColorFallback, ColorRef, Justify, LayoutRefinement, MetricRef, Radius, Space,
-    ui,
+    ChromeRefinement, ColorFallback, ColorRef, Items, Justify, LayoutRefinement, MetricRef, Radius,
+    Space, ui,
 };
 use fret_ui_shadcn::{Badge, BadgeVariant, Collapsible, CollapsibleContent};
 
@@ -382,19 +381,16 @@ impl SchemaDisplay {
                 return children;
             }
 
-            let header_row = stack::hstack(
-                cx,
-                stack::HStackProps::default()
-                    .gap(Space::N3)
-                    .items_center()
-                    .layout(LayoutRefinement::default().min_w_0()),
-                move |cx| {
-                    vec![
-                        SchemaDisplayMethod::new(method).into_element(cx),
-                        SchemaDisplayPath::new(path.clone()).into_element(cx),
-                    ]
-                },
-            );
+            let header_row = ui::h_row(move |cx| {
+                vec![
+                    SchemaDisplayMethod::new(method).into_element(cx),
+                    SchemaDisplayPath::new(path.clone()).into_element(cx),
+                ]
+            })
+            .gap(Space::N3)
+            .items(Items::Center)
+            .layout(LayoutRefinement::default().min_w_0())
+            .into_element(cx);
 
             let header = SchemaDisplayHeader::new([header_row]).into_element(cx);
 
@@ -492,14 +488,11 @@ impl SchemaDisplayHeader {
         props.border_color = Some(border_color(&theme));
 
         cx.container(props, move |cx| {
-            vec![stack::hstack(
-                cx,
-                stack::HStackProps::default()
-                    .layout(LayoutRefinement::default().w_full().min_w_0())
-                    .gap(Space::N3)
-                    .items_center(),
-                move |_cx| self.children,
-            )]
+            vec![ui::h_row(move |_cx| self.children)
+                .layout(LayoutRefinement::default().w_full().min_w_0())
+                .gap(Space::N3)
+                .items(Items::Center)
+                .into_element(cx)]
         })
     }
 }
@@ -743,13 +736,10 @@ impl SchemaDisplayContent {
             out.push(cx.container(props, move |_cx| vec![section]));
         }
 
-        stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .layout(self.layout)
-                .gap(Space::N0),
-            move |_cx| out,
-        )
+        ui::v_stack(move |_cx| out)
+            .layout(self.layout)
+            .gap(Space::N0)
+            .into_element(cx)
     }
 }
 
@@ -1027,41 +1017,38 @@ impl SchemaDisplayParameter {
         let description = self.parameter.description.clone();
         let location = self.parameter.location;
 
-        let line = stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .gap(Space::N2)
-                .items_center()
-                .layout(LayoutRefinement::default().w_full().min_w_0()),
-            move |cx| {
-                let mut out = Vec::new();
-                out.push(monospace_text(
-                    cx,
-                    &theme_for_line,
-                    name.clone(),
-                    theme_for_line.metric_token("metric.font.mono_size"),
-                ));
+        let line = ui::h_row(move |cx| {
+            let mut out = Vec::new();
+            out.push(monospace_text(
+                cx,
+                &theme_for_line,
+                name.clone(),
+                theme_for_line.metric_token("metric.font.mono_size"),
+            ));
+            out.push(
+                Badge::new(type_name.clone())
+                    .variant(BadgeVariant::Outline)
+                    .into_element(cx),
+            );
+
+            if let Some(location) = location {
                 out.push(
-                    Badge::new(type_name.clone())
-                        .variant(BadgeVariant::Outline)
+                    Badge::new(location.as_str())
+                        .variant(BadgeVariant::Secondary)
                         .into_element(cx),
                 );
+            }
 
-                if let Some(location) = location {
-                    out.push(
-                        Badge::new(location.as_str())
-                            .variant(BadgeVariant::Secondary)
-                            .into_element(cx),
-                    );
-                }
+            if required {
+                out.push(required_badge(cx));
+            }
 
-                if required {
-                    out.push(required_badge(cx));
-                }
-
-                out
-            },
-        );
+            out
+        })
+        .gap(Space::N2)
+        .items(Items::Center)
+        .layout(LayoutRefinement::default().w_full().min_w_0())
+        .into_element(cx);
 
         let desc = description.map(|d| {
             schema_inline_description(cx, &theme, d, Px(pad_x.0 + 24.0), Px(4.0), Px(0.0))
@@ -1180,13 +1167,10 @@ impl SchemaDisplayProperty {
                         Px(8.0),
                     );
 
-                    stack::vstack(
-                        cx,
-                        stack::VStackProps::default()
-                            .layout(LayoutRefinement::default().w_full().min_w_0())
-                            .gap(Space::N0),
-                        move |_cx| vec![trigger, desc_el],
-                    )
+                    ui::v_stack(move |_cx| vec![trigger, desc_el])
+                        .layout(LayoutRefinement::default().w_full().min_w_0())
+                        .gap(Space::N0)
+                        .into_element(cx)
                 },
                 move |cx| {
                     let mut children: Vec<SchemaProperty> = Vec::new();
@@ -1450,15 +1434,12 @@ fn schema_section_trigger<H: UiHost + 'static>(
             row_children.push(badge);
         }
 
-        let row = stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .layout(LayoutRefinement::default().w_full().min_w_0())
-                .gap(Space::N2)
-                .items_center()
-                .justify(Justify::Start),
-            move |_cx| row_children,
-        );
+        let row = ui::h_row(move |_cx| row_children)
+            .layout(LayoutRefinement::default().w_full().min_w_0())
+            .gap(Space::N2)
+            .items(Items::Center)
+            .justify(Justify::Start)
+            .into_element(cx);
 
         let mut props = ContainerProps::default();
         props.layout = decl_style::layout_style(
@@ -1490,13 +1471,10 @@ fn schema_parameter_list<H: UiHost + 'static>(
         }
     }
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .layout(LayoutRefinement::default().w_full().min_w_0())
-            .gap(Space::N0),
-        move |_cx| rows,
-    )
+    ui::v_stack(move |_cx| rows)
+        .layout(LayoutRefinement::default().w_full().min_w_0())
+        .gap(Space::N0)
+        .into_element(cx)
 }
 
 fn schema_property_trigger_row<H: UiHost + 'static>(
@@ -1565,14 +1543,11 @@ fn schema_property_trigger_row<H: UiHost + 'static>(
             row_children.push(required_badge(cx));
         }
 
-        let row = stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .layout(LayoutRefinement::default().w_full().min_w_0())
-                .gap(Space::N2)
-                .items_center(),
-            move |_cx| row_children,
-        );
+        let row = ui::h_row(move |_cx| row_children)
+            .layout(LayoutRefinement::default().w_full().min_w_0())
+            .gap(Space::N2)
+            .items(Items::Center)
+            .into_element(cx);
 
         let mut props = ContainerProps::default();
         props.layout.size.width = Length::Fill;
@@ -1620,14 +1595,11 @@ fn schema_property_leaf<H: UiHost>(
         row_children.push(required_badge(cx));
     }
 
-    let row = stack::hstack(
-        cx,
-        stack::HStackProps::default()
-            .layout(LayoutRefinement::default().w_full().min_w_0())
-            .gap(Space::N2)
-            .items_center(),
-        move |_cx| row_children,
-    );
+    let row = ui::h_row(move |_cx| row_children)
+        .layout(LayoutRefinement::default().w_full().min_w_0())
+        .gap(Space::N2)
+        .items(Items::Center)
+        .into_element(cx);
 
     let mut inner: Vec<AnyElement> = vec![row];
     if let Some(desc) = prop.description.clone() {
@@ -1690,11 +1662,8 @@ fn schema_property_list_from_vec<H: UiHost + 'static>(
         }
     }
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .layout(LayoutRefinement::default().w_full().min_w_0())
-            .gap(Space::N0),
-        move |_cx| rows,
-    )
+    ui::v_stack(move |_cx| rows)
+        .layout(LayoutRefinement::default().w_full().min_w_0())
+        .gap(Space::N0)
+        .into_element(cx)
 }

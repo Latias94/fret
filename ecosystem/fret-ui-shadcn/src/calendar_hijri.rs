@@ -11,12 +11,11 @@ use fret_ui_headless::calendar_solar_hijri::{SolarHijriMonth, solar_hijri_month_
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
-use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::theme_tokens;
 use fret_ui_kit::typography;
 use fret_ui_kit::{
-    ChromeRefinement, ColorFallback, ColorRef, LayoutRefinement, MetricRef, Radius, Space,
+    ChromeRefinement, ColorFallback, ColorRef, LayoutRefinement, MetricRef, Radius, Space, ui,
 };
 use time::{Date, Weekday};
 
@@ -437,77 +436,74 @@ impl CalendarHijri {
                 let theme_weekdays = theme.clone();
                 let theme_days = theme.clone();
 
-                let header = stack::hstack(
-                    cx,
-                    stack::HStackProps::default()
-                        .gap(Space::N2)
-                        .layout(LayoutRefinement::default().w_px(MetricRef::Px(month_width)))
-                        .items_center()
-                        .justify_start(),
-                    move |cx| {
-                        let nav_enabled = !disable_navigation;
-                        let direction = crate::use_direction(cx, None);
-                        let prev_icon = rtl::chevron_inline_start(direction);
-                        let next_icon = rtl::chevron_inline_end(direction);
+                let header = ui::h_row(move |cx| {
+                    let nav_enabled = !disable_navigation;
+                    let direction = crate::use_direction(cx, None);
+                    let prev_icon = rtl::chevron_inline_start(direction);
+                    let next_icon = rtl::chevron_inline_end(direction);
 
-                        let month_model_prev = month_model.clone();
-                        let prev = calendar_nav_icon_button(
-                            cx,
-                            "Go to the Previous Month",
-                            day_size,
-                            prev_icon,
-                            nav_enabled,
-                            move |host| {
-                                if disable_navigation {
-                                    return;
-                                }
-                                let _ = host.models_mut().update(&month_model_prev, |m| {
-                                    *m = m.prev_month();
-                                });
-                            },
-                        );
-                        let prev = attach_test_id_suffix(prev, test_id_prefix.as_ref(), "nav-prev");
-                        let month_model_next = month_model.clone();
-                        let next = calendar_nav_icon_button(
-                            cx,
-                            "Go to the Next Month",
-                            day_size,
-                            next_icon,
-                            nav_enabled,
-                            move |host| {
-                                if disable_navigation {
-                                    return;
-                                }
-                                let _ = host.models_mut().update(&month_model_next, |m| {
-                                    *m = m.next_month();
-                                });
-                            },
-                        );
-                        let next = attach_test_id_suffix(next, test_id_prefix.as_ref(), "nav-next");
+                    let month_model_prev = month_model.clone();
+                    let prev = calendar_nav_icon_button(
+                        cx,
+                        "Go to the Previous Month",
+                        day_size,
+                        prev_icon,
+                        nav_enabled,
+                        move |host| {
+                            if disable_navigation {
+                                return;
+                            }
+                            let _ = host.models_mut().update(&month_model_prev, |m| {
+                                *m = m.prev_month();
+                            });
+                        },
+                    );
+                    let prev = attach_test_id_suffix(prev, test_id_prefix.as_ref(), "nav-prev");
+                    let month_model_next = month_model.clone();
+                    let next = calendar_nav_icon_button(
+                        cx,
+                        "Go to the Next Month",
+                        day_size,
+                        next_icon,
+                        nav_enabled,
+                        move |host| {
+                            if disable_navigation {
+                                return;
+                            }
+                            let _ = host.models_mut().update(&month_model_next, |m| {
+                                *m = m.next_month();
+                            });
+                        },
+                    );
+                    let next = attach_test_id_suffix(next, test_id_prefix.as_ref(), "nav-next");
 
-                        let mut title_props = TextProps::new(title.clone());
-                        let size = theme_header.metric_token("font.size");
-                        let line_height = theme_header.metric_token("font.line_height");
-                        let mut style = typography::fixed_line_box_style(
-                            fret_core::FontId::ui(),
-                            size,
-                            line_height,
-                        );
-                        style.weight = FontWeight::MEDIUM;
-                        title_props.style = Some(style);
-                        title_props.wrap = TextWrap::None;
-                        title_props.overflow = TextOverflow::Clip;
-                        title_props.align = TextAlign::Center;
-                        // Keep the caption centered between nav buttons.
-                        title_props.layout.flex.grow = 1.0;
-                        title_props.layout.flex.shrink = 1.0;
-                        title_props.layout.flex.basis = Length::Px(Px(0.0));
-                        let title_el = cx.text_props(title_props);
+                    let mut title_props = TextProps::new(title.clone());
+                    let size = theme_header.metric_token("font.size");
+                    let line_height = theme_header.metric_token("font.line_height");
+                    let mut style = typography::fixed_line_box_style(
+                        fret_core::FontId::ui(),
+                        size,
+                        line_height,
+                    );
+                    style.weight = FontWeight::MEDIUM;
+                    title_props.style = Some(style);
+                    title_props.wrap = TextWrap::None;
+                    title_props.overflow = TextOverflow::Clip;
+                    title_props.align = TextAlign::Center;
+                    // Keep the caption centered between nav buttons.
+                    title_props.layout.flex.grow = 1.0;
+                    title_props.layout.flex.shrink = 1.0;
+                    title_props.layout.flex.basis = Length::Px(Px(0.0));
+                    let title_el = cx.text_props(title_props);
 
-                        let (prev, next) = crate::rtl::inline_start_end_pair(direction, prev, next);
-                        vec![prev, title_el, next]
-                    },
-                );
+                    let (prev, next) = crate::rtl::inline_start_end_pair(direction, prev, next);
+                    vec![prev, title_el, next]
+                })
+                .gap(Space::N2)
+                .layout(LayoutRefinement::default().w_px(MetricRef::Px(month_width)))
+                .items_center()
+                .justify_start()
+                .into_element(cx);
 
                 let weekday_row = cx.flex(
                     FlexProps {
@@ -603,17 +599,15 @@ impl CalendarHijri {
                         .collect::<Vec<_>>()
                 });
 
-                let body = stack::vstack(
-                    cx,
-                    stack::VStackProps::default().gap(Space::N2),
-                    move |_cx| vec![weekday_row, days_grid],
-                );
+                let body = ui::v_stack(move |_cx| vec![weekday_row, days_grid])
+                    .gap(Space::N2)
+                    .into_element(cx);
 
-                vec![stack::vstack(
-                    cx,
-                    stack::VStackProps::default().gap(Space::N4),
-                    move |_cx| vec![header, body],
-                )]
+                vec![
+                    ui::v_stack(move |_cx| vec![header, body])
+                        .gap(Space::N4)
+                        .into_element(cx),
+                ]
             })
         })
     }

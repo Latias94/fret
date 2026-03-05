@@ -62,11 +62,10 @@ pub(in crate::ui) fn preview_menus(
         .unwrap_or_else(|| Arc::<str>::from("<none>"));
 
     vec![
-        stack::hstack(
-            cx,
-            stack::HStackProps::default().gap(Space::N2).items_center(),
-            |_cx| [dropdown, context_menu],
-        ),
+        ui::h_row(|_cx| [dropdown, context_menu])
+            .gap(Space::N2)
+            .items_center()
+            .into_element(cx),
         cx.text(format!("last action: {last}")),
     ]
 }

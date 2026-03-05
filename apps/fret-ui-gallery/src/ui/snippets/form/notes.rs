@@ -5,13 +5,7 @@ use fret_app::App;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 
 pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N1)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full().min_w_0()),
-        |cx| {
+    ui::v_flex(|cx| {
             vec![
                 shadcn::typography::muted(
                     cx,
@@ -34,7 +28,9 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
                     "Textarea supports placeholder text; the upstream Bio example uses a placeholder string.",
                 ),
             ]
-        },
-    )
+        })
+            .gap(Space::N1)
+            .items_start()
+            .layout(LayoutRefinement::default().w_full().min_w_0()).into_element(cx)
 }
 // endregion: example

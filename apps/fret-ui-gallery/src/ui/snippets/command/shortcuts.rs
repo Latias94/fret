@@ -126,13 +126,7 @@ pub fn render<H: UiHost>(
 
     let on_select = on_select_for_last_action(last_action.clone());
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N2)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full().min_w_0()),
-        move |cx| {
+    ui::v_flex(move |cx: &mut ElementContext<'_, H>| {
             let disable_pointer_selection_value = cx
                 .app
                 .models()
@@ -144,10 +138,7 @@ pub fn render<H: UiHost>(
                 .get_cloned(&demo_disable_filtering)
                 .unwrap_or(false);
 
-            let toggle_row = stack::hstack(
-                cx,
-                stack::HStackProps::default().gap(Space::N3).items_center(),
-                |cx| {
+            let toggle_row = ui::h_row(|cx| {
                     vec![
                         shadcn::Checkbox::new(disable_pointer_selection.clone())
                             .control_id("shortcuts-disable-pointer-selection")
@@ -158,8 +149,7 @@ pub fn render<H: UiHost>(
                             .for_control("shortcuts-disable-pointer-selection")
                             .into_element(cx),
                     ]
-                },
-            );
+                }).gap(Space::N3).items_center().into_element(cx);
 
             let shortcuts_entries: Vec<shadcn::CommandEntry> = vec![
                 shadcn::CommandItem::new("Open Project")
@@ -213,10 +203,7 @@ pub fn render<H: UiHost>(
                 ) as fret_ui::action::OnActivate
             };
 
-            let demo_toggle_row = stack::hstack(
-                cx,
-                stack::HStackProps::default().gap(Space::N3).items_center(),
-                |cx| {
+            let demo_toggle_row = ui::h_row(|cx| {
                     vec![
                         shadcn::Checkbox::new(demo_disable_filtering.clone())
                             .control_id("demo-disable-filtering")
@@ -229,13 +216,9 @@ pub fn render<H: UiHost>(
                         .for_control("demo-disable-filtering")
                         .into_element(cx),
                     ]
-                },
-            );
+                }).gap(Space::N3).items_center().into_element(cx);
 
-            let controlled_selection_row = stack::hstack(
-                cx,
-                stack::HStackProps::default().gap(Space::N2).items_center(),
-                |cx| {
+            let controlled_selection_row = ui::h_row(|cx| {
                     vec![
                         shadcn::Button::new("Select Calendar")
                             .variant(shadcn::ButtonVariant::Outline)
@@ -253,8 +236,7 @@ pub fn render<H: UiHost>(
                             .test_id("ui-gallery-command-demo-selection-set-calculator")
                             .into_element(cx),
                     ]
-                },
-            );
+                }).gap(Space::N2).items_center().into_element(cx);
 
             let basic_items: Vec<shadcn::CommandItem> = vec![
                 shadcn::CommandItem::new("Calendar")
@@ -352,13 +334,7 @@ pub fn render<H: UiHost>(
                     .into_element(cx)
                     .test_id("ui-gallery-command-group-force");
 
-            let demo_block = stack::vstack(
-                cx,
-                stack::VStackProps::default()
-                    .gap(Space::N2)
-                    .items_start()
-                    .layout(LayoutRefinement::default().w_full().min_w_0()),
-                move |cx| {
+            let demo_block = ui::v_flex(move |cx: &mut ElementContext<'_, H>| {
                     let demo_filter_value_value = cx
                         .app
                         .models()
@@ -376,11 +352,15 @@ pub fn render<H: UiHost>(
                         cx.text("Demo-only: cmdk `Group forceMount` keeps headings visible even when all items are filtered out."),
                         group_force_palette,
                     ]
-                },
-            );
+                })
+                    .gap(Space::N2)
+                    .items_start()
+                    .layout(LayoutRefinement::default().w_full().min_w_0()).into_element(cx);
 
             vec![toggle_row, palette, demo_block]
-        },
-    )
+        })
+            .gap(Space::N2)
+            .items_start()
+            .layout(LayoutRefinement::default().w_full().min_w_0()).into_element(cx)
 }
 // endregion: example

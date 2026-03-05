@@ -5,7 +5,7 @@ use fret_runtime::Model;
 use fret_ui::Invalidation;
 use fret_ui::element::SemanticsDecoration;
 use fret_ui_ai as ui_ai;
-use fret_ui_kit::declarative::stack;
+use fret_ui_kit::ui;
 use fret_ui_kit::{LayoutRefinement, Space};
 use fret_ui_shadcn::prelude::*;
 
@@ -57,19 +57,16 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
         .test_id("ui-ai-speech-input-demo-btn")
         .into_element(cx);
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .layout(LayoutRefinement::default().w_full().min_w_0())
-            .gap(Space::N4),
-        move |cx| {
-            vec![
-                cx.text("SpeechInput (AI Elements)"),
-                cx.text("UI-only chrome. Apps own capture + ASR backends."),
-                marker,
-                btn,
-            ]
-        },
-    )
+    ui::v_flex(move |cx| {
+        vec![
+            cx.text("SpeechInput (AI Elements)"),
+            cx.text("UI-only chrome. Apps own capture + ASR backends."),
+            marker,
+            btn,
+        ]
+    })
+    .layout(LayoutRefinement::default().w_full().min_w_0())
+    .gap(Space::N4)
+    .into_element(cx)
 }
 // endregion: example

@@ -1,16 +1,180 @@
 use fret_ui::element::{AnyElement, ContainerProps};
 use fret_ui::{ElementContext, UiHost};
-use fret_ui_kit::declarative::stack;
-use fret_ui_kit::{LayoutRefinement, Space};
+use fret_ui_kit::{Items, Justify, LayoutRefinement, Space, ui};
+
+#[derive(Debug, Clone)]
+pub(crate) struct VStackProps {
+    gap: Space,
+    layout: LayoutRefinement,
+    items: Items,
+    justify: Justify,
+}
+
+impl Default for VStackProps {
+    fn default() -> Self {
+        Self {
+            gap: Space::N0,
+            layout: LayoutRefinement::default(),
+            items: Items::Stretch,
+            justify: Justify::Start,
+        }
+    }
+}
+
+impl VStackProps {
+    pub(crate) fn gap(mut self, gap: Space) -> Self {
+        self.gap = gap;
+        self
+    }
+
+    pub(crate) fn gap_y(self, gap: Space) -> Self {
+        self.gap(gap)
+    }
+
+    pub(crate) fn layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = layout;
+        self
+    }
+
+    pub(crate) fn items(mut self, items: Items) -> Self {
+        self.items = items;
+        self
+    }
+
+    pub(crate) fn items_center(self) -> Self {
+        self.items(Items::Center)
+    }
+
+    pub(crate) fn items_start(self) -> Self {
+        self.items(Items::Start)
+    }
+
+    pub(crate) fn items_end(self) -> Self {
+        self.items(Items::End)
+    }
+
+    pub(crate) fn items_stretch(self) -> Self {
+        self.items(Items::Stretch)
+    }
+
+    pub(crate) fn justify(mut self, justify: Justify) -> Self {
+        self.justify = justify;
+        self
+    }
+
+    pub(crate) fn justify_center(self) -> Self {
+        self.justify(Justify::Center)
+    }
+
+    pub(crate) fn justify_start(self) -> Self {
+        self.justify(Justify::Start)
+    }
+
+    pub(crate) fn justify_end(self) -> Self {
+        self.justify(Justify::End)
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct HStackProps {
+    gap: Space,
+    layout: LayoutRefinement,
+    items: Items,
+    justify: Justify,
+}
+
+impl Default for HStackProps {
+    fn default() -> Self {
+        Self {
+            gap: Space::N0,
+            layout: LayoutRefinement::default(),
+            items: Items::Center,
+            justify: Justify::Start,
+        }
+    }
+}
+
+impl HStackProps {
+    pub(crate) fn gap(mut self, gap: Space) -> Self {
+        self.gap = gap;
+        self
+    }
+
+    pub(crate) fn gap_x(self, gap: Space) -> Self {
+        self.gap(gap)
+    }
+
+    pub(crate) fn layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = layout;
+        self
+    }
+
+    pub(crate) fn items(mut self, items: Items) -> Self {
+        self.items = items;
+        self
+    }
+
+    pub(crate) fn items_center(self) -> Self {
+        self.items(Items::Center)
+    }
+
+    pub(crate) fn items_start(self) -> Self {
+        self.items(Items::Start)
+    }
+
+    pub(crate) fn items_end(self) -> Self {
+        self.items(Items::End)
+    }
+
+    pub(crate) fn items_stretch(self) -> Self {
+        self.items(Items::Stretch)
+    }
+
+    pub(crate) fn justify(mut self, justify: Justify) -> Self {
+        self.justify = justify;
+        self
+    }
+
+    pub(crate) fn justify_center(self) -> Self {
+        self.justify(Justify::Center)
+    }
+
+    pub(crate) fn justify_start(self) -> Self {
+        self.justify(Justify::Start)
+    }
+
+    pub(crate) fn justify_end(self) -> Self {
+        self.justify(Justify::End)
+    }
+
+    pub(crate) fn justify_between(self) -> Self {
+        self.justify(Justify::Between)
+    }
+}
 
 pub(crate) fn container_vstack<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     props: ContainerProps,
-    stack_props: stack::VStackProps,
+    stack_props: VStackProps,
     children: Vec<AnyElement>,
 ) -> AnyElement {
+    let VStackProps {
+        gap,
+        layout,
+        items,
+        justify,
+    } = stack_props;
+
     cx.container(props, move |cx| {
-        vec![stack::vstack(cx, stack_props, move |_cx| children)]
+        let builder = ui::v_stack(move |_cx| children);
+        vec![
+            builder
+                .gap(gap)
+                .items(items)
+                .justify(justify)
+                .layout(layout)
+                .into_element(cx),
+        ]
     })
 }
 
@@ -20,7 +184,7 @@ pub(crate) fn container_vstack_gap<H: UiHost>(
     gap: Space,
     children: Vec<AnyElement>,
 ) -> AnyElement {
-    container_vstack(cx, props, stack::VStackProps::default().gap(gap), children)
+    container_vstack(cx, props, VStackProps::default().gap(gap), children)
 }
 
 pub(crate) fn container_flow<H: UiHost>(
@@ -28,22 +192,32 @@ pub(crate) fn container_flow<H: UiHost>(
     props: ContainerProps,
     children: Vec<AnyElement>,
 ) -> AnyElement {
-    container_vstack(
-        cx,
-        props,
-        stack::VStackProps::default().gap(Space::N0),
-        children,
-    )
+    container_vstack(cx, props, VStackProps::default().gap(Space::N0), children)
 }
 
 pub(crate) fn container_hstack<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     props: ContainerProps,
-    stack_props: stack::HStackProps,
+    stack_props: HStackProps,
     children: Vec<AnyElement>,
 ) -> AnyElement {
+    let HStackProps {
+        gap,
+        layout,
+        items,
+        justify,
+    } = stack_props;
+
     cx.container(props, move |cx| {
-        vec![stack::hstack(cx, stack_props, move |_cx| children)]
+        let builder = ui::h_row(move |_cx| children);
+        vec![
+            builder
+                .gap(gap)
+                .items(items)
+                .justify(justify)
+                .layout(layout)
+                .into_element(cx),
+        ]
     })
 }
 
@@ -56,7 +230,7 @@ pub(crate) fn container_hstack_centered<H: UiHost>(
     container_hstack(
         cx,
         props,
-        stack::HStackProps::default()
+        HStackProps::default()
             .gap(gap)
             .layout(LayoutRefinement::default().w_full().h_full())
             .justify_center()

@@ -16,9 +16,11 @@ use fret_ui::element::{
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::declarative::{controllable_state, stack};
+use fret_ui_kit::declarative::controllable_state;
+use fret_ui_kit::ui;
 use fret_ui_kit::{
-    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space, typography,
+    ChromeRefinement, ColorRef, Items, Justify, LayoutRefinement, MetricRef, Radius, Space,
+    typography,
 };
 use fret_ui_shadcn::{Badge, BadgeVariant, Collapsible};
 
@@ -184,13 +186,10 @@ impl ChainOfThought {
             });
 
             let theme = Theme::global(&*cx.app).clone();
-            let body = stack::vstack(
-                cx,
-                stack::VStackProps::default()
-                    .layout(LayoutRefinement::default().w_full().min_w_0())
-                    .gap(gap),
-                move |cx| children(cx),
-            );
+            let body = ui::v_stack(move |cx| children(cx))
+                .layout(LayoutRefinement::default().w_full().min_w_0())
+                .gap(gap)
+                .into_element(cx);
 
             let mut root = cx.container(
                 ContainerProps {
@@ -371,14 +370,11 @@ impl ChainOfThoughtHeader {
                     },
                 );
 
-                let row = stack::hstack(
-                    cx,
-                    stack::HStackProps::default()
-                        .layout(LayoutRefinement::default().w_full().min_w_0())
-                        .items_center()
-                        .gap(Space::N2),
-                    move |_cx| vec![brain, label, chevron],
-                );
+                let row = ui::h_row(move |_cx| vec![brain, label, chevron])
+                    .layout(LayoutRefinement::default().w_full().min_w_0())
+                    .items(Items::Center)
+                    .gap(Space::N2)
+                    .into_element(cx);
 
                 vec![row]
             },
@@ -440,13 +436,10 @@ impl ChainOfThoughtContent {
             move |cx, _is_open| hidden(cx),
             move |cx| {
                 let theme = Theme::global(&*cx.app).clone();
-                let body = stack::vstack(
-                    cx,
-                    stack::VStackProps::default()
-                        .layout(LayoutRefinement::default().w_full().min_w_0())
-                        .gap(Space::N3),
-                    move |_cx| children,
-                );
+                let body = ui::v_stack(move |_cx| children)
+                    .layout(LayoutRefinement::default().w_full().min_w_0())
+                    .gap(Space::N3)
+                    .into_element(cx);
 
                 cx.container(
                     ContainerProps {
@@ -617,27 +610,21 @@ impl ChainOfThoughtStep {
         }
         body_children.extend(self.children);
 
-        let body = stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .layout(
-                    LayoutRefinement::default()
-                        .w_full()
-                        .min_w_0()
-                        .overflow_hidden(),
-                )
-                .gap(Space::N2),
-            move |_cx| body_children,
-        );
+        let body = ui::v_stack(move |_cx| body_children)
+            .layout(
+                LayoutRefinement::default()
+                    .w_full()
+                    .min_w_0()
+                    .overflow_hidden(),
+            )
+            .gap(Space::N2)
+            .into_element(cx);
 
-        let mut row = stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .layout(self.layout)
-                .gap(Space::N2)
-                .items_start(),
-            move |_cx| vec![icon_col, body],
-        );
+        let mut row = ui::h_row(move |_cx| vec![icon_col, body])
+            .layout(self.layout)
+            .gap(Space::N2)
+            .items(Items::Start)
+            .into_element(cx);
 
         if let Some(test_id) = self.test_id {
             row = row.attach_semantics(
@@ -832,14 +819,11 @@ impl ChainOfThoughtImage {
                     .overflow_hidden(),
             ),
             move |cx| {
-                vec![stack::hstack(
-                    cx,
-                    stack::HStackProps::default()
-                        .layout(LayoutRefinement::default().w_full().h_full())
-                        .justify_center()
-                        .items_center(),
-                    move |_cx| self.children,
-                )]
+                vec![ui::h_row(move |_cx| self.children)
+                    .layout(LayoutRefinement::default().w_full().h_full())
+                    .justify(Justify::Center)
+                    .items(Items::Center)
+                    .into_element(cx)]
             },
         );
 
@@ -857,13 +841,10 @@ impl ChainOfThoughtImage {
             }));
         }
 
-        let mut wrapper = stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .layout(self.layout)
-                .gap(Space::N2),
-            move |_cx| out,
-        );
+        let mut wrapper = ui::v_stack(move |_cx| out)
+            .layout(self.layout)
+            .gap(Space::N2)
+            .into_element(cx);
 
         if let Some(test_id) = self.test_id {
             wrapper = wrapper.attach_semantics(SemanticsDecoration::default().test_id(test_id));

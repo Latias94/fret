@@ -63,12 +63,7 @@ pub fn render<H: UiHost>(
                     .into_element(cx)
             },
             move |cx| {
-                stack::vstack(
-                    cx,
-                    stack::VStackProps::default()
-                        .layout(LayoutRefinement::default().w_full().h_full())
-                        .gap(Space::N4),
-                    move |cx| {
+                ui::v_flex(move |cx| {
                         vec![
                             material3::Button::new("Open drawer")
                                 .variant(material3::ButtonVariant::Filled)
@@ -83,8 +78,9 @@ pub fn render<H: UiHost>(
                                 "Tip: click the scrim or press Esc to close; Tab/Shift+Tab should stay inside the drawer while open.",
                             ),
                         ]
-                    },
-                )
+                    })
+                        .layout(LayoutRefinement::default().w_full().h_full())
+                        .gap(Space::N4).into_element(cx)
             },
         );
 
@@ -99,13 +95,7 @@ pub fn render<H: UiHost>(
         move |_cx| [modal],
     );
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .layout(LayoutRefinement::default().w_full().min_w_0())
-            .gap(Space::N3)
-            .items_start(),
-        |cx| {
+    ui::v_flex(|cx| {
             vec![
                 cx.text(
                     "Material 3 Modal Navigation Drawer: modal scrim + focus trap/restore + token-driven motion.",
@@ -113,8 +103,10 @@ pub fn render<H: UiHost>(
                 container,
                 cx.text(format!("open={} value={}", is_open as u8, current.as_ref())),
             ]
-        },
-    )
+        })
+            .layout(LayoutRefinement::default().w_full().min_w_0())
+            .gap(Space::N3)
+            .items_start().into_element(cx)
     .into()
 }
 

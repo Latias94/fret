@@ -17,9 +17,9 @@ use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
-use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::typography;
+use fret_ui_kit::ui;
 use fret_ui_kit::{
     ChromeRefinement, ColorFallback, ColorRef, Items, LayoutRefinement, MetricRef, Radius, Space,
 };
@@ -723,14 +723,11 @@ fn render_actions<H: UiHost + 'static>(
                 })
                 .collect::<Vec<_>>();
 
-            vec![stack::hstack(
-                cx,
-                stack::HStackProps::default()
-                    .layout(LayoutRefinement::default().flex_shrink_0())
-                    .gap(Space::N1)
-                    .items(Items::Center),
-                move |_cx| buttons,
-            )]
+            vec![ui::h_row(move |_cx| buttons)
+                .layout(LayoutRefinement::default().flex_shrink_0())
+                .gap(Space::N1)
+                .items(Items::Center)
+                .into_element(cx)]
         },
     );
 
@@ -814,18 +811,15 @@ fn file_tree_indent_el<H: UiHost + 'static>(
     );
     segments.push(pad);
 
-    stack::hstack(
-        cx,
-        stack::HStackProps::default()
-            .layout(
-                LayoutRefinement::default()
-                    .h_px(MetricRef::Px(row_height))
-                    .flex_shrink_0(),
-            )
-            .gap(Space::N0)
-            .items(Items::Center),
-        move |_cx| segments,
-    )
+    ui::h_row(move |_cx| segments)
+        .layout(
+            LayoutRefinement::default()
+                .h_px(MetricRef::Px(row_height))
+                .flex_shrink_0(),
+        )
+        .gap(Space::N0)
+        .items(Items::Center)
+        .into_element(cx)
 }
 
 fn render_folder_row<H: UiHost + 'static>(
@@ -956,21 +950,18 @@ fn render_folder_row<H: UiHost + 'static>(
         let name = FileTreeName::new(folder.name.clone()).into_element(cx);
         let actions = render_actions(cx, theme, folder.path.clone(), folder.actions.clone());
 
-        let row_contents = stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .layout(LayoutRefinement::default().w_full().min_w_0())
-                .gap(Space::N1)
-                .items(Items::Center),
-            move |cx| {
-                let indent = file_tree_indent_el(cx, theme, row_height, depth);
-                let mut out = vec![indent, chevron, folder_icon, name];
-                if let Some(actions) = actions {
-                    out.push(actions);
-                }
-                out
-            },
-        );
+        let row_contents = ui::h_row(move |row_cx| {
+            let indent = file_tree_indent_el(row_cx, theme, row_height, depth);
+            let mut out = vec![indent, chevron, folder_icon, name];
+            if let Some(actions) = actions {
+                out.push(actions);
+            }
+            out
+        })
+        .layout(LayoutRefinement::default().w_full().min_w_0())
+        .gap(Space::N1)
+        .items(Items::Center)
+        .into_element(cx);
 
         (pressable, chrome, move |_cx| vec![row_contents])
     });
@@ -1061,21 +1052,18 @@ fn render_file_row<H: UiHost + 'static>(
         let name = FileTreeName::new(file.name.clone()).into_element(cx);
         let actions = render_actions(cx, theme, file.path.clone(), file.actions.clone());
 
-        let row_contents = stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .layout(LayoutRefinement::default().w_full().min_w_0())
-                .gap(Space::N1)
-                .items(Items::Center),
-            move |cx| {
-                let indent = file_tree_indent_el(cx, theme, row_height, depth);
-                let mut out = vec![indent, spacer, icon, name];
-                if let Some(actions) = actions {
-                    out.push(actions);
-                }
-                out
-            },
-        );
+        let row_contents = ui::h_row(move |row_cx| {
+            let indent = file_tree_indent_el(row_cx, theme, row_height, depth);
+            let mut out = vec![indent, spacer, icon, name];
+            if let Some(actions) = actions {
+                out.push(actions);
+            }
+            out
+        })
+        .layout(LayoutRefinement::default().w_full().min_w_0())
+        .gap(Space::N1)
+        .items(Items::Center)
+        .into_element(cx);
 
         (pressable, chrome, move |_cx| vec![row_contents])
     })

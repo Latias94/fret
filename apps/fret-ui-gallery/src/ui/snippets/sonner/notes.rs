@@ -14,13 +14,7 @@ pub fn render<H: UiHost>(
         .get_cloned(&last_action)
         .unwrap_or_else(|| Arc::<str>::from("<none>"));
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N1)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full().min_w_0()),
-        move |cx| {
+    ui::v_flex(move |cx| {
             vec![
                 shadcn::typography::muted(cx, Arc::<str>::from(format!("Last action: {last}"))),
                 shadcn::typography::muted(
@@ -36,7 +30,9 @@ pub fn render<H: UiHost>(
                     "API reference: `ecosystem/fret-ui-shadcn/src/sonner.rs`.",
                 ),
             ]
-        },
-    )
+        })
+            .gap(Space::N1)
+            .items_start()
+            .layout(LayoutRefinement::default().w_full().min_w_0()).into_element(cx)
 }
 // endregion: example
