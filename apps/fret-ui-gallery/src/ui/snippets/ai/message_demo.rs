@@ -80,10 +80,18 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
         [
             ui_ai::MessageContent::new(
                 ui_ai::MessageRole::Assistant,
-                [
-                    cx.text("Assistant messages default to a full-width flow (no bubble)."),
-                    cx.text("Compose actions/toolbar slots as separate children."),
-                ],
+                [ui_ai::MessageResponse::new(Arc::<str>::from(
+                    "**Assistant** messages default to a full-width flow (no bubble).\n\n\
+Compose actions/toolbar slots as separate children.\n\n\
+```rust\n\
+fn streamed_demo() {\n\
+    println!(\"hello from message response\");\n\
+}\n\
+```\n",
+                ))
+                .streaming(false)
+                .test_id_prefix("ui-ai-message-demo-assistant-response-")
+                .into_element(cx)],
             )
             .test_id("ui-ai-message-demo-assistant-content")
             .into_element(cx),
@@ -111,7 +119,7 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
     .test_id("ui-ai-message-demo-user")
     .into_element(cx);
 
-    let title = cx.text("Message (AI Elements): alignment + bubble + actions rows.");
+    let title = cx.text("Message (AI Elements): alignment + bubble + actions + markdown response.");
 
     stack::vstack(
         cx,

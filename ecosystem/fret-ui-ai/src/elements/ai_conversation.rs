@@ -1,7 +1,9 @@
 use std::sync::Arc;
 
 use fret_core::{Edges, Px, SemanticsRole};
-use fret_ui::element::{AnyElement, ContainerProps, LayoutStyle, SemanticsDecoration};
+use fret_ui::element::{
+    AnyElement, ContainerProps, LayoutStyle, ScrollAxis, SemanticsDecoration, WheelRegionProps,
+};
 use fret_ui::scroll::VirtualListScrollHandle;
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::style as decl_style;
@@ -188,6 +190,8 @@ impl AiConversationTranscript {
             checked_ids_len: usize,
         }
 
+        const STICK_TO_BOTTOM_FRAMES: u8 = 8;
+
         let theme = Theme::global(&*cx.app).clone();
 
         let layout = self
@@ -232,29 +236,39 @@ impl AiConversationTranscript {
         let offset = handle.offset();
         let is_at_bottom = (max.y.0 - offset.y.0) <= stick_threshold.0;
 
-        let _effectively_at_bottom = cx.with_state(ConversationState::default, |st| {
-            let eligible = st.was_at_bottom || st.pending_scroll_frames > 0 || is_at_bottom;
+        let (_effectively_at_bottom, needs_followup_frame) =
+            cx.with_state(ConversationState::default, |st| {
+                let eligible = st.was_at_bottom || st.pending_scroll_frames > 0 || is_at_bottom;
 
-            if !st.initialized {
-                st.initialized = true;
-                st.last_revision = revision;
-                st.was_at_bottom = is_at_bottom;
-                if stick_to_bottom {
-                    st.pending_scroll_frames = 2;
+                if !st.initialized {
+                    st.initialized = true;
+                    st.last_revision = revision;
+                    st.was_at_bottom = is_at_bottom;
+                    if stick_to_bottom {
+                        st.pending_scroll_frames = STICK_TO_BOTTOM_FRAMES;
+                    }
+                } else if stick_to_bottom && revision != st.last_revision && eligible {
+                    st.pending_scroll_frames = STICK_TO_BOTTOM_FRAMES;
                 }
-            } else if stick_to_bottom && revision != st.last_revision && eligible {
-                st.pending_scroll_frames = 2;
-            }
 
-            if stick_to_bottom && st.pending_scroll_frames > 0 {
-                handle.scroll_to_bottom();
-                st.pending_scroll_frames = st.pending_scroll_frames.saturating_sub(1);
-            }
+                let did_attempt_scroll = stick_to_bottom && st.pending_scroll_frames > 0;
+                if did_attempt_scroll {
+                    let max = handle.max_offset();
+                    let cur = handle.offset();
+                    handle.scroll_to_offset(fret_core::Point::new(cur.x, max.y));
+                    st.pending_scroll_frames = st.pending_scroll_frames.saturating_sub(1);
+                }
 
-            st.last_revision = revision;
-            st.was_at_bottom = eligible;
-            is_at_bottom || st.pending_scroll_frames > 0
-        });
+                st.last_revision = revision;
+                st.was_at_bottom = eligible;
+                (
+                    is_at_bottom || st.pending_scroll_frames > 0,
+                    did_attempt_scroll,
+                )
+            });
+        if needs_followup_frame {
+            cx.request_frame();
+        }
 
         let content_padding = self.content_padding;
         let content_gap = self.content_gap;
@@ -391,10 +405,25 @@ impl AiConversationTranscript {
             move |_cx| vec![list],
         );
 
+        let mut wheel_layout = LayoutStyle::default();
+        wheel_layout.size.width = fret_ui::element::Length::Fill;
+        wheel_layout.size.height = fret_ui::element::Length::Fill;
+        wheel_layout.overflow = fret_ui::element::Overflow::Clip;
+
+        let wheel = cx.wheel_region(
+            WheelRegionProps {
+                layout: wheel_layout,
+                axis: ScrollAxis::Y,
+                scroll_target: None,
+                scroll_handle: handle.base_handle().clone(),
+            },
+            move |_cx| vec![list],
+        );
+
         let Some(test_id) = self.debug_root_test_id else {
-            return list;
+            return wheel;
         };
-        list.attach_semantics(
+        wheel.attach_semantics(
             SemanticsDecoration::default()
                 .role(SemanticsRole::List)
                 .test_id(test_id),

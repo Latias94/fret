@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
-use fret_core::{Edges, Point, Px, SemanticsRole};
+use fret_core::{Corners, Edges, Point, Px, SemanticsRole};
+use fret_icons::IconId;
 use fret_ui::action::OnActivate;
 use fret_ui::element::{AnyElement, ContainerProps, LayoutStyle, SemanticsProps, StackProps};
 use fret_ui::scroll::{ScrollHandle, ScrollStrategy, VirtualListScrollHandle};
@@ -308,10 +309,12 @@ impl ConversationTranscript {
                         host.request_redraw(cx.window);
                     });
 
-                    let button = Button::new("Scroll to bottom")
+                    let button = Button::new("")
+                        .a11y_label("Scroll to bottom")
                         .variant(ButtonVariant::Outline)
                         .size(ButtonSize::Icon)
-                        .children(vec![cx.text("↓")])
+                        .leading_icon(IconId::new_static("lucide.arrow-down"))
+                        .corner_radii_override(Corners::all(Px(999.0)))
                         .on_activate(on_activate)
                         .into_element(cx);
 
@@ -537,10 +540,12 @@ impl Conversation {
                         host.request_redraw(cx.window);
                     });
 
-                    let button = Button::new("Scroll to bottom")
+                    let button = Button::new("")
+                        .a11y_label("Scroll to bottom")
                         .variant(ButtonVariant::Outline)
                         .size(ButtonSize::Icon)
-                        .children(vec![cx.text("↓")])
+                        .leading_icon(IconId::new_static("lucide.arrow-down"))
+                        .corner_radii_override(Corners::all(Px(999.0)))
                         .on_activate(on_activate)
                         .into_element(cx);
 

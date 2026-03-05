@@ -2163,6 +2163,49 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-ai-conversation-demo-screenshot-zinc-dark",
+      "path": "tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-conversation-demo-screenshot-zinc-dark.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-ai-transcript-retained"
+      ],
+      "tags": [
+        "ai-elements",
+        "conversation",
+        "screenshots",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Sets theme preset to zinc/dark.",
+        "Navigates to the AI Elements Conversation demo page.",
+        "Captures a screenshot for quick visual parity checks."
+      ]
+    },
+    {
+      "id": "ui-gallery-ai-conversation-demo-scroll-button",
+      "path": "tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-conversation-demo-scroll-button.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-ai-transcript-retained"
+      ],
+      "tags": [
+        "ai-elements",
+        "conversation",
+        "scroll",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Navigates to the AI Elements Conversation demo page.",
+        "Sends a long message to ensure the transcript can scroll.",
+        "Scrolls up to assert the scroll-to-bottom button appears, then clicks it to assert it hides again."
+      ]
+    },
+    {
       "id": "ui-gallery-ai-transcript-torture-scroll",
       "path": "tools/diag-scripts/ui-gallery/perf/ui-gallery-ai-transcript-torture-scroll.json",
       "required_capabilities": [],
