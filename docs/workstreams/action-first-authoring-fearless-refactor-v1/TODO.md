@@ -387,6 +387,10 @@ practical steps:
     - `apps/fret-cookbook/examples/overlay_basics.rs`
     - `apps/fret-cookbook/examples/commands_keymap_basics.rs`
     - `apps/fret-cookbook/examples/hello_counter.rs`
+  - Done: remove redundant outer `cx` arguments from ecosystem authoring constructors (`fret-ui-kit::ui::*`):
+    - Implementation: `ecosystem/fret-ui-kit/src/ui.rs` (`h_flex`, `v_flex`, `container`, `scroll_area`, `stack`, `text`, `label`, `raw_text`, …)
+    - Call-site migration: cookbook, examples, ui-gallery, shadcn/genui crates (workspace-wide)
+    - Note: a handful of “host type inference” edge cases need an explicit anchor (e.g. `ui::v_flex::<App, _, _>(...)`)
 - Pointer-triggered explainability: stable selector → action mapping without relying on script stamping.
   - Status (as of 2026-03-03): `debug.command_dispatch_trace[*].source_test_id` is inferred from the
     current semantics snapshot when `source_element` is available (fallbacks remain for cases where

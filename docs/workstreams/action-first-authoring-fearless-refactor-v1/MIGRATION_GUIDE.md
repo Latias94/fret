@@ -222,6 +222,32 @@ Notes:
   (no extra layout node required).
 - `key_context(...)` participates in `when` expressions via `keyctx.*` (ADR 0022).
 
+## 4.2) cx-less `fret-ui-kit::ui::*` constructors (authoring noise reduction)
+
+Target outcome:
+
+- stop threading an outer `cx` argument into `fret-ui-kit::ui::*` constructors when it is only used
+  for type anchoring, not for logic.
+
+Migration examples:
+
+```rust,ignore
+// Before:
+ui::v_flex(cx, |cx| ui::children![cx; shadcn::Label::new("Title")])
+
+// After:
+ui::v_flex(|cx| ui::children![cx; shadcn::Label::new("Title")])
+```
+
+Notes:
+
+- The closure still receives `cx`; this is where keyed elements, observation, and conversion to
+  `AnyElement` happen.
+- In rare cases where Rust cannot infer the host type from context (typically when a builder is
+  stored in a `let` binding without an immediate `into_element(cx)` boundary), add an explicit
+  generic anchor:
+  - `ui::v_flex::<App, _, _>(|cx| { ... })`
+
 ## 5) GenUI alignment (spec bindings reuse action IDs)
 
 Target outcome:
