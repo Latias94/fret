@@ -113,6 +113,17 @@ Allocator A/B (empty idle, `--release`, `fretboard diag repro`, same script):
   - Default malloc zone: 7,814,144 allocated, 4,572,160 frag (~37%)
   - `wgpu_metal_current_allocated_size_bytes`: 32,161,792
 
+macOS allocator knob spot-check (ui-gallery code editor torture, single run):
+
+- Default (no `MallocNanoZone` override):
+  - `owned unmapped memory` dirty: ~225.4 MiB
+  - `MALLOC_SMALL` dirty: ~78.1 MiB
+  - malloc zones total frag: ~16.1 MiB
+- `MallocNanoZone=0`:
+  - `owned unmapped memory` dirty: ~226.0 MiB (no improvement observed)
+  - `MALLOC_SMALL` dirty: ~80.2 MiB (slightly higher)
+  - malloc zones total frag: ~18.0 MiB (higher)
+
 Interpretation:
 
 - GPU memory can be substantial but may not be reflected by `physical footprint` in a stable way.
