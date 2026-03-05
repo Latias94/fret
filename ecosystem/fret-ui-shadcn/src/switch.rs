@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use fret_core::window::ColorScheme;
 use fret_core::{Color, Corners, Edges, Px};
 use fret_runtime::{CommandId, Model};
 use fret_ui::element::{
@@ -110,10 +111,24 @@ fn switch_bg_off(theme: &Theme) -> Color {
         })
 }
 
-fn switch_thumb_bg(theme: &Theme) -> Color {
-    theme
-        .color_by_key("background")
-        .unwrap_or_else(|| theme.color_token("background"))
+fn switch_thumb_bg_off(theme: &Theme) -> Color {
+    match theme.color_scheme {
+        Some(ColorScheme::Dark) => theme
+            .color_by_key("foreground")
+            .unwrap_or_else(|| theme.color_token("foreground")),
+        _ => theme
+            .color_by_key("background")
+            .unwrap_or_else(|| theme.color_token("background")),
+    }
+}
+
+fn switch_thumb_bg_on(theme: &Theme) -> Color {
+    match theme.color_scheme {
+        Some(ColorScheme::Dark) => theme
+            .color_by_key("primary-foreground")
+            .unwrap_or_else(|| theme.color_token("primary-foreground")),
+        _ => switch_thumb_bg_off(theme),
+    }
 }
 
 fn switch_ring_color(theme: &Theme) -> Color {
@@ -316,7 +331,8 @@ impl Switch {
                     ring_border,
                     bg_off,
                     bg_on,
-                    thumb_bg,
+                    thumb_bg_off,
+                    thumb_bg_on,
                     pressable_layout,
                 ) = {
                     let theme = Theme::global(&*cx.app);
@@ -331,7 +347,8 @@ impl Switch {
 
                     let bg_off = switch_bg_off(theme);
                     let bg_on = switch_bg_on(theme);
-                    let thumb_bg = switch_thumb_bg(theme);
+                    let thumb_bg_off = switch_thumb_bg_off(theme);
+                    let thumb_bg_on = switch_thumb_bg_on(theme);
 
                     let layout = LayoutRefinement::default()
                         .w_px(w)
@@ -348,7 +365,8 @@ impl Switch {
                         ring_border,
                         bg_off,
                         bg_on,
-                        thumb_bg,
+                        thumb_bg_off,
+                        thumb_bg_on,
                         pressable_layout,
                     )
                 };
@@ -372,7 +390,9 @@ impl Switch {
                         ColorRef::Color(alpha_mul(bg_on, 0.8)),
                     );
 
-                let default_thumb_background = WidgetStateProperty::new(ColorRef::Color(thumb_bg));
+                let default_thumb_background =
+                    WidgetStateProperty::new(ColorRef::Color(thumb_bg_off))
+                        .when(WidgetStates::SELECTED, ColorRef::Color(thumb_bg_on));
 
                 let default_border_color =
                     WidgetStateProperty::new(ColorRef::Color(Color::TRANSPARENT))
@@ -456,21 +476,8 @@ impl Switch {
                     )
                     .value;
 
-                    let ring_alpha_target = if states.contains(WidgetStates::FOCUS_VISIBLE) {
-                        1.0
-                    } else {
-                        0.0
-                    };
-                    let ring_alpha = decl_motion::drive_tween_f32_for_element(
-                        cx,
-                        id,
-                        "track-ring-alpha",
-                        ring_alpha_target,
-                        track_duration,
-                        overlay_motion::shadcn_ease,
-                    );
                     let mut ring = decl_style::focus_ring(&theme, radius);
-                    ring.color = alpha_mul(ring_border, 0.5 * ring_alpha.value);
+                    ring.color = alpha_mul(ring_border, 0.5);
 
                     let mut chrome_props = decl_style::container_props(
                         &theme,
@@ -552,7 +559,7 @@ impl Switch {
                         enabled: !disabled,
                         focusable: true,
                         focus_ring: Some(ring),
-                        focus_ring_always_paint: ring_alpha.animating,
+                        focus_ring_always_paint: false,
                         a11y,
                         ..Default::default()
                     };
@@ -796,7 +803,7 @@ mod tests {
         let theme = Theme::global(&app);
         let track_bg = fret_core::Paint::Solid(switch_bg_off(theme)).into();
         let thumb_size = switch_thumb(theme, SwitchSize::Default);
-        let thumb_bg = fret_core::Paint::Solid(switch_thumb_bg(theme)).into();
+        let thumb_bg = fret_core::Paint::Solid(switch_thumb_bg_off(theme)).into();
 
         let mut track_rect: Option<Rect> = None;
         let mut thumb_rect: Option<Rect> = None;
@@ -1033,13 +1040,17 @@ mod tests {
 
         let theme = Theme::global(&app);
         let thumb_size = switch_thumb(theme, SwitchSize::Default);
-        let thumb_bg = switch_thumb_bg(theme);
+        let thumb_bg_off = switch_thumb_bg_off(theme);
+        let thumb_bg_on = switch_thumb_bg_on(theme);
+        let thumb_bgs = [thumb_bg_off, thumb_bg_on];
 
-        fn find_thumb_left(el: &AnyElement, thumb_bg: Color, thumb_size: Px) -> Option<Px> {
+        fn find_thumb_left(el: &AnyElement, thumb_bgs: &[Color], thumb_size: Px) -> Option<Px> {
             match &el.kind {
                 fret_ui::element::ElementKind::Container(props) => {
                     if props.layout.position == PositionStyle::Absolute
-                        && props.background == Some(thumb_bg)
+                        && props
+                            .background
+                            .is_some_and(|bg| thumb_bgs.iter().any(|c| *c == bg))
                         && props.layout.size.width == Length::Px(thumb_size)
                         && props.layout.size.height == Length::Px(thumb_size)
                     {
@@ -1049,12 +1060,12 @@ mod tests {
                     }
                     el.children
                         .iter()
-                        .find_map(|c| find_thumb_left(c, thumb_bg, thumb_size))
+                        .find_map(|c| find_thumb_left(c, thumb_bgs, thumb_size))
                 }
                 _ => el
                     .children
                     .iter()
-                    .find_map(|c| find_thumb_left(c, thumb_bg, thumb_size)),
+                    .find_map(|c| find_thumb_left(c, thumb_bgs, thumb_size)),
             }
         }
 
@@ -1073,7 +1084,7 @@ mod tests {
 
         let model = app.models_mut().insert(false);
         let off_el = render_switch(&mut app, window, model.clone());
-        let off_x = find_thumb_left(&off_el, thumb_bg, thumb_size)
+        let off_x = find_thumb_left(&off_el, &thumb_bgs, thumb_size)
             .expect("thumb left inset (off)")
             .0;
 
@@ -1087,7 +1098,7 @@ mod tests {
                 svc.record_frame(window, app.frame_id());
             });
             let el = render_switch(&mut app, window, model.clone());
-            let left = find_thumb_left(&el, thumb_bg, thumb_size).expect("thumb left inset");
+            let left = find_thumb_left(&el, &thumb_bgs, thumb_size).expect("thumb left inset");
             xs.push(left.0);
         }
 
@@ -1140,9 +1151,11 @@ mod tests {
         let track_w = switch_track_w(theme, SwitchSize::Default);
         let track_h = switch_track_h(theme, SwitchSize::Default);
         let bg_on = switch_bg_on(theme);
-        let thumb_bg = switch_thumb_bg(theme);
+        let thumb_bg_off = switch_thumb_bg_off(theme);
+        let thumb_bg_on = switch_thumb_bg_on(theme);
+        let thumb_bgs = [thumb_bg_off, thumb_bg_on];
 
-        fn find_track_bg(el: &AnyElement, w: Px, h: Px, thumb_bg: Color) -> Option<Color> {
+        fn find_track_bg(el: &AnyElement, w: Px, h: Px, thumb_bgs: &[Color]) -> Option<Color> {
             match &el.kind {
                 fret_ui::element::ElementKind::Container(props) => {
                     let looks_like_track = props.shadow.is_some()
@@ -1150,7 +1163,9 @@ mod tests {
                         && props.border.left.0 > 0.0
                         && props.corner_radii.top_left.0 > 0.0
                         && props.background.is_some()
-                        && props.background != Some(thumb_bg)
+                        && !props
+                            .background
+                            .is_some_and(|bg| thumb_bgs.iter().any(|c| *c == bg))
                         && (props.layout.size.width == Length::Px(w)
                             || props.layout.size.width == Length::Fill)
                         && (props.layout.size.height == Length::Px(h)
@@ -1160,12 +1175,12 @@ mod tests {
                     }
                     el.children
                         .iter()
-                        .find_map(|c| find_track_bg(c, w, h, thumb_bg))
+                        .find_map(|c| find_track_bg(c, w, h, thumb_bgs))
                 }
                 _ => el
                     .children
                     .iter()
-                    .find_map(|c| find_track_bg(c, w, h, thumb_bg)),
+                    .find_map(|c| find_track_bg(c, w, h, thumb_bgs)),
             }
         }
 
@@ -1188,7 +1203,8 @@ mod tests {
 
         let model = app.models_mut().insert(false);
         let off_el = render_switch(&mut app, window, model.clone());
-        let bg_off = find_track_bg(&off_el, track_w, track_h, thumb_bg).expect("track background");
+        let bg_off =
+            find_track_bg(&off_el, track_w, track_h, &thumb_bgs).expect("track background");
 
         let _ = app.models_mut().update(&model, |v| *v = true);
 
@@ -1201,7 +1217,7 @@ mod tests {
             });
 
             let el = render_switch(&mut app, window, model.clone());
-            let bg = find_track_bg(&el, track_w, track_h, thumb_bg).expect("track background");
+            let bg = find_track_bg(&el, track_w, track_h, &thumb_bgs).expect("track background");
             bgs.push(bg);
         }
 
@@ -1491,7 +1507,7 @@ mod tests {
         let theme = Theme::global(&app);
         let track_bg = fret_core::Paint::Solid(switch_bg_off(theme)).into();
         let thumb_size = switch_thumb(theme, SwitchSize::Sm);
-        let thumb_bg = fret_core::Paint::Solid(switch_thumb_bg(theme)).into();
+        let thumb_bg = fret_core::Paint::Solid(switch_thumb_bg_off(theme)).into();
 
         let mut track_rect: Option<Rect> = None;
         let mut thumb_rect: Option<Rect> = None;
@@ -1532,5 +1548,72 @@ mod tests {
             (thumb_cy - track_cy).abs() <= 0.2,
             "expected thumb center_y {thumb_cy} close to track center_y {track_cy}"
         );
+    }
+
+    #[test]
+    fn switch_thumb_color_matches_shadcn_dark_scheme() {
+        use crate::shadcn_themes::{ShadcnBaseColor, ShadcnColorScheme, apply_shadcn_new_york};
+
+        fn find_thumb_bg(scene: &Scene, expected_size: Px) -> Option<fret_core::Paint> {
+            for op in scene.ops() {
+                let fret_core::SceneOp::Quad {
+                    rect, background, ..
+                } = op
+                else {
+                    continue;
+                };
+                let is_thumb = (rect.size.width.0 - expected_size.0).abs() <= 0.1
+                    && (rect.size.height.0 - expected_size.0).abs() <= 0.1;
+                if is_thumb {
+                    return Some(background.paint);
+                }
+            }
+            None
+        }
+
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Dark);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(160.0), Px(80.0)),
+        );
+        let mut services = FakeServices;
+
+        let off_model = app.models_mut().insert(false);
+        let on_model = app.models_mut().insert(true);
+
+        for (label, model, expected_key) in [
+            ("off", off_model, "foreground"),
+            ("on", on_model, "primary-foreground"),
+        ] {
+            let mut ui: UiTree<App> = UiTree::new();
+            ui.set_window(window);
+
+            let root = fret_ui::declarative::render_root(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                &format!("shadcn-switch-thumb-color-dark-{label}"),
+                |cx| vec![Switch::new(model.clone()).into_element(cx)],
+            );
+            ui.set_root(root);
+            ui.request_semantics_snapshot();
+            ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+            let mut scene = Scene::default();
+            ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+            let theme = Theme::global(&app);
+            assert_eq!(theme.color_scheme, Some(ColorScheme::Dark));
+
+            let thumb_size = switch_thumb(theme, SwitchSize::Default);
+            let got = find_thumb_bg(&scene, thumb_size).expect("missing thumb quad");
+            let expected = fret_core::Paint::Solid(theme.color_token(expected_key));
+            assert_eq!(got, expected, "thumb paint mismatch for state {label}");
+        }
     }
 }

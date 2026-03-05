@@ -131,13 +131,13 @@ fn item_radius(theme: &Theme) -> Px {
 
 fn item_gap(theme: &Theme, size: ItemSize) -> Px {
     match size {
-        // shadcn/ui v4 (`repo-ref/ui/apps/v4/registry/styles/style-*.css`):
-        // - default: `gap-3.5`
-        // - sm: `gap-3.5`
-        // - xs: `gap-2.5`
-        ItemSize::Default => MetricRef::space(Space::N3p5).resolve(theme),
-        ItemSize::Sm => MetricRef::space(Space::N3p5).resolve(theme),
-        ItemSize::Xs => MetricRef::space(Space::N2p5).resolve(theme),
+        // shadcn/ui v4 (new-york-v4): `repo-ref/ui/apps/v4/registry/new-york-v4/ui/item.tsx`
+        // - default: `gap-4`
+        // - sm: `gap-2.5`
+        ItemSize::Default => MetricRef::space(Space::N4).resolve(theme),
+        ItemSize::Sm => MetricRef::space(Space::N2p5).resolve(theme),
+        // Not present in upstream new-york-v4 (extension for dense lists).
+        ItemSize::Xs => MetricRef::space(Space::N2).resolve(theme),
     }
 }
 
@@ -169,7 +169,7 @@ fn base_item_border_color(theme: &Theme, variant: ItemVariant) -> Option<Color> 
 #[derive(Debug)]
 pub struct ItemGroup {
     kind: ItemGroupKind,
-    size: ItemSize,
+    size: Option<ItemSize>,
     layout: LayoutRefinement,
     gap: Option<Px>,
     children: Vec<AnyElement>,
@@ -189,7 +189,7 @@ impl ItemGroup {
         let children = children.into_iter().collect();
         Self {
             kind: ItemGroupKind::Column,
-            size: ItemSize::Default,
+            size: None,
             layout: LayoutRefinement::default().w_full(),
             gap: None.into(),
             children,
@@ -202,7 +202,7 @@ impl ItemGroup {
     /// `has-data-[size=xs]:gap-2` in CSS. In Fret we can't infer this from descendants, so the
     /// group exposes an explicit knob.
     pub fn size(mut self, size: ItemSize) -> Self {
-        self.size = size;
+        self.size = Some(size);
         self
     }
 
@@ -227,9 +227,12 @@ impl ItemGroup {
             let theme = Theme::global(&*cx.app);
             let layout = decl_style::layout_style(theme, self.layout);
             let gap = self.gap.unwrap_or_else(|| match self.size {
-                ItemSize::Default => MetricRef::space(Space::N4).resolve(theme),
-                ItemSize::Sm => MetricRef::space(Space::N2p5).resolve(theme),
-                ItemSize::Xs => MetricRef::space(Space::N2).resolve(theme),
+                // shadcn new-york-v4 `ItemGroup` has no default gap; it relies on per-item padding
+                // and optional `ItemSeparator`.
+                None => Px(0.0),
+                Some(ItemSize::Default) => MetricRef::space(Space::N4).resolve(theme),
+                Some(ItemSize::Sm) => MetricRef::space(Space::N2p5).resolve(theme),
+                Some(ItemSize::Xs) => MetricRef::space(Space::N2).resolve(theme),
             });
             (layout, gap)
         };
@@ -287,7 +290,8 @@ impl ItemSeparator {
                     .w_full()
                     .h_px(MetricRef::Px(Px(1.0))),
             );
-            let margin_y = MetricRef::space(Space::N2).resolve(theme);
+            // shadcn/ui v4 (new-york-v4): `ItemSeparator` uses `my-0`.
+            let margin_y = Px(0.0);
             (border, layout, margin_y)
         };
         layout.margin.top = margin_y.into();
@@ -356,8 +360,25 @@ impl ItemMedia {
             let theme = Theme::global(&*cx.app);
 
             let (size, chrome) = match variant {
-                ItemMediaVariant::Default | ItemMediaVariant::Icon => {
-                    (None, ChromeRefinement::default())
+                ItemMediaVariant::Default => (None, ChromeRefinement::default()),
+                ItemMediaVariant::Icon => {
+                    // shadcn/ui v4 (new-york-v4): `size-8 rounded-sm border bg-muted`
+                    let side = MetricRef::space(Space::N8).resolve(theme);
+                    let border = theme
+                        .color_by_key("border")
+                        .unwrap_or_else(|| theme.color_token("border"));
+                    let bg = theme
+                        .color_by_key("muted")
+                        .unwrap_or_else(|| theme.color_token("muted.background"));
+
+                    let chrome = ChromeRefinement {
+                        radius: Some(MetricRef::radius(Radius::Sm)),
+                        border_width: Some(MetricRef::Px(Px(1.0))),
+                        border_color: Some(ColorRef::Color(border)),
+                        background: Some(ColorRef::Color(bg)),
+                        ..Default::default()
+                    };
+                    (Some(side), chrome)
                 }
                 ItemMediaVariant::Image => {
                     // shadcn/ui v4:
@@ -908,12 +929,12 @@ impl Item {
             None => (None, PressableKeyActivation::EnterAndSpace, None),
         };
         let padding = match size {
-            // shadcn/ui v4 (`repo-ref/ui/apps/v4/registry/styles/style-*.css`):
-            // - default: `px-4 py-3.5`
-            // - sm: `px-3.5 py-3`
-            // - xs: `px-3 py-2.5`
-            ItemSize::Default => ChromeRefinement::default().px(Space::N4).py(Space::N3p5),
-            ItemSize::Sm => ChromeRefinement::default().px(Space::N3p5).py(Space::N3),
+            // shadcn/ui v4 (new-york-v4): `repo-ref/ui/apps/v4/registry/new-york-v4/ui/item.tsx`
+            // - default: `p-4`
+            // - sm: `px-4 py-3`
+            ItemSize::Default => ChromeRefinement::default().px(Space::N4).py(Space::N4),
+            ItemSize::Sm => ChromeRefinement::default().px(Space::N4).py(Space::N3),
+            // Not present in upstream new-york-v4 (extension for dense lists).
             ItemSize::Xs => ChromeRefinement::default().px(Space::N3).py(Space::N2p5),
         };
 
@@ -1212,7 +1233,7 @@ mod tests {
         let chrome = item_chrome_container(&element);
         let theme = Theme::global(&app);
         let px = MetricRef::space(Space::N4).resolve(theme);
-        let py = MetricRef::space(Space::N3p5).resolve(theme);
+        let py = MetricRef::space(Space::N4).resolve(theme);
 
         assert_eq!(chrome.padding.left, SpacingLength::Px(px));
         assert_eq!(chrome.padding.right, SpacingLength::Px(px));
@@ -1320,7 +1341,75 @@ mod tests {
     }
 
     #[test]
-    fn item_separator_has_vertical_margin_like_shadcn() {
+    fn item_group_default_gap_is_zero_for_new_york_style() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = bounds();
+
+        crate::shadcn_themes::apply_shadcn_new_york(
+            &mut app,
+            crate::shadcn_themes::ShadcnBaseColor::Neutral,
+            crate::shadcn_themes::ShadcnColorScheme::Light,
+        );
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            ItemGroup::new(std::iter::empty()).into_element(cx)
+        });
+
+        let ElementKind::Column(props) = &element.kind else {
+            panic!("expected item group default to be a column");
+        };
+        assert_eq!(props.gap, SpacingLength::Px(Px(0.0)));
+    }
+
+    #[test]
+    fn item_media_icon_variant_has_fixed_side_and_chrome() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = bounds();
+
+        crate::shadcn_themes::apply_shadcn_new_york(
+            &mut app,
+            crate::shadcn_themes::ShadcnBaseColor::Neutral,
+            crate::shadcn_themes::ShadcnColorScheme::Light,
+        );
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            ItemMedia::new([ui::text(cx, "i").into_element(cx)])
+                .variant(ItemMediaVariant::Icon)
+                .into_element(cx)
+        });
+
+        let ElementKind::Container(props) = &element.kind else {
+            panic!("expected ItemMedia to render as a container");
+        };
+
+        let theme = Theme::global(&app);
+        let expected_side = MetricRef::space(Space::N8).resolve(theme);
+        assert_eq!(
+            props.layout.size.width,
+            fret_ui::element::Length::Px(expected_side)
+        );
+        assert_eq!(
+            props.layout.size.height,
+            fret_ui::element::Length::Px(expected_side)
+        );
+        assert!(
+            props.background.is_some(),
+            "expected icon media to have a background"
+        );
+        assert!(
+            props.border_color.is_some(),
+            "expected icon media to have a border color"
+        );
+        assert!(
+            props.border.left.0 > 0.0,
+            "expected icon media to have a border width"
+        );
+    }
+
+    #[test]
+    fn item_separator_has_no_vertical_margin_in_new_york_style() {
         let window = AppWindowId::default();
         let mut app = App::new();
         let bounds = bounds();
@@ -1338,15 +1427,13 @@ mod tests {
         let ElementKind::Container(props) = &element.kind else {
             panic!("expected separator to be a container");
         };
-        let theme = Theme::global(&app);
-        let expected_my = MetricRef::space(Space::N2).resolve(theme);
         assert_eq!(
             props.layout.margin.top,
-            fret_ui::element::MarginEdge::Px(expected_my)
+            fret_ui::element::MarginEdge::Px(Px(0.0))
         );
         assert_eq!(
             props.layout.margin.bottom,
-            fret_ui::element::MarginEdge::Px(expected_my)
+            fret_ui::element::MarginEdge::Px(Px(0.0))
         );
     }
 

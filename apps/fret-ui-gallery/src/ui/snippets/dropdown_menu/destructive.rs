@@ -5,39 +5,38 @@ use fret_core::Px;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    shadcn::DropdownMenu::new_controllable(cx, None, false)
-        .into_element_parts(
-            cx,
-            |cx| {
-                shadcn::DropdownMenuTrigger::new(
-                    shadcn::Button::new("Actions")
-                        .variant(shadcn::ButtonVariant::Outline)
-                        .test_id("ui-gallery-dropdown-menu-destructive-trigger")
-                        .into_element(cx),
-                )
-            },
-            shadcn::DropdownMenuContent::new()
-                .align(shadcn::DropdownMenuAlign::Start)
-                .side_offset(Px(4.0)),
-            |_cx| {
-                [
-                    shadcn::DropdownMenuGroup::new([
-                        shadcn::DropdownMenuItem::new("Edit")
-                            .leading_icon(IconId::new_static("lucide.pencil"))
-                            .into(),
-                        shadcn::DropdownMenuItem::new("Share")
-                            .leading_icon(IconId::new_static("lucide.share"))
-                            .into(),
-                    ])
-                    .into(),
-                    shadcn::DropdownMenuSeparator::new().into(),
-                    shadcn::DropdownMenuGroup::new([shadcn::DropdownMenuItem::new("Delete")
-                        .leading_icon(IconId::new_static("lucide.trash"))
-                        .variant(shadcn::dropdown_menu::DropdownMenuItemVariant::Destructive)
-                        .into()])
-                    .into(),
-                ]
-            },
-        )
+    shadcn::DropdownMenu::new_controllable(cx, None, false).into_element_parts(
+        cx,
+        |cx| {
+            shadcn::DropdownMenuTrigger::new(
+                shadcn::Button::new("Actions")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .test_id("ui-gallery-dropdown-menu-destructive-trigger")
+                    .into_element(cx),
+            )
+        },
+        shadcn::DropdownMenuContent::new()
+            .align(shadcn::DropdownMenuAlign::Start)
+            .side_offset(Px(4.0)),
+        |_cx| {
+            [
+                shadcn::DropdownMenuGroup::new([
+                    shadcn::DropdownMenuItem::new("Edit")
+                        .leading_icon(IconId::new_static("lucide.pencil"))
+                        .into(),
+                    shadcn::DropdownMenuItem::new("Share")
+                        .leading_icon(IconId::new_static("lucide.share"))
+                        .into(),
+                ])
+                .into(),
+                shadcn::DropdownMenuSeparator::new().into(),
+                shadcn::DropdownMenuGroup::new([shadcn::DropdownMenuItem::new("Delete")
+                    .leading_icon(IconId::new_static("lucide.trash"))
+                    .variant(shadcn::dropdown_menu::DropdownMenuItemVariant::Destructive)
+                    .into()])
+                .into(),
+            ]
+        },
+    )
 }
 // endregion: example

@@ -24,45 +24,44 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         }
     };
 
-    shadcn::DropdownMenu::new_controllable(cx, None, false)
-        .into_element_parts(
-            cx,
-            |cx| {
-                shadcn::DropdownMenuTrigger::new(
-                    shadcn::Button::new("Payment Method")
-                        .variant(shadcn::ButtonVariant::Outline)
-                        .test_id("ui-gallery-dropdown-menu-radio-icons-trigger")
-                        .into_element(cx),
-                )
-            },
-            shadcn::DropdownMenuContent::new()
-                .align(shadcn::DropdownMenuAlign::Start)
-                .side_offset(Px(4.0))
-                // shadcn/ui docs: `DropdownMenuContent className="min-w-56"`.
-                .min_width(Px(224.0)),
-            |_cx| {
-                [shadcn::DropdownMenuGroup::new([
-                    shadcn::DropdownMenuLabel::new("Select Payment Method").into(),
-                    shadcn::DropdownMenuRadioGroup::new(payment_method.clone())
-                        .item(
-                            shadcn::DropdownMenuRadioItemSpec::new("card", "Credit Card")
-                                .leading_icon(IconId::new_static("lucide.credit-card"))
-                                .test_id("ui-gallery-dropdown-menu-radio-icons-card"),
-                        )
-                        .item(
-                            shadcn::DropdownMenuRadioItemSpec::new("paypal", "PayPal")
-                                .leading_icon(IconId::new_static("lucide.wallet"))
-                                .test_id("ui-gallery-dropdown-menu-radio-icons-paypal"),
-                        )
-                        .item(
-                            shadcn::DropdownMenuRadioItemSpec::new("bank", "Bank Transfer")
-                                .leading_icon(IconId::new_static("lucide.building-2"))
-                                .test_id("ui-gallery-dropdown-menu-radio-icons-bank"),
-                        )
-                        .into(),
-                ])
-                .into()]
-            },
-        )
+    shadcn::DropdownMenu::new_controllable(cx, None, false).into_element_parts(
+        cx,
+        |cx| {
+            shadcn::DropdownMenuTrigger::new(
+                shadcn::Button::new("Payment Method")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .test_id("ui-gallery-dropdown-menu-radio-icons-trigger")
+                    .into_element(cx),
+            )
+        },
+        shadcn::DropdownMenuContent::new()
+            .align(shadcn::DropdownMenuAlign::Start)
+            .side_offset(Px(4.0))
+            // shadcn/ui docs: `DropdownMenuContent className="min-w-56"`.
+            .min_width(Px(224.0)),
+        |_cx| {
+            [shadcn::DropdownMenuGroup::new([
+                shadcn::DropdownMenuLabel::new("Select Payment Method").into(),
+                shadcn::DropdownMenuRadioGroup::new(payment_method.clone())
+                    .item(
+                        shadcn::DropdownMenuRadioItemSpec::new("card", "Credit Card")
+                            .leading_icon(IconId::new_static("lucide.credit-card"))
+                            .test_id("ui-gallery-dropdown-menu-radio-icons-card"),
+                    )
+                    .item(
+                        shadcn::DropdownMenuRadioItemSpec::new("paypal", "PayPal")
+                            .leading_icon(IconId::new_static("lucide.wallet"))
+                            .test_id("ui-gallery-dropdown-menu-radio-icons-paypal"),
+                    )
+                    .item(
+                        shadcn::DropdownMenuRadioItemSpec::new("bank", "Bank Transfer")
+                            .leading_icon(IconId::new_static("lucide.building-2"))
+                            .test_id("ui-gallery-dropdown-menu-radio-icons-bank"),
+                    )
+                    .into(),
+            ])
+            .into()]
+        },
+    )
 }
 // endregion: example
