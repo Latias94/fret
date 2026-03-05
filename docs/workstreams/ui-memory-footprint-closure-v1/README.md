@@ -47,6 +47,7 @@ Using `tools/diag-scripts/todo-memory-steady.json` on macOS/Metal:
    - Script defaults:
      - Baseline: `tools/diag-scripts/tooling/todo/todo-memory-steady.json` now sets cadence 600 via `meta.env_defaults`.
      - Deep dive: `tools/diag-scripts/tooling/todo/todo-memory-steady-wgpu-highfreq.json` sets cadence 60.
+     - Other memory steady scripts (`empty-idle`, `text-heavy`, `image-heavy`) also default to cadence 600 via `meta.env_defaults`.
 
 Using `tools/diag-scripts/empty-idle-memory-steady.json` on macOS/Metal (baseline):
 

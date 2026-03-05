@@ -30,6 +30,7 @@
 - [x] Default memory scripts to cadence 600 and keep a separate “high-frequency attribution” script for deep dives:
   - Baseline: `tools/diag-scripts/tooling/todo/todo-memory-steady.json` (cadence 600)
   - Deep dive: `tools/diag-scripts/tooling/todo/todo-memory-steady-wgpu-highfreq.json` (cadence 60)
+  - Baseline scripts also include `empty-idle`, `text-heavy`, `image-heavy` (cadence 600)
 
 ### Evidence (captured)
 
