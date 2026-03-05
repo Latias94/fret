@@ -156,7 +156,6 @@ impl View for RouterBasicsView {
                         return true;
                     };
                     let Ok((update, next_snapshot, can_back, can_forward)) = result else {
-                        host.request_redraw(window);
                         return true;
                     };
                     if !update.update.changed() {
@@ -168,22 +167,22 @@ impl View for RouterBasicsView {
                         .models_mut()
                         .update(&intents_model, |v| *v = update.intents);
                     host.set_router_command_availability(window, can_back, can_forward);
-                    host.request_redraw(window);
                     true
                 }
             }
         };
 
-        cx.on_action::<act::RouterBack>(navigate_history_action(NavigationAction::Back));
-        cx.on_action::<act::RouterForward>(navigate_history_action(NavigationAction::Forward));
-        cx.on_action::<act::ClearIntents>({
+        cx.on_action_notify::<act::RouterBack>(navigate_history_action(NavigationAction::Back));
+        cx.on_action_notify::<act::RouterForward>(navigate_history_action(
+            NavigationAction::Forward,
+        ));
+        cx.on_action_notify::<act::ClearIntents>({
             let intents = intents_weak_for_clear;
             move |host, _acx| {
                 let Some(intents) = intents.upgrade() else {
                     return true;
                 };
                 let _ = host.models_mut().update(&intents, |v| v.clear());
-                host.request_redraw(window);
                 true
             }
         });

@@ -76,28 +76,16 @@ impl View for CanvasPanZoomBasicsView {
             .paint()
             .copied_or_default();
 
-        cx.on_action::<act::ResetView>({
-            let view = self.view.clone();
-            move |host, acx| {
-                let _ = host
-                    .models_mut()
-                    .update(&view, |v| *v = PanZoom2D::default());
-                host.request_redraw(acx.window);
-                host.notify(acx);
-                true
-            }
+        cx.on_action_notify_model_update::<act::ResetView, PanZoom2D>(self.view.clone(), |v| {
+            *v = PanZoom2D::default();
         });
 
-        cx.on_action::<act::ResetNode>({
+        cx.on_action_notify_models::<act::ResetNode>({
             let node_origin = self.node_origin.clone();
             let node_drag_count = self.node_drag_count.clone();
-            move |host, acx| {
-                let _ = host
-                    .models_mut()
-                    .update(&node_origin, |p| *p = Point::new(Px(120.0), Px(120.0)));
-                let _ = host.models_mut().update(&node_drag_count, |n| *n = 0);
-                host.request_redraw(acx.window);
-                host.notify(acx);
+            move |models| {
+                let _ = models.update(&node_origin, |p| *p = Point::new(Px(120.0), Px(120.0)));
+                let _ = models.update(&node_drag_count, |n| *n = 0);
                 true
             }
         });

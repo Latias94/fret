@@ -163,15 +163,11 @@ impl View for TodoView {
         let input = shadcn::Input::new(draft.clone())
             .a11y_label("New task")
             .placeholder("Add a task…")
-            .submit_command(act::Add.into())
-            .into_element(cx);
+            .submit_command(act::Add.into());
 
-        let add_btn = shadcn::Button::new("Add")
-            .disabled(!enabled)
-            .action(act::Add)
-            .into_element(cx);
+        let add_btn = shadcn::Button::new("Add").disabled(!enabled).action(act::Add);
 
-        ui::h_flex(cx, |_cx| [input, add_btn])
+        ui::h_flex(|cx| ui::children![cx; input, add_btn])
             .gap(Space::N2)
             .items_center()
             .into_element(cx)

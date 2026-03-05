@@ -55,15 +55,13 @@ impl View for AssetsReloadEpochBasicsView {
     fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
         let theme = Theme::global(&*cx.app).snapshot();
 
-        cx.on_action::<act::BumpReload>({
+        cx.on_action_notify::<act::BumpReload>({
             let bumps = self.bumps.clone();
             move |host, action_cx| {
                 let _ = host.models_mut().update(&bumps, |v| {
                     *v = v.wrapping_add(1);
                 });
-                host.request_redraw(action_cx.window);
                 host.push_effect(Effect::RequestAnimationFrame(action_cx.window));
-                host.notify(action_cx);
                 true
             }
         });

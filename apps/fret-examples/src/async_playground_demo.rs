@@ -293,52 +293,48 @@ impl View for AsyncPlaygroundView {
         let header = header_bar(cx, &mut self.st, theme.clone(), global_slow, dark);
         let body = body(cx, &mut self.st, theme, global_slow, selected);
 
-        cx.on_action_notify::<act::SelectTip>({
+        cx.on_action_notify_models::<act::SelectTip>({
             let selected = self.st.selected.clone();
             let namespace_input = self.st.namespace_input.clone();
-            move |host, _acx| {
-                let _ = host.models_mut().update(&selected, |v| *v = QueryId::Tip);
-                let _ = host.models_mut().update(&namespace_input, |s| {
+            move |models| {
+                let _ = models.update(&selected, |v| *v = QueryId::Tip);
+                let _ = models.update(&namespace_input, |s| {
                     s.clear();
                     s.push_str(default_namespace_for_id(QueryId::Tip));
                 });
                 true
             }
         });
-        cx.on_action_notify::<act::SelectSearch>({
+        cx.on_action_notify_models::<act::SelectSearch>({
             let selected = self.st.selected.clone();
             let namespace_input = self.st.namespace_input.clone();
-            move |host, _acx| {
-                let _ = host
-                    .models_mut()
-                    .update(&selected, |v| *v = QueryId::Search);
-                let _ = host.models_mut().update(&namespace_input, |s| {
+            move |models| {
+                let _ = models.update(&selected, |v| *v = QueryId::Search);
+                let _ = models.update(&namespace_input, |s| {
                     s.clear();
                     s.push_str(default_namespace_for_id(QueryId::Search));
                 });
                 true
             }
         });
-        cx.on_action_notify::<act::SelectStock>({
+        cx.on_action_notify_models::<act::SelectStock>({
             let selected = self.st.selected.clone();
             let namespace_input = self.st.namespace_input.clone();
-            move |host, _acx| {
-                let _ = host.models_mut().update(&selected, |v| *v = QueryId::Stock);
-                let _ = host.models_mut().update(&namespace_input, |s| {
+            move |models| {
+                let _ = models.update(&selected, |v| *v = QueryId::Stock);
+                let _ = models.update(&namespace_input, |s| {
                     s.clear();
                     s.push_str(default_namespace_for_id(QueryId::Stock));
                 });
                 true
             }
         });
-        cx.on_action_notify::<act::SelectStatus>({
+        cx.on_action_notify_models::<act::SelectStatus>({
             let selected = self.st.selected.clone();
             let namespace_input = self.st.namespace_input.clone();
-            move |host, _acx| {
-                let _ = host
-                    .models_mut()
-                    .update(&selected, |v| *v = QueryId::Status);
-                let _ = host.models_mut().update(&namespace_input, |s| {
+            move |models| {
+                let _ = models.update(&selected, |v| *v = QueryId::Status);
+                let _ = models.update(&namespace_input, |s| {
                     s.clear();
                     s.push_str(default_namespace_for_id(QueryId::Status));
                 });

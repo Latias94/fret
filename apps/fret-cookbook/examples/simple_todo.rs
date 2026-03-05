@@ -155,13 +155,12 @@ impl View for SimpleTodoView {
         .max_w(Px(560.0))
         .into_element(cx);
 
-        cx.on_action::<act::Add>({
+        cx.on_action_notify_models::<act::Add>({
             let todos = self.st.todos.clone();
             let draft = self.st.draft.clone();
             let next_id = self.st.next_id.clone();
-            move |host, acx| {
-                let text = host
-                    .models_mut()
+            move |models| {
+                let text = models
                     .read(&draft, |v| v.trim().to_string())
                     .ok()
                     .unwrap_or_default();
@@ -169,43 +168,30 @@ impl View for SimpleTodoView {
                     return false;
                 }
 
-                let done = host.models_mut().insert(false);
-                let id = host.models_mut().read(&next_id, |v| *v).ok().unwrap_or(0);
-                let _ = host
-                    .models_mut()
-                    .update(&next_id, |v| *v = v.saturating_add(1));
+                let done = models.insert(false);
+                let id = models.read(&next_id, |v| *v).ok().unwrap_or(0);
+                let _ = models.update(&next_id, |v| *v = v.saturating_add(1));
 
-                let _ = host.models_mut().update(&todos, |todos| {
+                let _ = models.update(&todos, |todos| {
                     todos.push(TodoItem {
                         id,
                         done,
                         text: Arc::from(text),
                     });
                 });
-                let _ = host.models_mut().update(&draft, String::clear);
-
-                host.request_redraw(acx.window);
-                host.notify(acx);
+                let _ = models.update(&draft, String::clear);
                 true
             }
         });
 
-        cx.on_action::<act::ClearDone>({
+        cx.on_action_notify_models::<act::ClearDone>({
             let todos = self.st.todos.clone();
-            move |host, acx| {
-                let snapshot = host
-                    .models_mut()
-                    .read(&todos, Clone::clone)
-                    .ok()
-                    .unwrap_or_default();
+            move |models| {
+                let snapshot = models.read(&todos, Clone::clone).ok().unwrap_or_default();
 
                 let mut remove_ids = Vec::new();
                 for t in &snapshot {
-                    let done = host
-                        .models_mut()
-                        .read(&t.done, |v| *v)
-                        .ok()
-                        .unwrap_or(false);
+                    let done = models.read(&t.done, |v| *v).ok().unwrap_or(false);
                     if done {
                         remove_ids.push(t.id);
                     }
@@ -214,12 +200,9 @@ impl View for SimpleTodoView {
                     return false;
                 }
 
-                let _ = host.models_mut().update(&todos, |todos| {
+                let _ = models.update(&todos, |todos| {
                     todos.retain(|t| !remove_ids.contains(&t.id));
                 });
-
-                host.request_redraw(acx.window);
-                host.notify(acx);
                 true
             }
         });

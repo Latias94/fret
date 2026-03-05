@@ -26,7 +26,7 @@ impl View for ToastBasicsView {
         // Capture a clone into action handlers.
         let sonner = shadcn::Sonner::global(cx.app);
 
-        cx.on_action::<act::DefaultToast>({
+        cx.on_action_notify::<act::DefaultToast>({
             let sonner = sonner.clone();
             move |host, acx| {
                 sonner.toast_message(
@@ -35,13 +35,11 @@ impl View for ToastBasicsView {
                     "Hello from Fret",
                     shadcn::ToastMessageOptions::new().description("This is a default toast."),
                 );
-                host.request_redraw(acx.window);
-                host.notify(acx);
                 true
             }
         });
 
-        cx.on_action::<act::SuccessToast>({
+        cx.on_action_notify::<act::SuccessToast>({
             let sonner = sonner.clone();
             move |host, acx| {
                 sonner.toast_success_message(
@@ -50,18 +48,14 @@ impl View for ToastBasicsView {
                     "Saved",
                     shadcn::ToastMessageOptions::new().description("Everything worked."),
                 );
-                host.request_redraw(acx.window);
-                host.notify(acx);
                 true
             }
         });
 
-        cx.on_action::<act::DismissAll>({
+        cx.on_action_notify::<act::DismissAll>({
             let sonner = sonner.clone();
             move |host, acx| {
                 sonner.dismiss_all(host, acx.window);
-                host.request_redraw(acx.window);
-                host.notify(acx);
                 true
             }
         });

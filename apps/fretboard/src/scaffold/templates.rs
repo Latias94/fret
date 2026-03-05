@@ -209,22 +209,23 @@ pub(super) fn todo_template_main_rs(package_name: &str, opts: ScaffoldOptions) -
         .size(shadcn::ButtonSize::Icon)
         .disabled(!add_enabled)
         .action(act::Add)
-        .children([icon::icon(cx, IconId::new("lucide.plus"))])
-        .into_element(cx);
+        .children(ui::children![cx; icon::icon(cx, IconId::new("lucide.plus"))])
+        .ui()
+        .rounded_md();
 "#
     } else {
         r#"    let add_btn = shadcn::Button::new("Add")
         .disabled(!add_enabled)
         .action(act::Add)
-        .into_element(cx);
+        .ui()
+        .rounded_md();
 "#
     };
 
     let palette_button = if opts.command_palette {
         r#"
                 shadcn::Button::new("Command palette")
-                    .action("app.command_palette")
-                    .into_element(cx),"#
+                    .action("app.command_palette"),"#
     } else {
         ""
     };
@@ -369,13 +370,12 @@ impl View for TodoView {
 
         let add_enabled = !draft_value.trim().is_empty();
 
-        cx.on_action::<act::Add>({
+        cx.on_action_notify_models::<act::Add>({
             let todos = self.todos.clone();
             let draft = self.draft.clone();
             let next_id = self.next_id.clone();
-            move |host, acx| {
-                let text = host
-                    .models_mut()
+            move |models| {
+                let text = models
                     .read(&draft, |s| s.trim().to_string())
                     .ok()
                     .unwrap_or_default();
@@ -383,46 +383,38 @@ impl View for TodoView {
                     return false;
                 }
 
-                let id = host
-                    .models_mut()
+                let id = models
                     .read(&next_id, |v| *v)
                     .ok()
                     .unwrap_or(1);
-                let _ = host
-                    .models_mut()
-                    .update(&next_id, |v| *v = v.saturating_add(1));
+                let _ = models.update(&next_id, |v| *v = v.saturating_add(1));
 
-                let done = host.models_mut().insert(false);
+                let done = models.insert(false);
                 let item = TodoItem {
                     id,
                     done,
                     text: Arc::from(text),
                 };
 
-                let _ = host.models_mut().update(&todos, |todos| {
+                let _ = models.update(&todos, |todos| {
                     todos.insert(0, item);
                 });
-                let _ = host.models_mut().update(&draft, |s| s.clear());
-
-                host.request_redraw(acx.window);
-                host.notify(acx);
+                let _ = models.update(&draft, |s| s.clear());
                 true
             }
         });
 
-        cx.on_action::<act::ClearDone>({
+        cx.on_action_notify_models::<act::ClearDone>({
             let todos = self.todos.clone();
-            move |host, acx| {
-                let snapshot = host
-                    .models_mut()
+            move |models| {
+                let snapshot = models
                     .read(&todos, |v| v.clone())
                     .ok()
                     .unwrap_or_default();
 
                 let mut keep: Vec<TodoItem> = Vec::new();
                 for t in snapshot {
-                    let done = host
-                        .models_mut()
+                    let done = models
                         .read(&t.done, |v| *v)
                         .ok()
                         .unwrap_or(false);
@@ -431,63 +423,30 @@ impl View for TodoView {
                     }
                 }
 
-                let _ = host.models_mut().update(&todos, |todos| {
+                let _ = models.update(&todos, |todos| {
                     *todos = keep;
                 });
 
-                host.request_redraw(acx.window);
-                host.notify(acx);
                 true
             }
         });
 
-        cx.on_action::<act::RefreshTip>({
-            let tip_nonce = self.tip_nonce.clone();
-            move |host, acx| {
-                let _ = host
-                    .models_mut()
-                    .update(&tip_nonce, |v| *v = v.saturating_add(1));
-                host.request_redraw(acx.window);
-                host.notify(acx);
-                true
-            }
+        cx.on_action_notify_model_update::<act::RefreshTip, u64>(self.tip_nonce.clone(), |v| {
+            *v = v.saturating_add(1);
         });
 
-        cx.on_action::<act::FilterAll>({
-            let filter = self.filter.clone();
-            move |host, acx| {
-                let _ = host
-                    .models_mut()
-                    .update(&filter, |v| *v = TodoFilter::All);
-                host.request_redraw(acx.window);
-                host.notify(acx);
-                true
-            }
-        });
-
-        cx.on_action::<act::FilterActive>({
-            let filter = self.filter.clone();
-            move |host, acx| {
-                let _ = host
-                    .models_mut()
-                    .update(&filter, |v| *v = TodoFilter::Active);
-                host.request_redraw(acx.window);
-                host.notify(acx);
-                true
-            }
-        });
-
-        cx.on_action::<act::FilterCompleted>({
-            let filter = self.filter.clone();
-            move |host, acx| {
-                let _ = host
-                    .models_mut()
-                    .update(&filter, |v| *v = TodoFilter::Completed);
-                host.request_redraw(acx.window);
-                host.notify(acx);
-                true
-            }
-        });
+        cx.on_action_notify_model_set::<act::FilterAll, TodoFilter>(
+            self.filter.clone(),
+            TodoFilter::All,
+        );
+        cx.on_action_notify_model_set::<act::FilterActive, TodoFilter>(
+            self.filter.clone(),
+            TodoFilter::Active,
+        );
+        cx.on_action_notify_model_set::<act::FilterCompleted, TodoFilter>(
+            self.filter.clone(),
+            TodoFilter::Completed,
+        );
 
         let derived: TodoDerived = cx.use_selector(
             |cx| {
@@ -579,34 +538,29 @@ impl View for TodoView {
         };
 
         let progress = shadcn::Badge::new(format!("{}/{} done", derived.completed, derived.total))
-            .variant(shadcn::BadgeVariant::Secondary)
-            .into_element(cx);
+            .variant(shadcn::BadgeVariant::Secondary);
 
         let tip = shadcn::Badge::new(tip_text.clone())
             .variant(shadcn::BadgeVariant::Outline)
             .ui()
-            .text_color(ColorRef::Color(theme.color_token(tip_color_key)))
-            .into_element(cx);
+            .text_color(ColorRef::Color(theme.color_token(tip_color_key)));
 
         let refresh_tip_btn = shadcn::Button::new("Refresh tip")
             .variant(shadcn::ButtonVariant::Secondary)
             .action(act::RefreshTip)
             .ui()
-            .rounded_md()
-            .into_element(cx);
+            .rounded_md();
 
-        let stats = ui::h_flex(|_cx| [progress, tip, refresh_tip_btn])
+        let stats = ui::h_flex(|cx| ui::children![cx; progress, tip, refresh_tip_btn])
             .gap(Space::N2)
-            .items_center()
-            .into_element(cx);
+            .items_center();
 
         let clear_done_btn = shadcn::Button::new("Clear done")
             .variant(shadcn::ButtonVariant::Secondary)
             .disabled(derived.completed == 0)
             .action(act::ClearDone)
             .ui()
-            .rounded_md()
-            .into_element(cx);
+            .rounded_md();
 
 __ADD_BTN_DEF__
 
@@ -617,19 +571,15 @@ __ADD_BTN_DEF__
         let input_row = ui::h_flex(|cx| ui::children![cx; input, add_btn])
             .gap(Space::N2)
             .items_center()
-            .w_full()
-            .into_element(cx);
+            .w_full();
 
-        let chips = ui::h_flex(|cx| {
-            [
-                filter_chip(cx, TodoFilter::All, filter_value),
-                filter_chip(cx, TodoFilter::Active, filter_value),
-                filter_chip(cx, TodoFilter::Completed, filter_value),
-            ]
-        })
+        let chips = ui::h_flex(|cx| ui::children![cx;
+            filter_chip(cx, TodoFilter::All, filter_value),
+            filter_chip(cx, TodoFilter::Active, filter_value),
+            filter_chip(cx, TodoFilter::Completed, filter_value),
+        ])
         .gap(Space::N1)
-        .items_center()
-        .into_element(cx);
+        .items_center();
 
         let rows = ui::v_flex_build(|cx, out| {
             for row in derived.rows.iter() {
@@ -637,10 +587,9 @@ __ADD_BTN_DEF__
             }
         })
         .gap(Space::N3)
-        .w_full()
-        .into_element(cx);
+        .w_full();
 
-        let content = ui::v_flex(|cx| [
+        let content = ui::v_flex(|cx| ui::children![cx;
             stats,
             chips,
             input_row,
@@ -649,16 +598,14 @@ __ADD_BTN_DEF__
 __PALETTE_BUTTON__
         ])
         .gap(Space::N4)
-        .w_full()
-        .into_element(cx);
+        .w_full();
 
-        let card = shadcn::Card::new([
-            shadcn::CardHeader::new([
+        let card = shadcn::Card::new(ui::children![cx;
+            shadcn::CardHeader::new(ui::children![cx;
                 shadcn::CardTitle::new("Todo"),
                 shadcn::CardDescription::new("View runtime + typed actions + selector + query (v1)."),
-            ])
-            .into_element(cx),
-            shadcn::CardContent::new([content]).into_element(cx),
+            ]),
+            shadcn::CardContent::new(ui::children![cx; content]),
         ])
         .ui()
         .bg(ColorRef::Color(theme.color_token("background")))
@@ -667,23 +614,23 @@ __PALETTE_BUTTON__
         .border_color(ColorRef::Color(theme.color_token("border")))
         .w_full()
         .max_w(Px(520.0))
-        .into_element(cx);
+        ;
 
-        let page = ui::container(|cx| {
-            [ui::v_flex(|_cx| [card])
+        let page = ui::container(|cx| ui::children![cx;
+            ui::v_flex(|cx| ui::children![cx; card])
                 .w_full()
                 .h_full()
                 .justify_center()
                 .items_center()
-                .into_element(cx)]
-        })
+                ,
+        ])
         .bg(ColorRef::Color(theme.color_token("muted")))
         .p(Space::N6)
         .w_full()
         .h_full()
-        .into_element(cx);
+        ;
 
-        page.into()
+        page.into_element(cx).into()
     }
 }
 
@@ -796,23 +743,15 @@ impl View for HelloView {{
         let click_count = cx.use_state::<u32>();
         let click_count_value = cx.watch_model(&click_count).layout().copied_or(0);
 
-        cx.on_action::<act::Click>({{
-            let click_count = click_count.clone();
-            move |host, acx| {{
-                let _ = host
-                    .models_mut()
-                    .update(&click_count, |v| *v = v.saturating_add(1));
-                host.request_redraw(acx.window);
-                host.notify(acx);
-                true
-            }}
+        cx.on_action_notify_model_update::<act::Click, u32>(click_count.clone(), |v| {{
+            *v = v.saturating_add(1);
         }});
 
         ui::v_flex(|cx| {{
-            [
-                shadcn::Label::new("Hello, world!").into_element(cx),
+            ui::children![cx;
+                shadcn::Label::new("Hello, world!"),
                 cx.text(format!("Clicks: {{click_count_value}}")),
-                shadcn::Button::new("Click me").action(act::Click).into_element(cx),
+                shadcn::Button::new("Click me").action(act::Click),
 __PALETTE_BUTTON__
             ]
         }})
@@ -947,13 +886,12 @@ impl View for TodoView {
 
         let add_enabled = !draft_value.trim().is_empty();
 
-        cx.on_action::<act::Add>({
+        cx.on_action_notify_models::<act::Add>({
             let todos = self.todos.clone();
             let draft = self.draft.clone();
             let next_id = self.next_id.clone();
-            move |host, acx| {
-                let text = host
-                    .models_mut()
+            move |models| {
+                let text = models
                     .read(&draft, |v| v.trim().to_string())
                     .ok()
                     .unwrap_or_default();
@@ -961,44 +899,36 @@ impl View for TodoView {
                     return false;
                 }
 
-                let done = host.models_mut().insert(false);
-                let id = host
-                    .models_mut()
+                let done = models.insert(false);
+                let id = models
                     .read(&next_id, |v| *v)
                     .ok()
                     .unwrap_or(1);
-                let _ = host
-                    .models_mut()
-                    .update(&next_id, |v| *v = v.saturating_add(1));
+                let _ = models.update(&next_id, |v| *v = v.saturating_add(1));
 
-                let _ = host.models_mut().update(&todos, |todos| {
+                let _ = models.update(&todos, |todos| {
                     todos.push(TodoItem {
                         id,
                         done,
                         text: Arc::from(text),
                     });
                 });
-                let _ = host.models_mut().update(&draft, |v| v.clear());
-
-                host.request_redraw(acx.window);
-                host.notify(acx);
+                let _ = models.update(&draft, |v| v.clear());
                 true
             }
         });
 
-        cx.on_action::<act::ClearDone>({
+        cx.on_action_notify_models::<act::ClearDone>({
             let todos = self.todos.clone();
-            move |host, acx| {
-                let snapshot = host
-                    .models_mut()
+            move |models| {
+                let snapshot = models
                     .read(&todos, |v| v.clone())
                     .ok()
                     .unwrap_or_default();
 
                 let mut keep = Vec::new();
                 for t in snapshot {
-                    let done = host
-                        .models_mut()
+                    let done = models
                         .read(&t.done, |v| *v)
                         .ok()
                         .unwrap_or(false);
@@ -1007,9 +937,7 @@ impl View for TodoView {
                     }
                 }
 
-                let _ = host.models_mut().update(&todos, |todos| *todos = keep);
-                host.request_redraw(acx.window);
-                host.notify(acx);
+                let _ = models.update(&todos, |todos| *todos = keep);
                 true
             }
         });
@@ -1328,6 +1256,7 @@ mod tests {
         let src = todo_template_main_rs("todo-app", opts());
         assert!(src.contains("ui::container("));
         assert!(src.contains("ui::h_flex("));
+        assert!(src.contains("ui::children!["));
         assert!(!src.contains("ui::container( |"));
         assert!(!src.contains("ui::h_flex( |"));
         assert!(!src.contains("ui::v_flex( |"));
@@ -1336,7 +1265,16 @@ mod tests {
         assert!(src.contains(".run_view::<TodoView>()"));
         assert!(src.contains("fret::actions!(["));
         assert!(src.contains(".ui()"));
+        assert!(src.contains("cx.on_action_notify_models::<act::Add>"));
+        assert!(src.contains("cx.on_action_notify_models::<act::ClearDone>"));
+        assert!(src.contains("cx.on_action_notify_model_update::<act::RefreshTip, u64>"));
         assert!(!src.contains("decl_style::container_props"));
+
+        let into_element_count = src.matches(".into_element(cx)").count();
+        assert!(
+            into_element_count <= 18,
+            "expected <= 18 explicit `.into_element(cx)` calls, got {into_element_count}"
+        );
     }
 
     #[test]
@@ -1346,6 +1284,7 @@ mod tests {
         assert!(!src.contains("ui::v_flex( |"));
         assert!(src.contains("impl View for HelloView"));
         assert!(src.contains(".run_view::<HelloView>()"));
+        assert!(src.contains("cx.on_action_notify_model_update::<act::Click, u32>"));
         assert!(src.contains(".into_element(cx)"));
         assert!(!src.contains("decl_style::container_props"));
     }
@@ -1362,6 +1301,8 @@ mod tests {
         assert!(src.contains("impl View for TodoView"));
         assert!(src.contains(".run_view::<TodoView>()"));
         assert!(src.contains("fret::actions!(["));
+        assert!(src.contains("cx.on_action_notify_models::<act::Add>"));
+        assert!(src.contains("cx.on_action_notify_models::<act::ClearDone>"));
         assert!(!src.contains("fret_query"));
         assert!(!src.contains("fret_selector"));
 

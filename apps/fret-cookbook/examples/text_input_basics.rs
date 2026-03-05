@@ -48,15 +48,11 @@ impl TextInputBasicsView {
         !text.trim().is_empty()
     }
 
-    fn has_text_for_action(
-        host: &mut dyn fret_ui::action::UiFocusActionHost,
+    fn has_text_for_action_model_store(
+        models: &mut fret_runtime::ModelStore,
         text: &Model<String>,
     ) -> bool {
-        let text = host
-            .models_mut()
-            .read(text, Clone::clone)
-            .ok()
-            .unwrap_or_default();
+        let text = models.read(text, Clone::clone).ok().unwrap_or_default();
         !text.trim().is_empty()
     }
 }
@@ -111,34 +107,28 @@ impl View for TextInputBasicsView {
             .test_id(TEST_ID_INPUT)
             .into_element(cx);
 
-        cx.on_action::<act::Submit>({
+        cx.on_action_notify_models::<act::Submit>({
             let text = self.text.clone();
             let submitted_count = self.submitted_count.clone();
-            move |host, acx| {
-                if !TextInputBasicsView::has_text_for_action(host, &text) {
+            move |models| {
+                if !TextInputBasicsView::has_text_for_action_model_store(models, &text) {
                     return false;
                 }
 
-                let _ = host
-                    .models_mut()
-                    .update(&submitted_count, |v| *v = v.saturating_add(1));
-                let _ = host.models_mut().update(&text, String::clear);
-                host.request_redraw(acx.window);
-                host.notify(acx);
+                let _ = models.update(&submitted_count, |v| *v = v.saturating_add(1));
+                let _ = models.update(&text, String::clear);
                 true
             }
         });
 
-        cx.on_action::<act::Clear>({
+        cx.on_action_notify_models::<act::Clear>({
             let text = self.text.clone();
-            move |host, acx| {
-                if !TextInputBasicsView::has_text_for_action(host, &text) {
+            move |models| {
+                if !TextInputBasicsView::has_text_for_action_model_store(models, &text) {
                     return false;
                 }
 
-                let _ = host.models_mut().update(&text, String::clear);
-                host.request_redraw(acx.window);
-                host.notify(acx);
+                let _ = models.update(&text, String::clear);
                 true
             }
         });

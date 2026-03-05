@@ -98,14 +98,8 @@ impl View for ImUiActionBasicsView {
         let count = cx.use_state::<u32>();
         let count_value = cx.watch_model(&count).layout().copied_or(0);
 
-        cx.on_action_notify::<act::Inc>({
-            let count = count.clone();
-            move |host, _acx| {
-                let _ = host
-                    .models_mut()
-                    .update(&count, |v| *v = v.saturating_add(1));
-                true
-            }
+        cx.on_action_notify_model_update::<act::Inc, u32>(count.clone(), |v| {
+            *v = v.saturating_add(1);
         });
 
         cx.on_action_availability::<act::Inc>(|_host, _acx| CommandAvailability::Available);

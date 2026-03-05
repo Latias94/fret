@@ -45,37 +45,12 @@ impl View for QueryBasicsView {
         let invalidate_requested = cx.use_state::<bool>();
         let invalidate_namespace_requested = cx.use_state::<bool>();
 
-        cx.on_action::<act::ToggleErrorMode>({
-            let fail_mode = fail_mode.clone();
-            move |host, acx| {
-                let _ = host.models_mut().update(&fail_mode, |v| *v = !*v);
-                host.request_redraw(acx.window);
-                host.notify(acx);
-                true
-            }
-        });
-        cx.on_action::<act::Invalidate>({
-            let invalidate_requested = invalidate_requested.clone();
-            move |host, acx| {
-                let _ = host
-                    .models_mut()
-                    .update(&invalidate_requested, |v| *v = true);
-                host.request_redraw(acx.window);
-                host.notify(acx);
-                true
-            }
-        });
-        cx.on_action::<act::InvalidateNamespace>({
-            let invalidate_namespace_requested = invalidate_namespace_requested.clone();
-            move |host, acx| {
-                let _ = host
-                    .models_mut()
-                    .update(&invalidate_namespace_requested, |v| *v = true);
-                host.request_redraw(acx.window);
-                host.notify(acx);
-                true
-            }
-        });
+        cx.on_action_notify_toggle_bool::<act::ToggleErrorMode>(fail_mode.clone());
+        cx.on_action_notify_model_set::<act::Invalidate, bool>(invalidate_requested.clone(), true);
+        cx.on_action_notify_model_set::<act::InvalidateNamespace, bool>(
+            invalidate_namespace_requested.clone(),
+            true,
+        );
         cx.on_action_availability::<act::ToggleErrorMode>(|_host, _acx| {
             CommandAvailability::Available
         });

@@ -188,17 +188,10 @@ impl View for MarkdownAndCodeBasicsView {
             .max_w(Px(980.0))
             .into_element(cx);
 
-        cx.on_action::<act::Reset>({
-            let source = self.source.clone();
-            move |host, acx| {
-                let _ = host
-                    .models_mut()
-                    .update(&source, |v| *v = SAMPLE_MARKDOWN.to_string());
-                host.request_redraw(acx.window);
-                host.notify(acx);
-                true
-            }
-        });
+        cx.on_action_notify_model_set::<act::Reset, String>(
+            self.source.clone(),
+            SAMPLE_MARKDOWN.to_string(),
+        );
 
         fret_cookbook::scaffold::centered_page_background(cx, TEST_ID_ROOT, card).into()
     }

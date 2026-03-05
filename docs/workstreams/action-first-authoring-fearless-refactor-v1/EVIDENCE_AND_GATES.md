@@ -1,6 +1,6 @@
 # Action-First Authoring + View Runtime (Fearless Refactor v1) — Evidence and Gates
 
-Last updated: 2026-03-05
+Last updated: 2026-03-06
 
 This file defines what “done” means beyond subjective UX feel.
 
@@ -27,15 +27,21 @@ View runtime (v1):
 - `ecosystem/fret/src/view.rs` (`View`, `ViewCx`, `use_state`/`use_state_keyed`/`use_selector`/`use_query`, view-cache reuse + handler keepalive)
 - `ecosystem/fret/src/app_entry.rs` (`App::run_view`)
 
-Legacy MVU removal (M9):
+Legacy MVU removal (planned M9):
 
-- MVU authoring surfaces were hard-deleted in-tree.
-- Gate: `tools/gate_no_mvu_in_tree.py` (or `tools/gate_no_mvu_in_tree.ps1`) (added in M9 follow-up) prevents reintroduction.
+- MVU authoring still exists in-tree today as a compatibility surface.
+- The hard delete is planned for M9, after the M8 deprecation/migration window.
+- Gate (planned for M9): `tools/gate_no_mvu_in_tree.py` (or `tools/gate_no_mvu_in_tree.ps1`) prevents reintroduction once MVU is removed.
 
 UI gallery adoption (v1):
 
 - `apps/fret-ui-gallery/src/ui/snippets/command/action_first_view.rs` (action-first `.action(...)` + `cx.on_action::<...>(...)` via the view runtime)
 - `apps/fret-ui-gallery/src/ui/pages/command.rs` (wiring as a `DocSection` + code extraction region)
+
+Fretboard scaffolding templates (teaching surface):
+
+- `apps/fretboard/src/scaffold/templates.rs` (`hello_template_main_rs`, `todo_template_main_rs`, `simple_todo_template_main_rs`)
+  - Unit tests gate that templates use `ui::children![cx; ...]` and keep explicit `.into_element(cx)` calls low.
 
 Editor-grade adoption (workspace shell demo):
 
@@ -53,6 +59,14 @@ View/cache observability (diagnostics):
 
 - `ecosystem/fret-bootstrap/src/ui_diagnostics/invalidation_diagnostics.rs` (`dirty_views`, `notify_requests`)
 - `ecosystem/fret-bootstrap/src/ui_diagnostics/cache_root_diagnostics.rs` (`cache_roots[*].reuse_reason`)
+
+Teaching-surface ergonomics gates:
+
+- `tools/gate_no_models_mut_in_action_handlers.py` (guards cookbook/examples against regressing to verbose
+  `move |host, _acx| host.models_mut()...` patterns; prefers `ViewCx` helpers instead).
+- `tools/gate_no_on_action_in_teaching_surfaces.py` (guards cookbook/examples against regressing to
+  bare `cx.on_action` handlers; prefers `ViewCx::on_action_notify*` helpers).
+- `tools/pre_release.ps1` runs the teaching-surface gates as part of the pre-release policy suite.
 
 Pointer-trigger authoring integration (v1 still dispatches through the command pipeline):
 

@@ -362,11 +362,11 @@ impl View for UndoBasicsView {
                 .max_w(Px(760.0))
                 .into_element(cx);
 
-        cx.on_action::<act::Inc>({
+        cx.on_action_notify::<act::Inc>({
             let value = self.value.clone();
             let history = self.history.clone();
             let coalesce = self.coalesce.clone();
-            move |host, acx| {
+            move |host, _acx| {
                 let coalesce = host
                     .models_mut()
                     .read(&coalesce, |v| *v)
@@ -385,17 +385,15 @@ impl View for UndoBasicsView {
                     coalesce.then_some("value"),
                     after,
                 );
-                host.request_redraw(acx.window);
-                host.notify(acx);
                 true
             }
         });
 
-        cx.on_action::<act::Dec>({
+        cx.on_action_notify::<act::Dec>({
             let value = self.value.clone();
             let history = self.history.clone();
             let coalesce = self.coalesce.clone();
-            move |host, acx| {
+            move |host, _acx| {
                 let coalesce = host
                     .models_mut()
                     .read(&coalesce, |v| *v)
@@ -414,24 +412,20 @@ impl View for UndoBasicsView {
                     coalesce.then_some("value"),
                     after,
                 );
-                host.request_redraw(acx.window);
-                host.notify(acx);
                 true
             }
         });
 
-        cx.on_action::<act::Reset>({
+        cx.on_action_notify::<act::Reset>({
             let value = self.value.clone();
             let history = self.history.clone();
-            move |host, acx| {
+            move |host, _acx| {
                 record_value_tx(host, &value, &history, "Reset", None, 0);
-                host.request_redraw(acx.window);
-                host.notify(acx);
                 true
             }
         });
 
-        cx.on_action::<act::Undo>({
+        cx.on_action_notify::<act::Undo>({
             let value = self.value.clone();
             let history = self.history.clone();
             move |host, acx| {
@@ -453,14 +447,12 @@ impl View for UndoBasicsView {
                 };
 
                 let _ = host.models_mut().update(&value, |v| *v = next_value);
-                host.request_redraw(acx.window);
                 host.push_effect(Effect::RequestAnimationFrame(acx.window));
-                host.notify(acx);
                 true
             }
         });
 
-        cx.on_action::<act::Redo>({
+        cx.on_action_notify::<act::Redo>({
             let value = self.value.clone();
             let history = self.history.clone();
             move |host, acx| {
@@ -482,9 +474,7 @@ impl View for UndoBasicsView {
                 };
 
                 let _ = host.models_mut().update(&value, |v| *v = next_value);
-                host.request_redraw(acx.window);
                 host.push_effect(Effect::RequestAnimationFrame(acx.window));
-                host.notify(acx);
                 true
             }
         });
