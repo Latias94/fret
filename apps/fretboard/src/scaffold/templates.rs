@@ -1114,6 +1114,8 @@ cargo run --release
 {ui_assets_line}
 - Authoring: view runtime + typed unit actions (action-first, v1)
 - Hooks: selector + query (v1)
+- Read model values near the top of `render()` before building nested card/layout sections.
+- For App-only effects, prefer `on_action_notify_transient` in the handler and consume the transient in `render()`.
 ## Next steps
 
 - Edit UI in `src/main.rs`
@@ -1188,6 +1190,7 @@ cargo run --release
 {icons_line}{palette_line}
 {ui_assets_line}
 - Authoring: view runtime + typed unit actions (action-first, v1)
+- Read model values near the top of `render()` and keep row rendering driven by locals.
 ## Next steps
 
 - Edit UI in `src/main.rs`
@@ -1234,6 +1237,7 @@ cargo run --release
 - Theme: shadcn new-york-v4 (default via `fret-ui-shadcn/app-integration`)
 {icons_line}{palette_line}
 - Authoring: view runtime + typed unit actions (action-first, v1)
+- Read model values near the top of `render()` and keep action handlers on `on_action_notify*` when possible.
 - Next: edit `src/main.rs` and replace the view tree
 "#
     )
@@ -1318,5 +1322,18 @@ mod tests {
         let toml = simple_todo_template_cargo_toml("simple-todo-app", opts(), ".");
         assert!(!toml.contains("fret-query"));
         assert!(!toml.contains("fret-selector"));
+    }
+
+    #[test]
+    fn template_readmes_capture_authoring_guidance() {
+        let hello = hello_template_readme_md("hello-app", opts());
+        assert!(hello.contains("Read model values near the top of `render()`"));
+
+        let simple = simple_todo_template_readme_md("simple-todo-app", opts());
+        assert!(simple.contains("When rendering dynamic lists, prefer `cx.keyed(id, |cx| ...)`"));
+        assert!(simple.contains("Read model values near the top of `render()`"));
+
+        let todo = todo_template_readme_md("todo-app", opts());
+        assert!(todo.contains("For App-only effects, prefer `on_action_notify_transient`"));
     }
 }

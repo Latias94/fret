@@ -1,6 +1,6 @@
 # Action-First Authoring + View Runtime (Fearless Refactor v1) — Migration Guide
 
-Last updated: 2026-03-05
+Last updated: 2026-03-06
 
 This guide is intentionally practical: it describes how to migrate in-tree demos and ecosystem code
 in small, reviewable slices.
@@ -198,6 +198,21 @@ Example:
 - `ecosystem/fret/src/view.rs` (`ViewCx::on_action_notify_transient`, `ViewCx::take_transient_on_action_root`).
 - `apps/fret-examples/src/query_demo.rs` (uses transient events + `with_query_client`).
 - `apps/fret-examples/src/query_async_tokio_demo.rs` (same, but with `use_query_async`).
+
+### Current authoring review notes
+
+Based on the current template/demo pass (`hello_template_main_rs`, `hello_counter_demo`, `query_demo`):
+
+- Prefer reading models once near the top of `render()` into plain locals, then render from those locals below.
+  - Good: collect `draft_value`, `filter_value`, `count`, `step_text` up front.
+  - Avoid scattering `watch_model(...).layout()/paint()` calls deep inside card/layout subtrees unless the local scope truly needs them.
+- Prefer one `AnyElement` landing per composed subtree boundary.
+  - Good: build `header`, `content`, `footer`, then land each section once with `.into_element(cx)`.
+  - Use `ui::children![cx; ...]` to keep heterogeneous child lists readable before the final landing.
+- For App-only effects, keep the action handler data-only and schedule the effect explicitly.
+  - Good: `cx.on_action_notify_transient::<A>(...)` in the handler, then `take_transient_on_action_root(...)` + `with_query_client(...)` in `render()`.
+  - Use a small pending-effect model when you need payload/data rather than a boolean transient.
+- Do not add more tiny helper APIs until these patterns prove insufficient across another round of real demos/templates.
 
 ---
 
