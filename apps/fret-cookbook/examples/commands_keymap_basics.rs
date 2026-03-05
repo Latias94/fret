@@ -149,7 +149,7 @@ impl View for CommandsKeymapBasicsView {
         let dispatch_button = shadcn::Button::new("Dispatch command")
             .variant(shadcn::ButtonVariant::Outline)
             .action(act::TogglePanel)
-            .role(SemanticsRole::Button)
+            .a11y_role(SemanticsRole::Button)
             .test_id(TEST_ID_DISPATCH)
             .into_element(cx);
 
@@ -219,7 +219,7 @@ impl View for CommandsKeymapBasicsView {
             .into_element(cx)
             .key_context("cookbook.commands_keymap_basics");
 
-        cx.on_action::<act::TogglePanel>({
+        cx.on_action_notify::<act::TogglePanel>({
             let panel_open = self.panel_open.clone();
             let allow = self.allow_command.clone();
             move |host, acx| {
@@ -229,7 +229,6 @@ impl View for CommandsKeymapBasicsView {
                 }
 
                 toggle_panel(host, acx.window, &panel_open);
-                host.notify(acx);
                 true
             }
         });

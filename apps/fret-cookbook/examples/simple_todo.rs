@@ -155,11 +155,11 @@ impl View for SimpleTodoView {
         .max_w(Px(560.0))
         .into_element(cx);
 
-        cx.on_action::<act::Add>({
+        cx.on_action_notify::<act::Add>({
             let todos = self.st.todos.clone();
             let draft = self.st.draft.clone();
             let next_id = self.st.next_id.clone();
-            move |host, acx| {
+            move |host, _acx| {
                 let text = host
                     .models_mut()
                     .read(&draft, |v| v.trim().to_string())
@@ -183,16 +183,13 @@ impl View for SimpleTodoView {
                     });
                 });
                 let _ = host.models_mut().update(&draft, String::clear);
-
-                host.request_redraw(acx.window);
-                host.notify(acx);
                 true
             }
         });
 
-        cx.on_action::<act::ClearDone>({
+        cx.on_action_notify::<act::ClearDone>({
             let todos = self.st.todos.clone();
-            move |host, acx| {
+            move |host, _acx| {
                 let snapshot = host
                     .models_mut()
                     .read(&todos, Clone::clone)
@@ -217,9 +214,6 @@ impl View for SimpleTodoView {
                 let _ = host.models_mut().update(&todos, |todos| {
                     todos.retain(|t| !remove_ids.contains(&t.id));
                 });
-
-                host.request_redraw(acx.window);
-                host.notify(acx);
                 true
             }
         });

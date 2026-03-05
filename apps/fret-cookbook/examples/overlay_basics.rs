@@ -125,7 +125,7 @@ impl View for OverlayBasicsView {
                     let bump = shadcn::Button::new("Bump underlay")
                         .variant(shadcn::ButtonVariant::Outline)
                         .action(act::BumpUnderlay)
-                        .role(SemanticsRole::Button)
+                        .a11y_role(SemanticsRole::Button)
                         .test_id(TEST_ID_UNDERLAY_BUMP)
                         .into_element(cx);
 
@@ -133,7 +133,7 @@ impl View for OverlayBasicsView {
                         shadcn::Button::new("Open dialog")
                             .variant(shadcn::ButtonVariant::Outline)
                             .action(act::OpenDialog)
-                            .role(SemanticsRole::Button)
+                            .a11y_role(SemanticsRole::Button)
                             .test_id(TEST_ID_DIALOG_TRIGGER)
                             .into_element(cx),
                         ui::v_flex(|cx| {
