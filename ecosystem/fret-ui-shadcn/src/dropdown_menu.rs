@@ -931,7 +931,7 @@ impl DropdownMenuShortcut {
             .metric_by_key("component.dropdown_menu.shortcut.line_height")
             .unwrap_or_else(|| Px((base_line_height.0 - 2.0).max(font_size.0)));
 
-        ui::text(cx, self.text)
+        ui::text(self.text)
             .layout(rtl::layout_refinement_margin_inline_start_auto(dir))
             .text_size_px(font_size)
             .fixed_line_box_px(font_line_height)
@@ -1384,7 +1384,7 @@ fn checkable_menu_row_children<H: UiHost>(
                     }
 
                     let style = text_style.clone();
-                    let mut text = ui::text(cx, label.clone())
+                    let mut text = ui::text(label.clone())
                         .layout(LayoutRefinement::default().min_w_0().flex_1())
                         .text_size_px(style.size)
                         .font_weight(style.weight)
@@ -2388,7 +2388,7 @@ impl DropdownMenu {
                                                                 ..Default::default()
                                                             },
                                                             move |cx| {
-                                                                vec![ui::text(cx, text)
+                                                                vec![ui::text( text)
                                                                     .text_size_px(font_size)
                                                                     .line_height_px(font_line_height)
                                                                     .line_height_policy(
@@ -3104,7 +3104,7 @@ impl DropdownMenu {
                                                                                     row.push(menu_icon_slot_empty(cx));
                                                                                 }
                                                                                 let style = text_style.clone();
-                                                                                let mut text = ui::text(cx, label.clone())
+                                                                                let mut text = ui::text( label.clone())
                                                                                     .layout(LayoutRefinement::default().min_w_0().flex_1())
                                                                                     .text_size_px(style.size)
                                                                                     .font_weight(style.weight)
@@ -3534,7 +3534,7 @@ impl DropdownMenu {
                                                                         ..Default::default()
                                                                     },
                                                                     move |cx| {
-                                                                        vec![ui::text(cx, text)
+                                                                        vec![ui::text( text)
                                                                             .text_size_px(font_size)
                                                                             .line_height_px(font_line_height)
                                                                             .line_height_policy(
@@ -4039,7 +4039,7 @@ impl DropdownMenu {
                                                                                             row.push(menu_icon_slot_empty(cx));
                                                                                         }
                                                                                         let style = text_style.clone();
-                                                                                        let mut text = ui::text(cx, label.clone())
+                                                                                        let mut text = ui::text( label.clone())
                                                                                             .layout(LayoutRefinement::default().min_w_0().flex_1())
                                                                                             .text_size_px(style.size)
                                                                                             .font_weight(style.weight)

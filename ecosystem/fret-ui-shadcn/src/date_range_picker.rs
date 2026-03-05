@@ -185,7 +185,7 @@ impl DateRangePicker {
 
                                 vec![
                                     crate::icon::icon(cx, calendar_icon_for_content),
-                                    ui::text(cx, button_text_for_content.clone())
+                                    ui::text(button_text_for_content.clone())
                                         .text_size_px(text_size)
                                         .fixed_line_box_px(line_height)
                                         .line_box_in_bounds()

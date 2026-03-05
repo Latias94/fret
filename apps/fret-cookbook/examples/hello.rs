@@ -49,7 +49,7 @@ impl View for HelloView {
 
         cx.on_action_availability::<act::Click>(|_host, _acx| CommandAvailability::Available);
 
-        ui::v_flex(cx, |cx| {
+        ui::v_flex(|cx| {
             ui::children![
                 cx;
                 shadcn::Label::new("Hello, Fret cookbook!").test_id(TEST_ID_LABEL),

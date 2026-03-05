@@ -83,7 +83,7 @@ impl View for ToastBasicsView {
         ])
         .into_element(cx);
 
-        let buttons = ui::h_flex(cx, |cx| {
+        let buttons = ui::h_flex(|cx| {
             [
                 shadcn::Button::new("Default toast")
                     .variant(shadcn::ButtonVariant::Outline)
@@ -116,7 +116,7 @@ impl View for ToastBasicsView {
         let toaster = shadcn::Toaster::new().into_element(cx);
 
         // `Toaster` is layout-neutral but must be in the tree so toast layer + store are installed.
-        let body = ui::v_flex(cx, |_cx| [card, toaster])
+        let body = ui::v_flex(|_cx| [card, toaster])
             .gap(Space::N4)
             .into_element(cx);
 

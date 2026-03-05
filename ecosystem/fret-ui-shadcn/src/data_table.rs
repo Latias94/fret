@@ -814,7 +814,7 @@ impl DataTable {
                                             ..Default::default()
                                         },
                                         move |cx| {
-                                            let mut text = ui::label(cx, label.clone())
+                                            let mut text = ui::label( label.clone())
                                                 .text_size_px(style.size)
                                                 .font_weight(style.weight)
                                                 .text_color(ColorRef::Color(header_fg))
@@ -865,7 +865,7 @@ impl DataTable {
 
                                     if let Some(order) = order {
                                         pieces.push(
-                                            ui::label(cx, Arc::<str>::from(order.to_string()))
+                                            ui::label( Arc::<str>::from(order.to_string()))
                                                 .text_xs()
                                                 .text_color(ColorRef::Color(sort_fg))
                                                 .nowrap()
@@ -948,7 +948,7 @@ impl DataTable {
                                                     ..Default::default()
                                                 },
                                                 move |cx| {
-                                                    let mut text = ui::label(cx, label.clone())
+                                                    let mut text = ui::label( label.clone())
                                                         .text_size_px(style.size)
                                                         .font_weight(style.weight)
                                                         .text_color(ColorRef::Color(header_fg))
@@ -999,7 +999,7 @@ impl DataTable {
 
                                             if let Some(order) = order {
                                                 pieces.push(
-                                                    ui::label(cx, Arc::<str>::from(order.to_string()))
+                                                    ui::label( Arc::<str>::from(order.to_string()))
                                                         .text_xs()
                                                         .text_color(ColorRef::Color(sort_fg))
                                                         .nowrap()

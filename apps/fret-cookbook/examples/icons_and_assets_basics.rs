@@ -219,7 +219,7 @@ impl View for IconsAndAssetsBasicsView {
                         let preload_bytes = preload.map(|v| v.bytes_ready).unwrap_or(0);
 
                         [
-                            ui::h_flex(cx, |cx| {
+                            ui::h_flex( |cx| {
                                 [
                                     shadcn::Badge::new(format!("frozen icons: {frozen_len}"))
                                         .variant(shadcn::BadgeVariant::Secondary)
@@ -288,7 +288,7 @@ impl View for IconsAndAssetsBasicsView {
                             title: &str,
                             st: &fret_ui_assets::ImageSourceState|
          -> AnyElement {
-            let box_el = ui::container(cx, |cx| {
+            let box_el = ui::container(|cx| {
                 if let Some(image) = st.image {
                     let mut props = ImageProps::new(image);
                     props.layout =
@@ -332,7 +332,7 @@ impl View for IconsAndAssetsBasicsView {
                         .layout(LayoutRefinement::default().w_full()),
                     |cx| {
                         [
-                            ui::h_flex(cx, |cx| {
+                            ui::h_flex( |cx| {
                                 [
                                     shadcn::Label::new("File image status:").into_element(cx),
                                     shadcn::Badge::new(image_status)
@@ -380,9 +380,9 @@ impl View for IconsAndAssetsBasicsView {
             "missing"
         };
 
-        let svg_box = ui::container(cx, |cx| {
+        let svg_box = ui::container(|cx| {
             if let Some(err) = svg_file_state.error.clone() {
-                let el = ui::text(cx, format!("Failed to read SVG: {err}"))
+                let el = ui::text(format!("Failed to read SVG: {err}"))
                     .text_color(ColorRef::Color(theme.color_token("destructive")))
                     .into_element(cx);
                 [el]
@@ -421,7 +421,7 @@ impl View for IconsAndAssetsBasicsView {
                     .layout(LayoutRefinement::default().w_full()),
                 |cx| {
                     [
-                        ui::h_flex(cx, |cx| {
+                        ui::h_flex( |cx| {
                             [
                                 shadcn::Label::new("SVG status:").into_element(cx),
                                 shadcn::Badge::new(svg_status)

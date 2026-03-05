@@ -114,9 +114,9 @@ impl View for MarkdownAndCodeBasicsView {
             .into_element(cx)
             .test_id(TEST_ID_RESET);
 
-        let controls = ui::v_flex(cx, |cx| {
+        let controls = ui::v_flex(|cx| {
             [
-                ui::h_flex(cx, |cx| {
+                ui::h_flex(|cx| {
                     [
                         shadcn::Label::new("Code wrap:").into_element(cx),
                         stack::hstack(
@@ -131,7 +131,7 @@ impl View for MarkdownAndCodeBasicsView {
                 .gap(Space::N2)
                 .items_center()
                 .into_element(cx),
-                ui::h_flex(cx, |cx| {
+                ui::h_flex(|cx| {
                     [
                         shadcn::Label::new("Cap code block height:").into_element(cx),
                         cap_switch,
@@ -164,12 +164,12 @@ impl View for MarkdownAndCodeBasicsView {
             .into_element(cx)
             .test_id(TEST_ID_PREVIEW_SCROLL);
 
-        let left = ui::v_flex(cx, |_cx| [editor])
+        let left = ui::v_flex(|_cx| [editor])
             .gap(Space::N2)
             .flex_1()
             .min_w_0()
             .into_element(cx);
-        let right = ui::v_flex(cx, |_cx| [preview_scroll])
+        let right = ui::v_flex(|_cx| [preview_scroll])
             .gap(Space::N2)
             .flex_1()
             .min_w_0()
@@ -184,11 +184,9 @@ impl View for MarkdownAndCodeBasicsView {
             |_cx| [left, right],
         );
 
-        let body = ui::v_flex(cx, |cx| {
-            [controls, shadcn::Separator::new().into_element(cx), panels]
-        })
-        .gap(Space::N3)
-        .into_element(cx);
+        let body = ui::v_flex(|cx| [controls, shadcn::Separator::new().into_element(cx), panels])
+            .gap(Space::N3)
+            .into_element(cx);
 
         let card = shadcn::Card::new([header, shadcn::CardContent::new([body]).into_element(cx)])
             .ui()

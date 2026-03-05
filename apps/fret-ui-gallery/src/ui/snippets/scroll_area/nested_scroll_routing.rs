@@ -150,7 +150,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             )
             .test_id("ui-gallery-scroll-area-nested-body");
 
-        ui::v_flex(cx, |_cx| [reset, body])
+        ui::v_flex(|_cx| [reset, body])
             .gap(Space::N2)
             .into_element(cx)
             .attach_semantics(

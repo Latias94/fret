@@ -2,6 +2,7 @@ pub const SOURCE: &str = include_str!("demo.rs");
 
 // region: example
 use fret_core::Px;
+use fret_ui_kit::ui;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 
 #[derive(Default, Clone)]
@@ -68,7 +69,9 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                 shadcn::PopoverTrigger::new(trigger).into_element(cx)
             },
             |cx| {
-                let row = |cx: &mut ElementContext<'_, H>, label: &'static str, model: Model<_>| {
+                let row = |cx: &mut ElementContext<'_, H>,
+                           label: &'static str,
+                           model: Model<String>| {
                     stack::hstack(
                         cx,
                         stack::HStackProps::default()
@@ -76,24 +79,23 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                             .gap(Space::N4)
                             .items_center(),
                         move |cx| {
-                            vec![
-                                stack::hstack(
-                                    cx,
-                                    stack::HStackProps::default()
-                                        .layout(
-                                            LayoutRefinement::default()
-                                                .w_px(Px(96.0))
-                                                .flex_shrink_0(),
-                                        )
-                                        .justify_end()
-                                        .items_center(),
-                                    move |cx| vec![ui::label(cx, label).into_element(cx)],
-                                ),
-                                shadcn::Input::new(model)
-                                    .size(fret_ui_kit::Size::Small)
-                                    .refine_layout(LayoutRefinement::default().flex_1().min_w_0())
-                                    .into_element(cx),
-                            ]
+                            let label_cell = stack::hstack(
+                                cx,
+                                stack::HStackProps::default()
+                                    .layout(
+                                        LayoutRefinement::default().w_px(Px(96.0)).flex_shrink_0(),
+                                    )
+                                    .justify_end()
+                                    .items_center(),
+                                move |cx| vec![ui::label(label).into_element(cx)],
+                            );
+
+                            let input = shadcn::Input::new(model)
+                                .size(fret_ui_kit::Size::Small)
+                                .refine_layout(LayoutRefinement::default().flex_1().min_w_0())
+                                .into_element(cx);
+
+                            vec![label_cell, input]
                         },
                     )
                 };

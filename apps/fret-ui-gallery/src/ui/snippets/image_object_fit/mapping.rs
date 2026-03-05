@@ -54,7 +54,7 @@ pub fn render<H: UiHost>(
         );
         let cover = image_cell(cx, "Cover", image, fret_core::ViewportFit::Cover);
 
-        let grid = fret_ui_kit::ui::h_flex(cx, |_cx| vec![stretch, contain, cover])
+        let grid = fret_ui_kit::ui::h_flex(|_cx| vec![stretch, contain, cover])
             .gap(Space::N4)
             .wrap()
             .w_full()

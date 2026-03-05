@@ -19,14 +19,11 @@ fn side_content<H: UiHost>(
             .items_start(),
         move |cx| {
             vec![
-                ui::text(cx, "Hover Card").font_medium().into_element(cx),
-                ui::text(
-                    cx,
-                    format!("This hover card appears on the {side_label} side of the trigger."),
-                )
-                .wrap(TextWrap::WordBreak)
-                .into_element(cx),
-                ui::text(cx, "Positioning is controlled by `side` and `align`.")
+                ui::text(side_label)
+                    .text_sm()
+                    .font_medium()
+                    .into_element(cx),
+                ui::text("Positioning is controlled by `side` and `align`.")
                     .text_xs()
                     .text_color(ColorRef::Color(muted_fg))
                     .mt(Space::N1)

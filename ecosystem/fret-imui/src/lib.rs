@@ -3117,7 +3117,7 @@ mod tests {
                 crate::imui(cx, |ui| {
                     use fret_ui_kit::imui::UiWriterUiKitExt as _;
 
-                    let builder = fret_ui_kit::ui::text(ui.cx_mut(), "Hello").text_sm();
+                    let builder = fret_ui_kit::ui::text("Hello").text_sm();
                     ui.add_ui(builder);
                 })
             },

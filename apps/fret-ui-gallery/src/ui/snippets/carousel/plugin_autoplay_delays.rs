@@ -35,7 +35,7 @@ struct SlideVisual {
 fn slide_card(cx: &mut ElementContext<'_, App>, idx: usize, visual: SlideVisual) -> AnyElement {
     let theme = Theme::global(&*cx.app).clone();
 
-    let number = ui::text(cx, format!("{idx}"))
+    let number = ui::text(format!("{idx}"))
         .text_size_px(visual.text_px)
         .line_height_px(visual.line_height_px)
         .line_height_policy(fret_core::TextLineHeightPolicy::FixedFromStyle)
@@ -198,7 +198,7 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
             .test_id("ui-gallery-carousel-plugin-autoplay-delays-status")
             .into_element(cx);
 
-        ui::container(cx, move |_cx| vec![badge])
+        ui::container(move |_cx| vec![badge])
             .py_2()
             .into_element(cx)
     };

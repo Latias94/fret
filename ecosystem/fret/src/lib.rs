@@ -15,7 +15,7 @@
 //! }
 //!
 //! fn view<'a>(cx: &mut ElementContext<'a, App>, _st: &mut ()) -> ViewElements {
-//!     ui::text(cx, "Hello, Fret!").into_element(cx).into()
+//!     ui::text(Fret!").into_element(cx).into()
 //! }
 //!
 //! fn main() -> fret::Result<()> {

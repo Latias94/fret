@@ -278,7 +278,7 @@ fn web_vs_fret_layout_textarea_geometry_matches_web_fixtures() {
                     let textarea = fret_ui_shadcn::Textarea::new(model)
                         .a11y_label("Textarea")
                         .into_element(cx);
-                    let helper = ui::text(cx, "Your message will be copied to the support team.")
+                    let helper = ui::text("Your message will be copied to the support team.")
                         .text_size_px(theme.metric_token("font.size"))
                         .line_height_px(theme.metric_token("font.line_height"))
                         .font_normal()

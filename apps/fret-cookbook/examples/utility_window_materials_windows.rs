@@ -172,34 +172,34 @@ fn view(cx: &mut fret_ui::ElementContext<'_, fret_app::App>, st: &mut State) -> 
     ])
     .into_element(cx);
 
-    let content = ui::v_flex(cx, |cx| {
-        let platform_line = ui::text(cx, platform_text)
+    let content = ui::v_flex(|cx| {
+        let platform_line = ui::text(platform_text)
             .font_monospace()
             .text_sm()
             .text_color(ColorRef::Color(color_muted_foreground))
             .into_element(cx)
             .test_id(TEST_ID_PLATFORM_TEXT);
-        let style_line = ui::text(cx, style_text)
+        let style_line = ui::text(style_text)
             .font_monospace()
             .text_sm()
             .into_element(cx)
             .test_id(TEST_ID_STYLE_TEXT);
-        let caps_line = ui::text(cx, caps_text)
+        let caps_line = ui::text(caps_text)
             .font_monospace()
             .text_sm()
             .text_color(ColorRef::Color(color_muted_foreground))
             .into_element(cx);
-        let wgpu_line = ui::text(cx, wgpu_text)
+        let wgpu_line = ui::text(wgpu_text)
             .font_monospace()
             .text_sm()
             .text_color(ColorRef::Color(color_muted_foreground))
             .into_element(cx);
-        let status_line = ui::text(cx, status)
+        let status_line = ui::text(status)
             .text_sm()
             .text_color(ColorRef::Color(color_muted_foreground))
             .into_element(cx);
 
-        let buttons = ui::h_flex(cx, |cx| {
+        let buttons = ui::h_flex(|cx| {
             if is_windows {
                 vec![
                     shadcn::Button::new("None")
@@ -283,8 +283,8 @@ fn view(cx: &mut fret_ui::ElementContext<'_, fret_app::App>, st: &mut State) -> 
     // Default to an opaque background so `material=None` looks like a typical window. When a
     // backdrop material is enabled, switch to a transparent root so the OS material can show
     // through where not covered by UI (most content lives inside the centered Card).
-    ui::container(cx, |cx| {
-        [ui::v_flex(cx, |_cx| [surface])
+    ui::container(|cx| {
+        [ui::v_flex(|_cx| [surface])
             .items_center()
             .justify_center()
             .size_full()

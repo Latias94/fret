@@ -242,7 +242,7 @@ impl View for AsyncInboxBasicsView {
             .into_element(cx)
             .test_id(TEST_ID_CLEAR_LOG);
 
-        let status_row = ui::h_flex(cx, |cx| {
+        let status_row = ui::h_flex(|cx| {
             [
                 shadcn::Label::new("Status:").into_element(cx),
                 shadcn::Badge::new(status.as_ref())
@@ -272,7 +272,7 @@ impl View for AsyncInboxBasicsView {
             .test_id(TEST_ID_PROGRESS);
 
         let progress_label = cx.text(format!("{progress:.0}%"));
-        let progress_row = ui::h_flex(cx, |_cx| [progress_el, progress_label])
+        let progress_row = ui::h_flex(|_cx| [progress_el, progress_label])
             .gap(Space::N3)
             .items_center()
             .into_element(cx);
@@ -285,11 +285,11 @@ impl View for AsyncInboxBasicsView {
             .into_element(cx)
             .test_id(TEST_ID_LOG);
 
-        let controls = ui::v_flex(cx, |_cx| [start_button, cancel_button, clear_log_button])
+        let controls = ui::v_flex(|_cx| [start_button, cancel_button, clear_log_button])
             .gap(Space::N2)
             .into_element(cx);
 
-        let body = ui::v_flex(cx, |_cx| [status_row, progress_row, controls, log])
+        let body = ui::v_flex(|_cx| [status_row, progress_row, controls, log])
             .gap(Space::N3)
             .into_element(cx);
 

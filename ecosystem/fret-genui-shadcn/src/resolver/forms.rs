@@ -21,7 +21,7 @@ impl ShadcnResolver {
         if children.is_empty() {
             label
         } else {
-            fret_ui_kit::ui::v_flex(cx, move |_cx| {
+            fret_ui_kit::ui::v_flex(move |_cx| {
                 let mut out = Vec::with_capacity(children.len().saturating_add(1));
                 out.push(label);
                 out.extend(children);
@@ -140,7 +140,7 @@ impl ShadcnResolver {
             return input;
         }
 
-        fret_ui_kit::ui::v_flex(cx, move |_cx| {
+        fret_ui_kit::ui::v_flex(move |_cx| {
             let mut out = Vec::with_capacity(children.len().saturating_add(2));
             if let Some(label) = label.clone() {
                 out.push(fret_ui_shadcn::Label::new(label).into_element(_cx));
@@ -257,7 +257,7 @@ impl ShadcnResolver {
             return textarea;
         }
 
-        fret_ui_kit::ui::v_flex(cx, move |_cx| {
+        fret_ui_kit::ui::v_flex(move |_cx| {
             let mut out = Vec::with_capacity(children.len().saturating_add(2));
             if let Some(label) = label.clone() {
                 out.push(fret_ui_shadcn::Label::new(label).into_element(_cx));
@@ -280,7 +280,7 @@ impl ShadcnResolver {
     ) -> AnyElement {
         let on_submit = on_event("submit");
 
-        let out = fret_ui_kit::ui::v_flex(cx, move |_cx| children)
+        let out = fret_ui_kit::ui::v_flex(move |_cx| children)
             .gap(fret_ui_kit::Space::N4)
             .items_start()
             .w_full()
@@ -369,8 +369,8 @@ impl ShadcnResolver {
         let mut out_children: Vec<AnyElement> = Vec::new();
         if let Some(label) = label {
             out_children.push(
-                fret_ui_kit::ui::h_flex(cx, move |_cx| {
-                    vec![sw, fret_ui_kit::ui::text(_cx, label).into_element(_cx)]
+                fret_ui_kit::ui::h_flex(move |_cx| {
+                    vec![sw, fret_ui_kit::ui::text(label).into_element(_cx)]
                 })
                 .gap(fret_ui_kit::Space::N2)
                 .items_center()
@@ -384,7 +384,7 @@ impl ShadcnResolver {
         if out_children.len() == 1 {
             out_children.pop().expect("single child")
         } else {
-            fret_ui_kit::ui::v_flex(cx, move |_cx| out_children)
+            fret_ui_kit::ui::v_flex(move |_cx| out_children)
                 .gap(fret_ui_kit::Space::N2)
                 .items_start()
                 .into_element(cx)

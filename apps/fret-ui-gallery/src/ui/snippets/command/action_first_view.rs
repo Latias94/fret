@@ -53,7 +53,7 @@ impl View for ActionFirstViewRuntimeDemo {
 
         cx.on_action_availability::<act::Ping>(|_host, _acx| CommandAvailability::Available);
 
-        ui::v_flex(cx, |cx| {
+        ui::v_flex(|cx| {
             [
                 shadcn::Label::new("Action-first (view runtime)").into_element(cx),
                 cx.text(format!("Count: {count_value}")),
@@ -117,7 +117,7 @@ pub fn render(cx: &mut ElementContext<'_, App>, last_action: Model<Arc<str>>) ->
 #[cfg(target_arch = "wasm32")]
 pub fn render(cx: &mut ElementContext<'_, App>, _last_action: Model<Arc<str>>) -> AnyElement {
     cx.named("ui-gallery.command.action_first.view_runtime", |cx| {
-        ui::v_flex(cx, |cx| {
+        ui::v_flex(|cx| {
             [
                 shadcn::Label::new("Action-first (view runtime)").into_element(cx),
                 cx.text("This demo is desktop-only in v1."),

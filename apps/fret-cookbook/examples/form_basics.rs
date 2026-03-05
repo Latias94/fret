@@ -115,7 +115,7 @@ impl View for FormBasicsView {
         ])
         .into_element(cx);
 
-        let name_input = ui::v_flex(cx, |cx| {
+        let name_input = ui::v_flex(|cx| {
             [
                 shadcn::Label::new("Name").into_element(cx),
                 shadcn::Input::new(self.name.clone())
@@ -128,7 +128,7 @@ impl View for FormBasicsView {
         .gap(Space::N1)
         .into_element(cx);
 
-        let email_input = ui::v_flex(cx, |cx| {
+        let email_input = ui::v_flex(|cx| {
             [
                 shadcn::Label::new("Email").into_element(cx),
                 shadcn::Input::new(self.email.clone())
@@ -174,7 +174,7 @@ impl View for FormBasicsView {
                     .numeric_range(0.0, 1.0),
             );
 
-        let buttons = ui::h_flex(cx, |cx| {
+        let buttons = ui::h_flex(|cx| {
             [
                 shadcn::Button::new("Submit")
                     .variant(shadcn::ButtonVariant::Default)
@@ -193,11 +193,9 @@ impl View for FormBasicsView {
         .items_center()
         .into_element(cx);
 
-        let body = ui::v_flex(cx, |_cx| {
-            [name_input, email_input, error_row, valid, buttons]
-        })
-        .gap(Space::N3)
-        .into_element(cx);
+        let body = ui::v_flex(|_cx| [name_input, email_input, error_row, valid, buttons])
+            .gap(Space::N3)
+            .into_element(cx);
 
         let card = shadcn::Card::new([header, shadcn::CardContent::new([body]).into_element(cx)])
             .ui()

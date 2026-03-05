@@ -161,7 +161,7 @@ pub(in crate::ui) fn render_doc_page(
             .layout(LayoutRefinement::default().w_full().min_w_0())
             .justify_center(),
         move |cx| {
-            [ui::container(cx, move |_cx| vec![body])
+            [ui::container(move |_cx| vec![body])
                 .w_full()
                 .max_w(page_max_w)
                 .into_element(cx)]

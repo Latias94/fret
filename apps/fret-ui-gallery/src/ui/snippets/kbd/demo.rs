@@ -1,7 +1,6 @@
 pub const SOURCE: &str = include_str!("demo.rs");
 
 // region: example
-use fret_ui_kit::ui;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
@@ -35,7 +34,6 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                 .into_element(cx),
                 shadcn::KbdGroup::new([
                     shadcn::Kbd::new("Ctrl").into_element(cx),
-                    ui::text(cx, "+").into_element(cx),
                     shadcn::Kbd::new("B").into_element(cx),
                 ])
                 .into_element(cx),

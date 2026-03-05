@@ -298,7 +298,7 @@ impl AlertTitle {
             .or_else(|| theme.metric_by_key("font.line_height"))
             .unwrap_or_else(|| theme.metric_token("font.line_height"));
 
-        ui::text(cx, self.text)
+        ui::text(self.text)
             .text_size_px(px)
             .line_height_px(line_height)
             .font_weight(FontWeight::MEDIUM)
@@ -350,7 +350,7 @@ impl AlertDescription {
         match self.content {
             AlertDescriptionContent::Text(text) => cx.foreground_scope(fg, move |cx| {
                 vec![
-                    ui::text(cx, text)
+                    ui::text(text)
                         .text_size_px(px)
                         .line_height_px(line_height)
                         .font_weight(FontWeight::NORMAL)

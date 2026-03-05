@@ -100,12 +100,12 @@ impl View for EffectsLayerBasicsView {
             }]),
         };
 
-        let preview_content = ui::v_flex(cx, |cx| {
+        let preview_content = ui::v_flex(|cx| {
             [
                 shadcn::Label::new("EffectLayer preview").into_element(cx),
-                ui::h_flex(cx, |cx| {
+                ui::h_flex(|cx| {
                     let tile = |cx: &mut ElementContext<'_, App>, color: ColorRef| {
-                        ui::container(cx, |_cx| Vec::<AnyElement>::new())
+                        ui::container(|_cx| Vec::<AnyElement>::new())
                             .w_px(Px(28.0))
                             .h_px(Px(28.0))
                             .bg(color)
@@ -131,7 +131,7 @@ impl View for EffectsLayerBasicsView {
         let preview = {
             // Keep a definite pixel-sized box here: percent-fill sizing inside a shrink-wrapped
             // effect layer can create cyclic layout dependencies.
-            let content = ui::container(cx, move |_cx| [preview_content])
+            let content = ui::container(move |_cx| [preview_content])
                 .w_px(Px(460.0))
                 .h_px(Px(180.0))
                 .p(Space::N4)
@@ -144,7 +144,7 @@ impl View for EffectsLayerBasicsView {
                 cx.effect_layer(EffectMode::FilterContent, chain, move |_cx| [content])
             };
 
-            ui::container(cx, |_cx| [body])
+            ui::container(|_cx| [body])
                 .w_px(Px(460.0))
                 .h_px(Px(180.0))
                 .border_1()
@@ -164,7 +164,7 @@ impl View for EffectsLayerBasicsView {
         ])
         .into_element(cx);
 
-        let controls = ui::h_flex(cx, |cx| {
+        let controls = ui::h_flex(|cx| {
             [
                 button(cx, "None", EffectKind::None, act::None.into(), TEST_ID_NONE),
                 button(
@@ -182,9 +182,7 @@ impl View for EffectsLayerBasicsView {
 
         let content = shadcn::CardContent::new([
             controls,
-            ui::v_flex(cx, |_cx| [preview])
-                .gap(Space::N3)
-                .into_element(cx),
+            ui::v_flex(|_cx| [preview]).gap(Space::N3).into_element(cx),
         ])
         .into_element(cx);
 

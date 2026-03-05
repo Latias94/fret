@@ -58,7 +58,7 @@ fn web_vs_fret_layout_carousel_api_geometry_matches_web() {
                 .item_padding_start(Space::N4)
                 .into_element(cx);
 
-            let caption = ui::text(cx, "Slide 1 of 5")
+            let caption = ui::text("Slide 1 of 5")
                 .text_size_px(Px(14.0))
                 .line_height_px(Px(20.0))
                 .text_color(ColorRef::Token {
@@ -67,7 +67,7 @@ fn web_vs_fret_layout_carousel_api_geometry_matches_web() {
                 })
                 .into_element(cx);
 
-            ui::container(cx, move |_cx| vec![carousel, caption])
+            ui::container(move |_cx| vec![carousel, caption])
                 .w_full()
                 .max_w(MetricRef::Px(Px(320.0)))
                 .mx_auto()
@@ -211,7 +211,7 @@ fn carousel_card_content(
 ) -> AnyElement {
     let theme = Theme::global(&*cx.app).clone();
 
-    let text = ui::text(cx, format!("{number}"))
+    let text = ui::text(format!("{number}"))
         .text_size_px(text_px)
         .line_height_px(line_height)
         .font_semibold()
@@ -251,7 +251,7 @@ fn carousel_slide(
     let card = fret_ui_shadcn::Card::new([content]).into_element(cx);
 
     if with_p1_wrapper {
-        ui::container(cx, move |_cx| vec![card])
+        ui::container(move |_cx| vec![card])
             .p_1()
             .w_full()
             .into_element(cx)

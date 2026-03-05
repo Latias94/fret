@@ -60,12 +60,10 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
             })
             .collect::<Vec<_>>();
 
-        let count = shadcn::AvatarGroupCount::new([ui::text(cx, "+8")
-            .font_medium()
-            .nowrap()
-            .into_element(cx)])
-        .into_element(cx)
-        .test_id("ui-gallery-card-notes-avatar-count");
+        let count =
+            shadcn::AvatarGroupCount::new([ui::text("+8").font_medium().nowrap().into_element(cx)])
+                .into_element(cx)
+                .test_id("ui-gallery-card-notes-avatar-count");
 
         shadcn::AvatarGroup::new(avatars.into_iter().chain([count]).collect::<Vec<_>>())
             .into_element(cx)
@@ -79,12 +77,9 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
             .items_stretch()
             .layout(LayoutRefinement::default().w_full()),
         |cx| {
-            let paragraph = ui::text(
-                cx,
-                "Client requested dashboard redesign with focus on mobile responsiveness.",
-            )
-            .text_sm()
-            .into_element(cx);
+            let paragraph = ui::text("Here are the meeting notes:")
+                .text_sm()
+                .into_element(cx);
 
             let ordered_list = {
                 let props = decl_style::container_props(
@@ -102,7 +97,7 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
                             .layout(LayoutRefinement::default().w_full()),
                         |cx| {
                             let marker = |cx: &mut ElementContext<'_, App>, text: &str| {
-                                ui::text(cx, text)
+                                ui::text(text)
                                     .text_sm()
                                     .w_space(Space::N4)
                                     .text_align(fret_core::TextAlign::End)
@@ -123,7 +118,7 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
                                         |cx| {
                                             vec![
                                                 marker(cx, n),
-                                                ui::text(cx, content)
+                                                ui::text(content)
                                                     .text_sm()
                                                     .flex_1()
                                                     .min_w_0()

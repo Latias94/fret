@@ -623,7 +623,7 @@ impl TableHead {
                     wrap: false,
                 },
                 move |cx| {
-                    let mut head_text = ui::text(cx, text.clone())
+                    let mut head_text = ui::text(text.clone())
                         .text_size_px(style.size)
                         .font_weight(style.weight)
                         .text_color(ColorRef::Color(fg))
@@ -773,7 +773,7 @@ impl TableCaption {
         let text = self.text;
 
         cx.container(props, move |cx| {
-            let mut caption_text = ui::text(cx, text)
+            let mut caption_text = ui::text(text)
                 .text_size_px(style.size)
                 .font_weight(style.weight)
                 .text_color(ColorRef::Color(fg))
@@ -1065,8 +1065,8 @@ mod tests {
             let footer = TableFooter::new([TableRow::new(
                 2,
                 [
-                    TableCell::new(ui::text(cx, "Total").into_element(cx)).into_element(cx),
-                    TableCell::new(ui::text(cx, "$2,500.00").into_element(cx)).into_element(cx),
+                    TableCell::new(cx.text("Total")).into_element(cx),
+                    TableCell::new(cx.text("500.00")).into_element(cx),
                 ],
             )
             .into_element(cx)])

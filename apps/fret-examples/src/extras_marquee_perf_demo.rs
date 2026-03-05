@@ -41,7 +41,7 @@ fn view(
         ),
         |cx| {
             vec![
-                ui::text(cx, "Marquee perf probe (extras)")
+                ui::text("Marquee perf probe (extras)")
                     .font_semibold()
                     .into_element(cx),
                 marquee,

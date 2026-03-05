@@ -143,7 +143,7 @@ impl ShadcnResolver {
         if children.is_empty() {
             slider
         } else {
-            fret_ui_kit::ui::v_flex(cx, move |_cx| {
+            fret_ui_kit::ui::v_flex(move |_cx| {
                 let mut out = Vec::with_capacity(children.len().saturating_add(1));
                 out.push(slider);
                 out.extend(children);

@@ -96,7 +96,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                 shadcn::RadioGroupItem::new("email", "Email only")
                     .aria_invalid(true)
                     .child(
-                        ui::label(cx, "Email only")
+                        ui::label("Email only")
                             .text_color(ColorRef::Color(destructive))
                             .into_element(cx),
                     ),
@@ -105,7 +105,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                 shadcn::RadioGroupItem::new("sms", "SMS only")
                     .aria_invalid(true)
                     .child(
-                        ui::label(cx, "SMS only")
+                        ui::label("SMS only")
                             .text_color(ColorRef::Color(destructive))
                             .into_element(cx),
                     ),
@@ -114,7 +114,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                 shadcn::RadioGroupItem::new("both", "Both Email & SMS")
                     .aria_invalid(true)
                     .child(
-                        ui::label(cx, "Both Email & SMS")
+                        ui::label("Both Email & SMS")
                             .text_color(ColorRef::Color(destructive))
                             .into_element(cx),
                     ),

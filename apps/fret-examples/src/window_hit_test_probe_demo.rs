@@ -181,7 +181,14 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut WindowState) -> ViewElements 
                     corner_radii: fret_core::Corners::all(Px(10.0)),
                     ..Default::default()
                 },
-                move |cx| vec![ui::text(cx, title).font_semibold().into_element(cx)],
+                move |cx| {
+                    vec![
+                        ui::text("Hit-test passthrough probe")
+                            .font_semibold()
+                            .text_sm()
+                            .into_element(cx),
+                    ]
+                },
             );
 
             let content = Card::new([
@@ -200,11 +207,11 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut WindowState) -> ViewElements 
                         .layout(LayoutRefinement::default().w_full()),
                     move |cx| {
                         let logical_line =
-                            ui::text(cx, format!("logical_window_id={logical}"))
+                            ui::text(format!("logical_window_id={logical}"))
                                 .font_monospace()
                                 .text_sm()
                                 .into_element(cx);
-                        let status_line = ui::text(cx, status)
+                        let status_line = ui::text(status)
                             .text_sm()
                             .text_color(ColorRef::Color(color_muted_foreground))
                             .into_element(cx);

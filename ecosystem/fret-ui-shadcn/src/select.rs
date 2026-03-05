@@ -3237,7 +3237,7 @@ fn select_impl<H: UiHost>(
                                             ..Default::default()
                                         },
                                         |cx| {
-                                            let mut text = ui::text(cx, label)
+                                            let mut text = ui::text( label)
                                                 .text_size_px(style.size)
                                                 .font_weight(style.weight)
                                                 .nowrap();
@@ -3514,7 +3514,7 @@ fn select_impl<H: UiHost>(
                                                                                     ..Default::default()
                                                                                 },
                                                                                 move |cx| {
-                                                                                    vec![ui::text(cx, label.text)
+                                                                                    vec![ui::text( label.text)
                                                                                         .w_full()
                                                                                         .text_size_px(label_text_px)
                                                                                         .line_height_px(label_line_height)
@@ -3995,7 +3995,7 @@ fn select_impl<H: UiHost>(
                                                                                                                         SelectTextTone::Normal => fg,
                                                                                                                         SelectTextTone::Muted => fg_muted,
                                                                                                                     };
-                                                                                                                    let mut text = ui::text(cx, run.text.clone())
+                                                                                                                    let mut text = ui::text( run.text.clone())
                                                                                                                         .text_size_px(text_style.size)
                                                                                                                         .font_weight(text_style.weight)
                                                                                                                         .text_color(ColorRef::Color(color))
@@ -4537,7 +4537,7 @@ fn select_impl<H: UiHost>(
                                                     })
                                             };
 
-                                        let mut text = ui::text(cx, label);
+                                        let mut text = ui::text( label);
                                         if let Some(font) = trigger_font_override {
                                             text = text.font(font);
                                         }

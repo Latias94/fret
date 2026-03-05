@@ -405,7 +405,7 @@ fn cmdk_highlighted_label<H: UiHost>(
     };
 
     if query.is_empty() {
-        return apply_text_style(ui::text(cx, label))
+        return apply_text_style(ui::text(label))
             .layout(LayoutRefinement::default().min_w_0().flex_1())
             .text_color(ColorRef::Color(fg))
             .into_element(cx);
@@ -413,7 +413,7 @@ fn cmdk_highlighted_label<H: UiHost>(
 
     let ranges = cmdk_score::command_match_ranges(label.as_ref(), query);
     if ranges.is_empty() {
-        return apply_text_style(ui::text(cx, label))
+        return apply_text_style(ui::text(label))
             .layout(LayoutRefinement::default().min_w_0().flex_1())
             .text_color(ColorRef::Color(fg))
             .into_element(cx);
@@ -433,7 +433,7 @@ fn cmdk_highlighted_label<H: UiHost>(
                 .collect::<String>()
                 .into();
             pieces.push(
-                apply_text_style(ui::text(cx, text))
+                apply_text_style(ui::text(text))
                     .text_color(ColorRef::Color(nonmatch_fg))
                     .into_element(cx),
             );
@@ -445,7 +445,7 @@ fn cmdk_highlighted_label<H: UiHost>(
                 .collect::<String>()
                 .into();
             pieces.push(
-                apply_text_style(ui::text(cx, text))
+                apply_text_style(ui::text(text))
                     .text_color(ColorRef::Color(fg))
                     .into_element(cx),
             );
@@ -460,7 +460,7 @@ fn cmdk_highlighted_label<H: UiHost>(
             .collect::<String>()
             .into();
         pieces.push(
-            apply_text_style(ui::text(cx, text))
+            apply_text_style(ui::text(text))
                 .text_color(ColorRef::Color(nonmatch_fg))
                 .into_element(cx),
         );
@@ -658,7 +658,7 @@ impl CommandShortcut {
                 ink_overflow: Default::default(),
             });
         }
-        let mut text = ui::text(cx, self.text)
+        let mut text = ui::text(self.text)
             .layout(shortcut_layout)
             .text_size_px(style.size)
             .font_weight(style.weight)
@@ -1228,7 +1228,7 @@ impl CommandEmpty {
                         align: CrossAlign::Center,
                     },
                     move |cx| {
-                        let mut text = ui::text(cx, self.text.clone())
+                        let mut text = ui::text(self.text.clone())
                             .text_size_px(text_style.size)
                             .font_weight(text_style.weight)
                             .nowrap()
@@ -1336,7 +1336,7 @@ impl CommandLoading {
                         align: CrossAlign::Center,
                     },
                     move |cx| {
-                        let mut text = ui::text(cx, text_for_render.clone())
+                        let mut text = ui::text(text_for_render.clone())
                             .text_size_px(text_style.size)
                             .font_weight(text_style.weight)
                             .nowrap()
@@ -1641,7 +1641,7 @@ impl CommandList {
                                             ..Default::default()
                                         },
                                         move |cx| {
-                                            let mut text = ui::text(cx, heading)
+                                            let mut text = ui::text( heading)
                                                 .text_size_px(heading_style.size)
                                                 .font_weight(heading_style.weight)
                                                 .nowrap()
@@ -2827,7 +2827,7 @@ impl CommandPalette {
                                 ..Default::default()
                             },
                             move |cx| {
-                                let mut text = ui::text(cx, heading)
+                                let mut text = ui::text( heading)
                                     .text_size_px(style.size)
                                     .font_weight(style.weight)
                                     .nowrap()

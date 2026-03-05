@@ -17,13 +17,9 @@ fn side_content<H: UiHost>(
             .items_start(),
         move |cx| {
             vec![
-                ui::text(cx, "Hover Card").font_medium().into_element(cx),
-                ui::text(
-                    cx,
-                    format!("This hover card appears on the {side_label} side of the trigger."),
-                )
-                .wrap(TextWrap::WordBreak)
-                .into_element(cx),
+                ui::text(side_label)
+                    .wrap(TextWrap::WordBreak)
+                    .into_element(cx),
             ]
         },
     );

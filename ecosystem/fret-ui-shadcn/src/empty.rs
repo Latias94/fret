@@ -266,7 +266,7 @@ impl EmptyTitle {
             .metric_by_key("component.empty.title_line_height")
             .unwrap_or(Px(28.0));
 
-        ui::text(cx, self.text)
+        ui::text(self.text)
             .text_size_px(px)
             .line_height_px(line_height)
             .font_medium()
@@ -300,7 +300,7 @@ impl EmptyDescription {
             .metric_by_key("component.empty.description_line_height")
             .unwrap_or(Px(22.75));
 
-        ui::text(cx, self.text)
+        ui::text(self.text)
             .text_size_px(px)
             .line_height_px(line_height)
             .font_normal()

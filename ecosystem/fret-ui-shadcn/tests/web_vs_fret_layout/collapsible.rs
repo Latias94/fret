@@ -42,7 +42,7 @@ fn web_vs_fret_layout_collapsible_demo_trigger_icon_size_matches_web() {
             },
             move |cx| {
                 vec![
-                    ui::text(cx, "@peduarte starred 3 repositories")
+                    ui::text("@peduarte starred 3 repositories")
                         .font_semibold()
                         .into_element(cx),
                     trigger,
@@ -63,7 +63,7 @@ fn web_vs_fret_layout_collapsible_demo_trigger_icon_size_matches_web() {
                 padding: Edges::symmetric(Px(16.0), Px(8.0)).into(),
                 ..Default::default()
             },
-            move |cx| vec![ui::text(cx, "@radix-ui/primitives").into_element(cx)],
+            move |cx| vec![ui::text("@radix-ui/primitives").text_sm().into_element(cx)],
         );
 
         let trigger_stack = cx.column(
@@ -93,8 +93,9 @@ fn web_vs_fret_layout_collapsible_demo_trigger_icon_size_matches_web() {
                     },
                     move |cx| {
                         vec![
-                            ui::text(cx, "@radix-ui/colors").into_element(cx),
-                            ui::text(cx, "@stitches/react").into_element(cx),
+                            ui::text("@radix-ui/primitives").text_sm().into_element(cx),
+                            ui::text("@radix-ui/colors").text_sm().into_element(cx),
+                            ui::text("@stitches/react").text_sm().into_element(cx),
                         ]
                     },
                 )

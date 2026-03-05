@@ -69,7 +69,7 @@ impl View for EmbeddedViewportDemoView {
         };
         self.embedded.set_target_px_size(target_px_size);
 
-        let header = ui::v_flex(cx, |cx| {
+        let header = ui::v_flex(|cx| {
             ui::children![
                 cx;
                 shadcn::CardTitle::new("Tier A interop: embedded viewport"),
@@ -81,7 +81,7 @@ impl View for EmbeddedViewportDemoView {
         .gap(Space::N1)
         .into_element(cx);
 
-        let size_controls = ui::h_flex(cx, |cx| {
+        let size_controls = ui::h_flex(|cx| {
             ui::children![
                 cx;
                 shadcn::Button::new("640×360")
@@ -102,12 +102,18 @@ impl View for EmbeddedViewportDemoView {
         .items_center()
         .into_element(cx);
 
-        let info = ui::v_flex(cx, |cx| {
+        let info = ui::v_flex(|cx| {
             ui::children![
                 cx;
-                ui::text(cx, format!("target_px_size: {preset_label}")).text_xs(),
-                ui::text(cx, format!("clicks: {clicks}")).text_xs(),
-                ui::text(cx, format!("last input: {last_input}")).text_xs(),
+                ui::text(format!("Target: {preset_label}"))
+                    .text_sm()
+                    .into_element(cx),
+                ui::text(format!("Clicks: {clicks}"))
+                    .text_sm()
+                    .into_element(cx),
+                ui::text(format!("Last input: {last_input}"))
+                    .text_sm()
+                    .into_element(cx),
             ]
         })
         .gap(Space::N1)
@@ -129,7 +135,7 @@ impl View for EmbeddedViewportDemoView {
             cx;
             shadcn::CardHeader::new(ui::children![cx; header, size_controls, info]),
             shadcn::CardContent::new(ui::children![cx;
-                ui::container(cx, |cx| ui::children![cx; viewport])
+                ui::container( |cx| ui::children![cx; viewport])
                     .bg(ColorRef::Color(theme.color_token("muted")))
                     .rounded(Radius::Md)
                     .border_1()
@@ -166,10 +172,10 @@ impl View for EmbeddedViewportDemoView {
             }
         });
 
-        let page = ui::container(cx, |cx| {
+        let page = ui::container(|cx| {
             ui::children![
                 cx;
-                ui::v_flex(cx, |cx| ui::children![cx; viewport_card])
+                ui::v_flex( |cx| ui::children![cx; viewport_card])
                     .w_full()
                     .h_full()
                     .justify_center()

@@ -20,7 +20,7 @@ pub(in crate::ui) fn preview_button_legacy(cx: &mut ElementContext<'_, App>) -> 
     };
 
     let content_text = |cx: &mut ElementContext<'_, App>, text: &'static str, fg: ColorRef| {
-        ui::text(cx, text)
+        ui::text( text)
             .font_medium()
             .nowrap()
             .text_color(fg)
@@ -285,7 +285,7 @@ pub(in crate::ui) fn preview_button_legacy(cx: &mut ElementContext<'_, App>) -> 
                         })
                         .on_click(CMD_APP_OPEN)
                         .into_element(cx),
-                    ui::text(cx, "`ButtonRender::Link` models shadcn `asChild` anchors by applying link semantics to the pressable root.")
+                    ui::text( "`ButtonRender::Link` models shadcn `asChild` anchors by applying link semantics to the pressable root.")
                         .text_color(muted_fg.clone())
                         .into_element(cx),
                 ]

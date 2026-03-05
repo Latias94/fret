@@ -370,7 +370,7 @@ fn chart_tooltip_demo_panel<H: fret_ui::UiHost>(
                 let mut out = Vec::new();
                 if nest_label {
                     out.push(
-                        ui::text(cx, tooltip_label)
+                        ui::text(tooltip_label)
                             .text_xs()
                             .font_medium()
                             .line_height_px(text_xs_px)
@@ -380,7 +380,7 @@ fn chart_tooltip_demo_panel<H: fret_ui::UiHost>(
                     );
                 }
                 out.push(
-                    ui::text(cx, item_label)
+                    ui::text(item_label)
                         .text_xs()
                         .text_color(ColorRef::Color(muted))
                         .line_height_px(text_xs_px)
@@ -392,7 +392,7 @@ fn chart_tooltip_demo_panel<H: fret_ui::UiHost>(
             },
         );
 
-        let value_el = ui::text(cx, item_value)
+        let value_el = ui::text(item_value)
             .text_xs()
             .font_medium()
             .line_height_px(text_xs_px)
@@ -485,7 +485,7 @@ fn chart_tooltip_demo_panel<H: fret_ui::UiHost>(
             },
             move |cx| {
                 vec![
-                    ui::text(cx, label.clone())
+                    ui::text(label.clone())
                         .text_xs()
                         .font_medium()
                         .line_height_px(text_xs_line_height)

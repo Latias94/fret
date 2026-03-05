@@ -1525,7 +1525,7 @@ fn horizontal_container_element<H: UiHost>(
     options: HorizontalOptions,
     f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
 ) -> AnyElement {
-    let mut builder = crate::ui::h_flex_build(cx, move |cx, out| {
+    let mut builder = crate::ui::h_flex_build(move |cx, out| {
         build_imui_children_with_focus(cx, out, build_focus, f);
     });
     builder = builder
@@ -1546,7 +1546,7 @@ fn vertical_container_element<H: UiHost>(
     options: VerticalOptions,
     f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
 ) -> AnyElement {
-    let mut builder = crate::ui::v_flex_build(cx, move |cx, out| {
+    let mut builder = crate::ui::v_flex_build(move |cx, out| {
         build_imui_children_with_focus(cx, out, build_focus, f);
     });
     builder = builder
@@ -1567,7 +1567,7 @@ fn scroll_container_element<H: UiHost>(
     options: ScrollOptions,
     f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
 ) -> AnyElement {
-    let mut builder = crate::ui::scroll_area_build(cx, move |cx, out| {
+    let mut builder = crate::ui::scroll_area_build(move |cx, out| {
         build_imui_children_with_focus(cx, out, build_focus, f);
     });
     builder = builder
@@ -1606,7 +1606,7 @@ fn grid_container_element<H: UiHost>(
         }
 
         let row = cx.keyed(row_index, |cx| {
-            crate::ui::h_flex(cx, move |_cx| row_cells)
+            crate::ui::h_flex(move |_cx| row_cells)
                 .gap_metric(options.column_gap.clone())
                 .justify(options.row_justify)
                 .items(options.row_items)
@@ -1617,7 +1617,7 @@ fn grid_container_element<H: UiHost>(
         row_index += 1;
     }
 
-    crate::ui::v_flex(cx, move |_cx| rows)
+    crate::ui::v_flex(move |_cx| rows)
         .gap_metric(options.row_gap)
         .justify(crate::Justify::Start)
         .items(crate::Items::Stretch)

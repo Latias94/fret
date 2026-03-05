@@ -14,7 +14,7 @@ fn text_sm_nowrap<H: fret_ui::UiHost>(
         .or_else(|| theme.metric_by_key("font.line_height"))
         .unwrap_or_else(|| theme.metric_token("font.line_height"));
 
-    ui::text(cx, text)
+    ui::text(text)
         .text_size_px(size)
         .line_height_px(line_height)
         .nowrap()

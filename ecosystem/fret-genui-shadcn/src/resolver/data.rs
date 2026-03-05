@@ -255,7 +255,7 @@ impl ShadcnResolver {
             for col in columns.iter() {
                 let v = obj.and_then(|o| o.get(col.key.as_ref()));
                 let text = cell_text_for_value(v);
-                let child = fret_ui_kit::ui::text(cx, text).into_element(cx);
+                let child = fret_ui_kit::ui::text(text).into_element(cx);
                 row_cells.push(fret_ui_shadcn::TableCell::new(child).into_element(cx));
             }
 
@@ -313,7 +313,7 @@ impl ShadcnResolver {
                     buttons.push(btn.into_element(cx));
                 }
 
-                let actions_cell = fret_ui_kit::ui::h_flex(cx, move |_cx| buttons)
+                let actions_cell = fret_ui_kit::ui::h_flex(move |_cx| buttons)
                     .gap(fret_ui_kit::Space::N1)
                     .wrap()
                     .into_element(cx);
