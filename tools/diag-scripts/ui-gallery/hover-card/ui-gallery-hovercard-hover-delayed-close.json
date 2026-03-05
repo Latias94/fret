@@ -1,90 +1,80 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
+  "meta": {
+    "name": "UI gallery: HoverCard delayed close (hover leave)",
+    "required_capabilities": ["diag.script_v2"],
+    "tags": ["ui-gallery", "shadcn", "hovercard", "hover", "gate"],
+    "target_hints": [
+      "Navigates to the Hover Card page.",
+      "Opens the delayed HoverCard via hover, then moves the pointer away.",
+      "Asserts the panel remains during closeDelay and then closes."
+    ]
+  },
   "steps": [
-    {
-      "type": "wait_until",
-      "predicate": {
-        "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-nav-scroll" }
-      },
-      "timeout_frames": 240
-    },
-    {
-      "type": "wait_until",
-      "predicate": {
-        "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
-      },
-      "timeout_frames": 240
-    },
-    {
-      "type": "wait_until",
-      "predicate": {
-        "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-content-viewport" }
-      },
-      "timeout_frames": 240
-    },
+    { "type": "reset_diagnostics" },
     { "type": "press_key", "key": "escape" },
     { "type": "wait_frames", "n": 2 },
+    { "type": "set_window_inner_size", "width_px": 1280.0, "height_px": 720.0 },
+    { "type": "wait_frames", "n": 20 },
     {
-      "type": "click",
-      "target": { "kind": "test_id", "id": "ui-gallery-overlay-reset" }
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
+      "timeout_frames": 600
     },
-    { "type": "wait_frames", "n": 10 },
-    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
+
+    { "type": "click_stable", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
     { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
     { "type": "press_key", "key": "backspace" },
-    { "type": "type_text", "text": "overlay" },
+    { "type": "type_text", "text": "hover card" },
     { "type": "wait_frames", "n": 2 },
-    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-overlay" } },
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-nav-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-nav-hover-card" },
+      "delta_y": -240.0,
+      "timeout_frames": 600
+    },
+    { "type": "click_stable", "target": { "kind": "test_id", "id": "ui-gallery-nav-hover-card" } },
     {
       "type": "wait_until",
-      "predicate": {
-        "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-page-overlay" }
-      },
-      "timeout_frames": 240
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-page-hover-card" } },
+      "timeout_frames": 600
     },
-    { "type": "wait_frames", "n": 20 },
+
     {
-      "type": "move_pointer",
-      "target": { "kind": "test_id", "id": "ui-gallery-overlay-underlay" }
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-hover-card-delay-delayed-trigger" },
+      "delta_y": -240.0,
+      "require_fully_within_container": true,
+      "require_fully_within_window": true,
+      "padding_px": 24.0,
+      "timeout_frames": 1200
     },
-    { "type": "wait_frames", "n": 5 },
-    {
-      "type": "move_pointer",
-      "target": { "kind": "test_id", "id": "ui-gallery-hovercard-trigger" }
-    },
-    { "type": "wait_frames", "n": 20 },
+
+    { "type": "move_pointer", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "reset_diagnostics" },
+    { "type": "move_pointer", "target": { "kind": "test_id", "id": "ui-gallery-hover-card-delay-delayed-trigger" } },
+    { "type": "wait_frames", "n": 60 },
     {
       "type": "wait_until",
-      "predicate": {
-        "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-hovercard-content" }
-      },
-      "timeout_frames": 240
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-hover-card-delay-delayed-content" } },
+      "timeout_frames": 600
     },
-    {
-      "type": "move_pointer",
-      "target": { "kind": "test_id", "id": "ui-gallery-overlay-underlay" }
-    },
+
+    { "type": "move_pointer", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
     { "type": "wait_frames", "n": 5 },
     {
       "type": "assert",
-      "predicate": {
-        "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-hovercard-content" }
-      }
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-hover-card-delay-delayed-content" } }
     },
     {
       "type": "wait_until",
-      "predicate": {
-        "kind": "not_exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-hovercard-content" }
-      },
-      "timeout_frames": 240
+      "predicate": { "kind": "not_exists", "target": { "kind": "test_id", "id": "ui-gallery-hover-card-delay-delayed-content" } },
+      "timeout_frames": 600
     },
+
     { "type": "capture_bundle", "label": "ui-gallery-hovercard-hover-delayed-close" }
   ]
 }

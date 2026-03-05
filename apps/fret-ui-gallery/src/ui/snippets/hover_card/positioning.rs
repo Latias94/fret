@@ -17,7 +17,7 @@ fn side_content<H: UiHost>(
                 .text_sm()
                 .font_medium()
                 .into_element(cx),
-            ui::text("Positioning is controlled by `side` and `align`.")
+            ui::text_block("Positioning is controlled by `side` and `align`.")
                 .text_xs()
                 .text_color(ColorRef::Color(muted_fg))
                 .mt(Space::N1)
@@ -26,7 +26,7 @@ fn side_content<H: UiHost>(
     })
     .layout(LayoutRefinement::default().w_full().min_w_0())
     .gap(Space::N1)
-    .items_start()
+    .items_stretch()
     .into_element(cx);
 
     shadcn::HoverCardContent::new(vec![body])

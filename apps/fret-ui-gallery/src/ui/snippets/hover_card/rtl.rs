@@ -10,7 +10,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     with_direction_provider(cx, LayoutDirection::Rtl, |cx| {
         let body = ui::v_flex(move |cx| {
             vec![
-                ui::text("تحقق من محاذاة HoverCard تحت RTL.")
+                ui::text_block("تحقق من محاذاة HoverCard تحت RTL.")
                     .wrap(TextWrap::WordBreak)
                     .text_color(ColorRef::Color(muted_fg))
                     .into_element(cx),
@@ -18,7 +18,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         })
         .layout(LayoutRefinement::default().w_full().min_w_0())
         .gap(Space::N1)
-        .items_start()
+        .items_stretch()
         .into_element(cx);
 
         shadcn::HoverCard::new(

@@ -65,6 +65,29 @@
       "timeout_frames": 600
     },
 
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_min_size",
+        "target": { "kind": "test_id", "id": "ui-gallery-hover-card-demo-content-desc" },
+        "min_w_px": 120.0,
+        "min_h_px": 16.0,
+        "eps_px": 2.0
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_max_size",
+        "target": { "kind": "test_id", "id": "ui-gallery-hover-card-demo-content-desc" },
+        "max_w_px": 320.0,
+        "max_h_px": 120.0,
+        "eps_px": 2.0
+      },
+      "timeout_frames": 600
+    },
+
     { "type": "move_pointer", "target": { "kind": "test_id", "id": "ui-gallery-hover-card-demo-content" } },
     { "type": "wait_frames", "n": 3 },
 

@@ -1214,7 +1214,7 @@ impl HoverCardContent {
         let mut props = decl_style::container_props(&theme, chrome, base_layout.merge(self.layout));
         props.shadow = Some(decl_style::shadow_md(&theme, radius));
         let children = self.children;
-        let el = shadcn_layout::container_flow(cx, props, children);
+        let el = shadcn_layout::container_flow_fill_width(cx, props, children);
         match self.test_id {
             Some(test_id) => el.test_id(test_id),
             None => el,
