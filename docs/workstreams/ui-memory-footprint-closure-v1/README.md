@@ -79,12 +79,24 @@ Using `tools/diag-scripts/todo-memory-steady.json` on macOS/Metal:
     - `FRET_WGPU_MEMORY_HINTS=performance`: `Owned physical footprint (unmapped) (graphics)` p90=~236.6 MiB
     - `FRET_WGPU_MEMORY_HINTS=memory`: `Owned physical footprint (unmapped) (graphics)` p90=~237.1 MiB
     - Conclusion: small deltas only; does not explain the baseline headline.
+  - Image resource drop + idle (image-heavy; keep vs after-drop; N=5 each; outputs under `target/diag/mem-attrib-drop-20260305/`):
+    - Keep (`tools/diag-scripts/image-heavy-memory-steady.json`):
+      - `Owned physical footprint (unmapped) (graphics)` p50=~315.6 MiB
+      - `macos_owned_unmapped_memory_dirty_bytes` p50=~321.6 MiB
+      - `wgpu_metal_current_allocated_size_bytes_max` p50=~195.4 MiB
+    - After drop + idle (`tools/diag-scripts/image-heavy-memory-steady-after-drop.json`, drops registered images at frame 200):
+      - `Owned physical footprint (unmapped) (graphics)` p50=~218.8 MiB
+      - `macos_owned_unmapped_memory_dirty_bytes` p50=~221.8 MiB
+      - `wgpu_metal_current_allocated_size_bytes_max` p50=~98.7 MiB
+    - Conclusion: the headline `owned unmapped memory` / `Owned physical footprint (unmapped) (graphics)` bucket is sensitive to live texture pressure and can return close to baseline after releasing images (not a one-way leak signature).
   - Summary JSON files:
     - `target/diag/mem-attrib-20260305/latency1.memory-summary.json`
     - `target/diag/mem-attrib-20260305/latency2.memory-summary.json`
     - `target/diag/mem-attrib-20260305/latency3.memory-summary.json`
     - `target/diag/mem-attrib-20260305/memory-hints-performance.memory-summary.json`
     - `target/diag/mem-attrib-20260305/memory-hints-memory.memory-summary.json`
+    - `target/diag/mem-attrib-drop-20260305/image-heavy-keep.memory-summary.json`
+    - `target/diag/mem-attrib-drop-20260305/image-heavy-drop.memory-summary.json`
 
 - Repeat sample (N=5; `target/release/todo_demo`; `--env FRET_DIAG_WGPU_ALLOCATOR_REPORT=1`):
   - `macos_vmmap_steady.physical_footprint_peak_bytes`: 358,612,992 .. 419,325,542 (~342.0 .. 399.9 MiB)
@@ -154,6 +166,16 @@ Using `tools/diag-scripts/image-heavy-memory-steady.json` on macOS/Metal (textur
   - `macos_vmmap_steady.regions.io_accelerator_dirty_bytes`: 5,980,160 .. 7,372,800 (~5.7 .. 7.0 MiB)
   - `macos_vmmap_steady.regions.malloc_small_dirty_bytes`: 41,104,179 .. 44,774,195 (~39.2 .. 42.7 MiB)
   - `wgpu_metal_current_allocated_size_bytes`: 204,914,688 (~195.4 MiB; stable; requires `--env FRET_DIAG_WGPU_ALLOCATOR_REPORT=1`)
+
+Using `tools/diag-scripts/image-heavy-memory-steady-after-drop.json` on macOS/Metal (drop registered images + idle):
+
+- Repeat sample (N=5; defaults: `FRET_IMAGE_HEAVY_DEMO_COUNT=24`, `FRET_IMAGE_HEAVY_DEMO_SIZE_PX=1024`):
+  - `macos_vmmap_steady.regions.owned_unmapped_memory_dirty_bytes` p50=232,574,157 (~221.8 MiB)
+  - Apple `footprint` category `Owned physical footprint (unmapped) (graphics)` p50=229,457,920 (~218.8 MiB)
+  - `wgpu_metal_current_allocated_size_bytes_{min,max}`: 103,464,960 (~98.7 MiB; stable)
+- Notes:
+  - This script intentionally uses a “grow, then drop, then idle” shape; avoid gating on `macos_vmmap_steady.physical_footprint_peak_bytes` because it includes the pre-drop peak.
+  - The primary signal here is whether the post-drop steady state returns close to `text-heavy` / `todo` levels, not whether the peak phase was large.
 
 Using `tools/diag-scripts/ui-gallery/memory/ui-gallery-code-editor-torture-memory-steady.json` on macOS/Metal (UI Gallery, editor-grade stress):
 
@@ -440,6 +462,11 @@ Recommended local gate baselines (macOS, 2026-03-04):
   - `--max-renderer-intermediate-peak-in-use-bytes 67108864` (64 MiB)
   - Optional (requires `--env FRET_DIAG_WGPU_ALLOCATOR_REPORT=1`):
     - `--max-wgpu-metal-current-allocated-size-bytes 268435456` (256 MiB)
+- `image-heavy-memory-steady-after-drop`:
+  - Note: do not set `--max-macos-physical-footprint-peak-bytes` for this scenario; the script includes a pre-drop peak by design.
+  - `--max-macos-owned-unmapped-memory-dirty-bytes 293601280` (280 MiB)
+  - Optional (requires `--env FRET_DIAG_WGPU_ALLOCATOR_REPORT=1`):
+    - `--max-wgpu-metal-current-allocated-size-bytes 134217728` (128 MiB)
 - `ui-gallery-code-editor-torture-memory-steady`:
   - `--max-macos-physical-footprint-peak-bytes 419430400` (400 MiB)
   - `--max-macos-owned-unmapped-memory-dirty-bytes 268435456` (256 MiB)

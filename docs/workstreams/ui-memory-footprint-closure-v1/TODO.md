@@ -22,6 +22,7 @@
 - [x] Add `tools/diag-scripts/tooling/empty/empty-idle-memory-steady.json` (schema v2).
 - [x] Add `tools/diag-scripts/tooling/text/text-heavy-memory-steady.json` (forces emoji/color glyphs).
 - [x] Add `tools/diag-scripts/tooling/images/image-heavy-memory-steady.json` (forces texture cache).
+- [x] Add `tools/diag-scripts/tooling/images/image-heavy-memory-steady-after-drop.json` (drops registered images + idle).
 
 ## Attribution experiments (macOS / Metal)
 
@@ -42,6 +43,7 @@
 
 - [x] Attribution: sweep `FRET_RENDER_WGPU_SURFACE_DESIRED_MAX_FRAME_LATENCY` (1/2/3) on `empty-idle` and record the impact.
 - [x] Attribution: sweep `FRET_WGPU_MEMORY_HINTS` (`performance` vs `memory`) on `text-heavy` and record the impact.
+- [x] Attribution: release images + idle (image-heavy) and confirm `Owned physical footprint (unmapped) (graphics)` returns close to baseline after `renderer.unregister_image`.
 
 ### Evidence (captured)
 
@@ -76,4 +78,5 @@
 - [x] Calibrate a Metal allocated size gate for `empty-idle` and `text-heavy` (requires `--env FRET_DIAG_WGPU_ALLOCATOR_REPORT=1`).
 - [x] Add a wgpu hub counts gate (`check.wgpu_hub_counts.json`; requires `--env FRET_DIAG_WGPU_REPORT=1`).
 - [x] Add a text-atlas-focused gate (`--max-render-text-atlas-bytes-live-estimate-total`) for more stable attribution vs total Metal bytes.
+- [x] Calibrate a post-drop release gate for `image-heavy-memory-steady-after-drop` (avoid peak-based gates; prefer `owned_unmapped_memory` and `wgpu_metal_current_allocated_size_bytes` thresholds).
 - [ ] Document acceptable drift policy (e.g. +X MiB allowed with justification).

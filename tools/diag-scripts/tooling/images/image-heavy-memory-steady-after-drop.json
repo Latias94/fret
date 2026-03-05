@@ -1,0 +1,30 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "image heavy: memory steady (after drop + idle)",
+    "tags": ["images", "memory", "steady", "attribution"],
+    "required_capabilities": ["diag.script_v2"],
+    "target_hints": [
+      "Captures a steady-state bundle after dropping registered images and idling for a while.",
+      "Intended to test whether macOS `Owned physical footprint (unmapped) (graphics)` returns to baseline after GPU resources are released."
+    ],
+    "env_defaults": {
+      "FRET_DIAG_WGPU_ALLOCATOR_REPORT": 1,
+      "FRET_DIAG_WGPU_ALLOCATOR_REPORT_EVERY_N_FRAMES": 600,
+      "FRET_DIAG_WGPU_REPORT": 1,
+      "FRET_DIAG_WGPU_REPORT_EVERY_N_FRAMES": 600,
+
+      "FRET_IMAGE_HEAVY_DEMO_DROP_AFTER_FRAMES": 200,
+      "FRET_IMAGE_HEAVY_DEMO_POLL_AFTER_DROP": 1
+    }
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "wait_frames", "n": 10 },
+
+    { "type": "reset_diagnostics" },
+    { "type": "wait_frames", "n": 1200 },
+    { "type": "capture_bundle", "label": "image-heavy-memory-steady-after-drop" }
+  ]
+}
+
