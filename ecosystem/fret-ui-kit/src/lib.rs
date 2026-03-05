@@ -174,6 +174,7 @@ macro_rules! ui_into_element_render_once {
     };
 }
 
+pub mod activate;
 pub mod colors;
 pub mod command;
 mod corners4;
@@ -210,6 +211,9 @@ mod sizing;
 mod style;
 mod styled;
 
+pub use activate::{
+    on_activate, on_activate_notify, on_activate_request_redraw, on_activate_request_redraw_notify,
+};
 pub use corners4::Corners4;
 pub use edges4::{Edges4, MarginEdge};
 pub use image_metadata::{ImageMetadata, ImageMetadataStore, with_image_metadata_store_mut};
@@ -258,6 +262,10 @@ pub mod prelude {
     pub use crate::declarative::style;
     pub use crate::declarative::{CachedSubtreeExt, CachedSubtreeProps};
     pub use crate::ui;
+    pub use crate::{
+        on_activate, on_activate_notify, on_activate_request_redraw,
+        on_activate_request_redraw_notify,
+    };
 
     #[cfg(feature = "imui")]
     pub use crate::imui::UiWriterUiKitExt as _;

@@ -35,6 +35,7 @@ use fret_ui::element::{
 use fret_ui::{ElementContext, Invalidation, Theme, UiTree};
 use fret_ui_kit::custom_effects::CustomEffectProgramV2;
 use fret_ui_kit::declarative::ModelWatchExt as _;
+use fret_ui_kit::on_activate_request_redraw;
 use fret_ui_kit::ui;
 use fret_ui_kit::{Space, UiExt};
 use fret_ui_shadcn as shadcn;
@@ -487,7 +488,7 @@ impl CustomEffectV2IdentityWebDriver {
         let mix01 = Self::watch_first_f32(cx, &controls.mix01, 0.65).clamp(0.0, 1.0);
 
         let reset_controls = controls.clone();
-        let reset: fret_ui::action::OnActivate = Arc::new(move |host, acx, _reason| {
+        let reset = on_activate_request_redraw(move |host| {
             let models = host.models_mut();
             let _ = models.update(&reset_controls.enabled, |v| *v = true);
             let _ = models.update(&reset_controls.mode, |v| *v = Some(Arc::from("backdrop")));
@@ -496,7 +497,6 @@ impl CustomEffectV2IdentityWebDriver {
             let _ = models.update(&reset_controls.uv_span, |v| *v = vec![1.0]);
             let _ = models.update(&reset_controls.mix01, |v| *v = vec![0.65]);
             let _ = models.update(&reset_controls.debug_input, |v| *v = false);
-            host.request_redraw(acx.window);
         });
 
         let mut layout = LayoutStyle::default();
