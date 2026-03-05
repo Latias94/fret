@@ -58,7 +58,7 @@ impl MessageActions {
     }
 
     pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let layout = self.layout.merge(LayoutRefinement::default().w_full());
+        let layout = self.layout;
         let justify = self.justify;
         let children = self.children;
 

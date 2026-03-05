@@ -69,7 +69,15 @@ impl Message {
 
         let gap = self.gap;
         let children = self.children;
-        let layout = self.layout.merge(LayoutRefinement::default().w_full());
+        let layout = {
+            let base = LayoutRefinement::default().w_full().max_w_percent(95.0);
+            let merged = self.layout.merge(base);
+            if self.from == MessageRole::User {
+                merged.ml_auto()
+            } else {
+                merged
+            }
+        };
         let inner_layout = if self.from == MessageRole::User {
             LayoutRefinement::default().min_w_0()
         } else {
@@ -182,13 +190,17 @@ impl MessageContent {
         };
 
         let chrome = base_chrome.merge(self.chrome);
-        let base_layout = if self.from == MessageRole::User {
-            // User messages should size to their bubble content.
-            LayoutRefinement::default().min_w_0()
-        } else {
+        let base_layout = {
+            let mut layout = LayoutRefinement::default()
+                .min_w_0()
+                .max_w_full()
+                .overflow_hidden();
             // Assistant/system/tool messages should participate in the full-width flow so text
             // measurement receives stable width constraints (avoids 0-width wrap explosions).
-            LayoutRefinement::default().w_full().min_w_0()
+            if self.from != MessageRole::User {
+                layout = layout.w_full();
+            }
+            layout
         };
         let layout = base_layout.merge(self.layout);
         let children = self.children;
