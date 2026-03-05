@@ -81,6 +81,7 @@ Examples adoption (authoring-noise reduction):
 - `apps/fret-examples/src/imui_floating_windows_demo.rs` (pressable overlap target uses `on_activate_notify`)
 - `apps/fret-examples/src/query_demo.rs` (current guidance sample: top-of-render model reads + transient App-effect scheduling)
 - `apps/fret-examples/src/hello_counter_demo.rs` (current guidance sample: action helper placement + card/layout subtree boundaries)
+- `apps/fret-examples/src/query_async_tokio_demo.rs` (current guidance sample: async query variant using the same transient + subtree-boundary patterns)
 
 Pointer-trigger authoring integration (v1 still dispatches through the command pipeline):
 
