@@ -22,6 +22,9 @@ Using `tools/diag-scripts/todo-memory-steady.json` on macOS/Metal:
     - `fretboard diag memory-summary --dir target/fret-diag-mem-todo-steady --sort-key wgpu_metal_current_allocated_size_bytes_max --top 5`
   - Optional macOS-only hint for the largest `vmmap` buckets:
     - `fretboard diag memory-summary --dir target/fret-diag-mem-todo-steady --vmmap-regions-sorted-top`
+  - Aggregate macOS `vmmap -sortBySize` top-dirty regions across samples (helps attribute `owned unmapped memory`):
+    - `fretboard diag memory-summary --dir target/fret-diag-mem-todo-steady --vmmap-regions-sorted-agg`
+    - If pointing at a parent dir with multiple dated runs, recursion is enabled by default (bounded); disable via `--no-recursive`.
 
 - Repeat sample (N=5; `target/release/todo_demo`; `--env FRET_DIAG_WGPU_ALLOCATOR_REPORT=1`):
   - `macos_vmmap_steady.physical_footprint_peak_bytes`: 358,612,992 .. 419,325,542 (~342.0 .. 399.9 MiB)

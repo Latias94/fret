@@ -56,6 +56,11 @@ pub(crate) fn cmd_memory_summary(
     let mut sort_key: String = "macos_physical_footprint_peak_bytes".to_string();
     let mut include_regions_sorted_top = false;
     let mut top_sessions: Option<usize> = None;
+    let mut include_regions_sorted_agg = false;
+    let mut regions_sorted_agg_top: usize = 10;
+    let mut no_recursive = false;
+    let mut recursive_max_depth: usize = 3;
+    let mut recursive_max_samples: usize = 200;
 
     let mut i: usize = 0;
     while i < rest.len() {
@@ -78,6 +83,47 @@ pub(crate) fn cmd_memory_summary(
                 include_regions_sorted_top = true;
                 i += 1;
             }
+            "--vmmap-regions-sorted-agg" => {
+                include_regions_sorted_agg = true;
+                i += 1;
+            }
+            "--vmmap-regions-sorted-agg-top" => {
+                let Some(v) = rest.get(i + 1) else {
+                    return Err("missing value for --vmmap-regions-sorted-agg-top".to_string());
+                };
+                regions_sorted_agg_top = v.parse::<usize>().map_err(|e| {
+                    format!("invalid value for --vmmap-regions-sorted-agg-top: {e}")
+                })?;
+                if regions_sorted_agg_top == 0 {
+                    return Err("--vmmap-regions-sorted-agg-top must be >= 1".to_string());
+                }
+                i += 2;
+            }
+            "--no-recursive" => {
+                no_recursive = true;
+                i += 1;
+            }
+            "--max-depth" => {
+                let Some(v) = rest.get(i + 1) else {
+                    return Err("missing value for --max-depth".to_string());
+                };
+                recursive_max_depth = v
+                    .parse::<usize>()
+                    .map_err(|e| format!("invalid value for --max-depth: {e}"))?;
+                i += 2;
+            }
+            "--max-samples" => {
+                let Some(v) = rest.get(i + 1) else {
+                    return Err("missing value for --max-samples".to_string());
+                };
+                recursive_max_samples = v
+                    .parse::<usize>()
+                    .map_err(|e| format!("invalid value for --max-samples: {e}"))?;
+                if recursive_max_samples == 0 {
+                    return Err("--max-samples must be >= 1".to_string());
+                }
+                i += 2;
+            }
             "--top-sessions" => {
                 let Some(v) = rest.get(i + 1) else {
                     return Err("missing value for --top-sessions".to_string());
@@ -93,7 +139,7 @@ pub(crate) fn cmd_memory_summary(
             }
             "--help" | "-h" => {
                 return Err(
-                    "usage: fretboard diag memory-summary [<base_or_session_out_dir>] [--within-session <id|latest|all>] [--top-sessions <n>] [--sort-key <key>] [--top <n>] [--vmmap-regions-sorted-top] [--json] [--out <path>]".to_string(),
+                    "usage: fretboard diag memory-summary [<base_or_session_out_dir>] [--within-session <id|latest|all>] [--top-sessions <n>] [--sort-key <key>] [--top <n>] [--vmmap-regions-sorted-top] [--vmmap-regions-sorted-agg] [--vmmap-regions-sorted-agg-top <n>] [--no-recursive] [--max-depth <n>] [--max-samples <n>] [--json] [--out <path>]".to_string(),
                 );
             }
             other if other.starts_with('-') => {
@@ -116,11 +162,26 @@ pub(crate) fn cmd_memory_summary(
 
     validate_sort_key(&sort_key)?;
 
-    let sample_dirs = resolve_sample_dirs(&src, within_session.as_deref(), top_sessions)?;
+    let mut sample_dirs = resolve_sample_dirs(&src, within_session.as_deref(), top_sessions)?;
+    if sample_dirs.is_empty()
+        && src.is_dir()
+        && !no_recursive
+        && recursive_max_depth > 0
+        && recursive_max_samples > 0
+    {
+        sample_dirs = resolve_sample_dirs_recursive(
+            &src,
+            within_session.as_deref(),
+            top_sessions,
+            recursive_max_depth,
+            recursive_max_samples,
+        )?;
+    }
     if sample_dirs.is_empty() {
         return Err(format!(
             "no diagnostics samples found under: {}\n\
-hint: run with `--session-auto` (recommended) so multiple samples appear under `sessions/`",
+hint: point at a session root, a base dir containing `sessions/`, or a parent dir with multiple dated out dirs.\n\
+hint: run with `--session-auto` (recommended) so samples appear under `<dir>/sessions/<session_id>/`",
             src.display()
         ));
     }
@@ -140,7 +201,14 @@ hint: ensure each session root contains `evidence.index.json`",
         ));
     }
 
-    let report = build_report(&src, &sort_key, top_rows.max(1), &rows);
+    let report = build_report(
+        &src,
+        &sort_key,
+        top_rows.max(1),
+        &rows,
+        include_regions_sorted_agg,
+        regions_sorted_agg_top.max(1),
+    );
     let output_bytes: Vec<u8> = if json {
         serde_json::to_vec_pretty(&report).map_err(|e| e.to_string())?
     } else {
@@ -222,6 +290,113 @@ hint: list sessions via `fretboard diag list sessions --dir {}`",
     }
 
     Ok(Vec::new())
+}
+
+fn resolve_sample_dirs_recursive(
+    src: &Path,
+    within_session: Option<&str>,
+    top_sessions: Option<usize>,
+    max_depth: usize,
+    max_samples: usize,
+) -> Result<Vec<(String, PathBuf)>, String> {
+    use std::collections::{HashSet, VecDeque};
+
+    let mut out: Vec<(String, PathBuf)> = Vec::new();
+    let mut q: VecDeque<(PathBuf, usize)> = VecDeque::new();
+    q.push_back((src.to_path_buf(), 0));
+
+    let mut seen_dirs: HashSet<String> = HashSet::new();
+    let mut visited_dirs: usize = 0;
+
+    const MAX_VISITED_DIRS: usize = 4000;
+
+    while let Some((dir, depth)) = q.pop_front() {
+        if out.len() >= max_samples {
+            break;
+        }
+        if visited_dirs >= MAX_VISITED_DIRS {
+            break;
+        }
+        if !dir.is_dir() {
+            continue;
+        }
+        let key = dir.to_string_lossy().to_string();
+        if !seen_dirs.insert(key) {
+            continue;
+        }
+        visited_dirs = visited_dirs.saturating_add(1);
+
+        let name = dir.file_name().and_then(|s| s.to_str()).unwrap_or("");
+        if name.starts_with('.') || name == ".git" || name == "repo-ref" || name == "node_modules" {
+            continue;
+        }
+
+        if resolve::looks_like_diag_session_root(&dir) {
+            let id = rel_sample_id(src, &dir);
+            out.push((id, dir));
+            continue;
+        }
+
+        if dir.join(crate::session::SESSIONS_DIRNAME).is_dir() {
+            let base_rel = rel_sample_id(src, &dir);
+            let picks = resolve_sample_dirs(&dir, within_session, top_sessions)?;
+            for (sid, session_dir) in picks {
+                if out.len() >= max_samples {
+                    break;
+                }
+                let id = if base_rel == "." || base_rel.is_empty() {
+                    sid
+                } else {
+                    format!("{base_rel}/sessions/{sid}")
+                };
+                out.push((id, session_dir));
+            }
+            continue;
+        }
+
+        if dir.join("evidence.index.json").is_file()
+            || dir.join("resource.footprint.json").is_file()
+        {
+            let id = rel_sample_id(src, &dir);
+            out.push((id, dir));
+            continue;
+        }
+
+        if depth >= max_depth {
+            continue;
+        }
+
+        let iter = match std::fs::read_dir(&dir) {
+            Ok(it) => it,
+            Err(_) => continue,
+        };
+        for entry in iter.flatten() {
+            if out.len() >= max_samples {
+                break;
+            }
+            let child = entry.path();
+            if !child.is_dir() {
+                continue;
+            }
+            q.push_back((child, depth + 1));
+        }
+    }
+
+    if out.len() > max_samples {
+        out.truncate(max_samples);
+    }
+
+    Ok(out)
+}
+
+fn rel_sample_id(root: &Path, dir: &Path) -> String {
+    let rel = dir.strip_prefix(root).unwrap_or(dir);
+    let s = rel.to_string_lossy().replace('\\', "/");
+    if s.trim().is_empty() {
+        ".".to_string()
+    } else {
+        s
+    }
 }
 
 fn read_sample_row(
@@ -338,6 +513,8 @@ fn build_report(
     sort_key: &str,
     top: usize,
     rows: &[MemorySampleRow],
+    include_regions_sorted_agg: bool,
+    regions_sorted_agg_top: usize,
 ) -> serde_json::Value {
     let mut sorted: Vec<MemorySampleRow> = rows.to_vec();
     sorted.sort_by(|a, b| {
@@ -370,7 +547,7 @@ fn build_report(
         .map(|r| row_to_json(r))
         .collect::<Vec<_>>();
 
-    serde_json::json!({
+    let mut out = serde_json::json!({
         "schema_version": 1,
         "kind": "memory_summary",
         "src": src.display().to_string(),
@@ -379,6 +556,103 @@ fn build_report(
         "top": top,
         "fields": fields,
         "top_rows": top_rows,
+    });
+
+    if include_regions_sorted_agg {
+        if let Some(obj) = out.as_object_mut() {
+            obj.insert(
+                "vmmap_regions_sorted_agg".to_string(),
+                vmmap_regions_sorted_agg(rows, regions_sorted_agg_top.max(1)),
+            );
+        }
+    }
+
+    out
+}
+
+fn vmmap_regions_sorted_agg(rows: &[MemorySampleRow], top: usize) -> serde_json::Value {
+    use std::collections::BTreeMap;
+
+    let mut by_region_type: BTreeMap<String, Vec<u64>> = BTreeMap::new();
+    let mut samples_present: usize = 0;
+
+    for row in rows {
+        let fp_path = row.out_dir.join("resource.footprint.json");
+        let Some(v) = crate::util::read_json_value(&fp_path) else {
+            continue;
+        };
+        let regions_sorted = v
+            .get("macos_vmmap_regions_sorted_steady")
+            .or_else(|| v.get("macos_vmmap_regions_sorted"));
+        let Some(top_dirty) = regions_sorted
+            .and_then(|v| v.get("tables"))
+            .and_then(|v| v.get("regions"))
+            .and_then(|v| v.get("top_dirty"))
+            .and_then(|v| v.as_array())
+        else {
+            continue;
+        };
+
+        samples_present = samples_present.saturating_add(1);
+
+        let mut sample_sums: BTreeMap<String, u64> = BTreeMap::new();
+        for entry in top_dirty {
+            let Some(region_type) = entry.get("region_type").and_then(|v| v.as_str()) else {
+                continue;
+            };
+            let dirty = entry
+                .get("dirty_bytes")
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            if dirty == 0 {
+                continue;
+            }
+            *sample_sums.entry(region_type.to_string()).or_default() = sample_sums
+                .get(region_type)
+                .copied()
+                .unwrap_or(0)
+                .saturating_add(dirty);
+        }
+
+        for (k, dirty_sum) in sample_sums {
+            by_region_type.entry(k).or_default().push(dirty_sum);
+        }
+    }
+
+    let mut rows_out: Vec<(String, U64Stats)> = Vec::new();
+    for (k, mut values) in by_region_type {
+        if values.is_empty() {
+            continue;
+        }
+        values.sort_unstable();
+        let stats = U64Stats {
+            count_present: values.len(),
+            min: *values.first().unwrap_or(&0),
+            p50: quantile_sorted(&values, 0.50),
+            p90: quantile_sorted(&values, 0.90),
+            max: *values.last().unwrap_or(&0),
+        };
+        rows_out.push((k, stats));
+    }
+
+    rows_out.sort_by(|a, b| b.1.p90.cmp(&a.1.p90).then_with(|| a.0.cmp(&b.0)));
+    if rows_out.len() > top {
+        rows_out.truncate(top);
+    }
+
+    serde_json::json!({
+        "schema_version": 1,
+        "kind": "vmmap_regions_sorted_agg",
+        "samples_present": samples_present,
+        "top": top,
+        "by_region_type": rows_out.into_iter().map(|(k, s)| serde_json::json!({
+            "region_type": k,
+            "present": s.count_present,
+            "min": s.min,
+            "p50": s.p50,
+            "p90": s.p90,
+            "max": s.max,
+        })).collect::<Vec<_>>(),
     })
 }
 
@@ -565,6 +839,38 @@ fn human_report(report: &serde_json::Value) -> String {
             out.push_str(&format!(
                 "    - {id}: footprint_peak={peak} owned_unmapped_dirty={owned} io_surface_dirty={io_surface} io_accel_dirty={io_accel} metal_alloc_max={metal_max} dir={dir}\n"
             ));
+        }
+    }
+
+    if let Some(agg) = report
+        .get("vmmap_regions_sorted_agg")
+        .and_then(|v| v.as_object())
+    {
+        let present = agg
+            .get("samples_present")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0);
+        out.push_str(&format!(
+            "  vmmap_regions_sorted_agg: samples_present={present}\n"
+        ));
+        if let Some(rows) = agg.get("by_region_type").and_then(|v| v.as_array()) {
+            for r in rows {
+                let Some(k) = r.get("region_type").and_then(|v| v.as_str()) else {
+                    continue;
+                };
+                let p = r.get("present").and_then(|v| v.as_u64()).unwrap_or(0);
+                let min = r.get("min").and_then(|v| v.as_u64()).unwrap_or(0);
+                let p50 = r.get("p50").and_then(|v| v.as_u64()).unwrap_or(0);
+                let p90 = r.get("p90").and_then(|v| v.as_u64()).unwrap_or(0);
+                let max = r.get("max").and_then(|v| v.as_u64()).unwrap_or(0);
+                out.push_str(&format!(
+                    "    - {k}: present={p} min={} p50={} p90={} max={}\n",
+                    human_bytes(min),
+                    human_bytes(p50),
+                    human_bytes(p90),
+                    human_bytes(max),
+                ));
+            }
         }
     }
 
