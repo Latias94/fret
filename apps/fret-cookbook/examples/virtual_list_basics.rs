@@ -237,38 +237,32 @@ impl View for VirtualListBasicsView {
             )
             .test_id(TEST_ID_LIST);
 
-        cx.on_action::<act::RotateItems>({
+        cx.on_action_notify_models::<act::RotateItems>({
             let items = self.items.clone();
-            move |host, acx| {
-                let _ = host.models_mut().update(&items, |v| {
-                    let items = Arc::make_mut(v);
-                    if items.is_empty() {
-                        return;
-                    }
-                    let by = 37 % items.len();
-                    items.rotate_left(by);
-                });
-                host.request_redraw(acx.window);
-                host.notify(acx);
-                true
+            move |models| {
+                models
+                    .update(&items, |v| {
+                        let items = Arc::make_mut(v);
+                        if items.is_empty() {
+                            return;
+                        }
+                        let by = 37 % items.len();
+                        items.rotate_left(by);
+                    })
+                    .is_ok()
             }
         });
 
-        cx.on_action::<act::ScrollToTarget>({
+        cx.on_action_notify_models::<act::ScrollToTarget>({
             let items = self.items.clone();
             let reversed = self.reversed.clone();
             let scroll = self.scroll.clone();
-            move |host, acx| {
-                let items = host
-                    .models_mut()
+            move |models| {
+                let items = models
                     .read(&items, Arc::clone)
                     .ok()
                     .unwrap_or_else(|| Arc::new(Vec::new()));
-                let reversed = host
-                    .models_mut()
-                    .read(&reversed, |v| *v)
-                    .ok()
-                    .unwrap_or(false);
+                let reversed = models.read(&reversed, |v| *v).ok().unwrap_or(false);
 
                 let pos = items.iter().position(|it| it.id == TARGET_ID).unwrap_or(0);
                 let index = if reversed {
@@ -278,25 +272,17 @@ impl View for VirtualListBasicsView {
                 };
 
                 scroll.scroll_to_item(index, ScrollStrategy::Start);
-                host.request_redraw(acx.window);
-                host.notify(acx);
                 true
             }
         });
 
-        cx.on_action::<act::ScrollJump>({
+        cx.on_action_notify_models::<act::ScrollJump>({
             let jump = self.jump.clone();
             let scroll = self.scroll.clone();
-            move |host, acx| {
-                let raw = host
-                    .models_mut()
-                    .read(&jump, Clone::clone)
-                    .ok()
-                    .unwrap_or_default();
+            move |models| {
+                let raw = models.read(&jump, Clone::clone).ok().unwrap_or_default();
                 let index = raw.trim().parse::<usize>().ok().unwrap_or(0);
                 scroll.scroll_to_item(index, ScrollStrategy::Start);
-                host.request_redraw(acx.window);
-                host.notify(acx);
                 true
             }
         });
