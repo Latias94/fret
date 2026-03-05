@@ -215,6 +215,7 @@ Prefer `cargo nextest run` when available.
   - `pwsh tools/gate_no_stack_in_cookbook.ps1`
   - `pwsh tools/gate_no_stack_in_examples.ps1`
   - `pwsh tools/gate_no_stack_in_ui_gallery_shell.ps1`
+  - `pwsh tools/gate_no_public_stack_in_ui_kit.ps1` (keep legacy stack helpers internal-only)
 
 ---
 
