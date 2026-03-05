@@ -12,7 +12,6 @@ use fret_runtime::{
 use fret_ui::ElementContext;
 use fret_ui::element::{LayoutStyle, Length, PointerRegionProps, SemanticsDecoration, SizeStyle};
 use fret_ui_kit::declarative::ModelWatchExt as _;
-use fret_ui_kit::declarative::stack;
 use fret_ui_kit::{ColorRef, LayoutRefinement, Space, ui};
 use fret_ui_shadcn::button::{Button, ButtonSize, ButtonVariant};
 use fret_ui_shadcn::{Card, CardContent, CardDescription, CardHeader, CardTitle};
@@ -223,13 +222,8 @@ fn view(
             ..Default::default()
         },
         move |cx| {
-            vec![stack::hstack(
-                cx,
-                stack::HStackProps::default()
-                    .gap(Space::N3)
-                    .items_center()
-                    .layout(LayoutRefinement::default().w_full()),
-                move |cx| {
+            vec![
+                ui::h_flex(move |cx| {
                     let mut drag_region_props = PointerRegionProps::default();
                     drag_region_props.layout = LayoutStyle {
                         size: SizeStyle {
@@ -265,43 +259,44 @@ fn view(
                                 .role(SemanticsRole::Button),
                         );
 
-                    let header_controls = stack::hstack(
-                        cx,
-                        stack::HStackProps::default()
-                            .gap(Space::N2)
-                            .items_center()
-                            .layout(LayoutRefinement::default().flex_shrink_0()),
-                        move |cx| {
-                            vec![
-                                Button::new("Blink")
-                                    .variant(ButtonVariant::Secondary)
-                                    .size(ButtonSize::Sm)
-                                    .on_click(CommandId::from(CMD_BLINK))
-                                    .test_id(TEST_ID_BLINK)
-                                    .into_element(cx),
-                                Button::new(if always_on_top {
-                                    "Always on top: on"
-                                } else {
-                                    "Always on top: off"
-                                })
-                                .variant(ButtonVariant::Outline)
+                    let header_controls = ui::h_row(move |cx| {
+                        vec![
+                            Button::new("Blink")
+                                .variant(ButtonVariant::Secondary)
                                 .size(ButtonSize::Sm)
-                                .on_click(CommandId::from(CMD_TOGGLE_ALWAYS_ON_TOP))
-                                .test_id(TEST_ID_TOGGLE_ALWAYS_ON_TOP)
+                                .on_click(CommandId::from(CMD_BLINK))
+                                .test_id(TEST_ID_BLINK)
                                 .into_element(cx),
-                                Button::new("Quit")
-                                    .variant(ButtonVariant::Destructive)
-                                    .size(ButtonSize::Sm)
-                                    .on_click(CommandId::from(CMD_QUIT))
-                                    .test_id(TEST_ID_QUIT)
-                                    .into_element(cx),
-                            ]
-                        },
-                    );
+                            Button::new(if always_on_top {
+                                "Always on top: on"
+                            } else {
+                                "Always on top: off"
+                            })
+                            .variant(ButtonVariant::Outline)
+                            .size(ButtonSize::Sm)
+                            .on_click(CommandId::from(CMD_TOGGLE_ALWAYS_ON_TOP))
+                            .test_id(TEST_ID_TOGGLE_ALWAYS_ON_TOP)
+                            .into_element(cx),
+                            Button::new("Quit")
+                                .variant(ButtonVariant::Destructive)
+                                .size(ButtonSize::Sm)
+                                .on_click(CommandId::from(CMD_QUIT))
+                                .test_id(TEST_ID_QUIT)
+                                .into_element(cx),
+                        ]
+                    })
+                    .gap(Space::N2)
+                    .items_center()
+                    .layout(LayoutRefinement::default().flex_shrink_0())
+                    .into_element(cx);
 
                     vec![drag_region, header_controls]
-                },
-            )]
+                })
+                .gap(Space::N3)
+                .items_center()
+                .layout(LayoutRefinement::default().w_full())
+                .into_element(cx),
+            ]
         },
     );
 
@@ -314,69 +309,62 @@ fn view(
             .into_element(cx),
         ])
         .into_element(cx),
-        CardContent::new([stack::vstack(
-            cx,
-            stack::VStackProps::default().gap_y(Space::N3),
-            move |cx| {
-                vec![
-                    ui::text(style_text)
-                        .font_monospace()
-                        .text_sm()
-                        .into_element(cx)
-                        .attach_semantics(
-                            SemanticsDecoration::default().test_id(TEST_ID_STYLE_TEXT),
-                        ),
-                    ui::text(status)
-                        .text_sm()
-                        .text_color(ColorRef::Color(color_muted_foreground))
-                        .into_element(cx),
-                ]
-            },
-        )])
+        CardContent::new([ui::v_flex(move |cx| {
+            [
+                ui::text(style_text)
+                    .font_monospace()
+                    .text_sm()
+                    .into_element(cx)
+                    .attach_semantics(SemanticsDecoration::default().test_id(TEST_ID_STYLE_TEXT)),
+                ui::text(status)
+                    .text_sm()
+                    .text_color(ColorRef::Color(color_muted_foreground))
+                    .into_element(cx),
+            ]
+        })
+        .gap(Space::N3)
+        .into_element(cx)])
         .into_element(cx),
     ])
     .into_element(cx);
 
-    let resize_row = stack::hstack(
-        cx,
-        stack::HStackProps::default()
-            .layout(LayoutRefinement::default().w_full())
-            .justify_end(),
-        move |cx| {
-            let mut resize_props = PointerRegionProps::default();
-            resize_props.layout = LayoutStyle {
-                size: SizeStyle {
-                    width: Length::Px(Px(24.0)),
-                    height: Length::Px(Px(24.0)),
-                    ..Default::default()
-                },
+    let resize_row = ui::h_flex(move |cx| {
+        let mut resize_props = PointerRegionProps::default();
+        resize_props.layout = LayoutStyle {
+            size: SizeStyle {
+                width: Length::Px(Px(24.0)),
+                height: Length::Px(Px(24.0)),
                 ..Default::default()
-            };
+            },
+            ..Default::default()
+        };
 
-            let resize_handle = cx
-                .pointer_region(resize_props, |cx| {
-                    cx.pointer_region_on_pointer_down(Arc::new(|host, acx, down| {
-                        if down.button != MouseButton::Left {
-                            return false;
-                        }
-                        host.push_effect(Effect::Window(WindowRequest::BeginResize {
-                            window: acx.window,
-                            direction: WindowResizeDirection::Se,
-                        }));
-                        true
+        let resize_handle = cx
+            .pointer_region(resize_props, |cx| {
+                cx.pointer_region_on_pointer_down(Arc::new(|host, acx, down| {
+                    if down.button != MouseButton::Left {
+                        return false;
+                    }
+                    host.push_effect(Effect::Window(WindowRequest::BeginResize {
+                        window: acx.window,
+                        direction: WindowResizeDirection::Se,
                     }));
+                    true
+                }));
 
-                    vec![ui::text("↘").font_semibold().into_element(cx)]
-                })
-                .attach_semantics(
-                    SemanticsDecoration::default()
-                        .test_id(TEST_ID_RESIZE_SE)
-                        .role(SemanticsRole::Button),
-                );
+                vec![ui::text("↘").font_semibold().into_element(cx)]
+            })
+            .attach_semantics(
+                SemanticsDecoration::default()
+                    .test_id(TEST_ID_RESIZE_SE)
+                    .role(SemanticsRole::Button),
+            );
 
-            vec![resize_handle]
-        },
-    );
+        vec![resize_handle]
+    })
+    .layout(LayoutRefinement::default().w_full())
+    .justify_end()
+    .into_element(cx);
 
     let root = cx
         .container(
@@ -392,13 +380,12 @@ fn view(
                 ..Default::default()
             },
             move |cx| {
-                vec![stack::vstack(
-                    cx,
-                    stack::VStackProps::default()
-                        .gap_y(Space::N4)
-                        .layout(LayoutRefinement::default().w_full().h_full()),
-                    move |_cx| vec![header, content, resize_row],
-                )]
+                vec![
+                    ui::v_flex(move |_cx| [header, content, resize_row])
+                        .gap(Space::N4)
+                        .layout(LayoutRefinement::default().w_full().h_full())
+                        .into_element(cx),
+                ]
             },
         )
         .attach_semantics(SemanticsDecoration::default().test_id(TEST_ID_ROOT));

@@ -11,7 +11,6 @@ use fret_runtime::{
 };
 use fret_ui::ElementContext;
 use fret_ui::element::{LayoutStyle, Length, SemanticsDecoration, SizeStyle};
-use fret_ui_kit::declarative::stack;
 use fret_ui_kit::{ColorRef, LayoutRefinement, Space, ui};
 use fret_ui_shadcn::{Card, CardContent, CardDescription, CardHeader, CardTitle};
 
@@ -200,12 +199,8 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut WindowState) -> ViewElements 
                     .into_element(cx),
                 ])
                 .into_element(cx),
-                CardContent::new([stack::vstack(
-                    cx,
-                    stack::VStackProps::default()
-                        .gap_y(Space::N3)
-                        .layout(LayoutRefinement::default().w_full()),
-                    move |cx| {
+                CardContent::new([
+                    ui::v_flex(move |cx| {
                         let logical_line =
                             ui::text(format!("logical_window_id={logical}"))
                                 .font_monospace()
@@ -215,9 +210,12 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut WindowState) -> ViewElements 
                             .text_sm()
                             .text_color(ColorRef::Color(color_muted_foreground))
                             .into_element(cx);
-                        vec![logical_line, status_line]
-                    },
-                )])
+                        [logical_line, status_line]
+                    })
+                    .gap(Space::N3)
+                    .layout(LayoutRefinement::default().w_full())
+                    .into_element(cx),
+                ])
                 .into_element(cx),
             ])
             .into_element(cx)

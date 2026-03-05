@@ -14,7 +14,7 @@ use fret_core::scene::{Color, DropShadowV1, EffectChain, EffectMode, EffectQuali
 use fret_core::{Corners, Edges, Point, Px};
 use fret_runtime::Model;
 use fret_ui::element::{ContainerProps, LayoutStyle, Length, Overflow, SizeStyle, SpacerProps};
-use fret_ui_kit::{LayoutRefinement, Space};
+use fret_ui_kit::{LayoutRefinement, Space, ui};
 use fret_ui_shadcn as shadcn;
 
 fn srgb(r: u8, g: u8, b: u8, a: f32) -> Color {
@@ -174,45 +174,40 @@ impl View for DropShadowDemoView {
                         let cols = if stress { 4 } else { 2 };
                         let rows = if stress { 4 } else { 2 };
 
-                        let grid = shadcn::stack::vstack(
-                            cx,
-                            shadcn::stack::VStackProps::default()
-                                .gap(Space::N4)
-                                .items_center(),
-                            move |cx| {
-                                let mut out: Vec<AnyElement> = Vec::new();
-                                out.reserve(rows);
-                                for r in 0..rows {
-                                    let mut row_items = Vec::with_capacity(cols);
-                                    for c in 0..cols {
-                                        let i = r * cols + c;
-                                        row_items.push(card(
-                                            cx,
-                                            Arc::from(format!("Card {i}")),
-                                            Arc::from("Shadow behind content (scissored)"),
-                                            enabled,
-                                        ));
-                                    }
-                                    out.push(shadcn::stack::hstack(
+                        let grid = ui::v_flex(move |cx| {
+                            let mut out: Vec<AnyElement> = Vec::new();
+                            out.reserve(rows);
+                            for r in 0..rows {
+                                let mut row_items = Vec::with_capacity(cols);
+                                for c in 0..cols {
+                                    let i = r * cols + c;
+                                    row_items.push(card(
                                         cx,
-                                        shadcn::stack::HStackProps::default()
-                                            .gap(Space::N4)
-                                            .items_center(),
-                                        move |_cx| row_items,
+                                        Arc::from(format!("Card {i}")),
+                                        Arc::from("Shadow behind content (scissored)"),
+                                        enabled,
                                     ));
                                 }
-                                out
-                            },
-                        );
+                                out.push(
+                                    ui::h_row(move |_cx| row_items)
+                                        .gap(Space::N4)
+                                        .items_center()
+                                        .into_element(cx),
+                                );
+                            }
+                            out
+                        })
+                        .gap(Space::N4)
+                        .items_center()
+                        .into_element(cx);
 
-                        vec![shadcn::stack::vstack(
-                            cx,
-                            shadcn::stack::VStackProps::default()
+                        vec![
+                            ui::v_flex(move |_cx| [grid])
                                 .layout(LayoutRefinement::default().size_full())
                                 .justify_center()
-                                .items_center(),
-                            move |_cx| vec![grid],
-                        )]
+                                .items_center()
+                                .into_element(cx),
+                        ]
                     },
                 );
 
@@ -239,12 +234,8 @@ impl View for DropShadowDemoView {
                 ..Default::default()
             },
             move |cx| {
-                vec![shadcn::stack::vstack(
-                    cx,
-                    shadcn::stack::VStackProps::default()
-                        .gap(Space::N3)
-                        .items_stretch(),
-                    |cx| {
+                vec![
+                    ui::v_flex(|cx| {
                         vec![
                             shadcn::typography::h4(cx, "Drop shadow demo"),
                             shadcn::typography::muted(
@@ -252,56 +243,50 @@ impl View for DropShadowDemoView {
                                 "Toggle DropShadowV1 and a small stress grid.",
                             ),
                             shadcn::Separator::new().into_element(cx),
-                            shadcn::stack::hstack(
-                                cx,
-                                shadcn::stack::HStackProps::default()
-                                    .gap(Space::N2)
-                                    .items_center(),
-                                |cx| {
-                                    vec![
-                                        shadcn::Switch::new(self.st.enabled.clone())
-                                            .a11y_label("Enable drop shadow")
-                                            .test_id("drop-shadow-switch-enabled")
-                                            .into_element(cx),
-                                        shadcn::Label::new("Enable shadow").into_element(cx),
-                                    ]
-                                },
-                            ),
-                            shadcn::stack::hstack(
-                                cx,
-                                shadcn::stack::HStackProps::default()
-                                    .gap(Space::N2)
-                                    .items_center(),
-                                |cx| {
-                                    vec![
-                                        shadcn::Switch::new(self.st.stress.clone())
-                                            .a11y_label("Enable stress grid")
-                                            .test_id("drop-shadow-switch-stress")
-                                            .into_element(cx),
-                                        shadcn::Label::new("Stress grid").into_element(cx),
-                                    ]
-                                },
-                            ),
+                            ui::h_row(|cx| {
+                                [
+                                    shadcn::Switch::new(self.st.enabled.clone())
+                                        .a11y_label("Enable drop shadow")
+                                        .test_id("drop-shadow-switch-enabled")
+                                        .into_element(cx),
+                                    shadcn::Label::new("Enable shadow").into_element(cx),
+                                ]
+                            })
+                            .gap(Space::N2)
+                            .items_center()
+                            .into_element(cx),
+                            ui::h_row(|cx| {
+                                [
+                                    shadcn::Switch::new(self.st.stress.clone())
+                                        .a11y_label("Enable stress grid")
+                                        .test_id("drop-shadow-switch-stress")
+                                        .into_element(cx),
+                                    shadcn::Label::new("Stress grid").into_element(cx),
+                                ]
+                            })
+                            .gap(Space::N2)
+                            .items_center()
+                            .into_element(cx),
                             shadcn::Separator::new().into_element(cx),
                             shadcn::typography::muted(
                                 cx,
                                 "Perf baseline suite: drop-shadow-v1-steady",
                             ),
                         ]
-                    },
-                )]
+                    })
+                    .gap(Space::N3)
+                    .items_stretch()
+                    .into_element(cx),
+                ]
             },
         );
 
-        let root = shadcn::stack::hstack(
-            cx,
-            shadcn::stack::HStackProps::default()
-                .layout(LayoutRefinement::default().size_full())
-                .items_stretch()
-                .gap(Space::N0),
-            move |_cx| vec![stage, inspector],
-        )
-        .test_id("drop-shadow-demo-root");
+        let root = ui::h_flex(move |_cx| [stage, inspector])
+            .layout(LayoutRefinement::default().size_full())
+            .items_stretch()
+            .gap(Space::N0)
+            .into_element(cx)
+            .test_id("drop-shadow-demo-root");
 
         root.into()
     }

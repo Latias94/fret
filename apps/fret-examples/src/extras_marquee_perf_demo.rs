@@ -2,7 +2,6 @@ use fret_app::App;
 use fret_bootstrap::ui_app_with_hooks;
 use fret_core::{AppWindowId, Px};
 use fret_ui::ElementContext;
-use fret_ui_kit::declarative::stack;
 use fret_ui_kit::{LayoutRefinement, Space, ui};
 
 struct ExtrasMarqueePerfState;
@@ -31,23 +30,22 @@ fn view(
     .item_gap(Space::N3)
     .into_element(cx);
 
-    let content = stack::vstack(
-        cx,
-        stack::VStackProps::default().gap_y(Space::N4).layout(
-            LayoutRefinement::default()
-                .w_full()
-                .mx(Space::N8)
-                .my(Space::N8),
-        ),
-        |cx| {
-            vec![
-                ui::text("Marquee perf probe (extras)")
-                    .font_semibold()
-                    .into_element(cx),
-                marquee,
-            ]
-        },
-    );
+    let content = ui::v_flex(|cx| {
+        [
+            ui::text("Marquee perf probe (extras)")
+                .font_semibold()
+                .into_element(cx),
+            marquee,
+        ]
+    })
+    .gap(Space::N4)
+    .layout(
+        LayoutRefinement::default()
+            .w_full()
+            .mx(Space::N8)
+            .my(Space::N8),
+    )
+    .into_element(cx);
 
     vec![content].into()
 }
