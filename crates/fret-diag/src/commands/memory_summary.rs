@@ -58,6 +58,8 @@ pub(crate) fn cmd_memory_summary(
     let mut top_sessions: Option<usize> = None;
     let mut include_regions_sorted_agg = false;
     let mut regions_sorted_agg_top: usize = 10;
+    let mut include_regions_sorted_detail_agg = false;
+    let mut regions_sorted_detail_agg_top: usize = 12;
     let mut no_recursive = false;
     let mut recursive_max_depth: usize = 3;
     let mut recursive_max_samples: usize = 200;
@@ -87,6 +89,10 @@ pub(crate) fn cmd_memory_summary(
                 include_regions_sorted_agg = true;
                 i += 1;
             }
+            "--vmmap-regions-sorted-detail-agg" => {
+                include_regions_sorted_detail_agg = true;
+                i += 1;
+            }
             "--vmmap-regions-sorted-agg-top" => {
                 let Some(v) = rest.get(i + 1) else {
                     return Err("missing value for --vmmap-regions-sorted-agg-top".to_string());
@@ -96,6 +102,20 @@ pub(crate) fn cmd_memory_summary(
                 })?;
                 if regions_sorted_agg_top == 0 {
                     return Err("--vmmap-regions-sorted-agg-top must be >= 1".to_string());
+                }
+                i += 2;
+            }
+            "--vmmap-regions-sorted-detail-agg-top" => {
+                let Some(v) = rest.get(i + 1) else {
+                    return Err(
+                        "missing value for --vmmap-regions-sorted-detail-agg-top".to_string()
+                    );
+                };
+                regions_sorted_detail_agg_top = v.parse::<usize>().map_err(|e| {
+                    format!("invalid value for --vmmap-regions-sorted-detail-agg-top: {e}")
+                })?;
+                if regions_sorted_detail_agg_top == 0 {
+                    return Err("--vmmap-regions-sorted-detail-agg-top must be >= 1".to_string());
                 }
                 i += 2;
             }
@@ -139,7 +159,7 @@ pub(crate) fn cmd_memory_summary(
             }
             "--help" | "-h" => {
                 return Err(
-                    "usage: fretboard diag memory-summary [<base_or_session_out_dir>] [--within-session <id|latest|all>] [--top-sessions <n>] [--sort-key <key>] [--top <n>] [--vmmap-regions-sorted-top] [--vmmap-regions-sorted-agg] [--vmmap-regions-sorted-agg-top <n>] [--no-recursive] [--max-depth <n>] [--max-samples <n>] [--json] [--out <path>]".to_string(),
+                    "usage: fretboard diag memory-summary [<base_or_session_out_dir>] [--within-session <id|latest|all>] [--top-sessions <n>] [--sort-key <key>] [--top <n>] [--vmmap-regions-sorted-top] [--vmmap-regions-sorted-agg] [--vmmap-regions-sorted-agg-top <n>] [--vmmap-regions-sorted-detail-agg] [--vmmap-regions-sorted-detail-agg-top <n>] [--no-recursive] [--max-depth <n>] [--max-samples <n>] [--json] [--out <path>]".to_string(),
                 );
             }
             other if other.starts_with('-') => {
@@ -208,6 +228,8 @@ hint: ensure each session root contains `evidence.index.json`",
         &rows,
         include_regions_sorted_agg,
         regions_sorted_agg_top.max(1),
+        include_regions_sorted_detail_agg,
+        regions_sorted_detail_agg_top.max(1),
     );
     let output_bytes: Vec<u8> = if json {
         serde_json::to_vec_pretty(&report).map_err(|e| e.to_string())?
@@ -515,6 +537,8 @@ fn build_report(
     rows: &[MemorySampleRow],
     include_regions_sorted_agg: bool,
     regions_sorted_agg_top: usize,
+    include_regions_sorted_detail_agg: bool,
+    regions_sorted_detail_agg_top: usize,
 ) -> serde_json::Value {
     let mut sorted: Vec<MemorySampleRow> = rows.to_vec();
     sorted.sort_by(|a, b| {
@@ -563,6 +587,15 @@ fn build_report(
             obj.insert(
                 "vmmap_regions_sorted_agg".to_string(),
                 vmmap_regions_sorted_agg(rows, regions_sorted_agg_top.max(1)),
+            );
+        }
+    }
+
+    if include_regions_sorted_detail_agg {
+        if let Some(obj) = out.as_object_mut() {
+            obj.insert(
+                "vmmap_regions_sorted_detail_agg".to_string(),
+                vmmap_regions_sorted_detail_agg(rows, regions_sorted_detail_agg_top.max(1)),
             );
         }
     }
@@ -654,6 +687,176 @@ fn vmmap_regions_sorted_agg(rows: &[MemorySampleRow], top: usize) -> serde_json:
             "max": s.max,
         })).collect::<Vec<_>>(),
     })
+}
+
+fn vmmap_regions_sorted_detail_agg(rows: &[MemorySampleRow], top: usize) -> serde_json::Value {
+    use std::collections::BTreeMap;
+
+    let mut by_key: BTreeMap<(String, String), Vec<u64>> = BTreeMap::new();
+    let mut samples_present: usize = 0;
+
+    for row in rows {
+        let fp_path = row.out_dir.join("resource.footprint.json");
+        let Some(v) = crate::util::read_json_value(&fp_path) else {
+            continue;
+        };
+        let regions_sorted = v
+            .get("macos_vmmap_regions_sorted_steady")
+            .or_else(|| v.get("macos_vmmap_regions_sorted"));
+        let Some(top_dirty) = regions_sorted
+            .and_then(|v| v.get("tables"))
+            .and_then(|v| v.get("regions"))
+            .and_then(|v| v.get("top_dirty"))
+            .and_then(|v| v.as_array())
+        else {
+            continue;
+        };
+
+        samples_present = samples_present.saturating_add(1);
+
+        let mut sample_sums: BTreeMap<(String, String), u64> = BTreeMap::new();
+        for entry in top_dirty {
+            let Some(region_type) = entry.get("region_type").and_then(|v| v.as_str()) else {
+                continue;
+            };
+            let dirty = entry
+                .get("dirty_bytes")
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            if dirty == 0 {
+                continue;
+            }
+            let detail = entry.get("detail").and_then(|v| v.as_str()).unwrap_or("");
+            let detail_key = normalize_vmmap_regions_sorted_detail_key(region_type, detail);
+            let key = (region_type.to_string(), detail_key);
+            let cur = sample_sums.get(&key).copied().unwrap_or(0);
+            sample_sums.insert(key, cur.saturating_add(dirty));
+        }
+
+        for (k, dirty_sum) in sample_sums {
+            by_key.entry(k).or_default().push(dirty_sum);
+        }
+    }
+
+    let mut rows_out: Vec<((String, String), U64Stats)> = Vec::new();
+    for (k, mut values) in by_key {
+        if values.is_empty() {
+            continue;
+        }
+        values.sort_unstable();
+        let stats = U64Stats {
+            count_present: values.len(),
+            min: *values.first().unwrap_or(&0),
+            p50: quantile_sorted(&values, 0.50),
+            p90: quantile_sorted(&values, 0.90),
+            max: *values.last().unwrap_or(&0),
+        };
+        rows_out.push((k, stats));
+    }
+
+    rows_out.sort_by(|a, b| b.1.p90.cmp(&a.1.p90).then_with(|| a.0.cmp(&b.0)));
+    if rows_out.len() > top {
+        rows_out.truncate(top);
+    }
+
+    serde_json::json!({
+        "schema_version": 1,
+        "kind": "vmmap_regions_sorted_detail_agg",
+        "samples_present": samples_present,
+        "top": top,
+        "by_region_type_detail": rows_out.into_iter().map(|((region_type, detail_key), s)| serde_json::json!({
+            "region_type": region_type,
+            "detail_key": detail_key,
+            "present": s.count_present,
+            "min": s.min,
+            "p50": s.p50,
+            "p90": s.p90,
+            "max": s.max,
+        })).collect::<Vec<_>>(),
+    })
+}
+
+fn normalize_vmmap_regions_sorted_detail_key(region_type: &str, detail: &str) -> String {
+    let tokens: Vec<&str> = detail.split_whitespace().collect();
+    let mut idx: usize = 0;
+
+    if tokens
+        .first()
+        .is_some_and(|t| t.contains('/') && t.len() <= 16)
+    {
+        idx += 1;
+    }
+    while idx < tokens.len()
+        && (tokens[idx].starts_with("SM=") || tokens[idx].starts_with("PURGE="))
+    {
+        idx += 1;
+    }
+
+    let rem = tokens.get(idx..).unwrap_or(&[]).join(" ");
+    let rem = rem.trim();
+    if rem.is_empty() {
+        return "(none)".to_string();
+    }
+
+    if region_type.eq_ignore_ascii_case("IOSurface") {
+        if let Some(q) = extract_single_quoted(rem) {
+            return format!("'{}'", q);
+        }
+        if rem.starts_with("SurfaceID:") {
+            return "SurfaceID".to_string();
+        }
+    }
+
+    if rem.starts_with("DefaultMallocZone_0x") || rem.starts_with("DefaultMallocZone_0X") {
+        return "DefaultMallocZone".to_string();
+    }
+
+    let mut out = rem.to_string();
+    out = redact_hex_addresses(&out);
+    if out.len() > 96 {
+        out.truncate(96);
+        out.push_str("...");
+    }
+    out
+}
+
+fn extract_single_quoted(s: &str) -> Option<String> {
+    let start = s.find('\'')?;
+    let rest = &s[start + 1..];
+    let end_rel = rest.find('\'')?;
+    let inner = &rest[..end_rel];
+    (!inner.trim().is_empty()).then_some(inner.trim().to_string())
+}
+
+fn redact_hex_addresses(s: &str) -> String {
+    // Replace any `0x<hex>` substring with `0x…` to avoid address churn.
+    let mut out = String::with_capacity(s.len());
+    let bytes = s.as_bytes();
+    let mut i: usize = 0;
+    while i < bytes.len() {
+        if bytes[i] == b'0' && i + 1 < bytes.len() && (bytes[i + 1] == b'x' || bytes[i + 1] == b'X')
+        {
+            let mut j = i + 2;
+            let mut any = false;
+            while j < bytes.len() {
+                let c = bytes[j] as char;
+                if c.is_ascii_hexdigit() {
+                    any = true;
+                    j += 1;
+                    continue;
+                }
+                break;
+            }
+            if any {
+                out.push_str("0x…");
+                i = j;
+                continue;
+            }
+        }
+        out.push(bytes[i] as char);
+        i += 1;
+    }
+    out
 }
 
 fn validate_sort_key(key: &str) -> Result<(), String> {
@@ -865,6 +1068,42 @@ fn human_report(report: &serde_json::Value) -> String {
                 let max = r.get("max").and_then(|v| v.as_u64()).unwrap_or(0);
                 out.push_str(&format!(
                     "    - {k}: present={p} min={} p50={} p90={} max={}\n",
+                    human_bytes(min),
+                    human_bytes(p50),
+                    human_bytes(p90),
+                    human_bytes(max),
+                ));
+            }
+        }
+    }
+
+    if let Some(agg) = report
+        .get("vmmap_regions_sorted_detail_agg")
+        .and_then(|v| v.as_object())
+    {
+        let present = agg
+            .get("samples_present")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0);
+        out.push_str(&format!(
+            "  vmmap_regions_sorted_detail_agg: samples_present={present}\n"
+        ));
+        if let Some(rows) = agg.get("by_region_type_detail").and_then(|v| v.as_array()) {
+            for r in rows {
+                let Some(region_type) = r.get("region_type").and_then(|v| v.as_str()) else {
+                    continue;
+                };
+                let detail_key = r
+                    .get("detail_key")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("(none)");
+                let p = r.get("present").and_then(|v| v.as_u64()).unwrap_or(0);
+                let min = r.get("min").and_then(|v| v.as_u64()).unwrap_or(0);
+                let p50 = r.get("p50").and_then(|v| v.as_u64()).unwrap_or(0);
+                let p90 = r.get("p90").and_then(|v| v.as_u64()).unwrap_or(0);
+                let max = r.get("max").and_then(|v| v.as_u64()).unwrap_or(0);
+                out.push_str(&format!(
+                    "    - {region_type} | {detail_key}: present={p} min={} p50={} p90={} max={}\n",
                     human_bytes(min),
                     human_bytes(p50),
                     human_bytes(p90),
