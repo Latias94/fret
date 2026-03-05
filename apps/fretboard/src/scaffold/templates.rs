@@ -370,13 +370,12 @@ impl View for TodoView {
 
         let add_enabled = !draft_value.trim().is_empty();
 
-        cx.on_action_notify::<act::Add>({
+        cx.on_action_notify_models::<act::Add>({
             let todos = self.todos.clone();
             let draft = self.draft.clone();
             let next_id = self.next_id.clone();
-            move |host, _action_cx| {
-                let text = host
-                    .models_mut()
+            move |models| {
+                let text = models
                     .read(&draft, |s| s.trim().to_string())
                     .ok()
                     .unwrap_or_default();
@@ -384,43 +383,38 @@ impl View for TodoView {
                     return false;
                 }
 
-                let id = host
-                    .models_mut()
+                let id = models
                     .read(&next_id, |v| *v)
                     .ok()
                     .unwrap_or(1);
-                let _ = host
-                    .models_mut()
-                    .update(&next_id, |v| *v = v.saturating_add(1));
+                let _ = models.update(&next_id, |v| *v = v.saturating_add(1));
 
-                let done = host.models_mut().insert(false);
+                let done = models.insert(false);
                 let item = TodoItem {
                     id,
                     done,
                     text: Arc::from(text),
                 };
 
-                let _ = host.models_mut().update(&todos, |todos| {
+                let _ = models.update(&todos, |todos| {
                     todos.insert(0, item);
                 });
-                let _ = host.models_mut().update(&draft, |s| s.clear());
+                let _ = models.update(&draft, |s| s.clear());
                 true
             }
         });
 
-        cx.on_action_notify::<act::ClearDone>({
+        cx.on_action_notify_models::<act::ClearDone>({
             let todos = self.todos.clone();
-            move |host, _action_cx| {
-                let snapshot = host
-                    .models_mut()
+            move |models| {
+                let snapshot = models
                     .read(&todos, |v| v.clone())
                     .ok()
                     .unwrap_or_default();
 
                 let mut keep: Vec<TodoItem> = Vec::new();
                 for t in snapshot {
-                    let done = host
-                        .models_mut()
+                    let done = models
                         .read(&t.done, |v| *v)
                         .ok()
                         .unwrap_or(false);
@@ -429,7 +423,7 @@ impl View for TodoView {
                     }
                 }
 
-                let _ = host.models_mut().update(&todos, |todos| {
+                let _ = models.update(&todos, |todos| {
                     *todos = keep;
                 });
 
@@ -892,13 +886,12 @@ impl View for TodoView {
 
         let add_enabled = !draft_value.trim().is_empty();
 
-        cx.on_action_notify::<act::Add>({
+        cx.on_action_notify_models::<act::Add>({
             let todos = self.todos.clone();
             let draft = self.draft.clone();
             let next_id = self.next_id.clone();
-            move |host, _action_cx| {
-                let text = host
-                    .models_mut()
+            move |models| {
+                let text = models
                     .read(&draft, |v| v.trim().to_string())
                     .ok()
                     .unwrap_or_default();
@@ -906,41 +899,36 @@ impl View for TodoView {
                     return false;
                 }
 
-                let done = host.models_mut().insert(false);
-                let id = host
-                    .models_mut()
+                let done = models.insert(false);
+                let id = models
                     .read(&next_id, |v| *v)
                     .ok()
                     .unwrap_or(1);
-                let _ = host
-                    .models_mut()
-                    .update(&next_id, |v| *v = v.saturating_add(1));
+                let _ = models.update(&next_id, |v| *v = v.saturating_add(1));
 
-                let _ = host.models_mut().update(&todos, |todos| {
+                let _ = models.update(&todos, |todos| {
                     todos.push(TodoItem {
                         id,
                         done,
                         text: Arc::from(text),
                     });
                 });
-                let _ = host.models_mut().update(&draft, |v| v.clear());
+                let _ = models.update(&draft, |v| v.clear());
                 true
             }
         });
 
-        cx.on_action_notify::<act::ClearDone>({
+        cx.on_action_notify_models::<act::ClearDone>({
             let todos = self.todos.clone();
-            move |host, _action_cx| {
-                let snapshot = host
-                    .models_mut()
+            move |models| {
+                let snapshot = models
                     .read(&todos, |v| v.clone())
                     .ok()
                     .unwrap_or_default();
 
                 let mut keep = Vec::new();
                 for t in snapshot {
-                    let done = host
-                        .models_mut()
+                    let done = models
                         .read(&t.done, |v| *v)
                         .ok()
                         .unwrap_or(false);
@@ -949,7 +937,7 @@ impl View for TodoView {
                     }
                 }
 
-                let _ = host.models_mut().update(&todos, |todos| *todos = keep);
+                let _ = models.update(&todos, |todos| *todos = keep);
                 true
             }
         });
@@ -1277,8 +1265,8 @@ mod tests {
         assert!(src.contains(".run_view::<TodoView>()"));
         assert!(src.contains("fret::actions!(["));
         assert!(src.contains(".ui()"));
-        assert!(src.contains("cx.on_action_notify::<act::Add>"));
-        assert!(src.contains("cx.on_action_notify::<act::ClearDone>"));
+        assert!(src.contains("cx.on_action_notify_models::<act::Add>"));
+        assert!(src.contains("cx.on_action_notify_models::<act::ClearDone>"));
         assert!(src.contains("cx.on_action_notify_model_update::<act::RefreshTip, u64>"));
         assert!(!src.contains("decl_style::container_props"));
 
@@ -1313,8 +1301,8 @@ mod tests {
         assert!(src.contains("impl View for TodoView"));
         assert!(src.contains(".run_view::<TodoView>()"));
         assert!(src.contains("fret::actions!(["));
-        assert!(src.contains("cx.on_action_notify::<act::Add>"));
-        assert!(src.contains("cx.on_action_notify::<act::ClearDone>"));
+        assert!(src.contains("cx.on_action_notify_models::<act::Add>"));
+        assert!(src.contains("cx.on_action_notify_models::<act::ClearDone>"));
         assert!(!src.contains("fret_query"));
         assert!(!src.contains("fret_selector"));
 
