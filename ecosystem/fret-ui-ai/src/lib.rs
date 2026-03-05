@@ -155,6 +155,7 @@ pub use elements::{
     use_prompt_input_controller, use_prompt_input_referenced_sources, use_task_controller,
     use_transcription_controller, use_voice_selector_controller, use_web_preview_controller,
 };
+pub use elements::{get_attachment_label, get_media_category};
 pub use export::messages_to_markdown;
 pub use model::{
     AiMessage, CitationItem, ExternalId, MarkdownPart, MessageId, MessagePart, MessageRole,
