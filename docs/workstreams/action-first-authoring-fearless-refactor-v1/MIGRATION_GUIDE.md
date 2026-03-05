@@ -138,6 +138,20 @@ Migration steps:
    - `cx.notify()` and/or
    - selector/query hooks that carry proper dependency observation.
 
+Small ergonomics helpers (recommended for simple state):
+
+- For common “update a single model” handlers (counters, toggles, flags), prefer `ViewCx` helpers:
+
+```rust,ignore
+let count = cx.use_state::<u32>();
+cx.on_action_notify_model_update::<act::Click, u32>(count.clone(), |v| {
+    *v = v.saturating_add(1);
+});
+
+let open = cx.use_state::<bool>();
+cx.on_action_notify_toggle_bool::<act::TogglePanel>(open.clone());
+```
+
 Side effects that need `App` access (v1 note):
 
 - Some operations (e.g. `fret-query` invalidation via `with_query_client`) require `&mut App`.
