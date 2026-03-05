@@ -4694,6 +4694,36 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-item-docs-smoke",
+      "path": "tools/diag-scripts/ui-gallery/item/ui-gallery-item-docs-smoke.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-item-link-render",
+      "path": "tools/diag-scripts/ui-gallery/item/ui-gallery-item-link-render.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "item",
+        "link",
+        "render",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-label-click-focus-input",
       "path": "tools/diag-scripts/ui-gallery/label/ui-gallery-label-click-focus-input.json",
       "required_capabilities": [

@@ -37,6 +37,8 @@
     "tools/diag-scripts/ui-gallery-input-group-addon-after-control-tab-focus.json",
     "tools/diag-scripts/ui-gallery-input-group-text-non-overlap.json",
     "tools/diag-scripts/ui-gallery-input-otp-docs-smoke.json",
+    "tools/diag-scripts/ui-gallery/item/ui-gallery-item-docs-smoke.json",
+    "tools/diag-scripts/ui-gallery/item/ui-gallery-item-link-render.json",
     "tools/diag-scripts/ui-gallery-popover-click-through-outside-press-focus-underlay.json",
     "tools/diag-scripts/ui-gallery-popover-dialog-escape-underlay.json",
     "tools/diag-scripts/ui-gallery/navigation-menu/ui-gallery-navigation-menu-docs-smoke.json",
