@@ -182,7 +182,7 @@ impl View for HelloCounterView {
             .placeholder("Step (e.g. 1)")
             .submit_command(inc_cmd)
             .into_element(cx)
-            .a11y_role(SemanticsRole::TextField)
+            .role(SemanticsRole::TextField)
             .test_id(TEST_ID_STEP_INPUT);
 
         let presets = ui::h_flex(|cx| {
@@ -226,7 +226,7 @@ impl View for HelloCounterView {
                     .action(act::Dec)
                     .children([icon::icon(cx, IconId::new("lucide.minus"))])
                     .into_element(cx)
-                    .a11y_role(SemanticsRole::Button)
+                    .role(SemanticsRole::Button)
                     .a11y_label("Decrement")
                     .test_id(TEST_ID_DEC),
                 shadcn::Button::new("Reset")
@@ -234,7 +234,7 @@ impl View for HelloCounterView {
                     .action(act::Reset)
                     .children([icon::icon(cx, IconId::new("lucide.rotate-ccw"))])
                     .into_element(cx)
-                    .a11y_role(SemanticsRole::Button)
+                    .role(SemanticsRole::Button)
                     .test_id(TEST_ID_RESET),
                 shadcn::Button::new("")
                     .variant(shadcn::ButtonVariant::Default)
@@ -243,7 +243,7 @@ impl View for HelloCounterView {
                     .action(act::Inc)
                     .children([icon::icon(cx, IconId::new("lucide.plus"))])
                     .into_element(cx)
-                    .a11y_role(SemanticsRole::Button)
+                    .role(SemanticsRole::Button)
                     .a11y_label("Increment")
                     .test_id(TEST_ID_INC),
             ]

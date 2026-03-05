@@ -196,7 +196,7 @@ Prefer layout-transparent semantics decoration on `AnyElement` over introducing 
 nodes:
 
 - `element.test_id("my-test-id")`
-- `element.a11y_role(SemanticsRole::Button).test_id("my-button")`
+- `element.role(SemanticsRole::Button).test_id("my-button")`
 
 ### Recipe: embedding other UI systems
 
