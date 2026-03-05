@@ -135,7 +135,7 @@ impl View for EmbeddedViewportDemoView {
             cx;
             shadcn::CardHeader::new(ui::children![cx; header, size_controls, info]),
             shadcn::CardContent::new(ui::children![cx;
-                ui::container( |cx| ui::children![cx; viewport])
+                ui::container(|cx| ui::children![cx; viewport])
                     .bg(ColorRef::Color(theme.color_token("muted")))
                     .rounded(Radius::Md)
                     .border_1()
@@ -175,7 +175,7 @@ impl View for EmbeddedViewportDemoView {
         let page = ui::container(|cx| {
             ui::children![
                 cx;
-                ui::v_flex( |cx| ui::children![cx; viewport_card])
+                ui::v_flex(|cx| ui::children![cx; viewport_card])
                     .w_full()
                     .h_full()
                     .justify_center()

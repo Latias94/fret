@@ -414,7 +414,7 @@ impl View for VirtualListBasicsView {
         .w_full()
         .into_element(cx);
 
-        let left = ui::v_flex_build( |cx, out| {
+        let left = ui::v_flex_build(|cx, out| {
             out.push(controls);
             if index_keys {
                 out.push(

@@ -195,7 +195,7 @@ impl View for TextInputBasicsView {
             ])
             .into_element(cx),
             shadcn::CardContent::new([
-                ui::v_flex( |_cx| [input, buttons, stats])
+                ui::v_flex(|_cx| [input, buttons, stats])
                     .gap(Space::N3)
                     .into_element(cx),
             ])

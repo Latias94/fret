@@ -219,7 +219,7 @@ impl View for IconsAndAssetsBasicsView {
                         let preload_bytes = preload.map(|v| v.bytes_ready).unwrap_or(0);
 
                         [
-                            ui::h_flex( |cx| {
+                            ui::h_flex(|cx| {
                                 [
                                     shadcn::Badge::new(format!("frozen icons: {frozen_len}"))
                                         .variant(shadcn::BadgeVariant::Secondary)
@@ -332,7 +332,7 @@ impl View for IconsAndAssetsBasicsView {
                         .layout(LayoutRefinement::default().w_full()),
                     |cx| {
                         [
-                            ui::h_flex( |cx| {
+                            ui::h_flex(|cx| {
                                 [
                                     shadcn::Label::new("File image status:").into_element(cx),
                                     shadcn::Badge::new(image_status)
@@ -421,7 +421,7 @@ impl View for IconsAndAssetsBasicsView {
                     .layout(LayoutRefinement::default().w_full()),
                 |cx| {
                     [
-                        ui::h_flex( |cx| {
+                        ui::h_flex(|cx| {
                             [
                                 shadcn::Label::new("SVG status:").into_element(cx),
                                 shadcn::Badge::new(svg_status)
