@@ -1875,6 +1875,9 @@ pub struct TextInputProps {
     pub a11y_role: Option<SemanticsRole>,
     pub test_id: Option<std::sync::Arc<str>>,
     pub placeholder: Option<std::sync::Arc<str>>,
+    /// When true, visually obscures the rendered text (e.g. password fields) while keeping the
+    /// underlying model value unchanged.
+    pub obscure_text: bool,
     pub a11y_required: bool,
     pub a11y_invalid: Option<fret_core::SemanticsInvalid>,
     pub active_descendant: Option<NodeId>,
@@ -1908,6 +1911,7 @@ impl TextInputProps {
             a11y_role: None,
             test_id: None,
             placeholder: None,
+            obscure_text: false,
             a11y_required: false,
             a11y_invalid: None,
             active_descendant: None,
@@ -1936,6 +1940,7 @@ impl std::fmt::Debug for TextInputProps {
                 "placeholder",
                 &self.placeholder.as_ref().map(|s| s.as_ref()),
             )
+            .field("obscure_text", &self.obscure_text)
             .field("controls_element", &self.controls_element)
             .field("expanded", &self.expanded)
             .field("chrome", &self.chrome)

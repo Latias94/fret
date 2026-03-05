@@ -10,6 +10,9 @@ use crate::TextInputStyle;
 
 pub use bound::BoundTextInput;
 
+const OBSCURE_MASK: &str = "•";
+const OBSCURE_MASK_BYTES: usize = OBSCURE_MASK.len();
+
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 struct ImeSurroundingTextCacheKey {
     text_revision: u64,
@@ -23,12 +26,26 @@ struct ImeSurroundingTextCache {
     value: Option<fret_runtime::WindowImeSurroundingText>,
 }
 
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
+struct ObscureTextCacheKey {
+    text_revision: u64,
+}
+
+#[derive(Debug, Default, Clone)]
+struct ObscureTextCache {
+    key: Option<ObscureTextCacheKey>,
+    masked: String,
+    base_grapheme_boundaries: Vec<usize>,
+}
+
 #[derive(Debug)]
 pub struct TextInput {
     a11y_role: SemanticsRole,
     enabled: bool,
     focusable: bool,
     focus_ring_always_paint: bool,
+    obscure_text: bool,
+    obscure_text_cache: ObscureTextCache,
     text: String,
     base_text_revision: u64,
     ime_surrounding_text_cache: std::cell::RefCell<ImeSurroundingTextCache>,

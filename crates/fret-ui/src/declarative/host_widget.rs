@@ -413,6 +413,7 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
                 };
                 input.set_enabled(props.enabled);
                 input.set_focusable(props.focusable);
+                input.set_obscure_text(props.obscure_text);
                 input.set_chrome_style(props.chrome);
                 input.set_text_style(props.text_style);
                 input.set_placeholder(props.placeholder);

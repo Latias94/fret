@@ -1533,6 +1533,84 @@
       "target_hints": []
     },
     {
+      "id": "image-heavy-memory-count-12-steady",
+      "path": "tools/diag-scripts/tooling/images/image-heavy-memory-count-12-steady.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "tooling-image-heavy-memory-sweep-count"
+      ],
+      "tags": [
+        "images",
+        "memory",
+        "steady",
+        "sweep"
+      ],
+      "target_hints": [
+        "Count sweep point for attributing macOS (graphics) unmapped footprint vs image pressure.",
+        "Run with `diag repro --session-auto` to collect a small sample distribution."
+      ]
+    },
+    {
+      "id": "image-heavy-memory-count-48-steady",
+      "path": "tools/diag-scripts/tooling/images/image-heavy-memory-count-48-steady.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "tooling-image-heavy-memory-sweep-count"
+      ],
+      "tags": [
+        "images",
+        "memory",
+        "steady",
+        "sweep"
+      ],
+      "target_hints": [
+        "Count sweep point for attributing macOS (graphics) unmapped footprint vs image pressure.",
+        "Run with `diag repro --session-auto` to collect a small sample distribution."
+      ]
+    },
+    {
+      "id": "image-heavy-memory-count-6-steady",
+      "path": "tools/diag-scripts/tooling/images/image-heavy-memory-count-6-steady.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "tooling-image-heavy-memory-sweep-count"
+      ],
+      "tags": [
+        "images",
+        "memory",
+        "steady",
+        "sweep"
+      ],
+      "target_hints": [
+        "Count sweep point for attributing macOS (graphics) unmapped footprint vs image pressure.",
+        "Run with `diag repro --session-auto` to collect a small sample distribution."
+      ]
+    },
+    {
+      "id": "image-heavy-memory-steady",
+      "path": "tools/diag-scripts/tooling/images/image-heavy-memory-steady.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "tooling-image-heavy-memory-sweep-count"
+      ],
+      "tags": [
+        "images",
+        "memory",
+        "steady"
+      ],
+      "target_hints": [
+        "Captures a steady-state bundle; intended to grow IOSurface/IOAccelerator (textures) and wgpu Metal allocation size."
+      ]
+    },
+    {
       "id": "liquid-glass-backdrop-warp-steady",
       "path": "tools/diag-scripts/renderer/effects/liquid-glass-backdrop-warp-steady.json",
       "required_capabilities": [],
@@ -4630,11 +4708,14 @@
       "tags": [
         "gate",
         "hover",
+        "hover_card",
         "hovercard",
-        "overlay",
         "ui_gallery"
       ],
-      "target_hints": []
+      "target_hints": [
+        "Navigates to the Hover Card page (available in the default ui-gallery build).",
+        "Opens the instant-delay HoverCard via pointer hover and captures a bundle."
+      ]
     },
     {
       "id": "ui-gallery-incoming-open-inject-smoke",
