@@ -57,6 +57,7 @@ pub(crate) fn cmd_memory_summary(
     let mut target: Option<String> = None;
     let mut within_session: Option<String> = None;
     let mut sort_key: String = "macos_physical_footprint_peak_bytes".to_string();
+    let mut fits_linear: Vec<(String, String)> = Vec::new();
     let mut include_regions_sorted_top = false;
     let mut top_sessions: Option<usize> = None;
     let mut include_regions_sorted_agg = false;
@@ -84,6 +85,27 @@ pub(crate) fn cmd_memory_summary(
                     return Err("missing value for --sort-key".to_string());
                 };
                 sort_key = v.to_string();
+                i += 2;
+            }
+            "--fit-linear" | "--fit_linear" => {
+                let Some(v) = rest.get(i + 1) else {
+                    return Err("missing value for --fit-linear".to_string());
+                };
+                let (y_key, x_key) =
+                    v.split_once(':')
+                        .or_else(|| v.split_once(','))
+                        .ok_or_else(|| {
+                            "invalid value for --fit-linear: expected \"<y_key>:<x_key>\""
+                                .to_string()
+                        })?;
+                let y_key = y_key.trim();
+                let x_key = x_key.trim();
+                if y_key.is_empty() || x_key.is_empty() {
+                    return Err(
+                        "invalid value for --fit-linear: expected \"<y_key>:<x_key>\"".to_string(),
+                    );
+                }
+                fits_linear.push((y_key.to_string(), x_key.to_string()));
                 i += 2;
             }
             "--vmmap-regions-sorted-top" => {
@@ -180,7 +202,7 @@ pub(crate) fn cmd_memory_summary(
             }
             "--help" | "-h" => {
                 return Err(
-                    "usage: fretboard diag memory-summary [<base_or_session_out_dir>] [--within-session <id|latest|all>] [--top-sessions <n>] [--sort-key <key>] [--top <n>] [--vmmap-regions-sorted-top] [--vmmap-regions-sorted-agg] [--vmmap-regions-sorted-agg-top <n>] [--vmmap-regions-sorted-detail-agg] [--vmmap-regions-sorted-detail-agg-top <n>] [--footprint-categories-agg] [--footprint-categories-agg-top <n>] [--no-recursive] [--max-depth <n>] [--max-samples <n>] [--json] [--out <path>]".to_string(),
+                    "usage: fretboard diag memory-summary [<base_or_session_out_dir>] [--within-session <id|latest|all>] [--top-sessions <n>] [--sort-key <key>] [--fit-linear <y_key>:<x_key>] [--top <n>] [--vmmap-regions-sorted-top] [--vmmap-regions-sorted-agg] [--vmmap-regions-sorted-agg-top <n>] [--vmmap-regions-sorted-detail-agg] [--vmmap-regions-sorted-detail-agg-top <n>] [--footprint-categories-agg] [--footprint-categories-agg-top <n>] [--no-recursive] [--max-depth <n>] [--max-samples <n>] [--json] [--out <path>]".to_string(),
                 );
             }
             other if other.starts_with('-') => {
@@ -202,6 +224,10 @@ pub(crate) fn cmd_memory_summary(
         .unwrap_or_else(|| resolved_out_dir.to_path_buf());
 
     validate_sort_key(&sort_key)?;
+    for (y_key, x_key) in &fits_linear {
+        validate_u64_key(y_key).map_err(|e| format!("invalid --fit-linear y_key: {e}"))?;
+        validate_u64_key(x_key).map_err(|e| format!("invalid --fit-linear x_key: {e}"))?;
+    }
 
     let mut sample_dirs = resolve_sample_dirs(&src, within_session.as_deref(), top_sessions)?;
     if sample_dirs.is_empty()
@@ -245,6 +271,7 @@ hint: ensure each session root contains `evidence.index.json`",
     let report = build_report(
         &src,
         &sort_key,
+        &fits_linear,
         top_rows.max(1),
         &rows,
         include_regions_sorted_agg,
@@ -565,6 +592,7 @@ fn read_sample_row(
 fn build_report(
     src: &Path,
     sort_key: &str,
+    fits_linear: &[(String, String)],
     top: usize,
     rows: &[MemorySampleRow],
     include_regions_sorted_agg: bool,
@@ -618,6 +646,16 @@ fn build_report(
         "fields": fields,
         "top_rows": top_rows,
     });
+
+    if !fits_linear.is_empty() {
+        if let Some(obj) = out.as_object_mut() {
+            let fits = fits_linear
+                .iter()
+                .map(|(y_key, x_key)| linear_fit_u64(rows, y_key, x_key))
+                .collect::<Vec<_>>();
+            obj.insert("fits_linear".to_string(), serde_json::Value::Array(fits));
+        }
+    }
 
     if include_regions_sorted_agg {
         if let Some(obj) = out.as_object_mut() {
@@ -977,30 +1015,19 @@ fn redact_hex_addresses(s: &str) -> String {
     out
 }
 
-fn validate_sort_key(key: &str) -> Result<(), String> {
-    const VALID: &[&str] = &[
-        "macos_physical_footprint_peak_bytes",
-        "macos_owned_unmapped_memory_dirty_bytes",
-        "macos_io_surface_dirty_bytes",
-        "macos_io_accelerator_dirty_bytes",
-        "macos_malloc_dirty_bytes_total",
-        "wgpu_metal_current_allocated_size_bytes_max",
-        "renderer_intermediate_peak_in_use_bytes",
-        "renderer_gpu_images_bytes_estimate",
-        "renderer_gpu_render_targets_bytes_estimate",
-        "render_text_atlas_bytes_live_estimate_total",
-        "render_text_registered_font_blobs_total_bytes",
-        "render_text_registered_font_blobs_count",
-    ];
-
-    if VALID.contains(&key) {
+fn validate_u64_key(key: &str) -> Result<(), String> {
+    if valid_u64_keys().contains(&key) {
         return Ok(());
     }
     Err(format!(
-        "unknown --sort-key: {key}\n\
+        "unknown key: {key}\n\
 valid keys:\n  {}",
-        VALID.join("\n  ")
+        valid_u64_keys().join("\n  ")
     ))
+}
+
+fn validate_sort_key(key: &str) -> Result<(), String> {
+    validate_u64_key(key).map_err(|e| e.replace("unknown key:", "unknown --sort-key:"))
 }
 
 fn row_to_json(r: &MemorySampleRow) -> serde_json::Value {
@@ -1068,15 +1095,27 @@ fn quantile_sorted(values: &[u64], q: f64) -> u64 {
 }
 
 fn sort_u64_for_key(row: &MemorySampleRow, key: &str) -> u64 {
+    opt_u64_for_key(row, key).unwrap_or(0)
+}
+
+fn opt_u64_for_key(row: &MemorySampleRow, key: &str) -> Option<u64> {
     match key {
         "macos_physical_footprint_peak_bytes" => row.macos_physical_footprint_peak_bytes,
         "macos_owned_unmapped_memory_dirty_bytes" => row.macos_owned_unmapped_memory_dirty_bytes,
         "macos_io_surface_dirty_bytes" => row.macos_io_surface_dirty_bytes,
         "macos_io_accelerator_dirty_bytes" => row.macos_io_accelerator_dirty_bytes,
+        "macos_malloc_small_dirty_bytes" => row.macos_malloc_small_dirty_bytes,
         "macos_malloc_dirty_bytes_total" => row.macos_malloc_dirty_bytes_total,
+        "macos_malloc_zones_total_allocated_bytes" => row.macos_malloc_zones_total_allocated_bytes,
+        "macos_malloc_zones_total_frag_bytes" => row.macos_malloc_zones_total_frag_bytes,
+        "wgpu_metal_current_allocated_size_bytes_min" => {
+            row.wgpu_metal_current_allocated_size_bytes_min
+        }
         "wgpu_metal_current_allocated_size_bytes_max" => {
             row.wgpu_metal_current_allocated_size_bytes_max
         }
+        "wgpu_allocator_total_allocated_bytes" => row.wgpu_allocator_total_allocated_bytes,
+        "wgpu_allocator_total_reserved_bytes" => row.wgpu_allocator_total_reserved_bytes,
         "renderer_intermediate_peak_in_use_bytes" => row.renderer_intermediate_peak_in_use_bytes,
         "renderer_gpu_images_bytes_estimate" => row.renderer_gpu_images_bytes_estimate,
         "renderer_gpu_render_targets_bytes_estimate" => {
@@ -1089,9 +1128,110 @@ fn sort_u64_for_key(row: &MemorySampleRow, key: &str) -> u64 {
             row.render_text_registered_font_blobs_total_bytes
         }
         "render_text_registered_font_blobs_count" => row.render_text_registered_font_blobs_count,
-        _ => row.macos_physical_footprint_peak_bytes,
+        _ => None,
     }
-    .unwrap_or(0)
+}
+
+fn valid_u64_keys() -> &'static [&'static str] {
+    &[
+        "macos_physical_footprint_peak_bytes",
+        "macos_owned_unmapped_memory_dirty_bytes",
+        "macos_io_surface_dirty_bytes",
+        "macos_io_accelerator_dirty_bytes",
+        "macos_malloc_small_dirty_bytes",
+        "macos_malloc_dirty_bytes_total",
+        "macos_malloc_zones_total_allocated_bytes",
+        "macos_malloc_zones_total_frag_bytes",
+        "wgpu_metal_current_allocated_size_bytes_min",
+        "wgpu_metal_current_allocated_size_bytes_max",
+        "wgpu_allocator_total_allocated_bytes",
+        "wgpu_allocator_total_reserved_bytes",
+        "renderer_intermediate_peak_in_use_bytes",
+        "renderer_gpu_images_bytes_estimate",
+        "renderer_gpu_render_targets_bytes_estimate",
+        "render_text_atlas_bytes_live_estimate_total",
+        "render_text_registered_font_blobs_total_bytes",
+        "render_text_registered_font_blobs_count",
+    ]
+}
+
+fn linear_fit_u64(rows: &[MemorySampleRow], y_key: &str, x_key: &str) -> serde_json::Value {
+    let mut points: Vec<(f64, f64)> = Vec::new();
+    for row in rows {
+        let Some(x) = opt_u64_for_key(row, x_key) else {
+            continue;
+        };
+        let Some(y) = opt_u64_for_key(row, y_key) else {
+            continue;
+        };
+        points.push((x as f64, y as f64));
+    }
+
+    let n = points.len();
+    let mut out = serde_json::json!({
+        "y_key": y_key,
+        "x_key": x_key,
+        "points": n,
+    });
+
+    if n < 2 {
+        return out;
+    }
+
+    let mean_x: f64 = points.iter().map(|(x, _)| x).sum::<f64>() / n as f64;
+    let mean_y: f64 = points.iter().map(|(_, y)| y).sum::<f64>() / n as f64;
+
+    let mut var_x: f64 = 0.0;
+    let mut cov_xy: f64 = 0.0;
+    for (x, y) in &points {
+        let dx = x - mean_x;
+        let dy = y - mean_y;
+        var_x += dx * dx;
+        cov_xy += dx * dy;
+    }
+    if var_x <= 0.0 {
+        return out;
+    }
+
+    let slope = cov_xy / var_x;
+    let intercept = mean_y - slope * mean_x;
+
+    let mut sst: f64 = 0.0;
+    let mut sse: f64 = 0.0;
+    for (x, y) in &points {
+        let y_hat = intercept + slope * x;
+        let dy = y - mean_y;
+        let err = y - y_hat;
+        sst += dy * dy;
+        sse += err * err;
+    }
+    let r2 = if sst > 0.0 {
+        Some(1.0 - sse / sst)
+    } else {
+        None
+    };
+
+    let slope_ppm: Option<u64> =
+        (slope.is_finite() && slope >= 0.0).then(|| (slope * 1_000_000.0).round() as u64);
+    let intercept_bytes: Option<u64> =
+        (intercept.is_finite() && intercept >= 0.0).then(|| intercept.round() as u64);
+
+    if let Some(obj) = out.as_object_mut() {
+        obj.insert("slope".to_string(), serde_json::json!(slope));
+        obj.insert("intercept".to_string(), serde_json::json!(intercept));
+        if let Some(r2) = r2 {
+            obj.insert("r2".to_string(), serde_json::json!(r2));
+        }
+        obj.insert(
+            "suggested".to_string(),
+            serde_json::json!({
+                "intercept_bytes": intercept_bytes,
+                "slope_ppm": slope_ppm,
+            }),
+        );
+    }
+
+    out
 }
 
 fn human_report(report: &serde_json::Value) -> String {
@@ -1181,6 +1321,44 @@ fn human_report(report: &serde_json::Value) -> String {
             out.push_str(&format!(
                 "    - {id}: footprint_peak={peak} owned_unmapped_dirty={owned} io_surface_dirty={io_surface} io_accel_dirty={io_accel} metal_alloc_max={metal_max} gpu_images={images} gpu_targets={targets} dir={dir}\n"
             ));
+        }
+    }
+
+    if let Some(fits) = report.get("fits_linear").and_then(|v| v.as_array()) {
+        out.push_str("  fits_linear:\n");
+        for f in fits {
+            let y_key = f.get("y_key").and_then(|v| v.as_str()).unwrap_or("y");
+            let x_key = f.get("x_key").and_then(|v| v.as_str()).unwrap_or("x");
+            let points = f.get("points").and_then(|v| v.as_u64()).unwrap_or(0);
+            let slope = f.get("slope").and_then(|v| v.as_f64());
+            let intercept = f.get("intercept").and_then(|v| v.as_f64());
+            let r2 = f.get("r2").and_then(|v| v.as_f64());
+            let suggested_intercept_bytes = f
+                .get("suggested")
+                .and_then(|v| v.get("intercept_bytes"))
+                .and_then(|v| v.as_u64())
+                .map(human_bytes)
+                .unwrap_or_else(|| "n/a".to_string());
+            let suggested_slope_ppm = f
+                .get("suggested")
+                .and_then(|v| v.get("slope_ppm"))
+                .and_then(|v| v.as_u64())
+                .map(|v| v.to_string())
+                .unwrap_or_else(|| "n/a".to_string());
+
+            if let (Some(slope), Some(intercept)) = (slope, intercept) {
+                let intercept_h = human_bytes(intercept.max(0.0).round() as u64);
+                let r2_h = r2
+                    .map(|v| format!("{v:.3}"))
+                    .unwrap_or_else(|| "n/a".to_string());
+                out.push_str(&format!(
+                    "    - {y_key} ~ {intercept_h} + {slope:.4} * {x_key} (points={points}, r2={r2_h}, suggested_intercept={suggested_intercept_bytes}, suggested_slope_ppm={suggested_slope_ppm})\n"
+                ));
+            } else {
+                out.push_str(&format!(
+                    "    - {y_key} vs {x_key}: insufficient data (points={points})\n"
+                ));
+            }
         }
     }
 

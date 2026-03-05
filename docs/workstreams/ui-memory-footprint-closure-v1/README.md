@@ -20,6 +20,9 @@ Using `tools/diag-scripts/todo-memory-steady.json` on macOS/Metal:
   - Summarize multiple `--session-auto` samples under a base dir:
     - `fretboard diag memory-summary --dir target/fret-diag-mem-todo-steady`
     - `fretboard diag memory-summary --dir target/fret-diag-mem-todo-steady --sort-key wgpu_metal_current_allocated_size_bytes_max --top 5`
+    - Linear fit helper (least squares; outputs intercept + slope + suggested `slope_ppm`):
+      - `fretboard diag memory-summary --dir target/diag/mem-sweep-count-20260305 --fit-linear macos_owned_unmapped_memory_dirty_bytes:renderer_gpu_images_bytes_estimate`
+      - `fretboard diag memory-summary --dir target/diag/mem-sweep-count-20260305 --fit-linear wgpu_metal_current_allocated_size_bytes_max:renderer_gpu_images_bytes_estimate`
     - Renderer-side attribution fields (from `bundle_last_frame_stats`) are also surfaced, so you can sort/compare by:
       - `--sort-key renderer_gpu_images_bytes_estimate`
       - `--sort-key renderer_gpu_render_targets_bytes_estimate`
