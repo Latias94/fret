@@ -77,7 +77,10 @@ impl SourcesBlock {
     pub fn new(items: impl Into<Arc<[SourceItem]>>) -> Self {
         Self {
             items: items.into(),
-            title: Arc::<str>::from("Used sources"),
+            // Upstream `SourcesTrigger` defaults to: "Used {count} sources".
+            //
+            // Reference: `repo-ref/ai-elements/packages/elements/src/sources.tsx`.
+            title: Arc::<str>::from("Used {count} sources"),
             default_open: false,
             on_open_url: None,
             highlighted_source_id: None,
@@ -180,6 +183,7 @@ impl SourcesBlock {
 
         let items = self.items;
         let count = items.len();
+        let title = self.title;
         let items_for_list = items.clone();
         let on_open_url = self.on_open_url;
         let row_prefix = self.test_id_row_prefix;
@@ -374,9 +378,14 @@ impl SourcesBlock {
         let collapsible = Collapsible::uncontrolled(default_open).into_element_with_open_model(
             cx,
             move |cx, open_model, is_open| {
+                let label_text = if title.contains("{count}") {
+                    Arc::<str>::from(title.replace("{count}", &count.to_string()))
+                } else {
+                    title.clone()
+                };
                 let label = cx.text_props(TextProps {
                     layout: LayoutStyle::default(),
-                    text: Arc::<str>::from(format!("Used {count} sources")),
+                    text: label_text,
                     style: Some(text_xs_style(&trigger_theme, FontWeight::MEDIUM)),
                     color: Some(title_color),
                     wrap: TextWrap::None,
@@ -435,6 +444,19 @@ impl SourcesBlock {
             },
         );
 
+        // The UI gallery doc layout (and many transcript shells) uses `items: stretch` for vertical
+        // stacks, which would otherwise make the sources block appear full-width. Upstream AI
+        // Elements renders sources content as `w-fit`, so we wrap the block in a row to preserve
+        // intrinsic width while still participating in the parent layout.
+        let aligned = stack::hstack(
+            cx,
+            stack::HStackProps::default()
+                .layout(LayoutRefinement::default().w_full())
+                .justify_start()
+                .items_start(),
+            move |_cx| vec![collapsible],
+        );
+
         let root = cx.container(
             ContainerProps {
                 layout: root_layout,
@@ -443,7 +465,7 @@ impl SourcesBlock {
                 corner_radii: Corners::all(fret_core::Px(0.0)),
                 ..Default::default()
             },
-            move |_cx| vec![collapsible],
+            move |_cx| vec![aligned],
         );
 
         let Some(test_id) = self.test_id_root else {
