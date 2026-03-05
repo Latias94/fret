@@ -15,7 +15,6 @@ use fret_ui::element::{AnyElement, ContainerProps, LayoutStyle, Length, PointerR
 use fret_ui::{ElementContext, Theme, UiHost};
 
 use crate::declarative::model_watch::ModelWatchExt as _;
-use crate::declarative::stack;
 use crate::dnd;
 use crate::dnd::{
     ActivationConstraint, Axis, CollisionStrategy, DndItemId, DndScopeId, InsertionSide,
@@ -379,15 +378,12 @@ where
         children.push(el);
     }
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap_y(Space::N0)
-            .justify(Justify::Start)
-            .items(Items::Stretch)
-            .layout(LayoutRefinement::default().w_full()),
-        |_cx| children,
-    )
+    crate::ui::v_flex(|_cx| children)
+        .gap(Space::N0)
+        .justify_start()
+        .items_stretch()
+        .w_full()
+        .into_element(cx)
 }
 
 #[cfg(test)]
