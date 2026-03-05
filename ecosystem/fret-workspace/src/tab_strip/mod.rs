@@ -23,6 +23,7 @@ use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, Invalidation, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::dnd as ui_dnd;
+use fret_ui_headless::tab_strip_overflow_menu::OverflowMenuActivePolicy;
 
 use crate::focus_registry::{WorkspaceTabElementKey, workspace_tab_element_registry_model};
 
@@ -46,7 +47,6 @@ mod interaction;
 mod kernel;
 mod layouts;
 mod state;
-mod surface;
 mod theme;
 mod utils;
 mod widgets;
@@ -167,6 +167,7 @@ pub struct WorkspaceTabStrip {
     tab_drag: Option<Model<WorkspaceTabDragState>>,
     root_test_id: Option<Arc<str>>,
     tab_test_id_prefix: Option<Arc<str>>,
+    overflow_menu_active_policy: OverflowMenuActivePolicy,
 }
 
 impl WorkspaceTabStrip {
@@ -180,6 +181,7 @@ impl WorkspaceTabStrip {
             tab_drag: None,
             root_test_id: None,
             tab_test_id_prefix: None,
+            overflow_menu_active_policy: OverflowMenuActivePolicy::Exclude,
         }
     }
 
@@ -193,6 +195,7 @@ impl WorkspaceTabStrip {
             tab_drag: None,
             root_test_id: None,
             tab_test_id_prefix: None,
+            overflow_menu_active_policy: OverflowMenuActivePolicy::Exclude,
         }
     }
 
@@ -227,6 +230,14 @@ impl WorkspaceTabStrip {
     /// Shape: `{prefix}-{tab_id}`.
     pub fn tab_test_id_prefix(mut self, prefix: impl Into<Arc<str>>) -> Self {
         self.tab_test_id_prefix = Some(prefix.into());
+        self
+    }
+
+    /// Controls whether the overflow dropdown should force-include the active tab.
+    ///
+    /// Default: `Exclude` (overflowed-only list).
+    pub fn overflow_menu_active_policy(mut self, policy: OverflowMenuActivePolicy) -> Self {
+        self.overflow_menu_active_policy = policy;
         self
     }
 
@@ -280,6 +291,7 @@ impl WorkspaceTabStrip {
         let tab_drag_model = self.tab_drag;
         let root_test_id = self.root_test_id;
         let tab_test_id_prefix = self.tab_test_id_prefix;
+        let overflow_menu_active_policy = self.overflow_menu_active_policy;
 
         let drag_model = get_drag_model(cx);
         cx.observe_model(&drag_model, Invalidation::Paint);
@@ -2037,6 +2049,8 @@ impl WorkspaceTabStrip {
                                 let (button_test_id, entries) = compute_overflow_menu_entries(
                                     cx,
                                     root_test_id.as_ref(),
+                                    active.as_ref(),
+                                    overflow_menu_active_policy,
                                     &tabs,
                                     tab_rects,
                                     viewport,

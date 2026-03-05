@@ -13,6 +13,9 @@ Key files:
 Patterns worth copying (at the policy layer):
 
 - Pinned tabs as a first-class region (`pinned_tab_count`) and optional separate rows.
+- Explicit end-drop surfaces as flex-grow “header space” elements:
+  - `id("tab_bar_drop_target")` (unpinned row end-drop)
+  - `id("pinned_tabs_border")` (pinned row end-drop + visual boundary)
 - Scroll-to-active behaviors (`ScrollHandle`).
 - Strong “focus-neutral” behaviors when closing/moving (selection/focus invariants).
 
@@ -33,13 +36,15 @@ Patterns worth copying (as scaffolding, not semantics):
 Key files:
 
 - `repo-ref/dockview/packages/dockview-core/src/dockview/components/titlebar/tabsContainer.ts`
+- `repo-ref/dockview/packages/dockview-core/src/dockview/components/titlebar/voidContainer.ts`
 - `repo-ref/dockview/packages/dockview-core/src/dockview/components/titlebar/tabOverflowControl.ts`
 - `repo-ref/dockview/packages/dockview-core/src/__tests__/dockview/components/titlebar/tabsContainer.spec.ts`
 
 Patterns worth copying:
 
 - Overflow as a pipeline (visible tabs + overflow dropdown list).
-- “Header space” is treated as a drop surface, not just “between tabs”.
+- “Header space” is treated as a drop surface, not just “between tabs”:
+  - `VoidContainer` participates in `onWillShowOverlay` with `kind: 'header_space'`.
 
 ## What Fret is currently missing (most load-bearing gaps)
 

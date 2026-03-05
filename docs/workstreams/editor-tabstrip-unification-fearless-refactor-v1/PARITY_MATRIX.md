@@ -47,7 +47,7 @@ Legend:
 | Overflow item membership | N/A (no dropdown) | ✅ overflowed-only | ✅ overflowed-only or overflowed+active (policy) | ✅ overflowed+active (policy) | Adapter policy | Keep policy per adapter; record default in `OPEN_QUESTIONS.md`. |
 | Overflow dropdown close button visible | N/A | ✅ (explicit test) | ✅ | ✅ | Adapter policy | Workspace gate: `ecosystem/fret-workspace/tests/tab_strip_overflow_menu_lists_overflowed_tabs.rs`. |
 | Overflow close does **not** activate | N/A | ✅ (explicit test) | ✅ | ✅ | Adapter policy | Docking gate: `dock::tests::dock_space::overflow_menu_close_does_not_activate_tab`. Workspace gate: `ecosystem/fret-workspace/tests/tab_strip_overflow_menu_lists_overflowed_tabs.rs`. |
-| Selecting overflow item activates + ensures visible | N/A | ✅ | ⚠️ likely | ✅ | Adapter policy + shared helper | Docking already ensures visible on selection; workspace should match. |
+| Selecting overflow item activates + ensures visible | N/A | ✅ | ✅ | ✅ | Adapter policy + shared helper | Workspace gate: `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-overflow-activate-hidden-smoke.json`. Docking gate: `tools/diag-scripts/docking/arbitration/docking-arbitration-demo-tab-overflow-menu-select-row-1-activates.json`. |
 | Close vs activate hit-test arbitration | ✅ (tab-specific) | ✅ | ✅ (overflow menu) | ✅ (overflow menu) | Adapter policy | Uses `fret-ui-shadcn` dropdown item trailing action hook: `ecosystem/fret-ui-shadcn/src/dropdown_menu.rs`. Priority ordering still needs to be documented (see Q5). |
 | Tab close button does **not** activate inactive tab | ✅ | ✅ | ✅ | ✅ | Adapter policy | Workspace gate: `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-button-does-not-activate.json`. Docking gate: `tools/diag-scripts/docking/arbitration/docking-arbitration-demo-tab-close-button-does-not-activate.json`. |
 | Tab close button does **not** start a drag | ✅ | ✅ | ✅ | ✅ | Adapter policy | Workspace gate: `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-button-does-not-start-drag.json`. Docking gate: `tools/diag-scripts/docking/arbitration/docking-arbitration-demo-tab-close-button-does-not-activate.json` (asserts `dock_drag_active_is active=false` after a small move while pressed). |
@@ -55,10 +55,10 @@ Legend:
 | Header space treated as end-drop surface | ✅ | ✅ | ✅ | ✅ | `fret-ui-headless` | Canonical end-drop insert index must be deterministic across both. |
 | Tab halves decide insert-index on drop | ✅ | ✅ | ✅ | ✅ | `fret-ui-headless` | Existing docking tests; workspace needs diag or unit gate. |
 | Auto-scroll near edges during drag | ✅ | ✅ | ✅ | ✅ | Adapter policy + helper | Keep per-impl, but share helper vocabulary for “edge delta”. |
-| Pinned/unpinned tabs | ✅ | ❌ | ❌ | ❌ | Workspace policy | Zed supports pinned tabs and optional separate rows; Fret should treat this as workspace policy (not docking). |
+| Pinned/unpinned tabs | ✅ | ❌ | ✅ | ❌ | Workspace policy | Workspace gates: `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-pinned-boundary-toggle-smoke.json`, `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-reorder-within-pinned-smoke.json`. |
 | Multi-row tab strip | ✅ (configurable) | ❌ | ❌ | ❌ | Workspace policy | Depends on pinned/unpinned decision. |
 | Tab bar nav history buttons | ✅ | ❌ | ❌ | ❌ | Workspace policy | Not required for docking; editor-grade workspace might want it later. |
-| Keyboard/focus semantics (editor expectations) | ✅ | ✅ | ⚠️ partial | ⚠️ partial | `fret-ui-kit` policy | Track via APG-aligned rules and `workspace.pane.focus_tab_strip` command closure. |
+| Keyboard/focus semantics (editor expectations) | ✅ | ✅ | ⚠️ partial | ⚠️ partial | `fret-ui-kit` policy | Workspace has roving + reveal gates; docking remains mostly pointer-driven. |
 | Input arbitration priority with other affordances | ✅ | ✅ | ⚠️ | ⚠️ | Adapter policy (documented) | Docking fixed a real overlap bug: overflow control must win over float-zone. |
 
 ## Immediate parity targets (v1)
