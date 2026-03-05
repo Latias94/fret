@@ -692,7 +692,10 @@ impl InputGroup {
                                 overlay.test_id(Arc::<str>::from(format!("{test_id}.chrome")));
                         }
 
-                        overlay
+                        // Paint-only chrome (border + focus ring) must not intercept pointer
+                        // hit-testing; otherwise clicks intended for the underlying control can
+                        // miss (e.g. PromptInput textarea).
+                        cx.hit_test_gate(false, move |_cx| vec![overlay])
                     };
 
                 if is_block_layout {
@@ -2276,6 +2279,56 @@ mod tests {
         );
 
         assert_eq!(ui.focus(), None);
+    }
+
+    #[test]
+    fn input_group_chrome_overlay_is_pointer_transparent_for_textarea() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let mut services = FakeServices;
+        let bounds = bounds();
+        let model: Model<String> = app.models_mut().insert(String::new());
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "shadcn-input-group-chrome-pointer-transparent",
+            |cx| {
+                vec![
+                    InputGroup::new(model.clone())
+                        .textarea()
+                        .test_id("input_group")
+                        .control_test_id("input_group.control")
+                        .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let control = ui
+            .first_focusable_descendant_including_declarative(&mut app, window, root)
+            .expect("focusable textarea");
+        let control_bounds = ui.debug_node_bounds(control).expect("control bounds");
+        let position = Point::new(
+            Px(control_bounds.origin.x.0 + control_bounds.size.width.0 * 0.5),
+            Px(control_bounds.origin.y.0 + control_bounds.size.height.0 * 0.5),
+        );
+
+        let hit = ui.debug_hit_test_routing(position).hit.expect("hit node");
+        let hit_path = ui.debug_node_path(hit);
+        assert!(
+            hit_path.contains(&control),
+            "expected hit-test path to include the textarea control; hit={hit:?} control={control:?} path={hit_path:?}"
+        );
     }
 
     #[test]
