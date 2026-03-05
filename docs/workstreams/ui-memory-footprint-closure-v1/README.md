@@ -176,6 +176,7 @@ Using `tools/diag-scripts/image-heavy-memory-steady-after-drop.json` on macOS/Me
 - Notes:
   - This script intentionally uses a “grow, then drop, then idle” shape; avoid gating on `macos_vmmap_steady.physical_footprint_peak_bytes` because it includes the pre-drop peak.
   - The primary signal here is whether the post-drop steady state returns close to `text-heavy` / `todo` levels, not whether the peak phase was large.
+  - `FRET_IMAGE_HEAVY_DEMO_POLL_AFTER_DROP` is an optional knob; an A/B (idle 1200 frames) showed no material delta with `poll=1` vs `poll=0` in the post-drop steady state.
 
 Using `tools/diag-scripts/ui-gallery/memory/ui-gallery-code-editor-torture-memory-steady.json` on macOS/Metal (UI Gallery, editor-grade stress):
 

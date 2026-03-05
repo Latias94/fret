@@ -44,6 +44,7 @@
 - [x] Attribution: sweep `FRET_RENDER_WGPU_SURFACE_DESIRED_MAX_FRAME_LATENCY` (1/2/3) on `empty-idle` and record the impact.
 - [x] Attribution: sweep `FRET_WGPU_MEMORY_HINTS` (`performance` vs `memory`) on `text-heavy` and record the impact.
 - [x] Attribution: release images + idle (image-heavy) and confirm `Owned physical footprint (unmapped) (graphics)` returns close to baseline after `renderer.unregister_image`.
+- [x] Attribution: A/B `FRET_IMAGE_HEAVY_DEMO_POLL_AFTER_DROP` (1 vs 0; idle 1200 frames) and confirm no material delta in post-drop steady state.
 
 ### Evidence (captured)
 
