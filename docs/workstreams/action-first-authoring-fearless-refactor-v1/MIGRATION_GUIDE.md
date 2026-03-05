@@ -262,6 +262,11 @@ This is a style guide, not a contract, but it is the repo’s default teaching b
   identity stable and reduce allocation noise.
 - Attach `test_id` / `a11y_*` / `key_context` on builders before `into_element(cx)`; only land to
   `AnyElement` at the end of a subtree boundary.
+- Keep the teaching surfaces consistent: the repo gates forbid `stack::*` authoring helpers in
+  cookbook/examples (and the UI gallery shell):
+  - `tools/gate_no_stack_in_cookbook.ps1`
+  - `tools/gate_no_stack_in_examples.ps1`
+  - `tools/gate_no_stack_in_ui_gallery_shell.ps1` (shell-only; preview pages migrate in batches)
 - If host type inference fails, first try annotating the closure argument type
   (`|cx: &mut ElementContext<'_, App>| ...`) before reaching for turbofish.
 

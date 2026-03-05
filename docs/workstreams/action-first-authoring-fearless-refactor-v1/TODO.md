@@ -382,13 +382,20 @@ practical steps:
     - `apps/fret-cookbook/examples/hello_counter.rs`
   - Done: remove redundant outer `cx` arguments from ecosystem authoring constructors (`fret-ui-kit::ui::*`):
     - Implementation: `ecosystem/fret-ui-kit/src/ui.rs` (`h_flex`, `v_flex`, `container`, `scroll_area`, `stack`, `text`, `label`, `raw_text`, …)
-    - Call-site migration: cookbook, examples, ui-gallery, shadcn/genui crates (workspace-wide)
+    - Call-site migration (status):
+      - Done: `apps/fret-cookbook`, `apps/fret-examples`
+      - In progress: `apps/fret-ui-gallery` (large surface; migrate in batches)
+        - Started: `apps/fret-ui-gallery/src/ui/doc_layout.rs`, `apps/fret-ui-gallery/src/ui/content.rs`
+        - Gate (shell-only): `tools/gate_no_stack_in_ui_gallery_shell.ps1`
+      - As needed: shadcn/genui crates (only when they block teaching-surface convergence)
     - Note: a handful of “host type inference” edge cases need an explicit anchor.
       Preferred: annotate the closure argument type (e.g. `ui::v_flex(|cx: &mut ElementContext<'_, App>| ...)`).
       Alternative: turbofish (e.g. `ui::v_flex::<App, _, _>(...)`).
   - Done: cookbook examples no longer use `stack::hstack/vstack` authoring helpers; the repo teaches
     one layout authoring surface for demos (`fret-ui-kit::ui::*` builders).
     - Gate: `tools/gate_no_stack_in_cookbook.ps1`
+  - Done: examples no longer use `stack::hstack/vstack` authoring helpers.
+    - Gate: `tools/gate_no_stack_in_examples.ps1`
 - Pointer-triggered explainability: stable selector → action mapping without relying on script stamping.
   - Status (as of 2026-03-03): `debug.command_dispatch_trace[*].source_test_id` is inferred from the
     current semantics snapshot when `source_element` is available (fallbacks remain for cases where

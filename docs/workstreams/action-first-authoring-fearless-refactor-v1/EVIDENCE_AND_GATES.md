@@ -211,6 +211,10 @@ Prefer `cargo nextest run` when available.
   - `pwsh tools/diag_gate_action_first_authoring_v1.ps1`
 - Prevent legacy MVU drift in the cookbook (compile-time grep gate):
   - `pwsh tools/gate_no_mvu_in_cookbook.ps1`
+- Prevent `stack::*` authoring drift (cookbook/examples stay on `fret-ui-kit::ui::*` builders):
+  - `pwsh tools/gate_no_stack_in_cookbook.ps1`
+  - `pwsh tools/gate_no_stack_in_examples.ps1`
+  - `pwsh tools/gate_no_stack_in_ui_gallery_shell.ps1`
 
 ---
 
