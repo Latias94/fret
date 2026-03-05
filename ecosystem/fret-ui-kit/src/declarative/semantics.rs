@@ -124,10 +124,6 @@ pub trait UiIntoElementA11yExt: UiIntoElement + Sized {
         self.a11y(SemanticsDecoration::default().role(role))
     }
 
-    fn role(self, role: SemanticsRole) -> UiIntoElementWithA11y<Self> {
-        self.a11y_role(role)
-    }
-
     fn a11y_label(self, label: impl Into<Arc<str>>) -> UiIntoElementWithA11y<Self> {
         self.a11y(SemanticsDecoration::default().label(label))
     }
