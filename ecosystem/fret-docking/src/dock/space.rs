@@ -523,6 +523,142 @@ impl DockSpace {
         self
     }
 
+    fn layout_map_containing_tabs(
+        &self,
+        dock: &DockManager,
+        root: Option<DockNodeId>,
+        dock_bounds: Rect,
+        split_handle_gap: Px,
+        split_handle_hit_thickness: Px,
+        tabs: DockNodeId,
+    ) -> std::collections::HashMap<DockNodeId, Rect> {
+        let layout = root
+            .map(|root| {
+                compute_layout_map(
+                    &dock.graph,
+                    root,
+                    dock_bounds,
+                    split_handle_gap,
+                    split_handle_hit_thickness,
+                )
+            })
+            .unwrap_or_default();
+
+        if layout.contains_key(&tabs) {
+            return layout;
+        }
+
+        for floating in dock.graph.floating_windows(self.window) {
+            let chrome = Self::floating_chrome(floating.rect);
+            let candidate = compute_layout_map(
+                &dock.graph,
+                floating.floating,
+                chrome.inner,
+                split_handle_gap,
+                split_handle_hit_thickness,
+            );
+            if candidate.contains_key(&tabs) {
+                return candidate;
+            }
+        }
+
+        layout
+    }
+
+    fn take_pressed_tab_close_for_pointer(
+        &mut self,
+        pointer_id: fret_core::PointerId,
+    ) -> Option<PressedTabClose> {
+        self.pressed_tab_close
+            .as_ref()
+            .is_some_and(|pressed| pressed.pointer_id == pointer_id)
+            .then(|| self.pressed_tab_close.take())
+            .flatten()
+    }
+
+    fn begin_pressed_tab_close(
+        &mut self,
+        pointer_id: fret_core::PointerId,
+        tabs: DockNodeId,
+        index: usize,
+        panel: PanelKey,
+        start: Point,
+        dock_space_node: NodeId,
+        request_pointer_capture: &mut Option<Option<NodeId>>,
+        dock_hover: &mut Option<DockDropTarget>,
+        invalidate_paint: &mut bool,
+        pending_redraws: &mut Vec<fret_core::AppWindowId>,
+    ) {
+        self.pressed_tab_close = Some(PressedTabClose {
+            pointer_id,
+            tabs,
+            index,
+            panel,
+            start,
+        });
+        *request_pointer_capture = Some(Some(dock_space_node));
+        *dock_hover = None;
+        *invalidate_paint = true;
+        pending_redraws.push(self.window);
+    }
+
+    fn handle_pressed_tab_close_pointer_up(
+        &mut self,
+        pressed: PressedTabClose,
+        position: Point,
+        dock: &DockManager,
+        root: Option<DockNodeId>,
+        split_handle_gap: Px,
+        split_handle_hit_thickness: Px,
+        theme: fret_ui::ThemeSnapshot,
+        request_pointer_capture: &mut Option<Option<NodeId>>,
+        pending_effects: &mut Vec<Effect>,
+        invalidate_layout: &mut bool,
+        invalidate_paint: &mut bool,
+        pending_redraws: &mut Vec<fret_core::AppWindowId>,
+    ) {
+        *request_pointer_capture = Some(None);
+
+        let within_slop = fret_ui_headless::tab_strip_hit_test::pointer_move_within_slop(
+            pressed.start,
+            position,
+            DOCK_TAB_CLOSE_CLICK_SLOP,
+        );
+
+        let (_chrome, dock_bounds) = dock_space_regions(self.last_bounds);
+        let layout = self.layout_map_containing_tabs(
+            dock,
+            root,
+            dock_bounds,
+            split_handle_gap,
+            split_handle_hit_thickness,
+            pressed.tabs,
+        );
+
+        let clicked = hit_test_tab(
+            &dock.graph,
+            &layout,
+            &self.tab_scroll,
+            &self.tab_widths,
+            theme,
+            position,
+        )
+        .is_some_and(|(n, i, p, close)| {
+            close && n == pressed.tabs && i == pressed.index && p == pressed.panel
+        });
+
+        if clicked || within_slop {
+            pending_effects.push(Effect::Dock(DockOp::ClosePanel {
+                window: self.window,
+                panel: pressed.panel,
+            }));
+            *invalidate_layout = true;
+        }
+
+        *invalidate_paint = true;
+        pending_redraws.push(self.window);
+    }
+
     fn maybe_expire_dock_drop_resolve_diagnostics(&mut self, now_frame: fret_runtime::FrameId) {
         let Some(keep_until) = self.dock_drop_resolve_keep_until_frame else {
             return;
@@ -4103,17 +4239,18 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                         intent,
                                         tabstrip_controller::TabStripIntent::Close { .. }
                                     ) {
-                                        self.pressed_tab_close = Some(PressedTabClose {
+                                        self.begin_pressed_tab_close(
                                             pointer_id,
-                                            tabs: tabs_node,
-                                            index: tab_index,
-                                            panel: panel_key.clone(),
-                                            start: *position,
-                                        });
-                                        request_pointer_capture = Some(Some(dock_space_node));
-                                        dock.hover = None;
-                                        invalidate_paint = true;
-                                        pending_redraws.push(self.window);
+                                            tabs_node,
+                                            tab_index,
+                                            panel_key.clone(),
+                                            *position,
+                                            dock_space_node,
+                                            &mut request_pointer_capture,
+                                            &mut dock.hover,
+                                            &mut invalidate_paint,
+                                            &mut pending_redraws,
+                                        );
                                         handled = true;
                                     } else {
                                         self.last_active_tabs = Some(tabs_node);
@@ -5587,72 +5724,23 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                 handled = true;
                             }
                             if *button == fret_core::MouseButton::Left
-                                && self
-                                    .pressed_tab_close
-                                    .as_ref()
-                                    .is_some_and(|pressed| pressed.pointer_id == pointer_id)
-                                && let Some(pressed) = self.pressed_tab_close.take()
+                                && let Some(pressed) =
+                                    self.take_pressed_tab_close_for_pointer(pointer_id)
                             {
-                                request_pointer_capture = Some(None);
-
-                                let within_slop = fret_ui_headless::tab_strip_hit_test::pointer_move_within_slop(
-                                    pressed.start,
+                                self.handle_pressed_tab_close_pointer_up(
+                                    pressed,
                                     *position,
-                                    DOCK_TAB_CLOSE_CLICK_SLOP,
-                                );
-
-                                let (_chrome, dock_bounds) = dock_space_regions(self.last_bounds);
-                                let mut layout = root
-                                    .map(|root| {
-                                        compute_layout_map(
-                                            &dock.graph,
-                                            root,
-                                            dock_bounds,
-                                            split_handle_gap,
-                                            split_handle_hit_thickness,
-                                        )
-                                    })
-                                    .unwrap_or_default();
-                                if !layout.contains_key(&pressed.tabs) {
-                                    for floating in dock.graph.floating_windows(self.window) {
-                                        let chrome = Self::floating_chrome(floating.rect);
-                                        let l = compute_layout_map(
-                                            &dock.graph,
-                                            floating.floating,
-                                            chrome.inner,
-                                            split_handle_gap,
-                                            split_handle_hit_thickness,
-                                        );
-                                        if l.contains_key(&pressed.tabs) {
-                                            layout = l;
-                                            break;
-                                        }
-                                    }
-                                }
-                                let clicked = hit_test_tab(
-                                    &dock.graph,
-                                    &layout,
-                                    &self.tab_scroll,
-                                    &self.tab_widths,
+                                    dock,
+                                    root,
+                                    split_handle_gap,
+                                    split_handle_hit_thickness,
                                     theme.clone(),
-                                    *position,
-                                )
-                                .is_some_and(|(n, i, p, close)| {
-                                    close
-                                        && n == pressed.tabs
-                                        && i == pressed.index
-                                        && p == pressed.panel
-                                });
-
-                                if clicked || within_slop {
-                                    pending_effects.push(Effect::Dock(DockOp::ClosePanel {
-                                        window: self.window,
-                                        panel: pressed.panel,
-                                    }));
-                                    invalidate_layout = true;
-                                }
-                                invalidate_paint = true;
-                                pending_redraws.push(self.window);
+                                    &mut request_pointer_capture,
+                                    &mut pending_effects,
+                                    &mut invalidate_layout,
+                                    &mut invalidate_paint,
+                                    &mut pending_redraws,
+                                );
                                 handled = true;
                             }
 
