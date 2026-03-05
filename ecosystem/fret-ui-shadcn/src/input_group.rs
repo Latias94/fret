@@ -553,6 +553,11 @@ impl InputGroup {
                         )
                     };
 
+                    let muted_foreground = {
+                        let theme = Theme::global(&*cx.app);
+                        theme.color_token("muted-foreground")
+                    };
+
                     let should_click_to_focus = control_focus_target.is_some() && !has_button;
 
                     let on_down = should_click_to_focus.then(|| {
@@ -613,7 +618,7 @@ impl InputGroup {
                             } else {
                                 flex
                             };
-                            vec![content]
+                            vec![cx.foreground_scope(muted_foreground, move |_cx| vec![content])]
                         },
                     )
                 };
@@ -916,6 +921,8 @@ impl InputGroup {
                                 ..Default::default()
                             },
                             move |cx| {
+                                let muted_foreground =
+                                    Theme::global(&*cx.app).color_token("muted-foreground");
                                 let row = cx.flex(
                                     FlexProps {
                                         layout: LayoutStyle::default(),
@@ -935,11 +942,12 @@ impl InputGroup {
                                     move |_cx| block_start,
                                 );
 
-                                if disabled {
-                                    vec![cx.opacity(0.5, move |_cx| vec![row])]
+                                let row = if disabled {
+                                    cx.opacity(0.5, move |_cx| vec![row])
                                 } else {
-                                    vec![row]
-                                }
+                                    row
+                                };
+                                vec![cx.foreground_scope(muted_foreground, move |_cx| vec![row])]
                             },
                         )
                     });
@@ -982,6 +990,8 @@ impl InputGroup {
                                 ..Default::default()
                             },
                             move |cx| {
+                                let muted_foreground =
+                                    Theme::global(&*cx.app).color_token("muted-foreground");
                                 let row = cx.flex(
                                     FlexProps {
                                         layout: LayoutStyle::default(),
@@ -1001,11 +1011,12 @@ impl InputGroup {
                                     move |_cx| block_end,
                                 );
 
-                                if disabled {
-                                    vec![cx.opacity(0.5, move |_cx| vec![row])]
+                                let row = if disabled {
+                                    cx.opacity(0.5, move |_cx| vec![row])
                                 } else {
-                                    vec![row]
-                                }
+                                    row
+                                };
+                                vec![cx.foreground_scope(muted_foreground, move |_cx| vec![row])]
                             },
                         )
                     });
@@ -2122,6 +2133,19 @@ mod tests {
         node.children.iter().any(|c| find_opacity(c, opacity))
     }
 
+    fn find_foreground_scope_with_color(node: &AnyElement, color: Color) -> bool {
+        let matches = match &node.kind {
+            ElementKind::ForegroundScope(props) => props.foreground == Some(color),
+            _ => false,
+        };
+        if matches {
+            return true;
+        }
+        node.children
+            .iter()
+            .any(|c| find_foreground_scope_with_color(c, color))
+    }
+
     #[test]
     fn input_group_parts_apply_placeholder_to_control() {
         let window = AppWindowId::default();
@@ -2338,6 +2362,34 @@ mod tests {
                 assert!(
                     find_opacity(&el, 0.5),
                     "expected disabled addons to include an opacity wrapper"
+                );
+            },
+        );
+    }
+
+    #[test]
+    fn input_group_addons_scope_muted_foreground_for_current_color_parity() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+
+        fret_ui::elements::with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "input_group_addon_muted_foreground",
+            |cx| {
+                let theme = Theme::global(&*cx.app);
+                let muted = theme.color_token("muted-foreground");
+
+                let model: Model<String> = cx.app.models_mut().insert(String::new());
+                let el = InputGroup::new(model)
+                    .leading([crate::Spinner::new().into_element(cx)])
+                    .into_element(cx);
+
+                assert!(
+                    find_foreground_scope_with_color(&el, muted),
+                    "expected addons to stamp a ForegroundScope with muted-foreground"
                 );
             },
         );
