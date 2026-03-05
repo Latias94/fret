@@ -33,6 +33,7 @@ pub(crate) fn compute_overflow_menu_entries<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     root_test_id: Option<&Arc<str>>,
     active: Option<&Arc<str>>,
+    active_policy: OverflowMenuActivePolicy,
     tabs: &[WorkspaceTab],
     tab_rects: &[WorkspaceTabHitRect],
     viewport: Option<Rect>,
@@ -55,7 +56,7 @@ pub(crate) fn compute_overflow_menu_entries<H: UiHost>(
         tabs.len(),
         &overflowed_indices,
         active_index,
-        OverflowMenuActivePolicy::Include,
+        active_policy,
         if is_overflowing {
             OverflowMenuEmptyOverflowedPolicy::AllTabs
         } else {
