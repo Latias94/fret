@@ -760,7 +760,7 @@ pub(crate) fn maybe_launch_demo(
     launch_write_bundle_json: bool,
     timeout_ms: u64,
     poll_ms: u64,
-    _launch_high_priority: bool,
+    launch_high_priority: bool,
 ) -> Result<Option<LaunchedDemo>, String> {
     let Some(launch) = launch else {
         return Ok(None);
