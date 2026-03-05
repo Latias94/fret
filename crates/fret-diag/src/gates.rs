@@ -131,34 +131,69 @@ pub(super) fn check_wgpu_metal_current_allocated_size_threshold(
     let v = bundle_path.and_then(read_json_value);
     let bundle_present = v.is_some();
 
-    let (tick_id, frame_id, present_flag, bytes_value) = if let Some(v) = v.as_ref() {
-        let windows = v.get("windows").and_then(|v| v.as_array());
-        let first_window = windows.and_then(|w| w.first());
-        let snapshots = first_window
-            .and_then(|w| w.get("snapshots"))
-            .and_then(|v| v.as_array());
-        let last_snapshot = snapshots.and_then(|s| s.last());
-        let stats = last_snapshot
-            .and_then(|s| s.get("debug"))
-            .and_then(|d| d.get("stats"))
-            .and_then(|v| v.as_object());
+    let (tick_id, frame_id, present_flag_any, bytes_min, bytes_max, bytes_max_tick_frame) =
+        if let Some(v) = v.as_ref() {
+            let windows = v.get("windows").and_then(|v| v.as_array());
+            let first_window = windows.and_then(|w| w.first());
+            let snapshots = first_window
+                .and_then(|w| w.get("snapshots"))
+                .and_then(|v| v.as_array());
+            let last_snapshot = snapshots.and_then(|s| s.last());
 
-        let tick_id = last_snapshot
-            .and_then(|s| s.get("tick_id"))
-            .and_then(|v| v.as_u64());
-        let frame_id = last_snapshot
-            .and_then(|s| s.get("frame_id"))
-            .and_then(|v| v.as_u64());
-        let present_flag = stats
-            .and_then(|o| o.get("wgpu_metal_current_allocated_size_present"))
-            .and_then(|v| v.as_bool());
-        let bytes_value = stats
-            .and_then(|o| o.get("wgpu_metal_current_allocated_size_bytes"))
-            .and_then(|v| v.as_u64());
-        (tick_id, frame_id, present_flag, bytes_value)
-    } else {
-        (None, None, None, None)
-    };
+            let tick_id = last_snapshot
+                .and_then(|s| s.get("tick_id"))
+                .and_then(|v| v.as_u64());
+            let frame_id = last_snapshot
+                .and_then(|s| s.get("frame_id"))
+                .and_then(|v| v.as_u64());
+
+            let mut present_flag_any: Option<bool> = None;
+            let mut bytes_min: Option<u64> = None;
+            let mut bytes_max: Option<u64> = None;
+            let mut bytes_max_tick_frame: Option<(u64, u64)> = None;
+
+            if let Some(snapshots) = snapshots {
+                for snapshot in snapshots {
+                    let snap_tick_id = snapshot.get("tick_id").and_then(|v| v.as_u64());
+                    let snap_frame_id = snapshot.get("frame_id").and_then(|v| v.as_u64());
+                    let stats = snapshot
+                        .get("debug")
+                        .and_then(|d| d.get("stats"))
+                        .and_then(|v| v.as_object());
+
+                    let present_flag = stats
+                        .and_then(|o| o.get("wgpu_metal_current_allocated_size_present"))
+                        .and_then(|v| v.as_bool());
+                    if let Some(present_flag) = present_flag {
+                        present_flag_any = Some(present_flag_any.unwrap_or(false) || present_flag);
+                    }
+
+                    let bytes_value = stats
+                        .and_then(|o| o.get("wgpu_metal_current_allocated_size_bytes"))
+                        .and_then(|v| v.as_u64());
+                    if let Some(bytes_value) = bytes_value {
+                        bytes_min = Some(bytes_min.map_or(bytes_value, |cur| cur.min(bytes_value)));
+                        if bytes_max.map_or(true, |cur| bytes_value > cur) {
+                            bytes_max = Some(bytes_value);
+                            if let (Some(t), Some(f)) = (snap_tick_id, snap_frame_id) {
+                                bytes_max_tick_frame = Some((t, f));
+                            }
+                        }
+                    }
+                }
+            }
+
+            (
+                tick_id,
+                frame_id,
+                present_flag_any,
+                bytes_min,
+                bytes_max,
+                bytes_max_tick_frame,
+            )
+        } else {
+            (None, None, None, None, None, None)
+        };
 
     let missing_reason = if bundle_present {
         "missing_field"
@@ -167,7 +202,7 @@ pub(super) fn check_wgpu_metal_current_allocated_size_threshold(
     };
 
     let mut failures: Vec<serde_json::Value> = Vec::new();
-    match (present_flag, bytes_value) {
+    match (present_flag_any, bytes_max) {
         (Some(true), Some(observed)) if observed > max_wgpu_metal_current_allocated_size_bytes => {
             failures.push(serde_json::json!({
                 "kind": "wgpu_metal_current_allocated_size_bytes",
@@ -209,8 +244,10 @@ pub(super) fn check_wgpu_metal_current_allocated_size_threshold(
             "bundle_present": bundle_present,
             "tick_id": tick_id,
             "frame_id": frame_id,
-            "wgpu_metal_current_allocated_size_present": present_flag,
-            "wgpu_metal_current_allocated_size_bytes": bytes_value,
+            "wgpu_metal_current_allocated_size_present": present_flag_any,
+            "wgpu_metal_current_allocated_size_bytes_min": bytes_min,
+            "wgpu_metal_current_allocated_size_bytes_max": bytes_max,
+            "wgpu_metal_current_allocated_size_bytes_max_tick_frame": bytes_max_tick_frame,
         },
         "failures": failures,
     });
