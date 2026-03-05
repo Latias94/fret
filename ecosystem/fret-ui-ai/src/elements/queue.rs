@@ -12,15 +12,20 @@ use fret_core::{
 use fret_runtime::Model;
 use fret_ui::action::{ActionCx, UiActionHost};
 use fret_ui::element::{
-    AnyElement, ContainerProps, HoverRegionProps, ImageProps, LayoutStyle, Length, MarginEdge,
-    ScrollAxis, SemanticsDecoration, StyledTextProps, TextProps, VisualTransformProps,
+    AnyElement, ContainerProps, CrossAlign, FlexProps, HoverRegionProps, ImageProps, LayoutStyle,
+    Length, MainAlign, MarginEdge, ScrollAxis, SemanticsDecoration, SpacingLength, StyledTextProps,
+    TextProps, VisualTransformProps,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::typography;
-use fret_ui_kit::{ChromeRefinement, ColorRef, Items, LayoutRefinement, MetricRef, Radius, Space};
+use fret_ui_kit::{
+    ChromeRefinement, ColorRef, Items, LayoutRefinement, MetricRef, Radius, Space,
+    WidgetStateProperty, WidgetStates,
+};
+use fret_ui_shadcn::button::ButtonStyle;
 use fret_ui_shadcn::{
     Button, ButtonSize, ButtonVariant, Collapsible, CollapsibleContent, CollapsibleTrigger,
     ScrollArea,
@@ -1088,7 +1093,7 @@ impl QueueItemAction {
             disabled: false,
             test_id: None,
             variant: ButtonVariant::Ghost,
-            size: ButtonSize::IconSm,
+            size: ButtonSize::IconXs,
             chrome: ChromeRefinement::default().rounded(Radius::Sm).p(Space::N1),
             layout: LayoutRefinement::default(),
         }
@@ -1106,7 +1111,7 @@ impl QueueItemAction {
 
     /// Mirrors the upstream default `opacity-0` + `group-hover:opacity-100` outcome.
     ///
-    /// When `false`, the action is not rendered (best-effort parity for Fret).
+    /// When `false`, the action is still mounted but rendered at `opacity=0` (to preserve layout).
     pub fn visible(mut self, visible: bool) -> Self {
         self.visible = visible;
         self
@@ -1143,13 +1148,34 @@ impl QueueItemAction {
     }
 
     pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let theme = Theme::global(&*cx.app).clone();
+        let muted_fg = resolve_muted_fg(&theme);
+        let hover_fg = theme.color_token("foreground");
+        let hover_bg = alpha(muted_fg, 0.1);
+
+        // queue.tsx:
+        // - `text-muted-foreground`
+        // - `hover:bg-muted-foreground/10 hover:text-foreground`
+        let action_style = ButtonStyle::default()
+            .background(
+                WidgetStateProperty::new(Some(ColorRef::Color(Color::TRANSPARENT)))
+                    .when(WidgetStates::HOVERED, Some(ColorRef::Color(hover_bg)))
+                    .when(WidgetStates::ACTIVE, Some(ColorRef::Color(hover_bg))),
+            )
+            .foreground(
+                WidgetStateProperty::new(Some(ColorRef::Color(muted_fg)))
+                    .when(WidgetStates::HOVERED, Some(ColorRef::Color(hover_fg)))
+                    .when(WidgetStates::ACTIVE, Some(ColorRef::Color(hover_fg))),
+            );
+
         let mut btn = Button::new(self.label)
             .variant(self.variant)
             .size(self.size)
             .disabled(self.disabled)
             .children(self.children)
             .refine_style(self.chrome)
-            .refine_layout(self.layout);
+            .refine_layout(self.layout)
+            .style(action_style);
 
         if let Some(test_id) = self.test_id {
             btn = btn.test_id(test_id);
@@ -1165,11 +1191,7 @@ impl QueueItemAction {
 
         let btn = btn.into_element(cx);
         let opacity = if self.visible { 1.0 } else { 0.0 };
-        let interactive = self.visible;
-
-        cx.interactivity_gate(true, interactive, move |cx| {
-            vec![cx.opacity(opacity, move |_cx| vec![btn])]
-        })
+        cx.opacity(opacity, move |_cx| vec![btn])
     }
 }
 
@@ -1202,14 +1224,17 @@ impl QueueItemAttachment {
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .layout(self.layout)
-                .gap(Space::N2)
-                .items(Items::Center),
-            move |_cx| self.children,
-        )
+        let theme = Theme::global(&*cx.app).clone();
+
+        let mut props = FlexProps::default();
+        props.layout = decl_style::layout_style(&theme, self.layout);
+        props.direction = fret_core::Axis::Horizontal;
+        props.wrap = true; // Upstream: `flex flex-wrap`.
+        props.gap = SpacingLength::Px(MetricRef::space(Space::N2).resolve(&theme));
+        props.justify = MainAlign::Start;
+        props.align = CrossAlign::Center;
+
+        cx.flex(props, |_cx| self.children)
     }
 }
 

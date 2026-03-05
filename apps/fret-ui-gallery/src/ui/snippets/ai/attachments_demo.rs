@@ -95,7 +95,7 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
             let hover_preview = ui_ai::AttachmentPreview::new(item_inline.clone())
                 .variant(ui_ai::AttachmentVariant::Grid)
                 .into_element(cx);
-            let hover_label = ui::text(cx, ui_ai::get_attachment_label(&item_inline))
+            let hover_label = ui::text(ui_ai::get_attachment_label(&item_inline))
                 .text_sm()
                 .into_element(cx);
             let hover_content = stack::vstack(
