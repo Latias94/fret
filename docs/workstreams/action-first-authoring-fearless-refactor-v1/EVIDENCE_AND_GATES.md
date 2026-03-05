@@ -27,6 +27,8 @@ View runtime (v1):
 - `ecosystem/fret/src/view.rs` (`View`, `ViewCx`, `use_state`/`use_state_keyed`/`use_selector`/`use_query`, view-cache reuse + handler keepalive)
 - `ecosystem/fret/src/app_entry.rs` (`App::run_view`)
 - `ecosystem/fret-ui-kit/src/activate.rs` (`on_activate_*` helpers for low-noise pointer activation handlers)
+- `ecosystem/fret-ui-kit/src/primitives/menu/checkbox_item.rs` / `ecosystem/fret-ui-kit/src/primitives/menu/radio_group.rs` / `ecosystem/fret-ui-kit/src/primitives/menu/sub_trigger.rs` (internal primitives reuse `on_activate` helpers)
+- `ecosystem/fret-ui-kit/src/imui.rs` (imui pressable activation paths reuse `on_activate` helpers)
 
 Legacy MVU removal (planned M9):
 

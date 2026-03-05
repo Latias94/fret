@@ -4111,7 +4111,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                 let long_press_signal_model_for_up = long_press_signal_model.clone();
 
                 let model = model.clone();
-                cx.pressable_on_activate(Arc::new(move |host, acx, _reason| {
+                cx.pressable_on_activate(crate::on_activate(move |host, acx, _reason| {
                     let _ = host.update_model(&model, |v: &mut bool| *v = !*v);
                     host.record_transient_event(acx, KEY_CHANGED);
                     host.notify(acx);
@@ -4417,7 +4417,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                 }));
 
                 let model_for_activate = model.clone();
-                cx.pressable_on_activate(Arc::new(move |host, acx, _reason| {
+                cx.pressable_on_activate(crate::on_activate(move |host, acx, _reason| {
                     let _ = host.update_model(&model_for_activate, |v: &mut bool| *v = !*v);
                     host.record_transient_event(acx, KEY_CLICKED);
                     host.record_transient_event(acx, KEY_CHANGED);
