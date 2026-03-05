@@ -14,6 +14,7 @@ use fret_ui::action::{
 use fret_ui::element::{AnyElement, ContainerProps, LayoutStyle, Length, PointerRegionProps};
 use fret_ui::{ElementContext, Theme, UiHost};
 
+use crate::Space;
 use crate::declarative::model_watch::ModelWatchExt as _;
 use crate::dnd;
 use crate::dnd::{
@@ -21,7 +22,6 @@ use crate::dnd::{
     SensorOutput, insertion_side_for_pointer,
 };
 use crate::ui;
-use crate::{LayoutRefinement, Space};
 
 const DRAG_KIND_SORTABLE_REORDER: DragKindId = DragKindId(100);
 
@@ -383,7 +383,7 @@ where
         .gap(Space::N0)
         .justify_start()
         .items_stretch()
-        .layout(LayoutRefinement::default().w_full())
+        .w_full()
         .into_element(cx)
 }
 

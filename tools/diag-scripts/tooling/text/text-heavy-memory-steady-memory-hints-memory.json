@@ -1,0 +1,28 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "text heavy: memory steady (wgpu memory hints memory)",
+    "tags": ["text", "memory", "steady", "attribution"],
+    "required_capabilities": ["diag.script_v2"],
+    "target_hints": [
+      "Captures a steady-state bundle; intended to grow text shaping + emoji atlas caches.",
+      "Overrides WGPU memory hints to MemoryUsage to probe allocator/driver reservation behavior."
+    ],
+    "env_defaults": {
+      "FRET_DIAG_WGPU_ALLOCATOR_REPORT": 1,
+      "FRET_DIAG_WGPU_ALLOCATOR_REPORT_EVERY_N_FRAMES": 600,
+      "FRET_DIAG_WGPU_REPORT": 1,
+      "FRET_DIAG_WGPU_REPORT_EVERY_N_FRAMES": 600,
+      "FRET_WGPU_MEMORY_HINTS": "memory"
+    }
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "wait_frames", "n": 10 },
+
+    { "type": "reset_diagnostics" },
+    { "type": "wait_frames", "n": 600 },
+    { "type": "capture_bundle", "label": "text-heavy-memory-steady-memory-hints-memory" }
+  ]
+}
+

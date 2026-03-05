@@ -39,12 +39,15 @@ pub(crate) fn ui_gallery_layout_suite_scripts() -> Vec<String> {
 }
 
 pub(crate) fn docking_arbitration_suite_scripts() -> Vec<String> {
-    let mut inputs = vec!["tools/diag-scripts/suites/docking-arbitration/common".to_string()];
-
     #[cfg(target_os = "windows")]
     {
+        let mut inputs = vec!["tools/diag-scripts/suites/docking-arbitration/common".to_string()];
         inputs.push("tools/diag-scripts/suites/docking-arbitration/windows".to_string());
+        inputs
     }
 
-    inputs
+    #[cfg(not(target_os = "windows"))]
+    {
+        vec!["tools/diag-scripts/suites/docking-arbitration/common".to_string()]
+    }
 }

@@ -54,6 +54,10 @@ mod latest;
 mod launch_env_policy;
 mod layout_perf_summary;
 mod lint;
+#[cfg(target_os = "macos")]
+mod macos_footprint_tool;
+#[cfg(target_os = "macos")]
+mod macos_vmmap;
 mod math;
 mod pack_zip;
 mod paths;
@@ -110,11 +114,13 @@ use compare::{
 use devtools::DevtoolsOps;
 use gates::{
     CodeEditorMemoryGateResult, CodeEditorMemoryThresholds, RedrawHitchesGateResult,
-    RenderTextAtlasBytesGateResult, RendererGpuBudgetThresholds, RendererGpuBudgetsGateResult,
-    ResourceFootprintGateResult, ResourceFootprintThresholds, WgpuMetalAllocatedSizeGateResult,
-    check_code_editor_memory_thresholds, check_redraw_hitches_max_total_ms,
-    check_render_text_atlas_bytes_live_estimate_total_threshold,
-    check_renderer_gpu_budget_thresholds, check_resource_footprint_thresholds,
+    RenderTextAtlasBytesGateResult, RenderTextFontDbGateResult, RenderTextFontDbThresholds,
+    RendererGpuBudgetThresholds, RendererGpuBudgetsGateResult, ResourceFootprintGateResult,
+    ResourceFootprintThresholds, WgpuHubCountsGateResult, WgpuHubCountsThresholds,
+    WgpuMetalAllocatedSizeGateResult, check_code_editor_memory_thresholds,
+    check_redraw_hitches_max_total_ms, check_render_text_atlas_bytes_live_estimate_total_threshold,
+    check_render_text_font_db_thresholds, check_renderer_gpu_budget_thresholds,
+    check_resource_footprint_thresholds, check_wgpu_hub_counts_thresholds,
     check_wgpu_metal_current_allocated_size_threshold,
 };
 use lint::{LintOptions, lint_bundle_from_path};
@@ -352,6 +358,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut layout_sidecar_out: Option<PathBuf> = None;
     let mut extensions_out: Option<PathBuf> = None;
     let mut layout_perf_summary_out: Option<PathBuf> = None;
+    let mut memory_summary_out: Option<PathBuf> = None;
     let mut slice_out: Option<PathBuf> = None;
     let mut ai_packet_out: Option<PathBuf> = None;
     let mut script_path: Option<PathBuf> = None;
@@ -420,11 +427,23 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut max_macos_io_surface_dirty_bytes: Option<u64> = None;
     let mut max_macos_io_accelerator_dirty_bytes: Option<u64> = None;
     let mut max_macos_malloc_small_dirty_bytes: Option<u64> = None;
+    let mut max_macos_malloc_dirty_bytes_total: Option<u64> = None;
+    let mut max_macos_malloc_zones_total_allocated_bytes: Option<u64> = None;
+    let mut max_macos_malloc_zones_total_frag_bytes: Option<u64> = None;
+    let mut max_macos_malloc_zones_total_dirty_bytes: Option<u64> = None;
     let mut max_renderer_gpu_images_bytes_estimate: Option<u64> = None;
     let mut max_renderer_gpu_render_targets_bytes_estimate: Option<u64> = None;
     let mut max_renderer_intermediate_peak_in_use_bytes: Option<u64> = None;
+    let mut max_wgpu_hub_buffers: Option<u64> = None;
+    let mut max_wgpu_hub_textures: Option<u64> = None;
+    let mut max_wgpu_hub_render_pipelines: Option<u64> = None;
+    let mut max_wgpu_hub_shader_modules: Option<u64> = None;
     let mut max_wgpu_metal_current_allocated_size_bytes: Option<u64> = None;
     let mut max_render_text_atlas_bytes_live_estimate_total: Option<u64> = None;
+    let mut max_render_text_registered_font_blobs_total_bytes: Option<u64> = None;
+    let mut max_render_text_registered_font_blobs_count: Option<u64> = None;
+    let mut max_render_text_shape_cache_entries: Option<u64> = None;
+    let mut max_render_text_blob_cache_entries: Option<u64> = None;
     let mut max_code_editor_buffer_len_bytes: Option<u64> = None;
     let mut max_code_editor_undo_text_bytes_estimate_total: Option<u64> = None;
     let mut max_code_editor_row_text_cache_entries: Option<u64> = None;
@@ -865,6 +884,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 layout_sidecar_out = Some(p.clone());
                 extensions_out = Some(p.clone());
                 layout_perf_summary_out = Some(p.clone());
+                memory_summary_out = Some(p.clone());
                 slice_out = Some(p.clone());
                 ai_packet_out = Some(p.clone());
                 test_ids_out = Some(p);
@@ -1245,6 +1265,58 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 })?);
                 i += 1;
             }
+            "--max-macos-malloc-dirty-bytes-total" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err(
+                        "missing value for --max-macos-malloc-dirty-bytes-total".to_string()
+                    );
+                };
+                max_macos_malloc_dirty_bytes_total = Some(v.parse::<u64>().map_err(|_| {
+                    "invalid value for --max-macos-malloc-dirty-bytes-total".to_string()
+                })?);
+                i += 1;
+            }
+            "--max-macos-malloc-zones-total-allocated-bytes" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err(
+                        "missing value for --max-macos-malloc-zones-total-allocated-bytes"
+                            .to_string(),
+                    );
+                };
+                max_macos_malloc_zones_total_allocated_bytes =
+                    Some(v.parse::<u64>().map_err(|_| {
+                        "invalid value for --max-macos-malloc-zones-total-allocated-bytes"
+                            .to_string()
+                    })?);
+                i += 1;
+            }
+            "--max-macos-malloc-zones-total-frag-bytes" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err(
+                        "missing value for --max-macos-malloc-zones-total-frag-bytes".to_string(),
+                    );
+                };
+                max_macos_malloc_zones_total_frag_bytes = Some(v.parse::<u64>().map_err(|_| {
+                    "invalid value for --max-macos-malloc-zones-total-frag-bytes".to_string()
+                })?);
+                i += 1;
+            }
+            "--max-macos-malloc-zones-total-dirty-bytes" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err(
+                        "missing value for --max-macos-malloc-zones-total-dirty-bytes".to_string(),
+                    );
+                };
+                max_macos_malloc_zones_total_dirty_bytes =
+                    Some(v.parse::<u64>().map_err(|_| {
+                        "invalid value for --max-macos-malloc-zones-total-dirty-bytes".to_string()
+                    })?);
+                i += 1;
+            }
             "--max-renderer-gpu-images-bytes-estimate" => {
                 i += 1;
                 let Some(v) = args.get(i).cloned() else {
@@ -1287,6 +1359,49 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     })?);
                 i += 1;
             }
+            "--max-wgpu-hub-buffers" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --max-wgpu-hub-buffers".to_string());
+                };
+                max_wgpu_hub_buffers = Some(
+                    v.parse::<u64>()
+                        .map_err(|_| "invalid value for --max-wgpu-hub-buffers".to_string())?,
+                );
+                i += 1;
+            }
+            "--max-wgpu-hub-textures" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --max-wgpu-hub-textures".to_string());
+                };
+                max_wgpu_hub_textures = Some(
+                    v.parse::<u64>()
+                        .map_err(|_| "invalid value for --max-wgpu-hub-textures".to_string())?,
+                );
+                i += 1;
+            }
+            "--max-wgpu-hub-render-pipelines" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --max-wgpu-hub-render-pipelines".to_string());
+                };
+                max_wgpu_hub_render_pipelines = Some(v.parse::<u64>().map_err(|_| {
+                    "invalid value for --max-wgpu-hub-render-pipelines".to_string()
+                })?);
+                i += 1;
+            }
+            "--max-wgpu-hub-shader-modules" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --max-wgpu-hub-shader-modules".to_string());
+                };
+                max_wgpu_hub_shader_modules =
+                    Some(v.parse::<u64>().map_err(|_| {
+                        "invalid value for --max-wgpu-hub-shader-modules".to_string()
+                    })?);
+                i += 1;
+            }
             "--max-wgpu-metal-current-allocated-size-bytes" => {
                 i += 1;
                 let Some(v) = args.get(i).cloned() else {
@@ -1315,6 +1430,60 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                         "invalid value for --max-render-text-atlas-bytes-live-estimate-total"
                             .to_string()
                     })?);
+                i += 1;
+            }
+            "--max-render-text-registered-font-blobs-total-bytes" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err(
+                        "missing value for --max-render-text-registered-font-blobs-total-bytes"
+                            .to_string(),
+                    );
+                };
+                max_render_text_registered_font_blobs_total_bytes =
+                    Some(v.parse::<u64>().map_err(|_| {
+                        "invalid value for --max-render-text-registered-font-blobs-total-bytes"
+                            .to_string()
+                    })?);
+                i += 1;
+            }
+            "--max-render-text-registered-font-blobs-count" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err(
+                        "missing value for --max-render-text-registered-font-blobs-count"
+                            .to_string(),
+                    );
+                };
+                max_render_text_registered_font_blobs_count =
+                    Some(v.parse::<u64>().map_err(|_| {
+                        "invalid value for --max-render-text-registered-font-blobs-count"
+                            .to_string()
+                    })?);
+                i += 1;
+            }
+            "--max-render-text-shape-cache-entries" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err(
+                        "missing value for --max-render-text-shape-cache-entries".to_string()
+                    );
+                };
+                max_render_text_shape_cache_entries = Some(v.parse::<u64>().map_err(|_| {
+                    "invalid value for --max-render-text-shape-cache-entries".to_string()
+                })?);
+                i += 1;
+            }
+            "--max-render-text-blob-cache-entries" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err(
+                        "missing value for --max-render-text-blob-cache-entries".to_string()
+                    );
+                };
+                max_render_text_blob_cache_entries = Some(v.parse::<u64>().map_err(|_| {
+                    "invalid value for --max-render-text-blob-cache-entries".to_string()
+                })?);
                 i += 1;
             }
             "--max-code-editor-buffer-len-bytes" => {
@@ -2330,6 +2499,10 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
         max_macos_io_surface_dirty_bytes,
         max_macos_io_accelerator_dirty_bytes,
         max_macos_malloc_small_dirty_bytes,
+        max_macos_malloc_dirty_bytes_total,
+        max_macos_malloc_zones_total_allocated_bytes,
+        max_macos_malloc_zones_total_frag_bytes,
+        max_macos_malloc_zones_total_dirty_bytes,
         max_cpu_avg_percent_total_cores,
     };
 
@@ -2339,11 +2512,25 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
         max_renderer_intermediate_peak_in_use_bytes,
     };
 
+    let render_text_font_db_thresholds = RenderTextFontDbThresholds {
+        max_render_text_registered_font_blobs_total_bytes,
+        max_render_text_registered_font_blobs_count,
+        max_render_text_shape_cache_entries,
+        max_render_text_blob_cache_entries,
+    };
+
     let code_editor_memory_thresholds = CodeEditorMemoryThresholds {
         max_code_editor_buffer_len_bytes,
         max_code_editor_undo_text_bytes_estimate_total,
         max_code_editor_row_text_cache_entries,
         max_code_editor_row_rich_cache_entries,
+    };
+
+    let wgpu_hub_counts_thresholds = WgpuHubCountsThresholds {
+        max_wgpu_hub_buffers,
+        max_wgpu_hub_textures,
+        max_wgpu_hub_render_pipelines,
+        max_wgpu_hub_shader_modules,
     };
 
     if sub != "repro" && (with_tracy || with_renderdoc || renderdoc_after_frames.is_some()) {
@@ -2362,7 +2549,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
         && (resource_footprint_thresholds.any() || renderer_gpu_budget_thresholds.any())
     {
         return Err(
-            "--max-working-set-bytes/--max-peak-working-set-bytes/--max-macos-physical-footprint-peak-bytes/--max-macos-owned-unmapped-memory-dirty-bytes/--max-macos-io-surface-dirty-bytes/--max-macos-io-accelerator-dirty-bytes/--max-macos-malloc-small-dirty-bytes/--max-cpu-avg-percent-total-cores/--max-renderer-gpu-images-bytes-estimate/--max-renderer-gpu-render-targets-bytes-estimate/--max-renderer-intermediate-peak-in-use-bytes are only supported with `diag repro` for now"
+            "--max-working-set-bytes/--max-peak-working-set-bytes/--max-macos-physical-footprint-peak-bytes/--max-macos-owned-unmapped-memory-dirty-bytes/--max-macos-io-surface-dirty-bytes/--max-macos-io-accelerator-dirty-bytes/--max-macos-malloc-small-dirty-bytes/--max-macos-malloc-dirty-bytes-total/--max-macos-malloc-zones-total-allocated-bytes/--max-macos-malloc-zones-total-frag-bytes/--max-macos-malloc-zones-total-dirty-bytes/--max-cpu-avg-percent-total-cores/--max-renderer-gpu-images-bytes-estimate/--max-renderer-gpu-render-targets-bytes-estimate/--max-renderer-intermediate-peak-in-use-bytes are only supported with `diag repro` for now"
                 .to_string(),
         );
     }
@@ -2372,9 +2559,21 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 .to_string(),
         );
     }
+    if sub != "repro" && wgpu_hub_counts_thresholds.any() {
+        return Err(
+            "--max-wgpu-hub-buffers/--max-wgpu-hub-textures/--max-wgpu-hub-render-pipelines/--max-wgpu-hub-shader-modules is only supported with `diag repro` for now"
+                .to_string(),
+        );
+    }
     if sub != "repro" && max_render_text_atlas_bytes_live_estimate_total.is_some() {
         return Err(
             "--max-render-text-atlas-bytes-live-estimate-total is only supported with `diag repro` for now"
+                .to_string(),
+        );
+    }
+    if sub != "repro" && render_text_font_db_thresholds.any() {
+        return Err(
+            "--max-render-text-registered-font-blobs-total-bytes/--max-render-text-registered-font-blobs-count/--max-render-text-shape-cache-entries/--max-render-text-blob-cache-entries are only supported with `diag repro` for now"
                 .to_string(),
         );
     }
@@ -3022,6 +3221,8 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 resource_footprint_thresholds,
                 renderer_gpu_budget_thresholds,
                 code_editor_memory_thresholds,
+                render_text_font_db_thresholds,
+                wgpu_hub_counts_thresholds,
                 max_wgpu_metal_current_allocated_size_bytes,
                 max_render_text_atlas_bytes_live_estimate_total,
                 check_redraw_hitches_max_total_ms_threshold,
@@ -3318,6 +3519,14 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             warmup_frames,
             stats_json,
             layout_perf_summary_out.as_deref(),
+        ),
+        "memory-summary" | "memory_summary" => commands::memory_summary::cmd_memory_summary(
+            &rest,
+            &resolved_out_dir,
+            &workspace_root,
+            stats_json,
+            stats_top,
+            memory_summary_out.as_deref(),
         ),
         "layout-sidecar" | "layout_sidecar" => commands::layout_sidecar::cmd_layout_sidecar(
             &rest,

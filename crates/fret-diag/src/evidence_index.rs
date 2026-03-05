@@ -57,37 +57,60 @@ fn resource_footprint_summary(path: &Path) -> Option<serde_json::Value> {
         .and_then(|v| v.get("peak_working_set_bytes"))
         .and_then(|v| v.as_u64());
 
-    let macos_physical_footprint_bytes = v
-        .get("macos_vmmap")
+    let macos_vmmap_source = if v.get("macos_vmmap_steady").is_some() {
+        "steady"
+    } else {
+        "exit"
+    };
+    let macos_vmmap = v.get("macos_vmmap_steady").or_else(|| v.get("macos_vmmap"));
+
+    let macos_physical_footprint_bytes = macos_vmmap
         .and_then(|v| v.get("physical_footprint_bytes"))
         .and_then(|v| v.as_u64());
-    let macos_physical_footprint_peak_bytes = v
-        .get("macos_vmmap")
+    let macos_physical_footprint_peak_bytes = macos_vmmap
         .and_then(|v| v.get("physical_footprint_peak_bytes"))
         .and_then(|v| v.as_u64());
-    let macos_owned_unmapped_memory_dirty_bytes = v
-        .get("macos_vmmap")
+    let macos_owned_unmapped_memory_dirty_bytes = macos_vmmap
         .and_then(|v| v.get("regions"))
         .and_then(|v| v.get("owned_unmapped_memory_dirty_bytes"))
         .and_then(|v| v.as_u64());
-    let macos_io_surface_dirty_bytes = v
-        .get("macos_vmmap")
+    let macos_io_surface_dirty_bytes = macos_vmmap
         .and_then(|v| v.get("regions"))
         .and_then(|v| v.get("io_surface_dirty_bytes"))
         .and_then(|v| v.as_u64());
-    let macos_io_accelerator_dirty_bytes = v
-        .get("macos_vmmap")
+    let macos_io_accelerator_dirty_bytes = macos_vmmap
         .and_then(|v| v.get("regions"))
         .and_then(|v| v.get("io_accelerator_dirty_bytes"))
         .and_then(|v| v.as_u64());
-    let macos_malloc_small_dirty_bytes = v
-        .get("macos_vmmap")
+    let macos_malloc_small_dirty_bytes = macos_vmmap
         .and_then(|v| v.get("regions"))
         .and_then(|v| v.get("malloc_small_dirty_bytes"))
         .and_then(|v| v.as_u64());
+    let macos_malloc_dirty_bytes_total = macos_vmmap
+        .and_then(|v| v.get("regions"))
+        .and_then(|v| v.get("malloc_dirty_bytes_total"))
+        .and_then(|v| v.as_u64());
 
-    let macos_vmmap_top_dirty_region_type = v
-        .get("macos_vmmap")
+    let macos_malloc_zones_total_allocated_bytes = macos_vmmap
+        .and_then(|v| v.get("tables"))
+        .and_then(|v| v.get("malloc_zones"))
+        .and_then(|v| v.get("total"))
+        .and_then(|v| v.get("allocated_bytes"))
+        .and_then(|v| v.as_u64());
+    let macos_malloc_zones_total_frag_bytes = macos_vmmap
+        .and_then(|v| v.get("tables"))
+        .and_then(|v| v.get("malloc_zones"))
+        .and_then(|v| v.get("total"))
+        .and_then(|v| v.get("frag_bytes"))
+        .and_then(|v| v.as_u64());
+    let macos_malloc_zones_total_dirty_bytes = macos_vmmap
+        .and_then(|v| v.get("tables"))
+        .and_then(|v| v.get("malloc_zones"))
+        .and_then(|v| v.get("total"))
+        .and_then(|v| v.get("dirty_bytes"))
+        .and_then(|v| v.as_u64());
+
+    let macos_vmmap_top_dirty_region_type = macos_vmmap
         .and_then(|v| v.get("tables"))
         .and_then(|v| v.get("regions"))
         .and_then(|v| v.get("top_dirty"))
@@ -96,8 +119,7 @@ fn resource_footprint_summary(path: &Path) -> Option<serde_json::Value> {
         .and_then(|v| v.get("region_type"))
         .and_then(|v| v.as_str())
         .map(|s| s.to_string());
-    let macos_vmmap_top_dirty_region_bytes = v
-        .get("macos_vmmap")
+    let macos_vmmap_top_dirty_region_bytes = macos_vmmap
         .and_then(|v| v.get("tables"))
         .and_then(|v| v.get("regions"))
         .and_then(|v| v.get("top_dirty"))
@@ -106,8 +128,7 @@ fn resource_footprint_summary(path: &Path) -> Option<serde_json::Value> {
         .and_then(|v| v.get("dirty_bytes"))
         .and_then(|v| v.as_u64());
 
-    let macos_vmmap_top_allocated_malloc_zone = v
-        .get("macos_vmmap")
+    let macos_vmmap_top_allocated_malloc_zone = macos_vmmap
         .and_then(|v| v.get("tables"))
         .and_then(|v| v.get("malloc_zones"))
         .and_then(|v| v.get("top_allocated"))
@@ -116,8 +137,7 @@ fn resource_footprint_summary(path: &Path) -> Option<serde_json::Value> {
         .and_then(|v| v.get("zone"))
         .and_then(|v| v.as_str())
         .map(|s| s.to_string());
-    let macos_vmmap_top_allocated_malloc_bytes = v
-        .get("macos_vmmap")
+    let macos_vmmap_top_allocated_malloc_bytes = macos_vmmap
         .and_then(|v| v.get("tables"))
         .and_then(|v| v.get("malloc_zones"))
         .and_then(|v| v.get("top_allocated"))
@@ -126,8 +146,7 @@ fn resource_footprint_summary(path: &Path) -> Option<serde_json::Value> {
         .and_then(|v| v.get("allocated_bytes"))
         .and_then(|v| v.as_u64());
 
-    let macos_vmmap_top_dirty_regions = v
-        .get("macos_vmmap")
+    let macos_vmmap_top_dirty_regions = macos_vmmap
         .and_then(|v| v.get("tables"))
         .and_then(|v| v.get("regions"))
         .and_then(|v| v.get("top_dirty"))
@@ -147,8 +166,7 @@ fn resource_footprint_summary(path: &Path) -> Option<serde_json::Value> {
                 .collect::<Vec<_>>()
         });
 
-    let macos_vmmap_top_resident_regions = v
-        .get("macos_vmmap")
+    let macos_vmmap_top_resident_regions = macos_vmmap
         .and_then(|v| v.get("tables"))
         .and_then(|v| v.get("regions"))
         .and_then(|v| v.get("top_resident"))
@@ -177,12 +195,17 @@ fn resource_footprint_summary(path: &Path) -> Option<serde_json::Value> {
         "cpu_usage_percent_avg": cpu_usage_pct_avg,
         "working_set_bytes": working_set_bytes,
         "peak_working_set_bytes": peak_working_set_bytes,
+        "macos_vmmap_source": macos_vmmap_source,
         "macos_physical_footprint_bytes": macos_physical_footprint_bytes,
         "macos_physical_footprint_peak_bytes": macos_physical_footprint_peak_bytes,
         "macos_owned_unmapped_memory_dirty_bytes": macos_owned_unmapped_memory_dirty_bytes,
         "macos_io_surface_dirty_bytes": macos_io_surface_dirty_bytes,
         "macos_io_accelerator_dirty_bytes": macos_io_accelerator_dirty_bytes,
         "macos_malloc_small_dirty_bytes": macos_malloc_small_dirty_bytes,
+        "macos_malloc_dirty_bytes_total": macos_malloc_dirty_bytes_total,
+        "macos_malloc_zones_total_allocated_bytes": macos_malloc_zones_total_allocated_bytes,
+        "macos_malloc_zones_total_frag_bytes": macos_malloc_zones_total_frag_bytes,
+        "macos_malloc_zones_total_dirty_bytes": macos_malloc_zones_total_dirty_bytes,
         "macos_vmmap_top_dirty_region_type": macos_vmmap_top_dirty_region_type,
         "macos_vmmap_top_dirty_region_bytes": macos_vmmap_top_dirty_region_bytes,
         "macos_vmmap_top_dirty_regions": macos_vmmap_top_dirty_regions,
@@ -202,6 +225,21 @@ fn bundle_stats_summary_from_path(path: &Path) -> Option<serde_json::Value> {
         .get("debug")
         .and_then(|v| v.get("stats"))
         .and_then(|v| v.as_object())?;
+
+    let snapshot_stats_u64 = |snapshot: &serde_json::Value, k: &str| -> Option<u64> {
+        snapshot
+            .get("debug")
+            .and_then(|v| v.get("stats"))
+            .and_then(|v| v.get(k))
+            .and_then(|v| v.as_u64())
+    };
+    let snapshot_stats_bool = |snapshot: &serde_json::Value, k: &str| -> Option<bool> {
+        snapshot
+            .get("debug")
+            .and_then(|v| v.get("stats"))
+            .and_then(|v| v.get(k))
+            .and_then(|v| v.as_bool())
+    };
 
     let get_u64 = |k: &str| stats.get(k).and_then(|v| v.as_u64());
     let get_bool = |k: &str| stats.get(k).and_then(|v| v.as_bool());
@@ -248,11 +286,43 @@ fn bundle_stats_summary_from_path(path: &Path) -> Option<serde_json::Value> {
         _ => None,
     };
 
+    let mut wgpu_metal_current_allocated_size_bytes_min: Option<u64> = None;
+    let mut wgpu_metal_current_allocated_size_bytes_max: Option<u64> = None;
+    for snapshot in snapshots {
+        if snapshot_stats_bool(snapshot, "wgpu_metal_current_allocated_size_present") != Some(true)
+        {
+            continue;
+        }
+        let Some(v) = snapshot_stats_u64(snapshot, "wgpu_metal_current_allocated_size_bytes")
+        else {
+            continue;
+        };
+        wgpu_metal_current_allocated_size_bytes_min =
+            Some(wgpu_metal_current_allocated_size_bytes_min.map_or(v, |cur| cur.min(v)));
+        wgpu_metal_current_allocated_size_bytes_max =
+            Some(wgpu_metal_current_allocated_size_bytes_max.map_or(v, |cur| cur.max(v)));
+    }
+
     Some(serde_json::json!({
         "bundle_schema_version": v.get("schema_version").and_then(|v| v.as_u64()),
         "window": first_window.get("window").and_then(|v| v.as_u64()),
         "tick_id": last_snapshot.get("tick_id").and_then(|v| v.as_u64()),
         "frame_id": last_snapshot.get("frame_id").and_then(|v| v.as_u64()),
+
+        "wgpu_hub_tick_id": get_u64("wgpu_hub_tick_id"),
+        "wgpu_hub_frame_id": get_u64("wgpu_hub_frame_id"),
+        "wgpu_hub_adapters": get_u64("wgpu_hub_adapters"),
+        "wgpu_hub_devices": get_u64("wgpu_hub_devices"),
+        "wgpu_hub_queues": get_u64("wgpu_hub_queues"),
+        "wgpu_hub_command_encoders": get_u64("wgpu_hub_command_encoders"),
+        "wgpu_hub_buffers": get_u64("wgpu_hub_buffers"),
+        "wgpu_hub_textures": get_u64("wgpu_hub_textures"),
+        "wgpu_hub_texture_views": get_u64("wgpu_hub_texture_views"),
+        "wgpu_hub_samplers": get_u64("wgpu_hub_samplers"),
+        "wgpu_hub_shader_modules": get_u64("wgpu_hub_shader_modules"),
+        "wgpu_hub_render_pipelines": get_u64("wgpu_hub_render_pipelines"),
+        "wgpu_hub_compute_pipelines": get_u64("wgpu_hub_compute_pipelines"),
+
         "wgpu_allocator_tick_id": get_u64("wgpu_allocator_tick_id"),
         "wgpu_allocator_frame_id": get_u64("wgpu_allocator_frame_id"),
         "wgpu_allocator_sample_present": get_bool("wgpu_allocator_sample_present"),
@@ -261,6 +331,8 @@ fn bundle_stats_summary_from_path(path: &Path) -> Option<serde_json::Value> {
         "wgpu_allocator_total_reserved_bytes": get_u64("wgpu_allocator_total_reserved_bytes"),
         "wgpu_metal_current_allocated_size_present": get_bool("wgpu_metal_current_allocated_size_present"),
         "wgpu_metal_current_allocated_size_bytes": get_u64("wgpu_metal_current_allocated_size_bytes"),
+        "wgpu_metal_current_allocated_size_bytes_min": wgpu_metal_current_allocated_size_bytes_min,
+        "wgpu_metal_current_allocated_size_bytes_max": wgpu_metal_current_allocated_size_bytes_max,
         "renderer_intermediate_peak_in_use_bytes": get_u64("renderer_intermediate_peak_in_use_bytes"),
         "renderer_gpu_images_bytes_estimate": get_u64("renderer_gpu_images_bytes_estimate"),
         "renderer_gpu_render_targets_bytes_estimate": get_u64("renderer_gpu_render_targets_bytes_estimate"),
@@ -270,6 +342,8 @@ fn bundle_stats_summary_from_path(path: &Path) -> Option<serde_json::Value> {
         "render_text_blob_cache_entries": rt_u64("blob_cache_entries"),
         "render_text_shape_cache_entries": rt_u64("shape_cache_entries"),
         "render_text_measure_cache_buckets": rt_u64("measure_cache_buckets"),
+        "render_text_registered_font_blobs_total_bytes": rt_u64("registered_font_blobs_total_bytes"),
+        "render_text_registered_font_blobs_count": rt_u64("registered_font_blobs_count"),
 
         "render_text_mask_atlas_width_px": atlas_u64(mask_atlas, "width"),
         "render_text_mask_atlas_height_px": atlas_u64(mask_atlas, "height"),
@@ -332,7 +406,19 @@ pub(crate) fn write_evidence_index(
     add_file("repro.summary", "repro.summary.json");
     add_file("repro.zip", "repro.zip");
     add_file("resource.footprint", "resource.footprint.json");
+    add_file(
+        "resource.macos_footprint.steady",
+        "resource.macos_footprint.steady.json",
+    );
     add_file("resource.vmmap_summary", "resource.vmmap_summary.txt");
+    add_file(
+        "resource.vmmap_summary.steady",
+        "resource.vmmap_summary.steady.txt",
+    );
+    add_file(
+        "resource.vmmap_regions_sorted.steady",
+        "resource.vmmap_regions_sorted.steady.txt",
+    );
     add_file("redraw_hitches", "redraw_hitches.log");
     add_file("renderdoc.captures", "renderdoc.captures.json");
     add_file("tracy.note", "tracy.note.md");
@@ -353,9 +439,14 @@ pub(crate) fn write_evidence_index(
         "check.wgpu_metal_allocated_size",
         "check.wgpu_metal_allocated_size.json",
     );
+    add_file("check.wgpu_hub_counts", "check.wgpu_hub_counts.json");
     add_file(
         "check.render_text_atlas_bytes",
         "check.render_text_atlas_bytes.json",
+    );
+    add_file(
+        "check.render_text_font_db",
+        "check.render_text_font_db.json",
     );
     add_file(
         "check.renderer_gpu_budgets",

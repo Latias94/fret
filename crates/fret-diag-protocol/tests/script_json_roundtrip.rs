@@ -77,8 +77,8 @@ fn assert_script_v2_roundtrip(json: &str) {
 }
 
 #[test]
-fn script_v1_roundtrip_todo_baseline() {
-    assert_script_v1_roundtrip(include_str!(
+fn script_v2_roundtrip_todo_baseline() {
+    assert_script_v2_roundtrip(include_str!(
         "../../../tools/diag-scripts/todo-baseline.json"
     ));
 }

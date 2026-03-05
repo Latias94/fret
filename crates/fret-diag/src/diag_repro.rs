@@ -43,6 +43,8 @@ pub(crate) struct ReproCmdContext {
     pub resource_footprint_thresholds: ResourceFootprintThresholds,
     pub renderer_gpu_budget_thresholds: RendererGpuBudgetThresholds,
     pub code_editor_memory_thresholds: CodeEditorMemoryThresholds,
+    pub render_text_font_db_thresholds: RenderTextFontDbThresholds,
+    pub wgpu_hub_counts_thresholds: WgpuHubCountsThresholds,
     pub max_wgpu_metal_current_allocated_size_bytes: Option<u64>,
     pub max_render_text_atlas_bytes_live_estimate_total: Option<u64>,
     pub check_redraw_hitches_max_total_ms_threshold: Option<u64>,
@@ -86,6 +88,8 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
         resource_footprint_thresholds,
         renderer_gpu_budget_thresholds,
         code_editor_memory_thresholds,
+        render_text_font_db_thresholds,
+        wgpu_hub_counts_thresholds,
         max_wgpu_metal_current_allocated_size_bytes,
         max_render_text_atlas_bytes_live_estimate_total,
         check_redraw_hitches_max_total_ms_threshold,
@@ -342,9 +346,11 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
     let mut repro_process_footprint: Option<serde_json::Value> = None;
     let mut resource_footprint_gate: Option<ResourceFootprintGateResult> = None;
     let mut renderer_gpu_budgets_gate: Option<RendererGpuBudgetsGateResult> = None;
+    let mut wgpu_hub_counts_gate: Option<WgpuHubCountsGateResult> = None;
     let mut wgpu_metal_allocated_size_gate: Option<WgpuMetalAllocatedSizeGateResult> = None;
     let mut render_text_atlas_bytes_gate: Option<RenderTextAtlasBytesGateResult> = None;
     let mut code_editor_memory_gate: Option<CodeEditorMemoryGateResult> = None;
+    let mut render_text_font_db_gate: Option<RenderTextFontDbGateResult> = None;
     let mut redraw_hitches_gate: Option<RedrawHitchesGateResult> = None;
 
     let mut run_rows: Vec<serde_json::Value> = Vec::new();
@@ -746,6 +752,17 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
         )
         .ok();
     }
+    if wgpu_hub_counts_thresholds.any() {
+        let bundle_path = packed_bundle_artifact
+            .as_deref()
+            .or_else(|| selected_bundle_path.as_deref());
+        wgpu_hub_counts_gate = check_wgpu_hub_counts_thresholds(
+            &resolved_out_dir,
+            bundle_path,
+            &wgpu_hub_counts_thresholds,
+        )
+        .ok();
+    }
     if let Some(max_bytes) = max_wgpu_metal_current_allocated_size_bytes {
         let bundle_path = packed_bundle_artifact
             .as_deref()
@@ -765,6 +782,17 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
             &resolved_out_dir,
             bundle_path,
             max_bytes,
+        )
+        .ok();
+    }
+    if render_text_font_db_thresholds.any() {
+        let bundle_path = packed_bundle_artifact
+            .as_deref()
+            .or_else(|| selected_bundle_path.as_deref());
+        render_text_font_db_gate = check_render_text_font_db_thresholds(
+            &resolved_out_dir,
+            bundle_path,
+            &render_text_font_db_thresholds,
         )
         .ok();
     }
@@ -892,6 +920,17 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
         ));
         overall_reason_code = Some("tooling.code_editor_memory.failed".to_string());
     }
+    if let Some(r) = wgpu_hub_counts_gate.as_ref()
+        && r.failures > 0
+        && overall_error.is_none()
+    {
+        overall_error = Some(format!(
+            "wgpu hub counts threshold gate failed (failures={}, evidence={})",
+            r.failures,
+            r.evidence_path.display()
+        ));
+        overall_reason_code = Some("tooling.wgpu_hub_counts.failed".to_string());
+    }
     if let Some(r) = wgpu_metal_allocated_size_gate.as_ref()
         && r.failures > 0
         && overall_error.is_none()
@@ -913,6 +952,17 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
             r.evidence_path.display()
         ));
         overall_reason_code = Some("tooling.render_text_atlas_bytes.failed".to_string());
+    }
+    if let Some(r) = render_text_font_db_gate.as_ref()
+        && r.failures > 0
+        && overall_error.is_none()
+    {
+        overall_error = Some(format!(
+            "render_text font db threshold gate failed (failures={}, evidence={})",
+            r.failures,
+            r.evidence_path.display()
+        ));
+        overall_reason_code = Some("tooling.render_text_font_db.failed".to_string());
     }
     if let Some(r) = redraw_hitches_gate.as_ref()
         && r.failures > 0

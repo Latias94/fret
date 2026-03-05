@@ -43,8 +43,9 @@
     {
       "type": "wait_until",
       "predicate": {
-        "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-ai-env-vars-show-values-true" }
+        "kind": "checked_is",
+        "target": { "kind": "test_id", "id": "ui-ai-env-vars-toggle-switch" },
+        "checked": true
       },
       "timeout_frames": 240
     },
@@ -66,4 +67,3 @@
     }
   ]
 }
-

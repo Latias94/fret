@@ -6,7 +6,7 @@ use fret_runtime::Model;
 use fret_ui::element::{ContainerProps, PressableA11y, PressableProps};
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::ui;
-use fret_ui_kit::{ColorRef, LayoutRefinement, Space, ui};
+use fret_ui_kit::{ColorRef, LayoutRefinement, Space};
 use fret_ui_shadcn::prelude::*;
 use std::sync::Arc;
 

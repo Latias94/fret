@@ -1,15 +1,18 @@
 {
   "schema_version": 2,
   "meta": {
-    "name": "todo: memory steady",
-    "tags": ["todo", "memory", "steady"],
+    "name": "todo: memory steady (wgpu high frequency report)",
+    "tags": ["todo", "memory", "steady", "wgpu", "highfreq"],
     "required_capabilities": ["diag.script_v2"],
-    "target_hints": ["Waits for a short steady-state window before capturing a bundle."],
+    "target_hints": [
+      "Same as todo-memory-steady, but samples wgpu allocator/hub stats every 60 frames.",
+      "This can perturb Metal/driver allocations; use for attribution deep-dives, not for stable baselines."
+    ],
     "env_defaults": {
       "FRET_DIAG_WGPU_ALLOCATOR_REPORT": 1,
-      "FRET_DIAG_WGPU_ALLOCATOR_REPORT_EVERY_N_FRAMES": 600,
+      "FRET_DIAG_WGPU_ALLOCATOR_REPORT_EVERY_N_FRAMES": 60,
       "FRET_DIAG_WGPU_REPORT": 1,
-      "FRET_DIAG_WGPU_REPORT_EVERY_N_FRAMES": 600
+      "FRET_DIAG_WGPU_REPORT_EVERY_N_FRAMES": 60
     }
   },
   "steps": [

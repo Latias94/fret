@@ -14,6 +14,13 @@ pub(super) fn preview_ai_environment_variables_demo(
         Some("AI Elements are policy-level compositions built on top of lower-level primitives."),
         vec![
             DocSection::new("Environment Variables", demo)
+                .descriptions([
+                    "Value masking by default",
+                    "Toggle visibility switch",
+                    "Copy individual values",
+                    "Export format support (export KEY=\"value\")",
+                    "Required badge indicator",
+                ])
                 .test_id_prefix("ui-gallery-ai-environment-variables-demo")
                 .code_rust_from_file_region(
                     snippets::environment_variables_demo::SOURCE,

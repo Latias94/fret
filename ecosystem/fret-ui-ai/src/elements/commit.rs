@@ -3,7 +3,7 @@ use std::time::{Duration, SystemTime};
 
 use fret_core::{
     Color, Corners, Edges, FontId, FontWeight, Px, SemanticsRole, TextOverflow, TextStyle,
-    TextWrap, TimerToken,
+    TextWrap, TimerToken, window::ColorScheme,
 };
 use fret_icons::ids;
 use fret_runtime::Effect;
@@ -43,29 +43,34 @@ fn muted_fg(theme: &Theme) -> Color {
         .unwrap_or_else(|| theme.color_token("foreground"))
 }
 
-fn status_color(status: CommitFileStatusKind) -> ColorRef {
-    match status {
-        CommitFileStatusKind::Added => ColorRef::Token {
-            key: "color.commit.file.added",
-            // Tailwind: green-600 (#16a34a).
-            fallback: ColorFallback::Color(fret_ui_kit::colors::linear_from_hex_rgb(0x16_a3_4a)),
-        },
-        CommitFileStatusKind::Deleted => ColorRef::Token {
-            key: "color.commit.file.deleted",
-            // Tailwind: red-600 (#dc2626).
-            fallback: ColorFallback::Color(fret_ui_kit::colors::linear_from_hex_rgb(0xdc_26_26)),
-        },
-        CommitFileStatusKind::Modified => ColorRef::Token {
-            key: "color.commit.file.modified",
-            // Tailwind: yellow-600 (#ca8a04).
-            fallback: ColorFallback::Color(fret_ui_kit::colors::linear_from_hex_rgb(0xca_8a_04)),
-        },
-        CommitFileStatusKind::Renamed => ColorRef::Token {
-            key: "color.commit.file.renamed",
-            // Tailwind: blue-600 (#2563eb).
-            fallback: ColorFallback::Color(fret_ui_kit::colors::linear_from_hex_rgb(0x25_63_eb)),
-        },
+fn status_color(theme: &Theme, status: CommitFileStatusKind) -> Color {
+    let key = match status {
+        CommitFileStatusKind::Added => "color.commit.file.added",
+        CommitFileStatusKind::Deleted => "color.commit.file.deleted",
+        CommitFileStatusKind::Modified => "color.commit.file.modified",
+        CommitFileStatusKind::Renamed => "color.commit.file.renamed",
+    };
+
+    if let Some(color) = theme.color_by_key(key) {
+        return color;
     }
+
+    let scheme_is_dark = theme.color_scheme == Some(ColorScheme::Dark);
+    let rgb = match (status, scheme_is_dark) {
+        // Tailwind: green-600 (#16a34a), dark: green-400 (#4ade80).
+        (CommitFileStatusKind::Added, false) => 0x16_a3_4a,
+        (CommitFileStatusKind::Added, true) => 0x4a_de_80,
+        // Tailwind: red-600 (#dc2626), dark: red-400 (#f87171).
+        (CommitFileStatusKind::Deleted, false) => 0xdc_26_26,
+        (CommitFileStatusKind::Deleted, true) => 0xf8_71_71,
+        // Tailwind: yellow-600 (#ca8a04), dark: yellow-400 (#facc15).
+        (CommitFileStatusKind::Modified, false) => 0xca_8a_04,
+        (CommitFileStatusKind::Modified, true) => 0xfa_cc_15,
+        // Tailwind: blue-600 (#2563eb), dark: blue-400 (#60a5fa).
+        (CommitFileStatusKind::Renamed, false) => 0x25_63_eb,
+        (CommitFileStatusKind::Renamed, true) => 0x60_a5_fa,
+    };
+    fret_ui_kit::colors::linear_from_hex_rgb(rgb)
 }
 
 fn monospace_text_style(theme: &Theme, size: Px, weight: FontWeight) -> TextStyle {
@@ -215,17 +220,26 @@ impl CommitHeader {
         let layout = self.layout;
         let chrome = self.chrome;
 
-        let row = ui::h_row(move |_cx| children)
-            .layout(layout)
-            .gap(Space::N4)
-            .items(Items::Center)
-            .justify(Justify::Between)
-            .into_element(cx);
+        let hover_layout = decl_style::layout_style(&theme, layout.clone());
+        let hover = fret_ui::element::HoverRegionProps { layout: hover_layout };
 
-        let row = cx.container(
-            decl_style::container_props(&theme, chrome, LayoutRefinement::default()),
-            move |_cx| vec![row],
-        );
+        let row = cx.hover_region(hover, move |cx, hovered| {
+            let opacity = if hovered { 0.8 } else { 1.0 };
+
+            let row = ui::h_row(move |_cx| children)
+                .layout(layout)
+                .gap(Space::N4)
+                .items(Items::Center)
+                .justify(Justify::Between)
+                .into_element(cx);
+
+            let row = cx.container(
+                decl_style::container_props(&theme, chrome, LayoutRefinement::default()),
+                move |_cx| vec![row],
+            );
+
+            vec![cx.opacity(opacity, move |_cx| vec![row])]
+        });
 
         let trigger = fret_ui_shadcn::CollapsibleTrigger::new(open_model, vec![row])
             .a11y_label("Toggle commit details")
@@ -977,7 +991,7 @@ impl CommitFileStatus {
             layout: LayoutStyle::default(),
             text: label,
             style: Some(monospace_text_style(&theme, Px(12.0), FontWeight::MEDIUM)),
-            color: Some(status_color(self.status).resolve(&theme)),
+            color: Some(status_color(&theme, self.status)),
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
             align: fret_core::TextAlign::Start,
@@ -1144,7 +1158,7 @@ impl CommitFileAdditions {
         }
 
         let theme = Theme::global(&*cx.app).clone();
-        let color = status_color(CommitFileStatusKind::Added).resolve(&theme);
+        let color = status_color(&theme, CommitFileStatusKind::Added);
         let icon = decl_icon::icon_with(
             cx,
             ids::ui::PLUS,
@@ -1187,7 +1201,7 @@ impl CommitFileDeletions {
         }
 
         let theme = Theme::global(&*cx.app).clone();
-        let color = status_color(CommitFileStatusKind::Deleted).resolve(&theme);
+        let color = status_color(&theme, CommitFileStatusKind::Deleted);
         let icon = decl_icon::icon_with(
             cx,
             ids::ui::MINUS,

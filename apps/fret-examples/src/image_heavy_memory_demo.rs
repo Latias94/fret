@@ -33,16 +33,67 @@ impl Default for ImageHeavyImages {
 struct ImageHeavyMemoryState;
 
 pub fn run() -> anyhow::Result<()> {
-    fret_bootstrap::ui_app("image-heavy-memory-demo", init_window, view)
-        .init_app(fret_bootstrap::install_default_i18n_backend)
-        .with_main_window("image_heavy_memory_demo", (980.0, 720.0))
-        .on_gpu_ready(upload_images)
-        .run()
-        .map_err(anyhow::Error::from)
+    fret::app_with_hooks("image-heavy-memory-demo", init_window, view, |driver| {
+        driver.record_engine_frame(record_engine_frame)
+    })?
+    .init_app(fret_bootstrap::install_default_i18n_backend)
+    .with_main_window("image_heavy_memory_demo", (980.0, 720.0))
+    .on_gpu_ready(upload_images)
+    .run()
+    .map_err(anyhow::Error::from)
 }
 
 fn init_window(_app: &mut App, _window: AppWindowId) -> ImageHeavyMemoryState {
     ImageHeavyMemoryState
+}
+
+fn record_engine_frame(
+    app: &mut App,
+    _window: AppWindowId,
+    _ui: &mut fret_ui::UiTree<App>,
+    _st: &mut ImageHeavyMemoryState,
+    context: &WgpuContext,
+    renderer: &mut Renderer,
+    _dt_s: f32,
+    _tick_id: fret_runtime::TickId,
+    frame_id: fret_runtime::FrameId,
+) -> fret_launch::EngineFrameUpdate {
+    let drop_after_frames: Option<u64> = std::env::var("FRET_IMAGE_HEAVY_DEMO_DROP_AFTER_FRAMES")
+        .ok()
+        .and_then(|v| v.trim().parse::<u64>().ok())
+        .filter(|n| *n > 0);
+    if drop_after_frames.is_none() {
+        return fret_launch::EngineFrameUpdate::default();
+    }
+    let drop_after_frames = drop_after_frames.unwrap_or(0);
+
+    let poll_after_drop = std::env::var("FRET_IMAGE_HEAVY_DEMO_POLL_AFTER_DROP")
+        .ok()
+        .is_some_and(|v| v.trim() != "0");
+
+    let dropped = app.with_global_mut_untracked(ImageHeavyImages::default, |g, _app| {
+        if g.images.is_empty() {
+            return false;
+        }
+        if frame_id.0 < drop_after_frames {
+            return false;
+        }
+
+        for &image in g.images.iter() {
+            let _ = renderer.unregister_image(image);
+        }
+        *g = ImageHeavyImages::default();
+        true
+    });
+
+    if dropped && poll_after_drop {
+        let _ = context.device.poll(wgpu::PollType::Wait {
+            submission_index: None,
+            timeout: None,
+        });
+    }
+
+    fret_launch::EngineFrameUpdate::default()
 }
 
 fn upload_images(app: &mut App, context: &WgpuContext, renderer: &mut Renderer) {

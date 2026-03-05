@@ -6,7 +6,13 @@
     "required_capabilities": ["diag.script_v2"],
     "target_hints": [
       "Captures a steady-state bundle; intended to grow IOSurface/IOAccelerator (textures) and wgpu Metal allocation size."
-    ]
+    ],
+    "env_defaults": {
+      "FRET_DIAG_WGPU_ALLOCATOR_REPORT": 1,
+      "FRET_DIAG_WGPU_ALLOCATOR_REPORT_EVERY_N_FRAMES": 600,
+      "FRET_DIAG_WGPU_REPORT": 1,
+      "FRET_DIAG_WGPU_REPORT_EVERY_N_FRAMES": 600
+    }
   },
   "steps": [
     { "type": "reset_diagnostics" },
@@ -17,4 +23,3 @@
     { "type": "capture_bundle", "label": "image-heavy-memory-steady" }
   ]
 }
-

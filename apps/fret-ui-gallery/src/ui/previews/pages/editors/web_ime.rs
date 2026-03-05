@@ -49,7 +49,7 @@ pub(in crate::ui) fn preview_web_ime_harness(
             LayoutRefinement::default().w_full(),
         ),
         |cx| {
-            let body = ui::v_flex(|cx| {
+            let body = ui::v_flex(|cx: &mut ElementContext<'_, App>| {
                 vec![
                     cx.text("Editable widgets (sanity check):"),
                     shadcn::Input::new(text_input)
@@ -218,7 +218,7 @@ pub(in crate::ui) fn preview_web_ime_harness(
                     .h_px(MetricRef::Px(Px(240.0))),
             ),
             |cx| {
-                let body = ui::v_flex(|cx| {
+                let body = ui::v_flex(|cx: &mut ElementContext<'_, App>| {
                         let mut lines = vec![
                             cx.text(format!(
                                 "harness_region_ime_enabled={harness_region_ime_enabled}"
@@ -245,7 +245,9 @@ pub(in crate::ui) fn preview_web_ime_harness(
                         if let Some(snapshot) = cx
                             .app
                             .global::<fret_runtime::WindowTextInputSnapshotService>()
-                            .and_then(|svc| svc.snapshot(cx.window))
+                            .and_then(|svc: &fret_runtime::WindowTextInputSnapshotService| {
+                                svc.snapshot(cx.window)
+                            })
                             .cloned()
                         {
                             lines.push(cx.text("window_text_input_snapshot:"));
@@ -268,7 +270,9 @@ pub(in crate::ui) fn preview_web_ime_harness(
                         if let Some(input_ctx) = cx
                             .app
                             .global::<fret_runtime::WindowInputContextService>()
-                            .and_then(|svc| svc.snapshot(cx.window))
+                            .and_then(|svc: &fret_runtime::WindowInputContextService| {
+                                svc.snapshot(cx.window)
+                            })
                             .cloned()
                         {
                             lines.push(cx.text("window_input_context_snapshot:"));

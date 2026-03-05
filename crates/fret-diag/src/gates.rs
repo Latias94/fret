@@ -10,6 +10,10 @@ pub(super) struct ResourceFootprintThresholds {
     pub(super) max_macos_io_surface_dirty_bytes: Option<u64>,
     pub(super) max_macos_io_accelerator_dirty_bytes: Option<u64>,
     pub(super) max_macos_malloc_small_dirty_bytes: Option<u64>,
+    pub(super) max_macos_malloc_dirty_bytes_total: Option<u64>,
+    pub(super) max_macos_malloc_zones_total_allocated_bytes: Option<u64>,
+    pub(super) max_macos_malloc_zones_total_frag_bytes: Option<u64>,
+    pub(super) max_macos_malloc_zones_total_dirty_bytes: Option<u64>,
     pub(super) max_cpu_avg_percent_total_cores: Option<f64>,
 }
 
@@ -22,6 +26,10 @@ impl ResourceFootprintThresholds {
             || self.max_macos_io_surface_dirty_bytes.is_some()
             || self.max_macos_io_accelerator_dirty_bytes.is_some()
             || self.max_macos_malloc_small_dirty_bytes.is_some()
+            || self.max_macos_malloc_dirty_bytes_total.is_some()
+            || self.max_macos_malloc_zones_total_allocated_bytes.is_some()
+            || self.max_macos_malloc_zones_total_frag_bytes.is_some()
+            || self.max_macos_malloc_zones_total_dirty_bytes.is_some()
             || self.max_cpu_avg_percent_total_cores.is_some()
     }
 }
@@ -38,8 +46,54 @@ pub(super) struct WgpuMetalAllocatedSizeGateResult {
     pub(super) failures: usize,
 }
 
+#[derive(Debug, Clone, Default)]
+pub(super) struct WgpuHubCountsThresholds {
+    pub(super) max_wgpu_hub_buffers: Option<u64>,
+    pub(super) max_wgpu_hub_textures: Option<u64>,
+    pub(super) max_wgpu_hub_render_pipelines: Option<u64>,
+    pub(super) max_wgpu_hub_shader_modules: Option<u64>,
+}
+
+impl WgpuHubCountsThresholds {
+    pub(super) fn any(&self) -> bool {
+        self.max_wgpu_hub_buffers.is_some()
+            || self.max_wgpu_hub_textures.is_some()
+            || self.max_wgpu_hub_render_pipelines.is_some()
+            || self.max_wgpu_hub_shader_modules.is_some()
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(super) struct WgpuHubCountsGateResult {
+    pub(super) evidence_path: PathBuf,
+    pub(super) failures: usize,
+}
+
 #[derive(Debug, Clone)]
 pub(super) struct RenderTextAtlasBytesGateResult {
+    pub(super) evidence_path: PathBuf,
+    pub(super) failures: usize,
+}
+
+pub(super) struct RenderTextFontDbThresholds {
+    pub(super) max_render_text_registered_font_blobs_total_bytes: Option<u64>,
+    pub(super) max_render_text_registered_font_blobs_count: Option<u64>,
+    pub(super) max_render_text_shape_cache_entries: Option<u64>,
+    pub(super) max_render_text_blob_cache_entries: Option<u64>,
+}
+
+impl RenderTextFontDbThresholds {
+    pub(super) fn any(&self) -> bool {
+        self.max_render_text_registered_font_blobs_total_bytes
+            .is_some()
+            || self.max_render_text_registered_font_blobs_count.is_some()
+            || self.max_render_text_shape_cache_entries.is_some()
+            || self.max_render_text_blob_cache_entries.is_some()
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(super) struct RenderTextFontDbGateResult {
     pub(super) evidence_path: PathBuf,
     pub(super) failures: usize,
 }
@@ -100,34 +154,72 @@ pub(super) fn check_wgpu_metal_current_allocated_size_threshold(
     let v = bundle_path.and_then(read_json_value);
     let bundle_present = v.is_some();
 
-    let (tick_id, frame_id, present_flag, bytes_value) = if let Some(v) = v.as_ref() {
-        let windows = v.get("windows").and_then(|v| v.as_array());
-        let first_window = windows.and_then(|w| w.first());
-        let snapshots = first_window
-            .and_then(|w| w.get("snapshots"))
-            .and_then(|v| v.as_array());
-        let last_snapshot = snapshots.and_then(|s| s.last());
-        let stats = last_snapshot
-            .and_then(|s| s.get("debug"))
-            .and_then(|d| d.get("stats"))
-            .and_then(|v| v.as_object());
+    let (tick_id, frame_id, present_flag_any, bytes_min, bytes_max, bytes_max_tick_frame) =
+        if let Some(v) = v.as_ref() {
+            let windows = v.get("windows").and_then(|v| v.as_array());
+            let first_window = windows.and_then(|w| w.first());
+            let snapshots = first_window
+                .and_then(|w| w.get("snapshots"))
+                .and_then(|v| v.as_array());
+            let last_snapshot = snapshots.and_then(|s| s.last());
 
-        let tick_id = last_snapshot
-            .and_then(|s| s.get("tick_id"))
-            .and_then(|v| v.as_u64());
-        let frame_id = last_snapshot
-            .and_then(|s| s.get("frame_id"))
-            .and_then(|v| v.as_u64());
-        let present_flag = stats
-            .and_then(|o| o.get("wgpu_metal_current_allocated_size_present"))
-            .and_then(|v| v.as_bool());
-        let bytes_value = stats
-            .and_then(|o| o.get("wgpu_metal_current_allocated_size_bytes"))
-            .and_then(|v| v.as_u64());
-        (tick_id, frame_id, present_flag, bytes_value)
-    } else {
-        (None, None, None, None)
-    };
+            let tick_id = last_snapshot
+                .and_then(|s| s.get("tick_id"))
+                .and_then(|v| v.as_u64());
+            let frame_id = last_snapshot
+                .and_then(|s| s.get("frame_id"))
+                .and_then(|v| v.as_u64());
+
+            let mut present_flag_any: Option<bool> = None;
+            let mut bytes_min: Option<u64> = None;
+            let mut bytes_max: Option<u64> = None;
+            let mut bytes_max_tick_frame: Option<(u64, u64)> = None;
+
+            if let Some(snapshots) = snapshots {
+                for snapshot in snapshots {
+                    let snap_tick_id = snapshot.get("tick_id").and_then(|v| v.as_u64());
+                    let snap_frame_id = snapshot.get("frame_id").and_then(|v| v.as_u64());
+                    let stats = snapshot
+                        .get("debug")
+                        .and_then(|d| d.get("stats"))
+                        .and_then(|v| v.as_object());
+
+                    let present_flag = stats
+                        .and_then(|o| o.get("wgpu_metal_current_allocated_size_present"))
+                        .and_then(|v| v.as_bool());
+                    if let Some(present_flag) = present_flag {
+                        present_flag_any = Some(present_flag_any.unwrap_or(false) || present_flag);
+                    }
+
+                    let bytes_value = stats
+                        .and_then(|o| o.get("wgpu_metal_current_allocated_size_bytes"))
+                        .and_then(|v| v.as_u64());
+                    if present_flag == Some(true) {
+                        if let Some(bytes_value) = bytes_value {
+                            bytes_min =
+                                Some(bytes_min.map_or(bytes_value, |cur| cur.min(bytes_value)));
+                            if bytes_max.map_or(true, |cur| bytes_value > cur) {
+                                bytes_max = Some(bytes_value);
+                                if let (Some(t), Some(f)) = (snap_tick_id, snap_frame_id) {
+                                    bytes_max_tick_frame = Some((t, f));
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            (
+                tick_id,
+                frame_id,
+                present_flag_any,
+                bytes_min,
+                bytes_max,
+                bytes_max_tick_frame,
+            )
+        } else {
+            (None, None, None, None, None, None)
+        };
 
     let missing_reason = if bundle_present {
         "missing_field"
@@ -136,7 +228,7 @@ pub(super) fn check_wgpu_metal_current_allocated_size_threshold(
     };
 
     let mut failures: Vec<serde_json::Value> = Vec::new();
-    match (present_flag, bytes_value) {
+    match (present_flag_any, bytes_max) {
         (Some(true), Some(observed)) if observed > max_wgpu_metal_current_allocated_size_bytes => {
             failures.push(serde_json::json!({
                 "kind": "wgpu_metal_current_allocated_size_bytes",
@@ -178,8 +270,10 @@ pub(super) fn check_wgpu_metal_current_allocated_size_threshold(
             "bundle_present": bundle_present,
             "tick_id": tick_id,
             "frame_id": frame_id,
-            "wgpu_metal_current_allocated_size_present": present_flag,
-            "wgpu_metal_current_allocated_size_bytes": bytes_value,
+            "wgpu_metal_current_allocated_size_present": present_flag_any,
+            "wgpu_metal_current_allocated_size_bytes_min": bytes_min,
+            "wgpu_metal_current_allocated_size_bytes_max": bytes_max,
+            "wgpu_metal_current_allocated_size_bytes_max_tick_frame": bytes_max_tick_frame,
         },
         "failures": failures,
     });
@@ -195,6 +289,296 @@ pub(super) fn check_wgpu_metal_current_allocated_size_threshold(
         evidence_path: out_path,
         failures,
     })
+}
+
+pub(super) fn check_wgpu_hub_counts_thresholds(
+    out_dir: &Path,
+    bundle_path: Option<&Path>,
+    thresholds: &WgpuHubCountsThresholds,
+) -> Result<WgpuHubCountsGateResult, String> {
+    let out_path = out_dir.join("check.wgpu_hub_counts.json");
+
+    let v = bundle_path.and_then(read_json_value);
+    let bundle_present = v.is_some();
+
+    let (
+        last_tick_id,
+        last_frame_id,
+        snapshots_len,
+        hub_samples,
+        buffers_max,
+        buffers_max_tick_frame,
+        textures_max,
+        textures_max_tick_frame,
+        render_pipelines_max,
+        render_pipelines_max_tick_frame,
+        shader_modules_max,
+        shader_modules_max_tick_frame,
+    ) = if let Some(v) = v.as_ref() {
+        let windows = v.get("windows").and_then(|v| v.as_array());
+        let first_window = windows.and_then(|w| w.first());
+        let snapshots = first_window
+            .and_then(|w| w.get("snapshots"))
+            .and_then(|v| v.as_array());
+
+        let snapshots_len = snapshots.map(|s| s.len()).unwrap_or(0);
+
+        let mut last_tick_id: Option<u64> = None;
+        let mut last_frame_id: Option<u64> = None;
+
+        let mut hub_samples: u64 = 0;
+
+        let mut buffers_max: Option<u64> = None;
+        let mut buffers_max_tick_frame: Option<(u64, u64)> = None;
+        let mut textures_max: Option<u64> = None;
+        let mut textures_max_tick_frame: Option<(u64, u64)> = None;
+        let mut render_pipelines_max: Option<u64> = None;
+        let mut render_pipelines_max_tick_frame: Option<(u64, u64)> = None;
+        let mut shader_modules_max: Option<u64> = None;
+        let mut shader_modules_max_tick_frame: Option<(u64, u64)> = None;
+
+        if let Some(snapshots) = snapshots {
+            for snapshot in snapshots {
+                let snap_tick_id = snapshot.get("tick_id").and_then(|v| v.as_u64());
+                let snap_frame_id = snapshot.get("frame_id").and_then(|v| v.as_u64());
+                last_tick_id = snap_tick_id;
+                last_frame_id = snap_frame_id;
+
+                let stats = snapshot
+                    .get("debug")
+                    .and_then(|d| d.get("stats"))
+                    .and_then(|v| v.as_object());
+                let u64_stat = |k: &str| stats.and_then(|o| o.get(k)).and_then(|v| v.as_u64());
+
+                let hub_tick_id = u64_stat("wgpu_hub_tick_id");
+                let hub_frame_id = u64_stat("wgpu_hub_frame_id");
+                if hub_frame_id.unwrap_or(0) == 0 {
+                    continue;
+                }
+                hub_samples += 1;
+
+                let observed_tick_frame = hub_tick_id
+                    .zip(hub_frame_id)
+                    .or_else(|| snap_tick_id.zip(snap_frame_id));
+
+                let update_max = |cur: &mut Option<u64>,
+                                  cur_tick_frame: &mut Option<(u64, u64)>,
+                                  v: Option<u64>| {
+                    let Some(v) = v else {
+                        return;
+                    };
+                    if cur.map_or(true, |c| v > c) {
+                        *cur = Some(v);
+                        *cur_tick_frame = observed_tick_frame;
+                    }
+                };
+
+                update_max(
+                    &mut buffers_max,
+                    &mut buffers_max_tick_frame,
+                    u64_stat("wgpu_hub_buffers"),
+                );
+                update_max(
+                    &mut textures_max,
+                    &mut textures_max_tick_frame,
+                    u64_stat("wgpu_hub_textures"),
+                );
+                update_max(
+                    &mut render_pipelines_max,
+                    &mut render_pipelines_max_tick_frame,
+                    u64_stat("wgpu_hub_render_pipelines"),
+                );
+                update_max(
+                    &mut shader_modules_max,
+                    &mut shader_modules_max_tick_frame,
+                    u64_stat("wgpu_hub_shader_modules"),
+                );
+            }
+        }
+
+        (
+            last_tick_id,
+            last_frame_id,
+            snapshots_len,
+            hub_samples,
+            buffers_max,
+            buffers_max_tick_frame,
+            textures_max,
+            textures_max_tick_frame,
+            render_pipelines_max,
+            render_pipelines_max_tick_frame,
+            shader_modules_max,
+            shader_modules_max_tick_frame,
+        )
+    } else {
+        (
+            None, None, 0, 0, None, None, None, None, None, None, None, None,
+        )
+    };
+
+    let missing_reason = if bundle_present {
+        "missing_field"
+    } else {
+        "missing_bundle"
+    };
+
+    let hub_present = hub_samples > 0;
+
+    let mut failures: Vec<serde_json::Value> = Vec::new();
+    let mut check_u64 = |kind: &str, observed: Option<u64>, thr: Option<u64>| {
+        let Some(thr) = thr else {
+            return;
+        };
+        match (hub_present, observed) {
+            (true, Some(observed)) if observed > thr => failures.push(serde_json::json!({
+                "kind": kind,
+                "threshold": thr,
+                "observed": observed,
+                "reason": "exceeded",
+            })),
+            (true, Some(_)) => {}
+            (true, None) => failures.push(serde_json::json!({
+                "kind": kind,
+                "threshold": thr,
+                "observed": serde_json::Value::Null,
+                "reason": missing_reason,
+                "field": format!("windows[0].snapshots[-1].debug.stats.{kind}"),
+            })),
+            (false, _) => failures.push(serde_json::json!({
+                "kind": kind,
+                "threshold": thr,
+                "observed": serde_json::Value::Null,
+                "reason": missing_reason,
+                "field": "windows[0].snapshots[-1].debug.stats.wgpu_hub_frame_id",
+            })),
+        }
+    };
+
+    check_u64(
+        "wgpu_hub_buffers",
+        buffers_max,
+        thresholds.max_wgpu_hub_buffers,
+    );
+    check_u64(
+        "wgpu_hub_textures",
+        textures_max,
+        thresholds.max_wgpu_hub_textures,
+    );
+    check_u64(
+        "wgpu_hub_render_pipelines",
+        render_pipelines_max,
+        thresholds.max_wgpu_hub_render_pipelines,
+    );
+    check_u64(
+        "wgpu_hub_shader_modules",
+        shader_modules_max,
+        thresholds.max_wgpu_hub_shader_modules,
+    );
+
+    let payload = serde_json::json!({
+        "schema_version": 1,
+        "generated_unix_ms": now_unix_ms(),
+        "kind": "wgpu_hub_counts_thresholds",
+        "out_dir": out_dir.display().to_string(),
+        "bundle_file": bundle_path
+            .and_then(|p| p.file_name())
+            .and_then(|s| s.to_str())
+            .unwrap_or("<unknown>"),
+        "thresholds": {
+            "max_wgpu_hub_buffers": thresholds.max_wgpu_hub_buffers,
+            "max_wgpu_hub_textures": thresholds.max_wgpu_hub_textures,
+            "max_wgpu_hub_render_pipelines": thresholds.max_wgpu_hub_render_pipelines,
+            "max_wgpu_hub_shader_modules": thresholds.max_wgpu_hub_shader_modules,
+        },
+        "observed": {
+            "bundle_present": bundle_present,
+            "tick_id": last_tick_id,
+            "frame_id": last_frame_id,
+            "snapshots_len": snapshots_len,
+            "wgpu_hub_samples": hub_samples,
+            "wgpu_hub_present": hub_present,
+            "wgpu_hub_buffers_max": buffers_max,
+            "wgpu_hub_buffers_max_tick_frame": buffers_max_tick_frame,
+            "wgpu_hub_textures_max": textures_max,
+            "wgpu_hub_textures_max_tick_frame": textures_max_tick_frame,
+            "wgpu_hub_render_pipelines_max": render_pipelines_max,
+            "wgpu_hub_render_pipelines_max_tick_frame": render_pipelines_max_tick_frame,
+            "wgpu_hub_shader_modules_max": shader_modules_max,
+            "wgpu_hub_shader_modules_max_tick_frame": shader_modules_max_tick_frame,
+        },
+        "failures": failures,
+    });
+    let _ = write_json_value(&out_path, &payload);
+
+    let failures = payload
+        .get("failures")
+        .and_then(|v| v.as_array())
+        .map(|a| a.len())
+        .unwrap_or(0);
+
+    Ok(WgpuHubCountsGateResult {
+        evidence_path: out_path,
+        failures,
+    })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn make_temp_dir(name: &str) -> PathBuf {
+        let mut dir = std::env::temp_dir();
+        let nonce = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        dir.push(format!("fret-diag-{name}-{}-{nonce}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        dir
+    }
+
+    #[test]
+    fn wgpu_hub_counts_gate_uses_max_across_snapshots() {
+        let out_dir = make_temp_dir("wgpu-hub-max");
+        let bundle_path = out_dir.join("bundle.json");
+
+        let bundle = serde_json::json!({
+            "windows": [{
+                "snapshots": [
+                    {
+                        "tick_id": 1,
+                        "frame_id": 10,
+                        "debug": { "stats": {
+                            "wgpu_hub_tick_id": 1,
+                            "wgpu_hub_frame_id": 10,
+                            "wgpu_hub_textures": 20
+                        }}
+                    },
+                    {
+                        "tick_id": 2,
+                        "frame_id": 11,
+                        "debug": { "stats": {
+                            "wgpu_hub_tick_id": 2,
+                            "wgpu_hub_frame_id": 11,
+                            "wgpu_hub_textures": 10
+                        }}
+                    }
+                ]
+            }]
+        });
+        std::fs::write(&bundle_path, serde_json::to_vec_pretty(&bundle).unwrap()).unwrap();
+
+        let thresholds = WgpuHubCountsThresholds {
+            max_wgpu_hub_buffers: None,
+            max_wgpu_hub_textures: Some(15),
+            max_wgpu_hub_render_pipelines: None,
+            max_wgpu_hub_shader_modules: None,
+        };
+
+        let r =
+            check_wgpu_hub_counts_thresholds(&out_dir, Some(&bundle_path), &thresholds).unwrap();
+        assert_eq!(r.failures, 1);
+    }
 }
 
 pub(super) fn check_renderer_gpu_budget_thresholds(
@@ -501,6 +885,178 @@ pub(super) fn check_render_text_atlas_bytes_live_estimate_total_threshold(
     })
 }
 
+pub(super) fn check_render_text_font_db_thresholds(
+    out_dir: &Path,
+    bundle_path: Option<&Path>,
+    thresholds: &RenderTextFontDbThresholds,
+) -> Result<RenderTextFontDbGateResult, String> {
+    let out_path = out_dir.join("check.render_text_font_db.json");
+
+    let v = bundle_path.and_then(read_json_value);
+    let bundle_present = v.is_some();
+
+    let (tick_id, frame_id, render_text) = if let Some(v) = v.as_ref() {
+        let windows = v.get("windows").and_then(|v| v.as_array());
+        let first_window = windows.and_then(|w| w.first());
+        let snapshots = first_window
+            .and_then(|w| w.get("snapshots"))
+            .and_then(|v| v.as_array());
+        let last_snapshot = snapshots.and_then(|s| s.last());
+
+        let tick_id = last_snapshot
+            .and_then(|s| s.get("tick_id"))
+            .and_then(|v| v.as_u64());
+        let frame_id = last_snapshot
+            .and_then(|s| s.get("frame_id"))
+            .and_then(|v| v.as_u64());
+
+        let render_text = last_snapshot
+            .and_then(|s| s.get("resource_caches"))
+            .and_then(|v| v.get("render_text"))
+            .and_then(|v| v.as_object());
+
+        (tick_id, frame_id, render_text)
+    } else {
+        (None, None, None)
+    };
+
+    let missing_reason = if bundle_present {
+        "missing_field"
+    } else {
+        "missing_bundle"
+    };
+
+    let u64_field = |k: &str| -> Option<u64> {
+        render_text
+            .as_ref()
+            .and_then(|o| o.get(k))
+            .and_then(|v| v.as_u64())
+    };
+
+    let registered_font_blobs_total_bytes = u64_field("registered_font_blobs_total_bytes");
+    let registered_font_blobs_count = u64_field("registered_font_blobs_count");
+    let shape_cache_entries = u64_field("shape_cache_entries");
+    let blob_cache_entries = u64_field("blob_cache_entries");
+
+    let mut failures: Vec<serde_json::Value> = Vec::new();
+
+    if let Some(thr) = thresholds.max_render_text_registered_font_blobs_total_bytes {
+        match registered_font_blobs_total_bytes {
+            Some(observed) if observed > thr => failures.push(serde_json::json!({
+                "kind": "render_text_registered_font_blobs_total_bytes",
+                "threshold": thr,
+                "observed": observed,
+                "reason": "exceeded",
+            })),
+            Some(_) => {}
+            None => failures.push(serde_json::json!({
+                "kind": "render_text_registered_font_blobs_total_bytes",
+                "threshold": thr,
+                "observed": serde_json::Value::Null,
+                "reason": missing_reason,
+                "field": "windows[0].snapshots[-1].resource_caches.render_text.registered_font_blobs_total_bytes",
+            })),
+        }
+    }
+
+    if let Some(thr) = thresholds.max_render_text_registered_font_blobs_count {
+        match registered_font_blobs_count {
+            Some(observed) if observed > thr => failures.push(serde_json::json!({
+                "kind": "render_text_registered_font_blobs_count",
+                "threshold": thr,
+                "observed": observed,
+                "reason": "exceeded",
+            })),
+            Some(_) => {}
+            None => failures.push(serde_json::json!({
+                "kind": "render_text_registered_font_blobs_count",
+                "threshold": thr,
+                "observed": serde_json::Value::Null,
+                "reason": missing_reason,
+                "field": "windows[0].snapshots[-1].resource_caches.render_text.registered_font_blobs_count",
+            })),
+        }
+    }
+
+    if let Some(thr) = thresholds.max_render_text_shape_cache_entries {
+        match shape_cache_entries {
+            Some(observed) if observed > thr => failures.push(serde_json::json!({
+                "kind": "render_text_shape_cache_entries",
+                "threshold": thr,
+                "observed": observed,
+                "reason": "exceeded",
+            })),
+            Some(_) => {}
+            None => failures.push(serde_json::json!({
+                "kind": "render_text_shape_cache_entries",
+                "threshold": thr,
+                "observed": serde_json::Value::Null,
+                "reason": missing_reason,
+                "field": "windows[0].snapshots[-1].resource_caches.render_text.shape_cache_entries",
+            })),
+        }
+    }
+
+    if let Some(thr) = thresholds.max_render_text_blob_cache_entries {
+        match blob_cache_entries {
+            Some(observed) if observed > thr => failures.push(serde_json::json!({
+                "kind": "render_text_blob_cache_entries",
+                "threshold": thr,
+                "observed": observed,
+                "reason": "exceeded",
+            })),
+            Some(_) => {}
+            None => failures.push(serde_json::json!({
+                "kind": "render_text_blob_cache_entries",
+                "threshold": thr,
+                "observed": serde_json::Value::Null,
+                "reason": missing_reason,
+                "field": "windows[0].snapshots[-1].resource_caches.render_text.blob_cache_entries",
+            })),
+        }
+    }
+
+    let payload = serde_json::json!({
+        "schema_version": 1,
+        "generated_unix_ms": now_unix_ms(),
+        "kind": "render_text_font_db_thresholds",
+        "out_dir": out_dir.display().to_string(),
+        "bundle_file": bundle_path
+            .and_then(|p| p.file_name())
+            .and_then(|s| s.to_str())
+            .unwrap_or("<unknown>"),
+        "thresholds": {
+            "max_render_text_registered_font_blobs_total_bytes": thresholds.max_render_text_registered_font_blobs_total_bytes,
+            "max_render_text_registered_font_blobs_count": thresholds.max_render_text_registered_font_blobs_count,
+            "max_render_text_shape_cache_entries": thresholds.max_render_text_shape_cache_entries,
+            "max_render_text_blob_cache_entries": thresholds.max_render_text_blob_cache_entries,
+        },
+        "observed": {
+            "bundle_present": bundle_present,
+            "tick_id": tick_id,
+            "frame_id": frame_id,
+            "render_text_present": render_text.is_some(),
+            "render_text_registered_font_blobs_total_bytes": registered_font_blobs_total_bytes,
+            "render_text_registered_font_blobs_count": registered_font_blobs_count,
+            "render_text_shape_cache_entries": shape_cache_entries,
+            "render_text_blob_cache_entries": blob_cache_entries,
+        },
+        "failures": failures,
+    });
+    let _ = write_json_value(&out_path, &payload);
+
+    let failures = payload
+        .get("failures")
+        .and_then(|v| v.as_array())
+        .map(|a| a.len())
+        .unwrap_or(0);
+
+    Ok(RenderTextFontDbGateResult {
+        evidence_path: out_path,
+        failures,
+    })
+}
+
 pub(super) fn check_code_editor_memory_thresholds(
     out_dir: &Path,
     bundle_path: Option<&Path>,
@@ -728,34 +1284,65 @@ pub(super) fn check_resource_footprint_thresholds(
         .and_then(|v| v.get("peak_working_set_bytes"))
         .and_then(|v| v.as_u64());
 
-    let macos_physical_footprint_peak_bytes = v
+    let macos_vmmap_source = if v
         .as_ref()
-        .and_then(|v| v.get("macos_vmmap"))
+        .and_then(|v| v.get("macos_vmmap_steady"))
+        .is_some()
+    {
+        "steady"
+    } else {
+        "exit"
+    };
+    let macos_vmmap_field_prefix = if macos_vmmap_source == "steady" {
+        "macos_vmmap_steady"
+    } else {
+        "macos_vmmap"
+    };
+    let macos_vmmap = v
+        .as_ref()
+        .and_then(|v| v.get("macos_vmmap_steady").or_else(|| v.get("macos_vmmap")));
+
+    let macos_physical_footprint_peak_bytes = macos_vmmap
         .and_then(|v| v.get("physical_footprint_peak_bytes"))
         .and_then(|v| v.as_u64());
-    let macos_owned_unmapped_memory_dirty_bytes = v
-        .as_ref()
-        .and_then(|v| v.get("macos_vmmap"))
+    let macos_owned_unmapped_memory_dirty_bytes = macos_vmmap
         .and_then(|v| v.get("regions"))
         .and_then(|v| v.get("owned_unmapped_memory_dirty_bytes"))
         .and_then(|v| v.as_u64());
-    let macos_io_surface_dirty_bytes = v
-        .as_ref()
-        .and_then(|v| v.get("macos_vmmap"))
+    let macos_io_surface_dirty_bytes = macos_vmmap
         .and_then(|v| v.get("regions"))
         .and_then(|v| v.get("io_surface_dirty_bytes"))
         .and_then(|v| v.as_u64());
-    let macos_io_accelerator_dirty_bytes = v
-        .as_ref()
-        .and_then(|v| v.get("macos_vmmap"))
+    let macos_io_accelerator_dirty_bytes = macos_vmmap
         .and_then(|v| v.get("regions"))
         .and_then(|v| v.get("io_accelerator_dirty_bytes"))
         .and_then(|v| v.as_u64());
-    let macos_malloc_small_dirty_bytes = v
-        .as_ref()
-        .and_then(|v| v.get("macos_vmmap"))
+    let macos_malloc_small_dirty_bytes = macos_vmmap
         .and_then(|v| v.get("regions"))
         .and_then(|v| v.get("malloc_small_dirty_bytes"))
+        .and_then(|v| v.as_u64());
+    let macos_malloc_dirty_bytes_total = macos_vmmap
+        .and_then(|v| v.get("regions"))
+        .and_then(|v| v.get("malloc_dirty_bytes_total"))
+        .and_then(|v| v.as_u64());
+
+    let macos_malloc_zones_total_allocated_bytes = macos_vmmap
+        .and_then(|v| v.get("tables"))
+        .and_then(|v| v.get("malloc_zones"))
+        .and_then(|v| v.get("total"))
+        .and_then(|v| v.get("allocated_bytes"))
+        .and_then(|v| v.as_u64());
+    let macos_malloc_zones_total_frag_bytes = macos_vmmap
+        .and_then(|v| v.get("tables"))
+        .and_then(|v| v.get("malloc_zones"))
+        .and_then(|v| v.get("total"))
+        .and_then(|v| v.get("frag_bytes"))
+        .and_then(|v| v.as_u64());
+    let macos_malloc_zones_total_dirty_bytes = macos_vmmap
+        .and_then(|v| v.get("tables"))
+        .and_then(|v| v.get("malloc_zones"))
+        .and_then(|v| v.get("total"))
+        .and_then(|v| v.get("dirty_bytes"))
         .and_then(|v| v.as_u64());
 
     let cpu_avg_percent_total_cores = v
@@ -834,7 +1421,7 @@ pub(super) fn check_resource_footprint_thresholds(
                 "threshold": thr,
                 "observed": serde_json::Value::Null,
                 "reason": missing_reason,
-                "field": "macos_vmmap.physical_footprint_peak_bytes",
+                "field": format!("{macos_vmmap_field_prefix}.physical_footprint_peak_bytes"),
             })),
         }
     }
@@ -853,7 +1440,7 @@ pub(super) fn check_resource_footprint_thresholds(
                 "threshold": thr,
                 "observed": serde_json::Value::Null,
                 "reason": missing_reason,
-                "field": "macos_vmmap.regions.owned_unmapped_memory_dirty_bytes",
+                "field": format!("{macos_vmmap_field_prefix}.regions.owned_unmapped_memory_dirty_bytes"),
             })),
         }
     }
@@ -872,7 +1459,7 @@ pub(super) fn check_resource_footprint_thresholds(
                 "threshold": thr,
                 "observed": serde_json::Value::Null,
                 "reason": missing_reason,
-                "field": "macos_vmmap.regions.io_surface_dirty_bytes",
+                "field": format!("{macos_vmmap_field_prefix}.regions.io_surface_dirty_bytes"),
             })),
         }
     }
@@ -891,7 +1478,7 @@ pub(super) fn check_resource_footprint_thresholds(
                 "threshold": thr,
                 "observed": serde_json::Value::Null,
                 "reason": missing_reason,
-                "field": "macos_vmmap.regions.io_accelerator_dirty_bytes",
+                "field": format!("{macos_vmmap_field_prefix}.regions.io_accelerator_dirty_bytes"),
             })),
         }
     }
@@ -910,7 +1497,83 @@ pub(super) fn check_resource_footprint_thresholds(
                 "threshold": thr,
                 "observed": serde_json::Value::Null,
                 "reason": missing_reason,
-                "field": "macos_vmmap.regions.malloc_small_dirty_bytes",
+                "field": format!("{macos_vmmap_field_prefix}.regions.malloc_small_dirty_bytes"),
+            })),
+        }
+    }
+
+    if let Some(thr) = thresholds.max_macos_malloc_dirty_bytes_total {
+        match macos_malloc_dirty_bytes_total {
+            Some(observed) if observed > thr => failures.push(serde_json::json!({
+                "kind": "macos_malloc_dirty_bytes_total",
+                "threshold": thr,
+                "observed": observed,
+                "reason": "exceeded",
+            })),
+            Some(_) => {}
+            None => failures.push(serde_json::json!({
+                "kind": "macos_malloc_dirty_bytes_total",
+                "threshold": thr,
+                "observed": serde_json::Value::Null,
+                "reason": missing_reason,
+                "field": format!("{macos_vmmap_field_prefix}.regions.malloc_dirty_bytes_total"),
+            })),
+        }
+    }
+
+    if let Some(thr) = thresholds.max_macos_malloc_zones_total_allocated_bytes {
+        match macos_malloc_zones_total_allocated_bytes {
+            Some(observed) if observed > thr => failures.push(serde_json::json!({
+                "kind": "macos_malloc_zones_total_allocated_bytes",
+                "threshold": thr,
+                "observed": observed,
+                "reason": "exceeded",
+            })),
+            Some(_) => {}
+            None => failures.push(serde_json::json!({
+                "kind": "macos_malloc_zones_total_allocated_bytes",
+                "threshold": thr,
+                "observed": serde_json::Value::Null,
+                "reason": missing_reason,
+                "field": format!("{macos_vmmap_field_prefix}.tables.malloc_zones.total.allocated_bytes"),
+            })),
+        }
+    }
+
+    if let Some(thr) = thresholds.max_macos_malloc_zones_total_frag_bytes {
+        match macos_malloc_zones_total_frag_bytes {
+            Some(observed) if observed > thr => failures.push(serde_json::json!({
+                "kind": "macos_malloc_zones_total_frag_bytes",
+                "threshold": thr,
+                "observed": observed,
+                "reason": "exceeded",
+            })),
+            Some(_) => {}
+            None => failures.push(serde_json::json!({
+                "kind": "macos_malloc_zones_total_frag_bytes",
+                "threshold": thr,
+                "observed": serde_json::Value::Null,
+                "reason": missing_reason,
+                "field": format!("{macos_vmmap_field_prefix}.tables.malloc_zones.total.frag_bytes"),
+            })),
+        }
+    }
+
+    if let Some(thr) = thresholds.max_macos_malloc_zones_total_dirty_bytes {
+        match macos_malloc_zones_total_dirty_bytes {
+            Some(observed) if observed > thr => failures.push(serde_json::json!({
+                "kind": "macos_malloc_zones_total_dirty_bytes",
+                "threshold": thr,
+                "observed": observed,
+                "reason": "exceeded",
+            })),
+            Some(_) => {}
+            None => failures.push(serde_json::json!({
+                "kind": "macos_malloc_zones_total_dirty_bytes",
+                "threshold": thr,
+                "observed": serde_json::Value::Null,
+                "reason": missing_reason,
+                "field": format!("{macos_vmmap_field_prefix}.tables.malloc_zones.total.dirty_bytes"),
             })),
         }
     }
@@ -959,6 +1622,10 @@ pub(super) fn check_resource_footprint_thresholds(
             "max_macos_io_surface_dirty_bytes": thresholds.max_macos_io_surface_dirty_bytes,
             "max_macos_io_accelerator_dirty_bytes": thresholds.max_macos_io_accelerator_dirty_bytes,
             "max_macos_malloc_small_dirty_bytes": thresholds.max_macos_malloc_small_dirty_bytes,
+            "max_macos_malloc_dirty_bytes_total": thresholds.max_macos_malloc_dirty_bytes_total,
+            "max_macos_malloc_zones_total_allocated_bytes": thresholds.max_macos_malloc_zones_total_allocated_bytes,
+            "max_macos_malloc_zones_total_frag_bytes": thresholds.max_macos_malloc_zones_total_frag_bytes,
+            "max_macos_malloc_zones_total_dirty_bytes": thresholds.max_macos_malloc_zones_total_dirty_bytes,
             "max_cpu_avg_percent_total_cores": thresholds.max_cpu_avg_percent_total_cores,
         },
         "observed": {
@@ -973,11 +1640,16 @@ pub(super) fn check_resource_footprint_thresholds(
             "cpu_avg_percent_total_cores": cpu_avg_percent_total_cores,
             "working_set_bytes": working_set_bytes,
             "peak_working_set_bytes": peak_working_set_bytes,
+            "macos_vmmap_source": macos_vmmap_source,
             "macos_physical_footprint_peak_bytes": macos_physical_footprint_peak_bytes,
             "macos_owned_unmapped_memory_dirty_bytes": macos_owned_unmapped_memory_dirty_bytes,
             "macos_io_surface_dirty_bytes": macos_io_surface_dirty_bytes,
             "macos_io_accelerator_dirty_bytes": macos_io_accelerator_dirty_bytes,
             "macos_malloc_small_dirty_bytes": macos_malloc_small_dirty_bytes,
+            "macos_malloc_dirty_bytes_total": macos_malloc_dirty_bytes_total,
+            "macos_malloc_zones_total_allocated_bytes": macos_malloc_zones_total_allocated_bytes,
+            "macos_malloc_zones_total_frag_bytes": macos_malloc_zones_total_frag_bytes,
+            "macos_malloc_zones_total_dirty_bytes": macos_malloc_zones_total_dirty_bytes,
         },
         "failures": failures,
     });

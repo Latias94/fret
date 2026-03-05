@@ -1,0 +1,30 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "image heavy: memory steady (count=12, size=1024)",
+    "tags": ["images", "memory", "steady", "sweep"],
+    "required_capabilities": ["diag.script_v2"],
+    "target_hints": [
+      "Count sweep point for attributing macOS (graphics) unmapped footprint vs image pressure.",
+      "Run with `diag repro --session-auto` to collect a small sample distribution."
+    ],
+    "env_defaults": {
+      "FRET_DIAG_WGPU_ALLOCATOR_REPORT": 1,
+      "FRET_DIAG_WGPU_ALLOCATOR_REPORT_EVERY_N_FRAMES": 600,
+      "FRET_DIAG_WGPU_REPORT": 1,
+      "FRET_DIAG_WGPU_REPORT_EVERY_N_FRAMES": 600,
+
+      "FRET_IMAGE_HEAVY_DEMO_COUNT": 12,
+      "FRET_IMAGE_HEAVY_DEMO_SIZE_PX": 1024
+    }
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "wait_frames", "n": 10 },
+
+    { "type": "reset_diagnostics" },
+    { "type": "wait_frames", "n": 600 },
+    { "type": "capture_bundle", "label": "image-heavy-memory-count-12-steady" }
+  ]
+}
+
