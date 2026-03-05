@@ -65,21 +65,18 @@ pub(crate) fn sidebar_view(
         nav_scroll_handle.scroll_to_offset(Point::new(Px(0.0), Px(0.0)));
     }
 
-    let title_row = stack::hstack(
-        cx,
-        stack::HStackProps::default()
-            .layout(LayoutRefinement::default().w_full())
-            .justify_between()
-            .items_center(),
-        |cx| {
-            vec![
-                cx.text("Fret UI Gallery"),
-                shadcn::Badge::new("WIP")
-                    .variant(shadcn::BadgeVariant::Secondary)
-                    .into_element(cx),
-            ]
-        },
-    );
+    let title_row = ui::h_row(|cx| {
+        [
+            cx.text("Fret UI Gallery"),
+            shadcn::Badge::new("WIP")
+                .variant(shadcn::BadgeVariant::Secondary)
+                .into_element(cx),
+        ]
+    })
+    .layout(LayoutRefinement::default().w_full())
+    .justify_between()
+    .items_center()
+    .into_element(cx);
 
     let query_input = {
         let nav_query = nav_query.clone();
@@ -154,13 +151,10 @@ pub(crate) fn sidebar_view(
                     align: fret_core::TextAlign::Start,
                     ink_overflow: fret_ui::element::TextInkOverflow::None,
                 }),
-                stack::vstack(
-                    cx,
-                    stack::VStackProps::default()
-                        .layout(LayoutRefinement::default().w_full())
-                        .gap(Space::N1),
-                    |_cx| group_items,
-                ),
+                ui::v_flex(move |_cx| group_items)
+                    .layout(LayoutRefinement::default().w_full())
+                    .gap(Space::N1)
+                    .into_element(cx),
             ]
         });
 
@@ -194,13 +188,10 @@ pub(crate) fn sidebar_view(
         push_group(cx, "AI Elements", &deferred_ai_items, &mut nav_sections);
     }
 
-    let nav_body = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .layout(LayoutRefinement::default().w_full())
-            .gap(Space::N4),
-        |_cx| nav_sections,
-    );
+    let nav_body = ui::v_flex(move |_cx| nav_sections)
+        .layout(LayoutRefinement::default().w_full())
+        .gap(Space::N4)
+        .into_element(cx);
     let nav_scroll = {
         let nav_scroll = if (bisect & BISECT_DISABLE_SIDEBAR_SCROLL) != 0 {
             nav_body
@@ -226,13 +217,10 @@ pub(crate) fn sidebar_view(
             LayoutRefinement::default().w_px(Px(280.0)).h_full(),
         ),
         |cx| {
-            [stack::vstack(
-                cx,
-                stack::VStackProps::default()
-                    .layout(LayoutRefinement::default().w_full().h_full())
-                    .gap(Space::N4),
-                |_cx| [title_row, query_input, nav_scroll],
-            )]
+            [ui::v_flex(|_cx| [title_row, query_input, nav_scroll])
+                .layout(LayoutRefinement::default().w_full().h_full())
+                .gap(Space::N4)
+                .into_element(cx)]
         },
     );
 

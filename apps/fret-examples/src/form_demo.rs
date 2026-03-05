@@ -16,8 +16,8 @@ use fret_ui_kit::declarative::ElementContextThemeExt as _;
 use fret_ui_kit::declarative::form::FormRegistry;
 use fret_ui_kit::headless::form_state::{FormState, FormValidateMode};
 use fret_ui_kit::headless::form_validation::{first_error, required_trimmed};
+use fret_ui_kit::ui;
 use fret_ui_shadcn::button::{Button, ButtonSize, ButtonVariant};
-use fret_ui_shadcn::stack;
 use fret_ui_shadcn::{DatePicker, Form, FormField, Input, Select, SelectItem, Space};
 use std::sync::Arc;
 use time::Date;
@@ -258,11 +258,8 @@ impl WinitAppDriver for FormDemoDriver {
                     root_layout.size.width = Length::Fill;
                     root_layout.size.height = Length::Fill;
 
-                    let header = stack::hstack(
-                        cx,
-                        stack::HStackProps::default().gap(Space::N2).items_center(),
-                        |cx| {
-                            vec![
+                    let header = ui::h_row(|cx| {
+                        [
                             Button::new("Close")
                                 .variant(ButtonVariant::Outline)
                                 .size(ButtonSize::Sm)
@@ -282,8 +279,10 @@ impl WinitAppDriver for FormDemoDriver {
                                 status_text.as_ref()
                             ))),
                         ]
-                        },
-                    );
+                    })
+                    .gap(Space::N2)
+                    .items_center()
+                    .into_element(cx);
 
                     let form = {
                         Form::new(vec![

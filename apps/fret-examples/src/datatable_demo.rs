@@ -14,8 +14,8 @@ use fret_ui::{Invalidation, UiTree};
 use fret_ui_kit::OverlayController;
 use fret_ui_kit::declarative::ElementContextThemeExt as _;
 use fret_ui_kit::headless::table::{ColumnDef, RowKey, TableState, create_column_helper};
+use fret_ui_kit::ui;
 use fret_ui_shadcn::button::{Button, ButtonSize, ButtonVariant};
-use fret_ui_shadcn::stack;
 use fret_ui_shadcn::{
     DataTable, DataTablePagination, DataTableToolbar, DataTableViewOutput, Space,
 };
@@ -247,22 +247,21 @@ impl WinitAppDriver for DataTableDemoDriver {
                     table_slot.flex.basis = Length::Px(Px(0.0));
                     table_slot.overflow = Overflow::Clip;
 
-                    let header = stack::hstack(
-                        cx,
-                        stack::HStackProps::default().gap(Space::N2).items_center(),
-                        |cx| {
-                            vec![
-                                Button::new("Close")
-                                    .variant(ButtonVariant::Outline)
-                                    .size(ButtonSize::Sm)
-                                    .on_click(CommandId::from("datatable_demo.close"))
-                                    .into_element(cx),
-                                cx.text(Arc::from(format!(
-                                    "DataTable | selected={selected} sort={sorting}"
-                                ))),
-                            ]
-                        },
-                    );
+                    let header = ui::h_row(|cx| {
+                        [
+                            Button::new("Close")
+                                .variant(ButtonVariant::Outline)
+                                .size(ButtonSize::Sm)
+                                .on_click(CommandId::from("datatable_demo.close"))
+                                .into_element(cx),
+                            cx.text(Arc::from(format!(
+                                "DataTable | selected={selected} sort={sorting}"
+                            ))),
+                        ]
+                    })
+                    .gap(Space::N2)
+                    .items_center()
+                    .into_element(cx);
 
                     let columns_for_header: Arc<[(Arc<str>, Arc<str>)]> =
                         Arc::clone(&columns_for_menu);

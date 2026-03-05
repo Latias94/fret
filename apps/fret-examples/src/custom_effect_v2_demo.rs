@@ -369,14 +369,11 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut CustomEffectV2State) -> Eleme
         debug_input,
     );
 
-    let root = shadcn::stack::hstack(
-        cx,
-        shadcn::stack::HStackProps::default()
-            .layout(LayoutRefinement::default().size_full())
-            .items_stretch()
-            .gap(Space::N0),
-        move |_cx| vec![inspector, stage],
-    );
+    let root = ui::h_flex(move |_cx| [inspector, stage])
+        .size_full()
+        .items_stretch()
+        .gap(Space::N0)
+        .into_element(cx);
 
     vec![root].into()
 }
@@ -412,39 +409,36 @@ fn stage(
         "CustomV2 can sample one user-provided ImageId (e.g. noise/LUT/normal map).",
     );
 
-    let stripes = shadcn::stack::hstack(
-        cx,
-        shadcn::stack::HStackProps::default()
-            .layout(LayoutRefinement::default().size_full())
-            .gap(Space::N0)
-            .items_stretch(),
-        |cx| {
-            (0..10)
-                .map(|i| {
-                    let t = (i as f32) / 9.0;
-                    let c = Color {
-                        r: (t * std::f32::consts::TAU).sin() * 0.5 + 0.5,
-                        g: ((t + 0.33) * std::f32::consts::TAU).sin() * 0.5 + 0.5,
-                        b: ((t + 0.66) * std::f32::consts::TAU).sin() * 0.5 + 0.5,
-                        a: 1.0,
-                    };
+    let stripes = ui::h_flex(|cx| {
+        (0..10)
+            .map(|i| {
+                let t = (i as f32) / 9.0;
+                let c = Color {
+                    r: (t * std::f32::consts::TAU).sin() * 0.5 + 0.5,
+                    g: ((t + 0.33) * std::f32::consts::TAU).sin() * 0.5 + 0.5,
+                    b: ((t + 0.66) * std::f32::consts::TAU).sin() * 0.5 + 0.5,
+                    a: 1.0,
+                };
 
-                    let mut stripe_layout = LayoutStyle::default();
-                    stripe_layout.flex.grow = 1.0;
-                    stripe_layout.size.height = Length::Fill;
+                let mut stripe_layout = LayoutStyle::default();
+                stripe_layout.flex.grow = 1.0;
+                stripe_layout.size.height = Length::Fill;
 
-                    cx.container(
-                        ContainerProps {
-                            layout: stripe_layout,
-                            background: Some(c),
-                            ..Default::default()
-                        },
-                        |_cx| Vec::<AnyElement>::new(),
-                    )
-                })
-                .collect::<Vec<_>>()
-        },
-    );
+                cx.container(
+                    ContainerProps {
+                        layout: stripe_layout,
+                        background: Some(c),
+                        ..Default::default()
+                    },
+                    |_cx| Vec::<AnyElement>::new(),
+                )
+            })
+            .collect::<Vec<_>>()
+    })
+    .size_full()
+    .gap(Space::N0)
+    .items_stretch()
+    .into_element(cx);
 
     let mut stripes_layer_layout = LayoutStyle::default();
     stripes_layer_layout.position = PositionStyle::Absolute;
@@ -484,11 +478,11 @@ fn stage(
                     ..Default::default()
                 },
                 move |cx| {
-                    vec![shadcn::stack::vstack(
-                        cx,
-                        shadcn::stack::VStackProps::default().gap(Space::N1),
-                        |_cx| vec![title, subtitle],
-                    )]
+                    vec![
+                        ui::v_flex(|_cx| [title, subtitle])
+                            .gap(Space::N1)
+                            .into_element(cx),
+                    ]
                 },
             );
 
@@ -509,13 +503,12 @@ fn stage(
                     ..Default::default()
                 },
                 move |cx| {
-                    vec![shadcn::stack::vstack(
-                        cx,
-                        shadcn::stack::VStackProps::default()
+                    vec![
+                        ui::v_flex(move |_cx| [header, lenses])
                             .gap(Space::N4)
-                            .items_start(),
-                        move |_cx| vec![header, lenses],
-                    )]
+                            .items_start()
+                            .into_element(cx),
+                    ]
                 },
             );
 
@@ -537,33 +530,30 @@ fn lens_row(
     debug_input: bool,
 ) -> AnyElement {
     let radius = Px(24.0);
-    shadcn::stack::hstack(
-        cx,
-        shadcn::stack::HStackProps::default()
-            .gap(Space::N3)
-            .items_start(),
-        move |cx| {
-            vec![
-                plain_lens(cx, "Plain (no effect)", radius),
-                if enabled {
-                    custom_effect_lens(
-                        cx,
-                        "CustomV2 lens",
-                        effect,
-                        input_image,
-                        sampling,
-                        uv_span,
-                        input_strength,
-                        rim_strength,
-                        blur_radius_px,
-                        debug_input,
-                    )
-                } else {
-                    plain_lens(cx, "CustomV2 lens (disabled)", radius)
-                },
-            ]
-        },
-    )
+    ui::h_flex(move |cx| {
+        [
+            plain_lens(cx, "Plain (no effect)", radius),
+            if enabled {
+                custom_effect_lens(
+                    cx,
+                    "CustomV2 lens",
+                    effect,
+                    input_image,
+                    sampling,
+                    uv_span,
+                    input_strength,
+                    rim_strength,
+                    blur_radius_px,
+                    debug_input,
+                )
+            } else {
+                plain_lens(cx, "CustomV2 lens (disabled)", radius)
+            },
+        ]
+    })
+    .gap(Space::N3)
+    .items_start()
+    .into_element(cx)
 }
 
 fn lens_shell(
@@ -759,21 +749,18 @@ fn inspector(
         },
         move |cx| {
             let label_row = |cx: &mut ElementContext<'_, App>, label: &str, value: String| {
-                shadcn::stack::hstack(
-                    cx,
-                    shadcn::stack::HStackProps::default()
-                        .gap(Space::N2)
-                        .items_center(),
-                    move |cx| {
-                        vec![
-                            shadcn::Label::new(label).into_element(cx),
-                            cx.spacer(SpacerProps::default()),
-                            shadcn::Badge::new(value)
-                                .variant(shadcn::BadgeVariant::Secondary)
-                                .into_element(cx),
-                        ]
-                    },
-                )
+                ui::h_flex(move |cx| {
+                    [
+                        shadcn::Label::new(label).into_element(cx),
+                        cx.spacer(SpacerProps::default()),
+                        shadcn::Badge::new(value)
+                            .variant(shadcn::BadgeVariant::Secondary)
+                            .into_element(cx),
+                    ]
+                })
+                .gap(Space::N2)
+                .items_center()
+                .into_element(cx)
             };
 
             let header = shadcn::CardHeader::new([
@@ -785,164 +772,139 @@ fn inspector(
             ])
             .into_element(cx);
 
-            let sampling_row = shadcn::stack::vstack(
-                cx,
-                shadcn::stack::VStackProps::default().gap(Space::N2),
-                move |cx| {
-                    vec![
-                        label_row(cx, "Input sampling", sampling_value.to_string()),
-                        shadcn::Select::new(sampling_model.clone(), sampling_open_model.clone())
-                            .value(shadcn::SelectValue::new().placeholder("Pick sampling"))
-                            .items([
-                                shadcn::SelectItem::new("default", "Default"),
-                                shadcn::SelectItem::new("linear", "Linear"),
-                                shadcn::SelectItem::new("nearest", "Nearest"),
-                            ])
-                            .into_element(cx),
-                    ]
-                },
-            );
+            let sampling_row = ui::v_flex(move |cx| {
+                [
+                    label_row(cx, "Input sampling", sampling_value.to_string()),
+                    shadcn::Select::new(sampling_model.clone(), sampling_open_model.clone())
+                        .value(shadcn::SelectValue::new().placeholder("Pick sampling"))
+                        .items([
+                            shadcn::SelectItem::new("default", "Default"),
+                            shadcn::SelectItem::new("linear", "Linear"),
+                            shadcn::SelectItem::new("nearest", "Nearest"),
+                        ])
+                        .into_element(cx),
+                ]
+            })
+            .gap(Space::N2)
+            .into_element(cx);
 
-            let uv_span_row = shadcn::stack::vstack(
-                cx,
-                shadcn::stack::VStackProps::default().gap(Space::N2),
-                move |cx| {
-                    vec![
-                        label_row(
-                            cx,
-                            "Input UV span",
-                            format!("{:.2}", uv_span.clamp(0.05, 1.0)),
-                        ),
-                        shadcn::Slider::new(uv_span_model.clone())
-                            .range(0.05, 1.0)
-                            .step(0.01)
-                            .into_element(cx),
-                    ]
-                },
-            );
+            let uv_span_row = ui::v_flex(move |cx| {
+                [
+                    label_row(
+                        cx,
+                        "Input UV span",
+                        format!("{:.2}", uv_span.clamp(0.05, 1.0)),
+                    ),
+                    shadcn::Slider::new(uv_span_model.clone())
+                        .range(0.05, 1.0)
+                        .step(0.01)
+                        .into_element(cx),
+                ]
+            })
+            .gap(Space::N2)
+            .into_element(cx);
 
-            let strength_row = shadcn::stack::vstack(
-                cx,
-                shadcn::stack::VStackProps::default().gap(Space::N2),
-                move |cx| {
-                    vec![
-                        label_row(
-                            cx,
-                            "Input strength",
-                            format!("{:.2}", input_strength.clamp(0.0, 1.0)),
-                        ),
-                        shadcn::Slider::new(input_strength_model.clone())
-                            .range(0.0, 1.0)
-                            .step(0.01)
-                            .into_element(cx),
-                    ]
-                },
-            );
+            let strength_row = ui::v_flex(move |cx| {
+                [
+                    label_row(
+                        cx,
+                        "Input strength",
+                        format!("{:.2}", input_strength.clamp(0.0, 1.0)),
+                    ),
+                    shadcn::Slider::new(input_strength_model.clone())
+                        .range(0.0, 1.0)
+                        .step(0.01)
+                        .into_element(cx),
+                ]
+            })
+            .gap(Space::N2)
+            .into_element(cx);
 
-            let rim_row = shadcn::stack::vstack(
-                cx,
-                shadcn::stack::VStackProps::default().gap(Space::N2),
-                move |cx| {
-                    vec![
-                        label_row(
-                            cx,
-                            "Rim strength",
-                            format!("{:.2}", rim_strength.clamp(0.0, 1.0)),
-                        ),
-                        shadcn::Slider::new(rim_strength_model.clone())
-                            .range(0.0, 1.0)
-                            .step(0.01)
-                            .into_element(cx),
-                    ]
-                },
-            );
+            let rim_row = ui::v_flex(move |cx| {
+                [
+                    label_row(
+                        cx,
+                        "Rim strength",
+                        format!("{:.2}", rim_strength.clamp(0.0, 1.0)),
+                    ),
+                    shadcn::Slider::new(rim_strength_model.clone())
+                        .range(0.0, 1.0)
+                        .step(0.01)
+                        .into_element(cx),
+                ]
+            })
+            .gap(Space::N2)
+            .into_element(cx);
 
-            let blur_row = shadcn::stack::vstack(
-                cx,
-                shadcn::stack::VStackProps::default().gap(Space::N2),
-                move |cx| {
-                    vec![
-                        label_row(
-                            cx,
-                            "Backdrop blur (px)",
-                            format!("{:.1}", blur_radius_px.clamp(0.0, 48.0)),
-                        ),
-                        shadcn::Slider::new(blur_radius_model.clone())
-                            .range(0.0, 32.0)
-                            .step(0.5)
-                            .into_element(cx),
-                    ]
-                },
-            );
+            let blur_row = ui::v_flex(move |cx| {
+                [
+                    label_row(
+                        cx,
+                        "Backdrop blur (px)",
+                        format!("{:.1}", blur_radius_px.clamp(0.0, 48.0)),
+                    ),
+                    shadcn::Slider::new(blur_radius_model.clone())
+                        .range(0.0, 32.0)
+                        .step(0.5)
+                        .into_element(cx),
+                ]
+            })
+            .gap(Space::N2)
+            .into_element(cx);
 
-            let content = shadcn::CardContent::new([shadcn::stack::vstack(
-                cx,
-                shadcn::stack::VStackProps::default()
-                    .gap(Space::N3)
-                    .items_stretch(),
-                move |cx| {
-                    vec![
-                        shadcn::stack::hstack(
-                            cx,
-                            shadcn::stack::HStackProps::default()
-                                .gap(Space::N2)
-                                .items_center(),
-                            |cx| {
-                                vec![
-                                    shadcn::Switch::new(enabled_model.clone())
-                                        .a11y_label("Enable custom effect v2")
-                                        .test_id("custom-effect-v2.enabled")
-                                        .into_element(cx),
-                                    shadcn::Label::new("Enable").into_element(cx),
-                                ]
-                            },
-                        ),
-                        shadcn::stack::hstack(
-                            cx,
-                            shadcn::stack::HStackProps::default()
-                                .gap(Space::N2)
-                                .items_center(),
-                            |cx| {
-                                vec![
-                                    shadcn::Switch::new(non_filterable_model.clone())
-                                        .a11y_label(
-                                            "Use non-filterable input image (expect fallback)",
-                                        )
-                                        .test_id("custom-effect-v2.use-non-filterable-input")
-                                        .into_element(cx),
-                                    shadcn::Label::new("Non-filterable input (fallback)")
-                                        .into_element(cx),
-                                ]
-                            },
-                        ),
-                        sampling_row,
-                        uv_span_row,
-                        strength_row,
-                        rim_row,
-                        blur_row,
-                        shadcn::stack::hstack(
-                            cx,
-                            shadcn::stack::HStackProps::default()
-                                .gap(Space::N2)
-                                .items_center(),
-                            |cx| {
-                                vec![
-                                    shadcn::Switch::new(debug_model.clone())
-                                        .a11y_label("Show input image")
-                                        .test_id("custom-effect-v2.debug-input")
-                                        .into_element(cx),
-                                    shadcn::Label::new("Show input").into_element(cx),
-                                ]
-                            },
-                        ),
-                        shadcn::Button::new("Reset")
-                            .variant(shadcn::ButtonVariant::Secondary)
-                            .action(act::Reset)
-                            .test_id("custom-effect-v2.reset")
-                            .into_element(cx),
-                    ]
-                },
-            )])
+            let content = shadcn::CardContent::new([ui::v_flex(move |cx| {
+                [
+                    ui::h_flex(|cx| {
+                        [
+                            shadcn::Switch::new(enabled_model.clone())
+                                .a11y_label("Enable custom effect v2")
+                                .test_id("custom-effect-v2.enabled")
+                                .into_element(cx),
+                            shadcn::Label::new("Enable").into_element(cx),
+                        ]
+                    })
+                    .gap(Space::N2)
+                    .items_center()
+                    .into_element(cx),
+                    ui::h_flex(|cx| {
+                        [
+                            shadcn::Switch::new(non_filterable_model.clone())
+                                .a11y_label("Use non-filterable input image (expect fallback)")
+                                .test_id("custom-effect-v2.use-non-filterable-input")
+                                .into_element(cx),
+                            shadcn::Label::new("Non-filterable input (fallback)").into_element(cx),
+                        ]
+                    })
+                    .gap(Space::N2)
+                    .items_center()
+                    .into_element(cx),
+                    sampling_row,
+                    uv_span_row,
+                    strength_row,
+                    rim_row,
+                    blur_row,
+                    ui::h_flex(|cx| {
+                        [
+                            shadcn::Switch::new(debug_model.clone())
+                                .a11y_label("Show input image")
+                                .test_id("custom-effect-v2.debug-input")
+                                .into_element(cx),
+                            shadcn::Label::new("Show input").into_element(cx),
+                        ]
+                    })
+                    .gap(Space::N2)
+                    .items_center()
+                    .into_element(cx),
+                    shadcn::Button::new("Reset")
+                        .variant(shadcn::ButtonVariant::Secondary)
+                        .action(act::Reset)
+                        .test_id("custom-effect-v2.reset")
+                        .into_element(cx),
+                ]
+            })
+            .gap(Space::N3)
+            .items_stretch()
+            .into_element(cx)])
             .into_element(cx);
 
             vec![
