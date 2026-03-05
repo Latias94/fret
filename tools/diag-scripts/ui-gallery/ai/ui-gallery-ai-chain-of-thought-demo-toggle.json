@@ -9,10 +9,13 @@
       },
       "timeout_frames": 240
     },
-    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
-    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
-    { "type": "press_key", "key": "backspace" },
-    { "type": "type_text", "text": "ai chain of thought" },
+    {
+      "type": "type_text_into",
+      "target": { "kind": "test_id", "id": "ui-gallery-nav-search" },
+      "text": "ai chain of thought",
+      "clear_before_type": true,
+      "timeout_frames": 240
+    },
     {
       "type": "wait_until",
       "predicate": {
@@ -50,7 +53,30 @@
       },
       "timeout_frames": 240
     },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-ai-chain-of-thought-search-results-1" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-ai-chain-of-thought-image-1" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-ai-chain-of-thought-search-result-x" }
+      },
+      "timeout_frames": 240
+    },
     { "type": "capture_bundle", "label": "ui-gallery-ai-chain-of-thought-demo-toggle" }
   ]
 }
-

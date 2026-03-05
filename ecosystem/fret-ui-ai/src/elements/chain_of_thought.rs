@@ -4,18 +4,22 @@
 
 use std::sync::Arc;
 
-use fret_core::{Color, Point, Px, SemanticsRole, TextOverflow, TextWrap, Transform2D};
+use fret_core::{
+    Color, FontWeight, Point, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap, Transform2D,
+};
 use fret_runtime::Model;
 use fret_ui::action::{ActionCx, UiActionHost};
 use fret_ui::element::{
-    AnyElement, ContainerProps, InteractivityGateProps, LayoutStyle, Length, PressableA11y,
-    PressableProps, SemanticsDecoration, TextProps, VisualTransformProps,
+    AnyElement, ContainerProps, FlexProps, InteractivityGateProps, LayoutStyle, Length,
+    PressableA11y, PressableProps, SemanticsDecoration, TextProps, VisualTransformProps,
 };
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::declarative::{controllable_state, stack};
-use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space};
+use fret_ui_kit::{
+    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space, typography,
+};
 use fret_ui_shadcn::{Badge, BadgeVariant, Collapsible};
 
 pub type OnChainOfThoughtOpenChange = Arc<dyn Fn(&mut dyn UiActionHost, ActionCx, bool) + 'static>;
@@ -36,6 +40,20 @@ fn hidden<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         },
         |_cx| Vec::new(),
     )
+}
+
+fn text_sm(theme: &Theme, weight: FontWeight) -> TextStyle {
+    let mut style =
+        typography::TypographyPreset::control_ui(typography::UiTextSize::Sm).resolve(theme);
+    style.weight = weight;
+    style
+}
+
+fn text_xs(theme: &Theme, weight: FontWeight) -> TextStyle {
+    let mut style =
+        typography::TypographyPreset::control_ui(typography::UiTextSize::Xs).resolve(theme);
+    style.weight = weight;
+    style
 }
 
 #[derive(Debug, Default, Clone)]
@@ -319,7 +337,7 @@ impl ChainOfThoughtHeader {
                             LayoutRefinement::default().min_w_0().flex_1(),
                         ),
                         text: Arc::from("Chain of Thought"),
-                        style: None,
+                        style: Some(text_sm(&theme, FontWeight::NORMAL)),
                         color: Some(fg),
                         wrap: TextWrap::None,
                         overflow: TextOverflow::Clip,
@@ -561,7 +579,10 @@ impl ChainOfThoughtStep {
             ContainerProps {
                 layout: decl_style::layout_style(
                     &theme,
-                    LayoutRefinement::default().min_w_0().flex_shrink_0(),
+                    LayoutRefinement::default()
+                        .mt(Space::N0p5)
+                        .min_w_0()
+                        .flex_shrink_0(),
                 ),
                 ..Default::default()
             },
@@ -571,7 +592,7 @@ impl ChainOfThoughtStep {
         let label = cx.text_props(TextProps {
             layout: LayoutStyle::default(),
             text: self.label,
-            style: None,
+            style: Some(text_sm(&theme, FontWeight::NORMAL)),
             color: Some(fg),
             wrap: TextWrap::Word,
             overflow: TextOverflow::Clip,
@@ -586,7 +607,7 @@ impl ChainOfThoughtStep {
             body_children.push(cx.text_props(TextProps {
                 layout: LayoutStyle::default(),
                 text: description,
-                style: None,
+                style: Some(text_xs(&theme, FontWeight::NORMAL)),
                 color: Some(base_fg),
                 wrap: TextWrap::Word,
                 overflow: TextOverflow::Clip,
@@ -599,7 +620,12 @@ impl ChainOfThoughtStep {
         let body = stack::vstack(
             cx,
             stack::VStackProps::default()
-                .layout(LayoutRefinement::default().w_full().min_w_0())
+                .layout(
+                    LayoutRefinement::default()
+                        .w_full()
+                        .min_w_0()
+                        .overflow_hidden(),
+                )
                 .gap(Space::N2),
             move |_cx| body_children,
         );
@@ -668,12 +694,19 @@ impl ChainOfThoughtSearchResults {
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let mut row = stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .layout(self.layout)
-                .gap(self.gap)
-                .items_center(),
+        let theme = Theme::global(&*cx.app).clone();
+        let gap_px = decl_style::space(&theme, self.gap);
+
+        let mut row = cx.flex(
+            FlexProps {
+                layout: decl_style::layout_style(&theme, self.layout),
+                direction: fret_core::Axis::Horizontal,
+                gap: gap_px.into(),
+                justify: fret_ui::element::MainAlign::Start,
+                align: fret_ui::element::CrossAlign::Center,
+                wrap: true,
+                ..Default::default()
+            },
             move |_cx| self.children,
         );
 
@@ -722,6 +755,7 @@ impl ChainOfThoughtSearchResult {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let mut el = Badge::new(self.label)
             .variant(BadgeVariant::Secondary)
+            .label_weight(FontWeight::NORMAL)
             .children(self.children)
             .into_element(cx);
 
@@ -756,7 +790,7 @@ impl ChainOfThoughtImage {
             children: children.into_iter().collect(),
             caption: None,
             test_id: None,
-            layout: LayoutRefinement::default().w_full().min_w_0(),
+            layout: LayoutRefinement::default().mt(Space::N2).w_full().min_w_0(),
         }
     }
 
@@ -814,7 +848,7 @@ impl ChainOfThoughtImage {
             out.push(cx.text_props(TextProps {
                 layout: LayoutStyle::default(),
                 text: caption,
-                style: None,
+                style: Some(text_xs(&theme, FontWeight::NORMAL)),
                 color: Some(caption_fg),
                 wrap: TextWrap::Word,
                 overflow: TextOverflow::Clip,
@@ -846,4 +880,41 @@ pub fn set_chain_of_thought_open(
 ) {
     let _ = host.models_mut().update(open, |v| *v = value);
     host.request_redraw(action_cx.window);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_app::App;
+    use fret_core::{AppWindowId, Point, Rect, Size};
+    use fret_ui::element::ElementKind;
+
+    fn bounds() -> Rect {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(600.0), Px(400.0)),
+        )
+    }
+
+    #[test]
+    fn chain_of_thought_search_results_wraps() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+            let el =
+                ChainOfThoughtSearchResults::new([cx.text("a"), cx.text("b")]).into_element(cx);
+            let ElementKind::Flex(props) = &el.kind else {
+                panic!(
+                    "expected ChainOfThoughtSearchResults root to be Flex, got {:?}",
+                    el.kind
+                );
+            };
+            assert!(
+                props.wrap,
+                "expected ChainOfThoughtSearchResults to enable flex wrap"
+            );
+        });
+    }
 }
