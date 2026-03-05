@@ -1,0 +1,150 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "ui-gallery-scroll-area-expand-at-bottom",
+    "required_capabilities": ["diag.script_v2"],
+    "env_defaults": {
+      "FRET_UI_SCROLL_EXTENTS_POST_LAYOUT": 1
+    },
+    "tags": ["scroll", "extents", "ui_gallery", "regression_pack"]
+  },
+  "steps": [
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+      },
+      "timeout_frames": 600
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
+    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
+    { "type": "press_key", "key": "backspace" },
+    { "type": "type_text", "text": "scroll area" },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-scroll-area" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-nav-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-nav-scroll-area" },
+      "delta_y": -240.0,
+      "timeout_frames": 600
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-scroll-area" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-page-scroll-area" }
+      },
+      "timeout_frames": 600
+    },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-scroll-area-expand-at-bottom-toggle"
+        }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-scroll-area-expand-at-bottom-toggle"
+      },
+      "delta_y": -240.0,
+      "timeout_frames": 600,
+      "require_fully_within_container": true,
+      "require_fully_within_window": true,
+      "padding_px": 4.0
+    },
+
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "semantics_scroll_approx_eq",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-scroll-area-expand-at-bottom-viewport"
+        },
+        "field": "y_max",
+        "value": 0.0,
+        "eps": 0.01
+      }
+    },
+    {
+      "type": "click",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-scroll-area-expand-at-bottom-toggle"
+      }
+    },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "semantics_scroll_not_approx_eq",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-scroll-area-expand-at-bottom-viewport"
+        },
+        "field": "y_max",
+        "value": 0.0,
+        "eps": 0.01
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-scroll-area-expand-at-bottom-viewport"
+      },
+      "delta_y": -240.0,
+      "timeout_frames": 600,
+      "require_fully_within_container": true,
+      "require_fully_within_window": true,
+      "padding_px": 4.0
+    },
+    {
+      "type": "wheel",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-scroll-area-expand-at-bottom-viewport"
+      },
+      "delta_y": -240.0
+    },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "semantics_scroll_not_approx_eq",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-scroll-area-expand-at-bottom-viewport"
+        },
+        "field": "y",
+        "value": 0.0,
+        "eps": 0.01
+      }
+    },
+
+    { "type": "capture_bundle", "label": "ui-gallery-scroll-area-expand-at-bottom" }
+  ]
+}

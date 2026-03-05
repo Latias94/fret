@@ -662,6 +662,7 @@ fn infer_required_capabilities_v2(script: &UiActionScriptV2) -> Vec<String> {
             | UiActionStepV2::PointerUp { window, .. }
             | UiActionStepV2::MovePointerSweep { window, .. }
             | UiActionStepV2::Wheel { window, .. }
+            | UiActionStepV2::WheelBurst { window, .. }
             | UiActionStepV2::WaitUntil { window, .. }
             | UiActionStepV2::Assert { window, .. }
             | UiActionStepV2::ClickStable { window, .. }
@@ -707,6 +708,7 @@ fn infer_required_capabilities_v2(script: &UiActionScriptV2) -> Vec<String> {
             | UiActionStepV2::PointerUp { pointer_kind, .. }
             | UiActionStepV2::MovePointerSweep { pointer_kind, .. }
             | UiActionStepV2::Wheel { pointer_kind, .. }
+            | UiActionStepV2::WheelBurst { pointer_kind, .. }
             | UiActionStepV2::ClickStable { pointer_kind, .. }
             | UiActionStepV2::ClickSelectableTextSpanStable { pointer_kind, .. }
             | UiActionStepV2::ScrollIntoView { pointer_kind, .. }
@@ -740,6 +742,9 @@ fn infer_required_capabilities_v2(script: &UiActionScriptV2) -> Vec<String> {
         }
         if matches!(step, UiActionStepV2::WaitOverlayPlacementTrace { .. }) {
             push_cap(&mut caps, "diag.overlay_placement_trace");
+        }
+        if matches!(step, UiActionStepV2::WheelBurst { .. }) {
+            push_cap(&mut caps, "diag.wheel_burst_inject");
         }
         if matches!(
             step,

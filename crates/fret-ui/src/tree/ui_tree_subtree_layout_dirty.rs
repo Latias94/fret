@@ -258,6 +258,7 @@ impl<H: UiHost> UiTree<H> {
         }
     }
 
+    #[track_caller]
     pub(in crate::tree) fn apply_subtree_layout_dirty_delta_to_node_and_ancestors(
         &mut self,
         node: NodeId,
@@ -278,13 +279,28 @@ impl<H: UiHost> UiTree<H> {
                 (n.parent, n.element, n.subtree_layout_dirty_count, underflow)
             };
             if underflow {
+                let caller = std::panic::Location::caller();
                 tracing::error!(
                     node = ?id,
                     element = ?element,
                     stored,
                     delta,
+                    caller = %caller,
                     "subtree layout dirty count underflow"
                 );
+                // Parent pointers participate in both delta propagation and repair walks. When an
+                // underflow is observed, aggressively repair reachable parent pointers first so
+                // the subsequent subtree-count rebuild can propagate along the most plausible
+                // ancestry chain.
+                let repaired_parents = self.repair_parent_pointers_from_layer_roots();
+                if repaired_parents > 0 {
+                    tracing::warn!(
+                        node = ?id,
+                        repaired_parents,
+                        caller = %caller,
+                        "repaired parent pointers after subtree layout dirty underflow"
+                    );
+                }
                 self.repair_subtree_layout_dirty_counts_from(id);
                 break;
             }

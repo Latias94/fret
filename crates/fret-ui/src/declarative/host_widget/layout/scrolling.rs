@@ -73,6 +73,50 @@ fn scroll_extents_post_layout_enabled() -> bool {
     crate::runtime_config::ui_runtime_config().scroll_extents_post_layout
 }
 
+fn maybe_schedule_extent_probe_after_observation_budget_hit<H: UiHost>(
+    app: &mut H,
+    tree: &mut UiTree<H>,
+    window: AppWindowId,
+    node: NodeId,
+    element: GlobalElementId,
+    post_layout_extents_mode: bool,
+    at_scroll_extent_edge: bool,
+    observation: UiDebugScrollOverflowObservationTelemetry,
+) -> bool {
+    // If we cannot confidently observe overflow in post-layout geometry (budget hit), fall back to
+    // a measured unbounded probe on the next frame when the user is already at the current scroll
+    // extent edge. This avoids "pinned scroll range" regressions (e.g. expanding a code tab at the
+    // bottom of a docs page).
+    if !post_layout_extents_mode
+        || !at_scroll_extent_edge
+        || !(observation.wrapper_peel_budget_hit || observation.deep_scan_budget_hit)
+    {
+        return false;
+    }
+
+    let first_set = crate::elements::with_element_state(
+        app,
+        window,
+        element,
+        crate::element::ScrollState::default,
+        |state| {
+            let prev = state.pending_extent_probe;
+            state.pending_extent_probe = true;
+            !prev
+        },
+    );
+    if !first_set {
+        return false;
+    }
+
+    tree.schedule_barrier_relayout_with_source_and_detail(
+        node,
+        UiDebugInvalidationSource::Other,
+        UiDebugInvalidationDetail::ScrollExtentsObservationBudgetHit,
+    );
+    true
+}
+
 trait ScrollOverflowTree {
     fn children_ref(&self, node: NodeId) -> &[NodeId];
     fn node_bounds(&self, node: NodeId) -> Option<Rect>;
@@ -1567,29 +1611,17 @@ impl ElementHostWidget {
             // back to a measured unbounded probe on the next frame when the user is already at
             // the current scroll extent edge. This avoids "pinned scroll range" regressions (e.g.
             // expanding a code tab at the bottom of a docs page).
-            if post_layout_extents_mode
-                && at_scroll_extent_edge
-                && (observation.wrapper_peel_budget_hit || observation.deep_scan_budget_hit)
-            {
-                let first_set = crate::elements::with_element_state(
-                    &mut *cx.app,
-                    window,
-                    self.element,
-                    crate::element::ScrollState::default,
-                    |state| {
-                        let prev = state.pending_extent_probe;
-                        state.pending_extent_probe = true;
-                        !prev
-                    },
-                );
-                if first_set {
-                    cx.tree.schedule_barrier_relayout_with_source_and_detail(
-                        cx.node,
-                        UiDebugInvalidationSource::Other,
-                        UiDebugInvalidationDetail::ScrollExtentsObservationBudgetHit,
-                    );
-                    cx.request_redraw();
-                }
+            if maybe_schedule_extent_probe_after_observation_budget_hit(
+                &mut *cx.app,
+                cx.tree,
+                window,
+                cx.node,
+                self.element,
+                post_layout_extents_mode,
+                at_scroll_extent_edge,
+                observation,
+            ) {
+                cx.request_redraw();
             }
 
             // Best-effort: if post-layout child bounds exceed the probed extent (cached/deferral
@@ -1845,6 +1877,131 @@ impl ElementHostWidget {
         props: crate::element::ScrollbarProps,
     ) -> Size {
         clamp_to_constraints(cx.available, props.layout, cx.available)
+    }
+}
+
+#[cfg(test)]
+mod budget_probe_tests {
+    use super::*;
+
+    #[derive(Default)]
+    struct TestWidget;
+
+    impl<H: UiHost> Widget<H> for TestWidget {
+        fn layout(&mut self, _cx: &mut LayoutCx<'_, H>) -> Size {
+            Size::new(Px(0.0), Px(0.0))
+        }
+
+        fn paint(&mut self, _cx: &mut PaintCx<'_, H>) {}
+    }
+
+    fn make_observation(
+        wrapper_budget_hit: bool,
+        deep_scan_budget_hit: bool,
+    ) -> UiDebugScrollOverflowObservationTelemetry {
+        UiDebugScrollOverflowObservationTelemetry {
+            extent_may_be_stale: true,
+            barrier_roots: 1,
+            wrapper_peel_budget: 8,
+            wrapper_peeled_max: if wrapper_budget_hit { 8 } else { 0 },
+            wrapper_peel_budget_hit: wrapper_budget_hit,
+            immediate_children_visited: 0,
+            immediate_children_skipped_absolute: 0,
+            deep_scan_enabled: deep_scan_budget_hit,
+            deep_scan_budget_nodes: 256,
+            deep_scan_visited: if deep_scan_budget_hit { 256 } else { 0 },
+            deep_scan_budget_hit,
+            deep_scan_skipped_absolute: 0,
+        }
+    }
+
+    #[test]
+    fn scroll_post_layout_observation_budget_hit_schedules_probe_next_frame() {
+        let mut app = crate::test_host::TestHost::new();
+        let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+        let window = AppWindowId::default();
+        ui.set_window(window);
+        ui.set_debug_enabled(true);
+
+        let root = ui.create_node(TestWidget);
+        ui.set_root(root);
+
+        let element_peel = GlobalElementId(101);
+        let element_deep = GlobalElementId(202);
+        let node_peel = ui.create_node_for_element(element_peel, TestWidget);
+        let node_deep = ui.create_node_for_element(element_deep, TestWidget);
+        ui.set_children(root, vec![node_peel, node_deep]);
+
+        assert!(
+            maybe_schedule_extent_probe_after_observation_budget_hit(
+                &mut app,
+                &mut ui,
+                window,
+                node_peel,
+                element_peel,
+                true,
+                true,
+                make_observation(true, false),
+            ),
+            "expected wrapper-peel budget hit to schedule a probe"
+        );
+        assert!(
+            maybe_schedule_extent_probe_after_observation_budget_hit(
+                &mut app,
+                &mut ui,
+                window,
+                node_deep,
+                element_deep,
+                true,
+                true,
+                make_observation(false, true),
+            ),
+            "expected deep-scan budget hit to schedule a probe"
+        );
+
+        let pending = ui.take_pending_barrier_relayouts();
+        assert!(
+            pending.contains(&node_peel) && pending.contains(&node_deep),
+            "expected both scroll nodes to be scheduled for barrier relayout, got={pending:?}"
+        );
+
+        let pending_probe_peel = crate::elements::with_element_state(
+            &mut app,
+            window,
+            element_peel,
+            crate::element::ScrollState::default,
+            |state| state.pending_extent_probe,
+        );
+        let pending_probe_deep = crate::elements::with_element_state(
+            &mut app,
+            window,
+            element_deep,
+            crate::element::ScrollState::default,
+            |state| state.pending_extent_probe,
+        );
+        assert!(
+            pending_probe_peel && pending_probe_deep,
+            "expected budget-hit scheduling to set pending_extent_probe"
+        );
+
+        // Idempotent: once pending, we should not re-schedule.
+        assert!(
+            !maybe_schedule_extent_probe_after_observation_budget_hit(
+                &mut app,
+                &mut ui,
+                window,
+                node_peel,
+                element_peel,
+                true,
+                true,
+                make_observation(true, false),
+            ),
+            "expected repeated scheduling to be a no-op once pending"
+        );
+        assert!(
+            ui.take_pending_barrier_relayouts().is_empty(),
+            "expected no additional pending barrier relayouts after a no-op schedule"
+        );
     }
 }
 

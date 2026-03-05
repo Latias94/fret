@@ -195,6 +195,14 @@ pub(crate) fn ui_gallery_script_wheel_scroll_hit_changes_test_id(
     }
 }
 
+pub(crate) fn ui_gallery_script_requires_wheel_events_max_per_frame_gate(script: &Path) -> bool {
+    let Some(name) = script.file_name().and_then(|v| v.to_str()) else {
+        return false;
+    };
+
+    matches!(name, "ui-gallery-wheel-burst-coalescing.json")
+}
+
 pub(crate) fn ui_gallery_script_requires_code_editor_torture_marker_present_gate(
     script: &Path,
 ) -> bool {
