@@ -1,6 +1,6 @@
 # Action-First Authoring + View Runtime (Fearless Refactor v1) — Milestones
 
-Last updated: 2026-03-05
+Last updated: 2026-03-06
 
 Related:
 
@@ -9,22 +9,29 @@ Related:
 
 ---
 
-## Current status snapshot (as of 2026-03-05)
+## Current status snapshot (as of 2026-03-06)
 
-- **M0**: Met (ADRs 0307/0308 are accepted; ADR index jump table is updated).
-- **M1**: Met (ActionId identity + typed unit actions + converged metadata via command registry; dispatch diagnostics include handler scope and driver-handled classification).
-- **M2**: Met (View runtime v1 + hooks + view-cache keepalive + gates exist; cookbook adoption landed).
-- **M3**: Met (Declarative + imui + GenUI converge on the same ActionId dispatch and stable selectors; cross-frontend diag gate exists).
-- **M4**: Met (ui-gallery includes an action-first view runtime snippet; templates + docs converge on View+actions).
-- **M5**: Met (workspace shell demo tab strip uses action-first pointer dispatch hooks; scripted diag gate asserts pointer dispatch trace exists).
-- **M6**: Met (legacy MVU authoring is quarantined; golden path is action-first + view runtime).
-  - Status (as of 2026-03-05): MVU is no longer an in-tree authoring surface; the repo teaches one golden path.
-- **M6 evidence** (as of 2026-03-05): `apps/fret-examples/src/todo_demo.rs`, `apps/fret-examples/src/query_demo.rs`, `apps/fret-examples/src/query_async_tokio_demo.rs`, `apps/fret-examples/src/hello_counter_demo.rs`, `apps/fret-examples/src/async_playground_demo.rs`, `apps/fret-examples/src/embedded_viewport_demo.rs`, `apps/fret-examples/src/drop_shadow_demo.rs`, `apps/fret-examples/src/postprocess_theme_demo.rs`, `apps/fret-examples/src/custom_effect_v1_demo.rs`, `apps/fret-examples/src/custom_effect_v2_demo.rs`, `apps/fret-examples/src/custom_effect_v3_demo.rs`, `apps/fret-examples/src/liquid_glass_demo.rs`, `apps/fret-examples/src/genui_demo.rs`, `apps/fret-examples/src/markdown_demo.rs` are view runtime + typed actions.
-- **M7**: Met (payload actions v2 contract + prototype landed; at least one in-tree demo uses it with a scripted diag gate).
-- **M8**: Met (in-tree) (deprecation window existed; migrations landed).
-- **M9**: Met (in-tree) (legacy MVU demos removed; MVU modules removed; templates/docs/gates updated).
+This snapshot is intentionally evidence-based: only mark a milestone as “Met” when the in-tree code,
+teaching surfaces, and gates line up.
 
-Hardening follow-up (post-M1):
+- **M0**: Met (workstream docs + ADRs exist; indices are updated).
+- **M1**: In progress (typed unit actions exist; continue converging keymap/palette/menu/pointer triggers on the same dispatch pipeline).
+- **M2**: In progress (View runtime v1 exists; `ViewCx` action helpers landed; adoption in templates + cookbook/examples is ongoing).
+- **M3**: Planned (multi-frontend convergence: declarative + imui + GenUI).
+- **M4**: In progress (cookbook/examples + ui-gallery continue migrating to the same authoring surface).
+- **M5**: Planned (editor-grade proof points: docking/workspace integration).
+- **M6**: Planned (MVU deprecation window, then hard delete once adoption gates are met).
+- **M7–M9**: Proposed (payload actions v2, MVU deprecation, MVU hard delete).
+
+Evidence anchors (verified in-tree as of 2026-03-06):
+
+- `ecosystem/fret/src/view.rs` (`ViewCx::on_action_notify_*` helpers)
+- `apps/fretboard/src/scaffold/templates.rs` (scaffold templates prefer View + typed actions)
+- `apps/fret-cookbook/examples/query_basics.rs` (prefers action helpers)
+- `apps/fret-cookbook/examples/markdown_and_code_basics.rs` (prefers action helpers)
+- `tools/gate_no_models_mut_in_action_handlers.py` (teaching-surface regression gate)
+
+Hardening follow-up (open):
 
 - Key-context aware `when` evaluation (`keyctx.*`) is aligned across keymap matching, menus/palette gating, shortcut display, and diagnostics (see TODO `AFA-actions-019`).
 - Embedded viewport interop has a view-runtime demo proving `record_engine_frame` composition (see TODO `AFA-adopt-044`).

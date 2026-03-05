@@ -1,6 +1,6 @@
 # Action-First Authoring + View Runtime (Fearless Refactor v1) — Evidence and Gates
 
-Last updated: 2026-03-05
+Last updated: 2026-03-06
 
 This file defines what “done” means beyond subjective UX feel.
 
@@ -27,10 +27,11 @@ View runtime (v1):
 - `ecosystem/fret/src/view.rs` (`View`, `ViewCx`, `use_state`/`use_state_keyed`/`use_selector`/`use_query`, view-cache reuse + handler keepalive)
 - `ecosystem/fret/src/app_entry.rs` (`App::run_view`)
 
-Legacy MVU removal (M9):
+Legacy MVU removal (planned M9):
 
-- MVU authoring surfaces were hard-deleted in-tree.
-- Gate: `tools/gate_no_mvu_in_tree.py` (or `tools/gate_no_mvu_in_tree.ps1`) (added in M9 follow-up) prevents reintroduction.
+- MVU authoring still exists in-tree today as a compatibility surface.
+- The hard delete is planned for M9, after the M8 deprecation/migration window.
+- Gate (planned for M9): `tools/gate_no_mvu_in_tree.py` (or `tools/gate_no_mvu_in_tree.ps1`) prevents reintroduction once MVU is removed.
 
 UI gallery adoption (v1):
 

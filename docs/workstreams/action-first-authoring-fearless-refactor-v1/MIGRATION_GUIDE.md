@@ -209,13 +209,26 @@ If you previously relied on MVU routers for per-item/payloaded routing, prefer p
 - See: `docs/adr/0312-payload-actions-v2.md`
 - Example: `apps/fret-cookbook/examples/payload_actions_basics.rs`
 
-## 3.2) MVU removal note
+## 3.2) MVU deprecation / removal plan (M8/M9)
 
-MVU authoring surfaces were hard-deleted in-tree as part of milestone M9.
+MVU authoring still exists in-tree today as a compatibility surface, but it is not the recommended
+golden path for new code.
 
-- Do not add MVU back into this repo.
-- If you are migrating an external MVU-based codebase, treat this guide as the mapping reference and
-  prefer converging on View runtime + typed actions.
+Policy:
+
+- Do not add new MVU demos or expand MVU API surface.
+- Prefer migrating MVU demos to View runtime + typed actions as part of the adoption milestones.
+- Use this guide as the mapping reference when migrating an external MVU-based codebase.
+
+Planned sequence (subject to the workstream exit gates):
+
+- **M8**: MVU deprecation window (warn + migrate).
+- **M9**: hard delete legacy MVU in-tree (remove modules, templates/docs cleanup, add a regression gate).
+
+Evidence anchors:
+
+- `ecosystem/fret/src/mvu.rs` (current MVU compat)
+- `docs/workstreams/action-first-authoring-fearless-refactor-v1/TODO.md` (planned M9 checklist)
 
 ---
 
