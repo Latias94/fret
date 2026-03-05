@@ -18,7 +18,7 @@
     {
       "type": "wait_until",
       "predicate": {
-        "kind": "exists",
+        "kind": "bounds_within_window",
         "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-debug-toggle-tabstrip-two-row-pinned" }
       },
       "timeout_frames": 240
@@ -35,26 +35,24 @@
       "timeout_frames": 240
     },
 
-    { "type": "click", "button": "right", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-0" } },
     {
       "type": "wait_until",
-      "predicate": { "kind": "bounds_within_window", "target": { "kind": "role_and_name", "role": "menu_item", "name": "Pin Tab" } },
+      "predicate": { "kind": "bounds_within_window", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-debug-pin-doc-a-0" } },
       "timeout_frames": 240
     },
-    { "type": "click", "target": { "kind": "role_and_name", "role": "menu_item", "name": "Pin Tab" } },
+    { "type": "click", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-debug-pin-doc-a-0" } },
     {
       "type": "wait_until",
       "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-0.pinned" } },
       "timeout_frames": 240
     },
 
-    { "type": "click", "button": "right", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-1" } },
     {
       "type": "wait_until",
-      "predicate": { "kind": "bounds_within_window", "target": { "kind": "role_and_name", "role": "menu_item", "name": "Pin Tab" } },
+      "predicate": { "kind": "bounds_within_window", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-debug-pin-doc-a-1" } },
       "timeout_frames": 240
     },
-    { "type": "click", "target": { "kind": "role_and_name", "role": "menu_item", "name": "Pin Tab" } },
+    { "type": "click", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-debug-pin-doc-a-1" } },
     {
       "type": "wait_until",
       "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-1.pinned" } },
@@ -107,4 +105,3 @@
     { "type": "capture_bundle", "label": "workspace-shell-demo-tab-pinned-row-two-row-reorder-smoke" }
   ]
 }
-
