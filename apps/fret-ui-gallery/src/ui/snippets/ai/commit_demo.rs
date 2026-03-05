@@ -2,8 +2,6 @@ pub const SOURCE: &str = include_str!("commit_demo.rs");
 
 // region: example
 use fret_ui_ai as ui_ai;
-use fret_ui_kit::ui;
-use fret_ui_kit::{LayoutRefinement, Space};
 use fret_ui_shadcn::prelude::*;
 use std::sync::Arc;
 use std::time::{Duration, SystemTime};
@@ -29,6 +27,9 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
         ])
         .into_element(cx),
         ui_ai::CommitActions::new([ui_ai::CommitCopyButton::new(hash.clone())
+            .on_copy(Arc::new(|host, action_cx| {
+                host.notify(action_cx);
+            }))
             .test_id("ui-ai-commit-copy")
             .copied_marker_test_id("ui-ai-commit-copied-marker")
             .into_element(cx)])
@@ -83,15 +84,6 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
         .into_element(cx)
         .test_id("ui-ai-commit-root");
 
-    ui::v_flex(move |cx| {
-        vec![
-            cx.text("Commit (AI Elements)"),
-            cx.text("Disclosure surface: copy is independent of open state."),
-            commit,
-        ]
-    })
-    .layout(LayoutRefinement::default().w_full().min_w_0())
-    .gap(Space::N4)
-    .into_element(cx)
+    commit
 }
 // endregion: example
