@@ -233,6 +233,13 @@ fn bundle_stats_summary_from_path(path: &Path) -> Option<serde_json::Value> {
             .and_then(|v| v.get(k))
             .and_then(|v| v.as_u64())
     };
+    let snapshot_stats_bool = |snapshot: &serde_json::Value, k: &str| -> Option<bool> {
+        snapshot
+            .get("debug")
+            .and_then(|v| v.get("stats"))
+            .and_then(|v| v.get(k))
+            .and_then(|v| v.as_bool())
+    };
 
     let get_u64 = |k: &str| stats.get(k).and_then(|v| v.as_u64());
     let get_bool = |k: &str| stats.get(k).and_then(|v| v.as_bool());
@@ -282,6 +289,10 @@ fn bundle_stats_summary_from_path(path: &Path) -> Option<serde_json::Value> {
     let mut wgpu_metal_current_allocated_size_bytes_min: Option<u64> = None;
     let mut wgpu_metal_current_allocated_size_bytes_max: Option<u64> = None;
     for snapshot in snapshots {
+        if snapshot_stats_bool(snapshot, "wgpu_metal_current_allocated_size_present") != Some(true)
+        {
+            continue;
+        }
         let Some(v) = snapshot_stats_u64(snapshot, "wgpu_metal_current_allocated_size_bytes")
         else {
             continue;
