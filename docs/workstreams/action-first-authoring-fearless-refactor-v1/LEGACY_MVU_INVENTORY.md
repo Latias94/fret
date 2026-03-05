@@ -13,9 +13,9 @@ Scope:
 
 Note:
 
-- MVU surfaces were removed from `ecosystem/fret` (feature `legacy-mvu`, and modules `mvu`,
-  `mvu_router`, `legacy`) as part of M9.
-- In-tree demos no longer carry a separate demo-level opt-in feature (e.g. `legacy-mvu-demos`).
+- MVU surfaces were removed from `ecosystem/fret` (feature gate + `mvu` / `mvu_router` / `legacy`
+  modules) as part of M9.
+- In-tree demos no longer carry a separate demo-level opt-in feature.
 - Any remaining MVU references are expected to be limited to internal scaffolding sources and docs
   until M9 completes.
 
@@ -75,7 +75,7 @@ Current status:
 
 - None (as of 2026-03-05). All `apps/fret-examples` demos are view runtime + typed actions.
 - Legacy MVU demo copies (`*_legacy.rs`) were deleted as part of M9.
-- The demo-level opt-in feature (`legacy-mvu-demos`) and `apps/fret-demo` legacy routing were removed.
+- The former demo-level opt-in feature and `apps/fret-demo` legacy routing were removed.
 
 Recommendation:
 

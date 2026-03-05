@@ -1,16 +1,21 @@
 # Action-First Authoring + View Runtime (Fearless Refactor v1) — Migration Guide
 
-Last updated: 2026-03-04
+Last updated: 2026-03-05
 
 This guide is intentionally practical: it describes how to migrate in-tree demos and ecosystem code
 in small, reviewable slices.
+
+Note:
+
+- This repo no longer ships MVU authoring surfaces in-tree (M9 hard delete). The “MVU → View runtime”
+  section is retained only as a mapping guide for migrating older external codebases.
 
 ---
 
 ## 1) Migration sequence (recommended)
 
 1) Migrate **event identities** first (commands → actions).
-2) Migrate authoring loop (MVU → view runtime) only after action IDs are stable.
+2) Migrate the authoring loop (legacy MVU → view runtime) only after action IDs are stable (if applicable).
 3) Add/upgrade gates (tests + diag scripts) while migrating, not after.
 
 Rationale:
@@ -32,7 +37,7 @@ Migration steps:
 2) Update UI widgets to bind `.action(...)` rather than `.on_click(cmd_id)` where appropriate.
 3) Update handler registration:
    - v1: prefer `on_action` hooks backed by the action handler table (authoring-level).
-   - compat: keep `on_command` for legacy MVU demos while migrating incrementally.
+   - if migrating older code: keep existing command hooks temporarily, but treat them as compat-only.
 
 ### 2.1 Typed unit action IDs (recommended v1 authoring style)
 
@@ -85,7 +90,7 @@ fn install_commands(app: &mut App) {
 
 ---
 
-## 3) MVU → View runtime (minimal refactor)
+## 3) Legacy MVU → View runtime (minimal refactor)
 
 Target outcome:
 
@@ -156,59 +161,21 @@ Example:
 
 ---
 
-## 3.1) When to use MVU vs View (v1 guidance)
+## 3.1) Per-item dispatch: payload actions v2
 
-Recommended default (new code):
+If you previously relied on MVU routers for per-item/payloaded routing, prefer payload actions v2
+(ADR 0312) for pointer/programmatic dispatch:
 
-- Use **View runtime + typed actions** for new templates, cookbook examples, and app code.
-
-Keep MVU (compat / legacy) when:
-
-- You need **per-item/payloaded** routing semantics that v1 typed actions do not support yet
-  (v1 is intentionally *unit actions only*; see ADR 0307 “v1 decision snapshot”),
-  and the payload actions v2 prototype (ADR 0312) is not sufficient for your use case.
-- You are maintaining an existing MVU-based demo and migration would not add new evidence/gates.
-- You are exploring authoring patterns quickly and want a minimal “single-file loop” while prototyping.
-
-Prefer payload actions v2 (post-v1) when:
-
-- You want action-first per-item dispatch without routers, and you can accept:
-  - payload is pointer/programmatic-only (no keymap schema changes),
-  - payload is transient/best-effort (pending store + TTL),
-  - missing payload should be handled safely (recommended: treat as not handled).
 - See: `docs/adr/0312-payload-actions-v2.md`
 - Example: `apps/fret-cookbook/examples/payload_actions_basics.rs`
 
-Policy note:
+## 3.2) MVU removal note
 
-- MVU is legacy-only (compat), not a supported alternative golden path.
-- See: `docs/workstreams/action-first-authoring-fearless-refactor-v1/MVU_POLICY.md`
+MVU authoring surfaces were hard-deleted in-tree as part of milestone M9.
 
-If you choose MVU in 2026:
-
-- Label it explicitly as legacy/compat in docs and avoid copy-pasting it into new templates.
-- Prefer action-first IDs (`ActionId == CommandId` in v1) even inside MVU code where feasible, so
-  keymap/palette/menus/diagnostics stay aligned.
-
-### 3.2) Enabling legacy MVU surfaces (opt-in)
-
-MVU is feature-gated and compile-time deprecated.
-
-To use it (legacy demos only), opt in explicitly:
-
-- Enable the `fret` feature `legacy-mvu` in your `Cargo.toml`.
-- Import MVU through `fret::legacy::prelude::*` (do not rely on `fret::prelude::*`).
-- Expect `deprecated` warnings; in in-tree legacy demo crates we typically add `#![allow(deprecated)]`.
-
-Inventory:
-
-- Track remaining in-tree MVU usage here:
-  `docs/workstreams/action-first-authoring-fearless-refactor-v1/LEGACY_MVU_INVENTORY.md`
-
-Removal-track note:
-
-- If milestone M9 (hard delete MVU) is adopted, this section will be removed and MVU will no longer
-  be available in-tree. Prefer migrating now rather than adding new MVU usage.
+- Do not add MVU back into this repo.
+- If you are migrating an external MVU-based codebase, treat this guide as the mapping reference and
+  prefer converging on View runtime + typed actions.
 
 ---
 

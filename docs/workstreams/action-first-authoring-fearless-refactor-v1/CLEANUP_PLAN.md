@@ -1,6 +1,6 @@
 # Action-First Authoring + View Runtime (Fearless Refactor v1) — Cleanup Plan
 
-Last updated: 2026-03-04
+Last updated: 2026-03-05
 
 This document exists to prevent a common failure mode of fearless refactors:
 
@@ -11,15 +11,14 @@ This workstream is only “done” if we leave a **clean architecture** behind.
 
 ---
 
-## Status (as of 2026-03-04)
+## Status (as of 2026-03-05)
 
 v1 landed and the repo golden path is converged on **View runtime + typed actions**:
 
 - Templates: `fretboard new` scaffolds generate View+actions by default.
 - Cookbook: view runtime + actions; MVU is gated out (`pwsh tools/gate_no_mvu_in_cookbook.ps1`).
 - Diagnostics gates: action-first scripted gates exist (`pwsh tools/diag_gate_action_first_authoring_v1.ps1`).
-- MVU remains available as an explicit compat surface: `fret::legacy::prelude::*`.
-- MVU is compile-time deprecated and opt-in behind `fret` feature `legacy-mvu` (in-tree legacy demos explicitly enable it).
+- MVU authoring surfaces were hard-deleted in-tree as part of milestone M9.
 
 This plan remains relevant as a “don’t drift back” checklist and as guidance for future deletions.
 
@@ -70,19 +69,18 @@ These should remain disallowed in golden-path code:
 
 Repo already has checks for these patterns; keep them and update them to the new golden path.
 
-### 3.2 MVU typed command routers (`MessageRouter`, `KeyedMessageRouter`)
+### 3.2 MVU typed command routers (`MessageRouter`, `KeyedMessageRouter`) — removed
 
-ADR 0223 treats these as first-party ecosystem surfaces today.
+These legacy routers existed as a first-party ecosystem surface during the v1 transition.
 
-After action-first + view runtime adoption:
+Status:
 
-- MVU is legacy-only (compat), not a supported alternative golden path.
-  - Policy: `docs/workstreams/action-first-authoring-fearless-refactor-v1/MVU_POLICY.md`
+- Removed in-tree as part of M9.
 
-If demoted:
+Replacement guidance:
 
-- keep MVU for a deprecation window,
-- update docs/templates to recommend actions/views instead.
+- Use typed actions (ADR 0307) and payload actions v2 (ADR 0312) for per-item pointer/programmatic
+  dispatch.
 
 ### 3.3 Duplicate authoring entry points
 

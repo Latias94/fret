@@ -134,11 +134,9 @@ Exit criteria:
 Exit criteria:
 
 - MVU’s long-term stance is decided (supported vs legacy-only) and reflected in docs/templates.
-- If legacy-only: compile-time deprecations (or feature gating) are staged behind a deprecation
-  window and do not break in-tree demos.
-  - Feature gate: `ecosystem/fret/Cargo.toml` (`legacy-mvu`)
-  - Module gating: `ecosystem/fret/src/lib.rs`
-  - In-tree opt-in: `apps/fret-examples/Cargo.toml`, `apps/fret-ui-gallery/Cargo.toml`
+- If legacy-only: a deprecation window exists (warnings + migrations), and in-tree demos remain
+  buildable while migrating.
+- If removal is adopted: MVU is hard-deleted in-tree under M9.
 
 ### M9 — Hard delete legacy MVU (in-tree)
 
@@ -146,14 +144,12 @@ Exit criteria:
 
 - `LEGACY_MVU_INVENTORY.md` has no remaining in-tree MVU usage.
 - `ecosystem/fret` no longer exposes MVU surfaces:
-  - remove the `legacy-mvu` feature,
   - delete `mvu` + `mvu_router` + `legacy` modules,
   - remove MVU re-exports from `prelude::*`.
-- `apps/fret-examples` and `apps/fret-demo` no longer have a `legacy-mvu-demos` feature or legacy MVU demo routing.
+- `apps/fret-examples` and `apps/fret-demo` no longer have legacy MVU demo routing.
 - Docs/templates do not mention MVU as an available authoring path.
 - A small gate prevents MVU APIs from being reintroduced (grep-based check is sufficient).
 
 Current blockers (as of 2026-03-05):
 
-- Docs still describe MVU as an available compat path (needs cleanup + history note).
-- A small gate is still missing to prevent MVU identifiers from being reintroduced.
+- None.
