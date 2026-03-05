@@ -67,7 +67,7 @@ Legend:
 | `reasoning.tsx` | `fret-ui-ai` | `reasoning.rs` | Ported (prototype) | Streaming-driven auto-open/close policy. |
 | `suggestion.tsx` | `fret-ui-ai` | `suggestions.rs` | Ported (prototype) | Fret uses plural module name; surfaces `Suggestions`/`Suggestion`. |
 | `queue.tsx` | `fret-ui-ai` | `queue.rs` | Ported (prototype) | Policy-heavy; gated via diag. |
-| `model-selector.tsx` | `fret-ui-ai` | `model_selector.rs` | Ported (prototype) | Provider icons are placeholders (no remote fetch). |
+| `model-selector.tsx` | `fret-ui-ai` | `model_selector.rs` | Ported (prototype) | Provider icons are placeholders (no remote fetch). UI Gallery page: `ai_model_selector_demo`. Gate: `tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-model-selector-demo-open-filter-select.json` (requires `fret-ui-gallery --features gallery-dev`). |
 | `attachments.tsx` | `fret-ui-ai` | `attachments.rs` | Ported (prototype) | Chips grid; add/remove intents are app-owned. |
 | `chain-of-thought.tsx` | `fret-ui-ai` | `chain_of_thought.rs` | Ported (prototype) | Step-list disclosure surface. |
 | `checkpoint.tsx` | `fret-ui-ai` | `checkpoint.rs` | Ported (prototype) | Basic alignment. |
@@ -111,6 +111,15 @@ Legend:
 
 As of the snapshot above, **all** upstream `.tsx` surfaces are accounted for in `fret-ui-ai`.
  
+
+## Evidence bundles (local)
+
+- 2026-03-05 model selector open → filter → select → close (PASS):
+  - Script: `tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-model-selector-demo-open-filter-select.json`
+  - Launch: `cargo run -p fret-ui-gallery --release --features gallery-dev`
+  - Session: `target/fret-diag-codex/sessions/1772683677934-7716`
+  - Packed: `target/fret-diag-codex/sessions/1772683677934-7716/share/1772683839231.zip`
+  - Run id: `1772683839231`
 
 ## Regenerating this diff (developer note)
 

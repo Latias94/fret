@@ -130,7 +130,7 @@ Design note:
     - iced `row!/column!`: `repo-ref/iced/widget/src/helpers.rs`
   - Proposed shape (bikesheddable):
     - `ui::children![cx; a, b, c] -> Vec<AnyElement>`
-    - usable inside `ui::h_flex(cx, |cx| ui::children![cx; ...])`
+    - usable inside `ui::h_flex(|cx| ui::children![cx; ...])`
   - Scope:
     - `ecosystem/fret-ui-kit` (re-export from `fret_ui_shadcn::prelude`)
 
