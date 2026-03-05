@@ -21,12 +21,15 @@ This workstream is intentionally scoped to “editor-grade tab UX”:
 -   Output: `docs/workstreams/editor-tabstrip-unification-fearless-refactor-v1/PARITY_MATRIX.md`
 - [ ] Normalize terminology in code and docs:
   - “tabs viewport”, “header space”, “overflow control”, “end-drop surface”
-- [ ] Decide overflow dropdown policy:
+- [ ] Decide overflow dropdown policy (documented defaults per adapter):
   - list overflowed-only vs overflowed+active (current docking policy)
   - include close buttons in overflow list (dockview has tests for this)
-- [x] Default overflow dropdown policy: include active tab when overflowing.
-  - Workspace: `ecosystem/fret-workspace/src/tab_strip/overflow.rs`
-  - Docking: `ecosystem/fret-docking/src/dock/tab_overflow.rs`
+- [x] Implement adapter-owned overflow dropdown policy knobs.
+  - Workspace default: overflowed-only; configurable via `WorkspaceTabStrip::overflow_menu_active_policy(...)`.
+    - `ecosystem/fret-workspace/src/tab_strip/mod.rs`
+    - `ecosystem/fret-workspace/src/tab_strip/overflow.rs`
+  - Docking default: overflowed + active.
+    - `ecosystem/fret-docking/src/dock/tab_overflow.rs`
 - [x] Enable overflow dropdown close parity (workspace + docking):
   - Close affordance is visible in overflow menu rows.
   - Clicking close dispatches close without implicitly activating.

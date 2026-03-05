@@ -67,9 +67,10 @@ This file is a short, append-only log of landings and decisions for this workstr
 
 ## 2026-03-05
 
-- Aligned workspace overflow dropdown policy with docking by including the active tab when overflowing.
-  - Workspace adapter: `ecosystem/fret-workspace/src/tab_strip/overflow.rs`
-  - Rationale: keep the active tab reachable in the dropdown under overflow.
+- Added an adapter-owned overflow dropdown policy knob to the workspace tab strip.
+  - API: `WorkspaceTabStrip::overflow_menu_active_policy(...)`
+  - Workspace default: overflowed-only (dockview-like).
+  - Rationale: keep policy out of headless helpers while allowing unification experiments.
 
 ## Next (proposed)
 

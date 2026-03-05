@@ -10,8 +10,9 @@ Options:
 Recommendation:
 - Keep policy in adapters; default to “overflowed + active” because it prevents a common editor
   failure mode where the active tab becomes unreachable in the dropdown.
-  - Workspace default: includes active when overflowing (`ecosystem/fret-workspace/src/tab_strip/overflow.rs`).
   - Docking default: includes active (`ecosystem/fret-docking/src/dock/tab_overflow.rs`).
+  - Workspace default: overflowed-only (dockview-like), but can opt into include-active if needed
+    (`WorkspaceTabStrip::overflow_menu_active_policy(...)`).
 
 ## Q2: Should overflow dropdown support close buttons?
 

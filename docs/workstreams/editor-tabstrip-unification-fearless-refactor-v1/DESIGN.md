@@ -65,15 +65,17 @@ diagnostics predicates gate the outcomes when semantics IDs are unavailable.
 
 ## Overflow dropdown policy (decision)
 
-Adapters own the dropdown item policy, but the default posture is:
+Overflow dropdown item policy is **adapter-owned**.
 
-- **Include the active tab** in the overflow list when the strip is overflowing.
+Current defaults:
+
+- Workspace tab strip: overflowed-only (dockview-like).
+- Docking tab bar: overflowed + active (to keep the active tab reachable under different scroll/geometry pipelines).
 
 Rationale:
 
-- Prevents the “active tab becomes unreachable in the dropdown” failure mode.
-- Matches the current docking posture (always includes active).
-- Keeps behavior predictable for diagnostics scripts.
+- Keep policy in ecosystem layers; do not force a single global default when the surfaces have different UX goals.
+- Keep the mechanism helper deterministic (`compute_overflow_menu_item_indices`), and pass policy knobs from adapters.
 
 The shared headless helper (`compute_overflow_menu_item_indices`) remains the mechanism source of
 truth; adapters pass:
@@ -88,4 +90,3 @@ truth; adapters pass:
 - Expand shared gates around end-drop semantics under overflow (canonical insert-index).
 - Decide whether pinned tabs become multi-row in workspace (policy-only).
 - Document and gate a minimal keyboard/focus semantics bundle for editor surfaces.
-
