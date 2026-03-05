@@ -57,6 +57,18 @@ Using `tools/diag-scripts/todo-memory-steady.json` on macOS/Metal:
     - `target/diag/mem-baseline-20260305/image-heavy.memory-summary.json`
     - `target/diag/mem-baseline-20260305/todo.memory-summary.json`
 
+- Cross-check: Apple `footprint` categories (local, 2026-03-05; outputs under `target/diag/mem-baseline-20260305-footprint/`):
+  - Key observation: `footprint_categories_agg` top bucket is consistently `Owned physical footprint (unmapped) (graphics)`, which closely tracks `vmmap` `owned unmapped memory` dirty.
+  - `empty-idle` (N=10): `Owned physical footprint (unmapped) (graphics)` p50=~201.8 MiB, p90=~202.6 MiB
+  - `text-heavy` (N=10): `Owned physical footprint (unmapped) (graphics)` p50=~235.0 MiB, p90=~237.1 MiB
+  - `image-heavy` (N=5): `Owned physical footprint (unmapped) (graphics)` p50=~315.6 MiB, p90=~315.6 MiB
+  - `todo` (N=5): `Owned physical footprint (unmapped) (graphics)` p50=~221.6 MiB, p90=~221.6 MiB
+  - Summary JSON files:
+    - `target/diag/mem-baseline-20260305-footprint/empty-idle.memory-summary.json`
+    - `target/diag/mem-baseline-20260305-footprint/text-heavy.memory-summary.json`
+    - `target/diag/mem-baseline-20260305-footprint/image-heavy.memory-summary.json`
+    - `target/diag/mem-baseline-20260305-footprint/todo.memory-summary.json`
+
 - Repeat sample (N=5; `target/release/todo_demo`; `--env FRET_DIAG_WGPU_ALLOCATOR_REPORT=1`):
   - `macos_vmmap_steady.physical_footprint_peak_bytes`: 358,612,992 .. 419,325,542 (~342.0 .. 399.9 MiB)
     - Note: 4/5 runs clustered at ~342–346 MiB; 1/5 outlier correlated with higher GPU/driver-backed regions.
