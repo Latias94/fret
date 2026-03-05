@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use crate::button::{variant_colors, ButtonVariant};
+use crate::button::{ButtonVariant, variant_colors};
 use crate::rtl;
 use fret_core::{
     Axis, Color, Corners, CursorIcon, Edges, FontId, FontWeight, MouseButton, Px, SemanticsRole,
@@ -13,7 +13,7 @@ use fret_ui::element::{
     AnyElement, ContainerProps, FlexProps, LayoutStyle, Length, Overflow, PointerRegionProps,
     PressableA11y, PressableProps, SemanticsDecoration, TextAreaProps, TextInputProps, TextProps,
 };
-use fret_ui::{focus_visible, ElementContext, TextAreaStyle, TextInputStyle, Theme, UiHost};
+use fret_ui::{ElementContext, TextAreaStyle, TextInputStyle, Theme, UiHost, focus_visible};
 use fret_ui_kit::command::ElementCommandGatingExt as _;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
@@ -23,7 +23,7 @@ use fret_ui_kit::declarative::motion::{
     drive_tween_color_for_element, drive_tween_f32_for_element,
 };
 use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::recipes::input::{resolve_input_chrome, InputTokenKeys};
+use fret_ui_kit::recipes::input::{InputTokenKeys, resolve_input_chrome};
 use fret_ui_kit::typography;
 use fret_ui_kit::{ChromeRefinement, LayoutRefinement, Size as ComponentSize, Space};
 
@@ -1995,7 +1995,7 @@ mod tests {
     use fret_ui::element::{ElementKind, TextInputProps, TextProps};
     use fret_ui::tree::UiTree;
 
-    use crate::shadcn_themes::{apply_shadcn_new_york, ShadcnBaseColor, ShadcnColorScheme};
+    use crate::shadcn_themes::{ShadcnBaseColor, ShadcnColorScheme, apply_shadcn_new_york};
 
     fn bounds() -> Rect {
         Rect::new(
@@ -2227,9 +2227,11 @@ mod tests {
             bounds,
             "shadcn-input-group-addon-click-to-focus",
             |cx| {
-                vec![InputGroup::new(model.clone())
-                    .leading([cx.text("lead")])
-                    .into_element(cx)]
+                vec![
+                    InputGroup::new(model.clone())
+                        .leading([cx.text("lead")])
+                        .into_element(cx),
+                ]
             },
         );
         ui.set_root(root);
@@ -2286,9 +2288,11 @@ mod tests {
             bounds,
             "shadcn-input-group-chrome-hit-test",
             |cx| {
-                vec![InputGroup::new(model.clone())
-                    .test_id("input_group")
-                    .into_element(cx)]
+                vec![
+                    InputGroup::new(model.clone())
+                        .test_id("input_group")
+                        .into_element(cx),
+                ]
             },
         );
         ui.set_root(root);
@@ -2360,10 +2364,12 @@ mod tests {
             bounds,
             "shadcn-input-group-addon-click-to-focus-suppressed-by-hint",
             |cx| {
-                vec![InputGroup::new(model.clone())
-                    .leading([cx.text("lead")])
-                    .leading_has_button(true)
-                    .into_element(cx)]
+                vec![
+                    InputGroup::new(model.clone())
+                        .leading([cx.text("lead")])
+                        .leading_has_button(true)
+                        .into_element(cx),
+                ]
             },
         );
         ui.set_root(root);
