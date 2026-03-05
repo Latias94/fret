@@ -16,6 +16,13 @@ This workstream is about **measurement → attribution → bounded optimizations
 
 Using `tools/diag-scripts/todo-memory-steady.json` on macOS/Metal:
 
+- Tooling helper:
+  - Summarize multiple `--session-auto` samples under a base dir:
+    - `fretboard diag memory-summary --dir target/fret-diag-mem-todo-steady`
+    - `fretboard diag memory-summary --dir target/fret-diag-mem-todo-steady --sort wgpu_metal_current_allocated_size_bytes_max --top 5`
+  - Optional macOS-only hint for the largest `vmmap` buckets:
+    - `fretboard diag memory-summary --dir target/fret-diag-mem-todo-steady --vmmap-regions-sorted-top`
+
 - Repeat sample (N=5; `target/release/todo_demo`; `--env FRET_DIAG_WGPU_ALLOCATOR_REPORT=1`):
   - `macos_vmmap_steady.physical_footprint_peak_bytes`: 358,612,992 .. 419,325,542 (~342.0 .. 399.9 MiB)
     - Note: 4/5 runs clustered at ~342–346 MiB; 1/5 outlier correlated with higher GPU/driver-backed regions.

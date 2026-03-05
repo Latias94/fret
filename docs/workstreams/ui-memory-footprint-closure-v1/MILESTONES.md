@@ -9,6 +9,7 @@
 
 - `vmmap -summary` is parsed into structured fields in `resource.footprint.json`.
 - Top contributors (region types + malloc zone stats where available) are visible without manual parsing.
+- Multiple `--session-auto` samples can be summarized via `fretboard diag memory-summary`.
 
 ## M2 — Minimal scenario matrix (done)
 
