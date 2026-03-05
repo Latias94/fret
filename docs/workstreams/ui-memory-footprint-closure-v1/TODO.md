@@ -50,6 +50,7 @@
   - `Owned physical footprint (unmapped) (graphics)` vs `renderer_gpu_images_bytes_estimate`
   - `wgpu_metal_current_allocated_size_bytes_max` vs `renderer_gpu_images_bytes_estimate`
   - Goal: separate baseline intercept (swapchain/driver/allocator) from per-image growth.
+- [x] Captured initial sweep (local 2026-03-05; N=3 each) and observed ~1:1 scaling with a ~100 MiB Metal baseline and ~217 MiB footprint baseline.
 
 ### Evidence (captured)
 
