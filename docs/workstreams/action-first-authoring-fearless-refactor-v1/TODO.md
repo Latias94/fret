@@ -265,6 +265,8 @@ ID format:
     - All templates demonstrate “late `into_element(cx)` + `ui::children![cx; ...]`” (low adapter noise),
       with unit tests guarding against `into_element(cx)` regression:
       `apps/fretboard/src/scaffold/templates.rs` (template tests).
+    - Templates prefer `cx.on_action_notify::<A>(...)` to avoid repeating `request_redraw(...)` + `notify(...)`
+      boilerplate in action handlers (keeps view-cache closure participation consistent).
 
 - [x] AFA-adopt-044 Migrate `embedded_viewport_demo` to the view runtime.
   - Goal: prove view-runtime authoring composes cleanly with embedded viewport interop:
