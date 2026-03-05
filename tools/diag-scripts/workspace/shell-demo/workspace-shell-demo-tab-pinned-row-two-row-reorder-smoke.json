@@ -1,0 +1,107 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "Workspace shell demo: two-row pinned layout reorder within pinned group (smoke)",
+    "tags": ["workspace", "tabstrip", "pinned", "two_row", "reorder", "smoke", "gate"],
+    "required_capabilities": ["diag.script_v2"],
+    "target_hints": [
+      "Enables the two-row pinned layout via the debug toggle.",
+      "Pins doc-a-0 and doc-a-1 via the tab context menu.",
+      "Drags doc-a-0 to the end drop surface.",
+      "Asserts pinned ordering updates without affecting the unpinned tab."
+    ]
+  },
+  "steps": [
+    { "type": "set_window_inner_size", "width_px": 1280.0, "height_px": 720.0 },
+    { "type": "wait_frames", "n": 10 },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-debug-toggle-tabstrip-two-row-pinned" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-debug-toggle-tabstrip-two-row-pinned" } },
+    { "type": "wait_frames", "n": 10 },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-0" }
+      },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "bounds_within_window", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-debug-pin-doc-a-0" } },
+      "timeout_frames": 240
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-debug-pin-doc-a-0" } },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-0.pinned" } },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "bounds_within_window", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-debug-pin-doc-a-1" } },
+      "timeout_frames": 240
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-debug-pin-doc-a-1" } },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-1.pinned" } },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "pos_in_set_is", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-0" }, "pos_in_set": 1 },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "pos_in_set_is", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-1" }, "pos_in_set": 2 },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "pos_in_set_is", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-2" }, "pos_in_set": 3 },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-strip.drop_end" } },
+      "timeout_frames": 240
+    },
+    {
+      "type": "drag_to",
+      "from": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-0" },
+      "to": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-strip.drop_end" },
+      "steps": 84,
+      "timeout_frames": 240
+    },
+    { "type": "wait_frames", "n": 10 },
+
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "pos_in_set_is", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-1" }, "pos_in_set": 1 },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "pos_in_set_is", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-0" }, "pos_in_set": 2 },
+      "timeout_frames": 240
+    },
+    { "type": "assert", "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-0.pinned" } } },
+    { "type": "assert", "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-1.pinned" } } },
+
+    { "type": "capture_bundle", "label": "workspace-shell-demo-tab-pinned-row-two-row-reorder-smoke" }
+  ]
+}

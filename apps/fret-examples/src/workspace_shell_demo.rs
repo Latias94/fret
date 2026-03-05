@@ -110,6 +110,7 @@ struct WorkspaceShellWindowState {
     window_layout: fret_app::Model<WorkspaceWindowLayout>,
     dirty_close_prompt_open: fret_app::Model<bool>,
     dirty_close_prompt: fret_app::Model<Option<WorkspaceShellDirtyClosePrompt>>,
+    tabstrip_two_row_pinned: fret_app::Model<bool>,
     file_tree_items: fret_app::Model<Vec<TreeItem>>,
     file_tree_state: fret_app::Model<TreeState>,
     file_tree_scroll: VirtualListScrollHandle,
@@ -127,6 +128,8 @@ const CMD_WORKSPACE_SHELL_DEMO_DIRTY_CLOSE_DISCARD: &str =
     "workspace.shell_demo.dirty_close.discard";
 const CMD_WORKSPACE_SHELL_DEMO_DIRTY_CLOSE_SAVE_AND_CLOSE: &str =
     "workspace.shell_demo.dirty_close.save_and_close";
+const CMD_WORKSPACE_SHELL_DEMO_TOGGLE_TABSTRIP_TWO_ROW_PINNED: &str =
+    "workspace.shell_demo.toggle_tabstrip_two_row_pinned";
 
 const DIRTY_CLOSE_PROMPT_OVERLAY_ID: GlobalElementId = GlobalElementId(0x6a4e_5c1f_8f3b_1c20);
 
@@ -189,6 +192,7 @@ impl WorkspaceShellDemoDriver {
         let window_layout = app.models_mut().insert(window_layout);
         let dirty_close_prompt_open = app.models_mut().insert(false);
         let dirty_close_prompt = app.models_mut().insert(None);
+        let tabstrip_two_row_pinned = app.models_mut().insert(false);
 
         let (items_value, state_value) = build_file_tree_items();
         let file_tree_items = app.models_mut().insert(items_value);
@@ -200,6 +204,7 @@ impl WorkspaceShellDemoDriver {
             window_layout,
             dirty_close_prompt_open,
             dirty_close_prompt,
+            tabstrip_two_row_pinned,
             file_tree_items,
             file_tree_state,
             file_tree_scroll: VirtualListScrollHandle::new(),
@@ -217,6 +222,7 @@ impl WorkspaceShellDemoDriver {
         let window_layout = state.window_layout.clone();
         let dirty_close_prompt_open = state.dirty_close_prompt_open.clone();
         let dirty_close_prompt = state.dirty_close_prompt.clone();
+        let tabstrip_two_row_pinned = state.tabstrip_two_row_pinned.clone();
         let file_tree_items = state.file_tree_items.clone();
         let file_tree_state = state.file_tree_state.clone();
         let file_tree_scroll = state.file_tree_scroll.clone();
@@ -227,6 +233,7 @@ impl WorkspaceShellDemoDriver {
                     cx.observe_model(&window_layout, Invalidation::Layout);
                     cx.observe_model(&dirty_close_prompt_open, Invalidation::Layout);
                     cx.observe_model(&dirty_close_prompt, Invalidation::Layout);
+                    cx.observe_model(&tabstrip_two_row_pinned, Invalidation::Layout);
                     cx.observe_model(&file_tree_items, Invalidation::Layout);
                     cx.observe_model(&file_tree_state, Invalidation::Layout);
 
@@ -503,8 +510,12 @@ impl WorkspaceShellDemoDriver {
                                   is_active: bool,
                                   tab_drag| {
                                 let title = |id: &str| Arc::<str>::from(id);
+                                let two_row_pinned = cx
+                                    .get_model_cloned(&tabstrip_two_row_pinned, Invalidation::Layout)
+                                    .unwrap_or(false);
                                 let strip =
                                     WorkspaceTabStrip::from_workspace_tabs(&pane.tabs, title)
+                                        .separate_pinned_row(two_row_pinned)
                                         .pane_id(pane.id.clone())
                                         .tab_drag_model(tab_drag)
                                         .test_id_root(Arc::<str>::from(format!(
@@ -666,15 +677,26 @@ impl WorkspaceShellDemoDriver {
                                                     let commit = CommandId::new(Arc::<str>::from(
                                                         "workspace.tab.commit_preview",
                                                     ));
-                                                    let toggle_pin = CommandId::new(Arc::<str>::from(
-                                                        "workspace.tab.toggle_pin",
-                                                    ));
-                                                    let set_dirty = CommandId::new(Arc::<str>::from(
-                                                        CMD_WORKSPACE_SHELL_DEMO_SET_ACTIVE_DIRTY,
-                                                    ));
+	                                                    let toggle_pin = CommandId::new(Arc::<str>::from(
+	                                                        "workspace.tab.toggle_pin",
+	                                                    ));
+	                                                    let pin_doc_a_0 = CommandId::new(Arc::<str>::from(
+	                                                        "workspace.tab.pin.doc-a-0",
+	                                                    ));
+	                                                    let pin_doc_a_1 = CommandId::new(Arc::<str>::from(
+	                                                        "workspace.tab.pin.doc-a-1",
+	                                                    ));
+	                                                    let set_dirty = CommandId::new(Arc::<str>::from(
+	                                                        CMD_WORKSPACE_SHELL_DEMO_SET_ACTIVE_DIRTY,
+	                                                    ));
                                                     let clear_dirty = CommandId::new(Arc::<str>::from(
                                                         CMD_WORKSPACE_SHELL_DEMO_CLEAR_ACTIVE_DIRTY,
                                                     ));
+                                                    let toggle_two_row_pinned = CommandId::new(
+                                                        Arc::<str>::from(
+                                                            CMD_WORKSPACE_SHELL_DEMO_TOGGLE_TABSTRIP_TWO_ROW_PINNED,
+                                                        ),
+                                                    );
 	                                                    let close_others = CommandId::new(Arc::<str>::from(
 	                                                        "workspace.tab.close.others",
 	                                                    ));
@@ -751,36 +773,54 @@ impl WorkspaceShellDemoDriver {
 	                                                            wrap: false,
 	                                                            ..Default::default()
 	                                                        },
-	                                                        move |cx| {
-	                                                            vec![
-	                                                                button(
-	                                                                    cx,
-	                                                                    "workspace-shell-pane-pane-a-debug-open-preview-a",
-	                                                                    "Open preview A",
-	                                                                    open_a.clone(),
-	                                                                ),
+		                                                        move |cx| {
+		                                                            vec![
+		                                                                button(
+		                                                                    cx,
+		                                                                    "workspace-shell-pane-pane-a-debug-toggle-tabstrip-two-row-pinned",
+		                                                                    "Toggle pinned row layout",
+		                                                                    toggle_two_row_pinned.clone(),
+		                                                                ),
+		                                                                button(
+		                                                                    cx,
+		                                                                    "workspace-shell-pane-pane-a-debug-pin-doc-a-0",
+		                                                                    "Pin doc-a-0",
+		                                                                    pin_doc_a_0.clone(),
+		                                                                ),
+		                                                                button(
+		                                                                    cx,
+		                                                                    "workspace-shell-pane-pane-a-debug-pin-doc-a-1",
+		                                                                    "Pin doc-a-1",
+		                                                                    pin_doc_a_1.clone(),
+		                                                                ),
+		                                                                button(
+		                                                                    cx,
+		                                                                    "workspace-shell-pane-pane-a-debug-open-preview-a",
+		                                                                    "Open preview A",
+		                                                                    open_a.clone(),
+		                                                                ),
 	                                                                button(
 	                                                                    cx,
 	                                                                    "workspace-shell-pane-pane-a-debug-open-preview-b",
 	                                                                    "Open preview B",
 	                                                                    open_b.clone(),
 	                                                                ),
-	                                                                button(
-	                                                                    cx,
-	                                                                    "workspace-shell-pane-pane-a-debug-commit-preview",
-	                                                                    "Commit preview",
-	                                                                    commit.clone(),
-	                                                                ),
-	                                                                button(
-	                                                                    cx,
-	                                                                    "workspace-shell-pane-pane-a-debug-toggle-pin",
-	                                                                    "Toggle pin",
-	                                                                    toggle_pin.clone(),
-	                                                                ),
-	                                                                button(
-	                                                                    cx,
-	                                                                    "workspace-shell-pane-pane-a-debug-close-others",
-	                                                                    "Close others",
+		                                                                button(
+		                                                                    cx,
+		                                                                    "workspace-shell-pane-pane-a-debug-commit-preview",
+		                                                                    "Commit preview",
+		                                                                    commit.clone(),
+		                                                                ),
+		                                                                button(
+		                                                                    cx,
+		                                                                    "workspace-shell-pane-pane-a-debug-toggle-pin",
+		                                                                    "Toggle pin",
+		                                                                    toggle_pin.clone(),
+		                                                                ),
+		                                                                button(
+		                                                                    cx,
+		                                                                    "workspace-shell-pane-pane-a-debug-close-others",
+		                                                                    "Close others",
 	                                                                    close_others.clone(),
 	                                                                ),
 	                                                                button(
@@ -950,6 +990,14 @@ impl WinitAppDriver for WorkspaceShellDemoDriver {
             if did_apply {
                 app.request_redraw(window);
             }
+            return;
+        }
+
+        if command.as_str() == CMD_WORKSPACE_SHELL_DEMO_TOGGLE_TABSTRIP_TWO_ROW_PINNED {
+            let _ = app
+                .models_mut()
+                .update(&state.tabstrip_two_row_pinned, |v| *v = !*v);
+            app.request_redraw(window);
             return;
         }
 
