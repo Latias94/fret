@@ -46,6 +46,29 @@ pub(super) struct WgpuMetalAllocatedSizeGateResult {
     pub(super) failures: usize,
 }
 
+#[derive(Debug, Clone, Default)]
+pub(super) struct WgpuHubCountsThresholds {
+    pub(super) max_wgpu_hub_buffers: Option<u64>,
+    pub(super) max_wgpu_hub_textures: Option<u64>,
+    pub(super) max_wgpu_hub_render_pipelines: Option<u64>,
+    pub(super) max_wgpu_hub_shader_modules: Option<u64>,
+}
+
+impl WgpuHubCountsThresholds {
+    pub(super) fn any(&self) -> bool {
+        self.max_wgpu_hub_buffers.is_some()
+            || self.max_wgpu_hub_textures.is_some()
+            || self.max_wgpu_hub_render_pipelines.is_some()
+            || self.max_wgpu_hub_shader_modules.is_some()
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(super) struct WgpuHubCountsGateResult {
+    pub(super) evidence_path: PathBuf,
+    pub(super) failures: usize,
+}
+
 #[derive(Debug, Clone)]
 pub(super) struct RenderTextAtlasBytesGateResult {
     pub(super) evidence_path: PathBuf,
@@ -266,6 +289,296 @@ pub(super) fn check_wgpu_metal_current_allocated_size_threshold(
         evidence_path: out_path,
         failures,
     })
+}
+
+pub(super) fn check_wgpu_hub_counts_thresholds(
+    out_dir: &Path,
+    bundle_path: Option<&Path>,
+    thresholds: &WgpuHubCountsThresholds,
+) -> Result<WgpuHubCountsGateResult, String> {
+    let out_path = out_dir.join("check.wgpu_hub_counts.json");
+
+    let v = bundle_path.and_then(read_json_value);
+    let bundle_present = v.is_some();
+
+    let (
+        last_tick_id,
+        last_frame_id,
+        snapshots_len,
+        hub_samples,
+        buffers_max,
+        buffers_max_tick_frame,
+        textures_max,
+        textures_max_tick_frame,
+        render_pipelines_max,
+        render_pipelines_max_tick_frame,
+        shader_modules_max,
+        shader_modules_max_tick_frame,
+    ) = if let Some(v) = v.as_ref() {
+        let windows = v.get("windows").and_then(|v| v.as_array());
+        let first_window = windows.and_then(|w| w.first());
+        let snapshots = first_window
+            .and_then(|w| w.get("snapshots"))
+            .and_then(|v| v.as_array());
+
+        let snapshots_len = snapshots.map(|s| s.len()).unwrap_or(0);
+
+        let mut last_tick_id: Option<u64> = None;
+        let mut last_frame_id: Option<u64> = None;
+
+        let mut hub_samples: u64 = 0;
+
+        let mut buffers_max: Option<u64> = None;
+        let mut buffers_max_tick_frame: Option<(u64, u64)> = None;
+        let mut textures_max: Option<u64> = None;
+        let mut textures_max_tick_frame: Option<(u64, u64)> = None;
+        let mut render_pipelines_max: Option<u64> = None;
+        let mut render_pipelines_max_tick_frame: Option<(u64, u64)> = None;
+        let mut shader_modules_max: Option<u64> = None;
+        let mut shader_modules_max_tick_frame: Option<(u64, u64)> = None;
+
+        if let Some(snapshots) = snapshots {
+            for snapshot in snapshots {
+                let snap_tick_id = snapshot.get("tick_id").and_then(|v| v.as_u64());
+                let snap_frame_id = snapshot.get("frame_id").and_then(|v| v.as_u64());
+                last_tick_id = snap_tick_id;
+                last_frame_id = snap_frame_id;
+
+                let stats = snapshot
+                    .get("debug")
+                    .and_then(|d| d.get("stats"))
+                    .and_then(|v| v.as_object());
+                let u64_stat = |k: &str| stats.and_then(|o| o.get(k)).and_then(|v| v.as_u64());
+
+                let hub_tick_id = u64_stat("wgpu_hub_tick_id");
+                let hub_frame_id = u64_stat("wgpu_hub_frame_id");
+                if hub_frame_id.unwrap_or(0) == 0 {
+                    continue;
+                }
+                hub_samples += 1;
+
+                let observed_tick_frame = hub_tick_id
+                    .zip(hub_frame_id)
+                    .or_else(|| snap_tick_id.zip(snap_frame_id));
+
+                let update_max = |cur: &mut Option<u64>,
+                                  cur_tick_frame: &mut Option<(u64, u64)>,
+                                  v: Option<u64>| {
+                    let Some(v) = v else {
+                        return;
+                    };
+                    if cur.map_or(true, |c| v > c) {
+                        *cur = Some(v);
+                        *cur_tick_frame = observed_tick_frame;
+                    }
+                };
+
+                update_max(
+                    &mut buffers_max,
+                    &mut buffers_max_tick_frame,
+                    u64_stat("wgpu_hub_buffers"),
+                );
+                update_max(
+                    &mut textures_max,
+                    &mut textures_max_tick_frame,
+                    u64_stat("wgpu_hub_textures"),
+                );
+                update_max(
+                    &mut render_pipelines_max,
+                    &mut render_pipelines_max_tick_frame,
+                    u64_stat("wgpu_hub_render_pipelines"),
+                );
+                update_max(
+                    &mut shader_modules_max,
+                    &mut shader_modules_max_tick_frame,
+                    u64_stat("wgpu_hub_shader_modules"),
+                );
+            }
+        }
+
+        (
+            last_tick_id,
+            last_frame_id,
+            snapshots_len,
+            hub_samples,
+            buffers_max,
+            buffers_max_tick_frame,
+            textures_max,
+            textures_max_tick_frame,
+            render_pipelines_max,
+            render_pipelines_max_tick_frame,
+            shader_modules_max,
+            shader_modules_max_tick_frame,
+        )
+    } else {
+        (
+            None, None, 0, 0, None, None, None, None, None, None, None, None,
+        )
+    };
+
+    let missing_reason = if bundle_present {
+        "missing_field"
+    } else {
+        "missing_bundle"
+    };
+
+    let hub_present = hub_samples > 0;
+
+    let mut failures: Vec<serde_json::Value> = Vec::new();
+    let mut check_u64 = |kind: &str, observed: Option<u64>, thr: Option<u64>| {
+        let Some(thr) = thr else {
+            return;
+        };
+        match (hub_present, observed) {
+            (true, Some(observed)) if observed > thr => failures.push(serde_json::json!({
+                "kind": kind,
+                "threshold": thr,
+                "observed": observed,
+                "reason": "exceeded",
+            })),
+            (true, Some(_)) => {}
+            (true, None) => failures.push(serde_json::json!({
+                "kind": kind,
+                "threshold": thr,
+                "observed": serde_json::Value::Null,
+                "reason": missing_reason,
+                "field": format!("windows[0].snapshots[-1].debug.stats.{kind}"),
+            })),
+            (false, _) => failures.push(serde_json::json!({
+                "kind": kind,
+                "threshold": thr,
+                "observed": serde_json::Value::Null,
+                "reason": missing_reason,
+                "field": "windows[0].snapshots[-1].debug.stats.wgpu_hub_frame_id",
+            })),
+        }
+    };
+
+    check_u64(
+        "wgpu_hub_buffers",
+        buffers_max,
+        thresholds.max_wgpu_hub_buffers,
+    );
+    check_u64(
+        "wgpu_hub_textures",
+        textures_max,
+        thresholds.max_wgpu_hub_textures,
+    );
+    check_u64(
+        "wgpu_hub_render_pipelines",
+        render_pipelines_max,
+        thresholds.max_wgpu_hub_render_pipelines,
+    );
+    check_u64(
+        "wgpu_hub_shader_modules",
+        shader_modules_max,
+        thresholds.max_wgpu_hub_shader_modules,
+    );
+
+    let payload = serde_json::json!({
+        "schema_version": 1,
+        "generated_unix_ms": now_unix_ms(),
+        "kind": "wgpu_hub_counts_thresholds",
+        "out_dir": out_dir.display().to_string(),
+        "bundle_file": bundle_path
+            .and_then(|p| p.file_name())
+            .and_then(|s| s.to_str())
+            .unwrap_or("<unknown>"),
+        "thresholds": {
+            "max_wgpu_hub_buffers": thresholds.max_wgpu_hub_buffers,
+            "max_wgpu_hub_textures": thresholds.max_wgpu_hub_textures,
+            "max_wgpu_hub_render_pipelines": thresholds.max_wgpu_hub_render_pipelines,
+            "max_wgpu_hub_shader_modules": thresholds.max_wgpu_hub_shader_modules,
+        },
+        "observed": {
+            "bundle_present": bundle_present,
+            "tick_id": last_tick_id,
+            "frame_id": last_frame_id,
+            "snapshots_len": snapshots_len,
+            "wgpu_hub_samples": hub_samples,
+            "wgpu_hub_present": hub_present,
+            "wgpu_hub_buffers_max": buffers_max,
+            "wgpu_hub_buffers_max_tick_frame": buffers_max_tick_frame,
+            "wgpu_hub_textures_max": textures_max,
+            "wgpu_hub_textures_max_tick_frame": textures_max_tick_frame,
+            "wgpu_hub_render_pipelines_max": render_pipelines_max,
+            "wgpu_hub_render_pipelines_max_tick_frame": render_pipelines_max_tick_frame,
+            "wgpu_hub_shader_modules_max": shader_modules_max,
+            "wgpu_hub_shader_modules_max_tick_frame": shader_modules_max_tick_frame,
+        },
+        "failures": failures,
+    });
+    let _ = write_json_value(&out_path, &payload);
+
+    let failures = payload
+        .get("failures")
+        .and_then(|v| v.as_array())
+        .map(|a| a.len())
+        .unwrap_or(0);
+
+    Ok(WgpuHubCountsGateResult {
+        evidence_path: out_path,
+        failures,
+    })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn make_temp_dir(name: &str) -> PathBuf {
+        let mut dir = std::env::temp_dir();
+        let nonce = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        dir.push(format!("fret-diag-{name}-{}-{nonce}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        dir
+    }
+
+    #[test]
+    fn wgpu_hub_counts_gate_uses_max_across_snapshots() {
+        let out_dir = make_temp_dir("wgpu-hub-max");
+        let bundle_path = out_dir.join("bundle.json");
+
+        let bundle = serde_json::json!({
+            "windows": [{
+                "snapshots": [
+                    {
+                        "tick_id": 1,
+                        "frame_id": 10,
+                        "debug": { "stats": {
+                            "wgpu_hub_tick_id": 1,
+                            "wgpu_hub_frame_id": 10,
+                            "wgpu_hub_textures": 20
+                        }}
+                    },
+                    {
+                        "tick_id": 2,
+                        "frame_id": 11,
+                        "debug": { "stats": {
+                            "wgpu_hub_tick_id": 2,
+                            "wgpu_hub_frame_id": 11,
+                            "wgpu_hub_textures": 10
+                        }}
+                    }
+                ]
+            }]
+        });
+        std::fs::write(&bundle_path, serde_json::to_vec_pretty(&bundle).unwrap()).unwrap();
+
+        let thresholds = WgpuHubCountsThresholds {
+            max_wgpu_hub_buffers: None,
+            max_wgpu_hub_textures: Some(15),
+            max_wgpu_hub_render_pipelines: None,
+            max_wgpu_hub_shader_modules: None,
+        };
+
+        let r =
+            check_wgpu_hub_counts_thresholds(&out_dir, Some(&bundle_path), &thresholds).unwrap();
+        assert_eq!(r.failures, 1);
+    }
 }
 
 pub(super) fn check_renderer_gpu_budget_thresholds(

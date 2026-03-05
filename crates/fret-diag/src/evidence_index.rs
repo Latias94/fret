@@ -429,6 +429,7 @@ pub(crate) fn write_evidence_index(
         "check.wgpu_metal_allocated_size",
         "check.wgpu_metal_allocated_size.json",
     );
+    add_file("check.wgpu_hub_counts", "check.wgpu_hub_counts.json");
     add_file(
         "check.render_text_atlas_bytes",
         "check.render_text_atlas_bytes.json",

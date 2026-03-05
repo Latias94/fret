@@ -114,11 +114,12 @@ use gates::{
     CodeEditorMemoryGateResult, CodeEditorMemoryThresholds, RedrawHitchesGateResult,
     RenderTextAtlasBytesGateResult, RenderTextFontDbGateResult, RenderTextFontDbThresholds,
     RendererGpuBudgetThresholds, RendererGpuBudgetsGateResult, ResourceFootprintGateResult,
-    ResourceFootprintThresholds, WgpuMetalAllocatedSizeGateResult,
-    check_code_editor_memory_thresholds, check_redraw_hitches_max_total_ms,
-    check_render_text_atlas_bytes_live_estimate_total_threshold,
+    ResourceFootprintThresholds, WgpuHubCountsGateResult, WgpuHubCountsThresholds,
+    WgpuMetalAllocatedSizeGateResult, check_code_editor_memory_thresholds,
+    check_redraw_hitches_max_total_ms, check_render_text_atlas_bytes_live_estimate_total_threshold,
     check_render_text_font_db_thresholds, check_renderer_gpu_budget_thresholds,
-    check_resource_footprint_thresholds, check_wgpu_metal_current_allocated_size_threshold,
+    check_resource_footprint_thresholds, check_wgpu_hub_counts_thresholds,
+    check_wgpu_metal_current_allocated_size_threshold,
 };
 use lint::{LintOptions, lint_bundle_from_path};
 use perf_seed_policy::{PerfBaselineSeed, PerfSeedMetric, ResolvedPerfBaselineSeedPolicy};
@@ -430,6 +431,10 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut max_renderer_gpu_images_bytes_estimate: Option<u64> = None;
     let mut max_renderer_gpu_render_targets_bytes_estimate: Option<u64> = None;
     let mut max_renderer_intermediate_peak_in_use_bytes: Option<u64> = None;
+    let mut max_wgpu_hub_buffers: Option<u64> = None;
+    let mut max_wgpu_hub_textures: Option<u64> = None;
+    let mut max_wgpu_hub_render_pipelines: Option<u64> = None;
+    let mut max_wgpu_hub_shader_modules: Option<u64> = None;
     let mut max_wgpu_metal_current_allocated_size_bytes: Option<u64> = None;
     let mut max_render_text_atlas_bytes_live_estimate_total: Option<u64> = None;
     let mut max_render_text_registered_font_blobs_total_bytes: Option<u64> = None;
@@ -1347,6 +1352,49 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     Some(v.parse::<u64>().map_err(|_| {
                         "invalid value for --max-renderer-intermediate-peak-in-use-bytes"
                             .to_string()
+                    })?);
+                i += 1;
+            }
+            "--max-wgpu-hub-buffers" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --max-wgpu-hub-buffers".to_string());
+                };
+                max_wgpu_hub_buffers = Some(
+                    v.parse::<u64>()
+                        .map_err(|_| "invalid value for --max-wgpu-hub-buffers".to_string())?,
+                );
+                i += 1;
+            }
+            "--max-wgpu-hub-textures" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --max-wgpu-hub-textures".to_string());
+                };
+                max_wgpu_hub_textures = Some(
+                    v.parse::<u64>()
+                        .map_err(|_| "invalid value for --max-wgpu-hub-textures".to_string())?,
+                );
+                i += 1;
+            }
+            "--max-wgpu-hub-render-pipelines" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --max-wgpu-hub-render-pipelines".to_string());
+                };
+                max_wgpu_hub_render_pipelines = Some(v.parse::<u64>().map_err(|_| {
+                    "invalid value for --max-wgpu-hub-render-pipelines".to_string()
+                })?);
+                i += 1;
+            }
+            "--max-wgpu-hub-shader-modules" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --max-wgpu-hub-shader-modules".to_string());
+                };
+                max_wgpu_hub_shader_modules =
+                    Some(v.parse::<u64>().map_err(|_| {
+                        "invalid value for --max-wgpu-hub-shader-modules".to_string()
                     })?);
                 i += 1;
             }
@@ -2474,6 +2522,13 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
         max_code_editor_row_rich_cache_entries,
     };
 
+    let wgpu_hub_counts_thresholds = WgpuHubCountsThresholds {
+        max_wgpu_hub_buffers,
+        max_wgpu_hub_textures,
+        max_wgpu_hub_render_pipelines,
+        max_wgpu_hub_shader_modules,
+    };
+
     if sub != "repro" && (with_tracy || with_renderdoc || renderdoc_after_frames.is_some()) {
         return Err(
             "--with tracy/renderdoc and --renderdoc-after-frames are only supported with `diag repro` for now"
@@ -2497,6 +2552,12 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     if sub != "repro" && max_wgpu_metal_current_allocated_size_bytes.is_some() {
         return Err(
             "--max-wgpu-metal-current-allocated-size-bytes is only supported with `diag repro` for now"
+                .to_string(),
+        );
+    }
+    if sub != "repro" && wgpu_hub_counts_thresholds.any() {
+        return Err(
+            "--max-wgpu-hub-buffers/--max-wgpu-hub-textures/--max-wgpu-hub-render-pipelines/--max-wgpu-hub-shader-modules is only supported with `diag repro` for now"
                 .to_string(),
         );
     }
@@ -3156,6 +3217,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 renderer_gpu_budget_thresholds,
                 code_editor_memory_thresholds,
                 render_text_font_db_thresholds,
+                wgpu_hub_counts_thresholds,
                 max_wgpu_metal_current_allocated_size_bytes,
                 max_render_text_atlas_bytes_live_estimate_total,
                 check_redraw_hitches_max_total_ms_threshold,

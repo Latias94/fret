@@ -29,6 +29,11 @@ Using `tools/diag-scripts/todo-memory-steady.json` on macOS/Metal:
   - `evidence.index.json.resources.bundle_last_frame_stats.wgpu_metal_current_allocated_size_bytes_{min,max}` reports the range across captured snapshots.
   - `evidence.index.json.resources.bundle_last_frame_stats.wgpu_hub_*` counters are available when `--env FRET_DIAG_WGPU_REPORT=1` is enabled.
   - `check.wgpu_metal_allocated_size.json` evaluates the max value across captured snapshots (not just the last frame).
+  - `check.wgpu_hub_counts.json` evaluates the max values across captured snapshots (not just the last frame):
+    - `--max-wgpu-hub-buffers`
+    - `--max-wgpu-hub-textures`
+    - `--max-wgpu-hub-render-pipelines`
+    - `--max-wgpu-hub-shader-modules`
 
 Using `tools/diag-scripts/empty-idle-memory-steady.json` on macOS/Metal (baseline):
 

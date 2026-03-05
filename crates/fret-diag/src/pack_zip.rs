@@ -569,6 +569,7 @@ fn zip_add_root_artifacts(
         "check.perf_hints.json",
         "check.redraw_hitches.json",
         "check.wgpu_metal_allocated_size.json",
+        "check.wgpu_hub_counts.json",
         "check.resource_footprint.json",
         "check.view_cache_reuse_stable.json",
         "resource.footprint.json",
