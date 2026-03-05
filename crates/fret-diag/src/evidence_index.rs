@@ -342,6 +342,9 @@ fn bundle_stats_summary_from_path(path: &Path) -> Option<serde_json::Value> {
         "render_text_blob_cache_entries": rt_u64("blob_cache_entries"),
         "render_text_shape_cache_entries": rt_u64("shape_cache_entries"),
         "render_text_measure_cache_buckets": rt_u64("measure_cache_buckets"),
+        "render_text_shape_cache_bytes_estimate_total": rt_u64("shape_cache_bytes_estimate_total"),
+        "render_text_blob_paint_palette_bytes_estimate_total": rt_u64("blob_paint_palette_bytes_estimate_total"),
+        "render_text_blob_decorations_bytes_estimate_total": rt_u64("blob_decorations_bytes_estimate_total"),
         "render_text_registered_font_blobs_total_bytes": rt_u64("registered_font_blobs_total_bytes"),
         "render_text_registered_font_blobs_count": rt_u64("registered_font_blobs_count"),
 

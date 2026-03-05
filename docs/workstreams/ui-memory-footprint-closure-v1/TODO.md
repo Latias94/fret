@@ -14,7 +14,8 @@
 
 ## Diagnostics (app-side)
 
-- [ ] Add heap byte estimates for text caches (blob cache, shape cache, measure caches).
+- [x] Add heap byte estimates for render_text caches (shape cache + blob payload slices).
+- [ ] Extend heap byte estimates for text caches further (measure caches, line layout internals beyond best-effort).
 - [ ] Add cache byte estimates for images/assets where feasible (distinguish CPU decoded bytes vs GPU textures).
 - [ ] Keep all new fields behind a “diagnostics” surface (non-contract; best-effort).
 

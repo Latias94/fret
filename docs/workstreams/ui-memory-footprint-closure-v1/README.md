@@ -27,6 +27,9 @@ Using `tools/diag-scripts/todo-memory-steady.json` on macOS/Metal:
       - `--sort-key renderer_gpu_images_bytes_estimate`
       - `--sort-key renderer_gpu_render_targets_bytes_estimate`
       - `--sort-key renderer_intermediate_peak_in_use_bytes`
+      - `--sort-key render_text_shape_cache_bytes_estimate_total`
+      - `--sort-key render_text_blob_paint_palette_bytes_estimate_total`
+      - `--sort-key render_text_blob_decorations_bytes_estimate_total`
   - Optional macOS-only hint for the largest `vmmap` buckets:
     - `fretboard diag memory-summary --dir target/fret-diag-mem-todo-steady --vmmap-regions-sorted-top`
   - Aggregate macOS `vmmap -sortBySize` top-dirty regions across samples (helps attribute `owned unmapped memory`):

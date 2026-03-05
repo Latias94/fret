@@ -244,6 +244,13 @@ pub struct UiRendererTextPerfSnapshotV1 {
     pub measure_cache_buckets: u64,
 
     #[serde(default)]
+    pub shape_cache_bytes_estimate_total: u64,
+    #[serde(default)]
+    pub blob_paint_palette_bytes_estimate_total: u64,
+    #[serde(default)]
+    pub blob_decorations_bytes_estimate_total: u64,
+
+    #[serde(default)]
     pub unwrapped_layout_cache_entries: u64,
     #[serde(default)]
     pub frame_unwrapped_layout_cache_hits: u64,
@@ -287,6 +294,10 @@ impl UiRendererTextPerfSnapshotV1 {
             blob_cache_entries: snapshot.blob_cache_entries,
             shape_cache_entries: snapshot.shape_cache_entries,
             measure_cache_buckets: snapshot.measure_cache_buckets,
+            shape_cache_bytes_estimate_total: snapshot.shape_cache_bytes_estimate_total,
+            blob_paint_palette_bytes_estimate_total: snapshot
+                .blob_paint_palette_bytes_estimate_total,
+            blob_decorations_bytes_estimate_total: snapshot.blob_decorations_bytes_estimate_total,
             unwrapped_layout_cache_entries: snapshot.unwrapped_layout_cache_entries,
             frame_unwrapped_layout_cache_hits: snapshot.frame_unwrapped_layout_cache_hits,
             frame_unwrapped_layout_cache_misses: snapshot.frame_unwrapped_layout_cache_misses,

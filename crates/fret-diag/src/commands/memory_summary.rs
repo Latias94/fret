@@ -30,6 +30,9 @@ struct MemorySampleRow {
     render_text_atlas_bytes_live_estimate_total: Option<u64>,
     render_text_registered_font_blobs_total_bytes: Option<u64>,
     render_text_registered_font_blobs_count: Option<u64>,
+    render_text_shape_cache_bytes_estimate_total: Option<u64>,
+    render_text_blob_paint_palette_bytes_estimate_total: Option<u64>,
+    render_text_blob_decorations_bytes_estimate_total: Option<u64>,
 
     // Optional: deeper vmmap attribution hints (macOS-only)
     macos_vmmap_regions_sorted_top_dirty_region_type: Option<String>,
@@ -563,6 +566,18 @@ fn read_sample_row(
             bundle,
             "render_text_registered_font_blobs_count",
         ),
+        render_text_shape_cache_bytes_estimate_total: get_u64(
+            bundle,
+            "render_text_shape_cache_bytes_estimate_total",
+        ),
+        render_text_blob_paint_palette_bytes_estimate_total: get_u64(
+            bundle,
+            "render_text_blob_paint_palette_bytes_estimate_total",
+        ),
+        render_text_blob_decorations_bytes_estimate_total: get_u64(
+            bundle,
+            "render_text_blob_decorations_bytes_estimate_total",
+        ),
         macos_vmmap_regions_sorted_top_dirty_region_type: None,
         macos_vmmap_regions_sorted_top_dirty_detail: None,
         macos_vmmap_regions_sorted_top_dirty_bytes: None,
@@ -628,6 +643,9 @@ fn build_report(
         "render_text_atlas_bytes_live_estimate_total": stats_u64(rows.iter().filter_map(|r| r.render_text_atlas_bytes_live_estimate_total).collect()),
         "render_text_registered_font_blobs_total_bytes": stats_u64(rows.iter().filter_map(|r| r.render_text_registered_font_blobs_total_bytes).collect()),
         "render_text_registered_font_blobs_count": stats_u64(rows.iter().filter_map(|r| r.render_text_registered_font_blobs_count).collect()),
+        "render_text_shape_cache_bytes_estimate_total": stats_u64(rows.iter().filter_map(|r| r.render_text_shape_cache_bytes_estimate_total).collect()),
+        "render_text_blob_paint_palette_bytes_estimate_total": stats_u64(rows.iter().filter_map(|r| r.render_text_blob_paint_palette_bytes_estimate_total).collect()),
+        "render_text_blob_decorations_bytes_estimate_total": stats_u64(rows.iter().filter_map(|r| r.render_text_blob_decorations_bytes_estimate_total).collect()),
     });
 
     let top_rows = sorted
@@ -1054,6 +1072,9 @@ fn row_to_json(r: &MemorySampleRow) -> serde_json::Value {
         "render_text_atlas_bytes_live_estimate_total": r.render_text_atlas_bytes_live_estimate_total,
         "render_text_registered_font_blobs_total_bytes": r.render_text_registered_font_blobs_total_bytes,
         "render_text_registered_font_blobs_count": r.render_text_registered_font_blobs_count,
+        "render_text_shape_cache_bytes_estimate_total": r.render_text_shape_cache_bytes_estimate_total,
+        "render_text_blob_paint_palette_bytes_estimate_total": r.render_text_blob_paint_palette_bytes_estimate_total,
+        "render_text_blob_decorations_bytes_estimate_total": r.render_text_blob_decorations_bytes_estimate_total,
         "macos_vmmap_regions_sorted_top_dirty_region_type": r.macos_vmmap_regions_sorted_top_dirty_region_type,
         "macos_vmmap_regions_sorted_top_dirty_detail": r.macos_vmmap_regions_sorted_top_dirty_detail,
         "macos_vmmap_regions_sorted_top_dirty_bytes": r.macos_vmmap_regions_sorted_top_dirty_bytes,
@@ -1128,6 +1149,15 @@ fn opt_u64_for_key(row: &MemorySampleRow, key: &str) -> Option<u64> {
             row.render_text_registered_font_blobs_total_bytes
         }
         "render_text_registered_font_blobs_count" => row.render_text_registered_font_blobs_count,
+        "render_text_shape_cache_bytes_estimate_total" => {
+            row.render_text_shape_cache_bytes_estimate_total
+        }
+        "render_text_blob_paint_palette_bytes_estimate_total" => {
+            row.render_text_blob_paint_palette_bytes_estimate_total
+        }
+        "render_text_blob_decorations_bytes_estimate_total" => {
+            row.render_text_blob_decorations_bytes_estimate_total
+        }
         _ => None,
     }
 }
@@ -1152,6 +1182,9 @@ fn valid_u64_keys() -> &'static [&'static str] {
         "render_text_atlas_bytes_live_estimate_total",
         "render_text_registered_font_blobs_total_bytes",
         "render_text_registered_font_blobs_count",
+        "render_text_shape_cache_bytes_estimate_total",
+        "render_text_blob_paint_palette_bytes_estimate_total",
+        "render_text_blob_decorations_bytes_estimate_total",
     ]
 }
 

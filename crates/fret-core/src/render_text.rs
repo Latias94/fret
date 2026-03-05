@@ -30,6 +30,14 @@ pub struct RendererTextPerfSnapshot {
     pub shape_cache_entries: u64,
     pub measure_cache_buckets: u64,
 
+    /// Best-effort heap byte estimates for text caches (CPU-side).
+    ///
+    /// These values are intended for diagnostics only. They are approximate and may under-count
+    /// allocator overhead and shared allocations.
+    pub shape_cache_bytes_estimate_total: u64,
+    pub blob_paint_palette_bytes_estimate_total: u64,
+    pub blob_decorations_bytes_estimate_total: u64,
+
     pub unwrapped_layout_cache_entries: u64,
     pub frame_unwrapped_layout_cache_hits: u64,
     pub frame_unwrapped_layout_cache_misses: u64,
