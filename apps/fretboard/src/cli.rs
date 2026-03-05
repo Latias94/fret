@@ -81,7 +81,7 @@ Usage:
     fretboard diag meta <base_or_session_out_dir|bundle_dir|bundle.json|bundle.schema2.json> [--warmup-frames <n>] [--json] [--out <path>]
     fretboard diag index <base_or_session_out_dir|bundle_dir|bundle.json|bundle.schema2.json> [--warmup-frames <n>] [--json] [--out <path>]
     fretboard diag test-ids <base_or_session_out_dir|bundle_dir|bundle.json|bundle.schema2.json> [--warmup-frames <n>] [--max-test-ids <n>] [--json] [--out <path>]
-    fretboard diag memory-summary [<base_or_session_out_dir>] [--within-session <id|latest|all>] [--top-sessions <n>] [--sort <key>] [--top <n>] [--vmmap-regions-sorted-top] [--json] [--out <path>]
+    fretboard diag memory-summary [<base_or_session_out_dir>] [--within-session <id|latest|all>] [--top-sessions <n>] [--sort-key <key>] [--top <n>] [--vmmap-regions-sorted-top] [--json] [--out <path>]
     fretboard diag windows <base_or_session_out_dir|bundle_dir|bundle.json|bundle.schema2.json> [--warmup-frames <n>] [--json]
     fretboard diag dock-routing <base_or_session_out_dir|bundle_dir|bundle.json|bundle.schema2.json> [--warmup-frames <n>] [--json]
     fretboard diag screenshots <out_dir|bundle_dir|bundle.json|bundle.schema2.json> [--json]

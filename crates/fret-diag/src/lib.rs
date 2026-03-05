@@ -3521,6 +3521,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             &resolved_out_dir,
             &workspace_root,
             stats_json,
+            stats_top,
             memory_summary_out.as_deref(),
         ),
         "layout-sidecar" | "layout_sidecar" => commands::layout_sidecar::cmd_layout_sidecar(

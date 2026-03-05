@@ -46,11 +46,11 @@ pub(crate) fn cmd_memory_summary(
     resolved_out_dir: &Path,
     workspace_root: &Path,
     json: bool,
+    top_rows: usize,
     out: Option<&Path>,
 ) -> Result<(), String> {
     let mut target: Option<String> = None;
     let mut within_session: Option<String> = None;
-    let mut top: usize = 8;
     let mut sort_key: String = "macos_physical_footprint_peak_bytes".to_string();
     let mut include_regions_sorted_top = false;
     let mut top_sessions: Option<usize> = None;
@@ -65,21 +65,9 @@ pub(crate) fn cmd_memory_summary(
                 within_session = Some(v.to_string());
                 i += 2;
             }
-            "--top" => {
+            "--sort-key" | "--sort_key" => {
                 let Some(v) = rest.get(i + 1) else {
-                    return Err("missing value for --top".to_string());
-                };
-                top = v
-                    .parse::<usize>()
-                    .map_err(|e| format!("invalid value for --top: {e}"))?;
-                if top == 0 {
-                    return Err("--top must be >= 1".to_string());
-                }
-                i += 2;
-            }
-            "--sort" => {
-                let Some(v) = rest.get(i + 1) else {
-                    return Err("missing value for --sort".to_string());
+                    return Err("missing value for --sort-key".to_string());
                 };
                 sort_key = v.to_string();
                 i += 2;
@@ -103,7 +91,7 @@ pub(crate) fn cmd_memory_summary(
             }
             "--help" | "-h" => {
                 return Err(
-                    "usage: fretboard diag memory-summary [<base_or_session_out_dir>] [--within-session <id|latest>] [--top-sessions <n>] [--sort <key>] [--top <n>] [--vmmap-regions-sorted-top] [--json] [--out <path>]".to_string(),
+                    "usage: fretboard diag memory-summary [<base_or_session_out_dir>] [--within-session <id|latest|all>] [--top-sessions <n>] [--sort-key <key>] [--top <n>] [--vmmap-regions-sorted-top] [--json] [--out <path>]".to_string(),
                 );
             }
             other if other.starts_with('-') => {
@@ -150,7 +138,7 @@ hint: ensure each session root contains `evidence.index.json`",
         ));
     }
 
-    let report = build_report(&src, &sort_key, top, &rows);
+    let report = build_report(&src, &sort_key, top_rows.max(1), &rows);
     let output_bytes: Vec<u8> = if json {
         serde_json::to_vec_pretty(&report).map_err(|e| e.to_string())?
     } else {
