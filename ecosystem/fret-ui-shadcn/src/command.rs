@@ -739,18 +739,21 @@ impl Command {
                 )
                 .merge(self.chrome);
             (
-                decl_style::container_props(&theme, base, self.layout),
+                decl_style::container_props(
+                    &theme,
+                    base,
+                    LayoutRefinement::default()
+                        .w_full()
+                        .min_w_0()
+                        .overflow_hidden()
+                        .merge(self.layout),
+                ),
                 theme.color_token("popover-foreground"),
             )
         };
-        let children = current_color::scope_children(cx, ColorRef::Color(fg_root), move |cx| {
-            vec![
-                ui::v_stack(move |_cx| self.children)
-                    .gap(Space::N0)
-                    .into_element(cx),
-            ]
-        });
-        shadcn_layout::container_flow(cx, props, children)
+        let children =
+            current_color::scope_children(cx, ColorRef::Color(fg_root), move |_cx| self.children);
+        shadcn_layout::container_flow_fill_width(cx, props, children)
     }
 }
 
@@ -4385,6 +4388,32 @@ mod tests {
         fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
             true
         }
+    }
+
+    #[test]
+    fn command_root_defaults_to_fill_width_and_hidden_overflow() {
+        use fret_ui::element::ElementKind;
+        use fret_ui::elements::GlobalElementId;
+
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+            let command = Command::new(vec![AnyElement::new(
+                GlobalElementId(1),
+                ElementKind::Text(fret_ui::element::TextProps::new("item")),
+                Vec::new(),
+            )])
+            .into_element(cx);
+
+            let ElementKind::Container(props) = command.kind else {
+                panic!("expected Command to build a Container element");
+            };
+
+            assert!(matches!(props.layout.size.width, Length::Fill));
+            assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
+            assert!(matches!(props.layout.overflow, Overflow::Clip));
+        });
     }
 
     #[test]
