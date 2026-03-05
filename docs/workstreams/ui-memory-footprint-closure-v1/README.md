@@ -40,6 +40,13 @@ Using `tools/diag-scripts/todo-memory-steady.json` on macOS/Metal:
      - Typical: `wgpu_metal_current_allocated_size_bytes_max` ~83.8 MiB and `io_surface_dirty_bytes` ~26.6 MiB.
      - Outlier example: `wgpu_metal_current_allocated_size_bytes_max` 119,341,056 (~113.8 MiB) with `io_surface_dirty_bytes` 44,354,765 (~42.3 MiB) and `io_accelerator_dirty_bytes` 18,884,198 (~18.0 MiB), while `wgpu_hub_textures_max` stayed at 16 and `wgpu_hub_render_pipelines_max` at 52.
    - The Metal size transitions aligned with the report cadence (around frames ~480 and ~540), suggesting the reporting path may perturb driver allocations. Next experiment: sweep `*_EVERY_N_FRAMES` (e.g. 60 → 600) to measure the trade-off between attribution granularity and measurement stability.
+ - Cadence sweep (N=10 each; same script; env-only change):
+   - Cadence 60 (`FRET_DIAG_WGPU_{ALLOCATOR_,}REPORT_EVERY_N_FRAMES=60`): 2/10 runs triggered the outlier shape (IOAccelerator/IOSurface growth; `physical_footprint_peak_bytes` up to 479,828,378 and `wgpu_metal_current_allocated_size_bytes_max` up to 137,232,384).
+   - Cadence 600 (`FRET_DIAG_WGPU_{ALLOCATOR_,}REPORT_EVERY_N_FRAMES=600`): 0/10 outliers; Metal allocated size and vmmap GPU-backed regions were stable across runs.
+   - Recommendation: default memory scripts to cadence 600 for stable baselines; keep cadence 60 only for deep-dive attribution when needed.
+   - Script defaults:
+     - Baseline: `tools/diag-scripts/tooling/todo/todo-memory-steady.json` now sets cadence 600 via `meta.env_defaults`.
+     - Deep dive: `tools/diag-scripts/tooling/todo/todo-memory-steady-wgpu-highfreq.json` sets cadence 60.
 
 Using `tools/diag-scripts/empty-idle-memory-steady.json` on macOS/Metal (baseline):
 

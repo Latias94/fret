@@ -21,13 +21,15 @@
 
 ## Attribution experiments (macOS / Metal)
 
-- [ ] Sweep `FRET_DIAG_WGPU_ALLOCATOR_REPORT_EVERY_N_FRAMES` and `FRET_DIAG_WGPU_REPORT_EVERY_N_FRAMES`
-  (e.g. 60 vs 600) and measure:
+- [x] Sweep `FRET_DIAG_WGPU_ALLOCATOR_REPORT_EVERY_N_FRAMES` and `FRET_DIAG_WGPU_REPORT_EVERY_N_FRAMES`
+  (60 vs 600) and measure:
   - outlier frequency for `wgpu_metal_current_allocated_size_bytes_{min,max}`
   - stability of `macos_vmmap_steady.regions.io_surface_dirty_bytes` / `io_accelerator_dirty_bytes`
   - overhead (bundle size + tooling time)
-- [ ] If reporting cadence perturbs memory, set memory scripts to a conservative cadence (e.g. 600)
-  and keep a separate “high-frequency attribution” script for deep dives.
+- [x] Confirmed: cadence 60 produces outliers; cadence 600 is stable (see workstream README snapshot).
+- [x] Default memory scripts to cadence 600 and keep a separate “high-frequency attribution” script for deep dives:
+  - Baseline: `tools/diag-scripts/tooling/todo/todo-memory-steady.json` (cadence 600)
+  - Deep dive: `tools/diag-scripts/tooling/todo/todo-memory-steady-wgpu-highfreq.json` (cadence 60)
 
 ### Evidence (captured)
 
