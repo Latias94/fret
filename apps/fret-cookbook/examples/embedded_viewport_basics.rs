@@ -313,7 +313,7 @@ fn view(
         .paint()
         .copied_or(ViewportFit::Contain);
 
-    let header = ui::v_flex( |cx| {
+    let header = ui::v_flex(|cx| {
         ui::children![
             cx;
             shadcn::CardTitle::new("Tier A interop: embedded viewport (basics)"),

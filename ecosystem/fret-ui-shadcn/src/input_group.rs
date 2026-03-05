@@ -3,8 +3,8 @@ use std::sync::Arc;
 use crate::button::{ButtonVariant, variant_colors};
 use crate::rtl;
 use fret_core::{
-    Axis, Color, Corners, Edges, FontId, FontWeight, MouseButton, Px, SemanticsRole, TextOverflow,
-    TextWrap,
+    Axis, Color, Corners, CursorIcon, Edges, FontId, FontWeight, MouseButton, Px, SemanticsRole,
+    TextOverflow, TextWrap,
 };
 use fret_icons::IconId;
 use fret_runtime::{CommandId, Model};
@@ -469,7 +469,7 @@ impl InputGroup {
         let root = cx.container(
             fret_ui::element::ContainerProps {
                 layout: root_layout,
-                background: None,
+                background: Some(resolved.background),
                 shadow: Some(root_shadow),
                 border: root_border,
                 border_color: None,
@@ -555,11 +555,11 @@ impl InputGroup {
 
                     let should_click_to_focus = control_focus_target.is_some() && !has_button;
 
-                    if should_click_to_focus {
+                    let on_down = should_click_to_focus.then(|| {
                         let control_focus_target =
                             control_focus_target.expect("control_focus_target");
 
-                        let on_down = Arc::new(
+                        Arc::new(
                                 move |host: &mut dyn UiPointerActionHost,
                                       _cx: fret_ui::action::ActionCx,
                                       down: fret_ui::action::PointerDownCx| {
@@ -568,46 +568,49 @@ impl InputGroup {
                                     }
                                     false
                                 },
-                            );
+                            )
+                    });
 
-                        let flex = cx.flex(
-                            FlexProps {
-                                layout: LayoutStyle::default(),
-                                direction: Axis::Horizontal,
-                                gap: gap.into(),
-                                padding: padding.into(),
-                                justify: fret_ui::element::MainAlign::Center,
-                                align: fret_ui::element::CrossAlign::Center,
-                                wrap: false,
-                            },
-                            |_cx| children,
-                        );
+                    let on_move = Arc::new(
+                        move |host: &mut dyn UiPointerActionHost,
+                              _cx: fret_ui::action::ActionCx,
+                              _mv: fret_ui::action::PointerMoveCx| {
+                            // Upstream uses `cursor-text` for addons, even though they can be
+                            // clickable for "focus the underlying input" behavior.
+                            host.set_cursor_icon(CursorIcon::Text);
+                            false
+                        },
+                    );
 
-                        cx.pointer_region(
-                            PointerRegionProps {
-                                layout,
-                                enabled: true,
-                                capture_phase_pointer_moves: false,
-                            },
-                            move |cx| {
+                    let flex = cx.flex(
+                        FlexProps {
+                            layout: LayoutStyle::default(),
+                            direction: Axis::Horizontal,
+                            gap: gap.into(),
+                            padding: padding.into(),
+                            justify: fret_ui::element::MainAlign::Center,
+                            align: fret_ui::element::CrossAlign::Center,
+                            wrap: false,
+                        },
+                        |_cx| children,
+                    );
+
+                    cx.pointer_region(
+                        PointerRegionProps {
+                            layout,
+                            enabled: true,
+                            // Prefer capture-phase move handlers so descendant widgets (buttons)
+                            // can still win cursor arbitration in bubble.
+                            capture_phase_pointer_moves: true,
+                        },
+                        move |cx| {
+                            if let Some(on_down) = on_down.clone() {
                                 cx.pointer_region_on_pointer_down(on_down);
-                                vec![flex]
-                            },
-                        )
-                    } else {
-                        cx.flex(
-                            FlexProps {
-                                layout,
-                                direction: Axis::Horizontal,
-                                gap: gap.into(),
-                                padding: padding.into(),
-                                justify: fret_ui::element::MainAlign::Center,
-                                align: fret_ui::element::CrossAlign::Center,
-                                wrap: false,
-                            },
-                            |_cx| children,
-                        )
-                    }
+                            }
+                            cx.pointer_region_on_pointer_move(on_move.clone());
+                            vec![flex]
+                        },
+                    )
                 };
 
                 let build_wrapper_motion_overlay =

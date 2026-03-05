@@ -23,7 +23,9 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
 
     shadcn::InputGroup::new(value)
         .a11y_label("Dropdown example")
+        .control_test_id("ui-gallery-input-group-dropdown-control")
         .leading([shadcn::InputGroupButton::new("All")
+            .test_id("ui-gallery-input-group-dropdown-leading-button")
             .variant(shadcn::ButtonVariant::Ghost)
             .children([shadcn::icon::icon(
                 cx,

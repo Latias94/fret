@@ -11,6 +11,11 @@ use fret_ui_kit::LayoutRefinement;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::typography;
 
+fn color_with_alpha(mut color: fret_core::Color, alpha: f32) -> fret_core::Color {
+    color.a = (color.a * alpha).clamp(0.0, 1.0);
+    color
+}
+
 fn resolve_background(theme: &Theme) -> fret_core::Color {
     theme
         .color_by_key("background")
@@ -46,11 +51,13 @@ fn clamp_spread(spread: f32) -> f32 {
 ///
 /// Upstream uses a CSS background-clip trick (muted text + animated “erase” band driven by
 /// `duration` and `spread`). In Fret, we render the base text normally and paint an overlaid
-/// “erase band” using a clipped `Canvas` that draws the same text in `background` color.
+/// highlight band using clipped `Canvas` slices that draw the same text in `background` color.
 pub struct Shimmer {
     text: Arc<str>,
     duration_secs: f32,
     spread: f32,
+    text_style: Option<TextStyle>,
+    wrap: TextWrap,
     role: SemanticsRole,
     test_id: Option<Arc<str>>,
     layout: LayoutRefinement,
@@ -75,6 +82,8 @@ impl Shimmer {
             text: text.into(),
             duration_secs: 2.0,
             spread: 2.0,
+            text_style: None,
+            wrap: TextWrap::None,
             role: SemanticsRole::Text,
             test_id: None,
             layout: LayoutRefinement::default(),
@@ -88,6 +97,20 @@ impl Shimmer {
 
     pub fn spread(mut self, spread: f32) -> Self {
         self.spread = spread;
+        self
+    }
+
+    /// Override the text style used for both the base text and the overlaid "erase band".
+    ///
+    /// This is important for callers that want shimmer to inherit typography from a wrapper
+    /// (e.g. shadcn CardTitle/CardDescription in AI Elements).
+    pub fn text_style(mut self, style: TextStyle) -> Self {
+        self.text_style = Some(style);
+        self
+    }
+
+    pub fn wrap(mut self, wrap: TextWrap) -> Self {
+        self.wrap = wrap;
         self
     }
 
@@ -112,10 +135,31 @@ impl Shimmer {
         let layout = decl_style::layout_style(&theme, self.layout);
         let role = self.role;
         let test_id = self.test_id;
+        let wrap = self.wrap;
 
         let text = Arc::clone(&self.text);
         let duration_secs = self.duration_secs;
         let spread = self.spread;
+
+        let style = match self.text_style {
+            Some(style) => style,
+            None => {
+                let font_size = theme
+                    .metric_by_key("font.size")
+                    .unwrap_or(theme.metrics.font_size);
+                let line_height = theme
+                    .metric_by_key("font.line_height")
+                    .unwrap_or(theme.metrics.font_line_height);
+                TextStyle {
+                    font: FontId::ui(),
+                    size: font_size,
+                    line_height: Some(line_height),
+                    ..Default::default()
+                }
+            }
+        };
+        let style = typography::as_control_text(style);
+        let style_for_paint = style.clone();
 
         cx.semantics(
             SemanticsProps {
@@ -131,9 +175,9 @@ impl Shimmer {
                 let base = cx.text_props(TextProps {
                     layout: Default::default(),
                     text: Arc::clone(&text),
-                    style: None,
+                    style: Some(style.clone()),
                     color: Some(base_color),
-                    wrap: TextWrap::None,
+                    wrap,
                     overflow: TextOverflow::Clip,
                     align: fret_core::TextAlign::Start,
 
@@ -176,49 +220,34 @@ impl Shimmer {
                         let len_chars = text_str.chars().count() as f32;
                         let dynamic_spread_px = (len_chars * spread).max(1.0);
 
+                        let highlight_color = resolve_background(painter.theme());
                         let w = bounds.size.width.0.max(0.0);
-                        let band_w = (dynamic_spread_px * 2.0).clamp(1.0, w.max(1.0));
+                        let band_half = dynamic_spread_px;
 
-                        // Sweep the band from right → left, matching the upstream background-position
-                        // animation from `100%` to `0%`.
-                        let center = (1.0 - frac) * (w + band_w) - band_w * 0.5;
-                        let x0 = (center - band_w * 0.5).clamp(0.0, w);
-                        let x1 = (center + band_w * 0.5).clamp(0.0, w);
+                        // Upstream animates `background-position` from `100%` -> `0%` with
+                        // `bg-[length:250%_100%]`. That effectively sweeps the highlight from
+                        // slightly left of the glyphs to slightly right of the glyphs.
+                        let center = (-0.25 * w) + frac * (1.5 * w);
+
+                        let x0 = (center - band_half).min(center + band_half).max(0.0);
+                        let x1 = (center - band_half).max(center + band_half).min(w);
                         if x1 <= x0 {
                             return;
                         }
 
-                        let clip = Rect::new(
-                            Point::new(Px(bounds.origin.x.0 + x0), bounds.origin.y),
-                            Size::new(Px(x1 - x0), bounds.size.height),
-                        );
-
-                        let highlight_color = resolve_background(painter.theme());
-
-                        let theme = painter.theme();
-                        let font_size = theme
-                            .metric_by_key("font.size")
-                            .unwrap_or(theme.metrics.font_size);
-                        let line_height = theme
-                            .metric_by_key("font.line_height")
-                            .unwrap_or(theme.metrics.font_line_height);
-                        let style = typography::as_control_text(TextStyle {
-                            font: FontId::default(),
-                            size: font_size,
-                            line_height: Some(line_height),
-                            ..Default::default()
-                        });
-
                         let constraints = TextConstraints {
                             max_width: Some(bounds.size.width),
-                            wrap: TextWrap::None,
+                            wrap,
                             overflow: TextOverflow::Clip,
                             align: fret_core::TextAlign::Start,
                             scale_factor: painter.scale_factor(),
                         };
                         let baseline = {
                             let (services, _scene) = painter.services_and_scene();
-                            let input = TextInput::plain(Arc::clone(&shimmer_text), style.clone());
+                            let input = TextInput::plain(
+                                Arc::clone(&shimmer_text),
+                                style_for_paint.clone(),
+                            );
                             services.text().measure(&input, constraints).baseline
                         };
                         let origin =
@@ -226,22 +255,42 @@ impl Shimmer {
 
                         let canvas_constraints = CanvasTextConstraints {
                             max_width: Some(bounds.size.width),
-                            wrap: TextWrap::None,
+                            wrap,
                             overflow: TextOverflow::Clip,
                         };
                         let raster_scale_factor = painter.scale_factor();
 
-                        painter.with_clip_rect(clip, |p| {
-                            p.shared_text(
-                                DrawOrder(0),
-                                origin,
-                                Arc::clone(&shimmer_text),
-                                style,
-                                highlight_color,
-                                canvas_constraints,
-                                raster_scale_factor,
-                            );
-                        });
+                        // Approximate the upstream linear-gradient shimmer band by slicing the
+                        // highlight region into a handful of constant-alpha rects. This keeps the
+                        // implementation in the component layer (no per-glyph gradient fill yet)
+                        // while producing a softer edge than a single hard clip rect.
+                        const SLICES_PER_HALF: f32 = 6.0;
+                        let slice_w = (band_half / SLICES_PER_HALF).max(1.0);
+
+                        let mut x = x0;
+                        while x < x1 {
+                            let next = (x + slice_w).min(x1);
+                            let mid = (x + next) * 0.5;
+                            let alpha = (1.0 - ((mid - center).abs() / band_half)).clamp(0.0, 1.0);
+                            if alpha > 0.0 {
+                                let clip = Rect::new(
+                                    Point::new(Px(bounds.origin.x.0 + x), bounds.origin.y),
+                                    Size::new(Px(next - x), bounds.size.height),
+                                );
+                                painter.with_clip_rect(clip, |p| {
+                                    p.shared_text(
+                                        DrawOrder(0),
+                                        origin,
+                                        Arc::clone(&shimmer_text),
+                                        style_for_paint.clone(),
+                                        color_with_alpha(highlight_color, alpha),
+                                        canvas_constraints,
+                                        raster_scale_factor,
+                                    );
+                                });
+                            }
+                            x = next;
+                        }
                     },
                 );
 

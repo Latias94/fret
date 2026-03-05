@@ -1,7 +1,7 @@
 # Action-First Authoring + View Runtime (Fearless Refactor v1) — TODO
 
 Status: Landed (v1), hardening follow-ups in progress
-Last updated: 2026-03-04
+Last updated: 2026-03-05
 
 Related:
 
@@ -263,7 +263,7 @@ ID format:
     - `cargo run -p fretboard -- new simple-todo` uses View runtime + typed unit actions:
       `apps/fretboard/src/scaffold/templates.rs` (`simple_todo_template_main_rs`)
 
-- [x] AFA-adopt-044 Migrate `embedded_viewport_demo` to the view runtime (keep a legacy opt-in copy).
+- [x] AFA-adopt-044 Migrate `embedded_viewport_demo` to the view runtime.
   - Goal: prove view-runtime authoring composes cleanly with embedded viewport interop:
     - `viewport_input(...)` forwarding,
     - and a custom `record_engine_frame(...)` hook for offscreen engine passes.
@@ -272,8 +272,8 @@ ID format:
     recording. The migrated demo should demonstrate the correct composition pattern.
   - Evidence:
     - `apps/fret-examples/src/embedded_viewport_demo.rs` (composed `record_engine_frame`)
-    - `apps/fret-examples/src/embedded_viewport_demo_legacy.rs`
-    - `apps/fret-demo/src/main.rs` (demo routing + legacy name)
+    - `apps/fret-demo/src/main.rs` (demo routing)
+    - `tools/diag-scripts/viewport/embedded-demo/embedded-viewport-demo-input-forwarding.json` (input forwarding smoke)
     - `ecosystem/fret/src/interop/embedded_viewport.rs`
     - `ecosystem/fret/src/app_entry.rs`
 
@@ -309,12 +309,13 @@ ID format:
 
 This phase is intentionally last.
 
-- [x] AFA-clean-060 Deprecate legacy routing glue that is no longer recommended in templates/docs.
-  - Note: this is a doc-level deprecation in v1 (no compile-time `#[deprecated]` yet).
+- [x] AFA-clean-060 Remove legacy MVU routing glue once it is no longer recommended in templates/docs.
+  - Note: MVU authoring surfaces are hard-deleted in-tree as part of M9; only migration guidance for
+    external codebases remains.
   - Evidence:
-    - `ecosystem/fret/src/lib.rs` (MVU modules labeled legacy + recommendation pointer)
-    - `ecosystem/fret/src/mvu.rs` (legacy note + view-cache footgun callout)
-    - `ecosystem/fret/src/mvu_router.rs` (legacy note + action-first recommendation)
+    - `docs/workstreams/action-first-authoring-fearless-refactor-v1/MVU_POLICY.md` (archived)
+    - `tools/gate_no_mvu_in_tree.ps1`
+    - `tools/gate_no_mvu_in_cookbook.ps1`
 - [x] AFA-clean-061 Update docs and templates:
   - `docs/README.md` state management section shows actions + view runtime as the golden path.
   - `fretboard` templates generate action-first demos by default.
@@ -325,43 +326,35 @@ This phase is intentionally last.
   - Rule: do not delete until all in-tree demos + ecosystem crates have migrated or have explicit “legacy” labeling.
   - Migration inventory:
     - `docs/workstreams/action-first-authoring-fearless-refactor-v1/LEGACY_MVU_INVENTORY.md`
-  - Status (as of 2026-03-03):
-    - Quarantined: `fret::prelude::*` no longer re-exports MVU authoring types (use `fret::legacy::prelude::*` for MVU demos).
-    - Gated: cookbook does not contain MVU usage (`pwsh tools/gate_no_mvu_in_cookbook.ps1`).
+  - Status (as of 2026-03-05):
+    - MVU authoring surfaces have been hard-deleted in-tree (M9).
+    - Gated: repo remains MVU-free (`pwsh tools/gate_no_mvu_in_tree.ps1`).
+    - Gated: cookbook remains MVU-free (`pwsh tools/gate_no_mvu_in_cookbook.ps1`).
   - Evidence:
-    - `ecosystem/fret/src/lib.rs` (prelude quarantine)
-    - `ecosystem/fret/src/legacy.rs` (explicit legacy prelude)
-    - `apps/fret-examples/src/todo_demo.rs` (example: legacy prelude import)
+    - `docs/workstreams/action-first-authoring-fearless-refactor-v1/MILESTONES.md` (M9)
+    - `tools/gate_no_mvu_in_tree.ps1`
     - `tools/gate_no_mvu_in_cookbook.ps1`
 
 ### Next cleanup steps (post-v1)
 
 - [x] AFA-clean-063 Decide MVU’s long-term status (supported alternative vs legacy-only).
-  - Decision inputs:
-    - Payload/parameterized actions are not supported in typed actions v1 (ADR 0307 v1 scope),
-      which remains a practical reason to keep MVU for some demos/apps.
-    - Per-frame message routing must not regress view-cache reuse semantics.
-  - Exit criteria:
-    - A single, accurate “when to use MVU” policy exists and is reflected in docs/templates.
   - Decision:
-    - MVU is legacy-only (compat), not a supported alternative golden path.
-   - Evidence:
-     - Policy: `docs/workstreams/action-first-authoring-fearless-refactor-v1/MVU_POLICY.md`
-     - Guidance: `docs/workstreams/action-first-authoring-fearless-refactor-v1/MIGRATION_GUIDE.md`
+    - MVU is not a supported alternative golden path; it is deleted in-tree (M9).
+  - Historical note:
+    - During v1, the lack of structured payload actions (and view-cache parity risk) was a practical
+      reason to keep MVU during the deprecation window. Payload actions v2 (ADR 0312) landed later.
+  - Evidence:
+    - Policy: `docs/workstreams/action-first-authoring-fearless-refactor-v1/MVU_POLICY.md` (archived)
+    - Milestone: `docs/workstreams/action-first-authoring-fearless-refactor-v1/MILESTONES.md` (M9)
+    - Gate: `tools/gate_no_mvu_in_tree.ps1`
 
 - [x] AFA-clean-064 Add compile-time deprecation warnings for legacy MVU surfaces (if feasible).
-  - Rule: docs/templates must stop teaching it *before* adding warnings.
-  - Candidate surfaces:
-    - `ecosystem/fret/src/mvu.rs`
-    - `ecosystem/fret/src/mvu_router.rs`
-   - Evidence:
-     - MVU surfaces were deprecated during v1 and later removed in M9.
+  - Status: no longer applicable (MVU surfaces were removed in M9).
 
 - [x] AFA-clean-065 Consider feature-gating MVU behind an explicit legacy feature.
   - Goal: keep `fret::prelude::*` boring, and make MVU opt-in in downstream apps.
   - Non-goal: break existing users without a deprecation window.
-   - Evidence:
-     - MVU was feature-gated during the v1 deprecation window and later removed in M9.
+  - Status: no longer applicable (MVU surfaces were removed in M9).
 
 ---
 
@@ -389,10 +382,20 @@ practical steps:
     - `apps/fret-cookbook/examples/hello_counter.rs`
   - Done: remove redundant outer `cx` arguments from ecosystem authoring constructors (`fret-ui-kit::ui::*`):
     - Implementation: `ecosystem/fret-ui-kit/src/ui.rs` (`h_flex`, `v_flex`, `container`, `scroll_area`, `stack`, `text`, `label`, `raw_text`, …)
-    - Call-site migration: cookbook, examples, ui-gallery, shadcn/genui crates (workspace-wide)
+    - Call-site migration (status):
+      - Done: `apps/fret-cookbook`, `apps/fret-examples`
+      - In progress: `apps/fret-ui-gallery` (large surface; migrate in batches)
+        - Started: `apps/fret-ui-gallery/src/ui/doc_layout.rs`, `apps/fret-ui-gallery/src/ui/content.rs`
+        - Gate (shell-only): `tools/gate_no_stack_in_ui_gallery_shell.ps1`
+      - As needed: shadcn/genui crates (only when they block teaching-surface convergence)
     - Note: a handful of “host type inference” edge cases need an explicit anchor.
       Preferred: annotate the closure argument type (e.g. `ui::v_flex(|cx: &mut ElementContext<'_, App>| ...)`).
       Alternative: turbofish (e.g. `ui::v_flex::<App, _, _>(...)`).
+  - Done: cookbook examples no longer use `stack::hstack/vstack` authoring helpers; the repo teaches
+    one layout authoring surface for demos (`fret-ui-kit::ui::*` builders).
+    - Gate: `tools/gate_no_stack_in_cookbook.ps1`
+  - Done: examples no longer use `stack::hstack/vstack` authoring helpers.
+    - Gate: `tools/gate_no_stack_in_examples.ps1`
 - Pointer-triggered explainability: stable selector → action mapping without relying on script stamping.
   - Status (as of 2026-03-03): `debug.command_dispatch_trace[*].source_test_id` is inferred from the
     current semantics snapshot when `source_element` is available (fallbacks remain for cases where
@@ -461,8 +464,8 @@ practical steps:
 
 ## H. Hard delete legacy MVU (M9 follow-up)
 
-This workstream landed v1 with MVU quarantined and opt-in. If the repo goal becomes “fully
-migrated, then delete”, track the remaining steps here.
+Archived: M9 is complete and the repo is MVU-free. This section is kept as a historical checklist
+of what was removed and what the “hard delete” gate enforces.
 
 Exit target:
 

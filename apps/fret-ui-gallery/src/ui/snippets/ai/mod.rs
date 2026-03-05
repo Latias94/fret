@@ -33,6 +33,8 @@ pub mod reasoning_demo;
 pub mod sandbox_demo;
 pub mod schema_display_demo;
 pub mod shimmer_demo;
+pub mod shimmer_duration_demo;
+pub mod shimmer_elements_demo;
 pub mod snippet_demo;
 pub mod sources_demo;
 pub mod speech_input_demo;

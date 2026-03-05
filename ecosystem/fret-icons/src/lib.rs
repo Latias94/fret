@@ -50,6 +50,7 @@ pub mod ids {
         pub const CHEVRON_DOWN: IconId = IconId::new_static("ui.chevron.down");
         pub const CHEVRON_RIGHT: IconId = IconId::new_static("ui.chevron.right");
         pub const CHEVRON_UP: IconId = IconId::new_static("ui.chevron.up");
+        pub const CHEVRONS_UP_DOWN: IconId = IconId::new_static("ui.chevrons.up_down");
         pub const CLOSE: IconId = IconId::new_static("ui.close");
         pub const EYE: IconId = IconId::new_static("ui.eye");
         pub const EYE_OFF: IconId = IconId::new_static("ui.eye.off");

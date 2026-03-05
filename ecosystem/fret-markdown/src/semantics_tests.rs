@@ -1,8 +1,9 @@
 use fret_app::App;
+use fret_core::scene::{Scene, SceneOp};
 use fret_core::{
-    AppWindowId, PathCommand, PathConstraints, PathId, PathMetrics, PathService, PathStyle, Point,
-    Px, Rect, SemanticsRole, Size as CoreSize, SvgId, SvgService, TextBlobId, TextConstraints,
-    TextMetrics, TextService,
+    AppWindowId, Color, Paint, PathCommand, PathConstraints, PathId, PathMetrics, PathService,
+    PathStyle, Point, Px, Rect, SemanticsRole, Size as CoreSize, SvgId, SvgService, TextBlobId,
+    TextConstraints, TextMetrics, TextService,
 };
 use fret_ui::tree::UiTree;
 
@@ -89,6 +90,50 @@ fn render_markdown_snapshot(source: &str) -> fret_core::SemanticsSnapshot {
     ui.request_semantics_snapshot();
     ui.layout_all(&mut app, &mut services, bounds(), 1.0);
     ui.semantics_snapshot().expect("semantics snapshot").clone()
+}
+
+#[test]
+fn markdown_inherits_foreground_scope_color_for_plain_text() {
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = FakeServices;
+
+    let expected = Color {
+        r: 0.25,
+        g: 0.5,
+        b: 0.75,
+        a: 1.0,
+    };
+
+    let root = fret_ui::declarative::render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds(),
+        "markdown_foreground_scope_inheritance",
+        |cx| vec![cx.foreground_scope(expected, |cx| vec![crate::markdown(cx, "Hello markdown")])],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds(), 1.0);
+
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds(), &mut scene, 1.0);
+
+    let painted = scene.ops().iter().find_map(|op| match op {
+        SceneOp::Text { paint, .. } => match paint.paint {
+            Paint::Solid(color) => Some(color),
+            _ => None,
+        },
+        _ => None,
+    });
+    assert_eq!(
+        painted,
+        Some(expected),
+        "expected Markdown text to inherit ForegroundScope when no explicit color is set"
+    );
 }
 
 #[test]

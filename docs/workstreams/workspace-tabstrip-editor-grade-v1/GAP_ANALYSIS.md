@@ -57,6 +57,8 @@ These gaps are about “what editor users expect” rather than raw feature coun
 - **Separate pinned row option**:
   - Zed supports a “pinned row” mode; we currently only have a single-row boundary.
   - Risk: once apps depend on single-row layout, multi-row will be a disruptive refactor.
+  - Zed implementation note: separate pinned row is not a cosmetic change — it adds an explicit
+    end-drop surface for the pinned row and changes how “header space” is perceived by users.
   - Gate idea: a diag script + unit invariants for pinned row layout (no overlap + stable hit
     testing across the row boundary).
 
@@ -135,4 +137,3 @@ pattern to reduce the amount of cross-frame element-id bookkeeping.
 
 5) **Docking reuse pass**
    - Once the kernel seams are stable, apply the same kernel to `ecosystem/fret-docking` tab bars.
-

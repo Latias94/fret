@@ -22,7 +22,7 @@ These scripts use a semantic anchor (instead of pixel coordinates) to avoid DPI/
 
 Run as suite:
 
-- `cargo run -p fretboard -- diag suite docking-arbitration --launch -- cargo run -p fret-examples --bin docking_arbitration_demo --release`
+- `cargo run -p fretboard -- diag suite docking-arbitration --launch -- cargo run -p fret-demo --bin docking_arbitration_demo --release`
 
 Multi-window tear-off + merge-back gates (runner-routed cross-window drags):
 
@@ -44,6 +44,16 @@ Multi-window tear-off + merge-back gates (runner-routed cross-window drags):
 - `cargo run -p fretboard -- diag registry check`
 
 ## Evidence bundles (fill in after running locally)
+
+- 2026-03-05 docking tab close button does not activate (PASS):
+  - Session: `target/fret-diag-codex/sessions/1772682974973-2123`
+  - Packed: `target/fret-diag-codex/sessions/1772682974973-2123/share/1772683255784.zip`
+  - Run id: `1772683255784`
+
+- 2026-03-05 docking tab bar edge auto-scroll (PASS):
+  - Session: `target/fret-diag-codex/sessions/1772683263961-6019`
+  - Packed: `target/fret-diag-codex/sessions/1772683263961-6019/share/1772683425973.zip`
+  - Run id: `1772683425973`
 
 - 2026-03-03 diag-hardening-smoke-docking (PASS):
   - Session: `target/fret-diag-gpt-docking/sessions/1772539589213-769`

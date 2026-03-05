@@ -231,7 +231,7 @@ fn render_image_panel(
         ])
         .into_element(cx),
         shadcn::CardContent::new([
-            ui::v_flex( |_cx| body)
+            ui::v_flex(|_cx| body)
                 .gap(Space::N3)
                 .items_start()
                 .into_element(cx),

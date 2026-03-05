@@ -75,6 +75,19 @@ fn resolve_builtin_suite_scripts(
             let scripts = expand_script_inputs(workspace_root, &inputs)?;
             (scripts, Some(BuiltinSuite::UiGallery))
         }
+        "ui-gallery-ai-checkpoint" => {
+            // Keep this suite self-contained: start the gallery directly on the Checkpoint demo
+            // page so scripts do not depend on sidebar navigation ordering/virtualization.
+            push_env_if_missing(
+                launch_env,
+                "FRET_UI_GALLERY_START_PAGE",
+                "ai_checkpoint_demo",
+            );
+            // This harness captures a screenshot as evidence; enable GPU screenshots by default.
+            push_env_if_missing(launch_env, "FRET_DIAG_GPU_SCREENSHOTS", "1");
+            let scripts = scripts_from_suite_dir("ui-gallery-ai-checkpoint")?;
+            (scripts, Some(BuiltinSuite::UiGallery))
+        }
         "ui-gallery-text-ime" => {
             let inputs = diag_suite_scripts::ui_gallery_text_ime_suite_scripts();
             let scripts = expand_script_inputs(workspace_root, &inputs)?;

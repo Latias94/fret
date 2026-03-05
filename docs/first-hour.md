@@ -93,7 +93,7 @@ Key points:
 Minimal pattern:
 
 ```rust
-let header = ui::h_flex(cx, |cx| [ui::text(cx, "Hello")])
+let header = ui::h_flex(|_cx| [ui::text("Hello")])
     .gap(Space::N2)
     .px_3()
     .into_element(cx);

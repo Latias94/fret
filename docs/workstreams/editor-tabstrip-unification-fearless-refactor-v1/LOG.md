@@ -65,6 +65,13 @@ This file is a short, append-only log of landings and decisions for this workstr
   - Docking policy constant: `ecosystem/fret-docking/src/dock/consts.rs` (`DOCK_TAB_CLOSE_CLICK_SLOP`)
   - Gate hardening: `tools/diag-scripts/docking/arbitration/docking-arbitration-demo-tab-close-button-does-not-activate.json` (press + move 8px + release still closes; no drag; no activation)
 
+## 2026-03-05
+
+- Added an adapter-owned overflow dropdown policy knob to the workspace tab strip.
+  - API: `WorkspaceTabStrip::overflow_menu_active_policy(...)`
+  - Workspace default: overflowed-only (dockview-like).
+  - Rationale: keep policy out of headless helpers while allowing unification experiments.
+
 ## Next (proposed)
 
 - Extract a shared `TabStripController` into `ecosystem/fret-ui-kit/` (policy toolbox):

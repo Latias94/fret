@@ -206,3 +206,31 @@ Contract (v1 recommendation):
 
 Gate:
 - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-button-does-not-start-drag.json`
+
+## Q12: If we add a separate pinned row, how does it interact with overflow and “header space”?
+
+Why it matters:
+- Zed’s two-row mode changes the *user mental model* of where “drop at end” lives:
+  - pinned row has its own end-drop surface,
+  - unpinned row has its own end-drop surface,
+  - the “boundary” becomes a visual separator instead of a single in-row drop target.
+- If we keep a single overflow menu and a single scroll handle, we can accidentally make pinned
+  row drops feel inconsistent (e.g. header space resolves to the wrong canonical insert index).
+
+Options:
+1) Pinned row never overflows: cap pinned count or shrink pinned tabs aggressively.
+2) Pinned row is independently scrollable (Zed-style), but uses the same overflow menu policy as unpinned (complex).
+3) Pinned row is independently scrollable, and pinned row has **no overflow menu** (recommended for v1).
+
+Recommendation (v1):
+- Prefer **(3)**:
+  - Keep pinned row scroll as “best effort” (`overflow_x_scroll`) with **no overflow menu**.
+  - Keep the unpinned row as the only place with overflow menu + scroll buttons.
+  - Ensure both rows expose explicit end-drop surfaces (flex-grow header space) so drop semantics
+    stay stable under future button clusters.
+
+Gates:
+- Add a pinned-row diag script that asserts:
+  - end-drop in pinned row resolves `insert_index == pinned_count`,
+  - end-drop in unpinned row resolves `insert_index == tab_count`,
+  - header-space does not route into the overflow control surface.

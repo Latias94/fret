@@ -380,13 +380,10 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut CustomV1BasicsWindowState) ->
         .items_stretch()
         .into_element(cx);
 
-    let body = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap_y(Space::N4)
-            .layout(LayoutRefinement::default().w_full()),
-        |_cx| [toolbar, panels],
-    );
+    let body = ui::v_flex(|_cx| [toolbar, panels])
+        .gap(Space::N4)
+        .w_full()
+        .into_element(cx);
 
     let header = shadcn::CardHeader::new([
         shadcn::CardTitle::new("CustomV1 basics").into_element(cx),

@@ -26,6 +26,7 @@ use fret_ui::element::{
     Overflow, PositionStyle, RowProps, SpacingLength, TextProps,
 };
 use fret_ui_kit::custom_effects::CustomEffectProgramV3;
+use fret_ui_kit::ui;
 use fret_ui_shadcn as shadcn;
 
 use crate::custom_effect_v3_wgsl::CUSTOM_EFFECT_V3_LENS_WGSL;
@@ -494,11 +495,11 @@ fn stage(
             ..Default::default()
         },
         move |cx| {
-            vec![shadcn::stack::vstack(
-                cx,
-                shadcn::stack::VStackProps::default().gap(fret_ui_kit::Space::N1),
-                |_cx| vec![title, subtitle, controls],
-            )]
+            vec![
+                ui::v_flex(|_cx| [title, subtitle, controls])
+                    .gap(fret_ui_kit::Space::N1)
+                    .into_element(cx),
+            ]
         },
     );
 
@@ -519,13 +520,12 @@ fn stage(
             ..Default::default()
         },
         move |cx| {
-            vec![shadcn::stack::vstack(
-                cx,
-                shadcn::stack::VStackProps::default()
+            vec![
+                ui::v_flex(move |_cx| [header, lenses])
                     .gap(fret_ui_kit::Space::N4)
-                    .items_start(),
-                move |_cx| vec![header, lenses],
-            )]
+                    .items_start()
+                    .into_element(cx),
+            ]
         },
     );
 
@@ -557,95 +557,90 @@ fn stage_controls(
     let use_non_filterable_user0_model = st.use_non_filterable_user0.clone();
     let use_non_filterable_user1_model = st.use_non_filterable_user1.clone();
 
-    shadcn::stack::hstack(
-        cx,
-        shadcn::stack::HStackProps::default()
-            .gap(fret_ui_kit::Space::N2)
-            .items_center(),
-        move |cx| {
-            let mut out: Vec<AnyElement> = Vec::new();
+    ui::h_row(move |cx| {
+        let mut out: Vec<AnyElement> = Vec::new();
 
-            out.push(
-                shadcn::Switch::new(enabled_model.clone())
-                    .a11y_label("Enable CustomV3 lens")
-                    .test_id("custom-effect-v3.enabled")
-                    .into_element(cx),
-            );
-            out.push(
-                shadcn::Label::new(if enabled { "Enabled" } else { "Disabled" }).into_element(cx),
-            );
-
-            out.push(
-                shadcn::Switch::new(show_user0_probe_model.clone())
-                    .a11y_label("Show CustomV3 user0 probe")
-                    .test_id("custom-effect-v3.show-user0-probe")
-                    .into_element(cx),
-            );
-            out.push(
-                shadcn::Label::new(if show_user0_probe {
-                    "User0 probe"
-                } else {
-                    "User0 off"
-                })
+        out.push(
+            shadcn::Switch::new(enabled_model.clone())
+                .a11y_label("Enable CustomV3 lens")
+                .test_id("custom-effect-v3.enabled")
                 .into_element(cx),
-            );
+        );
+        out.push(shadcn::Label::new(if enabled { "Enabled" } else { "Disabled" }).into_element(cx));
 
-            out.push(
-                shadcn::Switch::new(show_user1_probe_model.clone())
-                    .a11y_label("Show CustomV3 user1 probe")
-                    .test_id("custom-effect-v3.show-user1-probe")
-                    .into_element(cx),
-            );
-            out.push(
-                shadcn::Label::new(if show_user1_probe {
-                    "User1 probe"
-                } else {
-                    "User1 off"
-                })
+        out.push(
+            shadcn::Switch::new(show_user0_probe_model.clone())
+                .a11y_label("Show CustomV3 user0 probe")
+                .test_id("custom-effect-v3.show-user0-probe")
                 .into_element(cx),
-            );
+        );
+        out.push(
+            shadcn::Label::new(if show_user0_probe {
+                "User0 probe"
+            } else {
+                "User0 off"
+            })
+            .into_element(cx),
+        );
 
-            out.push(
-                shadcn::Switch::new(use_non_filterable_user0_model.clone())
-                    .a11y_label("Use non-filterable user0 image (expect fallback)")
-                    .test_id("custom-effect-v3.use-non-filterable-user0")
-                    .into_element(cx),
-            );
-            out.push(
-                shadcn::Label::new(if use_non_filterable_user0 {
-                    "Non-filterable user0"
-                } else {
-                    "Filterable user0"
-                })
+        out.push(
+            shadcn::Switch::new(show_user1_probe_model.clone())
+                .a11y_label("Show CustomV3 user1 probe")
+                .test_id("custom-effect-v3.show-user1-probe")
                 .into_element(cx),
-            );
+        );
+        out.push(
+            shadcn::Label::new(if show_user1_probe {
+                "User1 probe"
+            } else {
+                "User1 off"
+            })
+            .into_element(cx),
+        );
 
-            out.push(
-                shadcn::Switch::new(use_non_filterable_user1_model.clone())
-                    .a11y_label("Use non-filterable user1 image (expect fallback)")
-                    .test_id("custom-effect-v3.use-non-filterable-user1")
-                    .into_element(cx),
-            );
-            out.push(
-                shadcn::Label::new(if use_non_filterable_user1 {
-                    "Non-filterable user1"
-                } else {
-                    "Filterable user1"
-                })
+        out.push(
+            shadcn::Switch::new(use_non_filterable_user0_model.clone())
+                .a11y_label("Use non-filterable user0 image (expect fallback)")
+                .test_id("custom-effect-v3.use-non-filterable-user0")
                 .into_element(cx),
-            );
+        );
+        out.push(
+            shadcn::Label::new(if use_non_filterable_user0 {
+                "Non-filterable user0"
+            } else {
+                "Filterable user0"
+            })
+            .into_element(cx),
+        );
 
-            out.push(
-                shadcn::Button::new("Reset")
-                    .variant(shadcn::ButtonVariant::Secondary)
-                    .action(act::Reset)
-                    .test_id("custom-effect-v3.reset")
-                    .into_element(cx),
-            );
+        out.push(
+            shadcn::Switch::new(use_non_filterable_user1_model.clone())
+                .a11y_label("Use non-filterable user1 image (expect fallback)")
+                .test_id("custom-effect-v3.use-non-filterable-user1")
+                .into_element(cx),
+        );
+        out.push(
+            shadcn::Label::new(if use_non_filterable_user1 {
+                "Non-filterable user1"
+            } else {
+                "Filterable user1"
+            })
+            .into_element(cx),
+        );
 
-            out
-        },
-    )
+        out.push(
+            shadcn::Button::new("Reset")
+                .variant(shadcn::ButtonVariant::Secondary)
+                .action(act::Reset)
+                .test_id("custom-effect-v3.reset")
+                .into_element(cx),
+        );
+
+        out
+    })
+    .gap(fret_ui_kit::Space::N2)
+    .items_center()
+    .into_element(cx)
 }
 
 fn animated_backdrop(cx: &mut ElementContext<'_, App>) -> AnyElement {

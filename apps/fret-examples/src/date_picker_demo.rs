@@ -14,8 +14,8 @@ use fret_ui::{Invalidation, UiTree};
 use fret_ui_kit::OverlayController;
 use fret_ui_kit::declarative::ElementContextThemeExt as _;
 use fret_ui_kit::headless::calendar::CalendarMonth;
+use fret_ui_kit::ui;
 use fret_ui_shadcn::button::{Button, ButtonSize, ButtonVariant};
-use fret_ui_shadcn::stack;
 use fret_ui_shadcn::{Calendar, DatePicker, Space, Switch};
 use std::sync::Arc;
 use time::{OffsetDateTime, Weekday};
@@ -248,35 +248,34 @@ impl WinitAppDriver for DatePickerDemoDriver {
                         .unwrap_or(false);
                     let disabled_value = cx.app.models().get_copied(&disabled).unwrap_or(false);
 
-                    let header = stack::hstack(
-                        cx,
-                        stack::HStackProps::default().gap(Space::N2).items_center(),
-                        |cx| {
-                            vec![
-                                Button::new("Close")
-                                    .variant(ButtonVariant::Outline)
-                                    .size(ButtonSize::Sm)
-                                    .on_click(CommandId::from("date_picker_demo.close"))
-                                    .into_element(cx),
-                                Button::new("Today")
-                                    .variant(ButtonVariant::Outline)
-                                    .size(ButtonSize::Sm)
-                                    .on_click(CommandId::from("date_picker_demo.reset_today"))
-                                    .into_element(cx),
-                                Button::new("Clear")
-                                    .variant(ButtonVariant::Outline)
-                                    .size(ButtonSize::Sm)
-                                    .on_click(CommandId::from("date_picker_demo.clear"))
-                                    .into_element(cx),
-                                cx.text(Arc::from(format!(
-                                    "DatePicker | open={} selected={} month={}",
-                                    if open_value { "true" } else { "false" },
-                                    selected_label.as_ref(),
-                                    month_label.as_ref(),
-                                ))),
-                            ]
-                        },
-                    );
+                    let header = ui::h_row(|cx| {
+                        [
+                            Button::new("Close")
+                                .variant(ButtonVariant::Outline)
+                                .size(ButtonSize::Sm)
+                                .on_click(CommandId::from("date_picker_demo.close"))
+                                .into_element(cx),
+                            Button::new("Today")
+                                .variant(ButtonVariant::Outline)
+                                .size(ButtonSize::Sm)
+                                .on_click(CommandId::from("date_picker_demo.reset_today"))
+                                .into_element(cx),
+                            Button::new("Clear")
+                                .variant(ButtonVariant::Outline)
+                                .size(ButtonSize::Sm)
+                                .on_click(CommandId::from("date_picker_demo.clear"))
+                                .into_element(cx),
+                            cx.text(Arc::from(format!(
+                                "DatePicker | open={} selected={} month={}",
+                                if open_value { "true" } else { "false" },
+                                selected_label.as_ref(),
+                                month_label.as_ref(),
+                            ))),
+                        ]
+                    })
+                    .gap(Space::N2)
+                    .items_center()
+                    .into_element(cx);
 
                     let toggles = cx.flex(
                         FlexProps {

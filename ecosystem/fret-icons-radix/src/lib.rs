@@ -86,6 +86,9 @@ mod semantic_ui {
         let _ = reg.alias_if_missing(ids::ui::CHEVRON_DOWN, IconId::new("radix.chevron-down"));
         let _ = reg.alias_if_missing(ids::ui::CHEVRON_RIGHT, IconId::new("radix.chevron-right"));
         let _ = reg.alias_if_missing(ids::ui::CHEVRON_UP, IconId::new("radix.chevron-up"));
+        // Radix Icons does not ship a direct equivalent of Lucide's `chevrons-up-down`.
+        // Prefer a reasonable fallback so semantic UI ids stay usable across packs.
+        let _ = reg.alias_if_missing(ids::ui::CHEVRONS_UP_DOWN, IconId::new("radix.chevron-down"));
         let _ = reg.alias_if_missing(ids::ui::CLOSE, IconId::new("radix.cross-1"));
         let _ = reg.alias_if_missing(ids::ui::LOADER, IconId::new("radix.update-icon"));
         let _ = reg.alias_if_missing(ids::ui::SEARCH, IconId::new("radix.magnifying-glass"));

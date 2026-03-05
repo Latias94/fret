@@ -4,7 +4,7 @@
 
 use std::sync::Arc;
 
-use fret_core::{Px, SemanticsRole};
+use fret_core::{FontId, FontWeight, Px, SemanticsRole, TextStyle, TextWrap};
 use fret_icons::ids;
 use fret_runtime::Model;
 use fret_ui::element::{AnyElement, InteractivityGateProps, LayoutStyle, SemanticsDecoration};
@@ -18,6 +18,8 @@ use fret_ui_shadcn::{
     Button, ButtonSize, ButtonVariant, CardAction, CardContent, CardDescription, CardFooter,
     CardHeader, CardTitle,
 };
+
+const CARD_ACTION_MARKER_PREFIX: &str = "fret-ui-shadcn.card-action:";
 
 #[derive(Debug, Default, Clone)]
 struct PlanProviderState {
@@ -61,6 +63,43 @@ fn plan_base_chrome(theme: &Theme) -> ChromeRefinement {
         .bg(ColorRef::Color(bg))
         .border_color(ColorRef::Color(border))
         .py(Space::N6)
+}
+
+fn card_title_text_style(theme: &Theme) -> TextStyle {
+    let px = theme
+        .metric_by_key("component.card.title_px")
+        .or_else(|| theme.metric_by_key("font.size"))
+        .unwrap_or_else(|| theme.metric_token("font.size"));
+    let line_height = theme
+        .metric_by_key("component.card.title_line_height")
+        .unwrap_or(px);
+
+    TextStyle {
+        font: FontId::ui(),
+        size: px,
+        weight: FontWeight::SEMIBOLD,
+        line_height: Some(line_height),
+        ..Default::default()
+    }
+}
+
+fn card_description_text_style(theme: &Theme) -> TextStyle {
+    let px = theme
+        .metric_by_key("component.card.description_px")
+        .or_else(|| theme.metric_by_key("font.size"))
+        .unwrap_or_else(|| theme.metric_token("font.size"));
+    let line_height = theme
+        .metric_by_key("component.card.description_line_height")
+        .or_else(|| theme.metric_by_key("font.line_height"))
+        .unwrap_or_else(|| theme.metric_token("font.line_height"));
+
+    TextStyle {
+        font: FontId::ui(),
+        size: px,
+        weight: FontWeight::NORMAL,
+        line_height: Some(line_height),
+        ..Default::default()
+    }
 }
 
 /// Collapsible plan container aligned with AI Elements `Plan`.
@@ -187,6 +226,8 @@ impl Plan {
 pub struct PlanHeader {
     children: Vec<AnyElement>,
     test_id: Option<Arc<str>>,
+    chrome: ChromeRefinement,
+    layout: LayoutRefinement,
 }
 
 impl PlanHeader {
@@ -194,6 +235,8 @@ impl PlanHeader {
         Self {
             children: children.into_iter().collect(),
             test_id: None,
+            chrome: ChromeRefinement::default(),
+            layout: LayoutRefinement::default(),
         }
     }
 
@@ -202,8 +245,36 @@ impl PlanHeader {
         self
     }
 
+    pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
+        self.chrome = self.chrome.merge(style);
+        self
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
+    }
+
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let el = CardHeader::new(self.children).into_element(cx);
+        let mut children = self.children;
+        let has_action_marker = children.iter().any(|child| {
+            child
+                .semantics_decoration
+                .as_ref()
+                .and_then(|d| d.test_id.as_deref())
+                .is_some_and(|id| id.starts_with(CARD_ACTION_MARKER_PREFIX))
+        });
+        if !has_action_marker && children.len() >= 2 {
+            if let Some(action) = children.pop() {
+                let action = CardAction::new([action]).into_element(cx);
+                children.push(action);
+            }
+        }
+
+        let el = CardHeader::new(children)
+            .refine_style(self.chrome)
+            .refine_layout(self.layout)
+            .into_element(cx);
         let Some(test_id) = self.test_id else {
             return el;
         };
@@ -241,8 +312,11 @@ impl PlanTitle {
             .unwrap_or(false);
 
         let el = if is_streaming {
+            let style = card_title_text_style(Theme::global(&*cx.app));
             super::Shimmer::new(self.text.clone())
+                .text_style(style)
                 .role(SemanticsRole::Text)
+                .wrap(TextWrap::Word)
                 .refine_layout(LayoutRefinement::default().w_full().min_w_0())
                 .into_element(cx)
         } else {
@@ -286,8 +360,11 @@ impl PlanDescription {
             .unwrap_or(false);
 
         let el = if is_streaming {
+            let style = card_description_text_style(Theme::global(&*cx.app));
             super::Shimmer::new(self.text.clone())
+                .text_style(style)
                 .role(SemanticsRole::Text)
+                .wrap(TextWrap::Word)
                 .refine_layout(LayoutRefinement::default().w_full().min_w_0())
                 .into_element(cx)
         } else {
@@ -310,6 +387,8 @@ impl PlanDescription {
 pub struct PlanAction {
     children: Vec<AnyElement>,
     test_id: Option<Arc<str>>,
+    chrome: ChromeRefinement,
+    layout: LayoutRefinement,
 }
 
 impl PlanAction {
@@ -317,6 +396,8 @@ impl PlanAction {
         Self {
             children: children.into_iter().collect(),
             test_id: None,
+            chrome: ChromeRefinement::default(),
+            layout: LayoutRefinement::default(),
         }
     }
 
@@ -325,8 +406,21 @@ impl PlanAction {
         self
     }
 
+    pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
+        self.chrome = self.chrome.merge(style);
+        self
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
+    }
+
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let el = CardAction::new(self.children).into_element(cx);
+        let el = CardAction::new(self.children)
+            .refine_style(self.chrome)
+            .refine_layout(self.layout)
+            .into_element(cx);
         let Some(test_id) = self.test_id else {
             return el;
         };
@@ -382,7 +476,7 @@ impl PlanTrigger {
 
         let icon = decl_icon::icon_with(
             cx,
-            ids::ui::CHEVRON_DOWN,
+            ids::ui::CHEVRONS_UP_DOWN,
             Some(icon_size),
             Some(ColorRef::Color(theme.color_token("muted-foreground"))),
         );
@@ -406,6 +500,8 @@ impl PlanTrigger {
 pub struct PlanContent {
     children: Vec<AnyElement>,
     test_id: Option<Arc<str>>,
+    chrome: ChromeRefinement,
+    layout: LayoutRefinement,
 }
 
 impl PlanContent {
@@ -413,11 +509,23 @@ impl PlanContent {
         Self {
             children: children.into_iter().collect(),
             test_id: None,
+            chrome: ChromeRefinement::default(),
+            layout: LayoutRefinement::default(),
         }
     }
 
     pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
         self.test_id = Some(id.into());
+        self
+    }
+
+    pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
+        self.chrome = self.chrome.merge(style);
+        self
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
         self
     }
 
@@ -433,7 +541,10 @@ impl PlanContent {
             return hidden(cx);
         }
 
-        let el = CardContent::new(self.children).into_element(cx);
+        let el = CardContent::new(self.children)
+            .refine_style(self.chrome)
+            .refine_layout(self.layout)
+            .into_element(cx);
         let Some(test_id) = self.test_id else {
             return el;
         };
@@ -450,6 +561,8 @@ impl PlanContent {
 pub struct PlanFooter {
     children: Vec<AnyElement>,
     test_id: Option<Arc<str>>,
+    chrome: ChromeRefinement,
+    layout: LayoutRefinement,
 }
 
 impl PlanFooter {
@@ -457,6 +570,8 @@ impl PlanFooter {
         Self {
             children: children.into_iter().collect(),
             test_id: None,
+            chrome: ChromeRefinement::default(),
+            layout: LayoutRefinement::default(),
         }
     }
 
@@ -465,8 +580,21 @@ impl PlanFooter {
         self
     }
 
+    pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
+        self.chrome = self.chrome.merge(style);
+        self
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
+    }
+
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let el = CardFooter::new(self.children).into_element(cx);
+        let el = CardFooter::new(self.children)
+            .refine_style(self.chrome)
+            .refine_layout(self.layout)
+            .into_element(cx);
         let Some(test_id) = self.test_id else {
             return el;
         };
