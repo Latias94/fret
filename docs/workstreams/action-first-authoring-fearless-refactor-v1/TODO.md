@@ -1,4 +1,4 @@
-# Action-First Authoring + View Runtime (Fearless Refactor v1) — TODO
+﻿# Action-First Authoring + View Runtime (Fearless Refactor v1) — TODO
 
 Status: Landed (v1), hardening follow-ups in progress
 Last updated: 2026-03-05
@@ -416,9 +416,23 @@ practical steps:
 - View runtime ergonomics: reduce `on_action` handler boilerplate (`request_redraw` + `notify`) without weakening
   determinism or layering (ecosystem-only).
   - Status (as of 2026-03-04): implemented `ViewCx::on_action_notify` + `ViewCx::on_payload_action_notify` sugar.
+  - Update (as of 2026-03-06): added `fret-ui-kit` `on_activate*` helpers so pointer/pressable authoring can
+    converge on the same “small closure + built-in redraw/notify policy” shape.
   - Evidence:
     - `ecosystem/fret/src/view.rs` (`on_action_notify`, `on_payload_action_notify`)
+    - `ecosystem/fret-ui-kit/src/activate.rs` (`on_activate`, `on_activate_request_redraw`, `on_activate_notify`)
     - `apps/fret-cookbook/examples/hello.rs` (uses `on_action_notify`)
+    - `apps/fret-examples/src/custom_effect_v2_web_demo.rs` (uses `on_activate_request_redraw`)
+- Demo authoring review snapshot (as of 2026-03-06):
+  - Simple demo status: `hello_template_main_rs` is close to the intended golden path (typed actions + `ui::children!` + one model-update helper).
+  - Medium demo status: `hello_counter_demo` and `query_demo` are substantially improved, but still expose three recurring noise classes:
+    1. model read boilerplate (`watch_model(...).layout()/paint().copied_or/cloned_or_default()`),
+    2. nested `into_element(cx)` landing inside composed card/layout sections,
+    3. explicit transient scheduling for App-only effects (`take_transient_on_action_root` + `with_query_client`).
+  - Recommended next phase:
+    - keep `on_action*` / `on_activate*` as the current closure story (do not add more tiny helpers yet),
+    - prefer template/doc guidance first for transient/App-effect patterns,
+    - re-evaluate only after one more round of template/demo authoring feedback.
 - Payload actions (v2+), behind strict determinism + validation rules.
   - See: `docs/adr/0312-payload-actions-v2.md`
 
