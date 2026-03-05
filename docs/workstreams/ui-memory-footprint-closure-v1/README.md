@@ -35,6 +35,12 @@ Using `tools/diag-scripts/todo-memory-steady.json` on macOS/Metal:
     - `--max-wgpu-hub-render-pipelines`
     - `--max-wgpu-hub-shader-modules`
 
+ - Hub+allocator report sampling note (N=5; `--env FRET_DIAG_WGPU_ALLOCATOR_REPORT_EVERY_N_FRAMES=60` + `--env FRET_DIAG_WGPU_REPORT_EVERY_N_FRAMES=60`):
+   - Observed a repeatable-ish outlier pattern where `wgpu_metal_current_allocated_size_bytes` and vmmap GPU-backed regions spike while hub counts remain stable:
+     - Typical: `wgpu_metal_current_allocated_size_bytes_max` ~83.8 MiB and `io_surface_dirty_bytes` ~26.6 MiB.
+     - Outlier example: `wgpu_metal_current_allocated_size_bytes_max` 119,341,056 (~113.8 MiB) with `io_surface_dirty_bytes` 44,354,765 (~42.3 MiB) and `io_accelerator_dirty_bytes` 18,884,198 (~18.0 MiB), while `wgpu_hub_textures_max` stayed at 16 and `wgpu_hub_render_pipelines_max` at 52.
+   - The Metal size transitions aligned with the report cadence (around frames ~480 and ~540), suggesting the reporting path may perturb driver allocations. Next experiment: sweep `*_EVERY_N_FRAMES` (e.g. 60 → 600) to measure the trade-off between attribution granularity and measurement stability.
+
 Using `tools/diag-scripts/empty-idle-memory-steady.json` on macOS/Metal (baseline):
 
 - Without UI diagnostics enabled (manual `vmmap -summary` on a plain run):
