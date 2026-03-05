@@ -261,6 +261,12 @@ This is a style guide, not a contract, but it is the repo’s default teaching b
 - If you need a vertical stack that does not force `width: fill`, prefer `ui::v_stack(|cx| ...)`.
 - Prefer `ui::children![cx; ...]` for heterogeneous child lists to avoid decorate-only early
   `into_element(cx)` calls.
+- For old `stack::*` call sites, the mapping is typically:
+  - `stack::v_flex(...)` → `ui::v_flex(...)` (forces `width: fill`)
+  - `stack::v_stack(...)` → `ui::v_stack(...)` (does **not** force `width: fill`)
+  - `stack::h_flex(...)` → `ui::h_flex(...)` (forces `width: fill`)
+  - `stack::h_row(...)` → `ui::h_row(...)` (does **not** force `width: fill`)
+  - `stack::container_vstack(...)` → `ui::container(...)` + `ui::v_stack(...)` (explicit composition)
 - When rendering dynamic lists, prefer `*_build(|cx, out| ...)` + `cx.keyed(id, |cx| ...)` to keep
   identity stable and reduce allocation noise.
 - Attach `test_id` / `a11y_*` / `key_context` on builders before `into_element(cx)`; only land to
