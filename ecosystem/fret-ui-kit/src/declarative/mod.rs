@@ -41,7 +41,6 @@ pub mod scroll;
 pub mod scroll_area_visibility;
 pub mod semantics;
 pub mod slider;
-mod stack;
 pub mod style;
 pub mod table;
 pub mod text;

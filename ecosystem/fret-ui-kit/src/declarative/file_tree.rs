@@ -10,9 +10,9 @@ use fret_ui::scroll::{ScrollStrategy, VirtualListScrollHandle};
 use fret_ui::{ElementContext, Theme, UiHost};
 
 use crate::declarative::CachedSubtreeExt as _;
+use crate::declarative::CachedSubtreeProps;
 use crate::declarative::model_watch::ModelWatchExt as _;
 use crate::declarative::style as decl_style;
-use crate::declarative::{CachedSubtreeProps, stack};
 use crate::style::{ChromeRefinement, LayoutRefinement};
 use crate::{ColorRef, MetricRef, Space, TreeEntry, TreeItem, TreeItemId, TreeState, flatten_tree};
 
@@ -277,22 +277,21 @@ pub fn file_tree_view_retained_v0<H: UiHost + 'static>(
                 .into();
 
                 vec![cx.container(row_props, |cx| {
-                    vec![stack::hstack(
-                        cx,
-                        stack::HStackProps::default()
-                            .layout(LayoutRefinement::default().w_full().h_full())
-                            .gap(Space::N2)
-                            .items_center(),
-                        |cx| {
+                    vec![
+                        crate::ui::h_row(|cx| {
                             let icon = crate::ui::text(icon).flex_shrink_0().into_element(cx);
                             let label = crate::ui::text(entry.label.as_ref())
                                 .flex_1()
                                 .min_w_0()
                                 .truncate()
                                 .into_element(cx);
-                            vec![icon, label]
-                        },
-                    )]
+                            [icon, label]
+                        })
+                        .layout(LayoutRefinement::default().w_full().h_full())
+                        .gap(Space::N2)
+                        .items_center()
+                        .into_element(cx),
+                    ]
                 })]
             },
         )

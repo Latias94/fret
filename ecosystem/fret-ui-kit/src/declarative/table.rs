@@ -32,8 +32,8 @@ type SorterSpec<TData> = (SortSpec, Arc<SorterFn<TData>>);
 use crate::declarative::action_hooks::ActionHooksExt;
 use crate::declarative::collection_semantics::CollectionSemanticsExt as _;
 use crate::declarative::model_watch::ModelWatchExt as _;
-use crate::declarative::stack;
-use crate::{Items, Justify, LayoutRefinement, MetricRef, Size, Space};
+use crate::ui;
+use crate::{LayoutRefinement, MetricRef, Size, Space};
 
 use crate::headless::table::{
     Aggregation, ColumnDef, ColumnId, ColumnResizeDirection, ColumnResizeMode, ExpandingState,
@@ -2032,11 +2032,9 @@ mod tests {
                     Arc::new(
                         |cx: &mut ElementContext<'_, App>, col: &ColumnDef<u32>, row: &u32| {
                             if *row == 0 && col.id.as_ref() == "b" {
-                                stack::vstack(
-                                    cx,
-                                    stack::VStackProps::default().gap(Space::N0),
-                                    |cx| vec![cx.text("b-0"), cx.text("extra line")],
-                                )
+                                ui::v_stack(|cx| [cx.text("b-0"), cx.text("extra line")])
+                                    .gap(Space::N0)
+                                    .into_element(cx)
                             } else {
                                 cx.text(format!("{}-{row}", col.id.as_ref()))
                             }
@@ -2705,14 +2703,8 @@ where
                         let enable_sorting = props.enable_sorting;
                         let data = data_for_header.clone();
 
-                        let row = stack::hstack(
-                            cx,
-                            stack::HStackProps::default()
-                                .gap_x(Space::N0)
-                                .justify(Justify::Start)
-                                .items(Items::Center),
-                            move |cx| {
-                                col_indices
+                        let row = ui::h_row(move |cx| {
+                            col_indices
                                     .iter()
                                     .map(|col_idx| {
                                         let col = &visible_columns[*col_idx];
@@ -2916,22 +2908,19 @@ where
                                                                         vec![_cx.text(header_text.as_ref())]
                                                                     }
                                                                     Some(accessory) => {
-                                                                        vec![stack::hstack(
-                                                                            _cx,
-                                                                            stack::HStackProps::default()
-                                                                                .gap_x(Space::N1)
-                                                                                .justify(Justify::Start)
-                                                                                .items(Items::Center),
-                                                                            move |_cx| {
-                                                                                vec![
-                                                                                    _cx.text(header_text.as_ref()),
-                                                                                    _cx.spacer(
-                                                                                        SpacerProps::default(),
-                                                                                    ),
-                                                                                    accessory,
-                                                                                ]
-                                                                            },
-                                                                        )]
+                                                                        vec![ui::h_row(move |_cx| {
+                                                                            [
+                                                                                _cx.text(header_text.as_ref()),
+                                                                                _cx.spacer(
+                                                                                    SpacerProps::default(),
+                                                                                ),
+                                                                                accessory,
+                                                                            ]
+                                                                        })
+                                                                        .gap(Space::N1)
+                                                                        .justify_start()
+                                                                        .items_center()
+                                                                        .into_element(_cx)]
                                                                     }
                                                                 }
                                                             },
@@ -2942,8 +2931,11 @@ where
                                         )
                                     })
                                     .collect::<Vec<_>>()
-                            },
-                        );
+                        })
+                        .gap(Space::N0)
+                        .justify_start()
+                        .items_center()
+                        .into_element(cx);
 
                         if let Some(scroll_x_for_group) = scroll_x_for_group {
                             cx.scroll(
@@ -2968,23 +2960,17 @@ where
                         }
                     };
 
-                vec![stack::hstack(
-                    cx,
-                    stack::HStackProps::default()
-                        .gap_x(Space::N0)
-                        .justify(Justify::Start)
-                        .items(Items::Stretch),
-                    |cx| {
-                        let left = render_header_group(cx, left_col_indices.clone(), None);
-                        let center = render_header_group(
-                            cx,
-                            center_col_indices.clone(),
-                            Some(scroll_x.clone()),
-                        );
-                        let right = render_header_group(cx, right_col_indices.clone(), None);
-                        vec![left, center, right]
-                    },
-                )]
+                vec![ui::h_row(|cx| {
+                    let left = render_header_group(cx, left_col_indices.clone(), None);
+                    let center =
+                        render_header_group(cx, center_col_indices.clone(), Some(scroll_x.clone()));
+                    let right = render_header_group(cx, right_col_indices.clone(), None);
+                    [left, center, right]
+                })
+                .gap(Space::N0)
+                .justify_start()
+                .items_stretch()
+                .into_element(cx)]
             },
         )
     };
@@ -3275,31 +3261,19 @@ where
                                 ..Default::default()
                             },
                             move |cx| {
-                                vec![stack::hstack(
-                                    cx,
-                                    stack::HStackProps::default()
-                                        .gap_x(Space::N0)
-                                        .justify(Justify::Start)
-                                        .items(Items::Stretch),
-                                    move |cx| {
+                                vec![ui::h_row(move |cx| {
                                         let render_row_group =
                                             |cx: &mut ElementContext<'_, H>,
                                              col_indices: &[usize],
                                              scroll_x_for_group: Option<ScrollHandle>| {
-                                                let row = stack::hstack(
-                                                    cx,
-                                                    stack::HStackProps::default()
-                                                        .gap_x(Space::N0)
-                                                        .justify(Justify::Start)
-                                                        .items(Items::Center),
-                                                    |cx| {
-                                                        col_indices
-                                                            .iter()
-                                                            .map(|col_idx| {
-                                                                let col = &columns_for_row[*col_idx];
-                                                                let col_w = col_widths_for_row[*col_idx];
-                                                                let cell =
-                                                                    (cell_at_for_row)(cx, col, original);
+                                                let row = ui::h_row(|cx| {
+                                                    col_indices
+                                                             .iter()
+                                                             .map(|col_idx| {
+                                                                 let col = &columns_for_row[*col_idx];
+                                                                 let col_w = col_widths_for_row[*col_idx];
+                                                                 let cell =
+                                                                     (cell_at_for_row)(cx, col, original);
 
                                                                 let cell_test_id = row_cell_test_id_prefix
                                                                     .as_ref()
@@ -3363,10 +3337,13 @@ where
                                                                 } else {
                                                                     cell
                                                                 }
-                                                            })
-                                                            .collect::<Vec<_>>()
-                                                    },
-                                                );
+                                                             })
+                                                             .collect::<Vec<_>>()
+                                                })
+                                                .gap(Space::N0)
+                                                .justify_start()
+                                                .items_center()
+                                                .into_element(cx);
 
                                                 if let Some(scroll_x_for_group) = scroll_x_for_group {
                                                     cx.scroll(
@@ -3406,9 +3383,12 @@ where
                                             right_col_indices_for_row.as_ref(),
                                             None,
                                         );
-                                        vec![left, center, right]
-                                    },
-                                )]
+                                        [left, center, right]
+                                    })
+                                    .gap(Space::N0)
+                                    .justify_start()
+                                    .items_stretch()
+                                    .into_element(cx)]
                             },
                         )]
                     },
@@ -3594,15 +3574,9 @@ where
                         false
                     }));
 
-                    vec![stack::vstack(
-                        cx,
-                        stack::VStackProps::default()
-                            .layout(LayoutRefinement::default().w_full().h_full())
-                            .gap(Space::N0)
-                            .justify(Justify::Start)
-                            .items(Items::Stretch),
-                        move |cx| {
-                            vec![
+                    vec![
+                        ui::v_flex(move |cx| {
+                            [
                                 header,
                                 cx.virtual_list_keyed_retained_with_layout(
                                     fill_layout,
@@ -3613,8 +3587,13 @@ where
                                     row,
                                 ),
                             ]
-                        },
-                    )]
+                        })
+                        .layout(LayoutRefinement::default().w_full().h_full())
+                        .gap(Space::N0)
+                        .justify_start()
+                        .items_stretch()
+                        .into_element(cx),
+                    ]
                 });
 
             let focus_ring = RingStyle {
@@ -4805,14 +4784,7 @@ where
                     ..Default::default()
                 },
                 |cx| {
-                    vec![stack::vstack(
-                        cx,
-                        stack::VStackProps::default()
-                            .layout(LayoutRefinement::default().size_full())
-                            .gap_y(Space::N0)
-                            .justify(Justify::Start)
-                            .items(Items::Stretch),
-                        |cx| {
+                    vec![ui::v_stack(|cx| {
                                     let header = cx.container(
                                         ContainerProps {
                                             background: Some(header_bg),
@@ -4845,13 +4817,7 @@ where
                                                  scroll_x: Option<ScrollHandle>| {
                                                     let column_width_by_id =
                                                         column_width_by_id.clone();
-                                                    let row = stack::hstack(
-                                                        cx,
-                                                        stack::HStackProps::default()
-                                                            .gap_x(Space::N0)
-                                                            .justify(Justify::Start)
-                                                            .items(Items::Center),
-                                                        |cx| {
+                                                    let row = ui::h_row(|cx| {
                                                             let out: Vec<AnyElement> = cols.iter()
                                                                 .map(|col| {
                                                                     let sort_state = sort_for_column(
@@ -4905,18 +4871,7 @@ where
                                                                     cx.container(cell_props, |cx| {
                                                                         let mut out = Vec::new();
 
-                                                                        out.push(stack::hstack(
-                                                                            cx,
-                                                                            stack::HStackProps::default()
-                                                                                .layout(
-                                                                                    LayoutRefinement::default()
-                                                                                        .size_full()
-                                                                                        .relative(),
-                                                                                )
-                                                                                .gap_x(Space::N0)
-                                                                                .justify(Justify::Start)
-                                                                                .items(Items::Center),
-                                                                            |cx| {
+                                                                        out.push(ui::h_row(|cx| {
                                                                                 let mut pieces = Vec::new();
 
                                                                                 let enabled = props.enable_sorting
@@ -5222,14 +5177,8 @@ where
                                                                                                     true
                                                                                                 }),
                                                                                             );
-                                                                                            vec![stack::hstack(
-                                                                                                cx,
-                                                                                                stack::HStackProps::default()
-                                                                                                    .gap_x(Space::N0)
-                                                                                                    .justify(Justify::End)
-                                                                                                    .items(Items::Stretch),
-                                                                                                |cx| {
-                                                                                                    vec![cx.container(
+                                                                                            vec![ui::h_row(|cx| {
+                                                                                                [cx.container(
                                                                                                         ContainerProps {
                                                                                                             background: Some(grip_color),
                                                                                                             layout: LayoutStyle {
@@ -5248,15 +5197,26 @@ where
                                                                                                         },
                                                                                                         |_| Vec::new(),
                                                                                                     )]
-                                                                                                },
-                                                                                            )]
+                                                                                            })
+                                                                                            .gap(Space::N0)
+                                                                                            .justify_end()
+                                                                                            .items_stretch()
+                                                                                            .into_element(cx)]
                                                                                         },
                                                                                     ));
                                                                                 }
 
                                                                                 pieces
-                                                                            },
-                                                                        ));
+                                                                            })
+                                                                            .layout(
+                                                                                LayoutRefinement::default()
+                                                                                    .size_full()
+                                                                                    .relative(),
+                                                                            )
+                                                                            .gap(Space::N0)
+                                                                            .justify_start()
+                                                                            .items_center()
+                                                                            .into_element(cx));
 
                                                                         out
                                                                     })
@@ -5264,8 +5224,11 @@ where
                                                                 .collect();
 
                                                             out
-                                                        },
-                                                    );
+                                                        })
+                                                        .gap(Space::N0)
+                                                        .justify_start()
+                                                        .items_center()
+                                                        .into_element(cx);
 
                                                             if let Some(scroll_x) = scroll_x {
                                                                 cx.scroll(
@@ -5295,13 +5258,7 @@ where
                                                             }
                                                 };
 
-                                            vec![stack::hstack(
-                                                cx,
-                                                stack::HStackProps::default()
-                                                    .gap_x(Space::N0)
-                                                    .justify(Justify::Start)
-                                                    .items(Items::Stretch),
-                                                |cx| {
+                                            vec![ui::h_row(|cx| {
                                                     let has_left = !left_cols.is_empty();
                                                     let has_center = !center_cols.is_empty();
                                                     let has_right = !right_cols.is_empty();
@@ -5365,9 +5322,12 @@ where
                                                     };
 
                                                     let right = render_header_group(cx, &right_cols, None);
-                                                    vec![left, center, right]
-                                                },
-                                            )]
+                                                    [left, center, right]
+                                            })
+                                            .gap(Space::N0)
+                                            .justify_start()
+                                            .items_stretch()
+                                            .into_element(cx)]
                                         },
                                     );
 
@@ -5627,54 +5587,50 @@ where
                                                                                                         .unwrap_or(Px(col.size))
                                                                                                 })
                                                                                                 .collect();
-                                                                                            let background_row =
-                                                                                                stack::hstack(
-                                                                                                    cx,
-                                                                                                    stack::HStackProps::default()
-                                                                                                        .gap_x(Space::N0)
-                                                                                                        .justify(Justify::Start)
-                                                                                                        .items(Items::Stretch),
-                                                                                                    |cx| {
-                                                                                                        cols.iter()
-                                                                                                            .zip(col_widths.iter().copied())
-                                                                                                            .map(|(_col, col_w)| {
-                                                                                                                cx.container(
-                                                                                                                    ContainerProps {
-                                                                                                                        border: if props.optimize_grid_lines {
-                                                                                                                            Edges::default()
-                                                                                                                        } else {
-                                                                                                                            Edges {
-                                                                                                                                right: Px(1.0),
-                                                                                                                                ..Default::default()
-                                                                                                                            }
-                                                                                                                        },
-                                                                                                                        border_color: if props.optimize_grid_lines {
-                                                                                                                            None
-                                                                                                                        } else {
-                                                                                                                            Some(border)
-                                                                                                                        },
-                                                                                                                        layout: LayoutStyle {
-                                                                                                                   size: fret_ui::element::SizeStyle {
+                                                                                            let background_row = ui::h_row(|cx| {
+                                                                                                cols.iter()
+                                                                                                    .zip(col_widths.iter().copied())
+                                                                                                    .map(|(_col, col_w)| {
+                                                                                                        cx.container(
+                                                                                                            ContainerProps {
+                                                                                                                border: if props.optimize_grid_lines {
+                                                                                                                    Edges::default()
+                                                                                                                } else {
+                                                                                                                    Edges {
+                                                                                                                        right: Px(1.0),
+                                                                                                                        ..Default::default()
+                                                                                                                    }
+                                                                                                                },
+                                                                                                                border_color: if props.optimize_grid_lines {
+                                                                                                                    None
+                                                                                                                } else {
+                                                                                                                    Some(border)
+                                                                                                                },
+                                                                                                                layout: LayoutStyle {
+                                                                                                                    size: fret_ui::element::SizeStyle {
                                                                                                                         width: Length::Px(col_w),
                                                                                                                         min_width: Some(Length::Px(col_w)),
                                                                                                                         max_width: Some(Length::Px(col_w)),
                                                                                                                         height: Length::Fill,
                                                                                                                         ..Default::default()
                                                                                                                     },
-                                                                                                                            flex: fret_ui::element::FlexItemStyle {
-                                                                                                                                shrink: 0.0,
-                                                                                                                                ..Default::default()
-                                                                                                                            },
-                                                                                                                            ..Default::default()
-                                                                                                                        },
+                                                                                                                    flex: fret_ui::element::FlexItemStyle {
+                                                                                                                        shrink: 0.0,
                                                                                                                         ..Default::default()
                                                                                                                     },
-                                                                                                                    |_| Vec::new(),
-                                                                                                                )
-                                                                                                            })
-                                                                                                            .collect::<Vec<_>>()
-                                                                                                    },
-                                                                                                );
+                                                                                                                    ..Default::default()
+                                                                                                                },
+                                                                                                                ..Default::default()
+                                                                                                            },
+                                                                                                            |_| Vec::new(),
+                                                                                                        )
+                                                                                                    })
+                                                                                                    .collect::<Vec<_>>()
+                                                                                            })
+                                                                                            .gap(Space::N0)
+                                                                                            .justify_start()
+                                                                                            .items_stretch()
+                                                                                            .into_element(cx);
 
                                                                                             let content_overlay = cx.container(
                                                                                                 ContainerProps {
@@ -5697,16 +5653,10 @@ where
                                                                                                     ..Default::default()
                                                                                                 },
                                                                                                 |cx| {
-                                                                                                    vec![stack::hstack(
-                                                                                                        cx,
-                                                                                                        stack::HStackProps::default()
-                                                                                                            .gap_x(Space::N0)
-                                                                                                            .justify(Justify::Start)
-                                                                                                            .items(Items::Center),
-                                                                                                        |cx| {
-                                                                                                            cols.iter()
-                                                                                                                .zip(col_widths.iter().copied())
-                                                                                                                .map(|(col, col_w)| {
+                                                                                                    vec![ui::h_row(|cx| {
+                                                                                                        cols.iter()
+                                                                                                            .zip(col_widths.iter().copied())
+                                                                                                            .map(|(col, col_w)| {
 
                                                                                                                     let is_label_target = col
                                                                                                                         .id
@@ -5772,10 +5722,13 @@ where
                                                                                                                             }
                                                                                                                         },
                                                                                                                     )
-                                                                                                                })
-                                                                                                                .collect::<Vec<_>>()
-                                                                                                        },
-                                                                                                    )]
+                                                                                                            })
+                                                                                                            .collect::<Vec<_>>()
+                                                                                                    })
+                                                                                                    .gap(Space::N0)
+                                                                                                    .justify_start()
+                                                                                                    .items_center()
+                                                                                                    .into_element(cx)]
                                                                                                 },
                                                                                             );
 
@@ -5783,13 +5736,7 @@ where
                                                                                         },
                                                                                     )
                                                                                 } else {
-                                                                                    stack::hstack(
-                                                                                        cx,
-                                                                                        stack::HStackProps::default()
-                                                                                            .gap_x(Space::N0)
-                                                                                            .justify(Justify::Start)
-                                                                                            .items(Items::Center),
-                                                                                        |cx| {
+                                                                                    ui::h_row(|cx| {
                                                                                             cols.iter()
                                                                                                 .map(|col| {
                                                                                                     let col_w = column_width_by_id
@@ -5876,8 +5823,11 @@ where
                                                                                                     )
                                                                                                 })
                                                                                                 .collect::<Vec<_>>()
-                                                                                        },
-                                                                                    )
+                                                                                    })
+                                                                                    .gap(Space::N0)
+                                                                                    .justify_start()
+                                                                                    .items_center()
+                                                                                    .into_element(cx)
                                                                                 };
 
                                                                                 if let Some(scroll_x) =
@@ -5910,13 +5860,7 @@ where
                                                                                 }
                                                                             };
 
-                                                                        out.push(stack::hstack(
-                                                                            cx,
-                                                                            stack::HStackProps::default()
-                                                                                .gap_x(Space::N0)
-                                                                                .justify(Justify::Start)
-                                                                                .items(Items::Stretch),
-                                                                            |cx| {
+                                                                        out.push(ui::h_row(|cx| {
                                                                                 let has_left =
                                                                                     !left_cols.is_empty();
                                                                                 let has_center =
@@ -5996,8 +5940,11 @@ where
                                                                                 );
 
                                                                                 vec![left, center, right]
-                                                                            },
-                                                                        ));
+                                                                        })
+                                                                        .gap(Space::N0)
+                                                                        .justify_start()
+                                                                        .items_stretch()
+                                                                        .into_element(cx));
                                                                         out
                                                                     },
                                                                 )]
@@ -6300,13 +6247,7 @@ where
                                                                                             .unwrap_or(Px(col.size))
                                                                                     })
                                                                                     .collect();
-                                                                                let background_row = stack::hstack(
-                                                                                    cx,
-                                                                                    stack::HStackProps::default()
-                                                                                        .gap_x(Space::N0)
-                                                                                        .justify(Justify::Start)
-                                                                                        .items(Items::Stretch),
-                                                                                    |cx| {
+                                                                                let background_row = ui::h_row(|cx| {
                                                                                         cols.iter()
                                                                                             .zip(col_widths.iter().copied())
                                                                                             .map(|(_col, col_w)| {
@@ -6345,8 +6286,11 @@ where
                                                                                                 )
                                                                                             })
                                                                                             .collect::<Vec<_>>()
-                                                                                    },
-                                                                                );
+                                                                                })
+                                                                                .gap(Space::N0)
+                                                                                .justify_start()
+                                                                                .items_stretch()
+                                                                                .into_element(cx);
 
                                                                                 let content_overlay = cx.container(
                                                                                     ContainerProps {
@@ -6369,13 +6313,7 @@ where
                                                                                         ..Default::default()
                                                                                     },
                                                                                     |cx| {
-                                                                                        vec![stack::hstack(
-                                                                                            cx,
-                                                                                            stack::HStackProps::default()
-                                                                                                .gap_x(Space::N0)
-                                                                                                .justify(Justify::Start)
-                                                                                                .items(Items::Center),
-                                                                                            |cx| {
+                                                                                        vec![ui::h_row(|cx| {
                                                                                                 cols.iter()
                                                                                                     .zip(col_widths.iter().copied())
                                                                                                     .map(|(col, col_w)| {
@@ -6404,25 +6342,25 @@ where
                                                                                                                 ..Default::default()
                                                                                                             },
                                                                                                             |cx| {
-                                                                                                                vec![stack::hstack(
-                                                                                                                    cx,
-                                                                                                                    stack::HStackProps::default()
-                                                                                                                        .gap_x(Space::N0)
-                                                                                                                        .justify(Justify::Start)
-                                                                                                                        .items(Items::Center)
-                                                                                                                        .layout(
-                                                                                                                            LayoutRefinement::default()
-                                                                                                                                .w_full()
-                                                                                                                                .h_full(),
-                                                                                                                        ),
-                                                                                                                    |cx| render_cell(cx, &data_row, col),
-                                                                                                                )]
+                                                                                                                vec![ui::h_row(|cx| render_cell(cx, &data_row, col))
+                                                                                                                    .layout(
+                                                                                                                        LayoutRefinement::default()
+                                                                                                                            .w_full()
+                                                                                                                            .h_full(),
+                                                                                                                    )
+                                                                                                                    .gap(Space::N0)
+                                                                                                                    .justify_start()
+                                                                                                                    .items_center()
+                                                                                                                    .into_element(cx)]
                                                                                                             },
                                                                                                         )
                                                                                                     })
                                                                                                     .collect::<Vec<_>>()
-                                                                                            },
-                                                                                        )]
+                                                                                        })
+                                                                                        .gap(Space::N0)
+                                                                                        .justify_start()
+                                                                                        .items_center()
+                                                                                        .into_element(cx)]
                                                                                     },
                                                                                 );
 
@@ -6430,13 +6368,7 @@ where
                                                                             },
                                                                         )
                                                                     } else {
-                                                                        stack::hstack(
-                                                                            cx,
-                                                                            stack::HStackProps::default()
-                                                                                .gap_x(Space::N0)
-                                                                                .justify(Justify::Start)
-                                                                                .items(Items::Center),
-                                                                                |cx| {
+                                                                        ui::h_row(|cx| {
                                                                                     cols.iter()
                                                                                         .map(|col| {
                                                                                             let col_w = column_width_by_id
@@ -6480,25 +6412,25 @@ where
                                                                                                 ..Default::default()
                                                                                             },
                                                                                             |cx| {
-                                                                                                vec![stack::hstack(
-                                                                                                    cx,
-                                                                                                    stack::HStackProps::default()
-                                                                                                        .gap_x(Space::N0)
-                                                                                                        .justify(Justify::Start)
-                                                                                                        .items(Items::Center)
-                                                                                                        .layout(
-                                                                                                            LayoutRefinement::default()
-                                                                                                                .w_full()
-                                                                                                                .h_full(),
-                                                                                                        ),
-                                                                                                    |cx| render_cell(cx, &data_row, col),
-                                                                                                )]
+                                                                                                vec![ui::h_row(|cx| render_cell(cx, &data_row, col))
+                                                                                                    .layout(
+                                                                                                        LayoutRefinement::default()
+                                                                                                            .w_full()
+                                                                                                            .h_full(),
+                                                                                                    )
+                                                                                                    .gap(Space::N0)
+                                                                                                    .justify_start()
+                                                                                                    .items_center()
+                                                                                                    .into_element(cx)]
                                                                                             },
                                                                                         )
                                                                                     })
                                                                                     .collect::<Vec<_>>()
-                                                                            },
-                                                                        )
+                                                                        })
+                                                                        .gap(Space::N0)
+                                                                        .justify_start()
+                                                                        .items_center()
+                                                                        .into_element(cx)
                                                                     };
 
                                                                     if let Some(scroll_x) = scroll_x {
@@ -6529,13 +6461,7 @@ where
                                                                     }
                                                                 };
 
-                                                            out.push(stack::hstack(
-                                                                cx,
-                                                                stack::HStackProps::default()
-                                                                    .gap_x(Space::N0)
-                                                                    .justify(Justify::Start)
-                                                                    .items(Items::Stretch),
-                                                                |cx| {
+                                                            out.push(ui::h_row(|cx| {
                                                                     let has_left = !left_cols.is_empty();
                                                                     let has_center = !center_cols.is_empty();
                                                                     let has_right = !right_cols.is_empty();
@@ -6602,8 +6528,11 @@ where
                                                                     let right =
                                                                         render_row_group(cx, &right_cols, None);
                                                                     vec![left, center, right]
-                                                                },
-                                                            ));
+                                                            })
+                                                            .gap(Space::N0)
+                                                            .justify_start()
+                                                            .items_stretch()
+                                                            .into_element(cx));
                                                             out
                                                         },
                                                     )]
@@ -6624,7 +6553,7 @@ where
 
                                     vec![header, body]
                         },
-                    )]
+                    ).into_element(cx)]
                 },
             )]
         },
