@@ -10,6 +10,7 @@
 - [x] Add `fretboard diag memory-summary` to summarize distributions across multiple `--session-auto` samples.
 - [x] Capture Apple `/usr/bin/footprint --json` output in bundles (macOS-only) and surface a summary under `macos_footprint_tool_steady`.
 - [x] Add `fretboard diag memory-summary --footprint-categories-agg` to aggregate `footprint` category dirty bytes across samples.
+- [x] Surface renderer attribution fields in `memory-summary` (`renderer_gpu_images_bytes_estimate`, `renderer_gpu_render_targets_bytes_estimate`, `renderer_intermediate_peak_in_use_bytes`).
 
 ## Diagnostics (app-side)
 

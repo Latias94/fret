@@ -24,6 +24,9 @@ struct MemorySampleRow {
     wgpu_metal_current_allocated_size_bytes_max: Option<u64>,
     wgpu_allocator_total_allocated_bytes: Option<u64>,
     wgpu_allocator_total_reserved_bytes: Option<u64>,
+    renderer_intermediate_peak_in_use_bytes: Option<u64>,
+    renderer_gpu_images_bytes_estimate: Option<u64>,
+    renderer_gpu_render_targets_bytes_estimate: Option<u64>,
     render_text_atlas_bytes_live_estimate_total: Option<u64>,
     render_text_registered_font_blobs_total_bytes: Option<u64>,
     render_text_registered_font_blobs_count: Option<u64>,
@@ -512,6 +515,15 @@ fn read_sample_row(
             "wgpu_allocator_total_allocated_bytes",
         ),
         wgpu_allocator_total_reserved_bytes: get_u64(bundle, "wgpu_allocator_total_reserved_bytes"),
+        renderer_intermediate_peak_in_use_bytes: get_u64(
+            bundle,
+            "renderer_intermediate_peak_in_use_bytes",
+        ),
+        renderer_gpu_images_bytes_estimate: get_u64(bundle, "renderer_gpu_images_bytes_estimate"),
+        renderer_gpu_render_targets_bytes_estimate: get_u64(
+            bundle,
+            "renderer_gpu_render_targets_bytes_estimate",
+        ),
         render_text_atlas_bytes_live_estimate_total: get_u64(
             bundle,
             "render_text_atlas_bytes_live_estimate_total",
@@ -582,6 +594,9 @@ fn build_report(
         "wgpu_metal_current_allocated_size_bytes_max": stats_u64(rows.iter().filter_map(|r| r.wgpu_metal_current_allocated_size_bytes_max).collect()),
         "wgpu_allocator_total_allocated_bytes": stats_u64(rows.iter().filter_map(|r| r.wgpu_allocator_total_allocated_bytes).collect()),
         "wgpu_allocator_total_reserved_bytes": stats_u64(rows.iter().filter_map(|r| r.wgpu_allocator_total_reserved_bytes).collect()),
+        "renderer_intermediate_peak_in_use_bytes": stats_u64(rows.iter().filter_map(|r| r.renderer_intermediate_peak_in_use_bytes).collect()),
+        "renderer_gpu_images_bytes_estimate": stats_u64(rows.iter().filter_map(|r| r.renderer_gpu_images_bytes_estimate).collect()),
+        "renderer_gpu_render_targets_bytes_estimate": stats_u64(rows.iter().filter_map(|r| r.renderer_gpu_render_targets_bytes_estimate).collect()),
         "render_text_atlas_bytes_live_estimate_total": stats_u64(rows.iter().filter_map(|r| r.render_text_atlas_bytes_live_estimate_total).collect()),
         "render_text_registered_font_blobs_total_bytes": stats_u64(rows.iter().filter_map(|r| r.render_text_registered_font_blobs_total_bytes).collect()),
         "render_text_registered_font_blobs_count": stats_u64(rows.iter().filter_map(|r| r.render_text_registered_font_blobs_count).collect()),
@@ -970,6 +985,9 @@ fn validate_sort_key(key: &str) -> Result<(), String> {
         "macos_io_accelerator_dirty_bytes",
         "macos_malloc_dirty_bytes_total",
         "wgpu_metal_current_allocated_size_bytes_max",
+        "renderer_intermediate_peak_in_use_bytes",
+        "renderer_gpu_images_bytes_estimate",
+        "renderer_gpu_render_targets_bytes_estimate",
         "render_text_atlas_bytes_live_estimate_total",
         "render_text_registered_font_blobs_total_bytes",
         "render_text_registered_font_blobs_count",
@@ -1003,6 +1021,9 @@ fn row_to_json(r: &MemorySampleRow) -> serde_json::Value {
         "wgpu_metal_current_allocated_size_bytes_max": r.wgpu_metal_current_allocated_size_bytes_max,
         "wgpu_allocator_total_allocated_bytes": r.wgpu_allocator_total_allocated_bytes,
         "wgpu_allocator_total_reserved_bytes": r.wgpu_allocator_total_reserved_bytes,
+        "renderer_intermediate_peak_in_use_bytes": r.renderer_intermediate_peak_in_use_bytes,
+        "renderer_gpu_images_bytes_estimate": r.renderer_gpu_images_bytes_estimate,
+        "renderer_gpu_render_targets_bytes_estimate": r.renderer_gpu_render_targets_bytes_estimate,
         "render_text_atlas_bytes_live_estimate_total": r.render_text_atlas_bytes_live_estimate_total,
         "render_text_registered_font_blobs_total_bytes": r.render_text_registered_font_blobs_total_bytes,
         "render_text_registered_font_blobs_count": r.render_text_registered_font_blobs_count,
@@ -1055,6 +1076,11 @@ fn sort_u64_for_key(row: &MemorySampleRow, key: &str) -> u64 {
         "macos_malloc_dirty_bytes_total" => row.macos_malloc_dirty_bytes_total,
         "wgpu_metal_current_allocated_size_bytes_max" => {
             row.wgpu_metal_current_allocated_size_bytes_max
+        }
+        "renderer_intermediate_peak_in_use_bytes" => row.renderer_intermediate_peak_in_use_bytes,
+        "renderer_gpu_images_bytes_estimate" => row.renderer_gpu_images_bytes_estimate,
+        "renderer_gpu_render_targets_bytes_estimate" => {
+            row.renderer_gpu_render_targets_bytes_estimate
         }
         "render_text_atlas_bytes_live_estimate_total" => {
             row.render_text_atlas_bytes_live_estimate_total
@@ -1142,8 +1168,18 @@ fn human_report(report: &serde_json::Value) -> String {
                 .and_then(|v| v.as_u64())
                 .map(human_bytes)
                 .unwrap_or_else(|| "n/a".to_string());
+            let images = r
+                .get("renderer_gpu_images_bytes_estimate")
+                .and_then(|v| v.as_u64())
+                .map(human_bytes)
+                .unwrap_or_else(|| "n/a".to_string());
+            let targets = r
+                .get("renderer_gpu_render_targets_bytes_estimate")
+                .and_then(|v| v.as_u64())
+                .map(human_bytes)
+                .unwrap_or_else(|| "n/a".to_string());
             out.push_str(&format!(
-                "    - {id}: footprint_peak={peak} owned_unmapped_dirty={owned} io_surface_dirty={io_surface} io_accel_dirty={io_accel} metal_alloc_max={metal_max} dir={dir}\n"
+                "    - {id}: footprint_peak={peak} owned_unmapped_dirty={owned} io_surface_dirty={io_surface} io_accel_dirty={io_accel} metal_alloc_max={metal_max} gpu_images={images} gpu_targets={targets} dir={dir}\n"
             ));
         }
     }

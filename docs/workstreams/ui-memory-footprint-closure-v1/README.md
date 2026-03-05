@@ -20,6 +20,10 @@ Using `tools/diag-scripts/todo-memory-steady.json` on macOS/Metal:
   - Summarize multiple `--session-auto` samples under a base dir:
     - `fretboard diag memory-summary --dir target/fret-diag-mem-todo-steady`
     - `fretboard diag memory-summary --dir target/fret-diag-mem-todo-steady --sort-key wgpu_metal_current_allocated_size_bytes_max --top 5`
+    - Renderer-side attribution fields (from `bundle_last_frame_stats`) are also surfaced, so you can sort/compare by:
+      - `--sort-key renderer_gpu_images_bytes_estimate`
+      - `--sort-key renderer_gpu_render_targets_bytes_estimate`
+      - `--sort-key renderer_intermediate_peak_in_use_bytes`
   - Optional macOS-only hint for the largest `vmmap` buckets:
     - `fretboard diag memory-summary --dir target/fret-diag-mem-todo-steady --vmmap-regions-sorted-top`
   - Aggregate macOS `vmmap -sortBySize` top-dirty regions across samples (helps attribute `owned unmapped memory`):
@@ -84,10 +88,12 @@ Using `tools/diag-scripts/todo-memory-steady.json` on macOS/Metal:
       - `Owned physical footprint (unmapped) (graphics)` p50=~315.6 MiB
       - `macos_owned_unmapped_memory_dirty_bytes` p50=~321.6 MiB
       - `wgpu_metal_current_allocated_size_bytes_max` p50=~195.4 MiB
+      - `renderer_gpu_images_bytes_estimate` p50=~96.0 MiB (24×1024×1024×RGBA8)
     - After drop + idle (`tools/diag-scripts/image-heavy-memory-steady-after-drop.json`, drops registered images at frame 200):
       - `Owned physical footprint (unmapped) (graphics)` p50=~218.8 MiB
       - `macos_owned_unmapped_memory_dirty_bytes` p50=~221.8 MiB
       - `wgpu_metal_current_allocated_size_bytes_max` p50=~98.7 MiB
+      - `renderer_gpu_images_bytes_estimate` p50=0
     - Conclusion: the headline `owned unmapped memory` / `Owned physical footprint (unmapped) (graphics)` bucket is sensitive to live texture pressure and can return close to baseline after releasing images (not a one-way leak signature).
   - Summary JSON files:
     - `target/diag/mem-attrib-20260305/latency1.memory-summary.json`
@@ -166,6 +172,7 @@ Using `tools/diag-scripts/image-heavy-memory-steady.json` on macOS/Metal (textur
   - `macos_vmmap_steady.regions.io_accelerator_dirty_bytes`: 5,980,160 .. 7,372,800 (~5.7 .. 7.0 MiB)
   - `macos_vmmap_steady.regions.malloc_small_dirty_bytes`: 41,104,179 .. 44,774,195 (~39.2 .. 42.7 MiB)
   - `wgpu_metal_current_allocated_size_bytes`: 204,914,688 (~195.4 MiB; stable; requires `--env FRET_DIAG_WGPU_ALLOCATOR_REPORT=1`)
+  - `renderer_gpu_images_bytes_estimate`: 100,663,296 (~96.0 MiB; stable; derived from registered image descriptors)
 
 Using `tools/diag-scripts/image-heavy-memory-steady-after-drop.json` on macOS/Metal (drop registered images + idle):
 
@@ -173,6 +180,7 @@ Using `tools/diag-scripts/image-heavy-memory-steady-after-drop.json` on macOS/Me
   - `macos_vmmap_steady.regions.owned_unmapped_memory_dirty_bytes` p50=232,574,157 (~221.8 MiB)
   - Apple `footprint` category `Owned physical footprint (unmapped) (graphics)` p50=229,457,920 (~218.8 MiB)
   - `wgpu_metal_current_allocated_size_bytes_{min,max}`: 103,464,960 (~98.7 MiB; stable)
+  - `renderer_gpu_images_bytes_estimate`: 0 (post-drop steady state)
 - Notes:
   - This script intentionally uses a “grow, then drop, then idle” shape; avoid gating on `macos_vmmap_steady.physical_footprint_peak_bytes` because it includes the pre-drop peak.
   - The primary signal here is whether the post-drop steady state returns close to `text-heavy` / `todo` levels, not whether the peak phase was large.
@@ -466,6 +474,7 @@ Recommended local gate baselines (macOS, 2026-03-04):
 - `image-heavy-memory-steady-after-drop`:
   - Note: do not set `--max-macos-physical-footprint-peak-bytes` for this scenario; the script includes a pre-drop peak by design.
   - `--max-macos-owned-unmapped-memory-dirty-bytes 293601280` (280 MiB)
+  - `--max-renderer-gpu-images-bytes-estimate 1048576` (1 MiB; should be ~0 after `unregister_image`)
   - Optional (requires `--env FRET_DIAG_WGPU_ALLOCATOR_REPORT=1`):
     - `--max-wgpu-metal-current-allocated-size-bytes 134217728` (128 MiB)
 - `ui-gallery-code-editor-torture-memory-steady`:
