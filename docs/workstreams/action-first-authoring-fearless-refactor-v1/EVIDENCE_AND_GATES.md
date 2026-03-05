@@ -26,6 +26,7 @@ View runtime (v1):
 
 - `ecosystem/fret/src/view.rs` (`View`, `ViewCx`, `use_state`/`use_state_keyed`/`use_selector`/`use_query`, view-cache reuse + handler keepalive)
 - `ecosystem/fret/src/app_entry.rs` (`App::run_view`)
+- `ecosystem/fret-ui-kit/src/activate.rs` (`on_activate_*` helpers for low-noise pointer activation handlers)
 
 Legacy MVU removal (planned M9):
 
@@ -67,6 +68,14 @@ Teaching-surface ergonomics gates:
 - `tools/gate_no_on_action_in_teaching_surfaces.py` (guards cookbook/examples against regressing to
   bare `cx.on_action` handlers; prefers `ViewCx::on_action_notify*` helpers).
 - `tools/pre_release.ps1` runs the teaching-surface gates as part of the pre-release policy suite.
+
+Examples adoption (authoring-noise reduction):
+
+- `apps/fret-examples/src/custom_effect_v2_web_demo.rs` (reset button uses `on_activate_request_redraw`)
+- `apps/fret-examples/src/custom_effect_v2_identity_web_demo.rs` (reset button uses `on_activate_request_redraw`)
+- `apps/fret-examples/src/custom_effect_v2_glass_chrome_web_demo.rs` (reset button uses `on_activate_request_redraw`)
+- `apps/fret-examples/src/custom_effect_v2_lut_web_demo.rs` (reset button uses `on_activate_request_redraw`)
+- `apps/fret-examples/src/imui_floating_windows_demo.rs` (pressable overlap target uses `on_activate_notify`)
 
 Pointer-trigger authoring integration (v1 still dispatches through the command pipeline):
 
