@@ -245,7 +245,9 @@ Notes:
   `AnyElement` happen.
 - In rare cases where Rust cannot infer the host type from context (typically when a builder is
   stored in a `let` binding without an immediate `into_element(cx)` boundary), add an explicit
-  generic anchor:
+  host-type anchor. Preferred (less generic noise): annotate the closure argument type:
+  - `ui::v_flex(|cx: &mut ElementContext<'_, App>| { ... })`
+  Alternative (turbofish):
   - `ui::v_flex::<App, _, _>(|cx| { ... })`
 
 ## 5) GenUI alignment (spec bindings reuse action IDs)
