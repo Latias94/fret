@@ -10,10 +10,11 @@
 - `vmmap -summary` is parsed into structured fields in `resource.footprint.json`.
 - Top contributors (region types + malloc zone stats where available) are visible without manual parsing.
 
-## M2 — Minimal scenario matrix (in progress)
+## M2 — Minimal scenario matrix (done)
 
 - `empty-idle`, `text-heavy`, and `image-heavy` scripts exist and run reliably in `diag repro`.
 - Each script has a documented expected shape (which counters should be near-zero vs non-zero).
+- Memory steady scripts default to a stable wgpu report cadence (600 frames) to avoid measurement-induced Metal/driver outliers.
 
 ## M3 — First bounded optimization with a gate
 
