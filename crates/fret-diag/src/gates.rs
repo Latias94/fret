@@ -120,6 +120,19 @@ pub(super) struct RendererGpuBudgetsGateResult {
     pub(super) failures: usize,
 }
 
+#[derive(Debug, Clone, Copy)]
+pub(super) struct LinearBytesVsImagesThreshold {
+    pub(super) intercept_bytes: u64,
+    pub(super) slope_ppm: u64,
+    pub(super) headroom_bytes: u64,
+}
+
+#[derive(Debug, Clone)]
+pub(super) struct LinearBytesVsImagesGateResult {
+    pub(super) evidence_path: PathBuf,
+    pub(super) failures: usize,
+}
+
 pub(super) struct CodeEditorMemoryThresholds {
     pub(super) max_code_editor_buffer_len_bytes: Option<u64>,
     pub(super) max_code_editor_undo_text_bytes_estimate_total: Option<u64>,
@@ -286,6 +299,399 @@ pub(super) fn check_wgpu_metal_current_allocated_size_threshold(
         .unwrap_or(0);
 
     Ok(WgpuMetalAllocatedSizeGateResult {
+        evidence_path: out_path,
+        failures,
+    })
+}
+
+fn linear_allowed_bytes(thr: LinearBytesVsImagesThreshold, images_bytes: u64) -> u64 {
+    let LinearBytesVsImagesThreshold {
+        intercept_bytes,
+        slope_ppm,
+        headroom_bytes,
+    } = thr;
+
+    let scaled = (images_bytes as u128)
+        .saturating_mul(slope_ppm as u128)
+        .saturating_add(999_999);
+    let scaled = (scaled / 1_000_000).min(u64::MAX as u128) as u64;
+
+    intercept_bytes
+        .saturating_add(scaled)
+        .saturating_add(headroom_bytes)
+}
+
+fn parse_bundle_images_bytes_max_and_last(
+    bundle_path: Option<&Path>,
+) -> (Option<u64>, Option<u64>, Option<u64>, Option<u64>, bool) {
+    let v = bundle_path.and_then(read_json_value);
+    let bundle_present = v.is_some();
+
+    let windows = v
+        .as_ref()
+        .and_then(|v| v.get("windows"))
+        .and_then(|v| v.as_array());
+    let first_window = windows.and_then(|w| w.first());
+    let snapshots = first_window
+        .and_then(|w| w.get("snapshots"))
+        .and_then(|v| v.as_array());
+    let last_snapshot = snapshots.and_then(|s| s.last());
+
+    let tick_id = last_snapshot
+        .and_then(|s| s.get("tick_id"))
+        .and_then(|v| v.as_u64());
+    let frame_id = last_snapshot
+        .and_then(|s| s.get("frame_id"))
+        .and_then(|v| v.as_u64());
+
+    let mut images_bytes_max: Option<u64> = None;
+    let mut images_bytes_last: Option<u64> = None;
+
+    if let Some(snapshots) = snapshots {
+        for (ix, snapshot) in snapshots.iter().enumerate() {
+            let stats = snapshot
+                .get("debug")
+                .and_then(|d| d.get("stats"))
+                .and_then(|v| v.as_object());
+            let v = stats
+                .and_then(|o| o.get("renderer_gpu_images_bytes_estimate"))
+                .and_then(|v| v.as_u64());
+            if let Some(v) = v {
+                images_bytes_max = Some(images_bytes_max.map_or(v, |cur| cur.max(v)));
+                if ix == snapshots.len().saturating_sub(1) {
+                    images_bytes_last = Some(v);
+                }
+            }
+        }
+    }
+
+    (
+        tick_id,
+        frame_id,
+        images_bytes_max,
+        images_bytes_last,
+        bundle_present,
+    )
+}
+
+pub(super) fn check_macos_owned_unmapped_memory_dirty_bytes_linear_vs_renderer_gpu_images(
+    out_dir: &Path,
+    footprint_path: &Path,
+    bundle_path: Option<&Path>,
+    thr: LinearBytesVsImagesThreshold,
+) -> Result<LinearBytesVsImagesGateResult, String> {
+    let out_path = out_dir.join("check.macos_owned_unmapped_linear_vs_images.json");
+
+    let footprint = read_json_value(footprint_path);
+    let footprint_present = footprint.is_some();
+
+    let macos_vmmap_source = if footprint
+        .as_ref()
+        .and_then(|v| v.get("macos_vmmap_steady"))
+        .is_some()
+    {
+        "steady"
+    } else {
+        "exit"
+    };
+    let macos_vmmap_field_prefix = if macos_vmmap_source == "steady" {
+        "macos_vmmap_steady"
+    } else {
+        "macos_vmmap"
+    };
+    let macos_vmmap = footprint
+        .as_ref()
+        .and_then(|v| v.get("macos_vmmap_steady").or_else(|| v.get("macos_vmmap")));
+
+    let observed_bytes = macos_vmmap
+        .and_then(|v| v.get("regions"))
+        .and_then(|v| v.get("owned_unmapped_memory_dirty_bytes"))
+        .and_then(|v| v.as_u64());
+
+    let (tick_id, frame_id, images_bytes_max, images_bytes_last, bundle_present) =
+        parse_bundle_images_bytes_max_and_last(bundle_path);
+
+    let missing_reason = if !footprint_present || !bundle_present {
+        "missing_artifacts"
+    } else {
+        "missing_fields"
+    };
+
+    let mut failures: Vec<serde_json::Value> = Vec::new();
+    match (observed_bytes, images_bytes_max) {
+        (Some(observed), Some(images)) => {
+            let allowed = linear_allowed_bytes(thr, images);
+            if observed > allowed {
+                failures.push(serde_json::json!({
+                    "kind": "macos_owned_unmapped_memory_dirty_bytes_linear_vs_renderer_gpu_images_bytes_estimate",
+                    "threshold": {
+                        "intercept_bytes": thr.intercept_bytes,
+                        "slope_ppm": thr.slope_ppm,
+                        "headroom_bytes": thr.headroom_bytes,
+                    },
+                    "observed": {
+                        "owned_unmapped_memory_dirty_bytes": observed,
+                        "renderer_gpu_images_bytes_estimate_max": images,
+                        "renderer_gpu_images_bytes_estimate_last": images_bytes_last,
+                    },
+                    "allowed_bytes": allowed,
+                    "reason": "exceeded",
+                }));
+            }
+        }
+        (None, _) => failures.push(serde_json::json!({
+            "kind": "macos_owned_unmapped_memory_dirty_bytes_linear_vs_renderer_gpu_images_bytes_estimate",
+            "threshold": {
+                "intercept_bytes": thr.intercept_bytes,
+                "slope_ppm": thr.slope_ppm,
+                "headroom_bytes": thr.headroom_bytes,
+            },
+            "observed": {
+                "owned_unmapped_memory_dirty_bytes": serde_json::Value::Null,
+                "renderer_gpu_images_bytes_estimate_max": images_bytes_max,
+                "renderer_gpu_images_bytes_estimate_last": images_bytes_last,
+            },
+            "allowed_bytes": serde_json::Value::Null,
+            "reason": missing_reason,
+            "field": format!("{macos_vmmap_field_prefix}.regions.owned_unmapped_memory_dirty_bytes"),
+        })),
+        (_, None) => failures.push(serde_json::json!({
+            "kind": "macos_owned_unmapped_memory_dirty_bytes_linear_vs_renderer_gpu_images_bytes_estimate",
+            "threshold": {
+                "intercept_bytes": thr.intercept_bytes,
+                "slope_ppm": thr.slope_ppm,
+                "headroom_bytes": thr.headroom_bytes,
+            },
+            "observed": {
+                "owned_unmapped_memory_dirty_bytes": observed_bytes,
+                "renderer_gpu_images_bytes_estimate_max": serde_json::Value::Null,
+                "renderer_gpu_images_bytes_estimate_last": images_bytes_last,
+            },
+            "allowed_bytes": serde_json::Value::Null,
+            "reason": missing_reason,
+            "field": "windows[0].snapshots[-1].debug.stats.renderer_gpu_images_bytes_estimate",
+        })),
+    }
+
+    let payload = serde_json::json!({
+        "schema_version": 1,
+        "generated_unix_ms": now_unix_ms(),
+        "kind": "macos_owned_unmapped_memory_dirty_bytes_linear_vs_renderer_gpu_images",
+        "out_dir": out_dir.display().to_string(),
+        "threshold": {
+            "intercept_bytes": thr.intercept_bytes,
+            "slope_ppm": thr.slope_ppm,
+            "headroom_bytes": thr.headroom_bytes,
+        },
+        "observed": {
+            "footprint_present": footprint_present,
+            "bundle_present": bundle_present,
+            "tick_id": tick_id,
+            "frame_id": frame_id,
+            "macos_vmmap_source": macos_vmmap_source,
+            "macos_owned_unmapped_memory_dirty_bytes": observed_bytes,
+            "renderer_gpu_images_bytes_estimate_max": images_bytes_max,
+            "renderer_gpu_images_bytes_estimate_last": images_bytes_last,
+            "allowed_bytes_for_images_max": images_bytes_max.map(|x| linear_allowed_bytes(thr, x)),
+        },
+        "failures": failures,
+    });
+    let _ = write_json_value(&out_path, &payload);
+
+    let failures = payload
+        .get("failures")
+        .and_then(|v| v.as_array())
+        .map(|a| a.len())
+        .unwrap_or(0);
+
+    Ok(LinearBytesVsImagesGateResult {
+        evidence_path: out_path,
+        failures,
+    })
+}
+
+pub(super) fn check_wgpu_metal_current_allocated_size_bytes_linear_vs_renderer_gpu_images(
+    out_dir: &Path,
+    bundle_path: Option<&Path>,
+    thr: LinearBytesVsImagesThreshold,
+) -> Result<LinearBytesVsImagesGateResult, String> {
+    let out_path = out_dir.join("check.wgpu_metal_allocated_size_linear_vs_images.json");
+
+    let v = bundle_path.and_then(read_json_value);
+    let bundle_present = v.is_some();
+
+    let windows = v
+        .as_ref()
+        .and_then(|v| v.get("windows"))
+        .and_then(|v| v.as_array());
+    let first_window = windows.and_then(|w| w.first());
+    let snapshots = first_window
+        .and_then(|w| w.get("snapshots"))
+        .and_then(|v| v.as_array());
+    let last_snapshot = snapshots.and_then(|s| s.last());
+
+    let tick_id = last_snapshot
+        .and_then(|s| s.get("tick_id"))
+        .and_then(|v| v.as_u64());
+    let frame_id = last_snapshot
+        .and_then(|s| s.get("frame_id"))
+        .and_then(|v| v.as_u64());
+
+    let mut present_flag_any: Option<bool> = None;
+    let mut bytes_max: Option<u64> = None;
+    let mut images_bytes_max: Option<u64> = None;
+    let mut images_bytes_last: Option<u64> = None;
+
+    if let Some(snapshots) = snapshots {
+        for (ix, snapshot) in snapshots.iter().enumerate() {
+            let stats = snapshot
+                .get("debug")
+                .and_then(|d| d.get("stats"))
+                .and_then(|v| v.as_object());
+
+            let present_flag = stats
+                .and_then(|o| o.get("wgpu_metal_current_allocated_size_present"))
+                .and_then(|v| v.as_bool());
+            if let Some(present_flag) = present_flag {
+                present_flag_any = Some(present_flag_any.unwrap_or(false) || present_flag);
+            }
+
+            let bytes_value = stats
+                .and_then(|o| o.get("wgpu_metal_current_allocated_size_bytes"))
+                .and_then(|v| v.as_u64());
+            if present_flag == Some(true) {
+                if let Some(bytes_value) = bytes_value {
+                    bytes_max = Some(bytes_max.map_or(bytes_value, |cur| cur.max(bytes_value)));
+                }
+            }
+
+            let img_value = stats
+                .and_then(|o| o.get("renderer_gpu_images_bytes_estimate"))
+                .and_then(|v| v.as_u64());
+            if let Some(img_value) = img_value {
+                images_bytes_max =
+                    Some(images_bytes_max.map_or(img_value, |cur| cur.max(img_value)));
+                if ix == snapshots.len().saturating_sub(1) {
+                    images_bytes_last = Some(img_value);
+                }
+            }
+        }
+    }
+
+    let missing_reason = if !bundle_present {
+        "missing_artifacts"
+    } else {
+        "missing_fields"
+    };
+
+    let mut failures: Vec<serde_json::Value> = Vec::new();
+    match (present_flag_any, bytes_max, images_bytes_max) {
+        (Some(true), Some(observed), Some(images)) => {
+            let allowed = linear_allowed_bytes(thr, images);
+            if observed > allowed {
+                failures.push(serde_json::json!({
+                    "kind": "wgpu_metal_current_allocated_size_bytes_linear_vs_renderer_gpu_images_bytes_estimate",
+                    "threshold": {
+                        "intercept_bytes": thr.intercept_bytes,
+                        "slope_ppm": thr.slope_ppm,
+                        "headroom_bytes": thr.headroom_bytes,
+                    },
+                    "observed": {
+                        "wgpu_metal_current_allocated_size_bytes_max": observed,
+                        "renderer_gpu_images_bytes_estimate_max": images,
+                        "renderer_gpu_images_bytes_estimate_last": images_bytes_last,
+                    },
+                    "allowed_bytes": allowed,
+                    "reason": "exceeded",
+                }));
+            }
+        }
+        (Some(true), None, _) => failures.push(serde_json::json!({
+            "kind": "wgpu_metal_current_allocated_size_bytes_linear_vs_renderer_gpu_images_bytes_estimate",
+            "threshold": {
+                "intercept_bytes": thr.intercept_bytes,
+                "slope_ppm": thr.slope_ppm,
+                "headroom_bytes": thr.headroom_bytes,
+            },
+            "observed": {
+                "wgpu_metal_current_allocated_size_bytes_max": serde_json::Value::Null,
+                "renderer_gpu_images_bytes_estimate_max": images_bytes_max,
+                "renderer_gpu_images_bytes_estimate_last": images_bytes_last,
+            },
+            "allowed_bytes": serde_json::Value::Null,
+            "reason": missing_reason,
+            "field": "windows[0].snapshots[-1].debug.stats.wgpu_metal_current_allocated_size_bytes",
+        })),
+        (Some(true), Some(_), None) => failures.push(serde_json::json!({
+            "kind": "wgpu_metal_current_allocated_size_bytes_linear_vs_renderer_gpu_images_bytes_estimate",
+            "threshold": {
+                "intercept_bytes": thr.intercept_bytes,
+                "slope_ppm": thr.slope_ppm,
+                "headroom_bytes": thr.headroom_bytes,
+            },
+            "observed": {
+                "wgpu_metal_current_allocated_size_bytes_max": bytes_max,
+                "renderer_gpu_images_bytes_estimate_max": serde_json::Value::Null,
+                "renderer_gpu_images_bytes_estimate_last": images_bytes_last,
+            },
+            "allowed_bytes": serde_json::Value::Null,
+            "reason": missing_reason,
+            "field": "windows[0].snapshots[-1].debug.stats.renderer_gpu_images_bytes_estimate",
+        })),
+        (Some(false), _, _) | (None, _, _) => failures.push(serde_json::json!({
+            "kind": "wgpu_metal_current_allocated_size_bytes_linear_vs_renderer_gpu_images_bytes_estimate",
+            "threshold": {
+                "intercept_bytes": thr.intercept_bytes,
+                "slope_ppm": thr.slope_ppm,
+                "headroom_bytes": thr.headroom_bytes,
+            },
+            "observed": {
+                "wgpu_metal_current_allocated_size_present": present_flag_any,
+                "wgpu_metal_current_allocated_size_bytes_max": bytes_max,
+                "renderer_gpu_images_bytes_estimate_max": images_bytes_max,
+                "renderer_gpu_images_bytes_estimate_last": images_bytes_last,
+            },
+            "allowed_bytes": serde_json::Value::Null,
+            "reason": missing_reason,
+            "field": "windows[0].snapshots[-1].debug.stats.wgpu_metal_current_allocated_size_present",
+        })),
+    }
+
+    let payload = serde_json::json!({
+        "schema_version": 1,
+        "generated_unix_ms": now_unix_ms(),
+        "kind": "wgpu_metal_current_allocated_size_bytes_linear_vs_renderer_gpu_images",
+        "out_dir": out_dir.display().to_string(),
+        "bundle_file": bundle_path
+            .and_then(|p| p.file_name())
+            .and_then(|s| s.to_str())
+            .unwrap_or("<unknown>"),
+        "threshold": {
+            "intercept_bytes": thr.intercept_bytes,
+            "slope_ppm": thr.slope_ppm,
+            "headroom_bytes": thr.headroom_bytes,
+        },
+        "observed": {
+            "bundle_present": bundle_present,
+            "tick_id": tick_id,
+            "frame_id": frame_id,
+            "wgpu_metal_current_allocated_size_present": present_flag_any,
+            "wgpu_metal_current_allocated_size_bytes_max": bytes_max,
+            "renderer_gpu_images_bytes_estimate_max": images_bytes_max,
+            "renderer_gpu_images_bytes_estimate_last": images_bytes_last,
+            "allowed_bytes_for_images_max": images_bytes_max.map(|x| linear_allowed_bytes(thr, x)),
+        },
+        "failures": failures,
+    });
+    let _ = write_json_value(&out_path, &payload);
+
+    let failures = payload
+        .get("failures")
+        .and_then(|v| v.as_array())
+        .map(|a| a.len())
+        .unwrap_or(0);
+
+    Ok(LinearBytesVsImagesGateResult {
         evidence_path: out_path,
         failures,
     })

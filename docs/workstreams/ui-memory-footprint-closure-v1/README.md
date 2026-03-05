@@ -425,6 +425,7 @@ Candidate gates:
 
 - `--max-macos-physical-footprint-peak-bytes`
 - `--max-macos-owned-unmapped-memory-dirty-bytes`
+- `--max-macos-owned-unmapped-memory-dirty-bytes-linear-vs-renderer-gpu-images` (format: `<intercept_bytes>,<slope_ppm>[,<headroom_bytes>]`)
 - `--max-macos-io-surface-dirty-bytes`
 - `--max-macos-io-accelerator-dirty-bytes`
 - `--max-macos-malloc-small-dirty-bytes`
@@ -432,6 +433,7 @@ Candidate gates:
 - `--max-renderer-gpu-render-targets-bytes-estimate`
 - `--max-renderer-intermediate-peak-in-use-bytes`
 - `--max-wgpu-metal-current-allocated-size-bytes` (macOS/Metal; best-effort)
+- `--max-wgpu-metal-current-allocated-size-bytes-linear-vs-renderer-gpu-images` (format: `<intercept_bytes>,<slope_ppm>[,<headroom_bytes>]`)
 - `--max-wgpu-hub-buffers` (requires `--env FRET_DIAG_WGPU_REPORT=1`; best-effort)
 - `--max-wgpu-hub-textures` (requires `--env FRET_DIAG_WGPU_REPORT=1`; best-effort)
 - `--max-wgpu-hub-render-pipelines` (requires `--env FRET_DIAG_WGPU_REPORT=1`; best-effort)
@@ -471,6 +473,9 @@ Recommended local gate baselines (macOS, 2026-03-04):
   - `--max-renderer-intermediate-peak-in-use-bytes 67108864` (64 MiB)
   - Optional (requires `--env FRET_DIAG_WGPU_ALLOCATOR_REPORT=1`):
     - `--max-wgpu-metal-current-allocated-size-bytes 268435456` (256 MiB)
+  - Optional (when scripts vary image pressure; requires `--env FRET_DIAG_WGPU_ALLOCATOR_REPORT=1`):
+    - `--max-macos-owned-unmapped-memory-dirty-bytes-linear-vs-renderer-gpu-images 251658240,1010000,33554432` (240 MiB + 1.01 * images + 32 MiB)
+    - `--max-wgpu-metal-current-allocated-size-bytes-linear-vs-renderer-gpu-images 117440512,1010000,33554432` (112 MiB + 1.01 * images + 32 MiB)
 - `image-heavy-memory-steady-after-drop`:
   - Note: do not set `--max-macos-physical-footprint-peak-bytes` for this scenario; the script includes a pre-drop peak by design.
   - `--max-macos-owned-unmapped-memory-dirty-bytes 293601280` (280 MiB)

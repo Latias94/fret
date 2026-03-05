@@ -90,4 +90,7 @@
 - [x] Add a wgpu hub counts gate (`check.wgpu_hub_counts.json`; requires `--env FRET_DIAG_WGPU_REPORT=1`).
 - [x] Add a text-atlas-focused gate (`--max-render-text-atlas-bytes-live-estimate-total`) for more stable attribution vs total Metal bytes.
 - [x] Calibrate a post-drop release gate for `image-heavy-memory-steady-after-drop` (avoid peak-based gates; prefer `owned_unmapped_memory` and `wgpu_metal_current_allocated_size_bytes` thresholds).
+- [x] Add linear-vs-image-pressure gates for the headline buckets:
+  - `--max-macos-owned-unmapped-memory-dirty-bytes-linear-vs-renderer-gpu-images`
+  - `--max-wgpu-metal-current-allocated-size-bytes-linear-vs-renderer-gpu-images`
 - [ ] Document acceptable drift policy (e.g. +X MiB allowed with justification).
