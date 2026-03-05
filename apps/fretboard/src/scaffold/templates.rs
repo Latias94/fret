@@ -370,11 +370,11 @@ impl View for TodoView {
 
         let add_enabled = !draft_value.trim().is_empty();
 
-        cx.on_action::<act::Add>({
+        cx.on_action_notify::<act::Add>({
             let todos = self.todos.clone();
             let draft = self.draft.clone();
             let next_id = self.next_id.clone();
-            move |host, acx| {
+            move |host, _action_cx| {
                 let text = host
                     .models_mut()
                     .read(&draft, |s| s.trim().to_string())
@@ -404,16 +404,13 @@ impl View for TodoView {
                     todos.insert(0, item);
                 });
                 let _ = host.models_mut().update(&draft, |s| s.clear());
-
-                host.request_redraw(acx.window);
-                host.notify(acx);
                 true
             }
         });
 
-        cx.on_action::<act::ClearDone>({
+        cx.on_action_notify::<act::ClearDone>({
             let todos = self.todos.clone();
-            move |host, acx| {
+            move |host, _action_cx| {
                 let snapshot = host
                     .models_mut()
                     .read(&todos, |v| v.clone())
@@ -436,56 +433,46 @@ impl View for TodoView {
                     *todos = keep;
                 });
 
-                host.request_redraw(acx.window);
-                host.notify(acx);
                 true
             }
         });
 
-        cx.on_action::<act::RefreshTip>({
+        cx.on_action_notify::<act::RefreshTip>({
             let tip_nonce = self.tip_nonce.clone();
-            move |host, acx| {
+            move |host, _action_cx| {
                 let _ = host
                     .models_mut()
                     .update(&tip_nonce, |v| *v = v.saturating_add(1));
-                host.request_redraw(acx.window);
-                host.notify(acx);
                 true
             }
         });
 
-        cx.on_action::<act::FilterAll>({
+        cx.on_action_notify::<act::FilterAll>({
             let filter = self.filter.clone();
-            move |host, acx| {
+            move |host, _action_cx| {
                 let _ = host
                     .models_mut()
                     .update(&filter, |v| *v = TodoFilter::All);
-                host.request_redraw(acx.window);
-                host.notify(acx);
                 true
             }
         });
 
-        cx.on_action::<act::FilterActive>({
+        cx.on_action_notify::<act::FilterActive>({
             let filter = self.filter.clone();
-            move |host, acx| {
+            move |host, _action_cx| {
                 let _ = host
                     .models_mut()
                     .update(&filter, |v| *v = TodoFilter::Active);
-                host.request_redraw(acx.window);
-                host.notify(acx);
                 true
             }
         });
 
-        cx.on_action::<act::FilterCompleted>({
+        cx.on_action_notify::<act::FilterCompleted>({
             let filter = self.filter.clone();
-            move |host, acx| {
+            move |host, _action_cx| {
                 let _ = host
                     .models_mut()
                     .update(&filter, |v| *v = TodoFilter::Completed);
-                host.request_redraw(acx.window);
-                host.notify(acx);
                 true
             }
         });
@@ -785,14 +772,12 @@ impl View for HelloView {{
         let click_count = cx.use_state::<u32>();
         let click_count_value = cx.watch_model(&click_count).layout().copied_or(0);
 
-        cx.on_action::<act::Click>({{
+        cx.on_action_notify::<act::Click>({{
             let click_count = click_count.clone();
-            move |host, acx| {{
+            move |host, _action_cx| {{
                 let _ = host
                     .models_mut()
                     .update(&click_count, |v| *v = v.saturating_add(1));
-                host.request_redraw(acx.window);
-                host.notify(acx);
                 true
             }}
         }});
@@ -936,11 +921,11 @@ impl View for TodoView {
 
         let add_enabled = !draft_value.trim().is_empty();
 
-        cx.on_action::<act::Add>({
+        cx.on_action_notify::<act::Add>({
             let todos = self.todos.clone();
             let draft = self.draft.clone();
             let next_id = self.next_id.clone();
-            move |host, acx| {
+            move |host, _action_cx| {
                 let text = host
                     .models_mut()
                     .read(&draft, |v| v.trim().to_string())
@@ -968,16 +953,13 @@ impl View for TodoView {
                     });
                 });
                 let _ = host.models_mut().update(&draft, |v| v.clear());
-
-                host.request_redraw(acx.window);
-                host.notify(acx);
                 true
             }
         });
 
-        cx.on_action::<act::ClearDone>({
+        cx.on_action_notify::<act::ClearDone>({
             let todos = self.todos.clone();
-            move |host, acx| {
+            move |host, _action_cx| {
                 let snapshot = host
                     .models_mut()
                     .read(&todos, |v| v.clone())
@@ -997,8 +979,6 @@ impl View for TodoView {
                 }
 
                 let _ = host.models_mut().update(&todos, |todos| *todos = keep);
-                host.request_redraw(acx.window);
-                host.notify(acx);
                 true
             }
         });
@@ -1326,6 +1306,9 @@ mod tests {
         assert!(src.contains(".run_view::<TodoView>()"));
         assert!(src.contains("fret::actions!(["));
         assert!(src.contains(".ui()"));
+        assert!(src.contains("cx.on_action_notify::<act::Add>"));
+        assert!(src.contains("cx.on_action_notify::<act::ClearDone>"));
+        assert!(src.contains("cx.on_action_notify::<act::RefreshTip>"));
         assert!(!src.contains("decl_style::container_props"));
 
         let into_element_count = src.matches(".into_element(cx)").count();
@@ -1342,6 +1325,7 @@ mod tests {
         assert!(!src.contains("ui::v_flex( |"));
         assert!(src.contains("impl View for HelloView"));
         assert!(src.contains(".run_view::<HelloView>()"));
+        assert!(src.contains("cx.on_action_notify::<act::Click>"));
         assert!(src.contains(".into_element(cx)"));
         assert!(!src.contains("decl_style::container_props"));
     }
@@ -1358,6 +1342,8 @@ mod tests {
         assert!(src.contains("impl View for TodoView"));
         assert!(src.contains(".run_view::<TodoView>()"));
         assert!(src.contains("fret::actions!(["));
+        assert!(src.contains("cx.on_action_notify::<act::Add>"));
+        assert!(src.contains("cx.on_action_notify::<act::ClearDone>"));
         assert!(!src.contains("fret_query"));
         assert!(!src.contains("fret_selector"));
 
