@@ -319,6 +319,18 @@ impl<'cx, 'a, H: UiHost> ViewCx<'cx, 'a, H> {
         self.on_action_notify_model_update::<A, bool>(model, |v| *v = !*v);
     }
 
+    /// Register a typed unit action handler that runs a model-store transaction and participates
+    /// in the view-cache closure (`request_redraw` + `notify`) when `handled=true`.
+    ///
+    /// This helper is intended for common cases that touch multiple models (e.g. read a draft
+    /// string, push to a list, clear the draft, bump an id counter).
+    pub fn on_action_notify_models<A: crate::TypedAction>(
+        &mut self,
+        f: impl Fn(&mut fret_runtime::ModelStore) -> bool + 'static,
+    ) {
+        self.on_action_notify::<A>(move |host, _action_cx| f(host.models_mut()))
+    }
+
     /// Register a typed action handler that records a transient event for this dispatch cycle.
     ///
     /// This is a convenience wrapper over `UiActionHost::record_transient_event`, commonly used
