@@ -507,6 +507,9 @@ Note: these numbers are intentionally conservative and should be revisited when:
   - `wgpu_metal_current_allocated_size_bytes_max` vs `renderer_gpu_images_bytes_estimate`
   - This helps separate a “baseline intercept” (swapchain/driver/allocator) from per-image growth, and tells us where
     further instrumentation is worthwhile.
+ - **Size sweep (image-heavy):** run `tools/diag-scripts/suites/tooling-image-heavy-memory-sweep-size/suite.json` and
+  validate whether `wgpu_metal_current_allocated_size_bytes_max` and the macOS (graphics) unmapped footprint scale
+  ~1:1 with `renderer_gpu_images_bytes_estimate` across texture sizes (detect tiling/alignment multipliers).
 
 ### Count sweep (results; local 2026-03-05)
 
@@ -525,3 +528,20 @@ Interpretation:
 
 - The headline bucket is dominated by **live texture pressure + a baseline intercept**, and scales ~1:1 with the estimated image bytes.
 - This strongly suggests our “high memory” in image-heavy scenarios is not primarily font/text heap; it is expected GPU resource pressure plus a platform/driver baseline.
+
+### Size sweep (results; local 2026-03-05)
+
+Using `target/diag/mem-sweep-size-20260305/` (N=3 each; count=24; 512/1024/2048 RGBA8 images):
+
+- p50 table:
+  - size=512: images=24.0 MiB, `wgpu_metal_current_allocated_size_bytes_max`=123.0 MiB, `Owned physical footprint (unmapped) (graphics)`=241.1 MiB
+  - size=1024: images=96.0 MiB, `wgpu_metal_current_allocated_size_bytes_max`=195.4 MiB, `Owned physical footprint (unmapped) (graphics)`=313.5 MiB
+  - size=2048: images=384.0 MiB, `wgpu_metal_current_allocated_size_bytes_max`=485.7 MiB, `Owned physical footprint (unmapped) (graphics)`=605.8 MiB
+- Linear fit (least squares; y = intercept + slope * images_bytes):
+  - `Owned physical footprint (unmapped) (graphics)`: intercept ≈ 216.5 MiB, slope ≈ 1.01 bytes/byte
+  - `wgpu_metal_current_allocated_size_bytes_max`: intercept ≈ 98.8 MiB, slope ≈ 1.01 bytes/byte
+
+Interpretation:
+
+- The ~1:1 bytes/byte scaling holds across texture sizes (no large tiling/alignment multiplier visible in this sweep).
+- The intercepts closely match the count sweep, strengthening the “baseline + linear image pressure” model.

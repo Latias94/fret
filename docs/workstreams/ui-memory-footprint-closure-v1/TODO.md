@@ -51,6 +51,10 @@
   - `wgpu_metal_current_allocated_size_bytes_max` vs `renderer_gpu_images_bytes_estimate`
   - Goal: separate baseline intercept (swapchain/driver/allocator) from per-image growth.
 - [x] Captured initial sweep (local 2026-03-05; N=3 each) and observed ~1:1 scaling with a ~100 MiB Metal baseline and ~217 MiB footprint baseline.
+- [ ] Attribution: sweep `FRET_IMAGE_HEAVY_DEMO_SIZE_PX` (count=24; size=512/1024/2048) and validate whether:
+  - the ~1:1 bytes/byte slope still holds (or if there is a material tiling/alignment multiplier),
+  - the intercept remains stable (baseline driver/swapchain).
+- [x] Captured initial size sweep (local 2026-03-05; N=3 each) and observed ~1:1 bytes/byte scaling with stable intercepts.
 
 ### Evidence (captured)
 
