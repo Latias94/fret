@@ -6203,6 +6203,24 @@
       ]
     },
     {
+      "id": "ui-gallery-textarea-docs-screenshot",
+      "path": "tools/diag-scripts/ui-gallery/textarea/ui-gallery-textarea-docs-screenshot.json",
+      "required_capabilities": [
+        "diag.screenshot_png"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "docs_parity",
+        "screenshot",
+        "shadcn",
+        "textarea",
+        "ui_gallery"
+      ],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-textarea-ime-delete-surrounding-emoji",
       "path": "tools/diag-scripts/ui-gallery/text-ime/ui-gallery-textarea-ime-delete-surrounding-emoji.json",
       "required_capabilities": [
