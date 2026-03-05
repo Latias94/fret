@@ -409,6 +409,10 @@ pub(crate) fn write_evidence_index(
         "resource.vmmap_summary.steady",
         "resource.vmmap_summary.steady.txt",
     );
+    add_file(
+        "resource.vmmap_regions_sorted.steady",
+        "resource.vmmap_regions_sorted.steady.txt",
+    );
     add_file("redraw_hitches", "redraw_hitches.log");
     add_file("renderdoc.captures", "renderdoc.captures.json");
     add_file("tracy.note", "tracy.note.md");

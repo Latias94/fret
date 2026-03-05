@@ -1547,6 +1547,14 @@ pub(crate) fn stop_launched_demo(
         out_dir,
         "resource.vmmap_summary.steady.txt",
     );
+    #[cfg(target_os = "macos")]
+    let macos_vmmap_regions_sorted_steady =
+        crate::macos_vmmap::collect_macos_vmmap_regions_sorted_best_effort(
+            demo.child.id(),
+            out_dir,
+            "resource.vmmap_regions_sorted.steady.txt",
+            18,
+        );
 
     let _ = touch(exit_path);
 
@@ -1589,6 +1597,12 @@ pub(crate) fn stop_launched_demo(
                     obj.insert("macos_vmmap_steady".to_string(), v.clone());
                 }
             }
+            #[cfg(target_os = "macos")]
+            if let Some(v) = macos_vmmap_regions_sorted_steady.as_ref() {
+                if let Some(obj) = footprint.as_object_mut() {
+                    obj.insert("macos_vmmap_regions_sorted_steady".to_string(), v.clone());
+                }
+            }
 
             let footprint = Some(footprint);
             if let Some(footprint) = &footprint {
@@ -1628,6 +1642,12 @@ pub(crate) fn stop_launched_demo(
     if let Some(v) = macos_vmmap_steady.as_ref() {
         if let Some(obj) = footprint.as_object_mut() {
             obj.insert("macos_vmmap_steady".to_string(), v.clone());
+        }
+    }
+    #[cfg(target_os = "macos")]
+    if let Some(v) = macos_vmmap_regions_sorted_steady.as_ref() {
+        if let Some(obj) = footprint.as_object_mut() {
+            obj.insert("macos_vmmap_regions_sorted_steady".to_string(), v.clone());
         }
     }
 

@@ -316,6 +316,7 @@ Optimizations should be:
 Primary evidence sources:
 
 - `resource.footprint.json` (tool-side process sampling + vmmap summary)
+- `resource.vmmap_regions_sorted.steady.txt` (tool-side; address-level region list, sorted by size; truncated)
 - `evidence.index.json.resources.bundle_last_frame_stats` (app-side last-frame stats)
 
 Candidate gates:

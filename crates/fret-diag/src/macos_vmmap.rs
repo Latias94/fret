@@ -4,6 +4,8 @@ use std::process::Stdio;
 
 use crate::util::now_unix_ms;
 
+const VMMAP_REGIONS_MAX_CAPTURE_LINES: usize = 800;
+
 fn parse_vmmap_size_token_to_bytes(token: &str) -> Option<u64> {
     let t = token.trim();
     if t.is_empty() {
@@ -46,6 +48,111 @@ fn parse_vmmap_percent_token(token: &str) -> Option<f64> {
         return None;
     }
     t.parse::<f64>().ok()
+}
+
+#[derive(Debug, Clone, serde::Serialize)]
+struct VmmapInterleavedRegionRow {
+    region_type: String,
+    start_end: String,
+    virtual_bytes: u64,
+    resident_bytes: u64,
+    dirty_bytes: u64,
+    swapped_bytes: u64,
+    detail: String,
+}
+
+fn truncate_text_by_lines(text: &str, max_lines: usize) -> (String, bool) {
+    if max_lines == 0 {
+        return ("".to_string(), !text.is_empty());
+    }
+
+    let mut out = String::new();
+    let mut truncated = false;
+    for (i, line) in text.lines().enumerate() {
+        if i >= max_lines {
+            truncated = true;
+            break;
+        }
+        out.push_str(line);
+        out.push('\n');
+    }
+    if truncated {
+        out.push_str("... truncated ...\n");
+    }
+    (out, truncated)
+}
+
+fn parse_vmmap_interleaved_regions(stdout: &str) -> Vec<VmmapInterleavedRegionRow> {
+    let mut rows = Vec::new();
+    let mut in_regions = false;
+
+    for line in stdout.lines() {
+        let l = line.trim_end();
+        if l.is_empty() {
+            continue;
+        }
+
+        if l.contains("REGION TYPE") && l.contains("START - END") && l.contains('[') {
+            in_regions = true;
+            continue;
+        }
+        if !in_regions {
+            continue;
+        }
+
+        if l.starts_with("====") || l.starts_with("vmmap:") {
+            break;
+        }
+        if l.starts_with("REGION TYPE") {
+            continue;
+        }
+
+        let Some(bracket_open) = l.find('[') else {
+            continue;
+        };
+        let Some(bracket_close_rel) = l[bracket_open..].find(']') else {
+            continue;
+        };
+        let bracket_close = bracket_open + bracket_close_rel;
+
+        let pre = l[..bracket_open].trim_end();
+        let sizes = l[bracket_open + 1..bracket_close].trim();
+        let post = l[bracket_close + 1..].trim();
+
+        let pre_tokens: Vec<&str> = pre.split_whitespace().collect();
+        let Some(start_end) = pre_tokens.last().copied() else {
+            continue;
+        };
+        let region_type = pre
+            .strip_suffix(start_end)
+            .unwrap_or(pre)
+            .trim()
+            .to_string();
+        if region_type.is_empty() {
+            continue;
+        }
+
+        let size_tokens: Vec<&str> = sizes.split_whitespace().collect();
+        if size_tokens.len() < 4 {
+            continue;
+        }
+        let virtual_bytes = parse_vmmap_size_token_to_bytes(size_tokens[0]).unwrap_or(0);
+        let resident_bytes = parse_vmmap_size_token_to_bytes(size_tokens[1]).unwrap_or(0);
+        let dirty_bytes = parse_vmmap_size_token_to_bytes(size_tokens[2]).unwrap_or(0);
+        let swapped_bytes = parse_vmmap_size_token_to_bytes(size_tokens[3]).unwrap_or(0);
+
+        rows.push(VmmapInterleavedRegionRow {
+            region_type,
+            start_end: start_end.to_string(),
+            virtual_bytes,
+            resident_bytes,
+            dirty_bytes,
+            swapped_bytes,
+            detail: post.to_string(),
+        });
+    }
+
+    rows
 }
 
 #[derive(Debug, Clone, serde::Serialize)]
@@ -350,4 +457,77 @@ pub(crate) fn collect_macos_vmmap_summary_best_effort(
         },
         "note": "best-effort; vmmap output is captured at a tool-selected point in time.",
     }))
+}
+
+pub(crate) fn collect_macos_vmmap_regions_sorted_best_effort(
+    pid: u32,
+    out_dir: &Path,
+    vmmap_regions_file: &str,
+    max_top_dirty: usize,
+) -> Option<serde_json::Value> {
+    if vmmap_regions_file.trim().is_empty() {
+        return None;
+    }
+
+    let out = Command::new("/usr/bin/vmmap")
+        .args(["-sortBySize", "-wide", "-interleaved", "-noCoalesce"])
+        .arg(pid.to_string())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null())
+        .output()
+        .ok()?;
+    if !out.status.success() {
+        return None;
+    }
+
+    let stdout_full = String::from_utf8_lossy(&out.stdout).to_string();
+    let (stdout, truncated) = truncate_text_by_lines(&stdout_full, VMMAP_REGIONS_MAX_CAPTURE_LINES);
+    let vmmap_file = out_dir.join(vmmap_regions_file);
+    let _ = std::fs::write(&vmmap_file, &stdout);
+
+    let mut regions = parse_vmmap_interleaved_regions(&stdout);
+    let rows_total = regions.len();
+
+    regions.sort_by_key(|r| std::cmp::Reverse(r.dirty_bytes));
+    regions.truncate(max_top_dirty.max(1).min(64));
+
+    Some(serde_json::json!({
+        "collector": "vmmap -sortBySize -wide -interleaved -noCoalesce",
+        "captured_unix_ms": now_unix_ms(),
+        "vmmap_regions_file": vmmap_regions_file,
+        "truncated": truncated,
+        "tables": {
+            "regions": {
+                "rows_total": rows_total,
+                "top_dirty": regions,
+            }
+        },
+        "note": "best-effort; output is truncated by line count to keep artifacts bounded.",
+    }))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parses_vmmap_interleaved_regions() {
+        let stdout = r#"
+==== regions for process 123  (non-writable and writable regions are interleaved)
+REGION TYPE                    START - END         [ VSIZE  RSDNT  DIRTY   SWAP] PRT/MAX SHRMOD PURGE    REGION DETAIL
+page table in kernel           kernel-kernel       [  256K   256K   256K     0K] rw-/rw- SM=PRV          charged to process physical footprint
+owned unmapped memory          1000-2000           [  1.0G     0K 227.6M     0K] rw-/rwx SM=COW
+vmmap: terminated; resuming target task
+"#;
+        let rows = parse_vmmap_interleaved_regions(stdout);
+        assert_eq!(rows.len(), 2);
+        assert_eq!(rows[0].region_type, "page table in kernel");
+        assert_eq!(rows[0].start_end, "kernel-kernel");
+        assert_eq!(rows[0].dirty_bytes, 256 * 1024);
+        assert_eq!(rows[1].region_type, "owned unmapped memory");
+        assert_eq!(
+            rows[1].dirty_bytes,
+            (227.6_f64 * 1024.0 * 1024.0).round() as u64
+        );
+    }
 }

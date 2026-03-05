@@ -4,6 +4,7 @@
 
 - [x] Parse `resource.vmmap_summary.txt` region table into structured JSON (top N by resident/dirty).
 - [x] Parse `MALLOC ZONE` allocated + frag into structured JSON when present.
+- [x] Capture a bounded `vmmap -sortBySize -wide -interleaved -noCoalesce` region list to break down large buckets like `owned unmapped memory`.
 - [x] Add `vmmap` parsing fields to `resource.footprint.json` schema (best-effort; macOS-only).
 - [x] Add a `fretboard diag compare --footprint` view that prints deltas for the structured fields.
 
