@@ -60,8 +60,8 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
         .test_id("ui-ai-inline-citation-demo-c1")
         .into_element(cx);
 
-    let title = cx.text("InlineCitation (AI Elements): hover card + pager + selection seam.");
-    let hint = cx.text("Hover a citation to preview sources; activate to select a source id. (Upstream uses hover-card + carousel header.)");
+    let title = cx.text("InlineCitation (AI Elements): inline label + hover card + pager.");
+    let hint = cx.text("Hover the badge to preview sources; activation emits a selected source id. (Upstream composes InlineCitationText + HoverCard + Carousel header.)");
     let row_label = cx.text("Citations:");
 
     let row = stack::hstack(

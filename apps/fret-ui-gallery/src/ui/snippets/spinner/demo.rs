@@ -12,7 +12,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             [shadcn::ItemTitle::new("Processing payment...").into_element(cx)],
         )
         .into_element(cx),
-        shadcn::ItemContent::new([ui::text(cx, "$100.00")
+        shadcn::ItemContent::new([ui::text("$100.00")
             .text_sm()
             .tabular_nums()
             .into_element(cx)])

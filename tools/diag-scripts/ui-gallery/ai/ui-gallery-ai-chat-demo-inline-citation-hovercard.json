@@ -1,6 +1,18 @@
 {
   "schema_version": 2,
+  "meta": {
+    "name": "UI Gallery: ai_chat_demo inline citation hovercard",
+    "tags": ["ui-gallery", "ai", "inline-citation", "hovercard", "screenshots"],
+    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
+    "target_hints": [
+      "Opens AI chat demo.",
+      "Scrolls an inline citation into view.",
+      "Hovers to open the hovercard, captures a screenshot, then clicks next/prev.",
+      "Captures a bundle for triage."
+    ]
+  },
   "steps": [
+    { "type": "reset_diagnostics" },
     {
       "type": "wait_until",
       "predicate": {
@@ -31,6 +43,14 @@
       "timeout_frames": 240
     },
     {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-ai-msg-4-citation-3-1-label" }
+      },
+      "timeout_frames": 240
+    },
+    {
       "type": "scroll_into_view",
       "container": { "kind": "test_id", "id": "ui-gallery-ai-chat-transcript-root" },
       "target": { "kind": "test_id", "id": "ui-ai-msg-4-citation-3-1" },
@@ -52,6 +72,11 @@
         "target": { "kind": "test_id", "id": "ui-ai-msg-4-citation-3-1-card" }
       },
       "timeout_frames": 240
+    },
+    { "type": "wait_frames", "n": 10 },
+    {
+      "type": "capture_screenshot",
+      "label": "ui-gallery-ai-chat-demo-inline-citation-hovercard"
     },
     {
       "type": "click_stable",
