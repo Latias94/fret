@@ -234,3 +234,19 @@ Gates:
   - end-drop in pinned row resolves `insert_index == pinned_count`,
   - end-drop in unpinned row resolves `insert_index == tab_count`,
   - header-space does not route into the overflow control surface.
+
+## Q13: Why do tab context menus fail to open in `diag --launch` runs (right click)?
+
+Observed:
+- `click(button="right")` on a workspace tab does not reliably open the tab context menu in `diag --launch` runs.
+  Scripts can time out waiting for menu items like `Pin Tab`.
+
+Intended outcome:
+- Determine whether the fix belongs in the diagnostics harness (event synthesis), the context-menu
+  trigger wiring (pointer region), or the workspace tab strip (pointer propagation / capture).
+
+Evidence anchors:
+- Script: `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-left-keeps-pinned-smoke.json`
+- Workspace tab pointer policy: `ecosystem/fret-workspace/src/tab_strip/interaction.rs`
+- Context menu open policy: `ecosystem/fret-ui-kit/src/primitives/context_menu.rs`
+- shadcn ContextMenu wrapper: `ecosystem/fret-ui-shadcn/src/context_menu.rs`
