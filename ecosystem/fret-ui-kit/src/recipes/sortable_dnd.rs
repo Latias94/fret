@@ -379,7 +379,7 @@ where
         children.push(el);
     }
 
-    ui::v_flex(|_cx| children)
+    ui::v_stack(|_cx| children)
         .gap(Space::N0)
         .justify_start()
         .items_stretch()

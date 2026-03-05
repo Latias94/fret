@@ -14,6 +14,7 @@ fn position_local(bounds: Rect, mapped: Point) -> Point {
 struct PressablePressTracking {
     pointer_id: Option<fret_core::PointerId>,
     down_position: Option<Point>,
+    down_hit_pressable_target: Option<crate::GlobalElementId>,
 }
 
 pub(super) fn handle_pressable<H: UiHost>(
@@ -340,6 +341,7 @@ pub(super) fn handle_pressable<H: UiHost>(
                         pointer_type: *pointer_type,
                         hit_is_text_input: cx.pointer_hit_is_text_input,
                         hit_is_pressable: cx.pointer_hit_is_pressable,
+                        hit_pressable_target: cx.pointer_hit_pressable_target,
                     };
 
                     let mut host = PressablePointerHookHost {
@@ -400,6 +402,7 @@ pub(super) fn handle_pressable<H: UiHost>(
                     |st| {
                         st.pointer_id = Some(*pointer_id);
                         st.down_position = Some(*position);
+                        st.down_hit_pressable_target = cx.pointer_hit_pressable_target;
                     },
                 );
                 cx.invalidate_self(Invalidation::Paint);
@@ -441,6 +444,13 @@ pub(super) fn handle_pressable<H: UiHost>(
                         is_click: *is_click,
                         click_count: *click_count,
                         pointer_type: *pointer_type,
+                        down_hit_pressable_target: crate::elements::with_element_state(
+                            &mut *cx.app,
+                            window,
+                            this.element,
+                            PressablePressTracking::default,
+                            |st| st.down_hit_pressable_target,
+                        ),
                     };
 
                     let mut host = PressablePointerHookHost {

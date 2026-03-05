@@ -7,7 +7,6 @@ use fret_ui::scroll::ScrollHandle;
 use fret_ui::{ElementContext, Theme, UiHost};
 
 use crate::LayoutRefinement;
-use crate::declarative::stack;
 use crate::declarative::style;
 
 /// Component-layer scroll helper (typed, declarative).
@@ -327,22 +326,6 @@ pub fn overflow_scroll_content<H: UiHost>(
     overflow_scroll(cx, layout, show_scrollbar, |cx| vec![content(cx)])
 }
 
-/// Vertical scrolling with a `vstack` content root.
-pub fn overflow_scroll_vstack<H: UiHost, I>(
-    cx: &mut ElementContext<'_, H>,
-    layout: LayoutRefinement,
-    show_scrollbar: bool,
-    vstack: stack::VStackProps,
-    f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
-) -> AnyElement
-where
-    I: IntoIterator<Item = AnyElement>,
-{
-    overflow_scroll_content(cx, layout, show_scrollbar, |cx| {
-        stack::vstack(cx, vstack, f)
-    })
-}
-
 /// Horizontal scrolling with a single content root.
 pub fn overflow_scroll_x_content<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
@@ -418,20 +401,10 @@ pub fn overflow_scroll_x_content<H: UiHost>(
 }
 
 /// Horizontal scrolling with a `vstack` content root.
-pub fn overflow_scroll_x_vstack<H: UiHost, I>(
-    cx: &mut ElementContext<'_, H>,
-    layout: LayoutRefinement,
-    show_scrollbar_x: bool,
-    vstack: stack::VStackProps,
-    f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
-) -> AnyElement
-where
-    I: IntoIterator<Item = AnyElement>,
-{
-    overflow_scroll_x_content(cx, layout, show_scrollbar_x, |cx| {
-        stack::vstack(cx, vstack, f)
-    })
-}
+// Note: older versions of this module exposed `*_vstack` helpers that depended on the legacy stack
+// helpers. Those were removed when the repo converged on
+// `fret-ui-kit::ui::*` builders as the teaching surface. Prefer `overflow_scroll_content(...)`
+// with an explicit content root (e.g. `ui::v_flex(|cx| ...)`).
 
 /// Like `overflow_scroll_with_handle_xy`, but enforces a single content root.
 pub fn overflow_scroll_with_handle_xy_content<H: UiHost>(

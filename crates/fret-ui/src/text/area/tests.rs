@@ -1273,6 +1273,7 @@ fn event_cx<'a>(
         },
         pointer_hit_is_text_input: false,
         pointer_hit_is_pressable: false,
+        pointer_hit_pressable_target: None,
         prevented_default_actions,
         pointer_id: None,
         scale_factor: 1.0,

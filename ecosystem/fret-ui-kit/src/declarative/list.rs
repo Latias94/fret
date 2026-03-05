@@ -7,8 +7,8 @@ use fret_ui::{ElementContext, Theme, UiHost};
 use crate::declarative::action_hooks::ActionHooksExt;
 use crate::declarative::collection_semantics::CollectionSemanticsExt as _;
 use crate::declarative::model_watch::ModelWatchExt as _;
-use crate::declarative::stack;
-use crate::{Items, Justify, MetricRef, Size, Space};
+use crate::ui;
+use crate::{MetricRef, Size, Space};
 
 use std::sync::Arc;
 
@@ -332,14 +332,13 @@ where
                                     ..Default::default()
                                 },
                                 |cx| {
-                                    vec![stack::hstack(
-                                        cx,
-                                        stack::HStackProps::default()
-                                            .gap_x(Space::N2)
-                                            .justify(Justify::Start)
-                                            .items(Items::Center),
-                                        |cx| row_contents(cx, i),
-                                    )]
+                                    vec![
+                                        ui::h_row(|cx| row_contents(cx, i))
+                                            .gap(Space::N2)
+                                            .justify_start()
+                                            .items_center()
+                                            .into_element(cx),
+                                    ]
                                 },
                             )]
                         },
@@ -489,14 +488,13 @@ where
                                     ..Default::default()
                                 },
                                 |cx| {
-                                    vec![stack::hstack(
-                                        cx,
-                                        stack::HStackProps::default()
-                                            .gap_x(Space::N2)
-                                            .justify(Justify::Start)
-                                            .items(Items::Center),
-                                        |_cx| row_children,
-                                    )]
+                                    vec![
+                                        ui::h_row(|_cx| row_children)
+                                            .gap(Space::N2)
+                                            .justify_start()
+                                            .items_center()
+                                            .into_element(cx),
+                                    ]
                                 },
                             )]
                         },

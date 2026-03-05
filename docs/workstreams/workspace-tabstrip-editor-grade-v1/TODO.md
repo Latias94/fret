@@ -20,6 +20,13 @@ This TODO list is scoped to this workstream folder and is intended to keep the r
 - [x] Add an inactive-tab drag-to-split smoke gate (`workspace-shell-demo-tab-drag-inactive-to-split-right-smoke`).
 - [x] Add a non-screenshot invariants-based split gate (post-split layout assertions + tab ownership):
   - [x] `workspace-shell-demo-tab-drag-to-split-right-preview-invariants-smoke`
+- [x] Add a two-row pinned reorder smoke script (debug-toggle only; not promoted yet):
+  - Gate: `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-pinned-row-two-row-reorder-smoke.json`
+  - Note: uses `workspace-shell-pane-pane-a-debug-pin-doc-a-0/1` buttons because tab context menus
+    do not currently open deterministically in `diag --launch` runs via `click(button="right")`.
+- [ ] Investigate why tab context menus do not open in `diag --launch` runs (right click on tab):
+  - Evidence: `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-left-keeps-pinned-smoke.json`
+    times out waiting for the `Pin Tab` menu item after `click(button="right")` on a tab.
 
 ## Modularization (M1)
 

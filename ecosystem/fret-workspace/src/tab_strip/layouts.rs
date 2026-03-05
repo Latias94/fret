@@ -56,6 +56,17 @@ pub(super) fn tab_strip_scroll_content_layout() -> LayoutStyle {
     }
 }
 
+pub(super) fn tab_strip_scroll_row_layout(height: Px) -> LayoutStyle {
+    let mut layout = LayoutStyle::default();
+    layout.size.width = Length::Auto;
+    layout.size.height = Length::Px(height);
+    // Ensure the row is at least as wide as the viewport so we keep a stable "header space" band
+    // to the right of the last tab (dockview/Zed-style).
+    layout.size.min_width = Some(Length::Fraction(1.0));
+    layout.flex.shrink = 0.0;
+    layout
+}
+
 pub(super) fn fixed_square_layout(size: Px) -> LayoutStyle {
     let mut layout = LayoutStyle::default();
     layout.size.width = Length::Px(size);

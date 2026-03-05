@@ -301,7 +301,7 @@ ID format:
     - `docs/workstreams/action-first-authoring-fearless-refactor-v1/RISK_MATRIX.md` (review pass section)
 - [x] AFA-gates-054 Add a small repo-local gate that prevents legacy MVU from drifting back into the cookbook.
   - Evidence:
-    - `tools/gate_no_mvu_in_cookbook.ps1`
+    - `tools/gate_no_mvu_in_cookbook.py` (or `tools/gate_no_mvu_in_cookbook.ps1`)
 
 ---
 
@@ -314,8 +314,8 @@ This phase is intentionally last.
     external codebases remains.
   - Evidence:
     - `docs/workstreams/action-first-authoring-fearless-refactor-v1/MVU_POLICY.md` (archived)
-    - `tools/gate_no_mvu_in_tree.ps1`
-    - `tools/gate_no_mvu_in_cookbook.ps1`
+    - `tools/gate_no_mvu_in_tree.py` (or `tools/gate_no_mvu_in_tree.ps1`)
+    - `tools/gate_no_mvu_in_cookbook.py` (or `tools/gate_no_mvu_in_cookbook.ps1`)
 - [x] AFA-clean-061 Update docs and templates:
   - `docs/README.md` state management section shows actions + view runtime as the golden path.
   - `fretboard` templates generate action-first demos by default.
@@ -328,12 +328,12 @@ This phase is intentionally last.
     - `docs/workstreams/action-first-authoring-fearless-refactor-v1/LEGACY_MVU_INVENTORY.md`
   - Status (as of 2026-03-05):
     - MVU authoring surfaces have been hard-deleted in-tree (M9).
-    - Gated: repo remains MVU-free (`pwsh tools/gate_no_mvu_in_tree.ps1`).
-    - Gated: cookbook remains MVU-free (`pwsh tools/gate_no_mvu_in_cookbook.ps1`).
+    - Gated: repo remains MVU-free (`python tools/gate_no_mvu_in_tree.py` or `pwsh tools/gate_no_mvu_in_tree.ps1`).
+    - Gated: cookbook remains MVU-free (`python tools/gate_no_mvu_in_cookbook.py` or `pwsh tools/gate_no_mvu_in_cookbook.ps1`).
   - Evidence:
     - `docs/workstreams/action-first-authoring-fearless-refactor-v1/MILESTONES.md` (M9)
-    - `tools/gate_no_mvu_in_tree.ps1`
-    - `tools/gate_no_mvu_in_cookbook.ps1`
+    - `tools/gate_no_mvu_in_tree.py` (or `tools/gate_no_mvu_in_tree.ps1`)
+    - `tools/gate_no_mvu_in_cookbook.py` (or `tools/gate_no_mvu_in_cookbook.ps1`)
 
 ### Next cleanup steps (post-v1)
 
@@ -346,7 +346,7 @@ This phase is intentionally last.
   - Evidence:
     - Policy: `docs/workstreams/action-first-authoring-fearless-refactor-v1/MVU_POLICY.md` (archived)
     - Milestone: `docs/workstreams/action-first-authoring-fearless-refactor-v1/MILESTONES.md` (M9)
-    - Gate: `tools/gate_no_mvu_in_tree.ps1`
+    - Gate: `tools/gate_no_mvu_in_tree.py` (or `tools/gate_no_mvu_in_tree.ps1`)
 
 - [x] AFA-clean-064 Add compile-time deprecation warnings for legacy MVU surfaces (if feasible).
   - Status: no longer applicable (MVU surfaces were removed in M9).
@@ -381,24 +381,23 @@ practical steps:
     - `apps/fret-cookbook/examples/commands_keymap_basics.rs`
     - `apps/fret-cookbook/examples/hello_counter.rs`
   - Done: remove redundant outer `cx` arguments from ecosystem authoring constructors (`fret-ui-kit::ui::*`):
-    - Implementation: `ecosystem/fret-ui-kit/src/ui.rs` (`h_flex`, `v_flex`, `container`, `scroll_area`, `stack`, `text`, `label`, `raw_text`, …)
+    - Implementation: `ecosystem/fret-ui-kit/src/ui.rs` (`h_flex`, `v_flex`, `h_row`, `v_stack`, `container`, `scroll_area`, `text`, `label`, `raw_text`, …)
     - Call-site migration (status):
       - Done: `apps/fret-cookbook`, `apps/fret-examples`
       - In progress: `apps/fret-ui-gallery` (large surface; migrate in batches)
         - Started: `apps/fret-ui-gallery/src/ui/doc_layout.rs`, `apps/fret-ui-gallery/src/ui/content.rs`
-        - Gate (shell-only): `tools/gate_no_stack_in_ui_gallery_shell.ps1`
+        - Gate (shell-only): `tools/gate_no_stack_in_ui_gallery_shell.py` (or `tools/gate_no_stack_in_ui_gallery_shell.ps1`)
       - As needed: shadcn/genui crates (only when they block teaching-surface convergence)
-  - In progress: hard delete legacy stack helpers once internal implementations are migrated.
-    - Current state: `fret-ui-kit::declarative::stack` is internal-only (not exported in `prelude::*`).
-    - Gate: `tools/gate_no_public_stack_in_ui_kit.ps1`
+  - Done: hard delete legacy stack helpers once internal implementations are migrated.
+    - Gate: `tools/gate_no_public_stack_in_ui_kit.py` (or `tools/gate_no_public_stack_in_ui_kit.ps1`)
     - Note: a handful of “host type inference” edge cases need an explicit anchor.
       Preferred: annotate the closure argument type (e.g. `ui::v_flex(|cx: &mut ElementContext<'_, App>| ...)`).
       Alternative: turbofish (e.g. `ui::v_flex::<App, _, _>(...)`).
   - Done: cookbook examples no longer use `stack::hstack/vstack` authoring helpers; the repo teaches
     one layout authoring surface for demos (`fret-ui-kit::ui::*` builders).
-    - Gate: `tools/gate_no_stack_in_cookbook.ps1`
+    - Gate: `tools/gate_no_stack_in_cookbook.py` (or `tools/gate_no_stack_in_cookbook.ps1`)
   - Done: examples no longer use `stack::hstack/vstack` authoring helpers.
-    - Gate: `tools/gate_no_stack_in_examples.ps1`
+    - Gate: `tools/gate_no_stack_in_examples.py` (or `tools/gate_no_stack_in_examples.ps1`)
 - Pointer-triggered explainability: stable selector → action mapping without relying on script stamping.
   - Status (as of 2026-03-03): `debug.command_dispatch_trace[*].source_test_id` is inferred from the
     current semantics snapshot when `source_element` is available (fallbacks remain for cases where
