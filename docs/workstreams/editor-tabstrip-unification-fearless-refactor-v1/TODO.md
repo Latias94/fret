@@ -24,6 +24,9 @@ This workstream is intentionally scoped to “editor-grade tab UX”:
 - [ ] Decide overflow dropdown policy:
   - list overflowed-only vs overflowed+active (current docking policy)
   - include close buttons in overflow list (dockview has tests for this)
+- [x] Default overflow dropdown policy: include active tab when overflowing.
+  - Workspace: `ecosystem/fret-workspace/src/tab_strip/overflow.rs`
+  - Docking: `ecosystem/fret-docking/src/dock/tab_overflow.rs`
 - [x] Enable overflow dropdown close parity (workspace + docking):
   - Close affordance is visible in overflow menu rows.
   - Clicking close dispatches close without implicitly activating.
