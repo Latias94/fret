@@ -250,6 +250,20 @@ Notes:
   Alternative (turbofish):
   - `ui::v_flex::<App, _, _>(|cx| { ... })`
 
+## 4.3) Authoring “golden style” (recommended)
+
+This is a style guide, not a contract, but it is the repo’s default teaching baseline.
+
+- Prefer `ui::v_flex(|cx| ...)` / `ui::h_flex(|cx| ...)` (no outer `cx` argument).
+- Prefer `ui::children![cx; ...]` for heterogeneous child lists to avoid decorate-only early
+  `into_element(cx)` calls.
+- When rendering dynamic lists, prefer `*_build(|cx, out| ...)` + `cx.keyed(id, |cx| ...)` to keep
+  identity stable and reduce allocation noise.
+- Attach `test_id` / `a11y_*` / `key_context` on builders before `into_element(cx)`; only land to
+  `AnyElement` at the end of a subtree boundary.
+- If host type inference fails, first try annotating the closure argument type
+  (`|cx: &mut ElementContext<'_, App>| ...`) before reaching for turbofish.
+
 ## 5) GenUI alignment (spec bindings reuse action IDs)
 
 Target outcome:
@@ -284,4 +298,5 @@ Recommended migration pattern:
 2) Install a *composed* `record_engine_frame(...)` that performs both responsibilities:
    - ensure view-cache enablement (view runtime v1 behavior), and
    - record the embedded viewport engine pass.
-3) Keep the legacy MVU demo as an opt-in copy until the new demo becomes stable evidence.
+3) Add a scripted diagnostics gate that proves the composition works end-to-end (pointer input +
+   engine recording + view-cache tracing).

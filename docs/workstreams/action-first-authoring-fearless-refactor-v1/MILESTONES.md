@@ -28,7 +28,7 @@ Hardening follow-up (post-M1):
 
 - Key-context aware `when` evaluation (`keyctx.*`) is aligned across keymap matching, menus/palette gating, shortcut display, and diagnostics (see TODO `AFA-actions-019`).
 - Embedded viewport interop has a view-runtime demo proving `record_engine_frame` composition (see TODO `AFA-adopt-044`).
-- Authoring ergonomics: semantics/test IDs/key contexts can be attached before `into_element(cx)` and cookbook demos demonstrate the pattern (see TODO “Reduce authoring noise”).
+- Authoring ergonomics: semantics/test IDs/key contexts can be attached before `into_element(cx)`, and `fret-ui-kit::ui::*` constructors are cx-less; cookbook + templates demonstrate the patterns (see TODO “Reduce authoring noise”).
 
 ---
 
