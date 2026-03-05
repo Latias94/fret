@@ -455,6 +455,9 @@ Candidate gates:
 - `--max-render-text-registered-font-blobs-count` (guards memory-backed font injection churn; `resource_caches.render_text`)
 - `--max-render-text-shape-cache-entries` (guards unbounded text shaping cache growth; `resource_caches.render_text`)
 - `--max-render-text-blob-cache-entries` (guards unbounded text blob cache growth; `resource_caches.render_text`)
+- `--max-render-text-shape-cache-bytes-estimate-total` (best-effort; `resource_caches.render_text`)
+- `--max-render-text-blob-paint-palette-bytes-estimate-total` (best-effort; `resource_caches.render_text`)
+- `--max-render-text-blob-decorations-bytes-estimate-total` (best-effort; `resource_caches.render_text`)
 - `--max-code-editor-buffer-len-bytes` (UI Gallery; `app_snapshot.code_editor.torture.memory`)
 - `--max-code-editor-undo-text-bytes-estimate-total` (UI Gallery; `app_snapshot.code_editor.torture.memory`)
 - `--max-code-editor-row-text-cache-entries` (UI Gallery; `app_snapshot.code_editor.torture.cache_sizes`)
@@ -472,6 +475,8 @@ Recommended local gate baselines (macOS, 2026-03-04):
   - `--max-macos-physical-footprint-peak-bytes 440401920` (420 MiB)
   - `--max-macos-owned-unmapped-memory-dirty-bytes 304087040` (290 MiB)
   - `--max-render-text-atlas-bytes-live-estimate-total 50331648` (48 MiB)
+  - Optional (best-effort; monitor-only until we have a stable distribution):
+    - `--max-render-text-shape-cache-bytes-estimate-total 33554432` (32 MiB)
   - Optional (requires `--env FRET_DIAG_WGPU_ALLOCATOR_REPORT=1`):
     - `--max-wgpu-metal-current-allocated-size-bytes 167772160` (160 MiB)
 - `image-heavy-memory-steady`:
@@ -500,6 +505,10 @@ Recommended local gate baselines (macOS, 2026-03-04):
   - `--max-macos-malloc-small-dirty-bytes 104857600` (100 MiB)
   - `--max-macos-io-surface-dirty-bytes 67108864` (64 MiB)
   - `--max-macos-io-accelerator-dirty-bytes 16777216` (16 MiB)
+  - Optional (best-effort; monitor-only until we have a stable distribution):
+    - `--max-render-text-shape-cache-bytes-estimate-total 67108864` (64 MiB)
+    - `--max-render-text-blob-paint-palette-bytes-estimate-total 8388608` (8 MiB)
+    - `--max-render-text-blob-decorations-bytes-estimate-total 4194304` (4 MiB)
   - `--max-wgpu-metal-current-allocated-size-bytes 150994944` (144 MiB)
 
 Note: these numbers are intentionally conservative and should be revisited when:

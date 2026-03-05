@@ -453,6 +453,9 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut max_render_text_registered_font_blobs_count: Option<u64> = None;
     let mut max_render_text_shape_cache_entries: Option<u64> = None;
     let mut max_render_text_blob_cache_entries: Option<u64> = None;
+    let mut max_render_text_shape_cache_bytes_estimate_total: Option<u64> = None;
+    let mut max_render_text_blob_paint_palette_bytes_estimate_total: Option<u64> = None;
+    let mut max_render_text_blob_decorations_bytes_estimate_total: Option<u64> = None;
     let mut max_code_editor_buffer_len_bytes: Option<u64> = None;
     let mut max_code_editor_undo_text_bytes_estimate_total: Option<u64> = None;
     let mut max_code_editor_row_text_cache_entries: Option<u64> = None;
@@ -1527,6 +1530,51 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 })?);
                 i += 1;
             }
+            "--max-render-text-shape-cache-bytes-estimate-total" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err(
+                        "missing value for --max-render-text-shape-cache-bytes-estimate-total"
+                            .to_string(),
+                    );
+                };
+                max_render_text_shape_cache_bytes_estimate_total =
+                    Some(v.parse::<u64>().map_err(|_| {
+                        "invalid value for --max-render-text-shape-cache-bytes-estimate-total"
+                            .to_string()
+                    })?);
+                i += 1;
+            }
+            "--max-render-text-blob-paint-palette-bytes-estimate-total" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err(
+                        "missing value for --max-render-text-blob-paint-palette-bytes-estimate-total"
+                            .to_string(),
+                    );
+                };
+                max_render_text_blob_paint_palette_bytes_estimate_total =
+                    Some(v.parse::<u64>().map_err(|_| {
+                        "invalid value for --max-render-text-blob-paint-palette-bytes-estimate-total"
+                            .to_string()
+                    })?);
+                i += 1;
+            }
+            "--max-render-text-blob-decorations-bytes-estimate-total" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err(
+                        "missing value for --max-render-text-blob-decorations-bytes-estimate-total"
+                            .to_string(),
+                    );
+                };
+                max_render_text_blob_decorations_bytes_estimate_total =
+                    Some(v.parse::<u64>().map_err(|_| {
+                        "invalid value for --max-render-text-blob-decorations-bytes-estimate-total"
+                            .to_string()
+                    })?);
+                i += 1;
+            }
             "--max-code-editor-buffer-len-bytes" => {
                 i += 1;
                 let Some(v) = args.get(i).cloned() else {
@@ -2558,6 +2606,9 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
         max_render_text_registered_font_blobs_count,
         max_render_text_shape_cache_entries,
         max_render_text_blob_cache_entries,
+        max_render_text_shape_cache_bytes_estimate_total,
+        max_render_text_blob_paint_palette_bytes_estimate_total,
+        max_render_text_blob_decorations_bytes_estimate_total,
     };
 
     let code_editor_memory_thresholds = CodeEditorMemoryThresholds {
@@ -2619,7 +2670,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     }
     if sub != "repro" && render_text_font_db_thresholds.any() {
         return Err(
-            "--max-render-text-registered-font-blobs-total-bytes/--max-render-text-registered-font-blobs-count/--max-render-text-shape-cache-entries/--max-render-text-blob-cache-entries are only supported with `diag repro` for now"
+            "--max-render-text-registered-font-blobs-total-bytes/--max-render-text-registered-font-blobs-count/--max-render-text-shape-cache-entries/--max-render-text-blob-cache-entries/--max-render-text-shape-cache-bytes-estimate-total/--max-render-text-blob-paint-palette-bytes-estimate-total/--max-render-text-blob-decorations-bytes-estimate-total are only supported with `diag repro` for now"
                 .to_string(),
         );
     }

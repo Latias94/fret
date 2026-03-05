@@ -80,6 +80,9 @@ pub(super) struct RenderTextFontDbThresholds {
     pub(super) max_render_text_registered_font_blobs_count: Option<u64>,
     pub(super) max_render_text_shape_cache_entries: Option<u64>,
     pub(super) max_render_text_blob_cache_entries: Option<u64>,
+    pub(super) max_render_text_shape_cache_bytes_estimate_total: Option<u64>,
+    pub(super) max_render_text_blob_paint_palette_bytes_estimate_total: Option<u64>,
+    pub(super) max_render_text_blob_decorations_bytes_estimate_total: Option<u64>,
 }
 
 impl RenderTextFontDbThresholds {
@@ -89,6 +92,15 @@ impl RenderTextFontDbThresholds {
             || self.max_render_text_registered_font_blobs_count.is_some()
             || self.max_render_text_shape_cache_entries.is_some()
             || self.max_render_text_blob_cache_entries.is_some()
+            || self
+                .max_render_text_shape_cache_bytes_estimate_total
+                .is_some()
+            || self
+                .max_render_text_blob_paint_palette_bytes_estimate_total
+                .is_some()
+            || self
+                .max_render_text_blob_decorations_bytes_estimate_total
+                .is_some()
     }
 }
 
@@ -1343,6 +1355,10 @@ pub(super) fn check_render_text_font_db_thresholds(
     let registered_font_blobs_count = u64_field("registered_font_blobs_count");
     let shape_cache_entries = u64_field("shape_cache_entries");
     let blob_cache_entries = u64_field("blob_cache_entries");
+    let shape_cache_bytes_estimate_total = u64_field("shape_cache_bytes_estimate_total");
+    let blob_paint_palette_bytes_estimate_total =
+        u64_field("blob_paint_palette_bytes_estimate_total");
+    let blob_decorations_bytes_estimate_total = u64_field("blob_decorations_bytes_estimate_total");
 
     let mut failures: Vec<serde_json::Value> = Vec::new();
 
@@ -1422,6 +1438,63 @@ pub(super) fn check_render_text_font_db_thresholds(
         }
     }
 
+    if let Some(thr) = thresholds.max_render_text_shape_cache_bytes_estimate_total {
+        match shape_cache_bytes_estimate_total {
+            Some(observed) if observed > thr => failures.push(serde_json::json!({
+                "kind": "render_text_shape_cache_bytes_estimate_total",
+                "threshold": thr,
+                "observed": observed,
+                "reason": "exceeded",
+            })),
+            Some(_) => {}
+            None => failures.push(serde_json::json!({
+                "kind": "render_text_shape_cache_bytes_estimate_total",
+                "threshold": thr,
+                "observed": serde_json::Value::Null,
+                "reason": missing_reason,
+                "field": "windows[0].snapshots[-1].resource_caches.render_text.shape_cache_bytes_estimate_total",
+            })),
+        }
+    }
+
+    if let Some(thr) = thresholds.max_render_text_blob_paint_palette_bytes_estimate_total {
+        match blob_paint_palette_bytes_estimate_total {
+            Some(observed) if observed > thr => failures.push(serde_json::json!({
+                "kind": "render_text_blob_paint_palette_bytes_estimate_total",
+                "threshold": thr,
+                "observed": observed,
+                "reason": "exceeded",
+            })),
+            Some(_) => {}
+            None => failures.push(serde_json::json!({
+                "kind": "render_text_blob_paint_palette_bytes_estimate_total",
+                "threshold": thr,
+                "observed": serde_json::Value::Null,
+                "reason": missing_reason,
+                "field": "windows[0].snapshots[-1].resource_caches.render_text.blob_paint_palette_bytes_estimate_total",
+            })),
+        }
+    }
+
+    if let Some(thr) = thresholds.max_render_text_blob_decorations_bytes_estimate_total {
+        match blob_decorations_bytes_estimate_total {
+            Some(observed) if observed > thr => failures.push(serde_json::json!({
+                "kind": "render_text_blob_decorations_bytes_estimate_total",
+                "threshold": thr,
+                "observed": observed,
+                "reason": "exceeded",
+            })),
+            Some(_) => {}
+            None => failures.push(serde_json::json!({
+                "kind": "render_text_blob_decorations_bytes_estimate_total",
+                "threshold": thr,
+                "observed": serde_json::Value::Null,
+                "reason": missing_reason,
+                "field": "windows[0].snapshots[-1].resource_caches.render_text.blob_decorations_bytes_estimate_total",
+            })),
+        }
+    }
+
     let payload = serde_json::json!({
         "schema_version": 1,
         "generated_unix_ms": now_unix_ms(),
@@ -1436,6 +1509,9 @@ pub(super) fn check_render_text_font_db_thresholds(
             "max_render_text_registered_font_blobs_count": thresholds.max_render_text_registered_font_blobs_count,
             "max_render_text_shape_cache_entries": thresholds.max_render_text_shape_cache_entries,
             "max_render_text_blob_cache_entries": thresholds.max_render_text_blob_cache_entries,
+            "max_render_text_shape_cache_bytes_estimate_total": thresholds.max_render_text_shape_cache_bytes_estimate_total,
+            "max_render_text_blob_paint_palette_bytes_estimate_total": thresholds.max_render_text_blob_paint_palette_bytes_estimate_total,
+            "max_render_text_blob_decorations_bytes_estimate_total": thresholds.max_render_text_blob_decorations_bytes_estimate_total,
         },
         "observed": {
             "bundle_present": bundle_present,
@@ -1446,6 +1522,9 @@ pub(super) fn check_render_text_font_db_thresholds(
             "render_text_registered_font_blobs_count": registered_font_blobs_count,
             "render_text_shape_cache_entries": shape_cache_entries,
             "render_text_blob_cache_entries": blob_cache_entries,
+            "render_text_shape_cache_bytes_estimate_total": shape_cache_bytes_estimate_total,
+            "render_text_blob_paint_palette_bytes_estimate_total": blob_paint_palette_bytes_estimate_total,
+            "render_text_blob_decorations_bytes_estimate_total": blob_decorations_bytes_estimate_total,
         },
         "failures": failures,
     });
