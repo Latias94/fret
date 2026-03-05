@@ -36,6 +36,7 @@ fn apply_tooltip_inherited_defaults(
     mut element: AnyElement,
     fg: fret_core::Color,
     text_style: &TextStyle,
+    max_text_w: Option<Px>,
 ) -> AnyElement {
     match &mut element.kind {
         ElementKind::Text(props) => {
@@ -44,6 +45,10 @@ fn apply_tooltip_inherited_defaults(
             }
             if props.style.is_none() {
                 props.style = Some(text_style.clone());
+            }
+            if let Some(max_w) = max_text_w {
+                props.layout.size.max_width = Some(Length::Px(max_w));
+                props.layout.size.min_width = Some(Length::Px(Px(0.0)));
             }
         }
         ElementKind::SvgIcon(SvgIconProps { color, .. }) => {
@@ -68,6 +73,10 @@ fn apply_tooltip_inherited_defaults(
             if props.style.is_none() {
                 props.style = Some(text_style.clone());
             }
+            if let Some(max_w) = max_text_w {
+                props.layout.size.max_width = Some(Length::Px(max_w));
+                props.layout.size.min_width = Some(Length::Px(Px(0.0)));
+            }
         }
         ElementKind::SelectableText(props) => {
             if props.color.is_none() {
@@ -76,6 +85,10 @@ fn apply_tooltip_inherited_defaults(
             if props.style.is_none() {
                 props.style = Some(text_style.clone());
             }
+            if let Some(max_w) = max_text_w {
+                props.layout.size.max_width = Some(Length::Px(max_w));
+                props.layout.size.min_width = Some(Length::Px(Px(0.0)));
+            }
         }
         _ => {}
     }
@@ -83,7 +96,7 @@ fn apply_tooltip_inherited_defaults(
     element.children = element
         .children
         .into_iter()
-        .map(|child| apply_tooltip_inherited_defaults(child, fg, text_style))
+        .map(|child| apply_tooltip_inherited_defaults(child, fg, text_style, max_text_w))
         .collect();
     element
 }
@@ -1482,10 +1495,16 @@ impl TooltipContent {
         let props = decl_style::container_props(&theme, chrome, base_layout.merge(self.layout));
         let fg = tooltip_text_fg(&theme);
         let text_style = tooltip_text_style(&theme);
+        let inner_max_w = {
+            let px = MetricRef::space(Space::N3).resolve(&theme);
+            Px((max_w.0 - px.0 * 2.0).max(0.0))
+        };
         let children = self
             .children
             .into_iter()
-            .map(|child| apply_tooltip_inherited_defaults(child, fg, &text_style))
+            .map(|child| {
+                apply_tooltip_inherited_defaults(child, fg, &text_style, Some(inner_max_w))
+            })
             .collect();
         let container = shadcn_layout::container_flow(cx, props, children);
         container.attach_semantics(
@@ -1638,7 +1657,7 @@ mod tests {
             vec![text_no_color, text_with_color],
         );
 
-        let out = apply_tooltip_inherited_defaults(root, fg, &text_style);
+        let out = apply_tooltip_inherited_defaults(root, fg, &text_style, None);
         let colors: Vec<Option<Color>> = out
             .children
             .iter()
@@ -1692,7 +1711,7 @@ mod tests {
             vec![text_no_style, text_with_style],
         );
 
-        let out = apply_tooltip_inherited_defaults(root, fg, &style);
+        let out = apply_tooltip_inherited_defaults(root, fg, &style, None);
         let (first, second) = (&out.children[0], &out.children[1]);
 
         let ElementKind::Text(first_props) = &first.kind else {

@@ -5,6 +5,7 @@ use crate::ui::snippets::tooltip as snippets;
 
 pub(super) fn preview_tooltip(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     let demo_tooltip = snippets::demo::render(cx);
+    let long_content_tooltip = snippets::long_content::render(cx);
     let focus_row = snippets::keyboard_focus::render(cx);
     let side_row = snippets::sides::render(cx);
     let keyboard_tooltip = snippets::keyboard_shortcut::render(cx);
@@ -28,6 +29,11 @@ pub(super) fn preview_tooltip(cx: &mut ElementContext<'_, App>) -> Vec<AnyElemen
             DocSection::new("Demo", demo_tooltip)
                 .description("Basic tooltip with an arrow and a short content label.")
                 .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
+            DocSection::new("Long Content", long_content_tooltip)
+                .description(
+                    "Longer tooltip content should wrap at the max width boundary without collapsing to a narrow column.",
+                )
+                .code_rust_from_file_region(snippets::long_content::SOURCE, "example"),
             DocSection::new("Keyboard Focus", focus_row)
                 .description("Tooltips should open when the trigger receives keyboard focus.")
                 .code_rust_from_file_region(snippets::keyboard_focus::SOURCE, "example"),
