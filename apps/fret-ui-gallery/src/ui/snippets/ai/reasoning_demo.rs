@@ -55,17 +55,25 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
         }))
         .into_element(cx);
 
+    // Mirror the upstream docs pattern: consolidate multiple reasoning parts into one panel.
+    // Source reference: `repo-ref/ai-elements/apps/docs/content/components/(chatbot)/reasoning.mdx`.
+    let reasoning_text = [
+        "Reasoning content is markdown.",
+        "- Opens automatically when streaming starts.",
+        "- Auto-closes shortly after streaming ends.",
+    ]
+    .join("\n\n");
+
     let reasoning = ui_ai::Reasoning::new(is_streaming)
+        .refine_layout(LayoutRefinement::default().w_full().min_w_0())
         .test_id_root("ui-ai-reasoning-root")
         .into_element(
             cx,
             |cx| ui_ai::ReasoningTrigger::new().into_element(cx),
             |cx| {
-                ui_ai::ReasoningContent::new(
-                    "Reasoning content is markdown.\n\n- Opens automatically when streaming starts.\n- Auto-closes shortly after streaming ends.",
-                )
-                .test_id("ui-ai-reasoning-content")
-                .into_element(cx)
+                ui_ai::ReasoningContent::new(reasoning_text)
+                    .test_id("ui-ai-reasoning-content")
+                    .into_element(cx)
             },
         );
 
