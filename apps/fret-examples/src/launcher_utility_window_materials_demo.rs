@@ -162,7 +162,7 @@ fn view(
         },
         move |cx| {
             vec![
-                ui::text(cx, "Utility Window Materials (Mica/Acrylic)")
+                ui::text("Utility Window Materials (Mica/Acrylic)")
                     .font_semibold()
                     .into_element(cx),
             ]
@@ -182,12 +182,12 @@ fn view(
             cx,
             stack::VStackProps::default().gap_y(Space::N3),
             move |cx| {
-                let style_line = ui::text(cx, style_text)
+                let style_line = ui::text(style_text)
                     .font_monospace()
                     .text_sm()
                     .into_element(cx)
                     .attach_semantics(SemanticsDecoration::default().test_id(TEST_ID_STYLE_TEXT));
-                let status_line = ui::text(cx, status)
+                let status_line = ui::text(status)
                     .text_sm()
                     .text_color(ColorRef::Color(color_muted_foreground))
                     .into_element(cx);

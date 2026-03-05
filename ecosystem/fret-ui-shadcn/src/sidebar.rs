@@ -1935,7 +1935,7 @@ impl SidebarGroupLabel {
             (fg, size, line_height)
         };
 
-        let text = ui::text(cx, self.text)
+        let text = ui::text(self.text)
             .text_size_px(size)
             .line_height_px(line_height)
             .font_medium()
@@ -2824,7 +2824,7 @@ impl SidebarMenuBadge {
             (props, text_px, text_lh, fg)
         };
 
-        let text = ui::text(cx, self.label)
+        let text = ui::text(self.label)
             .text_size_px(text_px)
             .line_height_px(text_lh)
             .font_medium()
@@ -3357,7 +3357,7 @@ impl SidebarMenuSubButton {
                         out.push(decl_icon::icon(cx, icon));
                     }
 
-                    let mut text = ui::text(cx, label.clone())
+                    let mut text = ui::text(label.clone())
                         .w_full()
                         .min_w_0()
                         .flex_1()
@@ -3721,7 +3721,7 @@ impl SidebarMenuButton {
                     // layout remains stable across the width transition. This matches the DOM
                     // recipe shape (overflow-hidden + truncate) and avoids a "pop" when the label
                     // branch appears/disappears at `opacity == 0`.
-                    let text = ui::text(cx, label.clone())
+                    let text = ui::text(label.clone())
                         .w_full()
                         .min_w_0()
                         .flex_1()
@@ -3817,7 +3817,7 @@ impl SidebarMenuButton {
             .rounded(Radius::Md)
             .p(Space::N2);
         let content = TooltipContent::new({
-            let mut text = ui::text(cx, label.clone())
+            let mut text = ui::text(label.clone())
                 .text_size_px(label_style.size)
                 .font_weight(label_style.weight)
                 .text_color(ColorRef::Color(fg))
@@ -6030,7 +6030,7 @@ mod tests {
                         .models_mut()
                         .update(&triggered_for_handler, |v| *v = true);
                 });
-                let action = SidebarMenuAction::new([ui::text(cx, "...").into_element(cx)])
+                let action = SidebarMenuAction::new([ui::text("...").into_element(cx)])
                     .as_child(true)
                     .on_activate(on_activate)
                     .test_id("sidebar-menu-action")
@@ -6765,7 +6765,7 @@ mod tests {
             bounds,
             "shadcn-sidebar-menu-sub-button-as-child",
             |cx| {
-                let child = ui::text(cx, "Custom Child")
+                let child = ui::text("Custom Child")
                     .into_element(cx)
                     .test_id("sidebar-menu-sub-button-child");
                 let button = SidebarMenuSubButton::new("Child")
@@ -6825,7 +6825,7 @@ mod tests {
             bounds,
             "shadcn-sidebar-menu-button-as-child",
             |cx| {
-                let child = ui::text(cx, "Custom Child")
+                let child = ui::text("Custom Child")
                     .into_element(cx)
                     .test_id("sidebar-menu-button-child");
                 let button = SidebarMenuButton::new("Projects")
@@ -6885,7 +6885,7 @@ mod tests {
             bounds,
             "shadcn-sidebar-menu-sub-button-as-child-href",
             |cx| {
-                let child = ui::text(cx, "Custom Child")
+                let child = ui::text("Custom Child")
                     .into_element(cx)
                     .test_id("sidebar-menu-sub-button-child");
                 let button = SidebarMenuSubButton::new("Child")
@@ -6944,7 +6944,7 @@ mod tests {
             bounds,
             "shadcn-sidebar-menu-button-as-child-href",
             |cx| {
-                let child = ui::text(cx, "Custom Child")
+                let child = ui::text("Custom Child")
                     .into_element(cx)
                     .test_id("sidebar-menu-button-child");
                 let button = SidebarMenuButton::new("Projects")

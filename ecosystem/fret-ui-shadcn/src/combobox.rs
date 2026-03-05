@@ -1607,7 +1607,7 @@ fn combobox_with_patch<H: UiHost>(
                                         let label_style = text_style.clone();
                                         let show_clear = show_clear && selected.is_some();
                                         let label_el = {
-                                            let mut label = ui::label(cx, resolved_label.clone())
+                                            let mut label = ui::label( resolved_label.clone())
                                                 .w_full()
                                                 .min_w_0()
                                                 .flex_1()
@@ -1890,7 +1890,7 @@ fn combobox_with_patch<H: UiHost>(
                                     });
 
                                 if let Some(content) = item.content {
-                                    let body = ui::h_flex(cx, move |_cx| vec![content])
+                                    let body = ui::h_flex( move |_cx| vec![content])
                                         .w_full()
                                         .min_w_0()
                                         .flex_1()
@@ -2050,14 +2050,14 @@ fn combobox_with_patch<H: UiHost>(
                                     );
 
                                     let body = if let Some(content) = item.content {
-                                        ui::h_flex(cx, move |_cx| vec![content])
+                                        ui::h_flex( move |_cx| vec![content])
                                             .w_full()
                                             .min_w_0()
                                             .flex_1()
                                             .basis_0()
                                             .into_element(cx)
                                     } else {
-                                        let mut label = ui::label(cx, label_text.clone())
+                                        let mut label = ui::label( label_text.clone())
                                             .text_size_px(label_style.size)
                                             .font_weight(label_style.weight)
                                             .text_color(ColorRef::Color(if item_disabled {
@@ -2353,7 +2353,7 @@ fn combobox_with_patch<H: UiHost>(
                                 let label_style = text_style.clone();
                                 let show_clear = show_clear && selected.is_some();
                                 let label_el = {
-                                    let mut label = ui::label(cx, resolved_label.clone())
+                                    let mut label = ui::label( resolved_label.clone())
                                         .w_full()
                                         .min_w_0()
                                         .flex_1()
@@ -2636,7 +2636,7 @@ fn combobox_with_patch<H: UiHost>(
                             });
 
                         if let Some(content) = item.content {
-                            let body = ui::h_flex(cx, move |_cx| vec![content])
+                            let body = ui::h_flex( move |_cx| vec![content])
                                 .w_full()
                                 .min_w_0()
                                 .flex_1()
@@ -2787,14 +2787,14 @@ fn combobox_with_patch<H: UiHost>(
                             cx.opacity(if is_selected { 1.0 } else { 0.0 }, move |_cx| vec![icon]);
 
                         let body = if let Some(content) = item.content {
-                            ui::h_flex(cx, move |_cx| vec![content])
+                            ui::h_flex( move |_cx| vec![content])
                                 .w_full()
                                 .min_w_0()
                                 .flex_1()
                                 .basis_0()
                                 .into_element(cx)
                         } else {
-                            let mut label = ui::label(cx, label_text.clone())
+                            let mut label = ui::label( label_text.clone())
                                 .text_size_px(label_style.size)
                                 .font_weight(label_style.weight)
                                 .text_color(ColorRef::Color(if item_disabled {

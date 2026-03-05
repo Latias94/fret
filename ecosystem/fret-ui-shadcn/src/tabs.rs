@@ -2235,7 +2235,7 @@ impl Tabs {
                                                             out.push(decl_icon::icon(cx, icon));
                                                         }
 
-                                                        let mut text = ui::label(cx, label.clone())
+                                                        let mut text = ui::label( label.clone())
                                                             .text_size_px(style.size)
                                                             .font_weight(style.weight)
                                                             .nowrap();

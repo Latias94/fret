@@ -220,9 +220,9 @@ impl View for UndoBasicsView {
         ])
         .into_element(cx);
 
-        let row_shortcuts = ui::v_flex(cx, |cx| {
+        let row_shortcuts = ui::v_flex(|cx| {
             [
-                ui::h_flex(cx, |cx| {
+                ui::h_flex(|cx| {
                     [
                         shadcn::Label::new("Undo shortcut:").into_element(cx),
                         shadcn::Badge::new(undo_shortcut)
@@ -234,7 +234,7 @@ impl View for UndoBasicsView {
                 .gap(Space::N2)
                 .items_center()
                 .into_element(cx),
-                ui::h_flex(cx, |cx| {
+                ui::h_flex(|cx| {
                     [
                         shadcn::Label::new("Redo shortcut:").into_element(cx),
                         shadcn::Badge::new(redo_shortcut)
@@ -251,7 +251,7 @@ impl View for UndoBasicsView {
         .gap(Space::N2)
         .into_element(cx);
 
-        let value_el = ui::text(cx, format!("{value}"))
+        let value_el = ui::text(format!("{value}"))
             .text_base()
             .tabular_nums()
             .font_weight(FontWeight::SEMIBOLD)
@@ -263,13 +263,11 @@ impl View for UndoBasicsView {
                     .numeric_value(value as f64),
             );
 
-        let row_value = ui::v_flex(cx, |cx| {
-            [shadcn::Label::new("Value").into_element(cx), value_el]
-        })
-        .gap(Space::N1)
-        .into_element(cx);
+        let row_value = ui::v_flex(|cx| [shadcn::Label::new("Value").into_element(cx), value_el])
+            .gap(Space::N1)
+            .into_element(cx);
 
-        let row_edits = ui::h_flex(cx, |cx| {
+        let row_edits = ui::h_flex(|cx| {
             [
                 shadcn::Button::new("-1")
                     .variant(shadcn::ButtonVariant::Secondary)
@@ -292,7 +290,7 @@ impl View for UndoBasicsView {
         .items_center()
         .into_element(cx);
 
-        let row_undo = ui::h_flex(cx, |cx| {
+        let row_undo = ui::h_flex(|cx| {
             [
                 shadcn::Button::new("Undo")
                     .disabled(!can_undo)
@@ -312,7 +310,7 @@ impl View for UndoBasicsView {
         .items_center()
         .into_element(cx);
 
-        let row_coalesce = ui::h_flex(cx, |cx| {
+        let row_coalesce = ui::h_flex(|cx| {
             [
                 shadcn::Label::new("Coalesce nudges (key = \"value\"):").into_element(cx),
                 shadcn::Switch::new(self.coalesce.clone())
@@ -327,14 +325,14 @@ impl View for UndoBasicsView {
         .items_center()
         .into_element(cx);
 
-        let row_next = ui::v_flex(cx, |cx| {
+        let row_next = ui::v_flex(|cx| {
             [
-                ui::text(cx, format!("Next undo: {next_undo}"))
+                ui::text(format!("Next undo: {next_undo}"))
                     .text_sm()
                     .text_color(ColorRef::Color(theme.color_token("muted-foreground")))
                     .into_element(cx)
                     .test_id(TEST_ID_NEXT_UNDO),
-                ui::text(cx, format!("Next redo: {next_redo}"))
+                ui::text(format!("Next redo: {next_redo}"))
                     .text_sm()
                     .text_color(ColorRef::Color(theme.color_token("muted-foreground")))
                     .into_element(cx)
@@ -344,7 +342,7 @@ impl View for UndoBasicsView {
         .gap(Space::N1)
         .into_element(cx);
 
-        let content = ui::v_flex(cx, |_cx| {
+        let content = ui::v_flex(|_cx| {
             [
                 row_shortcuts,
                 row_value,

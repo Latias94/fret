@@ -552,7 +552,7 @@ impl InputOtp {
                                     },
                                     move |cx| {
                                         let style = slot_text_style_for_slot.clone();
-                                        let mut label = ui::label(cx, text)
+                                        let mut label = ui::label(text)
                                             .text_size_px(style.size)
                                             .font_weight(style.weight)
                                             .text_color(ColorRef::Color(fg))

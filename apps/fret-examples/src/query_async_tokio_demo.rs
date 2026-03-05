@@ -176,29 +176,25 @@ impl View for QueryAsyncTokioDemoView {
             .action(act::InvalidateNamespace)
             .into_element(cx);
 
-        let buttons = ui::h_flex(cx, |_cx| {
-            [invalidate_btn, invalidate_ns_btn, toggle_mode_btn]
-        })
-        .gap(Space::N2)
-        .items_center()
-        .into_element(cx);
+        let buttons = ui::h_flex(|_cx| [invalidate_btn, invalidate_ns_btn, toggle_mode_btn])
+            .gap(Space::N2)
+            .items_center()
+            .into_element(cx);
 
-        let lines = ui::v_flex(cx, |cx| {
+        let lines = ui::v_flex(|cx| {
             let mut out: Vec<AnyElement> = Vec::new();
-            out.push(ui::raw_text(cx, info_line).into_element(cx));
-            out.push(ui::raw_text(cx, data_line).into_element(cx));
-            out.push(
-                ui::raw_text(
-                    cx,
-                    "Async fetch uses a runtime-provided FutureSpawnerHandle (Tokio in this demo).",
-                )
-                .text_color(ColorRef::Color(theme.color_token("muted-foreground")))
-                .into_element(cx),
-            );
+            out.push(ui::raw_text(info_line).into_element(cx));
+            out.push(ui::raw_text(data_line).into_element(cx));
             if let Some(err) = state.error.as_ref() {
                 out.push(
-                    ui::raw_text(cx, format!("error={err} kind={:?}", err.kind()))
+                    ui::raw_text(format!("Error: {:?}", err.kind()))
                         .text_color(ColorRef::Color(theme.color_token("destructive")))
+                        .into_element(cx),
+                );
+            } else {
+                out.push(
+                    ui::raw_text("Error: <none>")
+                        .text_color(ColorRef::Color(theme.color_token("muted-foreground")))
                         .into_element(cx),
                 );
             }
@@ -210,14 +206,14 @@ impl View for QueryAsyncTokioDemoView {
         let header = shadcn::CardHeader::new([
             shadcn::CardTitle::new("Async query demo (Tokio)").into_element(cx),
             shadcn::CardDescription::new("use_query_async + FutureSpawnerHandle").into_element(cx),
-            ui::h_flex(cx, |_cx| [status_badge, mode_badge])
+            ui::h_flex(|_cx| [status_badge, mode_badge])
                 .gap(Space::N2)
                 .items_center()
                 .into_element(cx),
         ])
         .into_element(cx);
 
-        let content = shadcn::CardContent::new([ui::v_flex(cx, |_cx| [buttons, lines])
+        let content = shadcn::CardContent::new([ui::v_flex(|_cx| [buttons, lines])
             .gap(Space::N4)
             .w_full()
             .into_element(cx)])
@@ -240,8 +236,8 @@ impl View for QueryAsyncTokioDemoView {
         cx.on_action_notify_transient::<act::Invalidate>(TRANSIENT_INVALIDATE_KEY);
         cx.on_action_notify_transient::<act::InvalidateNamespace>(TRANSIENT_INVALIDATE_NAMESPACE);
 
-        let page = ui::container(cx, |cx| {
-            [ui::v_flex(cx, |_cx| [card])
+        let page = ui::container(|cx| {
+            [ui::v_flex(|_cx| [card])
                 .w_full()
                 .h_full()
                 .justify_center()

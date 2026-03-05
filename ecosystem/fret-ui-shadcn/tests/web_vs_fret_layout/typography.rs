@@ -893,7 +893,7 @@ fn web_vs_fret_layout_typography_h1_geometry_light() {
 
     let mut services = StyleAwareServices::default();
     let (_ui, snap, _root) = run_fret_root_with_ui_and_services(bounds, &mut services, |cx| {
-        let heading = ui::text(cx, text.clone())
+        let heading = ui::text(text.clone())
             .text_size_px(size)
             .line_height_px(line_height)
             .font_weight(fret_core::FontWeight(weight))
@@ -941,7 +941,7 @@ fn web_vs_fret_layout_typography_h2_geometry_light() {
         let theme = Theme::global(&*cx.app).clone();
         let border_color = theme.color_token("border");
 
-        let heading = ui::text(cx, text.clone())
+        let heading = ui::text(text.clone())
             .text_size_px(size)
             .line_height_px(line_height)
             .font_weight(fret_core::FontWeight(weight))
@@ -1006,7 +1006,7 @@ fn web_vs_fret_layout_typography_h3_geometry_light() {
 
     let mut services = StyleAwareServices::default();
     let (_ui, snap, _root) = run_fret_root_with_ui_and_services(bounds, &mut services, |cx| {
-        let heading = ui::text(cx, text.clone())
+        let heading = ui::text(text.clone())
             .text_size_px(size)
             .line_height_px(line_height)
             .font_weight(fret_core::FontWeight(weight))
@@ -1049,7 +1049,7 @@ fn web_vs_fret_layout_typography_h4_geometry_light() {
 
     let mut services = StyleAwareServices::default();
     let (_ui, snap, _root) = run_fret_root_with_ui_and_services(bounds, &mut services, |cx| {
-        let heading = ui::text(cx, text.clone())
+        let heading = ui::text(text.clone())
             .text_size_px(size)
             .line_height_px(line_height)
             .font_weight(fret_core::FontWeight(weight))
@@ -1092,7 +1092,7 @@ fn web_vs_fret_layout_typography_p_geometry_light() {
 
     let mut services = StyleAwareServices::default();
     let (_ui, snap, _root) = run_fret_root_with_ui_and_services(bounds, &mut services, |cx| {
-        let p = ui::text(cx, text.clone())
+        let p = ui::text(text.clone())
             .text_size_px(size)
             .line_height_px(line_height)
             .font_weight(fret_core::FontWeight(weight))
@@ -1135,7 +1135,7 @@ fn web_vs_fret_layout_typography_lead_geometry_light() {
 
     let mut services = StyleAwareServices::default();
     let (_ui, snap, _root) = run_fret_root_with_ui_and_services(bounds, &mut services, |cx| {
-        let p = ui::text(cx, text.clone())
+        let p = ui::text(text.clone())
             .text_size_px(size)
             .line_height_px(line_height)
             .font_weight(fret_core::FontWeight(weight))
@@ -1182,7 +1182,7 @@ fn web_vs_fret_layout_typography_muted_geometry_light() {
 
     let mut services = StyleAwareServices::default();
     let (_ui, snap, _root) = run_fret_root_with_ui_and_services(bounds, &mut services, |cx| {
-        let p = ui::text(cx, text.clone())
+        let p = ui::text(text.clone())
             .text_size_px(size)
             .line_height_px(line_height)
             .font_weight(fret_core::FontWeight(weight))
@@ -1230,7 +1230,7 @@ fn web_vs_fret_layout_typography_large_geometry_light() {
 
     let mut services = StyleAwareServices::default();
     let (_ui, snap, _root) = run_fret_root_with_ui_and_services(bounds, &mut services, |cx| {
-        let div = ui::text(cx, text.clone())
+        let div = ui::text(text.clone())
             .text_size_px(size)
             .line_height_px(line_height)
             .font_weight(fret_core::FontWeight(weight))
@@ -1277,7 +1277,7 @@ fn web_vs_fret_layout_typography_blockquote_geometry_light() {
         let theme = Theme::global(&*cx.app).clone();
         let border_color = theme.color_token("border");
 
-        let quote = ui::text(cx, text.clone())
+        let quote = ui::text(text.clone())
             .text_size_px(size)
             .line_height_px(line_height)
             .into_element(cx);
@@ -1402,7 +1402,7 @@ fn web_vs_fret_layout_typography_list_geometry_light() {
                                         ..Default::default()
                                     },
                                     move |cx| {
-                                        let li = ui::text(cx, text)
+                                        let li = ui::text(text)
                                             .text_size_px(li_size)
                                             .line_height_px(li_line_height)
                                             .font_weight(fret_core::FontWeight(li_weight))
@@ -1463,7 +1463,7 @@ fn web_vs_fret_layout_typography_inline_code_padding_and_style_light() {
         let theme = Theme::global(&*cx.app).clone();
         let bg = theme.color_token("muted");
 
-        let code_text_el = ui::text(cx, text.clone())
+        let code_text_el = ui::text(text.clone())
             .text_size_px(size)
             .line_height_px(line_height)
             .font_weight(fret_core::FontWeight(weight))
@@ -1559,7 +1559,7 @@ fn web_vs_fret_layout_typography_small_text_style_light() {
 
     let mut services = StyleAwareServices::default();
     let (_ui, _snap, _root) = run_fret_root_with_ui_and_services(bounds, &mut services, |cx| {
-        let small = ui::text(cx, text.clone())
+        let small = ui::text(text.clone())
             .text_size_px(size)
             .line_height_px(line_height)
             .font_weight(fret_core::FontWeight(weight))
@@ -1615,7 +1615,7 @@ fn web_vs_fret_layout_typography_demo_geometry_smoke_light() {
             },
             move |cx| {
                 vec![
-                    ui::text(cx, h1_text.clone())
+                    ui::text(h1_text.clone())
                         .text_size_px(web_css_px(web_h1, "fontSize"))
                         .line_height_px(web_css_px(web_h1, "lineHeight"))
                         .font_weight(fret_core::FontWeight(web_css_u16(web_h1, "fontWeight")))
@@ -1639,7 +1639,7 @@ fn web_vs_fret_layout_typography_demo_geometry_smoke_light() {
                 let theme = Theme::global(&*cx.app).clone();
                 let border_color = theme.color_token("border");
 
-                let heading = ui::text(cx, h2_text.clone())
+                let heading = ui::text(h2_text.clone())
                     .text_size_px(web_css_px(web_h2, "fontSize"))
                     .line_height_px(web_css_px(web_h2, "lineHeight"))
                     .font_weight(fret_core::FontWeight(web_css_u16(web_h2, "fontWeight")))
@@ -1687,7 +1687,7 @@ fn web_vs_fret_layout_typography_demo_geometry_smoke_light() {
             },
             move |cx| {
                 vec![
-                    ui::text(cx, h3_text.clone())
+                    ui::text(h3_text.clone())
                         .text_size_px(web_css_px(web_h3, "fontSize"))
                         .line_height_px(web_css_px(web_h3, "lineHeight"))
                         .font_weight(fret_core::FontWeight(web_css_u16(web_h3, "fontWeight")))
@@ -1709,7 +1709,7 @@ fn web_vs_fret_layout_typography_demo_geometry_smoke_light() {
             },
             move |cx| {
                 vec![
-                    ui::text(cx, bq_text.clone())
+                    ui::text(bq_text.clone())
                         .text_size_px(web_css_px(web_bq, "fontSize"))
                         .line_height_px(web_css_px(web_bq, "lineHeight"))
                         .into_element(cx),
@@ -1753,7 +1753,7 @@ fn web_vs_fret_layout_typography_demo_geometry_smoke_light() {
                         li_texts
                             .into_iter()
                             .map(|t| {
-                                ui::text(cx, t)
+                                ui::text(t)
                                     .text_size_px(li_size)
                                     .line_height_px(li_line_height)
                                     .into_element(cx)

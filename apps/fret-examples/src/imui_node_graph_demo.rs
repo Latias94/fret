@@ -40,11 +40,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut ImUiNodeGraphState) -> fret::
 
         let root = fret_ui_kit::ui::v_flex_build(ui.cx_mut(), move |cx, out| {
             fret_imui::imui_build(cx, out, |ui| {
-                let title = fret_ui_kit::ui::text(
-                    ui.cx_mut(),
-                    "imui + retained node graph (RetainedSubtree prototype)",
-                )
-                .font_semibold();
+                let title = fret_ui_kit::ui::text().font_semibold();
                 ui.add_ui(title);
                 ui.separator();
 

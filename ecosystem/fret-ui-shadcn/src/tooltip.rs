@@ -1441,7 +1441,7 @@ impl TooltipContent {
         let text_style = tooltip_text_style(&theme);
         let fg = tooltip_text_fg(&theme);
 
-        ui::text(cx, text)
+        ui::text(text)
             .text_size_px(text_style.size)
             .line_height_px(
                 text_style
@@ -1960,7 +1960,7 @@ mod tests {
                     },
                 );
 
-                let content = TooltipContent::new(vec![ui::raw_text(cx, "tip").into_element(cx)])
+                let content = TooltipContent::new(vec![ui::raw_text("tip").into_element(cx)])
                     .into_element(cx);
                 content_id_out.set(Some(content.id));
 
@@ -2121,7 +2121,7 @@ mod tests {
                             );
 
                             let content =
-                                TooltipContent::new(vec![ui::raw_text(cx, "tip").into_element(cx)])
+                                TooltipContent::new(vec![ui::raw_text("tip").into_element(cx)])
                                     .into_element(cx);
                             content_id_out.set(Some(content.id));
 
@@ -2426,9 +2426,8 @@ mod tests {
                         },
                     );
 
-                    let content =
-                        TooltipContent::new(vec![ui::raw_text(cx, "tip").into_element(cx)])
-                            .into_element(cx);
+                    let content = TooltipContent::new(vec![ui::raw_text("tip").into_element(cx)])
+                        .into_element(cx);
                     content_id_out.set(Some(content.id));
 
                     vec![
@@ -2636,9 +2635,8 @@ mod tests {
                         },
                     );
 
-                    let content =
-                        TooltipContent::new(vec![ui::raw_text(cx, "tip").into_element(cx)])
-                            .into_element(cx);
+                    let content = TooltipContent::new(vec![ui::raw_text("tip").into_element(cx)])
+                        .into_element(cx);
                     content_id_out.set(Some(content.id));
 
                     vec![
@@ -2955,13 +2953,13 @@ mod tests {
                                     );
 
                                     let content_1 = TooltipContent::new(vec![
-                                        ui::raw_text(cx, "tip_1").into_element(cx),
+                                        ui::raw_text("Content").into_element(cx),
                                     ])
                                     .into_element(cx);
                                     content_1_id_out.set(Some(content_1.id));
 
                                     let content_2 = TooltipContent::new(vec![
-                                        ui::raw_text(cx, "tip_2").into_element(cx),
+                                        ui::raw_text("Content").into_element(cx),
                                     ])
                                     .into_element(cx);
                                     content_2_id_out.set(Some(content_2.id));
@@ -3151,7 +3149,7 @@ mod tests {
                                         },
                                     );
                                     let content_1 = TooltipContent::new(vec![
-                                        ui::raw_text(cx, "tip1").into_element(cx),
+                                        ui::raw_text("Content").into_element(cx),
                                     ])
                                     .into_element(cx);
                                     content_1_id_out.set(Some(content_1.id));
@@ -3180,7 +3178,7 @@ mod tests {
                                         },
                                     );
                                     let content_2 = TooltipContent::new(vec![
-                                        ui::raw_text(cx, "tip2").into_element(cx),
+                                        ui::raw_text("Content").into_element(cx),
                                     ])
                                     .into_element(cx);
                                     content_2_id_out.set(Some(content_2.id));
@@ -3420,7 +3418,7 @@ mod tests {
                             );
 
                             let content =
-                                TooltipContent::new(vec![ui::raw_text(cx, "tip").into_element(cx)])
+                                TooltipContent::new(vec![ui::raw_text("tip").into_element(cx)])
                                     .into_element(cx);
                             content_id_out.set(Some(content.id));
 
@@ -3610,7 +3608,7 @@ mod tests {
                             );
 
                             let content =
-                                TooltipContent::new(vec![ui::raw_text(cx, "tip").into_element(cx)])
+                                TooltipContent::new(vec![ui::raw_text("tip").into_element(cx)])
                                     .into_element(cx);
                             content_id_out.set(Some(content.id));
 
@@ -3819,7 +3817,7 @@ mod tests {
                                     );
 
                                     let content = TooltipContent::new(vec![
-                                        ui::raw_text(cx, "tip").into_element(cx),
+                                        ui::raw_text("Content").into_element(cx),
                                     ])
                                     .into_element(cx);
                                     content_id_out.set(Some(content.id));
@@ -4065,7 +4063,7 @@ mod tests {
                                             );
 
                                             let content = TooltipContent::new(vec![
-                                                ui::raw_text(cx, "tip").into_element(cx),
+                                                ui::raw_text("Content").into_element(cx),
                                             ])
                                             .into_element(cx);
                                             content_id_out.set(Some(content.id));
@@ -4316,7 +4314,7 @@ mod tests {
                             );
 
                             let content =
-                                TooltipContent::new(vec![ui::raw_text(cx, "tip").into_element(cx)])
+                                TooltipContent::new(vec![ui::raw_text("tip").into_element(cx)])
                                     .into_element(cx);
                             content_id_out.set(Some(content.id));
 
@@ -4520,13 +4518,13 @@ mod tests {
                                     );
 
                                     let content_1 = TooltipContent::new(vec![
-                                        ui::raw_text(cx, "tip1").into_element(cx),
+                                        ui::raw_text("Content").into_element(cx),
                                     ])
                                     .into_element(cx);
                                     content_1_id_out.set(Some(content_1.id));
 
                                     let content_2 = TooltipContent::new(vec![
-                                        ui::raw_text(cx, "tip2").into_element(cx),
+                                        ui::raw_text("Content").into_element(cx),
                                     ])
                                     .into_element(cx);
                                     content_2_id_out.set(Some(content_2.id));
@@ -4729,7 +4727,7 @@ mod tests {
                             );
 
                             let content =
-                                TooltipContent::new(vec![ui::raw_text(cx, "tip").into_element(cx)])
+                                TooltipContent::new(vec![ui::raw_text("tip").into_element(cx)])
                                     .into_element(cx);
                             content_id_out.set(Some(content.id));
 
@@ -4968,7 +4966,7 @@ mod tests {
                         },
                         |cx| {
                             vec![
-                                TooltipContent::new(vec![ui::raw_text(cx, "tip").into_element(cx)])
+                                TooltipContent::new(vec![ui::raw_text("tip").into_element(cx)])
                                     .into_element(cx),
                             ]
                         },

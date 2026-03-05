@@ -1088,7 +1088,7 @@ impl Button {
                             }
 
                             if !visible_label.is_empty() {
-                                let mut label = ui::text(cx, visible_label.clone())
+                                let mut label = ui::text(visible_label.clone())
                                     .text_size_px(text_px)
                                     .fixed_line_box_px(text_line_height)
                                     .line_box_in_bounds()

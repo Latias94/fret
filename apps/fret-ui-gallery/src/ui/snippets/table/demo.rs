@@ -44,7 +44,7 @@ fn make_invoice_table(
                 vec![
                     {
                         // shadcn docs: `font-medium` for the invoice id.
-                        let invoice_text = ui::text(cx, invoice)
+                        let invoice_text = ui::text(invoice)
                             .font_weight(FontWeight::MEDIUM)
                             .into_element(cx);
                         shadcn::TableCell::new(invoice_text)

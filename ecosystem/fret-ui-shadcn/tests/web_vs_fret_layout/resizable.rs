@@ -130,7 +130,7 @@ fn assert_resizable_demo_geometry_matches_web(web_name: &str) {
                             align: CrossAlign::Center,
                             wrap: false,
                         },
-                        move |cx| vec![ui::text(cx, text).font_semibold().into_element(cx)],
+                        move |cx| vec![ui::text(text).text_sm().into_element(cx)],
                     )]
                 },
             );
@@ -264,7 +264,20 @@ fn assert_resizable_demo_with_handle_geometry_matches_web(web_name: &str) {
                     padding: Edges::all(Px(24.0)).into(),
                     ..Default::default()
                 },
-                move |cx| vec![ui::text(cx, text).font_semibold().into_element(cx)],
+                move |cx| {
+                    vec![cx.flex(
+                        FlexProps {
+                            layout: LayoutStyle::default(),
+                            direction: fret_core::Axis::Horizontal,
+                            gap: Px(0.0).into(),
+                            padding: Edges::all(Px(0.0)).into(),
+                            justify: MainAlign::Center,
+                            align: CrossAlign::Center,
+                            wrap: false,
+                        },
+                        move |cx| vec![ui::text(text).text_sm().into_element(cx)],
+                    )]
+                },
             )
         }
 
@@ -370,7 +383,7 @@ fn assert_resizable_handle_geometry_matches_web(web_name: &str) {
                 padding: Edges::all(Px(24.0)).into(),
                 ..Default::default()
             },
-            move |cx| vec![ui::text(cx, "Sidebar").font_semibold().into_element(cx)],
+            move |cx| vec![ui::text("Sidebar").text_sm().into_element(cx)],
         );
         let left = cx.semantics(
             fret_ui::element::SemanticsProps {
@@ -387,7 +400,7 @@ fn assert_resizable_handle_geometry_matches_web(web_name: &str) {
                 padding: Edges::all(Px(24.0)).into(),
                 ..Default::default()
             },
-            move |cx| vec![ui::text(cx, "Content").font_semibold().into_element(cx)],
+            move |cx| vec![ui::text("Content").text_sm().into_element(cx)],
         );
         let right = cx.semantics(
             fret_ui::element::SemanticsProps {
@@ -507,7 +520,7 @@ fn assert_resizable_vertical_geometry_matches_web(web_name: &str) {
                 padding: Edges::all(Px(24.0)).into(),
                 ..Default::default()
             },
-            move |cx| vec![ui::text(cx, "Header").font_semibold().into_element(cx)],
+            move |cx| vec![ui::text("Header").text_sm().into_element(cx)],
         );
         let top = cx.semantics(
             fret_ui::element::SemanticsProps {
@@ -524,7 +537,7 @@ fn assert_resizable_vertical_geometry_matches_web(web_name: &str) {
                 padding: Edges::all(Px(24.0)).into(),
                 ..Default::default()
             },
-            move |cx| vec![ui::text(cx, "Content").font_semibold().into_element(cx)],
+            move |cx| vec![ui::text("Content").text_sm().into_element(cx)],
         );
         let bottom = cx.semantics(
             fret_ui::element::SemanticsProps {

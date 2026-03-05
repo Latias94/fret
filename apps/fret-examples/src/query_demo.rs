@@ -151,42 +151,40 @@ impl View for QueryDemoView {
             .action(act::InvalidateNamespace)
             .into_element(cx);
 
-        let buttons = ui::h_flex(cx, |_cx| {
-            [invalidate_btn, invalidate_ns_btn, toggle_mode_btn]
-        })
-        .gap(Space::N2)
-        .items_center()
-        .into_element(cx);
+        let buttons = ui::h_flex(|_cx| [invalidate_btn, invalidate_ns_btn, toggle_mode_btn])
+            .gap(Space::N2)
+            .items_center()
+            .into_element(cx);
 
-        let lines = ui::v_flex(cx, |cx| {
+        let lines = ui::v_flex(|cx| {
             let mut out: Vec<AnyElement> = Vec::new();
-            out.push(ui::raw_text(cx, info_line).into_element(cx));
-            out.push(ui::raw_text(cx, data_line).into_element(cx));
-            out.push(
-                ui::raw_text(
-                    cx,
-                    "Note: stale controls freshness only; use invalidate/refetch for refresh.",
-                )
-                .text_color(ColorRef::Color(theme.color_token("muted-foreground")))
-                .into_element(cx),
-            );
+            out.push(ui::raw_text(info_line).into_element(cx));
+            out.push(ui::raw_text(data_line).into_element(cx));
+
             if let Some(err) = error_line {
                 out.push(
-                    ui::raw_text(cx, format!("error={err} kind={:?}", err.kind()))
+                    ui::raw_text(format!("Error: {:?}", err.kind()))
                         .text_color(ColorRef::Color(theme.color_token("destructive")))
                         .into_element(cx),
                 );
+            } else {
+                out.push(
+                    ui::raw_text("Error: <none>")
+                        .text_color(ColorRef::Color(theme.color_token("muted-foreground")))
+                        .into_element(cx),
+                );
             }
+
             if let Some(dur) = duration_line {
                 out.push(
-                    ui::raw_text(cx, dur)
+                    ui::raw_text(dur)
                         .text_color(ColorRef::Color(theme.color_token("muted-foreground")))
                         .into_element(cx),
                 );
             }
             if let Some(retry) = retry_line {
                 out.push(
-                    ui::raw_text(cx, retry)
+                    ui::raw_text(retry)
                         .text_color(ColorRef::Color(theme.color_token("muted-foreground")))
                         .into_element(cx),
                 );
@@ -199,14 +197,14 @@ impl View for QueryDemoView {
         let header = shadcn::CardHeader::new([
             shadcn::CardTitle::new("Query demo").into_element(cx),
             shadcn::CardDescription::new("Async resource state via fret-query.").into_element(cx),
-            ui::h_flex(cx, |_cx| [status_badge, mode_badge])
+            ui::h_flex(|_cx| [status_badge, mode_badge])
                 .gap(Space::N2)
                 .items_center()
                 .into_element(cx),
         ])
         .into_element(cx);
 
-        let content = shadcn::CardContent::new([ui::v_flex(cx, |_cx| [buttons, lines])
+        let content = shadcn::CardContent::new([ui::v_flex(|_cx| [buttons, lines])
             .gap(Space::N4)
             .w_full()
             .into_element(cx)])
@@ -229,8 +227,8 @@ impl View for QueryDemoView {
         cx.on_action_notify_transient::<act::Invalidate>(TRANSIENT_INVALIDATE_KEY);
         cx.on_action_notify_transient::<act::InvalidateNamespace>(TRANSIENT_INVALIDATE_NAMESPACE);
 
-        let page = ui::container(cx, |cx| {
-            [ui::v_flex(cx, |_cx| [card])
+        let page = ui::container(|cx| {
+            [ui::v_flex(|_cx| [card])
                 .w_full()
                 .h_full()
                 .justify_center()

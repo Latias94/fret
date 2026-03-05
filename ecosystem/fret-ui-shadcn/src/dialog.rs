@@ -1035,7 +1035,7 @@ impl DialogTitle {
             .or_else(|| theme.metric_by_key("font.line_height"))
             .unwrap_or_else(|| theme.metric_token("font.line_height"));
 
-        let title = ui::text(cx, self.text)
+        let title = ui::text(self.text)
             .text_size_px(px)
             .line_height_px(line_height)
             .font_semibold()
@@ -1081,7 +1081,7 @@ impl DialogDescription {
             .or_else(|| theme.metric_by_key("font.line_height"))
             .unwrap_or_else(|| theme.metric_token("font.line_height"));
 
-        let description = ui::text(cx, self.text)
+        let description = ui::text(self.text)
             .text_size_px(px)
             .line_height_px(line_height)
             .font_normal()
@@ -2060,10 +2060,9 @@ mod tests {
                         cx,
                         |_cx| trigger,
                         move |cx| {
-                            let content = DialogContent::new(vec![
-                                ui::raw_text(cx, "dialog").into_element(cx),
-                            ])
-                            .into_element(cx);
+                            let content =
+                                DialogContent::new(vec![ui::raw_text("Content").into_element(cx)])
+                                    .into_element(cx);
                             content
                         },
                     );

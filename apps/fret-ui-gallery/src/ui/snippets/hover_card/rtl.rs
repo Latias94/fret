@@ -16,8 +16,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                 .items_start(),
             move |cx| {
                 vec![
-                    ui::text(cx, "نموذج RTL").font_semibold().into_element(cx),
-                    ui::text(cx, "تحقق من محاذاة HoverCard تحت RTL.")
+                    ui::text("تحقق من محاذاة HoverCard تحت RTL.")
                         .wrap(TextWrap::WordBreak)
                         .text_color(ColorRef::Color(muted_fg))
                         .into_element(cx),

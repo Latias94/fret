@@ -8,9 +8,7 @@ const CMD_APP_SAVE: &str = "ui_gallery.app.save";
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let page_number = |cx: &mut ElementContext<'_, H>, label: &'static str| {
-        fret_ui_kit::ui::text(cx, label)
-            .tabular_nums()
-            .into_element(cx)
+        fret_ui_kit::ui::text(label).tabular_nums().into_element(cx)
     };
 
     let content = shadcn::PaginationContent::new([

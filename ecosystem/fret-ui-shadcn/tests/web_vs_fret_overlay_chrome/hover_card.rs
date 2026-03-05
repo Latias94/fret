@@ -36,19 +36,16 @@ fn build_shadcn_hover_card_demo_page(
     ])
     .into_element(cx);
 
-    let heading = ui::text(cx, "@nextjs")
+    let heading = ui::text("@nextjs")
         .text_size_px(sm_px)
         .line_height_px(sm_line_height)
         .font_semibold()
         .into_element(cx);
-    let body = ui::text(
-        cx,
-        "The React Framework – created and maintained by @vercel.",
-    )
-    .text_size_px(sm_px)
-    .line_height_px(sm_line_height)
-    .into_element(cx);
-    let joined = ui::text(cx, "Joined December 2021")
+    let body = ui::text()
+        .text_size_px(sm_px)
+        .line_height_px(sm_line_height)
+        .into_element(cx);
+    let joined = ui::text("Joined December 2021")
         .text_size_px(xs_px)
         .line_height_px(xs_line_height)
         .text_color(ColorRef::Color(muted_fg))

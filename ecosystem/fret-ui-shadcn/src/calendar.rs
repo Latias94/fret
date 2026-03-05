@@ -1186,7 +1186,7 @@ impl Calendar {
                                     move |_cx| vec![prev, next],
                                 );
 
-                                ui::stack(cx, move |_cx| vec![title_bar, nav_bar])
+                                ui::stack(move |_cx| vec![title_bar, nav_bar])
                                     .relative()
                                     .w_px(MetricRef::Px(month_width))
                                     .h_px(MetricRef::Px(day_size))
@@ -1587,7 +1587,7 @@ fn calendar_multi_month_view<H: UiHost>(
     };
 
     let months_el = if is_row {
-        ui::h_flex(cx, move |cx| {
+        ui::h_flex(move |cx| {
             months
                 .iter()
                 .copied()
@@ -1638,7 +1638,7 @@ fn calendar_multi_month_view<H: UiHost>(
         .w_px(MetricRef::Px(months_span))
         .into_element(cx)
     } else {
-        ui::v_flex(cx, move |cx| {
+        ui::v_flex(move |cx| {
             months
                 .iter()
                 .copied()
@@ -1690,7 +1690,7 @@ fn calendar_multi_month_view<H: UiHost>(
         .into_element(cx)
     };
 
-    let stack = ui::stack(cx, move |_cx| vec![months_el, nav])
+    let stack = ui::stack(move |_cx| vec![months_el, nav])
         .relative()
         .w_px(MetricRef::Px(months_span))
         .into_element(cx);
@@ -2478,7 +2478,7 @@ fn calendar_day_cell<H: UiHost>(
                     wrap: false,
                 },
                 move |cx| {
-                    let label = ui::label(cx, day_text.clone())
+                    let label = ui::label(day_text.clone())
                         .text_size_px(text_sm_px)
                         .line_height_px(text_sm_line_height)
                         .font_medium()

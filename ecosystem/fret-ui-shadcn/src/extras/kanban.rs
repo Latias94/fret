@@ -360,7 +360,7 @@ impl Kanban {
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         self.into_element_with(cx, |cx, item, _ctx| {
-            ui::text(cx, item.name.clone())
+            ui::text(item.name.clone())
                 .font_medium()
                 .w_full()
                 .min_w_0()
@@ -609,7 +609,7 @@ impl Kanban {
                             ),
                             |cx| {
                                 vec![
-                                    ui::text(cx, col_name)
+                                    ui::text(col_name)
                                         .font_semibold()
                                         .w_full()
                                         .min_w_0()

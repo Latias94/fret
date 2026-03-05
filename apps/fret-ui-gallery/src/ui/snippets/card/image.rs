@@ -156,7 +156,7 @@ pub fn render(
             .variant(shadcn::BadgeVariant::Outline)
             .children([
                 icon(cx, icon_id),
-                ui::text(cx, text)
+                ui::text(text)
                     .nowrap()
                     .into_element(cx)
                     .test_id(format!("ui-gallery-card-image-badge-{text}")),
@@ -182,7 +182,7 @@ pub fn render(
                     ]
                 },
             );
-            let price = ui::text(cx, "$135,000")
+            let price = ui::text("$200,000")
                 .font_medium()
                 .into_element(cx)
                 .test_id("ui-gallery-card-image-price");

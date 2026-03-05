@@ -846,7 +846,7 @@ impl AlertDialogTitle {
             .or_else(|| theme.metric_by_key("font.line_height"))
             .unwrap_or_else(|| theme.metric_token("font.line_height"));
 
-        let title = ui::text(cx, self.text)
+        let title = ui::text(self.text)
             .text_size_px(px)
             .line_height_px(line_height)
             .font_semibold()
@@ -893,7 +893,7 @@ impl AlertDialogDescription {
             .or_else(|| theme.metric_by_key("font.line_height"))
             .unwrap_or_else(|| theme.metric_token("font.line_height"));
 
-        let description = ui::text(cx, self.text)
+        let description = ui::text(self.text)
             .text_size_px(px)
             .line_height_px(line_height)
             .font_normal()

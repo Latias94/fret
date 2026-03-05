@@ -10,8 +10,8 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         .map(|idx| Arc::<str>::from(format!("v1.2.0-beta.{}", 51 - idx)))
         .collect();
 
-    let content = ui::container(cx, move |cx| {
-        let heading = ui::text(cx, "Tags")
+    let content = ui::container(move |cx| {
+        let heading = ui::text("Tags")
             .text_size_px(Px(14.0))
             .line_height_px(Px(14.0))
             .line_height_policy(fret_core::TextLineHeightPolicy::FixedFromStyle)
@@ -27,7 +27,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                 let mut out: Vec<AnyElement> = Vec::with_capacity(tags.len() * 2);
                 for tag in tags {
                     out.push(
-                        ui::text(cx, tag)
+                        ui::text(tag)
                             .text_size_px(Px(14.0))
                             .line_height_px(Px(20.0))
                             .line_height_policy(fret_core::TextLineHeightPolicy::FixedFromStyle)

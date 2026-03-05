@@ -27,14 +27,14 @@ fn build_shadcn_popover_demo_page(
             let muted_fg = theme.color_token("muted.foreground");
 
             // popover-demo uses `h4.leading-none.font-medium` (line height = 16px).
-            let title = ui::text(cx, "Dimensions")
+            let title = ui::text("Dimensions")
                 .text_size_px(sm_px)
                 .line_height_px(Px(16.0))
                 .font_medium()
                 .nowrap()
                 .into_element(cx);
             // popover-demo uses `p.text-sm.text-muted-foreground` (line height = 20px).
-            let description = ui::text(cx, "Set the dimensions for the layer.")
+            let description = ui::text("Set the dimensions for the layer.")
                 .text_size_px(sm_px)
                 .line_height_px(sm_line_height)
                 .text_color(ColorRef::Color(muted_fg))

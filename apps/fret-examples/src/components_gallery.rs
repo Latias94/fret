@@ -458,7 +458,7 @@ impl ComponentsGalleryDriver {
                 let padding = theme.metric_token("metric.padding.md");
                 let bg = theme.color_token("background");
 
-                 vec![ui::v_flex(cx, |cx| {
+                vec![ui::v_flex(|cx: &mut ElementContext<'_, App>| {
                                  vec![
                                      cx.text(title),
                                      cx.text(subtitle),

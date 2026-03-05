@@ -536,7 +536,7 @@ impl ChartTooltipContent {
                 if !self.hide_label {
                     if let Some(label) = self.label.clone() {
                         children.push(
-                            ui::text(cx, label)
+                            ui::text(label)
                                 .text_xs()
                                 .font_medium()
                                 .h_px(MetricRef::Px(text_xs_line_height))
@@ -580,7 +580,7 @@ impl ChartTooltipContent {
                     }
 
                     row.push(
-                        ui::text(cx, item.label)
+                        ui::text(item.label)
                             .text_xs()
                             .text_color(ColorRef::Color(theme.color_token("muted-foreground")))
                             .line_height_px(text_xs_px)
@@ -589,7 +589,7 @@ impl ChartTooltipContent {
                     );
                     row.push(cx.spacer(SpacerProps::default()));
                     row.push(
-                        ui::text(cx, item.value)
+                        ui::text(item.value)
                             .text_xs()
                             .font_medium()
                             .line_height_px(text_xs_px)
@@ -625,19 +625,19 @@ impl ChartTooltipContent {
             ChartTooltipContentKind::FormatterKcal => {
                 let row_min_w = Px(130.0);
                 for item in self.items {
-                    let label = ui::text(cx, item.label)
+                    let label = ui::text(item.label)
                         .text_xs()
                         .text_color(ColorRef::Color(theme.color_token("muted-foreground")))
                         .line_height_px(text_xs_line_height)
                         .h_px(MetricRef::Px(text_xs_line_height))
                         .into_element(cx);
-                    let value = ui::text(cx, item.value)
+                    let value = ui::text(item.value)
                         .text_xs()
                         .font_medium()
                         .line_height_px(text_xs_line_height)
                         .h_px(MetricRef::Px(text_xs_line_height))
                         .into_element(cx);
-                    let suffix = ui::text(cx, "kcal")
+                    let suffix = ui::text("kcal")
                         .text_xs()
                         .text_color(ColorRef::Color(theme.color_token("muted-foreground")))
                         .line_height_px(text_xs_line_height)
@@ -693,19 +693,19 @@ impl ChartTooltipContent {
                         },
                         |_cx| Vec::new(),
                     );
-                    let label = ui::text(cx, item.label)
+                    let label = ui::text(item.label)
                         .text_xs()
                         .text_color(ColorRef::Color(theme.color_token("muted-foreground")))
                         .line_height_px(text_xs_line_height)
                         .h_px(MetricRef::Px(text_xs_line_height))
                         .into_element(cx);
-                    let value = ui::text(cx, item.value)
+                    let value = ui::text(item.value)
                         .text_xs()
                         .font_medium()
                         .line_height_px(text_xs_line_height)
                         .h_px(MetricRef::Px(text_xs_line_height))
                         .into_element(cx);
-                    let suffix = ui::text(cx, "kcal")
+                    let suffix = ui::text("kcal")
                         .text_xs()
                         .text_color(ColorRef::Color(theme.color_token("muted-foreground")))
                         .line_height_px(text_xs_line_height)
@@ -746,19 +746,19 @@ impl ChartTooltipContent {
                     };
 
                     if index == 1 {
-                        let total_label = ui::text(cx, "Total")
+                        let total_label = ui::text("Total")
                             .text_xs()
                             .font_medium()
                             .line_height_px(text_xs_line_height)
                             .h_px(MetricRef::Px(text_xs_line_height))
                             .into_element(cx);
-                        let total_value = ui::text(cx, total.clone())
+                        let total_value = ui::text(total.clone())
                             .text_xs()
                             .font_medium()
                             .line_height_px(text_xs_line_height)
                             .h_px(MetricRef::Px(text_xs_line_height))
                             .into_element(cx);
-                        let total_suffix = ui::text(cx, "kcal")
+                        let total_suffix = ui::text("kcal")
                             .text_xs()
                             .text_color(ColorRef::Color(theme.color_token("muted-foreground")))
                             .line_height_px(text_xs_line_height)
@@ -881,7 +881,7 @@ impl ChartTooltipContent {
             );
 
             vec![
-                ui::stack(cx, move |_cx| vec![sentinel, body])
+                ui::stack(move |_cx| vec![sentinel, body])
                     .w_full()
                     .into_element(cx),
             ]
@@ -1049,7 +1049,7 @@ impl ChartLegendContent {
                     |_cx| Vec::new(),
                 );
 
-                let label = ui::text(cx, item.label)
+                let label = ui::text(item.label)
                     .text_xs()
                     .line_height_px(text_xs_line_height)
                     .h_px(MetricRef::Px(text_xs_line_height))

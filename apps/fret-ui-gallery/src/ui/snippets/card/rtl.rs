@@ -24,7 +24,7 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
             ])
             .into_element(cx),
             shadcn::CardContent::new(vec![
-                ui::text(cx, "محتوى البطاقة").text_sm().into_element(cx),
+                ui::text("هذا محتوى البطاقة.").text_sm().into_element(cx),
             ])
             .into_element(cx),
         ])

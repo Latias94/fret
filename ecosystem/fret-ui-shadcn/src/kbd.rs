@@ -159,7 +159,7 @@ fn kbd_with_patch<H: UiHost>(
                 wrap: false,
             },
             move |cx| match content {
-                KbdContent::Text(text) => vec![ui::label(cx, text)
+                KbdContent::Text(text) => vec![ui::label( text)
                     .text_size_px(px)
                     .fixed_line_box_px(line_height)
                     .line_box_in_bounds()

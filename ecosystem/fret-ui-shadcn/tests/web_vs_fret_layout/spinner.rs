@@ -769,7 +769,7 @@ fn web_vs_fret_layout_spinner_demo_item_height_matches_web() {
                     },
                     move |cx| {
                         vec![
-                            fret_ui_shadcn::ItemContent::new([ui::text(cx, "$100.00")
+                            fret_ui_shadcn::ItemContent::new([ui::text("$100.00")
                                 .text_size_px(Theme::global(&*cx.app).metric_token("font.size"))
                                 .line_height_px(
                                     Theme::global(&*cx.app).metric_token("font.line_height"),

@@ -26,20 +26,17 @@ pub fn render<H: UiHost>(
         .into_element(cx);
     let avatar = shadcn::Avatar::new([avatar_image_el, avatar_fallback]).into_element(cx);
 
-    let heading = ui::text(cx, "@nextjs")
+    let heading = ui::text("@nextjs")
         .text_sm()
         .font_semibold()
         .into_element(cx)
         .test_id("ui-gallery-hover-card-demo-content-title");
-    let body = ui::text(
-        cx,
-        "The React Framework – created and maintained by @vercel.",
-    )
-    .text_sm()
-    .wrap(TextWrap::WordBreak)
-    .into_element(cx)
-    .test_id("ui-gallery-hover-card-demo-content-desc");
-    let joined = ui::text(cx, "Joined December 2021")
+    let body = ui::text("The React Framework – created and maintained by @vercel.")
+        .text_sm()
+        .wrap(TextWrap::WordBreak)
+        .into_element(cx)
+        .test_id("ui-gallery-hover-card-demo-content-desc");
+    let joined = ui::text("Joined December 2021")
         .text_xs()
         .text_color(ColorRef::Color(muted_fg))
         .into_element(cx)

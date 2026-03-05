@@ -26,7 +26,7 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
                 .test_id("ui-gallery-card-content-inline-button"),
         ])
         .into_element(cx),
-        shadcn::CardFooter::new(vec![ui::text(cx, "Footer").text_sm().into_element(cx)])
+        shadcn::CardFooter::new(vec![ui::text("Footer").text_sm().into_element(cx)])
             .into_element(cx),
     ])
     .refine_layout(max_w_sm)

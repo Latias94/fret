@@ -761,7 +761,7 @@ fn combobox_chips_with_patch<H: UiHost>(
                                     let mut out: Vec<AnyElement> = Vec::new();
                                     if selected_values_for_trigger.is_empty() {
                                         out.push(
-                                            ui::label(cx, placeholder_for_trigger.clone())
+                                            ui::label( placeholder_for_trigger.clone())
                                                 .text_size_px(label_style.size)
                                                 .font_weight(label_style.weight)
                                                 .text_color(ColorRef::Color(muted_fg))
@@ -820,7 +820,7 @@ fn combobox_chips_with_patch<H: UiHost>(
                                                     },
                                                     move |cx| {
                                                         let mut out = vec![
-                                                            ui::label(cx, label.clone())
+                                                            ui::label( label.clone())
                                                                 .text_size_px(Px(12.0))
                                                                 .font_weight(FontWeight::MEDIUM)
                                                                 .text_color(ColorRef::Color(
@@ -1053,7 +1053,7 @@ fn combobox_chips_with_patch<H: UiHost>(
                             .on_select_action(on_select);
 
                         if let Some(content) = item.content {
-                            let body = ui::h_flex(cx, move |_cx| vec![content])
+                            let body = ui::h_flex( move |_cx| vec![content])
                                 .w_full()
                                 .min_w_0()
                                 .flex_1()

@@ -459,7 +459,7 @@ fn badge_with_patch<H: UiHost>(
 
     let content_children = move |cx: &mut ElementContext<'_, H>| {
         current_color::scope_children(cx, fg_ref.clone(), |cx| {
-            let mut label = ui::text(cx, label_for_content.clone())
+            let mut label = ui::text(label_for_content.clone())
                 .text_size_px(text_px)
                 .fixed_line_box_px(line_height)
                 .line_box_in_bounds()

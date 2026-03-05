@@ -505,7 +505,7 @@ impl AvatarGroupCount {
                 move |cx| {
                     if children.as_ref().is_some_and(|c| c.is_empty()) {
                         vec![
-                            ui::text(cx, "+3")
+                            ui::text("+3")
                                 .text_size_px(text_px)
                                 .font_medium()
                                 .nowrap()
@@ -780,7 +780,7 @@ impl AvatarFallback {
                 .or_else(|| theme.metric_by_key("font.line_height"))
                 .unwrap_or_else(|| theme.metric_token("font.line_height"));
 
-            let label = ui::label(cx, self.text)
+            let label = ui::label(self.text)
                 .text_size_px(text_px)
                 .line_height_px(line_height)
                 .nowrap()

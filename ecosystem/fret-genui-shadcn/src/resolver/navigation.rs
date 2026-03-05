@@ -209,7 +209,7 @@ impl ShadcnResolver {
             buttons.push(b.into_element(cx));
         }
 
-        fret_ui_kit::ui::h_flex(cx, move |_cx| buttons)
+        fret_ui_kit::ui::h_flex(move |_cx| buttons)
             .gap(fret_ui_kit::Space::N1)
             .items_center()
             .justify_center()

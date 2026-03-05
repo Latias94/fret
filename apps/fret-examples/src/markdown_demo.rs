@@ -599,7 +599,7 @@ $$
                 ),
             };
 
-            ui::container(cx, |_cx| [inner])
+            ui::container(|_cx| [inner])
                 .w_full()
                 .padding_px(padding_md)
                 .into_element(cx)
@@ -622,7 +622,7 @@ $$
             },
         );
 
-        let toggles = ui::h_flex(cx, |cx| {
+        let toggles = ui::h_flex(|cx| {
             [
                 cx.text(format!(
                     "wrap code: {}",
@@ -659,7 +659,7 @@ $$
             },
             |cx, id| {
                 scroll_viewport = Some(id);
-                let scroll = shadcn::ScrollArea::new([ui::container(cx, |cx| {
+                let scroll = shadcn::ScrollArea::new([ui::container(|cx| {
                     [markdown::Markdown::new(self.st.markdown.clone())
                         .into_element_with(cx, &components)]
                 })
@@ -673,7 +673,7 @@ $$
             },
         );
 
-        let content = ui::v_flex(cx, |cx| {
+        let content = ui::v_flex(|cx| {
             [
                 cx.text("markdown_demo"),
                 cx.text("Scrollable markdown preview (links open via platform shell)."),
@@ -689,7 +689,7 @@ $$
 
         self.maybe_scroll_pending_anchor(cx, scroll_viewport, padding_md);
 
-        ui::container(cx, |_cx| [content])
+        ui::container(|_cx| [content])
             .bg(ColorRef::Color(theme.color_token("background")))
             .w_full()
             .h_full()

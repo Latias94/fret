@@ -158,7 +158,7 @@ impl View for DragBasicsView {
             cx.pointer_region_on_pointer_up(on_pointer_up);
 
             let box_size = Px(72.0);
-            let box_el = ui::v_flex(cx, |cx| [cx.text("Drag")])
+            let box_el = ui::v_flex(|cx| [cx.text("Drag")])
                 .w_px(box_size)
                 .h_px(box_size)
                 .items_center()
@@ -172,17 +172,17 @@ impl View for DragBasicsView {
             let offset_x = Px(origin.x.0.clamp(0.0, 480.0));
             let offset_y = Px(origin.y.0.clamp(0.0, 120.0));
 
-            let top_spacer = ui::container(cx, |_cx| Vec::<AnyElement>::new())
+            let top_spacer = ui::container(|_cx| Vec::<AnyElement>::new())
                 .h_px(offset_y)
                 .into_element(cx);
-            let left_spacer = ui::container(cx, |_cx| Vec::<AnyElement>::new())
+            let left_spacer = ui::container(|_cx| Vec::<AnyElement>::new())
                 .w_px(offset_x)
                 .into_element(cx);
 
-            let row = ui::h_flex(cx, |_cx| [left_spacer, box_el]).into_element(cx);
-            let col = ui::v_flex(cx, |_cx| [top_spacer, row]).into_element(cx);
+            let row = ui::h_flex(|_cx| [left_spacer, box_el]).into_element(cx);
+            let col = ui::v_flex(|_cx| [top_spacer, row]).into_element(cx);
 
-            let bounds = ui::container(cx, |_cx| vec![col])
+            let bounds = ui::container(|_cx| vec![col])
                 .w_full()
                 .h_full()
                 .bg(ColorRef::Color(theme.color_token("muted")))
@@ -192,7 +192,7 @@ impl View for DragBasicsView {
             vec![bounds]
         });
 
-        let body = ui::v_flex(cx, |_cx| [pos, drag_count_badge, draggable])
+        let body = ui::v_flex(|_cx| [pos, drag_count_badge, draggable])
             .gap(Space::N3)
             .into_element(cx);
 

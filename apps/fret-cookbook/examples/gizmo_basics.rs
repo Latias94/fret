@@ -351,7 +351,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut GizmoBasicsWindowState) -> Vi
     ])
     .into_element(cx);
 
-    let pos_badges = ui::h_flex(cx, |cx| {
+    let pos_badges = ui::h_flex(|cx| {
         let mut badge = |label: String, test_id: &'static str, value: f64| {
             shadcn::Badge::new(label)
                 .variant(shadcn::BadgeVariant::Secondary)
@@ -379,7 +379,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut GizmoBasicsWindowState) -> Vi
     .items_center()
     .into_element(cx);
 
-    let toolbar = ui::h_flex(cx, |cx| {
+    let toolbar = ui::h_flex(|cx| {
         [
             shadcn::Button::new("Reset")
                 .variant(shadcn::ButtonVariant::Outline)
@@ -655,13 +655,13 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut GizmoBasicsWindowState) -> Vi
         })
     };
 
-    let viewport = ui::container(cx, |_cx| vec![viewport])
+    let viewport = ui::container(|_cx| vec![viewport])
         .w_full()
         .h_full()
         .min_h(Px(480.0))
         .into_element(cx);
 
-    let content = ui::v_flex(cx, |_cx| vec![toolbar, hint, viewport])
+    let content = ui::v_flex(|_cx| vec![toolbar, hint, viewport])
         .gap(Space::N3)
         .w_full()
         .h_full()

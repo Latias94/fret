@@ -59,7 +59,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
 
                                         cx.pressable(props, move |cx, st| {
                                             let color = if st.hovered { fg } else { muted };
-                                            let label = fret_ui_kit::ui::text(cx, "Components")
+                                            let label = fret_ui_kit::ui::text("Components")
                                                 .text_color(fret_ui_kit::ColorRef::Color(color))
                                                 .nowrap()
                                                 .into_element(cx);

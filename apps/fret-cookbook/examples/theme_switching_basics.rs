@@ -72,7 +72,7 @@ impl View for ThemeSwitchingBasicsView {
         ])
         .into_element(cx);
 
-        let scheme_row = ui::h_flex(cx, |cx| {
+        let scheme_row = ui::h_flex(|cx| {
             [
                 shadcn::Label::new("Active scheme:").into_element(cx),
                 shadcn::Badge::new(scheme_label)
@@ -114,7 +114,7 @@ impl View for ThemeSwitchingBasicsView {
                     .into_element(cx),
             ])
             .into_element(cx),
-            shadcn::CardContent::new([ui::h_flex(cx, |cx| {
+            shadcn::CardContent::new([ui::h_flex(|cx| {
                 [
                     shadcn::Button::new("Default").into_element(cx),
                     shadcn::Button::new("Outline")
@@ -134,7 +134,7 @@ impl View for ThemeSwitchingBasicsView {
         .into_element(cx)
         .test_id(TEST_ID_SAMPLE_CARD);
 
-        let content_body = ui::v_flex(cx, |_cx| [scheme_row, toggle_row, sample])
+        let content_body = ui::v_flex(|_cx| [scheme_row, toggle_row, sample])
             .gap(Space::N5)
             .w_full()
             .into_element(cx);

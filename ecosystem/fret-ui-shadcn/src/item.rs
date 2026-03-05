@@ -679,7 +679,7 @@ impl ItemTitle {
             (fg, px, line_height)
         };
 
-        ui::text(cx, self.text)
+        ui::text(self.text)
             .text_size_px(px)
             .fixed_line_box_px(line_height)
             .line_box_in_bounds()
@@ -720,7 +720,7 @@ impl ItemDescription {
         };
         let max_h = Px(line_height.0 * 2.0);
 
-        ui::text(cx, self.text)
+        ui::text(self.text)
             .text_size_px(px)
             .line_height_px(line_height)
             .font_normal()
@@ -1280,11 +1280,11 @@ mod tests {
 
         let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
             item_sized(cx, ItemSize::Xs, |cx| {
-                let media = ItemMedia::new([ui::text(cx, "m").into_element(cx)])
+                let media = ItemMedia::new([ui::text("m").into_element(cx)])
                     .variant(ItemMediaVariant::Image)
                     .into_element(cx)
                     .test_id("media");
-                let content = ItemContent::new([ui::text(cx, "c").into_element(cx)])
+                let content = ItemContent::new([ui::text("c").into_element(cx)])
                     .into_element(cx)
                     .test_id("content");
                 [media, content]

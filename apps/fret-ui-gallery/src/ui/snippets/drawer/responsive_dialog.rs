@@ -101,7 +101,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         },
     );
 
-    ui::h_flex(cx, move |_cx| [desktop_dialog, mobile_drawer])
+    ui::h_flex(move |_cx| [desktop_dialog, mobile_drawer])
         .gap(Space::N2)
         .wrap()
         .w_full()

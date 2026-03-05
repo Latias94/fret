@@ -104,7 +104,7 @@ impl View for CommandsKeymapBasicsView {
         ])
         .into_element(cx);
 
-        let row_shortcut = ui::h_flex(cx, |cx| {
+        let row_shortcut = ui::h_flex(|cx| {
             [
                 shadcn::Label::new("Shortcut:").into_element(cx),
                 shadcn::Badge::new(shortcut)
@@ -117,7 +117,7 @@ impl View for CommandsKeymapBasicsView {
         .items_center()
         .into_element(cx);
 
-        let row_enabled = ui::h_flex(cx, |cx| {
+        let row_enabled = ui::h_flex(|cx| {
             [
                 shadcn::Label::new("Command state:").into_element(cx),
                 shadcn::Badge::new(enabled_label)
@@ -134,7 +134,7 @@ impl View for CommandsKeymapBasicsView {
         .items_center()
         .into_element(cx);
 
-        let row_allow = ui::h_flex(cx, |cx| {
+        let row_allow = ui::h_flex(|cx| {
             [
                 shadcn::Label::new("Allow command:").into_element(cx),
                 shadcn::Switch::new(self.allow_command.clone())
@@ -153,12 +153,10 @@ impl View for CommandsKeymapBasicsView {
             .test_id(TEST_ID_DISPATCH)
             .into_element(cx);
 
-        let left = ui::v_flex(cx, |_cx| {
-            [row_shortcut, row_enabled, row_allow, dispatch_button]
-        })
-        .gap(Space::N3)
-        .w_full()
-        .into_element(cx);
+        let left = ui::v_flex(|_cx| [row_shortcut, row_enabled, row_allow, dispatch_button])
+            .gap(Space::N3)
+            .w_full()
+            .into_element(cx);
 
         let panel_state_text = cx
             .text(format!(
@@ -171,7 +169,7 @@ impl View for CommandsKeymapBasicsView {
             .test_id(TEST_ID_PANEL_OPEN)
             .into_element(cx);
 
-        let panel_body = ui::v_flex(cx, |cx| {
+        let panel_body = ui::v_flex(|cx| {
             let desc = if panel_open {
                 "This panel is toggled by the command handler."
             } else {
@@ -179,7 +177,7 @@ impl View for CommandsKeymapBasicsView {
             };
             [
                 panel_state_text,
-                ui::h_flex(cx, |cx| {
+                ui::h_flex(|cx| {
                     [
                         shadcn::Label::new("Open:").into_element(cx),
                         panel_open_indicator,
@@ -209,7 +207,7 @@ impl View for CommandsKeymapBasicsView {
         .into_element(cx)
         .test_id(TEST_ID_PANEL);
 
-        let body = ui::h_flex(cx, |_cx| [left, panel])
+        let body = ui::h_flex(|_cx| [left, panel])
             .gap(Space::N6)
             .w_full()
             .into_element(cx);

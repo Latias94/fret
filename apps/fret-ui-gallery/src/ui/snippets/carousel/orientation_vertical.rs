@@ -15,7 +15,7 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
     let items = (1..=5)
         .map(|idx| {
             let theme = Theme::global(&*cx.app).clone();
-            let number = ui::text(cx, format!("{idx}"))
+            let number = ui::text(format!("{idx}"))
                 .text_size_px(Px(30.0))
                 .line_height_px(Px(36.0))
                 .line_height_policy(fret_core::TextLineHeightPolicy::FixedFromStyle)
@@ -35,7 +35,7 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
             );
 
             let card = shadcn::Card::new([body]).into_element(cx);
-            ui::container(cx, move |_cx| vec![card])
+            ui::container(move |_cx| vec![card])
                 .w_full()
                 .p_1()
                 .into_element(cx)

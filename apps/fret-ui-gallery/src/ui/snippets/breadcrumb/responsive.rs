@@ -178,7 +178,7 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
                                                     overflow_items
                                                         .iter()
                                                         .map(|(label, _href)| {
-                                                            fret_ui_kit::ui::text(cx, *label)
+                                                            fret_ui_kit::ui::text( *label)
                                                                 .into_element(cx)
                                                         })
                                                         .collect::<Vec<_>>()

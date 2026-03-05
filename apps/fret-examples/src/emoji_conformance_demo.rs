@@ -159,7 +159,7 @@ impl EmojiConformanceDriver {
                     })
                 };
 
-                let controls = ui::h_flex(cx, |cx| {
+                let controls = ui::h_flex( |cx| {
                     [
 	                        shadcn::Select::new(
 	                            emoji_font_override.clone(),
@@ -252,7 +252,7 @@ impl EmojiConformanceDriver {
                 }
 
                 let scroll = shadcn::ScrollArea::new([
-                    ui::v_flex(cx, |_cx| rows)
+                    ui::v_flex( |_cx| rows)
                         .w_full()
                         .gap(Space::N2)
                         .items_start()
@@ -271,8 +271,8 @@ impl EmojiConformanceDriver {
                     .max_w(Px(960.0))
                     .into_element(cx);
 
-                let page = ui::container(cx, |cx| {
-                    [ui::v_flex(cx, |_cx| [card])
+                let page = ui::container( |cx| {
+                    [ui::v_flex( |_cx| [card])
                         .w_full()
                         .h_full()
                         .justify_center()

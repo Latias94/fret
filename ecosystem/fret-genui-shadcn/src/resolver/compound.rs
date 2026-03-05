@@ -43,7 +43,7 @@ impl ShadcnResolver {
         cx: &mut ElementContext<'_, H>,
         children: Vec<AnyElement>,
     ) -> AnyElement {
-        fret_ui_kit::ui::container(cx, move |_cx| children).into_element(cx)
+        fret_ui_kit::ui::container(move |_cx| children).into_element(cx)
     }
 
     pub(super) fn render_tabs<H: UiHost>(
@@ -119,7 +119,7 @@ impl ShadcnResolver {
                 .and_then(|(_, slot)| slot.take())
                 .unwrap_or_else(|| {
                     let msg = Arc::<str>::from(format!("Missing TabContent for '{}'", def.value));
-                    fret_ui_kit::ui::text(cx, msg).into_element(cx)
+                    fret_ui_kit::ui::text(msg).into_element(cx)
                 });
             contents.push(fret_ui_shadcn::TabsContent::new(
                 def.value.clone(),
@@ -155,7 +155,7 @@ impl ShadcnResolver {
         cx: &mut ElementContext<'_, H>,
         children: Vec<AnyElement>,
     ) -> AnyElement {
-        fret_ui_kit::ui::container(cx, move |_cx| children).into_element(cx)
+        fret_ui_kit::ui::container(move |_cx| children).into_element(cx)
     }
 
     pub(super) fn render_accordion<H: UiHost>(

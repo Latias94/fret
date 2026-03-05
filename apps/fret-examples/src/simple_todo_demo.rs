@@ -89,7 +89,7 @@ impl SimpleTodoDriver {
                         .rounded_md();
 
                     let header_actions =
-                        ui::h_flex(cx, |cx| ui::children![cx; progress, clear_done_btn])
+                        ui::h_flex(|cx| ui::children![cx; progress, clear_done_btn])
                             .gap(Space::N2)
                             .items_center()
                             .into_element(cx);
@@ -107,13 +107,13 @@ impl SimpleTodoDriver {
                         .into_element(cx)
                         .test_id(TEST_ID_INPUT);
 
-                    let input_row = ui::h_flex(cx, |cx| ui::children![cx; input, add_btn])
+                    let input_row = ui::h_flex(|cx| ui::children![cx; input, add_btn])
                         .gap(Space::N2)
                         .items_center()
                         .w_full()
                         .into_element(cx);
 
-                    let rows = ui::v_flex_build(cx, |cx, out| {
+                    let rows = ui::v_flex_build(|cx, out| {
                         for t in &todos {
                             let remove_cmd = CommandId::new(format!("{CMD_REMOVE_PREFIX}{}", t.id));
                             out.push(
@@ -125,7 +125,7 @@ impl SimpleTodoDriver {
                     .w_full()
                     .into_element(cx);
 
-                    let content = ui::v_flex(cx, |cx| ui::children![cx; input_row, rows])
+                    let content = ui::v_flex(|cx| ui::children![cx; input_row, rows])
                         .gap(Space::N4)
                         .w_full()
                         .into_element(cx);
@@ -150,8 +150,8 @@ impl SimpleTodoDriver {
                     .w_full()
                     .max_w(Px(520.0));
 
-                    let page = ui::container(cx, |cx| {
-                        let centered = ui::v_flex(cx, |cx| ui::children![cx; card])
+                    let page = ui::container(|cx| {
+                        let centered = ui::v_flex(|cx| ui::children![cx; card])
                             .w_full()
                             .h_full()
                             .justify_center()
@@ -247,7 +247,7 @@ fn todo_row(
 
     let checkbox = shadcn::Checkbox::new(item.done.clone());
 
-    let text = ui::text(cx, item.text.clone())
+    let text = ui::text(item.text.clone())
         .truncate()
         .text_sm()
         .text_color(ColorRef::Color(if done {
@@ -262,7 +262,7 @@ fn todo_row(
         .ui()
         .rounded_md();
 
-    ui::h_flex(cx, |cx| ui::children![cx; checkbox, text, remove_btn])
+    ui::h_flex(|cx| ui::children![cx; checkbox, text, remove_btn])
         .gap(Space::N2)
         .items_center()
         .w_full()

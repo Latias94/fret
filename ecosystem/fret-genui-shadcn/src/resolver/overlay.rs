@@ -86,7 +86,7 @@ impl ShadcnResolver {
         } else if children.len() == 1 {
             children.into_iter().next().expect("single child")
         } else {
-            fret_ui_kit::ui::h_flex(cx, move |_cx| children)
+            fret_ui_kit::ui::h_flex(move |_cx| children)
                 .gap(fret_ui_kit::Space::N1)
                 .items_center()
                 .into_element(cx)

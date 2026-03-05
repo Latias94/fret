@@ -20,15 +20,12 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             .items_start(),
         |cx| {
             vec![
-                ui::text(
-                    cx,
-                    "The React Framework – created and maintained by @vercel.",
-                )
-                .text_sm()
-                .wrap(TextWrap::WordBreak)
-                .into_element(cx)
-                .test_id("ui-gallery-hover-card-basic-content-desc"),
-                ui::text(cx, "Joined December 2021")
+                ui::text("HoverCard content: multiline description with WordBreak wrapping.")
+                    .text_sm()
+                    .wrap(TextWrap::WordBreak)
+                    .into_element(cx)
+                    .test_id("ui-gallery-hover-card-basic-content-desc"),
+                ui::text("Joined December 2021")
                     .text_xs()
                     .text_color(ColorRef::Color(muted_fg))
                     .into_element(cx)

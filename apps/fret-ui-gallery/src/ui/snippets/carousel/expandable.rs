@@ -87,7 +87,7 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
                             ..Default::default()
                         },
                         move |cx| {
-                            let title = ui::text(cx, format!("Item\u{00A0}{idx}"))
+                            let title = ui::text(format!("Item\u{00A0}{idx}"))
                                 .text_base()
                                 .font_semibold()
                                 .nowrap()
@@ -109,7 +109,7 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
                     let mut out = vec![header];
 
                     if expanded {
-                        out.push(ui::text(cx, "Expandable body").text_sm().into_element(cx));
+                        out.push(ui::text("Expandable body").text_sm().into_element(cx));
                     }
 
                     out
@@ -117,7 +117,7 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
             );
 
             let card = shadcn::Card::new([body]).into_element(cx);
-            ui::container(cx, move |_cx| vec![card])
+            ui::container(move |_cx| vec![card])
                 .w_full()
                 .p_1()
                 .into_element(cx)

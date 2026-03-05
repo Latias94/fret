@@ -16,7 +16,7 @@ impl ShadcnResolver {
         cx: &mut ElementContext<'_, H>,
         text: Arc<str>,
     ) -> AnyElement {
-        fret_ui_kit::ui::text(cx, text).into_element(cx)
+        fret_ui_kit::ui::text(text).into_element(cx)
     }
 
     pub(super) fn json_to_label(v: Option<&serde_json::Value>) -> Arc<str> {

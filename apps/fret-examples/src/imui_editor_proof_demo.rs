@@ -189,11 +189,9 @@ fn view(cx: &mut ElementContext<'_, App>, _st: &mut ImUiEditorProofState) -> Vie
         use fret_ui_kit::imui::UiWriterImUiFacadeExt as _;
         use fret_ui_kit::imui::UiWriterUiKitExt as _;
 
-        let root = fret_ui_kit::ui::v_flex_build(ui.cx_mut(), move |cx, out| {
+        let root = fret_ui_kit::ui::v_flex_build(move |cx, out| {
             fret_imui::imui_build(cx, out, |ui| {
-                let headline = fret_ui_kit::ui::text(
-                    ui.cx_mut(),
-                    format!(
+                let headline = fret_ui_kit::ui::text(format!(
                         "imui editor-grade proof (M7): docking + multi-window + viewport surfaces (window={window:?})"
                     ),
                 )
@@ -201,9 +199,7 @@ fn view(cx: &mut ElementContext<'_, App>, _st: &mut ImUiEditorProofState) -> Vie
                 ui.add_ui(headline);
 
                 if single {
-                    let hint = fret_ui_kit::ui::text(
-                        ui.cx_mut(),
-                        format!(
+                    let hint = fret_ui_kit::ui::text(format!(
                             "single-window mode enabled ({ENV_SINGLE_WINDOW}=1): dock tear-off should degrade to in-window floating"
                         ),
                     )
@@ -211,9 +207,7 @@ fn view(cx: &mut ElementContext<'_, App>, _st: &mut ImUiEditorProofState) -> Vie
                     ui.add_ui(hint);
                 }
 
-                let caps_line = fret_ui_kit::ui::text(
-                    ui.cx_mut(),
-                    format!(
+                let caps_line = fret_ui_kit::ui::text(format!(
                         "caps: multi_window={} window_tear_off={} window_hover_detection={:?} window_inner_size={window_size:?}",
                         caps.ui.multi_window, caps.ui.window_tear_off, caps.ui.window_hover_detection,
                     ),
@@ -221,7 +215,7 @@ fn view(cx: &mut ElementContext<'_, App>, _st: &mut ImUiEditorProofState) -> Vie
                 .text_xs();
                 ui.add_ui(caps_line);
 
-                let controls = fret_ui_kit::ui::h_flex_build(ui.cx_mut(), move |cx, out| {
+                let controls = fret_ui_kit::ui::h_flex_build(move |cx, out| {
                     fret_imui::imui_build(cx, out, |ui| {
                         if <_ as fret_ui_kit::imui::UiWriterImUiFacadeExt<App>>::button(
                             ui,
@@ -245,16 +239,13 @@ fn view(cx: &mut ElementContext<'_, App>, _st: &mut ImUiEditorProofState) -> Vie
                 .gap(fret_ui_kit::Space::N2);
                 ui.add_ui(controls);
 
-                let last_input_line = fret_ui_kit::ui::text(
-                    ui.cx_mut(),
-                    format!("last viewport input: {last_input}"),
-                )
-                .text_xs();
+                let last_input_line =
+                    fret_ui_kit::ui::text(format!("last_input: {last_input}")).text_xs();
                 ui.add_ui(last_input_line);
                 ui.separator();
 
                 let editor_label =
-                    fret_ui_kit::ui::text(ui.cx_mut(), "fret-ui-editor (M2): PropertyGroup + PropertyGrid + MiniSearchBox (filter)")
+                    fret_ui_kit::ui::text("fret-ui-editor (M2): PropertyGroup + PropertyGrid + MiniSearchBox (filter)")
                         .text_xs();
                 ui.add_ui(editor_label);
                 ui.mount(|cx| {
@@ -1338,7 +1329,7 @@ impl DockPanelRegistry<App> for ImUiEditorProofPanelRegistry {
                     .unwrap_or_default();
 
                 vec![
-                    fret_ui_kit::ui::container_build(cx, move |cx, out| {
+                    fret_ui_kit::ui::container_build( move |cx, out| {
                         out.extend(
                             fret_imui::imui_vstack(cx, move |ui| {
                                 use fret_ui_kit::imui::UiWriterImUiFacadeExt as _;
