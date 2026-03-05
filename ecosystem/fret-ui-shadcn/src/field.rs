@@ -975,7 +975,17 @@ impl FieldLabel {
             let control_registry_on_pointer = control_registry.clone();
             let for_control_on_pointer = for_control.clone();
             let control_snapshot_on_pointer = control_snapshot.clone();
-            cx.pressable_add_on_pointer_down(Arc::new(move |host, acx, _down| {
+            let label_element = id;
+            cx.pressable_add_on_pointer_down(Arc::new(move |host, acx, down| {
+                // Avoid label click-to-focus forwarding when the pointer down originated from a
+                // nested pressable (e.g. an inline button inside the label subtree).
+                if down
+                    .hit_pressable_target
+                    .is_some_and(|target| target != label_element)
+                {
+                    return fret_ui::action::PressablePointerDownResult::Continue;
+                }
+
                 let target = host
                     .models_mut()
                     .read(&control_registry_on_pointer, |reg| {
@@ -1679,8 +1689,79 @@ mod tests {
     use super::*;
 
     use fret_app::App;
-    use fret_core::{AppWindowId, Point, Rect, Size};
+    use fret_core::{
+        AppWindowId, MaterialService, Modifiers, MouseButton, PathCommand, PathConstraints, PathId,
+        PathMetrics, PathService, PathStyle, Point, Px, Rect, Size, SvgId, SvgService, TextBlobId,
+        TextConstraints, TextInput, TextMetrics, TextService,
+    };
+    use fret_runtime::Model;
+    use fret_ui::tree::UiTree;
     use fret_ui_kit::primitives::control_registry::ControlId;
+
+    use crate::shadcn_themes::{ShadcnBaseColor, ShadcnColorScheme, apply_shadcn_new_york};
+
+    fn bounds() -> Rect {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(240.0)),
+        )
+    }
+
+    struct FakeServices;
+
+    impl TextService for FakeServices {
+        fn prepare(
+            &mut self,
+            _input: &TextInput,
+            _constraints: TextConstraints,
+        ) -> (TextBlobId, TextMetrics) {
+            (
+                TextBlobId::default(),
+                TextMetrics {
+                    size: Size::new(Px(10.0), Px(10.0)),
+                    baseline: Px(8.0),
+                },
+            )
+        }
+
+        fn release(&mut self, _blob: TextBlobId) {}
+    }
+
+    impl PathService for FakeServices {
+        fn prepare(
+            &mut self,
+            _commands: &[PathCommand],
+            _style: PathStyle,
+            _constraints: PathConstraints,
+        ) -> (PathId, PathMetrics) {
+            (PathId::default(), PathMetrics::default())
+        }
+
+        fn release(&mut self, _path: PathId) {}
+    }
+
+    impl SvgService for FakeServices {
+        fn register_svg(&mut self, _bytes: &[u8]) -> SvgId {
+            SvgId::default()
+        }
+
+        fn unregister_svg(&mut self, _svg: SvgId) -> bool {
+            true
+        }
+    }
+
+    impl MaterialService for FakeServices {
+        fn register_material(
+            &mut self,
+            _desc: fret_core::MaterialDescriptor,
+        ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+            Ok(fret_core::MaterialId::default())
+        }
+
+        fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
+            true
+        }
+    }
 
     #[test]
     fn checkbox_group_stamps_list_role_without_layout_wrapper() {
@@ -1874,5 +1955,141 @@ mod tests {
         assert_eq!(decoration.role, Some(SemanticsRole::Alert));
         assert_eq!(decoration.live, Some(Some(SemanticsLive::Assertive)));
         assert_eq!(decoration.live_atomic, Some(true));
+    }
+
+    #[test]
+    fn field_label_click_to_focus_skips_nested_pressables() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let mut services = FakeServices;
+        let bounds = bounds();
+        let model: Model<String> = app.models_mut().insert(String::new());
+        let control_id = ControlId::from("email");
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "shadcn-field-label-nested-pressable-focus-suppression",
+            |cx| {
+                let label_contents = ui::h_flex(|cx| {
+                    vec![
+                        ui::text("Email").into_element(cx),
+                        crate::Button::new("Help")
+                            .variant(crate::ButtonVariant::Secondary)
+                            .size(crate::ButtonSize::Sm)
+                            .test_id("field.label.nested_button")
+                            .into_element(cx),
+                    ]
+                })
+                .justify_between()
+                .items_center()
+                .layout(LayoutRefinement::default().w_full().min_w_0())
+                .into_element(cx);
+
+                vec![cx.column(fret_ui::element::ColumnProps::default(), |cx| {
+                    vec![
+                        FieldLabel::new("Email")
+                            .for_control(control_id.clone())
+                            .wrap([label_contents])
+                            .test_id("field.label")
+                            .into_element(cx),
+                        crate::Input::new(model.clone())
+                            .control_id(control_id.clone())
+                            .into_element(cx),
+                    ]
+                })]
+            },
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let column_node = ui.children(root)[0];
+        let label_node = ui.children(column_node)[0];
+        let control_host_node = ui.children(column_node)[1];
+
+        let snap = ui.semantics_snapshot_arc().expect("semantics snapshot");
+        let nested_button_node = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("field.label.nested_button"))
+            .map(|n| n.id)
+            .expect("expected nested button semantics node");
+
+        let center_of = |bounds: fret_core::Rect| {
+            Point::new(
+                Px(bounds.origin.x.0 + bounds.size.width.0 * 0.5),
+                Px(bounds.origin.y.0 + bounds.size.height.0 * 0.5),
+            )
+        };
+
+        let nested_button_bounds = ui
+            .debug_node_bounds(nested_button_node)
+            .expect("nested button bounds");
+        let label_bounds = ui.debug_node_bounds(label_node).expect("label bounds");
+        let control_bounds = ui
+            .debug_node_bounds(control_host_node)
+            .expect("control bounds");
+
+        let control_focus_target = ui
+            .debug_hit_test(center_of(control_bounds))
+            .hit
+            .expect("expected control center hit-test");
+
+        assert_eq!(ui.focus(), None);
+
+        // Clicking the nested pressable should not cause the label to forward focus to the
+        // associated control.
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: center_of(nested_button_bounds),
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        assert_ne!(ui.focus(), Some(control_focus_target));
+
+        // Clicking the label outside the nested pressable should still forward focus.
+        let y_mid = Px(label_bounds.origin.y.0 + label_bounds.size.height.0 * 0.5);
+        let x0 = label_bounds.origin.x.0;
+        let w = label_bounds.size.width.0;
+        let candidates = [
+            Point::new(Px(x0 + 4.0), y_mid),
+            Point::new(Px(x0 + w * 0.25), y_mid),
+            Point::new(Px(x0 + w * 0.75), y_mid),
+            Point::new(Px(x0 + w - 4.0), y_mid),
+        ];
+        let label_position = candidates
+            .into_iter()
+            .find(|p| label_bounds.contains(*p) && !nested_button_bounds.contains(*p))
+            .expect("expected a point in label bounds outside the nested pressable bounds");
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(1),
+                position: label_position,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+
+        assert_eq!(ui.focus(), Some(control_focus_target));
     }
 }

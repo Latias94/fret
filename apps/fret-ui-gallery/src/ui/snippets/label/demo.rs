@@ -27,26 +27,23 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let max_w = LayoutRefinement::default().w_full().max_w(Px(420.0));
     let id = ControlId::from("ui-gallery-label-email");
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N2)
-            .items_start()
-            .layout(max_w),
-        |cx| {
-            vec![
-                shadcn::Label::new("Your email address")
-                    .for_control(id.clone())
-                    .test_id("ui-gallery-label-demo-label")
-                    .into_element(cx),
-                shadcn::Input::new(email)
-                    .placeholder("you@example.com")
-                    .control_id(id)
-                    .test_id("ui-gallery-label-demo-input")
-                    .into_element(cx),
-            ]
-        },
-    )
+    ui::v_stack(|cx| {
+        vec![
+            shadcn::Label::new("Your email address")
+                .for_control(id.clone())
+                .test_id("ui-gallery-label-demo-label")
+                .into_element(cx),
+            shadcn::Input::new(email)
+                .placeholder("you@example.com")
+                .control_id(id)
+                .test_id("ui-gallery-label-demo-input")
+                .into_element(cx),
+        ]
+    })
+    .gap(Space::N2)
+    .items_start()
+    .layout(max_w)
+    .into_element(cx)
     .test_id("ui-gallery-label-demo")
 }
 // endregion: example

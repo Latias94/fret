@@ -568,7 +568,9 @@ impl InputGroup {
                                 move |host: &mut dyn UiPointerActionHost,
                                       _cx: fret_ui::action::ActionCx,
                                       down: fret_ui::action::PointerDownCx| {
-                                    if down.button == MouseButton::Left && !down.hit_is_pressable {
+                                    if down.button == MouseButton::Left
+                                        && down.hit_pressable_target.is_none()
+                                    {
                                         host.request_focus(control_focus_target);
                                     }
                                     false
@@ -2423,9 +2425,9 @@ mod tests {
                     move |host: &mut dyn fret_ui::action::UiPointerActionHost,
                           _cx: fret_ui::action::ActionCx,
                           down: fret_ui::action::PointerDownCx| {
-                        let _ = host
-                            .models_mut()
-                            .update(&seen, |v: &mut bool| *v = down.hit_is_pressable);
+                        let _ = host.models_mut().update(&seen, |v: &mut bool| {
+                            *v = down.hit_pressable_target.is_some()
+                        });
                         false
                     },
                 );
@@ -2518,7 +2520,7 @@ mod tests {
         assert_eq!(
             app.models().get_copied(&seen_pressable),
             Some(true),
-            "expected wrapper PointerRegion to observe hit_is_pressable=true when clicking the embedded pressable"
+            "expected wrapper PointerRegion to observe hit_pressable_target=Some(..) when clicking the embedded pressable"
         );
         assert_ne!(ui.focus(), Some(control_node));
 
@@ -2574,7 +2576,7 @@ mod tests {
         assert_eq!(
             app.models().get_copied(&seen_pressable),
             Some(false),
-            "expected wrapper PointerRegion to observe hit_is_pressable=false when clicking outside the embedded pressable"
+            "expected wrapper PointerRegion to observe hit_pressable_target=None when clicking outside the embedded pressable"
         );
         assert_eq!(ui.focus(), Some(control_node));
     }

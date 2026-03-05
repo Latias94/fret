@@ -3,7 +3,6 @@ use std::sync::Arc;
 use fret_core::{Px, TextWrap};
 use fret_ui::element::{AnyElement, ElementKind};
 use fret_ui::{ElementContext, Theme, UiHost};
-use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Space, ui};
 
@@ -172,7 +171,7 @@ impl Card {
                 [shadcn_layout::container_vstack(
                     cx,
                     props,
-                    stack::VStackProps::default()
+                    shadcn_layout::VStackProps::default()
                         .gap(gap)
                         .layout(LayoutRefinement::default().w_full()),
                     children,
@@ -310,20 +309,17 @@ impl CardHeader {
         }
 
         let content = if let Some(action) = action {
-            let left_col = stack::vstack(
-                cx,
-                stack::VStackProps::default()
-                    // shadcn/ui v4 CardHeader uses `gap-2` between title and description, even
-                    // when an action slot is present.
-                    .gap(Space::N2)
-                    .layout(LayoutRefinement::default().flex_1().min_w_0()),
-                move |_cx| left,
-            );
+            let left_col = ui::v_stack(move |_cx| left)
+                // shadcn/ui v4 CardHeader uses `gap-2` between title and description, even
+                // when an action slot is present.
+                .gap(Space::N2)
+                .layout(LayoutRefinement::default().flex_1().min_w_0())
+                .into_element(cx);
 
             shadcn_layout::container_hstack(
                 cx,
                 props,
-                stack::HStackProps::default()
+                shadcn_layout::HStackProps::default()
                     .gap(Space::N2)
                     .layout(LayoutRefinement::default().w_full())
                     .justify_between()
@@ -334,7 +330,7 @@ impl CardHeader {
             shadcn_layout::container_vstack(
                 cx,
                 props,
-                stack::VStackProps::default()
+                shadcn_layout::VStackProps::default()
                     .gap(Space::N2)
                     .layout(LayoutRefinement::default().w_full()),
                 left,
@@ -354,7 +350,7 @@ impl CardHeader {
             shadcn_layout::container_vstack(
                 cx,
                 outer_props,
-                stack::VStackProps::default()
+                shadcn_layout::VStackProps::default()
                     .gap(Space::N0)
                     .layout(LayoutRefinement::default().w_full()),
                 vec![content, separator],
@@ -407,11 +403,12 @@ impl CardAction {
             if children.len() <= 1 {
                 children
             } else {
-                vec![stack::hstack(
-                    cx,
-                    stack::HStackProps::default().gap(Space::N2).items_center(),
-                    move |_cx| children,
-                )]
+                vec![
+                    ui::h_row(move |_cx| children)
+                        .gap(Space::N2)
+                        .items_center()
+                        .into_element(cx),
+                ]
             }
         });
 
@@ -943,7 +940,7 @@ impl CardContent {
                 // Upstream shadcn/ui `CardContent` is a plain `div` (`px-6`) rather than a flex
                 // container, so avoid the default `items: stretch` behavior that would expand
                 // inline-sized children (e.g. buttons) to fill the card width.
-                stack::VStackProps::default()
+                shadcn_layout::VStackProps::default()
                     .items_start()
                     .layout(LayoutRefinement::default().w_full()),
                 children,
@@ -1105,7 +1102,7 @@ impl CardFooter {
             shadcn_layout::container_vstack(
                 cx,
                 outer_props,
-                stack::VStackProps::default()
+                shadcn_layout::VStackProps::default()
                     .gap(Space::N0)
                     .layout(LayoutRefinement::default().w_full()),
                 vec![separator, inner],

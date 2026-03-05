@@ -38,10 +38,7 @@ pub(in crate::ui) fn material3_variant_toggle_row(
         .get_model_copied(&material3_expressive, Invalidation::Layout)
         .unwrap_or(false);
 
-    stack::hstack(
-        cx,
-        stack::HStackProps::default().gap(Space::N2).items_center(),
-        move |cx| {
+    ui::h_row(move |cx| {
             vec![
                 shadcn::Switch::new(material3_expressive.clone())
                     .a11y_label("Enable Material 3 Expressive variant")
@@ -55,8 +52,7 @@ pub(in crate::ui) fn material3_variant_toggle_row(
                 )
                 .into_element(cx),
             ]
-        },
-    )
+        }).gap(Space::N2).items_center().into_element(cx)
 }
 
 mod buttons;

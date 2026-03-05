@@ -68,19 +68,16 @@ fn state_rows(
     let selected_row_test_id: Arc<str> = Arc::from(format!("{test_id_prefix}-selected"));
     let query_row_test_id: Arc<str> = Arc::from(format!("{test_id_prefix}-query"));
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N1)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full().min_w_0()),
-        move |cx| {
-            vec![
-                state_row(cx, selected_row_text.clone(), selected_row_test_id.clone()),
-                state_row(cx, query_row_text.clone(), query_row_test_id.clone()),
-            ]
-        },
-    )
+    ui::v_flex(move |cx| {
+        vec![
+            state_row(cx, selected_row_text.clone(), selected_row_test_id.clone()),
+            state_row(cx, query_row_text.clone(), query_row_test_id.clone()),
+        ]
+    })
+    .gap(Space::N1)
+    .items_start()
+    .layout(LayoutRefinement::default().w_full().min_w_0())
+    .into_element(cx)
 }
 
 pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
@@ -106,18 +103,15 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
             ]
         });
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N2)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full().max_w(Px(340.0))),
-        move |cx| {
-            vec![
-                custom_combo,
-                state_rows(cx, &value, &query, "ui-gallery-combobox-custom-items"),
-            ]
-        },
-    )
+    ui::v_flex(move |cx| {
+        vec![
+            custom_combo,
+            state_rows(cx, &value, &query, "ui-gallery-combobox-custom-items"),
+        ]
+    })
+    .gap(Space::N2)
+    .items_start()
+    .layout(LayoutRefinement::default().w_full().max_w(Px(340.0)))
+    .into_element(cx)
 }
 // endregion: example

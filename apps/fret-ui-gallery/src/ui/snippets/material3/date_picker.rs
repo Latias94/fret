@@ -33,10 +33,7 @@ pub fn render<H: UiHost>(
     material3::DatePickerDialog::new(open, month.clone(), selected.clone())
         .test_id("ui-gallery-material3-date-picker")
         .into_element(cx, move |cx| {
-            stack::vstack(
-                cx,
-                stack::VStackProps::default().gap(Space::N4),
-                move |cx| {
+            ui::v_stack(move |cx| {
                     let docked = material3::DockedDatePicker::new(month.clone(), selected.clone())
                         .test_id("ui-gallery-material3-date-picker-docked")
                         .into_element(cx);
@@ -57,8 +54,7 @@ pub fn render<H: UiHost>(
                             .into_element(cx),
                         docked,
                     ]
-                },
-            )
+                }).gap(Space::N4).into_element(cx)
         })
 }
 

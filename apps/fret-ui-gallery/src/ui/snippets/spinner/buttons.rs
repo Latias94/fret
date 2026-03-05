@@ -20,20 +20,17 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         .into_element(cx)
     };
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N4)
-            .items_center()
-            .layout(LayoutRefinement::default().w_full().min_w_0()),
-        |cx| {
-            vec![
-                button(cx, "Loading...", None),
-                button(cx, "Please wait", Some(shadcn::ButtonVariant::Outline)),
-                button(cx, "Processing", Some(shadcn::ButtonVariant::Secondary)),
-            ]
-        },
-    )
+    ui::v_flex(|cx| {
+        vec![
+            button(cx, "Loading...", None),
+            button(cx, "Please wait", Some(shadcn::ButtonVariant::Outline)),
+            button(cx, "Processing", Some(shadcn::ButtonVariant::Secondary)),
+        ]
+    })
+    .gap(Space::N4)
+    .items_center()
+    .layout(LayoutRefinement::default().w_full().min_w_0())
+    .into_element(cx)
     .test_id("ui-gallery-spinner-buttons")
 }
 

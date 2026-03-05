@@ -14,10 +14,9 @@ use fret_ui::element::{
 use fret_ui::{ElementContext, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
-use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::collapsible as radix_collapsible;
-use fret_ui_kit::{ChromeRefinement, LayoutRefinement, Space};
+use fret_ui_kit::{ChromeRefinement, LayoutRefinement, Space, ui};
 
 use crate::layout as shadcn_layout;
 
@@ -394,14 +393,11 @@ impl CollapsibleContent {
             }
             let props = decl_style::container_props(&theme, chrome, wrapper_layout);
 
-            let inner = stack::vstack(
-                cx,
-                stack::VStackProps::default()
-                    .gap(gap)
-                    .items_stretch()
-                    .layout(LayoutRefinement::default().w_full().min_w_0()),
-                move |_cx| children,
-            );
+            let inner = ui::v_stack(move |_cx| children)
+                .gap(gap)
+                .items_stretch()
+                .layout(LayoutRefinement::default().w_full().min_w_0())
+                .into_element(cx);
             let children = if force_mount && !is_open {
                 vec![cx.interactivity_gate(true, false, move |_cx| vec![inner])]
             } else {

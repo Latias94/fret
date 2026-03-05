@@ -43,35 +43,32 @@ pub fn render<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     avatar_image: Model<Option<ImageId>>,
 ) -> AnyElement {
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N4)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full().min_w_0()),
-        move |cx| {
-            vec![
-                group(
-                    cx,
-                    avatar_image.clone(),
-                    shadcn::AvatarSize::Sm,
-                    "ui-gallery-avatar-group-sm",
-                ),
-                group(
-                    cx,
-                    avatar_image.clone(),
-                    shadcn::AvatarSize::Default,
-                    "ui-gallery-avatar-group-default",
-                ),
-                group(
-                    cx,
-                    avatar_image.clone(),
-                    shadcn::AvatarSize::Lg,
-                    "ui-gallery-avatar-group-lg",
-                ),
-            ]
-        },
-    )
+    ui::v_flex(move |cx| {
+        vec![
+            group(
+                cx,
+                avatar_image.clone(),
+                shadcn::AvatarSize::Sm,
+                "ui-gallery-avatar-group-sm",
+            ),
+            group(
+                cx,
+                avatar_image.clone(),
+                shadcn::AvatarSize::Default,
+                "ui-gallery-avatar-group-default",
+            ),
+            group(
+                cx,
+                avatar_image.clone(),
+                shadcn::AvatarSize::Lg,
+                "ui-gallery-avatar-group-lg",
+            ),
+        ]
+    })
+    .gap(Space::N4)
+    .items_start()
+    .layout(LayoutRefinement::default().w_full().min_w_0())
+    .into_element(cx)
     .test_id("ui-gallery-avatar-group")
 }
 // endregion: example

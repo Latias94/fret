@@ -14,13 +14,13 @@ use fret_ui::element::{
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::chrome::centered_fixed_chrome_pressable_with_id_props;
 use fret_ui_kit::declarative::icon as decl_icon;
-use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::recipes::input::{
     InputTokenKeys, input_chrome_container_props, resolve_input_chrome,
 };
 use fret_ui_kit::typography;
-use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Size, Space};
+use fret_ui_kit::ui;
+use fret_ui_kit::{ChromeRefinement, ColorRef, Items, Justify, LayoutRefinement, Size, Space};
 
 fn alpha(color: Color, a: f32) -> Color {
     Color {
@@ -94,14 +94,11 @@ impl Snippet {
         let children = self.children;
         let test_id = self.test_id;
         let el = cx.container(props, move |cx| {
-            vec![stack::hstack(
-                cx,
-                stack::HStackProps::default()
-                    .gap(Space::N0)
-                    .items_center()
-                    .layout(LayoutRefinement::default().w_full().min_w_0()),
-                move |_cx| children,
-            )]
+            vec![ui::h_row(move |_cx| children)
+                .gap(Space::N0)
+                .items(Items::Center)
+                .layout(LayoutRefinement::default().w_full().min_w_0())
+                .into_element(cx)]
         });
 
         let Some(test_id) = test_id else {
@@ -446,14 +443,11 @@ impl SnippetCopyButton {
             chrome_props.padding = Edges::all(Px(0.0)).into();
 
             (props, chrome_props, move |cx| {
-                let row = stack::hstack(
-                    cx,
-                    stack::HStackProps::default()
-                        .items_center()
-                        .justify_center()
-                        .layout(LayoutRefinement::default().w_full().h_full()),
-                    move |_cx| vec![icon],
-                );
+                let row = ui::h_row(move |_cx| vec![icon])
+                    .items(Items::Center)
+                    .justify(Justify::Center)
+                    .layout(LayoutRefinement::default().w_full().h_full())
+                    .into_element(cx);
 
                 let marker = copied_marker_test_id.clone().and_then(|marker_id| {
                     copied.then(|| {

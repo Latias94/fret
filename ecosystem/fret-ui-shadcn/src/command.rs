@@ -744,11 +744,11 @@ impl Command {
             )
         };
         let children = current_color::scope_children(cx, ColorRef::Color(fg_root), move |cx| {
-            vec![fret_ui_kit::declarative::stack::vstack(
-                cx,
-                fret_ui_kit::declarative::stack::VStackProps::default().gap(Space::N0),
-                move |_cx| self.children,
-            )]
+            vec![
+                ui::v_stack(move |_cx| self.children)
+                    .gap(Space::N0)
+                    .into_element(cx),
+            ]
         });
         shadcn_layout::container_flow(cx, props, children)
     }

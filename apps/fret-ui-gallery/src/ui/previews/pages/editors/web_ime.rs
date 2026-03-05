@@ -26,19 +26,18 @@ pub(in crate::ui) fn preview_web_ime_harness(
         |st| st.clone(),
     );
 
-    let header = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .layout(LayoutRefinement::default().w_full())
-            .gap(Space::N2),
-        |cx| {
-            vec![
-                cx.text("Goal: validate the wasm textarea IME bridge (ADR 0180)."),
-                cx.text("Try: CJK IME preedit → commit; ensure no double insert on compositionend + input."),
-                cx.text("Click inside the region to focus it (IME should enable)."),
-            ]
-        },
-    );
+    let header = ui::v_flex(|cx| {
+        vec![
+            cx.text("Goal: validate the wasm textarea IME bridge (ADR 0180)."),
+            cx.text(
+                "Try: CJK IME preedit → commit; ensure no double insert on compositionend + input.",
+            ),
+            cx.text("Click inside the region to focus it (IME should enable)."),
+        ]
+    })
+    .layout(LayoutRefinement::default().w_full())
+    .gap(Space::N2)
+    .into_element(cx);
 
     let inputs = cx.container(
         decl_style::container_props(
@@ -50,24 +49,21 @@ pub(in crate::ui) fn preview_web_ime_harness(
             LayoutRefinement::default().w_full(),
         ),
         |cx| {
-            let body = stack::vstack(
-                cx,
-                stack::VStackProps::default()
-                    .layout(LayoutRefinement::default().w_full())
-                    .gap(Space::N2),
-                |cx| {
-                    vec![
-                        cx.text("Editable widgets (sanity check):"),
-                        shadcn::Input::new(text_input)
-                            .a11y_label("Web IME input")
-                            .placeholder("Type here (IME should work on web)")
-                            .into_element(cx),
-                        shadcn::Textarea::new(text_area)
-                            .a11y_label("Web IME textarea")
-                            .into_element(cx),
-                    ]
-                },
-            );
+            let body = ui::v_flex(|cx| {
+                vec![
+                    cx.text("Editable widgets (sanity check):"),
+                    shadcn::Input::new(text_input)
+                        .a11y_label("Web IME input")
+                        .placeholder("Type here (IME should work on web)")
+                        .into_element(cx),
+                    shadcn::Textarea::new(text_area)
+                        .a11y_label("Web IME textarea")
+                        .into_element(cx),
+                ]
+            })
+            .layout(LayoutRefinement::default().w_full())
+            .gap(Space::N2)
+            .into_element(cx);
             vec![body]
         },
     );
@@ -222,12 +218,7 @@ pub(in crate::ui) fn preview_web_ime_harness(
                     .h_px(MetricRef::Px(Px(240.0))),
             ),
             |cx| {
-                let body = stack::vstack(
-                    cx,
-                    stack::VStackProps::default()
-                        .layout(LayoutRefinement::default().w_full().h_full())
-                        .gap(Space::N2),
-                    |cx| {
+                let body = ui::v_flex(|cx| {
                         let mut lines = vec![
                             cx.text(format!(
                                 "harness_region_ime_enabled={harness_region_ime_enabled}"
@@ -422,8 +413,9 @@ pub(in crate::ui) fn preview_web_ime_harness(
                         }
 
                         lines
-                    },
-                );
+                    })
+                        .layout(LayoutRefinement::default().w_full().h_full())
+                        .gap(Space::N2).into_element(cx);
                 vec![body]
             },
         );

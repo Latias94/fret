@@ -36,13 +36,10 @@ fn ensure_models(cx: &mut ElementContext<'_, App>) -> (Model<bool>, Model<bool>,
 }
 
 fn align_end(cx: &mut ElementContext<'_, App>, child: AnyElement) -> AnyElement {
-    stack::hstack(
-        cx,
-        stack::HStackProps::default()
-            .layout(LayoutRefinement::default().w_full())
-            .justify_end(),
-        move |_cx| [child],
-    )
+    ui::h_flex(move |_cx| [child])
+        .layout(LayoutRefinement::default().w_full())
+        .justify_end()
+        .into_element(cx)
 }
 
 fn action_row(

@@ -3,7 +3,7 @@ pub const SOURCE: &str = include_str!("date_and_time_picker.rs");
 // region: example
 use fret_core::Px;
 use fret_ui_headless::calendar::CalendarMonth;
-use fret_ui_kit::declarative::stack;
+use fret_ui_kit::ui;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 use time::Date;
 
@@ -141,40 +141,32 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             },
         );
 
-    let date_column = stack::vstack(
-        cx,
-        stack::VStackProps::default()
+    let date_column =
+        ui::v_stack(|cx| vec![shadcn::FieldLabel::new("Date").into_element(cx), popover])
             .gap(Space::N3)
             .items_start()
-            .layout(LayoutRefinement::default().w_px(FIELD_W_PX)),
-        |cx| vec![shadcn::FieldLabel::new("Date").into_element(cx), popover],
-    );
+            .layout(LayoutRefinement::default().w_px(FIELD_W_PX))
+            .into_element(cx);
 
-    let time_column = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N3)
-            .items_start()
-            .layout(LayoutRefinement::default().w_px(FIELD_W_PX)),
-        |cx| {
-            vec![
-                shadcn::FieldLabel::new("Time").into_element(cx),
-                shadcn::InputGroup::new(time_value)
-                    .a11y_label("Time")
-                    .into_element(cx)
-                    .test_id("ui-gallery.calendar.time.time-input"),
-            ]
-        },
-    );
+    let time_column = ui::v_stack(|cx| {
+        vec![
+            shadcn::FieldLabel::new("Time").into_element(cx),
+            shadcn::InputGroup::new(time_value)
+                .a11y_label("Time")
+                .into_element(cx)
+                .test_id("ui-gallery.calendar.time.time-input"),
+        ]
+    })
+    .gap(Space::N3)
+    .items_start()
+    .layout(LayoutRefinement::default().w_px(FIELD_W_PX))
+    .into_element(cx);
 
-    stack::hstack(
-        cx,
-        stack::HStackProps::default()
-            .gap(Space::N4)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full().max_w(Px(320.0))),
-        |_cx| vec![date_column, time_column],
-    )
-    .test_id("ui-gallery.calendar.time.picker")
+    ui::h_flex(|_cx| vec![date_column, time_column])
+        .gap(Space::N4)
+        .items_start()
+        .layout(LayoutRefinement::default().w_full().max_w(Px(320.0)))
+        .into_element(cx)
+        .test_id("ui-gallery.calendar.time.picker")
 }
 // endregion: example

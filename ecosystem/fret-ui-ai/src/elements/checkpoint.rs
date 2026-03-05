@@ -7,9 +7,9 @@ use fret_ui::action::OnActivate;
 use fret_ui::element::{AnyElement, SemanticsDecoration};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::icon as decl_icon;
-use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::{ChromeRefinement, ColorFallback, ColorRef, LayoutRefinement, Space};
+use fret_ui_kit::ui;
+use fret_ui_kit::{ChromeRefinement, ColorFallback, ColorRef, Items, LayoutRefinement, Space};
 use fret_ui_kit::{WidgetStateProperty, WidgetStates};
 use fret_ui_shadcn::button::ButtonStyle;
 use fret_ui_shadcn::{
@@ -60,19 +60,16 @@ impl Checkpoint {
             .into_element(cx);
 
         let children = self.children;
-        let row = stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .layout(LayoutRefinement::default().w_full().min_w_0())
-                .gap(Space::N0p5)
-                .items_center(),
-            move |_cx| {
-                let mut out = children;
-                out.push(separator);
-                out
-            },
-        );
-        let mut row = cx.container(
+        let row = ui::h_row(move |_cx| {
+            let mut out = children;
+            out.push(separator);
+            out
+        })
+        .layout(LayoutRefinement::default().w_full().min_w_0())
+        .gap(Space::N0p5)
+        .items(Items::Center)
+        .into_element(cx);
+        let row = cx.container(
             decl_style::container_props(&theme, self.chrome, self.layout),
             move |_cx| vec![row],
         );

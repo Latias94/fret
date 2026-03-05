@@ -31,15 +31,12 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                         .as_child(true)
                         .into_element(cx);
 
-                    let row = stack::hstack(
-                        cx,
-                        stack::HStackProps::default()
-                            .gap_x(Space::N4)
-                            .items_center()
-                            .justify_between()
-                            .layout(LayoutRefinement::default().w_full().min_w_0()),
-                        move |_cx| vec![title, trigger],
-                    );
+                    let row = ui::h_flex(move |_cx| vec![title, trigger])
+                        .gap(Space::N4)
+                        .items_center()
+                        .justify_between()
+                        .layout(LayoutRefinement::default().w_full().min_w_0())
+                        .into_element(cx);
                     let theme = Theme::global(&*cx.app).snapshot();
                     let props = shadcn::decl_style::container_props(
                         &theme,

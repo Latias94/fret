@@ -5,13 +5,7 @@ use fret_ui_shadcn::{self as shadcn, prelude::*};
 use std::sync::Arc;
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N3)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full()),
-        |cx| {
+    ui::v_flex(|cx| {
             vec![
                 shadcn::typography::h1(cx, "Taxing Laughter: The Joke Tax Chronicles"),
                 shadcn::typography::lead(
@@ -39,8 +33,10 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                 )
                 .test_id("ui-gallery-typography-demo-list-joke-tax"),
             ]
-        },
-    )
+        })
+            .gap(Space::N3)
+            .items_start()
+            .layout(LayoutRefinement::default().w_full()).into_element(cx)
     .test_id("ui-gallery-typography-demo")
 }
 // endregion: example

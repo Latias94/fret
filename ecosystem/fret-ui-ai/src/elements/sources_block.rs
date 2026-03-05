@@ -13,11 +13,11 @@ use fret_ui::element::{
 };
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::declarative::icon as decl_icon;
-use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::typography;
+use fret_ui_kit::ui;
 use fret_ui_kit::{
-    ChromeRefinement, ColorFallback, ColorRef, Justify, LayoutRefinement, Radius, Space,
+    ChromeRefinement, ColorFallback, ColorRef, Items, Justify, LayoutRefinement, Radius, Space,
 };
 
 use fret_ui_shadcn::{Badge, BadgeVariant, Collapsible, CollapsibleContent, CollapsibleTrigger};
@@ -189,12 +189,7 @@ impl SourcesBlock {
         let row_prefix = self.test_id_row_prefix;
         let chrome = self.chrome;
 
-        let list = stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .layout(LayoutRefinement::default())
-                .gap(Space::N2),
-            move |cx| {
+        let list = ui::v_stack(move |cx| {
                 let mut out = Vec::new();
                 for (index, item) in items_for_list.iter().enumerate() {
                     let row_test_id = row_prefix
@@ -237,11 +232,10 @@ impl SourcesBlock {
                         ink_overflow: Default::default(),
                     });
 
-                    let title_row = stack::hstack(
-                        cx,
-                        stack::HStackProps::default().gap(Space::N2).items_center(),
-                        move |_cx| vec![icon, title_text],
-                    );
+                    let title_row = ui::h_row(move |_cx| vec![icon, title_text])
+                        .gap(Space::N2)
+                        .items(Items::Center)
+                        .into_element(cx);
 
                     let title_el: AnyElement = match (&item.url, on_open_url.clone()) {
                         (Some(url), Some(handler)) => {
@@ -296,21 +290,19 @@ impl SourcesBlock {
                         None
                     };
 
-                    let row = stack::hstack(
-                        cx,
-                        stack::HStackProps::default()
-                            .layout(LayoutRefinement::default())
-                            .gap(Space::N2)
-                            .justify(Justify::Between),
-                        move |_cx| {
-                            let mut row = Vec::new();
-                            row.push(title_el);
-                            if let Some(active_badge) = active_badge {
-                                row.push(active_badge);
-                            }
-                            row
-                        },
-                    );
+                    let row = ui::h_row(move |_cx| {
+                        let mut row = Vec::new();
+                        row.push(title_el);
+                        if let Some(active_badge) = active_badge {
+                            row.push(active_badge);
+                        }
+                        row
+                    })
+                    .layout(LayoutRefinement::default())
+                    .gap(Space::N2)
+                    .justify(Justify::Between)
+                    .items(Items::Center)
+                    .into_element(cx);
 
                     let excerpt_el = item.excerpt.clone().map(|excerpt| {
                         cx.text_props(TextProps {
@@ -325,20 +317,17 @@ impl SourcesBlock {
                         })
                     });
 
-                    let body = stack::vstack(
-                        cx,
-                        stack::VStackProps::default()
-                            .layout(LayoutRefinement::default().w_full())
-                            .gap(Space::N1),
-                        move |_cx| {
-                            let mut body = Vec::new();
-                            body.push(row);
-                            if let Some(excerpt_el) = excerpt_el {
-                                body.push(excerpt_el);
-                            }
-                            body
-                        },
-                    );
+                    let body = ui::v_stack(move |_cx| {
+                        let mut body = Vec::new();
+                        body.push(row);
+                        if let Some(excerpt_el) = excerpt_el {
+                            body.push(excerpt_el);
+                        }
+                        body
+                    })
+                    .layout(LayoutRefinement::default().w_full())
+                    .gap(Space::N1)
+                    .into_element(cx);
 
                     let body: AnyElement = if is_highlighted {
                         cx.container(
@@ -370,8 +359,10 @@ impl SourcesBlock {
                     ));
                 }
                 out
-            },
-        );
+            })
+            .layout(LayoutRefinement::default())
+            .gap(Space::N2)
+            .into_element(cx);
 
         let default_open = self.default_open;
 
@@ -404,14 +395,11 @@ impl SourcesBlock {
                     Some(Px(16.0)),
                     Some(trigger_icon_color.clone()),
                 );
-                let row = stack::hstack(
-                    cx,
-                    stack::HStackProps::default()
-                        .layout(LayoutRefinement::default())
-                        .gap(Space::N2)
-                        .items_center(),
-                    move |_cx| vec![label, chevron],
-                );
+                let row = ui::h_row(move |_cx| vec![label, chevron])
+                    .layout(LayoutRefinement::default())
+                    .gap(Space::N2)
+                    .items(Items::Center)
+                    .into_element(cx);
 
                 let trigger = CollapsibleTrigger::new(open_model, [row]).into_element(cx, is_open);
                 let Some(test_id) = trigger_test_id.clone() else {
@@ -448,14 +436,11 @@ impl SourcesBlock {
         // stacks, which would otherwise make the sources block appear full-width. Upstream AI
         // Elements renders sources content as `w-fit`, so we wrap the block in a row to preserve
         // intrinsic width while still participating in the parent layout.
-        let aligned = stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .layout(LayoutRefinement::default().w_full())
-                .justify_start()
-                .items_start(),
-            move |_cx| vec![collapsible],
-        );
+        let aligned = ui::h_row(move |_cx| vec![collapsible])
+            .layout(LayoutRefinement::default().w_full())
+            .justify(Justify::Start)
+            .items(Items::Start)
+            .into_element(cx);
 
         let root = cx.container(
             ContainerProps {

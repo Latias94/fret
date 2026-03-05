@@ -7,8 +7,8 @@ use fret_ui::Invalidation;
 use fret_ui::action::OnActivate;
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::declarative::ElementContextThemeExt;
-use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::ui;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, Space};
 use fret_ui_shadcn::prelude::*;
 use std::sync::Arc;
@@ -85,60 +85,52 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
         })
         .unwrap_or_else(|| cx.text("restored=false"));
 
-    let transcript = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .layout(LayoutRefinement::default().w_full().min_w_0())
-            .gap(Space::N4),
-        move |cx| {
-            let mut out: Vec<AnyElement> = Vec::new();
+    let transcript = ui::v_flex(move |cx| {
+        let mut out: Vec<AnyElement> = Vec::new();
 
-            for (idx, msg) in messages.iter().enumerate().take(visible_len) {
-                let message =
-                    ui_ai::Message::new(
-                        msg.role,
-                        [ui_ai::MessageContent::new(msg.role, [cx.text(msg.content)])
-                            .into_element(cx)],
-                    )
-                    .into_element(cx);
-                out.push(message);
+        for (idx, msg) in messages.iter().enumerate().take(visible_len) {
+            let message = ui_ai::Message::new(
+                msg.role,
+                [ui_ai::MessageContent::new(msg.role, [cx.text(msg.content)]).into_element(cx)],
+            )
+            .into_element(cx);
+            out.push(message);
 
-                if idx + 1 == CHECKPOINT_MESSAGE_COUNT {
-                    out.push(
-                        ui_ai::Checkpoint::new([
-                            ui_ai::CheckpointIcon::default().into_element(cx),
-                            ui_ai::CheckpointTrigger::new([cx.text("Restore checkpoint")])
-                                .tooltip("Restores workspace and chat to this point")
-                                .tooltip_panel_test_id("ui-ai-checkpoint-tooltip-panel")
-                                .test_id("ui-ai-checkpoint-trigger")
-                                .on_activate(restore.clone())
-                                .into_element(cx),
-                        ])
-                        .test_id("ui-ai-checkpoint-row")
-                        .into_element(cx),
-                    );
-                }
-            }
-
-            out
-        },
-    );
-
-    let controls = stack::hstack(
-        cx,
-        stack::HStackProps::default()
-            .layout(LayoutRefinement::default().w_full().min_w_0())
-            .gap(Space::N2)
-            .items_center(),
-        move |cx| {
-            vec![
-                fret_ui_shadcn::Button::new("Reset")
-                    .test_id("ui-ai-checkpoint-reset")
-                    .on_activate(reset.clone())
+            if idx + 1 == CHECKPOINT_MESSAGE_COUNT {
+                out.push(
+                    ui_ai::Checkpoint::new([
+                        ui_ai::CheckpointIcon::default().into_element(cx),
+                        ui_ai::CheckpointTrigger::new([cx.text("Restore checkpoint")])
+                            .tooltip("Restores workspace and chat to this point")
+                            .tooltip_panel_test_id("ui-ai-checkpoint-tooltip-panel")
+                            .test_id("ui-ai-checkpoint-trigger")
+                            .on_activate(restore.clone())
+                            .into_element(cx),
+                    ])
+                    .test_id("ui-ai-checkpoint-row")
                     .into_element(cx),
-            ]
-        },
-    );
+                );
+            }
+        }
+
+        out
+    })
+    .layout(LayoutRefinement::default().w_full().min_w_0())
+    .gap(Space::N4)
+    .into_element(cx);
+
+    let controls = ui::h_flex(move |cx| {
+        vec![
+            fret_ui_shadcn::Button::new("Reset")
+                .test_id("ui-ai-checkpoint-reset")
+                .on_activate(reset.clone())
+                .into_element(cx),
+        ]
+    })
+    .layout(LayoutRefinement::default().w_full().min_w_0())
+    .gap(Space::N2)
+    .items_center()
+    .into_element(cx);
 
     let conversation_props = cx.with_theme(|theme| {
         let chrome = ChromeRefinement::default()
@@ -159,20 +151,17 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
 
     let conversation = cx.container(conversation_props, move |_cx| vec![transcript]);
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .layout(LayoutRefinement::default().w_full().min_w_0())
-            .gap(Space::N4),
-        move |cx| {
-            vec![
-                cx.text("Checkpoint (AI Elements): restore a conversation to a prior state."),
-                cx.text("Hover the trigger for tooltip; click to restore messages."),
-                controls,
-                restored_marker,
-                conversation,
-            ]
-        },
-    )
+    ui::v_flex(move |cx| {
+        vec![
+            cx.text("Checkpoint (AI Elements): restore a conversation to a prior state."),
+            cx.text("Hover the trigger for tooltip; click to restore messages."),
+            controls,
+            restored_marker,
+            conversation,
+        ]
+    })
+    .layout(LayoutRefinement::default().w_full().min_w_0())
+    .gap(Space::N4)
+    .into_element(cx)
 }
 // endregion: example

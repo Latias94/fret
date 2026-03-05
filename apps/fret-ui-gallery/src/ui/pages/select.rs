@@ -8,15 +8,12 @@ pub(super) fn preview_select(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
         // A minimal shadcn-aligned demo (matches upstream `select-demo.tsx` example).
         let shadcn_demo = snippets::demo::render(cx);
 
-        stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .gap(Space::N2)
-                .items_start()
-                .layout(LayoutRefinement::default().w_full().min_w_0()),
-            |_cx| vec![shadcn_demo],
-        )
-        .test_id("ui-gallery-select-demo")
+        ui::v_flex(|_cx| vec![shadcn_demo])
+            .gap(Space::N2)
+            .items_start()
+            .layout(LayoutRefinement::default().w_full().min_w_0())
+            .into_element(cx)
+            .test_id("ui-gallery-select-demo")
     };
     let diag_surface = snippets::diag_surface::render(cx);
     let align_item = snippets::align_item_with_trigger::render(cx);

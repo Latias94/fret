@@ -15,11 +15,10 @@ use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
 use fret_ui_kit::declarative::controllable_state;
 use fret_ui_kit::declarative::icon as decl_icon;
-use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::typography;
 use fret_ui_kit::{
-    ChromeRefinement, ColorRef, Items, Justify, LayoutRefinement, Radius, Size, Space,
+    ChromeRefinement, ColorRef, Items, Justify, LayoutRefinement, Radius, Size, Space, ui,
 };
 use fret_ui_shadcn::{
     Button, ButtonSize, ButtonVariant, Collapsible, CollapsibleContent, Input, OnInputSubmit,
@@ -467,20 +466,17 @@ impl WebPreview {
 
                 let body = children(cx, controller);
 
-                let body = stack::vstack(
-                    cx,
-                    stack::VStackProps::default()
-                        .layout(
-                            LayoutRefinement::default()
-                                .w_full()
-                                .h_full()
-                                .min_w_0()
-                                .min_h_0(),
-                        )
-                        .gap(Space::N0)
-                        .items(Items::Stretch),
-                    move |_cx| body,
-                );
+                let body = ui::v_stack(move |_cx| body)
+                    .layout(
+                        LayoutRefinement::default()
+                            .w_full()
+                            .h_full()
+                            .min_w_0()
+                            .min_h_0(),
+                    )
+                    .gap(Space::N0)
+                    .items(Items::Stretch)
+                    .into_element(cx);
 
                 let body = if let Some(test_id) = test_id_root.clone() {
                     cx.semantics(
@@ -549,14 +545,11 @@ impl WebPreviewNavigation {
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
-        let row = stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .layout(self.layout)
-                .gap(Space::N1)
-                .items_center(),
-            move |_cx| self.children,
-        );
+        let row = ui::h_row(move |_cx| self.children)
+            .layout(self.layout)
+            .gap(Space::N1)
+            .items_center()
+            .into_element(cx);
 
         let bar = cx.container(
             decl_style::container_props(
@@ -568,13 +561,10 @@ impl WebPreviewNavigation {
         );
 
         let separator = fret_ui_shadcn::separator(cx);
-        let el = stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .layout(LayoutRefinement::default().w_full().min_w_0())
-                .gap(Space::N0),
-            move |_cx| vec![bar, separator],
-        );
+        let el = ui::v_stack(move |_cx| vec![bar, separator])
+            .layout(LayoutRefinement::default().w_full().min_w_0())
+            .gap(Space::N0)
+            .into_element(cx);
 
         let Some(test_id) = self.test_id else {
             return el;
@@ -1104,14 +1094,11 @@ impl WebPreviewConsole {
         );
 
         let label = cx.text("Console");
-        let row = stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .layout(LayoutRefinement::default().w_full().min_w_0())
-                .justify(Justify::Between)
-                .items_center(),
-            move |_cx| vec![label, chevron],
-        );
+        let row = ui::h_row(move |_cx| vec![label, chevron])
+            .layout(LayoutRefinement::default().w_full().min_w_0())
+            .justify(Justify::Between)
+            .items_center()
+            .into_element(cx);
 
         let trigger_test_id = self.test_id_trigger.clone();
         let console_open = controller.console_open.clone();
@@ -1193,20 +1180,17 @@ impl WebPreviewConsole {
         #[cfg(not(feature = "webview"))]
         let clear_button: Option<AnyElement> = None;
 
-        let header = stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .layout(LayoutRefinement::default().w_full().min_w_0())
-                .items_center()
-                .gap(Space::N1),
-            move |_cx| {
+        let header = ui::h_row(move |_cx| {
                 let mut items = vec![toggle_button];
                 if let Some(clear_button) = clear_button {
                     items.push(clear_button);
                 }
                 items
-            },
-        );
+            })
+        .layout(LayoutRefinement::default().w_full().min_w_0())
+        .items_center()
+        .gap(Space::N1)
+        .into_element(cx);
 
         #[cfg(feature = "webview")]
         let (logs, backend_logs_present) = {
@@ -1304,14 +1288,11 @@ impl WebPreviewConsole {
                         ink_overflow: Default::default(),
                     });
 
-                    let row = stack::hstack(
-                        cx,
-                        stack::HStackProps::default()
-                            .layout(LayoutRefinement::default().w_full().min_w_0())
-                            .gap(Space::N2)
-                            .items_center(),
-                        move |_cx| vec![ts, msg],
-                    );
+                    let row = ui::h_row(move |_cx| vec![ts, msg])
+                        .layout(LayoutRefinement::default().w_full().min_w_0())
+                        .gap(Space::N2)
+                        .items_center()
+                        .into_element(cx);
                     rows.push(row);
                 }
             }
@@ -1338,13 +1319,10 @@ impl WebPreviewConsole {
                 );
             }
 
-            stack::vstack(
-                cx,
-                stack::VStackProps::default()
-                    .layout(LayoutRefinement::default().w_full().min_w_0())
-                    .gap(Space::N1),
-                move |_cx| rows,
-            )
+            ui::v_stack(move |_cx| rows)
+                .layout(LayoutRefinement::default().w_full().min_w_0())
+                .gap(Space::N1)
+                .into_element(cx)
         }])
         .refine_style(ChromeRefinement::default().px(Space::N4).pb(Space::N4))
         .into_element(cx);

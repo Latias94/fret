@@ -1377,13 +1377,10 @@ fn snapshot_extras_kanban_custom_cards() {
                     children.push(fret_ui_kit::ui::text("overlay").nowrap().into_element(cx));
                 }
 
-                fret_ui_kit::declarative::stack::vstack(
-                    cx,
-                    fret_ui_kit::declarative::stack::VStackProps::default()
-                        .gap(fret_ui_kit::Space::N1)
-                        .layout(fret_ui_kit::LayoutRefinement::default().w_full()),
-                    |_cx| children,
-                )
+                ui::v_flex(|_cx| children)
+                    .gap(fret_ui_kit::Space::N1)
+                    .layout(fret_ui_kit::LayoutRefinement::default().w_full())
+                    .into_element(cx)
             },
         );
 

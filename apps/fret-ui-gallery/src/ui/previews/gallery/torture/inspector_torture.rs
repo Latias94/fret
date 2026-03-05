@@ -75,14 +75,13 @@ pub(in crate::ui) fn preview_inspector_torture(
         row_props.layout.overflow = fret_ui::element::Overflow::Clip;
 
         let row = cx.container(row_props, |cx| {
-            vec![stack::hstack(
-                cx,
-                stack::HStackProps::default()
+            vec![
+                ui::h_flex(|_cx| vec![spacer, name, value])
                     .layout(LayoutRefinement::default().w_full().h_full())
                     .gap(Space::N2)
-                    .items_center(),
-                |_cx| vec![spacer, name, value],
-            )]
+                    .items_center()
+                    .into_element(cx),
+            ]
         });
 
         row.test_id(format!("ui-gallery-inspector-row-{index}-label"))

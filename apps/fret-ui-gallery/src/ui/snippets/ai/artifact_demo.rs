@@ -3,7 +3,7 @@ pub const SOURCE: &str = include_str!("artifact_demo.rs");
 // region: example
 use fret_runtime::Model;
 use fret_ui_ai as ui_ai;
-use fret_ui_kit::declarative::stack;
+use fret_ui_kit::ui;
 use fret_ui_kit::{LayoutRefinement, Space};
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 use std::sync::Arc;
@@ -76,19 +76,16 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
         cx.text("Artifact closed.")
     };
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .layout(LayoutRefinement::default().w_full().min_w_0())
-            .gap(Space::N4),
-        move |cx| {
-            vec![
-                cx.text("Artifact (AI Elements)"),
-                cx.text("Close hides the artifact; reset re-mounts it."),
-                reset,
-                artifact,
-            ]
-        },
-    )
+    ui::v_flex(move |cx| {
+        vec![
+            cx.text("Artifact (AI Elements)"),
+            cx.text("Close hides the artifact; reset re-mounts it."),
+            reset,
+            artifact,
+        ]
+    })
+    .layout(LayoutRefinement::default().w_full().min_w_0())
+    .gap(Space::N4)
+    .into_element(cx)
 }
 // endregion: example

@@ -3,7 +3,7 @@ pub const SOURCE: &str = include_str!("shimmer_demo.rs");
 // region: example
 use fret_core::{FontId, FontWeight, Px, TextStyle};
 use fret_ui_ai as ui_ai;
-use fret_ui_kit::declarative::stack;
+use fret_ui_kit::ui;
 use fret_ui_kit::{LayoutRefinement, Space};
 use fret_ui_shadcn::prelude::*;
 use std::sync::Arc;
@@ -29,13 +29,10 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
         .spread(3.0)
         .into_element(cx);
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .layout(LayoutRefinement::default().w_full().min_w_0())
-            .gap(Space::N4)
-            .items_center(),
-        move |_cx| vec![text, heading, slow],
-    )
+    ui::v_flex(move |_cx| vec![text, heading, slow])
+        .layout(LayoutRefinement::default().w_full().min_w_0())
+        .gap(Space::N4)
+        .items_center()
+        .into_element(cx)
 }
 // endregion: example

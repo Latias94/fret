@@ -14,7 +14,7 @@ use fret_ui_kit::declarative::chrome::centered_fixed_chrome_pressable_with_id_pr
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::typography;
-use fret_ui_kit::{ColorRef, LayoutRefinement};
+use fret_ui_kit::{ColorRef, LayoutRefinement, ui};
 
 /// AI Elements-aligned code block surface backed by `ecosystem/fret-code-view`.
 ///
@@ -142,10 +142,19 @@ impl CodeBlock {
         header.left = self.header_left;
         header.right = self.header_right;
 
+        let header_visible = self.show_header
+            || !header.left.is_empty()
+            || !header.right.is_empty()
+            || (self.show_language && self.language.is_some());
+
         let options = fret_code_view::CodeBlockUiOptions {
             show_header: self.show_header,
-            header_divider: self.show_header,
-            header_background: fret_code_view::CodeBlockHeaderBackground::Muted80,
+            header_divider: header_visible,
+            header_background: if header_visible {
+                fret_code_view::CodeBlockHeaderBackground::Muted80
+            } else {
+                fret_code_view::CodeBlockHeaderBackground::None
+            },
             show_copy_button: false,
             copy_button_on_hover: true,
             copy_button_placement: fret_code_view::CodeBlockCopyButtonPlacement::Overlay,
@@ -400,14 +409,11 @@ impl CodeBlockCopyButton {
             chrome_props.padding = Edges::all(Px(0.0)).into();
 
             (props, chrome_props, move |cx| {
-                let row = fret_ui_kit::declarative::stack::hstack(
-                    cx,
-                    fret_ui_kit::declarative::stack::HStackProps::default()
-                        .items_center()
-                        .justify_center()
-                        .layout(LayoutRefinement::default().w_full().h_full()),
-                    move |_cx| vec![icon],
-                );
+                let row = ui::h_flex(move |_cx| vec![icon])
+                    .items_center()
+                    .justify_center()
+                    .layout(LayoutRefinement::default().w_full().h_full())
+                    .into_element(cx);
 
                 let marker = copied_marker_test_id.clone().and_then(|marker_id| {
                     copied.then(|| {

@@ -16,10 +16,10 @@ use fret_runtime::Model;
 use fret_ui::action::{ActionCx, UiActionHost};
 use fret_ui::element::{AnyElement, SemanticsDecoration};
 use fret_ui::{ElementContext, Theme, UiHost};
-use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::declarative::visually_hidden::visually_hidden;
-use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, Space};
+use fret_ui_kit::ui;
+use fret_ui_kit::{ChromeRefinement, ColorRef, Items, Justify, LayoutRefinement, Radius, Space};
 use fret_ui_shadcn::{Command, CommandDialog, Dialog, DialogContent, DialogTitle};
 
 /// AI Elements-aligned `ModelSelector` root.
@@ -354,14 +354,11 @@ impl ModelSelectorLogo {
                     a: 0.8,
                 }))
                 .into_element(cx);
-            vec![stack::hstack(
-                cx,
-                stack::HStackProps::default()
-                    .layout(LayoutRefinement::default().w_full().h_full())
-                    .justify_center()
-                    .items_center(),
-                move |_cx| vec![text],
-            )]
+            vec![ui::h_row(move |_cx| vec![text])
+                .layout(LayoutRefinement::default().w_full().h_full())
+                .justify(Justify::Center)
+                .items(Items::Center)
+                .into_element(cx)]
         });
 
         element = element.attach_semantics(SemanticsDecoration {
@@ -426,14 +423,11 @@ impl ModelSelectorLogoGroup {
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let mut element = stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .layout(self.layout)
-                .gap(self.gap)
-                .items_center(),
-            move |_cx| self.children,
-        );
+        let mut element = ui::h_row(move |_cx| self.children)
+            .layout(self.layout)
+            .gap(self.gap)
+            .items(Items::Center)
+            .into_element(cx);
 
         if let Some(test_id) = self.test_id {
             element = element.attach_semantics(SemanticsDecoration::default().test_id(test_id));

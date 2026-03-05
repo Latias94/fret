@@ -12,8 +12,7 @@ use fret_ui::element::{
 };
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::declarative::icon as decl_icon;
-use fret_ui_kit::declarative::stack;
-use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Space};
+use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Space, ui};
 use fret_ui_shadcn::button_group::ButtonGroupText;
 use fret_ui_shadcn::{Button, ButtonGroup, ButtonSize, ButtonVariant};
 
@@ -167,20 +166,17 @@ impl MessageBranch {
 
         let layout = self.layout;
         let test_id_root = self.test_id_root;
-        let body = stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .layout(layout)
-                .gap(Space::N2)
-                .items_start(),
-            move |_cx| {
+        let body = ui::v_stack(move |_cx| {
                 let mut out = vec![content];
                 if let Some(sel) = selector {
                     out.push(sel);
                 }
                 out
-            },
-        );
+            })
+        .layout(layout)
+        .gap(Space::N2)
+        .items_start()
+        .into_element(cx);
 
         if let Some(test_id) = test_id_root {
             return body.attach_semantics(
@@ -248,37 +244,29 @@ impl MessageBranchContent {
         let layout = self.layout;
         let branches = self.branches;
 
-        stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .layout(layout)
-                .gap(Space::N2)
-                .items_start(),
-            move |cx| {
-                branches
-                    .into_iter()
-                    .enumerate()
-                    .map(|(idx, branch)| {
-                        let present = idx == current;
+        ui::v_stack_build(move |cx, out| {
+            for (idx, branch) in branches.into_iter().enumerate() {
+                let present = idx == current;
+                out.push(cx.keyed(idx as u64, |cx| {
+                    let mut gate_layout = LayoutStyle::default();
+                    gate_layout.size.width = Length::Fill;
+                    gate_layout.size.height = Length::Auto;
 
-                        cx.keyed(idx as u64, |cx| {
-                            let mut gate_layout = LayoutStyle::default();
-                            gate_layout.size.width = Length::Fill;
-                            gate_layout.size.height = Length::Auto;
-
-                            cx.interactivity_gate_props(
-                                InteractivityGateProps {
-                                    layout: gate_layout,
-                                    present,
-                                    interactive: present,
-                                },
-                                move |_cx| vec![branch],
-                            )
-                        })
-                    })
-                    .collect::<Vec<_>>()
-            },
-        )
+                    cx.interactivity_gate_props(
+                        InteractivityGateProps {
+                            layout: gate_layout,
+                            present,
+                            interactive: present,
+                        },
+                        move |_cx| vec![branch],
+                    )
+                }));
+            }
+        })
+        .layout(layout)
+        .gap(Space::N2)
+        .items_start()
+        .into_element(cx)
     }
 }
 

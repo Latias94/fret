@@ -5,8 +5,8 @@ use std::sync::Arc;
 use fret_runtime::Model;
 use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui_kit::declarative::current_color;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
-use fret_ui_kit::declarative::{current_color, stack};
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, LengthRefinement, Space};
 use fret_ui_kit::{WidgetStateProperty, ui};
 use time::{Date, Weekday};
@@ -172,30 +172,27 @@ impl DateRangePicker {
                             (text_style.size, text_style.weight, line_height)
                         };
 
-                        let content = stack::hstack(
-                            cx,
-                            stack::HStackProps::default()
-                                .justify_start()
-                                .items_center()
-                                .gap_x(Space::N2)
-                                .layout(LayoutRefinement::default().w_full().min_w_0()),
-                            move |cx| {
-                                let fg = current_color::inherited_current_color(cx)
-                                    .unwrap_or_else(|| fg_fallback.clone());
+                        let content = ui::h_row(move |cx| {
+                            let fg = current_color::inherited_current_color(cx)
+                                .unwrap_or_else(|| fg_fallback.clone());
 
-                                vec![
-                                    crate::icon::icon(cx, calendar_icon_for_content),
-                                    ui::text(button_text_for_content.clone())
-                                        .text_size_px(text_size)
-                                        .fixed_line_box_px(line_height)
-                                        .line_box_in_bounds()
-                                        .font_weight(text_weight)
-                                        .nowrap()
-                                        .text_color(fg)
-                                        .into_element(cx),
-                                ]
-                            },
-                        );
+                            vec![
+                                crate::icon::icon(cx, calendar_icon_for_content),
+                                ui::text(button_text_for_content.clone())
+                                    .text_size_px(text_size)
+                                    .fixed_line_box_px(line_height)
+                                    .line_box_in_bounds()
+                                    .font_weight(text_weight)
+                                    .nowrap()
+                                    .text_color(fg)
+                                    .into_element(cx),
+                            ]
+                        })
+                        .justify_start()
+                        .items_center()
+                        .gap(Space::N2)
+                        .layout(LayoutRefinement::default().w_full().min_w_0())
+                        .into_element(cx);
 
                         let mut button = Button::new(button_text)
                             .variant(ButtonVariant::Outline)

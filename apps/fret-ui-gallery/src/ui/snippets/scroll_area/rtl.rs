@@ -7,12 +7,8 @@ use fret_ui_shadcn::{self as shadcn, prelude::*};
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let rtl_area = with_direction_provider(cx, LayoutDirection::Rtl, |cx| {
         let content = ui::container(|cx| {
-            vec![stack::vstack(
-                cx,
-                stack::VStackProps::default()
-                    .gap(Space::N0)
-                    .layout(LayoutRefinement::default().w_full()),
-                |cx| {
+            vec![
+                ui::v_flex(|cx| {
                     let mut rows: Vec<AnyElement> = vec![
                         ui::text("العلامات")
                             .text_sm()
@@ -39,8 +35,11 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                         );
                     }
                     rows
-                },
-            )]
+                })
+                .gap(Space::N0)
+                .layout(LayoutRefinement::default().w_full())
+                .into_element(cx),
+            ]
         })
         .p_4()
         .w_full()

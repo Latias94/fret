@@ -49,32 +49,29 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
     };
 
     shadcn::DirectionProvider::new(shadcn::LayoutDirection::Rtl).into_element(cx, |cx| {
-        stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .gap(Space::N3)
-                .items_start()
-                .layout(LayoutRefinement::default().w_full()),
-            |cx| {
-                vec![
-                    tooltip(
-                        cx,
-                        "يناير",
-                        shadcn::ChartTooltipIndicator::Dot,
-                        false,
-                        false,
-                        "ui-gallery-chart-rtl-tooltip",
-                    ),
-                    legend(
-                        cx,
-                        shadcn::ChartLegendVerticalAlign::Bottom,
-                        true,
-                        false,
-                        "ui-gallery-chart-rtl-legend",
-                    ),
-                ]
-            },
-        )
+        ui::v_flex(|cx| {
+            vec![
+                tooltip(
+                    cx,
+                    "يناير",
+                    shadcn::ChartTooltipIndicator::Dot,
+                    false,
+                    false,
+                    "ui-gallery-chart-rtl-tooltip",
+                ),
+                legend(
+                    cx,
+                    shadcn::ChartLegendVerticalAlign::Bottom,
+                    true,
+                    false,
+                    "ui-gallery-chart-rtl-legend",
+                ),
+            ]
+        })
+        .gap(Space::N3)
+        .items_start()
+        .layout(LayoutRefinement::default().w_full())
+        .into_element(cx)
     })
 }
 // endregion: example

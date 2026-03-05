@@ -5,7 +5,7 @@ use fret_runtime::Model;
 use fret_ui::Invalidation;
 use fret_ui::element::SemanticsProps;
 use fret_ui_ai as ui_ai;
-use fret_ui_kit::declarative::stack;
+use fret_ui_kit::ui;
 use fret_ui_kit::{Justify, LayoutRefinement, Space};
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 use std::sync::Arc;
@@ -233,26 +233,20 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
             },
         );
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .layout(LayoutRefinement::default().w_full().min_w_0())
-            .gap(Space::N4),
-        move |cx| {
-            vec![
-                cx.text("ModelSelector (AI Elements)"),
-                cx.text("Dialog + Command surfaces; selection is app-owned."),
-                stack::hstack(
-                    cx,
-                    stack::HStackProps::default()
-                        .layout(LayoutRefinement::default().w_full().min_w_0())
-                        .justify_center()
-                        .items_center(),
-                    move |_cx| vec![model_selector],
-                ),
-                selected_marker,
-            ]
-        },
-    )
+    ui::v_flex(move |cx| {
+        vec![
+            cx.text("ModelSelector (AI Elements)"),
+            cx.text("Dialog + Command surfaces; selection is app-owned."),
+            ui::h_flex(move |_cx| vec![model_selector])
+                .layout(LayoutRefinement::default().w_full().min_w_0())
+                .justify_center()
+                .items_center()
+                .into_element(cx),
+            selected_marker,
+        ]
+    })
+    .layout(LayoutRefinement::default().w_full().min_w_0())
+    .gap(Space::N4)
+    .into_element(cx)
 }
 // endregion: example

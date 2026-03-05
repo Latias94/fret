@@ -27,13 +27,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         .get_model_copied(&open, Invalidation::Layout)
         .unwrap_or(false);
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N3)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full().max_w(Px(420.0))),
-        |cx| {
+    ui::v_flex(|cx| {
             vec![
                 shadcn::typography::muted(
                     cx,
@@ -62,8 +56,10 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                     },
                 ),
             ]
-        },
-    )
+        })
+            .gap(Space::N3)
+            .items_start()
+            .layout(LayoutRefinement::default().w_full().max_w(Px(420.0))).into_element(cx)
     .test_id("ui-gallery-collapsible-controlled")
 }
 // endregion: example

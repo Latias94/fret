@@ -11,7 +11,6 @@ use fret_ui_headless::calendar::CalendarMonth;
 use fret_ui_kit::declarative::controllable_state;
 use fret_ui_kit::declarative::current_color;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
-use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, LengthRefinement, Space};
 use fret_ui_kit::{WidgetStateProperty, ui};
@@ -187,30 +186,27 @@ impl DatePickerWithPresets {
                             (text_style.size, text_style.weight, line_height)
                         };
 
-                        let content = stack::hstack(
-                            cx,
-                            stack::HStackProps::default()
-                                .justify_start()
-                                .items_center()
-                                .gap_x(Space::N2)
-                                .layout(LayoutRefinement::default().w_full().min_w_0()),
-                            move |cx| {
-                                let fg = current_color::inherited_current_color(cx)
-                                    .unwrap_or_else(|| fg_fallback.clone());
+                        let content = ui::h_row(move |cx| {
+                            let fg = current_color::inherited_current_color(cx)
+                                .unwrap_or_else(|| fg_fallback.clone());
 
-                                vec![
-                                    crate::icon::icon(cx, calendar_icon_for_content),
-                                    ui::text(button_text_for_content.clone())
-                                        .text_size_px(text_size)
-                                        .fixed_line_box_px(line_height)
-                                        .line_box_in_bounds()
-                                        .font_weight(text_weight)
-                                        .nowrap()
-                                        .text_color(fg)
-                                        .into_element(cx),
-                                ]
-                            },
-                        );
+                            vec![
+                                crate::icon::icon(cx, calendar_icon_for_content),
+                                ui::text(button_text_for_content.clone())
+                                    .text_size_px(text_size)
+                                    .fixed_line_box_px(line_height)
+                                    .line_box_in_bounds()
+                                    .font_weight(text_weight)
+                                    .nowrap()
+                                    .text_color(fg)
+                                    .into_element(cx),
+                            ]
+                        })
+                        .justify_start()
+                        .items_center()
+                        .gap(Space::N2)
+                        .layout(LayoutRefinement::default().w_full().min_w_0())
+                        .into_element(cx);
 
                         let mut button = Button::new(button_text.clone())
                             .variant(ButtonVariant::Outline)
@@ -301,11 +297,10 @@ impl DatePickerWithPresets {
                             cx.container(props, move |_cx| vec![calendar])
                         };
 
-                        let body = stack::vstack(
-                            cx,
-                            stack::VStackProps::default().gap(Space::N2).items_stretch(),
-                            move |_cx| vec![select, calendar_container],
-                        );
+                        let body = ui::v_stack(move |_cx| vec![select, calendar_container])
+                            .gap(Space::N2)
+                            .items_stretch()
+                            .into_element(cx);
 
                         PopoverContent::new([body])
                             .refine_style(ChromeRefinement::default().p(Space::N2))

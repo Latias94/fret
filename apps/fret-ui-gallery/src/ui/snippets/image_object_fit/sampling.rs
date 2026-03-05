@@ -27,14 +27,11 @@ pub fn render<H: UiHost>(
         .into_element(cx)
         .test_id("ui-gallery-image-sampling-nearest");
 
-    stack::hstack(
-        cx,
-        stack::HStackProps::default()
-            .gap(Space::N4)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full().min_w_0()),
-        |_cx| vec![linear, nearest],
-    )
-    .test_id("ui-gallery-image-object-fit-sampling")
+    ui::h_flex(|_cx| vec![linear, nearest])
+        .gap(Space::N4)
+        .items_start()
+        .layout(LayoutRefinement::default().w_full().min_w_0())
+        .into_element(cx)
+        .test_id("ui-gallery-image-object-fit-sampling")
 }
 // endregion: example

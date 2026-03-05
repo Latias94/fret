@@ -51,51 +51,48 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         .map(|set| set.len())
         .unwrap_or(0);
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .layout(LayoutRefinement::default().w_full().min_w_0())
-            .gap(Space::N4)
-            .items_start(),
-        |cx| {
-            vec![
-                cx.text(
-                    "Material 3 Segmented Buttons: token-driven outcomes + roving focus + selection.",
-                ),
-                SegmentedButtonSet::single(single_value.clone())
-                    .items(vec![
-                        SegmentedButtonItem::new("alpha", "Alpha")
-                            .icon(fret_icons::ids::ui::SEARCH)
-                            .test_id("ui-gallery-material3-segmented-single-alpha"),
-                        SegmentedButtonItem::new("beta", "Beta")
-                            .icon(fret_icons::ids::ui::SETTINGS)
-                            .test_id("ui-gallery-material3-segmented-single-beta"),
-                        SegmentedButtonItem::new("gamma", "Gamma (disabled)")
-                            .disabled(true)
-                            .icon(fret_icons::ids::ui::MORE_HORIZONTAL)
-                            .test_id("ui-gallery-material3-segmented-single-gamma-disabled"),
-                    ])
-                    .a11y_label("Material 3 Segmented Button (single)")
-                    .test_id("ui-gallery-material3-segmented-single")
-                    .into_element(cx),
-                cx.text(format!("single={}", single_current.as_ref())),
-                SegmentedButtonSet::multi(multi_value.clone())
-                    .items(vec![
-                        SegmentedButtonItem::new("alpha", "Alpha")
-                            .test_id("ui-gallery-material3-segmented-multi-alpha"),
-                        SegmentedButtonItem::new("beta", "Beta")
-                            .test_id("ui-gallery-material3-segmented-multi-beta"),
-                        SegmentedButtonItem::new("gamma", "Gamma (disabled)")
-                            .disabled(true)
-                            .test_id("ui-gallery-material3-segmented-multi-gamma-disabled"),
-                    ])
-                    .a11y_label("Material 3 Segmented Button (multi)")
-                    .test_id("ui-gallery-material3-segmented-multi")
-                    .into_element(cx),
-                cx.text(format!("multi_count={multi_current_len}")),
-            ]
-        },
-    )
+    ui::v_flex(|cx| {
+        vec![
+            cx.text(
+                "Material 3 Segmented Buttons: token-driven outcomes + roving focus + selection.",
+            ),
+            SegmentedButtonSet::single(single_value.clone())
+                .items(vec![
+                    SegmentedButtonItem::new("alpha", "Alpha")
+                        .icon(fret_icons::ids::ui::SEARCH)
+                        .test_id("ui-gallery-material3-segmented-single-alpha"),
+                    SegmentedButtonItem::new("beta", "Beta")
+                        .icon(fret_icons::ids::ui::SETTINGS)
+                        .test_id("ui-gallery-material3-segmented-single-beta"),
+                    SegmentedButtonItem::new("gamma", "Gamma (disabled)")
+                        .disabled(true)
+                        .icon(fret_icons::ids::ui::MORE_HORIZONTAL)
+                        .test_id("ui-gallery-material3-segmented-single-gamma-disabled"),
+                ])
+                .a11y_label("Material 3 Segmented Button (single)")
+                .test_id("ui-gallery-material3-segmented-single")
+                .into_element(cx),
+            cx.text(format!("single={}", single_current.as_ref())),
+            SegmentedButtonSet::multi(multi_value.clone())
+                .items(vec![
+                    SegmentedButtonItem::new("alpha", "Alpha")
+                        .test_id("ui-gallery-material3-segmented-multi-alpha"),
+                    SegmentedButtonItem::new("beta", "Beta")
+                        .test_id("ui-gallery-material3-segmented-multi-beta"),
+                    SegmentedButtonItem::new("gamma", "Gamma (disabled)")
+                        .disabled(true)
+                        .test_id("ui-gallery-material3-segmented-multi-gamma-disabled"),
+                ])
+                .a11y_label("Material 3 Segmented Button (multi)")
+                .test_id("ui-gallery-material3-segmented-multi")
+                .into_element(cx),
+            cx.text(format!("multi_count={multi_current_len}")),
+        ]
+    })
+    .layout(LayoutRefinement::default().w_full().min_w_0())
+    .gap(Space::N4)
+    .items_start()
+    .into_element(cx)
     .into()
 }
 

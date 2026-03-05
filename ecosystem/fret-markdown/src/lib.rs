@@ -18,8 +18,8 @@ use fret_ui::element::{
     SelectableTextProps, SemanticsDecoration, TextProps,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
-use fret_ui_kit::declarative::stack;
 use fret_ui_kit::typography;
+use fret_ui_kit::ui;
 use fret_ui_kit::{LayoutRefinement, Space};
 
 pub use mdstream::BlockId;
@@ -858,28 +858,24 @@ fn render_inline_flow_with_layout<H: UiHost>(
     }
     lines.push(cur);
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N0)
-            .layout(LayoutRefinement::default().w_full()),
-        |cx| {
-            lines
-                .into_iter()
-                .map(|line| {
-                    render_inline_line_with_layout(
-                        cx,
-                        theme,
-                        markdown_theme,
-                        components,
-                        &base,
-                        line,
-                        justify,
-                    )
-                })
-                .collect::<Vec<_>>()
-        },
-    )
+    ui::v_flex(|cx| {
+        lines
+            .into_iter()
+            .map(|line| {
+                render_inline_line_with_layout(
+                    cx,
+                    theme,
+                    markdown_theme,
+                    components,
+                    &base,
+                    line,
+                    justify,
+                )
+            })
+            .collect::<Vec<_>>()
+    })
+    .gap(Space::N0)
+    .into_element(cx)
 }
 
 fn render_inline_line_with_layout<H: UiHost>(

@@ -4,7 +4,7 @@ pub const SOURCE: &str = include_str!("commit_large_demo.rs");
 use fret_runtime::Model;
 use fret_ui::element::SemanticsProps;
 use fret_ui_ai as ui_ai;
-use fret_ui_kit::declarative::stack;
+use fret_ui_kit::ui;
 use fret_ui_kit::{LayoutRefinement, Space};
 use fret_ui_shadcn::prelude::*;
 use std::sync::Arc;
@@ -44,19 +44,16 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
     let hash: Arc<str> = Arc::from("d00df00d");
     let hash_for_title = hash.clone();
     let header = ui_ai::CommitHeader::new([
-        stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .layout(LayoutRefinement::default().min_w_0())
-                .gap(Space::N3)
-                .items_center(),
-            move |cx| {
-                vec![
-                    ui_ai::CommitHash::new(hash_for_title.clone()).into_element(cx),
-                    ui_ai::CommitMessage::new("Large file list scroll").into_element(cx),
-                ]
-            },
-        ),
+        ui::h_row(move |cx| {
+            vec![
+                ui_ai::CommitHash::new(hash_for_title.clone()).into_element(cx),
+                ui_ai::CommitMessage::new("Large file list scroll").into_element(cx),
+            ]
+        })
+        .layout(LayoutRefinement::default().min_w_0())
+        .gap(Space::N3)
+        .items_center()
+        .into_element(cx),
         ui_ai::CommitActions::new([ui_ai::CommitCopyButton::new(hash.clone()).into_element(cx)])
             .into_element(cx),
     ])
@@ -107,18 +104,15 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
         .into_element(cx)
         .test_id("ui-ai-commit-large-root");
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .layout(LayoutRefinement::default().w_full().min_w_0())
-            .gap(Space::N4),
-        move |cx| {
-            vec![
-                cx.text("Commit (Large)"),
-                cx.text("Scroll-heavy surface for hit testing + viewport scrolling."),
-                commit,
-            ]
-        },
-    )
+    ui::v_flex(move |cx| {
+        vec![
+            cx.text("Commit (Large)"),
+            cx.text("Scroll-heavy surface for hit testing + viewport scrolling."),
+            commit,
+        ]
+    })
+    .layout(LayoutRefinement::default().w_full().min_w_0())
+    .gap(Space::N4)
+    .into_element(cx)
 }
 // endregion: example

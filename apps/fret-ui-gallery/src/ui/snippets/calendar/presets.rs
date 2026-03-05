@@ -140,14 +140,11 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     )
     .into_element(cx);
 
-    stack::hstack(
-        cx,
-        stack::HStackProps::default()
-            .justify_center()
-            .items_start()
-            .layout(LayoutRefinement::default().w_full().min_w_0()),
-        move |_cx| vec![card],
-    )
-    .test_id("ui-gallery-calendar-presets-card")
+    ui::h_flex(move |_cx| vec![card])
+        .justify_center()
+        .items_start()
+        .layout(LayoutRefinement::default().w_full().min_w_0())
+        .into_element(cx)
+        .test_id("ui-gallery-calendar-presets-card")
 }
 // endregion: example

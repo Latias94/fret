@@ -73,10 +73,7 @@ pub(in crate::ui) fn preview_material3_card(
 
     vec![
         cx.text("Material 3 Card: token-driven surface + outline + ink (interactive only when on_activate is set)."),
-        stack::hstack(
-            cx,
-            stack::HStackProps::default().gap(Space::N2).items_center(),
-            move |cx| {
+        ui::h_row(move |cx| {
                 vec![
                     material3::Card::new()
                         .variant(material3::CardVariant::Filled)
@@ -96,12 +93,8 @@ pub(in crate::ui) fn preview_material3_card(
                         .test_id("ui-gallery-material3-card-filled-disabled")
                         .into_element(cx, |cx| vec![card_content_row1(cx, "Disabled")]),
                 ]
-            },
-        ),
-        stack::hstack(
-            cx,
-            stack::HStackProps::default().gap(Space::N2).items_center(),
-            move |cx| {
+            }).gap(Space::N2).items_center().into_element(cx),
+        ui::h_row(move |cx| {
                 vec![
                     material3::Card::new()
                         .variant(material3::CardVariant::Elevated)
@@ -120,7 +113,6 @@ pub(in crate::ui) fn preview_material3_card(
                         .test_id("ui-gallery-material3-card-outlined-override")
                         .into_element(cx, |cx| vec![card_content_row2(cx, "Outline override")]),
                 ]
-            },
-        ),
+            }).gap(Space::N2).items_center().into_element(cx),
     ]
 }

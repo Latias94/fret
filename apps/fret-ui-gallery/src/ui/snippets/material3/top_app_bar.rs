@@ -61,16 +61,16 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                 .test_id(test_prefix)
                 .into_element(cx);
 
-            let mut content_props = stack::VStackProps::default();
-            content_props.gap = Space::N2;
-            let content = stack::vstack(cx, content_props, |cx| {
+            let content = ui::v_stack(|cx| {
                 let mut out: Vec<AnyElement> = Vec::new();
                 out.push(cx.text("Scroll this area to drive the TopAppBar scroll behavior."));
                 for i in 0..80usize {
                     out.push(cx.text(format!("Row {i:02}")));
                 }
                 out
-            });
+            })
+            .gap(Space::N2)
+            .into_element(cx);
 
             let scroll = shadcn::ScrollArea::new([content])
                 .scroll_handle(scroll_handle.clone())
@@ -78,19 +78,14 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                 .viewport_test_id(format!("{test_prefix}-scroll-viewport"))
                 .into_element(cx);
 
-            stack::vstack(
-                cx,
-                stack::VStackProps::default()
-                    .layout(LayoutRefinement::default().w_full().min_w_0())
-                    .gap(Space::N4),
-                |_cx| [bar, scroll],
-            )
+            ui::v_flex(|_cx| [bar, scroll])
+                .layout(LayoutRefinement::default().w_full().min_w_0())
+                .gap(Space::N4)
+                .into_element(cx)
         })
     };
 
-    let mut props = stack::VStackProps::default();
-    props.gap = Space::N4;
-    stack::vstack(cx, props, |cx| {
+    ui::v_stack(|cx| {
         vec![
             cx.text("Material 3 Top App Bar: primitives driven by md.comp.top-app-bar.* tokens."),
             cx.text("Scroll behavior demos (policy-only, no fret-ui mechanism changes):"),
@@ -192,7 +187,8 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             ),
         ]
     })
-    .into()
+    .gap(Space::N4)
+    .into_element(cx)
 }
 
 // endregion: example

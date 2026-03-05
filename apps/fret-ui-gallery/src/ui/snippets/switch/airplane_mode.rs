@@ -17,27 +17,24 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         model
     });
 
-    stack::hstack(
-        cx,
-        stack::HStackProps::default()
-            .gap(Space::N2)
-            .items_center()
-            .layout(
-                LayoutRefinement::default()
-                    .w_full()
-                    .min_w_0()
-                    .max_w(Px(520.0)),
-            ),
-        |cx| {
-            vec![
-                shadcn::Switch::new(model)
-                    .a11y_label("Airplane mode")
-                    .test_id("ui-gallery-switch-airplane-toggle")
-                    .into_element(cx),
-                shadcn::Label::new("Airplane Mode").into_element(cx),
-            ]
-        },
+    ui::h_flex(|cx| {
+        vec![
+            shadcn::Switch::new(model)
+                .a11y_label("Airplane mode")
+                .test_id("ui-gallery-switch-airplane-toggle")
+                .into_element(cx),
+            shadcn::Label::new("Airplane Mode").into_element(cx),
+        ]
+    })
+    .gap(Space::N2)
+    .items_center()
+    .layout(
+        LayoutRefinement::default()
+            .w_full()
+            .min_w_0()
+            .max_w(Px(520.0)),
     )
+    .into_element(cx)
     .test_id("ui-gallery-switch-airplane")
 }
 

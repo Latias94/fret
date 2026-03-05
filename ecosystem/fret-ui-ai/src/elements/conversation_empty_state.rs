@@ -3,8 +3,8 @@ use std::sync::Arc;
 use fret_core::{FontWeight, SemanticsRole, TextOverflow, TextStyle, TextWrap};
 use fret_ui::element::{AnyElement, LayoutStyle, SemanticsProps, TextProps};
 use fret_ui::{ElementContext, Theme, UiHost};
-use fret_ui_kit::declarative::stack;
 use fret_ui_kit::typography;
+use fret_ui_kit::ui;
 use fret_ui_kit::{Justify, LayoutRefinement, Space};
 
 use fret_ui_shadcn::Card;
@@ -91,29 +91,23 @@ impl ConversationEmptyState {
             })
         });
 
-        let body = stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .layout(LayoutRefinement::default().w_full())
-                .gap(Space::N2),
-            |_cx| {
-                let mut out = Vec::new();
-                out.push(title);
-                if let Some(description) = description {
-                    out.push(description);
-                }
-                out
-            },
-        );
+        let body = ui::v_stack(|_cx| {
+            let mut out = Vec::new();
+            out.push(title);
+            if let Some(description) = description {
+                out.push(description);
+            }
+            out
+        })
+        .layout(LayoutRefinement::default().w_full())
+        .gap(Space::N2)
+        .into_element(cx);
 
-        let centered = stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .layout(LayoutRefinement::default().w_full().h_full())
-                .justify(Justify::Center)
-                .gap(Space::N4),
-            move |_cx| vec![body],
-        );
+        let centered = ui::v_stack(move |_cx| vec![body])
+            .layout(LayoutRefinement::default().w_full().h_full())
+            .justify(Justify::Center)
+            .gap(Space::N4)
+            .into_element(cx);
 
         let card = Card::new(vec![centered])
             .refine_layout(

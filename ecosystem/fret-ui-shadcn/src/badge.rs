@@ -19,7 +19,6 @@ use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::motion::{
     drive_tween_color_for_element, drive_tween_f32_for_element,
 };
-use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, Space, ui};
 
@@ -521,14 +520,13 @@ fn badge_with_patch<H: UiHost>(
                 content.push(decl_icon::icon_with(cx, icon, Some(icon_px), None));
             }
 
-            vec![stack::hstack(
-                cx,
-                stack::HStackProps::default()
+            vec![
+                ui::h_row(|_cx| content)
                     .justify_center()
                     .items_center()
-                    .gap_x(Space::N1),
-                |_cx| content,
-            )]
+                    .gap(Space::N1)
+                    .into_element(cx),
+            ]
         })
     };
 

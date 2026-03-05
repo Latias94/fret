@@ -3,8 +3,8 @@ use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
 use fret_ui_kit::Space;
-use fret_ui_kit::declarative::stack;
 use fret_ui_kit::typography;
+use fret_ui_kit::ui;
 
 use super::*;
 
@@ -30,9 +30,9 @@ pub(super) fn render_pulldown_events_root<H: UiHost + 'static>(
         return children.into_iter().next().unwrap();
     }
 
-    stack::vstack(cx, stack::VStackProps::default().gap(Space::N2), |_cx| {
-        children
-    })
+    ui::v_stack(|_cx| children)
+        .gap(Space::N2)
+        .into_element(cx)
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -565,11 +565,7 @@ fn render_blockquote_container<H: UiHost>(
         if children.len() == 1 {
             children
         } else {
-            vec![stack::vstack(
-                cx,
-                stack::VStackProps::default().gap(Space::N2),
-                |_cx| children,
-            )]
+            vec![ui::v_stack(|_cx| children).gap(Space::N2).into_element(cx)]
         }
     })
 }
@@ -642,7 +638,7 @@ fn render_pulldown_list<H: UiHost + 'static>(
     let list_gap = if loose { Space::N2 } else { Space::N1 };
     let item_body_gap = if loose { Space::N2 } else { Space::N1 };
 
-    let list_el = stack::vstack(cx, stack::VStackProps::default().gap(list_gap), |cx| {
+    let list_el = ui::v_stack(|cx| {
         items
             .into_iter()
             .enumerate()
@@ -650,11 +646,9 @@ fn render_pulldown_list<H: UiHost + 'static>(
                 let body = if item.children.len() == 1 {
                     item.children.into_iter().next().unwrap()
                 } else {
-                    stack::vstack(
-                        cx,
-                        stack::VStackProps::default().gap(item_body_gap),
-                        |_cx| item.children,
-                    )
+                    ui::v_stack(|_cx| item.children)
+                        .gap(item_body_gap)
+                        .into_element(cx)
                 };
 
                 let marker_el = match item.task {
@@ -680,11 +674,10 @@ fn render_pulldown_list<H: UiHost + 'static>(
                                 align: fret_core::TextAlign::Start,
                                 ink_overflow: Default::default(),
                             });
-                            stack::hstack(
-                                cx,
-                                stack::HStackProps::default().gap(Space::N1).items_start(),
-                                |_cx| vec![no_el, task_el],
-                            )
+                            ui::h_row(|_cx| vec![no_el, task_el])
+                                .gap(Space::N1)
+                                .items_start()
+                                .into_element(cx)
                         } else {
                             task_el
                         }
@@ -709,14 +702,15 @@ fn render_pulldown_list<H: UiHost + 'static>(
                     }
                 };
 
-                stack::hstack(
-                    cx,
-                    stack::HStackProps::default().gap(Space::N2).items_start(),
-                    |_cx| vec![marker_el, body],
-                )
+                ui::h_row(|_cx| vec![marker_el, body])
+                    .gap(Space::N2)
+                    .items_start()
+                    .into_element(cx)
             })
             .collect::<Vec<_>>()
-    });
+    })
+    .gap(list_gap)
+    .into_element(cx);
 
     if list_depth == 0 {
         return list_el;
@@ -820,16 +814,15 @@ fn render_pulldown_footnote_definition<H: UiHost + 'static>(
     let body = if children.len() == 1 {
         children.into_iter().next().unwrap()
     } else {
-        stack::vstack(cx, stack::VStackProps::default().gap(Space::N1), |_cx| {
-            children
-        })
+        ui::v_stack(|_cx| children)
+            .gap(Space::N1)
+            .into_element(cx)
     };
 
-    let el = stack::hstack(
-        cx,
-        stack::HStackProps::default().gap(Space::N2).items_start(),
-        |_cx| vec![label_el, body],
-    );
+    let el = ui::h_row(|_cx| vec![label_el, body])
+        .gap(Space::N2)
+        .items_start()
+        .into_element(cx);
 
     let anchor_test_id = crate::anchors::footnote_anchor_test_id(label.as_ref());
     let el = if let Some(decorate) = &components.anchor_decorate {

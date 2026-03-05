@@ -438,26 +438,23 @@ pub fn render<H: UiHost>(
             .test_id("ui-gallery-sonner-demo"),
     );
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N2)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full().min_w_0()),
-        move |cx| {
-            vec![
-                buttons,
-                shadcn::typography::muted(
-                    cx,
-                    if pending {
-                        "Promise toast pending: click Promise again to resolve."
-                    } else {
-                        "Promise toast idle: click Promise to start loading state."
-                    },
-                ),
-            ]
-        },
-    )
+    ui::v_flex(move |cx| {
+        vec![
+            buttons,
+            shadcn::typography::muted(
+                cx,
+                if pending {
+                    "Promise toast pending: click Promise again to resolve."
+                } else {
+                    "Promise toast idle: click Promise to start loading state."
+                },
+            ),
+        ]
+    })
+    .gap(Space::N2)
+    .items_start()
+    .layout(LayoutRefinement::default().w_full().min_w_0())
+    .into_element(cx)
     .test_id("ui-gallery-sonner-demo-root")
 }
 // endregion: example

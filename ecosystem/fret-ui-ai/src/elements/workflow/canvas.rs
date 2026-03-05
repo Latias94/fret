@@ -6,9 +6,8 @@ use fret_runtime::Model;
 use fret_ui::canvas::CanvasPainter;
 use fret_ui::element::{AnyElement, SemanticsProps};
 use fret_ui::{ElementContext, Theme, UiHost};
-use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, Space};
+use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, Space, ui};
 
 use fret_canvas::ui::{
     PanZoomCanvasPaintCx, PanZoomCanvasSurfacePanelProps, editor_pan_zoom_canvas_surface_panel,
@@ -161,17 +160,16 @@ impl WorkflowCanvas {
         );
 
         let body = cx.container(root_props, move |cx| {
-            vec![stack::vstack(
-                cx,
-                stack::VStackProps::default().gap(Space::N0).layout(
+            vec![ui::v_stack(move |_cx| vec![canvas, overlay])
+                .gap(Space::N0)
+                .layout(
                     LayoutRefinement::default()
                         .w_full()
                         .h_full()
                         .min_w_0()
                         .min_h_0(),
-                ),
-                move |_cx| vec![canvas, overlay],
-            )]
+                )
+                .into_element(cx)]
         });
 
         let Some(test_id) = self.test_id else {

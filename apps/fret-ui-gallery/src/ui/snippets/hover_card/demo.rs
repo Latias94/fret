@@ -42,24 +42,18 @@ pub fn render<H: UiHost>(
         .into_element(cx)
         .test_id("ui-gallery-hover-card-demo-content-joined");
 
-    let text_block = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .layout(LayoutRefinement::default().w_full().min_w_0())
-            .gap(Space::N1)
-            .items_start(),
-        |_cx| vec![heading, body, joined],
-    );
+    let text_block = ui::v_flex(|_cx| vec![heading, body, joined])
+        .layout(LayoutRefinement::default().w_full().min_w_0())
+        .gap(Space::N1)
+        .items_start()
+        .into_element(cx);
 
-    let row = stack::hstack(
-        cx,
-        stack::HStackProps::default()
-            .gap(Space::N4)
-            .layout(LayoutRefinement::default().w_full().min_w_0())
-            .items_start()
-            .justify_between(),
-        |_cx| vec![avatar, text_block],
-    );
+    let row = ui::h_flex(|_cx| vec![avatar, text_block])
+        .gap(Space::N4)
+        .layout(LayoutRefinement::default().w_full().min_w_0())
+        .items_start()
+        .justify_between()
+        .into_element(cx);
 
     let content = shadcn::HoverCardContent::new(vec![row])
         .refine_layout(LayoutRefinement::default().max_w(Px(320.0)))

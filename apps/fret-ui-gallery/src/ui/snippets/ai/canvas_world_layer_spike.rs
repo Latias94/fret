@@ -3,8 +3,8 @@ pub const SOURCE: &str = include_str!("canvas_world_layer_spike.rs");
 // region: example
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::declarative::ElementContextThemeExt;
-use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::ui;
 use fret_ui_kit::{ChromeRefinement, ColorFallback, ColorRef, LayoutRefinement, Radius, Space};
 use fret_ui_shadcn as shadcn;
 use fret_ui_shadcn::prelude::*;
@@ -62,18 +62,15 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
         models: Option<LocalModels>,
     }
 
-    let header = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .layout(LayoutRefinement::default().w_full().min_w_0())
-            .gap(Space::N2),
-        |cx| {
-            vec![
-                cx.text("Canvas world layer (spike)"),
-                cx.text("Goal: nodes as element subtrees under a pan/zoom view transform."),
-            ]
-        },
-    );
+    let header = ui::v_flex(|cx| {
+        vec![
+            cx.text("Canvas world layer (spike)"),
+            cx.text("Goal: nodes as element subtrees under a pan/zoom view transform."),
+        ]
+    })
+    .layout(LayoutRefinement::default().w_full().min_w_0())
+    .gap(Space::N2)
+    .into_element(cx);
 
     let models_opt = cx.with_state(LocalModelsState::default, |st| st.models.clone());
     let (models, created) = if let Some(models) = models_opt {
@@ -1911,13 +1908,9 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
                     .chain(target_bounds_ready)
                     .collect::<Vec<_>>();
 
-                    vec![stack::vstack(
-                        cx,
-                        stack::VStackProps::default()
+                    vec![ui::v_stack(move |_cx| items)
                             .layout(LayoutRefinement::default().min_w_0())
-                            .gap(Space::N2),
-                        move |_cx| items,
-                    )]
+                            .gap(Space::N2).into_element(cx)]
                 }));
             out
         },
@@ -1928,12 +1921,9 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
             .test_id("ui-ai-canvas-world-layer-spike-root"),
     );
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .layout(LayoutRefinement::default().w_full().min_w_0())
-            .gap(Space::N4),
-        move |cx| vec![header, cx.container(stage_props, move |_cx| vec![world])],
-    )
+    ui::v_flex(move |cx| vec![header, cx.container(stage_props, move |_cx| vec![world])])
+        .layout(LayoutRefinement::default().w_full().min_w_0())
+        .gap(Space::N4)
+        .into_element(cx)
 }
 // endregion: example

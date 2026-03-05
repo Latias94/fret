@@ -28,20 +28,18 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let default = group(cx, shadcn::ToggleSize::Default);
     let lg = group(cx, shadcn::ToggleSize::Lg);
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default().gap(Space::N2).items_start(),
-        move |cx| {
-            vec![
-                shadcn::typography::muted(cx, "Sm / Default / Lg"),
-                stack::hstack(
-                    cx,
-                    stack::HStackProps::default().gap(Space::N2).items_center(),
-                    move |_cx| vec![sm, default, lg],
-                ),
-            ]
-        },
-    )
+    ui::v_stack(move |cx| {
+        vec![
+            shadcn::typography::muted(cx, "Sm / Default / Lg"),
+            ui::h_row(move |_cx| vec![sm, default, lg])
+                .gap(Space::N2)
+                .items_center()
+                .into_element(cx),
+        ]
+    })
+    .gap(Space::N2)
+    .items_start()
+    .into_element(cx)
     .test_id("ui-gallery-toggle-group-size")
 }
 // endregion: example

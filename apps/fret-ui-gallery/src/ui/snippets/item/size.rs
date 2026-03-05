@@ -73,14 +73,11 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
             .test_id("ui-gallery-item-size-sm")
     };
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N6)
-            .items_start()
-            .layout(max_w_md),
-        |_cx| vec![item_default, item_sm],
-    )
-    .test_id("ui-gallery-item-size")
+    ui::v_stack(|_cx| vec![item_default, item_sm])
+        .gap(Space::N6)
+        .items_start()
+        .layout(max_w_md)
+        .into_element(cx)
+        .test_id("ui-gallery-item-size")
 }
 // endregion: example

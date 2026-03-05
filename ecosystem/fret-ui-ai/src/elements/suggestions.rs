@@ -8,8 +8,8 @@ use fret_ui::element::{
 };
 use fret_ui::scroll::ScrollHandle;
 use fret_ui::{ElementContext, UiHost};
-use fret_ui_kit::declarative::stack;
-use fret_ui_kit::{ChromeRefinement, LayoutRefinement, Radius, Space};
+use fret_ui_kit::ui;
+use fret_ui_kit::{ChromeRefinement, Items, LayoutRefinement, Radius, Space};
 
 use fret_ui_shadcn::{Button, ButtonSize, ButtonVariant};
 
@@ -60,14 +60,11 @@ impl Suggestions {
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let row = stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .layout(LayoutRefinement::default().flex_shrink_0())
-                .gap(Space::N2)
-                .items_center(),
-            move |_cx| self.children,
-        );
+        let row = ui::h_row(move |_cx| self.children)
+            .layout(LayoutRefinement::default().flex_shrink_0())
+            .gap(Space::N2)
+            .items(Items::Center)
+            .into_element(cx);
 
         // Prefer a plain scroll region here: shadcn/Radix `ScrollArea` roots often assume `h-full`
         // semantics, which can collapse to 0 height under auto-height stacks in layout engines

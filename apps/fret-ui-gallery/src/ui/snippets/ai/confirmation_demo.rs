@@ -7,8 +7,8 @@ use fret_ui::Theme;
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::ColorRef;
 use fret_ui_kit::declarative::icon as decl_icon;
-use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::text as decl_text;
+use fret_ui_kit::ui;
 use fret_ui_kit::{LayoutRefinement, Space};
 use fret_ui_shadcn::{Button, ButtonSize, ButtonVariant, prelude::*};
 use std::sync::Arc;
@@ -146,18 +146,15 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
         state_now,
         [
             cx.text("This tool wants to execute a query on the production database:"),
-            stack::vstack(
-                cx,
-                stack::VStackProps::default()
-                    .layout(LayoutRefinement::default().mt(Space::N2).w_full().min_w_0())
-                    .gap(Space::N1),
-                |cx| {
-                    vec![decl_text::text_code_wrap(
-                        cx,
-                        "SELECT * FROM users WHERE role = 'admin'",
-                    )]
-                },
-            ),
+            ui::v_flex(|cx| {
+                vec![decl_text::text_code_wrap(
+                    cx,
+                    "SELECT * FROM users WHERE role = 'admin'",
+                )]
+            })
+            .layout(LayoutRefinement::default().mt(Space::N2).w_full().min_w_0())
+            .gap(Space::N1)
+            .into_element(cx),
         ],
     )
     .into_element(cx);
@@ -182,19 +179,16 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
     }
     let confirmation = confirmation.into_element(cx);
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .layout(LayoutRefinement::default().w_full().min_w_0())
-            .gap(Space::N4),
-        move |cx| {
-            vec![
-                cx.text("Confirmation (AI Elements)"),
-                cx.text("Click to request, then approve to transition to accepted state."),
-                request_btn,
-                confirmation,
-            ]
-        },
-    )
+    ui::v_flex(move |cx| {
+        vec![
+            cx.text("Confirmation (AI Elements)"),
+            cx.text("Click to request, then approve to transition to accepted state."),
+            request_btn,
+            confirmation,
+        ]
+    })
+    .layout(LayoutRefinement::default().w_full().min_w_0())
+    .gap(Space::N4)
+    .into_element(cx)
 }
 // endregion: example

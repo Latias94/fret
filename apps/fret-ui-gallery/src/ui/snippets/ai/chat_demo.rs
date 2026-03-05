@@ -11,7 +11,7 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
     use fret_runtime::Model;
     use fret_ui::Invalidation;
     use fret_ui::action::OnActivate;
-    use fret_ui_kit::declarative::stack;
+    use fret_ui_kit::ui;
     use fret_ui_kit::{LayoutRefinement, Space};
 
     #[derive(Debug, Clone)]
@@ -609,24 +609,21 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
         }
     });
 
-    let header = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .layout(LayoutRefinement::default().w_full())
-            .gap(Space::N2),
-        |cx| {
-            vec![
-                cx.text("Goal: interactive demo for PromptInput + transcript append."),
-                cx.text("Send triggers a short \"loading\" window where Stop is available."),
-                shadcn::Button::new("Start streaming (seeded)")
-                    .variant(shadcn::ButtonVariant::Secondary)
-                    .size(shadcn::ButtonSize::Sm)
-                    .test_id("ui-gallery-ai-chat-start-stream")
-                    .on_activate(start_streaming.clone())
-                    .into_element(cx),
-            ]
-        },
-    );
+    let header = ui::v_flex(|cx| {
+        vec![
+            cx.text("Goal: interactive demo for PromptInput + transcript append."),
+            cx.text("Send triggers a short \"loading\" window where Stop is available."),
+            shadcn::Button::new("Start streaming (seeded)")
+                .variant(shadcn::ButtonVariant::Secondary)
+                .size(shadcn::ButtonSize::Sm)
+                .test_id("ui-gallery-ai-chat-start-stream")
+                .on_activate(start_streaming.clone())
+                .into_element(cx),
+        ]
+    })
+    .layout(LayoutRefinement::default().w_full())
+    .gap(Space::N2)
+    .into_element(cx);
 
     let actions_demo = {
         let copy = ui_ai::MessageAction::new("Copy")
@@ -705,20 +702,17 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
         )
     });
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .layout(LayoutRefinement::default().w_full().min_w_0())
-            .gap(Space::N3),
-        move |cx| {
-            vec![
-                header,
-                actions_demo,
-                chat,
-                prompt_non_empty_marker.unwrap_or_else(|| cx.text("")),
-                exported.unwrap_or_else(|| cx.text("")),
-            ]
-        },
-    )
+    ui::v_flex(move |cx| {
+        vec![
+            header,
+            actions_demo,
+            chat,
+            prompt_non_empty_marker.unwrap_or_else(|| cx.text("")),
+            exported.unwrap_or_else(|| cx.text("")),
+        ]
+    })
+    .layout(LayoutRefinement::default().w_full().min_w_0())
+    .gap(Space::N3)
+    .into_element(cx)
 }
 // endregion: example

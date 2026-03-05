@@ -7,11 +7,11 @@ use fret_icons::IconId;
 use fret_ui::element::{AnyElement, LayoutStyle, SemanticsProps, TextProps};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::icon as decl_icon;
-use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::typography;
+use fret_ui_kit::ui;
 use fret_ui_kit::{
-    ChromeRefinement, ColorFallback, ColorRef, Items, LayoutRefinement, Radius, Space,
+    ChromeRefinement, ColorFallback, ColorRef, Items, Justify, LayoutRefinement, Radius, Space,
 };
 use fret_ui_shadcn::Spinner;
 
@@ -226,14 +226,11 @@ impl Persona {
 
         let size = self.size;
         let orb = {
-            let centered = stack::hstack(
-                cx,
-                stack::HStackProps::default()
-                    .layout(LayoutRefinement::default().w_full().h_full())
-                    .items(Items::Center)
-                    .justify_center(),
-                move |_cx| [icon],
-            );
+            let centered = ui::h_row(move |_cx| vec![icon])
+                .layout(LayoutRefinement::default().w_full().h_full())
+                .items(Items::Center)
+                .justify(Justify::Center)
+                .into_element(cx);
 
             let props = decl_style::container_props(
                 &theme,
@@ -252,14 +249,11 @@ impl Persona {
         };
 
         let body: AnyElement = if let Some(label) = label {
-            stack::vstack(
-                cx,
-                stack::VStackProps::default()
-                    .gap(Space::N2)
-                    .items(Items::Center)
-                    .layout(LayoutRefinement::default().min_w_0().merge(self.layout)),
-                move |_cx| vec![orb, label],
-            )
+            ui::v_stack(move |_cx| vec![orb, label])
+                .gap(Space::N2)
+                .items(Items::Center)
+                .layout(LayoutRefinement::default().min_w_0().merge(self.layout))
+                .into_element(cx)
         } else {
             let props = decl_style::container_props(
                 &theme,

@@ -47,19 +47,13 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         .into_element_with_open_model(
             cx,
             |cx, open, is_open| {
-                let chevron = rotated_lucide(
-                    cx,
-                    "lucide.chevron-down",
-                    if is_open { 180.0 } else { 0.0 },
-                );
-                let row = stack::hstack(
-                    cx,
-                    stack::HStackProps::default()
-                        .layout(LayoutRefinement::default().w_full().min_w_0())
-                        .justify_between()
-                        .items_center(),
-                    |cx| vec![cx.text("Product details"), chevron],
-                );
+                let chevron =
+                    rotated_lucide(cx, "lucide.chevron-down", if is_open { 180.0 } else { 0.0 });
+                let row = ui::h_flex(|cx| vec![cx.text("Product details"), chevron])
+                    .layout(LayoutRefinement::default().w_full().min_w_0())
+                    .justify_between()
+                    .items_center()
+                    .into_element(cx);
 
                 shadcn::Button::new("Product details")
                     .variant(shadcn::ButtonVariant::Ghost)
@@ -70,25 +64,22 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                     .into_element(cx)
             },
             |cx| {
-                let body = stack::vstack(
-                    cx,
-                    stack::VStackProps::default()
-                        .gap(Space::N2)
-                        .items_start()
-                        .layout(LayoutRefinement::default().w_full().min_w_0()),
-                    |cx| {
-                        vec![
-                            shadcn::typography::p(
-                                cx,
-                                "This panel can be expanded or collapsed to reveal additional content.",
-                            ),
-                            shadcn::Button::new("Learn more")
-                                .size(shadcn::ButtonSize::Sm)
-                                .variant(shadcn::ButtonVariant::Secondary)
-                                .into_element(cx),
-                        ]
-                    },
-                );
+                let body = ui::v_flex(|cx| {
+                    vec![
+                        shadcn::typography::p(
+                            cx,
+                            "This panel can be expanded or collapsed to reveal additional content.",
+                        ),
+                        shadcn::Button::new("Learn more")
+                            .size(shadcn::ButtonSize::Sm)
+                            .variant(shadcn::ButtonVariant::Secondary)
+                            .into_element(cx),
+                    ]
+                })
+                .gap(Space::N2)
+                .items_start()
+                .layout(LayoutRefinement::default().w_full().min_w_0())
+                .into_element(cx);
 
                 shadcn::CollapsibleContent::new([body])
                     .refine_style(ChromeRefinement::default().p(Space::N2p5).pt(Space::N0))

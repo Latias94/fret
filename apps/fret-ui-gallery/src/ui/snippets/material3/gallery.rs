@@ -31,10 +31,8 @@ pub fn render<H: UiHost>(
     out.push(cx.text("Material 3 Gallery: compact outcomes-first surface."));
 
     out.push(cx.text("— Buttons —"));
-    out.push(stack::hstack(
-        cx,
-        stack::HStackProps::default().gap(Space::N2).items_center(),
-        |cx| {
+    out.push(
+        ui::h_row(|cx| {
             vec![
                 material3::Button::new("Filled")
                     .variant(material3::ButtonVariant::Filled)
@@ -49,14 +47,15 @@ pub fn render<H: UiHost>(
                     .variant(material3::ButtonVariant::Text)
                     .into_element(cx),
             ]
-        },
-    ));
+        })
+        .gap(Space::N2)
+        .items_center()
+        .into_element(cx),
+    );
 
     out.push(cx.text("— Icon Buttons —"));
-    out.push(stack::hstack(
-        cx,
-        stack::HStackProps::default().gap(Space::N2).items_center(),
-        |cx| {
+    out.push(
+        ui::h_row(|cx| {
             let (hover_icon, hover_container) = cx.with_theme(|theme| {
                 (
                     fret_ui_shadcn::ColorRef::Color(
@@ -92,14 +91,15 @@ pub fn render<H: UiHost>(
                     .style(hover_style)
                     .into_element(cx),
             ]
-        },
-    ));
+        })
+        .gap(Space::N2)
+        .items_center()
+        .into_element(cx),
+    );
 
     out.push(cx.text("— FAB —"));
-    out.push(stack::hstack(
-        cx,
-        stack::HStackProps::default().gap(Space::N2).items_center(),
-        |cx| {
+    out.push(
+        ui::h_row(|cx| {
             vec![
                 material3::Fab::new(ids::ui::SEARCH)
                     .a11y_label("Search")
@@ -117,14 +117,15 @@ pub fn render<H: UiHost>(
                     .variant(material3::FabVariant::Primary)
                     .into_element(cx),
             ]
-        },
-    ));
+        })
+        .gap(Space::N2)
+        .items_center()
+        .into_element(cx),
+    );
 
     out.push(cx.text("— Selection —"));
-    out.push(stack::hstack(
-        cx,
-        stack::HStackProps::default().gap(Space::N3).items_center(),
-        |cx| {
+    out.push(
+        ui::h_row(|cx| {
             let (hover_container, hover_icon, hover_outline) = cx.with_theme(|theme| {
                 (
                     fret_ui_shadcn::ColorRef::Color(
@@ -185,57 +186,55 @@ pub fn render<H: UiHost>(
                             )
                     })
                     .into_element(cx),
-                stack::vstack(
-                    cx,
-                    stack::VStackProps::default().gap(Space::N1).items_start(),
-                    |cx| {
-                        let items = vec![
-                            material3::RadioGroupItem::new("Alpha").a11y_label("Radio Alpha"),
-                            material3::RadioGroupItem::new("Beta").a11y_label("Radio Beta"),
-                            material3::RadioGroupItem::new("Charlie")
-                                .a11y_label("Radio Charlie")
-                                .disabled(true),
-                        ];
+                ui::v_stack(|cx| {
+                    let items = vec![
+                        material3::RadioGroupItem::new("Alpha").a11y_label("Radio Alpha"),
+                        material3::RadioGroupItem::new("Beta").a11y_label("Radio Beta"),
+                        material3::RadioGroupItem::new("Charlie")
+                            .a11y_label("Radio Charlie")
+                            .disabled(true),
+                    ];
 
-                        let hover_color = cx.with_theme(|theme| {
-                            fret_ui_shadcn::ColorRef::Color(
-                                theme.color_token("md.sys.color.tertiary"),
-                            )
-                        });
-                        let hover_style = material3::RadioStyle::default()
-                            .icon_color(fret_ui_kit::WidgetStateProperty::new(None).when(
-                                fret_ui_kit::WidgetStates::HOVERED,
-                                Some(hover_color.clone()),
-                            ))
-                            .state_layer_color(
-                                fret_ui_kit::WidgetStateProperty::new(None)
-                                    .when(fret_ui_kit::WidgetStates::HOVERED, Some(hover_color)),
-                            );
+                    let hover_color = cx.with_theme(|theme| {
+                        fret_ui_shadcn::ColorRef::Color(theme.color_token("md.sys.color.tertiary"))
+                    });
+                    let hover_style = material3::RadioStyle::default()
+                        .icon_color(fret_ui_kit::WidgetStateProperty::new(None).when(
+                            fret_ui_kit::WidgetStates::HOVERED,
+                            Some(hover_color.clone()),
+                        ))
+                        .state_layer_color(
+                            fret_ui_kit::WidgetStateProperty::new(None)
+                                .when(fret_ui_kit::WidgetStates::HOVERED, Some(hover_color)),
+                        );
 
-                        vec![
-                            cx.text("Radio Group"),
-                            material3::RadioGroup::new(material3_radio_value.clone())
-                                .a11y_label("Radio Group")
-                                .items(items.clone())
-                                .into_element(cx),
-                            cx.text("Radio Group Override"),
-                            material3::RadioGroup::new(material3_radio_value.clone())
-                                .a11y_label("Radio Group Override")
-                                .style(hover_style)
-                                .items(items)
-                                .into_element(cx),
-                        ]
-                    },
-                ),
+                    vec![
+                        cx.text("Radio Group"),
+                        material3::RadioGroup::new(material3_radio_value.clone())
+                            .a11y_label("Radio Group")
+                            .items(items.clone())
+                            .into_element(cx),
+                        cx.text("Radio Group Override"),
+                        material3::RadioGroup::new(material3_radio_value.clone())
+                            .a11y_label("Radio Group Override")
+                            .style(hover_style)
+                            .items(items)
+                            .into_element(cx),
+                    ]
+                })
+                .gap(Space::N1)
+                .items_start()
+                .into_element(cx),
             ]
-        },
-    ));
+        })
+        .gap(Space::N3)
+        .items_center()
+        .into_element(cx),
+    );
 
     out.push(cx.text("— Text Field —"));
-    out.push(stack::hstack(
-        cx,
-        stack::HStackProps::default().gap(Space::N2).items_center(),
-        |cx| {
+    out.push(
+        ui::h_row(|cx| {
             vec![
                 shadcn::Switch::new(material3_text_field_disabled.clone())
                     .a11y_label("Disable Text Field")
@@ -246,12 +245,13 @@ pub fn render<H: UiHost>(
                     .into_element(cx),
                 cx.text("Error"),
             ]
-        },
-    ));
-    out.push(stack::vstack(
-        cx,
-        stack::VStackProps::default().gap(Space::N1).items_start(),
-        |cx| {
+        })
+        .gap(Space::N2)
+        .items_center()
+        .into_element(cx),
+    );
+    out.push(
+        ui::v_stack(|cx| {
             let hover = cx.with_theme(|theme| {
                 fret_ui_shadcn::ColorRef::Color(theme.color_token("md.sys.color.tertiary"))
             });
@@ -282,14 +282,15 @@ pub fn render<H: UiHost>(
                     .error(error)
                     .into_element(cx),
             ]
-        },
-    ));
+        })
+        .gap(Space::N1)
+        .items_start()
+        .into_element(cx),
+    );
 
     out.push(cx.text("— Tabs —"));
-    out.push(stack::vstack(
-        cx,
-        stack::VStackProps::default().gap(Space::N1).items_start(),
-        |cx| {
+    out.push(
+        ui::v_stack(|cx| {
             let items = vec![
                 material3::TabItem::new("overview", "Overview"),
                 material3::TabItem::new("security", "Security"),
@@ -323,8 +324,11 @@ pub fn render<H: UiHost>(
                     .items(items)
                     .into_element(cx),
             ]
-        },
-    ));
+        })
+        .gap(Space::N1)
+        .items_start()
+        .into_element(cx),
+    );
 
     out.push(cx.text("— Navigation Bar —"));
     out.push(
@@ -352,15 +356,12 @@ pub fn render<H: UiHost>(
             .into_element(cx),
     );
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .layout(LayoutRefinement::default().w_full().min_w_0())
-            .gap(Space::N3)
-            .items_start(),
-        move |_cx| out,
-    )
-    .into()
+    ui::v_flex(move |_cx| out)
+        .layout(LayoutRefinement::default().w_full().min_w_0())
+        .gap(Space::N3)
+        .items_start()
+        .into_element(cx)
+        .into()
 }
 
 // endregion: example

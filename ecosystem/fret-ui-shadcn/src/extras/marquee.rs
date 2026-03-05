@@ -7,9 +7,8 @@ use fret_ui::element::{
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::declarative::motion;
 use fret_ui_kit::declarative::scheduling;
-use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::{ChromeRefinement, LayoutRefinement, MetricRef, Space};
+use fret_ui_kit::{ChromeRefinement, LayoutRefinement, MetricRef, Space, ui};
 
 use crate::badge::{Badge, BadgeVariant};
 use crate::test_id::attach_test_id;
@@ -147,14 +146,11 @@ impl Marquee {
 
             let track1 = cx.named("track1", |cx| build_track(cx, &items, item_gap));
 
-            let track_row = stack::hstack(
-                cx,
-                stack::HStackProps::default()
-                    .items_center()
-                    .gap_x(track_gap)
-                    .layout(LayoutRefinement::default().flex_shrink_0()),
-                |_cx| vec![track0, track1],
-            );
+            let track_row = ui::h_row(|_cx| vec![track0, track1])
+                .items_center()
+                .gap(track_gap)
+                .layout(LayoutRefinement::default().flex_shrink_0())
+                .into_element(cx);
 
             let test_id = self
                 .test_id
@@ -334,25 +330,22 @@ fn build_track<H: UiHost>(
     items: &[Arc<str>],
     gap: Space,
 ) -> AnyElement {
-    stack::hstack(
-        cx,
-        stack::HStackProps::default()
-            .items_center()
-            .gap_x(gap)
-            .layout(LayoutRefinement::default().flex_shrink_0()),
-        |cx| {
-            items
-                .iter()
-                .enumerate()
-                .map(|(idx, label)| {
-                    cx.keyed(idx as u64, |cx| {
-                        Badge::new(label.clone())
-                            .variant(BadgeVariant::Secondary)
-                            .refine_layout(LayoutRefinement::default().flex_shrink_0())
-                            .into_element(cx)
-                    })
+    ui::h_row(|cx| {
+        items
+            .iter()
+            .enumerate()
+            .map(|(idx, label)| {
+                cx.keyed(idx as u64, |cx| {
+                    Badge::new(label.clone())
+                        .variant(BadgeVariant::Secondary)
+                        .refine_layout(LayoutRefinement::default().flex_shrink_0())
+                        .into_element(cx)
                 })
-                .collect::<Vec<_>>()
-        },
-    )
+            })
+            .collect::<Vec<_>>()
+    })
+    .items_center()
+    .gap(gap)
+    .layout(LayoutRefinement::default().flex_shrink_0())
+    .into_element(cx)
 }

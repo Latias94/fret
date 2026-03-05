@@ -69,18 +69,17 @@ pub(in crate::ui) fn preview_text_measure_overlay(
         |st| st.clone(),
     );
 
-    let header = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .layout(LayoutRefinement::default().w_full())
-            .gap(Space::N2),
-        |cx| {
-            vec![
-                cx.text("Goal: visualize measured text bounds vs allocated container bounds."),
-                cx.text("Green = container bounds; Yellow = measured TextMetrics.size; Cyan = baseline."),
-            ]
-        },
-    );
+    let header = ui::v_flex(|cx| {
+        vec![
+            cx.text("Goal: visualize measured text bounds vs allocated container bounds."),
+            cx.text(
+                "Green = container bounds; Yellow = measured TextMetrics.size; Cyan = baseline.",
+            ),
+        ]
+    })
+    .layout(LayoutRefinement::default().w_full())
+    .gap(Space::N2)
+    .into_element(cx);
 
     let panel = cx.container(
         decl_style::container_props(

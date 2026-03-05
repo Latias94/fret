@@ -26,17 +26,16 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let value = value_model(cx);
     let max_w_xs = LayoutRefinement::default().w_full().max_w(Px(320.0));
 
-    let label = stack::hstack(
-        cx,
-        stack::HStackProps::default().gap(Space::N1).items_center(),
-        |cx| {
-            vec![
-                shadcn::FieldLabel::new("Required Field").into_element(cx),
-                shadcn::typography::muted(cx, "*")
-                    .attach_semantics(SemanticsDecoration::default().label("required-star")),
-            ]
-        },
-    );
+    let label = ui::h_row(|cx| {
+        vec![
+            shadcn::FieldLabel::new("Required Field").into_element(cx),
+            shadcn::typography::muted(cx, "*")
+                .attach_semantics(SemanticsDecoration::default().label("required-star")),
+        ]
+    })
+    .gap(Space::N1)
+    .items_center()
+    .into_element(cx);
 
     shadcn::Field::new([
         label,

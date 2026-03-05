@@ -359,13 +359,13 @@ pub use app_integration::{
     sync_theme_from_environment,
 };
 
-pub use ::fret_ui_kit::declarative::style as decl_style;
 /// Re-exported “authoring glue” for app/component code.
 ///
 /// shadcn/ui recipes assume a lightweight layout/styling vocabulary (Tailwind on the web).
 /// In Fret, the closest analogue lives in `fret-ui-kit::declarative`. Re-exporting these keeps
 /// the common “app + components” story down to `fret-ui-shadcn` + `fret-bootstrap`.
-pub use ::fret_ui_kit::declarative::{icon, stack};
+pub use ::fret_ui_kit::declarative::icon;
+pub use ::fret_ui_kit::declarative::style as decl_style;
 pub use ::fret_ui_kit::ui;
 pub use ::fret_ui_kit::{
     ChromeRefinement, ColorRef, Corners4, Edges4, LayoutRefinement, MarginEdge, MetricRef, Radius,
@@ -396,7 +396,7 @@ pub mod prelude {
         SelectScrollDownButton, SelectScrollUpButton, SelectSeparator, SelectSide, SelectTextRun,
         SelectTextTone, SelectTrigger, SelectTriggerLabelPolicy, SelectTriggerSize, SelectValue,
     };
-    pub use crate::{decl_style, icon, stack, ui};
+    pub use crate::{decl_style, icon, ui};
 
     #[cfg(feature = "state-selector")]
     pub use crate::state::use_selector_badge;

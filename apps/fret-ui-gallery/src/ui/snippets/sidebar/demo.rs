@@ -71,31 +71,30 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         let collapsed =
             shadcn::use_sidebar(cx).is_some_and(|ctx| !ctx.is_mobile && ctx.collapsed());
 
-        let header = stack::hstack(
-            cx,
-            stack::HStackProps::default().gap(Space::N2).items_center(),
-            |cx| {
-                vec![
-                    shadcn::SidebarTrigger::new()
-                        .test_id("ui-gallery-sidebar-demo-toggle")
-                        .into_element(cx),
-                    shadcn::Button::new("Focus")
-                        .variant(shadcn::ButtonVariant::Ghost)
-                        .size(shadcn::ButtonSize::Sm)
-                        .test_id("ui-gallery-sidebar-demo-focus")
-                        .into_element(cx),
-                    shadcn::typography::muted(
-                        cx,
-                        if collapsed {
-                            "Collapsed to icon rail"
-                        } else {
-                            "Expanded"
-                        },
-                    ),
-                    shadcn::typography::muted(cx, format!("active={}", selected_value.as_ref())),
-                ]
-            },
-        );
+        let header = ui::h_row(|cx| {
+            vec![
+                shadcn::SidebarTrigger::new()
+                    .test_id("ui-gallery-sidebar-demo-toggle")
+                    .into_element(cx),
+                shadcn::Button::new("Focus")
+                    .variant(shadcn::ButtonVariant::Ghost)
+                    .size(shadcn::ButtonSize::Sm)
+                    .test_id("ui-gallery-sidebar-demo-focus")
+                    .into_element(cx),
+                shadcn::typography::muted(
+                    cx,
+                    if collapsed {
+                        "Collapsed to icon rail"
+                    } else {
+                        "Expanded"
+                    },
+                ),
+                shadcn::typography::muted(cx, format!("active={}", selected_value.as_ref())),
+            ]
+        })
+        .gap(Space::N2)
+        .items_center()
+        .into_element(cx);
 
         let platform = shadcn::SidebarGroup::new([
             shadcn::SidebarGroupLabel::new("Platform").into_element(cx),
@@ -210,29 +209,23 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         .refine_layout(LayoutRefinement::default().w_full().h_full().min_w_0())
         .into_element(cx);
 
-        let inset = shadcn::SidebarInset::new([stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .gap(Space::N3)
-                .items_start()
-                .layout(LayoutRefinement::default().w_full().h_full()),
-            |_cx| vec![header, content],
-        )])
+        let inset = shadcn::SidebarInset::new([ui::v_flex(|_cx| vec![header, content])
+            .gap(Space::N3)
+            .items_start()
+            .layout(LayoutRefinement::default().w_full().h_full())
+            .into_element(cx)])
         .into_element(cx);
 
-        let frame = stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .gap(Space::N4)
-                .items_start()
-                .layout(LayoutRefinement::default().w_full().h_px(Px(360.0))),
-            |_cx| vec![sidebar, inset],
-        )
-        .attach_semantics(
-            SemanticsDecoration::default()
-                .role(fret_core::SemanticsRole::Group)
-                .test_id("ui-gallery-sidebar-demo"),
-        );
+        let frame = ui::h_flex(|_cx| vec![sidebar, inset])
+            .gap(Space::N4)
+            .items_start()
+            .layout(LayoutRefinement::default().w_full().h_px(Px(360.0)))
+            .into_element(cx)
+            .attach_semantics(
+                SemanticsDecoration::default()
+                    .role(fret_core::SemanticsRole::Group)
+                    .test_id("ui-gallery-sidebar-demo"),
+            );
 
         vec![frame]
     });

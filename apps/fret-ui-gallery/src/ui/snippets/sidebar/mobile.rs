@@ -86,13 +86,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                     host.request_redraw(action_cx.window);
                 });
 
-            let header = stack::hstack(
-                cx,
-                stack::HStackProps::default()
-                    .gap(Space::N2)
-                    .items_center()
-                    .layout(LayoutRefinement::default().w_full()),
-                |cx| {
+            let header = ui::h_flex(|cx| {
                     vec![
                         shadcn::SidebarTrigger::new()
                             .test_id("ui-gallery-sidebar-mobile-trigger")
@@ -110,8 +104,10 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                         shadcn::typography::muted(cx, format!("open_mobile={open_mobile_now}")),
                         shadcn::typography::muted(cx, format!("selected={}", selected_value.as_ref())),
                     ]
-                },
-            );
+                })
+                    .gap(Space::N2)
+                    .items_center()
+                    .layout(LayoutRefinement::default().w_full()).into_element(cx);
 
             let projects = shadcn::SidebarGroup::new([
                 shadcn::SidebarGroupLabel::new("Projects").into_element(cx),
@@ -171,14 +167,10 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                     .test_id("ui-gallery-sidebar-mobile-main"),
             );
 
-            let body = stack::vstack(
-                cx,
-                stack::VStackProps::default()
+            let body = ui::v_flex(|_cx| vec![header, sidebar, main])
                     .gap(Space::N3)
                     .items_start()
-                    .layout(LayoutRefinement::default().w_full()),
-                |_cx| vec![header, sidebar, main],
-            );
+                    .layout(LayoutRefinement::default().w_full()).into_element(cx);
 
             vec![body]
         });

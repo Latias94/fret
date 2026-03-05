@@ -8,7 +8,7 @@ fn build_shadcn_calendar_22_page(
     open: &Model<bool>,
 ) -> AnyElement {
     use fret_ui_headless::calendar::CalendarMonth;
-    use fret_ui_kit::declarative::stack;
+    use fret_ui_kit::ui;
     use fret_ui_kit::{ChromeRefinement, LayoutRefinement, MetricRef, Space};
     use fret_ui_shadcn::{Button, ButtonVariant, PopoverAlign};
     use time::Month;
@@ -45,11 +45,9 @@ fn build_shadcn_calendar_22_page(
             },
         );
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default().gap(Space::N3),
-        move |_cx| vec![label, popover],
-    )
+    ui::v_stack(move |_cx| vec![label, popover])
+        .gap(Space::N3)
+        .into_element(cx)
 }
 
 fn build_shadcn_calendar_23_page(
@@ -57,7 +55,7 @@ fn build_shadcn_calendar_23_page(
     open: &Model<bool>,
 ) -> AnyElement {
     use fret_ui_headless::calendar::CalendarMonth;
-    use fret_ui_kit::declarative::stack;
+    use fret_ui_kit::ui;
     use fret_ui_kit::{ChromeRefinement, LayoutRefinement, MetricRef, Space};
     use fret_ui_shadcn::{Button, ButtonVariant, PopoverAlign};
     use time::Month;
@@ -94,9 +92,7 @@ fn build_shadcn_calendar_23_page(
             },
         );
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default().gap(Space::N3),
-        move |_cx| vec![label, popover],
-    )
+    ui::v_stack(move |_cx| vec![label, popover])
+        .gap(Space::N3)
+        .into_element(cx)
 }

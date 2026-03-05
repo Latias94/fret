@@ -17,32 +17,29 @@ pub(in crate::ui) fn preview_intro(
         .into_element(cx)
     };
 
-    let grid = stack::hstack(
-        cx,
-        stack::HStackProps::default()
-            .layout(LayoutRefinement::default().w_full())
-            .gap(Space::N4)
-            .items_stretch(),
-        |cx| {
-            vec![
-                card(
-                    cx,
-                    "Core",
-                    "Window / event / UiTree / renderer contracts (mechanisms & boundaries)",
-                ),
-                card(
-                    cx,
-                    "UI Kit",
-                    "Headless interaction policies: focus trap, dismiss, hover intent, etc.",
-                ),
-                card(
-                    cx,
-                    "Shadcn",
-                    "Visual recipes: composed defaults built on the Kit layer",
-                ),
-            ]
-        },
-    );
+    let grid = ui::h_flex(|cx| {
+        vec![
+            card(
+                cx,
+                "Core",
+                "Window / event / UiTree / renderer contracts (mechanisms & boundaries)",
+            ),
+            card(
+                cx,
+                "UI Kit",
+                "Headless interaction policies: focus trap, dismiss, hover intent, etc.",
+            ),
+            card(
+                cx,
+                "Shadcn",
+                "Visual recipes: composed defaults built on the Kit layer",
+            ),
+        ]
+    })
+    .layout(LayoutRefinement::default().w_full())
+    .gap(Space::N4)
+    .items_stretch()
+    .into_element(cx);
     let grid = grid.attach_semantics(
         SemanticsDecoration::default()
             .label("Debug:ui-gallery:intro:preview-grid")
@@ -71,14 +68,11 @@ pub(in crate::ui) fn preview_intro(
             .test_id("ui-gallery-intro-preview-note"),
     );
 
-    let preview = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .layout(LayoutRefinement::default().w_full().min_w_0())
-            .gap(Space::N4)
-            .items_start(),
-        |_cx| vec![grid, note],
-    );
+    let preview = ui::v_flex(|_cx| vec![grid, note])
+        .layout(LayoutRefinement::default().w_full().min_w_0())
+        .gap(Space::N4)
+        .items_start()
+        .into_element(cx);
 
     let page = doc_layout::render_doc_page(
         cx,

@@ -4,7 +4,7 @@ pub const SOURCE: &str = include_str!("attachments_demo.rs");
 use fret_runtime::Model;
 use fret_ui::Invalidation;
 use fret_ui_ai as ui_ai;
-use fret_ui_kit::declarative::stack;
+use fret_ui_kit::ui;
 use fret_ui_kit::{LayoutRefinement, Space};
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 use std::sync::Arc;
@@ -98,14 +98,11 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
             let hover_label = ui::text(ui_ai::get_attachment_label(&item_inline))
                 .text_sm()
                 .into_element(cx);
-            let hover_content = stack::vstack(
-                cx,
-                stack::VStackProps::default()
-                    .layout(LayoutRefinement::default().min_w_0())
-                    .gap(Space::N2)
-                    .items_start(),
-                move |_cx| vec![hover_preview, hover_label],
-            );
+            let hover_content = ui::v_stack(move |_cx| vec![hover_preview, hover_label])
+                .layout(LayoutRefinement::default().min_w_0())
+                .gap(Space::N2)
+                .items_start()
+                .into_element(cx);
             let hover_content = shadcn::HoverCardContent::new(vec![hover_content])
                 .refine_style(ChromeRefinement::default().p(Space::N2))
                 .into_element(cx);
@@ -151,12 +148,7 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
         .test_id("ui-ai-attachments-empty-root")
         .into_element(cx);
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .layout(LayoutRefinement::default().w_full().min_w_0())
-            .gap(Space::N4),
-        move |cx| {
+    ui::v_flex(move |cx| {
             vec![
                 cx.text("Attachments (AI Elements)"),
                 cx.text("Grid, inline, and list variants. Hover to reveal remove controls; remove mutates the attachment list."),
@@ -169,7 +161,8 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
                 cx.text("Empty state"),
                 empty,
             ]
-        },
-    )
+        })
+            .layout(LayoutRefinement::default().w_full().min_w_0())
+            .gap(Space::N4).into_element(cx)
 }
 // endregion: example

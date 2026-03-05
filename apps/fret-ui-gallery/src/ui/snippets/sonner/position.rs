@@ -126,23 +126,20 @@ pub fn render<H: UiHost>(
     ];
     let bottom_row = wrap_controls_row(cx, Space::N2, bottom_children);
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N2)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full().min_w_0()),
-        move |cx| {
-            vec![
-                top_row,
-                bottom_row,
-                shadcn::typography::muted(
-                    cx,
-                    format!("Current toaster position: {}", toast_position_key(current)),
-                ),
-            ]
-        },
-    )
+    ui::v_flex(move |cx| {
+        vec![
+            top_row,
+            bottom_row,
+            shadcn::typography::muted(
+                cx,
+                format!("Current toaster position: {}", toast_position_key(current)),
+            ),
+        ]
+    })
+    .gap(Space::N2)
+    .items_start()
+    .layout(LayoutRefinement::default().w_full().min_w_0())
+    .into_element(cx)
     .attach_semantics(
         SemanticsDecoration::default()
             .role(fret_core::SemanticsRole::Group)

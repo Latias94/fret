@@ -27,30 +27,27 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
             .test_id(test_id)
     };
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N3)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full()),
-        |cx| {
-            vec![
-                legend(
-                    cx,
-                    shadcn::ChartLegendVerticalAlign::Top,
-                    false,
-                    false,
-                    "ui-gallery-chart-legend-top",
-                ),
-                legend(
-                    cx,
-                    shadcn::ChartLegendVerticalAlign::Bottom,
-                    true,
-                    true,
-                    "ui-gallery-chart-legend-wrap-no-icon",
-                ),
-            ]
-        },
-    )
+    ui::v_flex(|cx| {
+        vec![
+            legend(
+                cx,
+                shadcn::ChartLegendVerticalAlign::Top,
+                false,
+                false,
+                "ui-gallery-chart-legend-top",
+            ),
+            legend(
+                cx,
+                shadcn::ChartLegendVerticalAlign::Bottom,
+                true,
+                true,
+                "ui-gallery-chart-legend-wrap-no-icon",
+            ),
+        ]
+    })
+    .gap(Space::N3)
+    .items_start()
+    .layout(LayoutRefinement::default().w_full())
+    .into_element(cx)
 }
 // endregion: example

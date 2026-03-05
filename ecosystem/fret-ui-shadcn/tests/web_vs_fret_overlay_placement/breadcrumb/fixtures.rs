@@ -268,12 +268,8 @@ fn build_breadcrumb_responsive_drawer(
                                         ..Default::default()
                                     },
                                     move |cx| {
-                                        vec![stack::vstack(
-                                            cx,
-                                            stack::VStackProps::default()
-                                                .gap(Space::N1)
-                                                .items_stretch(),
-                                            move |cx| {
+                                        vec![
+                                            ui::v_stack(move |cx| {
                                                 let mut row = |text: &str| {
                                                     let text_sm = shadcn_text_style(
                                                         text_px,
@@ -305,8 +301,11 @@ fn build_breadcrumb_responsive_drawer(
                                                     row("Documentation"),
                                                     row("Building Your Application"),
                                                 ]
-                                            },
-                                        )]
+                                            })
+                                            .gap(Space::N1)
+                                            .items_stretch()
+                                            .into_element(cx),
+                                        ]
                                     },
                                 ),
                                 DrawerFooter::new(vec![

@@ -148,22 +148,14 @@ pub(in crate::ui) fn preview_code_editor_torture(
     }
 
     let header_handle = handle.clone();
-    let header = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .layout(LayoutRefinement::default().w_full())
-            .gap(Space::N2),
-        move |cx| {
+    let header = ui::v_flex(move |cx| {
             let header_handle_controls = header_handle.clone();
             let header_handle_mode = header_handle.clone();
             vec![
                 cx.text("Goal: stress scroll stability + bounded text caching for the windowed code editor."),
                 cx.text("Expect: auto-scroll bounce; line prefixes must stay consistent (no stale paint)."),
                 cx.text("Note: with soft wrap enabled, continuation rows may start mid-token (the numeric prefix does not repeat)."),
-                stack::hstack(
-                    cx,
-                    stack::HStackProps::default().gap(Space::N2).items_center(),
-                    move |cx| {
+                ui::h_row(move |cx| {
                         vec![
                             shadcn::Switch::new(syntax_rust.clone())
                                 .a11y_label("Toggle Rust syntax highlighting")
@@ -174,12 +166,8 @@ pub(in crate::ui) fn preview_code_editor_torture(
                                 "Syntax: disabled"
                             }),
                         ]
-                    },
-                ),
-                stack::hstack(
-                    cx,
-                    stack::HStackProps::default().gap(Space::N2).items_center(),
-                    move |cx| {
+                    }).gap(Space::N2).items_center().into_element(cx),
+                ui::h_row(move |cx| {
                         vec![
                             shadcn::Switch::new(boundary_identifier.clone())
                                 .a11y_label("Toggle identifier word boundaries")
@@ -190,8 +178,7 @@ pub(in crate::ui) fn preview_code_editor_torture(
                                 "Word boundaries: UnicodeWord"
                             }),
                         ]
-                    },
-                ),
+                    }).gap(Space::N2).items_center().into_element(cx),
                 doc_layout::wrap_controls_row(cx, theme, Space::N2, move |cx| {
                         let reset_handle = header_handle_controls.clone();
                         let preedit_handle = header_handle_controls.clone();
@@ -371,10 +358,7 @@ pub(in crate::ui) fn preview_code_editor_torture(
                              }),
                         ]
                     }),
-                stack::hstack(
-                    cx,
-                    stack::HStackProps::default().gap(Space::N2).items_center(),
-                    move |cx| {
+                ui::h_row(move |cx| {
                         let mode_handle = header_handle_mode.clone();
                         let edit_handle = header_handle_mode.clone();
                         let read_only_handle = header_handle_mode.clone();
@@ -424,11 +408,11 @@ pub(in crate::ui) fn preview_code_editor_torture(
                                 .into_element(cx),
                             cx.text(format!("Interaction: {mode_label}")),
                         ]
-                    },
-                ),
+                    }).gap(Space::N2).items_center().into_element(cx),
             ]
-        },
-    );
+        })
+            .layout(LayoutRefinement::default().w_full())
+            .gap(Space::N2).into_element(cx);
 
     #[cfg(not(target_arch = "wasm32"))]
     cx.app.with_global_mut(

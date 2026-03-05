@@ -156,11 +156,10 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
             .into_element(cx)
     };
 
-    let controls = stack::hstack(
-        cx,
-        stack::HStackProps::default().gap(Space::N2).items_center(),
-        |_cx| vec![stop, reset, pause, play],
-    );
+    let controls = ui::h_row(|_cx| vec![stop, reset, pause, play])
+        .gap(Space::N2)
+        .items_center()
+        .into_element(cx);
 
     let carousel = shadcn::Carousel::default()
         .plugins([shadcn::CarouselPlugin::Autoplay(
@@ -183,13 +182,10 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
             shadcn::CarouselNext::new(),
         );
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N2)
-            .items_stretch()
-            .layout(LayoutRefinement::default().w_full()),
-        |_cx| vec![controls, carousel],
-    )
+    ui::v_flex(|_cx| vec![controls, carousel])
+        .gap(Space::N2)
+        .items_stretch()
+        .layout(LayoutRefinement::default().w_full())
+        .into_element(cx)
 }
 // endregion: example

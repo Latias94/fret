@@ -9,11 +9,11 @@ use fret_ui::element::{
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::icon as decl_icon;
-use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::transition::{
     drive_transition_with_durations_and_cubic_bezier, ticks_60hz_for_duration,
 };
-use fret_ui_kit::{ColorRef, LayoutRefinement, Space, typography};
+use fret_ui_kit::ui;
+use fret_ui_kit::{ColorRef, Items, LayoutRefinement, Space, typography};
 
 use crate::elements::Shimmer;
 
@@ -405,14 +405,11 @@ impl ReasoningTrigger {
                     },
                 );
 
-                let row = stack::hstack(
-                    cx,
-                    stack::HStackProps::default()
-                        .layout(LayoutRefinement::default().w_full().min_w_0())
-                        .items_center()
-                        .gap(Space::N2),
-                    move |_cx| vec![brain, thinking, chevron],
-                );
+                let row = ui::h_row(move |_cx| vec![brain, thinking, chevron])
+                    .layout(LayoutRefinement::default().w_full().min_w_0())
+                    .items(Items::Center)
+                    .gap(Space::N2)
+                    .into_element(cx);
 
                 vec![row]
             },

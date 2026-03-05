@@ -8,8 +8,8 @@ use fret_ui::element::SemanticsProps;
 use fret_ui::scroll::VirtualListScrollHandle;
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::declarative::ElementContextThemeExt;
-use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::ui;
 use fret_ui_kit::{ChromeRefinement, ColorRef, Justify, LayoutRefinement, Radius, Space};
 use fret_ui_shadcn::prelude::{AnyElement, ElementContext, UiHost};
 use std::sync::Arc;
@@ -192,21 +192,15 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
         .test_id_send("ui-ai-conversation-demo-prompt-send")
         .into_element(cx);
 
-    let prompt_row = stack::hstack(
-        cx,
-        stack::HStackProps::default()
-            .layout(LayoutRefinement::default().w_full())
-            .justify(Justify::Center),
-        move |_cx| vec![prompt_input],
-    );
+    let prompt_row = ui::h_flex(move |_cx| vec![prompt_input])
+        .layout(LayoutRefinement::default().w_full())
+        .justify(Justify::Center)
+        .into_element(cx);
 
-    let body = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .layout(LayoutRefinement::default().w_full().h_full())
-            .gap(Space::N4),
-        move |_cx| vec![transcript_stack, prompt_row, instrumentation],
-    );
+    let body = ui::v_flex(move |_cx| vec![transcript_stack, prompt_row, instrumentation])
+        .layout(LayoutRefinement::default().w_full().h_full())
+        .gap(Space::N4)
+        .into_element(cx);
 
     let props = cx.with_theme(|theme| {
         let chrome = ChromeRefinement::default()

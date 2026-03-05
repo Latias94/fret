@@ -289,30 +289,26 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
 
     let trending_footer = |cx: &mut ElementContext<'_, App>, secondary: &'static str| {
         let icon = shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.trending-up"));
-        stack::vstack(
-            cx,
-            stack::VStackProps::default()
+        ui::v_flex(|cx| {
+            vec![
+                ui::h_row(|cx| {
+                    vec![
+                        ui::text("Trending up by 5.2% this month")
+                            .font_medium()
+                            .into_element(cx),
+                        icon,
+                    ]
+                })
                 .gap(Space::N2)
-                .items_start()
-                .layout(LayoutRefinement::default().w_full().min_w_0()),
-            |cx| {
-                vec![
-                    stack::hstack(
-                        cx,
-                        stack::HStackProps::default().gap(Space::N2).items_center(),
-                        |cx| {
-                            vec![
-                                ui::text("Trending up by 5.2% this month")
-                                    .font_medium()
-                                    .into_element(cx),
-                                icon,
-                            ]
-                        },
-                    ),
-                    shadcn::typography::muted(cx, secondary),
-                ]
-            },
-        )
+                .items_center()
+                .into_element(cx),
+                shadcn::typography::muted(cx, secondary),
+            ]
+        })
+        .gap(Space::N2)
+        .items_start()
+        .layout(LayoutRefinement::default().w_full().min_w_0())
+        .into_element(cx)
     };
 
     let chart_card = |cx: &mut ElementContext<'_, App>,

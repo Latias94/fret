@@ -76,25 +76,22 @@ fn file_leaf<H: UiHost>(
     key: &'static str,
     label: &'static str,
 ) -> AnyElement {
-    let row = stack::hstack(
-        cx,
-        stack::HStackProps::default()
-            .layout(LayoutRefinement::default().w_full().min_w_0())
-            .gap(Space::N2)
-            .justify_start()
-            .items_center(),
-        |cx| {
-            vec![
-                shadcn::icon::icon_with(
-                    cx,
-                    fret_icons::IconId::new_static("lucide.file"),
-                    Some(Px(16.0)),
-                    None,
-                ),
-                cx.text(label),
-            ]
-        },
-    );
+    let row = ui::h_flex(|cx| {
+        vec![
+            shadcn::icon::icon_with(
+                cx,
+                fret_icons::IconId::new_static("lucide.file"),
+                Some(Px(16.0)),
+                None,
+            ),
+            cx.text(label),
+        ]
+    })
+    .layout(LayoutRefinement::default().w_full().min_w_0())
+    .gap(Space::N2)
+    .justify_start()
+    .items_center()
+    .into_element(cx);
 
     shadcn::Button::new(label)
         .variant(shadcn::ButtonVariant::Link)
@@ -125,21 +122,18 @@ fn folder<H: UiHost>(
                     "lucide.folder"
                 });
 
-                let row = stack::hstack(
-                    cx,
-                    stack::HStackProps::default()
-                        .layout(LayoutRefinement::default().w_full().min_w_0())
-                        .gap(Space::N2)
-                        .justify_start()
-                        .items_center(),
-                    |cx| {
-                        vec![
-                            chevron,
-                            shadcn::icon::icon_with(cx, icon, Some(Px(16.0)), None),
-                            cx.text(label),
-                        ]
-                    },
-                );
+                let row = ui::h_flex(|cx| {
+                    vec![
+                        chevron,
+                        shadcn::icon::icon_with(cx, icon, Some(Px(16.0)), None),
+                        cx.text(label),
+                    ]
+                })
+                .layout(LayoutRefinement::default().w_full().min_w_0())
+                .gap(Space::N2)
+                .justify_start()
+                .items_center()
+                .into_element(cx);
 
                 shadcn::Button::new(label)
                     .variant(shadcn::ButtonVariant::Ghost)
@@ -151,14 +145,13 @@ fn folder<H: UiHost>(
                     .into_element(cx)
             },
             |cx| {
-                shadcn::CollapsibleContent::new(vec![stack::vstack(
-                    cx,
-                    stack::VStackProps::default()
+                shadcn::CollapsibleContent::new(vec![
+                    ui::v_flex(|_cx| children)
                         .gap(Space::N1)
                         .items_stretch()
-                        .layout(LayoutRefinement::default().w_full().ml(Space::N4)),
-                    |_cx| children,
-                )])
+                        .layout(LayoutRefinement::default().w_full().ml(Space::N4))
+                        .into_element(cx),
+                ])
                 .refine_layout(LayoutRefinement::default().w_full())
                 .into_element(cx)
                 .test_id(format!("ui-gallery-collapsible-tree-content-{key}"))
@@ -211,14 +204,11 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     );
 
     let cargo_toml = file_leaf(cx, "cargo-toml", "Cargo.toml");
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N1)
-            .items_stretch()
-            .layout(LayoutRefinement::default().w_full().max_w(Px(360.0))),
-        |_cx| vec![components_folder, src_folder, cargo_toml],
-    )
-    .test_id("ui-gallery-collapsible-file-tree")
+    ui::v_flex(|_cx| vec![components_folder, src_folder, cargo_toml])
+        .gap(Space::N1)
+        .items_stretch()
+        .layout(LayoutRefinement::default().w_full().max_w(Px(360.0)))
+        .into_element(cx)
+        .test_id("ui-gallery-collapsible-file-tree")
 }
 // endregion: example

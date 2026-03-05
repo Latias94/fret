@@ -10,8 +10,8 @@ use fret_ui::action::OnActivate;
 use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::icon as decl_icon;
-use fret_ui_kit::declarative::stack;
-use fret_ui_kit::{ColorRef, LayoutRefinement, Space};
+use fret_ui_kit::ui;
+use fret_ui_kit::{ColorRef, Items, LayoutRefinement, Space};
 use fret_ui_shadcn::{
     Button, ButtonVariant, DropdownMenu, DropdownMenuAlign, DropdownMenuEntry, DropdownMenuItem,
     DropdownMenuSide,
@@ -297,11 +297,10 @@ impl OpenInTrigger {
             Some(ColorRef::Color(theme.color_token("foreground"))),
         );
 
-        let row = stack::hstack(
-            cx,
-            stack::HStackProps::default().items_center().gap(Space::N2),
-            move |cx| vec![cx.text(label.as_ref()), chevron],
-        );
+        let row = ui::h_row(move |cx| vec![cx.text(label.as_ref()), chevron])
+            .items(Items::Center)
+            .gap(Space::N2)
+            .into_element(cx);
 
         let mut btn = Button::new("Open in chat")
             .children([row])

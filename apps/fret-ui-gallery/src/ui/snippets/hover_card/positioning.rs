@@ -11,26 +11,23 @@ fn side_content<H: UiHost>(
     side: shadcn::HoverCardSide,
     align: shadcn::HoverCardAlign,
 ) -> shadcn::HoverCardContent {
-    let body = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .layout(LayoutRefinement::default().w_full().min_w_0())
-            .gap(Space::N1)
-            .items_start(),
-        move |cx| {
-            vec![
-                ui::text(side_label)
-                    .text_sm()
-                    .font_medium()
-                    .into_element(cx),
-                ui::text("Positioning is controlled by `side` and `align`.")
-                    .text_xs()
-                    .text_color(ColorRef::Color(muted_fg))
-                    .mt(Space::N1)
-                    .into_element(cx),
-            ]
-        },
-    );
+    let body = ui::v_flex(move |cx| {
+        vec![
+            ui::text(side_label)
+                .text_sm()
+                .font_medium()
+                .into_element(cx),
+            ui::text("Positioning is controlled by `side` and `align`.")
+                .text_xs()
+                .text_color(ColorRef::Color(muted_fg))
+                .mt(Space::N1)
+                .into_element(cx),
+        ]
+    })
+    .layout(LayoutRefinement::default().w_full().min_w_0())
+    .gap(Space::N1)
+    .items_start()
+    .into_element(cx);
 
     shadcn::HoverCardContent::new(vec![body])
         .test_id(test_id)
@@ -80,10 +77,9 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     .into_element(cx)
     .test_id("ui-gallery-hover-card-pos-right-end");
 
-    stack::hstack(
-        cx,
-        stack::HStackProps::default().gap(Space::N3).items_center(),
-        |_cx| vec![top_start, right_end],
-    )
+    ui::h_row(|_cx| vec![top_start, right_end])
+        .gap(Space::N3)
+        .items_center()
+        .into_element(cx)
 }
 // endregion: example

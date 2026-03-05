@@ -5,7 +5,7 @@ use fret_ui::element::SemanticsDecoration;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    stack::hstack(cx, stack::HStackProps::default().items_center(), |cx| {
+    ui::h_row(|cx| {
         vec![
             shadcn::Skeleton::new()
                 .refine_style(ChromeRefinement::default().rounded(Radius::Full))
@@ -18,6 +18,8 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                 .into_element(cx),
         ]
     })
+    .items_center()
+    .into_element(cx)
     .attach_semantics(
         SemanticsDecoration::default()
             .role(fret_core::SemanticsRole::Group)

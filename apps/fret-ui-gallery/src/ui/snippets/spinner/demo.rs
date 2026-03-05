@@ -24,13 +24,10 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     .variant(shadcn::ItemVariant::Muted)
     .into_element(cx);
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N4)
-            .layout(LayoutRefinement::default().w_full().max_w(Px(320.0))),
-        |_cx| vec![item],
-    )
-    .test_id("ui-gallery-spinner-demo")
+    ui::v_flex(|_cx| vec![item])
+        .gap(Space::N4)
+        .layout(LayoutRefinement::default().w_full().max_w(Px(320.0)))
+        .into_element(cx)
+        .test_id("ui-gallery-spinner-demo")
 }
 // endregion: example

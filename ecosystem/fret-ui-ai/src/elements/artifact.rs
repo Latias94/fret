@@ -6,9 +6,9 @@ use fret_ui::action::OnActivate;
 use fret_ui::element::{AnyElement, LayoutStyle, SemanticsProps, TextProps};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::icon as decl_icon;
-use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::typography;
+use fret_ui_kit::ui;
 use fret_ui_kit::{
     ChromeRefinement, ColorFallback, ColorRef, Items, Justify, LayoutRefinement, Space,
     WidgetStateProperty, WidgetStates,
@@ -125,14 +125,11 @@ impl Artifact {
             });
 
         let children = self.children;
-        let body = stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .layout(LayoutRefinement::default().w_full().min_w_0())
-                .gap(Space::N0)
-                .items(Items::Stretch),
-            move |_cx| children,
-        );
+        let body = ui::v_stack(move |_cx| children)
+            .layout(LayoutRefinement::default().w_full().min_w_0())
+            .gap(Space::N0)
+            .items(Items::Stretch)
+            .into_element(cx);
 
         let root = cx.container(
             decl_style::container_props(&theme, base_chrome.merge(self.chrome), self.layout),
@@ -200,15 +197,12 @@ impl ArtifactHeader {
 
         let bg = token_color_with_alpha(&theme, "muted", "muted.background", 0.5);
 
-        let row = stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .layout(self.layout)
-                .gap(Space::N2)
-                .justify(Justify::Between)
-                .items_center(),
-            move |_cx| self.children,
-        );
+        let row = ui::h_row(move |_cx| self.children)
+            .layout(self.layout)
+            .gap(Space::N2)
+            .justify(Justify::Between)
+            .items(Items::Center)
+            .into_element(cx);
 
         let mut props =
             decl_style::container_props(&theme, self.chrome, LayoutRefinement::default());
@@ -403,14 +397,11 @@ impl ArtifactActions {
     pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let children = self.children;
 
-        let row = stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .layout(self.layout)
-                .gap(Space::N1)
-                .items(Items::Center),
-            move |_cx| children,
-        );
+        let row = ui::h_row(move |_cx| children)
+            .layout(self.layout)
+            .gap(Space::N1)
+            .items(Items::Center)
+            .into_element(cx);
 
         let Some(test_id) = self.test_id else {
             return row;

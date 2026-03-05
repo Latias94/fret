@@ -142,20 +142,19 @@ fn item_team(
     test_id: &'static str,
     action_test_id: &'static str,
 ) -> AnyElement {
-    let avatars = stack::hstack(
-        cx,
-        stack::HStackProps::default().gap(Space::N1).items_center(),
-        |cx| {
-            vec![
-                shadcn::Avatar::new([shadcn::AvatarFallback::new("CN").into_element(cx)])
-                    .into_element(cx),
-                shadcn::Avatar::new([shadcn::AvatarFallback::new("LR").into_element(cx)])
-                    .into_element(cx),
-                shadcn::Avatar::new([shadcn::AvatarFallback::new("ER").into_element(cx)])
-                    .into_element(cx),
-            ]
-        },
-    );
+    let avatars = ui::h_row(|cx| {
+        vec![
+            shadcn::Avatar::new([shadcn::AvatarFallback::new("CN").into_element(cx)])
+                .into_element(cx),
+            shadcn::Avatar::new([shadcn::AvatarFallback::new("LR").into_element(cx)])
+                .into_element(cx),
+            shadcn::Avatar::new([shadcn::AvatarFallback::new("ER").into_element(cx)])
+                .into_element(cx),
+        ]
+    })
+    .gap(Space::N1)
+    .items_center()
+    .into_element(cx);
     let media = shadcn::ItemMedia::new([avatars]).into_element(cx);
     let content = shadcn::ItemContent::new([
         shadcn::ItemTitle::new("Design Department").into_element(cx),
@@ -325,42 +324,36 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
             .orientation(shadcn::FieldOrientation::Horizontal)
             .into_element(cx);
 
-            stack::vstack(
-                cx,
-                stack::VStackProps::default()
-                    .gap(Space::N2)
-                    .items_start()
-                    .layout(LayoutRefinement::default().w_full().min_w_0()),
-                |cx| {
-                    vec![
-                        shadcn::FieldLabel::new("Field Label").into_element(cx),
-                        field,
-                    ]
-                },
-            )
+            ui::v_flex(|cx| {
+                vec![
+                    shadcn::FieldLabel::new("Field Label").into_element(cx),
+                    field,
+                ]
+            })
+            .gap(Space::N2)
+            .items_start()
+            .layout(LayoutRefinement::default().w_full().min_w_0())
+            .into_element(cx)
             .test_id("ui-gallery-item-field")
         };
 
-        stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .gap(Space::N6)
-                .items_start()
-                .layout(max_w_sm.clone()),
-            |_cx| {
-                vec![
-                    item_title_button,
-                    item_title_button_outline,
-                    item_desc_button,
-                    item_desc_outline,
-                    item_desc_muted,
-                    item_desc_muted_actions,
-                    item_ticket,
-                    item_ticket_muted,
-                    field,
-                ]
-            },
-        )
+        ui::v_stack(|_cx| {
+            vec![
+                item_title_button,
+                item_title_button_outline,
+                item_desc_button,
+                item_desc_outline,
+                item_desc_muted,
+                item_desc_muted_actions,
+                item_ticket,
+                item_ticket_muted,
+                field,
+            ]
+        })
+        .gap(Space::N6)
+        .items_start()
+        .layout(max_w_sm.clone())
+        .into_element(cx)
         .test_id("ui-gallery-item-column-basic")
     };
 
@@ -405,15 +398,12 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
             .test_id("ui-gallery-item-people-group");
 
         let team = item_team(cx, "ui-gallery-item-team", "ui-gallery-item-team-action");
-        stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .gap(Space::N6)
-                .items_start()
-                .layout(max_w_sm.clone()),
-            |_cx| vec![group, team, item_download],
-        )
-        .test_id("ui-gallery-item-column-people")
+        ui::v_stack(|_cx| vec![group, team, item_download])
+            .gap(Space::N6)
+            .items_start()
+            .layout(max_w_sm.clone())
+            .into_element(cx)
+            .test_id("ui-gallery-item-column-people")
     };
 
     let column_music = {
@@ -506,15 +496,12 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
             .into_element(cx)
             .test_id("ui-gallery-item-music-group");
 
-        stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .gap(Space::N6)
-                .items_start()
-                .layout(max_w_lg.clone()),
-            |_cx| vec![group],
-        )
-        .test_id("ui-gallery-item-column-music")
+        ui::v_stack(|_cx| vec![group])
+            .gap(Space::N6)
+            .items_start()
+            .layout(max_w_lg.clone())
+            .into_element(cx)
+            .test_id("ui-gallery-item-column-music")
     };
 
     let column_issues = {
@@ -576,15 +563,12 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
             .into_element(cx)
             .test_id("ui-gallery-item-issues-group");
 
-        stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .gap(Space::N6)
-                .items_start()
-                .layout(max_w_lg.clone()),
-            |_cx| vec![group],
-        )
-        .test_id("ui-gallery-item-column-issues")
+        ui::v_stack(|_cx| vec![group])
+            .gap(Space::N6)
+            .items_start()
+            .layout(max_w_lg.clone())
+            .into_element(cx)
+            .test_id("ui-gallery-item-column-issues")
     };
 
     let gallery_demo =

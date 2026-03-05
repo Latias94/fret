@@ -3,7 +3,7 @@ use std::sync::Arc;
 use fret_core::SemanticsRole;
 use fret_ui::element::{AnyElement, SemanticsDecoration};
 use fret_ui::{ElementContext, Theme, UiHost};
-use fret_ui_kit::declarative::stack;
+use fret_ui_kit::ui;
 use fret_ui_kit::{LayoutRefinement, Space};
 
 use crate::theme::MarkdownTheme;
@@ -267,57 +267,54 @@ fn markdown_mdstream_pulldown_with<H: UiHost + 'static>(
         );
     }
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N2)
-            .layout(LayoutRefinement::default().w_full()),
-        |cx| {
-            let mut out = Vec::with_capacity(committed.len() + usize::from(pending.is_some()));
+    ui::v_flex(|cx| {
+        let mut out = Vec::with_capacity(committed.len() + usize::from(pending.is_some()));
 
-            cx.for_each_keyed(
-                committed,
-                |b| b.id,
-                |cx, _i, block| match adapter.committed_events(block.id) {
-                    Some(events) => out.push(render_mdstream_block_with_events(
-                        cx,
-                        theme,
-                        markdown_theme,
-                        components,
-                        block,
-                        events,
-                    )),
-                    None => {
-                        let tmp = crate::parse_events(block.display_or_raw());
-                        out.push(render_mdstream_block_with_events(
-                            cx,
-                            theme,
-                            markdown_theme,
-                            components,
-                            block,
-                            &tmp,
-                        ));
-                    }
-                },
-            );
-
-            if let Some(pending) = pending {
-                cx.keyed(pending.id, |cx| {
-                    let events = adapter.parse_pending(pending);
+        cx.for_each_keyed(
+            committed,
+            |b| b.id,
+            |cx, _i, block| match adapter.committed_events(block.id) {
+                Some(events) => out.push(render_mdstream_block_with_events(
+                    cx,
+                    theme,
+                    markdown_theme,
+                    components,
+                    block,
+                    events,
+                )),
+                None => {
+                    let tmp = crate::parse_events(block.display_or_raw());
                     out.push(render_mdstream_block_with_events(
                         cx,
                         theme,
                         markdown_theme,
                         components,
-                        pending,
-                        &events,
+                        block,
+                        &tmp,
                     ));
-                });
-            }
+                }
+            },
+        );
 
-            out
-        },
-    )
+        if let Some(pending) = pending {
+            cx.keyed(pending.id, |cx| {
+                let events = adapter.parse_pending(pending);
+                out.push(render_mdstream_block_with_events(
+                    cx,
+                    theme,
+                    markdown_theme,
+                    components,
+                    pending,
+                    &events,
+                ));
+            });
+        }
+
+        out
+    })
+    .gap(Space::N2)
+    .w_full()
+    .into_element(cx)
 }
 
 fn render_mdstream_block_with_events<H: UiHost + 'static>(

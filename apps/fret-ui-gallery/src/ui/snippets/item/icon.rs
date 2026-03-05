@@ -71,14 +71,11 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
         "ui-gallery-item-icon",
     );
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N6)
-            .items_start()
-            .layout(max_w_lg),
-        |_cx| vec![item],
-    )
-    .test_id("ui-gallery-item-icon-wrapper")
+    ui::v_stack(|_cx| vec![item])
+        .gap(Space::N6)
+        .items_start()
+        .layout(max_w_lg)
+        .into_element(cx)
+        .test_id("ui-gallery-item-icon-wrapper")
 }
 // endregion: example

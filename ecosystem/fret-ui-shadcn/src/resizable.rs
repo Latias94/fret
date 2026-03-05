@@ -9,7 +9,7 @@ use fret_ui::element::{
 use fret_ui::{ElementContext, ResizablePanelGroupStyle, Theme, UiHost};
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::recipes::resizable as resizable_recipe;
-use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius};
+use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, ui};
 
 pub struct ResizablePanel {
     min_px: Px,
@@ -354,14 +354,11 @@ fn resizable_panel_group_with_entries<H: UiHost>(
                         },
                     );
 
-                    let centered = crate::stack::hstack(
-                        cx,
-                        crate::stack::HStackProps::default()
-                            .layout(LayoutRefinement::default().w_full().h_full())
-                            .items_center()
-                            .justify_center(),
-                        |_cx| vec![grip],
-                    );
+                    let centered = ui::h_row(|_cx| vec![grip])
+                        .layout(LayoutRefinement::default().w_full().h_full())
+                        .items_center()
+                        .justify_center()
+                        .into_element(cx);
 
                     vec![centered]
                 })]

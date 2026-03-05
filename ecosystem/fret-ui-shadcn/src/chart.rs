@@ -8,7 +8,6 @@ use fret_ui::element::{
     SemanticsDecoration, SizeStyle, SpacerProps,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
-use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::theme_tokens;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space, ui};
@@ -823,14 +822,11 @@ impl ChartTooltipContent {
                             total_row
                         };
 
-                        let group = stack::vstack(
-                            cx,
-                            stack::VStackProps::default()
-                                .gap(Space::N3p5)
-                                .items_stretch()
-                                .layout(LayoutRefinement::default().w_full()),
-                            move |_cx| vec![line, total_row],
-                        );
+                        let group = ui::v_stack(move |_cx| vec![line, total_row])
+                            .gap(Space::N3p5)
+                            .items_stretch()
+                            .layout(LayoutRefinement::default().w_full())
+                            .into_element(cx);
 
                         let group = if let Some(prefix) = test_id_prefix.as_ref() {
                             wrap_panel_semantics(
@@ -871,14 +867,11 @@ impl ChartTooltipContent {
                 |_cx| Vec::new(),
             );
 
-            let body = stack::vstack(
-                cx,
-                stack::VStackProps::default()
-                    .gap(Space::N1p5)
-                    .items_stretch()
-                    .layout(LayoutRefinement::default().w_full()),
-                move |_cx| children,
-            );
+            let body = ui::v_stack(move |_cx| children)
+                .gap(Space::N1p5)
+                .items_stretch()
+                .layout(LayoutRefinement::default().w_full())
+                .into_element(cx);
 
             vec![
                 ui::stack(move |_cx| vec![sentinel, body])

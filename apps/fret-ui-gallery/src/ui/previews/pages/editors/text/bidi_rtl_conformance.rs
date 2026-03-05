@@ -88,19 +88,15 @@ pub(in crate::ui) fn preview_text_bidi_rtl_conformance(
         |st| st.clone(),
     );
 
-    let header = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .layout(LayoutRefinement::default().w_full())
-            .gap(Space::N2),
-        |cx| {
+    let header = ui::v_flex(|cx| {
             vec![
                 cx.text("Goal: sanity-check BiDi/RTL geometry queries (hit-test, caret rects, selection rects)."),
                 cx.text("Use the selectable samples to validate editor-like selection behavior."),
                 cx.text("Use the diagnostic panel to verify `hit_test_point` → caret/selection rendering under mixed-direction strings."),
             ]
-        },
-    );
+        })
+            .layout(LayoutRefinement::default().w_full())
+            .gap(Space::N2).into_element(cx);
 
     let sample_buttons = {
         let mut buttons: Vec<AnyElement> = Vec::new();
@@ -148,74 +144,68 @@ pub(in crate::ui) fn preview_text_bidi_rtl_conformance(
         cx.flex(props, move |_cx| buttons)
     };
 
-    let selectable_samples = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .layout(LayoutRefinement::default().w_full())
-            .gap(Space::N2),
-        |cx| {
-            let mut out: Vec<AnyElement> = Vec::new();
-            out.push(cx.text("SelectableText samples:"));
+    let selectable_samples = ui::v_flex(|cx| {
+        let mut out: Vec<AnyElement> = Vec::new();
+        out.push(cx.text("SelectableText samples:"));
 
-            for (i, s) in SAMPLES.iter().enumerate() {
-                out.push(cx.keyed(format!("bidi-sample-row-{i}"), |cx| {
-                    let rich = AttributedText::new(
-                        Arc::<str>::from(s.text),
-                        Arc::<[TextSpan]>::from([TextSpan::new(s.text.len())]),
-                    );
+        for (i, s) in SAMPLES.iter().enumerate() {
+            out.push(cx.keyed(format!("bidi-sample-row-{i}"), |cx| {
+                let rich = AttributedText::new(
+                    Arc::<str>::from(s.text),
+                    Arc::<[TextSpan]>::from([TextSpan::new(s.text.len())]),
+                );
 
-                    let mut props = fret_ui::element::SelectableTextProps::new(rich);
-                    props.style = Some(TextStyle {
-                        font: FontId::ui(),
-                        size: Px(16.0),
-                        ..Default::default()
-                    });
-                    props.wrap = TextWrap::None;
-                    props.overflow = TextOverflow::Clip;
-                    props.layout.size.width = fret_ui::element::Length::Fill;
+                let mut props = fret_ui::element::SelectableTextProps::new(rich);
+                props.style = Some(TextStyle {
+                    font: FontId::ui(),
+                    size: Px(16.0),
+                    ..Default::default()
+                });
+                props.wrap = TextWrap::None;
+                props.overflow = TextOverflow::Clip;
+                props.layout.size.width = fret_ui::element::Length::Fill;
 
-                    let text = cx.selectable_text_props(props);
+                let text = cx.selectable_text_props(props);
 
-                    let row = stack::vstack(
-                        cx,
-                        stack::VStackProps::default()
-                            .layout(LayoutRefinement::default().w_full())
-                            .gap(Space::N1),
-                        |cx| {
-                            vec![
-                                cx.text_props(fret_ui::element::TextProps {
-                                    layout: Default::default(),
-                                    text: Arc::<str>::from(format!("{}:", s.label)),
-                                    style: None,
-                                    color: Some(theme.color_token("muted-foreground")),
-                                    wrap: TextWrap::None,
-                                    overflow: TextOverflow::Clip,
-                                    align: fret_core::TextAlign::Start,
-                                    ink_overflow: fret_ui::element::TextInkOverflow::None,
-                                }),
-                                cx.container(
-                                    decl_style::container_props(
-                                        theme,
-                                        ChromeRefinement::default()
-                                            .border_1()
-                                            .rounded(Radius::Md)
-                                            .p(Space::N2)
-                                            .bg(ColorRef::Color(theme.color_token("background"))),
-                                        LayoutRefinement::default().w_full(),
-                                    ),
-                                    move |_cx| vec![text],
-                                ),
-                            ]
-                        },
-                    );
+                let row = ui::v_flex(|cx| {
+                    vec![
+                        cx.text_props(fret_ui::element::TextProps {
+                            layout: Default::default(),
+                            text: Arc::<str>::from(format!("{}:", s.label)),
+                            style: None,
+                            color: Some(theme.color_token("muted-foreground")),
+                            wrap: TextWrap::None,
+                            overflow: TextOverflow::Clip,
+                            align: fret_core::TextAlign::Start,
+                            ink_overflow: fret_ui::element::TextInkOverflow::None,
+                        }),
+                        cx.container(
+                            decl_style::container_props(
+                                theme,
+                                ChromeRefinement::default()
+                                    .border_1()
+                                    .rounded(Radius::Md)
+                                    .p(Space::N2)
+                                    .bg(ColorRef::Color(theme.color_token("background"))),
+                                LayoutRefinement::default().w_full(),
+                            ),
+                            move |_cx| vec![text],
+                        ),
+                    ]
+                })
+                .layout(LayoutRefinement::default().w_full())
+                .gap(Space::N1)
+                .into_element(cx);
 
-                    row
-                }));
-            }
+                row
+            }));
+        }
 
-            out
-        },
-    );
+        out
+    })
+    .layout(LayoutRefinement::default().w_full())
+    .gap(Space::N2)
+    .into_element(cx);
 
     let diagnostic = {
         let state_for_handlers = state.clone();
@@ -523,18 +513,15 @@ pub(in crate::ui) fn preview_text_bidi_rtl_conformance(
         )
     };
 
-    let panel = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .layout(LayoutRefinement::default().w_full())
-            .gap(Space::N2),
-        |_cx| vec![sample_buttons, selectable_samples, diagnostic],
-    )
-    .attach_semantics(
-        SemanticsDecoration::default()
-            .role(fret_core::SemanticsRole::Group)
-            .test_id("ui-gallery-text-bidi-rtl-conformance-root"),
-    );
+    let panel = ui::v_flex(|_cx| vec![sample_buttons, selectable_samples, diagnostic])
+        .layout(LayoutRefinement::default().w_full())
+        .gap(Space::N2)
+        .into_element(cx)
+        .attach_semantics(
+            SemanticsDecoration::default()
+                .role(fret_core::SemanticsRole::Group)
+                .test_id("ui-gallery-text-bidi-rtl-conformance-root"),
+        );
 
     let page =
         doc_layout::wrap_preview_page(cx, None, "Bidi / RTL conformance", vec![header, panel]);

@@ -33,13 +33,10 @@ pub fn render<H: UiHost>(
         };
         let meta = shadcn::typography::muted(cx, format!("onValueCommit: {last_commit_text}"));
 
-        stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .gap(Space::N3)
-                .layout(LayoutRefinement::default().w_full().max_w(Px(320.0))),
-            |_cx| vec![slider, meta],
-        )
+        ui::v_flex(|_cx| vec![slider, meta])
+            .gap(Space::N3)
+            .layout(LayoutRefinement::default().w_full().max_w(Px(320.0)))
+            .into_element(cx)
     };
 
     let disabled = shadcn::Slider::new_controllable(cx, None, || vec![50.0])
@@ -69,13 +66,7 @@ pub fn render<H: UiHost>(
         .refine_layout(max_width_xs)
         .into_element(cx);
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N4)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full().min_w_0()),
-        |cx| {
+    ui::v_flex(|cx| {
             vec![
                 shadcn::typography::muted(
                     cx,
@@ -86,8 +77,10 @@ pub fn render<H: UiHost>(
                 rtl,
                 inverted,
             ]
-        },
-    )
+        })
+            .gap(Space::N4)
+            .items_start()
+            .layout(LayoutRefinement::default().w_full().min_w_0()).into_element(cx)
     .test_id("ui-gallery-slider-extras")
 }
 // endregion: example

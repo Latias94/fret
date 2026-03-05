@@ -6,10 +6,12 @@ use fret_icons::{IconId, ids};
 use fret_ui::element::{AnyElement, LayoutStyle, TextProps};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::icon as decl_icon;
-use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::typography;
-use fret_ui_kit::{ChromeRefinement, ColorFallback, ColorRef, Justify, LayoutRefinement, Space};
+use fret_ui_kit::ui;
+use fret_ui_kit::{
+    ChromeRefinement, ColorFallback, ColorRef, Items, Justify, LayoutRefinement, Space,
+};
 use fret_ui_shadcn::{Badge, BadgeVariant, Collapsible, CollapsibleContent, CollapsibleTrigger};
 
 use crate::elements::CodeBlock;
@@ -237,22 +239,21 @@ impl ToolHeader {
             )])
             .into_element(cx);
 
-        let left = stack::hstack(
-            cx,
-            stack::HStackProps::default().gap(Space::N2).items_center(),
-            move |cx| {
-                vec![
-                    decl_icon::icon_with(
-                        cx,
-                        IconId::new_static("lucide.wrench"),
-                        Some(Px(16.0)),
-                        Some(ColorRef::Color(muted_foreground)),
-                    ),
-                    label_text,
-                    badge,
-                ]
-            },
-        );
+        let left = ui::h_row(move |row_cx| {
+            vec![
+                decl_icon::icon_with(
+                    row_cx,
+                    IconId::new_static("lucide.wrench"),
+                    Some(Px(16.0)),
+                    Some(ColorRef::Color(muted_foreground)),
+                ),
+                label_text,
+                badge,
+            ]
+        })
+        .gap(Space::N2)
+        .items(Items::Center)
+        .into_element(cx);
 
         let chevron = decl_icon::icon_with(
             cx,
@@ -265,15 +266,12 @@ impl ToolHeader {
             Some(ColorRef::Color(muted_foreground)),
         );
 
-        let row = stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .layout(LayoutRefinement::default().w_full())
-                .gap(Space::N2)
-                .justify(Justify::Between)
-                .items_center(),
-            move |_cx| vec![left, chevron],
-        );
+        let row = ui::h_row(move |_cx| vec![left, chevron])
+            .layout(LayoutRefinement::default().w_full())
+            .gap(Space::N2)
+            .justify(Justify::Between)
+            .items(Items::Center)
+            .into_element(cx);
 
         let trigger_row = cx.container(
             decl_style::container_props(
@@ -337,13 +335,10 @@ impl ToolContent {
 
     fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let children = self.children;
-        let body = stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .layout(LayoutRefinement::default().w_full())
-                .gap(Space::N4),
-            move |_cx| children,
-        );
+        let body = ui::v_stack(move |_cx| children)
+            .layout(LayoutRefinement::default().w_full())
+            .gap(Space::N4)
+            .into_element(cx);
 
         CollapsibleContent::new([body])
             .refine_layout(self.layout)
@@ -411,13 +406,10 @@ impl ToolInput {
             move |_cx| vec![code],
         );
 
-        stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .layout(LayoutRefinement::default().w_full())
-                .gap(Space::N2),
-            move |_cx| vec![title, code],
-        )
+        ui::v_stack(move |_cx| vec![title, code])
+            .layout(LayoutRefinement::default().w_full())
+            .gap(Space::N2)
+            .into_element(cx)
     }
 }
 
@@ -527,13 +519,12 @@ impl ToolOutput {
             move |_cx| body,
         );
 
-        Some(stack::vstack(
-            cx,
-            stack::VStackProps::default()
+        Some(
+            ui::v_stack(move |_cx| vec![title, container])
                 .layout(LayoutRefinement::default().w_full())
-                .gap(Space::N2),
-            move |_cx| vec![title, container],
-        ))
+                .gap(Space::N2)
+                .into_element(cx),
+        )
     }
 }
 

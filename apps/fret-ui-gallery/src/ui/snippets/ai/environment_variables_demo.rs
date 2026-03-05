@@ -3,7 +3,7 @@ pub const SOURCE: &str = include_str!("environment_variables_demo.rs");
 // region: example
 use fret_ui::Invalidation;
 use fret_ui_ai as ui_ai;
-use fret_ui_kit::declarative::stack;
+use fret_ui_kit::ui;
 use fret_ui_kit::{LayoutRefinement, Space};
 use fret_ui_shadcn::prelude::*;
 
@@ -55,18 +55,15 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
             vec![header, marker, content]
         });
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .layout(LayoutRefinement::default().w_full().min_w_0())
-            .gap(Space::N4),
-        move |cx| {
-            vec![
-                cx.text("Environment Variables (AI Elements)"),
-                cx.text("Toggle to reveal values; copy uses a clipboard effect."),
-                env,
-            ]
-        },
-    )
+    ui::v_flex(move |cx| {
+        vec![
+            cx.text("Environment Variables (AI Elements)"),
+            cx.text("Toggle to reveal values; copy uses a clipboard effect."),
+            env,
+        ]
+    })
+    .layout(LayoutRefinement::default().w_full().min_w_0())
+    .gap(Space::N4)
+    .into_element(cx)
 }
 // endregion: example

@@ -86,19 +86,16 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         .refine_style(ChromeRefinement::default().border_1().rounded(Radius::Lg))
         .into_element(cx);
 
-    let panel = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N2)
-            .items_start()
-            .layout(LayoutRefinement::default().w_px(Px(420.0)).min_w_0()),
-        move |cx| {
-            vec![
-                shadcn::Badge::new("Panel: container queries").into_element(cx),
-                panel_calendar,
-            ]
-        },
-    )
+    let panel = ui::v_stack(move |cx| {
+        vec![
+            shadcn::Badge::new("Panel: container queries").into_element(cx),
+            panel_calendar,
+        ]
+    })
+    .gap(Space::N2)
+    .items_start()
+    .layout(LayoutRefinement::default().w_px(Px(420.0)).min_w_0())
+    .into_element(cx)
     .test_id("ui-gallery-calendar-responsive-panel");
 
     let popover = shadcn::Popover::new(popover_open.clone())
@@ -133,13 +130,10 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             },
         );
 
-    stack::hstack(
-        cx,
-        stack::HStackProps::default()
-            .gap(Space::N6)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full().min_w_0()),
-        move |_cx| vec![panel, popover],
-    )
+    ui::h_flex(move |_cx| vec![panel, popover])
+        .gap(Space::N6)
+        .items_start()
+        .layout(LayoutRefinement::default().w_full().min_w_0())
+        .into_element(cx)
 }
 // endregion: example

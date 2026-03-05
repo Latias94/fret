@@ -21,20 +21,17 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         .into_element(cx)
         .test_id("ui-gallery-spinner-sizes-8");
 
-    stack::hstack(
-        cx,
-        stack::HStackProps::default()
-            .gap(Space::N6)
-            .items_center()
-            .layout(
-                LayoutRefinement::default()
-                    .w_full()
-                    .min_w_0()
-                    .max_w(Px(520.0)),
-            ),
-        |_cx| vec![size_3, size_4, size_6, size_8],
-    )
-    .test_id("ui-gallery-spinner-sizes")
+    ui::h_flex(|_cx| vec![size_3, size_4, size_6, size_8])
+        .gap(Space::N6)
+        .items_center()
+        .layout(
+            LayoutRefinement::default()
+                .w_full()
+                .min_w_0()
+                .max_w(Px(520.0)),
+        )
+        .into_element(cx)
+        .test_id("ui-gallery-spinner-sizes")
 }
 
 // endregion: example

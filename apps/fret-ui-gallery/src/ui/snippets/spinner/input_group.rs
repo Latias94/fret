@@ -36,16 +36,15 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         .refine_layout(LayoutRefinement::default().w_full())
         .into_element(cx);
 
-    let validating = stack::hstack(
-        cx,
-        stack::HStackProps::default().gap(Space::N2).items_center(),
-        |cx| {
-            vec![
-                shadcn::Spinner::new().into_element(cx),
-                shadcn::typography::muted(cx, "Validating..."),
-            ]
-        },
-    );
+    let validating = ui::h_row(|cx| {
+        vec![
+            shadcn::Spinner::new().into_element(cx),
+            shadcn::typography::muted(cx, "Validating..."),
+        ]
+    })
+    .gap(Space::N2)
+    .items_center()
+    .into_element(cx);
 
     let send = shadcn::InputGroupButton::new("")
         .a11y_label("Send")
@@ -53,16 +52,13 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         .icon(fret_icons::IconId::new_static("lucide.arrow-up"))
         .into_element(cx);
 
-    let actions = stack::hstack(
-        cx,
-        stack::HStackProps::default()
-            .layout(LayoutRefinement::default().w_full())
-            .gap(Space::N2)
-            .items_center()
-            .justify_between(),
-        |_cx| vec![validating, send],
-    )
-    .test_id("ui-gallery-spinner-extras-textarea-actions");
+    let actions = ui::h_flex(|_cx| vec![validating, send])
+        .layout(LayoutRefinement::default().w_full())
+        .gap(Space::N2)
+        .items_center()
+        .justify_between()
+        .into_element(cx)
+        .test_id("ui-gallery-spinner-extras-textarea-actions");
 
     let textarea = shadcn::InputGroup::new(textarea_value)
         .textarea()
@@ -73,14 +69,11 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         .refine_layout(LayoutRefinement::default().w_full())
         .into_element(cx);
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N4)
-            .layout(LayoutRefinement::default().w_full().max_w(Px(448.0))),
-        |_cx| vec![input, textarea],
-    )
-    .test_id("ui-gallery-spinner-input-group")
+    ui::v_flex(|_cx| vec![input, textarea])
+        .gap(Space::N4)
+        .layout(LayoutRefinement::default().w_full().max_w(Px(448.0)))
+        .into_element(cx)
+        .test_id("ui-gallery-spinner-input-group")
 }
 
 // endregion: example

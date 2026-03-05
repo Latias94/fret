@@ -5,7 +5,7 @@ use fret_core::{Corners, Edges, Px, SemanticsRole};
 use fret_runtime::Model;
 use fret_ui::element::{ContainerProps, PressableA11y, PressableProps};
 use fret_ui_ai as ui_ai;
-use fret_ui_kit::declarative::stack;
+use fret_ui_kit::ui;
 use fret_ui_kit::{ColorRef, LayoutRefinement, Space, ui};
 use fret_ui_shadcn::prelude::*;
 use std::sync::Arc;
@@ -145,10 +145,8 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
                         .test_id("ui-gallery-ai-prompt-input-provider-sent-count-1")
                 });
 
-            vec![stack::vstack(
-                cx,
-                stack::VStackProps::default().gap(Space::N4),
-                move |cx| {
+            vec![
+                ui::v_stack(move |cx| {
                     let mut children = Vec::new();
                     children.push(add_external);
                     children.push(
@@ -164,22 +162,21 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
                         children.push(marker);
                     }
                     children
-                },
-            )]
+                })
+                .gap(Space::N4)
+                .into_element(cx),
+            ]
         });
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .layout(LayoutRefinement::default().w_full().min_w_0())
-            .gap(Space::N4),
-        move |cx| {
-            vec![
-                cx.text("Prompt Input Provider (AI Elements)"),
-                cx.text("External add mutates the provider attachments; send clears attachments."),
-                body,
-            ]
-        },
-    )
+    ui::v_flex(move |cx| {
+        vec![
+            cx.text("Prompt Input Provider (AI Elements)"),
+            cx.text("External add mutates the provider attachments; send clears attachments."),
+            body,
+        ]
+    })
+    .layout(LayoutRefinement::default().w_full().min_w_0())
+    .gap(Space::N4)
+    .into_element(cx)
 }
 // endregion: example

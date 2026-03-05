@@ -58,13 +58,9 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
             .into_element(cx),
         ])
         .into_element(cx),
-        shadcn::CardContent::new(vec![stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .gap(Space::N6)
-                .layout(LayoutRefinement::default().w_full()),
-            |cx| {
-                let email = stack::vstack(cx, stack::VStackProps::default().gap(Space::N2), |cx| {
+        shadcn::CardContent::new(vec![
+            ui::v_flex(|cx| {
+                let email = ui::v_stack(|cx| {
                     vec![
                         shadcn::Label::new("Email").into_element(cx),
                         shadcn::Input::new(email.clone())
@@ -72,37 +68,40 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
                             .placeholder("m@example.com")
                             .into_element(cx),
                     ]
-                });
+                })
+                .gap(Space::N2)
+                .into_element(cx);
 
-                let password =
-                    stack::vstack(cx, stack::VStackProps::default().gap(Space::N2), |cx| {
-                        vec![
-                            stack::hstack(
-                                cx,
-                                stack::HStackProps::default()
-                                    .layout(LayoutRefinement::default().w_full())
-                                    .justify_between()
-                                    .items_center(),
-                                |cx| {
-                                    vec![
-                                        shadcn::Label::new("Password").into_element(cx),
-                                        shadcn::Button::new("Forgot your password?")
-                                            .variant(shadcn::ButtonVariant::Link)
-                                            .size(shadcn::ButtonSize::Sm)
-                                            .into_element(cx),
-                                    ]
-                                },
-                            ),
-                            shadcn::Input::new(password.clone())
-                                .a11y_label("Password")
-                                .placeholder("••••••••")
-                                .into_element(cx),
-                        ]
-                    });
+                let password = ui::v_stack(|cx| {
+                    vec![
+                        ui::h_flex(|cx| {
+                            vec![
+                                shadcn::Label::new("Password").into_element(cx),
+                                shadcn::Button::new("Forgot your password?")
+                                    .variant(shadcn::ButtonVariant::Link)
+                                    .size(shadcn::ButtonSize::Sm)
+                                    .into_element(cx),
+                            ]
+                        })
+                        .layout(LayoutRefinement::default().w_full())
+                        .justify_between()
+                        .items_center()
+                        .into_element(cx),
+                        shadcn::Input::new(password.clone())
+                            .a11y_label("Password")
+                            .placeholder("••••••••")
+                            .into_element(cx),
+                    ]
+                })
+                .gap(Space::N2)
+                .into_element(cx);
 
                 vec![email, password]
-            },
-        )])
+            })
+            .gap(Space::N6)
+            .layout(LayoutRefinement::default().w_full())
+            .into_element(cx),
+        ])
         .into_element(cx),
         shadcn::CardFooter::new(vec![
             shadcn::Button::new("Login")

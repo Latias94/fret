@@ -5,7 +5,7 @@ use fret_ui::ElementContext;
 use fret_ui::tree::UiTree;
 use fret_ui_headless::table::{ColumnDef, RowKey, TableState};
 use fret_ui_kit::OverlayController;
-use fret_ui_kit::declarative::stack;
+use fret_ui_kit::ui;
 use std::sync::Arc;
 
 #[path = "support/fake_services.rs"]
@@ -63,11 +63,7 @@ fn render_frame(
             let pagination =
                 fret_ui_shadcn::DataTablePagination::new(state.clone(), output.clone())
                     .into_element(cx);
-            vec![stack::vstack(
-                cx,
-                stack::VStackProps::default(),
-                move |_cx| vec![table, pagination],
-            )]
+            vec![ui::v_stack(move |_cx| vec![table, pagination]).into_element(cx)]
         },
     );
     ui.set_root(root);

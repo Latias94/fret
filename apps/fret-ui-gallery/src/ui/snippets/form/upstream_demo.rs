@@ -511,19 +511,8 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
 
     let mobile_field = {
         let control_id = "ui-gallery-form-demo-mobile";
-        shadcn::Card::new(vec![shadcn::CardContent::new(vec![stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .gap(Space::N3)
-                .items_start()
-                .layout(LayoutRefinement::default().w_full().min_w_0()),
-            |cx| {
-                let label = stack::vstack(
-                    cx,
-                    stack::VStackProps::default()
-                        .gap(Space::N1)
-                        .layout(LayoutRefinement::default().w_full().min_w_0()),
-                    |cx| {
+        shadcn::Card::new(vec![shadcn::CardContent::new(vec![ui::h_flex(|cx| {
+                let label = ui::v_flex(|cx| {
                         vec![
                             shadcn::FieldLabel::new(
                                 "Use different settings for my mobile devices",
@@ -535,8 +524,9 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                                 "You can manage your mobile notifications in the mobile settings page.",
                             ),
                         ]
-                    },
-                );
+                    })
+                        .gap(Space::N1)
+                        .layout(LayoutRefinement::default().w_full().min_w_0()).into_element(cx);
                 vec![
                     shadcn::Checkbox::new(mobile.clone())
                         .control_id(control_id)
@@ -544,8 +534,10 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                         .into_element(cx),
                     label,
                 ]
-            },
-        )])
+            })
+                .gap(Space::N3)
+                .items_start()
+                .layout(LayoutRefinement::default().w_full().min_w_0()).into_element(cx)])
         .into_element(cx)])
         .refine_layout(LayoutRefinement::default().w_full().min_w_0())
         .into_element(cx)
@@ -555,101 +547,91 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let sidebar_field = shadcn::FormField::new(
         form_state.clone(),
         "items",
-        [stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .gap(Space::N4)
-                .layout(LayoutRefinement::default().w_full().min_w_0())
-                .items_start(),
-            |cx| {
-                let header = stack::vstack(
-                    cx,
-                    stack::VStackProps::default().gap(Space::N1).items_start(),
-                    |cx| {
-                        vec![
-                            shadcn::typography::large(cx, "Sidebar"),
-                            shadcn::typography::muted(
-                                cx,
-                                "Select the items you want to display in the sidebar.",
-                            ),
-                        ]
-                    },
-                );
-
-                let item_row = |cx: &mut ElementContext<'_, H>,
-                                model: Model<bool>,
-                                id: &'static str,
-                                label: &'static str| {
-                    stack::hstack(
+        [ui::v_flex(|cx| {
+            let header = ui::v_stack(|cx| {
+                vec![
+                    shadcn::typography::large(cx, "Sidebar"),
+                    shadcn::typography::muted(
                         cx,
-                        stack::HStackProps::default()
-                            .gap(Space::N3)
-                            .items_start()
-                            .layout(LayoutRefinement::default().w_full().min_w_0()),
-                        |cx| {
-                            vec![
-                                shadcn::Checkbox::new(model)
-                                    .control_id(id)
-                                    .a11y_label(label)
-                                    .into_element(cx),
-                                shadcn::FieldLabel::new(label)
-                                    .for_control(id)
-                                    .into_element(cx),
-                            ]
-                        },
-                    )
-                };
+                        "Select the items you want to display in the sidebar.",
+                    ),
+                ]
+            })
+            .gap(Space::N1)
+            .items_start()
+            .into_element(cx);
 
-                let list = stack::vstack(
-                    cx,
-                    stack::VStackProps::default()
-                        .gap(Space::N2)
-                        .layout(LayoutRefinement::default().w_full().min_w_0()),
-                    |cx| {
-                        vec![
-                            item_row(
-                                cx,
-                                sidebar_recents.clone(),
-                                "ui-gallery-form-demo-items-recents",
-                                "Recents",
-                            ),
-                            item_row(
-                                cx,
-                                sidebar_home.clone(),
-                                "ui-gallery-form-demo-items-home",
-                                "Home",
-                            ),
-                            item_row(
-                                cx,
-                                sidebar_applications.clone(),
-                                "ui-gallery-form-demo-items-applications",
-                                "Applications",
-                            ),
-                            item_row(
-                                cx,
-                                sidebar_desktop.clone(),
-                                "ui-gallery-form-demo-items-desktop",
-                                "Desktop",
-                            ),
-                            item_row(
-                                cx,
-                                sidebar_downloads.clone(),
-                                "ui-gallery-form-demo-items-downloads",
-                                "Downloads",
-                            ),
-                            item_row(
-                                cx,
-                                sidebar_documents.clone(),
-                                "ui-gallery-form-demo-items-documents",
-                                "Documents",
-                            ),
-                        ]
-                    },
-                );
+            let item_row = |cx: &mut ElementContext<'_, H>,
+                            model: Model<bool>,
+                            id: &'static str,
+                            label: &'static str| {
+                ui::h_flex(|cx| {
+                    vec![
+                        shadcn::Checkbox::new(model)
+                            .control_id(id)
+                            .a11y_label(label)
+                            .into_element(cx),
+                        shadcn::FieldLabel::new(label)
+                            .for_control(id)
+                            .into_element(cx),
+                    ]
+                })
+                .gap(Space::N3)
+                .items_start()
+                .layout(LayoutRefinement::default().w_full().min_w_0())
+                .into_element(cx)
+            };
 
-                vec![header, list]
-            },
-        )],
+            let list = ui::v_flex(|cx| {
+                vec![
+                    item_row(
+                        cx,
+                        sidebar_recents.clone(),
+                        "ui-gallery-form-demo-items-recents",
+                        "Recents",
+                    ),
+                    item_row(
+                        cx,
+                        sidebar_home.clone(),
+                        "ui-gallery-form-demo-items-home",
+                        "Home",
+                    ),
+                    item_row(
+                        cx,
+                        sidebar_applications.clone(),
+                        "ui-gallery-form-demo-items-applications",
+                        "Applications",
+                    ),
+                    item_row(
+                        cx,
+                        sidebar_desktop.clone(),
+                        "ui-gallery-form-demo-items-desktop",
+                        "Desktop",
+                    ),
+                    item_row(
+                        cx,
+                        sidebar_downloads.clone(),
+                        "ui-gallery-form-demo-items-downloads",
+                        "Downloads",
+                    ),
+                    item_row(
+                        cx,
+                        sidebar_documents.clone(),
+                        "ui-gallery-form-demo-items-documents",
+                        "Documents",
+                    ),
+                ]
+            })
+            .gap(Space::N2)
+            .layout(LayoutRefinement::default().w_full().min_w_0())
+            .into_element(cx);
+
+            vec![header, list]
+        })
+        .gap(Space::N4)
+        .layout(LayoutRefinement::default().w_full().min_w_0())
+        .items_start()
+        .into_element(cx)],
     )
     .decorate_control(false)
     .into_element(cx)
@@ -700,66 +682,53 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
 
     let email_notifications = {
         let marketing = shadcn::Card::new(vec![
-            shadcn::CardContent::new(vec![stack::hstack(
-                cx,
-                stack::HStackProps::default()
-                    .gap(Space::N4)
-                    .items_start()
-                    .layout(LayoutRefinement::default().w_full().min_w_0())
-                    .justify_between(),
-                |cx| {
-                    let text = stack::vstack(
-                        cx,
-                        stack::VStackProps::default()
-                            .gap(Space::N1)
-                            .layout(LayoutRefinement::default().min_w_0()),
-                        |cx| {
-                            vec![
-                                shadcn::Label::new("Marketing emails").into_element(cx),
-                                shadcn::typography::muted(
-                                    cx,
-                                    "Receive emails about new products, features, and more.",
-                                ),
-                            ]
-                        },
-                    );
+            shadcn::CardContent::new(vec![
+                ui::h_flex(|cx| {
+                    let text = ui::v_stack(|cx| {
+                        vec![
+                            shadcn::Label::new("Marketing emails").into_element(cx),
+                            shadcn::typography::muted(
+                                cx,
+                                "Receive emails about new products, features, and more.",
+                            ),
+                        ]
+                    })
+                    .gap(Space::N1)
+                    .layout(LayoutRefinement::default().min_w_0())
+                    .into_element(cx);
                     vec![
                         text,
                         shadcn::Switch::new(marketing_emails.clone())
                             .a11y_label("Marketing emails")
                             .into_element(cx),
                     ]
-                },
-            )])
+                })
+                .gap(Space::N4)
+                .items_start()
+                .layout(LayoutRefinement::default().w_full().min_w_0())
+                .justify_between()
+                .into_element(cx),
+            ])
             .into_element(cx),
         ])
         .into_element(cx)
         .test_id("ui-gallery-form-demo-email-notify-marketing");
 
         let security = shadcn::Card::new(vec![
-            shadcn::CardContent::new(vec![stack::hstack(
-                cx,
-                stack::HStackProps::default()
-                    .gap(Space::N4)
-                    .items_start()
-                    .layout(LayoutRefinement::default().w_full().min_w_0())
-                    .justify_between(),
-                |cx| {
-                    let text = stack::vstack(
-                        cx,
-                        stack::VStackProps::default()
-                            .gap(Space::N1)
-                            .layout(LayoutRefinement::default().min_w_0()),
-                        |cx| {
-                            vec![
-                                shadcn::Label::new("Security emails").into_element(cx),
-                                shadcn::typography::muted(
-                                    cx,
-                                    "Receive emails about your account security.",
-                                ),
-                            ]
-                        },
-                    );
+            shadcn::CardContent::new(vec![
+                ui::h_flex(|cx| {
+                    let text = ui::v_stack(|cx| {
+                        vec![
+                            shadcn::Label::new("Security emails").into_element(cx),
+                            shadcn::typography::muted(
+                                cx,
+                                "Receive emails about your account security.",
+                            ),
+                        ]
+                    })
+                    .gap(Space::N1)
+                    .layout(LayoutRefinement::default().min_w_0())
+                    .into_element(cx);
                     vec![
                         text,
                         shadcn::Switch::new(security_emails.clone())
@@ -767,54 +736,50 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                             .disabled(true)
                             .into_element(cx),
                     ]
-                },
-            )])
+                })
+                .gap(Space::N4)
+                .items_start()
+                .layout(LayoutRefinement::default().w_full().min_w_0())
+                .justify_between()
+                .into_element(cx),
+            ])
             .into_element(cx),
         ])
         .into_element(cx)
         .test_id("ui-gallery-form-demo-email-notify-security");
 
-        stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .gap(Space::N4)
-                .layout(LayoutRefinement::default().w_full().min_w_0())
-                .items_start(),
-            |cx| {
-                vec![
-                    shadcn::typography::h3(cx, "Email Notifications"),
-                    stack::vstack(
-                        cx,
-                        stack::VStackProps::default()
-                            .gap(Space::N4)
-                            .layout(LayoutRefinement::default().w_full().min_w_0()),
-                        |_cx| vec![marketing, security],
-                    ),
-                ]
-            },
-        )
+        ui::v_flex(|cx| {
+            vec![
+                shadcn::typography::h3(cx, "Email Notifications"),
+                ui::v_flex(|_cx| vec![marketing, security])
+                    .gap(Space::N4)
+                    .layout(LayoutRefinement::default().w_full().min_w_0())
+                    .into_element(cx),
+            ]
+        })
+        .gap(Space::N4)
+        .layout(LayoutRefinement::default().w_full().min_w_0())
+        .items_start()
+        .into_element(cx)
         .test_id("ui-gallery-form-demo-email-notifications")
     };
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N6)
-            .items_start()
-            .layout(max_w_sm),
-        |_cx| {
-            vec![
-                username_field,
-                email_field,
-                bio_field,
-                notify_field,
-                mobile_field,
-                sidebar_field,
-                dob_field,
-                email_notifications,
-                submit,
-            ]
-        },
-    )
+    ui::v_stack(|_cx| {
+        vec![
+            username_field,
+            email_field,
+            bio_field,
+            notify_field,
+            mobile_field,
+            sidebar_field,
+            dob_field,
+            email_notifications,
+            submit,
+        ]
+    })
+    .gap(Space::N6)
+    .items_start()
+    .layout(max_w_sm)
+    .into_element(cx)
 }
 // endregion: example

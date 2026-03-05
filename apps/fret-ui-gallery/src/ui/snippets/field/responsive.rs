@@ -111,13 +111,10 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     .into_element(cx)
     .test_id("ui-gallery-field-responsive");
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N3)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full().min_w_0()),
-        move |_cx| vec![width_toggle, content],
-    )
+    ui::v_flex(move |_cx| vec![width_toggle, content])
+        .gap(Space::N3)
+        .items_start()
+        .layout(LayoutRefinement::default().w_full().min_w_0())
+        .into_element(cx)
 }
 // endregion: example

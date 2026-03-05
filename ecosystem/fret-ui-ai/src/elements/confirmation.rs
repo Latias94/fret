@@ -4,8 +4,8 @@ use std::sync::Arc;
 
 use fret_ui::element::{AnyElement, InteractivityGateProps, LayoutStyle, SemanticsDecoration};
 use fret_ui::{ElementContext, UiHost};
-use fret_ui_kit::declarative::stack;
-use fret_ui_kit::{LayoutRefinement, Space};
+use fret_ui_kit::ui;
+use fret_ui_kit::{Items, Justify, LayoutRefinement, Space};
 use fret_ui_shadcn::{Alert, AlertDescription, Button, ButtonSize, ButtonVariant};
 
 /// Tool UI part state aligned with AI Elements `ToolUIPart["state"]`.
@@ -123,13 +123,10 @@ impl Confirmation {
         //
         // Note: this intentionally disables Alert's "icon as first child" heuristics for this
         // surface, matching the AI Elements Confirmation composition.
-        let body = stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .gap(Space::N2)
-                .layout(LayoutRefinement::default().w_full().min_w_0()),
-            |_cx| self.children,
-        );
+        let body = ui::v_stack(|_cx| self.children)
+            .gap(Space::N2)
+            .layout(LayoutRefinement::default().w_full().min_w_0())
+            .into_element(cx);
 
         let alert = Alert::new([body])
             .refine_layout(self.layout)
@@ -204,28 +201,23 @@ impl ConfirmationRequest {
         if self.state != ToolUiPartState::ApprovalRequested {
             return hidden(cx);
         }
-        let el = match self.children.len() {
-            0 => stack::vstack(
-                cx,
-                stack::VStackProps::default()
-                    .layout(self.layout)
-                    .gap(Space::N1)
-                    .items_start(),
-                |_cx| Vec::<AnyElement>::new(),
-            ),
+        let mut children = self.children;
+        let el = match children.len() {
+            0 => ui::v_stack(|_cx| Vec::<AnyElement>::new())
+                .layout(self.layout)
+                .gap(Space::N1)
+                .items(Items::Start)
+                .into_element(cx),
             1 => {
-                let mut it = self.children.into_iter();
-                let only = it.next().expect("expected exactly one child");
-                only
+                children
+                    .pop()
+                    .expect("expected exactly one child after len() check")
             }
-            _ => stack::vstack(
-                cx,
-                stack::VStackProps::default()
-                    .layout(self.layout)
-                    .gap(Space::N1)
-                    .items_start(),
-                |_cx| self.children,
-            ),
+            _ => ui::v_stack(move |_cx| children)
+                .layout(self.layout)
+                .gap(Space::N1)
+                .items(Items::Start)
+                .into_element(cx),
         };
         let Some(test_id) = self.test_id else {
             return el;
@@ -274,28 +266,23 @@ impl ConfirmationAccepted {
         if !approved || !self.state.is_response_state() {
             return hidden(cx);
         }
-        let el = match self.children.len() {
-            0 => stack::hstack(
-                cx,
-                stack::HStackProps::default()
-                    .layout(self.layout)
-                    .gap(Space::N1)
-                    .items_center(),
-                |_cx| Vec::<AnyElement>::new(),
-            ),
+        let mut children = self.children;
+        let el = match children.len() {
+            0 => ui::h_row(|_cx| Vec::<AnyElement>::new())
+                .layout(self.layout)
+                .gap(Space::N1)
+                .items(Items::Center)
+                .into_element(cx),
             1 => {
-                let mut it = self.children.into_iter();
-                let only = it.next().expect("expected exactly one child");
-                only
+                children
+                    .pop()
+                    .expect("expected exactly one child after len() check")
             }
-            _ => stack::hstack(
-                cx,
-                stack::HStackProps::default()
-                    .layout(self.layout)
-                    .gap(Space::N1)
-                    .items_center(),
-                |_cx| self.children,
-            ),
+            _ => ui::h_row(move |_cx| children)
+                .layout(self.layout)
+                .gap(Space::N1)
+                .items(Items::Center)
+                .into_element(cx),
         };
         let Some(test_id) = self.test_id else {
             return el;
@@ -344,28 +331,23 @@ impl ConfirmationRejected {
         if !rejected || !self.state.is_response_state() {
             return hidden(cx);
         }
-        let el = match self.children.len() {
-            0 => stack::hstack(
-                cx,
-                stack::HStackProps::default()
-                    .layout(self.layout)
-                    .gap(Space::N1)
-                    .items_center(),
-                |_cx| Vec::<AnyElement>::new(),
-            ),
+        let mut children = self.children;
+        let el = match children.len() {
+            0 => ui::h_row(|_cx| Vec::<AnyElement>::new())
+                .layout(self.layout)
+                .gap(Space::N1)
+                .items(Items::Center)
+                .into_element(cx),
             1 => {
-                let mut it = self.children.into_iter();
-                let only = it.next().expect("expected exactly one child");
-                only
+                children
+                    .pop()
+                    .expect("expected exactly one child after len() check")
             }
-            _ => stack::hstack(
-                cx,
-                stack::HStackProps::default()
-                    .layout(self.layout)
-                    .gap(Space::N1)
-                    .items_center(),
-                |_cx| self.children,
-            ),
+            _ => ui::h_row(move |_cx| children)
+                .layout(self.layout)
+                .gap(Space::N1)
+                .items(Items::Center)
+                .into_element(cx),
         };
         let Some(test_id) = self.test_id else {
             return el;
@@ -408,15 +390,12 @@ impl ConfirmationActions {
             return hidden(cx);
         }
 
-        let el = stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .layout(self.layout)
-                .gap(Space::N2)
-                .justify_end()
-                .items_center(),
-            |_cx| self.children,
-        );
+        let el = ui::h_row(|_cx| self.children)
+            .layout(self.layout)
+            .gap(Space::N2)
+            .justify(Justify::End)
+            .items(Items::Center)
+            .into_element(cx);
         let Some(test_id) = self.test_id else {
             return el;
         };

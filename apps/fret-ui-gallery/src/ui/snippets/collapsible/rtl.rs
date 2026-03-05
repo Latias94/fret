@@ -47,18 +47,17 @@ fn details_collapsible<H: UiHost>(
                     LayoutRefinement::default().w_full(),
                 );
                 cx.container(props, |cx| {
-                    vec![stack::hstack(
-                        cx,
-                        stack::HStackProps::default()
-                            .layout(LayoutRefinement::default().w_full())
-                            .justify_between(),
-                        |cx| {
+                    vec![
+                        ui::h_flex(|cx| {
                             vec![
                                 shadcn::typography::muted(cx, "Shipping address"),
                                 cx.text("100 Market St, San Francisco"),
                             ]
-                        },
-                    )]
+                        })
+                        .layout(LayoutRefinement::default().w_full())
+                        .justify_between()
+                        .into_element(cx),
+                    ]
                 })
             },
             {
@@ -72,18 +71,17 @@ fn details_collapsible<H: UiHost>(
                     LayoutRefinement::default().w_full(),
                 );
                 cx.container(props, |cx| {
-                    vec![stack::hstack(
-                        cx,
-                        stack::HStackProps::default()
-                            .layout(LayoutRefinement::default().w_full())
-                            .justify_between(),
-                        |cx| {
+                    vec![
+                        ui::h_flex(|cx| {
                             vec![
                                 shadcn::typography::muted(cx, "Items"),
                                 cx.text("2x Studio Headphones"),
                             ]
-                        },
-                    )]
+                        })
+                        .layout(LayoutRefinement::default().w_full())
+                        .justify_between()
+                        .into_element(cx),
+                    ]
                 })
             },
         ])
@@ -135,25 +133,21 @@ fn details_collapsible<H: UiHost>(
         LayoutRefinement::default().w_full(),
     );
     cx.container(wrapper_props, |cx| {
-        vec![stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .gap(Space::N2)
-                .items_stretch()
-                .layout(LayoutRefinement::default().w_full()),
-            move |cx| {
+        vec![
+            ui::v_flex(move |cx| {
                 vec![
-                    stack::hstack(
-                        cx,
-                        stack::HStackProps::default()
-                            .layout(LayoutRefinement::default().w_full())
-                            .justify_between(),
-                        |cx| vec![cx.text(label), cx.text(status)],
-                    ),
+                    ui::h_flex(|cx| vec![cx.text(label), cx.text(status)])
+                        .layout(LayoutRefinement::default().w_full())
+                        .justify_between()
+                        .into_element(cx),
                     collapsible,
                 ]
-            },
-        )]
+            })
+            .gap(Space::N2)
+            .items_stretch()
+            .layout(LayoutRefinement::default().w_full())
+            .into_element(cx),
+        ]
     })
     .test_id(test_id_prefix)
 }

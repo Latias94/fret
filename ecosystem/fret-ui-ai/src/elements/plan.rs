@@ -11,8 +11,8 @@ use fret_ui::element::{AnyElement, InteractivityGateProps, LayoutStyle, Semantic
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::declarative::controllable_state;
 use fret_ui_kit::declarative::icon as decl_icon;
-use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::ui;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Space};
 use fret_ui_shadcn::{
     Button, ButtonSize, ButtonVariant, CardAction, CardContent, CardDescription, CardFooter,
@@ -198,13 +198,10 @@ impl Plan {
                     st.controller = Some(controller.clone());
                 });
 
-                let body = stack::vstack(
-                    cx,
-                    stack::VStackProps::default()
-                        .layout(LayoutRefinement::default().w_full().min_w_0())
-                        .gap(Space::N6),
-                    move |cx| children(cx, controller),
-                );
+                let body = ui::v_stack(move |cx| children(cx, controller))
+                    .layout(LayoutRefinement::default().w_full().min_w_0())
+                    .gap(Space::N6)
+                    .into_element(cx);
 
                 vec![body]
             },

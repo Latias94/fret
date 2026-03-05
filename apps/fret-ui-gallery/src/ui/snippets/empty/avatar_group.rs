@@ -11,23 +11,22 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         .children([invite_icon, invite_text])
         .into_element(cx);
 
-    let avatars = stack::hstack(
-        cx,
-        stack::HStackProps::default().gap(Space::N1).items_center(),
-        |cx| {
-            vec![
-                shadcn::Avatar::new([shadcn::AvatarFallback::new("CN").into_element(cx)])
-                    .refine_layout(LayoutRefinement::default().w_px(Px(44.0)).h_px(Px(44.0)))
-                    .into_element(cx),
-                shadcn::Avatar::new([shadcn::AvatarFallback::new("LR").into_element(cx)])
-                    .refine_layout(LayoutRefinement::default().w_px(Px(44.0)).h_px(Px(44.0)))
-                    .into_element(cx),
-                shadcn::Avatar::new([shadcn::AvatarFallback::new("ER").into_element(cx)])
-                    .refine_layout(LayoutRefinement::default().w_px(Px(44.0)).h_px(Px(44.0)))
-                    .into_element(cx),
-            ]
-        },
-    );
+    let avatars = ui::h_row(|cx| {
+        vec![
+            shadcn::Avatar::new([shadcn::AvatarFallback::new("CN").into_element(cx)])
+                .refine_layout(LayoutRefinement::default().w_px(Px(44.0)).h_px(Px(44.0)))
+                .into_element(cx),
+            shadcn::Avatar::new([shadcn::AvatarFallback::new("LR").into_element(cx)])
+                .refine_layout(LayoutRefinement::default().w_px(Px(44.0)).h_px(Px(44.0)))
+                .into_element(cx),
+            shadcn::Avatar::new([shadcn::AvatarFallback::new("ER").into_element(cx)])
+                .refine_layout(LayoutRefinement::default().w_px(Px(44.0)).h_px(Px(44.0)))
+                .into_element(cx),
+        ]
+    })
+    .gap(Space::N1)
+    .items_center()
+    .into_element(cx);
 
     shadcn::Empty::new([
         shadcn::empty::EmptyHeader::new([

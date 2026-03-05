@@ -18,11 +18,11 @@ use fret_ui::element::{
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::icon as decl_icon;
-use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::typography;
+use fret_ui_kit::ui;
 use fret_ui_kit::{
-    ChromeRefinement, ColorRef, Items, LayoutRefinement, MetricRef, Radius, Space,
+    ChromeRefinement, ColorRef, Items, Justify, LayoutRefinement, MetricRef, Radius, Space,
     WidgetStateProperty, WidgetStates,
 };
 use fret_ui_shadcn::button::ButtonStyle;
@@ -151,13 +151,10 @@ impl Queue {
         props.shadow = Some(decl_style::shadow_xs(&theme, radius));
 
         let children = self.children;
-        let content = stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .layout(LayoutRefinement::default().w_full().min_w_0())
-                .gap(Space::N2),
-            move |_cx| children,
-        );
+        let content = ui::v_stack(move |_cx| children)
+            .layout(LayoutRefinement::default().w_full().min_w_0())
+            .gap(Space::N2)
+            .into_element(cx);
 
         let mut root = cx.container(props, move |_cx| vec![content]);
         if let Some(test_id) = self.test_id {
@@ -350,14 +347,11 @@ impl QueueSectionTrigger {
             props.background = Some(if hovered { hover_bg } else { bg });
             props.corner_radii = Corners::all(MetricRef::radius(Radius::Sm).resolve(&theme));
 
-            let row = stack::hstack(
-                cx,
-                stack::HStackProps::default()
-                    .layout(LayoutRefinement::default().w_full().min_w_0())
-                    .items(Items::Center)
-                    .justify_between(),
-                move |_cx| children,
-            );
+            let row = ui::h_row(move |_cx| children)
+                .layout(LayoutRefinement::default().w_full().min_w_0())
+                .items(Items::Center)
+                .justify(Justify::Between)
+                .into_element(cx);
 
             vec![cx.container(props, move |_cx| vec![row])]
         });
@@ -493,14 +487,11 @@ impl QueueSectionLabel {
         }
         children.push(text);
 
-        let row = stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .layout(self.layout)
-                .gap(Space::N2)
-                .items_center(),
-            move |_cx| children,
-        );
+        let row = ui::h_row(move |_cx| children)
+            .layout(self.layout)
+            .gap(Space::N2)
+            .items(Items::Center)
+            .into_element(cx);
 
         if let Some(test_id) = self.test_id {
             row.attach_semantics(
@@ -606,14 +597,11 @@ impl QueueList {
         let theme = Theme::global(&*cx.app).clone();
         let max_h = self.max_height;
 
-        let list = stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .layout(LayoutRefinement::default().w_full().min_w_0())
-                .gap(Space::N0),
-            move |_cx| self.children,
-        )
-        .attach_semantics(SemanticsDecoration::default().role(SemanticsRole::List));
+        let list = ui::v_stack(move |_cx| self.children)
+            .layout(LayoutRefinement::default().w_full().min_w_0())
+            .gap(Space::N0)
+            .into_element(cx)
+            .attach_semantics(SemanticsDecoration::default().role(SemanticsRole::List));
 
         let mut viewport = ContainerProps::default();
         viewport.layout =
@@ -714,13 +702,10 @@ impl QueueItem {
             chrome.corner_radii = Corners::all(MetricRef::radius(Radius::Sm).resolve(&theme));
 
             let children = content(cx, QueueItemState { hovered });
-            let col = stack::vstack(
-                cx,
-                stack::VStackProps::default()
-                    .layout(LayoutRefinement::default().w_full().min_w_0())
-                    .gap(Space::N1),
-                move |_cx| children,
-            );
+            let col = ui::v_stack(move |_cx| children)
+                .layout(LayoutRefinement::default().w_full().min_w_0())
+                .gap(Space::N1)
+                .into_element(cx);
             vec![cx.container(chrome, move |_cx| vec![col])]
         });
 
@@ -1039,14 +1024,11 @@ impl QueueItemActions {
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .layout(self.layout)
-                .gap(Space::N1)
-                .items_center(),
-            move |_cx| self.children,
-        )
+        ui::h_row(move |_cx| self.children)
+            .layout(self.layout)
+            .gap(Space::N1)
+            .items(Items::Center)
+            .into_element(cx)
     }
 }
 
@@ -1386,14 +1368,11 @@ impl QueueItemFile {
             ink_overflow: Default::default(),
         });
 
-        let row = stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .layout(LayoutRefinement::default().min_w_0())
-                .gap(Space::N1)
-                .items_center(),
-            move |_cx| vec![icon, filename],
-        );
+        let row = ui::h_row(move |_cx| vec![icon, filename])
+            .layout(LayoutRefinement::default().min_w_0())
+            .gap(Space::N1)
+            .items(Items::Center)
+            .into_element(cx);
 
         let mut props = ContainerProps::default();
         props.layout = decl_style::layout_style(&theme, self.layout);

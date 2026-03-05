@@ -12,9 +12,9 @@ use fret_ui::element::{
     TextProps,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
-use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::typography;
+use fret_ui_kit::ui;
 use fret_ui_kit::{ChromeRefinement, ColorRef, Items, Justify, LayoutRefinement, Space};
 use fret_ui_shadcn::{Button, ButtonVariant, HoverCard, HoverCardContent, Progress, Separator};
 
@@ -501,15 +501,12 @@ impl ContextContentHeader {
                 ink_overflow: Default::default(),
             });
 
-            let header_row = stack::hstack(
-                cx,
-                stack::HStackProps::default()
-                    .layout(LayoutRefinement::default().w_full().min_w_0())
-                    .items_center()
-                    .justify(Justify::Between)
-                    .gap(Space::N3),
-                move |_cx| vec![display_pct, used_total],
-            );
+            let header_row = ui::h_row(move |_cx| vec![display_pct, used_total])
+                .layout(LayoutRefinement::default().w_full().min_w_0())
+                .items(Items::Center)
+                .justify(Justify::Between)
+                .gap(Space::N3)
+                .into_element(cx);
 
             let progress_model = cx.with_state(|| None::<Model<f32>>, |st| st.clone());
             let progress_model = if let Some(m) = progress_model {
@@ -537,13 +534,10 @@ impl ContextContentHeader {
             vec![header_row, progress]
         });
 
-        let wrapper = stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .layout(LayoutRefinement::default().w_full().min_w_0())
-                .gap(Space::N2),
-            move |_cx| children,
-        );
+        let wrapper = ui::v_stack(move |_cx| children)
+            .layout(LayoutRefinement::default().w_full().min_w_0())
+            .gap(Space::N2)
+            .into_element(cx);
 
         let wrapper = cx.container(
             decl_style::container_props(
@@ -593,14 +587,11 @@ impl ContextContentBody {
 
         let theme = Theme::global(&*cx.app).clone();
 
-        let body = stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .layout(LayoutRefinement::default().w_full().min_w_0())
-                .gap(Space::N2)
-                .items(Items::Start),
-            move |_cx| self.children,
-        );
+        let body = ui::v_stack(move |_cx| self.children)
+            .layout(LayoutRefinement::default().w_full().min_w_0())
+            .gap(Space::N2)
+            .items(Items::Start)
+            .into_element(cx);
 
         let wrapper = cx.container(
             decl_style::container_props(
@@ -695,15 +686,12 @@ impl ContextContentFooter {
                 ink_overflow: Default::default(),
             });
 
-            let row = stack::hstack(
-                cx,
-                stack::HStackProps::default()
-                    .layout(LayoutRefinement::default().w_full().min_w_0())
-                    .items_center()
-                    .justify(Justify::Between)
-                    .gap(Space::N3),
-                move |_cx| vec![label, value],
-            );
+            let row = ui::h_row(move |_cx| vec![label, value])
+                .layout(LayoutRefinement::default().w_full().min_w_0())
+                .items(Items::Center)
+                .justify(Justify::Between)
+                .gap(Space::N3)
+                .into_element(cx);
 
             vec![row]
         });
@@ -786,27 +774,21 @@ fn usage_row<H: UiHost>(
             ink_overflow: Default::default(),
         });
 
-        stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .layout(LayoutRefinement::default().min_w_0())
-                .items_center()
-                .gap(Space::N2),
-            move |_cx| vec![token_text, cost_text],
-        )
+        ui::h_row(move |_cx| vec![token_text, cost_text])
+            .layout(LayoutRefinement::default().min_w_0())
+            .items(Items::Center)
+            .gap(Space::N2)
+            .into_element(cx)
     } else {
         token_text
     };
 
-    stack::hstack(
-        cx,
-        stack::HStackProps::default()
-            .layout(LayoutRefinement::default().w_full().min_w_0())
-            .items_center()
-            .justify(Justify::Between)
-            .gap(Space::N3),
-        move |_cx| vec![label_text, trailing],
-    )
+    ui::h_row(move |_cx| vec![label_text, trailing])
+        .layout(LayoutRefinement::default().w_full().min_w_0())
+        .items(Items::Center)
+        .justify(Justify::Between)
+        .gap(Space::N3)
+        .into_element(cx)
 }
 
 /// Usage row aligned with AI Elements `ContextInputUsage`.

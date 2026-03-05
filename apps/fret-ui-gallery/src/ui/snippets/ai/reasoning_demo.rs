@@ -4,7 +4,7 @@ pub const SOURCE: &str = include_str!("reasoning_demo.rs");
 use fret_runtime::Model;
 use fret_ui::Invalidation;
 use fret_ui_ai as ui_ai;
-use fret_ui_kit::declarative::stack;
+use fret_ui_kit::ui;
 use fret_ui_kit::{LayoutRefinement, Space};
 use fret_ui_shadcn::{Button, ButtonSize, ButtonVariant, prelude::*};
 use std::sync::Arc;
@@ -77,25 +77,21 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
             },
         );
 
-    let controls = stack::hstack(
-        cx,
-        stack::HStackProps::default().gap(Space::N2).items_center(),
-        move |_cx| vec![start, stop],
-    );
+    let controls = ui::h_row(move |_cx| vec![start, stop])
+        .gap(Space::N2)
+        .items_center()
+        .into_element(cx);
 
-    stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .layout(LayoutRefinement::default().w_full().min_w_0())
-            .gap(Space::N4),
-        move |cx| {
-            vec![
-                cx.text("Reasoning (AI Elements)"),
-                cx.text("Start streaming to auto-open; stop to auto-close."),
-                controls,
-                reasoning,
-            ]
-        },
-    )
+    ui::v_flex(move |cx| {
+        vec![
+            cx.text("Reasoning (AI Elements)"),
+            cx.text("Start streaming to auto-open; stop to auto-close."),
+            controls,
+            reasoning,
+        ]
+    })
+    .layout(LayoutRefinement::default().w_full().min_w_0())
+    .gap(Space::N4)
+    .into_element(cx)
 }
 // endregion: example
