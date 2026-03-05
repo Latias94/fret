@@ -3,7 +3,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
-use fret_diag_protocol::builder::{ScriptV2Builder, role_and_name, test_id, text_composition_is};
+use fret_diag_protocol::builder::{role_and_name, test_id, text_composition_is, ScriptV2Builder};
 use fret_diag_protocol::{
     UiActionScriptV2, UiActionStepV2, UiKeyModifiersV1, UiOverlayPlacementTraceKindV1,
     UiOverlayPlacementTraceQueryV1, UiPredicateV1, UiScriptMetaV1, UiSelectorV1,
@@ -236,15 +236,15 @@ fn template_v2(name: &str) -> Result<UiActionScriptV2, String> {
 
 fn todo_baseline_v2() -> UiActionScriptV2 {
     ScriptV2Builder::new()
-        .type_text_into(test_id("todo-input"), "Automated task")
+        .type_text_into(test_id("todo_demo.draft"), "Automated task")
         .wait_frames(2)
         .press_key("enter")
-        .wait_exists(test_id("todo-item-4-done"), 60)
+        .wait_exists(test_id("todo_demo.row.4"), 60)
         .capture_bundle(Some("todo-after-add".to_string()))
-        .click(test_id("todo-item-4-done"))
+        .click(test_id("todo_demo.done.4"))
         .wait_frames(2)
         .capture_bundle(Some("todo-after-toggle-done".to_string()))
-        .click(test_id("todo-item-4-remove"))
+        .click(test_id("todo_demo.remove.4"))
         .wait_frames(2)
         .capture_bundle(Some("todo-after-remove".to_string()))
         .build()
@@ -287,6 +287,7 @@ fn wait_bounds_within_window_step(target: UiSelectorV1, timeout_frames: u32) -> 
             eps_px: 0.5,
         },
         timeout_frames,
+        timeout_ms: None,
     }
 }
 
@@ -368,6 +369,7 @@ fn ui_gallery_input_ime_tab_suppressed_v2() -> UiActionScriptV2 {
                 target: input.clone(),
             },
             timeout_frames: 240,
+            timeout_ms: None,
         })
         .ime_preedit("東京", Some((0, 6)))
         .push(UiActionStepV2::WaitUntil {
@@ -377,6 +379,7 @@ fn ui_gallery_input_ime_tab_suppressed_v2() -> UiActionScriptV2 {
                 composing: true,
             },
             timeout_frames: 240,
+            timeout_ms: None,
         })
         .press_key("tab")
         .wait_shortcut_routing_trace(
@@ -399,6 +402,7 @@ fn ui_gallery_input_ime_tab_suppressed_v2() -> UiActionScriptV2 {
                 composing: false,
             },
             timeout_frames: 240,
+            timeout_ms: None,
         })
         .capture_bundle(Some("ui-gallery-input-ime-tab-suppressed".to_string()))
         .build();
@@ -439,6 +443,7 @@ fn ui_gallery_combobox_open_select_focus_restore_v2() -> UiActionScriptV2 {
                 target: test_id("ui-gallery-combobox-demo-trigger"),
             },
             timeout_frames: 240,
+            timeout_ms: None,
         })
         .click(test_id("ui-gallery-combobox-demo-trigger"))
         .wait_exists(test_id("ui-gallery-combobox-demo-item-apple"), 240)
@@ -449,6 +454,7 @@ fn ui_gallery_combobox_open_select_focus_restore_v2() -> UiActionScriptV2 {
                 selected: true,
             },
             timeout_frames: 240,
+            timeout_ms: None,
         })
         .press_key("escape")
         .wait_not_exists(test_id("ui-gallery-combobox-demo-listbox"), 240)
@@ -486,6 +492,7 @@ fn ui_gallery_combobox_keyboard_commit_apple_v2() -> UiActionScriptV2 {
                 item: test_id("ui-gallery-combobox-demo-item-apple"),
             },
             timeout_frames: 240,
+            timeout_ms: None,
         })
         .press_key("enter")
         .wait_not_exists(test_id("ui-gallery-combobox-demo-item-apple"), 240)
@@ -495,6 +502,7 @@ fn ui_gallery_combobox_keyboard_commit_apple_v2() -> UiActionScriptV2 {
                 target: test_id("ui-gallery-combobox-demo-trigger"),
             },
             timeout_frames: 240,
+            timeout_ms: None,
         })
         .click(test_id("ui-gallery-combobox-demo-trigger"))
         .wait_exists(test_id("ui-gallery-combobox-demo-item-apple"), 240)
@@ -505,6 +513,7 @@ fn ui_gallery_combobox_keyboard_commit_apple_v2() -> UiActionScriptV2 {
                 selected: true,
             },
             timeout_frames: 240,
+            timeout_ms: None,
         })
         .press_key("escape")
         .wait_not_exists(test_id("ui-gallery-combobox-demo-item-apple"), 240)
@@ -543,6 +552,7 @@ fn ui_gallery_combobox_typeahead_commit_banana_v2() -> UiActionScriptV2 {
                 item: test_id("ui-gallery-combobox-demo-item-banana"),
             },
             timeout_frames: 240,
+            timeout_ms: None,
         })
         .press_key("enter")
         .wait_not_exists(test_id("ui-gallery-combobox-demo-item-banana"), 240)
@@ -552,6 +562,7 @@ fn ui_gallery_combobox_typeahead_commit_banana_v2() -> UiActionScriptV2 {
                 target: test_id("ui-gallery-combobox-demo-trigger"),
             },
             timeout_frames: 240,
+            timeout_ms: None,
         })
         .click(test_id("ui-gallery-combobox-demo-trigger"))
         .wait_exists(test_id("ui-gallery-combobox-demo-item-banana"), 240)
@@ -562,6 +573,7 @@ fn ui_gallery_combobox_typeahead_commit_banana_v2() -> UiActionScriptV2 {
                 selected: true,
             },
             timeout_frames: 240,
+            timeout_ms: None,
         })
         .press_key("escape")
         .wait_not_exists(test_id("ui-gallery-combobox-demo-item-banana"), 240)
@@ -599,6 +611,7 @@ fn ui_gallery_combobox_escape_dismiss_focus_restore_v2() -> UiActionScriptV2 {
                 target: test_id("ui-gallery-combobox-demo-trigger"),
             },
             timeout_frames: 240,
+            timeout_ms: None,
         })
         .capture_bundle(Some(
             "ui-gallery-combobox-escape-dismiss-focus-restore".to_string(),
@@ -634,6 +647,7 @@ fn ui_gallery_combobox_dismiss_outside_press_v2() -> UiActionScriptV2 {
                 target: test_id("ui-gallery-combobox-demo-trigger"),
             },
             timeout_frames: 240,
+            timeout_ms: None,
         })
         .capture_bundle(Some(
             "ui-gallery-combobox-dismiss-outside-press".to_string(),
@@ -670,6 +684,7 @@ fn ui_gallery_combobox_roving_skips_disabled_v2() -> UiActionScriptV2 {
                 item: test_id("ui-gallery-combobox-demo-item-orange"),
             },
             timeout_frames: 240,
+            timeout_ms: None,
         })
         .press_key("escape")
         .wait_not_exists(test_id("ui-gallery-combobox-demo-input"), 240)
@@ -739,6 +754,7 @@ fn ui_gallery_combobox_ime_tab_suppressed_v2() -> UiActionScriptV2 {
                 target: input.clone(),
             },
             timeout_frames: 240,
+            timeout_ms: None,
         })
         .ime_preedit("東京", Some((0, 6)))
         .push(UiActionStepV2::WaitUntil {
@@ -748,11 +764,13 @@ fn ui_gallery_combobox_ime_tab_suppressed_v2() -> UiActionScriptV2 {
                 composing: true,
             },
             timeout_frames: 240,
+            timeout_ms: None,
         })
         .push(UiActionStepV2::WaitUntil {
             window: None,
             predicate: UiPredicateV1::ImeCursorAreaIsSome { is_some: true },
             timeout_frames: 240,
+            timeout_ms: None,
         })
         .push(UiActionStepV2::WaitUntil {
             window: None,
@@ -762,6 +780,7 @@ fn ui_gallery_combobox_ime_tab_suppressed_v2() -> UiActionScriptV2 {
                 eps_px: 2.0,
             },
             timeout_frames: 240,
+            timeout_ms: None,
         })
         .press_key("tab")
         .wait_shortcut_routing_trace(
@@ -785,6 +804,7 @@ fn ui_gallery_combobox_ime_tab_suppressed_v2() -> UiActionScriptV2 {
                 composing: false,
             },
             timeout_frames: 240,
+            timeout_ms: None,
         })
         .assert_focus_is(input.clone())
         .assert_exists(listbox.clone())
@@ -871,6 +891,7 @@ fn ui_gallery_combobox_long_list_scroll_select_last_v2() -> UiActionScriptV2 {
                 selected: true,
             },
             timeout_frames: 240,
+            timeout_ms: None,
         })
         .press_key("escape")
         .wait_not_exists(listbox.clone(), 240)
@@ -921,6 +942,7 @@ fn ui_gallery_select_open_jitter_click_stable_v2() -> UiActionScriptV2 {
                 eps_px: 0.5,
             },
             timeout_frames: 240,
+            timeout_ms: None,
         })
         .push(UiActionStepV2::WaitBoundsStable {
             window: None,
@@ -940,6 +962,7 @@ fn ui_gallery_select_open_jitter_click_stable_v2() -> UiActionScriptV2 {
                 selected: true,
             },
             timeout_frames: 240,
+            timeout_ms: None,
         })
         .press_key("escape")
         .wait_not_exists(test_id("select-scroll-viewport"), 240)
@@ -977,6 +1000,7 @@ fn ui_gallery_select_commit_and_label_update_bundle_v2() -> UiActionScriptV2 {
                 target: test_id("ui-gallery-select-trigger"),
             },
             timeout_frames: 240,
+            timeout_ms: None,
         })
         .click(test_id("ui-gallery-select-trigger"))
         .wait_exists(test_id("select-scroll-viewport"), 240)
@@ -995,6 +1019,7 @@ fn ui_gallery_select_commit_and_label_update_bundle_v2() -> UiActionScriptV2 {
                 selected: true,
             },
             timeout_frames: 240,
+            timeout_ms: None,
         })
         .press_key("escape")
         .wait_not_exists(test_id("select-scroll-viewport"), 240)
@@ -1029,6 +1054,7 @@ fn ui_gallery_select_keyboard_commit_apple_v2() -> UiActionScriptV2 {
                 item: test_id("ui-gallery-select-item-apple"),
             },
             timeout_frames: 240,
+            timeout_ms: None,
         })
         .press_key("enter")
         .wait_not_exists(test_id("select-scroll-viewport"), 240)
@@ -1038,6 +1064,7 @@ fn ui_gallery_select_keyboard_commit_apple_v2() -> UiActionScriptV2 {
                 target: test_id("ui-gallery-select-trigger"),
             },
             timeout_frames: 240,
+            timeout_ms: None,
         })
         .click(test_id("ui-gallery-select-trigger"))
         .wait_exists(test_id("select-scroll-viewport"), 240)
@@ -1056,6 +1083,7 @@ fn ui_gallery_select_keyboard_commit_apple_v2() -> UiActionScriptV2 {
                 selected: true,
             },
             timeout_frames: 240,
+            timeout_ms: None,
         })
         .press_key("escape")
         .wait_not_exists(test_id("select-scroll-viewport"), 240)
@@ -1090,6 +1118,7 @@ fn ui_gallery_select_typeahead_commit_banana_v2() -> UiActionScriptV2 {
                 target: test_id("ui-gallery-select-trigger"),
             },
             timeout_frames: 240,
+            timeout_ms: None,
         })
         .click(test_id("ui-gallery-select-trigger"))
         .wait_exists(test_id("select-scroll-viewport"), 240)
@@ -1108,6 +1137,7 @@ fn ui_gallery_select_typeahead_commit_banana_v2() -> UiActionScriptV2 {
                 selected: true,
             },
             timeout_frames: 240,
+            timeout_ms: None,
         })
         .press_key("escape")
         .wait_not_exists(test_id("select-scroll-viewport"), 240)
@@ -1143,6 +1173,7 @@ fn ui_gallery_select_disabled_item_no_commit_v2() -> UiActionScriptV2 {
                 target: test_id("ui-gallery-select-trigger"),
             },
             timeout_frames: 240,
+            timeout_ms: None,
         })
         .click(test_id("ui-gallery-select-trigger"))
         .wait_exists(test_id("select-scroll-viewport"), 240)
@@ -1166,6 +1197,7 @@ fn ui_gallery_select_disabled_item_no_commit_v2() -> UiActionScriptV2 {
                 target: test_id("ui-gallery-select-trigger"),
             },
             timeout_frames: 240,
+            timeout_ms: None,
         })
         .click(test_id("ui-gallery-select-trigger"))
         .wait_exists(test_id("select-scroll-viewport"), 240)
@@ -1184,6 +1216,7 @@ fn ui_gallery_select_disabled_item_no_commit_v2() -> UiActionScriptV2 {
                 selected: true,
             },
             timeout_frames: 240,
+            timeout_ms: None,
         })
         .press_key("escape")
         .wait_not_exists(test_id("select-scroll-viewport"), 240)
@@ -1218,6 +1251,7 @@ fn ui_gallery_select_roving_skips_disabled_orange_v2() -> UiActionScriptV2 {
                 item: test_id("ui-gallery-select-item-apple"),
             },
             timeout_frames: 240,
+            timeout_ms: None,
         })
         .press_key("arrow_down")
         .push(UiActionStepV2::WaitUntil {
@@ -1227,6 +1261,7 @@ fn ui_gallery_select_roving_skips_disabled_orange_v2() -> UiActionScriptV2 {
                 item: test_id("ui-gallery-select-item-banana"),
             },
             timeout_frames: 240,
+            timeout_ms: None,
         })
         .press_key("arrow_down")
         .push(UiActionStepV2::WaitUntil {
@@ -1236,6 +1271,7 @@ fn ui_gallery_select_roving_skips_disabled_orange_v2() -> UiActionScriptV2 {
                 item: test_id("ui-gallery-select-item-blueberry"),
             },
             timeout_frames: 240,
+            timeout_ms: None,
         })
         .capture_bundle(Some(
             "ui-gallery-select-roving-skips-disabled-orange".to_string(),
@@ -1269,6 +1305,7 @@ fn ui_gallery_select_dismiss_outside_press_v2() -> UiActionScriptV2 {
                 target: test_id("ui-gallery-select-trigger"),
             },
             timeout_frames: 240,
+            timeout_ms: None,
         })
         .wait_not_exists(test_id("select-scroll-viewport"), 240)
         .wait_not_exists(test_id("ui-gallery-select-item-apple"), 240)
@@ -1301,6 +1338,7 @@ fn ui_gallery_select_escape_dismiss_focus_restore_v2() -> UiActionScriptV2 {
                 target: test_id("ui-gallery-select-trigger"),
             },
             timeout_frames: 240,
+            timeout_ms: None,
         })
         .capture_bundle(Some(
             "ui-gallery-select-escape-dismiss-focus-restore".to_string(),
@@ -1334,6 +1372,7 @@ fn ui_gallery_select_trigger_toggle_close_v2() -> UiActionScriptV2 {
                 target: test_id("ui-gallery-select-trigger"),
             },
             timeout_frames: 240,
+            timeout_ms: None,
         })
         .capture_bundle(Some("ui-gallery-select-trigger-toggle-close".to_string()))
         .build();

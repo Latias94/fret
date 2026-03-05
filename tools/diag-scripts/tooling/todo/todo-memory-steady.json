@@ -10,13 +10,13 @@
     { "type": "reset_diagnostics" },
     { "type": "wait_frames", "n": 10 },
 
-    { "type": "click", "target": { "kind": "test_id", "id": "todo-input" } },
+    { "type": "click", "target": { "kind": "test_id", "id": "todo_demo.draft" } },
     { "type": "type_text", "text": "steady-state memory sample" },
     { "type": "wait_frames", "n": 2 },
     { "type": "press_key", "key": "enter" },
     {
       "type": "wait_until",
-      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "todo-item-3-done" } },
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "todo_demo.row.4" } },
       "timeout_frames": 120
     },
 
@@ -25,4 +25,3 @@
     { "type": "capture_bundle", "label": "todo-memory-steady" }
   ]
 }
-

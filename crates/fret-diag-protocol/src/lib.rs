@@ -3656,6 +3656,7 @@ mod tests {
                 window,
                 predicate,
                 timeout_frames,
+                timeout_ms,
             } => {
                 assert!(window.is_none());
                 assert!(
@@ -3663,6 +3664,7 @@ mod tests {
                     "expected exists predicate"
                 );
                 assert_eq!(timeout_frames, default_action_timeout_frames());
+                assert!(timeout_ms.is_none());
             }
             _ => panic!("expected wait_until"),
         }

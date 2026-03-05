@@ -5,13 +5,12 @@
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "todo-shortcuts" }
+        "target": { "kind": "test_id", "id": "todo_demo.root" }
       },
       "timeout_frames": 600
     },
     { "type": "wait_frames", "n": 20 },
-    { "type": "capture_bundle", "label": "todo-shortcuts" },
-    { "type": "capture_screenshot", "label": "todo-shortcuts" }
+    { "type": "capture_bundle", "label": "todo-demo" },
+    { "type": "capture_screenshot", "label": "todo-demo" }
   ]
 }
-

@@ -12,16 +12,19 @@ repeatable, diagnosable evidence chain that answers:
 
 This workstream is about **measurement → attribution → bounded optimizations**, not one-off profiling.
 
-## Snapshot (2026-03-04)
+## Snapshot (2026-03-05)
 
 Using `tools/diag-scripts/todo-memory-steady.json` on macOS/Metal:
 
-- `vmmap -summary`:
-  - `physical_footprint_peak_bytes`: ~347 MiB
-  - `owned unmapped memory` dirty: ~224.6 MiB (stable across runs)
-- `debug.stats.wgpu_metal_current_allocated_size_bytes`:
-  - Before lazy color/subpixel text atlases: ~123 MiB
-  - After lazy color/subpixel text atlases: ~58 MiB
+- Repeat sample (N=5; `target/release/todo_demo`; `--env FRET_DIAG_WGPU_ALLOCATOR_REPORT=1`):
+  - `macos_vmmap_steady.physical_footprint_peak_bytes`: 358,612,992 .. 419,325,542 (~342.0 .. 399.9 MiB)
+    - Note: 4/5 runs clustered at ~342–346 MiB; 1/5 outlier correlated with higher GPU/driver-backed regions.
+  - `macos_vmmap_steady.regions.owned_unmapped_memory_dirty_bytes`: 238,655,898 (~227.6 MiB; stable)
+  - `macos_vmmap_steady.regions.malloc_small_dirty_bytes`: 63,753,421 .. 67,738,010 (~60.8 .. 64.6 MiB)
+  - `macos_vmmap_steady.regions.malloc_dirty_bytes_total`: 76,909,773 .. 81,025,434 (~73.3 .. 77.3 MiB)
+  - `macos_vmmap_steady.tables.malloc_zones.total.frag_bytes`: 24,285,594 .. 28,165,325 (~23.2 .. 26.9 MiB)
+  - `wgpu_metal_current_allocated_size_bytes`: 83,755,008 .. 137,232,384 (~79.9 .. 130.9 MiB)
+  - `render_text_atlas_bytes_live_estimate_total`: 4,194,304 (4 MiB; mask atlas 1 page)
 
 Using `tools/diag-scripts/empty-idle-memory-steady.json` on macOS/Metal (baseline):
 
@@ -29,19 +32,21 @@ Using `tools/diag-scripts/empty-idle-memory-steady.json` on macOS/Metal (baselin
   - Physical footprint (peak): ~241 MiB
   - `owned unmapped memory` dirty: ~204 MiB
   - Default malloc zone: ~13.6 MiB allocated, ~4.0 MiB frag
-- With `fretboard diag repro` (UI diagnostics enabled, plus tool-side `vmmap` capture):
+  - With `fretboard diag repro` (UI diagnostics enabled, plus tool-side `vmmap` capture):
   - Repeat sample (N=5):
-    - `macos_vmmap.physical_footprint_peak_bytes`: 279,445,504 .. 285,946,675 (~266.6 .. 272.7 MiB)
-    - `macos_owned_unmapped_memory_dirty_bytes`: 213,594,931 .. 216,321,229 (~203.7 .. 206.3 MiB)
-    - `render_text_atlas_bytes_live_estimate_total`: `0` (after lazy mask atlas page allocation)
-  - Default malloc zone: ~24.5 MB allocated, ~15.4 MB frag
-  - `debug.stats.wgpu_metal_current_allocated_size_bytes`: 32,161,792 (~30.7 MiB; requires `--env FRET_DIAG_WGPU_ALLOCATOR_REPORT=1`)
+    - `macos_vmmap_steady.physical_footprint_peak_bytes`: 279,550,362 .. 282,591,232 (~266.6 .. 269.5 MiB)
+    - `macos_vmmap_steady.regions.owned_unmapped_memory_dirty_bytes`: 213,594,931 (~203.7 MiB)
+    - `macos_vmmap_steady.regions.malloc_small_dirty_bytes`: 34,036,122 .. 36,120,166 (~32.5 .. 34.4 MiB)
+    - `macos_vmmap_steady.regions.malloc_dirty_bytes_total`: 46,307,738 .. 48,391,782 (~44.2 .. 46.2 MiB)
+    - `macos_vmmap_steady.tables.malloc_zones.total.frag_bytes`: 14,533,837 .. 16,630,989 (~13.9 .. 15.9 MiB)
+  - malloc zones total: ~23.8 .. 24.5 MiB allocated, ~13.9 .. 15.9 MiB frag (system allocator)
+  - `wgpu_metal_current_allocated_size_bytes`: 32,161,792 (~30.7 MiB; requires `--env FRET_DIAG_WGPU_ALLOCATOR_REPORT=1`)
 
 Using `tools/diag-scripts/text-heavy-memory-steady.json` on macOS/Metal (fonts + emoji stress):
 
 - Repeat sample (N=5):
-  - `macos_vmmap.physical_footprint_peak_bytes`: 358,927,565 .. 368,364,749 (~342.4 .. 351.4 MiB)
-  - `macos_owned_unmapped_memory_dirty_bytes`: 249,036,800 .. 254,699,110 (~237.5 .. 242.9 MiB)
+  - `macos_vmmap_steady.physical_footprint_peak_bytes`: 359,976,141 .. 366,162,739 (~343.3 .. 349.3 MiB)
+  - `macos_vmmap_steady.regions.owned_unmapped_memory_dirty_bytes`: 249,036,800 .. 254,384,538 (~237.5 .. 242.6 MiB)
   - `render_text_atlas_bytes_live_estimate_total`: ~20 MiB (after lazy mask atlas page allocation)
 - Default malloc zone: ~26.6 MB allocated, ~20.9 MB frag (system allocator)
 - `wgpu_metal_current_allocated_size_bytes`: 127,418,368 (~121.6 MiB; requires `--env FRET_DIAG_WGPU_ALLOCATOR_REPORT=1`)
@@ -49,22 +54,23 @@ Using `tools/diag-scripts/text-heavy-memory-steady.json` on macOS/Metal (fonts +
 Using `tools/diag-scripts/image-heavy-memory-steady.json` on macOS/Metal (texture upload stress):
 
 - Repeat sample (N=5, defaults: `FRET_IMAGE_HEAVY_DEMO_COUNT=24`, `FRET_IMAGE_HEAVY_DEMO_SIZE_PX=1024`):
-  - `macos_vmmap.physical_footprint_peak_bytes`: 483,917,824 .. 501,324,186 (~461.6 .. 478.2 MiB)
-  - `macos_vmmap.regions.owned_unmapped_memory_dirty_bytes`: 331,874,304 .. 337,222,042 (~316.5 .. 321.6 MiB)
-  - `macos_vmmap.regions.io_surface_dirty_bytes`: 34,393,293 (~32.8 MiB; stable)
-  - `macos_vmmap.regions.io_accelerator_dirty_bytes`: 5,980,160 .. 7,372,800 (~5.7 .. 7.0 MiB)
-  - `macos_vmmap.regions.malloc_small_dirty_bytes`: 41,104,179 .. 44,774,195 (~39.2 .. 42.7 MiB)
+  - `macos_vmmap_steady.physical_footprint_peak_bytes`: 483,917,824 .. 501,324,186 (~461.6 .. 478.2 MiB)
+  - `macos_vmmap_steady.regions.owned_unmapped_memory_dirty_bytes`: 331,874,304 .. 337,222,042 (~316.5 .. 321.6 MiB)
+  - `macos_vmmap_steady.regions.io_surface_dirty_bytes`: 34,393,293 (~32.8 MiB; stable)
+  - `macos_vmmap_steady.regions.io_accelerator_dirty_bytes`: 5,980,160 .. 7,372,800 (~5.7 .. 7.0 MiB)
+  - `macos_vmmap_steady.regions.malloc_small_dirty_bytes`: 41,104,179 .. 44,774,195 (~39.2 .. 42.7 MiB)
   - `wgpu_metal_current_allocated_size_bytes`: 204,914,688 (~195.4 MiB; stable; requires `--env FRET_DIAG_WGPU_ALLOCATOR_REPORT=1`)
 
 Using `tools/diag-scripts/ui-gallery/memory/ui-gallery-code-editor-torture-memory-steady.json` on macOS/Metal (UI Gallery, editor-grade stress):
 
 - Repeat sample (N=5; captured via `fretboard diag repro --launch`):
-  - `macos_vmmap.physical_footprint_bytes`: 386,924,544 .. 389,545,984 (~369.1 .. 371.6 MiB)
-  - `macos_vmmap.physical_footprint_peak_bytes`: 387,658,547 .. 390,279,987 (~369.8 .. 372.2 MiB)
-  - `macos_vmmap.regions.owned_unmapped_memory_dirty_bytes`: 236,349,030 .. 236,978,176 (~225.4 .. 226.0 MiB)
-  - `macos_vmmap.regions.malloc_small_dirty_bytes`: 80,628,941 .. 83,276,595 (~76.9 .. 79.4 MiB)
-  - `macos_vmmap.regions.io_surface_dirty_bytes`: 37,748,736 (36.0 MiB; stable)
-  - `macos_vmmap.regions.io_accelerator_dirty_bytes`: 5,324,800 (5.1 MiB; stable)
+  - `macos_vmmap_steady.physical_footprint_peak_bytes`: 387,343,974 .. 390,804,275 (~369.4 .. 372.7 MiB)
+  - `macos_vmmap_steady.regions.owned_unmapped_memory_dirty_bytes`: 236,349,030 .. 236,978,176 (~225.4 .. 226.0 MiB)
+  - `macos_vmmap_steady.regions.malloc_small_dirty_bytes`: 79,475,507 .. 83,745,178 (~75.8 .. 79.9 MiB)
+  - `macos_vmmap_steady.regions.malloc_dirty_bytes_total`: 95,967,641 .. 100,204,544 (~91.5 .. 95.6 MiB)
+  - `macos_vmmap_steady.tables.malloc_zones.total.frag_bytes`: 14,675,558 .. 18,765,005 (~14.0 .. 17.9 MiB)
+  - `macos_vmmap_steady.regions.io_surface_dirty_bytes`: 37,748,736 (36.0 MiB; stable)
+  - `macos_vmmap_steady.regions.io_accelerator_dirty_bytes`: 5,324,800 (5.1 MiB; stable)
   - `wgpu_metal_current_allocated_size_bytes`: 118,308,864 (~112.8 MiB; stable)
 - App-side attribution (`app_snapshot.code_editor.torture.cache_sizes`, last snapshot):
   - `row_text_cache_entries`: 429
@@ -116,17 +122,17 @@ Interpretation:
 Allocator A/B (empty idle, `--release`, `fretboard diag repro`, same script):
 
 - System allocator:
-  - `macos_vmmap.physical_footprint_peak_bytes`: 284,164,096
+  - `macos_vmmap_steady.physical_footprint_peak_bytes`: 284,164,096
   - `owned unmapped memory` dirty: 213,594,931
   - Default malloc zone: 23,907,533 allocated, 15,623,782 frag (~40%)
   - `wgpu_metal_current_allocated_size_bytes`: 32,161,792
 - `mimalloc`:
-  - `macos_vmmap.physical_footprint_peak_bytes`: 285,212,672 (Δ +1,048,576 vs system)
+  - `macos_vmmap_steady.physical_footprint_peak_bytes`: 285,212,672 (Δ +1,048,576 vs system)
   - `owned unmapped memory` dirty: 213,594,931 (Δ 0 vs system)
   - Default malloc zone: 7,843,840 allocated, 5,574,656 frag (~42%)
   - `wgpu_metal_current_allocated_size_bytes`: 32,161,792
 - `jemalloc`:
-  - `macos_vmmap.physical_footprint_peak_bytes`: 280,494,080 (Δ -3,670,016 vs system)
+  - `macos_vmmap_steady.physical_footprint_peak_bytes`: 280,494,080 (Δ -3,670,016 vs system)
   - `owned unmapped memory` dirty: 216,321,229 (Δ +2,726,298 vs system)
   - Default malloc zone: 7,814,144 allocated, 4,572,160 frag (~37%)
   - `wgpu_metal_current_allocated_size_bytes`: 32,161,792
@@ -157,16 +163,14 @@ Interpretation:
 - Text atlas optimization note:
   - After `perf(render): lazily allocate mask glyph atlas pages`, the `render_text` mask atlas no
     longer preallocates all pages. Observed impact (same scripts):
-    - `empty-idle`: `render_text_atlas_bytes_live_estimate_total` drops to `0` (no text draws).
-    - `text-heavy`: `render_text_atlas_bytes_live_estimate_total` drops to `20 MiB` (mask pages `1`
-      instead of `2`).
+    - `text-heavy`: `render_text_atlas_bytes_live_estimate_total` is ~20 MiB (mask pages `1`).
   - vmmap region attribution note:
-    - `resource.footprint.json.macos_vmmap.regions` now also includes:
+    - `resource.footprint.json.macos_vmmap_steady.regions` now also includes:
       - `io_surface_dirty_bytes` (Metal-backed surfaces/textures)
       - `io_accelerator_dirty_bytes` (GPU driver allocations)
       - `malloc_small_dirty_bytes` (CPU heap bucket)
       - `malloc_dirty_bytes_total` (sum of `MALLOC_*` vmmap regions)
-    - `resource.footprint.json.macos_vmmap.tables.malloc_zones` now includes:
+    - `resource.footprint.json.macos_vmmap_steady.tables.malloc_zones` now includes:
       - `default_zone` (best-effort `DefaultMallocZone` row)
       - `total` (allocated/frag/dirty sums across all zones)
     - These are intended to support more actionable macOS gates than “just physical footprint”.
@@ -206,14 +210,14 @@ For each track, the closure deliverable is: **(script) + (bundle fields) + (gate
 
 1) **Allocator / retained pages track (CPU)**
    - Explain and bound `owned unmapped memory` dirty + malloc fragmentation/dirty (`MALLOC_*`).
-   - Primary evidence: `resource.footprint.json.macos_vmmap.{regions,tables}`.
+   - Primary evidence: `resource.footprint.json.macos_vmmap_steady.{regions,tables}`.
 2) **Text / fonts track (CPU + GPU)**
    - Explain and bound text shaping caches and glyph atlas growth.
    - Primary evidence: `resource_caches.render_text.*` + text atlas bytes gate.
 3) **Renderer / wgpu track (GPU + driver-backed regions)**
    - Explain and bound Metal/wgpu allocations and render target budgets.
    - Primary evidence: `wgpu_metal_current_allocated_size_bytes`, render target/image budgets, and
-     `macos_vmmap.regions.{io_surface_dirty_bytes,io_accelerator_dirty_bytes}`.
+     `macos_vmmap_steady.regions.{io_surface_dirty_bytes,io_accelerator_dirty_bytes}`.
 
 ### 1) Improve attribution (tool-side)
 

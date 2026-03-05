@@ -18,6 +18,7 @@ const TEST_ID_ADD: &str = "todo_demo.add";
 const TEST_ID_CLEAR_DONE: &str = "todo_demo.clear_done";
 const TEST_ID_PROGRESS: &str = "todo_demo.progress";
 const TEST_ID_ROWS: &str = "todo_demo.rows";
+const TEST_ID_DONE_PREFIX: &str = "todo_demo.done.";
 const TEST_ID_ROW_PREFIX: &str = "todo_demo.row.";
 const TEST_ID_REMOVE_PREFIX: &str = "todo_demo.remove.";
 
@@ -258,7 +259,9 @@ impl View for TodoDemoView {
 fn todo_row(cx: &mut ElementContext<'_, App>, theme: ThemeSnapshot, item: &TodoItem) -> AnyElement {
     let done = cx.watch_model(&item.done).paint().copied_or_default();
 
-    let checkbox = shadcn::Checkbox::new(item.done.clone()).into_element(cx);
+    let checkbox = shadcn::Checkbox::new(item.done.clone())
+        .into_element(cx)
+        .test_id(format!("{TEST_ID_DONE_PREFIX}{}", item.id));
 
     let text = ui::text(cx, item.text.clone())
         .truncate()

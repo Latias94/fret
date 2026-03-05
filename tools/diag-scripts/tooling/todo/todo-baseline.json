@@ -4,7 +4,7 @@
     {
       "button": "left",
       "target": {
-        "id": "todo-input",
+        "id": "todo_demo.draft",
         "kind": "test_id"
       },
       "type": "click"
@@ -32,7 +32,7 @@
       "predicate": {
         "kind": "exists",
         "target": {
-          "id": "todo-item-3-done",
+          "id": "todo_demo.row.4",
           "kind": "test_id"
         }
       },
@@ -46,7 +46,7 @@
     {
       "button": "left",
       "target": {
-        "id": "todo-item-3-done",
+        "id": "todo_demo.done.4",
         "kind": "test_id"
       },
       "type": "click"
@@ -62,7 +62,7 @@
     {
       "button": "left",
       "target": {
-        "id": "todo-item-3-remove",
+        "id": "todo_demo.remove.4",
         "kind": "test_id"
       },
       "type": "click"
