@@ -1114,6 +1114,7 @@ cargo run --release
 {ui_assets_line}
 - Authoring: view runtime + typed unit actions (action-first, v1)
 - Hooks: selector + query (v1)
+- Default entrypoints: `on_action_notify_models`, `on_action_notify_transient`, and local `on_activate*` only when you truly need widget-local pressable glue.
 - Read model values near the top of `render()` before building nested card/layout sections.
 - For App-only effects, prefer `on_action_notify_transient` in the handler and consume the transient in `render()`.
 ## Next steps
@@ -1190,6 +1191,7 @@ cargo run --release
 {icons_line}{palette_line}
 {ui_assets_line}
 - Authoring: view runtime + typed unit actions (action-first, v1)
+- Default entrypoints: start with `on_action_notify_models`; keep `on_activate*` for local widget glue only.
 - Read model values near the top of `render()` and keep row rendering driven by locals.
 ## Next steps
 
@@ -1237,6 +1239,7 @@ cargo run --release
 - Theme: shadcn new-york-v4 (default via `fret-ui-shadcn/app-integration`)
 {icons_line}{palette_line}
 - Authoring: view runtime + typed unit actions (action-first, v1)
+- Default entrypoints: start with `on_action_notify_models`; use `on_activate*` only for local pressable glue.
 - Read model values near the top of `render()` and keep action handlers on `on_action_notify*` when possible.
 - Next: edit `src/main.rs` and replace the view tree
 "#
@@ -1328,12 +1331,17 @@ mod tests {
     fn template_readmes_capture_authoring_guidance() {
         let hello = hello_template_readme_md("hello-app", opts());
         assert!(hello.contains("Read model values near the top of `render()`"));
+        assert!(hello.contains("Default entrypoints"));
 
         let simple = simple_todo_template_readme_md("simple-todo-app", opts());
         assert!(simple.contains("When rendering dynamic lists, prefer `cx.keyed(id, |cx| ...)`"));
         assert!(simple.contains("Read model values near the top of `render()`"));
+        assert!(simple.contains("start with `on_action_notify_models`"));
 
         let todo = todo_template_readme_md("todo-app", opts());
         assert!(todo.contains("For App-only effects, prefer `on_action_notify_transient`"));
+        assert!(todo.contains(
+            "Default entrypoints: `on_action_notify_models`, `on_action_notify_transient`"
+        ));
     }
 }

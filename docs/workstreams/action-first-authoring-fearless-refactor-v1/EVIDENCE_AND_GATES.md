@@ -80,6 +80,7 @@ Examples adoption (authoring-noise reduction):
 - `apps/fret-examples/src/custom_effect_v2_lut_web_demo.rs` (reset button uses `on_activate_request_redraw`)
 - `apps/fret-examples/src/imui_floating_windows_demo.rs` (pressable overlap target uses `on_activate_notify`)
 - `apps/fret-examples/src/query_demo.rs` (current guidance sample: top-of-render model reads + transient App-effect scheduling)
+- `apps/fret-examples/src/hello_counter_demo.rs` (current guidance sample: action helper placement + card/layout subtree boundaries)
 
 Pointer-trigger authoring integration (v1 still dispatches through the command pipeline):
 

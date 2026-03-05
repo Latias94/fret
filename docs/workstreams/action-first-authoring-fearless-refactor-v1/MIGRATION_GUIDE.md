@@ -140,6 +140,25 @@ Migration steps:
 
 Small ergonomics helpers (recommended for simple state):
 
+### Default entrypoints (recommended mental model)
+
+If you want the closest v1 equivalent to the GPUI/Zed authoring feel, start with only these three
+entrypoints and treat the rest as convenience aliases:
+
+1. `cx.on_action_notify_models::<A>(|models| ...)`
+   - Default for most typed UI actions that mutate app/view models.
+   - Think: ?normal button / shortcut / menu action?.
+2. `cx.on_action_notify_transient::<A>(...)`
+   - Default when the action must trigger an `App`-only effect in `render()`.
+   - Think: query invalidation, driver interaction, effect scheduling.
+3. `on_activate(...)` / `on_activate_notify(...)`
+   - Default only for local pressable/widget glue that is not worth promoting to a typed action.
+   - Think: small internal widget activation, close buttons, immediate-mode/imui local affordances.
+
+Everything else (`on_action_notify_model_update`, `on_action_notify_model_set`,
+`on_action_notify_toggle_bool`, `on_activate_request_redraw`, ...) should be treated as optional
+shorthand, not as the first thing new users need to memorize.
+
 - For common “update a single model” handlers (counters, toggles, flags), prefer `ViewCx` helpers:
 
 ```rust,ignore
@@ -172,11 +191,14 @@ cx.on_action_notify_models::<act::Add>({
 
 Choosing the helper:
 
-- Use `on_action_notify_model_update` / `on_action_notify_model_set` / `on_action_notify_toggle_bool` when a handler only touches one model.
-- Use `on_action_notify_models` when you need to coordinate multiple models in one handler.
-- Use `on_action_notify` (or `on_action`) when you need host-only operations (focus, timers, clipboard,
-  effects) in the handler; keep model updates minimal and prefer a single `models_mut()` access if
-  possible.
+- Start with `on_action_notify_models` unless you have a strong reason not to.
+- Use `on_action_notify_model_update` / `on_action_notify_model_set` / `on_action_notify_toggle_bool`
+  only when the single-model shape is obviously clearer than the generic `models` transaction.
+- Use `on_action_notify_transient` when the real work must happen with `&mut App` in `render()`.
+- Use `on_action_notify` (or raw `on_action`) for advanced host-only cases (focus, timers, clipboard,
+  custom effects) where the built-in shorthands do not fit.
+- Use `on_activate` / `on_activate_notify` for local pressable/widget glue, not as the default
+  replacement for typed action handlers.
 
 Side effects that need `App` access (v1 note):
 
