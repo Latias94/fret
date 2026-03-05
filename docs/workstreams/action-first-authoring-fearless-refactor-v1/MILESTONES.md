@@ -27,6 +27,12 @@ Evidence anchors (verified in-tree as of 2026-03-06):
 
 - `ecosystem/fret/src/view.rs` (`ViewCx::on_action_notify_*` helpers)
 - `apps/fretboard/src/scaffold/templates.rs` (scaffold templates prefer View + typed actions)
+- `apps/fret-cookbook/examples/async_inbox_basics.rs` (prefers `on_action_notify*` helpers; no manual `request_redraw + notify`)
+- `apps/fret-cookbook/examples/canvas_pan_zoom_basics.rs` (prefers `on_action_notify*` helpers)
+- `apps/fret-cookbook/examples/form_basics.rs` (prefers `on_action_notify_models`)
+- `apps/fret-cookbook/examples/router_basics.rs` (prefers `on_action_notify` wrappers for history navigation)
+- `apps/fret-cookbook/examples/undo_basics.rs` (prefers `on_action_notify` wrappers; keeps RAF effect where needed)
+- `apps/fret-cookbook/examples/virtual_list_basics.rs` (prefers `on_action_notify_models` for scroll actions)
 - `apps/fret-cookbook/examples/query_basics.rs` (prefers action helpers)
 - `apps/fret-cookbook/examples/markdown_and_code_basics.rs` (prefers action helpers)
 - `tools/gate_no_models_mut_in_action_handlers.py` (teaching-surface regression gate)

@@ -64,6 +64,8 @@ Teaching-surface ergonomics gates:
 
 - `tools/gate_no_models_mut_in_action_handlers.py` (guards cookbook/examples against regressing to verbose
   `move |host, _acx| host.models_mut()...` patterns; prefers `ViewCx` helpers instead).
+- `tools/gate_no_on_action_in_teaching_surfaces.py` (guards cookbook/examples against regressing to
+  bare `cx.on_action` handlers; prefers `ViewCx::on_action_notify*` helpers).
 
 Pointer-trigger authoring integration (v1 still dispatches through the command pipeline):
 
