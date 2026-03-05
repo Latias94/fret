@@ -329,6 +329,10 @@ Candidate gates:
 - `--max-renderer-gpu-render-targets-bytes-estimate`
 - `--max-renderer-intermediate-peak-in-use-bytes`
 - `--max-wgpu-metal-current-allocated-size-bytes` (macOS/Metal; best-effort)
+- `--max-wgpu-hub-buffers` (requires `--env FRET_DIAG_WGPU_REPORT=1`; best-effort)
+- `--max-wgpu-hub-textures` (requires `--env FRET_DIAG_WGPU_REPORT=1`; best-effort)
+- `--max-wgpu-hub-render-pipelines` (requires `--env FRET_DIAG_WGPU_REPORT=1`; best-effort)
+- `--max-wgpu-hub-shader-modules` (requires `--env FRET_DIAG_WGPU_REPORT=1`; best-effort)
 - `--max-render-text-atlas-bytes-live-estimate-total` (text-heavy attribution; stable, derived from `resource_caches.render_text`)
 - `--max-render-text-registered-font-blobs-total-bytes` (guards memory-backed font injection growth; `resource_caches.render_text`)
 - `--max-render-text-registered-font-blobs-count` (guards memory-backed font injection churn; `resource_caches.render_text`)
