@@ -27,6 +27,10 @@ Using `tools/diag-scripts/todo-memory-steady.json` on macOS/Metal:
     - If pointing at a parent dir with multiple dated runs, recursion is enabled by default (bounded); disable via `--no-recursive`.
   - Break down the aggregated regions further by a normalized `detail` key (e.g. de-addressed malloc zones, IOSurface kind):
     - `fretboard diag memory-summary --dir target/fret-diag-mem-todo-steady --vmmap-regions-sorted-detail-agg`
+  - Aggregate Apple `footprint` categories (dirty bytes) across samples (macOS-only):
+    - `fretboard diag memory-summary --dir target/fret-diag-mem-todo-steady --footprint-categories-agg`
+    - Useful for cross-checking whether the large `vmmap` buckets (e.g. `owned unmapped memory`) correspond to a stable
+      `footprint` category (e.g. untagged VM allocations, page tables, GPU carveout reservations).
 
 - Fresh baseline batch (local, 2026-03-05; outputs under `target/diag/mem-baseline-20260305/`):
   - `empty-idle` (N=10; `target/release/empty_idle_demo`):

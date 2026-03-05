@@ -8,6 +8,8 @@
 - [x] Add `vmmap` parsing fields to `resource.footprint.json` schema (best-effort; macOS-only).
 - [x] Add a `fretboard diag compare --footprint` view that prints deltas for the structured fields.
 - [x] Add `fretboard diag memory-summary` to summarize distributions across multiple `--session-auto` samples.
+- [x] Capture Apple `/usr/bin/footprint --json` output in bundles (macOS-only) and surface a summary under `macos_footprint_tool_steady`.
+- [x] Add `fretboard diag memory-summary --footprint-categories-agg` to aggregate `footprint` category dirty bytes across samples.
 
 ## Diagnostics (app-side)
 
@@ -33,6 +35,10 @@
   - Baseline: `tools/diag-scripts/tooling/todo/todo-memory-steady.json` (cadence 600)
   - Deep dive: `tools/diag-scripts/tooling/todo/todo-memory-steady-wgpu-highfreq.json` (cadence 60)
   - Baseline scripts also include `empty-idle`, `text-heavy`, `image-heavy` (cadence 600)
+
+- [ ] Correlate the `vmmap` headline bucket (`owned unmapped memory` dirty) with `footprint` categories:
+  - Determine which `footprint` categories rise/fall with `owned unmapped memory` across scenarios.
+  - If one category dominates, add a dedicated gate for it (monitor-only at first).
 
 ### Evidence (captured)
 
