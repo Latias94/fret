@@ -152,6 +152,24 @@ let open = cx.use_state::<bool>();
 cx.on_action_notify_toggle_bool::<act::TogglePanel>(open.clone());
 ```
 
+- For common multi-model flows, prefer `on_action_notify_models::<A>(|models| ...)`:
+
+```rust,ignore
+cx.on_action_notify_models::<act::Add>({
+    let todos = self.todos.clone();
+    let draft = self.draft.clone();
+    move |models| {
+        let text = models.read(&draft, |v| v.trim().to_string()).ok().unwrap_or_default();
+        if text.is_empty() {
+            return false;
+        }
+        let _ = models.update(&todos, |todos| todos.push(text));
+        let _ = models.update(&draft, String::clear);
+        true
+    }
+});
+```
+
 Side effects that need `App` access (v1 note):
 
 - Some operations (e.g. `fret-query` invalidation via `with_query_client`) require `&mut App`.
