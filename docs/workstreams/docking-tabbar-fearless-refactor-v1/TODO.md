@@ -34,6 +34,11 @@
   - overflow button is not treated as a drop surface
   - reserved header space between strip and overflow control resolves to an explicit end-drop (`insert_index == tab_count`)
 
+### Modularization (fearless refactor hygiene)
+
+- [x] Extract `pressed_tab_close` pointer-up handling into a helper to keep `DockSpace` input
+  arbitration auditable.
+
 ### Overflow
 
 - Refactor the existing overflow button/menu into a pipeline:

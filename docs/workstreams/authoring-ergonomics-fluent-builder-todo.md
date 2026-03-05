@@ -184,7 +184,7 @@ Top remaining hotspots (by callsite count):
 
 Migration guidelines:
 
-- Prefer `ui::label(cx, ...)` for 1-line UI labels (defaults: `nowrap + clip`); prefer `ui::text(cx, ...)` for multi-line/body text.
+- Prefer `ui::label(...)` for 1-line UI labels (defaults: `nowrap + clip`); prefer `ui::text(...)` for multi-line/body text.
 - If the old code used `TextProps::new(...)` (unstyled), prefer `ui::raw_text(cx, ...)` to preserve `style: None` and keep inherited styling behavior.
 - When the old code set explicit layout height (e.g. badge), keep it with `.h_px(...)` plus `.line_height_px(...)`.
 - When the old code set wrap/overflow, keep it explicit with `.wrap(...)`, `.nowrap()`, `.truncate()` (avoid semantic drift).

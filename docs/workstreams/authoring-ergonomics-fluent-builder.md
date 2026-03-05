@@ -219,7 +219,7 @@ These are the remaining items that most directly improve authoring density for e
    - keep these in `fret-ui-shadcn` (policy layer)
    - expose them as discoverable helpers, not ad-hoc per component
 2) **A patchable container constructor** (layout node, not a component):
-   - `ui::container(cx, |cx| ...) -> UiBuilder<...>` as the “default box”
+  - `ui::container(|cx| ...) -> UiBuilder<...>` as the “default box”
    - lets authors write layered barriers/underlays without dropping to raw `cx.container(...)`
 3) **Text authoring v1** (minimal, but ergonomic):
    - `ui::text(...)` / `ui::label(...)` constructors with a small, typed text refinement surface

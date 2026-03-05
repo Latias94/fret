@@ -43,11 +43,6 @@ Patterns worth copying:
 
 ## What Fret is currently missing (most load-bearing gaps)
 
-- End-to-end (widget-driven) coverage for overflow drop resolution in docking:
-  - Kernel behavior is unit-tested, but we still want at least one integration test that goes
-    through `InternalDrag` on a real dock space and asserts `DockOp::MovePanel.insert_index`.
-- Scripted (diag) gates for edge auto-scroll while dragging tabs:
-  - Docking has edge auto-scroll behavior; workspace already has a drag+scroll script.
 - Keyboard navigation + focus restore gates (M3):
   - Use APG-style behaviors and script them; do not rely on manual testing.
 - Policy-layer semantics (non-docking):
