@@ -173,7 +173,7 @@ points rather than direct graph mutation.
     choose between raw queue mutation and direct store dispatch first.
   - Retained edit glue now also converges on the controller-first path:
     `NodeGraphCanvas::with_controller` carries optional edit/view queues,
-    `NodeGraphPortalHost::with_controller` and `NodeGraphOverlayHost::new_with_controller` prefer
+    `NodeGraphPortalHost::with_controller` and `NodeGraphOverlayHost::new(...).with_controller(...)` prefer
     controller-owned transaction submission, `NodeGraphBlackboardOverlay::new(...).with_controller(...)`
     now gives retained symbol actions the same controller-first path, and `compat_retained`
     constructs controller-first canvas wiring whenever a store exists.
@@ -252,7 +252,7 @@ real editors.
 ### Progress note (2026-03-06)
 
 - Retained portal + rename overlay glue now has a controller-first path
-  (`NodeGraphPortalHost::with_controller`, `NodeGraphOverlayHost::new_with_controller`).
+  (`NodeGraphPortalHost::with_controller`, `NodeGraphOverlayHost::new(...).with_controller(...)`).
 - `node_graph_domain_demo` and `compat_retained` now exercise that path, reducing how often new
   app-facing examples need to teach raw `edit_queue` mutation.
 - The retained widget test harness is back in sync with the latest `fret-ui` retained bridge

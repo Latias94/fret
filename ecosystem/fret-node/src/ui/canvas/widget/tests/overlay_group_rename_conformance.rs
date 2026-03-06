@@ -124,14 +124,9 @@ fn group_rename_overlay_is_hit_test_transparent_when_inactive_and_blocks_within_
     let underlay_downs = Arc::new(AtomicUsize::new(0));
     let underlay = ui.create_node_retained(PointerDownCounter::new(underlay_downs.clone()));
 
-    let overlay_host = NodeGraphOverlayHost::new(
-        graph,
-        edits,
-        overlays.clone(),
-        group_rename_text,
-        underlay,
-        style,
-    );
+    let overlay_host =
+        NodeGraphOverlayHost::new(graph, overlays.clone(), group_rename_text, underlay, style)
+            .with_edit_queue(edits);
     let overlay_host_node = ui.create_node_retained(overlay_host);
 
     let overlay_child =
@@ -239,14 +234,9 @@ fn group_rename_overlay_escape_closes_and_restores_focus_to_canvas() {
     let style = NodeGraphStyle::default();
 
     let underlay = ui.create_node_retained(PointerDownCounter::new(Arc::new(AtomicUsize::new(0))));
-    let overlay_host = NodeGraphOverlayHost::new(
-        graph,
-        edits,
-        overlays.clone(),
-        group_rename_text,
-        underlay,
-        style,
-    );
+    let overlay_host =
+        NodeGraphOverlayHost::new(graph, overlays.clone(), group_rename_text, underlay, style)
+            .with_edit_queue(edits);
     let overlay_host_node = ui.create_node_retained(overlay_host);
     let overlay_child =
         ui.create_node_retained(PointerDownCounter::new(Arc::new(AtomicUsize::new(0))));
@@ -330,12 +320,12 @@ fn group_rename_overlay_enter_commits_transaction_and_closes() {
     let underlay = ui.create_node_retained(PointerDownCounter::new(Arc::new(AtomicUsize::new(0))));
     let overlay_host = NodeGraphOverlayHost::new(
         graph.clone(),
-        edits.clone(),
         overlays.clone(),
         group_rename_text.clone(),
         underlay,
         style,
-    );
+    )
+    .with_edit_queue(edits.clone());
     let overlay_host_node = ui.create_node_retained(overlay_host);
     let overlay_child =
         ui.create_node_retained(PointerDownCounter::new(Arc::new(AtomicUsize::new(0))));
@@ -434,14 +424,14 @@ fn group_rename_overlay_enter_with_controller_commits_through_store() {
     let style = NodeGraphStyle::default();
     let underlay_counter = Arc::new(AtomicUsize::new(0));
     let underlay = ui.create_node_retained(PointerDownCounter::new(underlay_counter));
-    let overlay_host = NodeGraphOverlayHost::new_with_controller(
+    let overlay_host = NodeGraphOverlayHost::new(
         graph.clone(),
-        controller,
         overlays.clone(),
         group_rename_text.clone(),
         underlay,
         style,
-    );
+    )
+    .with_controller(controller);
     let overlay_host_node = ui.create_node_retained(overlay_host);
     let overlay_child =
         ui.create_node_retained(PointerDownCounter::new(Arc::new(AtomicUsize::new(0))));

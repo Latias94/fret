@@ -1766,14 +1766,14 @@ impl NodeGraphDemoDriver {
         }
         ui.set_children(canvas_node, canvas_children);
 
-        let overlay_host = NodeGraphOverlayHost::new_with_controller(
+        let overlay_host = NodeGraphOverlayHost::new(
             graph,
-            controller.clone(),
             overlays,
             group_rename_text.clone(),
             canvas_node,
             style.clone(),
-        );
+        )
+        .with_controller(controller.clone());
         let overlay_node = ui.create_node_retained(overlay_host);
         let rename_input_node = ui.create_node_retained(BoundTextInput::new(group_rename_text));
         ui.set_children(overlay_node, vec![rename_input_node]);
@@ -2430,7 +2430,7 @@ impl WinitAppDriver for NodeGraphDemoDriver {
                 label: Some("Bump Float Value".to_string()),
                 ops,
             };
-            let _ = models.edits.update(app, |q, _cx| q.push(tx));
+            let _ = models.controller.submit_transaction_action_host(app, &tx);
             return;
         }
 

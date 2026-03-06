@@ -477,14 +477,9 @@ fn blackboard_overlay_rename_action_opens_symbol_rename_overlay() {
     );
     let blackboard_node = ui.create_node_retained(blackboard);
 
-    let overlay_host = NodeGraphOverlayHost::new(
-        graph,
-        edits.clone(),
-        overlays.clone(),
-        rename_text,
-        canvas,
-        style,
-    );
+    let overlay_host =
+        NodeGraphOverlayHost::new(graph, overlays.clone(), rename_text, canvas, style)
+            .with_edit_queue(edits.clone());
     let overlay_host_node = ui.create_node_retained(overlay_host);
     let overlay_child =
         ui.create_node_retained(PointerDownCounter::new(Arc::new(AtomicUsize::new(0))));
@@ -585,14 +580,9 @@ fn blackboard_overlay_rename_action_then_enter_commits_symbol_rename() {
     );
     let blackboard_node = ui.create_node_retained(blackboard);
 
-    let overlay_host = NodeGraphOverlayHost::new(
-        graph,
-        edits.clone(),
-        overlays.clone(),
-        rename_text.clone(),
-        canvas,
-        style,
-    );
+    let overlay_host =
+        NodeGraphOverlayHost::new(graph, overlays.clone(), rename_text.clone(), canvas, style)
+            .with_edit_queue(edits.clone());
     let overlay_host_node = ui.create_node_retained(overlay_host);
     let overlay_child =
         ui.create_node_retained(PointerDownCounter::new(Arc::new(AtomicUsize::new(0))));
@@ -725,14 +715,9 @@ fn blackboard_overlay_rename_action_then_escape_cancels_without_transaction() {
     );
     let blackboard_node = ui.create_node_retained(blackboard);
 
-    let overlay_host = NodeGraphOverlayHost::new(
-        graph,
-        edits.clone(),
-        overlays.clone(),
-        rename_text.clone(),
-        canvas,
-        style,
-    );
+    let overlay_host =
+        NodeGraphOverlayHost::new(graph, overlays.clone(), rename_text.clone(), canvas, style)
+            .with_edit_queue(edits.clone());
     let overlay_host_node = ui.create_node_retained(overlay_host);
     let overlay_child =
         ui.create_node_retained(PointerDownCounter::new(Arc::new(AtomicUsize::new(0))));
@@ -859,14 +844,9 @@ fn blackboard_overlay_rename_action_then_enter_unchanged_closes_without_transact
     );
     let blackboard_node = ui.create_node_retained(blackboard);
 
-    let overlay_host = NodeGraphOverlayHost::new(
-        graph,
-        edits.clone(),
-        overlays.clone(),
-        rename_text,
-        canvas,
-        style,
-    );
+    let overlay_host =
+        NodeGraphOverlayHost::new(graph, overlays.clone(), rename_text, canvas, style)
+            .with_edit_queue(edits.clone());
     let overlay_host_node = ui.create_node_retained(overlay_host);
     let overlay_child =
         ui.create_node_retained(PointerDownCounter::new(Arc::new(AtomicUsize::new(0))));

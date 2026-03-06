@@ -829,14 +829,14 @@ impl NodeGraphDomainDemoDriver {
         let a11y_node = ui.create_node_retained(NodeGraphA11yFocusedNode::new(internals));
         ui.set_children(canvas_node, vec![a11y_port, a11y_edge, a11y_node]);
 
-        let overlay_host = NodeGraphOverlayHost::new_with_controller(
+        let overlay_host = NodeGraphOverlayHost::new(
             graph,
-            controller.clone(),
             overlays,
             group_rename_text.clone(),
             canvas_node,
             style.clone(),
-        );
+        )
+        .with_controller(controller.clone());
         let overlay_node = ui.create_node_retained(overlay_host);
         let rename_input_node = ui.create_node_retained(BoundTextInput::new(group_rename_text));
         ui.set_children(overlay_node, vec![rename_input_node]);

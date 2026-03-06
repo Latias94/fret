@@ -66,7 +66,6 @@ pub struct NodeGraphOverlayHost {
 impl NodeGraphOverlayHost {
     pub fn new(
         graph: Model<crate::Graph>,
-        edits: Model<NodeGraphEditQueue>,
         overlays: Model<NodeGraphOverlayState>,
         group_rename_text: Model<String>,
         canvas_node: fret_core::NodeId,
@@ -74,7 +73,7 @@ impl NodeGraphOverlayHost {
     ) -> Self {
         Self {
             graph,
-            edits: Some(edits),
+            edits: None,
             controller: None,
             overlays,
             group_rename_text,
@@ -87,27 +86,14 @@ impl NodeGraphOverlayHost {
         }
     }
 
-    pub fn new_with_controller(
-        graph: Model<crate::Graph>,
-        controller: NodeGraphController,
-        overlays: Model<NodeGraphOverlayState>,
-        group_rename_text: Model<String>,
-        canvas_node: fret_core::NodeId,
-        style: NodeGraphStyle,
-    ) -> Self {
-        Self {
-            graph,
-            edits: None,
-            controller: Some(controller),
-            overlays,
-            group_rename_text,
-            canvas_node,
-            style,
-            last_opened_group: None,
-            last_opened_symbol: None,
-            group_rename_bounds: None,
-            active: false,
-        }
+    pub fn with_edit_queue(mut self, edits: Model<NodeGraphEditQueue>) -> Self {
+        self.edits = Some(edits);
+        self
+    }
+
+    pub fn with_controller(mut self, controller: NodeGraphController) -> Self {
+        self.controller = Some(controller);
+        self
     }
 
     fn submit_transaction<H: UiHost>(&self, host: &mut H, tx: &GraphTransaction) {
