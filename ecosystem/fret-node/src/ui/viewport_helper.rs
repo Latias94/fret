@@ -97,7 +97,7 @@ impl NodeGraphViewportHelper {
     }
 }
 
-fn pan_for_center(bounds: Rect, center: CanvasPoint, zoom: f32) -> CanvasPoint {
+pub(super) fn pan_for_center(bounds: Rect, center: CanvasPoint, zoom: f32) -> CanvasPoint {
     let z = if zoom.is_finite() && zoom > 0.0 {
         zoom
     } else {

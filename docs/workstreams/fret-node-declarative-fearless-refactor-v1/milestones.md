@@ -144,6 +144,10 @@ points rather than direct graph mutation.
     syncs graph / view models back from store.
   - `ecosystem/fret-node/src/ui/controller.rs` now provides a first minimal `NodeGraphController`
     facade over store + optional view queue.
+  - The controller now also covers the first bounds-aware viewport helpers:
+    `set_center_in_bounds*` and `fit_view_nodes_in_bounds*`.
+  - Those helpers now have a real store fallback when no `view_queue` exists, and still route
+    through queued `SetViewport` requests when a queue is present.
   - `apps/fret-examples/src/node_graph_demo.rs` now passes a controller into the declarative
     surface so the recommended demo path exercises the transaction-safe commit architecture.
 - Remaining M3 scope is still substantial: we still need a broader controller surface, more

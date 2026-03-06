@@ -74,9 +74,13 @@ land in code review; move design discussion back to `README.md` if a TODO turns 
   - canonical transaction-safe update entry points
 - [x] Wire the default declarative demo to use `NodeGraphController` instead of teaching raw store
       plumbing directly.
-- [ ] Extend the controller surface to cover the rest of the intended viewport helpers:
-  - fit-view / set-center
-  - broader imperative viewport choreography
+- [x] Extend the controller surface with the first bounds-aware viewport helpers:
+  - `set_center_in_bounds` / `set_center_in_bounds_with_options`
+  - `fit_view_nodes_in_bounds` / `fit_view_nodes_in_bounds_with_options`
+  - store fallback when no `view_queue` exists, while still routing through queued `SetViewport`
+    requests when a queue is present
+- [ ] Extend the controller surface further for broader imperative viewport choreography beyond the
+      first bounds-aware helper set.
 - [ ] Decide whether `view_queue` stays as the transport for imperative viewport requests or becomes
       an internal detail of the controller.
 - [ ] Decide whether `edit_queue` stays public, becomes controller-owned, or is limited to internal
