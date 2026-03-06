@@ -228,7 +228,7 @@ pub fn start() -> Result<(), JsValue> {
                 fret_examples::external_texture_imports_web_demo::build_runner_config();
             config.main_window_title =
                 "fret-demo external_texture_imports_web_demo (web)".to_string();
-            let driver = fret_examples::external_texture_imports_web_demo::build_driver();
+            let driver = fret_examples::external_texture_imports_web_demo::build_fn_driver();
             fret_launch::run_app_with_handle(config, app, driver)
         }
         Demo::EmojiConformanceDemo => {

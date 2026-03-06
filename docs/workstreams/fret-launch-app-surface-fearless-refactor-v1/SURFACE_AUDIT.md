@@ -235,6 +235,9 @@ Additional evidence:
 - `apps/fret-examples/src/custom_effect_v2_identity_web_demo.rs`
 - `apps/fret-examples/src/custom_effect_v2_glass_chrome_web_demo.rs`
 - `apps/fret-examples/src/custom_effect_v3_web_demo.rs`
+- `apps/fret-examples/src/first_frame_smoke_demo.rs`
+- `apps/fret-examples/src/effects_demo.rs`
+- `apps/fret-examples/src/external_texture_imports_web_demo.rs`
 - `apps/fret-demo-web/src/wasm.rs`
 - `tools/gate_winit_driver_example_hook_coverage.py`
 
@@ -246,6 +249,7 @@ Interpretation update:
 - remaining in-file direct trait impls cluster around multi-window/hot-reload/accessibility
   or engine-frame customization examples; that is migration debt and review surface, not a
   demonstrated `FnDriver` capability gap.
+- the low-risk batch (`first_frame_smoke_demo`, `effects_demo`, `external_texture_imports_web_demo`) further reduces the remaining direct `WinitAppDriver` inventory to 18 at this checkpoint, without requiring any new `FnDriver` hook surface.
 
 ### H3) Specialized launch modules still need classification discipline
 

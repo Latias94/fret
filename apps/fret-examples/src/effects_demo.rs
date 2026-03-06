@@ -6,7 +6,7 @@ use fret_core::scene::{
 use fret_core::text::{
     FontWeight, TextConstraints, TextOverflow, TextStyle, TextVerticalPlacement, TextWrap,
 };
-use fret_launch::{WinitAppDriver, WinitEventContext, WinitRenderContext, WinitRunnerConfig};
+use fret_launch::{FnDriver, WinitEventContext, WinitRenderContext, WinitRunnerConfig};
 use fret_render::{Renderer, WgpuContext};
 use std::time::{Duration, Instant};
 
@@ -46,7 +46,7 @@ fn parse_env_quality(key: &str) -> Option<EffectQuality> {
 }
 
 #[derive(Default)]
-struct EffectsDemoDriver;
+pub struct EffectsDemoDriver;
 
 #[derive(Debug, Clone)]
 struct OverlayTextCache {
@@ -68,7 +68,7 @@ impl Default for OverlayTextCache {
 }
 
 #[derive(Debug, Clone)]
-struct EffectsDemoState {
+pub struct EffectsDemoState {
     panel0_enabled: bool,
     panel1_enabled: bool,
     panel2_enabled: bool,
@@ -170,611 +170,642 @@ impl EffectsDemoState {
     }
 }
 
-impl WinitAppDriver for EffectsDemoDriver {
-    type WindowState = EffectsDemoState;
+fn gpu_ready(
+    _driver: &mut EffectsDemoDriver,
+    _app: &mut App,
+    _context: &WgpuContext,
+    renderer: &mut Renderer,
+) {
+    let perf_enabled = std::env::var_os("FRET_EFFECTS_DEMO_EXIT_AFTER_FRAMES").is_some()
+        || std::env::var_os("FRET_EFFECTS_DEMO_PROFILE").is_some()
+        || std::env::var_os("FRET_RENDERER_PERF_PIPELINES").is_some();
+    if perf_enabled {
+        renderer.set_perf_enabled(true);
+    }
+}
 
-    fn gpu_ready(&mut self, _app: &mut App, _context: &WgpuContext, renderer: &mut Renderer) {
-        let perf_enabled = std::env::var_os("FRET_EFFECTS_DEMO_EXIT_AFTER_FRAMES").is_some()
-            || std::env::var_os("FRET_EFFECTS_DEMO_PROFILE").is_some()
-            || std::env::var_os("FRET_RENDERER_PERF_PIPELINES").is_some();
-        if perf_enabled {
-            renderer.set_perf_enabled(true);
-        }
+fn gpu_frame_prepare(
+    _driver: &mut EffectsDemoDriver,
+    app: &mut App,
+    window: fret_core::AppWindowId,
+    state: &mut EffectsDemoState,
+    _context: &WgpuContext,
+    renderer: &mut Renderer,
+    _scale_factor: f32,
+) {
+    let profiling = std::env::var_os("FRET_EFFECTS_DEMO_PROFILE").is_some()
+        || state.exit_after_frames.is_some();
+    if !profiling {
+        return;
     }
 
-    fn gpu_frame_prepare(
-        &mut self,
-        app: &mut App,
-        window: fret_core::AppWindowId,
-        state: &mut Self::WindowState,
-        _context: &WgpuContext,
-        renderer: &mut Renderer,
-        _scale_factor: f32,
-    ) {
-        let profiling = std::env::var_os("FRET_EFFECTS_DEMO_PROFILE").is_some()
-            || state.exit_after_frames.is_some();
-        if !profiling {
+    state.frame = state.frame.saturating_add(1);
+
+    let now = Instant::now();
+    let should_report = match state.last_renderer_report {
+        None => true,
+        Some(last) => now.duration_since(last) >= Duration::from_secs(1),
+    };
+    if should_report {
+        if let Some(snap) = renderer.take_perf_snapshot() {
+            if snap.frames != 0 {
+                let pipeline_breakdown = std::env::var_os("FRET_RENDERER_PERF_PIPELINES").is_some();
+                try_println!(
+                    "renderer_perf: frames={} encode={:.2}ms prepare_svg={:.2}ms prepare_text={:.2}ms draws={} (quad={} viewport={} image={} text={} path={} mask={} fs={} clipmask={}) pipelines={} binds={} (ubinds={} tbinds={}) scissor={} uniform={}KB instance={}KB vertex={}KB cache_hits={} cache_misses={}",
+                    snap.frames,
+                    snap.encode_scene_us as f64 / 1000.0,
+                    snap.prepare_svg_us as f64 / 1000.0,
+                    snap.prepare_text_us as f64 / 1000.0,
+                    snap.draw_calls,
+                    snap.quad_draw_calls,
+                    snap.viewport_draw_calls,
+                    snap.image_draw_calls,
+                    snap.text_draw_calls,
+                    snap.path_draw_calls,
+                    snap.mask_draw_calls,
+                    snap.fullscreen_draw_calls,
+                    snap.clip_mask_draw_calls,
+                    snap.pipeline_switches,
+                    snap.bind_group_switches,
+                    snap.uniform_bind_group_switches,
+                    snap.texture_bind_group_switches,
+                    snap.scissor_sets,
+                    snap.uniform_bytes / 1024,
+                    snap.instance_bytes / 1024,
+                    snap.vertex_bytes / 1024,
+                    snap.scene_encoding_cache_hits,
+                    snap.scene_encoding_cache_misses
+                );
+                if pipeline_breakdown {
+                    try_println!(
+                        "renderer_perf_pipelines: quad={} viewport={} mask={} text_mask={} text_color={} path={} path_msaa={} composite={} fullscreen={} clip_mask={}",
+                        snap.pipeline_switches_quad,
+                        snap.pipeline_switches_viewport,
+                        snap.pipeline_switches_mask,
+                        snap.pipeline_switches_text_mask,
+                        snap.pipeline_switches_text_color,
+                        snap.pipeline_switches_path,
+                        snap.pipeline_switches_path_msaa,
+                        snap.pipeline_switches_composite,
+                        snap.pipeline_switches_fullscreen,
+                        snap.pipeline_switches_clip_mask,
+                    );
+                }
+            }
+        }
+        state.last_renderer_report = Some(now);
+    }
+
+    if let Some(limit) = state.exit_after_frames {
+        if state.frame >= limit {
+            app.push_effect(Effect::Window(WindowRequest::Close(window)));
             return;
         }
-
-        state.frame = state.frame.saturating_add(1);
-
-        let now = Instant::now();
-        let should_report = match state.last_renderer_report {
-            None => true,
-            Some(last) => now.duration_since(last) >= Duration::from_secs(1),
-        };
-        if should_report {
-            if let Some(snap) = renderer.take_perf_snapshot() {
-                if snap.frames != 0 {
-                    let pipeline_breakdown =
-                        std::env::var_os("FRET_RENDERER_PERF_PIPELINES").is_some();
-                    try_println!(
-                        "renderer_perf: frames={} encode={:.2}ms prepare_svg={:.2}ms prepare_text={:.2}ms draws={} (quad={} viewport={} image={} text={} path={} mask={} fs={} clipmask={}) pipelines={} binds={} (ubinds={} tbinds={}) scissor={} uniform={}KB instance={}KB vertex={}KB cache_hits={} cache_misses={}",
-                        snap.frames,
-                        snap.encode_scene_us as f64 / 1000.0,
-                        snap.prepare_svg_us as f64 / 1000.0,
-                        snap.prepare_text_us as f64 / 1000.0,
-                        snap.draw_calls,
-                        snap.quad_draw_calls,
-                        snap.viewport_draw_calls,
-                        snap.image_draw_calls,
-                        snap.text_draw_calls,
-                        snap.path_draw_calls,
-                        snap.mask_draw_calls,
-                        snap.fullscreen_draw_calls,
-                        snap.clip_mask_draw_calls,
-                        snap.pipeline_switches,
-                        snap.bind_group_switches,
-                        snap.uniform_bind_group_switches,
-                        snap.texture_bind_group_switches,
-                        snap.scissor_sets,
-                        snap.uniform_bytes / 1024,
-                        snap.instance_bytes / 1024,
-                        snap.vertex_bytes / 1024,
-                        snap.scene_encoding_cache_hits,
-                        snap.scene_encoding_cache_misses
-                    );
-                    if pipeline_breakdown {
-                        try_println!(
-                            "renderer_perf_pipelines: quad={} viewport={} mask={} text_mask={} text_color={} path={} path_msaa={} composite={} fullscreen={} clip_mask={}",
-                            snap.pipeline_switches_quad,
-                            snap.pipeline_switches_viewport,
-                            snap.pipeline_switches_mask,
-                            snap.pipeline_switches_text_mask,
-                            snap.pipeline_switches_text_color,
-                            snap.pipeline_switches_path,
-                            snap.pipeline_switches_path_msaa,
-                            snap.pipeline_switches_composite,
-                            snap.pipeline_switches_fullscreen,
-                            snap.pipeline_switches_clip_mask,
-                        );
-                    }
-                }
-            }
-            state.last_renderer_report = Some(now);
-        }
-
-        if let Some(limit) = state.exit_after_frames {
-            if state.frame >= limit {
-                app.push_effect(Effect::Window(WindowRequest::Close(window)));
-                return;
-            }
-        }
-
-        app.request_redraw(window);
     }
 
-    fn create_window_state(
-        &mut self,
-        _app: &mut App,
-        _window: fret_core::AppWindowId,
-    ) -> Self::WindowState {
-        EffectsDemoState::default()
-    }
+    app.request_redraw(window);
+}
 
-    fn handle_event(
-        &mut self,
-        context: WinitEventContext<'_, Self::WindowState>,
-        event: &fret_core::Event,
-    ) {
-        let WinitEventContext {
-            app, window, state, ..
-        } = context;
-        match event {
-            fret_core::Event::WindowCloseRequested
-            | fret_core::Event::KeyDown {
-                key: fret_core::KeyCode::Escape,
-                ..
-            } => {
-                app.push_effect(Effect::Window(WindowRequest::Close(window)));
-            }
-            fret_core::Event::KeyDown {
-                key,
-                modifiers,
-                repeat: false,
-            } => {
-                let mut changed = false;
+fn create_window_state(
+    _driver: &mut EffectsDemoDriver,
+    _app: &mut App,
+    _window: fret_core::AppWindowId,
+) -> EffectsDemoState {
+    EffectsDemoState::default()
+}
 
-                match key {
-                    fret_core::KeyCode::Digit0 => {
-                        let enable = !state.any_effects_enabled();
-                        state.panel0_enabled = enable;
-                        state.panel1_enabled = enable;
-                        state.panel2_enabled = enable;
-                        changed = true;
-                    }
-                    fret_core::KeyCode::Digit1 => {
-                        state.panel0_enabled = !state.panel0_enabled;
-                        changed = true;
-                    }
-                    fret_core::KeyCode::Digit2 => {
-                        state.panel1_enabled = !state.panel1_enabled;
-                        changed = true;
-                    }
-                    fret_core::KeyCode::Digit3 => {
-                        state.panel2_enabled = !state.panel2_enabled;
-                        changed = true;
-                    }
-                    fret_core::KeyCode::KeyQ => {
-                        state.cycle_quality();
-                        changed = true;
-                    }
-                    fret_core::KeyCode::BracketLeft => {
-                        let step = if modifiers.shift { 4 } else { 1 };
-                        state.panel0_blur_radius_px =
-                            state.panel0_blur_radius_px.saturating_sub(step).max(0);
-                        changed = true;
-                    }
-                    fret_core::KeyCode::BracketRight => {
-                        let step = if modifiers.shift { 4 } else { 1 };
-                        state.panel0_blur_radius_px =
-                            (state.panel0_blur_radius_px.saturating_add(step)).min(64);
-                        changed = true;
-                    }
-                    fret_core::KeyCode::Minus => {
-                        let step = if modifiers.shift { 4 } else { 1 };
-                        state.panel1_pixelate_scale =
-                            state.panel1_pixelate_scale.saturating_sub(step).max(1);
-                        changed = true;
-                    }
-                    fret_core::KeyCode::Equal => {
-                        let step = if modifiers.shift { 4 } else { 1 };
-                        state.panel1_pixelate_scale =
-                            (state.panel1_pixelate_scale.saturating_add(step)).min(64);
-                        changed = true;
-                    }
-                    fret_core::KeyCode::KeyZ => {
-                        let step = if modifiers.shift { 4 } else { 1 };
-                        state.panel2_pixelate_scale =
-                            state.panel2_pixelate_scale.saturating_sub(step).max(1);
-                        changed = true;
-                    }
-                    fret_core::KeyCode::KeyX => {
-                        let step = if modifiers.shift { 4 } else { 1 };
-                        state.panel2_pixelate_scale =
-                            (state.panel2_pixelate_scale.saturating_add(step)).min(64);
-                        changed = true;
-                    }
-                    fret_core::KeyCode::KeyH => {
-                        state.show_help = !state.show_help;
-                        changed = true;
-                    }
-                    _ => {}
-                }
-
-                if changed {
-                    state.overlay_dirty = true;
-                    app.request_redraw(window);
-                }
-            }
-            _ => {}
-        }
-    }
-
-    fn render(&mut self, context: WinitRenderContext<'_, Self::WindowState>) {
-        let WinitRenderContext {
-            bounds,
-            scale_factor,
-            scene,
-            services,
-            state,
+fn handle_event(
+    _driver: &mut EffectsDemoDriver,
+    context: WinitEventContext<'_, EffectsDemoState>,
+    event: &fret_core::Event,
+) {
+    let WinitEventContext {
+        app, window, state, ..
+    } = context;
+    match event {
+        fret_core::Event::WindowCloseRequested
+        | fret_core::Event::KeyDown {
+            key: fret_core::KeyCode::Escape,
             ..
-        } = context;
-        scene.clear();
+        } => {
+            app.push_effect(Effect::Window(WindowRequest::Close(window)));
+        }
+        fret_core::Event::KeyDown {
+            key,
+            modifiers,
+            repeat: false,
+        } => {
+            let mut changed = false;
 
-        let w = bounds.size.width.0.max(1.0);
-        let h = bounds.size.height.0.max(1.0);
-        let full = Rect::new(bounds.origin, Size::new(Px(w), Px(h)));
+            match key {
+                fret_core::KeyCode::Digit0 => {
+                    let enable = !state.any_effects_enabled();
+                    state.panel0_enabled = enable;
+                    state.panel1_enabled = enable;
+                    state.panel2_enabled = enable;
+                    changed = true;
+                }
+                fret_core::KeyCode::Digit1 => {
+                    state.panel0_enabled = !state.panel0_enabled;
+                    changed = true;
+                }
+                fret_core::KeyCode::Digit2 => {
+                    state.panel1_enabled = !state.panel1_enabled;
+                    changed = true;
+                }
+                fret_core::KeyCode::Digit3 => {
+                    state.panel2_enabled = !state.panel2_enabled;
+                    changed = true;
+                }
+                fret_core::KeyCode::KeyQ => {
+                    state.cycle_quality();
+                    changed = true;
+                }
+                fret_core::KeyCode::BracketLeft => {
+                    let step = if modifiers.shift { 4 } else { 1 };
+                    state.panel0_blur_radius_px =
+                        state.panel0_blur_radius_px.saturating_sub(step).max(0);
+                    changed = true;
+                }
+                fret_core::KeyCode::BracketRight => {
+                    let step = if modifiers.shift { 4 } else { 1 };
+                    state.panel0_blur_radius_px =
+                        (state.panel0_blur_radius_px.saturating_add(step)).min(64);
+                    changed = true;
+                }
+                fret_core::KeyCode::Minus => {
+                    let step = if modifiers.shift { 4 } else { 1 };
+                    state.panel1_pixelate_scale =
+                        state.panel1_pixelate_scale.saturating_sub(step).max(1);
+                    changed = true;
+                }
+                fret_core::KeyCode::Equal => {
+                    let step = if modifiers.shift { 4 } else { 1 };
+                    state.panel1_pixelate_scale =
+                        (state.panel1_pixelate_scale.saturating_add(step)).min(64);
+                    changed = true;
+                }
+                fret_core::KeyCode::KeyZ => {
+                    let step = if modifiers.shift { 4 } else { 1 };
+                    state.panel2_pixelate_scale =
+                        state.panel2_pixelate_scale.saturating_sub(step).max(1);
+                    changed = true;
+                }
+                fret_core::KeyCode::KeyX => {
+                    let step = if modifiers.shift { 4 } else { 1 };
+                    state.panel2_pixelate_scale =
+                        (state.panel2_pixelate_scale.saturating_add(step)).min(64);
+                    changed = true;
+                }
+                fret_core::KeyCode::KeyH => {
+                    state.show_help = !state.show_help;
+                    changed = true;
+                }
+                _ => {}
+            }
 
-        // Background.
+            if changed {
+                state.overlay_dirty = true;
+                app.request_redraw(window);
+            }
+        }
+        _ => {}
+    }
+}
+
+fn render(_driver: &mut EffectsDemoDriver, context: WinitRenderContext<'_, EffectsDemoState>) {
+    let WinitRenderContext {
+        bounds,
+        scale_factor,
+        scene,
+        services,
+        state,
+        ..
+    } = context;
+    scene.clear();
+
+    let w = bounds.size.width.0.max(1.0);
+    let h = bounds.size.height.0.max(1.0);
+    let full = Rect::new(bounds.origin, Size::new(Px(w), Px(h)));
+
+    // Background.
+    scene.push(SceneOp::Quad {
+        order: DrawOrder(0),
+        rect: full,
+        background: fret_core::Paint::Solid(Color {
+            r: 0.08,
+            g: 0.09,
+            b: 0.12,
+            a: 1.0,
+        })
+        .into(),
+        border: Edges::all(Px(0.0)),
+        border_paint: fret_core::Paint::TRANSPARENT.into(),
+
+        corner_radii: Corners::all(Px(0.0)),
+    });
+
+    // Color stripes: higher-frequency signal for blur / pixelate.
+    let stripe_w = 10.0_f32.max(2.0);
+    let stripe_count = ((w / stripe_w).ceil() as u32).max(1);
+    for i in 0..stripe_count {
+        let x = bounds.origin.x.0 + stripe_w * i as f32;
+        let denom = (stripe_count.saturating_sub(1)).max(1) as f32;
+        let t = i as f32 / denom;
+        let (r, g, b) = if t < 0.33 {
+            (1.0, t / 0.33, 0.0)
+        } else if t < 0.66 {
+            (1.0 - (t - 0.33) / 0.33, 1.0, (t - 0.33) / 0.33)
+        } else {
+            (0.0, 1.0 - (t - 0.66) / 0.34, 1.0)
+        };
         scene.push(SceneOp::Quad {
-            order: DrawOrder(0),
-            rect: full,
-            background: fret_core::Paint::Solid(Color {
-                r: 0.08,
-                g: 0.09,
-                b: 0.12,
-                a: 1.0,
-            })
-            .into(),
+            order: DrawOrder(1 + i),
+            rect: Rect::new(
+                Point::new(Px(x), bounds.origin.y),
+                Size::new(Px(stripe_w), Px(h)),
+            ),
+            background: fret_core::Paint::Solid(Color { r, g, b, a: 1.0 }).into(),
+
             border: Edges::all(Px(0.0)),
             border_paint: fret_core::Paint::TRANSPARENT.into(),
 
             corner_radii: Corners::all(Px(0.0)),
         });
+    }
 
-        // Color stripes: higher-frequency signal for blur / pixelate.
-        let stripe_w = 10.0_f32.max(2.0);
-        let stripe_count = ((w / stripe_w).ceil() as u32).max(1);
-        for i in 0..stripe_count {
-            let x = bounds.origin.x.0 + stripe_w * i as f32;
-            let denom = (stripe_count.saturating_sub(1)).max(1) as f32;
-            let t = i as f32 / denom;
-            let (r, g, b) = if t < 0.33 {
-                (1.0, t / 0.33, 0.0)
-            } else if t < 0.66 {
-                (1.0 - (t - 0.33) / 0.33, 1.0, (t - 0.33) / 0.33)
-            } else {
-                (0.0, 1.0 - (t - 0.66) / 0.34, 1.0)
+    // Three panels.
+    let pad = 24.0;
+    let panel_h = (h - pad * 2.0).max(120.0);
+    let panel_w = ((w - pad * 4.0) / 3.0).max(120.0);
+    let y0 = bounds.origin.y.0 + pad;
+
+    let panel0 = Rect::new(
+        Point::new(Px(bounds.origin.x.0 + pad), Px(y0)),
+        Size::new(Px(panel_w), Px(panel_h)),
+    );
+    let panel1 = Rect::new(
+        Point::new(Px(bounds.origin.x.0 + pad * 2.0 + panel_w), Px(y0)),
+        Size::new(Px(panel_w), Px(panel_h)),
+    );
+    let panel2 = Rect::new(
+        Point::new(Px(bounds.origin.x.0 + pad * 3.0 + panel_w * 2.0), Px(y0)),
+        Size::new(Px(panel_w), Px(panel_h)),
+    );
+
+    let panel_radii = Corners::all(Px(18.0));
+
+    let panel_border = |scene: &mut Scene, order: u32, rect: Rect, color: Color| {
+        scene.push(SceneOp::Quad {
+            order: DrawOrder(order),
+            rect,
+            background: fret_core::Paint::Solid(Color {
+                r: 0.0,
+                g: 0.0,
+                b: 0.0,
+                a: 0.0,
+            })
+            .into(),
+            border: Edges::all(Px(2.0)),
+            border_paint: fret_core::Paint::Solid(color).into(),
+
+            corner_radii: panel_radii,
+        });
+    };
+
+    // Panel 0: backdrop blur + slight color adjust (glass-ish).
+    scene.push(SceneOp::PushClipRRect {
+        rect: panel0,
+        corner_radii: panel_radii,
+    });
+    if state.panel0_enabled && state.panel0_blur_radius_px > 0 {
+        scene.push(SceneOp::PushEffect {
+            bounds: panel0,
+            mode: EffectMode::Backdrop,
+            chain: EffectChain::from_steps(&[
+                EffectStep::GaussianBlur {
+                    radius_px: Px(state.panel0_blur_radius_px as f32),
+                    downsample: state.panel0_blur_downsample.max(2),
+                },
+                EffectStep::ColorAdjust {
+                    saturation: 1.2,
+                    brightness: 1.02,
+                    contrast: 1.02,
+                },
+            ]),
+            quality: state.quality,
+        });
+    }
+    scene.push(SceneOp::Quad {
+        order: DrawOrder(10_000),
+        rect: panel0,
+        background: fret_core::Paint::Solid(Color {
+            r: 0.08,
+            g: 0.08,
+            b: 0.08,
+            a: 0.08,
+        })
+        .into(),
+        border: Edges::all(Px(0.0)),
+        border_paint: fret_core::Paint::TRANSPARENT.into(),
+
+        corner_radii: panel_radii,
+    });
+    panel_border(
+        scene,
+        10_100,
+        panel0,
+        Color {
+            r: 0.35,
+            g: 0.35,
+            b: 0.35,
+            a: if state.panel0_enabled { 0.35 } else { 0.18 },
+        },
+    );
+    if state.panel0_enabled && state.panel0_blur_radius_px > 0 {
+        scene.push(SceneOp::PopEffect);
+    }
+    scene.push(SceneOp::PopClip);
+
+    // Panel 1: backdrop pixelate.
+    scene.push(SceneOp::PushClipRRect {
+        rect: panel1,
+        corner_radii: panel_radii,
+    });
+    if state.panel1_enabled {
+        scene.push(SceneOp::PushEffect {
+            bounds: panel1,
+            mode: EffectMode::Backdrop,
+            chain: EffectChain::from_steps(&[EffectStep::Pixelate {
+                scale: state.panel1_pixelate_scale.max(1),
+            }]),
+            quality: state.quality,
+        });
+    }
+    scene.push(SceneOp::Quad {
+        order: DrawOrder(11_000),
+        rect: panel1,
+        background: fret_core::Paint::Solid(Color {
+            r: 0.0,
+            g: 0.0,
+            b: 0.0,
+            a: 0.12,
+        })
+        .into(),
+        border: Edges::all(Px(0.0)),
+        border_paint: fret_core::Paint::TRANSPARENT.into(),
+
+        corner_radii: panel_radii,
+    });
+    panel_border(
+        scene,
+        11_100,
+        panel1,
+        Color {
+            r: 0.55,
+            g: 0.495,
+            b: 0.33,
+            a: if state.panel1_enabled { 0.55 } else { 0.22 },
+        },
+    );
+    if state.panel1_enabled {
+        scene.push(SceneOp::PopEffect);
+    }
+    scene.push(SceneOp::PopClip);
+
+    // Panel 2: filter-content pixelate applied to a subtree (content drawn inside the group).
+    scene.push(SceneOp::PushClipRRect {
+        rect: panel2,
+        corner_radii: panel_radii,
+    });
+    if state.panel2_enabled {
+        scene.push(SceneOp::PushEffect {
+            bounds: panel2,
+            mode: EffectMode::FilterContent,
+            chain: EffectChain::from_steps(&[EffectStep::Pixelate {
+                scale: state.panel2_pixelate_scale.max(1),
+            }]),
+            quality: state.quality,
+        });
+    }
+    // High-frequency stripes so pixelation is obvious.
+    let stripe_w = 2.0_f32;
+    let count = (panel2.size.width.0 / stripe_w).ceil().max(1.0) as u32;
+    for i in 0..count {
+        let x = panel2.origin.x.0 + stripe_w * i as f32;
+        let is_red = (i % 2) == 0;
+        let bg = if is_red {
+            Color {
+                r: 1.0,
+                g: 0.0,
+                b: 0.0,
+                a: 1.0,
+            }
+        } else {
+            Color {
+                r: 0.0,
+                g: 0.0,
+                b: 1.0,
+                a: 1.0,
+            }
+        };
+        scene.push(SceneOp::Quad {
+            order: DrawOrder(12_000 + i),
+            rect: Rect::new(
+                Point::new(Px(x), panel2.origin.y),
+                Size::new(Px(stripe_w), panel2.size.height),
+            ),
+            background: fret_core::Paint::Solid(bg).into(),
+
+            border: Edges::all(Px(0.0)),
+            border_paint: fret_core::Paint::TRANSPARENT.into(),
+
+            corner_radii: Corners::all(Px(0.0)),
+        });
+    }
+    // Slight tint to keep the panel readable (premultiplied).
+    scene.push(SceneOp::Quad {
+        order: DrawOrder(12_900),
+        rect: panel2,
+        background: fret_core::Paint::Solid(Color {
+            r: 0.0,
+            g: 0.0,
+            b: 0.0,
+            a: 0.12,
+        })
+        .into(),
+        border: Edges::all(Px(0.0)),
+        border_paint: fret_core::Paint::TRANSPARENT.into(),
+
+        corner_radii: panel_radii,
+    });
+    if state.panel2_enabled {
+        scene.push(SceneOp::PopEffect);
+    }
+    panel_border(scene, 13_000, panel2, {
+        let mut c = Color::from_srgb_hex_rgb(0x7e_7e_85);
+        c.a = if state.panel2_enabled { 0.55 } else { 0.22 };
+        c
+    });
+    scene.push(SceneOp::PopClip);
+
+    // Foreground marker (ordering sanity).
+    scene.push(SceneOp::Quad {
+        order: DrawOrder(20_000),
+        rect: Rect::new(
+            Point::new(
+                Px(bounds.origin.x.0 + w - 120.0),
+                Px(bounds.origin.y.0 + h - 80.0),
+            ),
+            Size::new(Px(96.0), Px(56.0)),
+        ),
+        background: fret_core::Paint::Solid(Color {
+            r: 0.9,
+            g: 0.9,
+            b: 0.9,
+            a: 0.9,
+        })
+        .into(),
+        border: Edges::all(Px(0.0)),
+        border_paint: fret_core::Paint::TRANSPARENT.into(),
+
+        corner_radii: Corners::all(Px(14.0)),
+    });
+
+    // Debug overlay: show controls/state without depending on higher-level widgets.
+    if state.show_help {
+        let overlay_text = state.overlay_text();
+        let scale_bits = scale_factor.to_bits();
+        if state.overlay_dirty
+            || state.overlay.last_scale_bits != scale_bits
+            || state.overlay.last_text != overlay_text
+        {
+            if let Some(blob) = state.overlay.blob.take() {
+                services.text().release(blob);
+            }
+
+            let style = TextStyle {
+                font: fret_core::FontId::default(),
+                size: Px(13.0),
+                weight: FontWeight::MEDIUM,
+                slant: fret_core::text::TextSlant::Normal,
+                line_height: Some(Px(16.0)),
+                line_height_em: None,
+                line_height_policy: Default::default(),
+                letter_spacing_em: None,
+                features: Vec::new(),
+                axes: Vec::new(),
+                vertical_placement: TextVerticalPlacement::CenterMetricsBox,
+                leading_distribution: Default::default(),
+                strut_style: Default::default(),
             };
-            scene.push(SceneOp::Quad {
-                order: DrawOrder(1 + i),
-                rect: Rect::new(
-                    Point::new(Px(x), bounds.origin.y),
-                    Size::new(Px(stripe_w), Px(h)),
-                ),
-                background: fret_core::Paint::Solid(Color { r, g, b, a: 1.0 }).into(),
+            let constraints = TextConstraints {
+                max_width: Some(Px(w - pad * 2.0)),
+                wrap: TextWrap::Word,
+                overflow: TextOverflow::Clip,
+                align: fret_core::TextAlign::Start,
+                scale_factor,
+            };
 
-                border: Edges::all(Px(0.0)),
-                border_paint: fret_core::Paint::TRANSPARENT.into(),
-
-                corner_radii: Corners::all(Px(0.0)),
-            });
+            let (blob, metrics) =
+                services
+                    .text()
+                    .prepare_str(overlay_text.as_str(), &style, constraints);
+            state.overlay.last_text = overlay_text;
+            state.overlay.last_scale_bits = scale_bits;
+            state.overlay.blob = Some(blob);
+            state.overlay.metrics = Some(metrics);
+            state.overlay_dirty = false;
         }
 
-        // Three panels.
-        let pad = 24.0;
-        let panel_h = (h - pad * 2.0).max(120.0);
-        let panel_w = ((w - pad * 4.0) / 3.0).max(120.0);
-        let y0 = bounds.origin.y.0 + pad;
-
-        let panel0 = Rect::new(
-            Point::new(Px(bounds.origin.x.0 + pad), Px(y0)),
-            Size::new(Px(panel_w), Px(panel_h)),
-        );
-        let panel1 = Rect::new(
-            Point::new(Px(bounds.origin.x.0 + pad * 2.0 + panel_w), Px(y0)),
-            Size::new(Px(panel_w), Px(panel_h)),
-        );
-        let panel2 = Rect::new(
-            Point::new(Px(bounds.origin.x.0 + pad * 3.0 + panel_w * 2.0), Px(y0)),
-            Size::new(Px(panel_w), Px(panel_h)),
-        );
-
-        let panel_radii = Corners::all(Px(18.0));
-
-        let panel_border = |scene: &mut Scene, order: u32, rect: Rect, color: Color| {
+        if let (Some(blob), Some(metrics)) = (state.overlay.blob, state.overlay.metrics) {
+            let pad_px = Px(10.0);
+            let bg_rect = Rect::new(
+                Point::new(Px(bounds.origin.x.0 + pad), Px(bounds.origin.y.0 + pad)),
+                Size::new(
+                    Px(metrics.size.width.0 + pad_px.0 * 2.0),
+                    Px(metrics.size.height.0 + pad_px.0 * 2.0),
+                ),
+            );
             scene.push(SceneOp::Quad {
-                order: DrawOrder(order),
-                rect,
+                order: DrawOrder(30_000),
+                rect: bg_rect,
                 background: fret_core::Paint::Solid(Color {
-                    r: 0.0,
-                    g: 0.0,
-                    b: 0.0,
-                    a: 0.0,
+                    r: 0.06,
+                    g: 0.06,
+                    b: 0.07,
+                    a: 0.72,
                 })
                 .into(),
-                border: Edges::all(Px(2.0)),
-                border_paint: fret_core::Paint::Solid(color).into(),
-
-                corner_radii: panel_radii,
-            });
-        };
-
-        // Panel 0: backdrop blur + slight color adjust (glass-ish).
-        scene.push(SceneOp::PushClipRRect {
-            rect: panel0,
-            corner_radii: panel_radii,
-        });
-        if state.panel0_enabled && state.panel0_blur_radius_px > 0 {
-            scene.push(SceneOp::PushEffect {
-                bounds: panel0,
-                mode: EffectMode::Backdrop,
-                chain: EffectChain::from_steps(&[
-                    EffectStep::GaussianBlur {
-                        radius_px: Px(state.panel0_blur_radius_px as f32),
-                        downsample: state.panel0_blur_downsample.max(2),
-                    },
-                    EffectStep::ColorAdjust {
-                        saturation: 1.2,
-                        brightness: 1.02,
-                        contrast: 1.02,
-                    },
-                ]),
-                quality: state.quality,
-            });
-        }
-        scene.push(SceneOp::Quad {
-            order: DrawOrder(10_000),
-            rect: panel0,
-            background: fret_core::Paint::Solid(Color {
-                r: 0.08,
-                g: 0.08,
-                b: 0.08,
-                a: 0.08,
-            })
-            .into(),
-            border: Edges::all(Px(0.0)),
-            border_paint: fret_core::Paint::TRANSPARENT.into(),
-
-            corner_radii: panel_radii,
-        });
-        panel_border(
-            scene,
-            10_100,
-            panel0,
-            Color {
-                r: 0.35,
-                g: 0.35,
-                b: 0.35,
-                a: if state.panel0_enabled { 0.35 } else { 0.18 },
-            },
-        );
-        if state.panel0_enabled && state.panel0_blur_radius_px > 0 {
-            scene.push(SceneOp::PopEffect);
-        }
-        scene.push(SceneOp::PopClip);
-
-        // Panel 1: backdrop pixelate.
-        scene.push(SceneOp::PushClipRRect {
-            rect: panel1,
-            corner_radii: panel_radii,
-        });
-        if state.panel1_enabled {
-            scene.push(SceneOp::PushEffect {
-                bounds: panel1,
-                mode: EffectMode::Backdrop,
-                chain: EffectChain::from_steps(&[EffectStep::Pixelate {
-                    scale: state.panel1_pixelate_scale.max(1),
-                }]),
-                quality: state.quality,
-            });
-        }
-        scene.push(SceneOp::Quad {
-            order: DrawOrder(11_000),
-            rect: panel1,
-            background: fret_core::Paint::Solid(Color {
-                r: 0.0,
-                g: 0.0,
-                b: 0.0,
-                a: 0.12,
-            })
-            .into(),
-            border: Edges::all(Px(0.0)),
-            border_paint: fret_core::Paint::TRANSPARENT.into(),
-
-            corner_radii: panel_radii,
-        });
-        panel_border(
-            scene,
-            11_100,
-            panel1,
-            Color {
-                r: 0.55,
-                g: 0.495,
-                b: 0.33,
-                a: if state.panel1_enabled { 0.55 } else { 0.22 },
-            },
-        );
-        if state.panel1_enabled {
-            scene.push(SceneOp::PopEffect);
-        }
-        scene.push(SceneOp::PopClip);
-
-        // Panel 2: filter-content pixelate applied to a subtree (content drawn inside the group).
-        scene.push(SceneOp::PushClipRRect {
-            rect: panel2,
-            corner_radii: panel_radii,
-        });
-        if state.panel2_enabled {
-            scene.push(SceneOp::PushEffect {
-                bounds: panel2,
-                mode: EffectMode::FilterContent,
-                chain: EffectChain::from_steps(&[EffectStep::Pixelate {
-                    scale: state.panel2_pixelate_scale.max(1),
-                }]),
-                quality: state.quality,
-            });
-        }
-        // High-frequency stripes so pixelation is obvious.
-        let stripe_w = 2.0_f32;
-        let count = (panel2.size.width.0 / stripe_w).ceil().max(1.0) as u32;
-        for i in 0..count {
-            let x = panel2.origin.x.0 + stripe_w * i as f32;
-            let is_red = (i % 2) == 0;
-            let bg = if is_red {
-                Color {
+                border: Edges::all(Px(1.0)),
+                border_paint: fret_core::Paint::Solid(Color {
                     r: 1.0,
-                    g: 0.0,
-                    b: 0.0,
-                    a: 1.0,
-                }
-            } else {
-                Color {
-                    r: 0.0,
-                    g: 0.0,
+                    g: 1.0,
                     b: 1.0,
-                    a: 1.0,
-                }
-            };
-            scene.push(SceneOp::Quad {
-                order: DrawOrder(12_000 + i),
-                rect: Rect::new(
-                    Point::new(Px(x), panel2.origin.y),
-                    Size::new(Px(stripe_w), panel2.size.height),
-                ),
-                background: fret_core::Paint::Solid(bg).into(),
-
-                border: Edges::all(Px(0.0)),
-                border_paint: fret_core::Paint::TRANSPARENT.into(),
-
-                corner_radii: Corners::all(Px(0.0)),
+                    a: 0.12,
+                })
+                .into(),
+                corner_radii: Corners::all(Px(12.0)),
             });
-        }
-        // Slight tint to keep the panel readable (premultiplied).
-        scene.push(SceneOp::Quad {
-            order: DrawOrder(12_900),
-            rect: panel2,
-            background: fret_core::Paint::Solid(Color {
-                r: 0.0,
-                g: 0.0,
-                b: 0.0,
-                a: 0.12,
-            })
-            .into(),
-            border: Edges::all(Px(0.0)),
-            border_paint: fret_core::Paint::TRANSPARENT.into(),
 
-            corner_radii: panel_radii,
-        });
-        if state.panel2_enabled {
-            scene.push(SceneOp::PopEffect);
-        }
-        panel_border(scene, 13_000, panel2, {
-            let mut c = Color::from_srgb_hex_rgb(0x7e_7e_85);
-            c.a = if state.panel2_enabled { 0.55 } else { 0.22 };
-            c
-        });
-        scene.push(SceneOp::PopClip);
-
-        // Foreground marker (ordering sanity).
-        scene.push(SceneOp::Quad {
-            order: DrawOrder(20_000),
-            rect: Rect::new(
-                Point::new(
-                    Px(bounds.origin.x.0 + w - 120.0),
-                    Px(bounds.origin.y.0 + h - 80.0),
+            scene.push(SceneOp::Text {
+                order: DrawOrder(30_001),
+                origin: Point::new(
+                    Px(bg_rect.origin.x.0 + pad_px.0),
+                    Px(bg_rect.origin.y.0 + pad_px.0 + metrics.baseline.0),
                 ),
-                Size::new(Px(96.0), Px(56.0)),
-            ),
-            background: fret_core::Paint::Solid(Color {
-                r: 0.9,
-                g: 0.9,
-                b: 0.9,
-                a: 0.9,
-            })
-            .into(),
-            border: Edges::all(Px(0.0)),
-            border_paint: fret_core::Paint::TRANSPARENT.into(),
-
-            corner_radii: Corners::all(Px(14.0)),
-        });
-
-        // Debug overlay: show controls/state without depending on higher-level widgets.
-        if state.show_help {
-            let overlay_text = state.overlay_text();
-            let scale_bits = scale_factor.to_bits();
-            if state.overlay_dirty
-                || state.overlay.last_scale_bits != scale_bits
-                || state.overlay.last_text != overlay_text
-            {
-                if let Some(blob) = state.overlay.blob.take() {
-                    services.text().release(blob);
-                }
-
-                let style = TextStyle {
-                    font: fret_core::FontId::default(),
-                    size: Px(13.0),
-                    weight: FontWeight::MEDIUM,
-                    slant: fret_core::text::TextSlant::Normal,
-                    line_height: Some(Px(16.0)),
-                    line_height_em: None,
-                    line_height_policy: Default::default(),
-                    letter_spacing_em: None,
-                    features: Vec::new(),
-                    axes: Vec::new(),
-                    vertical_placement: TextVerticalPlacement::CenterMetricsBox,
-                    leading_distribution: Default::default(),
-                    strut_style: Default::default(),
-                };
-                let constraints = TextConstraints {
-                    max_width: Some(Px(w - pad * 2.0)),
-                    wrap: TextWrap::Word,
-                    overflow: TextOverflow::Clip,
-                    align: fret_core::TextAlign::Start,
-                    scale_factor,
-                };
-
-                let (blob, metrics) =
-                    services
-                        .text()
-                        .prepare_str(overlay_text.as_str(), &style, constraints);
-                state.overlay.last_text = overlay_text;
-                state.overlay.last_scale_bits = scale_bits;
-                state.overlay.blob = Some(blob);
-                state.overlay.metrics = Some(metrics);
-                state.overlay_dirty = false;
-            }
-
-            if let (Some(blob), Some(metrics)) = (state.overlay.blob, state.overlay.metrics) {
-                let pad_px = Px(10.0);
-                let bg_rect = Rect::new(
-                    Point::new(Px(bounds.origin.x.0 + pad), Px(bounds.origin.y.0 + pad)),
-                    Size::new(
-                        Px(metrics.size.width.0 + pad_px.0 * 2.0),
-                        Px(metrics.size.height.0 + pad_px.0 * 2.0),
-                    ),
-                );
-                scene.push(SceneOp::Quad {
-                    order: DrawOrder(30_000),
-                    rect: bg_rect,
-                    background: fret_core::Paint::Solid(Color {
-                        r: 0.06,
-                        g: 0.06,
-                        b: 0.07,
-                        a: 0.72,
-                    })
-                    .into(),
-                    border: Edges::all(Px(1.0)),
-                    border_paint: fret_core::Paint::Solid(Color {
-                        r: 1.0,
-                        g: 1.0,
-                        b: 1.0,
-                        a: 0.12,
-                    })
-                    .into(),
-                    corner_radii: Corners::all(Px(12.0)),
-                });
-
-                scene.push(SceneOp::Text {
-                    order: DrawOrder(30_001),
-                    origin: Point::new(
-                        Px(bg_rect.origin.x.0 + pad_px.0),
-                        Px(bg_rect.origin.y.0 + pad_px.0 + metrics.baseline.0),
-                    ),
-                    text: blob,
-                    paint: (Color {
-                        a: 0.95,
-                        ..Color::from_srgb_hex_rgb(0xf2_f2_f2)
-                    })
-                    .into(),
-                    outline: None,
-                    shadow: None,
-                });
-            }
+                text: blob,
+                paint: (Color {
+                    a: 0.95,
+                    ..Color::from_srgb_hex_rgb(0xf2_f2_f2)
+                })
+                .into(),
+                outline: None,
+                shadow: None,
+            });
         }
     }
 }
 
-pub fn run() -> anyhow::Result<()> {
-    crate::run_native_with_compat_driver(
-        WinitRunnerConfig {
-            main_window_title: "effects_demo".to_string(),
-            main_window_size: fret_launch::WindowLogicalSize::new(1100.0, 520.0),
-            ..Default::default()
-        },
-        App::new(),
+fn configure_fn_driver_hooks(
+    hooks: &mut fret_launch::FnDriverHooks<EffectsDemoDriver, EffectsDemoState>,
+) {
+    hooks.gpu_ready = Some(gpu_ready);
+    hooks.gpu_frame_prepare = Some(gpu_frame_prepare);
+}
+
+pub fn build_app() -> App {
+    App::new()
+}
+
+pub fn build_runner_config() -> WinitRunnerConfig {
+    WinitRunnerConfig {
+        main_window_title: "effects_demo".to_string(),
+        main_window_size: fret_launch::WindowLogicalSize::new(1100.0, 520.0),
+        ..Default::default()
+    }
+}
+
+pub fn build_fn_driver() -> FnDriver<EffectsDemoDriver, EffectsDemoState> {
+    FnDriver::new(
         EffectsDemoDriver::default(),
+        create_window_state,
+        handle_event,
+        render,
+    )
+    .with_hooks(configure_fn_driver_hooks)
+}
+
+pub fn run() -> anyhow::Result<()> {
+    let app = build_app();
+    let config = build_runner_config();
+    crate::run_native_with_fn_driver_with_hooks(
+        config,
+        app,
+        EffectsDemoDriver::default(),
+        create_window_state,
+        handle_event,
+        render,
+        configure_fn_driver_hooks,
     )
 }

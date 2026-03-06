@@ -196,6 +196,9 @@ Evidence anchors:
   example-local `impl WinitAppDriver` bodies are better understood as internal migration debt
   or complex harness glue (multi-window, hot reload, accessibility, engine-frame hooks), not
   as evidence that `FnDriver` lacks extension headroom.
+- The same holds for the low-risk batch (`first_frame_smoke_demo`, `effects_demo`,
+  `external_texture_imports_web_demo`): even smoke/profiling/external-texture demos can move to
+  `FnDriver` without exposing additional launch hooks.
 
 Evidence anchors:
 
@@ -204,6 +207,9 @@ Evidence anchors:
 - `apps/fret-examples/src/custom_effect_v2_identity_web_demo.rs`
 - `apps/fret-examples/src/custom_effect_v2_glass_chrome_web_demo.rs`
 - `apps/fret-examples/src/custom_effect_v3_web_demo.rs`
+- `apps/fret-examples/src/first_frame_smoke_demo.rs`
+- `apps/fret-examples/src/effects_demo.rs`
+- `apps/fret-examples/src/external_texture_imports_web_demo.rs`
 - `docs/workstreams/fret-launch-app-surface-fearless-refactor-v1/SURFACE_AUDIT.md`
 
 ## 8) Recommended refactor steps (small, gated)
