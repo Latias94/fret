@@ -38,6 +38,9 @@ Current snapshot (2026-03-06):
 - `fret-ui-ai/web_preview` console rows are now also covered: timestamp + message log rows keep
   word-wrap behavior without overflowing beside the timestamp, and the fix is locked with a
   targeted regression test.
+- `fret-ui-ai/inline_citation` hover-card content is now covered too: fixed-width cards keep title
+  / URL truncation and quote wrapping stable because the content stacks and text/link surfaces now
+  explicitly fill available width and opt into `min-w-0`.
 
 ---
 
