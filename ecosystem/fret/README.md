@@ -89,6 +89,8 @@ cargo run -p fretboard -- dev web --demo ui_gallery
 
 This runs `apps/fret-demo-web` via `trunk serve`.
 
+Related workstream: `docs/workstreams/fret-launch-app-surface-fearless-refactor-v1/`
+
 ## Choosing a native entry path
 
 - App authors: `fret::App::new(...).window(...).ui(...)?`

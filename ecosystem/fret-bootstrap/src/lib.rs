@@ -4,6 +4,15 @@
 //! existing primitives from `fret-launch` and friends to provide a convenient “golden path”
 //! startup experience.
 //!
+//! ## Choosing an entry path
+//!
+//! - `ui_app(...)` / `ui_app_with_hooks(...)`: recommended author-facing path for general UI apps.
+//! - `BootstrapBuilder::new_fn(...)`: recommended advanced path when you need runner-level control
+//!   but still want the bootstrap/defaults story.
+//! - `BootstrapBuilder::new(...)`: generic/compatibility path for existing low-level drivers that
+//!   already implement `fret_launch::WinitAppDriver`, or for code that already holds a fully built
+//!   driver value.
+//!
 //! Minimal example (native):
 //!
 //! ```no_run
@@ -155,6 +164,11 @@ core-command-title-app-quit = 退出
 "#;
 
 /// Builder wrapper around `fret_launch::WinitAppBuilder` with common bootstrapping conveniences.
+///
+/// Entry guidance:
+/// - prefer `ui_app(...)` / `ui_app_with_hooks(...)` for app-author-facing UI code,
+/// - prefer `BootstrapBuilder::new_fn(...)` for new advanced integrations,
+/// - use `BootstrapBuilder::new(...)` for generic/compatibility low-level driver integration.
 #[cfg(not(target_arch = "wasm32"))]
 pub struct BootstrapBuilder<D> {
     inner: fret_launch::WinitAppBuilder<D>,
@@ -165,6 +179,12 @@ pub struct BootstrapBuilder<D> {
 
 #[cfg(not(target_arch = "wasm32"))]
 impl<D: fret_launch::WinitAppDriver + 'static> BootstrapBuilder<D> {
+    /// Create a bootstrap builder from an already-constructed low-level driver.
+    ///
+    /// Prefer `new_fn(...)` for new advanced integrations and `ui_app(...)` for general app code.
+    /// This constructor remains useful for compatibility-oriented code that still implements
+    /// `fret_launch::WinitAppDriver` directly, or for callers that already have a concrete driver
+    /// value and simply want the bootstrap/defaults layer.
     pub fn new(app: App, driver: D) -> Self {
         Self {
             inner: fret_launch::WinitAppBuilder::new(app, driver),
@@ -895,6 +915,9 @@ pub type UiAppBootstrapBuilder<S> = BootstrapBuilder<
 /// Create a “golden path” native UI app builder, using `App::new()` by default and allowing a
 /// hook to configure the driver before it is wrapped into `FnDriver`.
 ///
+/// This is the recommended author-facing path for general applications that want the bootstrap
+/// defaults without dealing with runner-level driver details.
+///
 /// Prefer passing a non-capturing closure so it can coerce to a `fn` pointer (hotpatch-friendly).
 #[cfg(all(not(target_arch = "wasm32"), feature = "ui-app-driver"))]
 pub fn ui_app_with_hooks<S: 'static>(
@@ -908,7 +931,8 @@ pub fn ui_app_with_hooks<S: 'static>(
 
 /// Create a “golden path” native UI app builder, using `App::new()` by default.
 ///
-/// This hides the `FnDriver` boilerplate and keeps example code short.
+/// This is the shortest recommended entry for general applications. It hides the `FnDriver`
+/// boilerplate and keeps example code short.
 #[cfg(all(not(target_arch = "wasm32"), feature = "ui-app-driver"))]
 pub fn ui_app<S: 'static>(
     root_name: &'static str,
