@@ -12,4 +12,5 @@ pub mod parts;
 pub mod radio;
 pub mod rtl;
 pub mod submenu;
+pub mod usage;
 pub mod with_icons;
