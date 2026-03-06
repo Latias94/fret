@@ -8,6 +8,7 @@
 
 pub mod canvas;
 pub mod commands;
+pub mod controller;
 pub mod declarative;
 pub mod edge_types;
 pub mod edit_queue;
@@ -53,6 +54,7 @@ pub use canvas::{
     NoopNodeGraphCanvasMiddleware,
 };
 pub use commands::register_node_graph_commands;
+pub use controller::{NodeGraphController, NodeGraphControllerError};
 pub use edge_types::{EdgeCustomPath, EdgePathInput, EdgeTypeKey, NodeGraphEdgeTypes};
 pub use edit_queue::NodeGraphEditQueue;
 pub use geometry_overrides::{

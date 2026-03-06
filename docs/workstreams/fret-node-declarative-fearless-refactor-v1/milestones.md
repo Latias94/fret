@@ -138,14 +138,16 @@ points rather than direct graph mutation.
 
 ### Progress note (2026-03-06)
 
-- First landing slice is complete:
+- First landing slices are complete:
   - `node_graph_surface_paint_only` node-drag commit now builds a `GraphTransaction`.
-  - When a store exists, the declarative path dispatches through `NodeGraphStore` and syncs graph /
-    view models back from store.
-  - `apps/fret-examples/src/node_graph_demo.rs` now passes a store into the declarative surface so
-    the recommended demo path exercises the transaction-safe commit architecture.
-- Remaining M3 scope is still substantial: we still need a real controller/instance facade,
-  broader declarative commit coverage, and explicit undo/redo / controlled-mode gates.
+  - When a controller/store exists, the declarative path dispatches through `NodeGraphStore` and
+    syncs graph / view models back from store.
+  - `ecosystem/fret-node/src/ui/controller.rs` now provides a first minimal `NodeGraphController`
+    facade over store + optional view queue.
+  - `apps/fret-examples/src/node_graph_demo.rs` now passes a controller into the declarative
+    surface so the recommended demo path exercises the transaction-safe commit architecture.
+- Remaining M3 scope is still substantial: we still need a broader controller surface, more
+  declarative commit coverage, and explicit undo/redo / controlled-mode gates.
 
 ### Deliverables
 
@@ -177,6 +179,7 @@ points rather than direct graph mutation.
 - `ecosystem/fret-node/src/runtime/store.rs`
 - `ecosystem/fret-node/src/runtime/changes.rs`
 - `ecosystem/fret-node/src/runtime/lookups.rs`
+- `ecosystem/fret-node/src/ui/controller.rs`
 - `ecosystem/fret-node/src/ui/declarative/paint_only.rs`
 - `apps/fret-examples/src/node_graph_demo.rs`
 

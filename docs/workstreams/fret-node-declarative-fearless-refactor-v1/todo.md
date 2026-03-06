@@ -66,13 +66,17 @@ land in code review; move design discussion back to `README.md` if a TODO turns 
 
 ## M3 - Controller / instance facade
 
-- [ ] Introduce a thin controller or instance facade over store/lookups/view helpers.
-- [ ] Make the facade responsible for the ergonomic app-facing surface for:
-  - viewport manipulation
-  - fit-view / set-center
+- [x] Introduce a first thin controller facade in `ecosystem/fret-node/src/ui/controller.rs`.
+- [x] Make the first landing slice responsible for an ergonomic app-facing surface for:
+  - viewport read / set-viewport glue
   - controlled graph replacement / synchronization
-  - common graph queries
-  - canonical graph update entry points
+  - common graph queries (`outgoers`, `incomers`, `connected_edges`)
+  - canonical transaction-safe update entry points
+- [x] Wire the default declarative demo to use `NodeGraphController` instead of teaching raw store
+      plumbing directly.
+- [ ] Extend the controller surface to cover the rest of the intended viewport helpers:
+  - fit-view / set-center
+  - broader imperative viewport choreography
 - [ ] Decide whether `view_queue` stays as the transport for imperative viewport requests or becomes
       an internal detail of the controller.
 - [ ] Decide whether `edit_queue` stays public, becomes controller-owned, or is limited to internal
@@ -81,16 +85,21 @@ land in code review; move design discussion back to `README.md` if a TODO turns 
   - viewport helpers
   - get node/handle connections
   - update node/edge style helpers where appropriate
+- [ ] Decide the long-term public naming/ownership story (`Controller` vs `Instance` vs split
+      facades) before widening the teaching surface further.
 
 ## M3 - Transaction-safe declarative commits
 
 - [x] Land the first declarative transaction-safe commit slice:
   - `ecosystem/fret-node/src/ui/declarative/paint_only.rs` node-drag commit now builds a
     `GraphTransaction` instead of mutating `Graph` in place.
-  - When `NodeGraphSurfacePaintOnlyProps.store` is present, the commit now prefers
-    `NodeGraphStore::dispatch_transaction(...)` and then syncs graph/view models back from store.
-  - When no store is present, the declarative path still applies the transaction as a transaction,
-    rather than doing ad-hoc position mutation.
+  - When `NodeGraphSurfacePaintOnlyProps.controller` is present, the commit now prefers the
+    controller facade, which in turn dispatches through `NodeGraphStore` and syncs graph/view
+    models back from store.
+  - `NodeGraphSurfacePaintOnlyProps.store` remains as a compatibility fallback for callers that have
+    not adopted the controller surface yet.
+  - When no store/controller is present, the declarative path still applies the transaction as a
+    transaction, rather than doing ad-hoc position mutation.
 - [x] Wire `apps/fret-examples/src/node_graph_demo.rs` to provide a `NodeGraphStore` so the default
       declarative demo path exercises the transaction-safe architecture.
 - [x] Add a focused regression test for the drag transaction builder used by the declarative path.

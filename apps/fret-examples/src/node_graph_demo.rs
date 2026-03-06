@@ -10,8 +10,8 @@ use fret_node::core::{
 use fret_node::io::NodeGraphViewState;
 use fret_node::runtime::store::NodeGraphStore;
 use fret_node::ui::{
-    EdgePaintOverrideV1, NodeGraphPaintOverridesMap, NodeGraphPaintOverridesRef,
-    NodeGraphSurfacePaintOnlyProps, node_graph_surface_paint_only,
+    EdgePaintOverrideV1, NodeGraphController, NodeGraphPaintOverridesMap,
+    NodeGraphPaintOverridesRef, NodeGraphSurfacePaintOnlyProps, node_graph_surface_paint_only,
 };
 use serde_json::Value;
 
@@ -22,7 +22,7 @@ const TEST_ID_CANVAS: &str = "node_graph.canvas";
 struct NodeGraphDemoState {
     graph: Model<Graph>,
     view: Model<NodeGraphViewState>,
-    store: Model<NodeGraphStore>,
+    controller: NodeGraphController,
     paint_overrides: Option<NodeGraphPaintOverridesRef>,
 }
 
@@ -41,11 +41,12 @@ fn init_window(app: &mut App, _window: AppWindowId) -> NodeGraphDemoState {
     let store = app
         .models_mut()
         .insert(NodeGraphStore::new(graph_state, view_state));
+    let controller = NodeGraphController::new(store);
     let paint_overrides = demo_paint_overrides();
     NodeGraphDemoState {
         graph,
         view,
-        store,
+        controller,
         paint_overrides,
     }
 }
@@ -55,7 +56,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut NodeGraphDemoState) -> fret::
     cx.observe_model(&st.view, Invalidation::Paint);
 
     let mut props = NodeGraphSurfacePaintOnlyProps::new(st.graph.clone(), st.view.clone());
-    props.store = Some(st.store.clone());
+    props.controller = Some(st.controller.clone());
     props.test_id = Some(Arc::<str>::from(TEST_ID_CANVAS));
     props.paint_overrides = st.paint_overrides.clone();
     node_graph_surface_paint_only(cx, props).into()

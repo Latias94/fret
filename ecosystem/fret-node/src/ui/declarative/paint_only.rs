@@ -29,6 +29,7 @@ use crate::core::Graph;
 use crate::io::NodeGraphViewState;
 use crate::ops::{GraphOp, GraphTransaction, apply_transaction, normalize_transaction};
 use crate::runtime::store::NodeGraphStore;
+use crate::ui::NodeGraphController;
 use crate::ui::canvas::{CanvasGeometry, CanvasSpatialDerived};
 use crate::ui::declarative::view_reducer::{
     apply_fit_view_to_canvas_rect, apply_pan_by_screen_delta, apply_zoom_about_screen_point,
@@ -89,6 +90,7 @@ impl Default for NodeGraphWheelZoomConfig {
 pub struct NodeGraphSurfacePaintOnlyProps {
     pub graph: Model<Graph>,
     pub view_state: Model<NodeGraphViewState>,
+    pub controller: Option<NodeGraphController>,
     pub store: Option<Model<NodeGraphStore>>,
 
     pub pointer_region: PointerRegionProps,
@@ -135,6 +137,7 @@ impl NodeGraphSurfacePaintOnlyProps {
         Self {
             graph,
             view_state,
+            controller: None,
             store: None,
             pointer_region,
             canvas: CanvasProps::default(),
@@ -760,37 +763,11 @@ fn build_node_drag_transaction(
     tx.with_label(label)
 }
 
-fn sync_graph_and_view_state_from_store(
-    host: &mut dyn fret_ui::action::UiActionHost,
-    graph: &Model<Graph>,
-    view_state: &Model<NodeGraphViewState>,
-    store: &Model<NodeGraphStore>,
-) -> bool {
-    let Ok((next_view_state, next_graph)) = host.models_mut().read(store, |store| {
-        (store.view_state().clone(), store.graph().clone())
-    }) else {
-        return false;
-    };
-
-    let graph_synced = host
-        .models_mut()
-        .update(graph, |g| {
-            *g = next_graph;
-        })
-        .is_ok();
-    let view_synced = host
-        .models_mut()
-        .update(view_state, |state| {
-            *state = next_view_state;
-        })
-        .is_ok();
-    graph_synced && view_synced
-}
-
 fn commit_node_drag_transaction(
     host: &mut dyn fret_ui::action::UiActionHost,
     graph: &Model<Graph>,
     view_state: &Model<NodeGraphViewState>,
+    controller: Option<&NodeGraphController>,
     store: Option<&Model<NodeGraphStore>>,
     tx: &GraphTransaction,
 ) -> bool {
@@ -798,16 +775,17 @@ fn commit_node_drag_transaction(
         return true;
     }
 
+    if let Some(controller) = controller {
+        return controller
+            .dispatch_transaction_and_sync_models_action_host(host, graph, view_state, tx)
+            .is_ok();
+    }
+
     if let Some(store) = store {
-        return match host
-            .models_mut()
-            .update(store, |store| store.dispatch_transaction(tx))
-        {
-            Ok(Ok(_outcome)) => {
-                sync_graph_and_view_state_from_store(host, graph, view_state, store)
-            }
-            Ok(Err(_)) | Err(_) => false,
-        };
+        let controller = NodeGraphController::new(store.clone());
+        return controller
+            .dispatch_transaction_and_sync_models_action_host(host, graph, view_state, tx)
+            .is_ok();
     }
 
     let Ok(mut scratch) = host.models_mut().read(graph, |g| g.clone()) else {
@@ -1362,6 +1340,7 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
     let NodeGraphSurfacePaintOnlyProps {
         graph,
         view_state,
+        controller,
         store,
         pointer_region,
         canvas,
@@ -2633,6 +2612,7 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
             let node_drag_end = node_drag.clone();
             let graph_commit = graph.clone();
             let view_commit = view_state.clone();
+            let controller_commit = controller.clone();
             let store_commit = store.clone();
             let on_pointer_up: OnPointerUp = Arc::new(
                 move |host: &mut dyn fret_ui::action::UiPointerActionHost,
@@ -2672,6 +2652,7 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
                                         host,
                                         &graph_commit,
                                         &view_commit,
+                                        controller_commit.as_ref(),
                                         store_commit.as_ref(),
                                         tx,
                                     );

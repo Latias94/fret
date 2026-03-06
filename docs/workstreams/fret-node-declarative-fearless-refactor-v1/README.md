@@ -165,6 +165,17 @@ The final reference architecture should let app authors ask for one clear surfac
 - canonical edit/update entry points,
 - subscription and callback wiring.
 
+A first minimal slice is now landed in `ecosystem/fret-node/src/ui/controller.rs` as
+`NodeGraphController`:
+
+- it wraps `NodeGraphStore` and optional `NodeGraphViewQueue`,
+- it provides common query helpers and transaction-safe commit helpers,
+- it can sync external graph/view models from store after commits,
+- the default declarative demo now uses it.
+
+This is intentionally not the final shape yet. `edit_queue`, richer viewport commands, callback
+layering, and the long-term public naming/ownership story are still open.
+
 ### P5. The workstream itself must stay reviewable
 
 The previous workstream captured a lot of useful implementation evidence, but parts of it became
