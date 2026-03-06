@@ -4,6 +4,11 @@ Status: Draft (workstream note)
 
 This folder is a focused, “fearless refactor” plan for Fret’s diagnostics stack (“diag”).
 
+For the newer umbrella framing that consolidates runtime/tooling/artifacts/regression orchestration and
+decides that DevTools GUI is included as a consumer lane, see:
+
+- `docs/workstreams/diag-fearless-refactor-v2/README.md`
+
 Start here:
 
 - Design overview: `docs/workstreams/diag-architecture-fearless-refactor-v1/DESIGN.md`
