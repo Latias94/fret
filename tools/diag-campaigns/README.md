@@ -50,7 +50,10 @@ Automatic failure evidence:
   `share/share.manifest.json` when any selected campaign fails,
 - share manifest items now also record best-effort `triage.json` paths when the underlying bundle
   artifact is available,
+- share manifest items now also record `screenshots_manifest` when a bundle-aligned screenshots
+  manifest can be resolved,
 - share roots now also best-effort write `share/combined-failures.zip`, which bundles the share
-  manifest, aggregate summary/index, per-item AI zips, and any generated `triage.json` files,
+  manifest, aggregate summary/index, per-item AI zips, generated `triage.json`, and screenshot
+  manifest JSON files,
 - campaign and batch result manifests record `aggregate.share_manifest_path` plus `share_error`
   when export fails.

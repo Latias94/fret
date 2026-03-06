@@ -1163,7 +1163,8 @@ fn write_campaign_share_manifest(
     let mut triage_generated = 0usize;
     let mut triage_failed = 0usize;
     let mut run_entries = Vec::new();
-    let mut combined_entries: Vec<(String, Option<PathBuf>, Option<PathBuf>)> = Vec::new();
+    let mut combined_entries: Vec<(String, Option<PathBuf>, Option<PathBuf>, Option<PathBuf>)> =
+        Vec::new();
 
     for item in &summary.items {
         if !include_passed && item.status == RegressionStatusV1::Passed {
@@ -1183,6 +1184,10 @@ fn write_campaign_share_manifest(
         } else {
             (None, None)
         };
+        let screenshots_manifest = bundle_dir.as_deref().and_then(|bundle_dir| {
+            crate::commands::screenshots::resolve_screenshots_manifest_path(bundle_dir)
+                .map(|(_screenshots_dir, manifest_path)| manifest_path)
+        });
         if triage_path.is_some() {
             triage_generated = triage_generated.saturating_add(1);
         }
@@ -1230,6 +1235,7 @@ fn write_campaign_share_manifest(
             "bundle_dir": bundle_dir.as_ref().map(|path| path.display().to_string()),
             "triage_json": triage_path.as_ref().map(|path| path.display().to_string()),
             "triage_error": triage_error,
+            "screenshots_manifest": screenshots_manifest.as_ref().map(|path| path.display().to_string()),
             "source_script": item
                 .source
                 .as_ref()
@@ -1237,7 +1243,12 @@ fn write_campaign_share_manifest(
             "share_zip": pack_path.as_ref().map(|path| path.display().to_string()),
             "error": pack_error,
         }));
-        combined_entries.push((item.item_id.clone(), pack_path, triage_path));
+        combined_entries.push((
+            item.item_id.clone(),
+            pack_path,
+            triage_path,
+            screenshots_manifest,
+        ));
     }
 
     let share_manifest_path = share_dir.join("share.manifest.json");
@@ -1310,11 +1321,13 @@ fn write_campaign_combined_failure_zip(
     share_dir: &Path,
     share_manifest_path: &Path,
     summary_path: &Path,
-    entries: &[(String, Option<PathBuf>, Option<PathBuf>)],
+    entries: &[(String, Option<PathBuf>, Option<PathBuf>, Option<PathBuf>)],
 ) -> (Option<PathBuf>, Option<String>) {
     if !entries
         .iter()
-        .any(|(_item_id, share_zip, triage_path)| share_zip.is_some() || triage_path.is_some())
+        .any(|(_item_id, share_zip, triage_path, screenshots_manifest)| {
+            share_zip.is_some() || triage_path.is_some() || screenshots_manifest.is_some()
+        })
     {
         return (None, None);
     }
@@ -1337,7 +1350,7 @@ fn write_campaign_combined_failure_zip_inner(
     out_path: &Path,
     share_manifest_path: &Path,
     summary_path: &Path,
-    entries: &[(String, Option<PathBuf>, Option<PathBuf>)],
+    entries: &[(String, Option<PathBuf>, Option<PathBuf>, Option<PathBuf>)],
 ) -> Result<(), String> {
     if let Some(parent) = out_path.parent() {
         std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
@@ -1370,7 +1383,9 @@ fn write_campaign_combined_failure_zip_inner(
         )?;
     }
 
-    for (index, (item_id, share_zip, triage_path)) in entries.iter().enumerate() {
+    for (index, (item_id, share_zip, triage_path, screenshots_manifest)) in
+        entries.iter().enumerate()
+    {
         let safe_item_id = zip_safe_component(item_id);
         if let Some(share_zip) = share_zip.as_deref()
             && share_zip.is_file()
@@ -1389,6 +1404,19 @@ fn write_campaign_combined_failure_zip_inner(
                 &mut zip,
                 triage_path,
                 &format!("items/{:02}-{safe_item_id}.triage.json", index + 1),
+                options,
+            )?;
+        }
+        if let Some(screenshots_manifest) = screenshots_manifest.as_deref()
+            && screenshots_manifest.is_file()
+        {
+            add_file_to_zip(
+                &mut zip,
+                screenshots_manifest,
+                &format!(
+                    "items/{:02}-{safe_item_id}.screenshots.manifest.json",
+                    index + 1
+                ),
                 options,
             )?;
         }
@@ -1893,6 +1921,9 @@ mod tests {
         let packet_dir = bundle_dir.join("ai.packet");
         std::fs::create_dir_all(&packet_dir).unwrap();
         std::fs::write(packet_dir.join("summary.json"), b"{}" as &[u8]).unwrap();
+        let screenshots_dir = root.join("screenshots").join("bundle-a");
+        std::fs::create_dir_all(&screenshots_dir).unwrap();
+        std::fs::write(screenshots_dir.join("manifest.json"), b"{}" as &[u8]).unwrap();
 
         let mut totals = RegressionTotalsV1::default();
         totals.record_status(RegressionStatusV1::FailedDeterministic);
@@ -1984,5 +2015,10 @@ mod tests {
             .and_then(|v| v.as_str())
             .expect("combined zip path");
         assert!(PathBuf::from(combined_zip).is_file());
+        let screenshots_manifest = manifest
+            .pointer("/items/0/screenshots_manifest")
+            .and_then(|v| v.as_str())
+            .expect("screenshots manifest path");
+        assert!(PathBuf::from(screenshots_manifest).is_file());
     }
 }

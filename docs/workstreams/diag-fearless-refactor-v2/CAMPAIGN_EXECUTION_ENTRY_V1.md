@@ -38,6 +38,7 @@ Current shipped behavior:
   automatically for campaign and batch roots when aggregate summaries exist,
 - share manifest entries now also expose best-effort `triage.json` paths when bundle artifacts are
   present,
+- share manifest entries now also expose `screenshots_manifest` when screenshot evidence exists,
 - share roots now also best-effort emit one `combined-failures.zip` bundle for handoff,
 - suite runs reuse the existing `diag suite` implementation,
 - aggregate handoff reuses the existing `diag summarize` implementation,

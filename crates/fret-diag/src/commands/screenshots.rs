@@ -59,7 +59,7 @@ pub(crate) fn cmd_screenshots(
     Ok(())
 }
 
-fn resolve_screenshots_manifest_path(src: &Path) -> Option<(PathBuf, PathBuf)> {
+pub(crate) fn resolve_screenshots_manifest_path(src: &Path) -> Option<(PathBuf, PathBuf)> {
     let try_dir = |dir: &Path| -> Option<(PathBuf, PathBuf)> {
         let manifest = dir.join("manifest.json");
         if manifest.is_file() {
