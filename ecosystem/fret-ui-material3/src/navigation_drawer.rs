@@ -532,6 +532,8 @@ fn navigation_drawer_item<H: UiHost>(
                     props.color = Some(badge_color);
                     props.wrap = TextWrap::None;
                     props.overflow = TextOverflow::Clip;
+                    props.layout.size.min_width = Some(Length::Px(Px(0.0)));
+                    props.layout.flex.shrink = 1.0;
                     cx.text_props(props)
                 });
 
@@ -712,6 +714,40 @@ mod tests {
         assert_eq!(label.layout.size.min_width, Some(Length::Px(Px(0.0))));
         assert_eq!(label.layout.flex.grow, 1.0);
         assert_eq!(label.layout.flex.basis, Length::Px(Px(0.0)));
+    }
+
+    #[test]
+    fn navigation_drawer_badges_can_shrink_beside_labels() {
+        let window = fret_core::AppWindowId::default();
+        let mut app = App::new();
+        let selected = Arc::<str>::from("inbox");
+        let badge = Arc::<str>::from(
+            "A very long drawer badge that should shrink before it overflows the row",
+        );
+        let model = app.models_mut().insert(selected.clone());
+
+        let el = fret_ui::elements::with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "m3-navigation-drawer-badge",
+            |cx| {
+                NavigationDrawer::new(model.clone())
+                    .items(vec![
+                        NavigationDrawerItem::new(selected.clone(), "Inbox", ids::ui::SEARCH)
+                            .badge_label(badge.clone()),
+                    ])
+                    .into_element(cx)
+            },
+        );
+
+        let badge =
+            find_text_by_content(&el, badge.as_ref()).expect("navigation drawer badge text");
+        assert_eq!(badge.wrap, TextWrap::None);
+        assert_eq!(badge.overflow, TextOverflow::Clip);
+        assert_eq!(badge.layout.size.width, Length::Auto);
+        assert_eq!(badge.layout.size.min_width, Some(Length::Px(Px(0.0))));
+        assert_eq!(badge.layout.flex.shrink, 1.0);
     }
 }
 

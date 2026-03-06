@@ -54,6 +54,9 @@ Current snapshot (2026-03-06):
 - The Material 3 date picker audit now also covers the modal panel headline:
   `Select date` keeps ellipsis semantics within the fixed dialog width via explicit fill width
   plus `min-w-0`, alongside the already-covered month header title.
+- The Material 3 navigation drawer audit now also covers optional badge text:
+  unusually long badges keep clip semantics while shrinking beside the main label via explicit
+  `min-w-0` + `flex-shrink: 1`.
 - `fret-ui-ai/inline_citation` hover-card content is now covered too: fixed-width cards keep title
   / URL truncation and quote wrapping stable because the content stacks and text/link surfaces now
   explicitly fill available width and opt into `min-w-0`.
@@ -106,6 +109,9 @@ Current snapshot (2026-03-06):
 - `fret-ui-material3/date_picker` now also covers the modal dialog headline: `Select date`
   keeps ellipsis semantics within the fixed dialog width because the headline text now explicitly
   opts into fill width plus `min-w-0`, complementing the month-title header coverage.
+- `fret-ui-material3/navigation_drawer` now also covers optional badge text: unusually
+  long badges keep clip semantics while shrinking beside the main label because the badge text now
+  explicitly opts into `min-w-0` plus `flex-shrink: 1`.
 
 ---
 
