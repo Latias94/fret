@@ -29,26 +29,27 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             .into_element(cx),
     );
 
-    let content = shadcn::DrawerContent::new([
-        shadcn::DrawerHeader::new([
-            shadcn::DrawerTitle::new("Move Goal").into_element(cx),
-            shadcn::DrawerDescription::new("Set your daily activity goal.").into_element(cx),
-        ])
-        .into_element(cx),
-        shadcn::DrawerFooter::new([
-            shadcn::Button::new("Submit").into_element(cx),
-            shadcn::DrawerClose::from_scope().into_element(cx),
-        ])
-        .into_element(cx),
-    ])
-    .into_element(cx);
-
     shadcn::Drawer::new(open)
         .compose()
         .trigger(trigger)
         .portal(shadcn::DrawerPortal::new())
         .overlay(shadcn::DrawerOverlay::new())
-        .content(content)
+        .content_with(move |cx| {
+            shadcn::DrawerContent::new([
+                shadcn::DrawerHeader::new([
+                    shadcn::DrawerTitle::new("Move Goal").into_element(cx),
+                    shadcn::DrawerDescription::new("Set your daily activity goal.")
+                        .into_element(cx),
+                ])
+                .into_element(cx),
+                shadcn::DrawerFooter::new([
+                    shadcn::Button::new("Submit").into_element(cx),
+                    shadcn::DrawerClose::from_scope().into_element(cx),
+                ])
+                .into_element(cx),
+            ])
+            .into_element(cx)
+        })
         .into_element(cx)
 }
 // endregion: example

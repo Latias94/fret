@@ -13,8 +13,8 @@ use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::alert_dialog as radix_alert_dialog;
 use fret_ui_kit::primitives::portal_inherited;
 use fret_ui_kit::{
-    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayController, OverlayPresence,
-    Radius, Space, ui,
+    ui, ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayController,
+    OverlayPresence, Radius, Space,
 };
 
 use crate::layout as shadcn_layout;
@@ -247,7 +247,7 @@ impl AlertDialog {
     /// This is an ergonomic bridge between Fret's closure-root authoring model and the nested part
     /// mental model used by shadcn/Radix/Base UI. It intentionally stays in the recipe layer: the
     /// lower-level mechanism still routes through [`AlertDialog::into_element_parts`].
-    pub fn compose(self) -> AlertDialogComposition {
+    pub fn compose<H: UiHost>(self) -> AlertDialogComposition<H> {
         AlertDialogComposition::new(self)
     }
 
@@ -493,15 +493,23 @@ impl AlertDialog {
 /// Unlike upstream React children composition, this builder stores already-authored Fret elements
 /// and lowers them into the existing closure-based entry point at the end. That keeps the
 /// mechanism surface unchanged while giving call sites a more composable authoring style.
-pub struct AlertDialogComposition {
+type AlertDialogDeferredContent<H> =
+    Box<dyn FnOnce(&mut ElementContext<'_, H>) -> AnyElement + 'static>;
+
+enum AlertDialogCompositionContent<H: UiHost> {
+    Eager(AnyElement),
+    Deferred(AlertDialogDeferredContent<H>),
+}
+
+pub struct AlertDialogComposition<H: UiHost> {
     dialog: AlertDialog,
     trigger: Option<AlertDialogTrigger>,
     portal: AlertDialogPortal,
     overlay: AlertDialogOverlay,
-    content: Option<AnyElement>,
+    content: Option<AlertDialogCompositionContent<H>>,
 }
 
-impl std::fmt::Debug for AlertDialogComposition {
+impl<H: UiHost> std::fmt::Debug for AlertDialogComposition<H> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("AlertDialogComposition")
             .field("dialog", &self.dialog)
@@ -513,7 +521,7 @@ impl std::fmt::Debug for AlertDialogComposition {
     }
 }
 
-impl AlertDialogComposition {
+impl<H: UiHost> AlertDialogComposition<H> {
     pub fn new(dialog: AlertDialog) -> Self {
         Self {
             dialog,
@@ -540,12 +548,20 @@ impl AlertDialogComposition {
     }
 
     pub fn content(mut self, content: AnyElement) -> Self {
-        self.content = Some(content);
+        self.content = Some(AlertDialogCompositionContent::Eager(content));
+        self
+    }
+
+    pub fn content_with(
+        mut self,
+        content: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement + 'static,
+    ) -> Self {
+        self.content = Some(AlertDialogCompositionContent::Deferred(Box::new(content)));
         self
     }
 
     #[track_caller]
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let trigger = self
             .trigger
             .expect("AlertDialog::compose().trigger(...) must be provided before into_element()");
@@ -556,8 +572,22 @@ impl AlertDialogComposition {
         let portal = self.portal;
         let overlay = self.overlay;
 
-        self.dialog
-            .into_element_parts(cx, move |_cx| trigger, portal, overlay, move |_cx| content)
+        match content {
+            AlertDialogCompositionContent::Eager(content) => self.dialog.into_element_parts(
+                cx,
+                move |_cx| trigger,
+                portal,
+                overlay,
+                move |_cx| content,
+            ),
+            AlertDialogCompositionContent::Deferred(content) => self.dialog.into_element_parts(
+                cx,
+                move |_cx| trigger,
+                portal,
+                overlay,
+                move |cx| content(cx),
+            ),
+        }
     }
 }
 
@@ -1209,18 +1239,18 @@ mod tests {
     use super::*;
     use std::cell::Cell;
     use std::rc::Rc;
+    use std::sync::atomic::{AtomicUsize, Ordering};
     use std::sync::Arc;
     use std::sync::Mutex;
-    use std::sync::atomic::{AtomicUsize, Ordering};
 
     use fret_app::App;
     use fret_core::{AppWindowId, PathCommand, Point, Rect, Size, SvgId, SvgService};
     use fret_core::{PathConstraints, PathId, PathMetrics, PathService, PathStyle};
     use fret_core::{Px, TextBlobId, TextConstraints, TextMetrics, TextService};
     use fret_runtime::FrameId;
-    use fret_ui::UiTree;
     use fret_ui::element::PressableProps;
     use fret_ui::elements::bounds_for_element;
+    use fret_ui::UiTree;
     use fret_ui_kit::declarative::action_hooks::ActionHooksExt;
 
     #[test]
@@ -1414,6 +1444,55 @@ mod tests {
                 click_count: 1,
             }),
         );
+
+        assert_eq!(app.models().get_copied(&open), Some(true));
+    }
+
+    #[test]
+    fn alert_dialog_compose_content_with_supports_from_scope_buttons() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(200.0)),
+        );
+        let mut services = FakeServices;
+        let open = app.models_mut().insert(true);
+
+        OverlayController::begin_frame(&mut app, window);
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "shadcn-alert-dialog-compose-content-with-from-scope",
+            |cx| {
+                let trigger = AlertDialogTrigger::new(crate::Button::new("Open").into_element(cx));
+
+                vec![AlertDialog::new(open.clone())
+                    .compose()
+                    .trigger(trigger)
+                    .portal(AlertDialogPortal::new())
+                    .overlay(AlertDialogOverlay::new())
+                    .content_with(|cx| {
+                        let footer = AlertDialogFooter::new(vec![
+                            AlertDialogCancel::from_scope("Cancel").into_element(cx),
+                            AlertDialogAction::from_scope("Continue").into_element(cx),
+                        ])
+                        .into_element(cx);
+
+                        AlertDialogContent::new(vec![footer]).into_element(cx)
+                    })
+                    .into_element(cx)]
+            },
+        );
+        ui.set_root(root);
+        OverlayController::render(&mut ui, &mut app, &mut services, window, bounds);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
 
         assert_eq!(app.models().get_copied(&open), Some(true));
     }

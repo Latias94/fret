@@ -17,21 +17,21 @@ use fret_ui_headless::motion::simulation::Simulation1D;
 use fret_ui_headless::motion::tolerance::Tolerance;
 use fret_ui_headless::snap_points as headless_snap_points;
 
-use crate::Sheet;
 use crate::layout as shadcn_layout;
 pub use crate::sheet::{
     SheetDescription as DrawerDescription, SheetSide as DrawerSide, SheetTitle as DrawerTitle,
 };
+use crate::Sheet;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::motion_springs::{
     shadcn_drawer_inertia_bounce_spring_description, shadcn_drawer_settle_spring_description,
 };
 use fret_ui_kit::declarative::motion_value::{
-    MotionKickF32, MotionToSpecF32, MotionValueF32Update, SpringSpecF32, drive_motion_value_f32,
+    drive_motion_value_f32, MotionKickF32, MotionToSpecF32, MotionValueF32Update, SpringSpecF32,
 };
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::dialog as radix_dialog;
-use fret_ui_kit::{ChromeRefinement, ColorRef, Items, LayoutRefinement, Space, ui};
+use fret_ui_kit::{ui, ChromeRefinement, ColorRef, Items, LayoutRefinement, Space};
 
 type OnOpenChange = Arc<dyn Fn(bool) + Send + Sync + 'static>;
 
@@ -324,13 +324,11 @@ impl DrawerContent {
             DrawerSide::Top | DrawerSide::Bottom => LayoutRefinement::default().w_full(),
         };
         let content = cx.container(props, move |cx| {
-            vec![
-                ui::v_stack(move |_cx| rows)
-                    .gap(Space::N0)
-                    .layout(stack_layout)
-                    .items_stretch()
-                    .into_element(cx),
-            ]
+            vec![ui::v_stack(move |_cx| rows)
+                .gap(Space::N0)
+                .layout(stack_layout)
+                .items_stretch()
+                .into_element(cx)]
         });
 
         content.attach_semantics(SemanticsDecoration::default().role(SemanticsRole::Dialog))
@@ -465,7 +463,7 @@ impl Drawer {
     ///
     /// This bridges Fret's closure-root authoring model with the nested part mental model used by
     /// shadcn/Vaul while keeping the underlying mechanism surface unchanged.
-    pub fn compose(self) -> DrawerComposition {
+    pub fn compose<H: UiHost>(self) -> DrawerComposition<H> {
         DrawerComposition::new(self)
     }
 
@@ -975,15 +973,22 @@ impl Drawer {
 }
 
 /// Recipe-level builder for composing a drawer from shadcn-style parts.
-pub struct DrawerComposition {
+type DrawerDeferredContent<H> = Box<dyn FnOnce(&mut ElementContext<'_, H>) -> AnyElement + 'static>;
+
+enum DrawerCompositionContent<H: UiHost> {
+    Eager(AnyElement),
+    Deferred(DrawerDeferredContent<H>),
+}
+
+pub struct DrawerComposition<H: UiHost> {
     drawer: Drawer,
     trigger: Option<DrawerTrigger>,
     portal: DrawerPortal,
     overlay: DrawerOverlay,
-    content: Option<AnyElement>,
+    content: Option<DrawerCompositionContent<H>>,
 }
 
-impl std::fmt::Debug for DrawerComposition {
+impl<H: UiHost> std::fmt::Debug for DrawerComposition<H> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("DrawerComposition")
             .field("drawer", &self.drawer)
@@ -995,7 +1000,7 @@ impl std::fmt::Debug for DrawerComposition {
     }
 }
 
-impl DrawerComposition {
+impl<H: UiHost> DrawerComposition<H> {
     pub fn new(drawer: Drawer) -> Self {
         Self {
             drawer,
@@ -1022,12 +1027,20 @@ impl DrawerComposition {
     }
 
     pub fn content(mut self, content: AnyElement) -> Self {
-        self.content = Some(content);
+        self.content = Some(DrawerCompositionContent::Eager(content));
+        self
+    }
+
+    pub fn content_with(
+        mut self,
+        content: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement + 'static,
+    ) -> Self {
+        self.content = Some(DrawerCompositionContent::Deferred(Box::new(content)));
         self
     }
 
     #[track_caller]
-    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let trigger = self
             .trigger
             .expect("Drawer::compose().trigger(...) must be provided before into_element()");
@@ -1038,8 +1051,22 @@ impl DrawerComposition {
         let portal = self.portal;
         let overlay = self.overlay;
 
-        self.drawer
-            .into_element_parts(cx, move |_cx| trigger, portal, overlay, move |_cx| content)
+        match content {
+            DrawerCompositionContent::Eager(content) => self.drawer.into_element_parts(
+                cx,
+                move |_cx| trigger,
+                portal,
+                overlay,
+                move |_cx| content,
+            ),
+            DrawerCompositionContent::Deferred(content) => self.drawer.into_element_parts(
+                cx,
+                move |_cx| trigger,
+                portal,
+                overlay,
+                move |cx| content(cx),
+            ),
+        }
     }
 }
 
@@ -1165,7 +1192,7 @@ impl DrawerTrigger {
 /// In Fret, drawers are backed by modal overlays, so this delegates to `DialogClose`.
 #[derive(Clone)]
 pub struct DrawerClose {
-    inner: crate::DialogClose,
+    inner: crate::SheetClose,
 }
 
 impl std::fmt::Debug for DrawerClose {
@@ -1177,18 +1204,14 @@ impl std::fmt::Debug for DrawerClose {
 impl DrawerClose {
     pub fn new(open: Model<bool>) -> Self {
         Self {
-            // DrawerClose should behave like a primitive close affordance (no forced positioning).
-            // Delegate visuals to `DialogClose`, but override the default absolute positioning.
-            inner: crate::DialogClose::new(open)
-                .refine_layout(LayoutRefinement::default().relative().inset(Space::N0)),
+            inner: crate::SheetClose::new(open),
         }
     }
 
     /// Creates a close affordance that resolves the current drawer/dialog scope at render time.
     pub fn from_scope() -> Self {
         Self {
-            inner: crate::DialogClose::from_scope()
-                .refine_layout(LayoutRefinement::default().relative().inset(Space::N0)),
+            inner: crate::SheetClose::from_scope(),
         }
     }
 
@@ -1223,9 +1246,9 @@ mod tests {
 
     use std::cell::{Cell, RefCell};
     use std::rc::Rc;
+    use std::sync::atomic::{AtomicUsize, Ordering};
     use std::sync::Arc;
     use std::sync::Mutex;
-    use std::sync::atomic::{AtomicUsize, Ordering};
 
     use fret_app::App;
     use fret_core::{AppWindowId, Point, Px, Rect, Size};
@@ -1233,14 +1256,14 @@ mod tests {
     use fret_core::{PathConstraints, PathId, PathMetrics, PathService, PathStyle};
     use fret_core::{TextBlobId, TextConstraints, TextMetrics, TextService};
     use fret_runtime::FrameId;
-    use fret_ui::UiTree;
     use fret_ui::action::DismissReason;
     use fret_ui::element::{ContainerProps, LayoutStyle, Length, PressableProps, SizeStyle};
     use fret_ui::elements::{
-        GlobalElementId, current_bounds_for_element, visual_bounds_for_element,
+        current_bounds_for_element, visual_bounds_for_element, GlobalElementId,
     };
-    use fret_ui_kit::OverlayController;
+    use fret_ui::UiTree;
     use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
+    use fret_ui_kit::OverlayController;
 
     fn bounds() -> Rect {
         Rect::new(
@@ -1467,6 +1490,50 @@ mod tests {
         assert_eq!(app.models().get_copied(&open), Some(true));
     }
 
+    #[test]
+    fn drawer_compose_content_with_supports_from_scope_close() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(200.0)),
+        );
+        let mut services = FakeServices;
+        let open = app.models_mut().insert(true);
+
+        OverlayController::begin_frame(&mut app, window);
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "shadcn-drawer-compose-content-with-from-scope",
+            |cx| {
+                let trigger = DrawerTrigger::new(crate::Button::new("Open").into_element(cx));
+
+                vec![Drawer::new(open.clone())
+                    .compose()
+                    .trigger(trigger)
+                    .portal(DrawerPortal::new())
+                    .overlay(DrawerOverlay::new())
+                    .content_with(|cx| {
+                        let close = DrawerClose::from_scope().into_element(cx);
+                        DrawerContent::new(vec![close]).into_element(cx)
+                    })
+                    .into_element(cx)]
+            },
+        );
+        ui.set_root(root);
+        OverlayController::render(&mut ui, &mut app, &mut services, window, bounds);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        assert_eq!(app.models().get_copied(&open), Some(true));
+    }
+
     fn render_drawer_frame_with_underlay(
         ui: &mut UiTree<App>,
         app: &mut App,
@@ -1533,7 +1600,7 @@ mod tests {
                     |_cx| trigger,
                     move |cx| {
                         DrawerContent::new(vec![
-                            cx.container(ContainerProps::default(), |_cx| Vec::new()),
+                            cx.container(ContainerProps::default(), |_cx| Vec::new())
                         ])
                         .into_element(cx)
                     },
@@ -1974,7 +2041,7 @@ mod tests {
                         |_cx| trigger,
                         |cx| {
                             let content = DrawerContent::new(vec![
-                                cx.container(ContainerProps::default(), |_cx| Vec::new()),
+                                cx.container(ContainerProps::default(), |_cx| Vec::new())
                             ])
                             .into_element(cx);
                             drawer_content_id.set(Some(content.id));
@@ -2099,7 +2166,7 @@ mod tests {
                         |_cx| trigger,
                         |cx| {
                             let content = DrawerContent::new(vec![
-                                cx.container(ContainerProps::default(), |_cx| Vec::new()),
+                                cx.container(ContainerProps::default(), |_cx| Vec::new())
                             ])
                             .into_element(cx);
                             drawer_content_id.set(Some(content.id));
