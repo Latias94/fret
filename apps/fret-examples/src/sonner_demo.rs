@@ -6,8 +6,8 @@ use anyhow::Context as _;
 use fret_app::{App, CommandId, Effect, Model, WindowRequest};
 use fret_core::{AppWindowId, Edges, Event, Px, Rect, UiServices};
 use fret_launch::{
-    WindowCreateSpec, WinitAppDriver, WinitCommandContext, WinitEventContext, WinitRenderContext,
-    WinitRunnerConfig, WinitWindowContext,
+    FnDriver, WindowCreateSpec, WinitAppDriver, WinitCommandContext, WinitEventContext,
+    WinitHotReloadContext, WinitRenderContext, WinitRunnerConfig, WinitWindowContext,
 };
 use fret_runtime::PlatformCapabilities;
 use fret_ui::action::UiActionHostAdapter;
@@ -496,6 +496,78 @@ pub fn build_runner_config() -> WinitRunnerConfig {
     }
 }
 
+fn create_window_state(
+    driver: &mut SonnerDemoDriver,
+    app: &mut App,
+    window: AppWindowId,
+) -> SonnerDemoWindowState {
+    <SonnerDemoDriver as WinitAppDriver>::create_window_state(driver, app, window)
+}
+
+fn hot_reload_window(
+    driver: &mut SonnerDemoDriver,
+    context: WinitHotReloadContext<'_, SonnerDemoWindowState>,
+) {
+    let WinitHotReloadContext {
+        app,
+        services,
+        window,
+        state,
+    } = context;
+    <SonnerDemoDriver as WinitAppDriver>::hot_reload_window(driver, app, services, window, state)
+}
+
+fn handle_global_changes(
+    driver: &mut SonnerDemoDriver,
+    context: WinitWindowContext<'_, SonnerDemoWindowState>,
+    changed: &[std::any::TypeId],
+) {
+    <SonnerDemoDriver as WinitAppDriver>::handle_global_changes(driver, context, changed)
+}
+
+fn handle_event(
+    driver: &mut SonnerDemoDriver,
+    context: WinitEventContext<'_, SonnerDemoWindowState>,
+    event: &Event,
+) {
+    <SonnerDemoDriver as WinitAppDriver>::handle_event(driver, context, event)
+}
+
+fn handle_command(
+    driver: &mut SonnerDemoDriver,
+    context: WinitCommandContext<'_, SonnerDemoWindowState>,
+    command: CommandId,
+) {
+    <SonnerDemoDriver as WinitAppDriver>::handle_command(driver, context, command)
+}
+
+fn render(driver: &mut SonnerDemoDriver, context: WinitRenderContext<'_, SonnerDemoWindowState>) {
+    <SonnerDemoDriver as WinitAppDriver>::render(driver, context)
+}
+
+fn window_create_spec(
+    driver: &mut SonnerDemoDriver,
+    app: &mut App,
+    request: &fret_app::CreateWindowRequest,
+) -> Option<WindowCreateSpec> {
+    <SonnerDemoDriver as WinitAppDriver>::window_create_spec(driver, app, request)
+}
+
+pub fn build_driver() -> impl WinitAppDriver {
+    FnDriver::new(
+        SonnerDemoDriver::default(),
+        create_window_state,
+        handle_event,
+        render,
+    )
+    .with_hooks(|hooks| {
+        hooks.hot_reload_window = Some(hot_reload_window);
+        hooks.handle_global_changes = Some(handle_global_changes);
+        hooks.handle_command = Some(handle_command);
+        hooks.window_create_spec = Some(window_create_spec);
+    })
+}
+
 #[cfg(not(target_arch = "wasm32"))]
 pub fn run() -> anyhow::Result<()> {
     let _ = tracing_subscriber::fmt()
@@ -509,6 +581,7 @@ pub fn run() -> anyhow::Result<()> {
 
     let app = build_app();
     let config = build_runner_config();
-    fret::run_native_with_compat_driver(config, app, SonnerDemoDriver::default())
-        .context("run sonner_demo app")
+    let driver = build_driver();
+
+    fret::run_native_with_compat_driver(config, app, driver).context("run sonner_demo app")
 }

@@ -2,8 +2,8 @@ use anyhow::Context as _;
 use fret_app::{App, CommandId, Effect, WindowRequest};
 use fret_core::{AppWindowId, Event, Px};
 use fret_launch::{
-    WindowCreateSpec, WinitAppDriver, WinitCommandContext, WinitEventContext, WinitRenderContext,
-    WinitRunnerConfig, WinitWindowContext,
+    FnDriver, WindowCreateSpec, WinitAppDriver, WinitCommandContext, WinitEventContext,
+    WinitHotReloadContext, WinitRenderContext, WinitRunnerConfig, WinitWindowContext,
 };
 use fret_render::{Renderer, WgpuContext};
 use fret_runtime::PlatformCapabilities;
@@ -473,6 +473,123 @@ impl WinitAppDriver for VirtualListStressDriver {
     }
 }
 
+fn gpu_ready(
+    driver: &mut VirtualListStressDriver,
+    app: &mut App,
+    context: &WgpuContext,
+    renderer: &mut Renderer,
+) {
+    <VirtualListStressDriver as WinitAppDriver>::gpu_ready(driver, app, context, renderer)
+}
+
+fn gpu_frame_prepare(
+    driver: &mut VirtualListStressDriver,
+    app: &mut App,
+    window: AppWindowId,
+    state: &mut VirtualListStressWindowState,
+    context: &WgpuContext,
+    renderer: &mut Renderer,
+    scale_factor: f32,
+) {
+    <VirtualListStressDriver as WinitAppDriver>::gpu_frame_prepare(
+        driver,
+        app,
+        window,
+        state,
+        context,
+        renderer,
+        scale_factor,
+    )
+}
+
+fn create_window_state(
+    driver: &mut VirtualListStressDriver,
+    app: &mut App,
+    window: AppWindowId,
+) -> VirtualListStressWindowState {
+    <VirtualListStressDriver as WinitAppDriver>::create_window_state(driver, app, window)
+}
+
+fn hot_reload_window(
+    driver: &mut VirtualListStressDriver,
+    context: WinitHotReloadContext<'_, VirtualListStressWindowState>,
+) {
+    let WinitHotReloadContext {
+        app,
+        services,
+        window,
+        state,
+    } = context;
+    <VirtualListStressDriver as WinitAppDriver>::hot_reload_window(
+        driver, app, services, window, state,
+    )
+}
+
+fn handle_model_changes(
+    driver: &mut VirtualListStressDriver,
+    context: WinitWindowContext<'_, VirtualListStressWindowState>,
+    changed: &[fret_app::ModelId],
+) {
+    <VirtualListStressDriver as WinitAppDriver>::handle_model_changes(driver, context, changed)
+}
+
+fn handle_global_changes(
+    driver: &mut VirtualListStressDriver,
+    context: WinitWindowContext<'_, VirtualListStressWindowState>,
+    changed: &[std::any::TypeId],
+) {
+    <VirtualListStressDriver as WinitAppDriver>::handle_global_changes(driver, context, changed)
+}
+
+fn handle_command(
+    driver: &mut VirtualListStressDriver,
+    context: WinitCommandContext<'_, VirtualListStressWindowState>,
+    command: CommandId,
+) {
+    <VirtualListStressDriver as WinitAppDriver>::handle_command(driver, context, command)
+}
+
+fn handle_event(
+    driver: &mut VirtualListStressDriver,
+    context: WinitEventContext<'_, VirtualListStressWindowState>,
+    event: &Event,
+) {
+    <VirtualListStressDriver as WinitAppDriver>::handle_event(driver, context, event)
+}
+
+fn render(
+    driver: &mut VirtualListStressDriver,
+    context: WinitRenderContext<'_, VirtualListStressWindowState>,
+) {
+    <VirtualListStressDriver as WinitAppDriver>::render(driver, context)
+}
+
+fn window_create_spec(
+    driver: &mut VirtualListStressDriver,
+    app: &mut App,
+    request: &fret_app::CreateWindowRequest,
+) -> Option<WindowCreateSpec> {
+    <VirtualListStressDriver as WinitAppDriver>::window_create_spec(driver, app, request)
+}
+
+pub fn build_driver() -> impl WinitAppDriver {
+    FnDriver::new(
+        VirtualListStressDriver::default(),
+        create_window_state,
+        handle_event,
+        render,
+    )
+    .with_hooks(|hooks| {
+        hooks.gpu_ready = Some(gpu_ready);
+        hooks.hot_reload_window = Some(hot_reload_window);
+        hooks.gpu_frame_prepare = Some(gpu_frame_prepare);
+        hooks.handle_model_changes = Some(handle_model_changes);
+        hooks.handle_global_changes = Some(handle_global_changes);
+        hooks.handle_command = Some(handle_command);
+        hooks.window_create_spec = Some(window_create_spec);
+    })
+}
+
 pub fn run() -> anyhow::Result<()> {
     let _ = tracing_subscriber::fmt()
         .with_env_filter(
@@ -492,6 +609,8 @@ pub fn run() -> anyhow::Result<()> {
         ..Default::default()
     };
 
-    crate::run_native_with_compat_driver(config, app, VirtualListStressDriver::default())
+    let driver = build_driver();
+
+    crate::run_native_with_compat_driver(config, app, driver)
         .context("run virtual_list_stress_demo app")
 }
