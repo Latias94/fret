@@ -26,6 +26,8 @@ Tracking doc: `docs/workstreams/diag-fearless-refactor-v2/README.md`
 
 - [ ] Audit the main runtime/export modules and list remaining monolith hotspots.
 - [ ] Audit `crates/fret-diag` orchestration entry points and list duplication hotspots.
+- [x] Write a phased implementation roadmap that maps design docs to code landing order:
+  - evidence: `docs/workstreams/diag-fearless-refactor-v2/IMPLEMENTATION_ROADMAP.md`
 - [ ] Choose the next 2–3 high-ROI seam extractions for landable follow-up PRs:
   - [ ] run planning/context,
   - [ ] artifact resolution/materialization,

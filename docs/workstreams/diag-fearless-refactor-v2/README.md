@@ -16,6 +16,7 @@ Tracking files:
 - `docs/workstreams/diag-fearless-refactor-v2/CRATE_AND_MODULE_MAP.md`
 - `docs/workstreams/diag-fearless-refactor-v2/REGRESSION_CAMPAIGN_V1.md`
 - `docs/workstreams/diag-fearless-refactor-v2/REGRESSION_SUMMARY_SCHEMA_V1.md`
+- `docs/workstreams/diag-fearless-refactor-v2/IMPLEMENTATION_ROADMAP.md`
 
 Related workstreams and context:
 

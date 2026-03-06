@@ -30,6 +30,7 @@ Deliverables:
 
 - A hotspot inventory for runtime/tooling.
 - A short list of next seam extractions with rationale and risk.
+- A phased implementation roadmap (`IMPLEMENTATION_ROADMAP.md`).
 
 Exit criteria:
 
