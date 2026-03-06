@@ -36,6 +36,9 @@ Current shipped behavior:
   `<root>/share/` plus a `share.manifest.json` handoff file,
 - failed `diag campaign run` executions now also best-effort generate `share/share.manifest.json`
   automatically for campaign and batch roots when aggregate summaries exist,
+- share manifest entries now also expose best-effort `triage.json` paths when bundle artifacts are
+  present,
+- share roots now also best-effort emit one `combined-failures.zip` bundle for handoff,
 - suite runs reuse the existing `diag suite` implementation,
 - aggregate handoff reuses the existing `diag summarize` implementation,
 - the final artifact contract remains `regression.index.json` + `regression.summary.json`.

@@ -1160,7 +1160,10 @@ fn write_campaign_share_manifest(
     let mut bundles_total = 0usize;
     let mut bundles_packed = 0usize;
     let mut bundles_missing = 0usize;
+    let mut triage_generated = 0usize;
+    let mut triage_failed = 0usize;
     let mut run_entries = Vec::new();
+    let mut combined_entries: Vec<(String, Option<PathBuf>, Option<PathBuf>)> = Vec::new();
 
     for item in &summary.items {
         if !include_passed && item.status == RegressionStatusV1::Passed {
@@ -1174,6 +1177,17 @@ fn write_campaign_share_manifest(
             .map(PathBuf::from);
         if bundle_dir.is_none() {
             bundles_missing = bundles_missing.saturating_add(1);
+        }
+        let (triage_path, triage_error) = if let Some(bundle_dir) = bundle_dir.as_deref() {
+            maybe_write_bundle_triage_json(bundle_dir, stats_top, warmup_frames)
+        } else {
+            (None, None)
+        };
+        if triage_path.is_some() {
+            triage_generated = triage_generated.saturating_add(1);
+        }
+        if triage_error.is_some() {
+            triage_failed = triage_failed.saturating_add(1);
         }
         let pack_result = if let Some(bundle_dir) = bundle_dir.as_deref() {
             bundles_total = bundles_total.saturating_add(1);
@@ -1206,23 +1220,28 @@ fn write_campaign_share_manifest(
             Err("item does not expose evidence.bundle_dir".to_string())
         };
 
+        let pack_path = pack_result.as_ref().ok().cloned();
+        let pack_error = pack_result.as_ref().err().cloned();
         run_entries.push(serde_json::json!({
             "item_id": item.item_id,
             "name": item.name,
             "status": item.status,
             "reason_code": item.reason_code,
             "bundle_dir": bundle_dir.as_ref().map(|path| path.display().to_string()),
+            "triage_json": triage_path.as_ref().map(|path| path.display().to_string()),
+            "triage_error": triage_error,
             "source_script": item
                 .source
                 .as_ref()
                 .and_then(|source| source.script.clone()),
-            "share_zip": pack_result.as_ref().ok().map(|path| path.display().to_string()),
-            "error": pack_result.err(),
+            "share_zip": pack_path.as_ref().map(|path| path.display().to_string()),
+            "error": pack_error,
         }));
+        combined_entries.push((item.item_id.clone(), pack_path, triage_path));
     }
 
     let share_manifest_path = share_dir.join("share.manifest.json");
-    let payload = serde_json::json!({
+    let mut payload = serde_json::json!({
         "schema_version": 1,
         "kind": DIAG_CAMPAIGN_SHARE_MANIFEST_KIND_V1,
         "source": {
@@ -1239,6 +1258,8 @@ fn write_campaign_share_manifest(
             "bundles_total": bundles_total,
             "bundles_packed": bundles_packed,
             "bundles_missing": bundles_missing,
+            "triage_generated": triage_generated,
+            "triage_failed": triage_failed,
         },
         "share": {
             "share_dir": share_dir.display().to_string(),
@@ -1248,11 +1269,192 @@ fn write_campaign_share_manifest(
                 summary_path.display()
             ),
             "workspace_root": workspace_root.display().to_string(),
+            "combined_zip": serde_json::Value::Null,
+            "combined_zip_error": serde_json::Value::Null,
         },
         "items": run_entries,
     });
     write_json_value(&share_manifest_path, &payload)?;
+
+    let (combined_zip, combined_zip_error) = write_campaign_combined_failure_zip(
+        root_dir,
+        &share_dir,
+        &share_manifest_path,
+        summary_path,
+        &combined_entries,
+    );
+    if let Some(share) = payload
+        .get_mut("share")
+        .and_then(|value| value.as_object_mut())
+    {
+        share.insert(
+            "combined_zip".to_string(),
+            combined_zip
+                .as_ref()
+                .map(|path| serde_json::Value::String(path.display().to_string()))
+                .unwrap_or(serde_json::Value::Null),
+        );
+        share.insert(
+            "combined_zip_error".to_string(),
+            combined_zip_error
+                .map(serde_json::Value::String)
+                .unwrap_or(serde_json::Value::Null),
+        );
+    }
+    write_json_value(&share_manifest_path, &payload)?;
     Ok(share_manifest_path)
+}
+
+fn write_campaign_combined_failure_zip(
+    root_dir: &Path,
+    share_dir: &Path,
+    share_manifest_path: &Path,
+    summary_path: &Path,
+    entries: &[(String, Option<PathBuf>, Option<PathBuf>)],
+) -> (Option<PathBuf>, Option<String>) {
+    if !entries
+        .iter()
+        .any(|(_item_id, share_zip, triage_path)| share_zip.is_some() || triage_path.is_some())
+    {
+        return (None, None);
+    }
+
+    let out_path = share_dir.join("combined-failures.zip");
+    match write_campaign_combined_failure_zip_inner(
+        root_dir,
+        &out_path,
+        share_manifest_path,
+        summary_path,
+        entries,
+    ) {
+        Ok(()) => (Some(out_path), None),
+        Err(error) => (None, Some(error)),
+    }
+}
+
+fn write_campaign_combined_failure_zip_inner(
+    root_dir: &Path,
+    out_path: &Path,
+    share_manifest_path: &Path,
+    summary_path: &Path,
+    entries: &[(String, Option<PathBuf>, Option<PathBuf>)],
+) -> Result<(), String> {
+    if let Some(parent) = out_path.parent() {
+        std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+    }
+    let file = std::fs::File::create(out_path).map_err(|e| e.to_string())?;
+    let mut zip = zip::ZipWriter::new(file);
+    let options = zip::write::FileOptions::default()
+        .compression_method(zip::CompressionMethod::Deflated)
+        .unix_permissions(0o644);
+
+    add_file_to_zip(
+        &mut zip,
+        share_manifest_path,
+        "_root/share.manifest.json",
+        options,
+    )?;
+    add_file_to_zip(
+        &mut zip,
+        summary_path,
+        "_root/regression.summary.json",
+        options,
+    )?;
+    let index_path = root_dir.join(crate::regression_summary::DIAG_REGRESSION_INDEX_FILENAME_V1);
+    if index_path.is_file() {
+        add_file_to_zip(
+            &mut zip,
+            &index_path,
+            "_root/regression.index.json",
+            options,
+        )?;
+    }
+
+    for (index, (item_id, share_zip, triage_path)) in entries.iter().enumerate() {
+        let safe_item_id = zip_safe_component(item_id);
+        if let Some(share_zip) = share_zip.as_deref()
+            && share_zip.is_file()
+        {
+            add_file_to_zip(
+                &mut zip,
+                share_zip,
+                &format!("items/{:02}-{safe_item_id}.ai.zip", index + 1),
+                options,
+            )?;
+        }
+        if let Some(triage_path) = triage_path.as_deref()
+            && triage_path.is_file()
+        {
+            add_file_to_zip(
+                &mut zip,
+                triage_path,
+                &format!("items/{:02}-{safe_item_id}.triage.json", index + 1),
+                options,
+            )?;
+        }
+    }
+
+    zip.finish().map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+fn add_file_to_zip(
+    zip: &mut zip::ZipWriter<std::fs::File>,
+    src: &Path,
+    dest: &str,
+    options: zip::write::FileOptions,
+) -> Result<(), String> {
+    use std::io::Write;
+
+    zip.start_file(dest, options).map_err(|e| e.to_string())?;
+    let bytes = std::fs::read(src).map_err(|e| e.to_string())?;
+    zip.write_all(&bytes).map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+fn maybe_write_bundle_triage_json(
+    bundle_dir: &Path,
+    stats_top: usize,
+    warmup_frames: u64,
+) -> (Option<PathBuf>, Option<String>) {
+    let Some(bundle_path) = resolve_bundle_artifact_path_no_materialize(bundle_dir) else {
+        return (None, None);
+    };
+    let triage_path = crate::default_triage_out_path(&bundle_path);
+    if triage_path.is_file() {
+        return (Some(triage_path), None);
+    }
+    let sort = BundleStatsSort::Invalidation;
+    let report = match bundle_stats_from_path(
+        &bundle_path,
+        stats_top,
+        sort,
+        BundleStatsOptions { warmup_frames },
+    ) {
+        Ok(report) => report,
+        Err(error) => {
+            return (
+                None,
+                Some(format!(
+                    "failed to generate triage.json for {}: {}",
+                    bundle_dir.display(),
+                    error
+                )),
+            );
+        }
+    };
+    let payload = crate::triage_json_from_stats(&bundle_path, &report, sort, warmup_frames);
+    match write_json_value(&triage_path, &payload) {
+        Ok(()) => (Some(triage_path), None),
+        Err(error) => (
+            None,
+            Some(format!(
+                "failed to write triage.json for {}: {}",
+                bundle_dir.display(),
+                error
+            )),
+        ),
+    }
 }
 
 fn campaign_batch_to_json(batch: &CampaignBatchArtifacts) -> serde_json::Value {
@@ -1777,5 +1979,10 @@ mod tests {
             .and_then(|v| v.as_str())
             .expect("share zip path");
         assert!(PathBuf::from(share_zip).is_file());
+        let combined_zip = manifest
+            .pointer("/share/combined_zip")
+            .and_then(|v| v.as_str())
+            .expect("combined zip path");
+        assert!(PathBuf::from(combined_zip).is_file());
     }
 }

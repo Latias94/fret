@@ -48,5 +48,9 @@ Automatic failure evidence:
   campaign roots when `regression.summary.json` is available,
 - filtered or multi-id campaign batches also best-effort export a batch-level
   `share/share.manifest.json` when any selected campaign fails,
+- share manifest items now also record best-effort `triage.json` paths when the underlying bundle
+  artifact is available,
+- share roots now also best-effort write `share/combined-failures.zip`, which bundles the share
+  manifest, aggregate summary/index, per-item AI zips, and any generated `triage.json` files,
 - campaign and batch result manifests record `aggregate.share_manifest_path` plus `share_error`
   when export fails.
