@@ -15,8 +15,11 @@ use fret_bootstrap::ui_diagnostics::UiDiagnosticsService;
 use fret_core::scene::Paint;
 use fret_core::{AppWindowId, Event, KeyCode, Px};
 use fret_launch::{
-    EngineFrameKeepalive, EngineFrameUpdate, ImportedViewportRenderTarget, WinitAppDriver,
-    WinitEventContext, WinitRenderContext, WinitRunnerConfig,
+    EngineFrameKeepalive, EngineFrameUpdate, WinitAppDriver, WinitEventContext, WinitRenderContext,
+    WinitRunnerConfig,
+    imported_viewport_target::{
+        ImportedViewportFallbackUpdate, ImportedViewportFallbacks, ImportedViewportRenderTarget,
+    },
 };
 use fret_render::{
     RenderTargetColorSpace, RenderTargetIngestStrategy, RenderTargetMetadata, Renderer, WgpuContext,
@@ -404,8 +407,8 @@ impl WinitAppDriver for ExternalTextureImportsWebDriver {
                     state.target.push_update_with_fallbacks(
                         &mut update,
                         RenderTargetIngestStrategy::ExternalZeroCopy,
-                        fret_launch::ImportedViewportFallbacks {
-                            gpu_copy: Some(fret_launch::ImportedViewportFallbackUpdate::new(
+                        ImportedViewportFallbacks {
+                            gpu_copy: Some(ImportedViewportFallbackUpdate::new(
                                 view.clone(),
                                 state.target_px_size,
                                 metadata,
@@ -418,8 +421,8 @@ impl WinitAppDriver for ExternalTextureImportsWebDriver {
                     state.target.push_update_with_fallbacks(
                         &mut update,
                         RenderTargetIngestStrategy::ExternalZeroCopy,
-                        fret_launch::ImportedViewportFallbacks {
-                            gpu_copy: Some(fret_launch::ImportedViewportFallbackUpdate::new(
+                        ImportedViewportFallbacks {
+                            gpu_copy: Some(ImportedViewportFallbackUpdate::new(
                                 view.clone(),
                                 state.target_px_size,
                                 metadata,
@@ -436,8 +439,8 @@ impl WinitAppDriver for ExternalTextureImportsWebDriver {
                 state.target.push_update_with_fallbacks(
                     &mut update,
                     RenderTargetIngestStrategy::ExternalZeroCopy,
-                    fret_launch::ImportedViewportFallbacks {
-                        gpu_copy: Some(fret_launch::ImportedViewportFallbackUpdate::new(
+                    ImportedViewportFallbacks {
+                        gpu_copy: Some(ImportedViewportFallbackUpdate::new(
                             view.clone(),
                             state.target_px_size,
                             metadata,

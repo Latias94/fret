@@ -182,11 +182,14 @@ The intended stable surface should be small and explicit. Directionally, it shou
 - `WindowCreateSpec`,
 - `WinitAppBuilder`,
 - top-level `run_app*` entry points,
-- a small set of host-integration helper types that are intentionally supported.
+- a small set of host-integration helper types that are intentionally supported,
+- and dedicated specialized submodules for interop/media helpers that should stay public without
+  competing with the core crate-root story.
 
 Everything else should be one of:
 
 - internal-only,
+- moved under an explicit specialized submodule,
 - `#[doc(hidden)]` transitional,
 - or a later explicit contract decision.
 

@@ -37,17 +37,25 @@ Migration posture:
 
 ## Public surface
 
-Prefer importing from `fret_launch` crate-root re-exports in `src/lib.rs`. The `runner/` module is
-internal plumbing and is expected to evolve as backend seams firm up.
+Prefer importing long-lived core entry points from `fret_launch` crate-root re-exports in
+`src/lib.rs`. The `runner/` module is internal plumbing and is expected to evolve as backend seams
+firm up.
 
-Prefer crate-root imports for long-lived entry points and helper modules:
+Prefer crate-root imports for long-lived core entry points:
 
 - `fret_launch::FnDriver`
 - `fret_launch::FnDriverHooks`
 - `fret_launch::WinitRunnerConfig`
 - `fret_launch::WinitAppBuilder`
 - `fret_launch::run_app`
-- platform helpers such as `fret_launch::windows_mf_video`, `fret_launch::apple_avfoundation_video`, and `fret_launch::dx12`
+
+Prefer dedicated specialized modules for advanced interop/media helpers:
+
+- `fret_launch::imported_viewport_target::ImportedViewportRenderTarget`
+- `fret_launch::native_external_import::NativeExternalTextureFrame`
+- `fret_launch::media::windows_mf_video`
+- `fret_launch::media::apple_avfoundation_video`
+- `fret_launch::shared_allocation::dx12`
 
 Treat these as compatibility-oriented unless a specific hook gap forces them:
 

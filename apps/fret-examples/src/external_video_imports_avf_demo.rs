@@ -1,7 +1,12 @@
 use anyhow::Context as _;
 use fret_app::App;
 use fret_core::{AppWindowId, Event, KeyCode};
-use fret_launch::{EngineFrameUpdate, ImportedViewportRenderTarget};
+use fret_launch::{
+    EngineFrameUpdate,
+    imported_viewport_target::{
+        ImportedViewportFallbackUpdate, ImportedViewportFallbacks, ImportedViewportRenderTarget,
+    },
+};
 use fret_render::RendererCapabilities;
 use fret_render::{
     RenderTargetColorSpace, RenderTargetIngestStrategy, RenderTargetMetadata, Renderer, WgpuContext,
@@ -15,7 +20,7 @@ use fret_ui::{ElementContext, Invalidation, Theme};
 use std::time::{Duration, Instant};
 
 #[cfg(all(not(target_arch = "wasm32"), target_os = "macos"))]
-use fret_launch::apple_avfoundation_video as avf;
+use fret_launch::media::apple_avfoundation_video as avf;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum ExternalVideoImportsMode {
@@ -282,8 +287,8 @@ fn record_engine_frame(
             st.target.push_update_with_fallbacks(
                 &mut update,
                 RenderTargetIngestStrategy::Owned,
-                fret_launch::ImportedViewportFallbacks {
-                    owned: Some(fret_launch::ImportedViewportFallbackUpdate::new(
+                ImportedViewportFallbacks {
+                    owned: Some(ImportedViewportFallbackUpdate::new(
                         view.clone(),
                         st.target_px_size,
                         metadata,

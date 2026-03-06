@@ -19,7 +19,6 @@ pub mod yuv;
 #[doc(hidden)]
 pub mod yuv_gpu;
 
-pub use imported_viewport_target::*;
 pub use native_external_import::*;
 pub use viewport_overlay_immediate_3d::*;
 pub use viewport_target::*;

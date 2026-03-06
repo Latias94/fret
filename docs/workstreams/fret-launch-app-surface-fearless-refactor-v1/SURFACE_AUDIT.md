@@ -169,6 +169,23 @@ Interpretation:
 - specialized integrations still have a direct escape hatch,
 - the previous full-mirror hazard is now closed in this worktree.
 
+### Specialized interop/media helpers now live under explicit modules
+
+The `fret-launch` public surface now distinguishes between:
+
+- core launch/builder/driver contracts kept at crate root,
+- specialized interop helpers under `imported_viewport_target` / `native_external_import`,
+- platform media helpers under `media`,
+- shared-allocation interop under `shared_allocation`.
+
+That is a meaningful curation improvement because advanced helpers remain public without pretending
+to be part of the first-contact crate-root story.
+
+Evidence:
+
+- `crates/fret-launch/src/lib.rs`
+- `crates/fret-launch/README.md`
+
 ## Remaining hazards
 
 ### H1) `WinitRunnerConfig` is stable but still over-broad
@@ -204,10 +221,11 @@ Interpretation:
 - acceptable short term,
 - but future removal/de-emphasis still needs explicit sunset criteria.
 
-### H3) `fret-launch` crate-root exports are still broad
+### H3) Specialized launch modules still need classification discipline
 
 Several specialized interop/media/render-target exports are valid, but they should stay
-classification-driven and should not expand casually.
+classification-driven and should not expand casually even now that they live under explicit
+submodules.
 
 Evidence:
 
@@ -229,8 +247,8 @@ Evidence:
    - Outcome: write down which missing hook(s), if any, still block stronger de-emphasis.
    - Gate: docs update + representative example coverage remains green.
 
-4. **Keep specialized launch exports classification-driven**
-   - Outcome: future launch-root additions must be tagged as stable / specialized / transitional.
+4. **Keep specialized launch modules classification-driven**
+   - Outcome: future specialized additions land under explicit modules and must still be tagged as stable / specialized / transitional.
    - Gate: export inventory stays current.
 
 ## Final judgment

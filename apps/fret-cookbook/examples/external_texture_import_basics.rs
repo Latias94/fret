@@ -2,7 +2,7 @@ use fret::prelude::*;
 use fret_app::{CommandMeta, CommandScope};
 use fret_bootstrap::ui_app_driver::ViewElements;
 use fret_core::{AppWindowId, Px, ViewportFit};
-use fret_launch::{EngineFrameUpdate, ImportedViewportRenderTarget};
+use fret_launch::{EngineFrameUpdate, imported_viewport_target::ImportedViewportRenderTarget};
 use fret_render::{
     RenderTargetColorSpace, RenderTargetIngestStrategy, RenderTargetMetadata, Renderer,
     WgpuContext, write_rgba8_texture_region,
