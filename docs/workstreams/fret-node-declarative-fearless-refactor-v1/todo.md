@@ -137,6 +137,45 @@ land in code review; move design discussion back to `README.md` if a TODO turns 
 - [ ] Decide the long-term public naming/ownership story (`Controller` vs `Instance` vs split
       facades) before widening the teaching surface further.
 
+### Queue seam inventory (audit snapshot 2026-03-06)
+
+- **Keep as retained-only compatibility seams for now**
+  - `NodeGraphCanvas::with_edit_queue` / `NodeGraphCanvas::with_view_queue`
+    (`ecosystem/fret-node/src/ui/canvas/widget.rs`): still needed because the retained canvas is the
+    compatibility root that drains queue transport directly, and several focused retained tests still
+    exercise that path.
+  - `NodeGraphPortalHost::with_edit_queue`
+    (`ecosystem/fret-node/src/ui/portal.rs`),
+    `NodeGraphOverlayHost::with_edit_queue`
+    (`ecosystem/fret-node/src/ui/overlays/group_rename.rs`), and
+    `NodeGraphBlackboardOverlay::with_edit_queue`
+    (`ecosystem/fret-node/src/ui/overlays/blackboard.rs`): keep as fallback bindings for retained-only
+    callers that still do not own a store/controller.
+  - `NodeGraphMiniMapOverlay::with_view_queue` / `NodeGraphMiniMapNavigationBinding::ViewQueue`
+    (`ecosystem/fret-node/src/ui/overlays/minimap.rs`): keep because the minimap still intentionally
+    exposes an explicit transport binding mode for B-layer integrations that want queue-driven viewport
+    ownership.
+
+- **Most likely next shrink targets**
+  - `NodeGraphViewportHelper` (`ecosystem/fret-node/src/ui/viewport_helper.rs`, re-exported from
+    `ecosystem/fret-node/src/ui/mod.rs`): duplicates controller viewport helpers and still teaches a
+    queue-first mental model; strongest candidate to de-emphasize or collapse behind controller-first
+    naming.
+  - Public queue re-exports in `ecosystem/fret-node/src/ui/mod.rs`
+    (`NodeGraphEditQueue`, `NodeGraphViewQueue`, `NodeGraphViewRequest`, viewport request option types):
+    still very visible at the crate root even though app-facing examples now teach controller-first.
+  - `NodeGraphController::with_edit_queue` / `NodeGraphController::with_view_queue`
+    (`ecosystem/fret-node/src/ui/controller.rs`): probably keep, but document as advanced transport
+    binding rather than the default integration recipe.
+
+- **Landable follow-ups from this audit**
+  - [ ] Decide whether `NodeGraphViewportHelper` should become a thin wrapper around
+        `NodeGraphController` or move under an explicitly advanced/compat namespace.
+  - [ ] Decide whether queue types stay re-exported from `fret_node::ui` or move behind a more explicit
+        advanced/compat surface.
+  - [ ] Add one short README/workstream note that queue APIs are advanced retained transport seams, not
+        the default app-facing integration surface.
+
 ## M3 - Transaction-safe declarative commits
 
 - [x] Land the first declarative transaction-safe commit slice:

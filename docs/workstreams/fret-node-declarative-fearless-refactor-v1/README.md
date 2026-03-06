@@ -243,6 +243,12 @@ For retained composition, the preferred teaching posture is now controller-first
 `new(...)` plus optional `with_controller(...)` / `with_edit_queue(...)` only for explicit
 compatibility transport fallback.
 
+Queue-first APIs such as `NodeGraphEditQueue`, `NodeGraphViewQueue`, and
+`NodeGraphViewportHelper` should now be treated as advanced transport seams rather than the default
+app-facing integration surface. In particular, `NodeGraphViewportHelper::fit_view_nodes*` still
+relies on queue/canvas-bounds semantics, so collapsing it behind a pure controller-only API needs a
+deliberate follow-up design rather than an incidental rename.
+
 Current controller-facing XyFlow mapping (review helper, not a final contract):
 
 - viewport read:
