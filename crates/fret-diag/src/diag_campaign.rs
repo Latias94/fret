@@ -4,7 +4,6 @@ use crate::registry::campaigns::{
     CampaignDefinition, CampaignFilterOptions, CampaignItemDefinition, CampaignItemKind,
     CampaignRegistry, campaign_to_json, item_kind_str, lane_to_str, parse_lane, source_kind_str,
 };
-use crate::regression_summary::RegressionLaneV1;
 
 const DIAG_CAMPAIGN_MANIFEST_KIND_V1: &str = "diag_campaign_manifest";
 const DIAG_CAMPAIGN_RESULT_KIND_V1: &str = "diag_campaign_result";
@@ -41,9 +40,24 @@ pub(crate) struct CampaignCmdContext {
     pub checks: diag_suite::SuiteChecks,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 struct CampaignRunOptions {
-    requested_lane: Option<RegressionLaneV1>,
+    campaign_ids: Vec<String>,
+    filter: CampaignFilterOptions,
+}
+
+#[derive(Debug, Clone)]
+struct CampaignExecutionReport {
+    campaign_id: String,
+    out_dir: PathBuf,
+    summary_path: PathBuf,
+    index_path: PathBuf,
+    items_total: usize,
+    items_failed: usize,
+    suites_total: usize,
+    scripts_total: usize,
+    ok: bool,
+    error: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -333,23 +347,135 @@ fn cmd_campaign_run(
     rest: &[String],
     ctx: CampaignRunContext,
 ) -> Result<(), String> {
-    let Some(campaign_id) = rest.first() else {
-        return Err("missing campaign id for `diag campaign run`".to_string());
-    };
-    let options = parse_campaign_run_options(&rest[1..])?;
-    let campaign = registry.resolve(campaign_id)?;
+    let options = parse_campaign_run_options(rest)?;
+    let selected = select_campaigns_for_run(registry, &options)?;
 
-    if let Some(requested_lane) = options.requested_lane
-        && requested_lane != campaign.lane
-    {
+    let mut reports = Vec::new();
+    for campaign in selected {
+        reports.push(execute_campaign(campaign, &ctx));
+    }
+
+    let failed_runs = reports.iter().filter(|report| !report.ok).count();
+    if ctx.stats_json {
+        let payload = serde_json::json!({
+            "selection": {
+                "campaign_ids": options.campaign_ids,
+                "filters": campaign_filter_to_json(&options.filter),
+            },
+            "counters": {
+                "campaigns_total": reports.len(),
+                "campaigns_failed": failed_runs,
+                "campaigns_passed": reports.len().saturating_sub(failed_runs),
+            },
+            "runs": reports.iter().map(|report| serde_json::json!({
+                "campaign_id": report.campaign_id,
+                "ok": report.ok,
+                "error": report.error,
+                "out_dir": report.out_dir.display().to_string(),
+                "summary_path": report.summary_path.display().to_string(),
+                "index_path": report.index_path.display().to_string(),
+                "items_total": report.items_total,
+                "items_failed": report.items_failed,
+                "suites_total": report.suites_total,
+                "scripts_total": report.scripts_total,
+            })).collect::<Vec<_>>(),
+        });
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&payload).map_err(|e| e.to_string())?
+        );
+    } else if reports.len() == 1 {
+        let report = &reports[0];
+        if report.ok {
+            println!(
+                "campaign: ok (id={}, items={}, suites={}, scripts={}, out_dir={})",
+                report.campaign_id,
+                report.items_total,
+                report.suites_total,
+                report.scripts_total,
+                report.out_dir.display()
+            );
+        }
+    } else {
+        println!(
+            "campaign batch: {} run(s), {} failed",
+            reports.len(),
+            failed_runs
+        );
+        for report in &reports {
+            let status = if report.ok { "ok" } else { "failed" };
+            println!(
+                "  - {} [{}] items={} failed={} -> {}",
+                report.campaign_id,
+                status,
+                report.items_total,
+                report.items_failed,
+                report.out_dir.display()
+            );
+        }
+    }
+
+    if failed_runs > 0 {
+        let failures = reports
+            .iter()
+            .filter(|report| !report.ok)
+            .map(|report| {
+                format!(
+                    "{}: {}",
+                    report.campaign_id,
+                    report.error.as_deref().unwrap_or("unknown error")
+                )
+            })
+            .collect::<Vec<_>>()
+            .join("; ");
         return Err(format!(
-            "campaign `{}` is lane `{}` but `--lane {}` was requested",
-            campaign.id,
-            lane_to_str(campaign.lane),
-            lane_to_str(requested_lane)
+            "campaign run completed with {} failed campaign(s): {}",
+            failed_runs, failures
         ));
     }
 
+    Ok(())
+}
+
+fn select_campaigns_for_run<'a>(
+    registry: &'a CampaignRegistry,
+    options: &CampaignRunOptions,
+) -> Result<Vec<&'a CampaignDefinition>, String> {
+    if !options.campaign_ids.is_empty() {
+        let mut selected = Vec::new();
+        for campaign_id in &options.campaign_ids {
+            let campaign = registry.resolve(campaign_id)?;
+            if campaign.matches_filter(&options.filter) {
+                selected.push(campaign);
+            }
+        }
+        if selected.is_empty() {
+            return Err(
+                "explicit campaign ids were provided but none matched the requested filters"
+                    .to_string(),
+            );
+        }
+        return Ok(selected);
+    }
+
+    if campaign_filter_is_empty(&options.filter) {
+        return Err(
+            "missing campaign id or run selector (try: `diag campaign run ui-gallery-smoke` or `diag campaign run --lane smoke --tag ui-gallery`)"
+                .to_string(),
+        );
+    }
+
+    let selected = registry.filtered_campaigns(&options.filter);
+    if selected.is_empty() {
+        return Err("no campaigns matched the requested run selectors".to_string());
+    }
+    Ok(selected)
+}
+
+fn execute_campaign(
+    campaign: &CampaignDefinition,
+    ctx: &CampaignRunContext,
+) -> CampaignExecutionReport {
     let created_unix_ms = now_unix_ms();
     let run_id = created_unix_ms.to_string();
     let campaign_root = ctx
@@ -357,6 +483,38 @@ fn cmd_campaign_run(
         .join("campaigns")
         .join(zip_safe_component(&campaign.id))
         .join(&run_id);
+    let summary_path =
+        campaign_root.join(crate::regression_summary::DIAG_REGRESSION_SUMMARY_FILENAME_V1);
+    let index_path =
+        campaign_root.join(crate::regression_summary::DIAG_REGRESSION_INDEX_FILENAME_V1);
+
+    let report_error =
+        match execute_campaign_inner(campaign, ctx, &campaign_root, created_unix_ms, &run_id) {
+            Ok(()) => None,
+            Err(error) => Some(error),
+        };
+
+    CampaignExecutionReport {
+        campaign_id: campaign.id.clone(),
+        out_dir: campaign_root,
+        summary_path,
+        index_path,
+        items_total: campaign.items.len(),
+        items_failed: usize::from(report_error.is_some()),
+        suites_total: campaign.suite_count(),
+        scripts_total: campaign.script_count(),
+        ok: report_error.is_none(),
+        error: report_error,
+    }
+}
+
+fn execute_campaign_inner(
+    campaign: &CampaignDefinition,
+    ctx: &CampaignRunContext,
+    campaign_root: &Path,
+    created_unix_ms: u64,
+    run_id: &str,
+) -> Result<(), String> {
     let suite_results_root = campaign_root.join("suite-results");
     let script_results_root = campaign_root.join("script-results");
     std::fs::create_dir_all(&suite_results_root).map_err(|e| {
@@ -374,7 +532,7 @@ fn cmd_campaign_run(
         )
     })?;
 
-    write_campaign_manifest(&campaign_root, campaign, &run_id, created_unix_ms, &ctx)?;
+    write_campaign_manifest(campaign_root, campaign, run_id, created_unix_ms, ctx)?;
 
     let mut item_results: Vec<CampaignItemRunResult> = Vec::new();
     for (index, item) in campaign.items.iter().enumerate() {
@@ -383,14 +541,14 @@ fn cmd_campaign_run(
             item,
             &suite_results_root,
             &script_results_root,
-            &ctx,
+            ctx,
         )?);
     }
 
     let summarize_result = diag_summarize::cmd_summarize(diag_summarize::SummarizeCmdContext {
         rest: Vec::new(),
         workspace_root: ctx.workspace_root.clone(),
-        resolved_out_dir: campaign_root.clone(),
+        resolved_out_dir: campaign_root.to_path_buf(),
         stats_json: false,
     });
 
@@ -401,9 +559,9 @@ fn cmd_campaign_run(
     let index_path =
         campaign_root.join(crate::regression_summary::DIAG_REGRESSION_INDEX_FILENAME_V1);
     write_campaign_result(
-        &campaign_root,
+        campaign_root,
         campaign,
-        &run_id,
+        run_id,
         created_unix_ms,
         finished_unix_ms,
         duration_ms,
@@ -411,7 +569,7 @@ fn cmd_campaign_run(
         summarize_result.as_ref().err(),
         &summary_path,
         &index_path,
-        &ctx,
+        ctx,
     )?;
 
     if let Err(error) = summarize_result {
@@ -439,37 +597,6 @@ fn cmd_campaign_run(
             campaign_root.display(),
             failing
         ));
-    }
-
-    let suites_total = campaign.suite_count();
-    let scripts_total = campaign.script_count();
-
-    if ctx.stats_json {
-        let payload = serde_json::json!({
-            "campaign_id": campaign.id,
-            "run_id": run_id,
-            "lane": campaign.lane,
-            "out_dir": campaign_root.display().to_string(),
-            "summary_path": summary_path.display().to_string(),
-            "index_path": index_path.display().to_string(),
-            "items_total": item_results.len(),
-            "items_failed": items_failed,
-            "suites_total": suites_total,
-            "scripts_total": scripts_total,
-        });
-        println!(
-            "{}",
-            serde_json::to_string_pretty(&payload).map_err(|e| e.to_string())?
-        );
-    } else {
-        println!(
-            "campaign: ok (id={}, items={}, suites={}, scripts={}, out_dir={})",
-            campaign.id,
-            item_results.len(),
-            suites_total,
-            scripts_total,
-            campaign_root.display()
-        );
     }
 
     Ok(())
@@ -618,25 +745,55 @@ fn run_campaign_script_item(
 }
 
 fn parse_campaign_run_options(rest: &[String]) -> Result<CampaignRunOptions, String> {
-    let mut out = CampaignRunOptions {
-        requested_lane: None,
-    };
+    let mut out = CampaignRunOptions::default();
     let mut index = 0;
     while index < rest.len() {
         match rest[index].as_str() {
             "--lane" => {
-                let raw_lane = rest
+                let value = rest
                     .get(index + 1)
                     .ok_or_else(|| "missing value after --lane".to_string())?;
-                out.requested_lane = Some(parse_lane(raw_lane)?);
+                out.filter.lane = Some(parse_lane(value)?);
                 index += 2;
             }
-            other => {
+            "--tier" => {
+                let value = rest
+                    .get(index + 1)
+                    .ok_or_else(|| "missing value after --tier".to_string())?;
+                out.filter.tier = Some(value.to_string());
+                index += 2;
+            }
+            "--tag" => {
+                let value = rest
+                    .get(index + 1)
+                    .ok_or_else(|| "missing value after --tag".to_string())?;
+                out.filter.tags.push(value.to_string());
+                index += 2;
+            }
+            "--platform" => {
+                let value = rest
+                    .get(index + 1)
+                    .ok_or_else(|| "missing value after --platform".to_string())?;
+                out.filter.platforms.push(value.to_string());
+                index += 2;
+            }
+            other if other.starts_with('-') => {
                 return Err(format!("unknown diag campaign run flag: {other}"));
+            }
+            other => {
+                out.campaign_ids.push(other.to_string());
+                index += 1;
             }
         }
     }
     Ok(out)
+}
+
+fn campaign_filter_is_empty(filter: &CampaignFilterOptions) -> bool {
+    filter.lane.is_none()
+        && filter.tier.is_none()
+        && filter.tags.is_empty()
+        && filter.platforms.is_empty()
 }
 
 fn item_to_manifest_json(item: &CampaignItemDefinition) -> serde_json::Value {
@@ -749,4 +906,44 @@ fn write_campaign_result(
         })).collect::<Vec<_>>(),
     });
     write_json_value(&result_path, &payload)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::regression_summary::RegressionLaneV1;
+
+    #[test]
+    fn parse_campaign_run_options_collects_ids_and_filters() {
+        let options = parse_campaign_run_options(&[
+            "ui-gallery-smoke".to_string(),
+            "--tag".to_string(),
+            "ui-gallery".to_string(),
+            "--platform".to_string(),
+            "native".to_string(),
+        ])
+        .unwrap();
+
+        assert_eq!(options.campaign_ids, vec!["ui-gallery-smoke".to_string()]);
+        assert_eq!(options.filter.tags, vec!["ui-gallery".to_string()]);
+        assert_eq!(options.filter.platforms, vec!["native".to_string()]);
+    }
+
+    #[test]
+    fn select_campaigns_for_run_supports_filter_only_selection() {
+        let registry = CampaignRegistry::builtin();
+        let options = CampaignRunOptions {
+            campaign_ids: Vec::new(),
+            filter: CampaignFilterOptions {
+                lane: Some(RegressionLaneV1::Smoke),
+                tier: Some("smoke".to_string()),
+                tags: vec!["ui-gallery".to_string()],
+                platforms: vec!["native".to_string()],
+            },
+        };
+
+        let selected = select_campaigns_for_run(&registry, &options).unwrap();
+        assert_eq!(selected.len(), 1);
+        assert_eq!(selected[0].id, "ui-gallery-smoke");
+    }
 }

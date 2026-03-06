@@ -155,6 +155,7 @@ Tracking doc: `docs/workstreams/diag-fearless-refactor-v2/README.md`
   - [ ] failing evidence bundles,
   - [ ] copy/share-friendly paths.
 - [x] Add first campaign discovery filters to keep selection scalable (`--lane`, `--tier`, `--tag`, `--platform`).
+- [x] Extend those selectors into `diag campaign run` so filtered campaign batches can execute without enumerating ids by hand.
 - [ ] Add one thin maintainer note that explains the intended automation flow:
   - [ ] author or choose script,
   - [ ] run suite/campaign,

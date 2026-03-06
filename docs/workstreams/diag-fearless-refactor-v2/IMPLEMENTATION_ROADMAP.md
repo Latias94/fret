@@ -233,7 +233,7 @@ Recommended PR slices:
 
 1. decide when legacy top-level `suites` / `scripts` compatibility can be removed,
 2. enrich metadata beyond the current first pass (`owner`, `platforms`, `tier`, `expected_duration_ms`, `tags`),
-3. expand filtering/selection beyond the first registry filters (`lane`, `tier`, `tag`, `platform`) into run-time selection policy,
+3. decide whether filtered `diag campaign run` should emit a persisted batch artifact root in addition to per-campaign outputs,
 4. add richer lane composition (`matrix`, `perf`, `nightly/full`),
 5. decide whether campaign runs should persist a dashboard text or HTML projection,
 6. evaluate whether campaign manifests should become JSON-only, TOML, or generated registry inputs long-term.

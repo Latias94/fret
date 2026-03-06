@@ -20,3 +20,4 @@ Example:
 - `cargo run -p fretboard -- diag campaign show ui-gallery-smoke --json`
 - `cargo run -p fretboard -- diag campaign show ui-gallery-accordion-script-smoke --json`
 - `cargo run -p fretboard -- diag campaign run ui-gallery-smoke --launch -- <cmd...>`
+- `cargo run -p fretboard -- diag campaign run --lane smoke --tag ui-gallery --platform native --launch -- <cmd...>`
