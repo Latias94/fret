@@ -82,6 +82,7 @@ This is the minimum contract set `fret-ui-kit` can depend on long-term.
 | Declarative authoring | element tree + keyed state + model observation | stable IDs, predictable reuse, testable state reuse | GPUI-style authoring model | ADR 0028, ADR 0039, ADR 0051 |
 | Frame scheduling | one-shot frame requests + RAF requests + refcounted continuous leases | event-driven by default; continuous frames are explicit and scoped; coalesced per window per tick | GPUI/Zed `Window::refresh()` mental model | ADR 0034 |
 | Layout vocabulary | `LayoutStyle` + Flex/Grid semantics (Taffy-backed) | CSS/Tailwind-like defaults; no per-component hidden defaults in runtime | CSS + Tailwind semantics, Taffy engine | ADR 0057, ADR 0062, ADR 0035 |
+| Inherited foreground cascade | subtree-local foreground metadata + paint-time scoped resolution | inheriting foreground must not introduce a synthetic layout node; fill/shrink/sibling flow stay owned by the original subtree root; explicit element colors still win | GPUI/Zed style-context outcomes; shadcn `currentColor` idiom | ADR 0066, `docs/runtime-contract-matrix.md`, `docs/workstreams/foreground-style-context-fearless-refactor-v1/DESIGN.md` |
 | Scroll contract | scroll handles + strategies | scroll-to behavior is deterministic; components can build scrollbars/policies | GPUI handle patterns | ADR 0042 |
 | Virtualization contract | variable-size metrics + visible range computation + scroll-to-item | supports measured heights, stable keys, overscan; deterministic | virtualizer (primary), GPUI (engineering ref) | ADR 0070 |
 | Text input/IME engine contract | IME plumbing hooks, editing engine state/commands, caret geometry | caret/selection geometry query stable; IME preedit/commit deterministic | platform IME + APG text expectations | ADR 0012, ADR 0044, ADR 0045, ADR 0046 |
@@ -180,6 +181,39 @@ Runtime layout semantics must match the Tailwind/CSS mental model:
 - layout-affecting primitives are only those in ADR 0057/0062 (no widget-local hidden layout rules),
 - Taffy is the implementation engine; semantics are validated by tests against our ADRs and
   Tailwind vocabulary usage in `fret-components-*`.
+
+#### 3.6 Inherited foreground contract (Stable; wrapper-free style context)
+
+Runtime foreground inheritance must behave like a style context, not like a fragment-shaped layout
+wrapper.
+
+Mechanism (runtime-provided):
+
+- a subtree root may carry inherited foreground metadata without changing its layout identity,
+- mount/paint traversal may push/pop the effective foreground while descending into that subtree,
+- paint-capable consumers such as text/icon/spinner elements may opt into that inherited foreground
+  when they do not already have an explicit color.
+
+Invariants:
+
+- installing inherited foreground must not add an extra layout node,
+- `w_full` / `min_w_0` / fill-shrink behavior must remain owned by the original subtree root,
+- sibling ordering and parent participation must remain unchanged,
+- explicit element colors override inherited foreground,
+- compatibility wrappers may exist temporarily, but they are not the preferred author-facing model.
+
+Ownership boundary:
+
+- `crates/fret-ui` owns the subtree metadata + traversal mechanism,
+- `ecosystem/*` owns authoring helpers and policy about which recipe roots install inherited
+  foreground,
+- recipe crates should prefer stamping existing subtree roots over inserting wrapper-shaped scope
+  elements.
+
+Reference:
+
+- GPUI/Zed style-context traversal outcomes for text styling,
+- shadcn/Radix reliance on `currentColor` for icon/text alignment.
 
 ### 4) Declarative-only authoring (no retained widget primitives)
 
