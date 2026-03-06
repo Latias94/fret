@@ -157,11 +157,11 @@ Tracking doc: `docs/workstreams/diag-fearless-refactor-v2/README.md`
   - [x] copy/share-friendly paths.
 - [x] Add first campaign discovery filters to keep selection scalable (`--lane`, `--tier`, `--tag`, `--platform`).
 - [x] Extend those selectors into `diag campaign run` so filtered campaign batches can execute without enumerating ids by hand.
-- [ ] Add one thin maintainer note that explains the intended automation flow:
-  - [ ] author or choose script,
-  - [ ] run suite/campaign,
-  - [ ] inspect aggregate summary,
-  - [ ] pack/share evidence.
+- [x] Add one thin maintainer note that explains the intended automation flow:
+  - [x] author or choose script,
+  - [x] run suite/campaign,
+  - [x] inspect aggregate summary,
+  - [x] pack/share evidence.
 
 
 ## M5 — Documentation consolidation

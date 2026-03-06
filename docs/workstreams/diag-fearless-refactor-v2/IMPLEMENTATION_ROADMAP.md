@@ -233,7 +233,7 @@ Recommended PR slices:
 
 1. decide when legacy top-level `suites` / `scripts` compatibility can be removed,
 2. enrich metadata beyond the current first pass (`owner`, `platforms`, `tier`, `expected_duration_ms`, `tags`),
-3. extend the landed batch artifact root with pack/share helpers and one stable maintainer workflow,
+3. extend the landed batch artifact root with failing-evidence defaults beyond the first share helper,
 4. add richer lane composition (`matrix`, `perf`, `nightly/full`),
 5. decide whether campaign runs should persist a dashboard text or HTML projection,
 6. evaluate whether campaign manifests should become JSON-only, TOML, or generated registry inputs long-term.

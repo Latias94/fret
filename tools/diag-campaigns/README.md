@@ -31,3 +31,13 @@ Example:
 - `cargo run -p fretboard -- diag campaign show ui-gallery-accordion-script-smoke --json`
 - `cargo run -p fretboard -- diag campaign run ui-gallery-smoke --launch -- <cmd...>`
 - `cargo run -p fretboard -- diag campaign run --lane smoke --tag ui-gallery --platform native --launch -- <cmd...>`
+- `cargo run -p fretboard -- diag campaign share target/fret-diag/campaigns/ui-gallery-smoke/<run_id>`
+- `cargo run -p fretboard -- diag campaign share target/fret-diag/campaign-batches/<selection_slug>/<run_id> --json`
+
+`diag campaign share` behavior:
+
+- reads `regression.summary.json` from a campaign or batch root,
+- defaults to failed items only (`--include-passed` expands the selection),
+- generates bounded AI-only share zips under `<root>/share/*.ai.zip`,
+- writes `<root>/share/share.manifest.json` so maintainers, DevTools, and future GUI flows can
+  treat one directory as the stable handoff surface.

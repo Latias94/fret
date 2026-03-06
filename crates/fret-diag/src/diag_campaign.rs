@@ -4,11 +4,13 @@ use crate::registry::campaigns::{
     CampaignDefinition, CampaignFilterOptions, CampaignItemDefinition, CampaignItemKind,
     CampaignRegistry, campaign_to_json, item_kind_str, lane_to_str, parse_lane, source_kind_str,
 };
+use crate::regression_summary::{RegressionStatusV1, RegressionSummaryV1};
 
 const DIAG_CAMPAIGN_MANIFEST_KIND_V1: &str = "diag_campaign_manifest";
 const DIAG_CAMPAIGN_RESULT_KIND_V1: &str = "diag_campaign_result";
 const DIAG_CAMPAIGN_BATCH_MANIFEST_KIND_V1: &str = "diag_campaign_batch_manifest";
 const DIAG_CAMPAIGN_BATCH_RESULT_KIND_V1: &str = "diag_campaign_batch_result";
+const DIAG_CAMPAIGN_SHARE_MANIFEST_KIND_V1: &str = "diag_campaign_share_manifest";
 
 #[derive(Debug, Clone)]
 pub(crate) struct CampaignCmdContext {
@@ -74,6 +76,18 @@ struct CampaignBatchArtifacts {
     summary_path: PathBuf,
     index_path: PathBuf,
     summarize_error: Option<String>,
+}
+
+#[derive(Debug, Clone)]
+struct CampaignShareOptions {
+    source: String,
+    include_passed: bool,
+}
+
+#[derive(Debug, Clone)]
+struct CampaignShareSelection {
+    summary_path: PathBuf,
+    root_dir: PathBuf,
 }
 
 #[derive(Debug, Clone)]
@@ -161,6 +175,13 @@ pub(crate) fn cmd_campaign(ctx: CampaignCmdContext) -> Result<(), String> {
     match sub {
         "list" => cmd_campaign_list(&registry, &rest[1..], stats_json),
         "show" => cmd_campaign_show(&registry, &rest[1..], stats_json),
+        "share" => cmd_campaign_share(
+            &rest[1..],
+            &workspace_root,
+            stats_json,
+            stats_top,
+            warmup_frames,
+        ),
         "run" => cmd_campaign_run(
             &registry,
             &rest[1..],
@@ -196,6 +217,58 @@ pub(crate) fn cmd_campaign(ctx: CampaignCmdContext) -> Result<(), String> {
         ),
         other => Err(format!("unknown diag campaign subcommand: {other}")),
     }
+}
+
+fn cmd_campaign_share(
+    rest: &[String],
+    workspace_root: &Path,
+    json: bool,
+    stats_top: usize,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let options = parse_campaign_share_options(rest)?;
+    let selection = resolve_campaign_share_selection(workspace_root, &options.source)?;
+    let share_manifest_path = write_campaign_share_manifest(
+        &selection.root_dir,
+        &selection.summary_path,
+        workspace_root,
+        options.include_passed,
+        stats_top,
+        warmup_frames,
+    )?;
+    let payload = read_json_value(&share_manifest_path).ok_or_else(|| {
+        format!(
+            "failed to read share manifest {}",
+            share_manifest_path.display()
+        )
+    })?;
+    if json {
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&payload).map_err(|e| e.to_string())?
+        );
+    } else {
+        let bundles_total = payload
+            .pointer("/counters/bundles_total")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0);
+        let bundles_packed = payload
+            .pointer("/counters/bundles_packed")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0);
+        let bundles_missing = payload
+            .pointer("/counters/bundles_missing")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0);
+        println!(
+            "campaign share: ok (bundles={}, packed={}, missing={}, manifest={})",
+            bundles_total,
+            bundles_packed,
+            bundles_missing,
+            share_manifest_path.display()
+        );
+    }
+    Ok(())
 }
 
 fn cmd_campaign_list(
@@ -284,6 +357,82 @@ fn parse_campaign_list_filters(rest: &[String]) -> Result<CampaignFilterOptions,
         }
     }
     Ok(filter)
+}
+
+fn parse_campaign_share_options(rest: &[String]) -> Result<CampaignShareOptions, String> {
+    let mut source: Option<String> = None;
+    let mut include_passed = false;
+    let mut index = 0;
+    while index < rest.len() {
+        match rest[index].as_str() {
+            "--include-passed" => {
+                include_passed = true;
+                index += 1;
+            }
+            other if other.starts_with('-') => {
+                return Err(format!("unknown diag campaign share flag: {other}"));
+            }
+            other => {
+                if source.is_some() {
+                    return Err(format!(
+                        "unexpected extra positional for `diag campaign share`: {other}"
+                    ));
+                }
+                source = Some(other.to_string());
+                index += 1;
+            }
+        }
+    }
+    let source = source
+        .ok_or_else(|| "missing campaign or batch run dir for `diag campaign share`".to_string())?;
+    Ok(CampaignShareOptions {
+        source,
+        include_passed,
+    })
+}
+
+fn resolve_campaign_share_selection(
+    workspace_root: &Path,
+    raw: &str,
+) -> Result<CampaignShareSelection, String> {
+    let path = crate::resolve_path(workspace_root, PathBuf::from(raw));
+    if path.is_file() {
+        let expected = crate::regression_summary::DIAG_REGRESSION_SUMMARY_FILENAME_V1;
+        if path.file_name().and_then(|v| v.to_str()) != Some(expected) {
+            return Err(format!(
+                "expected campaign share input to be a directory or {}: {}",
+                expected,
+                path.display()
+            ));
+        }
+        let root_dir = path
+            .parent()
+            .ok_or_else(|| format!("summary path has no parent dir: {}", path.display()))?
+            .to_path_buf();
+        return Ok(CampaignShareSelection {
+            summary_path: path,
+            root_dir,
+        });
+    }
+    if path.is_dir() {
+        let summary_path =
+            path.join(crate::regression_summary::DIAG_REGRESSION_SUMMARY_FILENAME_V1);
+        if !summary_path.is_file() {
+            return Err(format!(
+                "campaign share input does not contain {}: {}",
+                crate::regression_summary::DIAG_REGRESSION_SUMMARY_FILENAME_V1,
+                path.display()
+            ));
+        }
+        return Ok(CampaignShareSelection {
+            summary_path,
+            root_dir: path,
+        });
+    }
+    Err(format!(
+        "campaign share input not found: {}",
+        path.display()
+    ))
 }
 
 fn campaign_filter_to_json(filter: &CampaignFilterOptions) -> serde_json::Value {
@@ -902,6 +1051,131 @@ fn campaign_filter_is_empty(filter: &CampaignFilterOptions) -> bool {
         && filter.platforms.is_empty()
 }
 
+fn write_campaign_share_manifest(
+    root_dir: &Path,
+    summary_path: &Path,
+    workspace_root: &Path,
+    include_passed: bool,
+    stats_top: usize,
+    warmup_frames: u64,
+) -> Result<PathBuf, String> {
+    let bytes = std::fs::read(summary_path).map_err(|e| {
+        format!(
+            "failed to read regression summary {}: {}",
+            summary_path.display(),
+            e
+        )
+    })?;
+    let summary = serde_json::from_slice::<RegressionSummaryV1>(&bytes).map_err(|e| {
+        format!(
+            "invalid regression summary {}: {}",
+            summary_path.display(),
+            e
+        )
+    })?;
+
+    let share_dir = root_dir.join("share");
+    std::fs::create_dir_all(&share_dir)
+        .map_err(|e| format!("failed to create share dir {}: {}", share_dir.display(), e))?;
+
+    let mut bundles_total = 0usize;
+    let mut bundles_packed = 0usize;
+    let mut bundles_missing = 0usize;
+    let mut run_entries = Vec::new();
+
+    for item in &summary.items {
+        if !include_passed && item.status == RegressionStatusV1::Passed {
+            continue;
+        }
+
+        let bundle_dir = item
+            .evidence
+            .as_ref()
+            .and_then(|evidence| evidence.bundle_dir.as_deref())
+            .map(PathBuf::from);
+        if bundle_dir.is_none() {
+            bundles_missing = bundles_missing.saturating_add(1);
+        }
+        let pack_result = if let Some(bundle_dir) = bundle_dir.as_deref() {
+            bundles_total = bundles_total.saturating_add(1);
+            let packet_dir = bundle_dir.join("ai.packet");
+            let ai_packet_result = crate::commands::ai_packet::ensure_ai_packet_dir_best_effort(
+                None,
+                bundle_dir,
+                &packet_dir,
+                true,
+                stats_top,
+                None,
+                warmup_frames,
+                None,
+            );
+            let share_zip = share_dir.join(format!(
+                "{:02}-{}.ai.zip",
+                bundles_total,
+                zip_safe_component(&item.item_id)
+            ));
+            match ai_packet_result
+                .and_then(|_| crate::pack_ai_packet_dir_to_zip(bundle_dir, &share_zip, root_dir))
+            {
+                Ok(()) => {
+                    bundles_packed = bundles_packed.saturating_add(1);
+                    Ok(share_zip)
+                }
+                Err(error) => Err(error),
+            }
+        } else {
+            Err("item does not expose evidence.bundle_dir".to_string())
+        };
+
+        run_entries.push(serde_json::json!({
+            "item_id": item.item_id,
+            "name": item.name,
+            "status": item.status,
+            "reason_code": item.reason_code,
+            "bundle_dir": bundle_dir.as_ref().map(|path| path.display().to_string()),
+            "source_script": item
+                .source
+                .as_ref()
+                .and_then(|source| source.script.clone()),
+            "share_zip": pack_result.as_ref().ok().map(|path| path.display().to_string()),
+            "error": pack_result.err(),
+        }));
+    }
+
+    let share_manifest_path = share_dir.join("share.manifest.json");
+    let payload = serde_json::json!({
+        "schema_version": 1,
+        "kind": DIAG_CAMPAIGN_SHARE_MANIFEST_KIND_V1,
+        "source": {
+            "root_dir": root_dir.display().to_string(),
+            "summary_path": summary_path.display().to_string(),
+            "campaign_name": summary.campaign.name,
+            "lane": summary.campaign.lane,
+        },
+        "selection": {
+            "include_passed": include_passed,
+        },
+        "counters": {
+            "items_selected": run_entries.len(),
+            "bundles_total": bundles_total,
+            "bundles_packed": bundles_packed,
+            "bundles_missing": bundles_missing,
+        },
+        "share": {
+            "share_dir": share_dir.display().to_string(),
+            "workflow_hint": format!(
+                "open {} in DevTools or share {} plus the generated *.ai.zip artifacts",
+                root_dir.display(),
+                summary_path.display()
+            ),
+            "workspace_root": workspace_root.display().to_string(),
+        },
+        "items": run_entries,
+    });
+    write_json_value(&share_manifest_path, &payload)?;
+    Ok(share_manifest_path)
+}
+
 fn campaign_batch_to_json(batch: &CampaignBatchArtifacts) -> serde_json::Value {
     serde_json::json!({
         "out_dir": batch.batch_root.display().to_string(),
@@ -1199,7 +1473,11 @@ fn write_campaign_batch_result(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::regression_summary::RegressionLaneV1;
+    use crate::regression_summary::{
+        RegressionArtifactsV1, RegressionCampaignSummaryV1, RegressionEvidenceV1,
+        RegressionHighlightsV1, RegressionItemKindV1, RegressionItemSummaryV1, RegressionLaneV1,
+        RegressionRunSummaryV1, RegressionSummaryV1, RegressionTotalsV1,
+    };
 
     #[test]
     fn parse_campaign_run_options_collects_ids_and_filters() {
@@ -1267,5 +1545,122 @@ mod tests {
             slug,
             "filtered-lane-smoke-tier-smoke-tag-ui-gallery-platform-native-2-campaigns"
         );
+    }
+
+    #[test]
+    fn parse_campaign_share_options_collects_source_and_flag() {
+        let options = parse_campaign_share_options(&[
+            "target/fret-diag/campaigns/ui-gallery-smoke/1234".to_string(),
+            "--include-passed".to_string(),
+        ])
+        .unwrap();
+
+        assert_eq!(
+            options.source,
+            "target/fret-diag/campaigns/ui-gallery-smoke/1234"
+        );
+        assert!(options.include_passed);
+    }
+
+    #[test]
+    fn campaign_share_writes_manifest_and_ai_zip_for_failed_items() {
+        let root = std::env::temp_dir().join(format!(
+            "fret-diag-campaign-share-{}-{}",
+            crate::util::now_unix_ms(),
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(&root).unwrap();
+
+        let bundle_dir = root.join("bundle-a");
+        let packet_dir = bundle_dir.join("ai.packet");
+        std::fs::create_dir_all(&packet_dir).unwrap();
+        std::fs::write(packet_dir.join("summary.json"), b"{}" as &[u8]).unwrap();
+
+        let mut totals = RegressionTotalsV1::default();
+        totals.record_status(RegressionStatusV1::FailedDeterministic);
+        let mut summary = RegressionSummaryV1::new(
+            RegressionCampaignSummaryV1 {
+                name: "ui-gallery-smoke".to_string(),
+                lane: RegressionLaneV1::Smoke,
+                profile: None,
+                schema_version: None,
+                requested_by: None,
+                filters: None,
+            },
+            RegressionRunSummaryV1 {
+                run_id: "1234".to_string(),
+                tool: "fretboard diag campaign".to_string(),
+                created_unix_ms: crate::util::now_unix_ms(),
+                duration_ms: None,
+                workspace_root: Some(root.display().to_string()),
+                out_dir: Some(root.display().to_string()),
+                started_unix_ms: None,
+                finished_unix_ms: None,
+                tool_version: None,
+                git_commit: None,
+                git_branch: None,
+                host: None,
+            },
+            totals,
+        );
+        summary.items.push(RegressionItemSummaryV1 {
+            item_id: "accordion-basic".to_string(),
+            kind: RegressionItemKindV1::Script,
+            name: "accordion-basic".to_string(),
+            status: RegressionStatusV1::FailedDeterministic,
+            reason_code: Some("diag.test.failure".to_string()),
+            source_reason_code: None,
+            lane: RegressionLaneV1::Smoke,
+            owner: None,
+            feature_tags: Vec::new(),
+            timing: None,
+            attempts: None,
+            evidence: Some(RegressionEvidenceV1 {
+                bundle_artifact: None,
+                bundle_dir: Some(bundle_dir.display().to_string()),
+                triage_json: None,
+                script_result_json: None,
+                ai_packet_dir: None,
+                pack_path: None,
+                screenshots_manifest: None,
+                perf_summary_json: None,
+                compare_json: None,
+                extra: None,
+            }),
+            source: None,
+            notes: None,
+        });
+        summary.highlights = RegressionHighlightsV1::from_items(&summary.items);
+        summary.artifacts = Some(RegressionArtifactsV1 {
+            summary_dir: Some(root.display().to_string()),
+            packed_report: None,
+            index_json: None,
+            html_report: None,
+        });
+
+        let summary_path =
+            root.join(crate::regression_summary::DIAG_REGRESSION_SUMMARY_FILENAME_V1);
+        write_json_value(
+            &summary_path,
+            &serde_json::to_value(&summary).expect("summary value"),
+        )
+        .unwrap();
+
+        let manifest_path =
+            write_campaign_share_manifest(&root, &summary_path, &root, false, 5, 0).unwrap();
+        let manifest = read_json_value(&manifest_path).expect("share manifest");
+
+        assert_eq!(
+            manifest
+                .pointer("/counters/bundles_packed")
+                .and_then(|v| v.as_u64()),
+            Some(1)
+        );
+        let share_zip = manifest
+            .pointer("/items/0/share_zip")
+            .and_then(|v| v.as_str())
+            .expect("share zip path");
+        assert!(PathBuf::from(share_zip).is_file());
     }
 }

@@ -32,6 +32,8 @@ Current shipped behavior:
 - each run writes under `campaigns/<campaign_id>/<run_id>/`,
 - filtered or multi-id runs that resolve to more than one campaign also persist a batch root under
   `campaign-batches/<selection_slug>/<run_id>/`,
+- `diag campaign share <campaign_or_batch_root>` can now generate bounded AI-only share zips under
+  `<root>/share/` plus a `share.manifest.json` handoff file,
 - suite runs reuse the existing `diag suite` implementation,
 - aggregate handoff reuses the existing `diag summarize` implementation,
 - the final artifact contract remains `regression.index.json` + `regression.summary.json`.
@@ -326,6 +328,8 @@ Status:
 - Newly done: filtered or multi-id campaign selection now emits one persisted batch artifact root
   with `batch.manifest.json`, `batch.result.json`, `regression.index.json`, and
   `regression.summary.json`.
+- Newly done: `diag campaign share` turns a campaign or batch root into one bounded share surface
+  by generating AI-only zips and `share/share.manifest.json`.
 - Still open: persisting one explicit human-readable dashboard artifact in the campaign run directory.
 
 ## Slice C - Discoverability
