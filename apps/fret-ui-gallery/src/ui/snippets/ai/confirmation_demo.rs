@@ -113,17 +113,17 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
         .into_element(cx);
 
     let confirmation = match approval_now {
-        Some(approval) => ui_ai::Confirmation::new(state_now)
-            .approval(approval)
-            .test_id("ui-ai-confirmation-root")
-            .into_element_with_children(cx, |cx| {
-                let theme = Theme::global(&*cx.app).snapshot();
-                let success = theme
-                    .color_by_key("success")
-                    .unwrap_or_else(|| theme.color_token("primary"));
-                let destructive = theme.color_token("destructive");
+        Some(approval) => {
+            let theme = Theme::global(&*cx.app).snapshot();
+            let success = theme
+                .color_by_key("success")
+                .unwrap_or_else(|| theme.color_token("primary"));
+            let destructive = theme.color_token("destructive");
 
-                vec![
+            ui_ai::Confirmation::new(state_now)
+                .approval(approval)
+                .test_id("ui-ai-confirmation-root")
+                .children([
                     ui_ai::ConfirmationTitle::new([
                         ui_ai::ConfirmationRequest::new([
                             cx.text(
@@ -166,8 +166,9 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
                     ui_ai::ConfirmationActions::new([reject_btn, approve_btn])
                         .test_id("ui-ai-confirmation-actions")
                         .into_element(cx),
-                ]
-            }),
+                ])
+                .into_element(cx)
+        }
         None => ui_ai::Confirmation::new(state_now)
             .test_id("ui-ai-confirmation-root")
             .into_element(cx),
@@ -176,7 +177,9 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
     ui::v_flex(move |cx| {
         vec![
             cx.text("Confirmation (AI Elements)"),
-            cx.text("Click to request, then approve or reject to transition between the canonical states."),
+            cx.text(
+                "Click to request, then approve or reject to transition between the canonical states.",
+            ),
             request_btn,
             confirmation,
         ]

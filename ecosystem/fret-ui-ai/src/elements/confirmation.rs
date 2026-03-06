@@ -2,8 +2,8 @@
 
 use std::sync::Arc;
 
-use fret_ui::Theme;
 use fret_ui::element::{AnyElement, InteractivityGateProps, LayoutStyle, SemanticsDecoration};
+use fret_ui::Theme;
 use fret_ui::{ElementContext, UiHost};
 use fret_ui_kit::ui;
 use fret_ui_kit::{Items, Justify, LayoutRefinement, Space};
@@ -72,6 +72,90 @@ fn hidden<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     )
 }
 
+const CONFIRMATION_REQUEST_SLOT_KEY: &str = "__fret_ui_ai.confirmation.request";
+const CONFIRMATION_ACCEPTED_SLOT_KEY: &str = "__fret_ui_ai.confirmation.accepted";
+const CONFIRMATION_REJECTED_SLOT_KEY: &str = "__fret_ui_ai.confirmation.rejected";
+const CONFIRMATION_ACTIONS_SLOT_KEY: &str = "__fret_ui_ai.confirmation.actions";
+
+fn deferred_slot<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    slot_key: &'static str,
+    visible_child: AnyElement,
+) -> AnyElement {
+    let mut slot = cx.interactivity_gate_props(
+        InteractivityGateProps {
+            layout: LayoutStyle::default(),
+            present: false,
+            interactive: false,
+        },
+        move |_cx| vec![visible_child],
+    );
+    slot.key_context = Some(Arc::<str>::from(slot_key));
+    slot
+}
+
+fn resolve_confirmation_children(
+    children: Vec<AnyElement>,
+    context: &ConfirmationContext,
+) -> Vec<AnyElement> {
+    children
+        .into_iter()
+        .filter_map(|child| resolve_confirmation_slot(child, context))
+        .collect()
+}
+
+fn resolve_confirmation_slot(
+    mut element: AnyElement,
+    context: &ConfirmationContext,
+) -> Option<AnyElement> {
+    match element.key_context.as_deref() {
+        Some(CONFIRMATION_REQUEST_SLOT_KEY) => {
+            if context.state != ToolUiPartState::ApprovalRequested {
+                return None;
+            }
+            return element
+                .children
+                .into_iter()
+                .next()
+                .and_then(|child| resolve_confirmation_slot(child, context));
+        }
+        Some(CONFIRMATION_ACCEPTED_SLOT_KEY) => {
+            if context.approval.approved != Some(true) || !context.state.is_response_state() {
+                return None;
+            }
+            return element
+                .children
+                .into_iter()
+                .next()
+                .and_then(|child| resolve_confirmation_slot(child, context));
+        }
+        Some(CONFIRMATION_REJECTED_SLOT_KEY) => {
+            if context.approval.approved != Some(false) || !context.state.is_response_state() {
+                return None;
+            }
+            return element
+                .children
+                .into_iter()
+                .next()
+                .and_then(|child| resolve_confirmation_slot(child, context));
+        }
+        Some(CONFIRMATION_ACTIONS_SLOT_KEY) => {
+            if context.state != ToolUiPartState::ApprovalRequested {
+                return None;
+            }
+            return element
+                .children
+                .into_iter()
+                .next()
+                .and_then(|child| resolve_confirmation_slot(child, context));
+        }
+        _ => {}
+    }
+
+    element.children = resolve_confirmation_children(element.children, context);
+    Some(element)
+}
+
 /// Nearest `Confirmation` context in scope.
 #[derive(Debug, Clone)]
 pub struct ConfirmationContext {
@@ -133,9 +217,17 @@ impl Confirmation {
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        if self.approval.is_none() || self.state.is_input_state() {
+        let Some(approval) = self.approval.clone() else {
+            return hidden(cx);
+        };
+        if self.state.is_input_state() {
             return hidden(cx);
         }
+
+        let context = ConfirmationContext {
+            approval,
+            state: self.state,
+        };
 
         let Confirmation {
             approval: _,
@@ -144,6 +236,7 @@ impl Confirmation {
             layout,
             test_id,
         } = self;
+        let children = resolve_confirmation_children(children, &context);
         Self::render(cx, layout, test_id, children)
     }
 
@@ -169,9 +262,9 @@ impl Confirmation {
         };
 
         cx.with_state(ConfirmationLocalState::default, |st| {
-            st.context = Some(context)
+            st.context = Some(context.clone())
         });
-        let children = children(cx);
+        let children = resolve_confirmation_children(children(cx), &context);
         let Confirmation {
             approval: _,
             state: _,
@@ -279,9 +372,15 @@ impl ConfirmationRequest {
         let state = self
             .state
             .or_else(|| use_confirmation_context(cx).map(|context| context.state));
-        if state != Some(ToolUiPartState::ApprovalRequested) {
-            return hidden(cx);
+        let el = self.materialize(cx);
+        match state {
+            Some(ToolUiPartState::ApprovalRequested) => el,
+            Some(_) => hidden(cx),
+            None => deferred_slot(cx, CONFIRMATION_REQUEST_SLOT_KEY, el),
         }
+    }
+
+    fn materialize<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let mut children = self.children;
         let el = match children.len() {
             0 => ui::v_stack(|_cx| Vec::<AnyElement>::new())
@@ -350,14 +449,20 @@ impl ConfirmationAccepted {
         let context = use_confirmation_context(cx);
         let approval = self
             .approval
+            .clone()
             .or_else(|| context.as_ref().map(|context| context.approval.clone()));
         let state = self
             .state
             .or_else(|| context.as_ref().map(|context| context.state));
-        let approved = approval.as_ref().and_then(|a| a.approved) == Some(true);
-        if !approved || !state.is_some_and(ToolUiPartState::is_response_state) {
-            return hidden(cx);
+        let el = self.materialize(cx);
+        match (approval.as_ref().and_then(|a| a.approved), state) {
+            (Some(true), Some(state)) if state.is_response_state() => el,
+            (Some(_), Some(_)) => hidden(cx),
+            _ => deferred_slot(cx, CONFIRMATION_ACCEPTED_SLOT_KEY, el),
         }
+    }
+
+    fn materialize<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let mut children = self.children;
         let el = match children.len() {
             0 => ui::h_row(|_cx| Vec::<AnyElement>::new())
@@ -374,9 +479,6 @@ impl ConfirmationAccepted {
                 .items(Items::Center)
                 .into_element(cx),
         };
-        if !state.is_some_and(ToolUiPartState::is_response_state) {
-            return hidden(cx);
-        }
         let Some(test_id) = self.test_id else {
             return el;
         };
@@ -429,14 +531,20 @@ impl ConfirmationRejected {
         let context = use_confirmation_context(cx);
         let approval = self
             .approval
+            .clone()
             .or_else(|| context.as_ref().map(|context| context.approval.clone()));
         let state = self
             .state
             .or_else(|| context.as_ref().map(|context| context.state));
-        let rejected = approval.as_ref().and_then(|a| a.approved) == Some(false);
-        if !rejected || !state.is_some_and(ToolUiPartState::is_response_state) {
-            return hidden(cx);
+        let el = self.materialize(cx);
+        match (approval.as_ref().and_then(|a| a.approved), state) {
+            (Some(false), Some(state)) if state.is_response_state() => el,
+            (Some(_), Some(_)) => hidden(cx),
+            _ => deferred_slot(cx, CONFIRMATION_REJECTED_SLOT_KEY, el),
         }
+    }
+
+    fn materialize<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let mut children = self.children;
         let el = match children.len() {
             0 => ui::h_row(|_cx| Vec::<AnyElement>::new())
@@ -498,10 +606,15 @@ impl ConfirmationActions {
         let state = self
             .state
             .or_else(|| use_confirmation_context(cx).map(|context| context.state));
-        if state != Some(ToolUiPartState::ApprovalRequested) {
-            return hidden(cx);
+        let el = self.materialize(cx);
+        match state {
+            Some(ToolUiPartState::ApprovalRequested) => el,
+            Some(_) => hidden(cx),
+            None => deferred_slot(cx, CONFIRMATION_ACTIONS_SLOT_KEY, el),
         }
+    }
 
+    fn materialize<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let mut el = ui::h_row(|_cx| self.children)
             .layout(self.layout)
             .gap(Space::N2)
@@ -735,6 +848,110 @@ mod tests {
                                 .into_element(cx),
                         ]
                     })
+            });
+
+        fn has_test_id(element: &AnyElement, test_id: &str) -> bool {
+            if element
+                .semantics_decoration
+                .as_ref()
+                .and_then(|d| d.test_id.as_deref())
+                == Some(test_id)
+            {
+                return true;
+            }
+
+            element
+                .children
+                .iter()
+                .any(|child| has_test_id(child, test_id))
+        }
+
+        assert!(has_test_id(&element, "accepted"));
+        assert!(!has_test_id(&element, "request"));
+        assert!(!has_test_id(&element, "rejected"));
+        assert!(!has_test_id(&element, "actions"));
+    }
+
+    #[test]
+    fn confirmation_direct_children_resolve_request_and_actions() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let approval = ToolUiPartApproval::new("approval-1");
+        let element =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+                Confirmation::new(ToolUiPartState::ApprovalRequested)
+                    .approval(approval)
+                    .children([
+                        ConfirmationTitle::new([
+                            ConfirmationRequest::new([cx.text("Ask")])
+                                .test_id("request")
+                                .into_element(cx),
+                            ConfirmationAccepted::new([cx.text("Approved")])
+                                .test_id("accepted")
+                                .into_element(cx),
+                            ConfirmationRejected::new([cx.text("Rejected")])
+                                .test_id("rejected")
+                                .into_element(cx),
+                        ])
+                        .into_element(cx),
+                        ConfirmationActions::new([cx.text("Actions")])
+                            .test_id("actions")
+                            .into_element(cx),
+                    ])
+                    .into_element(cx)
+            });
+
+        fn has_test_id(element: &AnyElement, test_id: &str) -> bool {
+            if element
+                .semantics_decoration
+                .as_ref()
+                .and_then(|d| d.test_id.as_deref())
+                == Some(test_id)
+            {
+                return true;
+            }
+
+            element
+                .children
+                .iter()
+                .any(|child| has_test_id(child, test_id))
+        }
+
+        assert!(has_test_id(&element, "request"));
+        assert!(has_test_id(&element, "actions"));
+        assert!(!has_test_id(&element, "accepted"));
+        assert!(!has_test_id(&element, "rejected"));
+    }
+
+    #[test]
+    fn confirmation_direct_children_resolve_response_slots() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let approval = ToolUiPartApproval::new("approval-1").approved(true);
+        let element =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+                Confirmation::new(ToolUiPartState::ApprovalResponded)
+                    .approval(approval)
+                    .children([
+                        ConfirmationTitle::new([
+                            ConfirmationRequest::new([cx.text("Ask")])
+                                .test_id("request")
+                                .into_element(cx),
+                            ConfirmationAccepted::new([cx.text("Approved")])
+                                .test_id("accepted")
+                                .into_element(cx),
+                            ConfirmationRejected::new([cx.text("Rejected")])
+                                .test_id("rejected")
+                                .into_element(cx),
+                        ])
+                        .into_element(cx),
+                        ConfirmationActions::new([cx.text("Actions")])
+                            .test_id("actions")
+                            .into_element(cx),
+                    ])
+                    .into_element(cx)
             });
 
         fn has_test_id(element: &AnyElement, test_id: &str) -> bool {

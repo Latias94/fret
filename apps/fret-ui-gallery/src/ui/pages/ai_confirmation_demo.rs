@@ -15,8 +15,8 @@ pub(super) fn preview_ai_confirmation_demo(
     let notes = doc_layout::notes(
         cx,
         [
-            "Confirmation belongs in the AI Elements/component layer: it composes Alert + Button semantics rather than changing fret-ui runtime behavior.",
-            "Prefer rendering the slot children from the Confirmation root so Request / Accepted / Rejected / Actions can consume the nearest approval context.",
+            "Confirmation still lives in the AI Elements/component layer: it composes Alert + Button outcomes rather than changing fret-ui runtime contracts.",
+            "Direct compound children now match the upstream docs shape; keep `into_element_with_children(...)` for cases where descendants need live provider context during construction.",
             "Keep the request state actionable and keep the accepted/rejected states read-only so the page mirrors the official docs examples.",
         ],
     );
@@ -24,7 +24,7 @@ pub(super) fn preview_ai_confirmation_demo(
     let body = crate::ui::doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview keeps the live approval workflow while adding the three docs-aligned AI Elements Confirmation states for copyable examples.",
+            "Preview keeps the live approval workflow while using the same direct compound-children composition style as the official AI Elements docs.",
         ),
         vec![
             DocSection::new("Workflow Demo", workflow)
