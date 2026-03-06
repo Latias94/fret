@@ -233,6 +233,8 @@ ID format:
       - `apps/fret-cookbook/examples/async_inbox_basics.rs`
       - `apps/fret-cookbook/examples/virtual_list_basics.rs`
       - `apps/fret-cookbook/examples/icons_and_assets_basics.rs`
+      - `apps/fret-cookbook/examples/assets_reload_epoch_basics.rs`
+      - `apps/fret-cookbook/examples/commands_keymap_basics.rs`
       - `apps/fret-cookbook/examples/effects_layer_basics.rs`
       - `apps/fret-cookbook/examples/markdown_and_code_basics.rs`
       - `apps/fret-cookbook/examples/canvas_pan_zoom_basics.rs`

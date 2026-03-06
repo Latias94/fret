@@ -87,6 +87,9 @@ Examples adoption (authoring-noise reduction):
 - `apps/fret-examples/src/query_demo.rs` (current guidance sample: top-of-render model reads + transient App-effect scheduling)
 - `apps/fret-examples/src/hello_counter_demo.rs` (current guidance sample: action helper placement + card/layout subtree boundaries)
 - `apps/fret-examples/src/query_async_tokio_demo.rs` (current guidance sample: async query variant using the same transient + subtree-boundary patterns)
+- `apps/fret-cookbook/examples/icons_and_assets_basics.rs` (reload bump action now uses the default `on_action_notify_models` transaction path)
+- `apps/fret-cookbook/examples/assets_reload_epoch_basics.rs` (reload bump action now uses the default `on_action_notify_models` transaction path)
+- `apps/fret-cookbook/examples/commands_keymap_basics.rs` (command toggle handler now uses the default `on_action_notify_models` transaction path while availability stays explicit)
 
 Pointer-trigger authoring integration (v1 still dispatches through the command pipeline):
 
