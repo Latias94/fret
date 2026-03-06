@@ -12,13 +12,14 @@ use crate::core::{CanvasPoint, CanvasSize, Graph, GraphId, Node, NodeId, NodeKin
 use crate::io::NodeGraphViewState;
 use crate::ops::{GraphOp, GraphTransaction};
 use crate::runtime::store::NodeGraphStore;
+use crate::ui::controller::NodeGraphController;
+use crate::ui::edit_queue::NodeGraphEditQueue;
 use crate::ui::measured::MeasuredGeometryStore;
 use crate::ui::portal::{
     NodeGraphPortalCommandHandler, NodeGraphPortalHost, PortalCommandOutcome, PortalTextCommand,
     portal_submit_text_command,
 };
 use crate::ui::style::NodeGraphStyle;
-use crate::ui::{NodeGraphController, NodeGraphEditQueue};
 
 use super::{
     NullServices, TestUiHostImpl, command_cx, insert_graph_view, insert_view,

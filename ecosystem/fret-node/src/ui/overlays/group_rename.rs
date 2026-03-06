@@ -6,7 +6,9 @@ use fret_ui::{UiHost, retained_bridge::*};
 
 use crate::core::{GroupId, SymbolId};
 use crate::ops::{GraphOp, GraphTransaction};
-use crate::ui::{NodeGraphController, NodeGraphEditQueue, NodeGraphStyle};
+use crate::ui::controller::NodeGraphController;
+use crate::ui::edit_queue::NodeGraphEditQueue;
+use crate::ui::style::NodeGraphStyle;
 
 use super::{clamp_rect_to_bounds, layout_hidden_child_and_release_focus};
 

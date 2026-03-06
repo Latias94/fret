@@ -43,14 +43,14 @@ pub mod portal;
 
 pub use declarative::{NodeGraphSurfacePaintOnlyProps, node_graph_surface_paint_only};
 
-/// Compatibility alias for `advanced::NodeGraphEditQueue`.
-/// Prefer `NodeGraphController` for app-facing graph updates.
+/// Temporary compatibility alias for `advanced::NodeGraphEditQueue`.
+/// Prefer `NodeGraphController` for app-facing graph updates; keep this alias until one external downstream audit pass lands.
 pub use advanced::NodeGraphEditQueue;
-/// Compatibility alias for `advanced::NodeGraphViewportHelper`.
-/// Prefer `NodeGraphViewportHelper::from_controller` or `NodeGraphController` in app-facing code.
+/// Temporary compatibility alias for `advanced::NodeGraphViewportHelper`.
+/// Prefer `NodeGraphViewportHelper::from_controller` or `NodeGraphController` in app-facing code; keep this alias until one external downstream audit pass lands.
 pub use advanced::NodeGraphViewportHelper;
-/// Compatibility aliases for `advanced` viewport transport seams.
-/// Prefer `NodeGraphController` for app-facing viewport control.
+/// Temporary compatibility aliases for `advanced` viewport transport seams.
+/// Prefer `NodeGraphController` for app-facing viewport control; keep these aliases until one external downstream audit pass lands.
 pub use advanced::{
     NodeGraphFitViewOptions, NodeGraphSetViewportOptions, NodeGraphViewQueue, NodeGraphViewRequest,
 };

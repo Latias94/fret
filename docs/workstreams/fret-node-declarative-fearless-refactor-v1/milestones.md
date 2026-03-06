@@ -187,6 +187,9 @@ points rather than direct graph mutation.
     during the migration window.
   - The retained-backed domain demo and the workflow gallery snippet now also import those raw queue
     surfaces from `advanced::*`, so the sample code no longer teaches root `ui::*` queue imports.
+  - Crate-internal retained/test callers now also use explicit module paths instead of the root queue
+    aliases, so the remaining question before deprecation is external downstream compatibility, not
+    in-tree cleanup.
   - Declarative keyboard zoom / wheel zoom / pinch zoom / drag-pan updates now start converging on
     controller/store-backed view-state replacement instead of only mutating the external
     `NodeGraphViewState` model.
@@ -339,4 +342,5 @@ Land in this order unless a blocking bug forces a smaller detour:
 4. `M3` controller + transaction-safe declarative commits
 5. `M4` declarative interaction/portal closure
 6. `M5` retained compatibility convergence
+
 

@@ -52,7 +52,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         let mut did = false;
         for req in reqs {
             match req {
-                crate::ui::NodeGraphViewRequest::FrameNodes { nodes, options } => {
+                crate::ui::view_queue::NodeGraphViewRequest::FrameNodes { nodes, options } => {
                     did |= self.frame_nodes_in_view_with_options(
                         host,
                         window,
@@ -61,7 +61,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                         Some(&options),
                     );
                 }
-                crate::ui::NodeGraphViewRequest::SetViewport { pan, zoom, options } => {
+                crate::ui::view_queue::NodeGraphViewRequest::SetViewport { pan, zoom, options } => {
                     did |= self.set_viewport_with_options(host, window, pan, zoom, Some(&options));
                 }
             }

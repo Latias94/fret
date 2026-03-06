@@ -256,7 +256,9 @@ constructor for retained-only integrations that still own the raw queue/models d
 `fret_node::ui::advanced::*` is now the explicit namespace for those retained transport seams,
 while root `fret_node::ui::*` queue/helper exports remain temporary compatibility aliases during
 migration. The retained-backed domain demo and the workflow gallery snippet now import those queue
-surfaces from `advanced::*` instead of the root `ui::*` namespace.
+surfaces from `advanced::*` instead of the root `ui::*` namespace, and crate-internal retained/test
+callers now also avoid the root aliases. The remaining decision is governance-facing: whether we
+want to add deprecated markers after one explicit external downstream audit pass.
 
 Current controller-facing XyFlow mapping (review helper, not a final contract):
 
@@ -492,4 +494,5 @@ Canonical gate families to keep alive:
 - `cargo run -p fretboard -- diag suite fret-examples-node-graph-paint-only --dir target/fret-diag-node-graph --launch -- cargo run -p fret-demo --bin node_graph_demo --features node-graph-demos`
 
 The TODO tracker defines the new gate additions required for transaction-safe declarative parity.
+
 

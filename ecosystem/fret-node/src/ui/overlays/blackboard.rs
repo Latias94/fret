@@ -18,7 +18,11 @@ use crate::core::{
 };
 use crate::io::NodeGraphViewState;
 use crate::ops::{GraphOp, GraphOpBuilderExt as _, GraphTransaction};
-use crate::ui::{NodeGraphController, NodeGraphEditQueue, NodeGraphOverlayState, NodeGraphStyle};
+use crate::ui::controller::NodeGraphController;
+use crate::ui::edit_queue::NodeGraphEditQueue;
+use crate::ui::style::NodeGraphStyle;
+
+use super::NodeGraphOverlayState;
 
 use super::{SymbolRenameOverlay, clamp_rect_to_bounds};
 

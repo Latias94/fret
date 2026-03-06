@@ -179,7 +179,8 @@ land in code review; move design discussion back to `README.md` if a TODO turns 
         the default app-facing integration surface.
   - [x] Migrate retained-only examples / docs that still import queue types from root `fret_node::ui::*`
         to `fret_node::ui::advanced::*` (`node_graph_domain_demo`, workflow gallery snippet).
-  - [ ] Reassess whether root aliases should be deprecated after one more downstream migration pass.
+  - [x] Clear in-tree uses of root queue/helper aliases (apps, gallery snippet, crate-internal retained/tests).
+  - [ ] Reassess whether root aliases should be deprecated after one explicit external downstream audit pass.
 
 ## M3 - Transaction-safe declarative commits
 
@@ -274,4 +275,5 @@ land in code review; move design discussion back to `README.md` if a TODO turns 
 - [ ] Whether controlled sync should expose diff-first helpers by default.
 - [ ] Which retained-only behaviors still need a deliberate temporary home while declarative parity
       is being built.
+
 
