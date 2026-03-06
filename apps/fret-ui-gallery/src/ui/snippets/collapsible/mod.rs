@@ -6,3 +6,4 @@ pub mod demo;
 pub mod file_tree;
 pub mod rtl;
 pub mod settings_panel;
+pub mod usage;
