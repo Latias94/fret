@@ -177,8 +177,9 @@ land in code review; move design discussion back to `README.md` if a TODO turns 
         seams while keeping root `fret_node::ui::*` re-exports as compatibility aliases.
   - [x] Add one short README/workstream note that queue APIs are advanced retained transport seams, not
         the default app-facing integration surface.
-  - [ ] Migrate retained-only examples / docs that still import queue types from root `fret_node::ui::*`
-        to `fret_node::ui::advanced::*`, then reassess whether root aliases should be deprecated.
+  - [x] Migrate retained-only examples / docs that still import queue types from root `fret_node::ui::*`
+        to `fret_node::ui::advanced::*` (`node_graph_domain_demo`, workflow gallery snippet).
+  - [ ] Reassess whether root aliases should be deprecated after one more downstream migration pass.
 
 ## M3 - Transaction-safe declarative commits
 
@@ -273,3 +274,4 @@ land in code review; move design discussion back to `README.md` if a TODO turns 
 - [ ] Whether controlled sync should expose diff-first helpers by default.
 - [ ] Which retained-only behaviors still need a deliberate temporary home while declarative parity
       is being built.
+

@@ -24,16 +24,17 @@ use fret_node::runtime::changes::NodeGraphChanges;
 use fret_node::runtime::events::ViewChange;
 use fret_node::runtime::store::NodeGraphStore;
 use fret_node::types::TypeDesc;
+use fret_node::ui::advanced::NodeGraphEditQueue;
 use fret_node::ui::canvas::RejectNonFiniteTx;
 use fret_node::ui::style::NodeGraphStyle;
 use fret_node::ui::{
     EdgeMarker, EdgeRenderHint, EdgeRouteKind, EdgeTypeKey, InsertNodeCandidate,
     MeasuredGeometryStore, NodeGraphA11yFocusedEdge, NodeGraphA11yFocusedNode,
     NodeGraphA11yFocusedPort, NodeGraphCanvas, NodeGraphController, NodeGraphEdgeTypes,
-    NodeGraphEditQueue, NodeGraphEditor, NodeGraphInternalsStore, NodeGraphNodeTypes,
-    NodeGraphOverlayHost, NodeGraphOverlayState, NodeGraphPortalHost, NodeGraphPortalNodeLayout,
-    NodeGraphPresenter, PortalNumberEditHandler, PortalNumberEditSpec, PortalNumberEditSubmit,
-    PortalNumberEditor, register_node_graph_commands,
+    NodeGraphEditor, NodeGraphInternalsStore, NodeGraphNodeTypes, NodeGraphOverlayHost,
+    NodeGraphOverlayState, NodeGraphPortalHost, NodeGraphPortalNodeLayout, NodeGraphPresenter,
+    PortalNumberEditHandler, PortalNumberEditSpec, PortalNumberEditSubmit, PortalNumberEditor,
+    register_node_graph_commands,
 };
 use fret_runtime::PlatformCapabilities;
 use fret_ui::Theme;

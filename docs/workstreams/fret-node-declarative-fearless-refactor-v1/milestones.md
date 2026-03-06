@@ -185,6 +185,8 @@ points rather than direct graph mutation.
   - Raw queue / viewport transport exports now also have an explicit `fret_node::ui::advanced::*`
     namespace, with root `fret_node::ui::*` queue/helper exports kept only as compatibility aliases
     during the migration window.
+  - The retained-backed domain demo and the workflow gallery snippet now also import those raw queue
+    surfaces from `advanced::*`, so the sample code no longer teaches root `ui::*` queue imports.
   - Declarative keyboard zoom / wheel zoom / pinch zoom / drag-pan updates now start converging on
     controller/store-backed view-state replacement instead of only mutating the external
     `NodeGraphViewState` model.
@@ -337,3 +339,4 @@ Land in this order unless a blocking bug forces a smaller detour:
 4. `M3` controller + transaction-safe declarative commits
 5. `M4` declarative interaction/portal closure
 6. `M5` retained compatibility convergence
+

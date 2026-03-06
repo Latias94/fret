@@ -12,9 +12,8 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
     use fret_icons::IconId;
     use fret_node::io::NodeGraphViewState;
     use fret_node::runtime::store::NodeGraphStore;
-    use fret_node::ui::{
-        NodeGraphCanvas, NodeGraphController, NodeGraphEditor, NodeGraphViewQueue,
-    };
+    use fret_node::ui::advanced::NodeGraphViewQueue;
+    use fret_node::ui::{NodeGraphCanvas, NodeGraphController, NodeGraphEditor};
     use fret_node::{
         CanvasPoint, Edge, EdgeId, EdgeKind, Graph, GraphId, Node, NodeId, NodeKindKey, Port,
         PortCapacity, PortDirection, PortId, PortKey, PortKind,
