@@ -101,6 +101,7 @@ Related workstream: `docs/workstreams/fret-launch-app-surface-fearless-refactor-
 - View runtime authors: `fret::App::new(...).window(...).view::<V>()?`
 - View runtime authors with driver hooks: `fret::App::new(...).window(...).view_with_hooks::<V>(...)?`
 - Advanced integration with `fret` defaults: `fret::run_native_with_fn_driver(...)`
+- Advanced integration with `FnDriver` hooks preserved: `fret::run_native_with_fn_driver_with_hooks(...)`
 - Compatibility-only low-level driver path: `fret::run_native_with_compat_driver(...)`
 
 ## What remains first-class on `fret`
@@ -137,6 +138,7 @@ Mapping (rough):
 - `fret::UiAppBuilder` -> `fret_bootstrap::UiAppBootstrapBuilder`
 - `fret::UiAppDriver` -> `fret_bootstrap::ui_app_driver::UiAppDriver`
 - `fret::run_native_with_fn_driver(...)` -> `fret_bootstrap::BootstrapBuilder::new_fn(...)`
+- `fret::run_native_with_fn_driver_with_hooks(...)` -> `fret_bootstrap::BootstrapBuilder::new_fn_with_hooks(...)`
 - `fret::run_native_with_compat_driver(...)` -> `fret_bootstrap::BootstrapBuilder::new(...)`
 
 The recommended manual-assembly entry point remains `fret-bootstrap`, keeping the underlying driver

@@ -458,18 +458,22 @@ fn window_create_spec(
     <SimpleTodoDriver as WinitAppDriver>::window_create_spec(driver, app, request)
 }
 
-pub fn build_driver() -> impl WinitAppDriver {
+fn configure_fn_driver_hooks(
+    hooks: &mut fret_launch::FnDriverHooks<SimpleTodoDriver, SimpleTodoWindowState>,
+) {
+    hooks.hot_reload_window = Some(hot_reload_window);
+    hooks.handle_command = Some(handle_command);
+    hooks.window_create_spec = Some(window_create_spec);
+}
+
+pub fn build_fn_driver() -> impl WinitAppDriver {
     FnDriver::new(
         SimpleTodoDriver::default(),
         create_window_state,
         handle_event,
         render,
     )
-    .with_hooks(|hooks| {
-        hooks.hot_reload_window = Some(hot_reload_window);
-        hooks.handle_command = Some(handle_command);
-        hooks.window_create_spec = Some(window_create_spec);
-    })
+    .with_hooks(configure_fn_driver_hooks)
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -485,8 +489,15 @@ pub fn run() -> anyhow::Result<()> {
 
     let app = build_app();
     let config = build_runner_config();
-    let driver = build_driver();
-    crate::run_native_with_compat_driver(config, app, driver)
+    crate::run_native_with_fn_driver_with_hooks(
+        config,
+        app,
+        SimpleTodoDriver::default(),
+        create_window_state,
+        handle_event,
+        render,
+        configure_fn_driver_hooks,
+    )
 }
 
 #[cfg(target_arch = "wasm32")]

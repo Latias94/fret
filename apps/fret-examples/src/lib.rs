@@ -14,6 +14,32 @@ pub(crate) fn run_native_with_compat_driver<D: fret_launch::WinitAppDriver + 'st
 }
 
 #[cfg(not(target_arch = "wasm32"))]
+pub(crate) fn run_native_with_fn_driver_with_hooks<D: 'static, S: 'static>(
+    config: fret_launch::WinitRunnerConfig,
+    app: fret_app::App,
+    driver_state: D,
+    create_window_state: fn(&mut D, &mut fret_app::App, fret_core::AppWindowId) -> S,
+    handle_event: for<'d, 'cx, 'e> fn(
+        &'d mut D,
+        fret_launch::WinitEventContext<'cx, S>,
+        &'e fret_core::Event,
+    ),
+    render: for<'d, 'cx> fn(&'d mut D, fret_launch::WinitRenderContext<'cx, S>),
+    configure_hooks: impl FnOnce(&mut fret_launch::FnDriverHooks<D, S>),
+) -> anyhow::Result<()> {
+    fret::run_native_with_fn_driver_with_hooks(
+        config,
+        app,
+        driver_state,
+        create_window_state,
+        handle_event,
+        render,
+        configure_hooks,
+    )
+    .map_err(anyhow::Error::from)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
 pub mod alpha_mode_demo;
 pub mod area_demo;
 #[cfg(not(target_arch = "wasm32"))]

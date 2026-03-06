@@ -77,6 +77,12 @@ fn hot_reload_window(
     state.root = None;
 }
 
+fn configure_fn_driver_hooks(
+    hooks: &mut fret_launch::FnDriverHooks<BarsDemoDriver, BarsDemoWindowState>,
+) {
+    hooks.hot_reload_window = Some(hot_reload_window);
+}
+
 fn handle_event(
     _driver: &mut BarsDemoDriver,
     context: WinitEventContext<'_, BarsDemoWindowState>,
@@ -175,16 +181,14 @@ pub fn build_runner_config() -> WinitRunnerConfig {
     }
 }
 
-pub fn build_driver() -> impl WinitAppDriver {
+pub fn build_fn_driver() -> impl WinitAppDriver {
     FnDriver::new(
         BarsDemoDriver::default(),
         create_window_state,
         handle_event,
         render,
     )
-    .with_hooks(|hooks| {
-        hooks.hot_reload_window = Some(hot_reload_window);
-    })
+    .with_hooks(configure_fn_driver_hooks)
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -200,9 +204,16 @@ pub fn run() -> anyhow::Result<()> {
 
     let app = build_app();
     let config = build_runner_config();
-    let driver = build_driver();
-
-    crate::run_native_with_compat_driver(config, app, driver).context("run bars_demo app")
+    crate::run_native_with_fn_driver_with_hooks(
+        config,
+        app,
+        BarsDemoDriver::default(),
+        create_window_state,
+        handle_event,
+        render,
+        configure_fn_driver_hooks,
+    )
+    .context("run bars_demo app")
 }
 
 #[cfg(target_arch = "wasm32")]

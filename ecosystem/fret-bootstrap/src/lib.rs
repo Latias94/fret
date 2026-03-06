@@ -7,8 +7,8 @@
 //! ## Choosing an entry path
 //!
 //! - `ui_app(...)` / `ui_app_with_hooks(...)`: recommended author-facing path for general UI apps.
-//! - `BootstrapBuilder::new_fn(...)`: recommended advanced path when you need runner-level control
-//!   but still want the bootstrap/defaults story.
+//! - `BootstrapBuilder::new_fn(...)` / `BootstrapBuilder::new_fn_with_hooks(...)`: recommended
+//!   advanced path when you need runner-level control but still want the bootstrap/defaults story.
 //! - `BootstrapBuilder::new(...)`: generic/compatibility path for existing low-level drivers that
 //!   already implement `fret_launch::WinitAppDriver`, or for code that already holds a fully built
 //!   driver value.
@@ -681,6 +681,78 @@ impl<D: 'static, S: 'static> BootstrapBuilder<fret_launch::FnDriver<D, S>> {
             app,
             fret_launch::FnDriver::new(driver_state, create_window_state, handle_event, render),
         )
+    }
+
+    /// Same as [`new_fn`](Self::new_fn), but preserves access to `FnDriverHooks`.
+    pub fn new_fn_with_hooks(
+        app: App,
+        driver_state: D,
+        create_window_state: fn(&mut D, &mut App, fret_core::AppWindowId) -> S,
+        handle_event: for<'d, 'cx, 'e> fn(
+            &'d mut D,
+            fret_launch::WinitEventContext<'cx, S>,
+            &'e fret_core::Event,
+        ),
+        render: for<'d, 'cx> fn(&'d mut D, fret_launch::WinitRenderContext<'cx, S>),
+        configure_hooks: impl FnOnce(&mut fret_launch::FnDriverHooks<D, S>),
+    ) -> Self {
+        Self::new(
+            app,
+            fret_launch::FnDriver::new(driver_state, create_window_state, handle_event, render)
+                .with_hooks(configure_hooks),
+        )
+    }
+}
+
+#[cfg(all(test, not(target_arch = "wasm32")))]
+mod fn_driver_builder_tests {
+    use fret_app::App;
+    use fret_core::AppWindowId;
+    use fret_launch::{
+        FnDriverHooks, WinitEventContext, WinitHotReloadContext, WinitRenderContext,
+    };
+
+    use super::BootstrapBuilder;
+
+    struct DriverState;
+    struct WindowState;
+
+    fn create_window_state(
+        _driver: &mut DriverState,
+        _app: &mut App,
+        _window: AppWindowId,
+    ) -> WindowState {
+        WindowState
+    }
+
+    fn handle_event(
+        _driver: &mut DriverState,
+        _context: WinitEventContext<'_, WindowState>,
+        _event: &fret_core::Event,
+    ) {
+    }
+
+    fn render(_driver: &mut DriverState, _context: WinitRenderContext<'_, WindowState>) {}
+
+    fn hot_reload_window(
+        _driver: &mut DriverState,
+        _context: WinitHotReloadContext<'_, WindowState>,
+    ) {
+    }
+
+    #[test]
+    fn new_fn_with_hooks_builds() {
+        let _builder = BootstrapBuilder::new_fn_with_hooks(
+            App::new(),
+            DriverState,
+            create_window_state,
+            handle_event,
+            render,
+            |hooks: &mut FnDriverHooks<DriverState, WindowState>| {
+                hooks.hot_reload_window = Some(hot_reload_window);
+            },
+        )
+        .configure(|_config| {});
     }
 }
 

@@ -8,8 +8,9 @@
 //! ## Choosing a native entry path
 //!
 //! - `fret::App::new(...).window(...).ui(...)?` is the recommended app-author path.
-//! - `fret::run_native_with_fn_driver(...)` is the recommended advanced escape hatch when you need
-//!   runner-level customization but still want the `fret` defaults/bootstrap story.
+//! - `fret::run_native_with_fn_driver(...)` / `fret::run_native_with_fn_driver_with_hooks(...)`
+//!   are the recommended advanced escape hatches when you need runner-level customization but
+//!   still want the `fret` defaults/bootstrap story.
 //! - `fret::run_native_with_compat_driver(...)` is a compatibility path for existing low-level
 //!   integrations that still implement `fret_launch::WinitAppDriver` directly.
 //!
@@ -625,12 +626,40 @@ pub fn run_native_with_fn_driver<D: 'static, S: 'static>(
     ),
     render: for<'d, 'cx> fn(&'d mut D, fret_launch::WinitRenderContext<'cx, S>),
 ) -> Result<()> {
-    let builder = fret_bootstrap::BootstrapBuilder::new_fn(
+    run_native_with_fn_driver_with_hooks(
+        config,
         app,
         driver_state,
         create_window_state,
         handle_event,
         render,
+        |_hooks| {},
+    )
+}
+
+/// Run a native desktop app using the advanced `FnDriver` escape hatch, preserving hook
+/// configuration.
+#[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
+pub fn run_native_with_fn_driver_with_hooks<D: 'static, S: 'static>(
+    config: fret_launch::WinitRunnerConfig,
+    app: KernelApp,
+    driver_state: D,
+    create_window_state: fn(&mut D, &mut KernelApp, fret_core::AppWindowId) -> S,
+    handle_event: for<'d, 'cx, 'e> fn(
+        &'d mut D,
+        fret_launch::WinitEventContext<'cx, S>,
+        &'e fret_core::Event,
+    ),
+    render: for<'d, 'cx> fn(&'d mut D, fret_launch::WinitRenderContext<'cx, S>),
+    configure_hooks: impl FnOnce(&mut fret_launch::FnDriverHooks<D, S>),
+) -> Result<()> {
+    let builder = fret_bootstrap::BootstrapBuilder::new_fn_with_hooks(
+        app,
+        driver_state,
+        create_window_state,
+        handle_event,
+        render,
+        configure_hooks,
     )
     .configure(move |c| {
         *c = config;

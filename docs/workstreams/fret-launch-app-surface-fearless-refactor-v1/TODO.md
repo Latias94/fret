@@ -8,6 +8,7 @@ Companion docs:
 - Export inventory: `docs/workstreams/fret-launch-app-surface-fearless-refactor-v1/EXPORT_INVENTORY.md`
 - Config inventory: `docs/workstreams/fret-launch-app-surface-fearless-refactor-v1/CONFIG_INVENTORY.md`
 - Surface audit: `docs/workstreams/fret-launch-app-surface-fearless-refactor-v1/SURFACE_AUDIT.md`
+- Crate audit (L1): `docs/workstreams/crate-audits/fret-launch.l1.md`
 - Milestones: `docs/workstreams/fret-launch-app-surface-fearless-refactor-v1/MILESTONES.md`
 
 ## Setup / Inventory
@@ -53,7 +54,7 @@ Companion docs:
   - [x] `install_custom_effects(...)`
   - [x] window create/close hooks
   - [x] engine-frame customization
-- [x] Add a high-level `FnDriver` bootstrap escape hatch (`fret_bootstrap::BootstrapBuilder::new_fn(...)`, `fret::run_native_with_fn_driver(...)`).
+- [x] Add a high-level `FnDriver` bootstrap escape hatch (`fret_bootstrap::BootstrapBuilder::new_fn(...)`, `fret_bootstrap::BootstrapBuilder::new_fn_with_hooks(...)`, `fret::run_native_with_fn_driver(...)`, `fret::run_native_with_fn_driver_with_hooks(...)`).
 
 ## Docs / Examples
 
