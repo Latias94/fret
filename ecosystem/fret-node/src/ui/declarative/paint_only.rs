@@ -3812,13 +3812,66 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
 
 #[cfg(test)]
 mod tests {
+    use std::any::Any;
+
+    use fret_core::AppWindowId;
+    use fret_runtime::{ClipboardToken, Effect, ModelStore, ShareSheetToken, TimerToken};
+    use fret_ui::action::UiActionHost;
+
     use super::{
         build_diag_normalize_visible_node_transaction, build_diag_nudge_visible_node_transaction,
-        build_node_drag_transaction,
+        build_node_drag_transaction, commit_graph_transaction,
     };
     use crate::core::{CanvasPoint, CanvasSize, Graph, GraphId, Node, NodeId, NodeKindKey};
+    use crate::io::NodeGraphViewState;
     use crate::ops::GraphOp;
+    use crate::runtime::store::NodeGraphStore;
+    use crate::ui::NodeGraphController;
     use serde_json::Value;
+
+    #[derive(Default)]
+    struct TestActionHostImpl {
+        models: ModelStore,
+        effects: Vec<Effect>,
+        next_timer_token: u64,
+        next_clipboard_token: u64,
+        next_share_sheet_token: u64,
+    }
+
+    impl UiActionHost for TestActionHostImpl {
+        fn models_mut(&mut self) -> &mut ModelStore {
+            &mut self.models
+        }
+
+        fn push_effect(&mut self, effect: Effect) {
+            self.effects.push(effect);
+        }
+
+        fn request_redraw(&mut self, _window: AppWindowId) {}
+
+        fn next_timer_token(&mut self) -> TimerToken {
+            self.next_timer_token = self.next_timer_token.saturating_add(1);
+            TimerToken(self.next_timer_token)
+        }
+
+        fn next_clipboard_token(&mut self) -> ClipboardToken {
+            self.next_clipboard_token = self.next_clipboard_token.saturating_add(1);
+            ClipboardToken(self.next_clipboard_token)
+        }
+
+        fn next_share_sheet_token(&mut self) -> ShareSheetToken {
+            self.next_share_sheet_token = self.next_share_sheet_token.saturating_add(1);
+            ShareSheetToken(self.next_share_sheet_token)
+        }
+
+        fn record_pending_action_payload(
+            &mut self,
+            _cx: fret_ui::action::ActionCx,
+            _action: &fret_runtime::ActionId,
+            _payload: Box<dyn Any + Send + Sync>,
+        ) {
+        }
+    }
 
     fn test_node(pos: CanvasPoint) -> Node {
         Node {
@@ -3957,5 +4010,61 @@ mod tests {
                 to: true,
             } if *id == other
         )));
+    }
+
+    #[test]
+    fn commit_graph_transaction_syncs_graph_and_view_models_through_controller() {
+        let mut host = TestActionHostImpl::default();
+        let mut graph_value = Graph::new(GraphId::from_u128(5));
+        let node = NodeId::from_u128(99);
+        graph_value
+            .nodes
+            .insert(node, test_node(CanvasPoint { x: 10.0, y: 20.0 }));
+        let graph = host.models.insert(graph_value.clone());
+        let view_state = host.models.insert(NodeGraphViewState::default());
+        let store = host.models.insert(NodeGraphStore::new(
+            graph_value,
+            NodeGraphViewState::default(),
+        ));
+        let controller = NodeGraphController::new(store.clone());
+
+        let tx = host
+            .models
+            .read(&graph, |graph| {
+                build_node_drag_transaction(graph, &[node], 5.0, -2.0)
+            })
+            .expect("build transaction");
+
+        assert!(commit_graph_transaction(
+            &mut host,
+            &graph,
+            &view_state,
+            Some(&controller),
+            Some(&store),
+            &tx,
+        ));
+
+        let graph_pos = host
+            .models
+            .read(&graph, |graph| graph.nodes.get(&node).map(|node| node.pos))
+            .ok()
+            .flatten()
+            .expect("graph node pos");
+        let store_pos = host
+            .models
+            .read(&store, |store| {
+                store.graph().nodes.get(&node).map(|node| node.pos)
+            })
+            .ok()
+            .flatten()
+            .expect("store node pos");
+        let synced_zoom = host
+            .models
+            .read(&view_state, |state| state.zoom)
+            .expect("view-state model readable");
+
+        assert_eq!(graph_pos, CanvasPoint { x: 15.0, y: 18.0 });
+        assert_eq!(store_pos, CanvasPoint { x: 15.0, y: 18.0 });
+        assert_eq!(synced_zoom, 1.0);
     }
 }
