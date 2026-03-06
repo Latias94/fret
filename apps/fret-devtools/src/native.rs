@@ -55,6 +55,7 @@ const CMD_COPY_PACK_PATH: &str = "fret.devtools.copy_pack_path";
 const CMD_OPEN_VIEWER_URL: &str = "fret.devtools.open_viewer_url";
 const CMD_REGRESSION_REFRESH: &str = "fret.devtools.regression.refresh";
 const CMD_REGRESSION_SUMMARIZE: &str = "fret.devtools.regression.summarize";
+const CMD_REGRESSION_PACK_SELECTED_BUNDLE: &str = "fret.devtools.regression.pack_selected_bundle";
 
 #[derive(Clone)]
 struct DevtoolsConfig {
@@ -1947,6 +1948,12 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
         .models()
         .read(&st.target_out_dir, |v| v.is_some())
         .unwrap_or(false);
+    let pack_in_flight = cx
+        .app
+        .models()
+        .read(&st.pack_in_flight, |v| *v)
+        .unwrap_or(false);
+    let can_pack_selected_bundle = !selected_bundle_dirs.is_empty();
     let summarize_in_flight = cx
         .app
         .models()
@@ -2150,6 +2157,14 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
                     .into_element(cx),
             );
         }
+        out.push(
+            shadcn::Button::new("Pack selected evidence")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Sm)
+                .disabled(!can_pack_selected_bundle || pack_in_flight)
+                .on_click(CMD_REGRESSION_PACK_SELECTED_BUNDLE)
+                .into_element(cx),
+        );
         if !selected_bundle_dirs_text.trim().is_empty() {
             let bundle_dirs = selected_bundle_dirs_text.clone();
             let on_copy: fret_ui::action::OnActivate = Arc::new(move |host, action_cx, _reason| {
@@ -2508,6 +2523,26 @@ fn on_command(
         CMD_REGRESSION_SUMMARIZE => {
             if let Err(err) = summarize::start_regression_summarize(app, st) {
                 push_log(app, &st.log_lines, &format!("regression summarize refused: {err}"));
+            }
+            app.request_redraw(window);
+        }
+        CMD_REGRESSION_PACK_SELECTED_BUNDLE => {
+            let Some(bundle_dir) = app
+                .models()
+                .read(&st.regression_selected_bundle_dirs, |v| v.first().cloned())
+                .ok()
+                .flatten()
+            else {
+                push_log(
+                    app,
+                    &st.log_lines,
+                    "regression pack refused (no selected bundle dir)",
+                );
+                app.request_redraw(window);
+                return;
+            };
+            if let Err(err) = pack::start_pack_bundle_dir(app, st, bundle_dir.as_ref()) {
+                push_log(app, &st.log_lines, &format!("regression pack refused: {err}"));
             }
             app.request_redraw(window);
         }

@@ -271,6 +271,7 @@ Recommended PR slices:
    - `apps/fret-devtools` now includes a first read-only `Regression` details tab over the shared aggregate artifacts,
    - the tab now supports failing-summary drill-down and bundle-dir path copying without introducing a new campaign model,
    - selected summaries now expose a direct `Copy first bundle dir` action for faster evidence handoff into external triage/viewer flows,
+   - selected summaries can now start the existing pack flow directly from the first failing bundle dir,
    - the tab now also provides a thin `Summarize` trigger that runs `fretboard diag summarize` semantics from the current artifacts root and refreshes the shared aggregate artifacts on completion,
 4. [in progress] add flake/evidence drill-down UX.
 

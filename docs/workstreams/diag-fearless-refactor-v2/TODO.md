@@ -106,6 +106,7 @@ Tracking doc: `docs/workstreams/diag-fearless-refactor-v2/README.md`
   - [x] the `Regression` tab now lists `failing_summaries` from `regression.index.json`,
   - [x] selecting a row loads the corresponding `regression.summary.json`,
   - [x] selected summary path, first bundle dir, and bundle dir list can be copied for evidence follow-up.
+  - [x] selected summary evidence can now be packed directly from the first failing bundle dir.
 - [x] Add a thin GUI summarize trigger over the shared aggregate artifacts:
   - [x] the `Regression` tab now includes a `Summarize` action next to `Refresh`,
   - [x] the action runs the existing `diag summarize` flow against the current artifacts root,
