@@ -14,7 +14,7 @@ use fret_ui::element::{
 use fret_ui::{ElementContext, Invalidation, Theme, ThemeNamedColorKey, ThemeSnapshot, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
-use fret_ui_kit::declarative::glass::{GlassPanelProps, glass_panel};
+use fret_ui_kit::declarative::glass::{glass_panel, GlassPanelProps};
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
@@ -22,12 +22,40 @@ use fret_ui_kit::primitives::dialog as radix_dialog;
 use fret_ui_kit::primitives::portal_inherited;
 use fret_ui_kit::recipes::glass::GlassEffectRefinement;
 use fret_ui_kit::{
-    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayController, OverlayPresence,
-    Space, ui,
+    ui, ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayController,
+    OverlayPresence, Space,
 };
 
 use crate::layout as shadcn_layout;
 use crate::overlay_motion;
+
+#[derive(Debug, Default)]
+struct DialogOpenProviderState {
+    current: Option<Model<bool>>,
+}
+
+fn inherited_dialog_open<H: UiHost>(cx: &ElementContext<'_, H>) -> Option<Model<bool>> {
+    cx.inherited_state_where::<DialogOpenProviderState>(|st| st.current.is_some())
+        .and_then(|st| st.current.clone())
+}
+
+#[track_caller]
+fn with_dialog_open_provider<H: UiHost, R>(
+    cx: &mut ElementContext<'_, H>,
+    open: Model<bool>,
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> R,
+) -> R {
+    let prev = cx.with_state(DialogOpenProviderState::default, |st| {
+        let prev = st.current.clone();
+        st.current = Some(open);
+        prev
+    });
+    let out = f(cx);
+    cx.with_state(DialogOpenProviderState::default, |st| {
+        st.current = prev;
+    });
+    out
+}
 
 fn default_overlay_color(theme: &ThemeSnapshot) -> Color {
     let mut scrim = theme.named_color(ThemeNamedColorKey::Black);
@@ -499,7 +527,7 @@ impl Dialog {
                         };
 
                         crate::a11y_modal::begin_modal_a11y_scope(cx.app, open_id);
-                        let content = content(cx);
+                        let content = with_dialog_open_provider(cx, self.open.clone(), content);
                         let content_id = content.id;
                         content_element_for_trigger.set(Some(content_id));
                         crate::a11y_modal::end_modal_a11y_scope(cx.app, open_id);
@@ -734,7 +762,7 @@ impl DialogContent {
 /// child in `DialogContent` so it stays on top during hit testing.
 #[derive(Clone)]
 pub struct DialogClose {
-    open: Model<bool>,
+    open: Option<Model<bool>>,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
 }
@@ -750,9 +778,29 @@ impl std::fmt::Debug for DialogClose {
 }
 
 impl DialogClose {
+    /// Creates a close affordance that explicitly toggles the provided dialog open model.
+    ///
+    /// Prefer this constructor when you want fully explicit data flow or when the close control is
+    /// authored outside the dialog content subtree.
     pub fn new(open: Model<bool>) -> Self {
         Self {
-            open,
+            open: Some(open),
+            chrome: ChromeRefinement::default(),
+            layout: LayoutRefinement::default(),
+        }
+    }
+
+    /// Creates a close affordance that closes the dialog resolved from the current content scope.
+    ///
+    /// This is recipe-layer sugar for shadcn-style composition inside
+    /// [`Dialog::into_element`] / [`Dialog::into_element_parts`] content closures. Explicit
+    /// `DialogClose::new(open)` remains available and should be preferred when the element is built
+    /// outside the dialog content subtree.
+    ///
+    /// Panics if no dialog content scope is active when the element is rendered.
+    pub fn from_scope() -> Self {
+        Self {
+            open: None,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
         }
@@ -779,7 +827,11 @@ impl DialogClose {
                 .unwrap_or_else(|| theme.color_token("muted.foreground"));
 
             let a11y_label: Arc<str> = Arc::from("Close");
-            let open = self.open.clone();
+            let open = self.open.clone().unwrap_or_else(|| {
+                inherited_dialog_open(cx).unwrap_or_else(|| {
+                    panic!("DialogClose::from_scope() must be used while rendering Dialog content")
+                })
+            });
 
             let radius = Px(2.0);
 
@@ -847,12 +899,10 @@ impl DialogClose {
                     );
                     let icon = cx.opacity(opacity, move |_cx| vec![icon]);
 
-                    vec![
-                        ui::h_row(|_cx| vec![icon])
-                            .justify_center()
-                            .items_center()
-                            .into_element(cx),
-                    ]
+                    vec![ui::h_row(|_cx| vec![icon])
+                        .justify_center()
+                        .items_center()
+                        .into_element(cx)]
                 };
 
                 (pressable_props, chrome_props, children)
@@ -1095,9 +1145,9 @@ mod tests {
     use super::*;
     use std::cell::Cell;
     use std::rc::Rc;
+    use std::sync::atomic::{AtomicUsize, Ordering};
     use std::sync::Arc;
     use std::sync::Mutex;
-    use std::sync::atomic::{AtomicUsize, Ordering};
 
     use crate::test_support::render_overlay_frame;
     use fret_app::App;
@@ -1108,8 +1158,8 @@ mod tests {
     use fret_core::{PathConstraints, PathId, PathMetrics, PathService, PathStyle};
     use fret_runtime::Effect;
     use fret_runtime::FrameId;
-    use fret_ui::UiTree;
     use fret_ui::element::PositionStyle;
+    use fret_ui::UiTree;
     use fret_ui_kit::declarative::action_hooks::ActionHooksExt;
 
     #[test]
@@ -1584,6 +1634,23 @@ mod tests {
     }
 
     #[test]
+    #[should_panic(
+        expected = "DialogClose::from_scope() must be used while rendering Dialog content"
+    )]
+    fn dialog_close_from_scope_panics_outside_dialog_content() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(200.0), Px(120.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let _ = DialogClose::from_scope().into_element(cx);
+        });
+    }
+
+    #[test]
     fn dialog_does_not_jump_on_first_open_frame_with_tall_content() {
         let window = AppWindowId::default();
         let mut app = App::new();
@@ -1790,7 +1857,7 @@ mod tests {
                                 },
                             );
 
-                            let close = DialogClose::new(open.clone()).into_element(cx);
+                            let close = DialogClose::from_scope().into_element(cx);
                             close_id_out.set(Some(close.id));
 
                             let content =
@@ -3044,7 +3111,7 @@ mod tests {
                         |_cx| trigger,
                         |cx| {
                             DialogContent::new(vec![
-                                cx.container(ContainerProps::default(), |_cx| Vec::new()),
+                                cx.container(ContainerProps::default(), |_cx| Vec::new())
                             ])
                             .into_element(cx)
                         },
@@ -3131,7 +3198,7 @@ mod tests {
                         |_cx| trigger,
                         |cx| {
                             DialogContent::new(vec![
-                                cx.container(ContainerProps::default(), |_cx| Vec::new()),
+                                cx.container(ContainerProps::default(), |_cx| Vec::new())
                             ])
                             .into_element(cx)
                         },
@@ -3242,7 +3309,7 @@ mod tests {
                         |_cx| trigger,
                         |cx| {
                             DialogContent::new(vec![
-                                cx.container(ContainerProps::default(), |_cx| Vec::new()),
+                                cx.container(ContainerProps::default(), |_cx| Vec::new())
                             ])
                             .into_element(cx)
                         },

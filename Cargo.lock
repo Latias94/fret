@@ -2323,6 +2323,8 @@ dependencies = [
  "fret-runner-web",
  "fret-runner-winit",
  "fret-runtime",
+ "fret-webview",
+ "fret-webview-wry",
  "getrandom 0.3.4",
  "image",
  "js-sys",

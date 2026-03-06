@@ -1098,10 +1098,10 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
             PageSpec::new(
                 PAGE_AI_PERSONA_DEMO,
                 "AI Persona (Demo)",
-                "AI Elements Persona / Visual Placeholder Demo",
-                "fret-ui-ai (persona placeholder)",
+                "AI Elements Persona / Docs-aligned Placeholder + Custom Visual Slot",
+                "fret-ui-ai (persona surface)",
                 CMD_NAV_AI_PERSONA_DEMO,
-                &["ai", "persona", "visual", "placeholder", "demo"],
+                &["ai", "persona", "visual", "variants", "docs", "demo"],
             ),
             PageSpec::new(
                 PAGE_AI_WORKFLOW_CHROME_DEMO,

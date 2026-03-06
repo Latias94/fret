@@ -467,6 +467,8 @@ fn chip_content<H: UiHost>(
     text.color = Some(label_color);
     text.wrap = TextWrap::None;
     text.overflow = TextOverflow::Ellipsis;
+    text.layout.size.min_width = Some(Length::Px(Px(0.0)));
+    text.layout.flex.shrink = 1.0;
 
     let label_el = cx.text_props(text);
 
@@ -526,4 +528,58 @@ fn material_icon<H: UiHost>(
     props.layout.size.height = Length::Px(size);
     props.color = color;
     cx.svg_icon_props(props)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use fret_app::App;
+    use fret_core::{Point, Rect, Size};
+    use fret_icons::ids;
+    use fret_ui::element::{ElementKind, Length, TextProps};
+
+    fn bounds() -> Rect {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(120.0)),
+        )
+    }
+
+    fn find_text_by_content<'a>(el: &'a AnyElement, text: &str) -> Option<&'a TextProps> {
+        match &el.kind {
+            ElementKind::Text(props) if props.text.as_ref() == text => Some(props),
+            _ => el
+                .children
+                .iter()
+                .find_map(|child| find_text_by_content(child, text)),
+        }
+    }
+
+    #[test]
+    fn suggestion_chip_labels_can_shrink_beside_leading_icon() {
+        let window = fret_core::AppWindowId::default();
+        let mut app = App::new();
+        let label = Arc::<str>::from(
+            "A very long suggestion chip label that should shrink beside the leading icon",
+        );
+
+        let el = fret_ui::elements::with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "m3-suggestion-chip",
+            |cx| {
+                SuggestionChip::new(label.clone())
+                    .leading_icon(ids::ui::SEARCH)
+                    .into_element(cx)
+            },
+        );
+
+        let label = find_text_by_content(&el, label.as_ref()).expect("suggestion chip label text");
+        assert_eq!(label.wrap, TextWrap::None);
+        assert_eq!(label.overflow, TextOverflow::Ellipsis);
+        assert_eq!(label.layout.size.width, Length::Auto);
+        assert_eq!(label.layout.size.min_width, Some(Length::Px(Px(0.0))));
+        assert_eq!(label.layout.flex.shrink, 1.0);
+    }
 }

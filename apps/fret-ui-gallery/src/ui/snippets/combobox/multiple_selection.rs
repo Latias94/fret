@@ -42,7 +42,6 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
     let combo = shadcn::ComboboxChips::new(values.clone(), open.clone())
         .a11y_label("Combobox multiple selection")
         .query_model(query.clone())
-        .trigger_test_id("ui-gallery-combobox-multiple-trigger")
         .test_id_prefix("ui-gallery-combobox-multiple")
         .items([
             shadcn::ComboboxItem::new("next", "Next.js"),

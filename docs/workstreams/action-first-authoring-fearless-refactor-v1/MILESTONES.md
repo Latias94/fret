@@ -6,6 +6,7 @@ Related:
 
 - Design: `docs/workstreams/action-first-authoring-fearless-refactor-v1/DESIGN.md`
 - TODO: `docs/workstreams/action-first-authoring-fearless-refactor-v1/TODO.md`
+- Post-v1 proposal: `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_AUTHORING_V2_PROPOSAL.md`
 
 ---
 
@@ -20,13 +21,18 @@ teaching surfaces, and gates line up.
 - **M3**: Planned (multi-frontend convergence: declarative + imui + GenUI).
 - **M4**: In progress (cookbook/examples + ui-gallery continue migrating to the same authoring surface).
 - **M5**: Planned (editor-grade proof points: docking/workspace integration).
-- **M6**: Planned (MVU deprecation window, then hard delete once adoption gates are met).
-- **M7–M9**: Proposed (payload actions v2, MVU deprecation, MVU hard delete).
+- **M6**: Met (MVU long-term stance is decided; in-tree MVU is removed and only archival migration notes remain).
+- **M7-M9**: Met (payload actions v2 landed; MVU hard delete and reintroduction gates are in place).
+- **Overall assessment**: v1 is successful as an architectural reset and teaching-surface convergence
+  pass; the remaining gap to the original GPUI/Zed-style density target is treated as post-v1
+  ergonomics work rather than unfinished migration closure.
 
 Evidence anchors (verified in-tree as of 2026-03-06):
 
 - `ecosystem/fret/src/view.rs` (`ViewCx::on_action_notify_*` helpers)
 - `ecosystem/fret-ui-kit/src/activate.rs` (`on_activate_*` helpers for low-noise `OnActivate` authoring)
+- `ecosystem/fret-ui-kit/src/ui.rs` (`UiElementSinkExt` for builder-first `*_build` sink composition)
+- `ecosystem/fret-ui-shadcn/src/card.rs` (`Card::build(...)` / `CardHeader::build(...)` / `CardContent::build(...)` allow late child landing across the query-demo card tree)
 - `apps/fretboard/src/scaffold/templates.rs` (scaffold templates prefer View + typed actions)
 - `docs/first-hour.md` / `docs/examples/README.md` / `docs/examples/todo-app-golden-path.md` / `docs/fearless-refactoring.md` / `docs/crate-usage-guide.md` / `docs/ui-ergonomics-and-interop.md` (first-contact, golden-path, and ergonomics docs now teach the same three entrypoints and defer raw `on_action_notify` to cookbook/reference host-side cases)
 - `apps/fret-ui-gallery/src/ui/pages/command.rs` (gallery teaching page now calls out the same default path and keeps advanced host-side cases out of the gallery narrative)
@@ -42,12 +48,16 @@ Evidence anchors (verified in-tree as of 2026-03-06):
 - `apps/fret-examples/src/custom_effect_v1_demo.rs` (reset action now uses the default `on_action_notify_models` transaction path)
 - `apps/fret-examples/src/liquid_glass_demo.rs` (reset/preset/toggle-inspector actions now use the default `on_action_notify_models` transaction path)
 - `apps/fret-examples/src/async_playground_demo.rs` (`ToggleTheme` now uses the default `on_action_notify_models` path and keeps the theme side effect as render-time state synchronization)
-- `apps/fret-examples/src/hello_counter_demo.rs` / `apps/fret-examples/src/embedded_viewport_demo.rs` / `apps/fret-examples/src/query_demo.rs` / `apps/fret-examples/src/query_async_tokio_demo.rs` (default demos now avoid single-model aliases and stay on `on_action_notify_models` / `on_action_notify_transient`)
+- `apps/fret-examples/src/hello_counter_demo.rs` (first `use_local` prototype; removes explicit model-handle fields while keeping the default `on_action_notify_models` action surface)
+- `apps/fret-examples/src/query_demo.rs` (second `use_local` prototype; also the first builder-first composition experiment using `ui::*_build` sinks plus `UiElementSinkExt`, now paired with late-landing `Card::build(...)` / `CardHeader::build(...)` / `CardContent::build(...)`)
+- `apps/fret-examples/src/query_async_tokio_demo.rs` (third `use_local` prototype; now also mirrors the builder-first composition experiment for the async query path with the same late-landing card tree while keeping transient invalidation and Tokio-backed async spawning)
+- `apps/fret-examples/src/embedded_viewport_demo.rs` (default demo avoids single-model aliases and stays on `on_action_notify_models` / `on_action_notify_transient`)
 - `apps/fret-examples/src/custom_effect_v2_web_demo.rs` (reset button uses `on_activate_request_redraw`)
 - `apps/fret-examples/src/imui_floating_windows_demo.rs` (pressable overlap target uses `on_activate_notify`)
 - `tools/gate_no_models_mut_in_action_handlers.py` (teaching-surface regression gate)
 - `tools/gate_only_allowed_on_action_notify_in_teaching_surfaces.py` (locks the approved advanced `on_action_notify` teaching-surface exceptions and keeps `fret-examples` plus ui-gallery pages/snippets on the zero-exception path)
 - `tools/gate_no_single_model_action_helpers_in_default_teaching_surfaces.py` (keeps `fret-examples` and ui-gallery teaching pages/snippets on the default helper surface without single-model aliases; scaffold templates keep equivalent unit-test assertions)
+- `tools/gate_no_mvu_in_tree.py` / `tools/gate_no_mvu_in_cookbook.py` (prevent MVU surfaces from reappearing in code after the M9 hard delete)
 
 Hardening follow-up (open):
 
@@ -56,6 +66,16 @@ Hardening follow-up (open):
 - Authoring ergonomics: semantics/test IDs/key contexts can be attached before `into_element(cx)`, and `fret-ui-kit::ui::*` constructors are cx-less; cookbook + templates demonstrate the patterns (see TODO “Reduce authoring noise”).
 - Teaching-surface convergence: cookbook/examples are gated to avoid legacy `stack::*` layout helpers and teach one layout authoring surface (`fret-ui-kit::ui::*`); ui-gallery migration is in progress (see TODO “Reduce authoring noise” and gates `tools/gate_no_stack_in_cookbook.py`, `tools/gate_no_stack_in_examples.py`).
 - Helper-surface convergence: README/docs/templates plus `docs/crate-usage-guide.md` and `docs/ui-ergonomics-and-interop.md` now frame `on_action_notify_models`, `on_action_notify_transient`, and local `on_activate*` as the default mental model; advanced aliases remain available but stay off the default teaching surfaces via `tools/gate_no_single_model_action_helpers_in_default_teaching_surfaces.py` plus scaffold template unit tests, while the remaining advanced raw `on_action_notify` teaching cases are cookbook-only host-side categories locked by `tools/gate_only_allowed_on_action_notify_in_teaching_surfaces.py`.
+
+Post-v1 direction (recommended):
+
+- Close v1 as successful on architecture and default-path convergence; do not keep the migration phase open solely to chase the final authoring-density target.
+- Track the remaining ergonomics pressure separately:
+  - direct local-state ergonomics beyond `Model<T>`,
+  - explicit-vs-implicit invalidation ergonomics (`notify()` stays available, but should not be the default burden after tracked state writes),
+  - builder-first composition that reduces `ui::children!` / nested `into_element(cx)`,
+  - widget-local action sugar only if a new round of evidence justifies promoting it,
+  - narrow UI macros only if builder-first authoring still leaves repeated structural boilerplate; they are optional polish, not a v2 prerequisite.
 
 ---
 
@@ -165,7 +185,7 @@ Exit criteria:
   buildable while migrating.
 - If removal is adopted: MVU is hard-deleted in-tree under M9.
 
-### M9 — Hard delete legacy MVU (in-tree)
+### M9 - Hard delete legacy MVU (in-tree) - Met
 
 Exit criteria:
 
@@ -177,6 +197,6 @@ Exit criteria:
 - Docs/templates do not mention MVU as an available authoring path.
 - A small gate prevents MVU APIs from being reintroduced (grep-based check is sufficient).
 
-Current blockers (as of 2026-03-05):
+Closure note (as of 2026-03-06):
 
-- None.
+- Exit criteria are met; MVU survives only as historical/external migration context in docs.

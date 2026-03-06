@@ -2241,6 +2241,16 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-ai-agent-demo-expand-tool",
+      "path": "tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-agent-demo-expand-tool.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-ai-agent"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-ai-checkpoint-restore-tooltip",
       "path": "tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-checkpoint-restore-tooltip.json",
       "required_capabilities": [
@@ -2506,6 +2516,22 @@
         "Navigates to the AI Elements transcription demo.",
         "Seeks into the transcript and captures a docs-aligned playback screenshot."
       ]
+    },
+    {
+      "id": "ui-gallery-alert-action-text-non-overlap",
+      "path": "tools/diag-scripts/ui-gallery/alert/ui-gallery-alert-action-text-non-overlap.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "alert",
+        "shadcn",
+        "ui-gallery"
+      ],
+      "target_hints": []
     },
     {
       "id": "ui-gallery-alert-dialog-basic-code-tab-scroll-range",
@@ -6053,7 +6079,7 @@
       "target_hints": [
         "Navigates to the Select page.",
         "Scrolls the Label Association example into view.",
-        "Clicks the FieldLabel and verifies focus moves to the Select trigger."
+        "Clicks the FieldLabel and verifies the Select popup opens."
       ]
     },
     {

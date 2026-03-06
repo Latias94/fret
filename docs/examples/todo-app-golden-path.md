@@ -140,7 +140,7 @@ Notes:
 
 - The action-first + view runtime path is the recommended golden path for new apps (ADRs 0307/0308).
 - Start with `on_action_notify_models`, `on_action_notify_transient`, and local `on_activate*` only when widget glue truly needs it.
-- Legacy MVU (`fret::mvu`) still exists for compatibility, but new templates/docs avoid teaching it by default.
+- In-tree MVU is removed; if you are migrating an older external MVU codebase, use the workstream migration guide as a mapping reference rather than treating MVU as a current option.
 
 ## App state (models)
 

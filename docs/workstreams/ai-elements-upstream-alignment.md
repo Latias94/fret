@@ -94,7 +94,7 @@ Legend:
 | `transcription.tsx` | `fret-ui-ai` | `transcription.rs` | Ported (prototype) | Segment surface + optional seek seam (`on_seek`). Playback timing remains app-owned. |
 | `jsx-preview.tsx` | n/a | n/a | N/A | Upstream is web-only (JSX render preview). In Fret, prefer app-owned webview previews if needed. |
 | `agent.tsx` | `fret-ui-ai` | `agent.rs` | Ported (prototype) | UI-only chrome (instructions/tools/output schema). Add gates: `tools/diag-scripts/ui-gallery-ai-agent-demo-expand-tool.json`. |
-| `persona.tsx` | `fret-ui-ai` | `persona.rs` | Ported (prototype) | UI-only placeholder (upstream uses Rive/webgl2). Add gates: `tools/diag-scripts/ui-gallery-ai-persona-demo.json`. |
+| `persona.tsx` | `fret-ui-ai` | `persona.rs` | Ported (prototype) | Variant-aware placeholder shell (upstream uses Rive/webgl2) plus Fret-specific custom visual slot seam. Gate: `tools/diag-scripts/ui-gallery-ai-persona-demo.json`. |
 | `sandbox.tsx` | `fret-ui-ai` | `sandbox.rs` | Ported (prototype) | UI-only chrome (collapsible + tabs). Add gates: `tools/diag-scripts/ui-gallery-ai-sandbox-demo-switch-tab.json`. |
 | `mic-selector.tsx` | `fret-ui-ai` | `mic_selector.rs` | Ported (prototype) | UI-only chrome + explicit seams (device enumeration is app-owned). Thin selector-level `MicSelectorItem` / `MicSelectorEmpty` wrappers exist; remaining gap is render-props list composition. |
 | `speech-input.tsx` | `fret-ui-ai` | `speech_input.rs` | Ported (prototype) | UI-only chrome + explicit seams (capture/ASR backends app-owned). |

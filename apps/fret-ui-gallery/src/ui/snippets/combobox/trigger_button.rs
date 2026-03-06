@@ -86,7 +86,6 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
     let combo = shadcn::Combobox::new(value.clone(), open.clone())
         .a11y_label("Combobox popup trigger")
         .query_model(query.clone())
-        .trigger_test_id("ui-gallery-combobox-popup-trigger")
         .test_id_prefix("ui-gallery-combobox-popup")
         .items([
             shadcn::ComboboxItem::new("next", "Next.js"),

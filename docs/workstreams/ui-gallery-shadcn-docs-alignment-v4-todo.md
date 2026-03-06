@@ -119,7 +119,7 @@ Component checklist (canonical order from `radix/meta.json`):
 - [x] textarea ? examples mirrored (Demo/Field/Disabled/Invalid/Button/RTL) (`apps/fret-ui-gallery/src/ui.rs::preview_textarea`, `ecosystem/fret-ui-shadcn/src/textarea.rs`)
 - [x] toast ? docs-aligned deprecation notice only (upstream points to Sonner) (`apps/fret-ui-gallery/src/ui.rs::preview_toast`, `repo-ref/ui/apps/v4/content/docs/components/radix/toast.mdx`)
 - [~] toggle - docs-order examples + Component/Code/Notes scaffold landed (`apps/fret-ui-gallery/src/ui/pages/toggle.rs`)
-- [~] toggle-group - docs-order examples + Component/Code/Notes scaffold landed (`apps/fret-ui-gallery/src/ui/pages/toggle_group.rs`)
+- [x] toggle-group - docs-style page now mirrors upstream Usage/Outline/Single/Small/Large/Disabled/Spacing sections, with Fret-only regression sections after docs parity examples (`apps/fret-ui-gallery/src/ui/pages/toggle_group.rs`)
 - [~] tooltip - docs-order examples + Component/Code/Notes scaffold landed (`apps/fret-ui-gallery/src/ui/pages/tooltip.rs`)
 - [~] typography - docs-order examples + Component/Code/Notes scaffold landed (`apps/fret-ui-gallery/src/ui/pages/typography.rs`)
 

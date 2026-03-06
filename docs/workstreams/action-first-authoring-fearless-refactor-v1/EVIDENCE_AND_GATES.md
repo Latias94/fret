@@ -31,11 +31,11 @@ View runtime (v1):
 - `ecosystem/fret-ui-kit/src/imui.rs` (imui pressable activation paths reuse `on_activate` / `on_activate_notify` helpers)
 - `ecosystem/fret-ui-kit/src/primitives/navigation_menu.rs` / `ecosystem/fret-ui-kit/src/window_overlays/render.rs` (navigation and overlay pressables reuse `on_activate` helpers)
 
-Legacy MVU removal (planned M9):
+Legacy MVU removal (M9 landed):
 
-- MVU authoring still exists in-tree today as a compatibility surface.
-- The hard delete is planned for M9, after the M8 deprecation/migration window.
-- Gate (planned for M9): `tools/gate_no_mvu_in_tree.py` (or `tools/gate_no_mvu_in_tree.ps1`) prevents reintroduction once MVU is removed.
+- In-tree MVU code surfaces are removed.
+- Historical MVU discussion remains only in migration/archive docs.
+- Gates: `tools/gate_no_mvu_in_tree.py` and `tools/gate_no_mvu_in_cookbook.py` prevent reintroduction.
 
 UI gallery adoption (v1):
 
@@ -263,7 +263,8 @@ Prefer `cargo nextest run` when available.
   - `tools/gates_wasm_smoke.ps1`
 - Run the Action-first authoring diagnostics gate set (commands/keymap + modal barrier + cross-frontend):
   - `pwsh tools/diag_gate_action_first_authoring_v1.ps1`
-- Prevent legacy MVU drift in the cookbook (compile-time grep gate):
+- Prevent legacy MVU drift in-tree (compile-time grep gates):
+  - `python tools/gate_no_mvu_in_tree.py`
   - `python tools/gate_no_mvu_in_cookbook.py` (or `pwsh tools/gate_no_mvu_in_cookbook.ps1`)
 - Prevent `stack::*` authoring drift (cookbook/examples stay on `fret-ui-kit::ui::*` builders):
   - `python tools/gate_no_stack_in_cookbook.py` (or `pwsh tools/gate_no_stack_in_cookbook.ps1`)

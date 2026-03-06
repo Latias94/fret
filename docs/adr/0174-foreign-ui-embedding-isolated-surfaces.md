@@ -90,13 +90,13 @@ It provides two integration styles (both keep semantics/focus/IME isolated):
 
 1. **Host-recorded embedded viewport**
    - App state owns an `EmbeddedViewportSurface` and implements `EmbeddedViewportRecord`.
-   - Driver wiring is one call: `UiAppDriverExt::drive_embedded_viewport()` (or MVU variant).
+   - Driver wiring is one call: `UiAppDriverExt::drive_embedded_viewport()`.
 
 2. **Foreign UI hosted inside an embedded surface**
    - App state owns an `EmbeddedViewportSurface` and implements `EmbeddedViewportSurfaceOwner`.
    - A foreign runtime implements `EmbeddedViewportForeignUi` (object-safe boundary).
    - The app registers it per window using `set_foreign_ui(app, window, ui)`.
-   - Driver wiring is one call: `EmbeddedViewportForeignUiAppDriverExt::drive_embedded_viewport_foreign()` (or MVU variant).
+   - Driver wiring is one call: `EmbeddedViewportForeignUiAppDriverExt::drive_embedded_viewport_foreign()`.
 
 This design keeps the "interop contract" explicit (render target + input forwarding) and allows adapters for
 other ecosystems (Iced/egui/custom wgpu passes) without pulling their semantics or layout models into the kernel.

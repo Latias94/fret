@@ -48,6 +48,8 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
 - Pass: Content is rendered via a per-window overlay root (portal-like), so it is not clipped by
   underlay layout/overflow.
 - Pass: `DialogClose` is available as an explicit close affordance recipe (close button parity).
+- Pass: `DialogClose::from_scope()` is available as recipe-layer sugar for content-local close
+  buttons while preserving `DialogClose::new(open)` as the explicit constructor.
 
 ### Dismissal behavior
 
@@ -91,6 +93,20 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
   (`web_vs_fret_dialog_demo_overlay_center_matches`).
 - Radix Web overlay geometry gate: `cargo nextest run -p fret-ui-shadcn --test radix_web_overlay_geometry`
   (`radix_web_dialog_open_geometry_matches_fret`).
+
+## Authoring note: `from_scope()`
+
+Fret now exposes `DialogClose::from_scope()` as recipe-layer sugar.
+
+- Scope: only for parts whose semantic job is “close the current dialog”.
+- Layering: this does **not** change the underlying mechanism contract; it only reads the current
+  dialog content scope while rendering the recipe.
+- Escape hatch: `DialogClose::new(open)` remains the explicit constructor and should be preferred
+  when building the part outside the dialog content subtree.
+- Rollout: `SheetClose` and `DrawerClose` now reuse the same pattern via wrappers over
+  `DialogClose::from_scope()`.
+- Failure mode: `from_scope()` panics when rendered outside dialog content so misuse is caught
+  early during development.
 
 ## Follow-ups (recommended)
 

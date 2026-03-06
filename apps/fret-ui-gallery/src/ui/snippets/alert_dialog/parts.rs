@@ -23,7 +23,6 @@ fn open_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<bool> {
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let open = open_model(cx);
     let open_for_trigger = open.clone();
-    let open_for_children = open.clone();
 
     shadcn::AlertDialog::new(open).into_element_parts(
         cx,
@@ -48,10 +47,10 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             .into_element(cx);
 
             let footer = shadcn::AlertDialogFooter::new(vec![
-                shadcn::AlertDialogCancel::new("Cancel", open_for_children.clone())
+                shadcn::AlertDialogCancel::from_scope("Cancel")
                     .test_id("ui-gallery-alert-dialog-parts-cancel")
                     .into_element(cx),
-                shadcn::AlertDialogAction::new("Continue", open_for_children.clone())
+                shadcn::AlertDialogAction::from_scope("Continue")
                     .test_id("ui-gallery-alert-dialog-parts-action")
                     .into_element(cx),
             ])

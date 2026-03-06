@@ -55,6 +55,8 @@ Upstream exports a thin wrapper around `vaul`:
 - Pass: `DrawerOverlay` is exposed as a shadcn-named configuration surface (delegates to `Sheet`
   overlay defaults).
 - Pass: `DrawerClose` is available and delegates to `DialogClose` (modal-overlay backed close).
+- Pass: `DrawerClose::from_scope()` is available as recipe-layer sugar for content-local close
+  buttons while preserving `DrawerClose::new(open)` as the explicit constructor.
 - Pass: `DrawerContent`/`Header`/`Footer` provide Drawer-specific layout while reusing shared dialog
   substrate building blocks (`Title`/`Description`).
 

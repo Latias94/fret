@@ -24,6 +24,7 @@ wasm-emoji-fonts = ["fret-fonts/emoji"]
 wasm-cjk-lite-fonts = ["fret-fonts/cjk-lite"]
 # Experimental: per-region hit test passthrough on macOS.
 macos-hit-test-regions = ["dep:block2", "objc2-app-kit/block2"]
+webview-wry = ["dep:fret-webview", "dep:fret-webview-wry"]
 
 [dependencies]
 fret-app = { version = "0.1.0", path = "../fret-app" }
@@ -42,6 +43,8 @@ fret-diag-protocol = { version = "0.1.0", path = "../fret-diag-protocol", option
 fret-platform = { version = "0.1.0", path = "../fret-platform" }
 fret-platform-native = { version = "0.1.0", path = "../fret-platform-native" }
 fret-runner-winit = { version = "0.1.0", path = "../fret-runner-winit" }
+fret-webview = { version = "0.1.0", path = "../fret-webview", optional = true }
+fret-webview-wry = { version = "0.1.0", path = "../fret-webview-wry", optional = true }
 pollster.workspace = true
 slotmap.workspace = true
 stacksafe.workspace = true

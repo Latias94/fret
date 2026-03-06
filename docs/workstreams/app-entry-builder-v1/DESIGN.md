@@ -187,7 +187,7 @@ If we introduce a closure-based variant, it must be:
 
 ## Migration / Compatibility
 
-- Keep existing entry points (`fret::run`, `fret::app_with_hooks`, `fret::mvu::app`, etc.).
+- Keep existing non-MVU entry points (`fret::run`, `fret::app_with_hooks`, etc.); historical MVU entry points have since been removed in-tree.
 - Update templates (`fretboard new hello/simple-todo/todo`) to the builder chain once the API is
   accepted.
 - Keep docs showing both:

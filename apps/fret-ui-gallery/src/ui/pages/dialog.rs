@@ -18,6 +18,7 @@ pub(super) fn preview_dialog(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
             "Docs parity uses the same section sequence as upstream: custom close, no close, sticky footer, scrollable content, then RTL.",
             "Part surface adapters exist for shadcn-style call sites (DialogTrigger/DialogPortal/DialogOverlay).",
             "Current Fret API models close controls explicitly with DialogClose; omitting it is equivalent to showCloseButton={false} in shadcn docs.",
+            "Content-local examples now prefer `DialogClose::from_scope()` so the close affordance stays close to shadcn composition without threading the same open model into every close icon.",
             "Scrollable examples isolate long content in ScrollArea so footer/header placement remains predictable under constrained viewport sizes.",
             "Each scenario has stable test IDs to support fretboard diag scripts and regression screenshots.",
         ],

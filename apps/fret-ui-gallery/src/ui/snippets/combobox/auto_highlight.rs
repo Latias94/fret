@@ -44,7 +44,6 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
         .auto_highlight(true)
         .query_model(query.clone())
         .test_id_prefix("ui-gallery-combobox-auto-highlight")
-        .trigger_test_id("ui-gallery-combobox-auto-highlight-trigger")
         .items([
             shadcn::ComboboxItem::new("next", "Next.js"),
             shadcn::ComboboxItem::new("svelte", "SvelteKit"),

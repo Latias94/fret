@@ -8,10 +8,10 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
     let summary = ui_ai::TestResultsSummaryData::new(10, 2, 1, 13).duration_ms(3500);
 
     ui_ai::TestResults::new()
-        .summary(summary.clone())
+        .summary(summary)
         .children([ui_ai::TestResultsHeader::new([
-            ui_ai::TestResultsSummary::new(summary.clone()).into_element(cx),
-            ui_ai::TestResultsDuration::new(summary).into_element(cx),
+            ui_ai::TestResultsSummary::from_context().into_element(cx),
+            ui_ai::TestResultsDuration::from_context().into_element(cx),
         ])
         .into_element(cx)])
         .into_element(cx)

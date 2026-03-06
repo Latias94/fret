@@ -58,7 +58,6 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     };
 
     let open_for_trigger = open.clone();
-    let close_open = open.clone();
     let save_open = open.clone();
     let name_model = name.clone();
     let username_model = username.clone();
@@ -75,7 +74,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             },
             |cx| {
                 shadcn::DialogContent::new([
-                    shadcn::DialogClose::new(close_open.clone()).into_element(cx),
+                    shadcn::DialogClose::from_scope().into_element(cx),
                     shadcn::DialogHeader::new([
                         shadcn::DialogTitle::new("RTL Profile").into_element(cx),
                         shadcn::DialogDescription::new(
@@ -88,7 +87,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                     shadcn::DialogFooter::new([
                         shadcn::Button::new("Cancel")
                             .variant(shadcn::ButtonVariant::Outline)
-                            .toggle_model(close_open.clone())
+                            .toggle_model(open.clone())
                             .into_element(cx),
                         shadcn::Button::new("Save")
                             .toggle_model(save_open.clone())

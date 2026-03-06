@@ -60,7 +60,7 @@ Preview / still-evolving examples (not recommended for onboarding) are labeled i
 
 - [apps/fret-cookbook/EXAMPLES.md](../../apps/fret-cookbook/EXAMPLES.md)
 
-Legacy MVU inventory (applies to maintainer demos, not cookbook):
+Historical MVU removal inventory (applies to maintainer demos, not cookbook):
 
 - [docs/workstreams/action-first-authoring-fearless-refactor-v1/LEGACY_MVU_INVENTORY.md](../workstreams/action-first-authoring-fearless-refactor-v1/LEGACY_MVU_INVENTORY.md)
 

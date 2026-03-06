@@ -1463,6 +1463,12 @@ impl MenubarMenu {
         self
     }
 
+    pub fn test_id_prefix(mut self, prefix: impl Into<Arc<str>>) -> Self {
+        let prefix = prefix.into();
+        self.test_id = Some(Arc::<str>::from(format!("{prefix}-trigger")));
+        self
+    }
+
     pub fn entries(self, entries: impl IntoIterator<Item = MenubarEntry>) -> MenubarMenuEntries {
         MenubarMenuEntries {
             menu: self,
@@ -3996,6 +4002,115 @@ mod tests {
         );
 
         assert_eq!(entries.menu.side_offset, Px(3.0));
+    }
+
+    #[test]
+    fn menubar_menu_test_id_prefix_derives_trigger_test_id() {
+        let menu = MenubarMenu::new("File").test_id_prefix("menu-file");
+        assert_eq!(menu.test_id.as_deref(), Some("menu-file-trigger"));
+    }
+
+    #[test]
+    fn menubar_test_id_prefix_derives_item_ids_when_open() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        let mut services = FakeServices::default();
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(480.0), Px(240.0)),
+        );
+
+        app.set_frame_id(FrameId(app.frame_id().0.saturating_add(1)));
+        OverlayController::begin_frame(&mut app, window);
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "menubar-prefix-items",
+            |cx| {
+                vec![
+                    Menubar::new(vec![
+                        MenubarMenu::new("File")
+                            .test_id_prefix("menu-file")
+                            .entries(vec![
+                                MenubarEntry::Item(MenubarItem::new("New")),
+                                MenubarEntry::Separator,
+                                MenubarEntry::Item(MenubarItem::new("Open")),
+                            ]),
+                    ])
+                    .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        OverlayController::render(&mut ui, &mut app, &mut services, window, bounds);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap0 = ui.semantics_snapshot().expect("semantics snapshot");
+        let file = menu_trigger_node_id(snap0, "File");
+        ui.set_focus(Some(file));
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::KeyDown {
+                key: fret_core::KeyCode::ArrowDown,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+
+        app.set_frame_id(FrameId(app.frame_id().0.saturating_add(1)));
+        let changed_models = app.take_changed_models();
+        let changed_globals = app.take_changed_globals();
+        let _ = fret_ui::frame_pipeline::propagate_changes(
+            &mut ui,
+            &mut app,
+            &changed_models,
+            &changed_globals,
+        );
+        OverlayController::begin_frame(&mut app, window);
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "menubar-prefix-items",
+            |cx| {
+                vec![
+                    Menubar::new(vec![
+                        MenubarMenu::new("File")
+                            .test_id_prefix("menu-file")
+                            .entries(vec![
+                                MenubarEntry::Item(MenubarItem::new("New")),
+                                MenubarEntry::Separator,
+                                MenubarEntry::Item(MenubarItem::new("Open")),
+                            ]),
+                    ])
+                    .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        OverlayController::render(&mut ui, &mut app, &mut services, window, bounds);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap1 = ui.semantics_snapshot().expect("semantics snapshot");
+        assert!(
+            snap1
+                .nodes
+                .iter()
+                .any(|n| n.test_id.as_deref() == Some("menu-file-item-new"))
+        );
+
+        let _ = root;
     }
 
     #[test]
