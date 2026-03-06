@@ -81,6 +81,13 @@ Invoke-Checked `
   )
 
 Invoke-Checked `
+  "Fret launch surface policy (curated root exports)" `
+  "python" `
+  @(
+    (Join-Path $repoRoot "tools/gate_fret_launch_surface_contract.py")
+  )
+
+Invoke-Checked `
   "Teaching surfaces policy (no verbose models_mut action handlers)" `
   "python" `
   @(

@@ -66,6 +66,7 @@ Companion docs:
 - [x] Add one minimal advanced example that shows the supported launch escape hatch without exposing unnecessary internals.
 - [x] Cross-link this workstream from any relevant builder/onboarding docs if the final surface changes.
 - [x] Add a focused guardrail so `fret` crate-root helper regressions and README drift are caught early.
+- [x] Add a focused guardrail so `fret-launch` crate-root exports stay curated and specialized helpers remain namespaced.
 
 ## Validation gates
 
@@ -74,6 +75,7 @@ Companion docs:
 - [x] `cargo nextest run -p fret`
 - [x] `python tools/check_layering.py`
 - [x] `python tools/gate_fret_builder_only_surface.py`
+- [x] `python tools/gate_fret_launch_surface_contract.py`
 
 ## Rollout notes
 
