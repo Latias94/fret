@@ -23,12 +23,15 @@ Current shipped surface:
 - `fretboard diag campaign list`
 - `fretboard diag campaign show <campaign_id>`
 - `fretboard diag campaign run <campaign_id>`
+- `fretboard diag campaign run --lane <lane> --tag <tag> --platform <platform>`
 
 Current shipped behavior:
 
 - a workspace-backed registry now resolves campaign ids from `tools/diag-campaigns/*.json`, with built-in definitions as fallback,
 - campaign `run` now expands to suites and direct script items,
 - each run writes under `campaigns/<campaign_id>/<run_id>/`,
+- filtered or multi-id runs that resolve to more than one campaign also persist a batch root under
+  `campaign-batches/<selection_slug>/<run_id>/`,
 - suite runs reuse the existing `diag suite` implementation,
 - aggregate handoff reuses the existing `diag summarize` implementation,
 - the final artifact contract remains `regression.index.json` + `regression.summary.json`.
@@ -38,7 +41,7 @@ Known gaps after the first landing:
 - canonical manifests now use one ordered `items` list; legacy top-level `suites` / `scripts` is still accepted for compatibility,
 - direct script-item support now exists and execution follows ordered `items`,
 - no persisted dashboard text/HTML projection yet,
-- no campaign-aware metadata resolver beyond the built-in registry,
+- no richer campaign metadata resolver beyond the workspace manifest registry yet,
 - cross-suite launch reuse still follows current `diag suite` behavior rather than a campaign-level runner.
 
 The intent is not to replace existing commands such as:
@@ -194,6 +197,8 @@ Recommendation:
 
 - place campaign runs under a stable root such as:
   - `<base_dir>/campaigns/<campaign_id>/<run_id>/`
+- when one `diag campaign run` selects multiple campaigns, also persist:
+  - `<base_dir>/campaign-batches/<selection_slug>/<run_id>/`
 
 Suggested contents:
 
@@ -207,6 +212,10 @@ Suggested contents:
   - aggregate consumer index for DevTools/MCP/CLI dashboard
 - `regression.summary.json`
   - aggregate merged summary
+- `batch.manifest.json`
+  - persisted selection metadata for one multi-campaign execution batch
+- `batch.result.json`
+  - batch-level counters plus stable links back to each per-campaign run root
 - `dashboard.txt` or equivalent human-readable dashboard output
 - `bundles/` or per-item evidence paths
   - only where produced by the underlying run/suite flow
@@ -314,6 +323,9 @@ Status:
 
 - Partially done: `diag campaign run` now emits `regression.index.json` and `regression.summary.json`
   by delegating to `diag summarize`.
+- Newly done: filtered or multi-id campaign selection now emits one persisted batch artifact root
+  with `batch.manifest.json`, `batch.result.json`, `regression.index.json`, and
+  `regression.summary.json`.
 - Still open: persisting one explicit human-readable dashboard artifact in the campaign run directory.
 
 ## Slice C - Discoverability

@@ -13,6 +13,16 @@ Current rules:
 - supported metadata fields include `owner`, `platforms`, `tier`, and `expected_duration_ms`,
 - manifest entries override same-id built-in fallback definitions.
 
+Run artifact layout:
+
+- single campaign runs write under `campaigns/<campaign_id>/<run_id>/`,
+- filtered or multi-id runs that select more than one campaign also write a batch root under
+  `campaign-batches/<selection_slug>/<run_id>/`,
+- batch roots persist `batch.manifest.json`, `batch.result.json`, `regression.summary.json`, and
+  `regression.index.json`,
+- batch summary/index reuse the existing `diag summarize` aggregate contract so DevTools, MCP, and
+  `diag dashboard` can open one shared handoff directory.
+
 Example:
 
 - `cargo run -p fretboard -- diag campaign list --json`

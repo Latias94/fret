@@ -148,12 +148,13 @@ Tracking doc: `docs/workstreams/diag-fearless-refactor-v2/README.md`
   - [x] add first-pass campaign metadata (`owner`, `platforms`, `tier`, `expected_duration_ms`, `tags`),
   - [x] add direct script items in addition to suites,
   - [x] move canonical manifest authoring from top-level `suites`/`scripts` to ordered `items`,
+  - [x] persist one batch artifact root for filtered or multi-id runs that resolve to multiple campaigns,
   - [ ] decide when legacy top-level `suites`/`scripts` compatibility can be removed,
   - [ ] decide whether campaign runs should emit a persisted dashboard text or HTML projection.
 - [ ] Make failed automation runs leave predictable evidence by default:
-  - [ ] summary/index artifacts,
+  - [x] summary/index artifacts,
   - [ ] failing evidence bundles,
-  - [ ] copy/share-friendly paths.
+  - [x] copy/share-friendly paths.
 - [x] Add first campaign discovery filters to keep selection scalable (`--lane`, `--tier`, `--tag`, `--platform`).
 - [x] Extend those selectors into `diag campaign run` so filtered campaign batches can execute without enumerating ids by hand.
 - [ ] Add one thin maintainer note that explains the intended automation flow:
