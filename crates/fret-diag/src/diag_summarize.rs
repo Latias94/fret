@@ -297,6 +297,7 @@ fn map_counts_to_json(counts: std::collections::BTreeMap<String, u64>) -> serde_
 
 fn regression_index_counters_json(loaded: &[LoadedRegressionSummary]) -> serde_json::Value {
     let mut by_lane = std::collections::BTreeMap::<String, u64>::new();
+    let mut by_status = std::collections::BTreeMap::<String, u64>::new();
     let mut by_tool = std::collections::BTreeMap::<String, u64>::new();
     let mut by_reason_code = std::collections::BTreeMap::<String, u64>::new();
 
@@ -312,6 +313,12 @@ fn regression_index_counters_json(loaded: &[LoadedRegressionSummary]) -> serde_j
             .or_default() += loaded_summary.summary.items.len() as u64;
 
         for item in &loaded_summary.summary.items {
+            let status = serde_json::to_value(item.status)
+                .ok()
+                .and_then(|v| v.as_str().map(|s| s.to_string()))
+                .unwrap_or_else(|| "passed".to_string());
+            *by_status.entry(status).or_default() += 1;
+
             if let Some(reason_code) = item.reason_code.as_deref().filter(|v| !v.trim().is_empty())
             {
                 *by_reason_code.entry(reason_code.to_string()).or_default() += 1;
@@ -321,9 +328,75 @@ fn regression_index_counters_json(loaded: &[LoadedRegressionSummary]) -> serde_j
 
     serde_json::json!({
         "by_lane": map_counts_to_json(by_lane),
+        "by_status": map_counts_to_json(by_status),
         "by_tool": map_counts_to_json(by_tool),
         "by_reason_code": map_counts_to_json(by_reason_code),
     })
+}
+
+fn regression_index_top_reason_codes_json(loaded: &[LoadedRegressionSummary]) -> serde_json::Value {
+    let mut counts = std::collections::BTreeMap::<String, u64>::new();
+    for loaded_summary in loaded {
+        for item in &loaded_summary.summary.items {
+            if let Some(reason_code) = item.reason_code.as_deref().filter(|v| !v.trim().is_empty())
+            {
+                *counts.entry(reason_code.to_string()).or_default() += 1;
+            }
+        }
+    }
+
+    let mut rows = counts.into_iter().collect::<Vec<_>>();
+    rows.sort_by(|left, right| right.1.cmp(&left.1).then_with(|| left.0.cmp(&right.0)));
+    serde_json::Value::Array(
+        rows.into_iter()
+            .take(10)
+            .map(|(reason_code, count)| {
+                serde_json::json!({
+                    "reason_code": reason_code,
+                    "count": count,
+                })
+            })
+            .collect(),
+    )
+}
+
+fn regression_index_failing_summaries_json(
+    workspace_root: &Path,
+    loaded: &[LoadedRegressionSummary],
+) -> serde_json::Value {
+    let mut rows = loaded
+        .iter()
+        .filter_map(|loaded_summary| {
+            let failures = loaded_summary
+                .summary
+                .items
+                .iter()
+                .filter(|item| item.status != crate::regression_summary::RegressionStatusV1::Passed)
+                .count() as u32;
+            (failures > 0).then(|| {
+                serde_json::json!({
+                    "path": normalize_repo_relative_path(workspace_root, &loaded_summary.path),
+                    "campaign_name": loaded_summary.summary.campaign.name,
+                    "lane": loaded_summary.summary.campaign.lane,
+                    "tool": loaded_summary.summary.run.tool,
+                    "failures": failures,
+                    "items_total": loaded_summary.summary.items.len(),
+                })
+            })
+        })
+        .collect::<Vec<_>>();
+
+    rows.sort_by(|left, right| {
+        let left_failures = left.get("failures").and_then(|v| v.as_u64()).unwrap_or(0);
+        let right_failures = right.get("failures").and_then(|v| v.as_u64()).unwrap_or(0);
+        right_failures.cmp(&left_failures).then_with(|| {
+            let left_path = left.get("path").and_then(|v| v.as_str()).unwrap_or("");
+            let right_path = right.get("path").and_then(|v| v.as_str()).unwrap_or("");
+            left_path.cmp(right_path)
+        })
+    });
+
+    serde_json::Value::Array(rows.into_iter().take(20).collect())
 }
 
 fn regression_index_json(
@@ -338,6 +411,8 @@ fn regression_index_json(
         "kind": DIAG_REGRESSION_INDEX_KIND_V1,
         "out_dir": resolved_out_dir.display().to_string(),
         "counters": regression_index_counters_json(loaded),
+        "top_reason_codes": regression_index_top_reason_codes_json(loaded),
+        "failing_summaries": regression_index_failing_summaries_json(workspace_root, loaded),
         "summaries": loaded.iter().map(|loaded_summary| {
             serde_json::json!({
                 "path": normalize_repo_relative_path(workspace_root, &loaded_summary.path),
@@ -480,6 +555,12 @@ mod tests {
         );
         assert_eq!(
             index
+                .pointer("/counters/by_status/failed_deterministic")
+                .and_then(|v| v.as_u64()),
+            Some(2)
+        );
+        assert_eq!(
+            index
                 .pointer("/counters/by_reason_code/assert.focus_restore.mismatch")
                 .and_then(|v| v.as_u64()),
             Some(1)
@@ -487,6 +568,18 @@ mod tests {
         assert_eq!(
             index
                 .pointer("/counters/by_reason_code/diag.perf.threshold_failed")
+                .and_then(|v| v.as_u64()),
+            Some(1)
+        );
+        assert_eq!(
+            index
+                .pointer("/top_reason_codes/0/reason_code")
+                .and_then(|v| v.as_str()),
+            Some("assert.focus_restore.mismatch")
+        );
+        assert_eq!(
+            index
+                .pointer("/failing_summaries/0/failures")
                 .and_then(|v| v.as_u64()),
             Some(1)
         );
