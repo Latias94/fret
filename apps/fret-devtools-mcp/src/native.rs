@@ -357,6 +357,88 @@ impl FretDevtoolsMcp {
         }))
     }
 
+    #[tool(
+        description = "Aggregate regression summaries under a directory and return the generated summary/index paths. When dir is omitted, reuse the current session artifacts root from the latest bundle.dumped event."
+    )]
+    async fn fret_diag_regression_summarize(
+        &self,
+        params: rmcp::handler::server::wrapper::Parameters<RegressionSummarizeRequestV1>,
+    ) -> Result<Json<RegressionSummarizeResultV1>, String> {
+        let repo_root = repo_root_from_manifest_dir()
+            .or_else(|| std::env::current_dir().ok())
+            .ok_or_else(|| "failed to resolve repo root".to_string())?;
+
+        let dir_abs = if let Some(dir) = params
+            .0
+            .dir
+            .as_deref()
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+        {
+            resolve_repo_path(&repo_root, dir)
+        } else {
+            let session_id = self.resolve_session_id(params.0.session_id.clone()).await?;
+            let dumped_payload = {
+                let inbox = self.inbox.lock().await;
+                inbox
+                    .iter()
+                    .rev()
+                    .find(|m| {
+                        m.r#type == "bundle.dumped"
+                            && m.session_id.as_deref() == Some(session_id.as_str())
+                    })
+                    .map(|m| m.payload.clone())
+            }
+            .ok_or_else(|| {
+                "missing dir and no bundle.dumped available for the selected session".to_string()
+            })?;
+            artifacts_root_from_bundle_dumped_payload(&repo_root, &dumped_payload).ok_or_else(
+                || "bundle.dumped missing out_dir/dir for artifacts root resolution".to_string(),
+            )?
+        };
+
+        let dir_arg = dir_abs
+            .strip_prefix(&repo_root)
+            .ok()
+            .map(|p| p.to_string_lossy().to_string())
+            .unwrap_or_else(|| dir_abs.to_string_lossy().to_string());
+
+        let mut args = vec![
+            "--dir".to_string(),
+            dir_arg.clone(),
+            "summarize".to_string(),
+        ];
+        if let Some(inputs) = params.0.inputs.clone() {
+            args.extend(inputs.into_iter().filter(|s| !s.trim().is_empty()));
+        }
+
+        tokio::task::spawn_blocking(move || fret_diag::diag_cmd(args))
+            .await
+            .map_err(|e| e.to_string())?
+            .map_err(|e| e.to_string())?;
+
+        let summary_path = dir_abs.join(DIAG_REGRESSION_SUMMARY_FILENAME_V1);
+        let index_path = dir_abs.join(DIAG_REGRESSION_INDEX_FILENAME_V1);
+        let include_json = params.0.include_json.unwrap_or(false);
+
+        Ok(Json(RegressionSummarizeResultV1 {
+            schema_version: 1,
+            dir: dir_arg,
+            summary_path: summary_path.to_string_lossy().to_string(),
+            index_path: index_path.to_string_lossy().to_string(),
+            summary_json: if include_json {
+                Some(std::fs::read_to_string(&summary_path).map_err(|e| e.to_string())?)
+            } else {
+                None
+            },
+            index_json: if include_json {
+                Some(std::fs::read_to_string(&index_path).map_err(|e| e.to_string())?)
+            } else {
+                None
+            },
+        }))
+    }
+
     #[tool(description = "Return the most recent bundle.dumped payload currently in the inbox.")]
     async fn fret_diag_bundle_dump_latest(
         &self,
@@ -1313,6 +1395,30 @@ struct PackLastBundleResultV1 {
     bundle_dir: String,
     pack_path: String,
     bundle_dumped_json: String,
+}
+
+#[derive(Serialize, Deserialize, JsonSchema)]
+struct RegressionSummarizeRequestV1 {
+    #[serde(default)]
+    session_id: Option<String>,
+    #[serde(default)]
+    dir: Option<String>,
+    #[serde(default)]
+    inputs: Option<Vec<String>>,
+    #[serde(default)]
+    include_json: Option<bool>,
+}
+
+#[derive(Serialize, Deserialize, JsonSchema)]
+struct RegressionSummarizeResultV1 {
+    schema_version: u32,
+    dir: String,
+    summary_path: String,
+    index_path: String,
+    #[serde(default)]
+    summary_json: Option<String>,
+    #[serde(default)]
+    index_json: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, JsonSchema)]

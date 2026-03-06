@@ -1,4 +1,4 @@
-# Diag Fearless Refactor v2 â€?Implementation Roadmap
+# Diag Fearless Refactor v2 ?Implementation Roadmap
 
 Status: Draft
 
@@ -58,7 +58,7 @@ If a PR changes ownership lines, it should update the relevant v2 docs in the sa
 
 ## 2) Recommended implementation phases
 
-## Phase A â€?Stabilize routing and ownership
+## Phase A ?Stabilize routing and ownership
 
 Goal:
 
@@ -79,7 +79,7 @@ Done when:
 - contributors can choose the correct layer before editing code,
 - upcoming PRs can point to a phase in this roadmap.
 
-## Phase B â€?`crates/fret-diag` orchestration seam cleanup
+## Phase B ?`crates/fret-diag` orchestration seam cleanup
 
 Goal:
 
@@ -116,7 +116,7 @@ Gate expectations:
 - existing `fret-diag` tests stay green,
 - add targeted tests for any new summary/evidence helpers.
 
-## Phase C â€?Runtime artifact and evidence alignment
+## Phase C ?Runtime artifact and evidence alignment
 
 Goal:
 
@@ -146,7 +146,7 @@ Gate expectations:
 - no regression in existing script runs,
 - at least one end-to-end scripted run validates the expected evidence set.
 
-## Phase D â€?Land `regression.summary.json` generation
+## Phase D ?Land `regression.summary.json` generation
 
 Current status:
 
@@ -198,7 +198,7 @@ Gate expectations:
 - regression tests for one success case and one failure case,
 - no breakage in existing JSON consumers.
 
-## Phase E â€?Introduce campaign entry surface
+## Phase E ?Introduce campaign entry surface
 
 Goal:
 
@@ -235,7 +235,7 @@ Gate expectations:
 - one golden test or fixture proving lane expansion,
 - one end-to-end doc example per first implemented lane.
 
-## Phase F â€?DevTools GUI and MCP alignment
+## Phase F ?DevTools GUI and MCP alignment
 
 Goal:
 
@@ -245,10 +245,12 @@ Current status:
 
 - A first thin consumer now exists via `fretboard diag dashboard`, which reads
   `regression.index.json` for human-oriented inspection.
-- The next step in this phase is no longer â€œwhether a consumer is usefulâ€? but how GUI/MCP
+- The next step in this phase is no longer â€œwhether a consumer is useful? but how GUI/MCP
   should reuse the same index/summary contracts without forking semantics.
-- pps/fret-devtools-mcp now exposes egression.summary.json and
-  egression.index.json as MCP resources when those artifacts exist in the current
+- pps/fret-devtools-mcp now exposes 
+egression.summary.json and
+  
+egression.index.json as MCP resources when those artifacts exist in the current
   artifacts root.
 
 Primary code areas:
@@ -260,7 +262,9 @@ Primary code areas:
 Recommended PR slices:
 
 1. [done] expose summary artifact paths/resources,
-2. [next] add campaign-aware run triggers in MCP or GUI,
+2. [in progress] add campaign-aware run triggers in MCP or GUI,
+   - `apps/fret-devtools-mcp` now provides a thin `fret_diag_regression_summarize` bridge over
+     `fretboard diag summarize`,
 3. add summary browsing panels,
 4. add flake/evidence drill-down UX.
 
@@ -268,7 +272,7 @@ Important rule:
 
 - GUI/MCP should read shared summary and artifact contracts rather than inventing their own run model.
 
-## Phase G â€?Metadata and selection scaling
+## Phase G ?Metadata and selection scaling
 
 Goal:
 

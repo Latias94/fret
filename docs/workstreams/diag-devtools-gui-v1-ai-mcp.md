@@ -63,6 +63,14 @@ Batch run:
   - `{ "scripts": ["tools/diag-scripts/a.json", ".fret/diag/scripts/b.json"] }`, or
   - `{ "glob": "ui-gallery-*.json" }`
 
+### Step 3.5: Aggregate regression summaries when you need a campaign view
+
+- tool: `fret_diag_regression_summarize`
+  - when `dir` is omitted, it reuses the current session artifacts root from the latest
+    `bundle.dumped` event,
+  - when `include_json` is `true`, it also returns the generated `regression.summary.json` and
+    `regression.index.json` payloads inline.
+
 ### Step 4: Pack the latest bundle and open the offline viewer
 
 - tool: `fret_diag_pack_last_bundle` (creates a zip on disk; returns `pack_path`)
