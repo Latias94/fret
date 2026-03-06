@@ -9,6 +9,12 @@
     "ui-gallery",
     "ui-gallery-code-editor"
   ],
+  "owner": "diag",
+  "platforms": [
+    "native"
+  ],
+  "tier": "correctness",
+  "expected_duration_ms": 300000,
   "tags": [
     "ui-gallery",
     "correctness"

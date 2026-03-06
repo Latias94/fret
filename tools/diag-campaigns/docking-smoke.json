@@ -9,6 +9,12 @@
     "diag-hardening-smoke-docking",
     "docking-arbitration"
   ],
+  "owner": "diag",
+  "platforms": [
+    "native"
+  ],
+  "tier": "smoke",
+  "expected_duration_ms": 120000,
   "tags": [
     "docking",
     "smoke"

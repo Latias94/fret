@@ -231,11 +231,11 @@ Suggested surface:
 
 Recommended PR slices:
 
-1. extract the built-in registry behind a clearer campaign resolver seam,
-2. enrich suite/campaign metadata (owner, platform, duration, flake policy, tags),
-3. add direct script items and richer lane composition (`matrix`, `perf`, `nightly/full`),
+1. decide whether manifests should keep top-level `suites` / `scripts` or move to ordered `items`,
+2. enrich metadata beyond the current first pass (`owner`, `platforms`, `tier`, `expected_duration_ms`, `tags`),
+3. add richer lane composition (`matrix`, `perf`, `nightly/full`),
 4. decide whether campaign runs should persist a dashboard text or HTML projection,
-5. evaluate whether campaign manifests should become external JSON/TOML after the seam settles.
+5. evaluate whether campaign manifests should become JSON-only, TOML, or generated registry inputs long-term.
 
 Important rule:
 

@@ -16,6 +16,11 @@ pub(crate) struct CampaignDefinition {
     pub lane: RegressionLaneV1,
     pub profile: Option<String>,
     pub suites: Vec<String>,
+    pub scripts: Vec<String>,
+    pub owner: Option<String>,
+    pub platforms: Vec<String>,
+    pub tier: Option<String>,
+    pub expected_duration_ms: Option<u64>,
     pub tags: Vec<String>,
     pub source: CampaignDefinitionSource,
 }
@@ -40,7 +45,18 @@ struct CampaignManifestV1 {
     lane: RegressionLaneV1,
     #[serde(default)]
     profile: Option<String>,
+    #[serde(default)]
     suites: Vec<String>,
+    #[serde(default)]
+    scripts: Vec<String>,
+    #[serde(default)]
+    owner: Option<String>,
+    #[serde(default)]
+    platforms: Vec<String>,
+    #[serde(default)]
+    tier: Option<String>,
+    #[serde(default)]
+    expected_duration_ms: Option<u64>,
     #[serde(default)]
     tags: Vec<String>,
 }
@@ -60,6 +76,11 @@ fn builtin_campaign_definitions() -> Vec<CampaignDefinition> {
                 .iter()
                 .map(|suite| (*suite).to_string())
                 .collect(),
+            scripts: Vec::new(),
+            owner: Some("diag".to_string()),
+            platforms: vec!["native".to_string()],
+            tier: Some("smoke".to_string()),
+            expected_duration_ms: Some(120_000),
             tags: vec![
                 "ui-gallery".to_string(),
                 "smoke".to_string(),
@@ -77,6 +98,11 @@ fn builtin_campaign_definitions() -> Vec<CampaignDefinition> {
                 .iter()
                 .map(|suite| (*suite).to_string())
                 .collect(),
+            scripts: Vec::new(),
+            owner: Some("diag".to_string()),
+            platforms: vec!["native".to_string()],
+            tier: Some("correctness".to_string()),
+            expected_duration_ms: Some(300_000),
             tags: vec!["ui-gallery".to_string(), "correctness".to_string()],
             source: CampaignDefinitionSource::Builtin,
         },
@@ -90,6 +116,11 @@ fn builtin_campaign_definitions() -> Vec<CampaignDefinition> {
                 .iter()
                 .map(|suite| (*suite).to_string())
                 .collect(),
+            scripts: Vec::new(),
+            owner: Some("diag".to_string()),
+            platforms: vec!["native".to_string()],
+            tier: Some("smoke".to_string()),
+            expected_duration_ms: Some(120_000),
             tags: vec!["docking".to_string(), "smoke".to_string()],
             source: CampaignDefinitionSource::Builtin,
         },
@@ -156,11 +187,13 @@ pub(crate) fn campaign_to_json(campaign: &CampaignDefinition) -> serde_json::Val
         "lane": campaign.lane,
         "profile": campaign.profile,
         "suites": campaign.suites,
+        "scripts": campaign.scripts,
+        "owner": campaign.owner,
+        "platforms": campaign.platforms,
+        "tier": campaign.tier,
+        "expected_duration_ms": campaign.expected_duration_ms,
         "tags": campaign.tags,
-        "source_kind": match campaign.source {
-            CampaignDefinitionSource::Builtin => "builtin",
-            CampaignDefinitionSource::Manifest(_) => "manifest",
-        },
+        "source_kind": source_kind_str(&campaign.source),
         "source_path": match &campaign.source {
             CampaignDefinitionSource::Builtin => None,
             CampaignDefinitionSource::Manifest(path) => Some(path.display().to_string()),
@@ -188,6 +221,13 @@ pub(crate) fn lane_to_str(lane: RegressionLaneV1) -> &'static str {
         RegressionLaneV1::Perf => "perf",
         RegressionLaneV1::Nightly => "nightly",
         RegressionLaneV1::Full => "full",
+    }
+}
+
+pub(crate) fn source_kind_str(source: &CampaignDefinitionSource) -> &'static str {
+    match source {
+        CampaignDefinitionSource::Builtin => "builtin",
+        CampaignDefinitionSource::Manifest(_) => "manifest",
     }
 }
 
@@ -260,27 +300,52 @@ fn load_manifest_campaign(path: &Path) -> Result<CampaignDefinition, String> {
             path.display()
         ));
     }
-    if manifest.suites.is_empty() {
+
+    let mut suites = manifest
+        .suites
+        .into_iter()
+        .map(|suite| suite.trim().to_string())
+        .filter(|suite| !suite.is_empty())
+        .collect::<Vec<_>>();
+    suites.sort();
+    suites.dedup();
+
+    let mut scripts = manifest
+        .scripts
+        .into_iter()
+        .map(|script| script.trim().to_string())
+        .filter(|script| !script.is_empty())
+        .collect::<Vec<_>>();
+    scripts.sort();
+    scripts.dedup();
+
+    if suites.is_empty() && scripts.is_empty() {
         return Err(format!(
-            "campaign manifest must contain at least one suite: {}",
+            "campaign manifest must contain at least one suite or script: {}",
             path.display()
         ));
     }
 
-    let mut suites = Vec::new();
-    for suite in manifest.suites {
-        let suite = suite.trim();
-        if suite.is_empty() {
-            return Err(format!(
-                "campaign manifest contains an empty suite id: {}",
-                path.display()
-            ));
-        }
-        suites.push(suite.to_string());
-    }
-    suites.sort();
-    suites.dedup();
-
+    let owner = manifest
+        .owner
+        .map(|value| value.trim().to_string())
+        .filter(|value| !value.is_empty());
+    let mut platforms = manifest
+        .platforms
+        .into_iter()
+        .map(|platform| platform.trim().to_string())
+        .filter(|platform| !platform.is_empty())
+        .collect::<Vec<_>>();
+    platforms.sort();
+    platforms.dedup();
+    let tier = manifest
+        .tier
+        .map(|value| value.trim().to_string())
+        .filter(|value| !value.is_empty());
+    let profile = manifest
+        .profile
+        .map(|value| value.trim().to_string())
+        .filter(|value| !value.is_empty());
     let mut tags = manifest
         .tags
         .into_iter()
@@ -294,11 +359,13 @@ fn load_manifest_campaign(path: &Path) -> Result<CampaignDefinition, String> {
         id: id.to_string(),
         description: description.to_string(),
         lane: manifest.lane,
-        profile: manifest
-            .profile
-            .map(|value| value.trim().to_string())
-            .filter(|value| !value.is_empty()),
+        profile,
         suites,
+        scripts,
+        owner,
+        platforms,
+        tier,
+        expected_duration_ms: manifest.expected_duration_ms,
         tags,
         source: CampaignDefinitionSource::Manifest(path.to_path_buf()),
     })
@@ -334,6 +401,7 @@ mod tests {
         assert_eq!(campaign.id, "ui-gallery-smoke");
         assert_eq!(campaign.suites, UI_GALLERY_SMOKE_SUITES);
         assert!(matches!(campaign.source, CampaignDefinitionSource::Builtin));
+        assert_eq!(campaign.tier.as_deref(), Some("smoke"));
     }
 
     #[test]
@@ -359,7 +427,11 @@ mod tests {
   "description": "Manifest-backed smoke override.",
   "lane": "smoke",
   "profile": "bounded",
-  "suites": ["ui-gallery-layout"],
+  "scripts": ["tools/diag-scripts/ui-gallery-layout.json"],
+  "owner": "diag",
+  "platforms": ["native"],
+  "tier": "smoke",
+  "expected_duration_ms": 12345,
   "tags": ["manifest", "smoke"]
 }"#,
         )
@@ -368,7 +440,11 @@ mod tests {
         let registry = CampaignRegistry::load_from_workspace_root(&root).unwrap();
         let campaign = registry.resolve("ui-gallery-smoke").unwrap();
         assert_eq!(campaign.description, "Manifest-backed smoke override.");
-        assert_eq!(campaign.suites, vec!["ui-gallery-layout".to_string()]);
+        assert_eq!(
+            campaign.scripts,
+            vec!["tools/diag-scripts/ui-gallery-layout.json".to_string()]
+        );
+        assert_eq!(campaign.expected_duration_ms, Some(12345));
         assert!(matches!(
             campaign.source,
             CampaignDefinitionSource::Manifest(_)

@@ -9,6 +9,12 @@
     "ui-gallery-lite-smoke",
     "ui-gallery-layout"
   ],
+  "owner": "diag",
+  "platforms": [
+    "native"
+  ],
+  "tier": "smoke",
+  "expected_duration_ms": 120000,
   "tags": [
     "ui-gallery",
     "smoke",

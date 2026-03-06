@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "kind": "diag_campaign_manifest",
+  "id": "ui-gallery-accordion-script-smoke",
+  "description": "Single-script smoke campaign proving direct script-item execution.",
+  "lane": "smoke",
+  "profile": "bounded",
+  "scripts": [
+    "tools/diag-scripts/ui-gallery/accordion/ui-gallery-accordion-basic-long-text-wraps.json"
+  ],
+  "owner": "diag",
+  "platforms": [
+    "native"
+  ],
+  "tier": "smoke",
+  "expected_duration_ms": 60000,
+  "tags": [
+    "ui-gallery",
+    "accordion",
+    "script-item",
+    "smoke"
+  ]
+}

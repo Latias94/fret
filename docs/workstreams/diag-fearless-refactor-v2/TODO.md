@@ -148,8 +148,9 @@ Tracking doc: `docs/workstreams/diag-fearless-refactor-v2/README.md`
   - [x] move campaign definitions behind an explicit resolver seam (`registry/campaigns.rs`),
   - [x] promote that seam from built-in-only registry to manifest-backed resolver (`tools/diag-campaigns/*.json`),
   - [ ] decide whether to keep JSON-only or add TOML / generated registry inputs later,
-  - [ ] add richer suite metadata (owner/platform/tier/duration/tags),
-  - [ ] add direct script items in addition to suites,
+  - [x] add first-pass campaign metadata (`owner`, `platforms`, `tier`, `expected_duration_ms`, `tags`),
+  - [x] add direct script items in addition to suites,
+  - [ ] decide whether future manifests should move from top-level `suites`/`scripts` to ordered `items`,
   - [ ] decide whether campaign runs should emit a persisted dashboard text or HTML projection.
 - [ ] Make failed automation runs leave predictable evidence by default:
   - [ ] summary/index artifacts,

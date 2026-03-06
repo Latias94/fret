@@ -27,7 +27,7 @@ Current shipped surface:
 Current shipped behavior:
 
 - a workspace-backed registry now resolves campaign ids from `tools/diag-campaigns/*.json`, with built-in definitions as fallback,
-- campaign `run` expands to suites only (not direct script items yet),
+- campaign `run` now expands to suites and direct script items,
 - each run writes under `campaigns/<campaign_id>/<run_id>/`,
 - suite runs reuse the existing `diag suite` implementation,
 - aggregate handoff reuses the existing `diag summarize` implementation,
@@ -35,8 +35,8 @@ Current shipped behavior:
 
 Known gaps after the first landing:
 
-- no richer manifest-backed item model yet beyond suite-only JSON manifests,
-- no direct script-item support yet,
+- manifests still use top-level `suites` / `scripts` rather than one ordered `items` list,
+- direct script-item support now exists, but ordering is still split across top-level `suites` / `scripts`,
 - no persisted dashboard text/HTML projection yet,
 - no campaign-aware metadata resolver beyond the built-in registry,
 - cross-suite launch reuse still follows current `diag suite` behavior rather than a campaign-level runner.
