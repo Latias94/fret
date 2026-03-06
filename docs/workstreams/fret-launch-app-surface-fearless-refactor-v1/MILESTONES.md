@@ -67,6 +67,7 @@ This workstream is staged to keep the launch stack landable while tightening pub
 - `fret::run_native_with_configured_fn_driver(...)` now covers the preconfigured-`FnDriver` posture (including `.with_init(...)`) without falling back to compat naming, and `docking_demo` uses it to reduce the remaining direct `WinitAppDriver` example inventory to six.
 - `container_queries_docking_demo` now follows the same configured-`FnDriver` posture, reducing the remaining direct `WinitAppDriver` example inventory to five without introducing any new docking/runtime hooks.
 - `docking_arbitration_demo` now follows the same configured-`FnDriver` posture too, proving that multi-window docking arbitration, dev-state wiring, and floating-window lifecycle hooks still fit the existing free-hook surface while reducing the remaining direct `WinitAppDriver` example inventory to four.
+- `node_graph_legacy_demo` now follows the same pure free-hook `FnDriver` posture on the retained node-graph reference path too, reducing the remaining direct `WinitAppDriver` example inventory to three without expanding launch surface area.
 - Any remaining direct `WinitAppDriver` examples are verified to stay within current `FnDriver` hook coverage until they migrate.
 - `python tools/gate_fret_launch_root_surface_snapshot.py`
 - `python tools/gate_fret_framework_launch_surface.py`

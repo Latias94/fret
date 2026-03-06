@@ -19,7 +19,7 @@ use fret_core::{
     TextWrap,
 };
 use fret_launch::{
-    FnDriver, WindowCreateSpec, WinitAppDriver, WinitCommandContext, WinitEventContext,
+    FnDriver, FnDriverHooks, WindowCreateSpec, WinitCommandContext, WinitEventContext,
     WinitRenderContext, WinitRunnerConfig, WinitWindowContext,
 };
 use fret_runtime::PlatformCapabilities;
@@ -1976,703 +1976,16 @@ impl Default for NodeGraphDemoDriver {
     }
 }
 
-impl WinitAppDriver for NodeGraphDemoDriver {
-    type WindowState = NodeGraphDemoWindowState;
-
-    fn create_window_state(&mut self, app: &mut App, window: AppWindowId) -> Self::WindowState {
-        if self.declarative_mode.enabled() {
-            Self::build_ui_declarative(app, window)
-        } else {
-            Self::build_ui(app, window)
-        }
-    }
-
-    fn handle_model_changes(
-        &mut self,
-        context: WinitWindowContext<'_, Self::WindowState>,
-        changed: &[fret_app::ModelId],
-    ) {
-        let WinitWindowContext {
-            app, state, window, ..
-        } = context;
-
-        app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
-            svc.record_model_changes(window, changed);
-        });
-        state.ui.propagate_model_changes(app, changed);
-
-        let Some(models) = app.global::<NodeGraphDemoModels>() else {
-            return;
-        };
-        if changed.contains(&models.view.id()) {
-            self.pending_view_state_save = true;
-        }
-        if self.pending_view_state_save {
-            let now = Instant::now();
-            let due = self.last_view_state_save_at.map_or(true, |t| {
-                now.duration_since(t) >= Self::VIEW_STATE_SAVE_DEBOUNCE
-            });
-            if due {
-                self.pending_view_state_save = false;
-                self.last_view_state_save_at = Some(now);
-                self.save_view_state(app);
-            }
-        }
-    }
-
-    fn handle_global_changes(
-        &mut self,
-        context: WinitWindowContext<'_, Self::WindowState>,
-        changed: &[std::any::TypeId],
-    ) {
-        let WinitWindowContext {
-            app, state, window, ..
-        } = context;
-        app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
-            svc.record_global_changes(app, window, changed);
-        });
-        state.ui.propagate_global_changes(app, changed);
-    }
-
-    fn handle_event(&mut self, context: WinitEventContext<'_, Self::WindowState>, event: &Event) {
-        let WinitEventContext {
-            app,
-            services,
-            window,
-            state,
-        } = context;
-
-        let consumed = app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
-            if !svc.is_enabled() {
-                return false;
-            }
-            if svc.maybe_intercept_event_for_inspect_shortcuts(app, window, event) {
-                return true;
-            }
-            svc.maybe_intercept_event_for_picking(app, window, event)
-        });
-        if consumed {
-            return;
-        }
-
-        if matches!(event, Event::WindowCloseRequested) {
-            self.save_view_state(app);
-            app.push_effect(Effect::Window(WindowRequest::Close(window)));
-            return;
-        }
-
-        state.ui.dispatch_event(app, services, event);
-    }
-
-    fn handle_command(
-        &mut self,
-        context: WinitCommandContext<'_, Self::WindowState>,
-        command: fret_app::CommandId,
-    ) {
-        let WinitCommandContext {
-            app,
-            services,
-            window,
-            state,
-        } = context;
-
-        if state.ui.dispatch_command(app, services, &command) {
-            return;
-        }
-
-        if command.as_str() == "node_graph_demo.close" {
-            self.save_view_state(app);
-            app.push_effect(Effect::Window(WindowRequest::Close(window)));
-            return;
-        }
-
-        if command.as_str() == CMD_UPGRADE_GRAPH {
-            let Some(models) = app.global::<NodeGraphDemoModels>().cloned() else {
-                return;
-            };
-            let Some(registry) = app.global::<NodeRegistry>().cloned() else {
-                return;
-            };
-
-            let result = models.store.update(app, move |store, _cx| {
-                let graph = store.graph();
-
-                let canonicalize = registry.plan_canonicalize_kinds(graph);
-                let mut migrate = registry.plan_migrate_nodes(graph);
-                migrate.tx.label = Some("Upgrade Node Graph".to_string());
-
-                let report = migrate.report;
-                let rewrite_count = canonicalize.rewrites.len();
-
-                if migrate.tx.is_empty() {
-                    return (rewrite_count, report, false);
-                }
-
-                let ok = store.dispatch_transaction(&migrate.tx).is_ok();
-                (rewrite_count, report, ok)
-            });
-
-            match result {
-                Ok((rewrites, report, did_apply)) => {
-                    if !did_apply && rewrites == 0 {
-                        tracing::info!("upgrade: no changes required");
-                    } else {
-                        tracing::info!(
-                            rewrites,
-                            upgraded = report.upgraded.len(),
-                            missing_schema = report.missing_schema.len(),
-                            missing_migrator = report.missing_migrator.len(),
-                            newer_than_schema = report.newer_than_schema.len(),
-                            errors = report.errors.len(),
-                            did_apply,
-                            "upgrade: completed"
-                        );
-                    }
-                }
-                Err(_) => tracing::warn!("upgrade: store unavailable"),
-            }
-
-            app.request_redraw(window);
-            return;
-        }
-
-        if command.as_str() == CMD_TOGGLE_WEIRD_LAYOUT {
-            let Some(toggle) = app.global::<Arc<DemoWeirdLayoutMeasuredState>>().cloned() else {
-                return;
-            };
-            let Some(measured) = app.global::<NodeGraphDemoMeasuredStores>().cloned() else {
-                return;
-            };
-            let Some(models) = app.global::<NodeGraphDemoModels>().cloned() else {
-                return;
-            };
-
-            let enabled = toggle.toggle();
-            let pin_radius = 6.0;
-            let weird_targets = models
-                .graph
-                .read_ref(app, |g| {
-                    let mut targets = Vec::new();
-                    for (node_id, node) in &g.nodes {
-                        if node.kind.0.as_str() != WEIRD_KIND {
-                            continue;
-                        }
-
-                        let mut ports = Vec::new();
-                        for port_id in &node.ports {
-                            let Some(port) = g.ports.get(port_id) else {
-                                continue;
-                            };
-                            let key = port.key.0.as_str();
-                            if matches!(key, "in_a" | "in_b" | "out_main" | "out_aux") {
-                                ports.push((*port_id, key.to_string()));
-                            }
-                        }
-
-                        targets.push((*node_id, ports));
-                    }
-                    targets
-                })
-                .ok();
-
-            if let Some(targets) = weird_targets {
-                let weird_size_px = if enabled {
-                    (420.0, 120.0)
-                } else {
-                    (280.0, 240.0)
-                };
-                measured.manual.update(|node_sizes, anchors| {
-                    for (node_id, ports) in targets {
-                        if enabled {
-                            node_sizes.insert(node_id, weird_size_px);
-                            for (port_id, key) in ports {
-                                if let Some(anchor) = DemoPresenter::weird_anchor_for_key(
-                                    true,
-                                    &key,
-                                    weird_size_px,
-                                    pin_radius,
-                                ) {
-                                    anchors.insert(port_id, anchor);
-                                }
-                            }
-                        } else {
-                            node_sizes.remove(&node_id);
-                            for (port_id, _) in ports {
-                                anchors.remove(&port_id);
-                            }
-                        }
-                    }
-                });
-                app.request_redraw(window);
-            }
-        }
-
-        if command.as_str() == CMD_CYCLE_BACKGROUND_PATTERN {
-            let Some(style_state) = app.global::<Arc<NodeGraphDemoStyleState>>().cloned() else {
-                return;
-            };
-
-            let pattern = style_state.cycle_background_pattern();
-            tracing::info!(?pattern, "node graph demo background pattern changed");
-
-            *state = if self.declarative_mode.enabled() {
-                Self::build_ui_declarative(app, window)
-            } else {
-                Self::build_ui(app, window)
-            };
-            app.request_redraw(window);
-            return;
-        }
-
-        if command.as_str() == CMD_CYCLE_PRESET_FAMILY {
-            let Some(skin) = app.global::<Arc<NodeGraphPresetSkinV1>>().cloned() else {
-                return;
-            };
-
-            let next = skin.cycle();
-            tracing::info!(
-                preset = next.display_name(),
-                "node graph demo preset changed"
-            );
-
-            app.request_redraw(window);
-            return;
-        }
-
-        if command.as_str() == CMD_TOGGLE_WIRE_GLOW {
-            let Some(skin) = app.global::<Arc<NodeGraphPresetSkinV1>>().cloned() else {
-                return;
-            };
-
-            let enabled = skin.toggle_wire_glow();
-            tracing::info!(enabled, "node graph demo wire glow toggled");
-
-            app.request_redraw(window);
-            return;
-        }
-
-        if command.as_str() == CMD_TOGGLE_WIRE_HIGHLIGHT {
-            let Some(skin) = app.global::<Arc<NodeGraphPresetSkinV1>>().cloned() else {
-                return;
-            };
-
-            let enabled = skin.toggle_wire_highlight();
-            tracing::info!(enabled, "node graph demo wire highlight toggled");
-
-            app.request_redraw(window);
-            return;
-        }
-
-        if command.as_str() == CMD_TOGGLE_EDGE_MARKERS {
-            let Some(skin) = app.global::<Arc<NodeGraphPresetSkinV1>>().cloned() else {
-                return;
-            };
-
-            let enabled = skin.toggle_edge_markers();
-            tracing::info!(enabled, "node graph demo edge markers toggled");
-
-            app.request_redraw(window);
-            return;
-        }
-
-        if command.as_str() == CMD_TOGGLE_HELP_OVERLAY {
-            let Some(toggles) = app.global::<Arc<NodeGraphDemoOverlayToggles>>().cloned() else {
-                return;
-            };
-            toggles.toggle_show_help();
-            *state = if self.declarative_mode.enabled() {
-                Self::build_ui_declarative(app, window)
-            } else {
-                Self::build_ui(app, window)
-            };
-            app.request_redraw(window);
-            return;
-        }
-
-        if command.as_str() == CMD_TOGGLE_TOOLBARS {
-            let Some(toggles) = app.global::<Arc<NodeGraphDemoOverlayToggles>>().cloned() else {
-                return;
-            };
-            toggles.toggle_show_toolbars();
-            *state = if self.declarative_mode.enabled() {
-                Self::build_ui_declarative(app, window)
-            } else {
-                Self::build_ui(app, window)
-            };
-            app.request_redraw(window);
-            return;
-        }
-
-        if command.as_str() == CMD_TOGGLE_BLACKBOARD_OVERLAY {
-            let Some(toggles) = app.global::<Arc<NodeGraphDemoOverlayToggles>>().cloned() else {
-                return;
-            };
-            toggles.toggle_show_blackboard();
-            *state = if self.declarative_mode.enabled() {
-                Self::build_ui_declarative(app, window)
-            } else {
-                Self::build_ui(app, window)
-            };
-            app.request_redraw(window);
-            return;
-        }
-
-        if command.as_str() == CMD_TOGGLE_CONTROLS_PLACEMENT {
-            let Some(toggles) = app.global::<Arc<NodeGraphDemoOverlayToggles>>().cloned() else {
-                return;
-            };
-            toggles.toggle_controls_placement();
-            *state = if self.declarative_mode.enabled() {
-                Self::build_ui_declarative(app, window)
-            } else {
-                Self::build_ui(app, window)
-            };
-            app.request_redraw(window);
-            return;
-        }
-
-        if command.as_str() == CMD_TOGGLE_MINIMAP_PLACEMENT {
-            let Some(toggles) = app.global::<Arc<NodeGraphDemoOverlayToggles>>().cloned() else {
-                return;
-            };
-            toggles.toggle_minimap_placement();
-            *state = if self.declarative_mode.enabled() {
-                Self::build_ui_declarative(app, window)
-            } else {
-                Self::build_ui(app, window)
-            };
-            app.request_redraw(window);
-            return;
-        }
-
-        if command.as_str() == CMD_LOG_INTERNALS {
-            let Some(internals) = app.global::<Arc<NodeGraphInternalsStore>>().cloned() else {
-                return;
-            };
-            let snap = internals.snapshot();
-            tracing::info!(
-                zoom = snap.transform.zoom,
-                pan_x = snap.transform.pan.x,
-                pan_y = snap.transform.pan.y,
-                nodes = snap.nodes_window.len(),
-                ports = snap.ports_window.len(),
-                "node graph internals snapshot"
-            );
-        }
-
-        if command.as_str() == CMD_LOG_MEASURED {
-            let Some(measured) = app.global::<NodeGraphDemoMeasuredStores>().cloned() else {
-                return;
-            };
-            tracing::info!(
-                manual_rev = measured.manual.revision(),
-                derived_rev = measured.derived.revision(),
-                "node graph measured stores (manual vs derived)"
-            );
-            return;
-        }
-
-        if command.as_str() == CMD_BUMP_FLOAT_VALUE {
-            let Some(models) = app.global::<NodeGraphDemoModels>().cloned() else {
-                return;
-            };
-
-            let selected = models
-                .view
-                .read_ref(app, |s| s.selected_nodes.clone())
-                .unwrap_or_default();
-            if selected.is_empty() {
-                tracing::info!("select a Float node first (demo.float)");
-                return;
-            }
-
-            let ops = models
-                .graph
-                .read_ref(app, |g| {
-                    let mut ops = Vec::new();
-                    for node_id in &selected {
-                        let Some(node) = g.nodes.get(node_id) else {
-                            continue;
-                        };
-                        if node.kind.0.as_str() != "demo.float" {
-                            continue;
-                        }
-
-                        let from = node.data.clone();
-                        let mut obj = from.as_object().cloned().unwrap_or_default();
-                        let cur = obj.get("value").and_then(|v| v.as_f64()).unwrap_or(0.0);
-                        let next = cur + 0.1;
-                        let Some(num) = serde_json::Number::from_f64(next) else {
-                            continue;
-                        };
-                        obj.insert("value".to_string(), serde_json::Value::Number(num));
-                        let to = serde_json::Value::Object(obj);
-
-                        ops.push(GraphOp::SetNodeData {
-                            id: *node_id,
-                            from,
-                            to,
-                        });
-                    }
-                    ops
-                })
-                .unwrap_or_default();
-            if ops.is_empty() {
-                return;
-            }
-
-            let tx = GraphTransaction {
-                label: Some("Bump Float Value".to_string()),
-                ops,
-            };
-            let _ = models.edits.update(app, |q, _cx| q.push(tx));
-            return;
-        }
-
-        if matches!(
-            command.as_str(),
-            CMD_RESET_GRAPH | CMD_SPAWN_STRESS_1K | CMD_SPAWN_STRESS_5K | CMD_SPAWN_STRESS_10K
-        ) {
-            let Some(models) = app.global::<NodeGraphDemoModels>().cloned() else {
-                return;
-            };
-            let Some(measured) = app.global::<NodeGraphDemoMeasuredStores>().cloned() else {
-                return;
-            };
-            let Some(persist) = app.global::<NodeGraphDemoViewStatePersistence>().cloned() else {
-                return;
-            };
-
-            let graph_id = persist.graph_id;
-            let next_graph = match command.as_str() {
-                CMD_RESET_GRAPH => build_demo_graph(graph_id),
-                CMD_SPAWN_STRESS_1K => build_stress_graph(graph_id, 1_000),
-                CMD_SPAWN_STRESS_5K => build_stress_graph(graph_id, 5_000),
-                CMD_SPAWN_STRESS_10K => build_stress_graph(graph_id, 10_000),
-                _ => return,
-            };
-
-            measured.manual.update(|node_sizes, anchors| {
-                node_sizes.clear();
-                anchors.clear();
-            });
-            measured.derived.update(|node_sizes, anchors| {
-                node_sizes.clear();
-                anchors.clear();
-            });
-
-            let _ = models
-                .edits
-                .update(app, |q, _cx| *q = NodeGraphEditQueue::default());
-            let _ = models
-                .overlays
-                .update(app, |o, _cx| *o = NodeGraphOverlayState::default());
-
-            let mut next_view = NodeGraphViewState::default();
-            next_view.sanitize_for_graph(&next_graph);
-
-            // Keep the standalone graph/view models in sync with the store so declarative surfaces
-            // that are not store-backed (e.g. paint-only skeleton) observe demo commands.
-            let next_graph_for_models = next_graph.clone();
-            let next_view_for_models = next_view.clone();
-
-            let _ = models.store.update(app, |store, _cx| {
-                store.replace_graph(next_graph);
-                store.replace_view_state(next_view);
-                store.clear_history();
-            });
-            let _ = models
-                .graph
-                .update(app, |g, _cx| *g = next_graph_for_models);
-            let _ = models.view.update(app, |v, _cx| *v = next_view_for_models);
-
-            app.request_redraw(window);
-            return;
-        }
-    }
-
-    fn render(&mut self, context: WinitRenderContext<'_, Self::WindowState>) {
-        let WinitRenderContext {
-            app,
-            services,
-            window,
-            state,
-            bounds,
-            scale_factor,
-            scene,
-        } = context;
-
-        if self.declarative_mode.enabled() {
-            if let Some(models) = app.global::<NodeGraphDemoModels>().cloned() {
-                let internals = app.global::<Arc<NodeGraphInternalsStore>>().cloned();
-                let mode = self.declarative_mode;
-                let root = ui_declarative::RenderRootContext::new(
-                    &mut state.ui,
-                    app,
-                    services,
-                    window,
-                    bounds,
-                )
-                .render_root("node-graph-demo-declarative", move |cx| {
-                    cx.observe_model(&models.graph, Invalidation::Layout);
-                    cx.observe_model(&models.view, Invalidation::Paint);
-                    cx.observe_model(&models.edits, Invalidation::Paint);
-                    cx.observe_model(&models.overlays, Invalidation::Paint);
-
-                    let surface = match mode {
-                        NodeGraphDemoDeclarativeMode::Off => unreachable!(),
-                        NodeGraphDemoDeclarativeMode::CompatRetained => {
-                            let mut surface_props =
-                                fret_node::ui::declarative::NodeGraphSurfaceCompatRetainedProps::new(
-                                    models.graph.clone(),
-                                    models.view.clone(),
-                                );
-                            surface_props.store = Some(models.store.clone());
-                            surface_props.edit_queue = Some(models.edits.clone());
-                            surface_props.overlays = Some(models.overlays.clone());
-                            surface_props.internals = internals;
-                            surface_props.test_id =
-                                Some(Arc::<str>::from("node_graph_demo.declarative.compat"));
-                            fret_node::ui::declarative::node_graph_surface_compat_retained(
-                                cx,
-                                surface_props,
-                            )
-                        }
-                        NodeGraphDemoDeclarativeMode::PaintOnly => {
-                            let props =
-                                NodeGraphSurfacePaintOnlyProps::new(models.graph.clone(), models.view.clone());
-                            fret_node::ui::declarative::node_graph_surface_paint_only(cx, props)
-                        }
-                    };
-                    vec![surface]
-                });
-                state.root = Some(root);
-            } else {
-                tracing::warn!("NodeGraphDemoModels global missing; skipping declarative render");
-            }
-        }
-
-        if let Some(root) = state.root {
-            state.ui.set_root(root);
-        }
-        state.ui.request_semantics_snapshot();
-        state.ui.ingest_paint_cache_source(scene);
-
-        let inspection_active = app
-            .with_global_mut_untracked(UiDiagnosticsService::default, |svc, _| {
-                svc.wants_inspection_active(window)
-            });
-        state.ui.set_inspection_active(inspection_active);
-
-        scene.clear();
-
-        let mut frame = UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
-        frame.layout_all();
-
-        let semantics_snapshot = state.ui.semantics_snapshot_arc();
-        let drive = app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
-            svc.drive_script_for_window(
-                app,
-                window,
-                bounds,
-                scale_factor,
-                Some(&mut state.ui),
-                semantics_snapshot.as_deref(),
-            )
-        });
-
-        if drive.request_redraw {
-            app.request_redraw(window);
-            app.push_effect(Effect::RequestAnimationFrame(window));
-        }
-
-        let mut injected_any = false;
-        for event in drive.events {
-            injected_any = true;
-            state.ui.dispatch_event(app, services, &event);
-        }
-
-        if injected_any {
-            let mut deferred_effects: Vec<Effect> = Vec::new();
-            loop {
-                let effects = app.flush_effects();
-                if effects.is_empty() {
-                    break;
-                }
-
-                let mut applied_any_command = false;
-                for effect in effects {
-                    match effect {
-                        Effect::Command { window: w, command } => {
-                            if w.is_none() || w == Some(window) {
-                                let _ = state.ui.dispatch_command(app, services, &command);
-                                applied_any_command = true;
-                            } else {
-                                deferred_effects.push(Effect::Command { window: w, command });
-                            }
-                        }
-                        other => deferred_effects.push(other),
-                    }
-                }
-
-                if !applied_any_command {
-                    break;
-                }
-            }
-            for effect in deferred_effects {
-                app.push_effect(effect);
-            }
-
-            state.ui.request_semantics_snapshot();
-            let mut frame =
-                UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
-            frame.layout_all();
-        }
-
-        let mut frame = UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
-        frame.paint_all(scene);
-
-        app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
-            let element_runtime = app.global::<fret_ui::elements::ElementRuntime>();
-            svc.record_snapshot(
-                app,
-                window,
-                bounds,
-                scale_factor,
-                &mut state.ui,
-                element_runtime,
-                scene,
-            );
-            let _ = svc.maybe_dump_if_triggered();
-            if svc.is_enabled() {
-                app.push_effect(Effect::RequestAnimationFrame(window));
-            }
-        });
-    }
-
-    fn window_create_spec(
-        &mut self,
-        _app: &mut App,
-        _request: &fret_app::CreateWindowRequest,
-    ) -> Option<fret_launch::WindowCreateSpec> {
-        None
-    }
-
-    fn window_created(
-        &mut self,
-        _app: &mut App,
-        _request: &fret_app::CreateWindowRequest,
-        _new_window: AppWindowId,
-    ) {
-    }
-}
-
 fn create_window_state(
     driver: &mut NodeGraphDemoDriver,
     app: &mut App,
     window: AppWindowId,
 ) -> NodeGraphDemoWindowState {
-    <NodeGraphDemoDriver as WinitAppDriver>::create_window_state(driver, app, window)
+    if driver.declarative_mode.enabled() {
+        NodeGraphDemoDriver::build_ui_declarative(app, window)
+    } else {
+        NodeGraphDemoDriver::build_ui(app, window)
+    }
 }
 
 fn handle_model_changes(
@@ -2680,7 +1993,32 @@ fn handle_model_changes(
     context: WinitWindowContext<'_, NodeGraphDemoWindowState>,
     changed: &[fret_app::ModelId],
 ) {
-    <NodeGraphDemoDriver as WinitAppDriver>::handle_model_changes(driver, context, changed)
+    let WinitWindowContext {
+        app, state, window, ..
+    } = context;
+
+    app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
+        svc.record_model_changes(window, changed);
+    });
+    state.ui.propagate_model_changes(app, changed);
+
+    let Some(models) = app.global::<NodeGraphDemoModels>() else {
+        return;
+    };
+    if changed.contains(&models.view.id()) {
+        driver.pending_view_state_save = true;
+    }
+    if driver.pending_view_state_save {
+        let now = Instant::now();
+        let due = driver.last_view_state_save_at.map_or(true, |t| {
+            now.duration_since(t) >= NodeGraphDemoDriver::VIEW_STATE_SAVE_DEBOUNCE
+        });
+        if due {
+            driver.pending_view_state_save = false;
+            driver.last_view_state_save_at = Some(now);
+            driver.save_view_state(app);
+        }
+    }
 }
 
 fn handle_global_changes(
@@ -2688,7 +2026,13 @@ fn handle_global_changes(
     context: WinitWindowContext<'_, NodeGraphDemoWindowState>,
     changed: &[std::any::TypeId],
 ) {
-    <NodeGraphDemoDriver as WinitAppDriver>::handle_global_changes(driver, context, changed)
+    let WinitWindowContext {
+        app, state, window, ..
+    } = context;
+    app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
+        svc.record_global_changes(app, window, changed);
+    });
+    state.ui.propagate_global_changes(app, changed);
 }
 
 fn handle_event(
@@ -2696,7 +2040,33 @@ fn handle_event(
     context: WinitEventContext<'_, NodeGraphDemoWindowState>,
     event: &Event,
 ) {
-    <NodeGraphDemoDriver as WinitAppDriver>::handle_event(driver, context, event)
+    let WinitEventContext {
+        app,
+        services,
+        window,
+        state,
+    } = context;
+
+    let consumed = app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
+        if !svc.is_enabled() {
+            return false;
+        }
+        if svc.maybe_intercept_event_for_inspect_shortcuts(app, window, event) {
+            return true;
+        }
+        svc.maybe_intercept_event_for_picking(app, window, event)
+    });
+    if consumed {
+        return;
+    }
+
+    if matches!(event, Event::WindowCloseRequested) {
+        driver.save_view_state(app);
+        app.push_effect(Effect::Window(WindowRequest::Close(window)));
+        return;
+    }
+
+    state.ui.dispatch_event(app, services, event);
 }
 
 fn handle_command(
@@ -2704,14 +2074,589 @@ fn handle_command(
     context: WinitCommandContext<'_, NodeGraphDemoWindowState>,
     command: CommandId,
 ) {
-    <NodeGraphDemoDriver as WinitAppDriver>::handle_command(driver, context, command)
+    let WinitCommandContext {
+        app,
+        services,
+        window,
+        state,
+    } = context;
+
+    if state.ui.dispatch_command(app, services, &command) {
+        return;
+    }
+
+    if command.as_str() == "node_graph_demo.close" {
+        driver.save_view_state(app);
+        app.push_effect(Effect::Window(WindowRequest::Close(window)));
+        return;
+    }
+
+    if command.as_str() == CMD_UPGRADE_GRAPH {
+        let Some(models) = app.global::<NodeGraphDemoModels>().cloned() else {
+            return;
+        };
+        let Some(registry) = app.global::<NodeRegistry>().cloned() else {
+            return;
+        };
+
+        let result = models.store.update(app, move |store, _cx| {
+            let graph = store.graph();
+
+            let canonicalize = registry.plan_canonicalize_kinds(graph);
+            let mut migrate = registry.plan_migrate_nodes(graph);
+            migrate.tx.label = Some("Upgrade Node Graph".to_string());
+
+            let report = migrate.report;
+            let rewrite_count = canonicalize.rewrites.len();
+
+            if migrate.tx.is_empty() {
+                return (rewrite_count, report, false);
+            }
+
+            let ok = store.dispatch_transaction(&migrate.tx).is_ok();
+            (rewrite_count, report, ok)
+        });
+
+        match result {
+            Ok((rewrites, report, did_apply)) => {
+                if !did_apply && rewrites == 0 {
+                    tracing::info!("upgrade: no changes required");
+                } else {
+                    tracing::info!(
+                        rewrites,
+                        upgraded = report.upgraded.len(),
+                        missing_schema = report.missing_schema.len(),
+                        missing_migrator = report.missing_migrator.len(),
+                        newer_than_schema = report.newer_than_schema.len(),
+                        errors = report.errors.len(),
+                        did_apply,
+                        "upgrade: completed"
+                    );
+                }
+            }
+            Err(_) => tracing::warn!("upgrade: store unavailable"),
+        }
+
+        app.request_redraw(window);
+        return;
+    }
+
+    if command.as_str() == CMD_TOGGLE_WEIRD_LAYOUT {
+        let Some(toggle) = app.global::<Arc<DemoWeirdLayoutMeasuredState>>().cloned() else {
+            return;
+        };
+        let Some(measured) = app.global::<NodeGraphDemoMeasuredStores>().cloned() else {
+            return;
+        };
+        let Some(models) = app.global::<NodeGraphDemoModels>().cloned() else {
+            return;
+        };
+
+        let enabled = toggle.toggle();
+        let pin_radius = 6.0;
+        let weird_targets = models
+            .graph
+            .read_ref(app, |g| {
+                let mut targets = Vec::new();
+                for (node_id, node) in &g.nodes {
+                    if node.kind.0.as_str() != WEIRD_KIND {
+                        continue;
+                    }
+
+                    let mut ports = Vec::new();
+                    for port_id in &node.ports {
+                        let Some(port) = g.ports.get(port_id) else {
+                            continue;
+                        };
+                        let key = port.key.0.as_str();
+                        if matches!(key, "in_a" | "in_b" | "out_main" | "out_aux") {
+                            ports.push((*port_id, key.to_string()));
+                        }
+                    }
+
+                    targets.push((*node_id, ports));
+                }
+                targets
+            })
+            .ok();
+
+        if let Some(targets) = weird_targets {
+            let weird_size_px = if enabled {
+                (420.0, 120.0)
+            } else {
+                (280.0, 240.0)
+            };
+            measured.manual.update(|node_sizes, anchors| {
+                for (node_id, ports) in targets {
+                    if enabled {
+                        node_sizes.insert(node_id, weird_size_px);
+                        for (port_id, key) in ports {
+                            if let Some(anchor) = DemoPresenter::weird_anchor_for_key(
+                                true,
+                                &key,
+                                weird_size_px,
+                                pin_radius,
+                            ) {
+                                anchors.insert(port_id, anchor);
+                            }
+                        }
+                    } else {
+                        node_sizes.remove(&node_id);
+                        for (port_id, _) in ports {
+                            anchors.remove(&port_id);
+                        }
+                    }
+                }
+            });
+            app.request_redraw(window);
+        }
+    }
+
+    if command.as_str() == CMD_CYCLE_BACKGROUND_PATTERN {
+        let Some(style_state) = app.global::<Arc<NodeGraphDemoStyleState>>().cloned() else {
+            return;
+        };
+
+        let pattern = style_state.cycle_background_pattern();
+        tracing::info!(?pattern, "node graph demo background pattern changed");
+
+        *state = if driver.declarative_mode.enabled() {
+            NodeGraphDemoDriver::build_ui_declarative(app, window)
+        } else {
+            NodeGraphDemoDriver::build_ui(app, window)
+        };
+        app.request_redraw(window);
+        return;
+    }
+
+    if command.as_str() == CMD_CYCLE_PRESET_FAMILY {
+        let Some(skin) = app.global::<Arc<NodeGraphPresetSkinV1>>().cloned() else {
+            return;
+        };
+
+        let next = skin.cycle();
+        tracing::info!(
+            preset = next.display_name(),
+            "node graph demo preset changed"
+        );
+
+        app.request_redraw(window);
+        return;
+    }
+
+    if command.as_str() == CMD_TOGGLE_WIRE_GLOW {
+        let Some(skin) = app.global::<Arc<NodeGraphPresetSkinV1>>().cloned() else {
+            return;
+        };
+
+        let enabled = skin.toggle_wire_glow();
+        tracing::info!(enabled, "node graph demo wire glow toggled");
+
+        app.request_redraw(window);
+        return;
+    }
+
+    if command.as_str() == CMD_TOGGLE_WIRE_HIGHLIGHT {
+        let Some(skin) = app.global::<Arc<NodeGraphPresetSkinV1>>().cloned() else {
+            return;
+        };
+
+        let enabled = skin.toggle_wire_highlight();
+        tracing::info!(enabled, "node graph demo wire highlight toggled");
+
+        app.request_redraw(window);
+        return;
+    }
+
+    if command.as_str() == CMD_TOGGLE_EDGE_MARKERS {
+        let Some(skin) = app.global::<Arc<NodeGraphPresetSkinV1>>().cloned() else {
+            return;
+        };
+
+        let enabled = skin.toggle_edge_markers();
+        tracing::info!(enabled, "node graph demo edge markers toggled");
+
+        app.request_redraw(window);
+        return;
+    }
+
+    if command.as_str() == CMD_TOGGLE_HELP_OVERLAY {
+        let Some(toggles) = app.global::<Arc<NodeGraphDemoOverlayToggles>>().cloned() else {
+            return;
+        };
+        toggles.toggle_show_help();
+        *state = if driver.declarative_mode.enabled() {
+            NodeGraphDemoDriver::build_ui_declarative(app, window)
+        } else {
+            NodeGraphDemoDriver::build_ui(app, window)
+        };
+        app.request_redraw(window);
+        return;
+    }
+
+    if command.as_str() == CMD_TOGGLE_TOOLBARS {
+        let Some(toggles) = app.global::<Arc<NodeGraphDemoOverlayToggles>>().cloned() else {
+            return;
+        };
+        toggles.toggle_show_toolbars();
+        *state = if driver.declarative_mode.enabled() {
+            NodeGraphDemoDriver::build_ui_declarative(app, window)
+        } else {
+            NodeGraphDemoDriver::build_ui(app, window)
+        };
+        app.request_redraw(window);
+        return;
+    }
+
+    if command.as_str() == CMD_TOGGLE_BLACKBOARD_OVERLAY {
+        let Some(toggles) = app.global::<Arc<NodeGraphDemoOverlayToggles>>().cloned() else {
+            return;
+        };
+        toggles.toggle_show_blackboard();
+        *state = if driver.declarative_mode.enabled() {
+            NodeGraphDemoDriver::build_ui_declarative(app, window)
+        } else {
+            NodeGraphDemoDriver::build_ui(app, window)
+        };
+        app.request_redraw(window);
+        return;
+    }
+
+    if command.as_str() == CMD_TOGGLE_CONTROLS_PLACEMENT {
+        let Some(toggles) = app.global::<Arc<NodeGraphDemoOverlayToggles>>().cloned() else {
+            return;
+        };
+        toggles.toggle_controls_placement();
+        *state = if driver.declarative_mode.enabled() {
+            NodeGraphDemoDriver::build_ui_declarative(app, window)
+        } else {
+            NodeGraphDemoDriver::build_ui(app, window)
+        };
+        app.request_redraw(window);
+        return;
+    }
+
+    if command.as_str() == CMD_TOGGLE_MINIMAP_PLACEMENT {
+        let Some(toggles) = app.global::<Arc<NodeGraphDemoOverlayToggles>>().cloned() else {
+            return;
+        };
+        toggles.toggle_minimap_placement();
+        *state = if driver.declarative_mode.enabled() {
+            NodeGraphDemoDriver::build_ui_declarative(app, window)
+        } else {
+            NodeGraphDemoDriver::build_ui(app, window)
+        };
+        app.request_redraw(window);
+        return;
+    }
+
+    if command.as_str() == CMD_LOG_INTERNALS {
+        let Some(internals) = app.global::<Arc<NodeGraphInternalsStore>>().cloned() else {
+            return;
+        };
+        let snap = internals.snapshot();
+        tracing::info!(
+            zoom = snap.transform.zoom,
+            pan_x = snap.transform.pan.x,
+            pan_y = snap.transform.pan.y,
+            nodes = snap.nodes_window.len(),
+            ports = snap.ports_window.len(),
+            "node graph internals snapshot"
+        );
+    }
+
+    if command.as_str() == CMD_LOG_MEASURED {
+        let Some(measured) = app.global::<NodeGraphDemoMeasuredStores>().cloned() else {
+            return;
+        };
+        tracing::info!(
+            manual_rev = measured.manual.revision(),
+            derived_rev = measured.derived.revision(),
+            "node graph measured stores (manual vs derived)"
+        );
+        return;
+    }
+
+    if command.as_str() == CMD_BUMP_FLOAT_VALUE {
+        let Some(models) = app.global::<NodeGraphDemoModels>().cloned() else {
+            return;
+        };
+
+        let selected = models
+            .view
+            .read_ref(app, |s| s.selected_nodes.clone())
+            .unwrap_or_default();
+        if selected.is_empty() {
+            tracing::info!("select a Float node first (demo.float)");
+            return;
+        }
+
+        let ops = models
+            .graph
+            .read_ref(app, |g| {
+                let mut ops = Vec::new();
+                for node_id in &selected {
+                    let Some(node) = g.nodes.get(node_id) else {
+                        continue;
+                    };
+                    if node.kind.0.as_str() != "demo.float" {
+                        continue;
+                    }
+
+                    let from = node.data.clone();
+                    let mut obj = from.as_object().cloned().unwrap_or_default();
+                    let cur = obj.get("value").and_then(|v| v.as_f64()).unwrap_or(0.0);
+                    let next = cur + 0.1;
+                    let Some(num) = serde_json::Number::from_f64(next) else {
+                        continue;
+                    };
+                    obj.insert("value".to_string(), serde_json::Value::Number(num));
+                    let to = serde_json::Value::Object(obj);
+
+                    ops.push(GraphOp::SetNodeData {
+                        id: *node_id,
+                        from,
+                        to,
+                    });
+                }
+                ops
+            })
+            .unwrap_or_default();
+        if ops.is_empty() {
+            return;
+        }
+
+        let tx = GraphTransaction {
+            label: Some("Bump Float Value".to_string()),
+            ops,
+        };
+        let _ = models.edits.update(app, |q, _cx| q.push(tx));
+        return;
+    }
+
+    if matches!(
+        command.as_str(),
+        CMD_RESET_GRAPH | CMD_SPAWN_STRESS_1K | CMD_SPAWN_STRESS_5K | CMD_SPAWN_STRESS_10K
+    ) {
+        let Some(models) = app.global::<NodeGraphDemoModels>().cloned() else {
+            return;
+        };
+        let Some(measured) = app.global::<NodeGraphDemoMeasuredStores>().cloned() else {
+            return;
+        };
+        let Some(persist) = app.global::<NodeGraphDemoViewStatePersistence>().cloned() else {
+            return;
+        };
+
+        let graph_id = persist.graph_id;
+        let next_graph = match command.as_str() {
+            CMD_RESET_GRAPH => build_demo_graph(graph_id),
+            CMD_SPAWN_STRESS_1K => build_stress_graph(graph_id, 1_000),
+            CMD_SPAWN_STRESS_5K => build_stress_graph(graph_id, 5_000),
+            CMD_SPAWN_STRESS_10K => build_stress_graph(graph_id, 10_000),
+            _ => return,
+        };
+
+        measured.manual.update(|node_sizes, anchors| {
+            node_sizes.clear();
+            anchors.clear();
+        });
+        measured.derived.update(|node_sizes, anchors| {
+            node_sizes.clear();
+            anchors.clear();
+        });
+
+        let _ = models
+            .edits
+            .update(app, |q, _cx| *q = NodeGraphEditQueue::default());
+        let _ = models
+            .overlays
+            .update(app, |o, _cx| *o = NodeGraphOverlayState::default());
+
+        let mut next_view = NodeGraphViewState::default();
+        next_view.sanitize_for_graph(&next_graph);
+
+        // Keep the standalone graph/view models in sync with the store so declarative surfaces
+        // that are not store-backed (e.g. paint-only skeleton) observe demo commands.
+        let next_graph_for_models = next_graph.clone();
+        let next_view_for_models = next_view.clone();
+
+        let _ = models.store.update(app, |store, _cx| {
+            store.replace_graph(next_graph);
+            store.replace_view_state(next_view);
+            store.clear_history();
+        });
+        let _ = models
+            .graph
+            .update(app, |g, _cx| *g = next_graph_for_models);
+        let _ = models.view.update(app, |v, _cx| *v = next_view_for_models);
+
+        app.request_redraw(window);
+        return;
+    }
 }
 
 fn render(
     driver: &mut NodeGraphDemoDriver,
     context: WinitRenderContext<'_, NodeGraphDemoWindowState>,
 ) {
-    <NodeGraphDemoDriver as WinitAppDriver>::render(driver, context)
+    let WinitRenderContext {
+        app,
+        services,
+        window,
+        state,
+        bounds,
+        scale_factor,
+        scene,
+    } = context;
+
+    if driver.declarative_mode.enabled() {
+        if let Some(models) = app.global::<NodeGraphDemoModels>().cloned() {
+            let internals = app.global::<Arc<NodeGraphInternalsStore>>().cloned();
+            let mode = driver.declarative_mode;
+            let root = ui_declarative::RenderRootContext::new(
+                &mut state.ui,
+                app,
+                services,
+                window,
+                bounds,
+            )
+            .render_root("node-graph-demo-declarative", move |cx| {
+                cx.observe_model(&models.graph, Invalidation::Layout);
+                cx.observe_model(&models.view, Invalidation::Paint);
+                cx.observe_model(&models.edits, Invalidation::Paint);
+                cx.observe_model(&models.overlays, Invalidation::Paint);
+
+                let surface = match mode {
+                    NodeGraphDemoDeclarativeMode::Off => unreachable!(),
+                    NodeGraphDemoDeclarativeMode::CompatRetained => {
+                        let mut surface_props =
+                            fret_node::ui::declarative::NodeGraphSurfaceCompatRetainedProps::new(
+                                models.graph.clone(),
+                                models.view.clone(),
+                            );
+                        surface_props.store = Some(models.store.clone());
+                        surface_props.edit_queue = Some(models.edits.clone());
+                        surface_props.overlays = Some(models.overlays.clone());
+                        surface_props.internals = internals;
+                        surface_props.test_id =
+                            Some(Arc::<str>::from("node_graph_demo.declarative.compat"));
+                        fret_node::ui::declarative::node_graph_surface_compat_retained(
+                            cx,
+                            surface_props,
+                        )
+                    }
+                    NodeGraphDemoDeclarativeMode::PaintOnly => {
+                        let props = NodeGraphSurfacePaintOnlyProps::new(
+                            models.graph.clone(),
+                            models.view.clone(),
+                        );
+                        fret_node::ui::declarative::node_graph_surface_paint_only(cx, props)
+                    }
+                };
+                vec![surface]
+            });
+            state.root = Some(root);
+        } else {
+            tracing::warn!("NodeGraphDemoModels global missing; skipping declarative render");
+        }
+    }
+
+    if let Some(root) = state.root {
+        state.ui.set_root(root);
+    }
+    state.ui.request_semantics_snapshot();
+    state.ui.ingest_paint_cache_source(scene);
+
+    let inspection_active = app
+        .with_global_mut_untracked(UiDiagnosticsService::default, |svc, _| {
+            svc.wants_inspection_active(window)
+        });
+    state.ui.set_inspection_active(inspection_active);
+
+    scene.clear();
+
+    let mut frame = UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
+    frame.layout_all();
+
+    let semantics_snapshot = state.ui.semantics_snapshot_arc();
+    let drive = app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
+        svc.drive_script_for_window(
+            app,
+            window,
+            bounds,
+            scale_factor,
+            Some(&mut state.ui),
+            semantics_snapshot.as_deref(),
+        )
+    });
+
+    if drive.request_redraw {
+        app.request_redraw(window);
+        app.push_effect(Effect::RequestAnimationFrame(window));
+    }
+
+    let mut injected_any = false;
+    for event in drive.events {
+        injected_any = true;
+        state.ui.dispatch_event(app, services, &event);
+    }
+
+    if injected_any {
+        let mut deferred_effects: Vec<Effect> = Vec::new();
+        loop {
+            let effects = app.flush_effects();
+            if effects.is_empty() {
+                break;
+            }
+
+            let mut applied_any_command = false;
+            for effect in effects {
+                match effect {
+                    Effect::Command { window: w, command } => {
+                        if w.is_none() || w == Some(window) {
+                            let _ = state.ui.dispatch_command(app, services, &command);
+                            applied_any_command = true;
+                        } else {
+                            deferred_effects.push(Effect::Command { window: w, command });
+                        }
+                    }
+                    other => deferred_effects.push(other),
+                }
+            }
+
+            if !applied_any_command {
+                break;
+            }
+        }
+        for effect in deferred_effects {
+            app.push_effect(effect);
+        }
+
+        state.ui.request_semantics_snapshot();
+        let mut frame = UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
+        frame.layout_all();
+    }
+
+    let mut frame = UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
+    frame.paint_all(scene);
+
+    app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
+        let element_runtime = app.global::<fret_ui::elements::ElementRuntime>();
+        svc.record_snapshot(
+            app,
+            window,
+            bounds,
+            scale_factor,
+            &mut state.ui,
+            element_runtime,
+            scene,
+        );
+        let _ = svc.maybe_dump_if_triggered();
+        if svc.is_enabled() {
+            app.push_effect(Effect::RequestAnimationFrame(window));
+        }
+    });
 }
 
 fn window_create_spec(
@@ -2719,7 +2664,7 @@ fn window_create_spec(
     app: &mut App,
     request: &fret_app::CreateWindowRequest,
 ) -> Option<WindowCreateSpec> {
-    <NodeGraphDemoDriver as WinitAppDriver>::window_create_spec(driver, app, request)
+    None
 }
 
 fn window_created(
@@ -2728,23 +2673,27 @@ fn window_created(
     request: &fret_app::CreateWindowRequest,
     new_window: AppWindowId,
 ) {
-    <NodeGraphDemoDriver as WinitAppDriver>::window_created(driver, app, request, new_window)
 }
 
-fn build_driver_with_state(
+fn configure_fn_driver_hooks(
+    hooks: &mut FnDriverHooks<NodeGraphDemoDriver, NodeGraphDemoWindowState>,
+) {
+    hooks.handle_model_changes = Some(handle_model_changes);
+    hooks.handle_global_changes = Some(handle_global_changes);
+    hooks.handle_command = Some(handle_command);
+    hooks.window_create_spec = Some(window_create_spec);
+    hooks.window_created = Some(window_created);
+}
+
+fn build_fn_driver_with_state(
     driver_state: NodeGraphDemoDriver,
 ) -> FnDriver<NodeGraphDemoDriver, NodeGraphDemoWindowState> {
-    FnDriver::new(driver_state, create_window_state, handle_event, render).with_hooks(|hooks| {
-        hooks.handle_model_changes = Some(handle_model_changes);
-        hooks.handle_global_changes = Some(handle_global_changes);
-        hooks.handle_command = Some(handle_command);
-        hooks.window_create_spec = Some(window_create_spec);
-        hooks.window_created = Some(window_created);
-    })
+    FnDriver::new(driver_state, create_window_state, handle_event, render)
+        .with_hooks(configure_fn_driver_hooks)
 }
 
-fn build_fn_driver() -> FnDriver<NodeGraphDemoDriver, NodeGraphDemoWindowState> {
-    build_driver_with_state(NodeGraphDemoDriver::new_from_env())
+pub fn build_fn_driver() -> FnDriver<NodeGraphDemoDriver, NodeGraphDemoWindowState> {
+    build_fn_driver_with_state(NodeGraphDemoDriver::new_from_env())
 }
 
 fn set_float_value_in_node_data(mut data: Value, value: f64) -> Value {
@@ -2871,8 +2820,12 @@ pub fn run() -> anyhow::Result<()> {
             "node_graph_demo: declarative root enabled (FRET_NODE_GRAPH_DECLARATIVE)"
         );
     }
-    let driver = build_driver_with_state(driver_state);
-    fret::run_native_with_compat_driver(config, app, driver).map_err(anyhow::Error::from)
+    fret::run_native_with_configured_fn_driver(
+        config,
+        app,
+        build_fn_driver_with_state(driver_state),
+    )
+    .map_err(anyhow::Error::from)
 }
 
 fn kb(platform: PlatformFilter, key: KeyCode, mods: Modifiers) -> DefaultKeybinding {

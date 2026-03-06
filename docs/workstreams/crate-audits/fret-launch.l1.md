@@ -221,8 +221,12 @@ Evidence anchors:
 - `docking_arbitration_demo` closes the next multi-window docking arbitration harness too:
   viewport input, dock-op arbitration, floating-window lifecycle, and dev-state export/import all
   fit the existing free-hook surface, reducing the remaining direct impl inventory again to four.
+- `node_graph_legacy_demo` closes the retained node-graph reference harness too: model/global
+  propagation, command routing, persistence debounce, diagnostics interception, and the
+  retained/declarative render split all fit the existing free-hook surface, reducing the remaining
+  direct impl inventory again to three.
 - The current remaining direct example impl inventory is now limited to `components_gallery`,
-  `gizmo3d_demo`, `node_graph_domain_demo`, and `node_graph_legacy_demo`.
+  `gizmo3d_demo`, and `node_graph_domain_demo`.
 
 Evidence anchors:
 
@@ -248,6 +252,7 @@ Evidence anchors:
 - `apps/fret-examples/src/docking_demo.rs`
 - `apps/fret-examples/src/container_queries_docking_demo.rs`
 - `apps/fret-examples/src/docking_arbitration_demo.rs`
+- `apps/fret-examples/src/node_graph_legacy_demo.rs`
 - `ecosystem/fret/src/lib.rs`
 - `docs/workstreams/fret-launch-app-surface-fearless-refactor-v1/SURFACE_AUDIT.md`
 

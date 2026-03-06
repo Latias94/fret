@@ -270,7 +270,8 @@ Interpretation update:
 - `docking_demo` shows the remaining gap was not in `FnDriverHooks` at all, but in the facade posture: once `fret::run_native_with_configured_fn_driver(...)` exists for preconfigured `.with_init(...)` drivers, docking orchestration also migrates cleanly and the inventory drops again to 6.
 - `container_queries_docking_demo` confirms that the same helper is reusable rather than one-off: container-query-aware docking also migrates cleanly and the inventory drops again to 5, still without any new `FnDriverHooks`.
 - `docking_arbitration_demo` closes the next multi-window docking case too: viewport input, dock-op arbitration, floating-window lifecycle, and dev-state export/import all move to the existing free-hook surface, reducing the remaining direct `WinitAppDriver` inventory again to 4 without adding any new `FnDriverHooks`.
-- the current remaining direct-example inventory is now limited to `components_gallery`, `gizmo3d_demo`, `node_graph_domain_demo`, and `node_graph_legacy_demo`.
+- `node_graph_legacy_demo` closes the retained node-graph reference path as well: model/global propagation, command routing, persistence debounce, diagnostics interception, and retained/declarative render selection all fit the existing free-hook surface, reducing the remaining direct `WinitAppDriver` inventory again to 3 without adding any new `FnDriverHooks`.
+- the current remaining direct-example inventory is now limited to `components_gallery`, `gizmo3d_demo`, and `node_graph_domain_demo`.
 
 ### H3) Specialized launch modules still need classification discipline
 
