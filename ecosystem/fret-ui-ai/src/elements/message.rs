@@ -3,7 +3,6 @@ use std::sync::Arc;
 use fret_core::SemanticsRole;
 use fret_ui::element::{AnyElement, SemanticsProps};
 use fret_ui::{ElementContext, Theme, UiHost};
-use fret_ui_kit::declarative::current_color;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::ui;
 use fret_ui_kit::{ChromeRefinement, ColorRef, Justify, LayoutRefinement, Radius, Space};
@@ -200,7 +199,6 @@ impl MessageContent {
         };
         let layout = base_layout.merge(self.layout);
         let children = self.children;
-        let bubble_fg = bubble_fg.map(ColorRef::Color);
 
         let props = decl_style::container_props(&theme, chrome, layout);
         let content = cx.container(props, move |cx| {
@@ -209,8 +207,8 @@ impl MessageContent {
                 .gap(Space::N2)
                 .into_element(cx);
 
-            match bubble_fg.clone() {
-                Some(fg) => current_color::scope_children(cx, fg, move |_cx| vec![stack]),
+            match bubble_fg {
+                Some(fg) => vec![stack.inherit_foreground(fg)],
                 None => vec![stack],
             }
         });
@@ -231,6 +229,81 @@ impl MessageContent {
 
 fret_ui_kit::ui_component_layout_only!(Message);
 fret_ui_kit::ui_component_chrome_layout!(MessageContent);
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_app::App;
+    use fret_core::{AppWindowId, Point, Px, Rect, Size};
+
+    fn contains_foreground_scope(el: &AnyElement) -> bool {
+        matches!(el.kind, fret_ui::element::ElementKind::ForegroundScope(_))
+            || el.children.iter().any(contains_foreground_scope)
+    }
+
+    fn find_first_inherited_foreground_node(el: &AnyElement) -> Option<&AnyElement> {
+        if el.inherited_foreground.is_some() {
+            return Some(el);
+        }
+        el.children
+            .iter()
+            .find_map(find_first_inherited_foreground_node)
+    }
+
+    #[test]
+    fn message_content_user_bubble_attaches_foreground_without_wrapper() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(160.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "message-fg", |cx| {
+            let theme = Theme::global(&*cx.app).clone();
+            let expected_fg = theme
+                .color_by_key("fret.ai.message.user.fg")
+                .unwrap_or_else(|| theme.color_token("foreground"));
+
+            let el = MessageContent::new(MessageRole::User, [cx.text("Hello")]).into_element(cx);
+            let inherited = find_first_inherited_foreground_node(&el)
+                .expect("expected message bubble subtree to carry inherited foreground");
+
+            assert_eq!(inherited.inherited_foreground, Some(expected_fg));
+            assert!(
+                !contains_foreground_scope(&el),
+                "expected message bubble content to attach inherited foreground without inserting a ForegroundScope"
+            );
+        });
+    }
+
+    #[test]
+    fn message_content_assistant_defaults_to_fill_width_for_stable_wrap() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(160.0)),
+        );
+
+        let el =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds, "message-width", |cx| {
+                MessageContent::new(MessageRole::Assistant, [cx.text("Wrapped content")])
+                    .into_element(cx)
+            });
+
+        let fret_ui::element::ElementKind::Container(props) = &el.kind else {
+            panic!("expected MessageContent to render a container root");
+        };
+
+        assert_eq!(props.layout.size.width, fret_ui::element::Length::Fill);
+        assert_eq!(
+            props.layout.size.min_width,
+            Some(fret_ui::element::Length::Px(Px(0.0)))
+        );
+    }
+}
 
 #[cfg(test)]
 mod ui_builder_integration_tests {

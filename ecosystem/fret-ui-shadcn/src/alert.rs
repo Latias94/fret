@@ -372,6 +372,20 @@ mod tests {
     use fret_ui::element::ElementKind;
     use fret_ui_kit::declarative::icon as decl_icon;
 
+    fn contains_foreground_scope(el: &AnyElement) -> bool {
+        matches!(el.kind, ElementKind::ForegroundScope(_))
+            || el.children.iter().any(contains_foreground_scope)
+    }
+
+    fn find_first_inherited_foreground_node(el: &AnyElement) -> Option<&AnyElement> {
+        if el.inherited_foreground.is_some() {
+            return Some(el);
+        }
+        el.children
+            .iter()
+            .find_map(find_first_inherited_foreground_node)
+    }
+
     #[test]
     fn alert_stamps_role_without_layout_wrapper() {
         let window = AppWindowId::default();
@@ -469,5 +483,34 @@ mod tests {
             icon.inherit_color,
             "expected Alert icon to inherit currentColor via ForegroundScope"
         );
+    }
+
+    #[test]
+    fn alert_attaches_foreground_to_main_content_without_wrapper() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(120.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let expected_fg = Theme::global(&*cx.app).color_token("foreground");
+            let el = Alert::new([
+                decl_icon::icon_with(cx, IconId::new_static("lucide.terminal"), None, None),
+                AlertTitle::new("Heads up!").into_element(cx),
+                AlertDescription::new("You can add components to your app.").into_element(cx),
+            ])
+            .into_element(cx);
+
+            let inherited = find_first_inherited_foreground_node(&el)
+                .expect("expected alert subtree to carry inherited foreground");
+            assert_eq!(inherited.inherited_foreground, Some(expected_fg));
+            assert!(
+                !contains_foreground_scope(&el),
+                "expected Alert to attach inherited foreground without inserting a ForegroundScope"
+            );
+        });
     }
 }

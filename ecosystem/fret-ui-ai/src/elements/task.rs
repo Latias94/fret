@@ -584,3 +584,51 @@ impl TaskItemFile {
         out.inherit_foreground(theme.color_token("foreground"))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_app::App;
+    use fret_core::{AppWindowId, Point, Px, Rect, Size};
+
+    fn contains_foreground_scope(el: &AnyElement) -> bool {
+        matches!(el.kind, ElementKind::ForegroundScope(_))
+            || el.children.iter().any(contains_foreground_scope)
+    }
+
+    fn find_first_inherited_foreground_node(el: &AnyElement) -> Option<&AnyElement> {
+        if el.inherited_foreground.is_some() {
+            return Some(el);
+        }
+        el.children
+            .iter()
+            .find_map(find_first_inherited_foreground_node)
+    }
+
+    #[test]
+    fn task_trigger_default_row_attaches_foreground_without_wrapper() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(160.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "task-trigger", |cx| {
+            let theme = Theme::global(&*cx.app).clone();
+            let expected_fg = muted_fg(&theme);
+            let open = cx.app.models_mut().insert(true);
+
+            let el = TaskTrigger::new("Search docs").into_element_with_open(cx, open, true);
+            let inherited = find_first_inherited_foreground_node(&el)
+                .expect("expected task trigger subtree to carry inherited foreground");
+
+            assert_eq!(inherited.inherited_foreground, Some(expected_fg));
+            assert!(
+                !contains_foreground_scope(&el),
+                "expected task trigger default row to attach inherited foreground without inserting a ForegroundScope"
+            );
+        });
+    }
+}
