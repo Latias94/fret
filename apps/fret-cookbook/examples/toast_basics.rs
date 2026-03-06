@@ -22,8 +22,9 @@ impl View for ToastBasicsView {
     }
 
     fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
-        // `Sonner::global` needs `UiHost`, which we have during render (but not inside handlers).
-        // Capture a clone into action handlers.
+        // Toast actions stay on the advanced helper because Sonner dispatch is a host-owned
+        // imperative integration: the handler needs `UiActionHost` + window, and the default
+        // model/transient teaching paths do not expose that host surface directly.
         let sonner = shadcn::Sonner::global(cx.app);
 
         cx.on_action_notify::<act::DefaultToast>({

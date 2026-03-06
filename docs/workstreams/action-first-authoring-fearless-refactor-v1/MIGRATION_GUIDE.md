@@ -208,6 +208,11 @@ Choosing the helper:
 - Use `on_action_notify_transient` when the real work must happen with `&mut App` in `render()`.
 - Use `on_action_notify` (or raw `on_action`) for advanced host-only cases (focus, timers, clipboard,
   custom effects) where the built-in shorthands do not fit.
+  - Current intentional cookbook cases fall into four host-side categories:
+    - `toast_basics`: imperative host integration (`Sonner` toast dispatch needs `UiActionHost` + window).
+    - `router_basics` back/forward: router command availability sync on the host path.
+    - `async_inbox_basics::Start`: background dispatcher/inbox scheduling plus wake integration.
+    - `undo_basics::Undo` / `Redo`: history traversal plus an explicit RAF effect.
 - Use `on_activate` / `on_activate_notify` for local pressable/widget glue, not as the default
   replacement for typed action handlers.
 
@@ -217,13 +222,15 @@ Side effects that need `App` access (v1 note):
 - View action handlers (`cx.on_action*`) run on a restricted host (`UiActionHost`) by design, so they
   should avoid direct `App`-only calls.
 
-Recommended v1 pattern (schedule in handler, execute in `render()`):
+Recommended v1 patterns:
 
-- Preferred: use transient events (one-shot flags) to schedule work for the next render pass:
+- For event-like App effects, prefer transient events (one-shot flags) to schedule work for the next render pass:
   - In the action handler: record a transient event (see `ViewCx::on_action_notify_transient`).
   - In `render()`: consume the transient flag (see `ViewCx::take_transient_on_action_root`) and
     apply the `App`-scoped effect.
-- If you need payload/data (not just a boolean flag), use a small “pending effect” model value
+- If the App-only effect is a pure projection of model state, keep the action as a normal model
+  transaction and synchronize the effect idempotently in `render()` from that state.
+- If you need payload/data (not just a boolean flag), use a small `pending effect` model value
   instead.
 
 Example:
@@ -231,6 +238,7 @@ Example:
 - `ecosystem/fret/src/view.rs` (`ViewCx::on_action_notify_transient`, `ViewCx::take_transient_on_action_root`).
 - `apps/fret-examples/src/query_demo.rs` (uses transient events + `with_query_client`).
 - `apps/fret-examples/src/query_async_tokio_demo.rs` (same, but with `use_query_async`).
+- `apps/fret-examples/src/async_playground_demo.rs` (theme mirrors `Model<bool>`; `render()` applies the theme when the value changes).
 
 ### Current authoring review notes
 

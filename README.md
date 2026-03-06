@@ -63,6 +63,7 @@ For new app authors, keep the default authoring model small:
 - `on_action_notify_transient` when an action must trigger an `App`-only effect in `render()`,
 - `on_activate*` only for local pressable/widget glue.
 - Everything else (`on_action_notify`, single-model aliases, redraw-oriented `on_activate*`) is optional shorthand and should stay out of first-contact onboarding unless a demo truly needs it.
+- The remaining raw `on_action_notify` examples are cookbook/reference-only host-side integrations (toasts, router availability sync, background scheduling, RAF effects).
 
 See [docs/README.md](./docs/README.md#state-management-authoring-ergonomics) for the full authoring map.
 
@@ -159,14 +160,9 @@ impl View for TodoView {
         let draft = cx.use_state::<String>();
         let enabled = !cx.watch_model(&draft).layout().cloned_or_default().trim().is_empty();
 
-        cx.on_action::<act::Add>({
+        cx.on_action_notify_models::<act::Add>({
             let draft = draft.clone();
-            move |host, acx| {
-                let _ = host.models_mut().update(&draft, String::clear);
-                host.request_redraw(acx.window);
-                host.notify(acx);
-                true
-            }
+            move |models| models.update(&draft, String::clear).is_ok()
         });
 
         let input = shadcn::Input::new(draft.clone())

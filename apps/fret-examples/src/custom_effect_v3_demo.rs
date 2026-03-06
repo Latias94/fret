@@ -20,7 +20,6 @@ use fret_render::{
 };
 use fret_runtime::Model;
 use fret_ui::Invalidation;
-use fret_ui::action::UiActionHost;
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, EffectLayerProps, LayoutStyle, Length, MainAlign,
     Overflow, PositionStyle, RowProps, SpacingLength, TextProps,
@@ -280,20 +279,12 @@ fn upload_user0_images(app: &mut App, context: &WgpuContext, renderer: &mut Rend
 }
 
 impl State {
-    fn reset(host: &mut dyn UiActionHost, st: &State) {
-        let _ = host.models_mut().update(&st.enabled, |v| *v = true);
-        let _ = host
-            .models_mut()
-            .update(&st.show_user0_probe, |v| *v = false);
-        let _ = host
-            .models_mut()
-            .update(&st.show_user1_probe, |v| *v = false);
-        let _ = host
-            .models_mut()
-            .update(&st.use_non_filterable_user0, |v| *v = false);
-        let _ = host
-            .models_mut()
-            .update(&st.use_non_filterable_user1, |v| *v = false);
+    fn reset(models: &mut fret_runtime::ModelStore, st: &State) {
+        let _ = models.update(&st.enabled, |v| *v = true);
+        let _ = models.update(&st.show_user0_probe, |v| *v = false);
+        let _ = models.update(&st.show_user1_probe, |v| *v = false);
+        let _ = models.update(&st.use_non_filterable_user0, |v| *v = false);
+        let _ = models.update(&st.use_non_filterable_user1, |v| *v = false);
     }
 }
 
@@ -311,10 +302,10 @@ impl View for CustomEffectV3View {
     }
 
     fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
-        cx.on_action_notify::<act::Reset>({
+        cx.on_action_notify_models::<act::Reset>({
             let st = self.clone_for_reset();
-            move |host, _acx| {
-                State::reset(host, &st);
+            move |models| {
+                State::reset(models, &st);
                 true
             }
         });

@@ -75,7 +75,7 @@ actions:
 
 - Define typed unit actions with stable IDs via `fret::actions!([..])`.
 - Bind UI triggers via `.action(act::Something)` (or `cx.dispatch(...)` for programmatic dispatch).
-- Handle actions via `ViewCx::on_action*` hooks.
+- Handle actions via `ViewCx::on_action_notify_models`, `ViewCx::on_action_notify_transient`, and local `on_activate*` by default; keep raw `on_action_notify` for cookbook/reference host-side cases.
 
 MVU note:
 
@@ -141,7 +141,7 @@ Use `rg` to find patterns:
 - `.into_element(cx)` call sites
 - `Theme::global(...)` usage
 - `watch_model(...).layout()` chains
-- typed action handlers (`on_action*`) and action IDs
+- typed action handlers (`on_action_notify_models`, `on_action_notify_transient`, `on_activate*`, and rare cookbook/reference `on_action_notify`) plus action IDs
 
 ### Prefer templates and golden demos as migration references
 

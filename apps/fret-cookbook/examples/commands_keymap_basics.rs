@@ -1,11 +1,10 @@
 use fret::prelude::*;
 use fret_app::{
-    CommandMeta, CommandScope, DefaultKeybinding, InputContext, KeyChord, KeymapService, Platform,
-    PlatformFilter, format_sequence,
+    format_sequence, CommandMeta, CommandScope, DefaultKeybinding, InputContext, KeyChord,
+    KeymapService, Platform, PlatformFilter,
 };
 use fret_core::{KeyCode, Modifiers};
 use fret_ui::CommandAvailability;
-use fret_ui::action::UiActionHost;
 
 mod act {
     fret::actions!([TogglePanel = "cookbook.commands.toggle_panel.v1"]);
@@ -56,12 +55,6 @@ fn install_commands(app: &mut App) {
     // Ensure keybindings are installed after registering the command (the app may have already
     // installed defaults for previously-known commands during bootstrap).
     fret_app::install_command_default_keybindings_into_keymap(app);
-}
-
-fn toggle_panel(host: &mut dyn UiActionHost, window: AppWindowId, panel_open: &Model<bool>) {
-    let _ = host.models_mut().update(panel_open, |v| *v = !*v);
-    host.request_redraw(window);
-    host.push_effect(Effect::RequestAnimationFrame(window));
 }
 
 struct CommandsKeymapBasicsView {
@@ -219,17 +212,16 @@ impl View for CommandsKeymapBasicsView {
             .into_element(cx)
             .key_context("cookbook.commands_keymap_basics");
 
-        cx.on_action_notify::<act::TogglePanel>({
+        cx.on_action_notify_models::<act::TogglePanel>({
             let panel_open = self.panel_open.clone();
             let allow = self.allow_command.clone();
-            move |host, acx| {
-                let allowed = host.models_mut().get_copied(&allow).unwrap_or(true);
+            move |models| {
+                let allowed = models.get_copied(&allow).unwrap_or(true);
                 if !allowed {
                     return false;
                 }
 
-                toggle_panel(host, acx.window, &panel_open);
-                true
+                models.update(&panel_open, |v| *v = !*v).is_ok()
             }
         });
 

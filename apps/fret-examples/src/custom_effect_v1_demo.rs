@@ -11,7 +11,6 @@ use fret::prelude::*;
 use fret_core::scene::{EffectChain, EffectMode, EffectParamsV1, EffectQuality, EffectStep};
 use fret_core::{Color, Corners, Edges, EffectId, Px};
 use fret_runtime::Model;
-use fret_ui::action::UiActionHost;
 use fret_ui::element::{
     ContainerProps, EffectLayerProps, LayoutStyle, Length, Overflow, PositionStyle, SpacerProps,
     TextProps,
@@ -225,35 +224,17 @@ fn install_custom_effect(app: &mut App, effects: &mut dyn fret_core::CustomEffec
 }
 
 impl CustomEffectV1State {
-    fn reset(host: &mut dyn UiActionHost, st: &CustomEffectV1State) {
-        let _ = host.models_mut().update(&st.enabled, |v| *v = true);
-        let _ = host
-            .models_mut()
-            .update(&st.blur_radius_px, |v| *v = vec![14.0]);
-        let _ = host
-            .models_mut()
-            .update(&st.blur_downsample, |v| *v = vec![2.0]);
-        let _ = host
-            .models_mut()
-            .update(&st.refraction_height_px, |v| *v = vec![20.0]);
-        let _ = host
-            .models_mut()
-            .update(&st.refraction_amount_px, |v| *v = vec![12.0]);
-        let _ = host
-            .models_mut()
-            .update(&st.depth_effect, |v| *v = vec![0.35]);
-        let _ = host
-            .models_mut()
-            .update(&st.chromatic_aberration, |v| *v = vec![0.75]);
-        let _ = host
-            .models_mut()
-            .update(&st.corner_radius_px, |v| *v = vec![20.0]);
-        let _ = host
-            .models_mut()
-            .update(&st.grain_strength, |v| *v = vec![0.06]);
-        let _ = host
-            .models_mut()
-            .update(&st.grain_scale, |v| *v = vec![1.0]);
+    fn reset(models: &mut fret_runtime::ModelStore, st: &CustomEffectV1State) {
+        let _ = models.update(&st.enabled, |v| *v = true);
+        let _ = models.update(&st.blur_radius_px, |v| *v = vec![14.0]);
+        let _ = models.update(&st.blur_downsample, |v| *v = vec![2.0]);
+        let _ = models.update(&st.refraction_height_px, |v| *v = vec![20.0]);
+        let _ = models.update(&st.refraction_amount_px, |v| *v = vec![12.0]);
+        let _ = models.update(&st.depth_effect, |v| *v = vec![0.35]);
+        let _ = models.update(&st.chromatic_aberration, |v| *v = vec![0.75]);
+        let _ = models.update(&st.corner_radius_px, |v| *v = vec![20.0]);
+        let _ = models.update(&st.grain_strength, |v| *v = vec![0.06]);
+        let _ = models.update(&st.grain_scale, |v| *v = vec![1.0]);
     }
 }
 
@@ -276,10 +257,10 @@ impl View for CustomEffectV1View {
     }
 
     fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
-        cx.on_action_notify::<act::Reset>({
+        cx.on_action_notify_models::<act::Reset>({
             let st = self.clone_for_reset();
-            move |host, _acx| {
-                CustomEffectV1State::reset(host, &st);
+            move |models| {
+                CustomEffectV1State::reset(models, &st);
                 true
             }
         });
