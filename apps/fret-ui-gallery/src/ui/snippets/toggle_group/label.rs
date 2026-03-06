@@ -10,12 +10,10 @@ fn icon_item<H: UiHost>(
     value: &'static str,
     label: &'static str,
     icon: &'static str,
-    test_id: &'static str,
 ) -> shadcn::ToggleGroupItem {
     shadcn::ToggleGroupItem::icon(value, IconId::new_static(icon))
         .child(cx.text(label))
         .a11y_label(format!("Toggle {label}"))
-        .test_id(test_id)
 }
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
@@ -23,28 +21,11 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
 
     let group = shadcn::ToggleGroup::single_uncontrolled(Some("bold"))
         .control_id(control_id.clone())
+        .test_id_prefix("ui-gallery-toggle-group-label")
         .items([
-            icon_item(
-                cx,
-                "bold",
-                "Bold",
-                "lucide.bold",
-                "ui-gallery-toggle-group-label-item-bold",
-            ),
-            icon_item(
-                cx,
-                "italic",
-                "Italic",
-                "lucide.italic",
-                "ui-gallery-toggle-group-label-item-italic",
-            ),
-            icon_item(
-                cx,
-                "underline",
-                "Underline",
-                "lucide.underline",
-                "ui-gallery-toggle-group-label-item-underline",
-            ),
+            icon_item(cx, "bold", "Bold", "lucide.bold"),
+            icon_item(cx, "italic", "Italic", "lucide.italic"),
+            icon_item(cx, "underline", "Underline", "lucide.underline"),
         ])
         .into_element(cx);
 

@@ -54,7 +54,7 @@ pub(super) fn preview_toggle_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyE
                 .description("Large size preset for roomier touch-friendly controls.")
                 .code_rust_from_file_region(snippets::large::SOURCE, "example"),
             DocSection::new("Label Association", label)
-                .description("Use `FieldLabel::for_control` + `ToggleGroup::control_id` to focus the current tab-stop item on label click.")
+                .description("Use `FieldLabel::for_control`, `ToggleGroup::control_id`, and `ToggleGroup::test_id_prefix` to keep label-focus behavior and automation anchors aligned.")
                 .test_id_prefix("ui-gallery-toggle-group-label")
                 .code_rust_from_file_region(snippets::label::SOURCE, "example"),
             DocSection::new("Disabled", disabled)
