@@ -651,6 +651,8 @@ fn date_picker_modal_panel<H: UiHost>(
         let mut props = TextProps::new(Arc::<str>::from("Select date"));
         props.style = Some(headline_style);
         props.color = Some(headline_color);
+        props.layout.size.width = Length::Fill;
+        props.layout.size.min_width = Some(Length::Px(Px(0.0)));
         props.wrap = TextWrap::None;
         props.overflow = TextOverflow::Ellipsis;
         cx.text_props(props)
@@ -1211,5 +1213,39 @@ mod tests {
         assert_eq!(title.layout.flex.grow, 1.0);
         assert_eq!(title.layout.flex.basis, Length::Px(Px(0.0)));
         assert_eq!(title.align, fret_core::TextAlign::Center);
+    }
+
+    #[test]
+    fn date_picker_modal_titles_can_truncate_within_dialog_width() {
+        let window = fret_core::AppWindowId::default();
+        let mut app = App::new();
+        let month = Date::from_calendar_date(2026, Month::September, 1).expect("date");
+        let month_model = app.models_mut().insert(CalendarMonth::from_date(month));
+        let selected_model = app.models_mut().insert(None::<Date>);
+        let noop: OnActivate = Arc::new(|_host, _cx, _reason| {});
+
+        let el = fret_ui::elements::with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "m3-date-picker-modal",
+            |cx| {
+                date_picker_modal_panel(
+                    cx,
+                    month_model.clone(),
+                    selected_model.clone(),
+                    Some(Arc::<str>::from("m3-date-picker-modal")),
+                    month,
+                    noop.clone(),
+                    noop.clone(),
+                )
+            },
+        );
+
+        let title = find_text_by_content(&el, "Select date").expect("date picker modal title");
+        assert_eq!(title.wrap, TextWrap::None);
+        assert_eq!(title.overflow, TextOverflow::Ellipsis);
+        assert_eq!(title.layout.size.width, Length::Fill);
+        assert_eq!(title.layout.size.min_width, Some(Length::Px(Px(0.0))));
     }
 }

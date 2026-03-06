@@ -51,6 +51,9 @@ Current snapshot (2026-03-06):
 - The Material 3 select listbox audit now also covers one-line and two-line option
   rows: item labels and supporting text keep clip semantics while shrinking inside icon-bearing
   listbox rows via explicit fill-width body slots plus `min-w-0`.
+- The Material 3 date picker audit now also covers the modal panel headline:
+  `Select date` keeps ellipsis semantics within the fixed dialog width via explicit fill width
+  plus `min-w-0`, alongside the already-covered month header title.
 - `fret-ui-ai/inline_citation` hover-card content is now covered too: fixed-width cards keep title
   / URL truncation and quote wrapping stable because the content stacks and text/link surfaces now
   explicitly fill available width and opt into `min-w-0`.
@@ -100,6 +103,9 @@ Current snapshot (2026-03-06):
 - `fret-ui-material3/select` listbox items are now covered too: one-line and two-line
   option rows keep label/supporting-text clip semantics while shrinking inside icon-bearing rows
   because the text surfaces and body slots now explicitly opt into fill width plus `min-w-0`.
+- `fret-ui-material3/date_picker` now also covers the modal dialog headline: `Select date`
+  keeps ellipsis semantics within the fixed dialog width because the headline text now explicitly
+  opts into fill width plus `min-w-0`, complementing the month-title header coverage.
 
 ---
 
