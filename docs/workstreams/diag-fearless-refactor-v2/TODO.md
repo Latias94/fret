@@ -122,6 +122,30 @@ Tracking doc: `docs/workstreams/diag-fearless-refactor-v2/README.md`
   - [x] inspect artifacts,
   - [x] pack/share.
   - [x] Documented in `docs/workstreams/diag-fearless-refactor-v2/DEVTOOLS_GUI_DOGFOOD_WORKFLOW.md`.
+- [x] Refresh the DevTools GUI enough for daily dogfooding:
+  - [x] top-level workspace shell and footer status strip now read as a product surface,
+  - [x] `Script Studio` now reads as one workflow (`Workflow Controls` + `Outputs & Bundles` + focused panes),
+  - [x] `Regression` now uses a summary-first master/detail layout with inspector sections,
+  - [x] failing summary rows now expose lane/failure/item badges for faster scanning,
+  - [x] `Regression Workspace` now uses a clearer summary strip (`Aggregate Status` + `Primary Actions` + `Dashboard Preview`).
+  - [x] Documented in `docs/workstreams/diag-devtools-gui-refresh-v1.md`.
+
+## Next focus after GUI refresh
+
+- [ ] Define the first campaign/suite execution slice over existing diag scripts:
+  - [ ] choose the CLI entry shape (`diag regression run`, `diag campaign run`, or equivalent),
+  - [ ] define the minimum stable output layout for suites/campaigns,
+  - [ ] keep DevTools and MCP consuming the same aggregate artifacts.
+- [ ] Make failed automation runs leave predictable evidence by default:
+  - [ ] summary/index artifacts,
+  - [ ] failing evidence bundles,
+  - [ ] copy/share-friendly paths.
+- [ ] Add one thin maintainer note that explains the intended automation flow:
+  - [ ] author or choose script,
+  - [ ] run suite/campaign,
+  - [ ] inspect aggregate summary,
+  - [ ] pack/share evidence.
+
 
 ## M5 — Documentation consolidation
 

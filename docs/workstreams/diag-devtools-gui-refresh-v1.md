@@ -355,12 +355,14 @@ Delivered:
 - `Selected Summary` now behaves more like an inspector with layered sections,
 - evidence actions stay above raw selected-summary payloads,
 - aggregate debug payloads are demoted and split into dashboard/index/summary debug sections,
-- failing summary rows now expose lane/failure/item badges for faster scanning.
+- failing summary rows now expose lane/failure/item badges for faster scanning,
+- the `Regression Workspace` header is now split into `Aggregate Status`, `Primary Actions`, and `Dashboard Preview`.
 
 Current effect:
 
 - the regression tab is now closer to `summary -> action -> raw debug`,
-- maintainers can move from a failing list item to concrete evidence with less visual noise.
+- maintainers can move from a failing list item to concrete evidence with less visual noise,
+- the top-level regression summary strip now reads as status -> action -> preview instead of one flat block.
 
 ## Current local helper set
 
@@ -378,18 +380,26 @@ Recent local screenshots captured during the refresh include:
 - `target/devtools-gui-shot-refresh.png`
 - `target/devtools-gui-shot-regression-inspector.png`
 - `target/devtools-gui-shot-failing-summaries.png`
+- `target/devtools-gui-shot-regression-summary-strip.png`
 
 These are informal dogfood snapshots, not screenshot-golden tests.
 
 ## Recommended next slice
 
-The next highest-value slice is a final polish pass on the regression overview/header area.
+The GUI refresh is now in a maintenance phase rather than a major-layout phase.
 
-Recommended focus:
+Recommended next focus:
 
-- tighten the `Regression Workspace` summary strip,
-- make aggregate counters and primary actions feel more intentional,
-- reduce the visual weight of any remaining raw text previews,
-- decide whether a lightweight recent-evidence/history surface is still necessary.
+- keep future GUI work additive and small,
+- reserve larger UI changes for issues discovered during dogfooding,
+- shift primary engineering attention back to diagnostics automation and regression orchestration,
+- keep DevTools as a thin consumer over the same artifacts emitted by CLI and MCP.
 
-That slice should remain additive and stay within `apps/fret-devtools` unless another diagnostics consumer proves the same helper surface is reusable.
+Recommended product/engineering priorities after this refresh:
+
+1. add a first-class campaign or suite execution flow over existing diag scripts,
+2. ensure failed runs always leave summary plus evidence bundles in a predictable layout,
+3. keep aggregate artifacts (`regression.index.json` / `regression.summary.json`) as the shared handoff surface,
+4. evaluate whether a recent-evidence/history lane is still needed only after automation has stabilized.
+
+That next phase should prefer execution reliability, artifact quality, and evidence handoff over more GUI chrome.
