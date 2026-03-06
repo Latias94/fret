@@ -1,11 +1,19 @@
 # Foreground Style Context (Fearless Refactor v1) — Milestones
 
-Status: Draft
+Status: In progress
 
 Related:
 
 - Design: `docs/workstreams/foreground-style-context-fearless-refactor-v1/DESIGN.md`
 - TODO: `docs/workstreams/foreground-style-context-fearless-refactor-v1/TODO.md`
+
+Current snapshot (2026-03-06):
+
+- `M2` is effectively landed for foreground-only v1 through an attached inherited-foreground carrier
+  plus compatibility support for legacy `ForegroundScope`.
+- `M3` is in progress: `input_group`, `card`, `alert`, `badge`, `menubar`, `context_menu`, and
+  selected `fret-ui-ai` surfaces have been migrated off synthetic foreground wrappers, while
+  `dropdown_menu`, `select`, and `tabs` remain open.
 
 ---
 

@@ -2295,11 +2295,11 @@ fn menu_row_children<H: UiHost>(
             }
 
             if let Some(l) = leading.take() {
-                let scoped = cx.foreground_scope(icon_fg, move |_cx| vec![l]);
+                let scoped = l.inherit_foreground(icon_fg);
                 row.push(menu_icon_slot(cx, scoped));
             } else if let Some(icon) = leading_icon.clone() {
                 let icon_el = decl_icon::icon_with(cx, icon, Some(Px(16.0)), None);
-                let scoped = cx.foreground_scope(icon_fg, move |_cx| vec![icon_el]);
+                let scoped = icon_el.inherit_foreground(icon_fg);
                 row.push(menu_icon_slot(cx, scoped));
             } else if reserve_leading_slot {
                 row.push(menu_icon_slot_empty(cx));

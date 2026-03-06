@@ -157,7 +157,11 @@ fn patch_text_color_recursive(el: &mut AnyElement, from: Color, to: Color) {
     }
 }
 
-fn patch_foreground_scope_recursive(el: &mut AnyElement, from: Color, to: Color) {
+fn patch_inherited_foreground_recursive(el: &mut AnyElement, from: Color, to: Color) {
+    if el.inherited_foreground == Some(from) {
+        el.inherited_foreground = Some(to);
+    }
+
     if let ElementKind::ForegroundScope(props) = &mut el.kind {
         if props.foreground == Some(from) {
             props.foreground = Some(to);
@@ -165,7 +169,7 @@ fn patch_foreground_scope_recursive(el: &mut AnyElement, from: Color, to: Color)
     }
 
     for child in &mut el.children {
-        patch_foreground_scope_recursive(child, from, to);
+        patch_inherited_foreground_recursive(child, from, to);
     }
 }
 
@@ -213,7 +217,7 @@ fn alert_with_patch<H: UiHost>(
     if variant == AlertVariant::Destructive {
         if let Some(description) = body_children.get_mut(1) {
             patch_text_color_recursive(description, muted_fg, destructive_description);
-            patch_foreground_scope_recursive(description, muted_fg, destructive_description);
+            patch_inherited_foreground_recursive(description, muted_fg, destructive_description);
         }
     }
 
@@ -259,8 +263,8 @@ fn alert_with_patch<H: UiHost>(
     let mut props = props;
     props.layout.position = PositionStyle::Relative;
 
-    cx.container(props, move |cx| {
-        let mut out: Vec<AnyElement> = vec![cx.foreground_scope(fg, move |_cx| vec![main])];
+    cx.container(props, move |_cx| {
+        let mut out: Vec<AnyElement> = vec![main.inherit_foreground(fg)];
         if let Some(action) = action {
             out.push(action);
         }
@@ -341,25 +345,19 @@ impl AlertDescription {
             .unwrap_or_else(|| theme.metric_token("font.line_height"));
 
         match self.content {
-            AlertDescriptionContent::Text(text) => cx.foreground_scope(fg, move |cx| {
-                vec![
-                    ui::text(text)
-                        .text_size_px(px)
-                        .line_height_px(line_height)
-                        .font_weight(FontWeight::NORMAL)
-                        .wrap(TextWrap::Word)
-                        .into_element(cx),
-                ]
-            }),
-            AlertDescriptionContent::Children(children) => cx.foreground_scope(fg, move |cx| {
-                vec![
-                    ui::v_flex(move |_cx| children)
-                        .gap(Space::N1)
-                        .items_start()
-                        .layout(LayoutRefinement::default().w_full())
-                        .into_element(cx),
-                ]
-            }),
+            AlertDescriptionContent::Text(text) => ui::text(text)
+                .text_size_px(px)
+                .line_height_px(line_height)
+                .font_weight(FontWeight::NORMAL)
+                .wrap(TextWrap::Word)
+                .into_element(cx)
+                .inherit_foreground(fg),
+            AlertDescriptionContent::Children(children) => ui::v_flex(move |_cx| children)
+                .gap(Space::N1)
+                .items_start()
+                .layout(LayoutRefinement::default().w_full())
+                .into_element(cx)
+                .inherit_foreground(fg),
         }
     }
 }

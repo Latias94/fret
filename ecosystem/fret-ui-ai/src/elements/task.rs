@@ -309,7 +309,7 @@ impl TaskTrigger {
                         muted_fg(&theme)
                     };
 
-                    vec![cx.foreground_scope(fg, |cx| {
+                    let row = {
                         let search = decl_icon::icon_with(
                             cx,
                             fret_icons::IconId::new_static("lucide.search"),
@@ -340,8 +340,9 @@ impl TaskTrigger {
                             .gap(Space::N2)
                             .into_element(cx);
 
-                        vec![row]
-                    })]
+                        row
+                    };
+                    vec![row.inherit_foreground(fg)]
                 },
             );
 
@@ -507,7 +508,7 @@ impl TaskItem {
         props.border_color = None;
 
         let out = cx.container(props, move |_cx| vec![row]);
-        cx.foreground_scope(muted_fg(&theme), move |_cx| vec![out])
+        out.inherit_foreground(muted_fg(&theme))
     }
 }
 
@@ -580,6 +581,6 @@ impl TaskItemFile {
             .into_element(cx);
 
         let out = cx.container(props, move |_cx| vec![content]);
-        cx.foreground_scope(theme.color_token("foreground"), move |_cx| vec![out])
+        out.inherit_foreground(theme.color_token("foreground"))
     }
 }

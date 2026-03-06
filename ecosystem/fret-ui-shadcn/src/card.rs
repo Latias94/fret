@@ -167,16 +167,15 @@ impl Card {
 
             // Cards behave like block containers in shadcn/ui examples: their sections are expected to
             // stretch to the card width unless explicitly constrained.
-            cx.foreground_scope(fg, |cx| {
-                [shadcn_layout::container_vstack(
-                    cx,
-                    props,
-                    shadcn_layout::VStackProps::default()
-                        .gap(gap)
-                        .layout(LayoutRefinement::default().w_full()),
-                    children,
-                )]
-            })
+            shadcn_layout::container_vstack(
+                cx,
+                props,
+                shadcn_layout::VStackProps::default()
+                    .gap(gap)
+                    .layout(LayoutRefinement::default().w_full()),
+                children,
+            )
+            .inherit_foreground(fg)
         })
     }
 }
@@ -424,8 +423,7 @@ mod tests {
     use fret_app::App;
     use fret_core::{AppWindowId, Axis, Point, Rect, Size};
     use fret_ui::element::{
-        ColumnProps, ContainerProps, CrossAlign, ForegroundScopeProps, Length, Overflow,
-        SemanticsProps,
+        ColumnProps, ContainerProps, CrossAlign, Length, Overflow, SemanticsProps,
     };
     use fret_ui::elements::GlobalElementId;
     use fret_ui_kit::MetricRef;
@@ -483,20 +481,13 @@ mod tests {
             let py = fret_ui_kit::MetricRef::space(Space::N6).resolve(theme);
             let el = Card::new([cx.text("body")]).into_element(cx);
 
-            let ElementKind::ForegroundScope(ForegroundScopeProps { foreground, .. }) = &el.kind
-            else {
-                panic!("expected Card root to install a ForegroundScope wrapper");
-            };
             assert_eq!(
-                *foreground,
+                el.inherited_foreground,
                 Some(fg),
-                "expected Card to install `text-card-foreground` behavior via ForegroundScope"
+                "expected Card to install `text-card-foreground` behavior on the existing root"
             );
 
-            let card = el
-                .children
-                .first()
-                .unwrap_or_else(|| panic!("expected ForegroundScope wrapper to have one child"));
+            let card = &el;
             let ElementKind::Container(ContainerProps {
                 layout, padding, ..
             }) = &card.kind

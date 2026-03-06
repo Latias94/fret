@@ -1,6 +1,6 @@
 # Foreground Style Context (Fearless Refactor v1) — TODO
 
-Status: Draft
+Status: In progress
 Last updated: 2026-03-06
 
 Related:
@@ -50,17 +50,17 @@ visible.
   - `[x]` reviewed and outcome recorded
   - `[!]` blocked by larger mechanism decision
 
-- [ ] FSC-audit-001 Inventory all current author-facing foreground inheritance entry points.
+- [x] FSC-audit-001 Inventory all current author-facing foreground inheritance entry points.
   - Minimum scope:
     - `cx.foreground_scope(...)`
     - `current_color::scope_element(...)`
     - `current_color::scope_children(...)`
-- [ ] FSC-audit-002 Audit all in-tree `scope_children(...)` call sites and classify them:
+- [x] FSC-audit-002 Audit all in-tree `scope_children(...)` call sites and classify them:
   - safe temporary use,
   - migration candidate,
   - immediate correctness risk.
-- [ ] FSC-audit-003 Audit direct `cx.foreground_scope(...)` call sites outside `fret-ui-kit`.
-- [ ] FSC-audit-004 Write down the current runtime contract of `ForegroundScope` in one place:
+- [x] FSC-audit-003 Audit direct `cx.foreground_scope(...)` call sites outside `fret-ui-kit`.
+- [x] FSC-audit-004 Write down the current runtime contract of `ForegroundScope` in one place:
   - mount shape,
   - measurement behavior,
   - paint inheritance behavior,
@@ -74,69 +74,69 @@ visible.
 
 ## B. Mechanism Design Closure
 
-- [ ] FSC-design-010 Decide the carrier for inherited foreground in `crates/fret-ui`.
+- [x] FSC-design-010 Decide the carrier for inherited foreground in `crates/fret-ui`.
   - Preferred direction: traversal-owned paint/text context, not `LayoutStyle`.
-- [ ] FSC-design-011 Define the precedence contract:
+- [x] FSC-design-011 Define the precedence contract:
   - explicit foreground,
   - inherited foreground,
   - theme fallback.
 - [ ] FSC-design-012 Decide whether overlay roots inherit foreground automatically or must be
   threaded explicitly.
-- [ ] FSC-design-013 Decide the initial v1 consumer set.
+- [x] FSC-design-013 Decide the initial v1 consumer set.
   - Minimum expected set:
     - `Text`
     - `StyledText`
     - `SelectableText`
     - icon-like surfaces
     - spinner/loading glyphs if applicable
-- [ ] FSC-design-014 Decide whether full text-style cascade is in scope for v1 or deferred to v2.
+- [x] FSC-design-014 Decide whether full text-style cascade is in scope for v1 or deferred to v2.
 
 ---
 
 ## C. Mechanism Prototype (`crates/fret-ui`)
 
-- [ ] FSC-mech-020 Add a minimal inherited foreground context path that does not require a
+- [x] FSC-mech-020 Add a minimal inherited foreground context path that does not require a
   synthetic author-facing wrapper node.
-- [ ] FSC-mech-021 Teach real subtree roots to install inherited foreground.
+- [x] FSC-mech-021 Teach real subtree roots to install inherited foreground.
   - Candidate roots:
     - `Container`
     - `Pressable`
     - flex/row/column roots
-- [ ] FSC-mech-022 Teach paint consumers to read the new inherited foreground carrier.
-- [ ] FSC-mech-023 Keep `ForegroundScope` working through a compatibility bridge while migration is
+- [x] FSC-mech-022 Teach paint consumers to read the new inherited foreground carrier.
+- [x] FSC-mech-023 Keep `ForegroundScope` working through a compatibility bridge while migration is
   in flight.
-- [ ] FSC-mech-024 Add comments/docs at the mechanism boundary clarifying that inherited foreground
+- [x] FSC-mech-024 Add comments/docs at the mechanism boundary clarifying that inherited foreground
   is context, not a layout fragment.
 
 ---
 
 ## D. Migration (`ecosystem/*`)
 
-- [ ] FSC-migrate-030 Migrate high-risk shadcn surfaces first.
+- [~] FSC-migrate-030 Migrate high-risk shadcn surfaces first.
   - Initial candidates:
     - `dropdown_menu`
     - `select`
     - `tabs`
     - `input_group`
-- [ ] FSC-migrate-031 Migrate nearby ecosystem surfaces that compose layout-heavy content under
+- [~] FSC-migrate-031 Migrate nearby ecosystem surfaces that compose layout-heavy content under
   inherited foreground.
   - Initial candidates:
     - `fret-ui-ai/message`
     - other menu/list/overlay content roots found by the audit
 - [ ] FSC-migrate-032 Stop introducing new `scope_children(...)` usages in new code.
-- [ ] FSC-migrate-033 Convert helper APIs/doc examples to prefer real layout roots carrying
+- [x] FSC-migrate-033 Convert helper APIs/doc examples to prefer real layout roots carrying
   inherited foreground.
 
 ---
 
 ## E. Regression Gates
 
-- [ ] FSC-gates-040 Add a unit/integration test proving that inherited foreground does not change
+- [x] FSC-gates-040 Add a unit/integration test proving that inherited foreground does not change
   sibling flow ownership when attached to a real layout root.
 - [ ] FSC-gates-041 Add a regression test for wrapped text under migrated menu/overlay content.
 - [ ] FSC-gates-042 Add a regression test proving explicit color still overrides inherited
   foreground.
-- [ ] FSC-gates-043 Add a compatibility test for legacy `ForegroundScope` during the migration
+- [x] FSC-gates-043 Add a compatibility test for legacy `ForegroundScope` during the migration
   window.
 - [ ] FSC-gates-044 Consider a grep/lint-style guard that flags new `scope_children(...)` usage once
   the replacement path is stable.
@@ -145,7 +145,7 @@ visible.
 
 ## F. Docs + ADRs
 
-- [ ] FSC-docs-050 Keep this workstream doc set updated as decisions close.
+- [x] FSC-docs-050 Keep this workstream doc set updated as decisions close.
 - [ ] FSC-docs-051 Update user-facing authoring guidance once the replacement path exists.
 - [ ] FSC-docs-052 Add or update an ADR when any hard contract changes are approved.
   - Trigger examples:

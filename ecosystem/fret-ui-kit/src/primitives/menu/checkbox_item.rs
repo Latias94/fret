@@ -35,6 +35,7 @@ mod tests {
         ContainerProps, InsetStyle, LayoutStyle, Length, PositionStyle, PressableProps, SizeStyle,
     };
     use fret_ui::tree::UiTree;
+    use std::sync::Arc;
 
     use crate::declarative::model_watch::ModelWatchExt as _;
     use crate::primitives::menu::item;

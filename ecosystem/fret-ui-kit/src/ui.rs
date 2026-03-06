@@ -1294,7 +1294,7 @@ mod tests {
     // (e.g. `UiBuilder<TextBox>`) without requiring call-site `.into_element(cx)`.
     #[allow(dead_code)]
     fn h_flex_accepts_ui_builder_children<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-        h_flex(|cx| [text("a"), text("b")])
+        h_flex(|_cx| [text("a"), text("b")])
             .gap(Space::N2)
             .into_element(cx)
     }
@@ -1305,7 +1305,7 @@ mod tests {
     fn h_flex_root_accepts_semantics_decorators<H: UiHost>(
         cx: &mut ElementContext<'_, H>,
     ) -> AnyElement {
-        h_flex(cx, |cx| [text(cx, "a"), text(cx, "b")])
+        h_flex(|_cx| [text("a"), text("b")])
             .test_id("root")
             .a11y_role(SemanticsRole::Group)
             .into_element(cx)
@@ -1315,11 +1315,9 @@ mod tests {
     // `into_element(cx)` (so callsites can avoid "decorate-only" early landing).
     #[allow(dead_code)]
     fn h_flex_accepts_decorated_children<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-        h_flex(cx, |cx| {
-            [text(cx, "a").test_id("a"), text(cx, "b").test_id("b")]
-        })
-        .gap(Space::N2)
-        .into_element(cx)
+        h_flex(|_cx| [text("a").test_id("a"), text("b").test_id("b")])
+            .gap(Space::N2)
+            .into_element(cx)
     }
 
     #[test]
@@ -1373,7 +1371,7 @@ mod tests {
         );
 
         fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
-            let el = text(cx, "hello").selectable_on().into_element(cx);
+            let el = text("hello").selectable_on().into_element(cx);
             assert!(
                 matches!(el.kind, ElementKind::SelectableText(_)),
                 "expected ui::text(...).selectable_on() to render a SelectableText element"
@@ -1401,28 +1399,21 @@ mod tests {
             let mut els = crate::declarative::current_color::scope_children(
                 cx,
                 crate::ColorRef::Color(expected),
-                |cx| [text(cx, "hello").into_element(cx)],
+                |cx| [text("hello").into_element(cx)],
             );
 
-            let scope = els
-                .pop()
-                .expect("expected a ForegroundScope wrapper element");
-            assert!(
-                matches!(scope.kind, ElementKind::ForegroundScope(_)),
-                "expected current_color::scope_children(...) to install a ForegroundScope wrapper"
+            let child = els.pop().expect("expected a child element");
+            assert_eq!(
+                child.inherited_foreground,
+                Some(expected),
+                "expected current_color::scope_children(...) to stamp inherited foreground on the existing root"
             );
-
-            let child = scope
-                .children
-                .into_iter()
-                .next()
-                .expect("expected a child element");
             let ElementKind::Text(props) = child.kind else {
                 panic!("expected Text element");
             };
             assert_eq!(
                 props.color, None,
-                "expected text to keep color late-bound for ForegroundScope inheritance"
+                "expected text to keep color late-bound for inherited foreground paint resolution"
             );
         });
     }
