@@ -164,4 +164,4 @@ Candidate cleanup targets:
 
 Note:
 
-- MVU deprecation (if desired) must be its own explicit decision after adoption evidence.
+- MVU hard delete already landed in-tree; do not reintroduce a competing compatibility surface without a new explicit decision and migration plan.

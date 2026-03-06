@@ -43,9 +43,9 @@ Use `EmbeddedViewportSurface` in your window state and pick an initial pixel siz
 
 Install `embedded_viewport::handle_viewport_input` as the app-wide viewport input hook.
 
-If you use `fret::mvu::app_with_hooks`, the extension helper does this for you:
+If you use `fret::app_with_hooks`, the extension helper does this for you:
 
-- `fret::mvu::app_with_hooks::<P>("my-app", |d| d.drive_embedded_viewport())`
+- `fret::app_with_hooks("my-app", init_window, view, |d| d.drive_embedded_viewport())`
 
 ### 3) Record rendering into the offscreen target each frame
 

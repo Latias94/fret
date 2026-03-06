@@ -183,7 +183,7 @@ pub mod prelude {
 
     #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
     pub use crate::ViewElements;
-    pub use crate::view::{View, ViewCx};
+    pub use crate::view::{LocalState, View, ViewCx};
     pub use fret_app::{App, Effect};
     pub use fret_core::{Event, SemanticsRole};
     pub use fret_ui::ThemeSnapshot;
