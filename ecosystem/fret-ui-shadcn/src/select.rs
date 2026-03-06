@@ -1506,7 +1506,7 @@ impl Select {
 
     /// Binds this Select to a logical form control id (similar to HTML `id`).
     ///
-    /// When set, `Label::for_control(ControlId)` forwards focus to the select trigger, and the
+    /// When set, `Label::for_control(ControlId)` forwards activation to the select trigger, and the
     /// select uses `aria-labelledby` / `aria-describedby`-like semantics via the control registry.
     pub fn control_id(mut self, id: impl Into<ControlId>) -> Self {
         self.control_id = Some(id.into());
@@ -2090,7 +2090,7 @@ fn select_impl<H: UiHost>(
                 let entry = ControlEntry {
                     element: trigger_id,
                     enabled,
-                    action: ControlAction::Noop,
+                    action: ControlAction::ToggleBool(open_for_trigger.clone()),
                 };
                 let _ = cx.app.models_mut().update(&control_registry, |reg| {
                     reg.register_control(cx.window, cx.frame_id, control_id, entry);
