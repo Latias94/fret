@@ -8,6 +8,7 @@ Related:
 - Design: `docs/workstreams/action-first-authoring-fearless-refactor-v1/DESIGN.md`
 - Milestones: `docs/workstreams/action-first-authoring-fearless-refactor-v1/MILESTONES.md`
 - Evidence/gates: `docs/workstreams/action-first-authoring-fearless-refactor-v1/EVIDENCE_AND_GATES.md`
+- Post-v1 proposal: `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_AUTHORING_V2_PROPOSAL.md`
 
 ADRs (decision gates for this workstream):
 
@@ -376,6 +377,27 @@ This phase is intentionally last.
 These are intentionally *not* part of the v1 milestone closure, but they are likely the next
 practical steps:
 
+- [ ] AFA-postv1-001 Investigate direct local-state ergonomics beyond `Model<T>` in `ViewCx::use_state`.
+  - Goal: let simple demos keep state in a plain-Rust shape without weakening dirty/notify semantics
+    or shared-model interop.
+  - Evidence target: rewrite one medium demo as a comparison branch before promoting any new surface.
+- [ ] AFA-postv1-002 Investigate builder-first composition paths that reduce `ui::children!` and nested
+  `into_element(cx)` in medium demos.
+  - Goal: measure whether a builder-only path materially improves density without helper sprawl.
+  - Evidence target: compare `hello_counter_demo` or `query_demo` against the current default path.
+- [ ] AFA-postv1-003 Investigate widget-local action sugar (`listener` / `dispatch` / `shortcut`)
+  without expanding the default helper surface prematurely.
+  - Goal: keep action-first semantics while lowering local event-wiring noise.
+  - Guardrail: only promote if at least two real demos/templates need the same shape.
+
+- [ ] AFA-postv1-004 Evaluate v2 invalidation ergonomics: keep explicit `notify()` as a low-level runtime escape hatch while making local-state writes rerender implicitly by default.
+  - Goal: preserve cache/debug determinism without forcing users to call `notify()` after most tracked state writes.
+  - Evidence target: prototype one medium demo and confirm diagnostics still explain rebuild reasons.
+- [ ] AFA-postv1-005 Evaluate narrow authoring macros that reduce repeated child/list boilerplate without introducing a full `rsx!`-style DSL as the default surface.
+  - Goal: decide whether keyed child-list macros or optional layout collection sugar materially improve density after builder-first improvements.
+  - Guardrail: no macro should hide action identity, key context, or cache-boundary semantics.
+  - Note: this is optional polish, not a prerequisite for declaring v2 successful.
+
 - Done: key context stack + diagnostics-visible context naming/stacking rules.
   - Evidence:
     - ADR: `docs/adr/0022-when-expressions.md` (`keyctx.*`)
@@ -446,6 +468,21 @@ practical steps:
     - keep `on_action*` / `on_activate*` as the current closure story (do not add more tiny helpers yet),
     - prefer template/doc guidance first for transient/App-effect patterns,
     - re-evaluate only after one more round of template/demo authoring feedback.
+- Post-v1 design review (as of 2026-03-06):
+  - v1 is successful at architecture + teaching-surface convergence: action-first dispatch landed,
+    `View` / `ViewCx` plus hooks are in tree, the default helper story narrowed, and MVU is hard-deleted
+    behind reintroduction gates.
+  - The repo has not yet reached the full GPUI/Zed-style authoring density end-state. The remaining
+    gaps are intentionally treated as post-v1 ergonomics work, not as unfinished migration closure.
+  - Remaining pressure points:
+    1. `use_state` still returns `Model<T>` instead of a plain-Rust local-state authoring story.
+    2. Default demos still rely on `watch_model(...)` / `models.update(...)` for common state reads/writes.
+    3. `ui::children!` remains the dominant composition style, with some nested `into_element(cx)` still visible in medium demos.
+    4. Widget-local `listener` / `dispatch` / `shortcut` sugar is not the default event story yet.
+  - Recommendation:
+    - close v1 as successful on architecture + migration + default teaching surface,
+    - track density/ergonomics work in a separate post-v1 phase,
+    - do not add more tiny helpers until another round of template/demo evidence shows repeated pressure.
 - Helper visibility policy snapshot (as of 2026-03-06):
   - Default teaching surface: `cx.on_action_notify_models::<A>(|models| ...)`, `cx.on_action_notify_transient::<A>(...)`, and local `on_activate(...)` / `on_activate_notify(...)` only.
   - Advanced/reference surface: raw `cx.on_action(...)` / `cx.on_action_notify(...)`, single-model aliases (`on_action_notify_model_update`, `on_action_notify_model_set`, `on_action_notify_toggle_bool`), payload hooks, and redraw-oriented `on_activate_request_redraw*` helpers.

@@ -47,14 +47,21 @@ Rationale:
 - The v1 view runtime lands in `ecosystem/fret` (golden path) to minimize churn and maximize adoption.
 - A future split into `ecosystem/fret-view` (or similar) is explicitly deferred until after in-tree adoption proves the API.
 
+Implementation clarification (as of 2026-03-06):
+
+- `ViewCx::use_state` in v1 is model-backed: the runtime stores a stable `Model<T>` handle in keyed
+  element/view state and returns that handle to authoring code.
+- Direct plain-Rust local-state ergonomics are explicitly deferred to a post-v1 ergonomics phase;
+  they are not part of the landed v1 contract.
+
 ### D2 — Views are stateful objects that render into the existing IR
 
 Introduce a `View` trait that renders into the existing declarative element taxonomy (`AnyElement`):
 
 - views are rebuilt as needed based on dirty/notify and observed dependencies,
-- view-local state lives in:
-  - app-owned models (`Model<T>`) for shared state, and/or
-  - element/view state slots for local state.
+- state is stored in app-owned models (`Model<T>`),
+- for v1 local state, keyed element/view state retains the stable `Model<T>` handle for the view so
+  authoring code gets view ownership without bypassing the model store.
 
 This does not replace the kernel’s authoring paradigm (ADR 0031); it is a cohesive wrapper around it.
 
@@ -64,7 +71,8 @@ The view runtime exposes hook-style helpers that remain explicit and auditable:
 
 - derived state: backed by `ecosystem/fret-selector`,
 - async resources: backed by `ecosystem/fret-query`,
-- local state: stored in element/view state slots using stable identity and keyed variants.
+- local state: model-backed in v1, with stable `Model<T>` handles retained in keyed element/view
+  state so hooks remain deterministic.
 
 Hook ordering and keying rules must be explicit to avoid “hook-like footguns” in loops:
 
@@ -114,10 +122,16 @@ Where:
 
 The view runtime provides:
 
-- `use_state(...)` for local state slots (stored in element/view state),
-- `use_state_keyed(...)` (or `cx.keyed(...)`) for loops,
-- `use_selector(...)` / `use_selector_keyed(...)` backed by `ecosystem/fret-selector`,
-- `use_query(...)` backed by `ecosystem/fret-query`.
+- `use_state(...)` returns a model-backed local-state handle (`Model<T>`) keyed by the current
+  view/callsite,
+- `use_state_keyed(...)` (or `cx.keyed(...)`) is the loop-safe variant,
+- `use_selector(...)` / `use_selector_keyed(...)` are backed by `ecosystem/fret-selector`,
+- `use_query(...)` is backed by `ecosystem/fret-query`.
+
+Post-v1 note:
+
+- direct plain-Rust local-state ergonomics may be explored later, but that is outside the v1
+  contract locked by this ADR.
 
 Key rule:
 

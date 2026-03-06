@@ -127,9 +127,12 @@ UI gallery reference:
 
 Migration steps:
 
-1) Move state into:
-   - app-owned models (recommended for shared state), or
-   - view-local state slots for simple demos.
+1) Move state into app-owned models.
+   - Shared state should stay in explicit models.
+   - For simple demo-local state, `cx.use_state::<T>()` is still model-backed in v1: it returns a
+     view-local `Model<T>` handle whose identity is retained in keyed view state.
+   - Direct plain-Rust local state is a post-v1 ergonomics exploration, not part of the landed v1
+     migration surface.
 2) Replace:
    - `msg.cmd(Msg::X)` with `act::X` action references.
 3) Replace `update(...)` with `cx.on_action...` handlers.
@@ -140,7 +143,7 @@ Migration steps:
    - `cx.notify()` and/or
    - selector/query hooks that carry proper dependency observation.
 
-Small ergonomics helpers (recommended for simple state):
+Helper layering for migration code:
 
 ### Default entrypoints (recommended mental model)
 
@@ -161,6 +164,18 @@ Everything else (`on_action_notify_model_update`, `on_action_notify_model_set`,
 `on_action_notify_toggle_bool`, `on_activate_request_redraw`, ...) should be treated as optional
 shorthand, not as the first thing new users need to memorize.
 
+### North-star vs landed v1
+
+The original north-star discussion remains valid, but it is important to separate the landed v1
+surface from the post-v1 density goals:
+
+- Landed in v1: `View` + typed actions, `use_selector` / `use_query`, cx-less `ui::*` constructors,
+  semantics/test IDs before `into_element(cx)`, and a narrowed default helper surface.
+- Not yet the default story: plain-Rust local state, builder-only composition that removes most
+  `ui::children!`, and widget-local `listener` / `dispatch` / `shortcut` sugar.
+- Recommendation: migrate to the landed v1 surface first, then evaluate post-v1 ergonomics changes
+  with side-by-side demo evidence rather than mixing them into the migration baseline.
+
 ### Helper visibility policy (docs/templates)
 
 - Default onboarding material should teach only the three entrypoints above.
@@ -170,7 +185,7 @@ shorthand, not as the first thing new users need to memorize.
 - A helper should graduate into first-contact docs/templates only after it solves repeated noise
   across multiple real demos/templates, not a single local call site.
 
-- For common “update a single model” handlers (counters, toggles, flags), prefer `ViewCx` helpers:
+- Optional advanced shorthand for obviously single-model handlers (keep these out of first-contact teaching unless they are materially clearer):
 
 ```rust,ignore
 let count = cx.use_state::<u32>();
