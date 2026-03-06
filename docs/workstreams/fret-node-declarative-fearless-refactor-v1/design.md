@@ -176,6 +176,9 @@ First landing in this worktree:
 - pointer-up / pointer-cancel event closures now also route through explicit session
   helpers, so release/cancel finish semantics and host-side invalidate/notify/redraw effects
   are testable outside the closure bodies.
+- declarative paint-only tests now share small controller/store and pointer-session
+  fixtures, so new reducer/session slices can land focused gates without duplicating large setup
+  blocks.
 
 ### Slice 3 - portal and overlay closure
 

@@ -232,6 +232,8 @@ points rather than direct graph mutation.
   - Declarative pointer-up / pointer-cancel event closures now dispatch through
     explicit session helpers, with focused tests covering left-release finish, non-left ignore,
     pan-release cleanup, and cancel-finish semantics.
+  - Declarative paint-only tests now share small controller/store and pointer-session
+    fixtures, so follow-up reducer/session gates stop duplicating large setup blocks.
   - Diagnostics-only `Digit3/4/5` graph tweaks now build transactions from `graph_diff` and commit
     through the same controller/store transaction path instead of mutating `Graph` in place.
   - `apps/fret-examples/src/node_graph_demo.rs` now passes a controller into the declarative
@@ -281,6 +283,8 @@ points rather than direct graph mutation.
   releases
 - pointer-session event gates for left-release finish, non-left ignore, pan-release
   cleanup, and cancel-finish semantics
+- shared declarative test-fixture helpers for controller/store callback setup and
+  pointer-session finish assertions
 - cancel reducer + pointer session helper gates for Escape-vs-pointer-cancel divergence around
   already-canceled node drags
 - keydown dispatch gates for diag-key parsing, diag view presets, portal-disable cleanup, zoom

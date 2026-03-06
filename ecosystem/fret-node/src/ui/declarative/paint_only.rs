@@ -5072,28 +5072,90 @@ mod tests {
         trace
     }
 
+    struct DeclarativeControllerFixture {
+        host: TestActionHostImpl,
+        graph: Model<Graph>,
+        view_state: Model<NodeGraphViewState>,
+        store: Model<NodeGraphStore>,
+        controller: NodeGraphController,
+    }
+
+    impl DeclarativeControllerFixture {
+        fn new_two_nodes(
+            graph_id: u128,
+            node_a: NodeId,
+            node_a_pos: CanvasPoint,
+            node_b: NodeId,
+            node_b_pos: CanvasPoint,
+            initial_view: NodeGraphViewState,
+        ) -> Self {
+            let mut host = TestActionHostImpl::default();
+            let mut graph_value = Graph::new(GraphId::from_u128(graph_id));
+            graph_value.nodes.insert(node_a, test_node(node_a_pos));
+            graph_value.nodes.insert(node_b, test_node(node_b_pos));
+            let graph = host.models.insert(graph_value.clone());
+            let view_state = host.models.insert(initial_view.clone());
+            let store = host
+                .models
+                .insert(NodeGraphStore::new(graph_value, initial_view));
+            let controller = NodeGraphController::new(store.clone());
+            Self {
+                host,
+                graph,
+                view_state,
+                store,
+                controller,
+            }
+        }
+
+        fn install_trace(&mut self) -> Rc<RefCell<DeclarativeCallbackTrace>> {
+            install_declarative_callback_trace(&mut self.host, &self.store)
+        }
+    }
+
+    fn assert_single_selection_change(
+        trace: &Rc<RefCell<DeclarativeCallbackTrace>>,
+        expected_nodes: Vec<NodeId>,
+    ) {
+        let got = trace.borrow();
+        assert!(got.commit_labels.is_empty());
+        assert_eq!(
+            got.selection_changes,
+            vec![SelectionChange {
+                nodes: expected_nodes,
+                edges: Vec::new(),
+                groups: Vec::new(),
+            }]
+        );
+    }
+
+    fn assert_pointer_session_finished(
+        host: &TestActionHostImpl,
+        action_cx: fret_ui::action::ActionCx,
+    ) {
+        assert_eq!(host.release_pointer_capture_count, 1);
+        assert_eq!(host.invalidations, vec![Invalidation::Layout]);
+        assert_eq!(host.notifications, vec![action_cx]);
+        assert_eq!(host.redraw_requests, vec![action_cx.window]);
+    }
+
     #[test]
     fn commit_pending_selection_action_host_notifies_selection_callbacks_through_controller() {
-        let mut host = TestActionHostImpl::default();
         let node_a = NodeId::from_u128(9801);
         let node_b = NodeId::from_u128(9802);
-        let mut graph_value = Graph::new(GraphId::from_u128(7));
-        graph_value
-            .nodes
-            .insert(node_a, test_node(CanvasPoint { x: 0.0, y: 0.0 }));
-        graph_value
-            .nodes
-            .insert(node_b, test_node(CanvasPoint { x: 40.0, y: 20.0 }));
         let initial_view = NodeGraphViewState {
             selected_nodes: vec![node_a],
             ..Default::default()
         };
-        let view_state = host.models.insert(initial_view.clone());
-        let store = host
-            .models
-            .insert(NodeGraphStore::new(graph_value, initial_view.clone()));
-        let controller = NodeGraphController::new(store.clone());
-        let trace = install_declarative_callback_trace(&mut host, &store);
+        let mut fixture = DeclarativeControllerFixture::new_two_nodes(
+            7,
+            node_a,
+            CanvasPoint { x: 0.0, y: 0.0 },
+            node_b,
+            CanvasPoint { x: 40.0, y: 20.0 },
+            initial_view,
+        );
+        let trace = fixture.install_trace();
         let pending = PendingSelectionState {
             nodes: Arc::from([node_b]),
             clear_edges: false,
@@ -5101,52 +5163,37 @@ mod tests {
         };
 
         assert!(commit_pending_selection_action_host(
-            &mut host,
-            &view_state,
-            Some(&controller),
-            Some(&store),
+            &mut fixture.host,
+            &fixture.view_state,
+            Some(&fixture.controller),
+            Some(&fixture.store),
             &pending,
         ));
 
-        let got = trace.borrow();
-        assert_eq!(got.selection_changes.len(), 1);
-        assert_eq!(
-            got.selection_changes[0],
-            SelectionChange {
-                nodes: vec![node_b],
-                edges: Vec::new(),
-                groups: Vec::new(),
-            }
-        );
-        assert!(got.commit_labels.is_empty());
+        assert_single_selection_change(&trace, vec![node_b]);
     }
 
     #[test]
     fn commit_marquee_selection_action_host_notifies_selection_callbacks_through_controller() {
-        let mut host = TestActionHostImpl::default();
         let node_a = NodeId::from_u128(9901);
         let node_b = NodeId::from_u128(9902);
         let edge = EdgeId::new();
         let group = GroupId::new();
-        let mut graph_value = Graph::new(GraphId::from_u128(8));
-        graph_value
-            .nodes
-            .insert(node_a, test_node(CanvasPoint { x: 0.0, y: 0.0 }));
-        graph_value
-            .nodes
-            .insert(node_b, test_node(CanvasPoint { x: 60.0, y: 20.0 }));
         let initial_view = NodeGraphViewState {
             selected_nodes: vec![node_a],
             selected_edges: vec![edge],
             selected_groups: vec![group],
             ..Default::default()
         };
-        let view_state = host.models.insert(initial_view.clone());
-        let store = host
-            .models
-            .insert(NodeGraphStore::new(graph_value, initial_view.clone()));
-        let controller = NodeGraphController::new(store.clone());
-        let trace = install_declarative_callback_trace(&mut host, &store);
+        let mut fixture = DeclarativeControllerFixture::new_two_nodes(
+            8,
+            node_a,
+            CanvasPoint { x: 0.0, y: 0.0 },
+            node_b,
+            CanvasPoint { x: 60.0, y: 20.0 },
+            initial_view,
+        );
+        let trace = fixture.install_trace();
         let marquee = MarqueeDragState {
             start_screen: Point::new(Px(0.0), Px(0.0)),
             current_screen: Point::new(Px(0.0), Px(0.0)),
@@ -5157,67 +5204,51 @@ mod tests {
         };
 
         assert!(commit_marquee_selection_action_host(
-            &mut host,
-            &view_state,
-            Some(&controller),
-            Some(&store),
+            &mut fixture.host,
+            &fixture.view_state,
+            Some(&fixture.controller),
+            Some(&fixture.store),
             &marquee,
         ));
 
-        let got = trace.borrow();
-        assert_eq!(got.selection_changes.len(), 1);
-        assert_eq!(
-            got.selection_changes[0],
-            SelectionChange {
-                nodes: vec![node_b],
-                edges: Vec::new(),
-                groups: Vec::new(),
-            }
-        );
-        assert!(got.commit_labels.is_empty());
+        assert_single_selection_change(&trace, vec![node_b]);
     }
 
     #[test]
     fn handle_declarative_pointer_up_action_host_left_release_finishes_pointer_session_when_handled()
      {
-        let mut host = TestActionHostImpl::default();
         let action_cx = test_action_cx();
         let node_a = NodeId::from_u128(9935);
         let node_b = NodeId::from_u128(9936);
-        let mut graph_value = Graph::new(GraphId::from_u128(120));
-        graph_value
-            .nodes
-            .insert(node_a, test_node(CanvasPoint { x: 0.0, y: 0.0 }));
-        graph_value
-            .nodes
-            .insert(node_b, test_node(CanvasPoint { x: 40.0, y: 20.0 }));
         let initial_view = NodeGraphViewState {
             selected_nodes: vec![node_a],
             ..Default::default()
         };
-        let graph = host.models.insert(graph_value.clone());
-        let view_state = host.models.insert(initial_view.clone());
-        let store = host
-            .models
-            .insert(NodeGraphStore::new(graph_value, initial_view.clone()));
-        let controller = NodeGraphController::new(store.clone());
-        let drag = host.models.insert(None::<DragState>);
-        let marquee = host.models.insert(None::<MarqueeDragState>);
-        let node_drag = host.models.insert(Some(NodeDragState {
+        let mut fixture = DeclarativeControllerFixture::new_two_nodes(
+            120,
+            node_a,
+            CanvasPoint { x: 0.0, y: 0.0 },
+            node_b,
+            CanvasPoint { x: 40.0, y: 20.0 },
+            initial_view,
+        );
+        let drag = fixture.host.models.insert(None::<DragState>);
+        let marquee = fixture.host.models.insert(None::<MarqueeDragState>);
+        let node_drag = fixture.host.models.insert(Some(NodeDragState {
             start_screen: Point::new(Px(0.0), Px(0.0)),
             current_screen: Point::new(Px(12.0), Px(0.0)),
             phase: NodeDragPhase::Armed,
             nodes_sorted: Arc::from([node_b]),
         }));
-        let pending = host.models.insert(Some(PendingSelectionState {
+        let pending = fixture.host.models.insert(Some(PendingSelectionState {
             nodes: Arc::from([node_b]),
             clear_edges: false,
             clear_groups: false,
         }));
-        let trace = install_declarative_callback_trace(&mut host, &store);
+        let trace = fixture.install_trace();
 
         assert!(handle_declarative_pointer_up_action_host(
-            &mut host,
+            &mut fixture.host,
             action_cx,
             test_pointer_up(
                 MouseButton::Left,
@@ -5229,25 +5260,13 @@ mod tests {
             &marquee,
             &node_drag,
             &pending,
-            &graph,
-            &view_state,
-            Some(&controller),
-            Some(&store),
+            &fixture.graph,
+            &fixture.view_state,
+            Some(&fixture.controller),
+            Some(&fixture.store),
         ));
-        assert_eq!(host.release_pointer_capture_count, 1);
-        assert_eq!(host.invalidations, vec![Invalidation::Layout]);
-        assert_eq!(host.notifications, vec![action_cx]);
-        assert_eq!(host.redraw_requests, vec![action_cx.window]);
-        let got = trace.borrow();
-        assert!(got.commit_labels.is_empty());
-        assert_eq!(
-            got.selection_changes,
-            vec![SelectionChange {
-                nodes: vec![node_b],
-                edges: Vec::new(),
-                groups: Vec::new(),
-            }]
-        );
+        assert_pointer_session_finished(&fixture.host, action_cx);
+        assert_single_selection_change(&trace, vec![node_b]);
     }
 
     #[test]
@@ -5330,10 +5349,7 @@ mod tests {
                 .read(&drag, |state| state.is_none())
                 .expect("drag readable")
         );
-        assert_eq!(host.release_pointer_capture_count, 1);
-        assert_eq!(host.invalidations, vec![Invalidation::Layout]);
-        assert_eq!(host.notifications, vec![action_cx]);
-        assert_eq!(host.redraw_requests, vec![action_cx.window]);
+        assert_pointer_session_finished(&host, action_cx);
     }
 
     #[test]
@@ -5354,53 +5370,44 @@ mod tests {
             &node_drag,
             &pending,
         ));
-        assert_eq!(host.release_pointer_capture_count, 1);
-        assert_eq!(host.invalidations, vec![Invalidation::Layout]);
-        assert_eq!(host.notifications, vec![action_cx]);
-        assert_eq!(host.redraw_requests, vec![action_cx.window]);
+        assert_pointer_session_finished(&host, action_cx);
     }
 
     #[test]
     fn complete_left_pointer_release_action_host_pending_selection_clears_transient_and_notifies_selection()
      {
-        let mut host = TestActionHostImpl::default();
         let node_a = NodeId::from_u128(9941);
         let node_b = NodeId::from_u128(9942);
-        let mut graph_value = Graph::new(GraphId::from_u128(10));
-        graph_value
-            .nodes
-            .insert(node_a, test_node(CanvasPoint { x: 0.0, y: 0.0 }));
-        graph_value
-            .nodes
-            .insert(node_b, test_node(CanvasPoint { x: 40.0, y: 20.0 }));
         let initial_view = NodeGraphViewState {
             selected_nodes: vec![node_a],
             ..Default::default()
         };
-        let graph = host.models.insert(graph_value.clone());
-        let view_state = host.models.insert(initial_view.clone());
-        let store = host
-            .models
-            .insert(NodeGraphStore::new(graph_value, initial_view.clone()));
-        let controller = NodeGraphController::new(store.clone());
-        let node_drag = host.models.insert(None::<NodeDragState>);
-        let marquee = host.models.insert(None::<MarqueeDragState>);
-        let pending = host.models.insert(Some(PendingSelectionState {
+        let mut fixture = DeclarativeControllerFixture::new_two_nodes(
+            10,
+            node_a,
+            CanvasPoint { x: 0.0, y: 0.0 },
+            node_b,
+            CanvasPoint { x: 40.0, y: 20.0 },
+            initial_view,
+        );
+        let node_drag = fixture.host.models.insert(None::<NodeDragState>);
+        let marquee = fixture.host.models.insert(None::<MarqueeDragState>);
+        let pending = fixture.host.models.insert(Some(PendingSelectionState {
             nodes: Arc::from([node_b]),
             clear_edges: false,
             clear_groups: false,
         }));
-        let trace = install_declarative_callback_trace(&mut host, &store);
+        let trace = fixture.install_trace();
 
         let outcome = complete_left_pointer_release_action_host(
-            &mut host,
+            &mut fixture.host,
             &node_drag,
             &pending,
             &marquee,
-            &graph,
-            &view_state,
-            Some(&controller),
-            Some(&store),
+            &fixture.graph,
+            &fixture.view_state,
+            Some(&fixture.controller),
+            Some(&fixture.store),
         );
 
         assert_eq!(
@@ -5410,46 +5417,33 @@ mod tests {
             }
         );
         assert!(
-            host.models
+            fixture
+                .host
+                .models
                 .read(&pending, |state| state.is_none())
                 .expect("pending readable")
         );
-        let got = trace.borrow();
-        assert!(got.commit_labels.is_empty());
-        assert_eq!(
-            got.selection_changes,
-            vec![SelectionChange {
-                nodes: vec![node_b],
-                edges: Vec::new(),
-                groups: Vec::new(),
-            }]
-        );
+        assert_single_selection_change(&trace, vec![node_b]);
     }
 
     #[test]
     fn complete_left_pointer_release_action_host_inactive_toggle_marquee_skips_selection_commit() {
-        let mut host = TestActionHostImpl::default();
         let node_a = NodeId::from_u128(9943);
         let node_b = NodeId::from_u128(9944);
-        let mut graph_value = Graph::new(GraphId::from_u128(11));
-        graph_value
-            .nodes
-            .insert(node_a, test_node(CanvasPoint { x: 0.0, y: 0.0 }));
-        graph_value
-            .nodes
-            .insert(node_b, test_node(CanvasPoint { x: 40.0, y: 20.0 }));
         let initial_view = NodeGraphViewState {
             selected_nodes: vec![node_a],
             ..Default::default()
         };
-        let graph = host.models.insert(graph_value.clone());
-        let view_state = host.models.insert(initial_view.clone());
-        let store = host
-            .models
-            .insert(NodeGraphStore::new(graph_value, initial_view.clone()));
-        let controller = NodeGraphController::new(store.clone());
-        let node_drag = host.models.insert(None::<NodeDragState>);
-        let marquee = host.models.insert(Some(MarqueeDragState {
+        let mut fixture = DeclarativeControllerFixture::new_two_nodes(
+            11,
+            node_a,
+            CanvasPoint { x: 0.0, y: 0.0 },
+            node_b,
+            CanvasPoint { x: 40.0, y: 20.0 },
+            initial_view,
+        );
+        let node_drag = fixture.host.models.insert(None::<NodeDragState>);
+        let marquee = fixture.host.models.insert(Some(MarqueeDragState {
             start_screen: Point::new(Px(0.0), Px(0.0)),
             current_screen: Point::new(Px(5.0), Px(5.0)),
             active: false,
@@ -5457,18 +5451,18 @@ mod tests {
             base_selected_nodes: Arc::from([node_a]),
             preview_selected_nodes: Arc::from([node_b]),
         }));
-        let pending = host.models.insert(None::<PendingSelectionState>);
-        let trace = install_declarative_callback_trace(&mut host, &store);
+        let pending = fixture.host.models.insert(None::<PendingSelectionState>);
+        let trace = fixture.install_trace();
 
         let outcome = complete_left_pointer_release_action_host(
-            &mut host,
+            &mut fixture.host,
             &node_drag,
             &pending,
             &marquee,
-            &graph,
-            &view_state,
-            Some(&controller),
-            Some(&store),
+            &fixture.graph,
+            &fixture.view_state,
+            Some(&fixture.controller),
+            Some(&fixture.store),
         );
 
         assert_eq!(
@@ -5478,7 +5472,9 @@ mod tests {
             }
         );
         assert!(
-            host.models
+            fixture
+                .host
+                .models
                 .read(&marquee, |state| state.is_none())
                 .expect("marquee readable")
         );
@@ -5512,47 +5508,41 @@ mod tests {
 
     #[test]
     fn handle_node_drag_left_pointer_release_action_host_clears_drag_and_pending_selection() {
-        let mut host = TestActionHostImpl::default();
         let node_a = NodeId::from_u128(9945);
         let node_b = NodeId::from_u128(9946);
-        let mut graph_value = Graph::new(GraphId::from_u128(13));
-        graph_value
-            .nodes
-            .insert(node_a, test_node(CanvasPoint { x: 0.0, y: 0.0 }));
-        graph_value
-            .nodes
-            .insert(node_b, test_node(CanvasPoint { x: 40.0, y: 20.0 }));
         let initial_view = NodeGraphViewState {
             selected_nodes: vec![node_a],
             ..Default::default()
         };
-        let graph = host.models.insert(graph_value.clone());
-        let view_state = host.models.insert(initial_view.clone());
-        let store = host
-            .models
-            .insert(NodeGraphStore::new(graph_value, initial_view.clone()));
-        let controller = NodeGraphController::new(store.clone());
-        let node_drag = host.models.insert(Some(NodeDragState {
+        let mut fixture = DeclarativeControllerFixture::new_two_nodes(
+            13,
+            node_a,
+            CanvasPoint { x: 0.0, y: 0.0 },
+            node_b,
+            CanvasPoint { x: 40.0, y: 20.0 },
+            initial_view,
+        );
+        let node_drag = fixture.host.models.insert(Some(NodeDragState {
             start_screen: Point::new(Px(0.0), Px(0.0)),
             current_screen: Point::new(Px(12.0), Px(0.0)),
             phase: NodeDragPhase::Armed,
             nodes_sorted: Arc::from([node_b]),
         }));
-        let pending = host.models.insert(Some(PendingSelectionState {
+        let pending = fixture.host.models.insert(Some(PendingSelectionState {
             nodes: Arc::from([node_b]),
             clear_edges: false,
             clear_groups: false,
         }));
-        let trace = install_declarative_callback_trace(&mut host, &store);
+        let trace = fixture.install_trace();
 
         let outcome = handle_node_drag_left_pointer_release_action_host(
-            &mut host,
+            &mut fixture.host,
             &node_drag,
             &pending,
-            &graph,
-            &view_state,
-            Some(&controller),
-            Some(&store),
+            &fixture.graph,
+            &fixture.view_state,
+            Some(&fixture.controller),
+            Some(&fixture.store),
         );
 
         assert_eq!(
@@ -5565,25 +5555,20 @@ mod tests {
             ))
         );
         assert!(
-            host.models
+            fixture
+                .host
+                .models
                 .read(&node_drag, |state| state.is_none())
                 .expect("node drag readable")
         );
         assert!(
-            host.models
+            fixture
+                .host
+                .models
                 .read(&pending, |state| state.is_none())
                 .expect("pending readable")
         );
-        let got = trace.borrow();
-        assert!(got.commit_labels.is_empty());
-        assert_eq!(
-            got.selection_changes,
-            vec![SelectionChange {
-                nodes: vec![node_b],
-                edges: Vec::new(),
-                groups: Vec::new(),
-            }]
-        );
+        assert_single_selection_change(&trace, vec![node_b]);
     }
 
     #[test]
