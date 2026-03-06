@@ -38,7 +38,7 @@
 
 - [ ] Decide whether compatibility shorthands should eventually be doc-deemphasized even harder or
       soft-deprecated.
-- [ ] Add a compile-oriented regression gate that covers `ui_with_hooks(...)` and
+- [x] Add a compile-oriented regression gate that covers `ui_with_hooks(...)` and
       `view_with_hooks(...)` directly.
 - [ ] Audit more cookbook/examples for wording consistency when describing manual assembly vs builder
       entry.

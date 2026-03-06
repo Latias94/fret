@@ -665,7 +665,8 @@ pub fn run_native_with_fn_driver<D: 'static, S: 'static>(
 /// Prefer the builder chain for new code so window/defaults/app-install configuration stays in one
 /// place.
 ///
-/// Create a desktop-first UI app builder with conservative defaults applied.
+/// Legacy compatibility shorthand that builds a desktop-first UI app builder with
+/// conservative defaults applied.
 ///
 /// Defaults (when the corresponding features are enabled):
 /// - diagnostics (`diagnostics`)
@@ -674,6 +675,7 @@ pub fn run_native_with_fn_driver<D: 'static, S: 'static>(
 /// - icon pack installation + optional SVG preloading
 /// - UI assets caches with default budgets (`ui-assets`)
 #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
+#[doc(hidden)]
 pub fn app_with_hooks<S: 'static>(
     root_name: &'static str,
     init_window: fn(&mut KernelApp, fret_core::AppWindowId) -> S,
@@ -711,6 +713,7 @@ fn shadcn_sync_theme_from_environment_on_global_changes<S>(
 ///
 /// Same as [`app_with_hooks`], but without a driver configuration hook.
 #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
+#[doc(hidden)]
 pub fn app<S: 'static>(
     root_name: &'static str,
     init_window: fn(&mut KernelApp, fret_core::AppWindowId) -> S,
@@ -725,6 +728,7 @@ pub fn app<S: 'static>(
 ///
 /// Run a desktop-first UI app using default window settings.
 #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
+#[doc(hidden)]
 pub fn run_with_hooks<S: 'static>(
     root_name: &'static str,
     init_window: fn(&mut KernelApp, fret_core::AppWindowId) -> S,
@@ -742,12 +746,169 @@ pub fn run_with_hooks<S: 'static>(
 ///
 /// Run a desktop-first UI app using default window settings.
 #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
+#[doc(hidden)]
 pub fn run<S: 'static>(
     root_name: &'static str,
     init_window: fn(&mut KernelApp, fret_core::AppWindowId) -> S,
     view: for<'a> fn(&mut fret_ui::ElementContext<'a, KernelApp>, &mut S) -> ViewElements,
 ) -> Result<()> {
     run_with_hooks(root_name, init_window, view, |d| d)
+}
+
+#[cfg(all(test, not(target_arch = "wasm32"), feature = "desktop"))]
+mod builder_surface_tests {
+    use super::{App as FretApp, IconRegistry, KernelApp, ViewElements};
+    use crate::view::{View, ViewCx};
+    use fret_app::CreateWindowRequest;
+    use fret_core::{AppWindowId, DockOp, Event, UiServices, ViewportInputEvent};
+    use fret_runtime::{CommandId, FrameId, TickId};
+    use fret_ui::ElementContext;
+    use fret_ui::element::Elements;
+
+    fn init_window(_app: &mut KernelApp, _window: AppWindowId) -> () {}
+
+    fn view(_cx: &mut ElementContext<'_, KernelApp>, _st: &mut ()) -> ViewElements {
+        ViewElements::default()
+    }
+
+    fn install_app(_app: &mut KernelApp) {}
+
+    fn install(_app: &mut KernelApp, _services: &mut dyn UiServices) {}
+
+    fn register_icon_pack(_registry: &mut IconRegistry) {}
+
+    fn on_event(
+        _app: &mut KernelApp,
+        _services: &mut dyn UiServices,
+        _window: AppWindowId,
+        _ui: &mut fret_ui::UiTree<KernelApp>,
+        _st: &mut (),
+        _event: &Event,
+    ) {
+    }
+
+    fn on_command(
+        _app: &mut KernelApp,
+        _services: &mut dyn UiServices,
+        _window: AppWindowId,
+        _ui: &mut fret_ui::UiTree<KernelApp>,
+        _st: &mut (),
+        _command: &CommandId,
+    ) {
+    }
+
+    fn handle_global_command(
+        _app: &mut KernelApp,
+        _services: &mut dyn UiServices,
+        _command: CommandId,
+    ) {
+    }
+
+    fn window_create_spec(
+        _app: &mut KernelApp,
+        _request: &CreateWindowRequest,
+    ) -> Option<fret_launch::WindowCreateSpec> {
+        None
+    }
+
+    fn window_created(_app: &mut KernelApp, _request: &CreateWindowRequest, _window: AppWindowId) {}
+
+    fn before_close_window(_app: &mut KernelApp, _window: AppWindowId) -> bool {
+        true
+    }
+
+    fn viewport_input(_app: &mut KernelApp, _event: ViewportInputEvent) {}
+
+    fn record_engine_frame(
+        _app: &mut KernelApp,
+        _window: AppWindowId,
+        _ui: &mut fret_ui::UiTree<KernelApp>,
+        _st: &mut (),
+        _context: &crate::kernel::render::WgpuContext,
+        _renderer: &mut crate::kernel::render::Renderer,
+        _dt_s: f32,
+        _tick_id: TickId,
+        _frame_id: FrameId,
+    ) -> fret_launch::EngineFrameUpdate {
+        fret_launch::EngineFrameUpdate::default()
+    }
+
+    fn dock_op(_app: &mut KernelApp, _op: DockOp) {}
+
+    fn record_view_engine_frame(
+        _app: &mut KernelApp,
+        _window: AppWindowId,
+        _ui: &mut fret_ui::UiTree<KernelApp>,
+        _st: &mut crate::view::ViewWindowState<SmokeView>,
+        _context: &crate::kernel::render::WgpuContext,
+        _renderer: &mut crate::kernel::render::Renderer,
+        _dt_s: f32,
+        _tick_id: TickId,
+        _frame_id: FrameId,
+    ) -> fret_launch::EngineFrameUpdate {
+        fret_launch::EngineFrameUpdate::default()
+    }
+
+    fn install_custom_effects(
+        _app: &mut KernelApp,
+        _service: &mut dyn fret_core::CustomEffectService,
+    ) {
+    }
+
+    struct SmokeView;
+
+    impl View for SmokeView {
+        fn init(_app: &mut KernelApp, _window: AppWindowId) -> Self {
+            Self
+        }
+
+        fn render(&mut self, _cx: &mut ViewCx<'_, '_, KernelApp>) -> Elements {
+            Elements::default()
+        }
+    }
+
+    #[test]
+    fn app_builder_ui_with_hooks_smoke() {
+        let _builder = FretApp::new("builder-ui-smoke")
+            .window("Builder UI Smoke", (640.0, 480.0))
+            .install_app(install_app)
+            .install(install)
+            .register_icon_pack(register_icon_pack)
+            .ui_with_hooks(init_window, view, |driver| {
+                driver
+                    .on_event(on_event)
+                    .on_command(on_command)
+                    .handle_global_command(handle_global_command)
+                    .window_create_spec(window_create_spec)
+                    .window_created(window_created)
+                    .before_close_window(before_close_window)
+                    .viewport_input(viewport_input)
+                    .record_engine_frame(record_engine_frame)
+                    .dock_op(dock_op)
+            })
+            .expect("ui_with_hooks should build")
+            .configure(|_config| {})
+            .init_app(|_app| {})
+            .install_custom_effects(install_custom_effects)
+            .on_gpu_ready(|_app, _context, _renderer| {});
+    }
+
+    #[test]
+    fn app_builder_view_with_hooks_smoke() {
+        let _builder = FretApp::new("builder-view-smoke")
+            .window("Builder View Smoke", (640.0, 480.0))
+            .view_with_hooks::<SmokeView>(|driver| {
+                driver
+                    .window_create_spec(window_create_spec)
+                    .window_created(window_created)
+                    .before_close_window(before_close_window)
+                    .viewport_input(viewport_input)
+                    .record_engine_frame(record_view_engine_frame)
+                    .dock_op(dock_op)
+            })
+            .expect("view_with_hooks should build")
+            .configure(|_config| {});
+    }
 }
 
 #[cfg(all(
