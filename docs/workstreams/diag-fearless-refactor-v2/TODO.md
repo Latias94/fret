@@ -133,6 +133,7 @@ Tracking doc: `docs/workstreams/diag-fearless-refactor-v2/README.md`
 ## Next focus after GUI refresh
 
 - [ ] Define the first campaign/suite execution slice over existing diag scripts:
+  - [x] Drafted command-surface and output-layout proposal in `docs/workstreams/diag-fearless-refactor-v2/CAMPAIGN_EXECUTION_ENTRY_V1.md`.
   - [ ] choose the CLI entry shape (`diag regression run`, `diag campaign run`, or equivalent),
   - [ ] define the minimum stable output layout for suites/campaigns,
   - [ ] keep DevTools and MCP consuming the same aggregate artifacts.
