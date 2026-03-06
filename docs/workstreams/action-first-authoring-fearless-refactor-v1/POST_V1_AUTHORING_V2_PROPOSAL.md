@@ -120,8 +120,8 @@ should no longer be the primary authoring pattern in demos/templates.
 Prototype status (as of 2026-03-06):
 
 - `apps/fret-examples/src/query_demo.rs` and `apps/fret-examples/src/query_async_tokio_demo.rs` now demonstrate builder-first passes using `ui::h_row_build`, `ui::v_flex_build`, and `UiElementSinkExt` to remove `ui::children!` from their main layout sections,
-- `ecosystem/fret-ui-shadcn/src/card.rs` now provides `CardHeader::build(...)` / `CardContent::build(...)` so section components can late-land child lists as well,
-- the remaining visible landing points mostly come from top-level composite wrappers that still collect `AnyElement` eagerly (for example `Card::new(...)`).
+- `ecosystem/fret-ui-shadcn/src/card.rs` now provides `Card::build(...)` / `CardHeader::build(...)` / `CardContent::build(...)` so the query demos can late-land both the card root and its section child lists,
+- the remaining visible landing points mostly come from other top-level composite wrappers that still collect `AnyElement` eagerly outside the current card path.
 
 ### 4.4 Invalidation and caching
 
