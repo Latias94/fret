@@ -1,6 +1,6 @@
 use crate::popper_arrow::{self, DiamondArrowStyle};
 use crate::rtl;
-use crate::test_id::{attach_test_id, test_id_slug};
+use crate::test_id::{attach_test_id, attach_test_id_suffix, test_id_slug};
 use fret_core::{
     Color, Corners, Edges, FontId, FontWeight, Point, Px, Rect, SemanticsRole, TextStyle,
 };
@@ -596,7 +596,7 @@ where
                 if let Some(btn) = scroll_button(
                     cx,
                     scroll_up_icon,
-                    "select-scroll-up-button",
+                    "scroll-up-button",
                     -1.0,
                     show_up,
                 ) {
@@ -608,7 +608,7 @@ where
                 if let Some(btn) = scroll_button(
                     cx,
                     scroll_down_icon,
-                    "select-scroll-down-button",
+                    "scroll-down-button",
                     1.0,
                     show_down,
                 ) {
@@ -2093,6 +2093,7 @@ fn select_impl<H: UiHost>(
         let model_for_trigger = model.clone();
         let open_for_trigger = open.clone();
         let trigger_test_id_for_trigger = trigger_test_id.clone();
+        let test_id_prefix_for_trigger = test_id_prefix.clone();
         let control_id_for_register = control_id.clone();
         let control_registry_for_register = control_registry.clone();
         let labelled_by_element_for_trigger = labelled_by_element;
@@ -4695,11 +4696,15 @@ fn select_impl<H: UiHost>(
                                 value_node
                             };
                         let chevron = cx.opacity(trigger_chevron_opacity, |cx| {
-                                vec![decl_icon::icon_with(
-                                    cx,
-                                    trigger_chevron_icon_override.unwrap_or(ids::ui::CHEVRON_DOWN),
-                                    Some(trigger_chevron_size),
-                                    Some(ColorRef::Color(fg_muted)),
+                                vec![attach_test_id_suffix(
+                                    decl_icon::icon_with(
+                                        cx,
+                                        trigger_chevron_icon_override.unwrap_or(ids::ui::CHEVRON_DOWN),
+                                        Some(trigger_chevron_size),
+                                        Some(ColorRef::Color(fg_muted)),
+                                    ),
+                                    test_id_prefix_for_trigger.as_ref(),
+                                    "icon",
                                 )]
                             });
 
