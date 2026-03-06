@@ -2859,6 +2859,12 @@ impl ContextMenu {
         self
     }
 
+    pub fn test_id_prefix(mut self, prefix: impl Into<Arc<str>>) -> Self {
+        let prefix = prefix.into();
+        self.content_test_id = Some(Arc::<str>::from(format!("{prefix}-content")));
+        self
+    }
+
     pub fn submenu_min_width(mut self, min_width: Px) -> Self {
         self.submenu_min_width = min_width;
         self
@@ -4805,6 +4811,71 @@ mod tests {
         ui.request_semantics_snapshot();
         ui.layout_all(app, services, bounds, 1.0);
         root
+    }
+
+    #[test]
+    fn context_menu_test_id_prefix_derives_content_id() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(true);
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(320.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let next_frame = FrameId(app.frame_id().0.saturating_add(1));
+        app.set_frame_id(next_frame);
+        OverlayController::begin_frame(&mut app, window);
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "context-menu-test-id-prefix",
+            move |cx| {
+                vec![
+                    ContextMenu::new(open.clone())
+                        .test_id_prefix("ctx")
+                        .into_element(
+                            cx,
+                            |cx| {
+                                cx.container(
+                                    ContainerProps {
+                                        layout: {
+                                            let mut layout = LayoutStyle::default();
+                                            layout.size.width = Length::Px(Px(120.0));
+                                            layout.size.height = Length::Px(Px(40.0));
+                                            layout
+                                        },
+                                        ..Default::default()
+                                    },
+                                    |_cx| Vec::new(),
+                                )
+                            },
+                            |_cx| vec![ContextMenuEntry::Item(ContextMenuItem::new("Alpha"))],
+                        ),
+                ]
+            },
+        );
+        ui.set_root(root);
+        OverlayController::render(&mut ui, &mut app, &mut services, window, bounds);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let ids: Vec<&str> = snap
+            .nodes
+            .iter()
+            .filter_map(|n| n.test_id.as_deref())
+            .collect();
+        assert!(ids.iter().copied().any(|id| id == "ctx-content"));
+
+        let _ = root;
     }
 
     fn render_frame_with_dismiss_handler(
