@@ -601,20 +601,32 @@ __PALETTE_BUTTON__
         .gap(Space::N4)
         .w_full();
 
-        let card = shadcn::Card::new(ui::children![cx;
-            shadcn::CardHeader::new(ui::children![cx;
-                shadcn::CardTitle::new("Todo"),
-                shadcn::CardDescription::new("View runtime + typed actions + selector + query (v1)."),
-            ]),
-            shadcn::CardContent::new(ui::children![cx; content]),
-        ])
-        .ui()
-        .bg(ColorRef::Color(theme.color_token("background")))
-        .rounded(Radius::Lg)
-        .border_1()
-        .border_color(ColorRef::Color(theme.color_token("border")))
-        .w_full()
-        .max_w(Px(520.0))
+        let card = shadcn::Card::build(|cx, out| {
+            out.push(
+                shadcn::CardHeader::build(|cx, out| {
+                    out.push_ui(cx, shadcn::CardTitle::new("Todo"));
+                    out.push_ui(
+                        cx,
+                        shadcn::CardDescription::new("View runtime + typed actions + selector + query (v1)."),
+                    );
+                })
+                .into_element(cx),
+            );
+            out.push(
+                shadcn::CardContent::build(|cx, out| {
+                    out.push_ui(cx, content);
+                })
+                .into_element(cx),
+            );
+        })
+        .refine_style(
+            ChromeRefinement::default()
+                .bg(ColorRef::Color(theme.color_token("background")))
+                .rounded(Radius::Lg)
+                .border_1()
+                .border_color(ColorRef::Color(theme.color_token("border"))),
+        )
+        .refine_layout(LayoutRefinement::default().w_full().max_w(Px(520.0)))
         ;
 
         let page = ui::container(|cx| ui::children![cx;
@@ -981,21 +993,33 @@ __ADD_BTN_DEF__
             .gap(Space::N4)
             .w_full();
 
-        let card = shadcn::Card::new(ui::children![cx;
-            shadcn::CardHeader::new(ui::children![cx;
-                shadcn::CardTitle::new("Simple Todo"),
-                shadcn::CardDescription::new("View runtime + typed actions + keyed lists (no selector/query)."),
-                header_actions,
-            ]),
-            shadcn::CardContent::new(ui::children![cx; content]),
-        ])
-        .ui()
-        .bg(ColorRef::Color(theme.color_token("background")))
-        .rounded(Radius::Lg)
-        .border_1()
-        .border_color(ColorRef::Color(theme.color_token("border")))
-        .w_full()
-        .max_w(Px(520.0))
+        let card = shadcn::Card::build(|cx, out| {
+            out.push(
+                shadcn::CardHeader::build(|cx, out| {
+                    out.push_ui(cx, shadcn::CardTitle::new("Simple Todo"));
+                    out.push_ui(
+                        cx,
+                        shadcn::CardDescription::new("View runtime + typed actions + keyed lists (no selector/query)."),
+                    );
+                    out.push(header_actions);
+                })
+                .into_element(cx),
+            );
+            out.push(
+                shadcn::CardContent::build(|cx, out| {
+                    out.push_ui(cx, content);
+                })
+                .into_element(cx),
+            );
+        })
+        .refine_style(
+            ChromeRefinement::default()
+                .bg(ColorRef::Color(theme.color_token("background")))
+                .rounded(Radius::Lg)
+                .border_1()
+                .border_color(ColorRef::Color(theme.color_token("border"))),
+        )
+        .refine_layout(LayoutRefinement::default().w_full().max_w(Px(520.0)))
         ;
 
         let page = ui::container(|cx| {
@@ -1276,7 +1300,9 @@ mod tests {
         assert!(src.contains("impl View for TodoView"));
         assert!(src.contains(".run_view::<TodoView>()"));
         assert!(src.contains("fret::actions!(["));
-        assert!(src.contains(".ui()"));
+        assert!(src.contains("shadcn::Card::build(|cx, out| {"));
+        assert!(src.contains("shadcn::CardHeader::build(|cx, out| {"));
+        assert!(src.contains("shadcn::CardContent::build(|cx, out| {"));
         assert!(src.contains("cx.on_action_notify_models::<act::Add>"));
         assert!(src.contains("cx.on_action_notify_models::<act::ClearDone>"));
         assert!(src.contains("cx.on_action_notify_models::<act::RefreshTip>"));
@@ -1316,6 +1342,9 @@ mod tests {
         assert!(src.contains("impl View for TodoView"));
         assert!(src.contains(".run_view::<TodoView>()"));
         assert!(src.contains("fret::actions!(["));
+        assert!(src.contains("shadcn::Card::build(|cx, out| {"));
+        assert!(src.contains("shadcn::CardHeader::build(|cx, out| {"));
+        assert!(src.contains("shadcn::CardContent::build(|cx, out| {"));
         assert!(src.contains("cx.on_action_notify_models::<act::Add>"));
         assert!(src.contains("cx.on_action_notify_models::<act::ClearDone>"));
         assert!(!src.contains("fret_query"));

@@ -88,15 +88,6 @@ impl View for CommandsKeymapBasicsView {
             .map(|seq| format_sequence(Platform::current(), &seq))
             .unwrap_or_else(|| "Unbound".to_string());
 
-        let header = shadcn::CardHeader::new([
-            shadcn::CardTitle::new("Commands + keymap basics").into_element(cx),
-            shadcn::CardDescription::new(
-                "Registers a command with a default keybinding, then gates availability from UI state.",
-            )
-            .into_element(cx),
-        ])
-        .into_element(cx);
-
         let row_shortcut = ui::h_flex(|cx| {
             [
                 shadcn::Label::new("Shortcut:").into_element(cx),
@@ -186,17 +177,25 @@ impl View for CommandsKeymapBasicsView {
         .gap(Space::N2)
         .into_element(cx);
 
-        let panel = shadcn::Card::new([
-            shadcn::CardHeader::new([
-                shadcn::CardTitle::new("Panel").into_element(cx),
-                shadcn::CardDescription::new("State changes should be command-driven.")
-                    .into_element(cx),
-            ])
-            .into_element(cx),
-            shadcn::CardContent::new([panel_body]).into_element(cx),
-        ])
-        .ui()
-        .w_full()
+        let panel = shadcn::Card::build(|cx, out| {
+            out.push(
+                shadcn::CardHeader::build(|cx, out| {
+                    out.push_ui(cx, shadcn::CardTitle::new("Panel"));
+                    out.push_ui(
+                        cx,
+                        shadcn::CardDescription::new("State changes should be command-driven."),
+                    );
+                })
+                .into_element(cx),
+            );
+            out.push(
+                shadcn::CardContent::build(|_cx, out| {
+                    out.push(panel_body);
+                })
+                .into_element(cx),
+            );
+        })
+        .refine_layout(LayoutRefinement::default().w_full())
         .into_element(cx)
         .test_id(TEST_ID_PANEL);
 
@@ -205,12 +204,29 @@ impl View for CommandsKeymapBasicsView {
             .w_full()
             .into_element(cx);
 
-        let card = shadcn::Card::new([header, shadcn::CardContent::new([body]).into_element(cx)])
-            .ui()
-            .w_full()
-            .max_w(Px(860.0))
-            .into_element(cx)
-            .key_context("cookbook.commands_keymap_basics");
+        let card = shadcn::Card::build(|cx, out| {
+            out.push(
+                shadcn::CardHeader::build(|cx, out| {
+                    out.push_ui(cx, shadcn::CardTitle::new("Commands + keymap basics"));
+                    out.push_ui(
+                        cx,
+                        shadcn::CardDescription::new(
+                            "Registers a command with a default keybinding, then gates availability from UI state.",
+                        ),
+                    );
+                })
+                .into_element(cx),
+            );
+            out.push(
+                shadcn::CardContent::build(|_cx, out| {
+                    out.push(body);
+                })
+                .into_element(cx),
+            );
+        })
+        .refine_layout(LayoutRefinement::default().w_full().max_w(Px(860.0)))
+        .into_element(cx)
+        .key_context("cookbook.commands_keymap_basics");
 
         cx.on_action_notify_models::<act::TogglePanel>({
             let panel_open = self.panel_open.clone();
