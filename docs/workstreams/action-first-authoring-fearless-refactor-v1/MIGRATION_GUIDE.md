@@ -1,14 +1,15 @@
 # Action-First Authoring + View Runtime (Fearless Refactor v1) — Migration Guide
 
-Last updated: 2026-03-05
+Last updated: 2026-03-06
 
 This guide is intentionally practical: it describes how to migrate in-tree demos and ecosystem code
 in small, reviewable slices.
 
 Note:
 
-- This repo no longer ships MVU authoring surfaces in-tree (M9 hard delete). The “MVU → View runtime”
-  section is retained only as a mapping guide for migrating older external codebases.
+- MVU is still treated as a compatibility surface during the refactor, but it is not the recommended
+  authoring path for new code. The `MVU -> View runtime` section is retained as a mapping guide for
+  migrating older external codebases and for the planned M8/M9 deprecation/removal path.
 
 ---
 
@@ -140,6 +141,25 @@ Migration steps:
 
 Small ergonomics helpers (recommended for simple state):
 
+### Default entrypoints (recommended mental model)
+
+If you want the closest v1 equivalent to the GPUI/Zed authoring feel, start with only these three
+entrypoints and treat the rest as convenience aliases:
+
+1. `cx.on_action_notify_models::<A>(|models| ...)`
+   - Default for most typed UI actions that mutate app/view models.
+   - Think: ?normal button / shortcut / menu action?.
+2. `cx.on_action_notify_transient::<A>(...)`
+   - Default when the action must trigger an `App`-only effect in `render()`.
+   - Think: query invalidation, driver interaction, effect scheduling.
+3. `on_activate(...)` / `on_activate_notify(...)`
+   - Default only for local pressable/widget glue that is not worth promoting to a typed action.
+   - Think: small internal widget activation, close buttons, immediate-mode/imui local affordances.
+
+Everything else (`on_action_notify_model_update`, `on_action_notify_model_set`,
+`on_action_notify_toggle_bool`, `on_activate_request_redraw`, ...) should be treated as optional
+shorthand, not as the first thing new users need to memorize.
+
 - For common “update a single model” handlers (counters, toggles, flags), prefer `ViewCx` helpers:
 
 ```rust,ignore
@@ -172,11 +192,14 @@ cx.on_action_notify_models::<act::Add>({
 
 Choosing the helper:
 
-- Use `on_action_notify_model_update` / `on_action_notify_model_set` / `on_action_notify_toggle_bool` when a handler only touches one model.
-- Use `on_action_notify_models` when you need to coordinate multiple models in one handler.
-- Use `on_action_notify` (or `on_action`) when you need host-only operations (focus, timers, clipboard,
-  effects) in the handler; keep model updates minimal and prefer a single `models_mut()` access if
-  possible.
+- Start with `on_action_notify_models` unless you have a strong reason not to.
+- Use `on_action_notify_model_update` / `on_action_notify_model_set` / `on_action_notify_toggle_bool`
+  only when the single-model shape is obviously clearer than the generic `models` transaction.
+- Use `on_action_notify_transient` when the real work must happen with `&mut App` in `render()`.
+- Use `on_action_notify` (or raw `on_action`) for advanced host-only cases (focus, timers, clipboard,
+  custom effects) where the built-in shorthands do not fit.
+- Use `on_activate` / `on_activate_notify` for local pressable/widget glue, not as the default
+  replacement for typed action handlers.
 
 Side effects that need `App` access (v1 note):
 
@@ -198,6 +221,21 @@ Example:
 - `ecosystem/fret/src/view.rs` (`ViewCx::on_action_notify_transient`, `ViewCx::take_transient_on_action_root`).
 - `apps/fret-examples/src/query_demo.rs` (uses transient events + `with_query_client`).
 - `apps/fret-examples/src/query_async_tokio_demo.rs` (same, but with `use_query_async`).
+
+### Current authoring review notes
+
+Based on the current template/demo pass (`hello_template_main_rs`, `hello_counter_demo`, `query_demo`):
+
+- Prefer reading models once near the top of `render()` into plain locals, then render from those locals below.
+  - Good: collect `draft_value`, `filter_value`, `count`, `step_text` up front.
+  - Avoid scattering `watch_model(...).layout()/paint()` calls deep inside card/layout subtrees unless the local scope truly needs them.
+- Prefer one `AnyElement` landing per composed subtree boundary.
+  - Good: build `header`, `content`, `footer`, then land each section once with `.into_element(cx)`.
+  - Use `ui::children![cx; ...]` to keep heterogeneous child lists readable before the final landing.
+- For App-only effects, keep the action handler data-only and schedule the effect explicitly.
+  - Good: `cx.on_action_notify_transient::<A>(...)` in the handler, then `take_transient_on_action_root(...)` + `with_query_client(...)` in `render()`.
+  - Use a small pending-effect model when you need payload/data rather than a boolean transient.
+- Do not add more tiny helper APIs until these patterns prove insufficient across another round of real demos/templates.
 
 ---
 

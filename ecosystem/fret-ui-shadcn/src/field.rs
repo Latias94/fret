@@ -977,13 +977,15 @@ impl FieldLabel {
             let control_snapshot_on_pointer = control_snapshot.clone();
             let label_element = id;
             cx.pressable_add_on_pointer_down(Arc::new(move |host, acx, down| {
+                use fret_ui::action::PressablePointerDownResult as R;
+
                 // Avoid label click-to-focus forwarding when the pointer down originated from a
                 // nested pressable (e.g. an inline button inside the label subtree).
                 if down
                     .hit_pressable_target
                     .is_some_and(|target| target != label_element)
                 {
-                    return fret_ui::action::PressablePointerDownResult::Continue;
+                    return R::SkipDefaultAndStopPropagation;
                 }
 
                 let target = host
@@ -1001,8 +1003,54 @@ impl FieldLabel {
                 });
                 if let Some((true, element)) = target {
                     host.request_focus(element);
+                    return R::SkipDefaultAndStopPropagation;
                 }
-                fret_ui::action::PressablePointerDownResult::Continue
+                R::SkipDefault
+            }));
+
+            let control_registry_on_pointer_up = control_registry.clone();
+            let for_control_on_pointer_up = for_control.clone();
+            let control_snapshot_on_pointer_up = control_snapshot.clone();
+            let label_element_on_pointer_up = id;
+            cx.pressable_add_on_pointer_up(Arc::new(move |host, acx, up| {
+                use fret_ui::action::PressablePointerUpResult as R;
+
+                // If the click started inside another (nested) pressable, do not forward or
+                // activate the label.
+                if up
+                    .down_hit_pressable_target
+                    .is_some_and(|target| target != label_element_on_pointer_up)
+                {
+                    return R::SkipActivate;
+                }
+
+                if !up.is_click {
+                    return R::Continue;
+                }
+
+                let control = host
+                    .models_mut()
+                    .read(&control_registry_on_pointer_up, |reg| {
+                        reg.control_for(acx.window, &for_control_on_pointer_up)
+                            .cloned()
+                    })
+                    .ok()
+                    .flatten();
+                let Some(control) = control.or_else(|| control_snapshot_on_pointer_up.clone())
+                else {
+                    return R::Continue;
+                };
+                if !control.enabled {
+                    return R::SkipActivate;
+                }
+
+                host.request_focus(control.element);
+                control.action.invoke(host);
+                host.request_redraw(acx.window);
+
+                // Avoid running the default activation path (and any stacked `on_activate`
+                // handlers) for the label pressable itself.
+                R::SkipActivate
             }));
 
             let control_registry_on_activate = control_registry.clone();

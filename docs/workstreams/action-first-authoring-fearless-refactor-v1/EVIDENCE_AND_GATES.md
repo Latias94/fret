@@ -26,6 +26,10 @@ View runtime (v1):
 
 - `ecosystem/fret/src/view.rs` (`View`, `ViewCx`, `use_state`/`use_state_keyed`/`use_selector`/`use_query`, view-cache reuse + handler keepalive)
 - `ecosystem/fret/src/app_entry.rs` (`App::run_view`)
+- `ecosystem/fret-ui-kit/src/activate.rs` (`on_activate_*` helpers for low-noise pointer activation handlers)
+- `ecosystem/fret-ui-kit/src/primitives/menu/checkbox_item.rs` / `ecosystem/fret-ui-kit/src/primitives/menu/radio_group.rs` / `ecosystem/fret-ui-kit/src/primitives/menu/sub_trigger.rs` (internal primitives reuse `on_activate` helpers)
+- `ecosystem/fret-ui-kit/src/imui.rs` (imui pressable activation paths reuse `on_activate` / `on_activate_notify` helpers)
+- `ecosystem/fret-ui-kit/src/primitives/navigation_menu.rs` / `ecosystem/fret-ui-kit/src/window_overlays/render.rs` (navigation and overlay pressables reuse `on_activate` helpers)
 
 Legacy MVU removal (planned M9):
 
@@ -67,6 +71,17 @@ Teaching-surface ergonomics gates:
 - `tools/gate_no_on_action_in_teaching_surfaces.py` (guards cookbook/examples against regressing to
   bare `cx.on_action` handlers; prefers `ViewCx::on_action_notify*` helpers).
 - `tools/pre_release.ps1` runs the teaching-surface gates as part of the pre-release policy suite.
+
+Examples adoption (authoring-noise reduction):
+
+- `apps/fret-examples/src/custom_effect_v2_web_demo.rs` (reset button uses `on_activate_request_redraw`)
+- `apps/fret-examples/src/custom_effect_v2_identity_web_demo.rs` (reset button uses `on_activate_request_redraw`)
+- `apps/fret-examples/src/custom_effect_v2_glass_chrome_web_demo.rs` (reset button uses `on_activate_request_redraw`)
+- `apps/fret-examples/src/custom_effect_v2_lut_web_demo.rs` (reset button uses `on_activate_request_redraw`)
+- `apps/fret-examples/src/imui_floating_windows_demo.rs` (pressable overlap target uses `on_activate_notify`)
+- `apps/fret-examples/src/query_demo.rs` (current guidance sample: top-of-render model reads + transient App-effect scheduling)
+- `apps/fret-examples/src/hello_counter_demo.rs` (current guidance sample: action helper placement + card/layout subtree boundaries)
+- `apps/fret-examples/src/query_async_tokio_demo.rs` (current guidance sample: async query variant using the same transient + subtree-boundary patterns)
 
 Pointer-trigger authoring integration (v1 still dispatches through the command pipeline):
 

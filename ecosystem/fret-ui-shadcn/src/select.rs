@@ -28,6 +28,9 @@ use fret_ui_kit::declarative::overlay_motion;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::overlay;
 use fret_ui_kit::primitives::active_descendant as active_desc;
+use fret_ui_kit::primitives::control_registry::{
+    ControlAction, ControlEntry, ControlId, control_registry_model,
+};
 use fret_ui_kit::primitives::popper;
 use fret_ui_kit::primitives::popper_content;
 use fret_ui_kit::primitives::portal_inherited;
@@ -1271,6 +1274,7 @@ pub struct Select {
     placeholder: Arc<str>,
     disabled: bool,
     mouse_policies: radix_select::SelectMousePolicies,
+    control_id: Option<ControlId>,
     trigger_test_id: Option<Arc<str>>,
     a11y_label: Option<Arc<str>>,
     aria_invalid: bool,
@@ -1314,6 +1318,7 @@ impl Select {
             placeholder: Arc::from("Select..."),
             disabled: false,
             mouse_policies: radix_select::SelectMousePolicies::default(),
+            control_id: None,
             trigger_test_id: None,
             a11y_label: None,
             aria_invalid: false,
@@ -1496,6 +1501,15 @@ impl Select {
 
     pub fn mouse_policies(mut self, policies: radix_select::SelectMousePolicies) -> Self {
         self.mouse_policies = policies;
+        self
+    }
+
+    /// Binds this Select to a logical form control id (similar to HTML `id`).
+    ///
+    /// When set, `Label::for_control(ControlId)` forwards focus to the select trigger, and the
+    /// select uses `aria-labelledby` / `aria-describedby`-like semantics via the control registry.
+    pub fn control_id(mut self, id: impl Into<ControlId>) -> Self {
+        self.control_id = Some(id.into());
         self
     }
 
@@ -1701,6 +1715,7 @@ impl Select {
             self.placeholder,
             self.disabled,
             self.mouse_policies,
+            self.control_id,
             self.trigger_test_id,
             self.a11y_label,
             self.aria_invalid,
@@ -1747,6 +1762,7 @@ fn select_impl<H: UiHost>(
     placeholder: Arc<str>,
     disabled: bool,
     mouse_policies: radix_select::SelectMousePolicies,
+    control_id: Option<ControlId>,
     trigger_test_id: Option<Arc<str>>,
     a11y_label: Option<Arc<str>>,
     aria_invalid: bool,
@@ -1786,6 +1802,35 @@ fn select_impl<H: UiHost>(
         .merge(chrome);
 
     cx.scope(|cx| {
+        let control_id = control_id.clone();
+        let control_registry = control_id.as_ref().map(|_| control_registry_model(cx));
+        let labelled_by_element = if a11y_label.is_some() {
+            None
+        } else if let (Some(control_id), Some(control_registry)) =
+            (control_id.as_ref(), control_registry.as_ref())
+        {
+            cx.app
+                .models()
+                .read(control_registry, |reg| {
+                    reg.label_for(cx.window, control_id).map(|l| l.element)
+                })
+                .ok()
+                .flatten()
+        } else {
+            None
+        };
+        let described_by_element = if let (Some(control_id), Some(control_registry)) =
+            (control_id.as_ref(), control_registry.as_ref())
+        {
+            cx.app
+                .models()
+                .read(control_registry, |reg| reg.described_by_for(cx.window, control_id))
+                .ok()
+                .flatten()
+        } else {
+            None
+        };
+
         let trigger_test_id = trigger_test_id.clone();
         fn find_item_label_overrides(
             entries: &[SelectEntry],
@@ -2031,8 +2076,27 @@ fn select_impl<H: UiHost>(
         let model_for_trigger = model.clone();
         let open_for_trigger = open.clone();
         let trigger_test_id_for_trigger = trigger_test_id.clone();
+        let control_id_for_register = control_id.clone();
+        let control_registry_for_register = control_registry.clone();
+        let labelled_by_element_for_trigger = labelled_by_element;
+        let described_by_element_for_trigger = described_by_element;
+        let has_a11y_label_for_trigger = a11y_label.is_some();
 
         let trigger = decl_chrome::control_chrome_pressable_with_id_props(cx, move |cx, st, trigger_id| {
+            if let (Some(control_id), Some(control_registry)) = (
+                control_id_for_register.clone(),
+                control_registry_for_register.clone(),
+            ) {
+                let entry = ControlEntry {
+                    element: trigger_id,
+                    enabled,
+                    action: ControlAction::Noop,
+                };
+                let _ = cx.app.models_mut().update(&control_registry, |reg| {
+                    reg.register_control(cx.window, cx.frame_id, control_id, entry);
+                });
+            }
+
             // `selected` affects rendered structure (label text + indicator visibility). Observe it as
             // a paint dependency on the mounted trigger element so model changes drive invalidation
             // (and won't be dropped when `select_impl` is wrapped in an unmounted `cx.scope`).
@@ -2501,6 +2565,12 @@ fn select_impl<H: UiHost>(
                 ..Default::default()
             };
             props.a11y.test_id = trigger_test_id_for_trigger.clone();
+            if !has_a11y_label_for_trigger {
+                props.a11y.labelled_by_element =
+                    labelled_by_element_for_trigger.map(|id| id.0);
+            }
+            props.a11y.described_by_element =
+                described_by_element_for_trigger.map(|id| id.0);
 
             // Radix Select uses `hideOthers(content)` (aria-hide outside) and disables outside
             // pointer events while open. In Fret we approximate that by installing a modal barrier

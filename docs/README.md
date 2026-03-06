@@ -111,6 +111,10 @@ so the default authoring story lives in ecosystem crates.
   - Derived state (selectors/computed): `ecosystem/fret-selector`
   - Async resources (loading/error/cache/invalidation): `ecosystem/fret-query`
   - Legacy/dynamic routing (per-item payloads): `fret::mvu::MessageRouter<M>` (compat; avoid in new templates)
+- Default entrypoints (recommended mental model):
+  - `cx.on_action_notify_models::<A>(|models| ...)` - default for most typed UI actions.
+  - `cx.on_action_notify_transient::<A>(...)` - default when the real work must happen with `&mut App` in `render()`.
+  - `on_activate(...)` / `on_activate_notify(...)` - local pressable/widget glue only; do not treat these as the default replacement for typed action handlers.
 - Upgrade guidance (app authors): `docs/fearless-refactoring.md`
 - Integration guidance:
   - Async fetch (tokio/wasm): `docs/integrating-tokio-and-reqwest.md`

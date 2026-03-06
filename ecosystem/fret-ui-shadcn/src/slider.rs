@@ -13,6 +13,9 @@ use fret_ui::{ElementContext, GlobalElementId, Theme, ThemeNamedColorKey, UiHost
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::motion::drive_tween_f32_for_element;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::primitives::control_registry::{
+    ControlAction, ControlEntry, ControlId, control_registry_model,
+};
 use fret_ui_kit::primitives::direction as radix_direction;
 use fret_ui_kit::primitives::slider as radix_slider;
 use fret_ui_kit::{
@@ -157,6 +160,7 @@ pub struct Slider {
     step: f32,
     min_steps_between_thumbs: u32,
     disabled: bool,
+    control_id: Option<ControlId>,
     a11y_label: Option<Arc<str>>,
     test_id: Option<Arc<str>>,
     on_value_commit: Option<OnValueCommit>,
@@ -177,6 +181,7 @@ impl Slider {
             step: 1.0,
             min_steps_between_thumbs: 0,
             disabled: false,
+            control_id: None,
             a11y_label: None,
             test_id: None,
             on_value_commit: None,
@@ -228,6 +233,15 @@ impl Slider {
     /// Minimum number of steps between thumbs (Radix `minStepsBetweenThumbs`).
     pub fn min_steps_between_thumbs(mut self, min_steps_between_thumbs: u32) -> Self {
         self.min_steps_between_thumbs = min_steps_between_thumbs;
+        self
+    }
+
+    /// Binds this Slider to a logical form control id (similar to HTML `id`).
+    ///
+    /// When set, `Label::for_control(ControlId)` forwards focus to the active thumb, and the
+    /// slider uses `aria-labelledby` / `aria-describedby`-like semantics via the control registry.
+    pub fn control_id(mut self, id: impl Into<ControlId>) -> Self {
+        self.control_id = Some(id.into());
         self
     }
 
@@ -286,6 +300,7 @@ impl Slider {
             self.step,
             self.min_steps_between_thumbs,
             self.disabled,
+            self.control_id,
             self.a11y_label,
             self.test_id,
             self.on_value_commit,
@@ -307,6 +322,7 @@ pub fn slider<H: UiHost>(
     step: f32,
     min_steps_between_thumbs: u32,
     disabled: bool,
+    control_id: Option<ControlId>,
     a11y_label: Option<Arc<str>>,
     test_id: Option<Arc<str>>,
     on_value_commit: Option<OnValueCommit>,
@@ -317,6 +333,37 @@ pub fn slider<H: UiHost>(
     let theme = Theme::global(&*cx.app).snapshot();
 
     cx.scope(|cx| {
+        let control_id = control_id.clone();
+        let control_registry = control_id.as_ref().map(|_| control_registry_model(cx));
+        let labelled_by_element = if a11y_label.is_some() {
+            None
+        } else if let (Some(control_id), Some(control_registry)) =
+            (control_id.as_ref(), control_registry.as_ref())
+        {
+            cx.app
+                .models()
+                .read(control_registry, |reg| {
+                    reg.label_for(cx.window, control_id).map(|l| l.element)
+                })
+                .ok()
+                .flatten()
+        } else {
+            None
+        };
+        let described_by_element = if let (Some(control_id), Some(control_registry)) =
+            (control_id.as_ref(), control_registry.as_ref())
+        {
+            cx.app
+                .models()
+                .read(control_registry, |reg| {
+                    reg.described_by_for(cx.window, control_id)
+                })
+                .ok()
+                .flatten()
+        } else {
+            None
+        };
+
         #[derive(Default)]
         struct DragIndexState {
             model: Option<Model<usize>>,
@@ -489,6 +536,10 @@ pub fn slider<H: UiHost>(
             radix_slider::slider_root_semantics(a11y_label.clone(), active_value, disabled);
         semantics.layout = semantics_layout;
         semantics.test_id = test_id.clone();
+        if a11y_label.is_none() {
+            semantics.labelled_by_element = labelled_by_element.map(|id| id.0);
+        }
+        semantics.described_by_element = described_by_element.map(|id| id.0);
         semantics.orientation = Some(match orientation {
             radix_slider::SliderOrientation::Horizontal => SemanticsOrientation::Horizontal,
             radix_slider::SliderOrientation::Vertical => SemanticsOrientation::Vertical,
@@ -534,6 +585,9 @@ pub fn slider<H: UiHost>(
         let axis_on_move = axis;
         let min_at_axis_start_on_down = min_at_axis_start;
         let min_at_axis_start_on_move = min_at_axis_start;
+
+        let control_id_for_register = control_id.clone();
+        let control_registry_for_register = control_registry.clone();
 
         cx.semantics_with_id(semantics, |cx, semantics_id| {
             let track_offset = 0.0;
@@ -1341,6 +1395,25 @@ pub fn slider<H: UiHost>(
                     out
                 })]
             });
+
+            if let (Some(control_id), Some(control_registry)) = (
+                control_id_for_register.clone(),
+                control_registry_for_register.clone(),
+            ) {
+                let focus_target = active_thumb_focus_target
+                    .get()
+                    .or_else(|| thumb_focus_targets.get(0).and_then(|t| t.get()));
+                if let Some(focus_target) = focus_target {
+                    let entry = ControlEntry {
+                        element: focus_target,
+                        enabled: !disabled,
+                        action: ControlAction::Noop,
+                    };
+                    let _ = cx.app.models_mut().update(&control_registry, |reg| {
+                        reg.register_control(cx.window, cx.frame_id, control_id, entry);
+                    });
+                }
+            }
 
             if disabled {
                 let mut opacity = OpacityProps::default();

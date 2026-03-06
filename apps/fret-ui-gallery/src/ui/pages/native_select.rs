@@ -110,6 +110,7 @@ pub(super) fn preview_native_select(cx: &mut ElementContext<'_, App>) -> Vec<Any
     };
 
     let demo = snippets::demo::render(cx, demo_value, demo_open);
+    let label = snippets::label::render(cx);
     let with_groups = snippets::with_groups::render(cx, groups_value, groups_open);
     let disabled_state = snippets::disabled::render(cx, disabled_value, disabled_open);
     let invalid_state = snippets::invalid::render(cx, invalid_value, invalid_open);
@@ -134,6 +135,10 @@ pub(super) fn preview_native_select(cx: &mut ElementContext<'_, App>) -> Vec<Any
                 .description("A styled native-select-like control (upstream is a DOM `<select>`).")
                 .no_shell()
                 .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
+            DocSection::new("Label Association", label)
+                .description("Use `FieldLabel::for_control` + `NativeSelect::control_id` to forward focus on label click.")
+                .test_id_prefix("ui-gallery-native-select-label")
+                .code_rust_from_file_region(snippets::label::SOURCE, "example"),
             DocSection::new("With Groups", with_groups)
                 .description("Organize options using `NativeSelectOptGroup`.")
                 .code_rust_from_file_region(snippets::with_groups::SOURCE, "example"),

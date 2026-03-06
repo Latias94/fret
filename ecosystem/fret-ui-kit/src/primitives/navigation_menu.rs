@@ -1186,38 +1186,40 @@ impl NavigationMenuTrigger {
                     let value_for_activate = value_model.clone();
                     let trigger_states_for_activate = trigger_states.clone();
                     let item_value_for_activate = item_value.clone();
-                    cx.pressable_add_on_activate(Arc::new(move |host, action_cx, _reason| {
-                        let mut root = root_state_for_activate
-                            .lock()
-                            .unwrap_or_else(|e| e.into_inner());
-                        root.on_item_select(
-                            host,
-                            action_cx,
-                            &value_for_activate,
-                            item_value_for_activate.clone(),
-                            cfg,
-                        );
+                    cx.pressable_add_on_activate(crate::on_activate(
+                        move |host, action_cx, _reason| {
+                            let mut root = root_state_for_activate
+                                .lock()
+                                .unwrap_or_else(|e| e.into_inner());
+                            root.on_item_select(
+                                host,
+                                action_cx,
+                                &value_for_activate,
+                                item_value_for_activate.clone(),
+                                cfg,
+                            );
 
-                        let now_open = host
-                            .models_mut()
-                            .read(&value_for_activate, |v| v.clone())
-                            .ok()
-                            .flatten()
-                            .is_some_and(|v| v.as_ref() == item_value_for_activate.as_ref());
+                            let now_open = host
+                                .models_mut()
+                                .read(&value_for_activate, |v| v.clone())
+                                .ok()
+                                .flatten()
+                                .is_some_and(|v| v.as_ref() == item_value_for_activate.as_ref());
 
-                        let mut states = trigger_states_for_activate
-                            .lock()
-                            .unwrap_or_else(|e| e.into_inner());
-                        let entry = states
-                            .states
-                            .entry(item_value_for_activate.clone())
-                            .or_insert_with(NavigationMenuTriggerState::default);
-                        entry.was_click_close = !now_open;
-                        if now_open {
-                            entry.was_escape_close = false;
-                        }
-                        entry.has_pointer_move_opened = false;
-                    }));
+                            let mut states = trigger_states_for_activate
+                                .lock()
+                                .unwrap_or_else(|e| e.into_inner());
+                            let entry = states
+                                .states
+                                .entry(item_value_for_activate.clone())
+                                .or_insert_with(NavigationMenuTriggerState::default);
+                            entry.was_click_close = !now_open;
+                            if now_open {
+                                entry.was_escape_close = false;
+                            }
+                            entry.has_pointer_move_opened = false;
+                        },
+                    ));
 
                     let trigger_states_for_hover = trigger_states.clone();
                     let root_state_for_hover = root_state.clone();
@@ -1404,19 +1406,21 @@ impl NavigationMenuLink {
 
                 let root_state_for_dismiss = root_state.clone();
                 let value_for_dismiss = value_model.clone();
-                cx.pressable_add_on_activate(Arc::new(move |host, action_cx, _reason| {
-                    let mut st = modifier_state.lock().unwrap_or_else(|e| e.into_inner());
-                    let suppress = st.suppress_dismiss_for_next_activate;
-                    st.suppress_dismiss_for_next_activate = false;
-                    if suppress {
-                        return;
-                    }
+                cx.pressable_add_on_activate(crate::on_activate(
+                    move |host, action_cx, _reason| {
+                        let mut st = modifier_state.lock().unwrap_or_else(|e| e.into_inner());
+                        let suppress = st.suppress_dismiss_for_next_activate;
+                        st.suppress_dismiss_for_next_activate = false;
+                        if suppress {
+                            return;
+                        }
 
-                    let mut root = root_state_for_dismiss
-                        .lock()
-                        .unwrap_or_else(|e| e.into_inner());
-                    root.on_item_dismiss(host, action_cx, &value_for_dismiss, cfg);
-                }));
+                        let mut root = root_state_for_dismiss
+                            .lock()
+                            .unwrap_or_else(|e| e.into_inner());
+                        root.on_item_dismiss(host, action_cx, &value_for_dismiss, cfg);
+                    },
+                ));
             }
             f(cx, st)
         })

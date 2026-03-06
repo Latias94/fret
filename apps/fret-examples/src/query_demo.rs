@@ -26,6 +26,16 @@ fn demo_key() -> QueryKey<DemoData> {
     QueryKey::new("fret-examples.query_demo.demo_data.v1", &0u8)
 }
 
+fn query_policy() -> QueryPolicy {
+    QueryPolicy {
+        stale_time: Duration::from_secs(2),
+        cache_time: Duration::from_secs(30),
+        keep_previous_data_while_loading: true,
+        retry: QueryRetryPolicy::exponential(3, Duration::from_millis(250), Duration::from_secs(2)),
+        ..Default::default()
+    }
+}
+
 struct QueryDemoState {
     fail_mode: Model<bool>,
 }
@@ -58,25 +68,16 @@ impl View for QueryDemoView {
             });
         }
 
+        cx.on_action_notify_toggle_bool::<act::ToggleFailMode>(self.st.fail_mode.clone());
+        cx.on_action_notify_transient::<act::Invalidate>(TRANSIENT_INVALIDATE_KEY);
+        cx.on_action_notify_transient::<act::InvalidateNamespace>(TRANSIENT_INVALIDATE_NAMESPACE);
+
         let fail_mode = cx
             .watch_model(&self.st.fail_mode)
             .layout()
             .copied_or_default();
 
-        let key = demo_key();
-        let policy = QueryPolicy {
-            stale_time: Duration::from_secs(2),
-            cache_time: Duration::from_secs(30),
-            keep_previous_data_while_loading: true,
-            retry: QueryRetryPolicy::exponential(
-                3,
-                Duration::from_millis(250),
-                Duration::from_secs(2),
-            ),
-            ..Default::default()
-        };
-
-        let handle = cx.use_query(key, policy, move |_token| {
+        let query_handle = cx.use_query(demo_key(), query_policy(), move |_token| {
             if fail_mode {
                 return Err(QueryError::transient("simulated fetch error"));
             }
@@ -85,130 +86,121 @@ impl View for QueryDemoView {
             Ok(DemoData { label })
         });
 
-        let state = cx
-            .watch_model(handle.model())
+        let query_state = cx
+            .watch_model(query_handle.model())
             .layout()
             .cloned_or_else(QueryState::<DemoData>::default);
 
-        let status_label = match state.status {
+        let status_label = match query_state.status {
             QueryStatus::Idle => "Idle",
             QueryStatus::Loading => "Loading",
             QueryStatus::Success => "Success",
             QueryStatus::Error => "Error",
         };
-
-        let mode_badge = shadcn::Badge::new(if fail_mode { "Mode: Error" } else { "Mode: Ok" })
-            .variant(shadcn::BadgeVariant::Secondary)
-            .into_element(cx);
-
-        let status_badge = shadcn::Badge::new(status_label)
-            .variant(match state.status {
-                QueryStatus::Success => shadcn::BadgeVariant::Default,
-                QueryStatus::Error => shadcn::BadgeVariant::Destructive,
-                QueryStatus::Idle | QueryStatus::Loading => shadcn::BadgeVariant::Secondary,
-            })
-            .into_element(cx);
-
-        let info_line = match state.status {
-            QueryStatus::Loading if state.data.is_some() => "Refreshing (kept previous data)…",
-            QueryStatus::Loading => "Loading…",
+        let status_variant = match query_state.status {
+            QueryStatus::Success => shadcn::BadgeVariant::Default,
+            QueryStatus::Error => shadcn::BadgeVariant::Destructive,
+            QueryStatus::Idle | QueryStatus::Loading => shadcn::BadgeVariant::Secondary,
+        };
+        let info_line = match query_state.status {
+            QueryStatus::Loading if query_state.data.is_some() => {
+                "Refreshing (kept previous data)?"
+            }
+            QueryStatus::Loading => "Loading?",
             QueryStatus::Success => "Ready.",
             QueryStatus::Error => "Fetch failed.",
             QueryStatus::Idle => "Idle.",
         };
-
-        let data_line: Arc<str> = state
+        let data_line: Arc<str> = query_state
             .data
             .as_ref()
-            .map(|d| d.label.clone())
+            .map(|data| data.label.clone())
             .unwrap_or_else(|| Arc::from("<no data>"));
-
-        let error_line = state.error.clone();
-
-        let duration_line = state
+        let error_line = query_state
+            .error
+            .as_ref()
+            .map(|err| format!("Error: {:?}", err.kind()))
+            .unwrap_or_else(|| "Error: <none>".to_string());
+        let error_color = if query_state.error.is_some() {
+            theme.color_token("destructive")
+        } else {
+            theme.color_token("muted-foreground")
+        };
+        let duration_line = query_state
             .last_duration
-            .map(|d| Arc::from(format!("last_duration={d:?}")));
-
-        let retry_line = state.retry.next_retry_at.map(|at| {
+            .map(|duration| Arc::from(format!("last_duration={duration:?}")));
+        let retry_line = query_state.retry.next_retry_at.map(|next_retry_at| {
             Arc::from(format!(
-                "retry: failures={} next_at={at:?}",
-                state.retry.failures
+                "retry: failures={} next_at={next_retry_at:?}",
+                query_state.retry.failures
             ))
         });
 
-        let toggle_mode_btn = shadcn::Button::new("Toggle error mode")
-            .variant(shadcn::ButtonVariant::Secondary)
-            .action(act::ToggleFailMode)
-            .into_element(cx);
-
-        let invalidate_btn = shadcn::Button::new("Invalidate")
-            .variant(shadcn::ButtonVariant::Default)
-            .action(act::Invalidate)
-            .into_element(cx);
-
-        let invalidate_ns_btn = shadcn::Button::new("Invalidate namespace")
-            .variant(shadcn::ButtonVariant::Ghost)
-            .action(act::InvalidateNamespace)
-            .into_element(cx);
-
-        let buttons = ui::h_flex(|_cx| [invalidate_btn, invalidate_ns_btn, toggle_mode_btn])
-            .gap(Space::N2)
-            .items_center()
-            .into_element(cx);
-
-        let lines = ui::v_flex(|cx| {
-            let mut out: Vec<AnyElement> = Vec::new();
-            out.push(ui::raw_text(info_line).into_element(cx));
-            out.push(ui::raw_text(data_line).into_element(cx));
-
-            if let Some(err) = error_line {
-                out.push(
-                    ui::raw_text(format!("Error: {:?}", err.kind()))
-                        .text_color(ColorRef::Color(theme.color_token("destructive")))
-                        .into_element(cx),
-                );
-            } else {
-                out.push(
-                    ui::raw_text("Error: <none>")
-                        .text_color(ColorRef::Color(theme.color_token("muted-foreground")))
-                        .into_element(cx),
-                );
-            }
-
-            if let Some(dur) = duration_line {
-                out.push(
-                    ui::raw_text(dur)
-                        .text_color(ColorRef::Color(theme.color_token("muted-foreground")))
-                        .into_element(cx),
-                );
-            }
-            if let Some(retry) = retry_line {
-                out.push(
-                    ui::raw_text(retry)
-                        .text_color(ColorRef::Color(theme.color_token("muted-foreground")))
-                        .into_element(cx),
-                );
-            }
-            out
+        let status_row = ui::h_flex(|cx| {
+            ui::children![cx;
+                shadcn::Badge::new(status_label).variant(status_variant),
+                shadcn::Badge::new(if fail_mode { "Mode: Error" } else { "Mode: Ok" })
+                    .variant(shadcn::BadgeVariant::Secondary),
+            ]
         })
         .gap(Space::N2)
+        .items_center()
         .into_element(cx);
 
-        let header = shadcn::CardHeader::new([
-            shadcn::CardTitle::new("Query demo").into_element(cx),
-            shadcn::CardDescription::new("Async resource state via fret-query.").into_element(cx),
-            ui::h_flex(|_cx| [status_badge, mode_badge])
-                .gap(Space::N2)
-                .items_center()
-                .into_element(cx),
+        let buttons = ui::h_flex(|cx| {
+            ui::children![cx;
+                shadcn::Button::new("Invalidate")
+                    .variant(shadcn::ButtonVariant::Default)
+                    .action(act::Invalidate),
+                shadcn::Button::new("Invalidate namespace")
+                    .variant(shadcn::ButtonVariant::Ghost)
+                    .action(act::InvalidateNamespace),
+                shadcn::Button::new("Toggle error mode")
+                    .variant(shadcn::ButtonVariant::Secondary)
+                    .action(act::ToggleFailMode),
+            ]
+        })
+        .gap(Space::N2)
+        .items_center()
+        .into_element(cx);
+
+        let mut detail_lines = ui::children![cx;
+            ui::raw_text(info_line),
+            ui::raw_text(data_line),
+            ui::raw_text(error_line).text_color(ColorRef::Color(error_color)),
+        ];
+        if let Some(duration_line) = duration_line {
+            detail_lines.push(
+                ui::raw_text(duration_line)
+                    .text_color(ColorRef::Color(theme.color_token("muted-foreground")))
+                    .into_element(cx),
+            );
+        }
+        if let Some(retry_line) = retry_line {
+            detail_lines.push(
+                ui::raw_text(retry_line)
+                    .text_color(ColorRef::Color(theme.color_token("muted-foreground")))
+                    .into_element(cx),
+            );
+        }
+
+        let detail_body = ui::v_flex(|_cx| detail_lines)
+            .gap(Space::N2)
+            .into_element(cx);
+
+        let header = shadcn::CardHeader::new(ui::children![cx;
+            shadcn::CardTitle::new("Query demo"),
+            shadcn::CardDescription::new("Async resource state via fret-query."),
+            status_row,
         ])
         .into_element(cx);
 
-        let content = shadcn::CardContent::new([ui::v_flex(|_cx| [buttons, lines])
+        let content_body = ui::v_flex(|_cx| [buttons, detail_body])
             .gap(Space::N4)
             .w_full()
-            .into_element(cx)])
-        .into_element(cx);
+            .into_element(cx);
+
+        let content = shadcn::CardContent::new([content_body]).into_element(cx);
 
         let card = shadcn::Card::new([header, content])
             .ui()
@@ -216,12 +208,7 @@ impl View for QueryDemoView {
             .max_w(Px(520.0))
             .into_element(cx);
 
-        cx.on_action_notify_toggle_bool::<act::ToggleFailMode>(self.st.fail_mode.clone());
-
-        cx.on_action_notify_transient::<act::Invalidate>(TRANSIENT_INVALIDATE_KEY);
-        cx.on_action_notify_transient::<act::InvalidateNamespace>(TRANSIENT_INVALIDATE_NAMESPACE);
-
-        let page = ui::container(|cx| {
+        ui::container(|cx| {
             [ui::v_flex(|_cx| [card])
                 .w_full()
                 .h_full()
@@ -233,9 +220,8 @@ impl View for QueryDemoView {
         .p(Space::N6)
         .w_full()
         .h_full()
-        .into_element(cx);
-
-        page.into()
+        .into_element(cx)
+        .into()
     }
 }
 

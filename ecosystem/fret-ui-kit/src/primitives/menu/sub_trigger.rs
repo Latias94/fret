@@ -15,6 +15,7 @@ use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, UiHost};
 
 use crate::declarative::model_watch::ModelWatchExt as _;
+use crate::on_activate;
 use crate::primitives::direction::{self as direction_prim, LayoutDirection};
 use crate::primitives::menu::sub;
 
@@ -77,7 +78,7 @@ pub fn wire<H: UiHost>(
     if has_submenu {
         let models_for_activate = models.clone();
         let value_for_activate = value.clone();
-        cx.pressable_add_on_activate(Arc::new(move |host, acx, _reason| {
+        cx.pressable_add_on_activate(on_activate(move |host, acx, _reason| {
             sub::open_on_activate(host, acx, &models_for_activate, value_for_activate.clone());
         }));
     }

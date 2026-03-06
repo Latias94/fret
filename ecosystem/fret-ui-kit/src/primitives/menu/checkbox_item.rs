@@ -5,16 +5,16 @@
 //! closure.
 
 use fret_runtime::Model;
-use fret_ui::action::OnActivate;
 use fret_ui::{ElementContext, UiHost};
-use std::sync::Arc;
+
+use crate::on_activate;
 
 /// Wire checkbox-item activation to toggle `checked`.
 ///
 /// Intended to be called inside a pressable closure for the checkbox item.
 #[track_caller]
 pub fn wire_toggle_on_activate<H: UiHost>(cx: &mut ElementContext<'_, H>, checked: Model<bool>) {
-    let handler: OnActivate = Arc::new(move |host, _acx, _reason| {
+    let handler = on_activate(move |host, _acx, _reason| {
         let _ = host.models_mut().update(&checked, |v| *v = !*v);
     });
     cx.pressable_add_on_activate(handler);

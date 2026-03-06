@@ -10,12 +10,13 @@ pub(super) fn preview_accordion(
     let _ = value;
 
     let demo = snippets::demo::render(cx);
+    let usage = snippets::usage::render(cx);
     let extras = snippets::extras::render(cx);
 
     let notes = doc_layout::notes(
         cx,
         [
-            "Preview follows `accordion-demo.tsx` (new-york-v4).",
+            "Preview follows the shadcn Accordion docs flow: demo first, then a minimal usage example.",
             "Extras keep additional stress cases and local regression gates (not part of upstream).",
             "API reference: `ecosystem/fret-ui-shadcn/src/accordion.rs`.",
         ],
@@ -31,6 +32,10 @@ pub(super) fn preview_accordion(
                 .description("Upstream shadcn AccordionDemo structure.")
                 .test_id_prefix("ui-gallery-accordion-demo")
                 .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
+            DocSection::new("Usage", usage)
+                .description("Minimal usage mirroring the upstream docs example.")
+                .test_id_prefix("ui-gallery-accordion-usage")
+                .code_rust_from_file_region(snippets::usage::SOURCE, "example"),
             DocSection::new("Extras", extras)
                 .description("Fret-specific variants + RTL coverage.")
                 .test_id_prefix("ui-gallery-accordion-extras")

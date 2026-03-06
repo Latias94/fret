@@ -4,5 +4,6 @@ pub mod diag_surface;
 pub mod disabled;
 pub mod groups;
 pub mod invalid;
+pub mod label;
 pub mod rtl;
 pub mod scrollable;
