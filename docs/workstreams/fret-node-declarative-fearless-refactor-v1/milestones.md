@@ -203,6 +203,9 @@ points rather than direct graph mutation.
   - Declarative marquee preview no longer churns store selection on pointer move: previewed nodes now
     stay in local reducer state, pointer-up commits through the controller/store-backed selection
     seam, and escape/pointer-cancel simply drop the transient marquee state.
+  - Declarative hit-node click selection and empty-space clear no longer write store selection on
+    pointer-down: they stay in local transient state until pointer-up, while node-drag threshold
+    crossing commits the pending selection before the drag transaction path takes over.
   - Diagnostics-only `Digit3/4/5` graph tweaks now build transactions from `graph_diff` and commit
     through the same controller/store transaction path instead of mutating `Graph` in place.
   - `apps/fret-examples/src/node_graph_demo.rs` now passes a controller into the declarative

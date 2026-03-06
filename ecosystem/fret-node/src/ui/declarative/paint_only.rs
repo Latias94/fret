@@ -181,6 +181,13 @@ struct NodeDragState {
     nodes_sorted: Arc<[crate::core::NodeId]>,
 }
 
+#[derive(Debug, Clone)]
+struct PendingSelectionState {
+    nodes: Arc<[crate::core::NodeId]>,
+    clear_edges: bool,
+    clear_groups: bool,
+}
+
 #[track_caller]
 fn use_uncontrolled_model<T: Clone + 'static, H: UiHost>(
     cx: &mut ElementContext<'_, H>,
@@ -1032,15 +1039,38 @@ fn build_marquee_preview_selected_nodes(
     Arc::from(selected_nodes.into_boxed_slice())
 }
 
-fn commit_marquee_selection_action_host(
+fn build_click_selection_preview_nodes(
+    base_selected_nodes: &[crate::core::NodeId],
+    hit: crate::core::NodeId,
+    multi: bool,
+) -> Arc<[crate::core::NodeId]> {
+    let mut selected_nodes = base_selected_nodes.to_vec();
+    let already_selected = selected_nodes.contains(&hit);
+    if multi {
+        if let Some(ix) = selected_nodes.iter().position(|id| *id == hit) {
+            selected_nodes.remove(ix);
+        } else {
+            selected_nodes.push(hit);
+        }
+    } else if !already_selected {
+        selected_nodes.clear();
+        selected_nodes.push(hit);
+    }
+    selected_nodes.sort();
+    selected_nodes.dedup();
+    Arc::from(selected_nodes.into_boxed_slice())
+}
+
+fn commit_pending_selection_action_host(
     host: &mut dyn fret_ui::action::UiActionHost,
     view_state: &Model<NodeGraphViewState>,
     controller: Option<&NodeGraphController>,
     store: Option<&Model<NodeGraphStore>>,
-    marquee: &MarqueeDragState,
+    pending: &PendingSelectionState,
 ) -> bool {
-    let preview_selected_nodes = marquee.preview_selected_nodes.clone();
-    let toggle = marquee.toggle;
+    let nodes = pending.nodes.clone();
+    let clear_edges = pending.clear_edges;
+    let clear_groups = pending.clear_groups;
     update_selection_action_host(
         host,
         view_state,
@@ -1048,13 +1078,30 @@ fn commit_marquee_selection_action_host(
         store,
         move |selected_nodes, selected_edges, selected_groups| {
             selected_nodes.clear();
-            selected_nodes.extend(preview_selected_nodes.iter().copied());
-            if !toggle {
+            selected_nodes.extend(nodes.iter().copied());
+            if clear_edges {
                 selected_edges.clear();
+            }
+            if clear_groups {
                 selected_groups.clear();
             }
         },
     )
+}
+
+fn commit_marquee_selection_action_host(
+    host: &mut dyn fret_ui::action::UiActionHost,
+    view_state: &Model<NodeGraphViewState>,
+    controller: Option<&NodeGraphController>,
+    store: Option<&Model<NodeGraphStore>>,
+    marquee: &MarqueeDragState,
+) -> bool {
+    let pending = PendingSelectionState {
+        nodes: marquee.preview_selected_nodes.clone(),
+        clear_edges: !marquee.toggle,
+        clear_groups: !marquee.toggle,
+    };
+    commit_pending_selection_action_host(host, view_state, controller, store, &pending)
 }
 
 fn hit_test_node_at_point(
@@ -1621,6 +1668,10 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
     // Node dragging preview state (paint-only baseline).
     let node_drag: Model<Option<NodeDragState>> = use_uncontrolled_model(cx, || None);
 
+    // Pending click-selection preview that should only commit on pointer-up / drag activation.
+    let pending_selection: Model<Option<PendingSelectionState>> =
+        use_uncontrolled_model(cx, || None);
+
     // Hover state is internal and intentionally not persisted in view state.
     let hovered_node: Model<Option<crate::core::NodeId>> = use_uncontrolled_model(cx, || None);
     // Scratch vec used by hit tests to avoid per-event allocations.
@@ -1687,6 +1738,9 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
     let node_dragging = node_drag_value
         .as_ref()
         .is_some_and(|d| d.active && !d.canceled);
+    let pending_selection_value = cx
+        .get_model_cloned(&pending_selection, Invalidation::Layout)
+        .unwrap_or(None);
 
     let view_value = cx
         .get_model_cloned(&view_state, Invalidation::Layout)
@@ -1917,6 +1971,11 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
         .as_ref()
         .filter(|marquee| marquee.active)
         .map(|marquee| marquee.preview_selected_nodes.to_vec())
+        .or_else(|| {
+            pending_selection_value
+                .as_ref()
+                .map(|pending| pending.nodes.to_vec())
+        })
         .unwrap_or_else(|| view_value.selected_nodes.clone());
     let selected_nodes_len = effective_selected_nodes.len();
     let portal_fit_count = cx
@@ -2071,6 +2130,7 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
             let drag_escape = drag.clone();
             let marquee_escape = marquee_drag.clone();
             let node_drag_escape = node_drag.clone();
+            let pending_selection_escape = pending_selection.clone();
             let graph_debug = graph.clone();
             let view_zoom_kb = view_state.clone();
              let controller_zoom_kb = controller.clone();
@@ -2112,6 +2172,9 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
 
                         let _ = host.models_mut().update(&drag_escape, |st| *st = None);
                         let _ = host.models_mut().update(&marquee_escape, |st| *st = None);
+                        let _ = host
+                            .models_mut()
+                            .update(&pending_selection_escape, |st| *st = None);
                         let _ = host.models_mut().update(&node_drag_escape, |st| {
                             if let Some(st) = st.as_mut() {
                                 st.canceled = true;
@@ -2380,11 +2443,12 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
             cx.key_on_key_down_capture_for(element, on_key_down_capture);
 
             let view_pan_down = view_state.clone();
-            let controller_pan_down = controller.clone();
-            let store_pan_down = store.clone();
+            let _controller_pan_down = controller.clone();
+            let _store_pan_down = store.clone();
             let drag_start = drag.clone();
             let marquee_start = marquee_drag.clone();
             let node_drag_start = node_drag.clone();
+            let pending_selection_start = pending_selection.clone();
             let grid_cache_bounds = grid_cache.clone();
             let focus_target = element;
             let derived_cache_for_down = derived_cache.clone();
@@ -2475,52 +2539,33 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
                             let _ = host.models_mut().update(&node_drag_start, |st| *st = None);
                             let _ = host
                                 .models_mut()
+                                .update(&pending_selection_start, |st| *st = None);
+                            let _ = host
+                                .models_mut()
                                 .update(&hovered_for_down, |h| *h = Some(hit));
                             if interaction.elements_selectable {
-                                let _ = update_selection_action_host(
-                                    host,
-                                    &view_pan_down,
-                                    controller_pan_down.as_ref(),
-                                    store_pan_down.as_ref(),
-                                    |selected_nodes, _selected_edges, _selected_groups| {
-                                        let already_selected =
-                                            selected_nodes.iter().any(|id| *id == hit);
-                                        if multi {
-                                            if let Some(ix) =
-                                                selected_nodes.iter().position(|id| *id == hit)
-                                            {
-                                                selected_nodes.remove(ix);
-                                            } else {
-                                                selected_nodes.push(hit);
-                                            }
-                                        } else if !already_selected {
-                                            selected_nodes.clear();
-                                            selected_nodes.push(hit);
-                                        }
-                                    },
-                                );
-                            }
-
-                            if interaction.nodes_draggable
-                                && interaction.elements_selectable
-                                && !multi
-                            {
-                                let mut nodes = if base_selection.iter().any(|id| *id == hit) {
-                                    base_selection.clone()
-                                } else {
-                                    vec![hit]
-                                };
-                                nodes.sort();
-                                nodes.dedup();
-                                let _ = host.models_mut().update(&node_drag_start, |st| {
-                                    *st = Some(NodeDragState {
-                                        start_screen: down.position,
-                                        current_screen: down.position,
-                                        active: false,
-                                        canceled: false,
-                                        nodes_sorted: Arc::from(nodes.into_boxed_slice()),
+                                let preview_nodes =
+                                    build_click_selection_preview_nodes(&base_selection, hit, multi);
+                                let _ = host.models_mut().update(&pending_selection_start, |st| {
+                                    *st = Some(PendingSelectionState {
+                                        nodes: preview_nodes.clone(),
+                                        clear_edges: false,
+                                        clear_groups: false,
                                     });
                                 });
+                                host.capture_pointer();
+
+                                if interaction.nodes_draggable && !multi {
+                                    let _ = host.models_mut().update(&node_drag_start, |st| {
+                                        *st = Some(NodeDragState {
+                                            start_screen: down.position,
+                                            current_screen: down.position,
+                                            active: false,
+                                            canceled: false,
+                                            nodes_sorted: preview_nodes,
+                                        });
+                                    });
+                                }
                             }
 
                             host.notify(action_cx);
@@ -2530,6 +2575,9 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
 
                         let _ = host.models_mut().update(&hovered_for_down, |h| *h = None);
                         let _ = host.models_mut().update(&node_drag_start, |st| *st = None);
+                        let _ = host
+                            .models_mut()
+                            .update(&pending_selection_start, |st| *st = None);
 
                         if selection_box_armed && interaction.elements_selectable {
                             host.capture_pointer();
@@ -2562,17 +2610,14 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
 
                         // Clicking empty space clears selection (unless multi-selection modifier is held).
                         if interaction.elements_selectable && !multi {
-                            let _ = update_selection_action_host(
-                                host,
-                                &view_pan_down,
-                                controller_pan_down.as_ref(),
-                                store_pan_down.as_ref(),
-                                |selected_nodes, selected_edges, selected_groups| {
-                                    selected_nodes.clear();
-                                    selected_edges.clear();
-                                    selected_groups.clear();
-                                },
-                            );
+                            let _ = host.models_mut().update(&pending_selection_start, |st| {
+                                *st = Some(PendingSelectionState {
+                                    nodes: Arc::from([]),
+                                    clear_edges: true,
+                                    clear_groups: true,
+                                });
+                            });
+                            host.capture_pointer();
                             host.notify(action_cx);
                             host.request_redraw(action_cx.window);
                             return true;
@@ -2593,6 +2638,7 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
             let drag_move = drag.clone();
             let marquee_move = marquee_drag.clone();
             let node_drag_move = node_drag.clone();
+            let pending_selection_move = pending_selection.clone();
             let grid_cache_bounds = grid_cache.clone();
             let derived_cache_for_hover = derived_cache.clone();
             let hovered_for_hover = hovered_node.clone();
@@ -2638,6 +2684,23 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
                             let should_activate = dist2 >= threshold2;
                             if should_activate && !node_drag.active {
                                 host.capture_pointer();
+                                let pending_selection = host
+                                    .models_mut()
+                                    .read(&pending_selection_move, |st| st.clone())
+                                    .ok()
+                                    .flatten();
+                                if let Some(pending_selection) = pending_selection.as_ref() {
+                                    let _ = commit_pending_selection_action_host(
+                                        host,
+                                        &view_pan,
+                                        controller_pan.as_ref(),
+                                        store_pan.as_ref(),
+                                        pending_selection,
+                                    );
+                                    let _ = host
+                                        .models_mut()
+                                        .update(&pending_selection_move, |st| *st = None);
+                                }
                             }
 
                             let mut needs_redraw = false;
@@ -2845,6 +2908,7 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
             let drag_end = drag.clone();
             let marquee_end = marquee_drag.clone();
             let node_drag_end = node_drag.clone();
+            let pending_selection_end = pending_selection.clone();
             let graph_commit = graph.clone();
             let view_commit = view_state.clone();
             let controller_commit = controller.clone();
@@ -2864,6 +2928,11 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
                             .ok()
                             .flatten();
                         if let Some(node_drag) = node_drag {
+                            let pending_selection = host
+                                .models_mut()
+                                .read(&pending_selection_end, |st| st.clone())
+                                .ok()
+                                .flatten();
                             let view = host
                                 .models_mut()
                                 .read(&view_commit, |s| view_from_state(s))
@@ -2874,6 +2943,19 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
                                 && !node_drag.canceled
                                 && dx.is_finite()
                                 && dy.is_finite();
+
+                            if let Some(pending_selection) = pending_selection.as_ref() {
+                                let _ = commit_pending_selection_action_host(
+                                    host,
+                                    &view_commit,
+                                    controller_commit.as_ref(),
+                                    store_commit.as_ref(),
+                                    pending_selection,
+                                );
+                            }
+                            let _ = host
+                                .models_mut()
+                                .update(&pending_selection_end, |st| *st = None);
 
                             if commit && (dx.abs() > 1.0e-9 || dy.abs() > 1.0e-9) {
                                 let tx = host
@@ -2902,6 +2984,29 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
                             return true;
                         }
 
+                        let pending_selection = host
+                            .models_mut()
+                            .read(&pending_selection_end, |st| st.clone())
+                            .ok()
+                            .flatten();
+                        if let Some(pending_selection) = pending_selection.as_ref() {
+                            let _ = commit_pending_selection_action_host(
+                                host,
+                                &view_commit,
+                                controller_commit.as_ref(),
+                                store_commit.as_ref(),
+                                pending_selection,
+                            );
+                            host.release_pointer_capture();
+                            let _ = host
+                                .models_mut()
+                                .update(&pending_selection_end, |st| *st = None);
+                            host.invalidate(Invalidation::Layout);
+                            host.notify(action_cx);
+                            host.request_redraw(action_cx.window);
+                            return true;
+                        }
+
                         let marquee = host
                             .models_mut()
                             .read(&marquee_end, |st| st.clone())
@@ -2922,6 +3027,7 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
                         }
 
                         host.release_pointer_capture();
+                        let _ = host.models_mut().update(&pending_selection_end, |st| *st = None);
                         let _ = host.models_mut().update(&marquee_end, |st| *st = None);
                         host.invalidate(Invalidation::Layout);
                         host.notify(action_cx);
@@ -2941,6 +3047,7 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
             let drag_cancel = drag.clone();
             let marquee_cancel = marquee_drag.clone();
             let node_drag_cancel = node_drag.clone();
+            let pending_selection_cancel = pending_selection.clone();
             let on_pointer_cancel: OnPointerCancel = Arc::new(
                 move |host: &mut dyn fret_ui::action::UiPointerActionHost,
                       action_cx: fret_ui::action::ActionCx,
@@ -2949,6 +3056,9 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
                     let _ = host.models_mut().update(&drag_cancel, |st| *st = None);
                     let _ = host.models_mut().update(&marquee_cancel, |st| *st = None);
                     let _ = host.models_mut().update(&node_drag_cancel, |st| *st = None);
+                    let _ = host
+                        .models_mut()
+                        .update(&pending_selection_cancel, |st| *st = None);
                     host.invalidate(Invalidation::Layout);
                     host.notify(action_cx);
                     host.request_redraw(action_cx.window);
@@ -3811,10 +3921,11 @@ mod tests {
     use fret_ui::action::UiActionHost;
 
     use super::{
-        MarqueeDragState, build_diag_normalize_visible_node_transaction,
-        build_diag_nudge_visible_node_transaction, build_marquee_preview_selected_nodes,
-        build_node_drag_transaction, commit_graph_transaction,
-        commit_marquee_selection_action_host,
+        MarqueeDragState, PendingSelectionState, build_click_selection_preview_nodes,
+        build_diag_normalize_visible_node_transaction, build_diag_nudge_visible_node_transaction,
+        build_marquee_preview_selected_nodes, build_node_drag_transaction,
+        commit_graph_transaction, commit_marquee_selection_action_host,
+        commit_pending_selection_action_host,
     };
     use crate::core::{
         CanvasPoint, CanvasSize, EdgeId, Graph, GraphId, GroupId, Node, NodeId, NodeKindKey,
@@ -4094,6 +4205,111 @@ mod tests {
         assert_eq!(graph_pos, CanvasPoint { x: 15.0, y: 18.0 });
         assert_eq!(store_pos, CanvasPoint { x: 15.0, y: 18.0 });
         assert_eq!(synced_zoom, 1.0);
+    }
+
+    #[test]
+    fn build_click_selection_preview_nodes_single_click_replaces_base_selection() {
+        let node_a = NodeId::from_u128(9401);
+        let node_b = NodeId::from_u128(9402);
+
+        let preview = build_click_selection_preview_nodes(&[node_a], node_b, false);
+
+        assert_eq!(preview.as_ref(), &[node_b]);
+    }
+
+    #[test]
+    fn build_click_selection_preview_nodes_multi_click_toggles_hit_membership() {
+        let node_a = NodeId::from_u128(9501);
+        let node_b = NodeId::from_u128(9502);
+
+        let added = build_click_selection_preview_nodes(&[node_a], node_b, true);
+        let removed = build_click_selection_preview_nodes(&[node_a, node_b], node_b, true);
+
+        assert_eq!(added.as_ref(), &[node_a, node_b]);
+        assert_eq!(removed.as_ref(), &[node_a]);
+    }
+
+    #[test]
+    fn commit_pending_selection_action_host_preserves_edges_and_groups_when_not_requested() {
+        let mut host = TestActionHostImpl::default();
+        let node_a = NodeId::from_u128(9601);
+        let node_b = NodeId::from_u128(9602);
+        let edge = EdgeId::new();
+        let group = GroupId::new();
+        let view_state = host.models.insert(NodeGraphViewState {
+            selected_nodes: vec![node_a],
+            selected_edges: vec![edge],
+            selected_groups: vec![group],
+            ..Default::default()
+        });
+        let pending = PendingSelectionState {
+            nodes: Arc::from([node_b]),
+            clear_edges: false,
+            clear_groups: false,
+        };
+
+        assert!(commit_pending_selection_action_host(
+            &mut host,
+            &view_state,
+            None,
+            None,
+            &pending,
+        ));
+
+        let selection = host
+            .models
+            .read(&view_state, |state| {
+                (
+                    state.selected_nodes.clone(),
+                    state.selected_edges.clone(),
+                    state.selected_groups.clone(),
+                )
+            })
+            .expect("read view state");
+        assert_eq!(selection.0, vec![node_b]);
+        assert_eq!(selection.1, vec![edge]);
+        assert_eq!(selection.2, vec![group]);
+    }
+
+    #[test]
+    fn commit_pending_selection_action_host_can_clear_all_selection_kinds() {
+        let mut host = TestActionHostImpl::default();
+        let node = NodeId::from_u128(9701);
+        let edge = EdgeId::new();
+        let group = GroupId::new();
+        let view_state = host.models.insert(NodeGraphViewState {
+            selected_nodes: vec![node],
+            selected_edges: vec![edge],
+            selected_groups: vec![group],
+            ..Default::default()
+        });
+        let pending = PendingSelectionState {
+            nodes: Arc::from([]),
+            clear_edges: true,
+            clear_groups: true,
+        };
+
+        assert!(commit_pending_selection_action_host(
+            &mut host,
+            &view_state,
+            None,
+            None,
+            &pending,
+        ));
+
+        let selection = host
+            .models
+            .read(&view_state, |state| {
+                (
+                    state.selected_nodes.clone(),
+                    state.selected_edges.clone(),
+                    state.selected_groups.clone(),
+                )
+            })
+            .expect("read view state");
+        assert!(selection.0.is_empty());
+        assert!(selection.1.is_empty());
+        assert!(selection.2.is_empty());
     }
 
     #[test]

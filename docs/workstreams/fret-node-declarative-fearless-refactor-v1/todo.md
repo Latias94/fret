@@ -229,6 +229,8 @@ Execution companion: `design.md` (surface map + next worktree order).
       cancel semantics.
   - Landed first marquee slice: preview selection is now local transient state and pointer-up commits
     through the controller/store-backed selection seam.
+  - Landed click-selection follow-up: hit-node selection and empty-space clear now also stay local
+    until pointer-up (or node-drag activation).
 - [ ] Keep pointer-capture and cancel behavior as a first-class regression target while doing this.
 - [ ] Decide which interaction pieces remain local surface state vs store-backed editor state.
 - [ ] Ensure new declarative interaction work does not regress cache discipline.

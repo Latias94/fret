@@ -148,8 +148,13 @@ First landing in this worktree:
 
 - marquee preview selection now stays in local declarative reducer state instead of churning store
   selection on every pointer move,
+- hit-node click selection and empty-space clear now also stay local until pointer-up (or node-drag
+  activation), instead of writing store selection on pointer-down,
 - pointer-up commits the previewed selection through the same controller/store-backed selection seam,
-- escape/pointer-cancel now drop transient marquee state instead of issuing selection restore writes.
+- node-drag threshold crossing commits any pending hit selection before the drag transaction path
+  takes over,
+- escape/pointer-cancel now drop transient marquee/click-selection state instead of issuing
+  selection restore writes.
 
 ### Slice 3 - portal and overlay closure
 
