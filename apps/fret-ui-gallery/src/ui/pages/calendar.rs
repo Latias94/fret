@@ -11,6 +11,7 @@ pub(super) fn preview_calendar(
     let _ = (month, selected);
 
     let demo = snippets::demo::render(cx);
+    let usage = snippets::usage::render(cx);
     let basic = snippets::basic::render(cx);
     let range = snippets::range::render(cx);
     let month_year_selector = snippets::month_year_selector::render(cx);
@@ -29,7 +30,8 @@ pub(super) fn preview_calendar(
     let notes = doc_layout::notes(
         cx,
         [
-            "Preview follows shadcn/ui v4 Calendar examples.",
+            "API reference: `ecosystem/fret-ui-shadcn/src/calendar.rs` (Calendar).",
+            "Calendar already exposes the important authoring surface (`new`, caption layout, locale, multi-month, week numbers, disabled matchers), so the main parity gap here is usage clarity rather than missing composition APIs.",
             "Fret uses `time::Date` for selections, so timezone offset issues from JS `Date` do not apply.",
             "Set `FRET_UI_GALLERY_FIXED_TODAY=YYYY-MM-DD` to make presets deterministic in screenshots/tests.",
             "Diagnostics scripts depend on `ui-gallery.calendar.*` test_id prefixes and calendar section doc IDs.",
@@ -38,12 +40,18 @@ pub(super) fn preview_calendar(
 
     let body = doc_layout::render_doc_page(
         cx,
-        Some("A date field component that allows users to enter and edit date."),
+        Some(
+            "Preview follows shadcn Calendar docs flow: Demo -> Usage. Gallery adds range, pickers, presets, locale, and regression-focused variants.",
+        ),
         vec![
             DocSection::new("Demo", demo)
                 .max_w(Px(980.0))
                 .test_id_prefix("ui-gallery-calendar-demo")
                 .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
+            DocSection::new("Usage", usage)
+                .max_w(Px(980.0))
+                .test_id_prefix("ui-gallery-calendar-usage")
+                .code_rust_from_file_region(snippets::usage::SOURCE, "example"),
             DocSection::new("Basic", basic)
                 .max_w(Px(980.0))
                 .test_id_prefix("ui-gallery-calendar-single")
