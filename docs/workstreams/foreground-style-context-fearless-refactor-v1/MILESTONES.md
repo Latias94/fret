@@ -25,6 +25,9 @@ Current snapshot (2026-03-06):
 - `input_group` is now fully covered for the v1 foreground slice: addon rows and button-content
   roots both attach inherited foreground directly to existing subtree roots without synthetic
   wrappers.
+- Follow-up layout audit work has now locked `radio_group` long-label behavior with a targeted
+  regression test: the default label text keeps word wrapping while shrinking inside the item row
+  via explicit grow + `min-w-0`, preventing the one-line overflow drift seen during the audit.
 
 ---
 
