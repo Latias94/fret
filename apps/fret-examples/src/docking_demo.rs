@@ -537,6 +537,7 @@ fn render(driver: &mut DockingDemoDriver, context: WinitRenderContext<'_, Dockin
     let drive = app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
         svc.drive_script_for_window(
             app,
+            services,
             window,
             bounds,
             scale_factor,

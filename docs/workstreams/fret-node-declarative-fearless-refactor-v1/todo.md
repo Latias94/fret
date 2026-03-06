@@ -11,6 +11,8 @@ Execution companion: `design.md` (surface map + next worktree order).
 - [x] Keep the compatibility retained path feature-gated and explicitly named.
 - [x] Keep the default lightweight declarative demo path (`node_graph_demo`).
 - [x] Keep the workstream docs aligned with the actual public recommendation after each milestone.
+- [x] Keep diagnostics-driven example hosts aligned with the current `UiDiagnosticsService`
+      script-driving surface when syncing from `main`.
 - [ ] Update ADR alignment or ADR text when a hard contract changes rather than hiding the change in
       implementation-only diffs.
 

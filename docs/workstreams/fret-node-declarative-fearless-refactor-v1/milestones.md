@@ -82,12 +82,15 @@ make compatibility paths explicit instead of accidental.
 - One bounded description of when `compat-retained-canvas` is justified.
 - A surface plan for converging toward a single high-level declarative entrypoint.
 - A wording audit for examples and internal guides so retained demos stay explicitly scoped.
+- Diagnostics-driven example hosts stay aligned with the current `UiDiagnosticsService`
+  script-driving contract when shared framework surfaces evolve on `main`.
 
 ### Done criteria
 
 - Public docs stop reading like there are two equally blessed downstream authoring models.
 - Retained constructors are no longer implied as the normal ecosystem path.
 - New examples and cookbook-style guidance prefer declarative composition by default.
+- Diagnostics-enabled example hosts do not silently drift behind the active service signature.
 
 ### Evidence anchors
 
