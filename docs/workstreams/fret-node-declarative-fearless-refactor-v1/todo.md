@@ -250,6 +250,9 @@ Execution companion: `design.md` (surface map + next worktree order).
   - Landed keydown dispatch follow-up: `Escape`, diagnostics digits, and keyboard zoom now route
     through explicit action helpers, with focused tests for diag-key parsing, diag view presets,
     portal-disable cleanup, zoom reset, and paint-override toggling.
+  - Landed pointer-down reducer follow-up: pan start, hit-node preview/drag arming, marquee
+    arming, and empty-space clear now route through explicit snapshot/reducer helpers, with
+    focused tests covering the pan, hit-node, marquee, and clear-selection branches.
 - [x] Keep pointer-capture and cancel behavior as a first-class regression target while doing this.
   - Landed initial declarative gates for selection-only release, escape cancel, and pointer-cancel
     cleanup in `paint_only.rs`.

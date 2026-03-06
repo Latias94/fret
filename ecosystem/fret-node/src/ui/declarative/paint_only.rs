@@ -1726,6 +1726,205 @@ fn handle_declarative_keyboard_zoom_action_host(
     })
 }
 
+#[derive(Debug, Clone)]
+struct LeftPointerDownSnapshot {
+    interaction: crate::io::NodeGraphInteractionConfig,
+    base_selection: Vec<crate::core::NodeId>,
+    hit: Option<crate::core::NodeId>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum LeftPointerDownOutcome {
+    HitNode { capture_pointer: bool },
+    Marquee,
+    EmptySpaceClear,
+    Idle,
+}
+
+impl LeftPointerDownOutcome {
+    fn capture_pointer(self) -> bool {
+        matches!(
+            self,
+            Self::HitNode {
+                capture_pointer: true,
+            } | Self::Marquee
+                | Self::EmptySpaceClear
+        )
+    }
+}
+
+fn begin_pan_pointer_down_action_host(
+    host: &mut dyn fret_ui::action::UiActionHost,
+    drag: &Model<Option<DragState>>,
+    marquee: &Model<Option<MarqueeDragState>>,
+    node_drag: &Model<Option<NodeDragState>>,
+    down: fret_ui::action::PointerDownCx,
+) -> bool {
+    let _ = host.models_mut().update(marquee, |state| *state = None);
+    let _ = host.models_mut().update(node_drag, |state| *state = None);
+    let _ = host.models_mut().update(drag, |state| {
+        *state = Some(DragState {
+            button: down.button,
+            last_pos: down.position,
+        });
+    });
+    true
+}
+
+fn read_left_pointer_down_snapshot_action_host(
+    host: &mut dyn fret_ui::action::UiActionHost,
+    view_state: &Model<NodeGraphViewState>,
+    derived_cache: &Model<DerivedGeometryCacheState>,
+    hit_scratch: &Model<Vec<crate::core::NodeId>>,
+    down: fret_ui::action::PointerDownCx,
+    bounds: Rect,
+) -> LeftPointerDownSnapshot {
+    let (interaction, base_selection, node_click_distance_screen_px, view) = host
+        .models_mut()
+        .read(view_state, |state| {
+            (
+                state.interaction.clone(),
+                state.selected_nodes.clone(),
+                state.interaction.node_click_distance,
+                view_from_state(state),
+            )
+        })
+        .ok()
+        .unwrap_or((Default::default(), Vec::new(), 6.0, PanZoom2D::default()));
+
+    let (geom, index) = host
+        .models_mut()
+        .read(derived_cache, |state| {
+            (state.geom.clone(), state.index.clone())
+        })
+        .ok()
+        .unwrap_or((None, None));
+
+    let hit = if let (Some(geom), Some(index)) = (geom.as_deref(), index.as_deref()) {
+        host.models_mut()
+            .update(hit_scratch, |scratch| {
+                hit_test_node_at_point(
+                    view,
+                    bounds,
+                    node_click_distance_screen_px,
+                    geom,
+                    index,
+                    down.position,
+                    scratch,
+                )
+            })
+            .ok()
+            .flatten()
+    } else {
+        None
+    };
+
+    LeftPointerDownSnapshot {
+        interaction,
+        base_selection,
+        hit,
+    }
+}
+
+fn begin_left_pointer_down_action_host(
+    host: &mut dyn fret_ui::action::UiActionHost,
+    marquee: &Model<Option<MarqueeDragState>>,
+    node_drag: &Model<Option<NodeDragState>>,
+    pending_selection: &Model<Option<PendingSelectionState>>,
+    hovered: &Model<Option<crate::core::NodeId>>,
+    down: fret_ui::action::PointerDownCx,
+    snapshot: &LeftPointerDownSnapshot,
+) -> LeftPointerDownOutcome {
+    let multi = snapshot
+        .interaction
+        .multi_selection_key
+        .is_pressed(down.modifiers);
+    let selection_box_armed = snapshot.interaction.selection_on_drag
+        || snapshot
+            .interaction
+            .selection_key
+            .is_pressed(down.modifiers);
+
+    if let Some(hit) = snapshot.hit {
+        let _ = host.models_mut().update(marquee, |state| *state = None);
+        let _ = host.models_mut().update(node_drag, |state| *state = None);
+        let _ = host
+            .models_mut()
+            .update(pending_selection, |state| *state = None);
+        let _ = host
+            .models_mut()
+            .update(hovered, |state| *state = Some(hit));
+        if snapshot.interaction.elements_selectable {
+            let preview_nodes =
+                build_click_selection_preview_nodes(&snapshot.base_selection, hit, multi);
+            let _ = host.models_mut().update(pending_selection, |state| {
+                *state = Some(PendingSelectionState {
+                    nodes: preview_nodes.clone(),
+                    clear_edges: false,
+                    clear_groups: false,
+                });
+            });
+
+            if snapshot.interaction.nodes_draggable && !multi {
+                let _ = host.models_mut().update(node_drag, |state| {
+                    *state = Some(NodeDragState {
+                        start_screen: down.position,
+                        current_screen: down.position,
+                        phase: NodeDragPhase::Armed,
+                        nodes_sorted: preview_nodes,
+                    });
+                });
+            }
+        }
+        return LeftPointerDownOutcome::HitNode {
+            capture_pointer: snapshot.interaction.elements_selectable,
+        };
+    }
+
+    let _ = host.models_mut().update(hovered, |state| *state = None);
+    let _ = host.models_mut().update(node_drag, |state| *state = None);
+    let _ = host
+        .models_mut()
+        .update(pending_selection, |state| *state = None);
+
+    if selection_box_armed && snapshot.interaction.elements_selectable {
+        let base_selected_nodes: Arc<[crate::core::NodeId]> = if multi {
+            Arc::from(snapshot.base_selection.clone().into_boxed_slice())
+        } else {
+            Arc::from([])
+        };
+        let preview_selected_nodes: Arc<[crate::core::NodeId]> = if multi {
+            base_selected_nodes.clone()
+        } else {
+            Arc::from([])
+        };
+        let _ = host.models_mut().update(marquee, |state| {
+            *state = Some(MarqueeDragState {
+                start_screen: down.position,
+                current_screen: down.position,
+                active: false,
+                toggle: multi,
+                base_selected_nodes,
+                preview_selected_nodes,
+            });
+        });
+        return LeftPointerDownOutcome::Marquee;
+    }
+
+    if snapshot.interaction.elements_selectable && !multi {
+        let _ = host.models_mut().update(pending_selection, |state| {
+            *state = Some(PendingSelectionState {
+                nodes: Arc::from([]),
+                clear_edges: true,
+                clear_groups: true,
+            });
+        });
+        return LeftPointerDownOutcome::EmptySpaceClear;
+    }
+
+    LeftPointerDownOutcome::Idle
+}
+
 fn hit_test_node_at_point(
     view: PanZoom2D,
     bounds: Rect,
@@ -2850,168 +3049,53 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
                     host.request_focus(focus_target);
 
                     let bounds = host.bounds();
-                    let _ = host.models_mut().update(&grid_cache_bounds, |st| {
-                        if st.bounds != bounds {
-                            st.bounds = bounds;
+                    let _ = host.models_mut().update(&grid_cache_bounds, |state| {
+                        if state.bounds != bounds {
+                            state.bounds = bounds;
                         }
                     });
 
                     if down.button == pan_button {
+                        let handled = begin_pan_pointer_down_action_host(
+                            host,
+                            &drag_start,
+                            &marquee_start,
+                            &node_drag_start,
+                            down,
+                        );
+                        if handled {
+                            host.capture_pointer();
+                            notify_and_redraw_action_host(host, action_cx);
+                        }
+                        return handled;
+                    }
+
+                    if down.button != MouseButton::Left {
+                        return false;
+                    }
+
+                    let snapshot = read_left_pointer_down_snapshot_action_host(
+                        host,
+                        &view_pan_down,
+                        &derived_cache_for_down,
+                        &hit_scratch_for_down,
+                        down,
+                        bounds,
+                    );
+                    let outcome = begin_left_pointer_down_action_host(
+                        host,
+                        &marquee_start,
+                        &node_drag_start,
+                        &pending_selection_start,
+                        &hovered_for_down,
+                        down,
+                        &snapshot,
+                    );
+                    if outcome.capture_pointer() {
                         host.capture_pointer();
-                        let _ = host.models_mut().update(&marquee_start, |st| *st = None);
-                        let _ = host.models_mut().update(&node_drag_start, |st| *st = None);
-                        let _ = host.models_mut().update(&drag_start, |st| {
-                            *st = Some(DragState {
-                                button: down.button,
-                                last_pos: down.position,
-                            });
-                        });
-                        notify_and_redraw_action_host(host, action_cx);
-                        return true;
                     }
-
-                    if down.button == MouseButton::Left {
-                        let (interaction, base_selection, node_click_distance_screen_px, view) =
-                            host.models_mut()
-                                .read(&view_pan_down, |s| {
-                                    (
-                                        s.interaction.clone(),
-                                        s.selected_nodes.clone(),
-                                        s.interaction.node_click_distance,
-                                        view_from_state(s),
-                                    )
-                                })
-                                .ok()
-                                .unwrap_or((
-                                    Default::default(),
-                                    Vec::new(),
-                                    6.0,
-                                    PanZoom2D::default(),
-                                ));
-
-                        let (geom, index) = host
-                            .models_mut()
-                            .read(&derived_cache_for_down, |st| {
-                                (st.geom.clone(), st.index.clone())
-                            })
-                            .ok()
-                            .unwrap_or((None, None));
-
-                        let hit = if let (Some(geom), Some(index)) =
-                            (geom.as_deref(), index.as_deref())
-                        {
-                            host.models_mut()
-                                .update(&hit_scratch_for_down, |scratch| {
-                                    hit_test_node_at_point(
-                                        view,
-                                        bounds,
-                                        node_click_distance_screen_px,
-                                        geom,
-                                        index,
-                                        down.position,
-                                        scratch,
-                                    )
-                                })
-                                .ok()
-                                .flatten()
-                        } else {
-                            None
-                        };
-
-                        let multi = interaction.multi_selection_key.is_pressed(down.modifiers);
-                        let selection_box_armed = interaction.selection_on_drag
-                            || interaction.selection_key.is_pressed(down.modifiers);
-
-                        if let Some(hit) = hit {
-                            let _ = host.models_mut().update(&marquee_start, |st| *st = None);
-                            let _ = host.models_mut().update(&node_drag_start, |st| *st = None);
-                            let _ = host
-                                .models_mut()
-                                .update(&pending_selection_start, |st| *st = None);
-                            let _ = host
-                                .models_mut()
-                                .update(&hovered_for_down, |h| *h = Some(hit));
-                            if interaction.elements_selectable {
-                                let preview_nodes =
-                                    build_click_selection_preview_nodes(&base_selection, hit, multi);
-                                let _ = host.models_mut().update(&pending_selection_start, |st| {
-                                    *st = Some(PendingSelectionState {
-                                        nodes: preview_nodes.clone(),
-                                        clear_edges: false,
-                                        clear_groups: false,
-                                    });
-                                });
-                                host.capture_pointer();
-
-                                if interaction.nodes_draggable && !multi {
-                                    let _ = host.models_mut().update(&node_drag_start, |st| {
-                                        *st = Some(NodeDragState {
-                                            start_screen: down.position,
-                                            current_screen: down.position,
-                                            phase: NodeDragPhase::Armed,
-                                            nodes_sorted: preview_nodes,
-                                        });
-                                    });
-                                }
-                            }
-
-                            notify_and_redraw_action_host(host, action_cx);
-                            return true;
-                        }
-
-                        let _ = host.models_mut().update(&hovered_for_down, |h| *h = None);
-                        let _ = host.models_mut().update(&node_drag_start, |st| *st = None);
-                        let _ = host
-                            .models_mut()
-                            .update(&pending_selection_start, |st| *st = None);
-
-                        if selection_box_armed && interaction.elements_selectable {
-                            host.capture_pointer();
-                            let base_selected_nodes: Arc<[crate::core::NodeId]> = if multi {
-                                Arc::from(base_selection.into_boxed_slice())
-                            } else {
-                                Arc::from([])
-                            };
-
-                            let preview_selected_nodes: Arc<[crate::core::NodeId]> = if multi {
-                                base_selected_nodes.clone()
-                            } else {
-                                Arc::from([])
-                            };
-                            let _ = host.models_mut().update(&marquee_start, |st| {
-                                *st = Some(MarqueeDragState {
-                                    start_screen: down.position,
-                                    current_screen: down.position,
-                                    active: false,
-                                    toggle: multi,
-                                    base_selected_nodes,
-                                    preview_selected_nodes,
-                                });
-                            });
-
-                            notify_and_redraw_action_host(host, action_cx);
-                            return true;
-                        }
-
-                        // Clicking empty space clears selection (unless multi-selection modifier is held).
-                        if interaction.elements_selectable && !multi {
-                            let _ = host.models_mut().update(&pending_selection_start, |st| {
-                                *st = Some(PendingSelectionState {
-                                    nodes: Arc::from([]),
-                                    clear_edges: true,
-                                    clear_groups: true,
-                                });
-                            });
-                            host.capture_pointer();
-                            notify_and_redraw_action_host(host, action_cx);
-                            return true;
-                        }
-
-                        notify_and_redraw_action_host(host, action_cx);
-                        return true;
-                    }
-
-                    false
+                    notify_and_redraw_action_host(host, action_cx);
+                    true
                 },
             );
 
@@ -4184,21 +4268,24 @@ mod tests {
     use std::sync::Arc;
 
     use fret_canvas::view::PanZoom2D;
-    use fret_core::{AppWindowId, MouseButton, Point, Px, Rect};
-    use fret_runtime::{ClipboardToken, Effect, Model, ModelStore, ShareSheetToken, TimerToken};
+    use fret_core::{AppWindowId, Modifiers, MouseButton, Point, PointerId, PointerType, Px, Rect};
+    use fret_runtime::{
+        ClipboardToken, Effect, Model, ModelStore, ShareSheetToken, TickId, TimerToken,
+    };
     use fret_ui::action::UiActionHost;
 
     use super::{
         DeclarativeDiagKeyAction, DeclarativeDiagViewPreset, DeclarativeKeyboardZoomAction,
-        DragState, LeftPointerReleaseOutcome, MarqueeDragState, NodeDragPhase, NodeDragState,
-        PendingSelectionState, PortalBoundsStore, PortalDebugFlags,
-        apply_declarative_diag_view_preset_action_host, build_click_selection_preview_nodes,
-        build_diag_normalize_visible_node_transaction, build_diag_nudge_visible_node_transaction,
-        build_marquee_preview_selected_nodes, build_node_drag_transaction,
-        commit_graph_transaction, commit_marquee_selection_action_host,
-        commit_node_drag_transaction, commit_pending_selection_action_host,
-        complete_left_pointer_release_action_host, complete_node_drag_release_action_host,
-        escape_cancel_declarative_interactions_action_host,
+        DragState, LeftPointerDownOutcome, LeftPointerDownSnapshot, LeftPointerReleaseOutcome,
+        MarqueeDragState, NodeDragPhase, NodeDragState, PendingSelectionState, PortalBoundsStore,
+        PortalDebugFlags, apply_declarative_diag_view_preset_action_host,
+        begin_left_pointer_down_action_host, begin_pan_pointer_down_action_host,
+        build_click_selection_preview_nodes, build_diag_normalize_visible_node_transaction,
+        build_diag_nudge_visible_node_transaction, build_marquee_preview_selected_nodes,
+        build_node_drag_transaction, commit_graph_transaction,
+        commit_marquee_selection_action_host, commit_node_drag_transaction,
+        commit_pending_selection_action_host, complete_left_pointer_release_action_host,
+        complete_node_drag_release_action_host, escape_cancel_declarative_interactions_action_host,
         handle_declarative_diag_key_action_host, handle_declarative_keyboard_zoom_action_host,
         node_drag_commit_delta, pointer_cancel_declarative_interactions_action_host,
         pointer_crossed_threshold,
@@ -4259,6 +4346,28 @@ mod tests {
             _action: &fret_runtime::ActionId,
             _payload: Box<dyn Any + Send + Sync>,
         ) {
+        }
+    }
+
+    fn test_pointer_down(
+        button: MouseButton,
+        position: Point,
+        modifiers: Modifiers,
+    ) -> fret_ui::action::PointerDownCx {
+        fret_ui::action::PointerDownCx {
+            pointer_id: PointerId::default(),
+            position,
+            position_local: position,
+            position_window: Some(position),
+            tick_id: TickId(0),
+            pixels_per_point: 1.0,
+            button,
+            modifiers,
+            click_count: 1,
+            pointer_type: PointerType::Mouse,
+            hit_is_text_input: false,
+            hit_is_pressable: false,
+            hit_pressable_target: None,
         }
     }
 
@@ -4947,6 +5056,226 @@ mod tests {
                 .read(&pending, |state| state.is_none())
                 .expect("pending readable")
         );
+    }
+
+    #[test]
+    fn begin_pan_pointer_down_action_host_clears_transients_and_starts_drag() {
+        let mut host = TestActionHostImpl::default();
+        let drag = host.models.insert(None::<DragState>);
+        let marquee = host.models.insert(Some(MarqueeDragState {
+            start_screen: Point::new(Px(1.0), Px(2.0)),
+            current_screen: Point::new(Px(3.0), Px(4.0)),
+            active: false,
+            toggle: false,
+            base_selected_nodes: Arc::from([]),
+            preview_selected_nodes: Arc::from([]),
+        }));
+        let node_drag = host.models.insert(Some(NodeDragState {
+            start_screen: Point::new(Px(5.0), Px(6.0)),
+            current_screen: Point::new(Px(7.0), Px(8.0)),
+            phase: NodeDragPhase::Armed,
+            nodes_sorted: Arc::from([NodeId::from_u128(9966)]),
+        }));
+        let down = test_pointer_down(
+            MouseButton::Middle,
+            Point::new(Px(10.0), Px(11.0)),
+            Modifiers::default(),
+        );
+
+        assert!(begin_pan_pointer_down_action_host(
+            &mut host, &drag, &marquee, &node_drag, down,
+        ));
+        assert!(
+            host.models
+                .read(&marquee, |state| state.is_none())
+                .expect("marquee readable")
+        );
+        assert!(
+            host.models
+                .read(&node_drag, |state| state.is_none())
+                .expect("node drag readable")
+        );
+        host.models
+            .read(&drag, |state| {
+                let state = state.expect("drag armed");
+                assert_eq!(state.button, MouseButton::Middle);
+                assert_eq!(state.last_pos, Point::new(Px(10.0), Px(11.0)));
+            })
+            .expect("drag readable");
+    }
+
+    #[test]
+    fn begin_left_pointer_down_action_host_hit_node_selectable_arms_pending_selection_and_drag() {
+        let mut host = TestActionHostImpl::default();
+        let marquee = host.models.insert(Some(MarqueeDragState {
+            start_screen: Point::new(Px(1.0), Px(2.0)),
+            current_screen: Point::new(Px(3.0), Px(4.0)),
+            active: false,
+            toggle: false,
+            base_selected_nodes: Arc::from([]),
+            preview_selected_nodes: Arc::from([]),
+        }));
+        let node_drag = host.models.insert(None::<NodeDragState>);
+        let pending = host.models.insert(None::<PendingSelectionState>);
+        let hovered = host.models.insert(None::<NodeId>);
+        let hit = NodeId::from_u128(9967);
+        let snapshot = LeftPointerDownSnapshot {
+            interaction: crate::io::NodeGraphInteractionConfig {
+                elements_selectable: true,
+                nodes_draggable: true,
+                ..Default::default()
+            },
+            base_selection: vec![NodeId::from_u128(9968)],
+            hit: Some(hit),
+        };
+        let down = test_pointer_down(
+            MouseButton::Left,
+            Point::new(Px(12.0), Px(13.0)),
+            Modifiers::default(),
+        );
+
+        let outcome = begin_left_pointer_down_action_host(
+            &mut host, &marquee, &node_drag, &pending, &hovered, down, &snapshot,
+        );
+
+        assert_eq!(
+            outcome,
+            LeftPointerDownOutcome::HitNode {
+                capture_pointer: true,
+            }
+        );
+        assert!(outcome.capture_pointer());
+        assert_eq!(
+            host.models
+                .read(&hovered, |state| *state)
+                .expect("hovered readable"),
+            Some(hit)
+        );
+        host.models
+            .read(&pending, |state| {
+                let state = state.as_ref().expect("pending armed");
+                assert_eq!(state.nodes.as_ref(), &[hit]);
+                assert!(!state.clear_edges);
+                assert!(!state.clear_groups);
+            })
+            .expect("pending readable");
+        host.models
+            .read(&node_drag, |state| {
+                let state = state.as_ref().expect("node drag armed");
+                assert_eq!(state.phase, NodeDragPhase::Armed);
+                assert_eq!(state.nodes_sorted.as_ref(), &[hit]);
+            })
+            .expect("node drag readable");
+        assert!(
+            host.models
+                .read(&marquee, |state| state.is_none())
+                .expect("marquee readable")
+        );
+    }
+
+    #[test]
+    fn begin_left_pointer_down_action_host_empty_space_arms_marquee() {
+        let mut host = TestActionHostImpl::default();
+        let marquee = host.models.insert(None::<MarqueeDragState>);
+        let node_drag = host.models.insert(Some(NodeDragState {
+            start_screen: Point::new(Px(1.0), Px(1.0)),
+            current_screen: Point::new(Px(2.0), Px(2.0)),
+            phase: NodeDragPhase::Armed,
+            nodes_sorted: Arc::from([NodeId::from_u128(9969)]),
+        }));
+        let pending = host.models.insert(Some(PendingSelectionState {
+            nodes: Arc::from([NodeId::from_u128(9970)]),
+            clear_edges: false,
+            clear_groups: false,
+        }));
+        let hovered = host.models.insert(Some(NodeId::from_u128(9971)));
+        let snapshot = LeftPointerDownSnapshot {
+            interaction: crate::io::NodeGraphInteractionConfig {
+                elements_selectable: true,
+                selection_on_drag: true,
+                ..Default::default()
+            },
+            base_selection: vec![NodeId::from_u128(9972)],
+            hit: None,
+        };
+        let down = test_pointer_down(
+            MouseButton::Left,
+            Point::new(Px(20.0), Px(21.0)),
+            Modifiers::default(),
+        );
+
+        let outcome = begin_left_pointer_down_action_host(
+            &mut host, &marquee, &node_drag, &pending, &hovered, down, &snapshot,
+        );
+
+        assert_eq!(outcome, LeftPointerDownOutcome::Marquee);
+        assert!(outcome.capture_pointer());
+        assert_eq!(
+            host.models
+                .read(&hovered, |state| *state)
+                .expect("hovered readable"),
+            None
+        );
+        assert!(
+            host.models
+                .read(&node_drag, |state| state.is_none())
+                .expect("node drag readable")
+        );
+        assert!(
+            host.models
+                .read(&pending, |state| state.is_none())
+                .expect("pending readable")
+        );
+        host.models
+            .read(&marquee, |state| {
+                let state = state.as_ref().expect("marquee armed");
+                assert_eq!(state.start_screen, Point::new(Px(20.0), Px(21.0)));
+                assert_eq!(state.preview_selected_nodes.len(), 0);
+            })
+            .expect("marquee readable");
+    }
+
+    #[test]
+    fn begin_left_pointer_down_action_host_empty_space_clear_arms_pending_clear() {
+        let mut host = TestActionHostImpl::default();
+        let marquee = host.models.insert(None::<MarqueeDragState>);
+        let node_drag = host.models.insert(None::<NodeDragState>);
+        let pending = host.models.insert(None::<PendingSelectionState>);
+        let hovered = host.models.insert(Some(NodeId::from_u128(9973)));
+        let snapshot = LeftPointerDownSnapshot {
+            interaction: crate::io::NodeGraphInteractionConfig {
+                elements_selectable: true,
+                ..Default::default()
+            },
+            base_selection: Vec::new(),
+            hit: None,
+        };
+        let down = test_pointer_down(
+            MouseButton::Left,
+            Point::new(Px(30.0), Px(31.0)),
+            Modifiers::default(),
+        );
+
+        let outcome = begin_left_pointer_down_action_host(
+            &mut host, &marquee, &node_drag, &pending, &hovered, down, &snapshot,
+        );
+
+        assert_eq!(outcome, LeftPointerDownOutcome::EmptySpaceClear);
+        assert!(outcome.capture_pointer());
+        assert_eq!(
+            host.models
+                .read(&hovered, |state| *state)
+                .expect("hovered readable"),
+            None
+        );
+        host.models
+            .read(&pending, |state| {
+                let state = state.as_ref().expect("pending clear armed");
+                assert!(state.nodes.is_empty());
+                assert!(state.clear_edges);
+                assert!(state.clear_groups);
+            })
+            .expect("pending readable");
     }
 
     #[test]

@@ -164,7 +164,10 @@ First landing in this worktree:
 - pointer-driven layout/paint follow-up effects (`invalidate` / `notify` / `request_redraw`) now
   route through dedicated helpers so reducer extraction does not duplicate host-side bookkeeping,
 - keyboard capture now parses explicit declarative diag/zoom actions, so `Escape`, diagnostics
-  digits, and keyboard zoom no longer depend on one monolithic closure branch.
+  digits, and keyboard zoom no longer depend on one monolithic closure branch,
+- left-button pointer-down now also routes through explicit snapshot/reducer helpers, so pan
+  start, hit-node preview, marquee arming, and empty-space clear stop competing inside one
+  oversized event closure.
 
 ### Slice 3 - portal and overlay closure
 

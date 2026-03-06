@@ -220,6 +220,9 @@ points rather than direct graph mutation.
   - Declarative keydown capture now dispatches through explicit diag/zoom action helpers, with
     focused tests covering diag-key parsing, diag view presets, portal-disable cleanup, zoom
     reset, and paint-override toggling.
+  - Declarative left-button pointer-down now dispatches through explicit snapshot/reducer
+    helpers, with focused tests covering pan-start cleanup plus hit-node, marquee, and
+    empty-space-clear branches.
   - Diagnostics-only `Digit3/4/5` graph tweaks now build transactions from `graph_diff` and commit
     through the same controller/store transaction path instead of mutating `Graph` in place.
   - `apps/fret-examples/src/node_graph_demo.rs` now passes a controller into the declarative
@@ -270,6 +273,8 @@ points rather than direct graph mutation.
   already-canceled node drags
 - keydown dispatch gates for diag-key parsing, diag view presets, portal-disable cleanup, zoom
   reset, and paint-override toggling
+- pointer-down reducer gates for pan-start cleanup plus hit-node, marquee, and empty-space
+  clear branches
 - controlled-mode regression coverage for replace/diff behavior
 
 ### Evidence anchors
