@@ -10,6 +10,7 @@ pub mod demo;
 pub mod disabled;
 pub mod flex_1_items;
 pub mod full_width_items;
+pub mod label;
 pub mod large;
 pub mod outline;
 pub mod rtl;

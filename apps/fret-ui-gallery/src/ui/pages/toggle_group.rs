@@ -10,6 +10,7 @@ pub(super) fn preview_toggle_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyE
     let single = snippets::single::render(cx);
     let small = snippets::small::render(cx);
     let large = snippets::large::render(cx);
+    let label = snippets::label::render(cx);
     let spacing = snippets::spacing::render(cx);
     let disabled = snippets::disabled::render(cx);
     let vertical = snippets::vertical::render(cx);
@@ -52,6 +53,10 @@ pub(super) fn preview_toggle_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyE
             DocSection::new("Large", large)
                 .description("Large size preset for roomier touch-friendly controls.")
                 .code_rust_from_file_region(snippets::large::SOURCE, "example"),
+            DocSection::new("Label Association", label)
+                .description("Use `FieldLabel::for_control` + `ToggleGroup::control_id` to focus the current tab-stop item on label click.")
+                .test_id_prefix("ui-gallery-toggle-group-label")
+                .code_rust_from_file_region(snippets::label::SOURCE, "example"),
             DocSection::new("Disabled", disabled)
                 .description("Disabled groups keep layout but block interaction.")
                 .code_rust_from_file_region(snippets::disabled::SOURCE, "example"),
