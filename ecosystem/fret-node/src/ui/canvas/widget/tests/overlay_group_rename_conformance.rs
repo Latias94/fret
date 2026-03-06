@@ -10,10 +10,12 @@ use fret_ui::retained_bridge::UiTreeRetainedExt as _;
 use fret_ui::{Invalidation, UiTree};
 
 use crate::core::{CanvasPoint, CanvasRect, CanvasSize, Graph, GraphId, Group, GroupId};
+use crate::io::NodeGraphViewState;
 use crate::ops::{GraphOp, GraphTransaction};
+use crate::runtime::store::NodeGraphStore;
 use crate::ui::{
-    GroupRenameOverlay, NodeGraphEditQueue, NodeGraphEditor, NodeGraphOverlayHost,
-    NodeGraphOverlayState, NodeGraphStyle,
+    GroupRenameOverlay, NodeGraphController, NodeGraphEditQueue, NodeGraphEditor,
+    NodeGraphOverlayHost, NodeGraphOverlayState, NodeGraphStyle,
 };
 
 use super::{NullServices, TestUiHostImpl, insert_graph_view};
@@ -395,4 +397,116 @@ fn group_rename_overlay_enter_commits_transaction_and_closes() {
         }
         other => panic!("unexpected op: {other:?}"),
     }
+}
+
+#[test]
+fn group_rename_overlay_enter_with_controller_commits_through_store() {
+    let mut host = TestUiHostImpl::default();
+    let mut services = NullServices::default();
+    let mut ui = UiTree::<TestUiHostImpl>::default();
+    ui.set_window(AppWindowId::default());
+
+    let group_id = GroupId::new();
+    let mut graph_value = Graph::new(GraphId::new());
+    graph_value.groups.insert(
+        group_id,
+        Group {
+            title: "Old".to_string(),
+            rect: CanvasRect {
+                origin: CanvasPoint { x: 0.0, y: 0.0 },
+                size: CanvasSize {
+                    width: 100.0,
+                    height: 60.0,
+                },
+            },
+            color: None,
+        },
+    );
+    let graph = host.models.insert(graph_value.clone());
+    let store = host.models.insert(NodeGraphStore::new(
+        graph_value,
+        NodeGraphViewState::default(),
+    ));
+    let controller = NodeGraphController::new(store.clone());
+    let overlays = host.models.insert(NodeGraphOverlayState::default());
+    let group_rename_text = host.models.insert(String::new());
+
+    let style = NodeGraphStyle::default();
+    let underlay_counter = Arc::new(AtomicUsize::new(0));
+    let underlay = ui.create_node_retained(PointerDownCounter::new(underlay_counter));
+    let overlay_host = NodeGraphOverlayHost::new_with_controller(
+        graph.clone(),
+        controller,
+        overlays.clone(),
+        group_rename_text.clone(),
+        underlay,
+        style,
+    );
+    let overlay_host_node = ui.create_node_retained(overlay_host);
+    let overlay_child =
+        ui.create_node_retained(PointerDownCounter::new(Arc::new(AtomicUsize::new(0))));
+    ui.set_children(overlay_host_node, vec![overlay_child]);
+
+    let editor = ui.create_node_retained(NodeGraphEditor::new());
+    ui.set_children(editor, vec![underlay, overlay_host_node]);
+    ui.set_root(editor);
+
+    open_rename_overlay(
+        &mut host,
+        &overlays,
+        group_id,
+        Point::new(Px(400.0), Px(300.0)),
+    );
+    let changed = host.take_changed_models();
+    ui.propagate_model_changes(&mut host, &changed);
+    ui.layout_all(&mut host, &mut services, bounds(), 1.0);
+
+    let _ = group_rename_text.update(&mut host, |text, _cx| {
+        *text = "New".to_string();
+    });
+    let changed = host.take_changed_models();
+    ui.propagate_model_changes(&mut host, &changed);
+    ui.layout_all(&mut host, &mut services, bounds(), 1.0);
+
+    ui.dispatch_event(
+        &mut host,
+        &mut services,
+        &Event::KeyDown {
+            key: KeyCode::Enter,
+            modifiers: Modifiers::default(),
+            repeat: false,
+        },
+    );
+
+    let changed = host.take_changed_models();
+    ui.propagate_model_changes(&mut host, &changed);
+    ui.layout_all(&mut host, &mut services, bounds(), 1.0);
+
+    let closed = overlays
+        .read_ref(&host, |s| s.group_rename.is_none())
+        .ok()
+        .unwrap_or(false);
+    assert!(closed, "expected Enter to close the group rename overlay");
+
+    let graph_title = graph
+        .read_ref(&host, |g| {
+            g.groups.get(&group_id).map(|group| group.title.clone())
+        })
+        .ok()
+        .flatten()
+        .expect("graph group title");
+    assert_eq!(graph_title, "New");
+
+    let store_title = store
+        .read_ref(&host, |store| {
+            store
+                .graph()
+                .groups
+                .get(&group_id)
+                .map(|group| group.title.clone())
+        })
+        .ok()
+        .flatten()
+        .expect("store group title");
+    assert_eq!(store_title, "New");
 }

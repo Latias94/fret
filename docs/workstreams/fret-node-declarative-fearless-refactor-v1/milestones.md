@@ -190,6 +190,9 @@ points rather than direct graph mutation.
     surface so the recommended demo path exercises the transaction-safe commit architecture.
   - `apps/fret-examples/src/node_graph_domain_demo.rs` now acts as the retained-backed best-practice
     sample for controller-first canvas / overlay / portal composition.
+  - `apps/fret-examples/src/node_graph_legacy_demo.rs` now also routes retained canvas / rename
+    overlay / portal / minimap glue through the controller-first path, so the legacy demo no longer
+    teaches raw edit queue mutation first for those core surfaces.
 - Remaining M3 scope is still substantial: we still need a broader controller surface, more
   declarative commit coverage, and explicit undo/redo / controlled-mode gates.
 
@@ -230,6 +233,7 @@ points rather than direct graph mutation.
 - `ecosystem/fret-node/src/ui/declarative/compat_retained.rs`
 - `apps/fret-examples/src/node_graph_demo.rs`
 - `apps/fret-examples/src/node_graph_domain_demo.rs`
+- `apps/fret-examples/src/node_graph_legacy_demo.rs`
 
 ## M4 - Declarative editor-grade interaction and portal closure
 
@@ -271,7 +275,10 @@ real editors.
 - `ecosystem/fret-node/src/ui/declarative/paint_only.rs`
 - `ecosystem/fret-node/src/ui/portal.rs`
 - `ecosystem/fret-node/src/ui/overlays/group_rename.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/tests/overlay_group_rename_conformance.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/tests/portal_lifecycle_conformance.rs`
 - `apps/fret-examples/src/node_graph_domain_demo.rs`
+- `apps/fret-examples/src/node_graph_legacy_demo.rs`
 - `tools/diag-scripts/node-graph/`
 
 ## M5 - Compatibility retained convergence and deletion gate

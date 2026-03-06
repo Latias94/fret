@@ -6,14 +6,24 @@ use fret_runtime::ModelsHost as _;
 use fret_ui::UiTree;
 use fret_ui::element::SemanticsProps;
 use fret_ui::retained_bridge::UiTreeRetainedExt as _;
+use fret_ui::retained_bridge::Widget as _;
 
 use crate::core::{CanvasPoint, CanvasSize, Graph, GraphId, Node, NodeId, NodeKindKey};
-
+use crate::io::NodeGraphViewState;
+use crate::ops::{GraphOp, GraphTransaction};
+use crate::runtime::store::NodeGraphStore;
 use crate::ui::measured::MeasuredGeometryStore;
-use crate::ui::portal::NodeGraphPortalHost;
+use crate::ui::portal::{
+    NodeGraphPortalCommandHandler, NodeGraphPortalHost, PortalCommandOutcome, PortalTextCommand,
+    portal_submit_text_command,
+};
 use crate::ui::style::NodeGraphStyle;
+use crate::ui::{NodeGraphController, NodeGraphEditQueue};
 
-use super::{NullServices, TestUiHostImpl, insert_view};
+use super::{
+    NullServices, TestUiHostImpl, command_cx, insert_graph_view, insert_view,
+    make_test_graph_two_nodes,
+};
 
 fn bounds() -> Rect {
     Rect::new(
@@ -108,4 +118,95 @@ fn portal_subtree_resets_state_on_node_kind_change() {
         third, second,
         "expected subtree state to reset when node kind changes"
     );
+}
+
+#[derive(Debug, Clone, Copy)]
+struct CommitMoveHandler {
+    node: NodeId,
+}
+
+impl NodeGraphPortalCommandHandler<TestUiHostImpl> for CommitMoveHandler {
+    fn handle_portal_command(
+        &mut self,
+        _cx: &mut fret_ui::retained_bridge::CommandCx<'_, TestUiHostImpl>,
+        _graph: &Graph,
+        command: PortalTextCommand,
+    ) -> PortalCommandOutcome {
+        match command {
+            PortalTextCommand::Submit { node } if node == self.node => {
+                PortalCommandOutcome::Commit(GraphTransaction {
+                    label: Some("Move Node".to_string()),
+                    ops: vec![GraphOp::SetNodePos {
+                        id: node,
+                        from: CanvasPoint { x: 0.0, y: 0.0 },
+                        to: CanvasPoint { x: 64.0, y: 32.0 },
+                    }],
+                })
+            }
+            _ => PortalCommandOutcome::NotHandled,
+        }
+    }
+}
+
+#[test]
+fn portal_command_prefers_controller_over_raw_edit_queue() {
+    let mut host = TestUiHostImpl::default();
+    let mut services = NullServices::default();
+    let mut tree = UiTree::<TestUiHostImpl>::default();
+
+    let (graph_value, node_id, _other_node) = make_test_graph_two_nodes();
+    let (graph, view) = insert_graph_view(&mut host, graph_value.clone());
+    let store = host.models.insert(NodeGraphStore::new(
+        graph_value,
+        NodeGraphViewState::default(),
+    ));
+    let edits = host.models.insert(NodeGraphEditQueue::default());
+    let controller = NodeGraphController::new(store.clone());
+
+    let measured = Arc::new(MeasuredGeometryStore::new());
+    let mut portal = NodeGraphPortalHost::new(
+        graph.clone(),
+        view,
+        measured,
+        NodeGraphStyle::default(),
+        "test.portal.controller",
+        move |ecx: &mut fret_ui::ElementContext<'_, TestUiHostImpl>,
+              _graph: &Graph,
+              _layout: crate::ui::portal::NodeGraphPortalNodeLayout| {
+            vec![ecx.semantics(SemanticsProps::default(), |_ecx| Vec::new())]
+        },
+    )
+    .with_edit_queue(edits.clone())
+    .with_controller(controller)
+    .with_command_handler(CommitMoveHandler { node: node_id });
+
+    let mut cx = command_cx(&mut host, &mut services, &mut tree);
+    assert!(portal.command(&mut cx, &portal_submit_text_command(node_id)));
+
+    let queued = edits
+        .read_ref(&host, |queue| queue.pending.clone())
+        .ok()
+        .unwrap_or_default();
+    assert!(
+        queued.is_empty(),
+        "expected controller-first path to avoid pushing into the raw edit queue"
+    );
+
+    let graph_pos = graph
+        .read_ref(&host, |graph| {
+            graph.nodes.get(&node_id).map(|node| node.pos)
+        })
+        .ok()
+        .flatten()
+        .expect("graph node pos");
+    assert_eq!(graph_pos, CanvasPoint { x: 64.0, y: 32.0 });
+
+    let store_pos = store
+        .read_ref(&host, |store| {
+            store.graph().nodes.get(&node_id).map(|node| node.pos)
+        })
+        .ok()
+        .flatten()
+        .expect("store node pos");
+    assert_eq!(store_pos, CanvasPoint { x: 64.0, y: 32.0 });
 }

@@ -115,6 +115,9 @@ land in code review; move design discussion back to `README.md` if a TODO turns 
       falling back to raw queue transport.
     - `NodeGraphOverlayHost::new_with_controller` and `compat_retained` now teach controller-first
       rename / portal composition instead of requiring raw queue mutation at the app boundary.
+    - `apps/fret-examples/src/node_graph_legacy_demo.rs` now uses the same controller-first canvas /
+      overlay / portal / minimap wiring, leaving raw `edit_queue` mainly for transport-only or
+      compatibility seams that still need explicit queue ownership.
 - [x] Land the first XyFlow-style connection-query mapping on the controller surface:
   - `NodeGraphController::node_connections`
   - `NodeGraphController::port_connections` (XyFlow `getHandleConnections` analogue)
@@ -183,6 +186,9 @@ land in code review; move design discussion back to `README.md` if a TODO turns 
 - [ ] Move overlay/menu/toolbar policy to the right ecosystem surfaces where that boundary is
       currently blurry.
 - [ ] Add at least one gate that exercises portal + overlay anchoring under motion.
+  - Progress: the feature-gated retained conformance files now include controller-first rename and
+    portal commit scenarios (`overlay_group_rename_conformance.rs`,
+    `portal_lifecycle_conformance.rs`), pending the existing retained test-harness compile drift.
 
 ## M5 - Compatibility retained convergence
 

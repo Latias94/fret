@@ -230,6 +230,8 @@ A first minimal slice is now landed in `ecosystem/fret-node/src/ui/controller.rs
 - it can sync external graph/view models from store after commits,
 - retained rename / portal / compatibility glue now also prefers controller-owned transaction
   submission when a controller/store exists,
+- the retained legacy demo now routes its canvas / rename overlay / portal / minimap glue through the
+  same controller-first surface,
 - the default declarative demo now uses it.
 
 This is intentionally not the final shape yet. Richer viewport commands, callback layering, and the

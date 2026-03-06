@@ -60,19 +60,21 @@ use fret_node::ui::style::{NodeGraphBackgroundPattern, NodeGraphStyle};
 use fret_node::ui::{
     EdgePaintOverrideV1, MeasuredGeometryStore, MeasuredNodeGraphPresenter,
     NodeGraphA11yFocusedEdge, NodeGraphA11yFocusedNode, NodeGraphA11yFocusedPort,
-    NodeGraphBlackboardOverlay, NodeGraphCanvas, NodeGraphControlsOverlay, NodeGraphDiagAnchor,
-    NodeGraphDiagConnectingFlag, NodeGraphEdgeToolbar, NodeGraphEdgeTypes, NodeGraphEditQueue,
-    NodeGraphEditor, NodeGraphInternalsStore, NodeGraphMiniMapOverlay, NodeGraphNodeToolbar,
-    NodeGraphNodeTypes, NodeGraphOverlayHost, NodeGraphOverlayState, NodeGraphPaintOverridesMap,
-    NodeGraphPanel, NodeGraphPanelPosition, NodeGraphPortalHost, NodeGraphPortalNodeLayout,
-    NodeGraphPresetFamily, NodeGraphPresetSkinV1, NodeGraphToolbarAlign, NodeGraphToolbarPosition,
-    PortalNumberEditHandler, PortalNumberEditSpec, PortalNumberEditSubmit, PortalNumberEditor,
-    RegistryNodeGraphPresenter, register_node_graph_commands,
+    NodeGraphBlackboardOverlay, NodeGraphCanvas, NodeGraphController, NodeGraphControlsOverlay,
+    NodeGraphDiagAnchor, NodeGraphDiagConnectingFlag, NodeGraphEdgeToolbar, NodeGraphEdgeTypes,
+    NodeGraphEditQueue, NodeGraphEditor, NodeGraphInternalsStore, NodeGraphMiniMapOverlay,
+    NodeGraphNodeToolbar, NodeGraphNodeTypes, NodeGraphOverlayHost, NodeGraphOverlayState,
+    NodeGraphPaintOverridesMap, NodeGraphPanel, NodeGraphPanelPosition, NodeGraphPortalHost,
+    NodeGraphPortalNodeLayout, NodeGraphPresetFamily, NodeGraphPresetSkinV1, NodeGraphToolbarAlign,
+    NodeGraphToolbarPosition, PortalNumberEditHandler, PortalNumberEditSpec,
+    PortalNumberEditSubmit, PortalNumberEditor, RegistryNodeGraphPresenter,
+    register_node_graph_commands,
 };
 
 #[derive(Clone)]
 struct NodeGraphDemoModels {
     store: fret_runtime::Model<NodeGraphStore>,
+    controller: NodeGraphController,
     graph: fret_runtime::Model<Graph>,
     view: fret_runtime::Model<NodeGraphViewState>,
     edits: fret_runtime::Model<NodeGraphEditQueue>,
@@ -1610,9 +1612,9 @@ impl NodeGraphDemoDriver {
 
         let graph = models.graph.clone();
         let view = models.view.clone();
-        let edits = models.edits.clone();
         let overlays = models.overlays.clone();
         let group_rename_text = models.group_rename_text.clone();
+        let controller = models.controller.clone();
         let store = models.store.clone();
         let mut style = NodeGraphStyle::from_theme(Theme::global(app));
         let mut background = style.background_style();
@@ -1711,13 +1713,12 @@ impl NodeGraphDemoDriver {
         };
 
         let mut canvas = NodeGraphCanvas::new(graph.clone(), view)
-            .with_store(store.clone())
+            .with_controller(controller.clone())
             .with_middleware(RejectNonFiniteTx)
             .with_presenter(presenter)
             .with_edge_types(edge_types)
             .with_style(style.clone())
             .with_skin(preset_skin)
-            .with_edit_queue(edits.clone())
             .with_overlay_state(overlays.clone())
             .with_internals_store(internals)
             .with_measured_output_store(measured.derived.clone())
@@ -1765,9 +1766,9 @@ impl NodeGraphDemoDriver {
         }
         ui.set_children(canvas_node, canvas_children);
 
-        let overlay_host = NodeGraphOverlayHost::new(
+        let overlay_host = NodeGraphOverlayHost::new_with_controller(
             graph,
-            edits,
+            controller.clone(),
             overlays,
             group_rename_text.clone(),
             canvas_node,
@@ -1808,7 +1809,7 @@ impl NodeGraphDemoDriver {
             node_types.into_portal_renderer(),
         )
         .with_cull_margin_px(style.paint.render_cull_margin_px)
-        .with_edit_queue(models.edits.clone())
+        .with_controller(models.controller.clone())
         .with_canvas_focus_target(canvas_node)
         .with_command_handler(PortalNumberEditHandler::new(
             portal_root,
@@ -1875,7 +1876,7 @@ impl NodeGraphDemoDriver {
                 internals_overlay.clone(),
                 style.clone(),
             )
-            .with_store(store)
+            .with_controller(models.controller.clone())
             .in_panel_bounds();
             let minimap_overlay_node = ui.create_node_retained(minimap_overlay);
 
@@ -1892,7 +1893,7 @@ impl NodeGraphDemoDriver {
                 internals_overlay.clone(),
                 style.clone(),
             )
-            .with_store(store);
+            .with_controller(models.controller.clone());
             Some(ui.create_node_retained(minimap_overlay))
         };
 
@@ -2732,10 +2733,12 @@ pub fn run() -> anyhow::Result<()> {
     let view = app.models_mut().insert(store_value.view_state().clone());
     let store = app.models_mut().insert(store_value);
     let edits = app.models_mut().insert(NodeGraphEditQueue::default());
+    let controller = NodeGraphController::new(store.clone()).with_edit_queue(edits.clone());
     let overlays = app.models_mut().insert(NodeGraphOverlayState::default());
     let group_rename_text = app.models_mut().insert(String::new());
     app.set_global(NodeGraphDemoModels {
         store,
+        controller,
         graph,
         view,
         edits,
