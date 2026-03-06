@@ -41,7 +41,6 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
         ui_ai::MicSelectorDevice::new("usb", "USB Audio Device (5678:ef01)"),
         ui_ai::MicSelectorDevice::new("loopback", "Loopback"),
     ]);
-    let list_devices = devices.clone();
 
     let selected = cx.app.models().read(&value, |v| v.clone()).ok().flatten();
 
@@ -69,27 +68,29 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
                     .test_id("ui-ai-mic-selector-demo-trigger")
                     .into_element(cx);
 
-            let items = list_devices
-                .iter()
-                .cloned()
-                .map(|device| {
-                    ui_ai::MicSelectorItem::new(device.label.clone())
-                        .value(device.id.clone())
-                        .test_id(format!(
-                            "ui-ai-mic-selector-demo-item-{}",
-                            device.id.as_ref().replace(' ', "-")
-                        ))
-                        .children([ui_ai::MicSelectorLabel::new(device).into_element(cx)])
-                })
-                .collect::<Vec<_>>();
-
             let content = ui_ai::MicSelectorContent::new([
                 ui_ai::MicSelectorInput::new()
                     .test_id("ui-ai-mic-selector-demo-input")
                     .into_element(cx),
-                ui_ai::MicSelectorList::new_entries(items)
+                ui_ai::MicSelectorList::new()
                     .empty(ui_ai::MicSelectorEmpty::new())
-                    .into_element(cx),
+                    .into_element_with_children(cx, |cx, devices| {
+                        devices
+                            .iter()
+                            .cloned()
+                            .map(|device| {
+                                ui_ai::MicSelectorItem::new(device.label.clone())
+                                    .value(device.id.clone())
+                                    .test_id(format!(
+                                        "ui-ai-mic-selector-demo-item-{}",
+                                        device.id.as_ref().replace(' ', "-")
+                                    ))
+                                    .children([
+                                        ui_ai::MicSelectorLabel::new(device).into_element(cx)
+                                    ])
+                            })
+                            .collect::<Vec<_>>()
+                    }),
             ])
             .test_id_root("ui-ai-mic-selector-demo-content")
             .into_element(cx);

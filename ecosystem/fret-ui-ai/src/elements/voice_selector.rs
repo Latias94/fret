@@ -256,6 +256,59 @@ impl VoiceSelector {
         self
     }
 
+    /// Rust-friendly compound entrypoint for the upstream JSX children shape.
+    pub fn into_element_with_children<H, F>(
+        self,
+        cx: &mut ElementContext<'_, H>,
+        children: F,
+    ) -> AnyElement
+    where
+        H: UiHost + 'static,
+        F: Fn(&mut ElementContext<'_, H>) -> (AnyElement, AnyElement) + Clone + 'static,
+    {
+        let open = fret_ui_kit::primitives::dialog::DialogRoot::new()
+            .open(self.open.clone())
+            .default_open(self.default_open)
+            .open_model(cx);
+
+        let value = controllable_state::use_controllable_model(cx, self.value.clone(), || {
+            self.default_value.clone()
+        })
+        .model();
+
+        let query = query_model(cx);
+        let controller = VoiceSelectorController {
+            voices: self.voices.clone(),
+            value: value.clone(),
+            open: open.clone(),
+            query: query.clone(),
+            on_value_change: self.on_value_change.clone(),
+        };
+
+        let controller_for_trigger = controller.clone();
+        let controller_for_content = controller;
+        let children_for_trigger = children.clone();
+        let children_for_content = children;
+
+        Dialog::new(open.clone()).into_element(
+            cx,
+            move |cx| {
+                cx.with_state(VoiceSelectorProviderState::default, |st| {
+                    st.controller = Some(controller_for_trigger.clone());
+                });
+                let (trigger, _) = children_for_trigger(cx);
+                trigger
+            },
+            move |cx| {
+                cx.with_state(VoiceSelectorProviderState::default, |st| {
+                    st.controller = Some(controller_for_content.clone());
+                });
+                let (_, content) = children_for_content(cx);
+                content
+            },
+        )
+    }
+
     pub fn into_element<H: UiHost + 'static>(
         self,
         cx: &mut ElementContext<'_, H>,

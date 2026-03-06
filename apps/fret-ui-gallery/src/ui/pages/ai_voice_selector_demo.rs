@@ -20,7 +20,7 @@ fn parts_table(cx: &mut ElementContext<'_, App>) -> AnyElement {
             [
                 shadcn::TableCell::new(cx.text("VoiceSelector")).into_element(cx),
                 shadcn::TableCell::new(
-                    cx.text("UI root with controlled/uncontrolled `value_model` / `open_model` support plus `default_value` / `default_open`."),
+                    cx.text("UI root with controlled/uncontrolled `value_model` / `open_model` support plus a Rust-friendly `into_element_with_children(...)` compound entrypoint."),
                 )
                 .into_element(cx),
             ],
@@ -102,7 +102,7 @@ pub(super) fn preview_ai_voice_selector_demo(
             "The demo already covers searchable selection, grouped entries, metadata rows, and preview actions without leaking policy into the runtime layer.",
             "`VoiceSelectorEmpty`, `Group`, `Item`, `Separator`, and `Shortcut` deliberately stay aligned with shared `Command*` semantics.",
             "Voice inventory and preview playback remain app-owned so the example stays copy-paste friendly and backend-agnostic.",
-            "Rust uses builder-based composition, but the page now mirrors the official docs taxonomy instead of showing a single raw demo block.",
+            "Rust now uses the same root-level `into_element_with_children(...)` compound entrypoint as `MicSelector`, while still keeping voice-specific metadata parts explicit.",
         ],
     );
     let parts = parts_table(cx);
@@ -123,8 +123,8 @@ pub(super) fn preview_ai_voice_selector_demo(
         vec![
             DocSection::new("Compound API", demo)
                 .descriptions([
-                    "Uses the same high-level trigger / content / input / list / item taxonomy as the official AI Elements `voice-selector` docs.",
-                    "Selector-specific metadata parts remain visible so this page demonstrates where policy ends and shared command semantics begin.",
+                    "Uses the same high-level trigger / content / input / list / item taxonomy as the official AI Elements `voice-selector` docs, now expressed with the same root-level `into_element_with_children(...)` pattern used by `MicSelector`.",
+                    "Selector-specific metadata parts remain visible so this page demonstrates where policy ends, shared selector composition begins, and shared command semantics take over.",
                 ])
                 .test_id_prefix("ui-gallery-ai-voice-selector-demo")
                 .code_rust_from_file_region(snippets::voice_selector_demo::SOURCE, "example"),

@@ -20,7 +20,7 @@ fn parts_table(cx: &mut ElementContext<'_, App>) -> AnyElement {
             [
                 shadcn::TableCell::new(cx.text("ModelSelector")).into_element(cx),
                 shadcn::TableCell::new(
-                    cx.text("Thin dialog root that owns open state only. Selected model and search query stay app-owned in the current Fret surface."),
+                    cx.text("Thin dialog root that owns open state only, now with a Rust-friendly `into_element_with_children(...)` compound entrypoint. Selected model and search query stay app-owned."),
                 )
                 .into_element(cx),
             ],
@@ -84,7 +84,7 @@ pub(super) fn preview_ai_model_selector_demo(
     let features = doc_layout::notes(
         cx,
         [
-            "This selector is intentionally a thin wrapper over dialog + command surfaces, which already matches the spirit of the official AI Elements component.",
+            "This selector is intentionally a thin wrapper over dialog + command surfaces, but it now shares the same root-level `into_element_with_children(...)` composition pattern as the other AI selectors.",
             "The demo keeps selected model state, query state, and provider grouping local so the snippet remains easy to lift into an app.",
             "Keyboard navigation, filtering, empty-state handling, and grouped entries all come from the shared command surface rather than selector-specific runtime code.",
             "Provider badges and label layout are recipe-level helpers; they improve docs parity without turning `ModelSelector` into a policy-heavy root.",
@@ -95,7 +95,7 @@ pub(super) fn preview_ai_model_selector_demo(
     let notes = doc_layout::notes(
         cx,
         [
-            "`ModelSelector` should stay lighter than `VoiceSelector`; the main parity work here belongs in shared command composition and docs examples, not in extra selector-owned contracts.",
+            "`ModelSelector` should stay lighter than `VoiceSelector`; sharing the root compound entrypoint is enough, and the main remaining parity work still belongs in shared command composition and docs examples.",
             "The current `ModelSelectorLogo` intentionally avoids remote network fetches and renders a local placeholder badge instead, which is a reasonable Fret-specific divergence for now.",
             "If we later want 1:1 docs parity, the next step is refining `Command` composition and optional asset hooks rather than pushing model-specific semantics into `crates/fret-ui`.",
         ],
@@ -109,8 +109,8 @@ pub(super) fn preview_ai_model_selector_demo(
         vec![
             DocSection::new("Compound API", demo)
                 .descriptions([
-                    "Shows the same dialog / content / input / list decomposition as the official `model-selector` docs, expressed with Rust builders instead of JSX nesting.",
-                    "Highlights that most of the surface is a thin alias layer over shared command parts, with only a few selector-specific presentation helpers on top.",
+                    "Shows the same dialog / content / input / list decomposition as the official `model-selector` docs, expressed with the same root-level `into_element_with_children(...)` pattern used by the other selectors.",
+                    "Highlights that most of the surface is still a thin alias layer over shared command parts, with only a few selector-specific presentation helpers on top.",
                 ])
                 .test_id_prefix("ui-gallery-ai-model-selector-demo")
                 .code_rust_from_file_region(snippets::model_selector_demo::SOURCE, "example"),

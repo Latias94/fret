@@ -903,35 +903,36 @@ impl MicSelectorList {
         self
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    fn auto_entries<H: UiHost + 'static>(
+        cx: &mut ElementContext<'_, H>,
+        devices: &[MicSelectorDevice],
+    ) -> Vec<MicSelectorItem> {
+        devices
+            .iter()
+            .cloned()
+            .map(|device| {
+                MicSelectorItem::new(device.label.clone())
+                    .value(device.id.clone())
+                    .children([MicSelectorLabel::new(device).into_element(cx)])
+            })
+            .collect()
+    }
+
+    fn into_element_with_item_entries<H: UiHost + 'static>(
+        cx: &mut ElementContext<'_, H>,
+        empty_text: Arc<str>,
+        test_id_prefix: Option<Arc<str>>,
+        scroll_layout: LayoutRefinement,
+        entries: Vec<MicSelectorItem>,
+    ) -> AnyElement {
         let Some(controller) = use_mic_selector_controller(cx) else {
             return visually_hidden(cx, |_| Vec::new());
         };
 
-        let Self {
-            empty_text,
-            test_id_prefix,
-            mode,
-            scroll_layout,
-        } = self;
-
-        let items = match mode {
-            MicSelectorListMode::Auto => controller
-                .devices
-                .iter()
-                .cloned()
-                .map(|device| {
-                    MicSelectorItem::new(device.label.clone())
-                        .value(device.id.clone())
-                        .children([MicSelectorLabel::new(device).into_element(cx)])
-                        .into_command_item(&controller, test_id_prefix.as_ref())
-                })
-                .collect::<Vec<_>>(),
-            MicSelectorListMode::Entries(entries) => entries
-                .into_iter()
-                .map(|entry| entry.into_command_item(&controller, test_id_prefix.as_ref()))
-                .collect::<Vec<_>>(),
-        };
+        let items = entries
+            .into_iter()
+            .map(|entry| entry.into_command_item(&controller, test_id_prefix.as_ref()))
+            .collect::<Vec<_>>();
 
         CommandList::new(items)
             .empty_text(empty_text)
@@ -939,6 +940,57 @@ impl MicSelectorList {
             .highlight_query_model(controller.query)
             .refine_scroll_layout(scroll_layout)
             .into_element(cx)
+    }
+
+    /// Rust-friendly equivalent of upstream `MicSelectorList(children(data))`.
+    ///
+    /// The closure receives the current device slice and returns explicit selector entries,
+    /// preserving the docs-style compound composition while keeping device enumeration app-owned.
+    pub fn into_element_with_children<H, F, I>(
+        self,
+        cx: &mut ElementContext<'_, H>,
+        children: F,
+    ) -> AnyElement
+    where
+        H: UiHost + 'static,
+        F: FnOnce(&mut ElementContext<'_, H>, Arc<[MicSelectorDevice]>) -> I,
+        I: IntoIterator<Item = MicSelectorItem>,
+    {
+        let Some(controller) = use_mic_selector_controller(cx) else {
+            return visually_hidden(cx, |_| Vec::new());
+        };
+
+        let Self {
+            empty_text,
+            test_id_prefix,
+            scroll_layout,
+            ..
+        } = self;
+
+        let devices = controller.devices.clone();
+        let entries = children(cx, devices).into_iter().collect::<Vec<_>>();
+        Self::into_element_with_item_entries(cx, empty_text, test_id_prefix, scroll_layout, entries)
+    }
+
+    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let Self {
+            empty_text,
+            test_id_prefix,
+            mode,
+            scroll_layout,
+        } = self;
+
+        let entries = match mode {
+            MicSelectorListMode::Auto => {
+                let Some(controller) = use_mic_selector_controller(cx) else {
+                    return visually_hidden(cx, |_| Vec::new());
+                };
+                Self::auto_entries(cx, controller.devices.as_ref())
+            }
+            MicSelectorListMode::Entries(entries) => entries,
+        };
+
+        Self::into_element_with_item_entries(cx, empty_text, test_id_prefix, scroll_layout, entries)
     }
 }
 
