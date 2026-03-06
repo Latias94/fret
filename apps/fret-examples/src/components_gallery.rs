@@ -7,8 +7,8 @@ use fret_core::{
     FontId, KeyCode, Px, Rect, SemanticsRole, TextStyle, UiServices,
 };
 use fret_launch::{
-    WindowCreateSpec, WinitAppDriver, WinitCommandContext, WinitEventContext, WinitRenderContext,
-    WinitRunnerConfig, WinitWindowContext,
+    FnDriver, FnDriverHooks, WindowCreateSpec, WinitCommandContext, WinitEventContext,
+    WinitHotReloadContext, WinitRenderContext, WinitRunnerConfig, WinitWindowContext,
 };
 use fret_markdown as markdown;
 use fret_runtime::PlatformCapabilities;
@@ -1489,607 +1489,629 @@ impl ComponentsGalleryDriver {
     }
 }
 
-impl WinitAppDriver for ComponentsGalleryDriver {
-    type WindowState = ComponentsGalleryWindowState;
+fn init(_driver: &mut ComponentsGalleryDriver, _app: &mut App, _main_window: AppWindowId) {}
 
-    fn init(&mut self, _app: &mut App, _main_window: AppWindowId) {}
+fn gpu_ready(
+    _driver: &mut ComponentsGalleryDriver,
+    _app: &mut App,
+    _context: &fret_render::WgpuContext,
+    _renderer: &mut fret_render::Renderer,
+) {
+}
 
-    fn gpu_ready(
-        &mut self,
-        _app: &mut App,
-        _context: &fret_render::WgpuContext,
-        _renderer: &mut fret_render::Renderer,
-    ) {
+fn create_window_state(
+    _driver: &mut ComponentsGalleryDriver,
+    app: &mut App,
+    window: AppWindowId,
+) -> ComponentsGalleryWindowState {
+    ComponentsGalleryDriver::build_ui(app, window)
+}
+
+fn hot_reload_window(
+    _driver: &mut ComponentsGalleryDriver,
+    context: WinitHotReloadContext<'_, ComponentsGalleryWindowState>,
+) {
+    let WinitHotReloadContext {
+        app, window, state, ..
+    } = context;
+
+    crate::hotpatch::reset_ui_tree(app, window, &mut state.ui);
+    state.root = None;
+    state.pending_font_dialog = None;
+    state.awaiting_font_dialog = false;
+
+    let _ = app.models_mut().update(&state.select_open, |v| *v = false);
+    let _ = app
+        .models_mut()
+        .update(&state.theme_preset_open, |v| *v = false);
+    let _ = app
+        .models_mut()
+        .update(&state.dropdown_open, |v| *v = false);
+    let _ = app
+        .models_mut()
+        .update(&state.context_menu_open, |v| *v = false);
+    let _ = app.models_mut().update(&state.popover_open, |v| *v = false);
+    let _ = app.models_mut().update(&state.dialog_open, |v| *v = false);
+    let _ = app
+        .models_mut()
+        .update(&state.alert_dialog_open, |v| *v = false);
+    let _ = app.models_mut().update(&state.sheet_open, |v| *v = false);
+    let _ = app.models_mut().update(&state.cmdk_open, |v| *v = false);
+    let _ = app
+        .models_mut()
+        .update(&state.ui_font_override_open, |v| *v = false);
+    let _ = app
+        .models_mut()
+        .update(&state.emoji_font_override_open, |v| *v = false);
+}
+
+fn handle_model_changes(
+    _driver: &mut ComponentsGalleryDriver,
+    context: WinitWindowContext<'_, ComponentsGalleryWindowState>,
+    changed: &[fret_app::ModelId],
+) {
+    let WinitWindowContext {
+        app, state, window, ..
+    } = context;
+
+    app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
+        svc.record_model_changes(window, changed);
+    });
+    state.ui.propagate_model_changes(app, changed);
+
+    if changed.contains(&state.ui_font_override.id()) {
+        let selected = app
+            .models()
+            .read(&state.ui_font_override, |v| v.clone())
+            .ok()
+            .flatten();
+
+        let mut config = app
+            .global::<fret_core::TextFontFamilyConfig>()
+            .cloned()
+            .unwrap_or_default();
+        config.ui_sans = selected
+            .as_deref()
+            .map(|name| vec![name.to_string()])
+            .unwrap_or_default();
+        app.set_global::<fret_core::TextFontFamilyConfig>(config);
+    }
+}
+
+fn handle_global_changes(
+    _driver: &mut ComponentsGalleryDriver,
+    context: WinitWindowContext<'_, ComponentsGalleryWindowState>,
+    changed: &[std::any::TypeId],
+) {
+    let WinitWindowContext {
+        app, state, window, ..
+    } = context;
+    app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
+        svc.record_global_changes(app, window, changed);
+    });
+    state.ui.propagate_global_changes(app, changed);
+}
+
+fn handle_command(
+    _driver: &mut ComponentsGalleryDriver,
+    context: WinitCommandContext<'_, ComponentsGalleryWindowState>,
+    command: CommandId,
+) {
+    let WinitCommandContext {
+        app,
+        services,
+        window,
+        state,
+    } = context;
+
+    if command.as_str() == fret_app::core_commands::COMMAND_PALETTE
+        || command.as_str() == fret_app::core_commands::COMMAND_PALETTE_LEGACY
+    {
+        let _ = app.models_mut().update(&state.cmdk_open, |v| *v = true);
+        let _ = app.models_mut().update(&state.cmdk_query, |v| v.clear());
+        app.request_redraw(window);
+        return;
     }
 
-    fn create_window_state(&mut self, app: &mut App, window: AppWindowId) -> Self::WindowState {
-        Self::build_ui(app, window)
+    if state.ui.dispatch_command(app, services, &command) {
+        return;
     }
 
-    fn hot_reload_window(
-        &mut self,
-        app: &mut App,
-        _services: &mut dyn fret_core::UiServices,
-        window: AppWindowId,
-        state: &mut Self::WindowState,
-    ) {
-        crate::hotpatch::reset_ui_tree(app, window, &mut state.ui);
-        state.root = None;
+    if command.as_str() == "gallery.close" {
+        app.push_effect(Effect::Window(WindowRequest::Close(window)));
+        return;
+    }
+
+    if command.as_str() == "gallery.progress.inc" {
+        let _ = app
+            .models_mut()
+            .update(&state.progress, |v| *v = (*v + 10.0).min(100.0));
+    }
+
+    if command.as_str() == "gallery.progress.dec" {
+        let _ = app
+            .models_mut()
+            .update(&state.progress, |v| *v = (*v - 10.0).max(0.0));
+    }
+
+    if command.as_str() == "gallery.progress.reset" {
+        let _ = app.models_mut().update(&state.progress, |v| *v = 35.0);
+    }
+
+    match command.as_str() {
+        "gallery.dropdown.select.apple" => {
+            let _ = app.models_mut().update(&state.last_action, |v| {
+                *v = Arc::<str>::from("dropdown.select.apple");
+            });
+            return;
+        }
+        "gallery.dropdown.select.banana" => {
+            let _ = app.models_mut().update(&state.last_action, |v| {
+                *v = Arc::<str>::from("dropdown.select.banana");
+            });
+            return;
+        }
+        "gallery.cmdk.select.open" => {
+            let _ = app.models_mut().update(&state.last_action, |v| {
+                *v = Arc::<str>::from("cmdk.select.open");
+            });
+            return;
+        }
+        "gallery.cmdk.select.save" => {
+            let _ = app.models_mut().update(&state.last_action, |v| {
+                *v = Arc::<str>::from("cmdk.select.save");
+            });
+            return;
+        }
+        "gallery.cmdk.select.close" => {
+            let _ = app.models_mut().update(&state.last_action, |v| {
+                *v = Arc::<str>::from("cmdk.select.close");
+            });
+            return;
+        }
+        "gallery.cmdk.select.settings" => {
+            let _ = app.models_mut().update(&state.last_action, |v| {
+                *v = Arc::<str>::from("cmdk.select.settings");
+            });
+            return;
+        }
+        "gallery.cmdk.select.disabled" => {
+            let _ = app.models_mut().update(&state.last_action, |v| {
+                *v = Arc::<str>::from("cmdk.select.disabled");
+            });
+            return;
+        }
+        _ => {}
+    }
+
+    if command.as_str() == "gallery.context_menu.action" {
+        let _ = app.models_mut().update(&state.last_action, |v| {
+            *v = Arc::<str>::from("context_menu.action");
+        });
+    }
+
+    if command.as_str() == "gallery.text_smoke.emoji_font.reset" {
+        let _ = app
+            .models_mut()
+            .update(&state.emoji_font_override, |v| *v = None);
+    }
+
+    if command.as_str() == "gallery.text_smoke.ui_font.reset" {
+        let _ = app
+            .models_mut()
+            .update(&state.ui_font_override, |v| *v = None);
+    }
+
+    if command.as_str() == "gallery.text_smoke.fonts.load" {
+        let caps = app
+            .global::<PlatformCapabilities>()
+            .cloned()
+            .unwrap_or_default();
+        if !caps.fs.file_dialogs {
+            let _ = app.models_mut().update(&state.last_action, |v| {
+                *v = Arc::<str>::from("fonts.load: file dialogs not available");
+            });
+            return;
+        }
+
         state.pending_font_dialog = None;
-        state.awaiting_font_dialog = false;
+        state.awaiting_font_dialog = true;
 
-        let _ = app.models_mut().update(&state.select_open, |v| *v = false);
-        let _ = app
-            .models_mut()
-            .update(&state.theme_preset_open, |v| *v = false);
-        let _ = app
-            .models_mut()
-            .update(&state.dropdown_open, |v| *v = false);
-        let _ = app
-            .models_mut()
-            .update(&state.context_menu_open, |v| *v = false);
-        let _ = app.models_mut().update(&state.popover_open, |v| *v = false);
-        let _ = app.models_mut().update(&state.dialog_open, |v| *v = false);
-        let _ = app
-            .models_mut()
-            .update(&state.alert_dialog_open, |v| *v = false);
-        let _ = app.models_mut().update(&state.sheet_open, |v| *v = false);
-        let _ = app.models_mut().update(&state.cmdk_open, |v| *v = false);
-        let _ = app
-            .models_mut()
-            .update(&state.ui_font_override_open, |v| *v = false);
-        let _ = app
-            .models_mut()
-            .update(&state.emoji_font_override_open, |v| *v = false);
-    }
-
-    fn handle_model_changes(
-        &mut self,
-        context: WinitWindowContext<'_, Self::WindowState>,
-        changed: &[fret_app::ModelId],
-    ) {
-        let WinitWindowContext {
-            app, state, window, ..
-        } = context;
-
-        app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
-            svc.record_model_changes(window, changed);
-        });
-        state.ui.propagate_model_changes(app, changed);
-
-        if changed.contains(&state.ui_font_override.id()) {
-            let selected = app
-                .models()
-                .read(&state.ui_font_override, |v| v.clone())
-                .ok()
-                .flatten();
-
-            let mut config = app
-                .global::<fret_core::TextFontFamilyConfig>()
-                .cloned()
-                .unwrap_or_default();
-            config.ui_sans = selected
-                .as_deref()
-                .map(|name| vec![name.to_string()])
-                .unwrap_or_default();
-            app.set_global::<fret_core::TextFontFamilyConfig>(config);
-        }
-    }
-
-    fn handle_global_changes(
-        &mut self,
-        context: WinitWindowContext<'_, Self::WindowState>,
-        changed: &[std::any::TypeId],
-    ) {
-        let WinitWindowContext {
-            app, state, window, ..
-        } = context;
-        app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
-            svc.record_global_changes(app, window, changed);
-        });
-        state.ui.propagate_global_changes(app, changed);
-    }
-
-    fn handle_command(
-        &mut self,
-        context: WinitCommandContext<'_, Self::WindowState>,
-        command: CommandId,
-    ) {
-        let WinitCommandContext {
-            app,
-            services,
+        app.push_effect(Effect::FileDialogOpen {
             window,
-            state,
-        } = context;
+            options: FileDialogOptions {
+                title: Some("Load fonts".to_string()),
+                multiple: true,
+                filters: vec![FileDialogFilter {
+                    name: "Fonts".to_string(),
+                    extensions: vec!["ttf".to_string(), "otf".to_string(), "ttc".to_string()],
+                }],
+            },
+        });
 
-        if command.as_str() == fret_app::core_commands::COMMAND_PALETTE
-            || command.as_str() == fret_app::core_commands::COMMAND_PALETTE_LEGACY
-        {
-            let _ = app.models_mut().update(&state.cmdk_open, |v| *v = true);
-            let _ = app.models_mut().update(&state.cmdk_query, |v| v.clear());
-            app.request_redraw(window);
-            return;
-        }
+        let _ = app.models_mut().update(&state.last_action, |v| {
+            *v = Arc::<str>::from("fonts.load: opening file dialog...");
+        });
+        return;
+    }
+}
 
-        if state.ui.dispatch_command(app, services, &command) {
-            return;
-        }
+fn handle_event(
+    _driver: &mut ComponentsGalleryDriver,
+    context: WinitEventContext<'_, ComponentsGalleryWindowState>,
+    event: &Event,
+) {
+    let WinitEventContext {
+        app,
+        services,
+        window,
+        state,
+    } = context;
 
-        if command.as_str() == "gallery.close" {
-            app.push_effect(Effect::Window(WindowRequest::Close(window)));
-            return;
-        }
+    if fret_bootstrap::maybe_consume_event(app, window, event) {
+        return;
+    }
+    if matches!(event, Event::WindowCloseRequested) {
+        app.push_effect(Effect::Window(WindowRequest::Close(window)));
+        return;
+    }
 
-        if command.as_str() == "gallery.progress.inc" {
-            let _ = app
-                .models_mut()
-                .update(&state.progress, |v| *v = (*v + 10.0).min(100.0));
-        }
-
-        if command.as_str() == "gallery.progress.dec" {
-            let _ = app
-                .models_mut()
-                .update(&state.progress, |v| *v = (*v - 10.0).max(0.0));
-        }
-
-        if command.as_str() == "gallery.progress.reset" {
-            let _ = app.models_mut().update(&state.progress, |v| *v = 35.0);
-        }
-
-        match command.as_str() {
-            "gallery.dropdown.select.apple" => {
-                let _ = app.models_mut().update(&state.last_action, |v| {
-                    *v = Arc::<str>::from("dropdown.select.apple");
-                });
+    match event {
+        Event::FileDialogSelection(selection) => {
+            if !state.awaiting_font_dialog {
+                state.ui.dispatch_event(app, services, event);
                 return;
             }
-            "gallery.dropdown.select.banana" => {
-                let _ = app.models_mut().update(&state.last_action, |v| {
-                    *v = Arc::<str>::from("dropdown.select.banana");
-                });
-                return;
-            }
-            "gallery.cmdk.select.open" => {
-                let _ = app.models_mut().update(&state.last_action, |v| {
-                    *v = Arc::<str>::from("cmdk.select.open");
-                });
-                return;
-            }
-            "gallery.cmdk.select.save" => {
-                let _ = app.models_mut().update(&state.last_action, |v| {
-                    *v = Arc::<str>::from("cmdk.select.save");
-                });
-                return;
-            }
-            "gallery.cmdk.select.close" => {
-                let _ = app.models_mut().update(&state.last_action, |v| {
-                    *v = Arc::<str>::from("cmdk.select.close");
-                });
-                return;
-            }
-            "gallery.cmdk.select.settings" => {
-                let _ = app.models_mut().update(&state.last_action, |v| {
-                    *v = Arc::<str>::from("cmdk.select.settings");
-                });
-                return;
-            }
-            "gallery.cmdk.select.disabled" => {
-                let _ = app.models_mut().update(&state.last_action, |v| {
-                    *v = Arc::<str>::from("cmdk.select.disabled");
-                });
-                return;
-            }
-            _ => {}
-        }
+            state.awaiting_font_dialog = false;
+            state.pending_font_dialog = Some(selection.token);
 
-        if command.as_str() == "gallery.context_menu.action" {
-            let _ = app.models_mut().update(&state.last_action, |v| {
-                *v = Arc::<str>::from("context_menu.action");
-            });
-        }
-
-        if command.as_str() == "gallery.text_smoke.emoji_font.reset" {
-            let _ = app
-                .models_mut()
-                .update(&state.emoji_font_override, |v| *v = None);
-        }
-
-        if command.as_str() == "gallery.text_smoke.ui_font.reset" {
-            let _ = app
-                .models_mut()
-                .update(&state.ui_font_override, |v| *v = None);
-        }
-
-        if command.as_str() == "gallery.text_smoke.fonts.load" {
-            let caps = app
-                .global::<PlatformCapabilities>()
-                .cloned()
-                .unwrap_or_default();
-            if !caps.fs.file_dialogs {
-                let _ = app.models_mut().update(&state.last_action, |v| {
-                    *v = Arc::<str>::from("fonts.load: file dialogs not available");
-                });
-                return;
-            }
-
-            state.pending_font_dialog = None;
-            state.awaiting_font_dialog = true;
-
-            app.push_effect(Effect::FileDialogOpen {
+            app.push_effect(Effect::FileDialogReadAll {
                 window,
-                options: FileDialogOptions {
-                    title: Some("Load fonts".to_string()),
-                    multiple: true,
-                    filters: vec![FileDialogFilter {
-                        name: "Fonts".to_string(),
-                        extensions: vec!["ttf".to_string(), "otf".to_string(), "ttc".to_string()],
-                    }],
-                },
+                token: selection.token,
             });
 
             let _ = app.models_mut().update(&state.last_action, |v| {
-                *v = Arc::<str>::from("fonts.load: opening file dialog...");
+                *v = Arc::<str>::from("fonts.load: reading selected files...");
             });
             return;
         }
-    }
+        Event::FileDialogData(data) => {
+            if state.pending_font_dialog != Some(data.token) {
+                state.ui.dispatch_event(app, services, event);
+                return;
+            }
+            state.pending_font_dialog = None;
 
-    fn handle_event(&mut self, context: WinitEventContext<'_, Self::WindowState>, event: &Event) {
-        let WinitEventContext {
-            app,
-            services,
-            window,
-            state,
-        } = context;
+            let fonts: Vec<Vec<u8>> = data.files.iter().map(|f| f.bytes.clone()).collect();
+            if !fonts.is_empty() {
+                app.push_effect(Effect::TextAddFonts { fonts });
+            }
+            app.push_effect(Effect::FileDialogRelease { token: data.token });
 
-        if fret_bootstrap::maybe_consume_event(app, window, event) {
+            let msg: Arc<str> = Arc::from(
+                format!(
+                    "fonts.load: loaded_files={} errors={}",
+                    data.files.len(),
+                    data.errors.len()
+                )
+                .into_boxed_str(),
+            );
+            let _ = app.models_mut().update(&state.last_action, |v| *v = msg);
             return;
         }
-        if matches!(event, Event::WindowCloseRequested) {
-            app.push_effect(Effect::Window(WindowRequest::Close(window)));
-            return;
-        }
-
-        match event {
-            Event::FileDialogSelection(selection) => {
-                if !state.awaiting_font_dialog {
-                    state.ui.dispatch_event(app, services, event);
-                    return;
-                }
+        Event::FileDialogCanceled => {
+            if state.awaiting_font_dialog || state.pending_font_dialog.is_some() {
                 state.awaiting_font_dialog = false;
-                state.pending_font_dialog = Some(selection.token);
-
-                app.push_effect(Effect::FileDialogReadAll {
-                    window,
-                    token: selection.token,
-                });
-
-                let _ = app.models_mut().update(&state.last_action, |v| {
-                    *v = Arc::<str>::from("fonts.load: reading selected files...");
-                });
-                return;
-            }
-            Event::FileDialogData(data) => {
-                if state.pending_font_dialog != Some(data.token) {
-                    state.ui.dispatch_event(app, services, event);
-                    return;
-                }
                 state.pending_font_dialog = None;
-
-                let fonts: Vec<Vec<u8>> = data.files.iter().map(|f| f.bytes.clone()).collect();
-                if !fonts.is_empty() {
-                    app.push_effect(Effect::TextAddFonts { fonts });
-                }
-                app.push_effect(Effect::FileDialogRelease { token: data.token });
-
-                let msg: Arc<str> = Arc::from(
-                    format!(
-                        "fonts.load: loaded_files={} errors={}",
-                        data.files.len(),
-                        data.errors.len()
-                    )
-                    .into_boxed_str(),
-                );
-                let _ = app.models_mut().update(&state.last_action, |v| *v = msg);
-                return;
-            }
-            Event::FileDialogCanceled => {
-                if state.awaiting_font_dialog || state.pending_font_dialog.is_some() {
-                    state.awaiting_font_dialog = false;
-                    state.pending_font_dialog = None;
-                    let _ = app.models_mut().update(&state.last_action, |v| {
-                        *v = Arc::<str>::from("fonts.load: canceled");
-                    });
-                    return;
-                }
-            }
-            _ => {}
-        }
-
-        let overlays_open = app.models().get_copied(&state.select_open).unwrap_or(false)
-            || app
-                .models()
-                .get_copied(&state.theme_preset_open)
-                .unwrap_or(false)
-            || app
-                .models()
-                .get_copied(&state.dropdown_open)
-                .unwrap_or(false)
-            || app
-                .models()
-                .get_copied(&state.context_menu_open)
-                .unwrap_or(false)
-            || app
-                .models()
-                .get_copied(&state.popover_open)
-                .unwrap_or(false)
-            || app.models().get_copied(&state.dialog_open).unwrap_or(false)
-            || app
-                .models()
-                .get_copied(&state.alert_dialog_open)
-                .unwrap_or(false)
-            || app.models().get_copied(&state.sheet_open).unwrap_or(false)
-            || app.models().get_copied(&state.cmdk_open).unwrap_or(false);
-
-        if overlays_open {
-            state.ui.dispatch_event(app, services, event);
-            return;
-        }
-
-        let focus = state.ui.focus();
-        let focused_is_tree_item = focus.is_some_and(|focused| {
-            state.ui.semantics_snapshot().is_some_and(|snap| {
-                snap.nodes
-                    .iter()
-                    .find(|n| n.id == focused)
-                    .is_some_and(|n| n.role == SemanticsRole::TreeItem)
-            })
-        });
-
-        if focus.is_none() || focused_is_tree_item {
-            if ComponentsGalleryDriver::handle_tree_key_event(
-                app,
-                state.items.clone(),
-                state.tree_state.clone(),
-                event,
-            ) {
+                let _ = app.models_mut().update(&state.last_action, |v| {
+                    *v = Arc::<str>::from("fonts.load: canceled");
+                });
                 return;
             }
         }
-
-        state.ui.dispatch_event(app, services, event);
+        _ => {}
     }
 
-    fn render(&mut self, context: WinitRenderContext<'_, Self::WindowState>) {
-        let WinitRenderContext {
+    let overlays_open = app.models().get_copied(&state.select_open).unwrap_or(false)
+        || app
+            .models()
+            .get_copied(&state.theme_preset_open)
+            .unwrap_or(false)
+        || app
+            .models()
+            .get_copied(&state.dropdown_open)
+            .unwrap_or(false)
+        || app
+            .models()
+            .get_copied(&state.context_menu_open)
+            .unwrap_or(false)
+        || app
+            .models()
+            .get_copied(&state.popover_open)
+            .unwrap_or(false)
+        || app.models().get_copied(&state.dialog_open).unwrap_or(false)
+        || app
+            .models()
+            .get_copied(&state.alert_dialog_open)
+            .unwrap_or(false)
+        || app.models().get_copied(&state.sheet_open).unwrap_or(false)
+        || app.models().get_copied(&state.cmdk_open).unwrap_or(false);
+
+    if overlays_open {
+        state.ui.dispatch_event(app, services, event);
+        return;
+    }
+
+    let focus = state.ui.focus();
+    let focused_is_tree_item = focus.is_some_and(|focused| {
+        state.ui.semantics_snapshot().is_some_and(|snap| {
+            snap.nodes
+                .iter()
+                .find(|n| n.id == focused)
+                .is_some_and(|n| n.role == SemanticsRole::TreeItem)
+        })
+    });
+
+    if focus.is_none() || focused_is_tree_item {
+        if ComponentsGalleryDriver::handle_tree_key_event(
             app,
-            services,
+            state.items.clone(),
+            state.tree_state.clone(),
+            event,
+        ) {
+            return;
+        }
+    }
+
+    state.ui.dispatch_event(app, services, event);
+}
+
+fn render(
+    _driver: &mut ComponentsGalleryDriver,
+    context: WinitRenderContext<'_, ComponentsGalleryWindowState>,
+) {
+    let WinitRenderContext {
+        app,
+        services,
+        window,
+        state,
+        bounds,
+        scale_factor,
+        scene,
+    } = context;
+    ComponentsGalleryDriver::render_gallery(app, services, window, state, bounds);
+
+    state.ui.request_semantics_snapshot();
+    state.ui.ingest_paint_cache_source(scene);
+
+    let inspection_active = app
+        .with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
+            svc.wants_inspection_active(window)
+        });
+    state.ui.set_inspection_active(inspection_active);
+
+    scene.clear();
+    let mut frame =
+        fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
+    frame.layout_all();
+
+    let semantics_snapshot = state.ui.semantics_snapshot_arc();
+    let drive = app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
+        svc.drive_script_for_window(
+            app,
             window,
-            state,
             bounds,
             scale_factor,
-            scene,
-        } = context;
-        ComponentsGalleryDriver::render_gallery(app, services, window, state, bounds);
+            Some(&mut state.ui),
+            semantics_snapshot.as_deref(),
+        )
+    });
+
+    if drive.request_redraw {
+        app.request_redraw(window);
+        // Script-driven `wait_frames` needs a reliable way to advance frames even when the
+        // scene is otherwise idle. Requesting an animation frame ensures the runner
+        // schedules another render tick.
+        app.push_effect(Effect::RequestAnimationFrame(window));
+    }
+
+    let mut injected_any = false;
+    for event in drive.events {
+        injected_any = true;
+        state.ui.dispatch_event(app, services, &event);
+    }
+
+    if injected_any {
+        let mut deferred_effects: Vec<Effect> = Vec::new();
+        loop {
+            let effects = app.flush_effects();
+            if effects.is_empty() {
+                break;
+            }
+
+            let mut applied_any_command = false;
+            for effect in effects {
+                match effect {
+                    Effect::Command { window: w, command } => {
+                        if w.is_none() || w == Some(window) {
+                            let _ = state.ui.dispatch_command(app, services, &command);
+                            applied_any_command = true;
+                        } else {
+                            deferred_effects.push(Effect::Command { window: w, command });
+                        }
+                    }
+                    other => deferred_effects.push(other),
+                }
+            }
+
+            if !applied_any_command {
+                break;
+            }
+        }
+        for effect in deferred_effects {
+            app.push_effect(effect);
+        }
 
         state.ui.request_semantics_snapshot();
-        state.ui.ingest_paint_cache_source(scene);
-
-        let inspection_active = app
-            .with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
-                svc.wants_inspection_active(window)
-            });
-        state.ui.set_inspection_active(inspection_active);
-
-        scene.clear();
         let mut frame =
             fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
         frame.layout_all();
+    }
 
-        let semantics_snapshot = state.ui.semantics_snapshot_arc();
-        let drive = app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
-            svc.drive_script_for_window(
-                app,
-                window,
-                bounds,
-                scale_factor,
-                Some(&mut state.ui),
-                semantics_snapshot.as_deref(),
-            )
-        });
+    let mut frame =
+        fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
+    frame.paint_all(scene);
 
-        if drive.request_redraw {
-            app.request_redraw(window);
-            // Script-driven `wait_frames` needs a reliable way to advance frames even when the
-            // scene is otherwise idle. Requesting an animation frame ensures the runner
-            // schedules another render tick.
+    app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
+        let element_runtime = app.global::<fret_ui::elements::ElementRuntime>();
+        svc.record_snapshot(
+            app,
+            window,
+            bounds,
+            scale_factor,
+            &mut state.ui,
+            element_runtime,
+            scene,
+        );
+        let _ = svc.maybe_dump_if_triggered();
+        if svc.is_enabled() {
             app.push_effect(Effect::RequestAnimationFrame(window));
         }
+    });
+}
 
-        let mut injected_any = false;
-        for event in drive.events {
-            injected_any = true;
-            state.ui.dispatch_event(app, services, &event);
-        }
+fn window_create_spec(
+    _driver: &mut ComponentsGalleryDriver,
+    _app: &mut App,
+    _request: &fret_app::CreateWindowRequest,
+) -> Option<WindowCreateSpec> {
+    None
+}
 
-        if injected_any {
-            let mut deferred_effects: Vec<Effect> = Vec::new();
-            loop {
-                let effects = app.flush_effects();
-                if effects.is_empty() {
-                    break;
-                }
+fn window_created(
+    _driver: &mut ComponentsGalleryDriver,
+    _app: &mut App,
+    _request: &fret_app::CreateWindowRequest,
+    _new_window: AppWindowId,
+) {
+}
 
-                let mut applied_any_command = false;
-                for effect in effects {
-                    match effect {
-                        Effect::Command { window: w, command } => {
-                            if w.is_none() || w == Some(window) {
-                                let _ = state.ui.dispatch_command(app, services, &command);
-                                applied_any_command = true;
-                            } else {
-                                deferred_effects.push(Effect::Command { window: w, command });
-                            }
-                        }
-                        other => deferred_effects.push(other),
-                    }
-                }
+fn semantics_snapshot(
+    _driver: &mut ComponentsGalleryDriver,
+    _app: &mut App,
+    _window: AppWindowId,
+    state: &mut ComponentsGalleryWindowState,
+) -> Option<Arc<fret_core::SemanticsSnapshot>> {
+    state.ui.semantics_snapshot_arc()
+}
 
-                if !applied_any_command {
-                    break;
-                }
-            }
-            for effect in deferred_effects {
-                app.push_effect(effect);
-            }
+fn accessibility_focus(
+    _driver: &mut ComponentsGalleryDriver,
+    _app: &mut App,
+    _window: AppWindowId,
+    state: &mut ComponentsGalleryWindowState,
+    target: fret_core::NodeId,
+) {
+    state.ui.set_focus(Some(target));
+}
 
-            state.ui.request_semantics_snapshot();
-            let mut frame =
-                fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
-            frame.layout_all();
-        }
+fn accessibility_invoke(
+    _driver: &mut ComponentsGalleryDriver,
+    app: &mut App,
+    services: &mut dyn UiServices,
+    _window: AppWindowId,
+    state: &mut ComponentsGalleryWindowState,
+    target: fret_core::NodeId,
+) {
+    fret_ui_app::accessibility_actions::invoke(&mut state.ui, app, services, target);
+}
 
-        let mut frame =
-            fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
-        frame.paint_all(scene);
+fn accessibility_set_value_text(
+    _driver: &mut ComponentsGalleryDriver,
+    app: &mut App,
+    services: &mut dyn UiServices,
+    _window: AppWindowId,
+    state: &mut ComponentsGalleryWindowState,
+    target: fret_core::NodeId,
+    value: &str,
+) {
+    fret_ui_app::accessibility_actions::set_value_text(&mut state.ui, app, services, target, value);
+}
 
-        app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
-            let element_runtime = app.global::<fret_ui::elements::ElementRuntime>();
-            svc.record_snapshot(
-                app,
-                window,
-                bounds,
-                scale_factor,
-                &mut state.ui,
-                element_runtime,
-                scene,
-            );
-            let _ = svc.maybe_dump_if_triggered();
-            if svc.is_enabled() {
-                app.push_effect(Effect::RequestAnimationFrame(window));
-            }
-        });
-    }
+fn accessibility_set_value_numeric(
+    _driver: &mut ComponentsGalleryDriver,
+    app: &mut App,
+    services: &mut dyn UiServices,
+    _window: AppWindowId,
+    state: &mut ComponentsGalleryWindowState,
+    target: fret_core::NodeId,
+    value: f64,
+) {
+    fret_ui_app::accessibility_actions::set_value_numeric(
+        &mut state.ui,
+        app,
+        services,
+        target,
+        value,
+    );
+}
 
-    fn window_create_spec(
-        &mut self,
-        _app: &mut App,
-        _request: &fret_app::CreateWindowRequest,
-    ) -> Option<WindowCreateSpec> {
-        None
-    }
+fn accessibility_set_text_selection(
+    _driver: &mut ComponentsGalleryDriver,
+    app: &mut App,
+    services: &mut dyn UiServices,
+    _window: AppWindowId,
+    state: &mut ComponentsGalleryWindowState,
+    target: fret_core::NodeId,
+    anchor: u32,
+    focus: u32,
+) {
+    fret_ui_app::accessibility_actions::set_text_selection(
+        &mut state.ui,
+        app,
+        services,
+        target,
+        anchor,
+        focus,
+    );
+}
 
-    fn window_created(
-        &mut self,
-        _app: &mut App,
-        _request: &fret_app::CreateWindowRequest,
-        _new_window: AppWindowId,
-    ) {
-    }
+fn accessibility_replace_selected_text(
+    _driver: &mut ComponentsGalleryDriver,
+    app: &mut App,
+    services: &mut dyn UiServices,
+    _window: AppWindowId,
+    state: &mut ComponentsGalleryWindowState,
+    target: fret_core::NodeId,
+    value: &str,
+) {
+    fret_ui_app::accessibility_actions::replace_selected_text(
+        &mut state.ui,
+        app,
+        services,
+        target,
+        value,
+    );
+}
 
-    fn semantics_snapshot(
-        &mut self,
-        _app: &mut App,
-        _window: AppWindowId,
-        state: &mut Self::WindowState,
-    ) -> Option<Arc<fret_core::SemanticsSnapshot>> {
-        state.ui.semantics_snapshot_arc()
-    }
-
-    fn accessibility_focus(
-        &mut self,
-        _app: &mut App,
-        _window: AppWindowId,
-        state: &mut Self::WindowState,
-        target: fret_core::NodeId,
-    ) {
-        state.ui.set_focus(Some(target));
-    }
-
-    fn accessibility_invoke(
-        &mut self,
-        app: &mut App,
-        services: &mut dyn UiServices,
-        _window: AppWindowId,
-        state: &mut Self::WindowState,
-        target: fret_core::NodeId,
-    ) {
-        fret_ui_app::accessibility_actions::invoke(&mut state.ui, app, services, target);
-    }
-
-    fn accessibility_set_value_text(
-        &mut self,
-        app: &mut App,
-        services: &mut dyn UiServices,
-        _window: AppWindowId,
-        state: &mut Self::WindowState,
-        target: fret_core::NodeId,
-        value: &str,
-    ) {
-        fret_ui_app::accessibility_actions::set_value_text(
-            &mut state.ui,
-            app,
-            services,
-            target,
-            value,
-        );
-    }
-
-    fn accessibility_set_value_numeric(
-        &mut self,
-        app: &mut App,
-        services: &mut dyn UiServices,
-        _window: AppWindowId,
-        state: &mut Self::WindowState,
-        target: fret_core::NodeId,
-        value: f64,
-    ) {
-        fret_ui_app::accessibility_actions::set_value_numeric(
-            &mut state.ui,
-            app,
-            services,
-            target,
-            value,
-        );
-    }
-
-    fn accessibility_set_text_selection(
-        &mut self,
-        app: &mut App,
-        services: &mut dyn UiServices,
-        _window: AppWindowId,
-        state: &mut Self::WindowState,
-        target: fret_core::NodeId,
-        anchor: u32,
-        focus: u32,
-    ) {
-        fret_ui_app::accessibility_actions::set_text_selection(
-            &mut state.ui,
-            app,
-            services,
-            target,
-            anchor,
-            focus,
-        );
-    }
-
-    fn accessibility_replace_selected_text(
-        &mut self,
-        app: &mut App,
-        services: &mut dyn UiServices,
-        _window: AppWindowId,
-        state: &mut Self::WindowState,
-        target: fret_core::NodeId,
-        value: &str,
-    ) {
-        fret_ui_app::accessibility_actions::replace_selected_text(
-            &mut state.ui,
-            app,
-            services,
-            target,
-            value,
-        );
-    }
+fn configure_fn_driver_hooks(
+    hooks: &mut FnDriverHooks<ComponentsGalleryDriver, ComponentsGalleryWindowState>,
+) {
+    hooks.init = Some(init);
+    hooks.gpu_ready = Some(gpu_ready);
+    hooks.hot_reload_window = Some(hot_reload_window);
+    hooks.handle_model_changes = Some(handle_model_changes);
+    hooks.handle_global_changes = Some(handle_global_changes);
+    hooks.handle_command = Some(handle_command);
+    hooks.window_create_spec = Some(window_create_spec);
+    hooks.window_created = Some(window_created);
+    hooks.semantics_snapshot = Some(semantics_snapshot);
+    hooks.accessibility_focus = Some(accessibility_focus);
+    hooks.accessibility_invoke = Some(accessibility_invoke);
+    hooks.accessibility_set_value_text = Some(accessibility_set_value_text);
+    hooks.accessibility_set_value_numeric = Some(accessibility_set_value_numeric);
+    hooks.accessibility_set_text_selection = Some(accessibility_set_text_selection);
+    hooks.accessibility_replace_selected_text = Some(accessibility_replace_selected_text);
 }
 
 pub fn build_app() -> App {
@@ -2144,8 +2166,14 @@ pub fn build_runner_config() -> WinitRunnerConfig {
     }
 }
 
-pub fn build_driver() -> impl WinitAppDriver {
-    ComponentsGalleryDriver::default()
+fn build_fn_driver() -> FnDriver<ComponentsGalleryDriver, ComponentsGalleryWindowState> {
+    FnDriver::new(
+        ComponentsGalleryDriver::default(),
+        create_window_state,
+        handle_event,
+        render,
+    )
+    .with_hooks(configure_fn_driver_hooks)
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -2162,6 +2190,6 @@ pub fn run() -> anyhow::Result<()> {
     let app = build_app();
     let config = build_runner_config();
 
-    fret::run_native_demo(config, app, ComponentsGalleryDriver)
+    fret::run_native_with_configured_fn_driver(config, app, build_fn_driver())
         .context("run components_gallery app")
 }

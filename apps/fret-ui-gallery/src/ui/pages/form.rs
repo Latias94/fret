@@ -6,6 +6,7 @@ use crate::ui::snippets::form as snippets;
 pub(super) fn preview_forms(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     let upstream_demo = snippets::upstream_demo::render(cx);
     let demo = snippets::demo::render(cx);
+    let usage = snippets::usage::render(cx);
     let input = snippets::input::render(cx);
     let textarea = snippets::textarea::render(cx);
     let controls = snippets::controls::render(cx);
@@ -17,12 +18,15 @@ pub(super) fn preview_forms(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Start with an upstream-aligned FormDemo, then keep a set of gallery recipes for composing Input/Textarea/Checkbox/Switch/FieldSet.",
+            "Start with an upstream-aligned FormDemo, then provide a copyable Usage section and gallery recipes for composing Input/Textarea/Checkbox/Switch/FieldSet.",
         ),
         vec![
             DocSection::new("Form Demo", upstream_demo)
                 .description("Aligned with shadcn/ui `form-demo.tsx` (new-york-v4).")
                 .code_rust_from_file_region(snippets::upstream_demo::SOURCE, "example"),
+            DocSection::new("Usage", usage)
+                .description("Copyable minimal usage for the framework-agnostic `Form` + `FormField` surface.")
+                .code_rust_from_file_region(snippets::usage::SOURCE, "example"),
             DocSection::new("Demo", demo)
                 .description("FieldSet + FieldGroup recipe with multiple controls.")
                 .code_rust_from_file_region(snippets::demo::SOURCE, "example"),

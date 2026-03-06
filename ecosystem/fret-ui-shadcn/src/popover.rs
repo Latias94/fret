@@ -1592,6 +1592,7 @@ impl PopoverDescription {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::{Avatar, AvatarFallback, Button, ButtonSize, ButtonVariant};
     use std::cell::Cell;
     use std::rc::Rc;
     use std::sync::Mutex;
@@ -1605,7 +1606,7 @@ mod tests {
     };
     use fret_core::{KeyCode, Modifiers};
     use fret_core::{PathConstraints, PathId, PathMetrics, PathService, PathStyle};
-    use fret_core::{Px, TextBlobId, TextConstraints, TextMetrics, TextService};
+    use fret_core::{Px, SemanticsRole, TextBlobId, TextConstraints, TextMetrics, TextService};
     use fret_runtime::Effect;
     use fret_runtime::FrameId;
     use fret_ui::UiTree;
@@ -2913,6 +2914,105 @@ mod tests {
             .find(|n| n.id == controlled)
             .expect("controlled node");
         assert_eq!(controlled_node.role, SemanticsRole::Dialog);
+    }
+
+    #[test]
+    fn popover_trigger_keeps_authored_button_semantics_when_avatar_is_nested_child() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        crate::shadcn_themes::apply_shadcn_new_york(
+            &mut app,
+            crate::shadcn_themes::ShadcnBaseColor::Neutral,
+            crate::shadcn_themes::ShadcnColorScheme::Light,
+        );
+
+        let open = app.models_mut().insert(false);
+        let mut services = FakeServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(400.0), Px(240.0)),
+        );
+
+        OverlayController::begin_frame(&mut app, window);
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "popover-avatar-trigger-semantics",
+            move |cx| {
+                let avatar = Avatar::new([AvatarFallback::new("VC").into_element(cx)])
+                    .into_element(cx)
+                    .test_id("popover-avatar-trigger-leaf");
+                let trigger = Button::new("")
+                    .variant(ButtonVariant::Ghost)
+                    .size(ButtonSize::Icon)
+                    .a11y_label("Open profile card")
+                    .children([avatar])
+                    .test_id("popover-avatar-trigger")
+                    .into_element(cx);
+
+                vec![Popover::new(open.clone()).into_element(
+                    cx,
+                    |cx| PopoverTrigger::new(trigger).into_element(cx),
+                    |cx| {
+                        PopoverContent::new([PopoverTitle::new("Profile").into_element(cx)])
+                            .into_element(cx)
+                    },
+                )]
+            },
+        );
+        ui.set_root(root);
+        OverlayController::render(&mut ui, &mut app, &mut services, window, bounds);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui
+            .semantics_snapshot()
+            .cloned()
+            .expect("expected semantics snapshot");
+
+        let trigger = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("popover-avatar-trigger"))
+            .expect("expected authored button trigger semantics node");
+        assert_eq!(
+            trigger.role,
+            SemanticsRole::Button,
+            "expected authored popover trigger button to own button semantics"
+        );
+        assert!(
+            trigger.actions.focus,
+            "expected authored trigger to remain focusable"
+        );
+        assert!(
+            trigger.actions.invoke,
+            "expected authored trigger to remain invokable"
+        );
+
+        let leaf = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("popover-avatar-trigger-leaf"))
+            .expect("expected nested avatar leaf semantics node");
+        assert_eq!(
+            leaf.role,
+            SemanticsRole::Generic,
+            "expected nested avatar leaf to stay presentational"
+        );
+        assert!(
+            !leaf.actions.focus,
+            "expected nested avatar leaf to avoid owning focus semantics"
+        );
+        assert!(
+            !leaf.actions.invoke,
+            "expected nested avatar leaf to avoid owning invoke semantics"
+        );
     }
 
     fn render_popover_in_clipped_surface_frame(

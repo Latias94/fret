@@ -665,6 +665,8 @@ fn infer_required_capabilities_v2(script: &UiActionScriptV2) -> Vec<String> {
             | UiActionStepV2::WheelBurst { window, .. }
             | UiActionStepV2::WaitUntil { window, .. }
             | UiActionStepV2::Assert { window, .. }
+            | UiActionStepV2::Activate { window, .. }
+            | UiActionStepV2::Focus { window, .. }
             | UiActionStepV2::ClickStable { window, .. }
             | UiActionStepV2::ClickSelectableTextSpanStable { window, .. }
             | UiActionStepV2::WaitBoundsStable { window, .. }

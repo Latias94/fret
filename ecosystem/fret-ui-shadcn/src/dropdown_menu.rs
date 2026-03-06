@@ -4418,7 +4418,7 @@ mod tests {
 
     use std::sync::atomic::{AtomicUsize, Ordering};
 
-    use crate::LayoutDirection;
+    use crate::{Avatar, AvatarFallback, Button, ButtonSize, ButtonVariant, LayoutDirection};
     use fret_app::App;
     use fret_core::{
         AppWindowId, Event, KeyCode, Modifiers, MouseButtons, PathCommand, Point, PointerEvent,
@@ -6314,6 +6314,110 @@ mod tests {
             "expected trigger to control menu content; controls={:?} content={:?}",
             trigger_sem.controls,
             menu_content.id
+        );
+    }
+
+    #[test]
+    fn dropdown_menu_part_trigger_keeps_authored_button_semantics_when_avatar_is_nested_child() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        crate::shadcn_themes::apply_shadcn_new_york(
+            &mut app,
+            crate::shadcn_themes::ShadcnBaseColor::Neutral,
+            crate::shadcn_themes::ShadcnColorScheme::Light,
+        );
+
+        let open = app.models_mut().insert(false);
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "dropdown-menu-avatar-trigger-semantics",
+            move |cx| {
+                vec![
+                    DropdownMenu::new(open.clone())
+                        .modal(false)
+                        .into_element_parts(
+                            cx,
+                            |cx| {
+                                let avatar =
+                                    Avatar::new([AvatarFallback::new("LR").into_element(cx)])
+                                        .into_element(cx)
+                                        .test_id("dropdown-menu-avatar-trigger-leaf");
+
+                                let trigger = Button::new("")
+                                    .variant(ButtonVariant::Ghost)
+                                    .size(ButtonSize::Icon)
+                                    .a11y_label("Account")
+                                    .children([avatar])
+                                    .test_id("dropdown-menu-avatar-trigger")
+                                    .into_element(cx);
+
+                                DropdownMenuTrigger::new(trigger)
+                            },
+                            DropdownMenuContent::new(),
+                            |_cx| [DropdownMenuItem::new("Profile").into()],
+                        ),
+                ]
+            },
+        );
+        ui.set_root(root);
+        OverlayController::render(&mut ui, &mut app, &mut services, window, bounds);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui
+            .semantics_snapshot()
+            .cloned()
+            .expect("expected semantics snapshot");
+
+        let trigger = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("dropdown-menu-avatar-trigger"))
+            .expect("expected authored button trigger semantics node");
+        assert_eq!(
+            trigger.role,
+            SemanticsRole::Button,
+            "expected authored trigger button to own button semantics"
+        );
+        assert!(
+            trigger.actions.focus,
+            "expected authored trigger button to remain focusable"
+        );
+        assert!(
+            trigger.actions.invoke,
+            "expected authored trigger button to remain invokable"
+        );
+
+        let leaf = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("dropdown-menu-avatar-trigger-leaf"))
+            .expect("expected nested avatar leaf semantics node");
+        assert_eq!(
+            leaf.role,
+            SemanticsRole::Generic,
+            "expected nested avatar leaf to stay presentational"
+        );
+        assert!(
+            !leaf.actions.focus,
+            "expected nested avatar leaf to avoid owning focus semantics"
+        );
+        assert!(
+            !leaf.actions.invoke,
+            "expected nested avatar leaf to avoid owning invoke semantics"
         );
     }
 

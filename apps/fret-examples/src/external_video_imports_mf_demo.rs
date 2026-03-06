@@ -1,7 +1,12 @@
 use anyhow::Context as _;
 use fret_app::App;
 use fret_core::{AppWindowId, Event, KeyCode};
-use fret_launch::{EngineFrameUpdate, ImportedViewportRenderTarget};
+use fret_launch::{
+    EngineFrameUpdate,
+    imported_viewport_target::{
+        ImportedViewportFallbackUpdate, ImportedViewportFallbacks, ImportedViewportRenderTarget,
+    },
+};
 use fret_render::RendererCapabilities;
 use fret_render::{
     RenderTargetColorSpace, RenderTargetIngestStrategy, RenderTargetMetadata, Renderer, WgpuContext,
@@ -24,7 +29,7 @@ fn env_flag_default_false(name: &str) -> bool {
 }
 
 #[cfg(all(not(target_arch = "wasm32"), target_os = "windows"))]
-use fret_launch::runner::windows_mf_video as wmf;
+use fret_launch::media::windows_mf_video as wmf;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum ExternalVideoImportsMode {
@@ -266,8 +271,8 @@ fn record_engine_frame(
             st.target.push_update_with_fallbacks(
                 &mut update,
                 RenderTargetIngestStrategy::Owned,
-                fret_launch::ImportedViewportFallbacks {
-                    owned: Some(fret_launch::ImportedViewportFallbackUpdate::new(
+                ImportedViewportFallbacks {
+                    owned: Some(ImportedViewportFallbackUpdate::new(
                         view.clone(),
                         st.target_px_size,
                         metadata,
@@ -435,18 +440,19 @@ pub fn run() -> anyhow::Result<()> {
         )
         .try_init();
 
-    let builder = fret::app_with_hooks("external-video-imports-mf", init_window, view, |driver| {
-        driver
-            .on_event(on_event)
-            .record_engine_frame(record_engine_frame)
-    })?
-    .init_app(|app| {
-        app.set_global(PlatformCapabilities::default());
-    })
-    .with_main_window(
-        "fret-demo external_video_imports_mf_demo (V toggles visibility, I toggles source)",
-        (980.0, 720.0),
-    );
+    let builder = fret::App::new("external-video-imports-mf")
+        .window(
+            "fret-demo external_video_imports_mf_demo (V toggles visibility, I toggles source)",
+            (980.0, 720.0),
+        )
+        .ui_with_hooks(init_window, view, |driver| {
+            driver
+                .on_event(on_event)
+                .record_engine_frame(record_engine_frame)
+        })?
+        .init_app(|app| {
+            app.set_global(PlatformCapabilities::default());
+        });
 
     builder.run().context("run external_video_imports_mf_demo")
 }

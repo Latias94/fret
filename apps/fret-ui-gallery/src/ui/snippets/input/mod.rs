@@ -10,5 +10,6 @@ pub mod grid;
 pub mod inline;
 pub mod input_group;
 pub mod invalid;
+pub mod label;
 pub mod required;
 pub mod rtl;

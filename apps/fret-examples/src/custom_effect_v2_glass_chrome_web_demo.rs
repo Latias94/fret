@@ -17,7 +17,7 @@ use fret_core::scene::{
     ImageSamplingHint, Paint, UvRect,
 };
 use fret_core::{AppWindowId, Corners, Edges, ImageId, KeyCode, Px};
-use fret_launch::{WinitAppDriver, WinitEventContext, WinitRenderContext, WinitRunnerConfig};
+use fret_launch::{FnDriver, WinitEventContext, WinitRenderContext, WinitRunnerConfig};
 use fret_render::{
     ImageColorSpace, ImageDescriptor, Renderer, RendererCapabilities, WgpuContext,
     write_rgba8_texture_region,
@@ -793,104 +793,127 @@ impl CustomEffectV2GlassChromeWebDriver {
     }
 }
 
-impl WinitAppDriver for CustomEffectV2GlassChromeWebDriver {
-    type WindowState = CustomEffectV2GlassChromeWebWindowState;
+fn init(
+    _driver: &mut CustomEffectV2GlassChromeWebDriver,
+    app: &mut App,
+    _main_window: AppWindowId,
+) {
+    // The runner is expected to populate this, but keep a placeholder so `global::<...>()`
+    // calls remain non-panicking before `gpu_ready`.
+    app.set_global(PlatformCapabilities::default());
+}
 
-    fn init(&mut self, app: &mut App, _main_window: AppWindowId) {
-        // The runner is expected to populate this, but keep a placeholder so `global::<...>()`
-        // calls remain non-panicking before `gpu_ready`.
-        app.set_global(PlatformCapabilities::default());
+fn create_window_state(
+    _driver: &mut CustomEffectV2GlassChromeWebDriver,
+    app: &mut App,
+    window: AppWindowId,
+) -> CustomEffectV2GlassChromeWebWindowState {
+    CustomEffectV2GlassChromeWebDriver::build_ui(app, window)
+}
+
+fn gpu_ready(
+    _driver: &mut CustomEffectV2GlassChromeWebDriver,
+    app: &mut App,
+    context: &WgpuContext,
+    renderer: &mut Renderer,
+) {
+    app.set_global(RendererCapabilities::from_wgpu_context(context));
+    CustomEffectV2GlassChromeWebDriver::install_custom_effect_and_input(app, context, renderer);
+}
+
+fn handle_model_changes(
+    _driver: &mut CustomEffectV2GlassChromeWebDriver,
+    context: fret_launch::WinitWindowContext<'_, CustomEffectV2GlassChromeWebWindowState>,
+    changed: &[fret_app::ModelId],
+) {
+    let fret_launch::WinitWindowContext { app, state, .. } = context;
+    state.ui.propagate_model_changes(app, changed);
+}
+
+fn handle_global_changes(
+    _driver: &mut CustomEffectV2GlassChromeWebDriver,
+    context: fret_launch::WinitWindowContext<'_, CustomEffectV2GlassChromeWebWindowState>,
+    changed: &[std::any::TypeId],
+) {
+    let fret_launch::WinitWindowContext { app, state, .. } = context;
+    state.ui.propagate_global_changes(app, changed);
+}
+
+fn handle_event(
+    _driver: &mut CustomEffectV2GlassChromeWebDriver,
+    context: WinitEventContext<'_, CustomEffectV2GlassChromeWebWindowState>,
+    event: &fret_core::Event,
+) {
+    let WinitEventContext {
+        app,
+        services,
+        window,
+        state,
+        ..
+    } = context;
+
+    if let fret_core::Event::KeyDown { key, .. } = event
+        && *key == KeyCode::KeyV
+    {
+        let _ = app.models_mut().update(&state.show, |v| *v = !*v);
+        app.request_redraw(window);
+    }
+    if let fret_core::Event::KeyDown { key, .. } = event
+        && *key == KeyCode::KeyR
+    {
+        CustomEffectV2GlassChromeWebDriver::reset_controls(app, &state.controls);
+        app.request_redraw(window);
     }
 
-    fn create_window_state(&mut self, app: &mut App, window: AppWindowId) -> Self::WindowState {
-        Self::build_ui(app, window)
-    }
+    state.ui.dispatch_event(app, services, event);
+}
 
-    fn gpu_ready(&mut self, app: &mut App, context: &WgpuContext, renderer: &mut Renderer) {
-        app.set_global(RendererCapabilities::from_wgpu_context(context));
-        Self::install_custom_effect_and_input(app, context, renderer);
-    }
+fn render(
+    _driver: &mut CustomEffectV2GlassChromeWebDriver,
+    context: WinitRenderContext<'_, CustomEffectV2GlassChromeWebWindowState>,
+) {
+    let WinitRenderContext {
+        app,
+        services,
+        window,
+        state,
+        bounds,
+        scale_factor,
+        scene,
+        ..
+    } = context;
 
-    fn handle_model_changes(
-        &mut self,
-        context: fret_launch::WinitWindowContext<'_, Self::WindowState>,
-        changed: &[fret_app::ModelId],
-    ) {
-        let fret_launch::WinitWindowContext { app, state, .. } = context;
-        state.ui.propagate_model_changes(app, changed);
-    }
+    let show = state.show.clone();
+    let controls = state.controls.clone();
 
-    fn handle_global_changes(
-        &mut self,
-        context: fret_launch::WinitWindowContext<'_, Self::WindowState>,
-        changed: &[std::any::TypeId],
-    ) {
-        let fret_launch::WinitWindowContext { app, state, .. } = context;
-        state.ui.propagate_global_changes(app, changed);
-    }
+    let root = declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds)
+        .render_root("custom-effect-v2-glass-chrome-web", |cx| {
+            CustomEffectV2GlassChromeWebDriver::render_root(cx, show.clone(), controls.clone())
+        });
 
-    fn handle_event(
-        &mut self,
-        context: WinitEventContext<'_, Self::WindowState>,
-        event: &fret_core::Event,
-    ) {
-        let WinitEventContext {
-            app,
-            services,
-            window,
-            state,
-            ..
-        } = context;
+    state.ui.set_root(root);
+    state.root = Some(root);
 
-        if let fret_core::Event::KeyDown { key, .. } = event
-            && *key == KeyCode::KeyV
-        {
-            let _ = app.models_mut().update(&state.show, |v| *v = !*v);
-            app.request_redraw(window);
-        }
-        if let fret_core::Event::KeyDown { key, .. } = event
-            && *key == KeyCode::KeyR
-        {
-            Self::reset_controls(app, &state.controls);
-            app.request_redraw(window);
-        }
+    scene.clear();
+    let mut frame =
+        fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
+    frame.layout_all();
+    frame.paint_all(scene);
 
-        state.ui.dispatch_event(app, services, event);
-    }
+    // Keep the demo responsive to live sliders without relying on external diagnostics.
+    app.push_effect(Effect::RequestAnimationFrame(window));
+}
 
-    fn render(&mut self, context: WinitRenderContext<'_, Self::WindowState>) {
-        let WinitRenderContext {
-            app,
-            services,
-            window,
-            state,
-            bounds,
-            scale_factor,
-            scene,
-            ..
-        } = context;
-
-        let show = state.show.clone();
-        let controls = state.controls.clone();
-
-        let root =
-            declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds)
-                .render_root("custom-effect-v2-glass-chrome-web", |cx| {
-                    Self::render_root(cx, show.clone(), controls.clone())
-                });
-
-        state.ui.set_root(root);
-        state.root = Some(root);
-
-        scene.clear();
-        let mut frame =
-            fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
-        frame.layout_all();
-        frame.paint_all(scene);
-
-        // Keep the demo responsive to live sliders without relying on external diagnostics.
-        app.push_effect(Effect::RequestAnimationFrame(window));
-    }
+fn configure_fn_driver_hooks(
+    hooks: &mut fret_launch::FnDriverHooks<
+        CustomEffectV2GlassChromeWebDriver,
+        CustomEffectV2GlassChromeWebWindowState,
+    >,
+) {
+    hooks.init = Some(init);
+    hooks.gpu_ready = Some(gpu_ready);
+    hooks.handle_model_changes = Some(handle_model_changes);
+    hooks.handle_global_changes = Some(handle_global_changes);
 }
 
 pub fn build_app() -> App {
@@ -913,6 +936,13 @@ pub fn build_runner_config() -> WinitRunnerConfig {
     }
 }
 
-pub fn build_driver() -> impl WinitAppDriver {
-    CustomEffectV2GlassChromeWebDriver::default()
+pub fn build_fn_driver()
+-> FnDriver<CustomEffectV2GlassChromeWebDriver, CustomEffectV2GlassChromeWebWindowState> {
+    FnDriver::new(
+        CustomEffectV2GlassChromeWebDriver::default(),
+        create_window_state,
+        handle_event,
+        render,
+    )
+    .with_hooks(configure_fn_driver_hooks)
 }

@@ -1,6 +1,5 @@
 # shadcn/ui v4 Audit - Combobox
 
-
 ## Upstream references (non-normative)
 
 This document references optional local checkouts under `repo-ref/` for convenience.
@@ -22,11 +21,24 @@ Base UI combobox lifecycle semantics.
 ## Fret implementation anchors
 
 - Component code: `ecosystem/fret-ui-shadcn/src/combobox.rs`
+- Gallery page: `apps/fret-ui-gallery/src/ui/pages/combobox.rs`
+- Copyable usage snippet: `apps/fret-ui-gallery/src/ui/snippets/combobox/usage.rs`
 - Building blocks:
   - `ecosystem/fret-ui-shadcn/src/popover.rs`
   - `ecosystem/fret-ui-shadcn/src/command.rs`
 
 ## Audit checklist
+
+### Authoring surface
+
+- Pass: `Combobox::new(value, open)` already covers the common shadcn recipe path with controlled
+  value/open models.
+- Pass: `query_model(...)`, `items(...)`, `groups(...)`, `group_separators(...)`, `show_clear(...)`,
+  and `auto_highlight(...)` cover the important recipe-level authoring outcomes.
+- Pass: `Combobox::into_element_parts(...)` plus `ComboboxTrigger` / `ComboboxInput` expose the
+  upstream-shaped recipe patch surface for copyable examples without forcing raw Popover/Command assembly.
+- Note: Because this component is intentionally a recipe over `Popover` + `Command`, Fret does not add
+  a separate generic `compose()` builder beyond the existing parts-patch surface.
 
 ### Composition model (Popover + Command)
 
@@ -61,6 +73,13 @@ Base UI combobox lifecycle semantics.
 - Gap: Base UI callbacks include cancellable event details; Fret currently exposes reason metadata
   but does not provide cancelable `eventDetails` contracts.
 
+## Conclusion
+
+- Result: This component does not currently point to a missing mechanism-layer issue.
+- Result: The main missing piece for shadcn docs parity was a concise gallery `Usage` example.
+- Result: Composable authoring is already supported through the recipe + parts-patch surface, so follow-up
+  work should focus on concrete behavior regressions or richer recipes rather than adding another generic builder.
+
 ## Validation
 
 - `cargo nextest run -p fret-ui-shadcn combobox_on_value_change_builder_sets_handler`
@@ -72,3 +91,4 @@ Base UI combobox lifecycle semantics.
 - `cargo nextest run -p fret-ui-shadcn combobox_open_change_events_complete_without_animation`
 - `cargo nextest run -p fret-ui-shadcn combobox_open_change_reason_maps_dismiss_reasons`
 - `cargo run -p fretboard -- diag run tools/diag-scripts/ui-gallery-combobox-custom-items-detail-filter-react.json --launch -- cargo run -p fret-ui-gallery`
+- `cargo check -p fret-ui-gallery --message-format short`

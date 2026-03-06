@@ -1,4 +1,4 @@
-# shadcn/ui v4 Audit — Breadcrumb
+# shadcn/ui v4 Audit - Breadcrumb
 
 
 ## Upstream references (non-normative)
@@ -9,7 +9,7 @@ Upstream sources:
 - shadcn/ui: https://github.com/shadcn-ui/ui
 
 See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
-This audit compares Fret’s shadcn-aligned `Breadcrumb` against the upstream shadcn/ui v4 docs and
+This audit compares Fret's shadcn-aligned `Breadcrumb` against the upstream shadcn/ui v4 docs and
 the `new-york-v4` registry implementation in `repo-ref/ui`.
 
 ## Upstream references (source of truth)
@@ -24,13 +24,20 @@ the `new-york-v4` registry implementation in `repo-ref/ui`.
 
 ## Audit checklist
 
+### Authoring surface
+
+- Pass: `Breadcrumb::new().items([...])` covers the common compact authoring path for standard breadcrumb trails.
+- Pass: `BreadcrumbItem::new(...).href(...)`, non-link `BreadcrumbItem::new(...)` current-page text, and `BreadcrumbItem::ellipsis()` cover the important shadcn recipe outcomes.
+- Pass: Upstream-shaped primitives remain available for cases that need more explicit composition.
+- Note: Because Fret already offers both the compact builder and primitives surface, it intentionally does not add a separate generic `compose()` builder here.
+
 ### Layout & geometry (shadcn parity)
 
-- Pass: Separator uses lucide `ChevronRight` at `size-3.5` (≈ `14px`), matching `BreadcrumbSeparator`.
+- Pass: Separator uses lucide `ChevronRight` at `size-3.5` (about `14px`), matching `BreadcrumbSeparator`.
 - Pass: Custom separator examples (e.g. `breadcrumb-separator`) can be represented via
   `BreadcrumbSeparator::Icon { icon: ids::ui::SLASH, size: 14px }`.
-- Pass: Ellipsis uses a `size-9` box (≈ `36x36`) with a centered lucide `MoreHorizontal` icon at `size-4`
-  (≈ `16px`), matching `BreadcrumbEllipsis`.
+- Pass: Ellipsis uses a `size-9` box (about `36x36`) with a centered lucide `MoreHorizontal` icon at `size-4`
+  (about `16px`), matching `BreadcrumbEllipsis`.
 - Pass: Link items can attach `SemanticsRole::Link` + `value=href` when configured, and can fall back to
   `Effect::OpenUrl` when no explicit `on_activate` hook is provided.
 - Pass: Responsive truncation (`max-w-20 truncate md:max-w-none`) is representable via
@@ -48,7 +55,7 @@ the `new-york-v4` registry implementation in `repo-ref/ui`.
   - `web_vs_fret_layout_breadcrumb_demo_toggle_trigger_geometry`
   - `web_vs_fret_layout_breadcrumb_responsive_mobile_truncation_geometry`
 
-- Web overlay placement gates (menu panel size + clamping): `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_placement`
+- Web overlay placement gates: `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_placement`
   - `web_vs_fret_breadcrumb_demo_overlay_placement_matches`
   - `web_vs_fret_breadcrumb_demo_small_viewport_overlay_placement_matches`
   - `web_vs_fret_breadcrumb_dropdown_overlay_placement_matches`
@@ -56,7 +63,7 @@ the `new-york-v4` registry implementation in `repo-ref/ui`.
   - `web_vs_fret_breadcrumb_responsive_overlay_placement_matches`
   - `web_vs_fret_breadcrumb_responsive_mobile_drawer_overlay_insets_match`
 
-- Web overlay chrome gates (menu panel border/background/shadow): `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_chrome`
+- Web overlay chrome gates: `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_chrome`
   - `web_vs_fret_breadcrumb_dropdown_surface_colors_match_web`
   - `web_vs_fret_breadcrumb_dropdown_surface_colors_match_web_dark`
   - `web_vs_fret_breadcrumb_dropdown_shadow_matches_web`

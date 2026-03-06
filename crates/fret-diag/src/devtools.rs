@@ -4,7 +4,8 @@ use std::time::{Duration, Instant};
 
 use fret_diag_protocol::{
     DevtoolsAppExitRequestV1, DevtoolsBundleDumpV1, DevtoolsBundleDumpedV1,
-    DevtoolsScreenshotRequestV1, DiagTransportMessageV1, UiInspectConfigV1, UiSemanticsNodeGetV1,
+    DevtoolsScreenshotRequestV1, DiagTransportMessageV1, UiHitTestExplainV1, UiInspectConfigV1,
+    UiSelectorV1, UiSemanticsNodeGetV1,
 };
 
 use crate::transport::ToolingDiagClient;
@@ -172,6 +173,28 @@ impl DevtoolsOps {
                 schema_version: 1,
                 window,
                 node_id,
+            })
+            .unwrap_or(serde_json::Value::Null),
+        });
+        request_id
+    }
+
+    pub fn hit_test_explain(
+        &self,
+        session_id: Option<&str>,
+        window: u64,
+        target: UiSelectorV1,
+    ) -> u64 {
+        let request_id = self.next_request_id();
+        self.send(DiagTransportMessageV1 {
+            schema_version: 1,
+            r#type: "hit_test.explain".to_string(),
+            session_id: session_id.map(|s| s.to_string()),
+            request_id: Some(request_id),
+            payload: serde_json::to_value(UiHitTestExplainV1 {
+                schema_version: 1,
+                window,
+                target,
             })
             .unwrap_or(serde_json::Value::Null),
         });

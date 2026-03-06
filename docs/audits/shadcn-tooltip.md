@@ -1,6 +1,5 @@
 # shadcn/ui v4 Audit - Tooltip
 
-
 ## Upstream references (non-normative)
 
 This document references optional local checkouts under `repo-ref/` for convenience.
@@ -33,6 +32,13 @@ Radix semantics, and Base UI `Tooltip.Root` lifecycle behavior.
 - Pass: Supports open on hover and keyboard focus.
 - Pass: Supports provider close delay aliases (`close_delay_duration_ms`, `close_delay_duration_frames`).
 - Pass: Supports Base UI cursor tracking via `Tooltip::track_cursor_axis(...)`.
+- Pass: `Tooltip::new(trigger, content)` already acts as the recipe-level composition entry point,
+  with `TooltipTrigger` / `TooltipContent` preserving shadcn-style part naming at call sites.
+- Note: Fret intentionally does not add a separate generic `compose()` builder for `Tooltip`
+  today. Unlike modal overlays that need explicit portal/overlay/content slot assembly, tooltip
+  authoring is already expressed by the root's required trigger/content slots plus root/provider-
+  owned hover policy (`TooltipProvider`, delay settings, `track_cursor_axis`, `anchor_element`).
+  An extra builder would mostly duplicate the current contract without improving semantics.
 
 ### Open lifecycle semantics (Base UI parity)
 

@@ -8,6 +8,7 @@ pub(super) fn preview_hover_card(
     avatar_image: Model<Option<ImageId>>,
 ) -> Vec<AnyElement> {
     let demo = snippets::demo::render(cx, avatar_image);
+    let usage = snippets::usage::render(cx);
     let trigger_delays = snippets::trigger_delays::render(cx);
     let positioning = snippets::positioning::render(cx);
     let basic = snippets::basic::render(cx);
@@ -17,6 +18,7 @@ pub(super) fn preview_hover_card(
     let notes = doc_layout::notes(
         cx,
         [
+            "Hover card already exposes shadcn-style part names (`HoverCardTrigger`, `HoverCardContent`), and `HoverCard::new(trigger, content)` is the recipe-level composition entry point.",
             "Hover card interactions depend on hover-intent delays, so examples include both instant and delayed scenarios.",
             "Sides and positioning are separated to make placement parity checks deterministic.",
             "RTL sample is included because side resolution can differ in right-to-left layouts.",
@@ -26,7 +28,7 @@ pub(super) fn preview_hover_card(
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview follows shadcn Hover Card docs order: Demo, Trigger Delays, Positioning, Basic, Sides, RTL.",
+            "Preview follows shadcn Hover Card docs order: Demo, Usage, then Fret-specific parity checks for Trigger Delays, Positioning, Basic, Sides, RTL.",
         ),
         vec![
             DocSection::new("Demo", demo)
@@ -34,6 +36,10 @@ pub(super) fn preview_hover_card(
                     "Upstream shadcn demo composition: link trigger + 320px content (w-80) with avatar and text.",
                 )
                 .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
+            DocSection::new("Usage", usage)
+                .title_test_id("ui-gallery-section-usage-title")
+                .description("Copyable shadcn-style composition reference for Hover Card.")
+                .code_rust_from_file_region(snippets::usage::SOURCE, "example"),
             DocSection::new("Trigger Delays", trigger_delays)
                 .description("Compare instant vs delayed open/close behavior.")
                 .code_rust_from_file_region(snippets::trigger_delays::SOURCE, "example"),

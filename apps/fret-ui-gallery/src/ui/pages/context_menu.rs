@@ -5,6 +5,7 @@ use crate::ui::snippets::context_menu as snippets;
 
 pub(super) fn preview_context_menu(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     let basic = snippets::basic::render(cx);
+    let usage = snippets::usage::render(cx);
     let submenu = snippets::submenu::render(cx);
     let shortcuts = snippets::shortcuts::render(cx);
     let groups = snippets::groups::render(cx);
@@ -18,7 +19,8 @@ pub(super) fn preview_context_menu(cx: &mut ElementContext<'_, App>) -> Vec<AnyE
         cx,
         [
             "Preview follows the upstream shadcn Context Menu docs (v4 Base UI).",
-            "Examples are snippet-backed: Preview ≡ Code (single source of truth).",
+            "Context Menu already exposes shadcn-style parts, and `ContextMenu::into_element_parts(...)` is the closest recipe-level bridge for docs-style authoring.",
+            "Examples are snippet-backed: preview and code stay in sync.",
             "Keep `ui-gallery-context-menu-*` test IDs stable; multiple diag scripts depend on them.",
         ],
     );
@@ -26,14 +28,18 @@ pub(super) fn preview_context_menu(cx: &mut ElementContext<'_, App>) -> Vec<AnyE
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Context Menu examples, aligned with upstream shadcn docs (Base UI variant): \
-             Basic, Submenu, Shortcuts, Groups, Icons, Checkboxes, Radio, Destructive, RTL.",
+            "Context Menu examples aligned with upstream shadcn docs: Basic, Usage, Submenu, Shortcuts, Groups, Icons, Checkboxes, Radio, Destructive, RTL.",
         ),
         vec![
             DocSection::new("Basic", basic)
                 .description("Right click on the trigger surface to open the menu.")
                 .test_id_prefix("ui-gallery-context-menu-basic")
                 .code_rust_from_file_region(snippets::basic::SOURCE, "example"),
+            DocSection::new("Usage", usage)
+                .title_test_id("ui-gallery-section-usage-title")
+                .description("Copyable shadcn-style composition reference for Context Menu.")
+                .test_id_prefix("ui-gallery-context-menu-usage")
+                .code_rust_from_file_region(snippets::usage::SOURCE, "example"),
             DocSection::new("Submenu", submenu)
                 .description("Nested submenu entries for grouped actions.")
                 .test_id_prefix("ui-gallery-context-menu-submenu")

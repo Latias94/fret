@@ -6,8 +6,9 @@ struct ImUiHelloState {
 }
 
 pub fn run() -> anyhow::Result<()> {
-    fret::app("imui-hello-demo", init_window, view)?
-        .with_main_window("imui_hello_demo", (520.0, 240.0))
+    FretApp::new("imui-hello-demo")
+        .window("imui_hello_demo", (520.0, 240.0))
+        .ui(init_window, view)?
         .run()?;
     Ok(())
 }

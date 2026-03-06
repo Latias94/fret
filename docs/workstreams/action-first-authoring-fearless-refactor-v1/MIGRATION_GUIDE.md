@@ -295,9 +295,13 @@ Completed in-tree state:
 - `ecosystem/fret` no longer exposes MVU modules or legacy re-exports.
 - `apps/fret-examples`, `apps/fret-demo`, and scaffold templates no longer carry MVU demo routing.
 - Guardrails prevent MVU from drifting back into code surfaces.
+- New in-tree work should target `View` + typed unit/payload actions only; keep this guide as an
+  external migration mapping reference.
 
 Evidence anchors:
 
+- `ecosystem/fret/src/view.rs` (current view-runtime authoring hooks)
+- `ecosystem/fret/src/actions.rs` (unit + payload action macros/traits)
 - `docs/workstreams/action-first-authoring-fearless-refactor-v1/LEGACY_MVU_INVENTORY.md`
 - `tools/gate_no_mvu_in_tree.py`
 - `tools/gate_no_mvu_in_cookbook.py`

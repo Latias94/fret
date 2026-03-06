@@ -25,6 +25,14 @@ This audit compares Fret’s shadcn-aligned `Label` against the upstream shadcn/
 
 ## Audit checklist
 
+### Authoring surface
+
+- Pass: `Label::new(text)` covers the common shadcn path.
+- Pass: `Label::for_control(ControlId)` models the upstream `htmlFor` association and forwards
+  click-to-focus / control activation through Fret's control registry.
+- Note: `Label` is already a minimal leaf primitive, so Fret intentionally does not add a generic
+  `compose()` builder here.
+
 ### Layout & geometry (shadcn parity)
 
 - Pass: Uses `text-sm` (14px) and `leading-none` (14px line-height) via theme metrics:

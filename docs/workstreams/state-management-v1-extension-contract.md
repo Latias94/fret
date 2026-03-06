@@ -61,11 +61,11 @@ Non-goals:
 
 ### 2.4 Typed command routing (UI intent boundary)
 
-- Official primitive:
-  - `MessageRouter<M>` for per-frame dynamic commands,
-  - `KeyedMessageRouter<K, M>` for view-cache-safe dynamic commands.
+- Official primitives:
+  - `fret::actions!` + `ViewCx::on_action*` for stable unit actions,
+  - `fret::payload_actions!` + `ViewCx::on_payload_action*` for payloaded per-item intents.
 - Contract:
-  - use typed messages for app mutations,
+  - use typed actions for app mutations,
   - reserve literal `CommandId` strings for globally addressable keymap/menu actions.
 
 ## 3. Memory-safety and concurrency model (must keep)
@@ -152,7 +152,7 @@ Recommended integration mode:
 
 For new app templates and AI-assisted generation:
 
-1. Use typed message routing (`MessageRouter` or `KeyedMessageRouter` by cache mode).
+1. Use typed unit actions or typed payload actions instead of string-parsed dynamic commands.
 2. Use `Selector` for derived counters/filters/projections.
 3. Use `QueryClient` for async resource loading/error/retry/cache.
 4. Keep writes in command handlers and trigger query invalidation explicitly.

@@ -25,27 +25,29 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             .test_id("ui-gallery-sheet-parts-trigger"),
     );
 
-    let content = shadcn::SheetContent::new([
-        shadcn::SheetHeader::new([
-            shadcn::SheetTitle::new("Parts sheet").into_element(cx),
-            shadcn::SheetDescription::new("Part surface adapter for shadcn-style authoring.")
-                .into_element(cx),
-        ])
-        .into_element(cx),
-        shadcn::SheetFooter::new([shadcn::SheetClose::from_scope()
-            .into_element(cx)
-            .test_id("ui-gallery-sheet-parts-close")])
-        .into_element(cx),
-    ])
-    .into_element(cx)
-    .test_id("ui-gallery-sheet-parts-overlay-content");
-
     shadcn::Sheet::new(open)
         .compose()
         .trigger(trigger)
         .portal(shadcn::SheetPortal::new())
         .overlay(shadcn::SheetOverlay::new())
-        .content(content)
+        .content_with(move |cx| {
+            shadcn::SheetContent::new([
+                shadcn::SheetHeader::new([
+                    shadcn::SheetTitle::new("Parts sheet").into_element(cx),
+                    shadcn::SheetDescription::new(
+                        "Part surface adapter for shadcn-style authoring.",
+                    )
+                    .into_element(cx),
+                ])
+                .into_element(cx),
+                shadcn::SheetFooter::new([shadcn::SheetClose::from_scope()
+                    .into_element(cx)
+                    .test_id("ui-gallery-sheet-parts-close")])
+                .into_element(cx),
+            ])
+            .into_element(cx)
+            .test_id("ui-gallery-sheet-parts-overlay-content")
+        })
         .into_element(cx)
         .test_id("ui-gallery-sheet-parts-overlay")
 }

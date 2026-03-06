@@ -517,7 +517,7 @@ fn input_with_style_and_submit<H: UiHost>(
             let entry = ControlEntry {
                 element: id,
                 enabled: !disabled,
-                action: ControlAction::Noop,
+                action: ControlAction::FocusOnly,
             };
             let _ = cx.app.models_mut().update(&control_registry, |reg| {
                 reg.register_control(cx.window, cx.frame_id, control_id, entry);

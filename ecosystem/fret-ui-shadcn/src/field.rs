@@ -9,7 +9,7 @@ use fret_ui::element::{
 use fret_ui::{ElementContext, Invalidation, Theme, ThemeSnapshot, UiHost};
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::control_registry::{
-    ControlId, DescriptionEntry, ErrorEntry, LabelEntry, control_registry_model,
+    ControlAction, ControlId, DescriptionEntry, ErrorEntry, LabelEntry, control_registry_model,
 };
 use fret_ui_kit::primitives::field_state as field_state_prim;
 use fret_ui_kit::theme_tokens;
@@ -1015,17 +1015,33 @@ impl FieldLabel {
                                         .models_mut()
                                         .read(&control_registry_on_pointer, |reg| {
                                             reg.control_for(acx.window, &for_control_on_pointer)
-                                                .map(|c| (c.enabled, c.element))
+                                                .map(|c| {
+                                                    (
+                                                        c.enabled,
+                                                        c.element,
+                                                        matches!(
+                                                            c.action,
+                                                            ControlAction::FocusOnly
+                                                        ),
+                                                    )
+                                                })
                                         })
                                         .ok()
                                         .flatten()
                                         .or_else(|| {
-                                            control_snapshot_on_pointer
-                                                .as_ref()
-                                                .map(|c| (c.enabled, c.element))
+                                            control_snapshot_on_pointer.as_ref().map(|c| {
+                                                (
+                                                    c.enabled,
+                                                    c.element,
+                                                    matches!(c.action, ControlAction::FocusOnly),
+                                                )
+                                            })
                                         });
-                                    if let Some((true, element)) = target {
-                                        host.request_focus(element);
+                                    if let Some((true, element, focus_on_pointer_down)) = target {
+                                        if focus_on_pointer_down {
+                                            host.request_focus(element);
+                                            return true;
+                                        }
                                         host.capture_pointer();
                                     }
                                     true
@@ -1057,6 +1073,10 @@ impl FieldLabel {
                                     return true;
                                 }
 
+                                let focus_only = matches!(control.action, ControlAction::FocusOnly);
+                                if focus_only {
+                                    return true;
+                                }
                                 host.request_focus(control.element);
                                 control.action.invoke(host);
                                 host.request_redraw(acx.window);
@@ -2098,6 +2118,19 @@ mod tests {
                 modifiers: Modifiers::default(),
                 pointer_type: fret_core::PointerType::Mouse,
                 click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(1),
+                position: label_position,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                is_click: true,
+                click_count: 1,
+                pointer_type: fret_core::PointerType::Mouse,
             }),
         );
 

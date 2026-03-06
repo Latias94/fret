@@ -8,6 +8,7 @@
 
 pub mod demo;
 pub mod disabled;
+pub mod label;
 pub mod outline;
 pub mod rtl;
 pub mod size;

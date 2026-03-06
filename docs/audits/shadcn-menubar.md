@@ -46,6 +46,11 @@ Key upstream behaviors/surfaces:
   - `modal=true` enables underlay pointer blocking while menus are open.
 - Pass: root-level disabled gate now forces closed-state render semantics (menu content hidden and
   trigger `expanded=false`) even when an internal menu open model was previously `true`.
+- Pass: `MenubarTrigger::into_menu().entries_parts(...)` already acts as the recipe-level
+  composition bridge for shadcn-style `MenubarTrigger` / `MenubarContent` authoring.
+- Note: Fret intentionally does not add a separate generic `compose()` builder for `Menubar`
+  today. The root already consumes typed `MenubarMenu` values, and the parts bridge keeps content
+  entry modeling explicit without weakening menu semantics.
 - Note: Fret exposes an explicit `close_on_select` policy per item; upstream Radix typically relies
   on `onSelect(e) { e.preventDefault() }` to keep menus open for toggles.
 - Pass: Close auto-focus outcomes match Radix Menubar’s `onCloseAutoFocus` policy:

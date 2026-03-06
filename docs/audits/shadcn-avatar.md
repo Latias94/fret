@@ -1,5 +1,4 @@
-# shadcn/ui v4 Audit — Avatar
-
+# shadcn/ui v4 Audit - Avatar
 
 ## Upstream references (non-normative)
 
@@ -7,38 +6,137 @@ This document references optional local checkouts under `repo-ref/` for convenie
 Upstream sources:
 
 - shadcn/ui: https://github.com/shadcn-ui/ui
+- Radix UI Primitives: https://github.com/radix-ui/primitives
+- MUI Base UI: https://github.com/mui/base-ui
 
 See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
-This audit compares Fret’s shadcn-aligned `Avatar` against the upstream shadcn/ui v4 docs and the
-`new-york-v4` registry implementation in `repo-ref/ui`.
+This audit compares Fret's shadcn-aligned `Avatar` recipe and avatar-in-dropdown usage against
+upstream shadcn/ui v4 docs plus Radix/Base UI interaction expectations.
 
 ## Upstream references (source of truth)
 
-- Docs page: `repo-ref/ui/apps/v4/content/docs/components/avatar.mdx`
-- Registry implementation (new-york): `repo-ref/ui/apps/v4/registry/new-york-v4/ui/avatar.tsx`
-- Underlying primitive: Radix `@radix-ui/react-avatar`
+- shadcn docs: `repo-ref/ui/apps/v4/content/docs/components/avatar.mdx`
+- shadcn dropdown docs/examples: `repo-ref/ui/apps/v4/content/docs/components/dropdown-menu.mdx`
+- shadcn source: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/avatar.tsx`
+- Radix avatar primitive: `repo-ref/primitives/packages/react/avatar/src/avatar.tsx`
+- Base UI interaction references: `repo-ref/base-ui/packages/react/src/menu`
 
-## Fret implementation
+## Fret implementation anchors
 
-- Component code: `ecosystem/fret-ui-shadcn/src/avatar.rs`
-- Radix-aligned fallback delay helper: `ecosystem/fret-ui-kit/src/primitives/avatar.rs`
+- Avatar component: `ecosystem/fret-ui-shadcn/src/avatar.rs`
+- Dropdown trigger/menu recipe: `ecosystem/fret-ui-shadcn/src/dropdown_menu.rs`
+- Gallery page: `apps/fret-ui-gallery/src/ui/pages/avatar.rs`
+- Avatar dropdown demo: `apps/fret-ui-gallery/src/ui/snippets/avatar/dropdown.rs`
+- Usage snippet: `apps/fret-ui-gallery/src/ui/snippets/avatar/usage.rs`
 
-## Audit checklist
+## What is aligned now
 
-### Layout & geometry (shadcn parity)
+### Docs/gallery surface
 
-- Pass: Root defaults to `size-8` (32px) and `shrink-0`.
-- Pass: Root uses overflow clipping and a fully-rounded shape by default.
-- Pass: `rounded-lg` can be expressed via `ChromeRefinement::rounded(Radius::Lg)` for parity demos.
-- Pass: Group overlap can be expressed via `LayoutRefinement::ml_neg(Space::N2)` to match `-space-x-2`.
-- Note: The web golden gates the avatar-group **visual** bounds by unioning the avatar item rects,
-  rather than relying on a wrapper node's bounds.
+- Pass: the gallery page follows a `Demo -> Usage -> Extras` structure that matches the component-doc
+  reading order more closely.
+- Pass: the `Usage` snippet is copyable and complete enough for authors to lift directly.
+- Pass: avatar-in-dropdown demos are exposed with stable `test_id` anchors for diagnostics.
+
+### Avatar authoring surface
+
+- Pass: `Avatar::children(...)` now exists, so avatar content can be authored in a composable way
+  without forcing only the convenience constructor path.
+- Pass: image/fallback authoring remains close to the upstream Radix/shadcn mental model.
+
+### Pointer/open/restore behavior
+
+- Pass: pointer-driven opening on the nested avatar target works (`click_stable` passes).
+- Pass: open -> `Escape` -> focus restore works for the avatar dropdown demo.
+- Pass: focusing the wrapper trigger works through diagnostics.
+
+## Diagnostic matrix
+
+The following scripted repros were used:
+
+- `tools/diag-scripts/ui-gallery/avatar/ui-gallery-avatar-dropdown-focus-trigger.json`
+- `tools/diag-scripts/ui-gallery/avatar/ui-gallery-avatar-dropdown-click-stable-open.json`
+- `tools/diag-scripts/ui-gallery/avatar/ui-gallery-avatar-dropdown-escape-focus-restore.json`
+- `tools/diag-scripts/ui-gallery/avatar/ui-gallery-avatar-dropdown-activate-open.json`
+- `tools/diag-scripts/ui-gallery/avatar/ui-gallery-avatar-dropdown-activate-open-trigger.json`
+
+Observed outcomes:
+
+- Pass: `focus(trigger-avatar child button)`
+- Pass: `activate(trigger-avatar child button) -> open`
+- Pass: `click_stable(trigger-avatar child button) -> open`
+- Pass: `click_stable open -> Escape -> focus restore`
+- Pass: suite `ui-gallery-avatar-dropdown-attribution`
+
+## Root-cause classification
+
+### Not a visual-defaults problem
+
+- The avatar parity work here was not blocked by size, radius, fallback paint, spacing, or docs-page
+  layout defaults.
+- After aligning the trigger composition, the visual result and interactive result both match the
+  intended shadcn docs pattern closely enough for gallery/demo use.
+
+### Not a pointer hit-test infrastructure failure
+
+- Pointer-open and Escape focus restore were already behaving correctly before the final recipe fix.
+- That ruled out a primary hit-test or overlay dismissal infrastructure bug.
+
+### Diagnostic infrastructure gap was real, and is already fixed
+
+- Semantic `activate` initially failed for the wrapper trigger because diagnostics invoked synchronously
+  under the `ElementRuntime` lease and fell back to a generic `Space` key path.
+- That has already been fixed by:
+  - routing button-like roles through `Enter` in accessibility invoke;
+  - dispatching `activate` outside the `ElementRuntime` mutable lease.
+
+### Final remaining issue was recipe composition, not avatar mechanism
+
+- The failing target was the nested presentational avatar node, not the authored pressable trigger.
+- In upstream shadcn/Radix composition, `DropdownMenuTrigger asChild` is meant to reuse the authored
+  interactive child (typically a `Button`), while the nested `Avatar` remains presentational content.
+- Our previous gallery snippet put the diagnostic child `test_id` on the nested `Avatar`, which made
+  pointer click look fine but semantic `focus` / `activate` target the wrong node.
+- The fix was to align the demo with the upstream composition shape:
+  - use `DropdownMenu::into_element_parts(...)`;
+  - make the authored ghost icon `Button` the actual trigger surface;
+  - move the trigger contract `test_id` to that button.
+
+## Conclusion
+
+- Result: `Avatar` itself was not the problem.
+- Result: this was not a missing semantic-defaults fix in `fret-ui`, nor a hit-test bug in the renderer.
+- Result: this was also not a missing `Avatar` children API issue; `Avatar::new([..])` and
+  `Avatar::children([..])` are already sufficient for avatar composition.
+- Result: the correct parity move for this component is **recipe alignment**:
+  - the authored pressable child owns trigger semantics;
+  - the nested avatar stays presentational.
+- Result: after that alignment, the full avatar dropdown diag matrix now passes.
+
+## Recommended next steps
+
+### Short term
+
+- Keep the avatar gallery dropdown snippet authored in the shadcn/Radix shape: authored ghost button
+  as trigger, avatar nested inside it.
+- Keep automation targeting the trigger button `test_id`, not the nested avatar leaf.
+
+### Follow-up implementation work
+
+- If you want stronger ergonomics across the ecosystem, consider adding an explicit
+  `DropdownMenuTrigger::as_child(true)` authoring signal later. That would be an API ergonomics
+  improvement, not a blocker for avatar parity anymore.
+- Reuse this attribution pattern for other shadcn trigger recipes: first verify whether diagnostics are
+  targeting the authored interactive child or only a nested presentational leaf.
 
 ## Validation
 
-- Web layout gate: `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_layout`
-  (`web_vs_fret_layout_avatar_demo_geometry`).
-- Additional avatar gates in the same suite:
-  - `web_vs_fret_layout_empty_avatar_geometry`
-  - `web_vs_fret_layout_empty_avatar_group_geometry`
-  - `web_vs_fret_layout_item_avatar_geometry`
+- `cargo build -p fret-ui-gallery`
+- `cargo test -p fret-diag-protocol script_v2_roundtrip_ui_gallery_avatar_dropdown_activate_open -- --exact`
+- `cargo test -p fret-diag-protocol script_v2_roundtrip_ui_gallery_avatar_dropdown_focus_trigger -- --exact`
+- `cargo test -p fret-diag-protocol script_v2_roundtrip_ui_gallery_avatar_dropdown_activate_open_trigger -- --exact`
+- `target/debug/fretboard.exe diag run tools/diag-scripts/ui-gallery/avatar/ui-gallery-avatar-dropdown-activate-open.json --dir target/fret-diag-avatar-activate-open-main2 --session-auto --timeout-ms 900000 --launch -- target/debug/fret-ui-gallery.exe`
+- `target/debug/fretboard.exe diag run tools/diag-scripts/ui-gallery/avatar/ui-gallery-avatar-dropdown-focus-trigger.json --dir target/fret-diag-avatar-focus-main2 --session-auto --timeout-ms 900000 --launch -- target/debug/fret-ui-gallery.exe`
+- `target/debug/fretboard.exe diag run tools/diag-scripts/ui-gallery/avatar/ui-gallery-avatar-dropdown-escape-focus-restore.json --dir target/fret-diag-avatar-escape-main2 --session-auto --timeout-ms 900000 --launch -- target/debug/fret-ui-gallery.exe`
+- `target/debug/fretboard.exe diag run tools/diag-scripts/ui-gallery/avatar/ui-gallery-avatar-dropdown-click-stable-open.json --dir target/fret-diag-avatar-click-main2 --session-auto --timeout-ms 900000 --launch -- target/debug/fret-ui-gallery.exe`
+- `target/debug/fretboard.exe diag suite ui-gallery-avatar-dropdown-attribution --dir target/fret-diag-avatar-attribution-main4 --session-auto --timeout-ms 900000 --launch -- target/debug/fret-ui-gallery.exe`

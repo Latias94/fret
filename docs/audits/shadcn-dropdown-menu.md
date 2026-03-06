@@ -103,8 +103,14 @@ _None tracked at this time._
 
 Notes on API mapping:
 
-- Fret provides a single `DropdownMenu::into_element(trigger, entries)` entry point, rather than a
-  DOM-like `Trigger`/`Content` component split.
+- Pass: Fret still supports the direct typed builder entry point
+  `DropdownMenu::into_element(trigger, entries)`.
+- Pass: Fret also exposes a parts bridge via `DropdownMenu::into_element_parts(...)`, so shadcn-style
+  `DropdownMenuTrigger` / `DropdownMenuContent` call sites no longer need to be translated into a
+  different authoring shape.
+- Note: Fret intentionally does not add a separate generic `compose()` builder for `DropdownMenu`
+  today. The typed `DropdownMenuEntry` model is already the important contract, and the parts bridge
+  keeps placement/content slots explicit without weakening entry semantics.
 - Groups/labels/shortcuts/destructive variant are modeled via:
   `DropdownMenuEntry::{Group,Label}` and `DropdownMenuItem::{trailing,variant}`.
 

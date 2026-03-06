@@ -32,7 +32,7 @@ In practice: **service-first orchestration** in app code, then pass plain snapsh
   - converts domain state to immediate draw snapshots.
 - `imui` wrapper/component:
   - consumes plain values + typed callbacks,
-  - emits typed intents (`MessageRouter`/`KeyedMessageRouter`),
+  - emits typed unit/payload actions,
   - avoids hidden async fetch or hidden selector dependencies.
 
 ## 3) Host-side orchestration pattern

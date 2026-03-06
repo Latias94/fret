@@ -5,8 +5,8 @@ use std::time::{Duration, Instant};
 use fret_app::{App, CommandId, Effect, WindowRequest};
 use fret_core::{AppWindowId, Color, Event};
 use fret_launch::{
-    WinitAppDriver, WinitCommandContext, WinitEventContext, WinitRenderContext, WinitRunnerConfig,
-    WinitWindowContext, run_app,
+    FnDriver, FnDriverHooks, WindowCreateSpec, WinitCommandContext, WinitEventContext,
+    WinitRenderContext, WinitRunnerConfig, WinitWindowContext,
 };
 use fret_node::Graph;
 use fret_node::GraphId;
@@ -904,135 +904,162 @@ impl NodeGraphDomainDemoDriver {
     }
 }
 
-impl WinitAppDriver for NodeGraphDomainDemoDriver {
-    type WindowState = NodeGraphDomainDemoWindowState;
+fn create_window_state(
+    driver: &mut NodeGraphDomainDemoDriver,
+    app: &mut App,
+    window: AppWindowId,
+) -> NodeGraphDomainDemoWindowState {
+    NodeGraphDomainDemoDriver::build_ui(app, window)
+}
 
-    fn create_window_state(&mut self, app: &mut App, window: AppWindowId) -> Self::WindowState {
-        Self::build_ui(app, window)
+fn handle_model_changes(
+    driver: &mut NodeGraphDomainDemoDriver,
+    context: WinitWindowContext<'_, NodeGraphDomainDemoWindowState>,
+    changed: &[fret_app::ModelId],
+) {
+    context
+        .state
+        .ui
+        .propagate_model_changes(context.app, changed);
+
+    let Some(models) = context.app.global::<NodeGraphDemoModels>() else {
+        return;
+    };
+    if changed.contains(&models.view.id()) {
+        driver.pending_view_state_save = true;
     }
-
-    fn handle_model_changes(
-        &mut self,
-        context: WinitWindowContext<'_, Self::WindowState>,
-        changed: &[fret_app::ModelId],
-    ) {
-        context
-            .state
-            .ui
-            .propagate_model_changes(context.app, changed);
-
-        let Some(models) = context.app.global::<NodeGraphDemoModels>() else {
-            return;
-        };
-        if changed.contains(&models.view.id()) {
-            self.pending_view_state_save = true;
+    if driver.pending_view_state_save {
+        let now = Instant::now();
+        let due = driver.last_view_state_save_at.map_or(true, |t| {
+            now.duration_since(t) >= NodeGraphDomainDemoDriver::VIEW_STATE_SAVE_DEBOUNCE
+        });
+        if due {
+            driver.pending_view_state_save = false;
+            driver.last_view_state_save_at = Some(now);
+            driver.save_view_state(context.app);
         }
-        if self.pending_view_state_save {
-            let now = Instant::now();
-            let due = self.last_view_state_save_at.map_or(true, |t| {
-                now.duration_since(t) >= Self::VIEW_STATE_SAVE_DEBOUNCE
-            });
-            if due {
-                self.pending_view_state_save = false;
-                self.last_view_state_save_at = Some(now);
-                self.save_view_state(context.app);
-            }
-        }
+    }
+}
+
+fn handle_global_changes(
+    driver: &mut NodeGraphDomainDemoDriver,
+    context: WinitWindowContext<'_, NodeGraphDomainDemoWindowState>,
+    changed: &[std::any::TypeId],
+) {
+    context
+        .state
+        .ui
+        .propagate_global_changes(context.app, changed);
+}
+
+fn handle_event(
+    driver: &mut NodeGraphDomainDemoDriver,
+    context: WinitEventContext<'_, NodeGraphDomainDemoWindowState>,
+    event: &Event,
+) {
+    let WinitEventContext {
+        app,
+        services,
+        window,
+        state,
+    } = context;
+
+    if matches!(event, Event::WindowCloseRequested) {
+        driver.save_view_state(app);
+        app.push_effect(Effect::Window(WindowRequest::Close(window)));
+        return;
     }
 
-    fn handle_global_changes(
-        &mut self,
-        context: WinitWindowContext<'_, Self::WindowState>,
-        changed: &[std::any::TypeId],
-    ) {
-        context
-            .state
-            .ui
-            .propagate_global_changes(context.app, changed);
-    }
-
-    fn handle_event(&mut self, context: WinitEventContext<'_, Self::WindowState>, event: &Event) {
-        let WinitEventContext {
-            app,
-            services,
-            window,
-            state,
-        } = context;
-
-        if matches!(event, Event::WindowCloseRequested) {
-            self.save_view_state(app);
+    if let Event::KeyDown { key, .. } = event {
+        if *key == fret_core::KeyCode::Escape {
+            driver.save_view_state(app);
             app.push_effect(Effect::Window(WindowRequest::Close(window)));
             return;
         }
-
-        if let Event::KeyDown { key, .. } = event {
-            if *key == fret_core::KeyCode::Escape {
-                self.save_view_state(app);
-                app.push_effect(Effect::Window(WindowRequest::Close(window)));
-                return;
-            }
-        }
-
-        state.ui.dispatch_event(app, services, event);
     }
 
-    fn handle_command(
-        &mut self,
-        context: WinitCommandContext<'_, Self::WindowState>,
-        command: CommandId,
-    ) {
-        let WinitCommandContext {
-            app,
-            services,
-            window,
-            state,
-        } = context;
+    state.ui.dispatch_event(app, services, event);
+}
 
-        if state.ui.dispatch_command(app, services, &command) {
-            return;
-        }
+fn handle_command(
+    driver: &mut NodeGraphDomainDemoDriver,
+    context: WinitCommandContext<'_, NodeGraphDomainDemoWindowState>,
+    command: CommandId,
+) {
+    let WinitCommandContext {
+        app,
+        services,
+        window,
+        state,
+    } = context;
 
-        if command.as_str() == "node_graph_domain_demo.close" {
-            self.save_view_state(app);
-            app.push_effect(Effect::Window(WindowRequest::Close(window)));
-        }
+    if state.ui.dispatch_command(app, services, &command) {
+        return;
     }
 
-    fn render(&mut self, context: WinitRenderContext<'_, Self::WindowState>) {
-        let WinitRenderContext {
-            app,
-            services,
-            window,
-            state,
-            bounds,
-            scale_factor,
-            scene,
-        } = context;
-
-        state.ui.set_root(state.root);
-        state.ui.ingest_paint_cache_source(scene);
-        scene.clear();
-
-        let mut frame = UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
-        frame.layout_all();
-        frame.paint_all(scene);
+    if command.as_str() == "node_graph_domain_demo.close" {
+        driver.save_view_state(app);
+        app.push_effect(Effect::Window(WindowRequest::Close(window)));
     }
+}
 
-    fn window_create_spec(
-        &mut self,
-        _app: &mut App,
-        _request: &fret_app::CreateWindowRequest,
-    ) -> Option<fret_launch::WindowCreateSpec> {
-        None
-    }
+fn render(
+    driver: &mut NodeGraphDomainDemoDriver,
+    context: WinitRenderContext<'_, NodeGraphDomainDemoWindowState>,
+) {
+    let WinitRenderContext {
+        app,
+        services,
+        window,
+        state,
+        bounds,
+        scale_factor,
+        scene,
+    } = context;
 
-    fn window_created(
-        &mut self,
-        _app: &mut App,
-        _request: &fret_app::CreateWindowRequest,
-        _new_window: AppWindowId,
-    ) {
-    }
+    state.ui.set_root(state.root);
+    state.ui.ingest_paint_cache_source(scene);
+    scene.clear();
+
+    let mut frame = UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
+    frame.layout_all();
+    frame.paint_all(scene);
+}
+
+fn window_create_spec(
+    driver: &mut NodeGraphDomainDemoDriver,
+    app: &mut App,
+    request: &fret_app::CreateWindowRequest,
+) -> Option<WindowCreateSpec> {
+    None
+}
+
+fn window_created(
+    driver: &mut NodeGraphDomainDemoDriver,
+    app: &mut App,
+    request: &fret_app::CreateWindowRequest,
+    new_window: AppWindowId,
+) {
+}
+
+fn configure_fn_driver_hooks(
+    hooks: &mut FnDriverHooks<NodeGraphDomainDemoDriver, NodeGraphDomainDemoWindowState>,
+) {
+    hooks.handle_model_changes = Some(handle_model_changes);
+    hooks.handle_global_changes = Some(handle_global_changes);
+    hooks.handle_command = Some(handle_command);
+    hooks.window_create_spec = Some(window_create_spec);
+    hooks.window_created = Some(window_created);
+}
+
+pub fn build_fn_driver() -> FnDriver<NodeGraphDomainDemoDriver, NodeGraphDomainDemoWindowState> {
+    FnDriver::new(
+        NodeGraphDomainDemoDriver::default(),
+        create_window_state,
+        handle_event,
+        render,
+    )
+    .with_hooks(configure_fn_driver_hooks)
 }
 
 pub fn run() -> anyhow::Result<()> {
@@ -1093,5 +1120,6 @@ pub fn run() -> anyhow::Result<()> {
         ..Default::default()
     };
 
-    run_app(config, app, NodeGraphDomainDemoDriver::default()).map_err(anyhow::Error::from)
+    fret::run_native_with_configured_fn_driver(config, app, build_fn_driver())
+        .map_err(anyhow::Error::from)
 }

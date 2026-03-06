@@ -2213,6 +2213,7 @@ fn ui_app_render<S>(
         let drive = app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
             svc.drive_script_for_window(
                 app,
+                services,
                 window,
                 bounds,
                 scale_factor,

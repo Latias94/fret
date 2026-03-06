@@ -33,14 +33,15 @@ impl Default for ImageHeavyImages {
 struct ImageHeavyMemoryState;
 
 pub fn run() -> anyhow::Result<()> {
-    fret::app_with_hooks("image-heavy-memory-demo", init_window, view, |driver| {
-        driver.record_engine_frame(record_engine_frame)
-    })?
-    .init_app(fret_bootstrap::install_default_i18n_backend)
-    .with_main_window("image_heavy_memory_demo", (980.0, 720.0))
-    .on_gpu_ready(upload_images)
-    .run()
-    .map_err(anyhow::Error::from)
+    fret::App::new("image-heavy-memory-demo")
+        .window("image_heavy_memory_demo", (980.0, 720.0))
+        .ui_with_hooks(init_window, view, |driver| {
+            driver.record_engine_frame(record_engine_frame)
+        })?
+        .init_app(fret_bootstrap::install_default_i18n_backend)
+        .on_gpu_ready(upload_images)
+        .run()
+        .map_err(anyhow::Error::from)
 }
 
 fn init_window(_app: &mut App, _window: AppWindowId) -> ImageHeavyMemoryState {

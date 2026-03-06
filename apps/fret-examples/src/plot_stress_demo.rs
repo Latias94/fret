@@ -2,8 +2,8 @@ use anyhow::Context as _;
 use fret_app::{App, Effect, WindowRequest};
 use fret_core::{AppWindowId, Event};
 use fret_launch::{
-    WindowCreateSpec, WinitAppDriver, WinitEventContext, WinitRenderContext, WinitRunnerConfig,
-    WinitWindowContext,
+    FnDriver, WindowCreateSpec, WinitEventContext, WinitHotReloadContext, WinitRenderContext,
+    WinitRunnerConfig, WinitWindowContext,
 };
 use fret_plot::cartesian::{DataPoint, DataRect};
 use fret_plot::retained::{LinePlotCanvas, LinePlotModel, LinePlotStyle, LineSeries};
@@ -30,7 +30,7 @@ macro_rules! try_println {
 const DEFAULT_POINTS: usize = 200_000;
 const DEFAULT_SERIES: usize = 3;
 
-struct PlotStressWindowState {
+pub struct PlotStressWindowState {
     ui: UiTree<App>,
     root: Option<fret_core::NodeId>,
     plot: fret_runtime::Model<LinePlotModel>,
@@ -44,7 +44,7 @@ struct PlotStressWindowState {
 }
 
 #[derive(Default)]
-struct PlotStressDriver {
+pub struct PlotStressDriver {
     points: usize,
     series: usize,
     max_frames: Option<u64>,
@@ -151,285 +151,304 @@ impl PlotStressDriver {
     }
 }
 
-impl WinitAppDriver for PlotStressDriver {
-    type WindowState = PlotStressWindowState;
+fn gpu_ready(
+    _driver: &mut PlotStressDriver,
+    _app: &mut App,
+    _context: &WgpuContext,
+    renderer: &mut Renderer,
+) {
+    renderer.set_perf_enabled(true);
+}
 
-    fn gpu_ready(&mut self, _app: &mut App, _context: &WgpuContext, renderer: &mut Renderer) {
-        renderer.set_perf_enabled(true);
+fn create_window_state(
+    driver: &mut PlotStressDriver,
+    app: &mut App,
+    window: AppWindowId,
+) -> PlotStressWindowState {
+    let plot = app.models_mut().insert(PlotStressDriver::build_plot_model(
+        driver.points,
+        driver.series,
+    ));
+    let animate = app.models_mut().insert(true);
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+
+    PlotStressWindowState {
+        ui,
+        root: None,
+        plot,
+        animate,
+        max_frames: driver.max_frames,
+        frame: 0,
+        last_report: None,
+        last_renderer_report: None,
+        render_time_accum: Duration::ZERO,
+        render_frames_accum: 0,
     }
+}
 
-    fn gpu_frame_prepare(
-        &mut self,
-        _app: &mut App,
-        _window: AppWindowId,
-        state: &mut Self::WindowState,
-        _context: &WgpuContext,
-        renderer: &mut Renderer,
-        _scale_factor: f32,
-    ) {
-        let now = Instant::now();
-        let should_report = match state.last_renderer_report {
-            None => true,
-            Some(last) => now.duration_since(last) >= Duration::from_secs(1),
-        };
-        if should_report {
-            if let Some(snap) = renderer.take_perf_snapshot() {
-                if snap.frames != 0 {
-                    let pipeline_breakdown =
-                        std::env::var_os("FRET_RENDERER_PERF_PIPELINES").is_some();
+fn hot_reload_window(
+    _driver: &mut PlotStressDriver,
+    context: WinitHotReloadContext<'_, PlotStressWindowState>,
+) {
+    let WinitHotReloadContext {
+        app,
+        services: _,
+        window,
+        state,
+    } = context;
+    crate::hotpatch::reset_ui_tree(app, window, &mut state.ui);
+    state.root = None;
+}
+
+fn gpu_frame_prepare(
+    driver: &mut PlotStressDriver,
+    app: &mut App,
+    window: fret_core::AppWindowId,
+    state: &mut PlotStressWindowState,
+    context: &WgpuContext,
+    renderer: &mut Renderer,
+    scale_factor: f32,
+) {
+    let now = Instant::now();
+    let should_report = match state.last_renderer_report {
+        None => true,
+        Some(last) => now.duration_since(last) >= Duration::from_secs(1),
+    };
+    if should_report {
+        if let Some(snap) = renderer.take_perf_snapshot() {
+            if snap.frames != 0 {
+                let pipeline_breakdown = std::env::var_os("FRET_RENDERER_PERF_PIPELINES").is_some();
+                try_println!(
+                    "renderer_perf: frames={} encode={:.2}ms prepare_svg={:.2}ms prepare_text={:.2}ms draws={} (quad={} viewport={} image={} text={} path={} mask={} fs={} clipmask={}) pipelines={} binds={} (ubinds={} tbinds={}) scissor={} uniform={}KB instance={}KB vertex={}KB cache_hits={} cache_misses={}",
+                    snap.frames,
+                    snap.encode_scene_us as f64 / 1000.0,
+                    snap.prepare_svg_us as f64 / 1000.0,
+                    snap.prepare_text_us as f64 / 1000.0,
+                    snap.draw_calls,
+                    snap.quad_draw_calls,
+                    snap.viewport_draw_calls,
+                    snap.image_draw_calls,
+                    snap.text_draw_calls,
+                    snap.path_draw_calls,
+                    snap.mask_draw_calls,
+                    snap.fullscreen_draw_calls,
+                    snap.clip_mask_draw_calls,
+                    snap.pipeline_switches,
+                    snap.bind_group_switches,
+                    snap.uniform_bind_group_switches,
+                    snap.texture_bind_group_switches,
+                    snap.scissor_sets,
+                    snap.uniform_bytes / 1024,
+                    snap.instance_bytes / 1024,
+                    snap.vertex_bytes / 1024,
+                    snap.scene_encoding_cache_hits,
+                    snap.scene_encoding_cache_misses
+                );
+                if pipeline_breakdown {
                     try_println!(
-                        "renderer_perf: frames={} encode={:.2}ms prepare_svg={:.2}ms prepare_text={:.2}ms draws={} (quad={} viewport={} image={} text={} path={} mask={} fs={} clipmask={}) pipelines={} binds={} (ubinds={} tbinds={}) scissor={} uniform={}KB instance={}KB vertex={}KB cache_hits={} cache_misses={}",
-                        snap.frames,
-                        snap.encode_scene_us as f64 / 1000.0,
-                        snap.prepare_svg_us as f64 / 1000.0,
-                        snap.prepare_text_us as f64 / 1000.0,
-                        snap.draw_calls,
-                        snap.quad_draw_calls,
-                        snap.viewport_draw_calls,
-                        snap.image_draw_calls,
-                        snap.text_draw_calls,
-                        snap.path_draw_calls,
-                        snap.mask_draw_calls,
-                        snap.fullscreen_draw_calls,
-                        snap.clip_mask_draw_calls,
-                        snap.pipeline_switches,
-                        snap.bind_group_switches,
-                        snap.uniform_bind_group_switches,
-                        snap.texture_bind_group_switches,
-                        snap.scissor_sets,
-                        snap.uniform_bytes / 1024,
-                        snap.instance_bytes / 1024,
-                        snap.vertex_bytes / 1024,
-                        snap.scene_encoding_cache_hits,
-                        snap.scene_encoding_cache_misses
+                        "renderer_perf_pipelines: quad={} viewport={} mask={} text_mask={} text_color={} path={} path_msaa={} composite={} fullscreen={} clip_mask={}",
+                        snap.pipeline_switches_quad,
+                        snap.pipeline_switches_viewport,
+                        snap.pipeline_switches_mask,
+                        snap.pipeline_switches_text_mask,
+                        snap.pipeline_switches_text_color,
+                        snap.pipeline_switches_path,
+                        snap.pipeline_switches_path_msaa,
+                        snap.pipeline_switches_composite,
+                        snap.pipeline_switches_fullscreen,
+                        snap.pipeline_switches_clip_mask,
                     );
-                    if pipeline_breakdown {
-                        try_println!(
-                            "renderer_perf_pipelines: quad={} viewport={} mask={} text_mask={} text_color={} path={} path_msaa={} composite={} fullscreen={} clip_mask={}",
-                            snap.pipeline_switches_quad,
-                            snap.pipeline_switches_viewport,
-                            snap.pipeline_switches_mask,
-                            snap.pipeline_switches_text_mask,
-                            snap.pipeline_switches_text_color,
-                            snap.pipeline_switches_path,
-                            snap.pipeline_switches_path_msaa,
-                            snap.pipeline_switches_composite,
-                            snap.pipeline_switches_fullscreen,
-                            snap.pipeline_switches_clip_mask,
-                        );
-                    }
                 }
             }
-            state.last_renderer_report = Some(now);
         }
+        state.last_renderer_report = Some(now);
     }
+}
 
-    fn create_window_state(&mut self, app: &mut App, window: AppWindowId) -> Self::WindowState {
-        let plot = app
-            .models_mut()
-            .insert(Self::build_plot_model(self.points, self.series));
-        let animate = app.models_mut().insert(true);
+fn handle_model_changes(
+    _driver: &mut PlotStressDriver,
+    context: WinitWindowContext<'_, PlotStressWindowState>,
+    changed: &[fret_app::ModelId],
+) {
+    context
+        .state
+        .ui
+        .propagate_model_changes(context.app, changed);
+}
 
-        let mut ui: UiTree<App> = UiTree::new();
-        ui.set_window(window);
+fn handle_global_changes(
+    _driver: &mut PlotStressDriver,
+    context: WinitWindowContext<'_, PlotStressWindowState>,
+    changed: &[std::any::TypeId],
+) {
+    context
+        .state
+        .ui
+        .propagate_global_changes(context.app, changed);
+}
 
-        PlotStressWindowState {
-            ui,
-            root: None,
-            plot,
-            animate,
-            max_frames: self.max_frames,
-            frame: 0,
-            last_report: None,
-            last_renderer_report: None,
-            render_time_accum: Duration::ZERO,
-            render_frames_accum: 0,
-        }
-    }
+fn handle_event(
+    _driver: &mut PlotStressDriver,
+    context: WinitEventContext<'_, PlotStressWindowState>,
+    event: &Event,
+) {
+    let WinitEventContext {
+        app,
+        services,
+        window,
+        state,
+        ..
+    } = context;
 
-    fn hot_reload_window(
-        &mut self,
-        app: &mut App,
-        _services: &mut dyn fret_core::UiServices,
-        window: AppWindowId,
-        state: &mut Self::WindowState,
-    ) {
-        crate::hotpatch::reset_ui_tree(app, window, &mut state.ui);
-        state.root = None;
-    }
-
-    fn handle_model_changes(
-        &mut self,
-        context: WinitWindowContext<'_, Self::WindowState>,
-        changed: &[fret_app::ModelId],
-    ) {
-        context
-            .state
-            .ui
-            .propagate_model_changes(context.app, changed);
-    }
-
-    fn handle_global_changes(
-        &mut self,
-        context: WinitWindowContext<'_, Self::WindowState>,
-        changed: &[std::any::TypeId],
-    ) {
-        context
-            .state
-            .ui
-            .propagate_global_changes(context.app, changed);
-    }
-
-    fn handle_event(&mut self, context: WinitEventContext<'_, Self::WindowState>, event: &Event) {
-        let WinitEventContext {
-            app,
-            services,
-            window,
-            state,
+    match event {
+        Event::WindowCloseRequested
+        | Event::KeyDown {
+            key: fret_core::KeyCode::Escape,
             ..
-        } = context;
-
-        match event {
-            Event::WindowCloseRequested
-            | Event::KeyDown {
-                key: fret_core::KeyCode::Escape,
-                ..
-            } => {
-                app.push_effect(Effect::Window(WindowRequest::Close(window)));
-                return;
-            }
-            Event::KeyDown { key, repeat, .. } if !*repeat => match *key {
-                fret_core::KeyCode::Space => {
-                    let _ = app.models_mut().update(&state.animate, |v| *v = !*v);
-                    app.request_redraw(window);
-                    return;
-                }
-                fret_core::KeyCode::KeyH => Self::print_help(),
-                _ => {}
-            },
-            _ => {}
-        }
-
-        state.ui.dispatch_event(app, services, event);
-    }
-
-    fn render(&mut self, context: WinitRenderContext<'_, Self::WindowState>) {
-        let render_start = Instant::now();
-        let WinitRenderContext {
-            app,
-            services,
-            window,
-            state,
-            bounds,
-            scale_factor,
-            scene,
-        } = context;
-
-        state.frame = state.frame.wrapping_add(1);
-        Self::maybe_animate_bounds(state, app);
-
-        if state.last_report.is_none() {
-            state.last_report = Some(Instant::now());
-        }
-
-        let root = state.root.get_or_insert_with(|| {
-            let style = LinePlotStyle::default();
-            let canvas = LinePlotCanvas::new(state.plot.clone()).style(style);
-            let node = LinePlotCanvas::create_node(&mut state.ui, canvas);
-            state.ui.set_root(node);
-            node
-        });
-
-        state.ui.set_root(*root);
-        state.ui.request_semantics_snapshot();
-        state.ui.ingest_paint_cache_source(scene);
-
-        scene.clear();
-        let mut frame =
-            fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
-        frame.layout_all();
-        frame.paint_all(scene);
-
-        let elapsed = render_start.elapsed();
-        state.render_time_accum += elapsed;
-        state.render_frames_accum = state.render_frames_accum.saturating_add(1);
-
-        if let Some(last) = state.last_report
-            && last.elapsed() >= Duration::from_secs(1)
-        {
-            let avg_us = if state.render_frames_accum == 0 {
-                0.0
-            } else {
-                state.render_time_accum.as_secs_f64() * 1_000_000.0
-                    / state.render_frames_accum as f64
-            };
-
-            let animate = app.models().read(&state.animate, |v| *v).unwrap_or(false);
-
-            try_println!(
-                "frames={} points={} series={} animate={} avg_driver_render={:.1}us",
-                state.frame,
-                self.points,
-                self.series,
-                animate,
-                avg_us
-            );
-
-            state.last_report = Some(Instant::now());
-            state.render_time_accum = Duration::ZERO;
-            state.render_frames_accum = 0;
-        }
-
-        if let Some(max) = state.max_frames
-            && state.frame >= max
-        {
+        } => {
             app.push_effect(Effect::Window(WindowRequest::Close(window)));
             return;
         }
-
-        app.request_redraw(window);
+        Event::KeyDown { key, repeat, .. } if !*repeat => match *key {
+            fret_core::KeyCode::Space => {
+                let _ = app.models_mut().update(&state.animate, |v| *v = !*v);
+                app.request_redraw(window);
+                return;
+            }
+            fret_core::KeyCode::KeyH => PlotStressDriver::print_help(),
+            _ => {}
+        },
+        _ => {}
     }
 
-    fn window_create_spec(
-        &mut self,
-        _app: &mut App,
-        _request: &fret_app::CreateWindowRequest,
-    ) -> Option<WindowCreateSpec> {
-        None
-    }
-
-    fn window_created(
-        &mut self,
-        _app: &mut App,
-        _request: &fret_app::CreateWindowRequest,
-        _new_window: AppWindowId,
-    ) {
-    }
+    state.ui.dispatch_event(app, services, event);
 }
 
-pub fn build_app() -> App {
-    let mut app = App::new();
-    app.set_global(PlatformCapabilities::default());
-    app
-}
+fn render(driver: &mut PlotStressDriver, context: WinitRenderContext<'_, PlotStressWindowState>) {
+    let render_start = Instant::now();
+    let WinitRenderContext {
+        app,
+        services,
+        window,
+        state,
+        bounds,
+        scale_factor,
+        scene,
+    } = context;
 
-pub fn build_runner_config() -> WinitRunnerConfig {
-    WinitRunnerConfig {
-        main_window_title: "fret-demo plot_stress_demo".to_string(),
-        main_window_size: fret_launch::WindowLogicalSize::new(960.0, 640.0),
-        ..Default::default()
+    state.frame = state.frame.wrapping_add(1);
+    PlotStressDriver::maybe_animate_bounds(state, app);
+
+    if state.last_report.is_none() {
+        state.last_report = Some(Instant::now());
     }
-}
 
-pub fn build_driver() -> impl WinitAppDriver {
-    PlotStressDriver {
-        points: DEFAULT_POINTS,
-        series: DEFAULT_SERIES,
-        max_frames: None,
+    let root = state.root.get_or_insert_with(|| {
+        let style = LinePlotStyle::default();
+        let canvas = LinePlotCanvas::new(state.plot.clone()).style(style);
+        let node = LinePlotCanvas::create_node(&mut state.ui, canvas);
+        state.ui.set_root(node);
+        node
+    });
+
+    state.ui.set_root(*root);
+    state.ui.request_semantics_snapshot();
+    state.ui.ingest_paint_cache_source(scene);
+
+    scene.clear();
+    let mut frame =
+        fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
+    frame.layout_all();
+    frame.paint_all(scene);
+
+    let elapsed = render_start.elapsed();
+    state.render_time_accum += elapsed;
+    state.render_frames_accum = state.render_frames_accum.saturating_add(1);
+
+    if let Some(last) = state.last_report
+        && last.elapsed() >= Duration::from_secs(1)
+    {
+        let avg_us = if state.render_frames_accum == 0 {
+            0.0
+        } else {
+            state.render_time_accum.as_secs_f64() * 1_000_000.0 / state.render_frames_accum as f64
+        };
+
+        let animate = app.models().read(&state.animate, |v| *v).unwrap_or(false);
+
+        try_println!(
+            "frames={} points={} series={} animate={} avg_driver_render={:.1}us",
+            state.frame,
+            driver.points,
+            driver.series,
+            animate,
+            avg_us
+        );
+
+        state.last_report = Some(Instant::now());
+        state.render_time_accum = Duration::ZERO;
+        state.render_frames_accum = 0;
     }
+
+    if let Some(max) = state.max_frames
+        && state.frame >= max
+    {
+        app.push_effect(Effect::Window(WindowRequest::Close(window)));
+        return;
+    }
+
+    app.request_redraw(window);
 }
 
-#[cfg(not(target_arch = "wasm32"))]
+fn window_create_spec(
+    _driver: &mut PlotStressDriver,
+    app: &mut App,
+    request: &fret_app::CreateWindowRequest,
+) -> Option<WindowCreateSpec> {
+    None
+}
+
+fn window_created(
+    _driver: &mut PlotStressDriver,
+    app: &mut App,
+    request: &fret_app::CreateWindowRequest,
+    new_window: AppWindowId,
+) {
+}
+
+fn configure_fn_driver_hooks(
+    hooks: &mut fret_launch::FnDriverHooks<PlotStressDriver, PlotStressWindowState>,
+) {
+    hooks.gpu_ready = Some(gpu_ready);
+    hooks.hot_reload_window = Some(hot_reload_window);
+    hooks.gpu_frame_prepare = Some(gpu_frame_prepare);
+    hooks.handle_model_changes = Some(handle_model_changes);
+    hooks.handle_global_changes = Some(handle_global_changes);
+    hooks.window_create_spec = Some(window_create_spec);
+    hooks.window_created = Some(window_created);
+}
+
+fn build_driver_with_options(
+    points: usize,
+    series: usize,
+    max_frames: Option<u64>,
+) -> FnDriver<PlotStressDriver, PlotStressWindowState> {
+    let driver = PlotStressDriver {
+        points,
+        series,
+        max_frames,
+    };
+
+    FnDriver::new(driver, create_window_state, handle_event, render)
+        .with_hooks(configure_fn_driver_hooks)
+}
+
+pub fn build_fn_driver() -> FnDriver<PlotStressDriver, PlotStressWindowState> {
+    build_driver_with_options(DEFAULT_POINTS, DEFAULT_SERIES, None)
+}
+
 pub fn run() -> anyhow::Result<()> {
     let _ = tracing_subscriber::fmt()
         .with_env_filter(
@@ -475,15 +494,36 @@ pub fn run() -> anyhow::Result<()> {
         }
     }
 
-    let app = build_app();
-    let config = build_runner_config();
-    let driver = PlotStressDriver {
-        points,
-        series,
-        max_frames,
+    let mut app = App::new();
+    app.set_global(PlatformCapabilities::default());
+
+    let config = WinitRunnerConfig {
+        main_window_title: "fret-demo plot_stress_demo".to_string(),
+        main_window_size: fret_launch::WindowLogicalSize::new(1280.0, 720.0),
+        ..Default::default()
     };
 
-    crate::run_native_demo(config, app, driver).context("run plot_stress_demo app")
+    let driver_state =
+        if points == DEFAULT_POINTS && series == DEFAULT_SERIES && max_frames.is_none() {
+            PlotStressDriver::default()
+        } else {
+            PlotStressDriver {
+                points,
+                series,
+                max_frames,
+            }
+        };
+
+    crate::run_native_with_fn_driver_with_hooks(
+        config,
+        app,
+        driver_state,
+        create_window_state,
+        handle_event,
+        render,
+        configure_fn_driver_hooks,
+    )
+    .context("run plot_stress_demo app")
 }
 
 #[cfg(target_arch = "wasm32")]

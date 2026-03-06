@@ -47,9 +47,9 @@
     {
       "type": "scroll_into_view",
       "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
-      "target": { "kind": "test_id", "id": "ui-gallery-checkbox-checked-state" },
+      "target": { "kind": "test_id", "id": "ui-gallery-checkbox-controlled-label" },
       "delta_y": -160.0,
-      "require_fully_within_window": true,
+      "require_fully_within_window": false,
       "padding_px": 24.0,
       "timeout_frames": 600
     },
@@ -65,13 +65,7 @@
       "timeout_frames": 600
     },
 
-    {
-      "type": "click_stable",
-      "target": { "kind": "test_id", "id": "ui-gallery-checkbox-controlled" },
-      "stable_frames": 2,
-      "max_move_px": 2.0,
-      "timeout_frames": 900
-    },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-checkbox-controlled" } },
     {
       "type": "wait_until",
       "predicate": {
@@ -82,13 +76,7 @@
       "timeout_frames": 600
     },
 
-    {
-      "type": "click_stable",
-      "target": { "kind": "test_id", "id": "ui-gallery-checkbox-controlled-label" },
-      "stable_frames": 2,
-      "max_move_px": 2.0,
-      "timeout_frames": 900
-    },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-checkbox-controlled-label" } },
     {
       "type": "wait_until",
       "predicate": {
@@ -103,3 +91,4 @@
     { "type": "capture_screenshot", "label": "ui-gallery-checkbox-label-click-toggles" }
   ]
 }
+

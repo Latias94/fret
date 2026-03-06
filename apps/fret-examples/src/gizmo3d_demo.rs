@@ -19,7 +19,7 @@ use fret_gizmo::{
 };
 use fret_gizmo::{ViewportToolCx, ViewportToolId, ViewportToolPriority, ViewportToolResult};
 use fret_launch::{
-    EngineFrameUpdate, ViewportRenderTargetWithDepth, WinitAppDriver, WinitCommandContext,
+    EngineFrameUpdate, FnDriver, FnDriverHooks, ViewportRenderTargetWithDepth, WinitCommandContext,
     WinitEventContext, WinitRenderContext, WinitRunnerConfig, WinitWindowContext,
     install_viewport_overlay_3d_immediate, record_viewport_overlay_3d,
     upload_viewport_overlay_3d_immediate,
@@ -2807,1128 +2807,1105 @@ fn camera_view_projection(size: (u32, u32), camera: OrbitCamera) -> Mat4 {
     proj * view
 }
 
-impl WinitAppDriver for Gizmo3dDemoDriver {
-    type WindowState = Gizmo3dDemoWindowState;
+fn init(_driver: &mut Gizmo3dDemoDriver, app: &mut App, _main_window: AppWindowId) {
+    install_viewport_overlay_3d_immediate(app);
+}
 
-    fn init(&mut self, app: &mut App, _main_window: AppWindowId) {
-        install_viewport_overlay_3d_immediate(app);
+fn create_window_state(
+    _driver: &mut Gizmo3dDemoDriver,
+    app: &mut App,
+    window: AppWindowId,
+) -> Gizmo3dDemoWindowState {
+    let state = Gizmo3dDemoDriver::build_ui(app, window);
+    // Ensure we render at least one frame; otherwise the viewport surface can remain blank until
+    // the first input event happens to request a redraw.
+    app.request_redraw(window);
+    app.push_effect(Effect::RequestAnimationFrame(window));
+    state
+}
+
+fn handle_command(
+    driver: &mut Gizmo3dDemoDriver,
+    context: WinitCommandContext<'_, Gizmo3dDemoWindowState>,
+    command: CommandId,
+) {
+    let WinitCommandContext {
+        app,
+        services,
+        window,
+        state,
+    } = context;
+
+    // Prefer focused-surface command handling (e.g. local widget histories) before falling
+    // back to the window's active document undo stack (ADR 0125, ADR 0020).
+    if state.ui.dispatch_command(app, services, &command) {
+        return;
     }
 
-    fn create_window_state(&mut self, app: &mut App, window: AppWindowId) -> Self::WindowState {
-        let state = Self::build_ui(app, window);
-        // Ensure we render at least one frame; otherwise the viewport surface can remain blank until
-        // the first input event happens to request a redraw.
-        app.request_redraw(window);
-        app.push_effect(Effect::RequestAnimationFrame(window));
-        state
-    }
-
-    fn handle_command(
-        &mut self,
-        context: WinitCommandContext<'_, Self::WindowState>,
-        command: CommandId,
-    ) {
-        let WinitCommandContext {
-            app,
-            services,
-            window,
-            state,
-        } = context;
-
-        // Prefer focused-surface command handling (e.g. local widget histories) before falling
-        // back to the window's active document undo stack (ADR 0125, ADR 0020).
-        if state.ui.dispatch_command(app, services, &command) {
-            return;
+    match command.as_str() {
+        "edit.undo" => {
+            let _ = driver.handle_undo_redo_shortcut(app, window, state, true);
         }
-
-        match command.as_str() {
-            "edit.undo" => {
-                let _ = self.handle_undo_redo_shortcut(app, window, state, true);
-            }
-            "edit.redo" => {
-                let _ = self.handle_undo_redo_shortcut(app, window, state, false);
-            }
-            _ => {}
+        "edit.redo" => {
+            let _ = driver.handle_undo_redo_shortcut(app, window, state, false);
         }
+        _ => {}
     }
+}
 
-    fn handle_event(&mut self, context: WinitEventContext<'_, Self::WindowState>, event: &Event) {
-        let WinitEventContext {
-            app,
-            services,
-            window,
-            state,
+fn handle_event(
+    _driver: &mut Gizmo3dDemoDriver,
+    context: WinitEventContext<'_, Gizmo3dDemoWindowState>,
+    event: &Event,
+) {
+    let WinitEventContext {
+        app,
+        services,
+        window,
+        state,
+        ..
+    } = context;
+
+    match event {
+        Event::WindowCloseRequested => {
+            app.push_effect(Effect::Window(WindowRequest::Close(window)));
+        }
+        Event::KeyDown {
+            key: fret_core::KeyCode::Escape,
             ..
-        } = context;
+        } => {
+            let did_cancel = state
+                .demo
+                .update(app, |m, _cx| {
+                    m.cancel_active_viewport_tool_interaction()
+                        || m.cancel_in_progress_interaction()
+                })
+                .unwrap_or(false);
 
-        match event {
-            Event::WindowCloseRequested => {
+            if did_cancel {
+                app.request_redraw(window);
+            } else {
                 app.push_effect(Effect::Window(WindowRequest::Close(window)));
             }
-            Event::KeyDown {
-                key: fret_core::KeyCode::Escape,
-                ..
-            } => {
-                let did_cancel = state
-                    .demo
-                    .update(app, |m, _cx| {
-                        m.cancel_active_viewport_tool_interaction()
-                            || m.cancel_in_progress_interaction()
-                    })
-                    .unwrap_or(false);
-
-                if did_cancel {
-                    app.request_redraw(window);
+        }
+        Event::KeyDown {
+            key: fret_core::KeyCode::KeyR,
+            repeat: false,
+            ..
+        } => {
+            let _ = state.demo.update(app, |m, _cx| {
+                if m.is_busy() {
+                    return;
+                }
+                if m.op_mask_enabled {
+                    m.set_op_mask_preset(GizmoOpMaskPreset::Rotate);
                 } else {
-                    app.push_effect(Effect::Window(WindowRequest::Close(window)));
+                    m.gizmo_mut().config.mode = GizmoMode::Rotate;
                 }
-            }
-            Event::KeyDown {
-                key: fret_core::KeyCode::KeyR,
-                repeat: false,
-                ..
-            } => {
-                let _ = state.demo.update(app, |m, _cx| {
-                    if m.is_busy() {
-                        return;
-                    }
-                    if m.op_mask_enabled {
-                        m.set_op_mask_preset(GizmoOpMaskPreset::Rotate);
-                    } else {
-                        m.gizmo_mut().config.mode = GizmoMode::Rotate;
-                    }
-                });
-                app.request_redraw(window);
-            }
-            Event::KeyDown {
-                key: fret_core::KeyCode::KeyS,
-                repeat: false,
-                ..
-            } => {
-                let _ = state.demo.update(app, |m, _cx| {
-                    if m.is_busy() {
-                        return;
-                    }
-                    if m.op_mask_enabled {
-                        m.set_op_mask_preset(GizmoOpMaskPreset::Scale);
-                    } else {
-                        m.gizmo_mut().config.mode = GizmoMode::Scale;
-                    }
-                });
-                app.request_redraw(window);
-            }
-            Event::KeyDown {
-                key: fret_core::KeyCode::KeyT,
-                repeat: false,
-                ..
-            } => {
-                let _ = state.demo.update(app, |m, _cx| {
-                    if m.is_busy() {
-                        return;
-                    }
-                    if m.op_mask_enabled {
-                        m.set_op_mask_preset(GizmoOpMaskPreset::Translate);
-                    } else {
-                        m.gizmo_mut().config.mode = GizmoMode::Translate;
-                    }
-                });
-                app.request_redraw(window);
-            }
-            Event::KeyDown {
-                key: fret_core::KeyCode::KeyU,
-                repeat: false,
-                ..
-            } => {
-                let _ = state.demo.update(app, |m, _cx| {
-                    if m.is_busy() {
-                        return;
-                    }
-                    if m.op_mask_enabled {
-                        m.set_op_mask_preset(GizmoOpMaskPreset::Universal);
-                    } else {
-                        m.gizmo_mut().config.mode = GizmoMode::Universal;
-                    }
-                });
-                app.request_redraw(window);
-            }
-            Event::KeyDown {
-                key: fret_core::KeyCode::KeyH,
-                repeat: false,
-                ..
-            } => {
-                let _ = state.demo.update(app, |m, _cx| {
-                    m.show_help = !m.show_help;
-                });
-                app.request_redraw(window);
-            }
-            Event::KeyDown {
-                key: fret_core::KeyCode::KeyM,
-                repeat: false,
-                ..
-            } => {
-                let _ = state.demo.update(app, |m, _cx| {
-                    if m.is_busy() {
-                        return;
-                    }
-                    m.op_mask_enabled = !m.op_mask_enabled;
-                    if m.op_mask_enabled {
-                        // Pick a reasonable starting preset based on the current coarse mode.
-                        let preset = match m.gizmo().config.mode {
-                            GizmoMode::Translate => GizmoOpMaskPreset::Translate,
-                            GizmoMode::Rotate => GizmoOpMaskPreset::Rotate,
-                            GizmoMode::Scale => GizmoOpMaskPreset::Scale,
-                            GizmoMode::Universal => GizmoOpMaskPreset::Universal,
-                        };
-                        m.set_op_mask_preset(preset);
-                    } else {
-                        m.apply_op_mask();
-                    }
-                });
-                app.request_redraw(window);
-            }
-            Event::KeyDown {
-                key: fret_core::KeyCode::KeyO,
-                repeat: false,
-                ..
-            } => {
-                let _ = state.demo.update(app, |m, _cx| {
-                    if m.is_busy() {
-                        return;
-                    }
-                    m.gizmo_mut().config.depth_mode = match m.gizmo().config.depth_mode {
-                        DepthMode::Test => DepthMode::Always,
-                        DepthMode::Ghost | DepthMode::Always => DepthMode::Test,
-                    };
-                });
-                app.request_redraw(window);
-            }
-            Event::KeyDown {
-                key: fret_core::KeyCode::KeyD,
-                repeat: false,
-                ..
-            } => {
-                let _ = state.demo.update(app, |m, _cx| {
-                    if m.is_busy() {
-                        return;
-                    }
-                    m.gizmo_mut().config.universal_includes_translate_depth =
-                        !m.gizmo().config.universal_includes_translate_depth;
-                });
-                app.request_redraw(window);
-            }
-            Event::KeyDown {
-                key: fret_core::KeyCode::KeyY,
-                repeat: false,
-                ..
-            } => {
-                let mut next_index: Option<usize> = None;
-                let _ = state.demo.update(app, |m, _cx| {
-                    if m.is_busy() {
-                        return;
-                    }
-                    let idx = (m.theme_preset_index + 1) % DEMO_THEME_PRESETS.len();
-                    next_index = Some(idx);
-                });
-
-                let Some(next_index) = next_index else {
-                    return;
-                };
-                let (_name, path) = DEMO_THEME_PRESETS[next_index];
-
-                let Some(bytes) = fs::read(path).ok() else {
-                    return;
-                };
-                let Ok(cfg) = ThemeConfig::from_slice(&bytes) else {
-                    return;
-                };
-
-                Theme::with_global_mut(app, |theme| theme.apply_config(&cfg));
-
-                let theme = Theme::global(&*app).clone();
-                let _ = state.demo.update(app, |m, _cx| {
-                    m.theme_preset_index = next_index;
-                    apply_viewport_gizmo_theme(&theme, m);
-                });
-                app.request_redraw(window);
-            }
-            Event::KeyDown {
-                key: fret_core::KeyCode::KeyG,
-                modifiers,
-                repeat: false,
-                ..
-            } => {
-                let _ = state.demo.update(app, |m, _cx| {
-                    if m.is_busy() {
-                        return;
-                    }
-
-                    if modifiers.shift {
-                        m.view_gizmo_visual_preset_index = (m.view_gizmo_visual_preset_index + 1)
-                            % ViewGizmoVisualPreset::ALL.len();
-                        let cursor_units_per_screen_px =
-                            m.gizmo_cursor_units_per_screen_px.clamp(0.1, 16.0);
-                        let visuals =
-                            ViewGizmoVisualPreset::ALL[m.view_gizmo_visual_preset_index].visuals();
-                        m.view_gizmo.config.margin_px =
-                            visuals.margin_px * cursor_units_per_screen_px;
-                        m.view_gizmo.config.size_px = visuals.size_px * cursor_units_per_screen_px;
-                        m.view_gizmo.config.pick_padding_px =
-                            visuals.pick_padding_px * cursor_units_per_screen_px;
-                        m.view_gizmo.config.center_button_radius_px =
-                            visuals.center_button_radius_px * cursor_units_per_screen_px;
-                        m.view_gizmo.config.face_color = visuals.face_color;
-                        m.view_gizmo.config.edge_color = visuals.edge_color;
-                        m.view_gizmo.config.hover_color = visuals.hover_color;
-                        m.view_gizmo.config.x_color = visuals.x_color;
-                        m.view_gizmo.config.y_color = visuals.y_color;
-                        m.view_gizmo.config.z_color = visuals.z_color;
-                    } else {
-                        m.gizmo_visual_preset_index =
-                            (m.gizmo_visual_preset_index + 1) % GizmoVisualPreset::ALL.len();
-                        let cursor_units_per_screen_px =
-                            m.gizmo_cursor_units_per_screen_px.clamp(0.1, 16.0);
-                        let preset = GizmoVisualPreset::ALL[m.gizmo_visual_preset_index];
-                        let visuals = preset.visuals();
-                        let gizmo = m.gizmo_mut();
-                        gizmo.set_part_visuals(preset.part_visuals());
-                        gizmo.config.size_px = visuals.size_px * cursor_units_per_screen_px;
-                        gizmo.config.pick_radius_px =
-                            visuals.pick_radius_px * cursor_units_per_screen_px;
-                        gizmo.config.line_thickness_px =
-                            visuals.line_thickness_px * cursor_units_per_screen_px;
-                        gizmo.config.bounds_handle_size_px =
-                            visuals.bounds_handle_size_px * cursor_units_per_screen_px;
-                        gizmo.config.show_occluded = visuals.show_occluded;
-                        gizmo.config.occluded_alpha = visuals.occluded_alpha;
-                        gizmo.config.x_color = visuals.x_color;
-                        gizmo.config.y_color = visuals.y_color;
-                        gizmo.config.z_color = visuals.z_color;
-                        gizmo.config.hover_color = visuals.hover_color;
-                    }
-                });
-                app.request_redraw(window);
-            }
-            Event::KeyDown {
-                key: fret_core::KeyCode::KeyV,
-                repeat: false,
-                ..
-            } => {
-                let _ = state.demo.update(app, |m, _cx| {
-                    if m.is_busy() {
-                        return;
-                    }
-                    m.gizmo_mut().config.size_policy = match m.gizmo().config.size_policy {
-                        GizmoSizePolicy::ConstantPixels => {
-                            GizmoSizePolicy::PixelsClampedBySelectionBounds {
-                                min_fraction_of_max_extent: 0.0,
-                                max_fraction_of_max_extent: 1.50,
-                            }
-                        }
-                        GizmoSizePolicy::PixelsClampedBySelectionBounds { .. } => {
-                            GizmoSizePolicy::SelectionBounds {
-                                fraction_of_max_extent: 1.2,
-                            }
-                        }
-                        GizmoSizePolicy::SelectionBounds { .. } => GizmoSizePolicy::ConstantPixels,
-                    };
-                });
-                app.request_redraw(window);
-            }
-            Event::KeyDown {
-                key: fret_core::KeyCode::Semicolon,
-                modifiers,
-                repeat: false,
-                ..
-            } => {
-                let step = if modifiers.shift { 0.25 } else { 0.05 };
-                let _ = state.demo.update(app, |m, _cx| {
-                    if m.is_busy() {
-                        return;
-                    }
-                    match m.gizmo_mut().config.size_policy {
-                        GizmoSizePolicy::SelectionBounds {
-                            ref mut fraction_of_max_extent,
-                        } => {
-                            *fraction_of_max_extent =
-                                (*fraction_of_max_extent - step).clamp(0.05, 5.0);
-                        }
-                        GizmoSizePolicy::PixelsClampedBySelectionBounds {
-                            ref mut min_fraction_of_max_extent,
-                            max_fraction_of_max_extent,
-                        } => {
-                            *min_fraction_of_max_extent = (*min_fraction_of_max_extent - step)
-                                .clamp(0.0, max_fraction_of_max_extent);
-                        }
-                        GizmoSizePolicy::ConstantPixels => {}
-                    }
-                });
-                app.request_redraw(window);
-            }
-            Event::KeyDown {
-                key: fret_core::KeyCode::Quote,
-                modifiers,
-                repeat: false,
-                ..
-            } => {
-                let step = if modifiers.shift { 0.25 } else { 0.05 };
-                let _ = state.demo.update(app, |m, _cx| {
-                    if m.is_busy() {
-                        return;
-                    }
-                    match m.gizmo_mut().config.size_policy {
-                        GizmoSizePolicy::SelectionBounds {
-                            ref mut fraction_of_max_extent,
-                        } => {
-                            *fraction_of_max_extent =
-                                (*fraction_of_max_extent + step).clamp(0.05, 5.0);
-                        }
-                        GizmoSizePolicy::PixelsClampedBySelectionBounds {
-                            min_fraction_of_max_extent,
-                            ref mut max_fraction_of_max_extent,
-                        } => {
-                            *max_fraction_of_max_extent = (*max_fraction_of_max_extent + step)
-                                .clamp(min_fraction_of_max_extent, 5.0);
-                        }
-                        GizmoSizePolicy::ConstantPixels => {}
-                    }
-                });
-                app.request_redraw(window);
-            }
-            Event::KeyDown {
-                key: fret_core::KeyCode::Minus,
-                modifiers,
-                repeat: false,
-                ..
-            } => {
-                let step_screen_px = if modifiers.shift { 16.0 } else { 4.0 };
-                let _ = state.demo.update(app, |m, _cx| {
-                    if m.is_busy() {
-                        return;
-                    }
-                    let cursor_units_per_screen_px =
-                        m.gizmo_cursor_units_per_screen_px.clamp(0.1, 16.0);
-                    let step = step_screen_px * cursor_units_per_screen_px;
-                    let min = 24.0 * cursor_units_per_screen_px;
-                    let max = 256.0 * cursor_units_per_screen_px;
-                    m.gizmo_mut().config.size_px =
-                        (m.gizmo().config.size_px - step).clamp(min, max);
-                });
-                app.request_redraw(window);
-            }
-            Event::KeyDown {
-                key: fret_core::KeyCode::Equal,
-                modifiers,
-                repeat: false,
-                ..
-            } => {
-                let step_screen_px = if modifiers.shift { 16.0 } else { 4.0 };
-                let _ = state.demo.update(app, |m, _cx| {
-                    if m.is_busy() {
-                        return;
-                    }
-                    let cursor_units_per_screen_px =
-                        m.gizmo_cursor_units_per_screen_px.clamp(0.1, 16.0);
-                    let step = step_screen_px * cursor_units_per_screen_px;
-                    let min = 24.0 * cursor_units_per_screen_px;
-                    let max = 256.0 * cursor_units_per_screen_px;
-                    m.gizmo_mut().config.size_px =
-                        (m.gizmo().config.size_px + step).clamp(min, max);
-                });
-                app.request_redraw(window);
-            }
-            Event::KeyDown {
-                key: fret_core::KeyCode::Comma,
-                modifiers,
-                repeat: false,
-                ..
-            } => {
-                let step_screen_px = if modifiers.shift { 2.0 } else { 1.0 };
-                let _ = state.demo.update(app, |m, _cx| {
-                    if m.is_busy() {
-                        return;
-                    }
-                    let cursor_units_per_screen_px =
-                        m.gizmo_cursor_units_per_screen_px.clamp(0.1, 16.0);
-                    let step = step_screen_px * cursor_units_per_screen_px;
-                    let thickness_min = 1.0 * cursor_units_per_screen_px;
-                    let thickness_max = 24.0 * cursor_units_per_screen_px;
-                    let pick_radius_min = 4.0 * cursor_units_per_screen_px;
-                    let pick_radius_max = 32.0 * cursor_units_per_screen_px;
-                    let handle_min = 6.0 * cursor_units_per_screen_px;
-                    let handle_max = 32.0 * cursor_units_per_screen_px;
-                    m.gizmo_mut().config.line_thickness_px = (m.gizmo().config.line_thickness_px
-                        - step)
-                        .clamp(thickness_min, thickness_max);
-                    m.gizmo_mut().config.pick_radius_px = (m.gizmo().config.pick_radius_px - step)
-                        .clamp(pick_radius_min, pick_radius_max);
-                    m.gizmo_mut().config.bounds_handle_size_px =
-                        (m.gizmo().config.bounds_handle_size_px - step)
-                            .clamp(handle_min, handle_max);
-                });
-                app.request_redraw(window);
-            }
-            Event::KeyDown {
-                key: fret_core::KeyCode::Period,
-                modifiers,
-                repeat: false,
-                ..
-            } => {
-                let step_screen_px = if modifiers.shift { 2.0 } else { 1.0 };
-                let _ = state.demo.update(app, |m, _cx| {
-                    if m.is_busy() {
-                        return;
-                    }
-                    let cursor_units_per_screen_px =
-                        m.gizmo_cursor_units_per_screen_px.clamp(0.1, 16.0);
-                    let step = step_screen_px * cursor_units_per_screen_px;
-                    let thickness_min = 1.0 * cursor_units_per_screen_px;
-                    let thickness_max = 24.0 * cursor_units_per_screen_px;
-                    let pick_radius_min = 4.0 * cursor_units_per_screen_px;
-                    let pick_radius_max = 32.0 * cursor_units_per_screen_px;
-                    let handle_min = 6.0 * cursor_units_per_screen_px;
-                    let handle_max = 32.0 * cursor_units_per_screen_px;
-                    m.gizmo_mut().config.line_thickness_px = (m.gizmo().config.line_thickness_px
-                        + step)
-                        .clamp(thickness_min, thickness_max);
-                    m.gizmo_mut().config.pick_radius_px = (m.gizmo().config.pick_radius_px + step)
-                        .clamp(pick_radius_min, pick_radius_max);
-                    m.gizmo_mut().config.bounds_handle_size_px =
-                        (m.gizmo().config.bounds_handle_size_px + step)
-                            .clamp(handle_min, handle_max);
-                });
-                app.request_redraw(window);
-            }
-            Event::KeyDown {
-                key: fret_core::KeyCode::BracketLeft,
-                repeat: false,
-                ..
-            } => {
-                let _ = state.demo.update(app, |m, _cx| {
-                    if m.is_busy() || !m.op_mask_enabled {
-                        return;
-                    }
-                    let n = GizmoOpMaskPreset::ALL.len();
-                    m.op_mask_preset_index = (m.op_mask_preset_index + n - 1) % n;
-                    m.apply_op_mask();
-                });
-                app.request_redraw(window);
-            }
-            Event::KeyDown {
-                key: fret_core::KeyCode::BracketRight,
-                repeat: false,
-                ..
-            } => {
-                let _ = state.demo.update(app, |m, _cx| {
-                    if m.is_busy() || !m.op_mask_enabled {
-                        return;
-                    }
-                    let n = GizmoOpMaskPreset::ALL.len();
-                    m.op_mask_preset_index = (m.op_mask_preset_index + 1) % n;
-                    m.apply_op_mask();
-                });
-                app.request_redraw(window);
-            }
-            Event::KeyDown {
-                key: fret_core::KeyCode::KeyL,
-                repeat: false,
-                ..
-            } => {
-                let _ = state.demo.update(app, |m, _cx| {
-                    if m.input.dragging || m.gizmo_mgr.state.active.is_some() {
-                        return;
-                    }
-                    m.gizmo_mut().config.orientation = match m.gizmo().config.orientation {
-                        GizmoOrientation::World => GizmoOrientation::Local,
-                        GizmoOrientation::Local => GizmoOrientation::World,
-                    };
-                });
-                app.request_redraw(window);
-            }
-            Event::KeyDown {
-                key: fret_core::KeyCode::KeyP,
-                repeat: false,
-                ..
-            } => {
-                let _ = state.demo.update(app, |m, _cx| {
-                    if m.input.dragging || m.gizmo_mgr.state.active.is_some() {
-                        return;
-                    }
-                    m.gizmo_mut().config.pivot_mode = match m.gizmo().config.pivot_mode {
-                        GizmoPivotMode::Active => GizmoPivotMode::Center,
-                        GizmoPivotMode::Center => GizmoPivotMode::Active,
-                    };
-                });
-                app.request_redraw(window);
-            }
-            Event::KeyDown {
-                key: fret_core::KeyCode::KeyN,
-                repeat: false,
-                ..
-            } => {
-                let _ = state.demo.update(app, |m, _cx| {
-                    if m.input.dragging
-                        || m.gizmo_mgr.state.active.is_some()
-                        || m.selection.is_empty()
-                    {
-                        return;
-                    }
-                    let Some(i) = m.selection.iter().position(|id| *id == m.active_target) else {
-                        m.active_target = m.selection[0];
-                        return;
-                    };
-                    m.active_target = m.selection[(i + 1) % m.selection.len()];
-                });
-                app.request_redraw(window);
-            }
-            Event::KeyDown {
-                key: fret_core::KeyCode::KeyB,
-                repeat: false,
-                ..
-            } => {
-                let _ = state.demo.update(app, |m, _cx| {
-                    if m.input.dragging
-                        || m.gizmo_mgr.state.active.is_some()
-                        || m.selection.is_empty()
-                    {
-                        return;
-                    }
-                    let Some(i) = m.selection.iter().position(|id| *id == m.active_target) else {
-                        m.active_target = m.selection[0];
-                        return;
-                    };
-                    m.active_target = m.selection[(i + m.selection.len() - 1) % m.selection.len()];
-                });
-                app.request_redraw(window);
-            }
-            Event::KeyDown {
-                key: fret_core::KeyCode::KeyF,
-                modifiers,
-                repeat: false,
-            } => {
-                let frame_all = modifiers.shift;
-                let smooth_time_s = if frame_all { 0.32 } else { 0.18 };
-                let _ = state.demo.update(app, |m, _cx| {
-                    if m.input.dragging || m.gizmo_mgr.state.active.is_some() {
-                        return;
-                    }
-
-                    let targets: Vec<GizmoTarget3d> = if frame_all || m.selection.is_empty() {
-                        m.targets.clone()
-                    } else {
-                        m.targets
-                            .iter()
-                            .copied()
-                            .filter(|t| m.selection.contains(&t.id))
-                            .collect()
-                    };
-
-                    let Some((min, max)) = targets_world_aabb(&targets) else {
-                        return;
-                    };
-                    frame_aabb(&mut m.camera, m.viewport_px, min, max, smooth_time_s);
-                });
-                app.request_redraw(window);
-            }
-            Event::KeyDown {
-                key: fret_core::KeyCode::KeyA,
-                modifiers,
-                repeat: false,
-            } if modifiers.ctrl || modifiers.meta => {
-                let clear = modifiers.shift;
-                let _ = state.demo.update(app, |m, _cx| {
-                    let is_busy = m.input.dragging
-                        || m.gizmo_mgr.state.active.is_some()
-                        || m.pending_selection.is_some()
-                        || m.marquee.is_some();
-                    if is_busy {
-                        return;
-                    }
-
-                    if clear {
-                        m.selection.clear();
-                        m.marquee_preview.clear();
-                    } else {
-                        m.selection = m.targets.iter().map(|t| t.id).collect();
-                        if !m.selection.contains(&m.active_target) {
-                            if let Some(id) = m.selection.first().copied() {
-                                m.active_target = id;
-                            }
-                        }
-                    }
-                });
-                app.request_redraw(window);
-            }
-            Event::KeyDown {
-                key: fret_core::KeyCode::Digit1,
-                modifiers,
-                repeat: false,
-            }
-            | Event::KeyDown {
-                key: fret_core::KeyCode::Digit2,
-                modifiers,
-                repeat: false,
-            }
-            | Event::KeyDown {
-                key: fret_core::KeyCode::Digit3,
-                modifiers,
-                repeat: false,
-            } => {
-                let id = match event {
-                    Event::KeyDown {
-                        key: fret_core::KeyCode::Digit1,
-                        ..
-                    } => GizmoTargetId(1),
-                    Event::KeyDown {
-                        key: fret_core::KeyCode::Digit2,
-                        ..
-                    } => GizmoTargetId(2),
-                    Event::KeyDown {
-                        key: fret_core::KeyCode::Digit3,
-                        ..
-                    } => GizmoTargetId(3),
-                    _ => return,
-                };
-                let op = selection_op(modifiers);
-                let _ = state.demo.update(app, |m, _cx| {
-                    if m.input.dragging || m.gizmo_mgr.state.active.is_some() {
-                        return;
-                    }
-                    apply_click_selection_op(&mut m.selection, &mut m.active_target, Some(id), op);
-                });
-                app.request_redraw(window);
-            }
-            _ => {
-                state.ui.dispatch_event(app, services, event);
-            }
-        }
-    }
-
-    fn handle_global_changes(
-        &mut self,
-        context: WinitWindowContext<'_, Self::WindowState>,
-        changed: &[TypeId],
-    ) {
-        if !changed.contains(&TypeId::of::<fret_core::WindowMetricsService>()) {
-            return;
-        }
-        context.app.request_redraw(context.window);
-    }
-
-    fn viewport_input(&mut self, app: &mut App, event: ViewportInputEvent) {
-        let model = app.with_global_mut(Gizmo3dDemoService::default, |svc, _app| {
-            svc.per_window.get(&event.window).cloned()
-        });
-        let Some(model) = model else {
-            return;
-        };
-
-        let pending_undo = model.update(app, |m, _cx| {
-            if m.viewport_target != event.target {
-                return PendingUndoRecords::default();
-            }
-
-            let tool_input = ViewportToolInput::from_viewport_input_target_px(
-                &event,
-                fret_core::MouseButton::Left,
-            );
-            let target_px_per_screen_px = tool_input.cursor_units_per_screen_px;
-            apply_gizmo_cursor_units_per_screen_px(m, target_px_per_screen_px);
-
-            let cursor_target_px = tool_input.cursor_px;
-            let cursor_screen_px = Vec2::new(event.cursor_px.x.0, event.cursor_px.y.0);
-
-            let mut pending = PendingUndoRecords::default();
-
-            match event.kind {
-                ViewportInputKind::PointerDown {
-                    button: fret_core::MouseButton::Right,
-                    ..
-                } => {
-                    m.camera.frame_anim = None;
-                    m.camera.orbiting = true;
-                    m.camera.panning = false;
-                    m.camera.last_cursor_screen_px = cursor_screen_px;
-                }
-                ViewportInputKind::PointerDown {
-                    button: fret_core::MouseButton::Middle,
-                    ..
-                } => {
-                    m.camera.frame_anim = None;
-                    m.camera.panning = true;
-                    m.camera.orbiting = false;
-                    m.camera.last_cursor_screen_px = cursor_screen_px;
-                }
-                ViewportInputKind::PointerUp {
-                    button: fret_core::MouseButton::Right,
-                    ..
-                } => {
-                    m.camera.orbiting = false;
-                }
-                ViewportInputKind::PointerUp {
-                    button: fret_core::MouseButton::Middle,
-                    ..
-                } => {
-                    m.camera.panning = false;
-                }
-                ViewportInputKind::PointerMove { buttons, .. } => {
-                    // Some platforms can produce inconsistent "buttons" state for move events.
-                    // Prefer to keep orbit/pan latched until an explicit PointerUp arrives, but
-                    // still allow the move buttons state to end navigation if it becomes false.
-                    if m.camera.orbiting && !buttons.right {
-                        m.camera.orbiting = false;
-                    }
-                    if m.camera.panning && !buttons.middle {
-                        m.camera.panning = false;
-                    }
-
-                    if m.camera.orbiting || m.camera.panning {
-                        let delta = cursor_screen_px - m.camera.last_cursor_screen_px;
-                        m.camera.last_cursor_screen_px = cursor_screen_px;
-
-                        if m.camera.orbiting {
-                            let orbit_sensitivity = 0.008;
-                            m.camera.yaw_radians -= delta.x * orbit_sensitivity;
-                            m.camera.pitch_radians = (m.camera.pitch_radians
-                                - delta.y * orbit_sensitivity)
-                                .clamp(-1.55, 1.55);
-                        }
-
-                        if m.camera.panning {
-                            let pan_sensitivity = 0.002;
-                            let pitch = m.camera.pitch_radians.clamp(-1.55, 1.55);
-                            let yaw = m.camera.yaw_radians;
-                            let distance = m.camera.distance.max(0.05);
-                            let pan_scale = match m.camera.projection {
-                                OrbitProjection::Perspective => distance,
-                                OrbitProjection::Orthographic => {
-                                    m.camera.ortho_half_height.max(0.05)
-                                }
-                            };
-
-                            let dir = Vec3::new(
-                                yaw.cos() * pitch.cos(),
-                                pitch.sin(),
-                                yaw.sin() * pitch.cos(),
-                            );
-                            let eye = m.camera.target + dir * distance;
-                            let forward = (m.camera.target - eye).normalize_or_zero();
-                            let right = forward.cross(Vec3::Y).normalize_or_zero();
-                            let up = right.cross(forward).normalize_or_zero();
-
-                            if right.length_squared() > 0.0 && up.length_squared() > 0.0 {
-                                let pan = (-right * delta.x + up * delta.y)
-                                    * (pan_scale * pan_sensitivity);
-                                m.camera.target += pan;
-                            }
-                        }
-                    }
-                }
-                ViewportInputKind::Wheel { delta, .. } => {
-                    m.camera.frame_anim = None;
-                    // Positive wheel delta.y typically scrolls up; treat that as "zoom in".
-                    let zoom_sensitivity = 0.0015;
-                    let scroll = delta.y.0;
-                    let factor = (-scroll * zoom_sensitivity).exp();
-                    match m.camera.projection {
-                        OrbitProjection::Perspective => {
-                            m.camera.distance = (m.camera.distance * factor).clamp(0.2, 25.0);
-                        }
-                        OrbitProjection::Orthographic => {
-                            m.camera.ortho_half_height =
-                                (m.camera.ortho_half_height * factor).clamp(0.05, 1000.0);
-                        }
-                    }
-                }
-                _ => {}
-            };
-
-            let modifiers = viewport_modifiers(event.kind);
-            let snap = gizmo_snap_from_modifiers(&modifiers);
-            let precision = precision_multiplier(&modifiers);
-
-            let is_navigating = m.camera.orbiting || m.camera.panning;
-            let hovered = !is_navigating;
-            let cursor_over_draw_rect = tool_input.cursor_over_draw_rect;
-
-            let config = ViewportToolArbitratorConfig {
-                primary_button: fret_core::MouseButton::Left,
-                coordinate_space: ViewportToolCoordinateSpace::TargetPx,
-            };
-            let mut tools = [
-                ViewportToolEntry {
-                    id: TOOL_ID_VIEW_GIZMO,
-                    priority: ViewportToolPriority(1000),
-                    set_hot: Some(view_gizmo_tool_set_hot),
-                    hit_test: view_gizmo_tool_hit_test,
-                    handle_event: view_gizmo_tool_handle_event,
-                    cancel: None,
-                },
-                ViewportToolEntry {
-                    id: TOOL_ID_TRANSFORM_GIZMO,
-                    priority: ViewportToolPriority(500),
-                    set_hot: Some(transform_gizmo_tool_set_hot),
-                    hit_test: transform_gizmo_tool_hit_test,
-                    handle_event: transform_gizmo_tool_handle_event,
-                    cancel: None,
-                },
-                ViewportToolEntry {
-                    id: TOOL_ID_SELECTION,
-                    priority: ViewportToolPriority(0),
-                    set_hot: None,
-                    hit_test: selection_tool_hit_test,
-                    handle_event: selection_tool_handle_event,
-                    cancel: None,
-                },
-            ];
-
-            let mut router = m.viewport_tool_router;
-            let _handled = route_viewport_tools(&mut router, config, m, &event, &mut tools);
-            m.viewport_tool_router = router;
-
-            if m.viewport_tool_router.active == Some(TOOL_ID_VIEW_GIZMO)
-                || m.view_gizmo.state.drag_active
-            {
-                return pending;
-            }
-
-            let over_view_gizmo = m.viewport_tool_router.hot == Some(TOOL_ID_VIEW_GIZMO)
-                || m.view_gizmo.state.drag_active
-                || m.view_gizmo.state.hovered.is_some()
-                || m.view_gizmo.state.hovered_center_button;
-            let scene_hovered = hovered && cursor_over_draw_rect && !over_view_gizmo;
-
-            let is_selecting = m.viewport_tool_router.active == Some(TOOL_ID_SELECTION)
-                || m.pending_selection.is_some()
-                || m.marquee.is_some();
-
-            let transform_hot = m.viewport_tool_router.hot == Some(TOOL_ID_TRANSFORM_GIZMO);
-            let transform_active = m.viewport_tool_router.active == Some(TOOL_ID_TRANSFORM_GIZMO)
-                || m.gizmo_mgr.state.active.is_some()
-                || m.input.dragging;
-
-            let wants_transform_update = !is_selecting
-                && matches!(
-                    event.kind,
-                    ViewportInputKind::PointerMove { .. }
-                        | ViewportInputKind::PointerDown { .. }
-                        | ViewportInputKind::PointerUp { .. }
-                )
-                && (transform_hot || transform_active);
-
-            let (drag_started, dragging) = if transform_active {
-                match event.kind {
-                    ViewportInputKind::PointerDown {
-                        button: fret_core::MouseButton::Left,
-                        ..
-                    } => (true, true),
-                    ViewportInputKind::PointerUp {
-                        button: fret_core::MouseButton::Left,
-                        ..
-                    } => (false, false),
-                    ViewportInputKind::PointerMove { .. } => (false, true),
-                    _ => (false, m.input.dragging),
-                }
-            } else {
-                (false, false)
-            };
-
-            let viewport_px = event.geometry.target_px_size;
-            let view_projection = camera_view_projection(viewport_px, m.camera);
-            let viewport = tool_input.viewport;
-            m.input = GizmoInput {
-                cursor_px: cursor_target_px,
-                hovered: scene_hovered && !is_selecting,
-                drag_started,
-                dragging,
-                snap,
-                cancel: false,
-                precision,
-            };
-
-            if wants_transform_update {
-                let selected: Vec<GizmoTarget3d> = m
-                    .targets
-                    .iter()
-                    .copied()
-                    .filter(|t| m.selection.contains(&t.id))
-                    .collect();
-
-                let apply_updated_targets =
-                    |targets: &mut Vec<GizmoTarget3d>, updated: &[GizmoTarget3d]| {
-                        for u in updated {
-                            if let Some(t) = targets.iter_mut().find(|t| t.id == u.id) {
-                                t.transform = u.transform;
-                            }
-                        }
-                    };
-
-                let properties = DemoGizmoPropertySource {
-                    scalars: &m.custom_scalar_values,
-                };
-                if let Some(update) = m.gizmo_mgr.update(
-                    view_projection,
-                    viewport,
-                    m.gizmo().config.depth_range,
-                    m.input,
-                    m.active_target,
-                    &selected,
-                    Some(&properties),
-                ) {
-                    m.hud.last = Some(GizmoHudLastUpdate {
-                        phase: update.phase,
-                        active: update.active,
-                        result: update.result,
-                    });
-                    match update.phase {
-                        GizmoPhase::Begin => {
-                            m.drag_start_targets = Some(selected.clone());
-                            m.capture_custom_scalar_drag_start(&update.custom_edits);
-                            apply_updated_targets(&mut m.targets, &update.updated_targets);
-                            m.apply_custom_scalar_totals(&update.custom_edits);
-                        }
-                        GizmoPhase::Update => {
-                            m.capture_custom_scalar_drag_start(&update.custom_edits);
-                            apply_updated_targets(&mut m.targets, &update.updated_targets);
-                            m.apply_custom_scalar_totals(&update.custom_edits);
-                        }
-                        GizmoPhase::Commit => {
-                            m.capture_custom_scalar_drag_start(&update.custom_edits);
-                            m.apply_custom_scalar_totals(&update.custom_edits);
-
-                            let selection = m.selection.clone();
-                            pending.custom_scalars = m.commit_custom_scalar_undo_record(
-                                &update.custom_edits,
-                                m.active_target,
-                                &selection,
-                            );
-
-                            if let Some(before) = m.drag_start_targets.take() {
-                                let mut after: Vec<GizmoTarget3d> =
-                                    Vec::with_capacity(before.len());
-                                for t in &before {
-                                    if let Some(now) = m.targets.iter().find(|v| v.id == t.id) {
-                                        after.push(*now);
-                                    }
-                                }
-
-                                if before != after {
-                                    let tool = match update.result {
-                                        fret_gizmo::GizmoResult::Translation { .. } => {
-                                            "gizmo.translate"
-                                        }
-                                        fret_gizmo::GizmoResult::Rotation { .. } => "gizmo.rotate",
-                                        fret_gizmo::GizmoResult::Arcball { .. } => "gizmo.arcball",
-                                        fret_gizmo::GizmoResult::Scale { .. } => "gizmo.scale",
-                                        fret_gizmo::GizmoResult::CustomScalar { key, .. } => {
-                                            if key == LightRadiusGizmoPlugin::PROPERTY_RADIUS {
-                                                "gizmo.light_radius"
-                                            } else {
-                                                "gizmo.scalar"
-                                            }
-                                        }
-                                    };
-
-                                    let mut sel = m.selection.clone();
-                                    sel.sort_by_key(|id| id.0);
-                                    let sel_key = sel
-                                        .iter()
-                                        .map(|id| id.0.to_string())
-                                        .collect::<Vec<_>>()
-                                        .join(",");
-                                    let coalesce_key = format!(
-                                        "{tool}:active={}:sel={sel_key}",
-                                        m.active_target.0
-                                    );
-
-                                    let rec = UndoRecord::new(ValueTx::new(before, after))
-                                        .label("Transform")
-                                        .coalesce_key(CoalesceKey::from(coalesce_key));
-                                    pending.transform = Some(rec);
-                                }
-                            }
-                        }
-                        GizmoPhase::Cancel => {
-                            if let Some(start) = m.drag_start_targets.take() {
-                                apply_updated_targets(&mut m.targets, &start);
-                            }
-                            m.cancel_custom_scalar_drag();
-                        }
-                    }
-                }
-            }
-
-            m.hud.hovered = m.gizmo_mgr.state.hovered;
-            m.hud.hovered_kind = m.hud.hovered.and_then(transform_gizmo_kind_for_handle);
-            m.hud.active = m.gizmo_mgr.state.active;
-            m.hud.snap = m.input.snap;
-
-            pending
-        });
-
-        if let Ok(pending) = pending_undo {
-            if let Some(rec) = pending.transform {
-                let _ = app.with_global_mut(
-                    || UndoService::<ValueTx<Vec<GizmoTarget3d>>>::with_limit(256),
-                    |undo_svc, _app| {
-                        undo_svc.record_or_coalesce_active(event.window, rec);
-                    },
-                );
-            }
-            if let Some(rec) = pending.custom_scalars {
-                let _ = app.with_global_mut(
-                    || UndoService::<ValueTx<HashMap<CustomScalarKey, f32>>>::with_limit(256),
-                    |undo_svc, _app| {
-                        undo_svc.record_or_coalesce_active(event.window, rec);
-                    },
-                );
-            }
-        }
-
-        app.request_redraw(event.window);
-    }
-
-    fn record_engine_frame(
-        &mut self,
-        app: &mut App,
-        window: AppWindowId,
-        state: &mut Self::WindowState,
-        context: &WgpuContext,
-        renderer: &mut Renderer,
-        _scale_factor: f32,
-        _tick_id: fret_runtime::TickId,
-        _frame_id: fret_runtime::FrameId,
-    ) -> EngineFrameUpdate {
-        let _ = Self::sync_window_command_availability(app, window, &state.doc);
-
-        let (target_id, color_view, depth_view, size) =
-            Self::ensure_target(app, window, state, context, renderer);
-
-        let animating = state
-            .demo
-            .update(app, |m, _cx| {
-                let now = Instant::now();
-                let dt = m
-                    .last_frame_instant
-                    .and_then(|prev| now.checked_duration_since(prev))
-                    .unwrap_or_default();
-                m.last_frame_instant = Some(now);
-                step_frame_anim(&mut m.camera, dt.as_secs_f32())
-            })
-            .unwrap_or(false);
-        if animating {
+            });
             app.request_redraw(window);
         }
+        Event::KeyDown {
+            key: fret_core::KeyCode::KeyS,
+            repeat: false,
+            ..
+        } => {
+            let _ = state.demo.update(app, |m, _cx| {
+                if m.is_busy() {
+                    return;
+                }
+                if m.op_mask_enabled {
+                    m.set_op_mask_preset(GizmoOpMaskPreset::Scale);
+                } else {
+                    m.gizmo_mut().config.mode = GizmoMode::Scale;
+                }
+            });
+            app.request_redraw(window);
+        }
+        Event::KeyDown {
+            key: fret_core::KeyCode::KeyT,
+            repeat: false,
+            ..
+        } => {
+            let _ = state.demo.update(app, |m, _cx| {
+                if m.is_busy() {
+                    return;
+                }
+                if m.op_mask_enabled {
+                    m.set_op_mask_preset(GizmoOpMaskPreset::Translate);
+                } else {
+                    m.gizmo_mut().config.mode = GizmoMode::Translate;
+                }
+            });
+            app.request_redraw(window);
+        }
+        Event::KeyDown {
+            key: fret_core::KeyCode::KeyU,
+            repeat: false,
+            ..
+        } => {
+            let _ = state.demo.update(app, |m, _cx| {
+                if m.is_busy() {
+                    return;
+                }
+                if m.op_mask_enabled {
+                    m.set_op_mask_preset(GizmoOpMaskPreset::Universal);
+                } else {
+                    m.gizmo_mut().config.mode = GizmoMode::Universal;
+                }
+            });
+            app.request_redraw(window);
+        }
+        Event::KeyDown {
+            key: fret_core::KeyCode::KeyH,
+            repeat: false,
+            ..
+        } => {
+            let _ = state.demo.update(app, |m, _cx| {
+                m.show_help = !m.show_help;
+            });
+            app.request_redraw(window);
+        }
+        Event::KeyDown {
+            key: fret_core::KeyCode::KeyM,
+            repeat: false,
+            ..
+        } => {
+            let _ = state.demo.update(app, |m, _cx| {
+                if m.is_busy() {
+                    return;
+                }
+                m.op_mask_enabled = !m.op_mask_enabled;
+                if m.op_mask_enabled {
+                    // Pick a reasonable starting preset based on the current coarse mode.
+                    let preset = match m.gizmo().config.mode {
+                        GizmoMode::Translate => GizmoOpMaskPreset::Translate,
+                        GizmoMode::Rotate => GizmoOpMaskPreset::Rotate,
+                        GizmoMode::Scale => GizmoOpMaskPreset::Scale,
+                        GizmoMode::Universal => GizmoOpMaskPreset::Universal,
+                    };
+                    m.set_op_mask_preset(preset);
+                } else {
+                    m.apply_op_mask();
+                }
+            });
+            app.request_redraw(window);
+        }
+        Event::KeyDown {
+            key: fret_core::KeyCode::KeyO,
+            repeat: false,
+            ..
+        } => {
+            let _ = state.demo.update(app, |m, _cx| {
+                if m.is_busy() {
+                    return;
+                }
+                m.gizmo_mut().config.depth_mode = match m.gizmo().config.depth_mode {
+                    DepthMode::Test => DepthMode::Always,
+                    DepthMode::Ghost | DepthMode::Always => DepthMode::Test,
+                };
+            });
+            app.request_redraw(window);
+        }
+        Event::KeyDown {
+            key: fret_core::KeyCode::KeyD,
+            repeat: false,
+            ..
+        } => {
+            let _ = state.demo.update(app, |m, _cx| {
+                if m.is_busy() {
+                    return;
+                }
+                m.gizmo_mut().config.universal_includes_translate_depth =
+                    !m.gizmo().config.universal_includes_translate_depth;
+            });
+            app.request_redraw(window);
+        }
+        Event::KeyDown {
+            key: fret_core::KeyCode::KeyY,
+            repeat: false,
+            ..
+        } => {
+            let mut next_index: Option<usize> = None;
+            let _ = state.demo.update(app, |m, _cx| {
+                if m.is_busy() {
+                    return;
+                }
+                let idx = (m.theme_preset_index + 1) % DEMO_THEME_PRESETS.len();
+                next_index = Some(idx);
+            });
 
-        let (
-            scene_targets,
-            selection,
-            active_target,
-            draw,
-            thickness_px,
-            view_proj,
-            marquee,
-            depth,
-        ) = state
+            let Some(next_index) = next_index else {
+                return;
+            };
+            let (_name, path) = DEMO_THEME_PRESETS[next_index];
+
+            let Some(bytes) = fs::read(path).ok() else {
+                return;
+            };
+            let Ok(cfg) = ThemeConfig::from_slice(&bytes) else {
+                return;
+            };
+
+            Theme::with_global_mut(app, |theme| theme.apply_config(&cfg));
+
+            let theme = Theme::global(&*app).clone();
+            let _ = state.demo.update(app, |m, _cx| {
+                m.theme_preset_index = next_index;
+                apply_viewport_gizmo_theme(&theme, m);
+            });
+            app.request_redraw(window);
+        }
+        Event::KeyDown {
+            key: fret_core::KeyCode::KeyG,
+            modifiers,
+            repeat: false,
+            ..
+        } => {
+            let _ = state.demo.update(app, |m, _cx| {
+                if m.is_busy() {
+                    return;
+                }
+
+                if modifiers.shift {
+                    m.view_gizmo_visual_preset_index =
+                        (m.view_gizmo_visual_preset_index + 1) % ViewGizmoVisualPreset::ALL.len();
+                    let cursor_units_per_screen_px =
+                        m.gizmo_cursor_units_per_screen_px.clamp(0.1, 16.0);
+                    let visuals =
+                        ViewGizmoVisualPreset::ALL[m.view_gizmo_visual_preset_index].visuals();
+                    m.view_gizmo.config.margin_px = visuals.margin_px * cursor_units_per_screen_px;
+                    m.view_gizmo.config.size_px = visuals.size_px * cursor_units_per_screen_px;
+                    m.view_gizmo.config.pick_padding_px =
+                        visuals.pick_padding_px * cursor_units_per_screen_px;
+                    m.view_gizmo.config.center_button_radius_px =
+                        visuals.center_button_radius_px * cursor_units_per_screen_px;
+                    m.view_gizmo.config.face_color = visuals.face_color;
+                    m.view_gizmo.config.edge_color = visuals.edge_color;
+                    m.view_gizmo.config.hover_color = visuals.hover_color;
+                    m.view_gizmo.config.x_color = visuals.x_color;
+                    m.view_gizmo.config.y_color = visuals.y_color;
+                    m.view_gizmo.config.z_color = visuals.z_color;
+                } else {
+                    m.gizmo_visual_preset_index =
+                        (m.gizmo_visual_preset_index + 1) % GizmoVisualPreset::ALL.len();
+                    let cursor_units_per_screen_px =
+                        m.gizmo_cursor_units_per_screen_px.clamp(0.1, 16.0);
+                    let preset = GizmoVisualPreset::ALL[m.gizmo_visual_preset_index];
+                    let visuals = preset.visuals();
+                    let gizmo = m.gizmo_mut();
+                    gizmo.set_part_visuals(preset.part_visuals());
+                    gizmo.config.size_px = visuals.size_px * cursor_units_per_screen_px;
+                    gizmo.config.pick_radius_px =
+                        visuals.pick_radius_px * cursor_units_per_screen_px;
+                    gizmo.config.line_thickness_px =
+                        visuals.line_thickness_px * cursor_units_per_screen_px;
+                    gizmo.config.bounds_handle_size_px =
+                        visuals.bounds_handle_size_px * cursor_units_per_screen_px;
+                    gizmo.config.show_occluded = visuals.show_occluded;
+                    gizmo.config.occluded_alpha = visuals.occluded_alpha;
+                    gizmo.config.x_color = visuals.x_color;
+                    gizmo.config.y_color = visuals.y_color;
+                    gizmo.config.z_color = visuals.z_color;
+                    gizmo.config.hover_color = visuals.hover_color;
+                }
+            });
+            app.request_redraw(window);
+        }
+        Event::KeyDown {
+            key: fret_core::KeyCode::KeyV,
+            repeat: false,
+            ..
+        } => {
+            let _ = state.demo.update(app, |m, _cx| {
+                if m.is_busy() {
+                    return;
+                }
+                m.gizmo_mut().config.size_policy = match m.gizmo().config.size_policy {
+                    GizmoSizePolicy::ConstantPixels => {
+                        GizmoSizePolicy::PixelsClampedBySelectionBounds {
+                            min_fraction_of_max_extent: 0.0,
+                            max_fraction_of_max_extent: 1.50,
+                        }
+                    }
+                    GizmoSizePolicy::PixelsClampedBySelectionBounds { .. } => {
+                        GizmoSizePolicy::SelectionBounds {
+                            fraction_of_max_extent: 1.2,
+                        }
+                    }
+                    GizmoSizePolicy::SelectionBounds { .. } => GizmoSizePolicy::ConstantPixels,
+                };
+            });
+            app.request_redraw(window);
+        }
+        Event::KeyDown {
+            key: fret_core::KeyCode::Semicolon,
+            modifiers,
+            repeat: false,
+            ..
+        } => {
+            let step = if modifiers.shift { 0.25 } else { 0.05 };
+            let _ = state.demo.update(app, |m, _cx| {
+                if m.is_busy() {
+                    return;
+                }
+                match m.gizmo_mut().config.size_policy {
+                    GizmoSizePolicy::SelectionBounds {
+                        ref mut fraction_of_max_extent,
+                    } => {
+                        *fraction_of_max_extent = (*fraction_of_max_extent - step).clamp(0.05, 5.0);
+                    }
+                    GizmoSizePolicy::PixelsClampedBySelectionBounds {
+                        ref mut min_fraction_of_max_extent,
+                        max_fraction_of_max_extent,
+                    } => {
+                        *min_fraction_of_max_extent = (*min_fraction_of_max_extent - step)
+                            .clamp(0.0, max_fraction_of_max_extent);
+                    }
+                    GizmoSizePolicy::ConstantPixels => {}
+                }
+            });
+            app.request_redraw(window);
+        }
+        Event::KeyDown {
+            key: fret_core::KeyCode::Quote,
+            modifiers,
+            repeat: false,
+            ..
+        } => {
+            let step = if modifiers.shift { 0.25 } else { 0.05 };
+            let _ = state.demo.update(app, |m, _cx| {
+                if m.is_busy() {
+                    return;
+                }
+                match m.gizmo_mut().config.size_policy {
+                    GizmoSizePolicy::SelectionBounds {
+                        ref mut fraction_of_max_extent,
+                    } => {
+                        *fraction_of_max_extent = (*fraction_of_max_extent + step).clamp(0.05, 5.0);
+                    }
+                    GizmoSizePolicy::PixelsClampedBySelectionBounds {
+                        min_fraction_of_max_extent,
+                        ref mut max_fraction_of_max_extent,
+                    } => {
+                        *max_fraction_of_max_extent = (*max_fraction_of_max_extent + step)
+                            .clamp(min_fraction_of_max_extent, 5.0);
+                    }
+                    GizmoSizePolicy::ConstantPixels => {}
+                }
+            });
+            app.request_redraw(window);
+        }
+        Event::KeyDown {
+            key: fret_core::KeyCode::Minus,
+            modifiers,
+            repeat: false,
+            ..
+        } => {
+            let step_screen_px = if modifiers.shift { 16.0 } else { 4.0 };
+            let _ = state.demo.update(app, |m, _cx| {
+                if m.is_busy() {
+                    return;
+                }
+                let cursor_units_per_screen_px =
+                    m.gizmo_cursor_units_per_screen_px.clamp(0.1, 16.0);
+                let step = step_screen_px * cursor_units_per_screen_px;
+                let min = 24.0 * cursor_units_per_screen_px;
+                let max = 256.0 * cursor_units_per_screen_px;
+                m.gizmo_mut().config.size_px = (m.gizmo().config.size_px - step).clamp(min, max);
+            });
+            app.request_redraw(window);
+        }
+        Event::KeyDown {
+            key: fret_core::KeyCode::Equal,
+            modifiers,
+            repeat: false,
+            ..
+        } => {
+            let step_screen_px = if modifiers.shift { 16.0 } else { 4.0 };
+            let _ = state.demo.update(app, |m, _cx| {
+                if m.is_busy() {
+                    return;
+                }
+                let cursor_units_per_screen_px =
+                    m.gizmo_cursor_units_per_screen_px.clamp(0.1, 16.0);
+                let step = step_screen_px * cursor_units_per_screen_px;
+                let min = 24.0 * cursor_units_per_screen_px;
+                let max = 256.0 * cursor_units_per_screen_px;
+                m.gizmo_mut().config.size_px = (m.gizmo().config.size_px + step).clamp(min, max);
+            });
+            app.request_redraw(window);
+        }
+        Event::KeyDown {
+            key: fret_core::KeyCode::Comma,
+            modifiers,
+            repeat: false,
+            ..
+        } => {
+            let step_screen_px = if modifiers.shift { 2.0 } else { 1.0 };
+            let _ = state.demo.update(app, |m, _cx| {
+                if m.is_busy() {
+                    return;
+                }
+                let cursor_units_per_screen_px =
+                    m.gizmo_cursor_units_per_screen_px.clamp(0.1, 16.0);
+                let step = step_screen_px * cursor_units_per_screen_px;
+                let thickness_min = 1.0 * cursor_units_per_screen_px;
+                let thickness_max = 24.0 * cursor_units_per_screen_px;
+                let pick_radius_min = 4.0 * cursor_units_per_screen_px;
+                let pick_radius_max = 32.0 * cursor_units_per_screen_px;
+                let handle_min = 6.0 * cursor_units_per_screen_px;
+                let handle_max = 32.0 * cursor_units_per_screen_px;
+                m.gizmo_mut().config.line_thickness_px =
+                    (m.gizmo().config.line_thickness_px - step).clamp(thickness_min, thickness_max);
+                m.gizmo_mut().config.pick_radius_px = (m.gizmo().config.pick_radius_px - step)
+                    .clamp(pick_radius_min, pick_radius_max);
+                m.gizmo_mut().config.bounds_handle_size_px =
+                    (m.gizmo().config.bounds_handle_size_px - step).clamp(handle_min, handle_max);
+            });
+            app.request_redraw(window);
+        }
+        Event::KeyDown {
+            key: fret_core::KeyCode::Period,
+            modifiers,
+            repeat: false,
+            ..
+        } => {
+            let step_screen_px = if modifiers.shift { 2.0 } else { 1.0 };
+            let _ = state.demo.update(app, |m, _cx| {
+                if m.is_busy() {
+                    return;
+                }
+                let cursor_units_per_screen_px =
+                    m.gizmo_cursor_units_per_screen_px.clamp(0.1, 16.0);
+                let step = step_screen_px * cursor_units_per_screen_px;
+                let thickness_min = 1.0 * cursor_units_per_screen_px;
+                let thickness_max = 24.0 * cursor_units_per_screen_px;
+                let pick_radius_min = 4.0 * cursor_units_per_screen_px;
+                let pick_radius_max = 32.0 * cursor_units_per_screen_px;
+                let handle_min = 6.0 * cursor_units_per_screen_px;
+                let handle_max = 32.0 * cursor_units_per_screen_px;
+                m.gizmo_mut().config.line_thickness_px =
+                    (m.gizmo().config.line_thickness_px + step).clamp(thickness_min, thickness_max);
+                m.gizmo_mut().config.pick_radius_px = (m.gizmo().config.pick_radius_px + step)
+                    .clamp(pick_radius_min, pick_radius_max);
+                m.gizmo_mut().config.bounds_handle_size_px =
+                    (m.gizmo().config.bounds_handle_size_px + step).clamp(handle_min, handle_max);
+            });
+            app.request_redraw(window);
+        }
+        Event::KeyDown {
+            key: fret_core::KeyCode::BracketLeft,
+            repeat: false,
+            ..
+        } => {
+            let _ = state.demo.update(app, |m, _cx| {
+                if m.is_busy() || !m.op_mask_enabled {
+                    return;
+                }
+                let n = GizmoOpMaskPreset::ALL.len();
+                m.op_mask_preset_index = (m.op_mask_preset_index + n - 1) % n;
+                m.apply_op_mask();
+            });
+            app.request_redraw(window);
+        }
+        Event::KeyDown {
+            key: fret_core::KeyCode::BracketRight,
+            repeat: false,
+            ..
+        } => {
+            let _ = state.demo.update(app, |m, _cx| {
+                if m.is_busy() || !m.op_mask_enabled {
+                    return;
+                }
+                let n = GizmoOpMaskPreset::ALL.len();
+                m.op_mask_preset_index = (m.op_mask_preset_index + 1) % n;
+                m.apply_op_mask();
+            });
+            app.request_redraw(window);
+        }
+        Event::KeyDown {
+            key: fret_core::KeyCode::KeyL,
+            repeat: false,
+            ..
+        } => {
+            let _ = state.demo.update(app, |m, _cx| {
+                if m.input.dragging || m.gizmo_mgr.state.active.is_some() {
+                    return;
+                }
+                m.gizmo_mut().config.orientation = match m.gizmo().config.orientation {
+                    GizmoOrientation::World => GizmoOrientation::Local,
+                    GizmoOrientation::Local => GizmoOrientation::World,
+                };
+            });
+            app.request_redraw(window);
+        }
+        Event::KeyDown {
+            key: fret_core::KeyCode::KeyP,
+            repeat: false,
+            ..
+        } => {
+            let _ = state.demo.update(app, |m, _cx| {
+                if m.input.dragging || m.gizmo_mgr.state.active.is_some() {
+                    return;
+                }
+                m.gizmo_mut().config.pivot_mode = match m.gizmo().config.pivot_mode {
+                    GizmoPivotMode::Active => GizmoPivotMode::Center,
+                    GizmoPivotMode::Center => GizmoPivotMode::Active,
+                };
+            });
+            app.request_redraw(window);
+        }
+        Event::KeyDown {
+            key: fret_core::KeyCode::KeyN,
+            repeat: false,
+            ..
+        } => {
+            let _ = state.demo.update(app, |m, _cx| {
+                if m.input.dragging || m.gizmo_mgr.state.active.is_some() || m.selection.is_empty()
+                {
+                    return;
+                }
+                let Some(i) = m.selection.iter().position(|id| *id == m.active_target) else {
+                    m.active_target = m.selection[0];
+                    return;
+                };
+                m.active_target = m.selection[(i + 1) % m.selection.len()];
+            });
+            app.request_redraw(window);
+        }
+        Event::KeyDown {
+            key: fret_core::KeyCode::KeyB,
+            repeat: false,
+            ..
+        } => {
+            let _ = state.demo.update(app, |m, _cx| {
+                if m.input.dragging || m.gizmo_mgr.state.active.is_some() || m.selection.is_empty()
+                {
+                    return;
+                }
+                let Some(i) = m.selection.iter().position(|id| *id == m.active_target) else {
+                    m.active_target = m.selection[0];
+                    return;
+                };
+                m.active_target = m.selection[(i + m.selection.len() - 1) % m.selection.len()];
+            });
+            app.request_redraw(window);
+        }
+        Event::KeyDown {
+            key: fret_core::KeyCode::KeyF,
+            modifiers,
+            repeat: false,
+        } => {
+            let frame_all = modifiers.shift;
+            let smooth_time_s = if frame_all { 0.32 } else { 0.18 };
+            let _ = state.demo.update(app, |m, _cx| {
+                if m.input.dragging || m.gizmo_mgr.state.active.is_some() {
+                    return;
+                }
+
+                let targets: Vec<GizmoTarget3d> = if frame_all || m.selection.is_empty() {
+                    m.targets.clone()
+                } else {
+                    m.targets
+                        .iter()
+                        .copied()
+                        .filter(|t| m.selection.contains(&t.id))
+                        .collect()
+                };
+
+                let Some((min, max)) = targets_world_aabb(&targets) else {
+                    return;
+                };
+                frame_aabb(&mut m.camera, m.viewport_px, min, max, smooth_time_s);
+            });
+            app.request_redraw(window);
+        }
+        Event::KeyDown {
+            key: fret_core::KeyCode::KeyA,
+            modifiers,
+            repeat: false,
+        } if modifiers.ctrl || modifiers.meta => {
+            let clear = modifiers.shift;
+            let _ = state.demo.update(app, |m, _cx| {
+                let is_busy = m.input.dragging
+                    || m.gizmo_mgr.state.active.is_some()
+                    || m.pending_selection.is_some()
+                    || m.marquee.is_some();
+                if is_busy {
+                    return;
+                }
+
+                if clear {
+                    m.selection.clear();
+                    m.marquee_preview.clear();
+                } else {
+                    m.selection = m.targets.iter().map(|t| t.id).collect();
+                    if !m.selection.contains(&m.active_target) {
+                        if let Some(id) = m.selection.first().copied() {
+                            m.active_target = id;
+                        }
+                    }
+                }
+            });
+            app.request_redraw(window);
+        }
+        Event::KeyDown {
+            key: fret_core::KeyCode::Digit1,
+            modifiers,
+            repeat: false,
+        }
+        | Event::KeyDown {
+            key: fret_core::KeyCode::Digit2,
+            modifiers,
+            repeat: false,
+        }
+        | Event::KeyDown {
+            key: fret_core::KeyCode::Digit3,
+            modifiers,
+            repeat: false,
+        } => {
+            let id = match event {
+                Event::KeyDown {
+                    key: fret_core::KeyCode::Digit1,
+                    ..
+                } => GizmoTargetId(1),
+                Event::KeyDown {
+                    key: fret_core::KeyCode::Digit2,
+                    ..
+                } => GizmoTargetId(2),
+                Event::KeyDown {
+                    key: fret_core::KeyCode::Digit3,
+                    ..
+                } => GizmoTargetId(3),
+                _ => return,
+            };
+            let op = selection_op(modifiers);
+            let _ = state.demo.update(app, |m, _cx| {
+                if m.input.dragging || m.gizmo_mgr.state.active.is_some() {
+                    return;
+                }
+                apply_click_selection_op(&mut m.selection, &mut m.active_target, Some(id), op);
+            });
+            app.request_redraw(window);
+        }
+        _ => {
+            state.ui.dispatch_event(app, services, event);
+        }
+    }
+}
+
+fn handle_global_changes(
+    _driver: &mut Gizmo3dDemoDriver,
+    context: WinitWindowContext<'_, Gizmo3dDemoWindowState>,
+    changed: &[TypeId],
+) {
+    if !changed.contains(&TypeId::of::<fret_core::WindowMetricsService>()) {
+        return;
+    }
+    context.app.request_redraw(context.window);
+}
+
+fn viewport_input(_driver: &mut Gizmo3dDemoDriver, app: &mut App, event: ViewportInputEvent) {
+    let model = app.with_global_mut(Gizmo3dDemoService::default, |svc, _app| {
+        svc.per_window.get(&event.window).cloned()
+    });
+    let Some(model) = model else {
+        return;
+    };
+
+    let pending_undo = model.update(app, |m, _cx| {
+        if m.viewport_target != event.target {
+            return PendingUndoRecords::default();
+        }
+
+        let tool_input =
+            ViewportToolInput::from_viewport_input_target_px(&event, fret_core::MouseButton::Left);
+        let target_px_per_screen_px = tool_input.cursor_units_per_screen_px;
+        apply_gizmo_cursor_units_per_screen_px(m, target_px_per_screen_px);
+
+        let cursor_target_px = tool_input.cursor_px;
+        let cursor_screen_px = Vec2::new(event.cursor_px.x.0, event.cursor_px.y.0);
+
+        let mut pending = PendingUndoRecords::default();
+
+        match event.kind {
+            ViewportInputKind::PointerDown {
+                button: fret_core::MouseButton::Right,
+                ..
+            } => {
+                m.camera.frame_anim = None;
+                m.camera.orbiting = true;
+                m.camera.panning = false;
+                m.camera.last_cursor_screen_px = cursor_screen_px;
+            }
+            ViewportInputKind::PointerDown {
+                button: fret_core::MouseButton::Middle,
+                ..
+            } => {
+                m.camera.frame_anim = None;
+                m.camera.panning = true;
+                m.camera.orbiting = false;
+                m.camera.last_cursor_screen_px = cursor_screen_px;
+            }
+            ViewportInputKind::PointerUp {
+                button: fret_core::MouseButton::Right,
+                ..
+            } => {
+                m.camera.orbiting = false;
+            }
+            ViewportInputKind::PointerUp {
+                button: fret_core::MouseButton::Middle,
+                ..
+            } => {
+                m.camera.panning = false;
+            }
+            ViewportInputKind::PointerMove { buttons, .. } => {
+                // Some platforms can produce inconsistent "buttons" state for move events.
+                // Prefer to keep orbit/pan latched until an explicit PointerUp arrives, but
+                // still allow the move buttons state to end navigation if it becomes false.
+                if m.camera.orbiting && !buttons.right {
+                    m.camera.orbiting = false;
+                }
+                if m.camera.panning && !buttons.middle {
+                    m.camera.panning = false;
+                }
+
+                if m.camera.orbiting || m.camera.panning {
+                    let delta = cursor_screen_px - m.camera.last_cursor_screen_px;
+                    m.camera.last_cursor_screen_px = cursor_screen_px;
+
+                    if m.camera.orbiting {
+                        let orbit_sensitivity = 0.008;
+                        m.camera.yaw_radians -= delta.x * orbit_sensitivity;
+                        m.camera.pitch_radians = (m.camera.pitch_radians
+                            - delta.y * orbit_sensitivity)
+                            .clamp(-1.55, 1.55);
+                    }
+
+                    if m.camera.panning {
+                        let pan_sensitivity = 0.002;
+                        let pitch = m.camera.pitch_radians.clamp(-1.55, 1.55);
+                        let yaw = m.camera.yaw_radians;
+                        let distance = m.camera.distance.max(0.05);
+                        let pan_scale = match m.camera.projection {
+                            OrbitProjection::Perspective => distance,
+                            OrbitProjection::Orthographic => m.camera.ortho_half_height.max(0.05),
+                        };
+
+                        let dir = Vec3::new(
+                            yaw.cos() * pitch.cos(),
+                            pitch.sin(),
+                            yaw.sin() * pitch.cos(),
+                        );
+                        let eye = m.camera.target + dir * distance;
+                        let forward = (m.camera.target - eye).normalize_or_zero();
+                        let right = forward.cross(Vec3::Y).normalize_or_zero();
+                        let up = right.cross(forward).normalize_or_zero();
+
+                        if right.length_squared() > 0.0 && up.length_squared() > 0.0 {
+                            let pan =
+                                (-right * delta.x + up * delta.y) * (pan_scale * pan_sensitivity);
+                            m.camera.target += pan;
+                        }
+                    }
+                }
+            }
+            ViewportInputKind::Wheel { delta, .. } => {
+                m.camera.frame_anim = None;
+                // Positive wheel delta.y typically scrolls up; treat that as "zoom in".
+                let zoom_sensitivity = 0.0015;
+                let scroll = delta.y.0;
+                let factor = (-scroll * zoom_sensitivity).exp();
+                match m.camera.projection {
+                    OrbitProjection::Perspective => {
+                        m.camera.distance = (m.camera.distance * factor).clamp(0.2, 25.0);
+                    }
+                    OrbitProjection::Orthographic => {
+                        m.camera.ortho_half_height =
+                            (m.camera.ortho_half_height * factor).clamp(0.05, 1000.0);
+                    }
+                }
+            }
+            _ => {}
+        };
+
+        let modifiers = viewport_modifiers(event.kind);
+        let snap = gizmo_snap_from_modifiers(&modifiers);
+        let precision = precision_multiplier(&modifiers);
+
+        let is_navigating = m.camera.orbiting || m.camera.panning;
+        let hovered = !is_navigating;
+        let cursor_over_draw_rect = tool_input.cursor_over_draw_rect;
+
+        let config = ViewportToolArbitratorConfig {
+            primary_button: fret_core::MouseButton::Left,
+            coordinate_space: ViewportToolCoordinateSpace::TargetPx,
+        };
+        let mut tools = [
+            ViewportToolEntry {
+                id: TOOL_ID_VIEW_GIZMO,
+                priority: ViewportToolPriority(1000),
+                set_hot: Some(view_gizmo_tool_set_hot),
+                hit_test: view_gizmo_tool_hit_test,
+                handle_event: view_gizmo_tool_handle_event,
+                cancel: None,
+            },
+            ViewportToolEntry {
+                id: TOOL_ID_TRANSFORM_GIZMO,
+                priority: ViewportToolPriority(500),
+                set_hot: Some(transform_gizmo_tool_set_hot),
+                hit_test: transform_gizmo_tool_hit_test,
+                handle_event: transform_gizmo_tool_handle_event,
+                cancel: None,
+            },
+            ViewportToolEntry {
+                id: TOOL_ID_SELECTION,
+                priority: ViewportToolPriority(0),
+                set_hot: None,
+                hit_test: selection_tool_hit_test,
+                handle_event: selection_tool_handle_event,
+                cancel: None,
+            },
+        ];
+
+        let mut router = m.viewport_tool_router;
+        let _handled = route_viewport_tools(&mut router, config, m, &event, &mut tools);
+        m.viewport_tool_router = router;
+
+        if m.viewport_tool_router.active == Some(TOOL_ID_VIEW_GIZMO)
+            || m.view_gizmo.state.drag_active
+        {
+            return pending;
+        }
+
+        let over_view_gizmo = m.viewport_tool_router.hot == Some(TOOL_ID_VIEW_GIZMO)
+            || m.view_gizmo.state.drag_active
+            || m.view_gizmo.state.hovered.is_some()
+            || m.view_gizmo.state.hovered_center_button;
+        let scene_hovered = hovered && cursor_over_draw_rect && !over_view_gizmo;
+
+        let is_selecting = m.viewport_tool_router.active == Some(TOOL_ID_SELECTION)
+            || m.pending_selection.is_some()
+            || m.marquee.is_some();
+
+        let transform_hot = m.viewport_tool_router.hot == Some(TOOL_ID_TRANSFORM_GIZMO);
+        let transform_active = m.viewport_tool_router.active == Some(TOOL_ID_TRANSFORM_GIZMO)
+            || m.gizmo_mgr.state.active.is_some()
+            || m.input.dragging;
+
+        let wants_transform_update = !is_selecting
+            && matches!(
+                event.kind,
+                ViewportInputKind::PointerMove { .. }
+                    | ViewportInputKind::PointerDown { .. }
+                    | ViewportInputKind::PointerUp { .. }
+            )
+            && (transform_hot || transform_active);
+
+        let (drag_started, dragging) = if transform_active {
+            match event.kind {
+                ViewportInputKind::PointerDown {
+                    button: fret_core::MouseButton::Left,
+                    ..
+                } => (true, true),
+                ViewportInputKind::PointerUp {
+                    button: fret_core::MouseButton::Left,
+                    ..
+                } => (false, false),
+                ViewportInputKind::PointerMove { .. } => (false, true),
+                _ => (false, m.input.dragging),
+            }
+        } else {
+            (false, false)
+        };
+
+        let viewport_px = event.geometry.target_px_size;
+        let view_projection = camera_view_projection(viewport_px, m.camera);
+        let viewport = tool_input.viewport;
+        m.input = GizmoInput {
+            cursor_px: cursor_target_px,
+            hovered: scene_hovered && !is_selecting,
+            drag_started,
+            dragging,
+            snap,
+            cancel: false,
+            precision,
+        };
+
+        if wants_transform_update {
+            let selected: Vec<GizmoTarget3d> = m
+                .targets
+                .iter()
+                .copied()
+                .filter(|t| m.selection.contains(&t.id))
+                .collect();
+
+            let apply_updated_targets =
+                |targets: &mut Vec<GizmoTarget3d>, updated: &[GizmoTarget3d]| {
+                    for u in updated {
+                        if let Some(t) = targets.iter_mut().find(|t| t.id == u.id) {
+                            t.transform = u.transform;
+                        }
+                    }
+                };
+
+            let properties = DemoGizmoPropertySource {
+                scalars: &m.custom_scalar_values,
+            };
+            if let Some(update) = m.gizmo_mgr.update(
+                view_projection,
+                viewport,
+                m.gizmo().config.depth_range,
+                m.input,
+                m.active_target,
+                &selected,
+                Some(&properties),
+            ) {
+                m.hud.last = Some(GizmoHudLastUpdate {
+                    phase: update.phase,
+                    active: update.active,
+                    result: update.result,
+                });
+                match update.phase {
+                    GizmoPhase::Begin => {
+                        m.drag_start_targets = Some(selected.clone());
+                        m.capture_custom_scalar_drag_start(&update.custom_edits);
+                        apply_updated_targets(&mut m.targets, &update.updated_targets);
+                        m.apply_custom_scalar_totals(&update.custom_edits);
+                    }
+                    GizmoPhase::Update => {
+                        m.capture_custom_scalar_drag_start(&update.custom_edits);
+                        apply_updated_targets(&mut m.targets, &update.updated_targets);
+                        m.apply_custom_scalar_totals(&update.custom_edits);
+                    }
+                    GizmoPhase::Commit => {
+                        m.capture_custom_scalar_drag_start(&update.custom_edits);
+                        m.apply_custom_scalar_totals(&update.custom_edits);
+
+                        let selection = m.selection.clone();
+                        pending.custom_scalars = m.commit_custom_scalar_undo_record(
+                            &update.custom_edits,
+                            m.active_target,
+                            &selection,
+                        );
+
+                        if let Some(before) = m.drag_start_targets.take() {
+                            let mut after: Vec<GizmoTarget3d> = Vec::with_capacity(before.len());
+                            for t in &before {
+                                if let Some(now) = m.targets.iter().find(|v| v.id == t.id) {
+                                    after.push(*now);
+                                }
+                            }
+
+                            if before != after {
+                                let tool = match update.result {
+                                    fret_gizmo::GizmoResult::Translation { .. } => {
+                                        "gizmo.translate"
+                                    }
+                                    fret_gizmo::GizmoResult::Rotation { .. } => "gizmo.rotate",
+                                    fret_gizmo::GizmoResult::Arcball { .. } => "gizmo.arcball",
+                                    fret_gizmo::GizmoResult::Scale { .. } => "gizmo.scale",
+                                    fret_gizmo::GizmoResult::CustomScalar { key, .. } => {
+                                        if key == LightRadiusGizmoPlugin::PROPERTY_RADIUS {
+                                            "gizmo.light_radius"
+                                        } else {
+                                            "gizmo.scalar"
+                                        }
+                                    }
+                                };
+
+                                let mut sel = m.selection.clone();
+                                sel.sort_by_key(|id| id.0);
+                                let sel_key = sel
+                                    .iter()
+                                    .map(|id| id.0.to_string())
+                                    .collect::<Vec<_>>()
+                                    .join(",");
+                                let coalesce_key =
+                                    format!("{tool}:active={}:sel={sel_key}", m.active_target.0);
+
+                                let rec = UndoRecord::new(ValueTx::new(before, after))
+                                    .label("Transform")
+                                    .coalesce_key(CoalesceKey::from(coalesce_key));
+                                pending.transform = Some(rec);
+                            }
+                        }
+                    }
+                    GizmoPhase::Cancel => {
+                        if let Some(start) = m.drag_start_targets.take() {
+                            apply_updated_targets(&mut m.targets, &start);
+                        }
+                        m.cancel_custom_scalar_drag();
+                    }
+                }
+            }
+        }
+
+        m.hud.hovered = m.gizmo_mgr.state.hovered;
+        m.hud.hovered_kind = m.hud.hovered.and_then(transform_gizmo_kind_for_handle);
+        m.hud.active = m.gizmo_mgr.state.active;
+        m.hud.snap = m.input.snap;
+
+        pending
+    });
+
+    if let Ok(pending) = pending_undo {
+        if let Some(rec) = pending.transform {
+            let _ = app.with_global_mut(
+                || UndoService::<ValueTx<Vec<GizmoTarget3d>>>::with_limit(256),
+                |undo_svc, _app| {
+                    undo_svc.record_or_coalesce_active(event.window, rec);
+                },
+            );
+        }
+        if let Some(rec) = pending.custom_scalars {
+            let _ = app.with_global_mut(
+                || UndoService::<ValueTx<HashMap<CustomScalarKey, f32>>>::with_limit(256),
+                |undo_svc, _app| {
+                    undo_svc.record_or_coalesce_active(event.window, rec);
+                },
+            );
+        }
+    }
+
+    app.request_redraw(event.window);
+}
+
+fn record_engine_frame(
+    _driver: &mut Gizmo3dDemoDriver,
+    app: &mut App,
+    window: AppWindowId,
+    state: &mut Gizmo3dDemoWindowState,
+    context: &WgpuContext,
+    renderer: &mut Renderer,
+    _scale_factor: f32,
+    _tick_id: fret_runtime::TickId,
+    _frame_id: fret_runtime::FrameId,
+) -> EngineFrameUpdate {
+    let _ = Gizmo3dDemoDriver::sync_window_command_availability(app, window, &state.doc);
+
+    let (target_id, color_view, depth_view, size) =
+        Gizmo3dDemoDriver::ensure_target(app, window, state, context, renderer);
+
+    let animating = state
+        .demo
+        .update(app, |m, _cx| {
+            let now = Instant::now();
+            let dt = m
+                .last_frame_instant
+                .and_then(|prev| now.checked_duration_since(prev))
+                .unwrap_or_default();
+            m.last_frame_instant = Some(now);
+            step_frame_anim(&mut m.camera, dt.as_secs_f32())
+        })
+        .unwrap_or(false);
+    if animating {
+        app.request_redraw(window);
+    }
+
+    let (scene_targets, selection, active_target, draw, thickness_px, view_proj, marquee, depth) =
+        state
             .demo
             .update(app, |m, _cx| {
                 let view_proj = camera_view_projection(size, m.camera);
@@ -4012,386 +3989,485 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                 )
             });
 
-        let uniforms = Uniforms {
-            view_proj: view_proj.to_cols_array_2d(),
-            viewport_and_thickness: [size.0 as f32, size.1 as f32, thickness_px, 0.0],
+    let uniforms = Uniforms {
+        view_proj: view_proj.to_cols_array_2d(),
+        viewport_and_thickness: [size.0 as f32, size.1 as f32, thickness_px, 0.0],
+    };
+    let cpu = &mut state.overlay_cpu;
+    cpu.clear();
+
+    let mut cube_verts: Vec<Vertex> = Vec::new();
+    for t in &scene_targets {
+        let is_selected = selection.contains(&t.id);
+        let color = if t.id == active_target {
+            [1.0, 0.85, 0.2, 1.0]
+        } else if is_selected {
+            [0.25, 0.85, 0.35, 1.0]
+        } else {
+            [0.55, 0.58, 0.62, 1.0]
         };
-        let cpu = &mut state.overlay_cpu;
-        cpu.clear();
+        append_cube_triangles(&mut cube_verts, t.transform, color);
+    }
 
-        let mut cube_verts: Vec<Vertex> = Vec::new();
-        for t in &scene_targets {
-            let is_selected = selection.contains(&t.id);
-            let color = if t.id == active_target {
-                [1.0, 0.85, 0.2, 1.0]
-            } else if is_selected {
-                [0.25, 0.85, 0.35, 1.0]
-            } else {
-                [0.55, 0.58, 0.62, 1.0]
-            };
-            append_cube_triangles(&mut cube_verts, t.transform, color);
-        }
-
-        let cube_vb = (!cube_verts.is_empty()).then(|| {
-            context
-                .device
-                .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                    label: Some("gizmo3d demo cubes vb"),
-                    contents: bytemuck::cast_slice(&cube_verts),
-                    usage: wgpu::BufferUsages::VERTEX,
-                })
-        });
-
-        for tri in draw.triangles {
-            let a = tri.a.to_array();
-            let b = tri.b.to_array();
-            let c = tri.c.to_array();
-            let color = [tri.color.r, tri.color.g, tri.color.b, tri.color.a];
-            match tri.depth {
-                DepthMode::Test => push_triangle(cpu.solid_test_mut(), a, b, c, color),
-                DepthMode::Ghost => push_triangle(cpu.solid_ghost_mut(), a, b, c, color),
-                DepthMode::Always => push_triangle(cpu.solid_always_mut(), a, b, c, color),
-            }
-        }
-
-        for line in draw.lines {
-            let a = line.a.to_array();
-            let b = line.b.to_array();
-            let color = [line.color.r, line.color.g, line.color.b, line.color.a];
-            match line.depth {
-                DepthMode::Test => push_thick_line_quad(cpu.line_test_mut(), a, b, color),
-                DepthMode::Ghost => push_thick_line_quad(cpu.line_ghost_mut(), a, b, color),
-                DepthMode::Always => push_thick_line_quad(cpu.line_always_mut(), a, b, color),
-            }
-        }
-
-        if let Some(marquee) = marquee {
-            let viewport = ViewportRect::new(Vec2::ZERO, Vec2::new(size.0 as f32, size.1 as f32));
-            let (mut rect_min, mut rect_max) =
-                marquee_rect(marquee.start_cursor_px, marquee.cursor_px);
-            rect_min.x = rect_min.x.clamp(viewport.min.x, viewport.max().x);
-            rect_min.y = rect_min.y.clamp(viewport.min.y, viewport.max().y);
-            rect_max.x = rect_max.x.clamp(viewport.min.x, viewport.max().x);
-            rect_max.y = rect_max.y.clamp(viewport.min.y, viewport.max().y);
-
-            let corners = [
-                Vec2::new(rect_min.x, rect_min.y),
-                Vec2::new(rect_max.x, rect_min.y),
-                Vec2::new(rect_max.x, rect_max.y),
-                Vec2::new(rect_min.x, rect_max.y),
-            ];
-
-            let z01 = 0.001;
-            let mut w = [Vec3::ZERO; 4];
-            let mut ok = true;
-            for (i, s) in corners.iter().enumerate() {
-                if let Some(p) = fret_gizmo::unproject_point(view_proj, viewport, *s, depth, z01) {
-                    w[i] = p;
-                } else {
-                    ok = false;
-                    break;
-                }
-            }
-
-            if ok {
-                let (fill, border) = match marquee.op {
-                    SelectionOp::Replace => ([0.25, 0.60, 1.00, 0.10], [0.25, 0.60, 1.00, 0.90]),
-                    SelectionOp::Add => ([0.25, 0.85, 0.35, 0.10], [0.25, 0.85, 0.35, 0.90]),
-                    SelectionOp::Subtract => ([1.00, 0.25, 0.25, 0.10], [1.00, 0.25, 0.25, 0.90]),
-                    SelectionOp::Toggle => ([1.00, 0.85, 0.20, 0.10], [1.00, 0.85, 0.20, 0.90]),
-                };
-
-                push_triangle(
-                    cpu.solid_always_mut(),
-                    w[0].to_array(),
-                    w[1].to_array(),
-                    w[2].to_array(),
-                    fill,
-                );
-                push_triangle(
-                    cpu.solid_always_mut(),
-                    w[0].to_array(),
-                    w[2].to_array(),
-                    w[3].to_array(),
-                    fill,
-                );
-
-                let edges = [(0, 1), (1, 2), (2, 3), (3, 0)];
-                for (a, b) in edges {
-                    push_thick_line_quad(
-                        cpu.line_always_mut(),
-                        w[a].to_array(),
-                        w[b].to_array(),
-                        border,
-                    );
-                }
-            }
-        }
-
-        let overlay = upload_viewport_overlay_3d_immediate(
-            app,
-            &context.device,
-            &context.queue,
-            window,
-            target_id,
-            state.target.color_format(),
-            state.target.depth_format(),
-            uniforms,
-            cpu,
-        );
-
-        let clear = wgpu::Color {
-            r: 0.08,
-            g: 0.08,
-            b: 0.10,
-            a: 1.0,
-        };
-
-        let mut encoder = context
+    let cube_vb = (!cube_verts.is_empty()).then(|| {
+        context
             .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("gizmo3d demo encoder"),
-            });
+            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("gizmo3d demo cubes vb"),
+                contents: bytemuck::cast_slice(&cube_verts),
+                usage: wgpu::BufferUsages::VERTEX,
+            })
+    });
 
-        {
-            let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                label: Some("gizmo3d demo pass"),
-                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                    view: &color_view,
-                    resolve_target: None,
-                    depth_slice: None,
-                    ops: wgpu::Operations {
-                        load: wgpu::LoadOp::Clear(clear),
-                        store: wgpu::StoreOp::Store,
-                    },
-                })],
-                depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
-                    view: &depth_view,
-                    depth_ops: Some(wgpu::Operations {
-                        load: wgpu::LoadOp::Clear(1.0),
-                        store: wgpu::StoreOp::Store,
-                    }),
-                    stencil_ops: None,
-                }),
-                timestamp_writes: None,
-                occlusion_query_set: None,
-                multiview_mask: None,
-            });
-
-            if let Some(cube_vb) = &cube_vb {
-                pass.set_bind_group(0, &overlay.bind_group, &[]);
-                pass.set_pipeline(&overlay.tri_pipeline);
-                pass.set_vertex_buffer(0, cube_vb.slice(..));
-                pass.draw(0..(cube_verts.len().min(u32::MAX as usize) as u32), 0..1);
-            }
-
-            let ctx = ViewportOverlay3dContext {
-                view_proj,
-                viewport_px: size,
-            };
-
-            record_viewport_overlay_3d(app, window, target_id, &mut pass, &ctx);
-
-            let _ = _frame_id;
-        }
-
-        EngineFrameUpdate {
-            target_updates: Vec::new(),
-            command_buffers: vec![encoder.finish()],
-            keepalive: Vec::new(),
+    for tri in draw.triangles {
+        let a = tri.a.to_array();
+        let b = tri.b.to_array();
+        let c = tri.c.to_array();
+        let color = [tri.color.r, tri.color.g, tri.color.b, tri.color.a];
+        match tri.depth {
+            DepthMode::Test => push_triangle(cpu.solid_test_mut(), a, b, c, color),
+            DepthMode::Ghost => push_triangle(cpu.solid_ghost_mut(), a, b, c, color),
+            DepthMode::Always => push_triangle(cpu.solid_always_mut(), a, b, c, color),
         }
     }
 
-    fn render(&mut self, context: WinitRenderContext<'_, Self::WindowState>) {
-        let WinitRenderContext {
-            app,
-            services,
-            window,
-            state,
-            bounds,
-            scale_factor,
-            scene,
-        } = context;
+    for line in draw.lines {
+        let a = line.a.to_array();
+        let b = line.b.to_array();
+        let color = [line.color.r, line.color.g, line.color.b, line.color.a];
+        match line.depth {
+            DepthMode::Test => push_thick_line_quad(cpu.line_test_mut(), a, b, color),
+            DepthMode::Ghost => push_thick_line_quad(cpu.line_ghost_mut(), a, b, color),
+            DepthMode::Always => push_thick_line_quad(cpu.line_always_mut(), a, b, color),
+        }
+    }
 
-        let root = state.root.get_or_insert_with(|| {
-            let style = Plot3dStyle::default();
-            let canvas = Plot3dCanvas::new(state.plot.clone()).style(style);
-            let node = Plot3dCanvas::create_node(&mut state.ui, canvas);
-            state.ui.set_root(node);
-            node
-        });
+    if let Some(marquee) = marquee {
+        let viewport = ViewportRect::new(Vec2::ZERO, Vec2::new(size.0 as f32, size.1 as f32));
+        let (mut rect_min, mut rect_max) = marquee_rect(marquee.start_cursor_px, marquee.cursor_px);
+        rect_min.x = rect_min.x.clamp(viewport.min.x, viewport.max().x);
+        rect_min.y = rect_min.y.clamp(viewport.min.y, viewport.max().y);
+        rect_max.x = rect_max.x.clamp(viewport.min.x, viewport.max().x);
+        rect_max.y = rect_max.y.clamp(viewport.min.y, viewport.max().y);
 
-        state.ui.set_root(*root);
-        state.ui.request_semantics_snapshot();
-        state.ui.ingest_paint_cache_source(scene);
+        let corners = [
+            Vec2::new(rect_min.x, rect_min.y),
+            Vec2::new(rect_max.x, rect_min.y),
+            Vec2::new(rect_max.x, rect_max.y),
+            Vec2::new(rect_min.x, rect_max.y),
+        ];
 
-        scene.clear();
-        let mut frame =
-            fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
-        frame.layout_all();
-        frame.paint_all(scene);
-
-        let (show_help, overlay_text) = state
-            .demo
-            .read(app, |_app, m| (m.show_help, m.overlay_text()))
-            .unwrap_or((false, String::new()));
-
-        if show_help {
-            let scale_bits = scale_factor.to_bits();
-            if state.overlay.last_text != overlay_text
-                || state.overlay.last_scale_bits != scale_bits
-            {
-                if let Some(blob) = state.overlay.blob.take() {
-                    services.text().release(blob);
-                }
-
-                let style = TextStyle {
-                    font: fret_core::FontId::default(),
-                    size: Px(13.0),
-                    weight: FontWeight::MEDIUM,
-                    slant: fret_core::text::TextSlant::Normal,
-                    line_height: Some(Px(16.0)),
-                    line_height_em: None,
-                    line_height_policy: Default::default(),
-                    letter_spacing_em: None,
-                    features: Vec::new(),
-                    axes: Vec::new(),
-                    vertical_placement: TextVerticalPlacement::CenterMetricsBox,
-                    leading_distribution: Default::default(),
-                    strut_style: Default::default(),
-                };
-                let constraints = TextConstraints {
-                    max_width: Some(Px(bounds.size.width.0 - 24.0)),
-                    wrap: TextWrap::Word,
-                    overflow: TextOverflow::Clip,
-                    align: fret_core::TextAlign::Start,
-                    scale_factor,
-                };
-
-                let (blob, metrics) =
-                    services
-                        .text()
-                        .prepare_str(overlay_text.as_str(), &style, constraints);
-                state.overlay.last_text = overlay_text;
-                state.overlay.last_scale_bits = scale_bits;
-                state.overlay.blob = Some(blob);
-                state.overlay.metrics = Some(metrics);
-            }
-
-            if let (Some(blob), Some(metrics)) = (state.overlay.blob, state.overlay.metrics) {
-                let pad = Px(10.0);
-                let outer_pad = Px(12.0);
-
-                let bg_rect = Rect::new(
-                    Point::new(
-                        Px(bounds.origin.x.0 + outer_pad.0),
-                        Px(bounds.origin.y.0 + outer_pad.0),
-                    ),
-                    Size::new(
-                        Px(metrics.size.width.0 + pad.0 * 2.0),
-                        Px(metrics.size.height.0 + pad.0 * 2.0),
-                    ),
-                );
-                scene.push(SceneOp::Quad {
-                    order: DrawOrder(50_000),
-                    rect: bg_rect,
-                    background: fret_core::Paint::Solid(Color {
-                        r: 0.08,
-                        g: 0.08,
-                        b: 0.09,
-                        a: 0.78,
-                    })
-                    .into(),
-                    border: Edges::all(Px(1.0)),
-                    border_paint: fret_core::Paint::Solid(Color {
-                        r: 0.35,
-                        g: 0.35,
-                        b: 0.40,
-                        a: 0.85,
-                    })
-                    .into(),
-                    corner_radii: Corners::all(Px(12.0)),
-                });
-                scene.push(SceneOp::Text {
-                    order: DrawOrder(50_010),
-                    origin: Point::new(
-                        Px(bg_rect.origin.x.0 + pad.0),
-                        Px(bg_rect.origin.y.0 + pad.0),
-                    ),
-                    text: blob,
-                    paint: (Color {
-                        r: 0.92,
-                        g: 0.92,
-                        b: 0.94,
-                        a: 0.95,
-                    })
-                    .into(),
-                    outline: None,
-                    shadow: None,
-                });
+        let z01 = 0.001;
+        let mut w = [Vec3::ZERO; 4];
+        let mut ok = true;
+        for (i, s) in corners.iter().enumerate() {
+            if let Some(p) = fret_gizmo::unproject_point(view_proj, viewport, *s, depth, z01) {
+                w[i] = p;
+            } else {
+                ok = false;
+                break;
             }
         }
 
-        // View gizmo labels (X/Y/Z + P/O).
-        let viewport = state
-            .plot
-            .read(app, |_app, m| m.viewport)
-            .unwrap_or_default();
-        let viewport_px = viewport.target_px_size;
-
-        let mapping = viewport.mapping(bounds);
-        let draw_rect = mapping.map().draw_rect;
-        let scale_x = draw_rect.size.width.0 / (viewport_px.0.max(1) as f32);
-        let scale_y = draw_rect.size.height.0 / (viewport_px.1.max(1) as f32);
-        let scale = scale_x.min(scale_y).max(1e-6);
-        let target_px_per_screen_px = mapping
-            .target_px_per_screen_px()
-            .unwrap_or_else(|| viewport_px.0.max(1) as f32 / draw_rect.size.width.0.max(1.0));
-
-        let _ = state.demo.update(app, |m, _cx| {
-            apply_gizmo_cursor_units_per_screen_px(m, target_px_per_screen_px);
-        });
-
-        let (camera, view_gizmo, gizmo_cfg, hud_state) = state
-            .demo
-            .read(app, |_app, m| {
-                (m.camera, m.view_gizmo.clone(), m.gizmo().config, m.hud)
-            })
-            .unwrap_or((
-                OrbitCamera::default(),
-                ViewGizmo::new(ViewGizmoConfig::default()),
-                GizmoConfig::default(),
-                GizmoHudState::default(),
-            ));
-
-        let view_proj = camera_view_projection(viewport_px, camera);
-        let viewport_rect = ViewportRect::new(
-            Vec2::ZERO,
-            Vec2::new(viewport_px.0 as f32, viewport_px.1 as f32),
-        );
-        let projection = match camera.projection {
-            OrbitProjection::Perspective => ViewGizmoProjection::Perspective,
-            OrbitProjection::Orthographic => ViewGizmoProjection::Orthographic,
-        };
-
-        let labels = view_gizmo.labels(view_proj, viewport_rect, projection);
-        if !labels.is_empty() {
-            state.view_gizmo_labels.ensure(services, scale_factor);
-        }
-
-        for label in labels {
-            let Some((blob, metrics)) = state.view_gizmo_labels.blob_and_metrics(label.text) else {
-                continue;
+        if ok {
+            let (fill, border) = match marquee.op {
+                SelectionOp::Replace => ([0.25, 0.60, 1.00, 0.10], [0.25, 0.60, 1.00, 0.90]),
+                SelectionOp::Add => ([0.25, 0.85, 0.35, 0.10], [0.25, 0.85, 0.35, 0.90]),
+                SelectionOp::Subtract => ([1.00, 0.25, 0.25, 0.10], [1.00, 0.25, 0.25, 0.90]),
+                SelectionOp::Toggle => ([1.00, 0.85, 0.20, 0.10], [1.00, 0.85, 0.20, 0.90]),
             };
 
-            let x = draw_rect.origin.x.0 + label.screen_px.x * scale;
-            let y = draw_rect.origin.y.0 + label.screen_px.y * scale;
+            push_triangle(
+                cpu.solid_always_mut(),
+                w[0].to_array(),
+                w[1].to_array(),
+                w[2].to_array(),
+                fill,
+            );
+            push_triangle(
+                cpu.solid_always_mut(),
+                w[0].to_array(),
+                w[2].to_array(),
+                w[3].to_array(),
+                fill,
+            );
 
-            let pad = Px(3.0);
-            let bg = Rect::new(
+            let edges = [(0, 1), (1, 2), (2, 3), (3, 0)];
+            for (a, b) in edges {
+                push_thick_line_quad(
+                    cpu.line_always_mut(),
+                    w[a].to_array(),
+                    w[b].to_array(),
+                    border,
+                );
+            }
+        }
+    }
+
+    let overlay = upload_viewport_overlay_3d_immediate(
+        app,
+        &context.device,
+        &context.queue,
+        window,
+        target_id,
+        state.target.color_format(),
+        state.target.depth_format(),
+        uniforms,
+        cpu,
+    );
+
+    let clear = wgpu::Color {
+        r: 0.08,
+        g: 0.08,
+        b: 0.10,
+        a: 1.0,
+    };
+
+    let mut encoder = context
+        .device
+        .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+            label: Some("gizmo3d demo encoder"),
+        });
+
+    {
+        let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+            label: Some("gizmo3d demo pass"),
+            color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                view: &color_view,
+                resolve_target: None,
+                depth_slice: None,
+                ops: wgpu::Operations {
+                    load: wgpu::LoadOp::Clear(clear),
+                    store: wgpu::StoreOp::Store,
+                },
+            })],
+            depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
+                view: &depth_view,
+                depth_ops: Some(wgpu::Operations {
+                    load: wgpu::LoadOp::Clear(1.0),
+                    store: wgpu::StoreOp::Store,
+                }),
+                stencil_ops: None,
+            }),
+            timestamp_writes: None,
+            occlusion_query_set: None,
+            multiview_mask: None,
+        });
+
+        if let Some(cube_vb) = &cube_vb {
+            pass.set_bind_group(0, &overlay.bind_group, &[]);
+            pass.set_pipeline(&overlay.tri_pipeline);
+            pass.set_vertex_buffer(0, cube_vb.slice(..));
+            pass.draw(0..(cube_verts.len().min(u32::MAX as usize) as u32), 0..1);
+        }
+
+        let ctx = ViewportOverlay3dContext {
+            view_proj,
+            viewport_px: size,
+        };
+
+        record_viewport_overlay_3d(app, window, target_id, &mut pass, &ctx);
+
+        let _ = _frame_id;
+    }
+
+    EngineFrameUpdate {
+        target_updates: Vec::new(),
+        command_buffers: vec![encoder.finish()],
+        keepalive: Vec::new(),
+    }
+}
+
+fn render(
+    _driver: &mut Gizmo3dDemoDriver,
+    context: WinitRenderContext<'_, Gizmo3dDemoWindowState>,
+) {
+    let WinitRenderContext {
+        app,
+        services,
+        window,
+        state,
+        bounds,
+        scale_factor,
+        scene,
+    } = context;
+
+    let root = state.root.get_or_insert_with(|| {
+        let style = Plot3dStyle::default();
+        let canvas = Plot3dCanvas::new(state.plot.clone()).style(style);
+        let node = Plot3dCanvas::create_node(&mut state.ui, canvas);
+        state.ui.set_root(node);
+        node
+    });
+
+    state.ui.set_root(*root);
+    state.ui.request_semantics_snapshot();
+    state.ui.ingest_paint_cache_source(scene);
+
+    scene.clear();
+    let mut frame =
+        fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
+    frame.layout_all();
+    frame.paint_all(scene);
+
+    let (show_help, overlay_text) = state
+        .demo
+        .read(app, |_app, m| (m.show_help, m.overlay_text()))
+        .unwrap_or((false, String::new()));
+
+    if show_help {
+        let scale_bits = scale_factor.to_bits();
+        if state.overlay.last_text != overlay_text || state.overlay.last_scale_bits != scale_bits {
+            if let Some(blob) = state.overlay.blob.take() {
+                services.text().release(blob);
+            }
+
+            let style = TextStyle {
+                font: fret_core::FontId::default(),
+                size: Px(13.0),
+                weight: FontWeight::MEDIUM,
+                slant: fret_core::text::TextSlant::Normal,
+                line_height: Some(Px(16.0)),
+                line_height_em: None,
+                line_height_policy: Default::default(),
+                letter_spacing_em: None,
+                features: Vec::new(),
+                axes: Vec::new(),
+                vertical_placement: TextVerticalPlacement::CenterMetricsBox,
+                leading_distribution: Default::default(),
+                strut_style: Default::default(),
+            };
+            let constraints = TextConstraints {
+                max_width: Some(Px(bounds.size.width.0 - 24.0)),
+                wrap: TextWrap::Word,
+                overflow: TextOverflow::Clip,
+                align: fret_core::TextAlign::Start,
+                scale_factor,
+            };
+
+            let (blob, metrics) =
+                services
+                    .text()
+                    .prepare_str(overlay_text.as_str(), &style, constraints);
+            state.overlay.last_text = overlay_text;
+            state.overlay.last_scale_bits = scale_bits;
+            state.overlay.blob = Some(blob);
+            state.overlay.metrics = Some(metrics);
+        }
+
+        if let (Some(blob), Some(metrics)) = (state.overlay.blob, state.overlay.metrics) {
+            let pad = Px(10.0);
+            let outer_pad = Px(12.0);
+
+            let bg_rect = Rect::new(
                 Point::new(
-                    Px(x - metrics.size.width.0 * 0.5 - pad.0),
-                    Px(y - metrics.size.height.0 * 0.5 - pad.0),
+                    Px(bounds.origin.x.0 + outer_pad.0),
+                    Px(bounds.origin.y.0 + outer_pad.0),
+                ),
+                Size::new(
+                    Px(metrics.size.width.0 + pad.0 * 2.0),
+                    Px(metrics.size.height.0 + pad.0 * 2.0),
+                ),
+            );
+            scene.push(SceneOp::Quad {
+                order: DrawOrder(50_000),
+                rect: bg_rect,
+                background: fret_core::Paint::Solid(Color {
+                    r: 0.08,
+                    g: 0.08,
+                    b: 0.09,
+                    a: 0.78,
+                })
+                .into(),
+                border: Edges::all(Px(1.0)),
+                border_paint: fret_core::Paint::Solid(Color {
+                    r: 0.35,
+                    g: 0.35,
+                    b: 0.40,
+                    a: 0.85,
+                })
+                .into(),
+                corner_radii: Corners::all(Px(12.0)),
+            });
+            scene.push(SceneOp::Text {
+                order: DrawOrder(50_010),
+                origin: Point::new(
+                    Px(bg_rect.origin.x.0 + pad.0),
+                    Px(bg_rect.origin.y.0 + pad.0),
+                ),
+                text: blob,
+                paint: (Color {
+                    r: 0.92,
+                    g: 0.92,
+                    b: 0.94,
+                    a: 0.95,
+                })
+                .into(),
+                outline: None,
+                shadow: None,
+            });
+        }
+    }
+
+    // View gizmo labels (X/Y/Z + P/O).
+    let viewport = state
+        .plot
+        .read(app, |_app, m| m.viewport)
+        .unwrap_or_default();
+    let viewport_px = viewport.target_px_size;
+
+    let mapping = viewport.mapping(bounds);
+    let draw_rect = mapping.map().draw_rect;
+    let scale_x = draw_rect.size.width.0 / (viewport_px.0.max(1) as f32);
+    let scale_y = draw_rect.size.height.0 / (viewport_px.1.max(1) as f32);
+    let scale = scale_x.min(scale_y).max(1e-6);
+    let target_px_per_screen_px = mapping
+        .target_px_per_screen_px()
+        .unwrap_or_else(|| viewport_px.0.max(1) as f32 / draw_rect.size.width.0.max(1.0));
+
+    let _ = state.demo.update(app, |m, _cx| {
+        apply_gizmo_cursor_units_per_screen_px(m, target_px_per_screen_px);
+    });
+
+    let (camera, view_gizmo, gizmo_cfg, hud_state) = state
+        .demo
+        .read(app, |_app, m| {
+            (m.camera, m.view_gizmo.clone(), m.gizmo().config, m.hud)
+        })
+        .unwrap_or((
+            OrbitCamera::default(),
+            ViewGizmo::new(ViewGizmoConfig::default()),
+            GizmoConfig::default(),
+            GizmoHudState::default(),
+        ));
+
+    let view_proj = camera_view_projection(viewport_px, camera);
+    let viewport_rect = ViewportRect::new(
+        Vec2::ZERO,
+        Vec2::new(viewport_px.0 as f32, viewport_px.1 as f32),
+    );
+    let projection = match camera.projection {
+        OrbitProjection::Perspective => ViewGizmoProjection::Perspective,
+        OrbitProjection::Orthographic => ViewGizmoProjection::Orthographic,
+    };
+
+    let labels = view_gizmo.labels(view_proj, viewport_rect, projection);
+    if !labels.is_empty() {
+        state.view_gizmo_labels.ensure(services, scale_factor);
+    }
+
+    for label in labels {
+        let Some((blob, metrics)) = state.view_gizmo_labels.blob_and_metrics(label.text) else {
+            continue;
+        };
+
+        let x = draw_rect.origin.x.0 + label.screen_px.x * scale;
+        let y = draw_rect.origin.y.0 + label.screen_px.y * scale;
+
+        let pad = Px(3.0);
+        let bg = Rect::new(
+            Point::new(
+                Px(x - metrics.size.width.0 * 0.5 - pad.0),
+                Px(y - metrics.size.height.0 * 0.5 - pad.0),
+            ),
+            Size::new(
+                Px(metrics.size.width.0 + pad.0 * 2.0),
+                Px(metrics.size.height.0 + pad.0 * 2.0),
+            ),
+        );
+
+        scene.push(SceneOp::Quad {
+            order: DrawOrder(49_000),
+            rect: bg,
+            background: fret_core::Paint::Solid(Color {
+                r: 0.06,
+                g: 0.06,
+                b: 0.07,
+                a: 0.55,
+            })
+            .into(),
+            border: Edges::all(Px(1.0)),
+            border_paint: fret_core::Paint::Solid(Color {
+                r: label.color.r,
+                g: label.color.g,
+                b: label.color.b,
+                a: 0.85,
+            })
+            .into(),
+            corner_radii: Corners::all(Px(8.0)),
+        });
+
+        scene.push(SceneOp::Text {
+            order: DrawOrder(49_010),
+            origin: Point::new(
+                Px(x - metrics.size.width.0 * 0.5),
+                Px(y - metrics.size.height.0 * 0.5),
+            ),
+            text: blob,
+            paint: (Color {
+                r: label.color.r,
+                g: label.color.g,
+                b: label.color.b,
+                a: label.color.a,
+            })
+            .into(),
+            outline: None,
+            shadow: None,
+        });
+    }
+
+    if let Some(text) = gizmo_hud_text(hud_state, gizmo_cfg) {
+        let scale_bits = scale_factor.to_bits();
+        if state.hud.last_text != text || state.hud.last_scale_bits != scale_bits {
+            if let Some(blob) = state.hud.blob.take() {
+                services.text().release(blob);
+            }
+
+            let style = TextStyle {
+                font: fret_core::FontId::default(),
+                size: Px(12.0),
+                weight: FontWeight::MEDIUM,
+                slant: fret_core::text::TextSlant::Normal,
+                line_height: Some(Px(14.0)),
+                line_height_em: None,
+                line_height_policy: Default::default(),
+                letter_spacing_em: None,
+                features: Vec::new(),
+                axes: Vec::new(),
+                vertical_placement: TextVerticalPlacement::CenterMetricsBox,
+                leading_distribution: Default::default(),
+                strut_style: Default::default(),
+            };
+            let constraints = TextConstraints {
+                max_width: Some(Px(340.0)),
+                wrap: TextWrap::None,
+                overflow: TextOverflow::Clip,
+                align: fret_core::TextAlign::Start,
+                scale_factor,
+            };
+
+            let (blob, metrics) = services
+                .text()
+                .prepare_str(text.as_str(), &style, constraints);
+            state.hud.last_text = text;
+            state.hud.last_scale_bits = scale_bits;
+            state.hud.blob = Some(blob);
+            state.hud.metrics = Some(metrics);
+        }
+
+        if let (Some(blob), Some(metrics)) = (state.hud.blob, state.hud.metrics) {
+            let pad = Px(10.0);
+            let outer_pad = Px(12.0);
+
+            let origin = Point::new(
+                Px(draw_rect.origin.x.0 + outer_pad.0),
+                Px(draw_rect.origin.y.0 + draw_rect.size.height.0 - outer_pad.0),
+            );
+
+            let bg_rect = Rect::new(
+                Point::new(
+                    Px(origin.x.0),
+                    Px(origin.y.0 - (metrics.size.height.0 + pad.0 * 2.0)),
                 ),
                 Size::new(
                     Px(metrics.size.width.0 + pad.0 * 2.0),
@@ -4400,150 +4476,57 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
             );
 
             scene.push(SceneOp::Quad {
-                order: DrawOrder(49_000),
-                rect: bg,
+                order: DrawOrder(49_200),
+                rect: bg_rect,
                 background: fret_core::Paint::Solid(Color {
                     r: 0.06,
                     g: 0.06,
                     b: 0.07,
-                    a: 0.55,
+                    a: 0.62,
                 })
                 .into(),
                 border: Edges::all(Px(1.0)),
                 border_paint: fret_core::Paint::Solid(Color {
-                    r: label.color.r,
-                    g: label.color.g,
-                    b: label.color.b,
+                    r: 0.35,
+                    g: 0.35,
+                    b: 0.40,
                     a: 0.85,
                 })
                 .into(),
-                corner_radii: Corners::all(Px(8.0)),
+                corner_radii: Corners::all(Px(12.0)),
             });
-
             scene.push(SceneOp::Text {
-                order: DrawOrder(49_010),
+                order: DrawOrder(49_210),
                 origin: Point::new(
-                    Px(x - metrics.size.width.0 * 0.5),
-                    Px(y - metrics.size.height.0 * 0.5),
+                    Px(bg_rect.origin.x.0 + pad.0),
+                    Px(bg_rect.origin.y.0 + pad.0),
                 ),
                 text: blob,
                 paint: (Color {
-                    r: label.color.r,
-                    g: label.color.g,
-                    b: label.color.b,
-                    a: label.color.a,
+                    r: 0.92,
+                    g: 0.92,
+                    b: 0.94,
+                    a: 0.95,
                 })
                 .into(),
                 outline: None,
                 shadow: None,
             });
         }
-
-        if let Some(text) = gizmo_hud_text(hud_state, gizmo_cfg) {
-            let scale_bits = scale_factor.to_bits();
-            if state.hud.last_text != text || state.hud.last_scale_bits != scale_bits {
-                if let Some(blob) = state.hud.blob.take() {
-                    services.text().release(blob);
-                }
-
-                let style = TextStyle {
-                    font: fret_core::FontId::default(),
-                    size: Px(12.0),
-                    weight: FontWeight::MEDIUM,
-                    slant: fret_core::text::TextSlant::Normal,
-                    line_height: Some(Px(14.0)),
-                    line_height_em: None,
-                    line_height_policy: Default::default(),
-                    letter_spacing_em: None,
-                    features: Vec::new(),
-                    axes: Vec::new(),
-                    vertical_placement: TextVerticalPlacement::CenterMetricsBox,
-                    leading_distribution: Default::default(),
-                    strut_style: Default::default(),
-                };
-                let constraints = TextConstraints {
-                    max_width: Some(Px(340.0)),
-                    wrap: TextWrap::None,
-                    overflow: TextOverflow::Clip,
-                    align: fret_core::TextAlign::Start,
-                    scale_factor,
-                };
-
-                let (blob, metrics) =
-                    services
-                        .text()
-                        .prepare_str(text.as_str(), &style, constraints);
-                state.hud.last_text = text;
-                state.hud.last_scale_bits = scale_bits;
-                state.hud.blob = Some(blob);
-                state.hud.metrics = Some(metrics);
-            }
-
-            if let (Some(blob), Some(metrics)) = (state.hud.blob, state.hud.metrics) {
-                let pad = Px(10.0);
-                let outer_pad = Px(12.0);
-
-                let origin = Point::new(
-                    Px(draw_rect.origin.x.0 + outer_pad.0),
-                    Px(draw_rect.origin.y.0 + draw_rect.size.height.0 - outer_pad.0),
-                );
-
-                let bg_rect = Rect::new(
-                    Point::new(
-                        Px(origin.x.0),
-                        Px(origin.y.0 - (metrics.size.height.0 + pad.0 * 2.0)),
-                    ),
-                    Size::new(
-                        Px(metrics.size.width.0 + pad.0 * 2.0),
-                        Px(metrics.size.height.0 + pad.0 * 2.0),
-                    ),
-                );
-
-                scene.push(SceneOp::Quad {
-                    order: DrawOrder(49_200),
-                    rect: bg_rect,
-                    background: fret_core::Paint::Solid(Color {
-                        r: 0.06,
-                        g: 0.06,
-                        b: 0.07,
-                        a: 0.62,
-                    })
-                    .into(),
-                    border: Edges::all(Px(1.0)),
-                    border_paint: fret_core::Paint::Solid(Color {
-                        r: 0.35,
-                        g: 0.35,
-                        b: 0.40,
-                        a: 0.85,
-                    })
-                    .into(),
-                    corner_radii: Corners::all(Px(12.0)),
-                });
-                scene.push(SceneOp::Text {
-                    order: DrawOrder(49_210),
-                    origin: Point::new(
-                        Px(bg_rect.origin.x.0 + pad.0),
-                        Px(bg_rect.origin.y.0 + pad.0),
-                    ),
-                    text: blob,
-                    paint: (Color {
-                        r: 0.92,
-                        g: 0.92,
-                        b: 0.94,
-                        a: 0.95,
-                    })
-                    .into(),
-                    outline: None,
-                    shadow: None,
-                });
-            }
-        }
-
-        if state.warmup_frames_remaining > 0 {
-            state.warmup_frames_remaining = state.warmup_frames_remaining.saturating_sub(1);
-            app.push_effect(Effect::RequestAnimationFrame(window));
-        }
     }
+
+    if state.warmup_frames_remaining > 0 {
+        state.warmup_frames_remaining = state.warmup_frames_remaining.saturating_sub(1);
+        app.push_effect(Effect::RequestAnimationFrame(window));
+    }
+}
+
+fn configure_fn_driver_hooks(hooks: &mut FnDriverHooks<Gizmo3dDemoDriver, Gizmo3dDemoWindowState>) {
+    hooks.init = Some(init);
+    hooks.handle_command = Some(handle_command);
+    hooks.handle_global_changes = Some(handle_global_changes);
+    hooks.viewport_input = Some(viewport_input);
+    hooks.record_engine_frame = Some(record_engine_frame);
 }
 
 pub fn build_app() -> App {
@@ -4560,8 +4543,9 @@ pub fn build_runner_config() -> WinitRunnerConfig {
     }
 }
 
-pub fn build_driver() -> impl WinitAppDriver {
-    Gizmo3dDemoDriver
+fn build_fn_driver() -> FnDriver<Gizmo3dDemoDriver, Gizmo3dDemoWindowState> {
+    FnDriver::new(Gizmo3dDemoDriver, create_window_state, handle_event, render)
+        .with_hooks(configure_fn_driver_hooks)
 }
 
 pub fn run() -> anyhow::Result<()> {
@@ -4576,7 +4560,7 @@ pub fn run() -> anyhow::Result<()> {
 
     let app = build_app();
     let config = build_runner_config();
-    let driver = build_driver();
 
-    crate::run_native_demo(config, app, driver).context("run gizmo3d_demo app")
+    fret::run_native_with_configured_fn_driver(config, app, build_fn_driver())
+        .context("run gizmo3d_demo app")
 }

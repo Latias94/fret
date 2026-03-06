@@ -4,6 +4,7 @@ use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::badge as snippets;
 
 pub(super) fn preview_badge(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    let usage = snippets::usage::render(cx);
     let demo = snippets::demo::render(cx);
     let variants = snippets::variants::render(cx);
     let with_icon = snippets::icon::render(cx);
@@ -17,17 +18,23 @@ pub(super) fn preview_badge(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
         [
             "Badge is a small status/label primitive; prefer concise text and keep contrast high.",
             "API reference: `ecosystem/fret-ui-shadcn/src/badge.rs`.",
+            "Badge already exposes the important recipe surface (`variant`, icons, link-style composition), so the main parity gap here is usage clarity rather than missing composition APIs.",
             "Note: the Link render example installs a no-op `on_activate` so diag scripts do not launch a system browser; remove it to enable the default `Effect::OpenUrl` fallback.",
         ],
     );
 
     let body = doc_layout::render_doc_page(
         cx,
-        Some("Preview follows shadcn Badge docs (demo + asChild-style link render)."),
+        Some(
+            "Preview follows shadcn Badge docs flow: Demo -> Usage -> Link. Gallery adds variant, icon, spinner, color, and RTL recipes.",
+        ),
         vec![
             DocSection::new("Demo", demo)
                 .description("Default shadcn badge variants and common compositions.")
                 .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
+            DocSection::new("Usage", usage)
+                .description("Copyable minimal usage for `Badge`.")
+                .code_rust_from_file_region(snippets::usage::SOURCE, "example"),
             DocSection::new("Variants", variants)
                 .description("Use the `variant` prop to change the badge variant.")
                 .code_rust_from_file_region(snippets::variants::SOURCE, "example"),

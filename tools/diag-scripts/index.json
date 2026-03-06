@@ -2536,18 +2536,93 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-avatar-dropdown-activate-open",
+      "path": "tools/diag-scripts/ui-gallery/avatar/ui-gallery-avatar-dropdown-activate-open.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-avatar-dropdown-attribution"
+      ],
+      "tags": [
+        "activate",
+        "avatar",
+        "dropdown",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-avatar-dropdown-activate-open-trigger",
+      "path": "tools/diag-scripts/ui-gallery/avatar/ui-gallery-avatar-dropdown-activate-open-trigger.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-avatar-dropdown-attribution"
+      ],
+      "tags": [
+        "activate",
+        "avatar",
+        "dropdown",
+        "shadcn",
+        "trigger",
+        "ui_gallery"
+      ],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-avatar-dropdown-click-stable-open",
+      "path": "tools/diag-scripts/ui-gallery/avatar/ui-gallery-avatar-dropdown-click-stable-open.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-avatar-dropdown-attribution"
+      ],
+      "tags": [
+        "attribution",
+        "avatar",
+        "click_stable",
+        "dropdown",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-avatar-dropdown-escape-focus-restore",
       "path": "tools/diag-scripts/ui-gallery/avatar/ui-gallery-avatar-dropdown-escape-focus-restore.json",
       "required_capabilities": [
         "diag.script_v2"
       ],
       "suite_memberships": [
+        "ui-gallery-avatar-dropdown-attribution",
         "ui-gallery-shadcn-conformance"
       ],
       "tags": [
         "avatar",
         "dropdown",
         "focus_restore",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-avatar-dropdown-focus-trigger",
+      "path": "tools/diag-scripts/ui-gallery/avatar/ui-gallery-avatar-dropdown-focus-trigger.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-avatar-dropdown-attribution"
+      ],
+      "tags": [
+        "avatar",
+        "dropdown",
+        "focus",
         "shadcn",
         "ui_gallery"
       ],

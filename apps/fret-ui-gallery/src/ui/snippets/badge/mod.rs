@@ -12,4 +12,5 @@ pub mod icon;
 pub mod link;
 pub mod rtl;
 pub mod spinner;
+pub mod usage;
 pub mod variants;

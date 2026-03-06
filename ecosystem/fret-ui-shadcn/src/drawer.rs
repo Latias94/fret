@@ -465,6 +465,14 @@ impl Drawer {
         self
     }
 
+    /// Returns a recipe-level composition builder for shadcn-style part assembly.
+    ///
+    /// This bridges Fret's closure-root authoring model with the nested part mental model used by
+    /// shadcn/Vaul while keeping the underlying mechanism surface unchanged.
+    pub fn compose<H: UiHost>(self) -> DrawerComposition<H> {
+        DrawerComposition::new(self)
+    }
+
     pub fn overlay_component(mut self, overlay: DrawerOverlay) -> Self {
         if let Some(color) = overlay.color {
             self.inner = self.inner.overlay_color(color);
@@ -970,6 +978,104 @@ impl Drawer {
     }
 }
 
+/// Recipe-level builder for composing a drawer from shadcn-style parts.
+type DrawerDeferredContent<H> = Box<dyn FnOnce(&mut ElementContext<'_, H>) -> AnyElement + 'static>;
+
+enum DrawerCompositionContent<H: UiHost> {
+    Eager(AnyElement),
+    Deferred(DrawerDeferredContent<H>),
+}
+
+pub struct DrawerComposition<H: UiHost> {
+    drawer: Drawer,
+    trigger: Option<DrawerTrigger>,
+    portal: DrawerPortal,
+    overlay: DrawerOverlay,
+    content: Option<DrawerCompositionContent<H>>,
+}
+
+impl<H: UiHost> std::fmt::Debug for DrawerComposition<H> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("DrawerComposition")
+            .field("drawer", &self.drawer)
+            .field("trigger", &self.trigger.is_some())
+            .field("portal", &self.portal)
+            .field("overlay", &self.overlay)
+            .field("content", &self.content.is_some())
+            .finish()
+    }
+}
+
+impl<H: UiHost> DrawerComposition<H> {
+    pub fn new(drawer: Drawer) -> Self {
+        Self {
+            drawer,
+            trigger: None,
+            portal: DrawerPortal::new(),
+            overlay: DrawerOverlay::new(),
+            content: None,
+        }
+    }
+
+    pub fn trigger(mut self, trigger: DrawerTrigger) -> Self {
+        self.trigger = Some(trigger);
+        self
+    }
+
+    pub fn portal(mut self, portal: DrawerPortal) -> Self {
+        self.portal = portal;
+        self
+    }
+
+    pub fn overlay(mut self, overlay: DrawerOverlay) -> Self {
+        self.overlay = overlay;
+        self
+    }
+
+    pub fn content(mut self, content: AnyElement) -> Self {
+        self.content = Some(DrawerCompositionContent::Eager(content));
+        self
+    }
+
+    pub fn content_with(
+        mut self,
+        content: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement + 'static,
+    ) -> Self {
+        self.content = Some(DrawerCompositionContent::Deferred(Box::new(content)));
+        self
+    }
+
+    #[track_caller]
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let trigger = self
+            .trigger
+            .expect("Drawer::compose().trigger(...) must be provided before into_element()");
+        let content = self
+            .content
+            .expect("Drawer::compose().content(...) must be provided before into_element()");
+
+        let portal = self.portal;
+        let overlay = self.overlay;
+
+        match content {
+            DrawerCompositionContent::Eager(content) => self.drawer.into_element_parts(
+                cx,
+                move |_cx| trigger,
+                portal,
+                overlay,
+                move |_cx| content,
+            ),
+            DrawerCompositionContent::Deferred(content) => self.drawer.into_element_parts(
+                cx,
+                move |_cx| trigger,
+                portal,
+                overlay,
+                move |cx| content(cx),
+            ),
+        }
+    }
+}
+
 const DRAWER_DRAG_HANDLE_HIT_HEIGHT: f32 = 32.0;
 const DRAWER_DRAG_HANDLE_HIT_HALF_WIDTH: f32 = 80.0;
 const DRAWER_DRAG_DISMISS_MIN_PX: f32 = 30.0;
@@ -1143,7 +1249,7 @@ where
 /// In Fret, drawers are backed by modal overlays, so this delegates to `DialogClose`.
 #[derive(Clone)]
 pub struct DrawerClose {
-    inner: crate::DialogClose,
+    inner: crate::SheetClose,
 }
 
 impl std::fmt::Debug for DrawerClose {
@@ -1155,18 +1261,14 @@ impl std::fmt::Debug for DrawerClose {
 impl DrawerClose {
     pub fn new(open: Model<bool>) -> Self {
         Self {
-            // DrawerClose should behave like a primitive close affordance (no forced positioning).
-            // Delegate visuals to `DialogClose`, but override the default absolute positioning.
-            inner: crate::DialogClose::new(open)
-                .refine_layout(LayoutRefinement::default().relative().inset(Space::N0)),
+            inner: crate::SheetClose::new(open),
         }
     }
 
     /// Creates a close affordance that resolves the current drawer/dialog scope at render time.
     pub fn from_scope() -> Self {
         Self {
-            inner: crate::DialogClose::from_scope()
-                .refine_layout(LayoutRefinement::default().relative().inset(Space::N0)),
+            inner: crate::SheetClose::from_scope(),
         }
     }
 
@@ -1460,6 +1562,50 @@ mod tests {
                 click_count: 1,
             }),
         );
+
+        assert_eq!(app.models().get_copied(&open), Some(true));
+    }
+
+    #[test]
+    fn drawer_compose_content_with_supports_from_scope_close() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(200.0)),
+        );
+        let mut services = FakeServices;
+        let open = app.models_mut().insert(true);
+
+        OverlayController::begin_frame(&mut app, window);
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "shadcn-drawer-compose-content-with-from-scope",
+            |cx| {
+                let trigger = DrawerTrigger::new(crate::Button::new("Open").into_element(cx));
+
+                vec![Drawer::new(open.clone())
+                    .compose()
+                    .trigger(trigger)
+                    .portal(DrawerPortal::new())
+                    .overlay(DrawerOverlay::new())
+                    .content_with(|cx| {
+                        let close = DrawerClose::from_scope().into_element(cx);
+                        DrawerContent::new(vec![close]).into_element(cx)
+                    })
+                    .into_element(cx)]
+            },
+        );
+        ui.set_root(root);
+        OverlayController::render(&mut ui, &mut app, &mut services, window, bounds);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
 
         assert_eq!(app.models().get_copied(&open), Some(true));
     }

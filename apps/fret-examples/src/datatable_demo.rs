@@ -2,8 +2,8 @@ use anyhow::Context as _;
 use fret_app::{App, CommandId, Effect, Model, WindowRequest};
 use fret_core::{AppWindowId, Corners, Edges, Event, Px};
 use fret_launch::{
-    WindowCreateSpec, WinitAppDriver, WinitCommandContext, WinitEventContext, WinitRenderContext,
-    WinitRunnerConfig, WinitWindowContext,
+    FnDriver, WindowCreateSpec, WinitCommandContext, WinitEventContext, WinitHotReloadContext,
+    WinitRenderContext, WinitRunnerConfig, WinitWindowContext,
 };
 use fret_runtime::PlatformCapabilities;
 use fret_ui::declarative;
@@ -30,7 +30,7 @@ struct DemoRow {
     score: i32,
 }
 
-struct DemoWindowState {
+pub struct DemoWindowState {
     ui: UiTree<App>,
     table_state: Model<TableState>,
     table_output: Model<DataTableViewOutput>,
@@ -42,7 +42,7 @@ struct DemoWindowState {
 }
 
 #[derive(Default)]
-struct DataTableDemoDriver;
+pub struct DataTableDemoDriver;
 
 impl DataTableDemoDriver {
     fn build_ui(app: &mut App, window: AppWindowId) -> DemoWindowState {
@@ -85,325 +85,346 @@ impl DataTableDemoDriver {
     }
 }
 
-impl WinitAppDriver for DataTableDemoDriver {
-    type WindowState = DemoWindowState;
+fn create_window_state(
+    _driver: &mut DataTableDemoDriver,
+    app: &mut App,
+    window: AppWindowId,
+) -> DemoWindowState {
+    DataTableDemoDriver::build_ui(app, window)
+}
 
-    fn create_window_state(&mut self, app: &mut App, window: AppWindowId) -> Self::WindowState {
-        Self::build_ui(app, window)
+fn hot_reload_window(
+    _driver: &mut DataTableDemoDriver,
+    context: WinitHotReloadContext<'_, DemoWindowState>,
+) {
+    let WinitHotReloadContext {
+        app,
+        services: _,
+        window,
+        state,
+    } = context;
+    crate::hotpatch::reset_ui_tree(app, window, &mut state.ui);
+}
+
+fn handle_model_changes(
+    _driver: &mut DataTableDemoDriver,
+    context: WinitWindowContext<'_, DemoWindowState>,
+    changed: &[fret_app::ModelId],
+) {
+    context
+        .state
+        .ui
+        .propagate_model_changes(context.app, changed);
+}
+
+fn handle_global_changes(
+    _driver: &mut DataTableDemoDriver,
+    context: WinitWindowContext<'_, DemoWindowState>,
+    changed: &[std::any::TypeId],
+) {
+    context
+        .state
+        .ui
+        .propagate_global_changes(context.app, changed);
+}
+
+fn handle_command(
+    _driver: &mut DataTableDemoDriver,
+    context: WinitCommandContext<'_, DemoWindowState>,
+    command: CommandId,
+) {
+    let WinitCommandContext {
+        app,
+        services,
+        window,
+        state,
+    } = context;
+
+    if state.ui.dispatch_command(app, services, &command) {
+        return;
     }
 
-    fn hot_reload_window(
-        &mut self,
-        app: &mut App,
-        _services: &mut dyn fret_core::UiServices,
-        window: AppWindowId,
-        state: &mut Self::WindowState,
-    ) {
-        crate::hotpatch::reset_ui_tree(app, window, &mut state.ui);
+    if command.as_str() == "datatable_demo.close" {
+        app.push_effect(Effect::Window(WindowRequest::Close(window)));
+        return;
+    }
+}
+
+fn handle_event(
+    _driver: &mut DataTableDemoDriver,
+    context: WinitEventContext<'_, DemoWindowState>,
+    event: &Event,
+) {
+    let WinitEventContext {
+        app,
+        services,
+        window,
+        state,
+    } = context;
+
+    if matches!(event, Event::WindowCloseRequested) {
+        app.push_effect(Effect::Window(WindowRequest::Close(window)));
+        return;
     }
 
-    fn handle_model_changes(
-        &mut self,
-        context: WinitWindowContext<'_, Self::WindowState>,
-        changed: &[fret_app::ModelId],
-    ) {
-        context
-            .state
-            .ui
-            .propagate_model_changes(context.app, changed);
-    }
-
-    fn handle_global_changes(
-        &mut self,
-        context: WinitWindowContext<'_, Self::WindowState>,
-        changed: &[std::any::TypeId],
-    ) {
-        context
-            .state
-            .ui
-            .propagate_global_changes(context.app, changed);
-    }
-
-    fn handle_command(
-        &mut self,
-        context: WinitCommandContext<'_, Self::WindowState>,
-        command: CommandId,
-    ) {
-        let WinitCommandContext {
-            app,
-            services,
-            window,
-            state,
-        } = context;
-
-        if state.ui.dispatch_command(app, services, &command) {
+    if let Event::KeyDown { key, modifiers, .. } = event {
+        if modifiers.ctrl || modifiers.alt || modifiers.shift || modifiers.meta {
+            state.ui.dispatch_event(app, services, event);
             return;
         }
 
-        if command.as_str() == "datatable_demo.close" {
+        if *key == fret_core::KeyCode::Escape {
             app.push_effect(Effect::Window(WindowRequest::Close(window)));
             return;
         }
     }
 
-    fn handle_event(&mut self, context: WinitEventContext<'_, Self::WindowState>, event: &Event) {
-        let WinitEventContext {
-            app,
-            services,
-            window,
-            state,
-        } = context;
+    state.ui.dispatch_event(app, services, event);
+}
 
-        if matches!(event, Event::WindowCloseRequested) {
-            app.push_effect(Effect::Window(WindowRequest::Close(window)));
-            return;
-        }
+fn render(_driver: &mut DataTableDemoDriver, context: WinitRenderContext<'_, DemoWindowState>) {
+    let scale_factor = context.scale_factor;
+    let WinitRenderContext {
+        app,
+        services,
+        window,
+        state,
+        bounds,
+        scene,
+        ..
+    } = context;
 
-        if let Event::KeyDown { key, modifiers, .. } = event {
-            if modifiers.ctrl || modifiers.alt || modifiers.shift || modifiers.meta {
-                state.ui.dispatch_event(app, services, event);
-                return;
-            }
+    OverlayController::begin_frame(app, window);
+    let frame_started = Instant::now();
 
-            if *key == fret_core::KeyCode::Escape {
-                app.push_effect(Effect::Window(WindowRequest::Close(window)));
-                return;
-            }
-        }
+    let rows = Arc::clone(&state.rows);
+    let table_state = state.table_state.clone();
+    let table_output = state.table_output.clone();
+    let root = declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds)
+        .render_root("datatable-demo", move |cx| {
+            cx.observe_model(&table_state, Invalidation::Layout);
+            cx.observe_model(&table_output, Invalidation::Layout);
 
-        state.ui.dispatch_event(app, services, event);
-    }
+            let theme = cx.theme_snapshot();
+            let padding = theme.metric_token("metric.padding.md");
 
-    fn render(&mut self, context: WinitRenderContext<'_, Self::WindowState>) {
-        let scale_factor = context.scale_factor;
-        let WinitRenderContext {
-            app,
-            services,
-            window,
-            state,
-            bounds,
-            scene,
-            ..
-        } = context;
-
-        OverlayController::begin_frame(app, window);
-        let frame_started = Instant::now();
-
-        let rows = Arc::clone(&state.rows);
-        let table_state = state.table_state.clone();
-        let table_output = state.table_output.clone();
-        let root =
-            declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds)
-                .render_root("datatable-demo", move |cx| {
-                    cx.observe_model(&table_state, Invalidation::Layout);
-                    cx.observe_model(&table_output, Invalidation::Layout);
-
-                    let theme = cx.theme_snapshot();
-                    let padding = theme.metric_token("metric.padding.md");
-
-                    let (selected, sorting) = cx
-                        .app
-                        .models()
-                        .read(&table_state, |st| {
-                            let selected = st.row_selection.len();
-                            let sorting = st
-                                .sorting
-                                .first()
-                                .map(|s| {
-                                    format!(
-                                        "{}:{}",
-                                        s.column.as_ref(),
-                                        if s.desc { "desc" } else { "asc" }
-                                    )
-                                })
-                                .unwrap_or_else(|| "<none>".to_string());
-                            (selected, sorting)
+            let (selected, sorting) = cx
+                .app
+                .models()
+                .read(&table_state, |st| {
+                    let selected = st.row_selection.len();
+                    let sorting = st
+                        .sorting
+                        .first()
+                        .map(|s| {
+                            format!(
+                                "{}:{}",
+                                s.column.as_ref(),
+                                if s.desc { "desc" } else { "asc" }
+                            )
                         })
-                        .unwrap_or((0, "<none>".to_string()));
+                        .unwrap_or_else(|| "<none>".to_string());
+                    (selected, sorting)
+                })
+                .unwrap_or((0, "<none>".to_string()));
 
-                    let helper = create_column_helper::<DemoRow>();
-                    let columns: Vec<ColumnDef<DemoRow>> = vec![
-                        helper.clone().accessor("id", |r| r.id),
-                        helper.clone().accessor_str("name", |r| r.name.as_ref()),
-                        helper.clone().accessor_str("role", |r| r.role.as_ref()),
-                        helper.accessor("score", |r| r.score),
-                    ];
-                    let columns: Arc<[ColumnDef<DemoRow>]> = columns.into();
-                    let columns_for_menu: Arc<[(Arc<str>, Arc<str>)]> = Arc::from([
-                        (Arc::from("id"), Arc::from("ID")),
-                        (Arc::from("name"), Arc::from("Name")),
-                        (Arc::from("role"), Arc::from("Role")),
-                        (Arc::from("score"), Arc::from("Score")),
-                    ]);
+            let helper = create_column_helper::<DemoRow>();
+            let columns: Vec<ColumnDef<DemoRow>> = vec![
+                helper.clone().accessor("id", |r| r.id),
+                helper.clone().accessor_str("name", |r| r.name.as_ref()),
+                helper.clone().accessor_str("role", |r| r.role.as_ref()),
+                helper.accessor("score", |r| r.score),
+            ];
+            let columns: Arc<[ColumnDef<DemoRow>]> = columns.into();
+            let columns_for_menu: Arc<[(Arc<str>, Arc<str>)]> = Arc::from([
+                (Arc::from("id"), Arc::from("ID")),
+                (Arc::from("name"), Arc::from("Name")),
+                (Arc::from("role"), Arc::from("Role")),
+                (Arc::from("score"), Arc::from("Score")),
+            ]);
 
-                    let mut root_layout = LayoutStyle::default();
-                    root_layout.size.width = Length::Fill;
-                    root_layout.size.height = Length::Fill;
+            let mut root_layout = LayoutStyle::default();
+            root_layout.size.width = Length::Fill;
+            root_layout.size.height = Length::Fill;
 
-                    let mut table_slot = LayoutStyle::default();
-                    table_slot.size.width = Length::Fill;
-                    table_slot.size.height = Length::Fill;
-                    table_slot.flex.grow = 1.0;
-                    table_slot.flex.basis = Length::Px(Px(0.0));
-                    table_slot.overflow = Overflow::Clip;
+            let mut table_slot = LayoutStyle::default();
+            table_slot.size.width = Length::Fill;
+            table_slot.size.height = Length::Fill;
+            table_slot.flex.grow = 1.0;
+            table_slot.flex.basis = Length::Px(Px(0.0));
+            table_slot.overflow = Overflow::Clip;
 
-                    let header = ui::h_row(|cx| {
-                        [
-                            Button::new("Close")
-                                .variant(ButtonVariant::Outline)
-                                .size(ButtonSize::Sm)
-                                .on_click(CommandId::from("datatable_demo.close"))
-                                .into_element(cx),
-                            cx.text(Arc::from(format!(
-                                "DataTable | selected={selected} sort={sorting}"
-                            ))),
-                        ]
-                    })
-                    .gap(Space::N2)
-                    .items_center()
-                    .into_element(cx);
+            let header = ui::h_row(|cx| {
+                [
+                    Button::new("Close")
+                        .variant(ButtonVariant::Outline)
+                        .size(ButtonSize::Sm)
+                        .on_click(CommandId::from("datatable_demo.close"))
+                        .into_element(cx),
+                    cx.text(Arc::from(format!(
+                        "DataTable | selected={selected} sort={sorting}"
+                    ))),
+                ]
+            })
+            .gap(Space::N2)
+            .items_center()
+            .into_element(cx);
 
-                    let columns_for_header: Arc<[(Arc<str>, Arc<str>)]> =
-                        Arc::clone(&columns_for_menu);
-                    let columns_for_toolbar = Arc::clone(&columns_for_header);
-                    let toolbar = DataTableToolbar::new(
-                        table_state.clone(),
-                        Arc::clone(&columns),
-                        move |col| {
-                            columns_for_toolbar
-                                .iter()
-                                .find_map(|(id, label)| {
-                                    (id.as_ref() == col.id.as_ref()).then(|| Arc::clone(label))
-                                })
-                                .unwrap_or_else(|| Arc::clone(&col.id))
-                        },
-                    )
-                    .into_element(cx);
-                    let pagination =
-                        DataTablePagination::new(table_state.clone(), table_output.clone())
-                            .into_element(cx);
+            let columns_for_header: Arc<[(Arc<str>, Arc<str>)]> = Arc::clone(&columns_for_menu);
+            let columns_for_toolbar = Arc::clone(&columns_for_header);
+            let toolbar =
+                DataTableToolbar::new(table_state.clone(), Arc::clone(&columns), move |col| {
+                    columns_for_toolbar
+                        .iter()
+                        .find_map(|(id, label)| {
+                            (id.as_ref() == col.id.as_ref()).then(|| Arc::clone(label))
+                        })
+                        .unwrap_or_else(|| Arc::clone(&col.id))
+                })
+                .into_element(cx);
+            let pagination = DataTablePagination::new(table_state.clone(), table_output.clone())
+                .into_element(cx);
 
-                    let data_table = DataTable::new()
-                        .output_model(table_output.clone())
-                        .into_element(
-                            cx,
-                            Arc::clone(&rows),
-                            1,
-                            table_state.clone(),
-                            Arc::clone(&columns),
-                            |row, _i, _parent| RowKey(row.id),
-                            move |col| {
-                                columns_for_header
-                                    .iter()
-                                    .find_map(|(id, label)| {
-                                        if id.as_ref() == col.id.as_ref() {
-                                            Some(Arc::clone(label))
-                                        } else {
-                                            None
-                                        }
-                                    })
-                                    .unwrap_or_else(|| Arc::clone(&col.id))
-                            },
-                            |cx, col, row| match col.id.as_ref() {
-                                "id" => cx.text(Arc::from(row.id.to_string())),
-                                "name" => cx.text(Arc::clone(&row.name)),
-                                "role" => cx.text(Arc::clone(&row.role)),
-                                "score" => cx.text(Arc::from(row.score.to_string())),
-                                _ => cx.text(Arc::from("")),
-                            },
-                        );
+            let data_table = DataTable::new()
+                .output_model(table_output.clone())
+                .into_element(
+                    cx,
+                    Arc::clone(&rows),
+                    1,
+                    table_state.clone(),
+                    Arc::clone(&columns),
+                    |row, _i, _parent| RowKey(row.id),
+                    move |col| {
+                        columns_for_header
+                            .iter()
+                            .find_map(|(id, label)| {
+                                if id.as_ref() == col.id.as_ref() {
+                                    Some(Arc::clone(label))
+                                } else {
+                                    None
+                                }
+                            })
+                            .unwrap_or_else(|| Arc::clone(&col.id))
+                    },
+                    |cx, col, row| match col.id.as_ref() {
+                        "id" => cx.text(Arc::from(row.id.to_string())),
+                        "name" => cx.text(Arc::clone(&row.name)),
+                        "role" => cx.text(Arc::clone(&row.role)),
+                        "score" => cx.text(Arc::from(row.score.to_string())),
+                        _ => cx.text(Arc::from("")),
+                    },
+                );
 
-                    vec![cx.container(
-                        ContainerProps {
+            vec![cx.container(
+                ContainerProps {
+                    layout: root_layout,
+                    background: Some(theme.color_token("background")),
+                    ..Default::default()
+                },
+                move |cx| {
+                    vec![cx.flex(
+                        FlexProps {
                             layout: root_layout,
-                            background: Some(theme.color_token("background")),
-                            ..Default::default()
+                            direction: fret_core::Axis::Vertical,
+                            gap: fret_ui::element::SpacingLength::Px(Px(8.0)),
+                            padding: Edges::all(padding).into(),
+                            justify: MainAlign::Start,
+                            align: CrossAlign::Stretch,
+                            wrap: false,
                         },
                         move |cx| {
-                            vec![cx.flex(
-                                FlexProps {
-                                    layout: root_layout,
-                                    direction: fret_core::Axis::Vertical,
-                                    gap: fret_ui::element::SpacingLength::Px(Px(8.0)),
-                                    padding: Edges::all(padding).into(),
-                                    justify: MainAlign::Start,
-                                    align: CrossAlign::Stretch,
-                                    wrap: false,
-                                },
-                                move |cx| {
-                                    vec![
-                                        header,
-                                        toolbar,
-                                        cx.container(
-                                            ContainerProps {
-                                                layout: table_slot,
-                                                background: Some(theme.color_token("card")),
-                                                border: Edges::all(Px(1.0)),
-                                                border_color: Some(theme.color_token("border")),
-                                                corner_radii: Corners::all(
-                                                    theme.metric_token("metric.radius.md"),
-                                                ),
-                                                ..Default::default()
-                                            },
-                                            move |_cx| vec![data_table],
+                            vec![
+                                header,
+                                toolbar,
+                                cx.container(
+                                    ContainerProps {
+                                        layout: table_slot,
+                                        background: Some(theme.color_token("card")),
+                                        border: Edges::all(Px(1.0)),
+                                        border_color: Some(theme.color_token("border")),
+                                        corner_radii: Corners::all(
+                                            theme.metric_token("metric.radius.md"),
                                         ),
-                                        pagination,
-                                    ]
-                                },
-                            )]
+                                        ..Default::default()
+                                    },
+                                    move |_cx| vec![data_table],
+                                ),
+                                pagination,
+                            ]
                         },
                     )]
-                });
+                },
+            )]
+        });
 
-        state.ui.set_root(root);
-        OverlayController::render(&mut state.ui, app, services, window, bounds);
-        state.ui.request_semantics_snapshot();
-        state.ui.ingest_paint_cache_source(scene);
-        scene.clear();
+    state.ui.set_root(root);
+    OverlayController::render(&mut state.ui, app, services, window, bounds);
+    state.ui.request_semantics_snapshot();
+    state.ui.ingest_paint_cache_source(scene);
+    scene.clear();
 
-        let mut frame =
-            fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
-        let layout_started = Instant::now();
-        frame.layout_all();
-        let layout_elapsed = layout_started.elapsed();
-        let paint_started = Instant::now();
-        frame.paint_all(scene);
-        let paint_elapsed = paint_started.elapsed();
+    let mut frame =
+        fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
+    let layout_started = Instant::now();
+    frame.layout_all();
+    let layout_elapsed = layout_started.elapsed();
+    let paint_started = Instant::now();
+    frame.paint_all(scene);
+    let paint_elapsed = paint_started.elapsed();
 
-        state.frame = state.frame.saturating_add(1);
-        if state.profile_frames_left > 0 {
-            state.profile_frames_left = state.profile_frames_left.saturating_sub(1);
-            let since_start = state.started_at.elapsed();
-            let frame_elapsed = frame_started.elapsed();
-            tracing::info!(
-                "datatable_demo: frame={} since_start={:.2}ms total={:.2}ms layout={:.2}ms paint={:.2}ms",
-                state.frame,
-                since_start.as_secs_f64() * 1000.0,
-                frame_elapsed.as_secs_f64() * 1000.0,
-                layout_elapsed.as_secs_f64() * 1000.0,
-                paint_elapsed.as_secs_f64() * 1000.0
-            );
-        }
+    state.frame = state.frame.saturating_add(1);
+    if state.profile_frames_left > 0 {
+        state.profile_frames_left = state.profile_frames_left.saturating_sub(1);
+        let since_start = state.started_at.elapsed();
+        let frame_elapsed = frame_started.elapsed();
+        tracing::info!(
+            "datatable_demo: frame={} since_start={:.2}ms total={:.2}ms layout={:.2}ms paint={:.2}ms",
+            state.frame,
+            since_start.as_secs_f64() * 1000.0,
+            frame_elapsed.as_secs_f64() * 1000.0,
+            layout_elapsed.as_secs_f64() * 1000.0,
+            paint_elapsed.as_secs_f64() * 1000.0
+        );
+    }
 
-        if let Some(limit) = state.exit_after_frames {
-            if state.frame >= limit {
-                app.push_effect(Effect::Window(WindowRequest::Close(window)));
-                return;
-            }
-        }
-
-        if state.profile_frames_left > 0 || state.exit_after_frames.is_some() {
-            app.request_redraw(window);
+    if let Some(limit) = state.exit_after_frames {
+        if state.frame >= limit {
+            app.push_effect(Effect::Window(WindowRequest::Close(window)));
+            return;
         }
     }
 
-    fn window_create_spec(
-        &mut self,
-        _app: &mut App,
-        _request: &fret_app::CreateWindowRequest,
-    ) -> Option<WindowCreateSpec> {
-        None
+    if state.profile_frames_left > 0 || state.exit_after_frames.is_some() {
+        app.request_redraw(window);
     }
+}
+
+fn window_create_spec(
+    _driver: &mut DataTableDemoDriver,
+    _app: &mut App,
+    _request: &fret_app::CreateWindowRequest,
+) -> Option<WindowCreateSpec> {
+    None
+}
+
+fn configure_fn_driver_hooks(
+    hooks: &mut fret_launch::FnDriverHooks<DataTableDemoDriver, DemoWindowState>,
+) {
+    hooks.hot_reload_window = Some(hot_reload_window);
+    hooks.handle_model_changes = Some(handle_model_changes);
+    hooks.handle_global_changes = Some(handle_global_changes);
+    hooks.handle_command = Some(handle_command);
+    hooks.window_create_spec = Some(window_create_spec);
+}
+
+pub fn build_fn_driver() -> FnDriver<DataTableDemoDriver, DemoWindowState> {
+    FnDriver::new(
+        DataTableDemoDriver::default(),
+        create_window_state,
+        handle_event,
+        render,
+    )
+    .with_hooks(configure_fn_driver_hooks)
 }
 
 pub fn run() -> anyhow::Result<()> {
@@ -425,6 +446,14 @@ pub fn run() -> anyhow::Result<()> {
         ..Default::default()
     };
 
-    crate::run_native_demo(config, app, DataTableDemoDriver::default())
-        .context("run datatable_demo app")
+    crate::run_native_with_fn_driver_with_hooks(
+        config,
+        app,
+        DataTableDemoDriver::default(),
+        create_window_state,
+        handle_event,
+        render,
+        configure_fn_driver_hooks,
+    )
+    .context("run datatable_demo app")
 }

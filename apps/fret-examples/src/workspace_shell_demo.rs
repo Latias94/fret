@@ -3,7 +3,7 @@ use fret_app::{App, CommandId, Effect, WindowRequest};
 use fret_bootstrap::ui_diagnostics::UiDiagnosticsService;
 use fret_core::{AppWindowId, Axis, Edges, Event, Px, Rect, SemanticsRole};
 use fret_launch::{
-    WinitAppDriver, WinitCommandContext, WinitEventContext, WinitRenderContext, WinitRunnerConfig,
+    FnDriver, WinitCommandContext, WinitEventContext, WinitRenderContext, WinitRunnerConfig,
     WinitWindowContext,
 };
 use fret_runtime::{
@@ -104,7 +104,7 @@ fn build_file_tree_items() -> (Vec<TreeItem>, TreeState) {
     )
 }
 
-struct WorkspaceShellWindowState {
+pub struct WorkspaceShellWindowState {
     ui: UiTree<App>,
     view_cache_shell: bool,
     window_layout: fret_app::Model<WorkspaceWindowLayout>,
@@ -117,7 +117,7 @@ struct WorkspaceShellWindowState {
 }
 
 #[derive(Default)]
-struct WorkspaceShellDemoDriver;
+pub struct WorkspaceShellDemoDriver;
 
 const CMD_WORKSPACE_SHELL_DEMO_SET_ACTIVE_DIRTY: &str = "workspace.shell_demo.set_active_dirty";
 const CMD_WORKSPACE_SHELL_DEMO_CLEAR_ACTIVE_DIRTY: &str = "workspace.shell_demo.clear_active_dirty";
@@ -875,404 +875,427 @@ impl WorkspaceShellDemoDriver {
     }
 }
 
-impl WinitAppDriver for WorkspaceShellDemoDriver {
-    type WindowState = WorkspaceShellWindowState;
+fn create_window_state(
+    _driver: &mut WorkspaceShellDemoDriver,
+    app: &mut App,
+    window: AppWindowId,
+) -> WorkspaceShellWindowState {
+    WorkspaceShellDemoDriver::build_ui(app, window)
+}
 
-    fn create_window_state(&mut self, app: &mut App, window: AppWindowId) -> Self::WindowState {
-        Self::build_ui(app, window)
-    }
+fn handle_model_changes(
+    _driver: &mut WorkspaceShellDemoDriver,
+    context: WinitWindowContext<'_, WorkspaceShellWindowState>,
+    changed: &[fret_app::ModelId],
+) {
+    let WinitWindowContext { app, state, .. } = context;
+    state.ui.propagate_model_changes(app, changed);
+}
 
-    fn handle_model_changes(
-        &mut self,
-        context: WinitWindowContext<'_, Self::WindowState>,
-        changed: &[fret_app::ModelId],
+fn handle_global_changes(
+    _driver: &mut WorkspaceShellDemoDriver,
+    context: WinitWindowContext<'_, WorkspaceShellWindowState>,
+    changed: &[std::any::TypeId],
+) {
+    let WinitWindowContext { app, state, .. } = context;
+    state.ui.propagate_global_changes(app, changed);
+}
+
+fn handle_command(
+    _driver: &mut WorkspaceShellDemoDriver,
+    context: WinitCommandContext<'_, WorkspaceShellWindowState>,
+    command: CommandId,
+) {
+    let WinitCommandContext {
+        app,
+        services,
+        window,
+        state,
+    } = context;
+
+    if matches!(
+        command.as_str(),
+        CMD_WORKSPACE_SHELL_DEMO_DIRTY_CLOSE_CANCEL
+            | CMD_WORKSPACE_SHELL_DEMO_DIRTY_CLOSE_DISCARD
+            | CMD_WORKSPACE_SHELL_DEMO_DIRTY_CLOSE_SAVE_AND_CLOSE
     ) {
-        let WinitWindowContext { app, state, .. } = context;
-        state.ui.propagate_model_changes(app, changed);
-    }
+        let prompt = app.models().get_cloned(&state.dirty_close_prompt).flatten();
+        let do_discard = command.as_str() == CMD_WORKSPACE_SHELL_DEMO_DIRTY_CLOSE_DISCARD;
+        let do_save = command.as_str() == CMD_WORKSPACE_SHELL_DEMO_DIRTY_CLOSE_SAVE_AND_CLOSE;
 
-    fn handle_global_changes(
-        &mut self,
-        context: WinitWindowContext<'_, Self::WindowState>,
-        changed: &[std::any::TypeId],
-    ) {
-        let WinitWindowContext { app, state, .. } = context;
-        state.ui.propagate_global_changes(app, changed);
-    }
-
-    fn handle_command(
-        &mut self,
-        context: WinitCommandContext<'_, Self::WindowState>,
-        command: CommandId,
-    ) {
-        let WinitCommandContext {
-            app,
-            services,
-            window,
-            state,
-        } = context;
-
-        if matches!(
-            command.as_str(),
-            CMD_WORKSPACE_SHELL_DEMO_DIRTY_CLOSE_CANCEL
-                | CMD_WORKSPACE_SHELL_DEMO_DIRTY_CLOSE_DISCARD
-                | CMD_WORKSPACE_SHELL_DEMO_DIRTY_CLOSE_SAVE_AND_CLOSE
-        ) {
-            let prompt = app.models().get_cloned(&state.dirty_close_prompt).flatten();
-            let do_discard = command.as_str() == CMD_WORKSPACE_SHELL_DEMO_DIRTY_CLOSE_DISCARD;
-            let do_save = command.as_str() == CMD_WORKSPACE_SHELL_DEMO_DIRTY_CLOSE_SAVE_AND_CLOSE;
-
-            if (do_discard || do_save) && prompt.is_some() {
-                let prompt = prompt.unwrap();
-                let _ = app.models_mut().update(
-                    &state.window_layout,
-                    |layout: &mut WorkspaceWindowLayout| {
-                        layout.active_pane = Some(prompt.pane_id.clone());
-                        let Some(pane) = layout.pane_tree.find_pane_mut(prompt.pane_id.as_ref())
-                        else {
-                            return;
-                        };
-                        if let Some(active) = prompt.request.active_tab_id.clone() {
-                            let _ = pane.tabs.activate(active);
-                        }
-                        if do_save {
-                            for id in prompt.request.dirty_tabs_in_order.clone() {
-                                pane.tabs.set_dirty(id, false);
-                            }
-                        }
-                        let _ = pane.tabs.apply_command(&prompt.command);
-                    },
-                );
-            }
-
-            let _ = app
-                .models_mut()
-                .update(&state.dirty_close_prompt, |p| *p = None);
-            let _ = app
-                .models_mut()
-                .update(&state.dirty_close_prompt_open, |v| *v = false);
-            app.request_redraw(window);
-            return;
-        }
-
-        if command.as_str() == "window.close" {
-            app.push_effect(Effect::Window(WindowRequest::Close(window)));
-            return;
-        }
-
-        if matches!(
-            command.as_str(),
-            CMD_WORKSPACE_SHELL_DEMO_SET_ACTIVE_DIRTY | CMD_WORKSPACE_SHELL_DEMO_CLEAR_ACTIVE_DIRTY
-        ) {
-            let dirty = command.as_str() == CMD_WORKSPACE_SHELL_DEMO_SET_ACTIVE_DIRTY;
-            let did_apply = app
-                .models_mut()
-                .update(
-                    &state.window_layout,
-                    |layout: &mut WorkspaceWindowLayout| {
-                        let Some(pane) = layout.pane_tree.find_pane_mut("pane-a") else {
-                            return false;
-                        };
-                        let Some(active) = pane
-                            .tabs
-                            .active()
-                            .cloned()
-                            .or_else(|| pane.tabs.tabs().first().cloned())
-                        else {
-                            return false;
-                        };
-                        let _ = pane.tabs.activate(active.clone());
-                        pane.tabs.set_dirty(active, dirty);
-                        true
-                    },
-                )
-                .unwrap_or(false);
-            if did_apply {
-                app.request_redraw(window);
-            }
-            return;
-        }
-
-        if command.as_str() == CMD_WORKSPACE_SHELL_DEMO_TOGGLE_TABSTRIP_TWO_ROW_PINNED {
-            let _ = app
-                .models_mut()
-                .update(&state.tabstrip_two_row_pinned, |v| *v = !*v);
-            app.request_redraw(window);
-            return;
-        }
-
-        if command.as_str() == CMD_WORKSPACE_SHELL_DEMO_DEBUG_CLOSE_ACTIVE_PANE_A {
-            let close_cmd = CommandId::new(Arc::<str>::from("workspace.tab.close"));
-
-            let block_dirty_close =
-                env_bool("FRET_WORKSPACE_SHELL_DEBUG_DIRTY_CLOSE_POLICY", false);
-            let mut dirty_close_policy = WorkspaceShellDemoDirtyClosePolicy {
-                block: block_dirty_close,
-            };
-
-            let update = app.models_mut().update(
+        if (do_discard || do_save) && prompt.is_some() {
+            let prompt = prompt.unwrap();
+            let _ = app.models_mut().update(
                 &state.window_layout,
                 |layout: &mut WorkspaceWindowLayout| {
-                    layout.active_pane = Some(Arc::from("pane-a"));
-                    layout
-                        .apply_command_with_close_policy(&close_cmd, Some(&mut dirty_close_policy))
+                    layout.active_pane = Some(prompt.pane_id.clone());
+                    let Some(pane) = layout.pane_tree.find_pane_mut(prompt.pane_id.as_ref()) else {
+                        return;
+                    };
+                    if let Some(active) = prompt.request.active_tab_id.clone() {
+                        let _ = pane.tabs.activate(active);
+                    }
+                    if do_save {
+                        for id in prompt.request.dirty_tabs_in_order.clone() {
+                            pane.tabs.set_dirty(id, false);
+                        }
+                    }
+                    let _ = pane.tabs.apply_command(&prompt.command);
                 },
             );
-            let outcome = update.unwrap_or(fret_workspace::tabs::WorkspaceApplyCommandOutcome {
-                applied: false,
-                blocked_dirty_close: None,
-            });
-
-            if let Some(req) = outcome.blocked_dirty_close.clone() {
-                let _ = app.models_mut().update(&state.dirty_close_prompt, |p| {
-                    *p = Some(WorkspaceShellDirtyClosePrompt {
-                        pane_id: Arc::from("pane-a"),
-                        command: close_cmd.clone(),
-                        request: req,
-                    });
-                });
-                let _ = app
-                    .models_mut()
-                    .update(&state.dirty_close_prompt_open, |v| *v = true);
-            }
-
-            if outcome.applied || outcome.blocked_dirty_close.is_some() {
-                app.request_redraw(window);
-            }
-            return;
         }
 
-        // Important: for "app model" commands (e.g. workspace tab operations), we still want to
-        // apply the command even if some UI subtree reports it as handled (e.g. a context menu
-        // item dispatching the command while focused inside the menu overlay).
-        //
-        // Diagnostics note: because the model application runs before UI command hooks, some UI
-        // hooks become non-idempotent (e.g. close-by-id after the tab is already removed). Capture
-        // pending source metadata up front so we can still emit a stable command dispatch trace
-        // entry for the driver-applied outcome (ADR 0307).
-        let pending_source = app.with_global_mut(
-            WindowPendingCommandDispatchSourceService::default,
-            |svc, app| {
-                svc.consume(window, app.tick_id(), &command)
-                    .unwrap_or_else(CommandDispatchSourceV1::programmatic)
-            },
-        );
-        let pending_source_for_ui = pending_source.clone();
-        app.with_global_mut(
-            WindowPendingCommandDispatchSourceService::default,
-            |svc, app| {
-                svc.record(
-                    window,
-                    app.tick_id(),
-                    command.clone(),
-                    pending_source_for_ui,
-                );
-            },
-        );
+        let _ = app
+            .models_mut()
+            .update(&state.dirty_close_prompt, |p| *p = None);
+        let _ = app
+            .models_mut()
+            .update(&state.dirty_close_prompt_open, |v| *v = false);
+        app.request_redraw(window);
+        return;
+    }
+
+    if command.as_str() == "window.close" {
+        app.push_effect(Effect::Window(WindowRequest::Close(window)));
+        return;
+    }
+
+    if matches!(
+        command.as_str(),
+        CMD_WORKSPACE_SHELL_DEMO_SET_ACTIVE_DIRTY | CMD_WORKSPACE_SHELL_DEMO_CLEAR_ACTIVE_DIRTY
+    ) {
+        let dirty = command.as_str() == CMD_WORKSPACE_SHELL_DEMO_SET_ACTIVE_DIRTY;
+        let did_apply = app
+            .models_mut()
+            .update(
+                &state.window_layout,
+                |layout: &mut WorkspaceWindowLayout| {
+                    let Some(pane) = layout.pane_tree.find_pane_mut("pane-a") else {
+                        return false;
+                    };
+                    let Some(active) = pane
+                        .tabs
+                        .active()
+                        .cloned()
+                        .or_else(|| pane.tabs.tabs().first().cloned())
+                    else {
+                        return false;
+                    };
+                    let _ = pane.tabs.activate(active.clone());
+                    pane.tabs.set_dirty(active, dirty);
+                    true
+                },
+            )
+            .unwrap_or(false);
+        if did_apply {
+            app.request_redraw(window);
+        }
+        return;
+    }
+
+    if command.as_str() == CMD_WORKSPACE_SHELL_DEMO_TOGGLE_TABSTRIP_TWO_ROW_PINNED {
+        let _ = app
+            .models_mut()
+            .update(&state.tabstrip_two_row_pinned, |v| *v = !*v);
+        app.request_redraw(window);
+        return;
+    }
+
+    if command.as_str() == CMD_WORKSPACE_SHELL_DEMO_DEBUG_CLOSE_ACTIVE_PANE_A {
+        let close_cmd = CommandId::new(Arc::<str>::from("workspace.tab.close"));
 
         let block_dirty_close = env_bool("FRET_WORKSPACE_SHELL_DEBUG_DIRTY_CLOSE_POLICY", false);
         let mut dirty_close_policy = WorkspaceShellDemoDirtyClosePolicy {
             block: block_dirty_close,
         };
+
         let update = app.models_mut().update(
             &state.window_layout,
             |layout: &mut WorkspaceWindowLayout| {
-                let active_pane_id = layout.active_pane.clone();
-                (
-                    layout.apply_command_with_close_policy(&command, Some(&mut dirty_close_policy)),
-                    active_pane_id,
-                )
+                layout.active_pane = Some(Arc::from("pane-a"));
+                layout.apply_command_with_close_policy(&close_cmd, Some(&mut dirty_close_policy))
             },
         );
-        let (outcome, active_pane_id) = update.unwrap_or((
-            fret_workspace::tabs::WorkspaceApplyCommandOutcome {
-                applied: false,
-                blocked_dirty_close: None,
-            },
-            None,
-        ));
-
-        let did_dispatch_ui = state.ui.dispatch_command(app, services, &command);
-        if (outcome.applied || outcome.blocked_dirty_close.is_some()) && !did_dispatch_ui {
-            let handled_by_scope = app
-                .commands()
-                .get(command.clone())
-                .map(|m| m.scope)
-                .or(Some(CommandScope::Window));
-            app.with_global_mut(
-                WindowCommandDispatchDiagnosticsStore::default,
-                |store, app| {
-                    store.record(CommandDispatchDecisionV1 {
-                        seq: 0,
-                        frame_id: app.frame_id(),
-                        tick_id: app.tick_id(),
-                        window,
-                        command: command.clone(),
-                        source: pending_source.clone(),
-                        handled: true,
-                        handled_by_element: None,
-                        handled_by_scope,
-                        handled_by_driver: true,
-                        stopped: false,
-                        started_from_focus: false,
-                        used_default_root_fallback: false,
-                    });
-                },
-            );
-        }
+        let outcome = update.unwrap_or(fret_workspace::tabs::WorkspaceApplyCommandOutcome {
+            applied: false,
+            blocked_dirty_close: None,
+        });
 
         if let Some(req) = outcome.blocked_dirty_close.clone() {
-            if let Some(pane_id) = active_pane_id {
-                let _ = app.models_mut().update(&state.dirty_close_prompt, |p| {
-                    *p = Some(WorkspaceShellDirtyClosePrompt {
-                        pane_id,
-                        command: command.clone(),
-                        request: req,
-                    });
+            let _ = app.models_mut().update(&state.dirty_close_prompt, |p| {
+                *p = Some(WorkspaceShellDirtyClosePrompt {
+                    pane_id: Arc::from("pane-a"),
+                    command: close_cmd.clone(),
+                    request: req,
                 });
-                let _ = app
-                    .models_mut()
-                    .update(&state.dirty_close_prompt_open, |v| *v = true);
-            }
+            });
+            let _ = app
+                .models_mut()
+                .update(&state.dirty_close_prompt_open, |v| *v = true);
         }
 
-        if outcome.applied || did_dispatch_ui {
+        if outcome.applied || outcome.blocked_dirty_close.is_some() {
             app.request_redraw(window);
         }
+        return;
     }
 
-    fn handle_event(&mut self, context: WinitEventContext<'_, Self::WindowState>, event: &Event) {
-        let WinitEventContext {
-            app,
-            services,
-            window,
-            state,
-        } = context;
-        if matches!(event, Event::WindowCloseRequested) {
-            app.push_effect(Effect::Window(WindowRequest::Close(window)));
-            return;
+    // Important: for "app model" commands (e.g. workspace tab operations), we still want to
+    // apply the command even if some UI subtree reports it as handled (e.g. a context menu
+    // item dispatching the command while focused inside the menu overlay).
+    //
+    // Diagnostics note: because the model application runs before UI command hooks, some UI
+    // hooks become non-idempotent (e.g. close-by-id after the tab is already removed). Capture
+    // pending source metadata up front so we can still emit a stable command dispatch trace
+    // entry for the driver-applied outcome (ADR 0307).
+    let pending_source = app.with_global_mut(
+        WindowPendingCommandDispatchSourceService::default,
+        |svc, app| {
+            svc.consume(window, app.tick_id(), &command)
+                .unwrap_or_else(CommandDispatchSourceV1::programmatic)
+        },
+    );
+    let pending_source_for_ui = pending_source.clone();
+    app.with_global_mut(
+        WindowPendingCommandDispatchSourceService::default,
+        |svc, app| {
+            svc.record(
+                window,
+                app.tick_id(),
+                command.clone(),
+                pending_source_for_ui,
+            );
+        },
+    );
+
+    let block_dirty_close = env_bool("FRET_WORKSPACE_SHELL_DEBUG_DIRTY_CLOSE_POLICY", false);
+    let mut dirty_close_policy = WorkspaceShellDemoDirtyClosePolicy {
+        block: block_dirty_close,
+    };
+    let update = app.models_mut().update(
+        &state.window_layout,
+        |layout: &mut WorkspaceWindowLayout| {
+            let active_pane_id = layout.active_pane.clone();
+            (
+                layout.apply_command_with_close_policy(&command, Some(&mut dirty_close_policy)),
+                active_pane_id,
+            )
+        },
+    );
+    let (outcome, active_pane_id) = update.unwrap_or((
+        fret_workspace::tabs::WorkspaceApplyCommandOutcome {
+            applied: false,
+            blocked_dirty_close: None,
+        },
+        None,
+    ));
+
+    let did_dispatch_ui = state.ui.dispatch_command(app, services, &command);
+    if (outcome.applied || outcome.blocked_dirty_close.is_some()) && !did_dispatch_ui {
+        let handled_by_scope = app
+            .commands()
+            .get(command.clone())
+            .map(|m| m.scope)
+            .or(Some(CommandScope::Window));
+        app.with_global_mut(
+            WindowCommandDispatchDiagnosticsStore::default,
+            |store, app| {
+                store.record(CommandDispatchDecisionV1 {
+                    seq: 0,
+                    frame_id: app.frame_id(),
+                    tick_id: app.tick_id(),
+                    window,
+                    command: command.clone(),
+                    source: pending_source.clone(),
+                    handled: true,
+                    handled_by_element: None,
+                    handled_by_scope,
+                    handled_by_driver: true,
+                    stopped: false,
+                    started_from_focus: false,
+                    used_default_root_fallback: false,
+                });
+            },
+        );
+    }
+
+    if let Some(req) = outcome.blocked_dirty_close.clone() {
+        if let Some(pane_id) = active_pane_id {
+            let _ = app.models_mut().update(&state.dirty_close_prompt, |p| {
+                *p = Some(WorkspaceShellDirtyClosePrompt {
+                    pane_id,
+                    command: command.clone(),
+                    request: req,
+                });
+            });
+            let _ = app
+                .models_mut()
+                .update(&state.dirty_close_prompt_open, |v| *v = true);
         }
-        state.ui.dispatch_event(app, services, event);
     }
 
-    fn render(&mut self, context: WinitRenderContext<'_, Self::WindowState>) {
-        let WinitRenderContext {
+    if outcome.applied || did_dispatch_ui {
+        app.request_redraw(window);
+    }
+}
+
+fn handle_event(
+    _driver: &mut WorkspaceShellDemoDriver,
+    context: WinitEventContext<'_, WorkspaceShellWindowState>,
+    event: &Event,
+) {
+    let WinitEventContext {
+        app,
+        services,
+        window,
+        state,
+    } = context;
+    if matches!(event, Event::WindowCloseRequested) {
+        app.push_effect(Effect::Window(WindowRequest::Close(window)));
+        return;
+    }
+    state.ui.dispatch_event(app, services, event);
+}
+
+fn render(
+    driver: &mut WorkspaceShellDemoDriver,
+    context: WinitRenderContext<'_, WorkspaceShellWindowState>,
+) {
+    let WinitRenderContext {
+        app,
+        services,
+        window,
+        state,
+        bounds,
+        scale_factor,
+        scene,
+    } = context;
+
+    OverlayController::begin_frame(app, window);
+    WorkspaceShellDemoDriver::render_ui(app, services, window, state, bounds);
+    OverlayController::render(&mut state.ui, app, services, window, bounds);
+
+    state.ui.request_semantics_snapshot();
+    state.ui.ingest_paint_cache_source(scene);
+
+    let inspection_active = app
+        .with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
+            svc.wants_inspection_active(window)
+        });
+    state.ui.set_inspection_active(inspection_active);
+
+    scene.clear();
+    let mut frame =
+        fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
+    frame.layout_all();
+
+    let semantics_snapshot = state.ui.semantics_snapshot_arc();
+    let drive = app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
+        svc.drive_script_for_window(
             app,
-            services,
             window,
-            state,
             bounds,
             scale_factor,
-            scene,
-        } = context;
+            Some(&mut state.ui),
+            semantics_snapshot.as_deref(),
+        )
+    });
 
-        OverlayController::begin_frame(app, window);
-        Self::render_ui(app, services, window, state, bounds);
-        OverlayController::render(&mut state.ui, app, services, window, bounds);
+    if drive.request_redraw {
+        app.request_redraw(window);
+        app.push_effect(Effect::RequestAnimationFrame(window));
+    }
+
+    let mut injected_any = false;
+    for event in drive.events {
+        injected_any = true;
+        state.ui.dispatch_event(app, services, &event);
+    }
+
+    if injected_any {
+        let mut deferred_effects: Vec<Effect> = Vec::new();
+        loop {
+            let effects = app.flush_effects();
+            if effects.is_empty() {
+                break;
+            }
+
+            let mut applied_any_command = false;
+            for effect in effects {
+                match effect {
+                    Effect::Command { window: w, command } => {
+                        if w.is_none() || w == Some(window) {
+                            handle_command(
+                                driver,
+                                WinitCommandContext {
+                                    app,
+                                    services,
+                                    window,
+                                    state,
+                                },
+                                command,
+                            );
+                            applied_any_command = true;
+                        } else {
+                            deferred_effects.push(Effect::Command { window: w, command });
+                        }
+                    }
+                    other => deferred_effects.push(other),
+                }
+            }
+
+            if !applied_any_command {
+                break;
+            }
+        }
+        for effect in deferred_effects {
+            app.push_effect(effect);
+        }
 
         state.ui.request_semantics_snapshot();
-        state.ui.ingest_paint_cache_source(scene);
-
-        let inspection_active = app
-            .with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
-                svc.wants_inspection_active(window)
-            });
-        state.ui.set_inspection_active(inspection_active);
-
-        scene.clear();
         let mut frame =
             fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
         frame.layout_all();
+    }
 
-        let semantics_snapshot = state.ui.semantics_snapshot_arc();
-        let drive = app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
-            svc.drive_script_for_window(
-                app,
-                window,
-                bounds,
-                scale_factor,
-                Some(&mut state.ui),
-                semantics_snapshot.as_deref(),
-            )
-        });
+    let mut frame =
+        fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
+    frame.paint_all(scene);
 
-        if drive.request_redraw {
-            app.request_redraw(window);
+    app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
+        let element_runtime = app.global::<fret_ui::elements::ElementRuntime>();
+        svc.record_snapshot(
+            app,
+            window,
+            bounds,
+            scale_factor,
+            &mut state.ui,
+            element_runtime,
+            scene,
+        );
+        let _ = svc.maybe_dump_if_triggered();
+        if svc.is_enabled() {
             app.push_effect(Effect::RequestAnimationFrame(window));
         }
+    });
+}
 
-        let mut injected_any = false;
-        for event in drive.events {
-            injected_any = true;
-            state.ui.dispatch_event(app, services, &event);
-        }
+fn configure_fn_driver_hooks(
+    hooks: &mut fret_launch::FnDriverHooks<WorkspaceShellDemoDriver, WorkspaceShellWindowState>,
+) {
+    hooks.handle_model_changes = Some(handle_model_changes);
+    hooks.handle_global_changes = Some(handle_global_changes);
+    hooks.handle_command = Some(handle_command);
+}
 
-        if injected_any {
-            let mut deferred_effects: Vec<Effect> = Vec::new();
-            loop {
-                let effects = app.flush_effects();
-                if effects.is_empty() {
-                    break;
-                }
-
-                let mut applied_any_command = false;
-                for effect in effects {
-                    match effect {
-                        Effect::Command { window: w, command } => {
-                            if w.is_none() || w == Some(window) {
-                                self.handle_command(
-                                    WinitCommandContext {
-                                        app,
-                                        services,
-                                        window,
-                                        state,
-                                    },
-                                    command,
-                                );
-                                applied_any_command = true;
-                            } else {
-                                deferred_effects.push(Effect::Command { window: w, command });
-                            }
-                        }
-                        other => deferred_effects.push(other),
-                    }
-                }
-
-                if !applied_any_command {
-                    break;
-                }
-            }
-            for effect in deferred_effects {
-                app.push_effect(effect);
-            }
-
-            state.ui.request_semantics_snapshot();
-            let mut frame =
-                fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
-            frame.layout_all();
-        }
-
-        let mut frame =
-            fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
-        frame.paint_all(scene);
-
-        app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
-            let element_runtime = app.global::<fret_ui::elements::ElementRuntime>();
-            svc.record_snapshot(
-                app,
-                window,
-                bounds,
-                scale_factor,
-                &mut state.ui,
-                element_runtime,
-                scene,
-            );
-            let _ = svc.maybe_dump_if_triggered();
-            if svc.is_enabled() {
-                app.push_effect(Effect::RequestAnimationFrame(window));
-            }
-        });
-    }
+pub fn build_fn_driver() -> FnDriver<WorkspaceShellDemoDriver, WorkspaceShellWindowState> {
+    FnDriver::new(
+        WorkspaceShellDemoDriver::default(),
+        create_window_state,
+        handle_event,
+        render,
+    )
+    .with_hooks(configure_fn_driver_hooks)
 }
 
 pub fn run() -> anyhow::Result<()> {
@@ -1296,6 +1319,14 @@ pub fn run() -> anyhow::Result<()> {
         ..Default::default()
     };
 
-    let driver = WorkspaceShellDemoDriver::default();
-    fret::run_native_demo(config, app, driver).context("run workspace_shell_demo app")
+    crate::run_native_with_fn_driver_with_hooks(
+        config,
+        app,
+        WorkspaceShellDemoDriver::default(),
+        create_window_state,
+        handle_event,
+        render,
+        configure_fn_driver_hooks,
+    )
+    .context("run workspace_shell_demo app")
 }

@@ -192,6 +192,34 @@ fn script_v2_roundtrip_ui_gallery_markdown_span_link_gate_activate() {
 }
 
 #[test]
+fn script_v2_roundtrip_ui_gallery_avatar_dropdown_activate_open() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/avatar/ui-gallery-avatar-dropdown-activate-open.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_avatar_dropdown_focus_trigger() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/avatar/ui-gallery-avatar-dropdown-focus-trigger.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_avatar_dropdown_click_stable_open() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/avatar/ui-gallery-avatar-dropdown-click-stable-open.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_avatar_dropdown_activate_open_trigger() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/avatar/ui-gallery-avatar-dropdown-activate-open-trigger.json"
+    ));
+}
+
+#[test]
 fn script_v2_roundtrip_ui_gallery_table_retained_multi_sort_shift_click() {
     assert_script_v2_roundtrip(include_str!(
         "../../../tools/diag-scripts/ui-gallery-table-retained-multi-sort-shift-click.json"

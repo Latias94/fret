@@ -3753,6 +3753,7 @@ impl WinitAppDriver for UiGalleryDriver {
                 let wants_quit = svc.poll_exit_trigger();
                 let drive = svc.drive_script_for_window(
                     app,
+                    services,
                     window,
                     bounds,
                     scale_factor,

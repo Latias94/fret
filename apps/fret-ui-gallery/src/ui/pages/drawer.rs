@@ -5,6 +5,7 @@ use crate::ui::snippets::drawer as snippets;
 
 pub(super) fn preview_drawer(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     let demo = snippets::demo::render(cx);
+    let usage = snippets::usage::render(cx);
     let snap_points = snippets::snap_points::render(cx);
     let scrollable_content = snippets::scrollable_content::render(cx);
     let sides = snippets::sides::render(cx);
@@ -15,17 +16,10 @@ pub(super) fn preview_drawer(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
         cx,
         [
             "Docs parity follows the upstream order: scrollable content and sides are explicit recipes after the basic demo.",
+            "`Drawer::compose()` is a recipe-level bridge for shadcn-style part composition without pushing children API concerns into the mechanism layer.",
             "Responsive dialog recipe is represented as explicit desktop/mobile branches for deterministic gallery validation.",
             "Use stable test IDs on every scenario so diag scripts can capture open/close and layout outcomes reliably.",
             "DrawerClose-as-child composition is not modeled yet; current examples close through toggle_model actions.",
-        ],
-    );
-
-    let usage = doc_layout::notes(
-        cx,
-        [
-            "See the Preview sections above for the canonical shadcn-aligned recipes (Demo, Snap Points, Scrollable Content, Sides, Responsive Dialog, RTL).",
-            "Each section includes a minimal code snippet that you can copy into an app and adapt.",
         ],
     );
 
@@ -39,6 +33,10 @@ pub(super) fn preview_drawer(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
                 .description("Basic drawer with header copy and footer actions.")
                 .test_id_prefix("ui-gallery-drawer")
                 .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
+            DocSection::new("Usage", usage)
+                .title_test_id("ui-gallery-section-usage-title")
+                .description("Copyable shadcn-style composition reference for Drawer.")
+                .code_rust_from_file_region(snippets::usage::SOURCE, "example"),
             DocSection::new("Snap Points", snap_points)
                 .description("Drag settles to the nearest snap point (Vaul-style).")
                 .code_rust_from_file_region(snippets::snap_points::SOURCE, "example"),
@@ -56,9 +54,6 @@ pub(super) fn preview_drawer(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
             DocSection::new("RTL", rtl)
                 .description("Drawer layout should follow right-to-left direction context.")
                 .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
-            DocSection::new("Usage", usage)
-                .title_test_id("ui-gallery-section-usage-title")
-                .description("Quick reference for using the drawer recipes."),
             DocSection::new("Notes", notes)
                 .title_test_id("ui-gallery-section-notes-title")
                 .description("Implementation notes and regression guidelines."),

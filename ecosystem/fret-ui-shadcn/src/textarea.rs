@@ -7,15 +7,15 @@ use fret_ui::element::{
     TextAreaProps,
 };
 use fret_ui::elements::GlobalElementId;
-use fret_ui::{ElementContext, TextAreaStyle, Theme, UiHost, action};
+use fret_ui::{action, ElementContext, TextAreaStyle, Theme, UiHost};
 use fret_ui_kit::declarative::motion::{
     drive_tween_color_for_element, drive_tween_f32_for_element,
 };
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::control_registry::{
-    ControlAction, ControlEntry, ControlId, control_registry_model,
+    control_registry_model, ControlAction, ControlEntry, ControlId,
 };
-use fret_ui_kit::recipes::input::{InputTokenKeys, resolve_input_chrome};
+use fret_ui_kit::recipes::input::{resolve_input_chrome, InputTokenKeys};
 use fret_ui_kit::typography;
 use fret_ui_kit::{ChromeRefinement, LayoutRefinement, Size as ComponentSize, Space};
 
@@ -75,6 +75,7 @@ pub struct Textarea {
     a11y_label: Option<Arc<str>>,
     labelled_by_element: Option<GlobalElementId>,
     control_id: Option<ControlId>,
+    test_id: Option<Arc<str>>,
     placeholder: Option<Arc<str>>,
     aria_invalid: bool,
     aria_required: bool,
@@ -96,6 +97,7 @@ impl std::fmt::Debug for Textarea {
                 "placeholder",
                 &self.placeholder.as_ref().map(|s| s.as_ref()),
             )
+            .field("test_id", &self.test_id.as_ref().map(|s| s.as_ref()))
             .field("min_height", &self.min_height)
             .field("resizable", &self.resizable)
             .field("size", &self.size)
@@ -112,6 +114,7 @@ impl Textarea {
             a11y_label: None,
             labelled_by_element: None,
             control_id: None,
+            test_id: None,
             placeholder: None,
             aria_invalid: false,
             aria_required: false,
@@ -140,6 +143,12 @@ impl Textarea {
     /// helper text) can forward activation and attach `labelled-by` / `described-by` semantics.
     pub fn control_id(mut self, id: impl Into<ControlId>) -> Self {
         self.control_id = Some(id.into());
+        self
+    }
+
+    /// Sets a stable `test_id` on the underlying `TextArea` element.
+    pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(id.into());
         self
     }
 
@@ -203,6 +212,7 @@ impl Textarea {
             self.a11y_label,
             self.labelled_by_element,
             self.control_id,
+            self.test_id,
             self.placeholder,
             self.aria_invalid,
             self.aria_required,
@@ -223,6 +233,7 @@ pub fn textarea<H: UiHost>(
     a11y_label: Option<Arc<str>>,
     labelled_by_element: Option<GlobalElementId>,
     control_id: Option<ControlId>,
+    test_id: Option<Arc<str>>,
     placeholder: Option<Arc<str>>,
     aria_invalid: bool,
     aria_required: bool,
@@ -290,6 +301,7 @@ pub fn textarea<H: UiHost>(
 
     let has_a11y_label = a11y_label.is_some();
     let mut props = TextAreaProps::new(model);
+    props.test_id = test_id.clone();
     props.enabled = !disabled;
     props.focusable = !disabled;
     props.a11y_label = a11y_label;
@@ -386,7 +398,7 @@ pub fn textarea<H: UiHost>(
                         let entry = ControlEntry {
                             element: id,
                             enabled: !disabled,
-                            action: ControlAction::Noop,
+                            action: ControlAction::FocusOnly,
                         };
                         let _ = cx.app.models_mut().update(&control_registry, |reg| {
                             reg.register_control(cx.window, cx.frame_id, control_id, entry);
@@ -492,7 +504,7 @@ pub fn textarea<H: UiHost>(
                     let entry = ControlEntry {
                         element: id,
                         enabled: !disabled,
-                        action: ControlAction::Noop,
+                        action: ControlAction::FocusOnly,
                     };
                     let _ = cx.app.models_mut().update(&control_registry, |reg| {
                         reg.register_control(cx.window, cx.frame_id, control_id, entry);
@@ -699,7 +711,7 @@ mod tests {
     use fret_runtime::FrameId;
     use fret_ui::element::{ElementKind, Length};
     use fret_ui::elements;
-    use fret_ui::{UiTree, focus_visible};
+    use fret_ui::{focus_visible, UiTree};
     use fret_ui_kit::declarative::transition::ticks_60hz_for_duration;
 
     #[derive(Default)]

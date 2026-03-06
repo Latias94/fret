@@ -28,8 +28,9 @@ struct AssetsDemoImageEvents {
 }
 
 pub fn run() -> anyhow::Result<()> {
-    fret::app_with_hooks("assets-demo", init_window, view, |d| d.on_event(on_event))?
-        .with_main_window("assets_demo", (720.0, 520.0))
+    FretApp::new("assets-demo")
+        .window("assets_demo", (720.0, 520.0))
+        .ui_with_hooks(init_window, view, |d| d.on_event(on_event))?
         .with_ui_assets_budgets(64 * 1024 * 1024, 2048, 16 * 1024 * 1024, 4096)
         .init_app(|app| {
             shadcn::shadcn_themes::apply_shadcn_new_york(

@@ -523,6 +523,24 @@ pub enum UiActionStepV2 {
     },
     /// Clear the active base reference, restoring global selector resolution.
     ClearBaseRef,
+    /// Semantically activate a target using the runtime accessibility action surface.
+    ///
+    /// This bypasses pointer hit-testing and is primarily intended for diagnosis: it helps
+    /// distinguish "semantics can activate" from "pointer cannot hit the target".
+    Activate {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        window: Option<UiWindowTargetV1>,
+        target: UiSelectorV1,
+    },
+    /// Move accessibility focus to a target without invoking it.
+    ///
+    /// This is intended for diagnosis and parity checks where you want to distinguish
+    /// focusability from pointer hit-testing and activation behavior.
+    Focus {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        window: Option<UiWindowTargetV1>,
+        target: UiSelectorV1,
+    },
     MovePointer {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         window: Option<UiWindowTargetV1>,
@@ -2277,6 +2295,31 @@ pub struct UiSemanticsNodeGetAckV1 {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiHitTestExplainV1 {
+    pub schema_version: u32,
+    pub window: u64,
+    pub target: UiSelectorV1,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiHitTestExplainAckV1 {
+    pub schema_version: u32,
+    pub status: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reason: Option<String>,
+    pub window: u64,
+    pub target: UiSelectorV1,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub semantics_fingerprint: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub hittable: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub hit_test: Option<UiHitTestTraceEntryV1>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub captured_unix_ms: Option<u64>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UiInspectConfigV1 {
     pub schema_version: u32,
     pub enabled: bool,
@@ -3596,6 +3639,52 @@ mod tests {
                 ..
             }
         ));
+    }
+
+    #[test]
+    fn step_activate_deserializes_with_defaults() {
+        let value = serde_json::json!({
+            "type": "activate",
+            "target": { "kind": "test_id", "id": "trigger" }
+        });
+
+        let step: UiActionStepV2 = serde_json::from_value(value).unwrap();
+        match step {
+            UiActionStepV2::Activate { window, target } => {
+                assert!(window.is_none());
+                assert!(matches!(target, UiSelectorV1::TestId { .. }));
+            }
+            _ => panic!("expected activate"),
+        }
+    }
+
+    #[test]
+    fn step_focus_deserializes_with_defaults() {
+        let value = serde_json::json!({
+            "type": "focus",
+            "target": { "kind": "test_id", "id": "trigger" }
+        });
+
+        let step: UiActionStepV2 = serde_json::from_value(value).unwrap();
+        match step {
+            UiActionStepV2::Focus { window, target } => {
+                assert!(window.is_none());
+                assert!(matches!(target, UiSelectorV1::TestId { .. }));
+            }
+            _ => panic!("expected focus"),
+        }
+    }
+
+    #[test]
+    fn hit_test_explain_request_round_trips() {
+        let value = serde_json::json!({
+            "schema_version": 1,
+            "window": 7,
+            "target": { "kind": "test_id", "id": "trigger" }
+        });
+        let req: UiHitTestExplainV1 = serde_json::from_value(value.clone()).unwrap();
+        assert_eq!(req.window, 7);
+        assert_eq!(serde_json::to_value(req).unwrap(), value);
     }
 
     #[test]

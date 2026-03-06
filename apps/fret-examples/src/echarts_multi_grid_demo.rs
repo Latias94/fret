@@ -5,20 +5,20 @@ use fret_core::{AppWindowId, Event, Px};
 #[cfg(not(target_arch = "wasm32"))]
 use fret_launch::run_app;
 use fret_launch::{
-    WindowCreateSpec, WinitAppDriver, WinitEventContext, WinitRenderContext, WinitRunnerConfig,
+    FnDriver, WindowCreateSpec, WinitEventContext, WinitRenderContext, WinitRunnerConfig,
 };
 use fret_runtime::PlatformCapabilities;
 use fret_ui::UiTree;
 
-use fret_chart::retained::{UniformGrid, create_multi_grid_chart_canvas_nodes};
+use fret_chart::retained::{create_multi_grid_chart_canvas_nodes, UniformGrid};
 
-struct EchartsMultiGridDemoWindowState {
+pub struct EchartsMultiGridDemoWindowState {
     ui: UiTree<App>,
     root: Option<fret_core::NodeId>,
 }
 
 #[derive(Default)]
-struct EchartsMultiGridDemoDriver;
+pub struct EchartsMultiGridDemoDriver;
 
 impl EchartsMultiGridDemoDriver {
     fn build_ui(window: AppWindowId) -> EchartsMultiGridDemoWindowState {
@@ -28,52 +28,60 @@ impl EchartsMultiGridDemoDriver {
     }
 }
 
-impl WinitAppDriver for EchartsMultiGridDemoDriver {
-    type WindowState = EchartsMultiGridDemoWindowState;
+fn create_window_state(
+    _driver: &mut EchartsMultiGridDemoDriver,
+    _app: &mut App,
+    window: AppWindowId,
+) -> EchartsMultiGridDemoWindowState {
+    EchartsMultiGridDemoDriver::build_ui(window)
+}
 
-    fn create_window_state(&mut self, _app: &mut App, window: AppWindowId) -> Self::WindowState {
-        Self::build_ui(window)
-    }
+fn handle_event(
+    _driver: &mut EchartsMultiGridDemoDriver,
+    context: WinitEventContext<'_, EchartsMultiGridDemoWindowState>,
+    event: &Event,
+) {
+    let WinitEventContext {
+        app,
+        services,
+        window,
+        state,
+        ..
+    } = context;
 
-    fn handle_event(&mut self, context: WinitEventContext<'_, Self::WindowState>, event: &Event) {
-        let WinitEventContext {
-            app,
-            services,
-            window,
-            state,
+    match event {
+        Event::WindowCloseRequested
+        | Event::KeyDown {
+            key: fret_core::KeyCode::Escape,
             ..
-        } = context;
-
-        match event {
-            Event::WindowCloseRequested
-            | Event::KeyDown {
-                key: fret_core::KeyCode::Escape,
-                ..
-            } => {
-                app.push_effect(Effect::Window(WindowRequest::Close(window)));
-            }
-            _ => {
-                state.ui.dispatch_event(app, services, event);
-            }
+        } => {
+            app.push_effect(Effect::Window(WindowRequest::Close(window)));
+        }
+        _ => {
+            state.ui.dispatch_event(app, services, event);
         }
     }
+}
 
-    fn render(&mut self, context: WinitRenderContext<'_, Self::WindowState>) {
-        let WinitRenderContext {
-            app,
-            services,
-            window,
-            state,
-            bounds,
-            scale_factor,
-            scene,
-        } = context;
+fn render(
+    _driver: &mut EchartsMultiGridDemoDriver,
+    context: WinitRenderContext<'_, EchartsMultiGridDemoWindowState>,
+) {
+    let WinitRenderContext {
+        app,
+        services,
+        window,
+        state,
+        bounds,
+        scale_factor,
+        scene,
+    } = context;
 
-        if state.root.is_none() {
-            // Intentionally small v1 subset used to validate multi-grid bindings:
-            // a single engine instance with per-grid plot viewports, per-grid canvas views,
-            // and global controllers (legend + tooltip/axisPointer overlay).
-            let option_json = r#"
+    if state.root.is_none() {
+        // Intentionally small v1 subset used to validate multi-grid bindings:
+        // a single engine instance with per-grid plot viewports, per-grid canvas views,
+        // and global controllers (legend + tooltip/axisPointer overlay).
+        let option_json = r#"
 {
   "grid": [{}, {}],
   "dataset": {
@@ -118,51 +126,59 @@ impl WinitAppDriver for EchartsMultiGridDemoDriver {
 }
 "#;
 
-            let translated = fret_chart::echarts::translate_json_str(option_json)
-                .expect("valid v1 ECharts option JSON");
-            let fret_chart::echarts::TranslatedChart {
-                spec,
-                datasets,
-                actions: _actions,
-            } = translated;
+        let translated = fret_chart::echarts::translate_json_str(option_json)
+            .expect("valid v1 ECharts option JSON");
+        let fret_chart::echarts::TranslatedChart {
+            spec,
+            datasets,
+            actions: _actions,
+        } = translated;
 
-            let layout = UniformGrid::new(1).with_gap(Px(8.0));
-            let nodes =
-                create_multi_grid_chart_canvas_nodes(&mut state.ui, spec, &datasets, layout)
-                    .expect("translated chart spec should be valid");
+        let layout = UniformGrid::new(1).with_gap(Px(8.0));
+        let nodes = create_multi_grid_chart_canvas_nodes(&mut state.ui, spec, &datasets, layout)
+            .expect("translated chart spec should be valid");
 
-            state.ui.set_root(nodes.root);
-            state
-                .ui
-                .set_focus(nodes.canvases.first().map(|(_, node)| *node));
-            state.root = Some(nodes.root);
-        }
-
-        state.ui.request_semantics_snapshot();
-        state.ui.ingest_paint_cache_source(scene);
-        scene.clear();
-
-        let mut frame =
-            fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
-        frame.layout_all();
-        frame.paint_all(scene);
+        state.ui.set_root(nodes.root);
+        state
+            .ui
+            .set_focus(nodes.canvases.first().map(|(_, node)| *node));
+        state.root = Some(nodes.root);
     }
 
-    fn window_create_spec(
-        &mut self,
-        _app: &mut App,
-        _request: &fret_app::CreateWindowRequest,
-    ) -> Option<WindowCreateSpec> {
-        None
-    }
+    state.ui.request_semantics_snapshot();
+    state.ui.ingest_paint_cache_source(scene);
+    scene.clear();
 
-    fn window_created(
-        &mut self,
-        _app: &mut App,
-        _request: &fret_app::CreateWindowRequest,
-        _new_window: AppWindowId,
-    ) {
-    }
+    let mut frame =
+        fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
+    frame.layout_all();
+    frame.paint_all(scene);
+}
+
+fn window_create_spec(
+    _driver: &mut EchartsMultiGridDemoDriver,
+    _app: &mut App,
+    _request: &fret_app::CreateWindowRequest,
+) -> Option<WindowCreateSpec> {
+    None
+}
+
+fn window_created(
+    _driver: &mut EchartsMultiGridDemoDriver,
+    _app: &mut App,
+    _request: &fret_app::CreateWindowRequest,
+    _new_window: AppWindowId,
+) {
+}
+
+fn configure_fn_driver_hooks(
+    hooks: &mut fret_launch::FnDriverHooks<
+        EchartsMultiGridDemoDriver,
+        EchartsMultiGridDemoWindowState,
+    >,
+) {
+    hooks.window_create_spec = Some(window_create_spec);
+    hooks.window_created = Some(window_created);
 }
 
 pub fn build_app() -> App {
@@ -179,15 +195,21 @@ pub fn build_runner_config() -> WinitRunnerConfig {
     }
 }
 
-pub fn build_driver() -> impl WinitAppDriver {
-    EchartsMultiGridDemoDriver::default()
+pub fn build_fn_driver() -> FnDriver<EchartsMultiGridDemoDriver, EchartsMultiGridDemoWindowState> {
+    FnDriver::new(
+        EchartsMultiGridDemoDriver::default(),
+        create_window_state,
+        handle_event,
+        render,
+    )
+    .with_hooks(configure_fn_driver_hooks)
 }
 
 #[cfg(not(target_arch = "wasm32"))]
 pub fn run() -> anyhow::Result<()> {
     let app = build_app();
     let config = build_runner_config();
-    let driver = build_driver();
+    let driver = build_fn_driver();
 
     run_app(config, app, driver)
         .context("run echarts_multi_grid_demo app")

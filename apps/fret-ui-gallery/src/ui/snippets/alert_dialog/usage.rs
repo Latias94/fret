@@ -29,30 +29,28 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             .into_element(cx),
     );
 
-    let content = {
-        let header = shadcn::AlertDialogHeader::new(vec![
-            shadcn::AlertDialogTitle::new("Are you absolutely sure?").into_element(cx),
-            shadcn::AlertDialogDescription::new(
-                "This action cannot be undone. This will permanently delete your account and remove your data from our servers.",
-            )
-            .into_element(cx),
-        ])
-        .into_element(cx);
-        let footer = shadcn::AlertDialogFooter::new(vec![
-            shadcn::AlertDialogCancel::from_scope("Cancel").into_element(cx),
-            shadcn::AlertDialogAction::from_scope("Continue").into_element(cx),
-        ])
-        .into_element(cx);
-
-        shadcn::AlertDialogContent::new(vec![header, footer]).into_element(cx)
-    };
-
     shadcn::AlertDialog::new(open)
         .compose()
         .trigger(trigger)
         .portal(shadcn::AlertDialogPortal::new())
         .overlay(shadcn::AlertDialogOverlay::new())
-        .content(content)
+        .content_with(move |cx| {
+            let header = shadcn::AlertDialogHeader::new(vec![
+                shadcn::AlertDialogTitle::new("Are you absolutely sure?").into_element(cx),
+                shadcn::AlertDialogDescription::new(
+                    "This action cannot be undone. This will permanently delete your account and remove your data from our servers.",
+                )
+                .into_element(cx),
+            ])
+            .into_element(cx);
+            let footer = shadcn::AlertDialogFooter::new(vec![
+                shadcn::AlertDialogCancel::from_scope("Cancel").into_element(cx),
+                shadcn::AlertDialogAction::from_scope("Continue").into_element(cx),
+            ])
+            .into_element(cx);
+
+            shadcn::AlertDialogContent::new(vec![header, footer]).into_element(cx)
+        })
         .into_element(cx)
 }
 // endregion: example

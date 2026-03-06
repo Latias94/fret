@@ -2,8 +2,8 @@ use anyhow::Context as _;
 use fret_app::{App, Effect, WindowRequest};
 use fret_core::{AppWindowId, Event, KeyCode};
 use fret_launch::{
-    WindowCreateSpec, WinitAppDriver, WinitEventContext, WinitRenderContext, WinitRunnerConfig,
-    WinitWindowContext,
+    FnDriver, WindowCreateSpec, WinitEventContext, WinitHotReloadContext, WinitRenderContext,
+    WinitRunnerConfig, WinitWindowContext,
 };
 use fret_runtime::PlatformCapabilities;
 use fret_ui::UiTree;
@@ -142,7 +142,7 @@ impl<H: fret_ui::UiHost> Widget<H> for ChartStressCanvas {
     }
 }
 
-struct ChartStressWindowState {
+pub struct ChartStressWindowState {
     ui: UiTree<App>,
     root: Option<fret_core::NodeId>,
     frame: u64,
@@ -153,7 +153,7 @@ struct ChartStressWindowState {
 }
 
 #[derive(Default)]
-struct ChartStressDriver {
+pub struct ChartStressDriver {
     points: usize,
     max_frames: Option<u64>,
     scatter_lod: Option<SeriesLodSpecV1>,
@@ -558,189 +558,189 @@ impl ChartStressDriver {
     }
 }
 
-impl WinitAppDriver for ChartStressDriver {
-    type WindowState = ChartStressWindowState;
+fn create_window_state(
+    driver: &mut ChartStressDriver,
+    _app: &mut App,
+    window: AppWindowId,
+) -> ChartStressWindowState {
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
 
-    fn create_window_state(&mut self, _app: &mut App, window: AppWindowId) -> Self::WindowState {
-        let mut ui: UiTree<App> = UiTree::new();
-        ui.set_window(window);
-
-        ChartStressWindowState {
-            ui,
-            root: None,
-            frame: 0,
-            max_frames: self.max_frames,
-            last_driver_report: None,
-            driver_time_accum: Duration::ZERO,
-            driver_frames_accum: 0,
-        }
+    ChartStressWindowState {
+        ui,
+        root: None,
+        frame: 0,
+        max_frames: driver.max_frames,
+        last_driver_report: None,
+        driver_time_accum: Duration::ZERO,
+        driver_frames_accum: 0,
     }
+}
 
-    fn hot_reload_window(
-        &mut self,
-        app: &mut App,
-        _services: &mut dyn fret_core::UiServices,
-        window: AppWindowId,
-        state: &mut Self::WindowState,
-    ) {
-        crate::hotpatch::reset_ui_tree(app, window, &mut state.ui);
-        state.root = None;
-    }
+fn hot_reload_window(
+    _driver: &mut ChartStressDriver,
+    context: WinitHotReloadContext<'_, ChartStressWindowState>,
+) {
+    let WinitHotReloadContext {
+        app, window, state, ..
+    } = context;
 
-    fn handle_model_changes(
-        &mut self,
-        context: WinitWindowContext<'_, Self::WindowState>,
-        changed: &[fret_app::ModelId],
-    ) {
-        context
-            .state
-            .ui
-            .propagate_model_changes(context.app, changed);
-    }
+    crate::hotpatch::reset_ui_tree(app, window, &mut state.ui);
+    state.root = None;
+}
 
-    fn handle_global_changes(
-        &mut self,
-        context: WinitWindowContext<'_, Self::WindowState>,
-        changed: &[std::any::TypeId],
-    ) {
-        context
-            .state
-            .ui
-            .propagate_global_changes(context.app, changed);
-    }
+fn handle_model_changes(
+    _driver: &mut ChartStressDriver,
+    context: WinitWindowContext<'_, ChartStressWindowState>,
+    changed: &[fret_app::ModelId],
+) {
+    context
+        .state
+        .ui
+        .propagate_model_changes(context.app, changed);
+}
 
-    fn handle_event(&mut self, context: WinitEventContext<'_, Self::WindowState>, event: &Event) {
-        let WinitEventContext {
-            app,
-            services,
-            window,
-            state,
+fn handle_global_changes(
+    _driver: &mut ChartStressDriver,
+    context: WinitWindowContext<'_, ChartStressWindowState>,
+    changed: &[std::any::TypeId],
+) {
+    context
+        .state
+        .ui
+        .propagate_global_changes(context.app, changed);
+}
+
+fn handle_event(
+    _driver: &mut ChartStressDriver,
+    context: WinitEventContext<'_, ChartStressWindowState>,
+    event: &Event,
+) {
+    let WinitEventContext {
+        app,
+        services,
+        window,
+        state,
+        ..
+    } = context;
+
+    match event {
+        Event::WindowCloseRequested
+        | Event::KeyDown {
+            key: KeyCode::Escape,
             ..
-        } = context;
-
-        match event {
-            Event::WindowCloseRequested
-            | Event::KeyDown {
-                key: KeyCode::Escape,
-                ..
-            } => {
-                app.push_effect(Effect::Window(WindowRequest::Close(window)));
-                return;
-            }
-            Event::KeyDown {
-                key: KeyCode::KeyH,
-                repeat,
-                ..
-            } if !*repeat => {
-                Self::print_help();
-            }
-            _ => {}
-        }
-
-        state.ui.dispatch_event(app, services, event);
-    }
-
-    fn render(&mut self, context: WinitRenderContext<'_, Self::WindowState>) {
-        let render_start = Instant::now();
-        let WinitRenderContext {
-            app,
-            services,
-            window,
-            state,
-            bounds,
-            scale_factor,
-            scene,
-        } = context;
-
-        state.frame = state.frame.wrapping_add(1);
-        if state.last_driver_report.is_none() {
-            state.last_driver_report = Some(Instant::now());
-        }
-
-        let root = state.root.get_or_insert_with(|| {
-            let canvas = Self::build_canvas(self.points, self.scatter_lod);
-            let widget = ChartStressCanvas::new(self.points, canvas);
-            let node = ChartStressCanvas::create_node(&mut state.ui, widget);
-            state.ui.set_root(node);
-            node
-        });
-
-        state.ui.set_root(*root);
-        state.ui.request_semantics_snapshot();
-        state.ui.ingest_paint_cache_source(scene);
-
-        scene.clear();
-        let mut frame =
-            fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
-        frame.layout_all();
-        frame.paint_all(scene);
-
-        let elapsed = render_start.elapsed();
-        state.driver_time_accum += elapsed;
-        state.driver_frames_accum = state.driver_frames_accum.saturating_add(1);
-
-        if let Some(last) = state.last_driver_report
-            && last.elapsed() >= Duration::from_secs(1)
-        {
-            let avg_us = if state.driver_frames_accum == 0 {
-                0.0
-            } else {
-                state.driver_time_accum.as_secs_f64() * 1_000_000.0
-                    / state.driver_frames_accum as f64
-            };
-
-            println!(
-                "chart_stress_demo: frames={} avg_driver_render={:.1}us",
-                state.frame, avg_us
-            );
-
-            state.last_driver_report = Some(Instant::now());
-            state.driver_time_accum = Duration::ZERO;
-            state.driver_frames_accum = 0;
-        }
-
-        if let Some(max) = state.max_frames
-            && state.frame >= max
-        {
+        } => {
             app.push_effect(Effect::Window(WindowRequest::Close(window)));
             return;
         }
-
-        app.request_redraw(window);
+        Event::KeyDown {
+            key: KeyCode::KeyH,
+            repeat,
+            ..
+        } if !*repeat => {
+            ChartStressDriver::print_help();
+        }
+        _ => {}
     }
 
-    fn window_create_spec(
-        &mut self,
-        _app: &mut App,
-        _request: &fret_app::CreateWindowRequest,
-    ) -> Option<WindowCreateSpec> {
-        None
-    }
-
-    fn window_created(
-        &mut self,
-        _app: &mut App,
-        _request: &fret_app::CreateWindowRequest,
-        _new_window: AppWindowId,
-    ) {
-    }
+    state.ui.dispatch_event(app, services, event);
 }
 
-pub fn build_app() -> App {
-    let mut app = App::new();
-    app.set_global(PlatformCapabilities::default());
-    app
-}
+fn render(driver: &mut ChartStressDriver, context: WinitRenderContext<'_, ChartStressWindowState>) {
+    let render_start = Instant::now();
+    let WinitRenderContext {
+        app,
+        services,
+        window,
+        state,
+        bounds,
+        scale_factor,
+        scene,
+    } = context;
 
-pub fn build_runner_config() -> WinitRunnerConfig {
-    WinitRunnerConfig {
-        main_window_title: "fret-demo chart_stress_demo (delinea + fret-chart)".to_string(),
-        main_window_size: fret_launch::WindowLogicalSize::new(1280.0, 720.0),
-        ..Default::default()
+    state.frame = state.frame.wrapping_add(1);
+    if state.last_driver_report.is_none() {
+        state.last_driver_report = Some(Instant::now());
     }
+
+    let root = state.root.get_or_insert_with(|| {
+        let canvas = ChartStressDriver::build_canvas(driver.points, driver.scatter_lod);
+        let widget = ChartStressCanvas::new(driver.points, canvas);
+        let node = ChartStressCanvas::create_node(&mut state.ui, widget);
+        state.ui.set_root(node);
+        node
+    });
+
+    state.ui.set_root(*root);
+    state.ui.request_semantics_snapshot();
+    state.ui.ingest_paint_cache_source(scene);
+
+    scene.clear();
+    let mut frame =
+        fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
+    frame.layout_all();
+    frame.paint_all(scene);
+
+    let elapsed = render_start.elapsed();
+    state.driver_time_accum += elapsed;
+    state.driver_frames_accum = state.driver_frames_accum.saturating_add(1);
+
+    if let Some(last) = state.last_driver_report
+        && last.elapsed() >= Duration::from_secs(1)
+    {
+        let avg_us = if state.driver_frames_accum == 0 {
+            0.0
+        } else {
+            state.driver_time_accum.as_secs_f64() * 1_000_000.0 / state.driver_frames_accum as f64
+        };
+
+        println!(
+            "chart_stress_demo: frames={} avg_driver_render={:.1}us",
+            state.frame, avg_us
+        );
+
+        state.last_driver_report = Some(Instant::now());
+        state.driver_time_accum = Duration::ZERO;
+        state.driver_frames_accum = 0;
+    }
+
+    if let Some(max) = state.max_frames
+        && state.frame >= max
+    {
+        app.push_effect(Effect::Window(WindowRequest::Close(window)));
+        return;
+    }
+
+    app.request_redraw(window);
 }
 
-pub fn build_driver() -> impl WinitAppDriver {
+fn window_create_spec(
+    _driver: &mut ChartStressDriver,
+    _app: &mut App,
+    _request: &fret_app::CreateWindowRequest,
+) -> Option<WindowCreateSpec> {
+    None
+}
+
+fn window_created(
+    _driver: &mut ChartStressDriver,
+    _app: &mut App,
+    _request: &fret_app::CreateWindowRequest,
+    _new_window: AppWindowId,
+) {
+}
+
+fn configure_fn_driver_hooks(
+    hooks: &mut fret_launch::FnDriverHooks<ChartStressDriver, ChartStressWindowState>,
+) {
+    hooks.hot_reload_window = Some(hot_reload_window);
+    hooks.handle_model_changes = Some(handle_model_changes);
+    hooks.handle_global_changes = Some(handle_global_changes);
+    hooks.window_create_spec = Some(window_create_spec);
+    hooks.window_created = Some(window_created);
+}
+
+fn build_driver_state() -> ChartStressDriver {
     let points = parse_env_usize("FRET_CHART_STRESS_POINTS").unwrap_or(1_000_000);
     let points = points.clamp(1, 10_000_000);
     let max_frames = parse_env_u64("FRET_CHART_STRESS_EXIT_AFTER_FRAMES");
@@ -761,10 +761,42 @@ pub fn build_driver() -> impl WinitAppDriver {
     }
 }
 
+pub fn build_app() -> App {
+    let mut app = App::new();
+    app.set_global(PlatformCapabilities::default());
+    app
+}
+
+pub fn build_runner_config() -> WinitRunnerConfig {
+    WinitRunnerConfig {
+        main_window_title: "fret-demo chart_stress_demo (delinea + fret-chart)".to_string(),
+        main_window_size: fret_launch::WindowLogicalSize::new(1280.0, 720.0),
+        ..Default::default()
+    }
+}
+
+pub fn build_fn_driver() -> FnDriver<ChartStressDriver, ChartStressWindowState> {
+    FnDriver::new(
+        build_driver_state(),
+        create_window_state,
+        handle_event,
+        render,
+    )
+    .with_hooks(configure_fn_driver_hooks)
+}
+
 pub fn run() -> anyhow::Result<()> {
     let config = build_runner_config();
     let app = build_app();
-    let driver = build_driver();
 
-    crate::run_native_demo(config, app, driver).context("run chart_stress_demo app")
+    crate::run_native_with_fn_driver_with_hooks(
+        config,
+        app,
+        build_driver_state(),
+        create_window_state,
+        handle_event,
+        render,
+        configure_fn_driver_hooks,
+    )
+    .context("run chart_stress_demo app")
 }

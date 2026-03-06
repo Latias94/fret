@@ -16,7 +16,8 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         .into_element(cx)
         .test_id("ui-gallery-aspect-ratio-demo-content");
 
-    let frame = shadcn::AspectRatio::new(16.0 / 9.0, image)
+    let frame = shadcn::AspectRatio::with_child(image)
+        .ratio(16.0 / 9.0)
         .refine_style(
             ChromeRefinement::default()
                 .rounded(Radius::Lg)
@@ -56,7 +57,8 @@ pub fn render_preview<H: UiHost>(
         .into_element(cx)
         .test_id("ui-gallery-aspect-ratio-demo-content");
 
-    let frame = shadcn::AspectRatio::new(16.0 / 9.0, image)
+    let frame = shadcn::AspectRatio::with_child(image)
+        .ratio(16.0 / 9.0)
         .refine_style(
             ChromeRefinement::default()
                 .rounded(Radius::Lg)

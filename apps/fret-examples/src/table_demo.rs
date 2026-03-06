@@ -2,8 +2,8 @@ use anyhow::Context as _;
 use fret_app::{App, CommandId, Effect, Model, WindowRequest};
 use fret_core::{AppWindowId, Corners, Edges, Event, Px};
 use fret_launch::{
-    WindowCreateSpec, WinitAppDriver, WinitCommandContext, WinitEventContext, WinitRenderContext,
-    WinitRunnerConfig, WinitWindowContext,
+    FnDriver, WindowCreateSpec, WinitCommandContext, WinitEventContext, WinitHotReloadContext,
+    WinitRenderContext, WinitRunnerConfig, WinitWindowContext,
 };
 use fret_runtime::PlatformCapabilities;
 use fret_ui::declarative;
@@ -43,7 +43,7 @@ struct DemoRow {
     score: i32,
 }
 
-struct TableDemoWindowState {
+pub struct TableDemoWindowState {
     ui: UiTree<App>,
     table_state: Model<TableState>,
     rows: Arc<[DemoRow]>,
@@ -62,7 +62,7 @@ struct TableDemoWindowState {
 }
 
 #[derive(Default)]
-struct TableDemoDriver;
+pub struct TableDemoDriver;
 
 impl TableDemoDriver {
     fn build_ui(app: &mut App, window: AppWindowId) -> TableDemoWindowState {
@@ -128,110 +128,158 @@ impl TableDemoDriver {
     }
 }
 
-impl WinitAppDriver for TableDemoDriver {
-    type WindowState = TableDemoWindowState;
+fn create_window_state(
+    _driver: &mut TableDemoDriver,
+    app: &mut App,
+    window: AppWindowId,
+) -> TableDemoWindowState {
+    TableDemoDriver::build_ui(app, window)
+}
 
-    fn create_window_state(&mut self, app: &mut App, window: AppWindowId) -> Self::WindowState {
-        Self::build_ui(app, window)
+fn hot_reload_window(
+    _driver: &mut TableDemoDriver,
+    context: WinitHotReloadContext<'_, TableDemoWindowState>,
+) {
+    let WinitHotReloadContext {
+        app,
+        services: _,
+        window,
+        state,
+    } = context;
+    crate::hotpatch::reset_ui_tree(app, window, &mut state.ui);
+}
+
+fn handle_model_changes(
+    _driver: &mut TableDemoDriver,
+    context: WinitWindowContext<'_, TableDemoWindowState>,
+    changed: &[fret_app::ModelId],
+) {
+    context
+        .state
+        .ui
+        .propagate_model_changes(context.app, changed);
+}
+
+fn handle_global_changes(
+    _driver: &mut TableDemoDriver,
+    context: WinitWindowContext<'_, TableDemoWindowState>,
+    changed: &[std::any::TypeId],
+) {
+    context
+        .state
+        .ui
+        .propagate_global_changes(context.app, changed);
+}
+
+fn handle_command(
+    _driver: &mut TableDemoDriver,
+    context: WinitCommandContext<'_, TableDemoWindowState>,
+    command: CommandId,
+) {
+    let WinitCommandContext {
+        app,
+        services,
+        window,
+        state,
+    } = context;
+
+    if state.ui.dispatch_command(app, services, &command) {
+        return;
     }
 
-    fn hot_reload_window(
-        &mut self,
-        app: &mut App,
-        _services: &mut dyn fret_core::UiServices,
-        window: AppWindowId,
-        state: &mut Self::WindowState,
-    ) {
-        crate::hotpatch::reset_ui_tree(app, window, &mut state.ui);
+    match command.as_str() {
+        CMD_CLOSE => {
+            app.push_effect(Effect::Window(WindowRequest::Close(window)));
+            return;
+        }
+        CMD_GROUP_CLEAR => {
+            let _ = app.models_mut().update(&state.table_state, clear_grouping);
+            app.request_redraw(window);
+            return;
+        }
+        CMD_GROUP_SET_ROLE => {
+            let _ = app
+                .models_mut()
+                .update(&state.table_state, |st| set_grouping(st, "role"));
+            app.request_redraw(window);
+            return;
+        }
+        CMD_GROUP_SET_NAME => {
+            let _ = app
+                .models_mut()
+                .update(&state.table_state, |st| set_grouping(st, "name"));
+            app.request_redraw(window);
+            return;
+        }
+        CMD_GROUP_TOGGLE_ID => {
+            let _ = app
+                .models_mut()
+                .update(&state.table_state, |st| toggle_grouping(st, "id"));
+            app.request_redraw(window);
+            return;
+        }
+        CMD_GROUP_TOGGLE_NAME => {
+            let _ = app
+                .models_mut()
+                .update(&state.table_state, |st| toggle_grouping(st, "name"));
+            app.request_redraw(window);
+            return;
+        }
+        CMD_GROUP_TOGGLE_ROLE => {
+            let _ = app
+                .models_mut()
+                .update(&state.table_state, |st| toggle_grouping(st, "role"));
+            app.request_redraw(window);
+            return;
+        }
+        CMD_GROUP_TOGGLE_SCORE => {
+            let _ = app
+                .models_mut()
+                .update(&state.table_state, |st| toggle_grouping(st, "score"));
+            app.request_redraw(window);
+            return;
+        }
+        _ => {}
+    }
+}
+
+fn handle_event(
+    _driver: &mut TableDemoDriver,
+    context: WinitEventContext<'_, TableDemoWindowState>,
+    event: &Event,
+) {
+    let WinitEventContext {
+        app,
+        services,
+        window,
+        state,
+    } = context;
+
+    if matches!(event, Event::WindowCloseRequested) {
+        app.push_effect(Effect::Window(WindowRequest::Close(window)));
+        return;
     }
 
-    fn handle_model_changes(
-        &mut self,
-        context: WinitWindowContext<'_, Self::WindowState>,
-        changed: &[fret_app::ModelId],
-    ) {
-        context
-            .state
-            .ui
-            .propagate_model_changes(context.app, changed);
-    }
-
-    fn handle_global_changes(
-        &mut self,
-        context: WinitWindowContext<'_, Self::WindowState>,
-        changed: &[std::any::TypeId],
-    ) {
-        context
-            .state
-            .ui
-            .propagate_global_changes(context.app, changed);
-    }
-
-    fn handle_command(
-        &mut self,
-        context: WinitCommandContext<'_, Self::WindowState>,
-        command: CommandId,
-    ) {
-        let WinitCommandContext {
-            app,
-            services,
-            window,
-            state,
-        } = context;
-
-        if state.ui.dispatch_command(app, services, &command) {
+    if let Event::KeyDown { key, modifiers, .. } = event {
+        if modifiers.ctrl || modifiers.alt || modifiers.shift || modifiers.meta {
+            state.ui.dispatch_event(app, services, event);
             return;
         }
 
-        match command.as_str() {
-            CMD_CLOSE => {
+        match *key {
+            fret_core::KeyCode::Escape => {
                 app.push_effect(Effect::Window(WindowRequest::Close(window)));
                 return;
             }
-            CMD_GROUP_CLEAR => {
-                let _ = app.models_mut().update(&state.table_state, clear_grouping);
+            fret_core::KeyCode::Home => {
+                state
+                    .scroll
+                    .scroll_to_item(0, fret_ui::ScrollStrategy::Start);
                 app.request_redraw(window);
                 return;
             }
-            CMD_GROUP_SET_ROLE => {
-                let _ = app
-                    .models_mut()
-                    .update(&state.table_state, |st| set_grouping(st, "role"));
-                app.request_redraw(window);
-                return;
-            }
-            CMD_GROUP_SET_NAME => {
-                let _ = app
-                    .models_mut()
-                    .update(&state.table_state, |st| set_grouping(st, "name"));
-                app.request_redraw(window);
-                return;
-            }
-            CMD_GROUP_TOGGLE_ID => {
-                let _ = app
-                    .models_mut()
-                    .update(&state.table_state, |st| toggle_grouping(st, "id"));
-                app.request_redraw(window);
-                return;
-            }
-            CMD_GROUP_TOGGLE_NAME => {
-                let _ = app
-                    .models_mut()
-                    .update(&state.table_state, |st| toggle_grouping(st, "name"));
-                app.request_redraw(window);
-                return;
-            }
-            CMD_GROUP_TOGGLE_ROLE => {
-                let _ = app
-                    .models_mut()
-                    .update(&state.table_state, |st| toggle_grouping(st, "role"));
-                app.request_redraw(window);
-                return;
-            }
-            CMD_GROUP_TOGGLE_SCORE => {
-                let _ = app
-                    .models_mut()
-                    .update(&state.table_state, |st| toggle_grouping(st, "score"));
+            fret_core::KeyCode::End => {
+                state.scroll.scroll_to_bottom();
                 app.request_redraw(window);
                 return;
             }
@@ -239,75 +287,35 @@ impl WinitAppDriver for TableDemoDriver {
         }
     }
 
-    fn handle_event(&mut self, context: WinitEventContext<'_, Self::WindowState>, event: &Event) {
-        let WinitEventContext {
-            app,
-            services,
-            window,
-            state,
-        } = context;
+    state.ui.dispatch_event(app, services, event);
+}
 
-        if matches!(event, Event::WindowCloseRequested) {
-            app.push_effect(Effect::Window(WindowRequest::Close(window)));
-            return;
-        }
+fn render(_driver: &mut TableDemoDriver, context: WinitRenderContext<'_, TableDemoWindowState>) {
+    let WinitRenderContext {
+        app,
+        services,
+        window,
+        state,
+        bounds,
+        scale_factor,
+        scene,
+        ..
+    } = context;
 
-        if let Event::KeyDown { key, modifiers, .. } = event {
-            if modifiers.ctrl || modifiers.alt || modifiers.shift || modifiers.meta {
-                state.ui.dispatch_event(app, services, event);
-                return;
-            }
+    OverlayController::begin_frame(app, window);
 
-            match *key {
-                fret_core::KeyCode::Escape => {
-                    app.push_effect(Effect::Window(WindowRequest::Close(window)));
-                    return;
-                }
-                fret_core::KeyCode::Home => {
-                    state
-                        .scroll
-                        .scroll_to_item(0, fret_ui::ScrollStrategy::Start);
-                    app.request_redraw(window);
-                    return;
-                }
-                fret_core::KeyCode::End => {
-                    state.scroll.scroll_to_bottom();
-                    app.request_redraw(window);
-                    return;
-                }
-                _ => {}
-            }
-        }
-
-        state.ui.dispatch_event(app, services, event);
-    }
-
-    fn render(&mut self, context: WinitRenderContext<'_, Self::WindowState>) {
-        let WinitRenderContext {
-            app,
-            services,
-            window,
-            state,
-            bounds,
-            scale_factor,
-            scene,
-            ..
-        } = context;
-
-        OverlayController::begin_frame(app, window);
-
-        let frame_started = Instant::now();
-        let rows = state.rows.clone();
-        let scroll = state.scroll.clone();
-        let table_state = state.table_state.clone();
-        let view_options_open = state.view_options_open.clone();
-        let enable_grouping_model = state.enable_grouping.clone();
-        let grouped_column_mode_model = state.grouped_column_mode.clone();
-        let header_menu_id_open = state.header_menu_id_open.clone();
-        let header_menu_name_open = state.header_menu_name_open.clone();
-        let header_menu_role_open = state.header_menu_role_open.clone();
-        let header_menu_score_open = state.header_menu_score_open.clone();
-        let root =
+    let frame_started = Instant::now();
+    let rows = state.rows.clone();
+    let scroll = state.scroll.clone();
+    let table_state = state.table_state.clone();
+    let view_options_open = state.view_options_open.clone();
+    let enable_grouping_model = state.enable_grouping.clone();
+    let grouped_column_mode_model = state.grouped_column_mode.clone();
+    let header_menu_id_open = state.header_menu_id_open.clone();
+    let header_menu_name_open = state.header_menu_name_open.clone();
+    let header_menu_role_open = state.header_menu_role_open.clone();
+    let header_menu_score_open = state.header_menu_score_open.clone();
+    let root =
             declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds)
                 .render_root("table-demo", move |cx| {
                     cx.observe_model(&table_state, Invalidation::Layout);
@@ -673,55 +681,74 @@ impl WinitAppDriver for TableDemoDriver {
                     )]
                 });
 
-        state.ui.set_root(root);
-        OverlayController::render(&mut state.ui, app, services, window, bounds);
-        state.ui.request_semantics_snapshot();
-        state.ui.ingest_paint_cache_source(scene);
-        scene.clear();
+    state.ui.set_root(root);
+    OverlayController::render(&mut state.ui, app, services, window, bounds);
+    state.ui.request_semantics_snapshot();
+    state.ui.ingest_paint_cache_source(scene);
+    scene.clear();
 
-        let mut frame =
-            fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
-        let layout_started = Instant::now();
-        frame.layout_all();
-        let layout_elapsed = layout_started.elapsed();
-        let paint_started = Instant::now();
-        frame.paint_all(scene);
-        let paint_elapsed = paint_started.elapsed();
+    let mut frame =
+        fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
+    let layout_started = Instant::now();
+    frame.layout_all();
+    let layout_elapsed = layout_started.elapsed();
+    let paint_started = Instant::now();
+    frame.paint_all(scene);
+    let paint_elapsed = paint_started.elapsed();
 
-        state.frame = state.frame.saturating_add(1);
-        if state.profile_frames_left > 0 {
-            state.profile_frames_left = state.profile_frames_left.saturating_sub(1);
-            let since_start = state.started_at.elapsed();
-            let frame_elapsed = frame_started.elapsed();
-            tracing::info!(
-                "table_demo: frame={} since_start={:.2}ms total={:.2}ms layout={:.2}ms paint={:.2}ms",
-                state.frame,
-                since_start.as_secs_f64() * 1000.0,
-                frame_elapsed.as_secs_f64() * 1000.0,
-                layout_elapsed.as_secs_f64() * 1000.0,
-                paint_elapsed.as_secs_f64() * 1000.0
-            );
-        }
+    state.frame = state.frame.saturating_add(1);
+    if state.profile_frames_left > 0 {
+        state.profile_frames_left = state.profile_frames_left.saturating_sub(1);
+        let since_start = state.started_at.elapsed();
+        let frame_elapsed = frame_started.elapsed();
+        tracing::info!(
+            "table_demo: frame={} since_start={:.2}ms total={:.2}ms layout={:.2}ms paint={:.2}ms",
+            state.frame,
+            since_start.as_secs_f64() * 1000.0,
+            frame_elapsed.as_secs_f64() * 1000.0,
+            layout_elapsed.as_secs_f64() * 1000.0,
+            paint_elapsed.as_secs_f64() * 1000.0
+        );
+    }
 
-        if let Some(limit) = state.exit_after_frames {
-            if state.frame >= limit {
-                app.push_effect(Effect::Window(WindowRequest::Close(window)));
-                return;
-            }
-        }
-
-        if state.profile_frames_left > 0 || state.exit_after_frames.is_some() {
-            app.request_redraw(window);
+    if let Some(limit) = state.exit_after_frames {
+        if state.frame >= limit {
+            app.push_effect(Effect::Window(WindowRequest::Close(window)));
+            return;
         }
     }
 
-    fn window_create_spec(
-        &mut self,
-        _app: &mut App,
-        _request: &fret_app::CreateWindowRequest,
-    ) -> Option<WindowCreateSpec> {
-        None
+    if state.profile_frames_left > 0 || state.exit_after_frames.is_some() {
+        app.request_redraw(window);
     }
+}
+
+fn window_create_spec(
+    _driver: &mut TableDemoDriver,
+    app: &mut App,
+    request: &fret_app::CreateWindowRequest,
+) -> Option<WindowCreateSpec> {
+    None
+}
+
+fn configure_fn_driver_hooks(
+    hooks: &mut fret_launch::FnDriverHooks<TableDemoDriver, TableDemoWindowState>,
+) {
+    hooks.hot_reload_window = Some(hot_reload_window);
+    hooks.handle_model_changes = Some(handle_model_changes);
+    hooks.handle_global_changes = Some(handle_global_changes);
+    hooks.handle_command = Some(handle_command);
+    hooks.window_create_spec = Some(window_create_spec);
+}
+
+pub fn build_fn_driver() -> FnDriver<TableDemoDriver, TableDemoWindowState> {
+    FnDriver::new(
+        TableDemoDriver::default(),
+        create_window_state,
+        handle_event,
+        render,
+    )
+    .with_hooks(configure_fn_driver_hooks)
 }
 
 pub fn run() -> anyhow::Result<()> {
@@ -753,7 +780,16 @@ pub fn run() -> anyhow::Result<()> {
         ..Default::default()
     };
 
-    crate::run_native_demo(config, app, TableDemoDriver::default()).context("run table_demo app")
+    crate::run_native_with_fn_driver_with_hooks(
+        config,
+        app,
+        TableDemoDriver::default(),
+        create_window_state,
+        handle_event,
+        render,
+        configure_fn_driver_hooks,
+    )
+    .context("run table_demo app")
 }
 
 fn clear_grouping(st: &mut TableState) {

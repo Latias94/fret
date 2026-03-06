@@ -3,7 +3,8 @@ use anyhow::Context as _;
 use fret_app::{App, Effect, WindowRequest};
 use fret_core::{AppWindowId, Event};
 use fret_launch::{
-    WindowCreateSpec, WinitAppDriver, WinitEventContext, WinitRenderContext, WinitRunnerConfig,
+    FnDriver, WindowCreateSpec, WinitEventContext, WinitHotReloadContext, WinitRenderContext,
+    WinitRunnerConfig,
 };
 use fret_plot::cartesian::DataRect;
 use fret_plot::retained::{
@@ -14,7 +15,7 @@ use fret_plot::series::Series;
 use fret_runtime::PlatformCapabilities;
 use fret_ui::UiTree;
 
-struct DragDemoWindowState {
+pub struct DragDemoWindowState {
     ui: UiTree<App>,
     root: Option<fret_core::NodeId>,
     plot: fret_runtime::Model<LinePlotModel>,
@@ -24,7 +25,7 @@ struct DragDemoWindowState {
 }
 
 #[derive(Default)]
-struct DragDemoDriver;
+pub struct DragDemoDriver;
 
 impl DragDemoDriver {
     fn apply_drag(state: &mut PlotState, drag: PlotDragOutput) {
@@ -98,19 +99,17 @@ impl DragDemoDriver {
                 .label("P B")
                 .show_value(true),
             ],
-            drag_rects: vec![
-                DragRect::new(
-                    0x5241u64,
-                    DataRect {
-                        x_min: 35.0,
-                        x_max: 65.0,
-                        y_min: -0.25,
-                        y_max: 0.25,
-                    },
-                    YAxis::Left,
-                )
-                .label("window"),
-            ],
+            drag_rects: vec![DragRect::new(
+                0x5241u64,
+                DataRect {
+                    x_min: 35.0,
+                    x_max: 65.0,
+                    y_min: -0.25,
+                    y_max: 0.25,
+                },
+                YAxis::Left,
+            )
+            .label("window")],
             ..Default::default()
         };
 
@@ -131,119 +130,132 @@ impl DragDemoDriver {
     }
 }
 
-impl WinitAppDriver for DragDemoDriver {
-    type WindowState = DragDemoWindowState;
+fn create_window_state(
+    _driver: &mut DragDemoDriver,
+    app: &mut App,
+    window: AppWindowId,
+) -> DragDemoWindowState {
+    DragDemoDriver::build_ui(app, window)
+}
 
-    fn create_window_state(&mut self, app: &mut App, window: AppWindowId) -> Self::WindowState {
-        Self::build_ui(app, window)
-    }
+fn hot_reload_window(
+    _driver: &mut DragDemoDriver,
+    context: WinitHotReloadContext<'_, DragDemoWindowState>,
+) {
+    let WinitHotReloadContext {
+        app, window, state, ..
+    } = context;
 
-    fn hot_reload_window(
-        &mut self,
-        app: &mut App,
-        _services: &mut dyn fret_core::UiServices,
-        window: AppWindowId,
-        state: &mut Self::WindowState,
-    ) {
-        crate::hotpatch::reset_ui_tree(app, window, &mut state.ui);
-        state.root = None;
-    }
+    crate::hotpatch::reset_ui_tree(app, window, &mut state.ui);
+    state.root = None;
+}
 
-    fn handle_event(&mut self, context: WinitEventContext<'_, Self::WindowState>, event: &Event) {
-        let WinitEventContext {
-            app,
-            services,
-            window,
-            state,
+fn handle_event(
+    _driver: &mut DragDemoDriver,
+    context: WinitEventContext<'_, DragDemoWindowState>,
+    event: &Event,
+) {
+    let WinitEventContext {
+        app,
+        services,
+        window,
+        state,
+        ..
+    } = context;
+
+    match event {
+        Event::WindowCloseRequested
+        | Event::KeyDown {
+            key: fret_core::KeyCode::Escape,
             ..
-        } = context;
+        } => {
+            app.push_effect(Effect::Window(WindowRequest::Close(window)));
+            return;
+        }
+        _ => {
+            state.ui.dispatch_event(app, services, event);
 
-        match event {
-            Event::WindowCloseRequested
-            | Event::KeyDown {
-                key: fret_core::KeyCode::Escape,
-                ..
-            } => {
-                app.push_effect(Effect::Window(WindowRequest::Close(window)));
-                return;
-            }
-            _ => {
-                state.ui.dispatch_event(app, services, event);
+            if matches!(
+                event,
+                Event::Pointer(fret_core::PointerEvent::Move { .. })
+                    | Event::Pointer(fret_core::PointerEvent::Up { .. })
+            ) {
+                let output = state
+                    .plot_output
+                    .read(app, |_app, o| *o)
+                    .unwrap_or_default();
 
-                if matches!(
-                    event,
-                    Event::Pointer(fret_core::PointerEvent::Move { .. })
-                        | Event::Pointer(fret_core::PointerEvent::Up { .. })
-                ) {
-                    let output = state
-                        .plot_output
-                        .read(app, |_app, o| *o)
-                        .unwrap_or_default();
-
-                    if output.revision != state.last_applied_output_revision {
-                        state.last_applied_output_revision = output.revision;
-                        if let Some(drag) = output.snapshot.drag {
-                            let _ = state.plot_state.update(app, |s, _cx| {
-                                Self::apply_drag(s, drag);
-                            });
-                        }
+                if output.revision != state.last_applied_output_revision {
+                    state.last_applied_output_revision = output.revision;
+                    if let Some(drag) = output.snapshot.drag {
+                        let _ = state.plot_state.update(app, |s, _cx| {
+                            DragDemoDriver::apply_drag(s, drag);
+                        });
                     }
                 }
             }
         }
     }
+}
 
-    fn render(&mut self, context: WinitRenderContext<'_, Self::WindowState>) {
-        let WinitRenderContext {
-            app,
-            services,
-            window,
-            state,
-            bounds,
-            scale_factor,
-            scene,
-        } = context;
+fn render(_driver: &mut DragDemoDriver, context: WinitRenderContext<'_, DragDemoWindowState>) {
+    let WinitRenderContext {
+        app,
+        services,
+        window,
+        state,
+        bounds,
+        scale_factor,
+        scene,
+    } = context;
 
-        let root = state.root.get_or_insert_with(|| {
-            let style = LinePlotStyle {
-                series_tooltip: SeriesTooltipMode::NearestAtCursor,
-                ..Default::default()
-            };
-            let canvas = LinePlotCanvas::new(state.plot.clone())
-                .style(style)
-                .state(state.plot_state.clone())
-                .output(state.plot_output.clone());
-            let node = LinePlotCanvas::create_node(&mut state.ui, canvas);
-            state.ui.set_root(node);
-            node
-        });
+    let root = state.root.get_or_insert_with(|| {
+        let style = LinePlotStyle {
+            series_tooltip: SeriesTooltipMode::NearestAtCursor,
+            ..Default::default()
+        };
+        let canvas = LinePlotCanvas::new(state.plot.clone())
+            .style(style)
+            .state(state.plot_state.clone())
+            .output(state.plot_output.clone());
+        let node = LinePlotCanvas::create_node(&mut state.ui, canvas);
+        state.ui.set_root(node);
+        node
+    });
 
-        state.ui.set_root(*root);
-        state.ui.request_semantics_snapshot();
-        state.ui.ingest_paint_cache_source(scene);
+    state.ui.set_root(*root);
+    state.ui.request_semantics_snapshot();
+    state.ui.ingest_paint_cache_source(scene);
 
-        scene.clear();
-        let mut frame =
-            fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
-        frame.layout_all();
-        frame.paint_all(scene);
-    }
+    scene.clear();
+    let mut frame =
+        fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
+    frame.layout_all();
+    frame.paint_all(scene);
+}
 
-    fn window_create_spec(
-        &mut self,
-        _app: &mut App,
-        _request: &fret_app::CreateWindowRequest,
-    ) -> Option<WindowCreateSpec> {
-        None
-    }
+fn window_create_spec(
+    _driver: &mut DragDemoDriver,
+    _app: &mut App,
+    _request: &fret_app::CreateWindowRequest,
+) -> Option<WindowCreateSpec> {
+    None
+}
 
-    fn window_created(
-        &mut self,
-        _app: &mut App,
-        _request: &fret_app::CreateWindowRequest,
-        _new_window: AppWindowId,
-    ) {
-    }
+fn window_created(
+    _driver: &mut DragDemoDriver,
+    _app: &mut App,
+    _request: &fret_app::CreateWindowRequest,
+    _new_window: AppWindowId,
+) {
+}
+
+fn configure_fn_driver_hooks(
+    hooks: &mut fret_launch::FnDriverHooks<DragDemoDriver, DragDemoWindowState>,
+) {
+    hooks.hot_reload_window = Some(hot_reload_window);
+    hooks.window_create_spec = Some(window_create_spec);
+    hooks.window_created = Some(window_created);
 }
 
 pub fn build_app() -> App {
@@ -262,8 +274,14 @@ pub fn build_runner_config() -> WinitRunnerConfig {
     }
 }
 
-pub fn build_driver() -> impl WinitAppDriver {
-    DragDemoDriver::default()
+pub fn build_fn_driver() -> FnDriver<DragDemoDriver, DragDemoWindowState> {
+    FnDriver::new(
+        DragDemoDriver::default(),
+        create_window_state,
+        handle_event,
+        render,
+    )
+    .with_hooks(configure_fn_driver_hooks)
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -279,9 +297,17 @@ pub fn run() -> anyhow::Result<()> {
 
     let app = build_app();
     let config = build_runner_config();
-    let driver = build_driver();
 
-    crate::run_native_demo(config, app, driver).context("run drag_demo app")
+    crate::run_native_with_fn_driver_with_hooks(
+        config,
+        app,
+        DragDemoDriver::default(),
+        create_window_state,
+        handle_event,
+        render,
+        configure_fn_driver_hooks,
+    )
+    .context("run drag_demo app")
 }
 
 #[cfg(target_arch = "wasm32")]
