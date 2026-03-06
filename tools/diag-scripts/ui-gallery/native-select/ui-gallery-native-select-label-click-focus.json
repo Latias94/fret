@@ -46,8 +46,8 @@
     {
       "type": "wait_until",
       "predicate": {
-        "kind": "focus_is",
-        "target": { "kind": "test_id", "id": "ui-gallery-native-select-label-trigger" }
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-native-select-label-listbox" }
       },
       "timeout_frames": 240
     },
@@ -55,4 +55,3 @@
     { "type": "capture_bundle", "label": "ui-gallery-native-select-label-click-focus" }
   ]
 }
-
