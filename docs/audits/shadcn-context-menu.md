@@ -68,6 +68,13 @@ Key upstream behaviors/surfaces:
 - Pass: `ContextMenu::modal(bool)` is supported (default `true`).
   - `modal=true`: blocks underlay pointer interaction while open (Radix `disableOutsidePointerEvents`).
   - `modal=false`: outside-press dismissal becomes click-through.
+- Pass: `ContextMenu::into_element_parts(...)` already acts as the recipe-level composition bridge,
+  preserving shadcn-style `ContextMenuTrigger` / `ContextMenuContent` part authoring while keeping
+  entry collection explicit in the closure passed to `entries`.
+- Note: Fret intentionally does not add a separate generic `compose()` builder for `ContextMenu`
+  today. The root already needs a trigger part plus an explicit `entries` closure for typed menu
+  items, groups, separators, check/radio items, and submenus. A generic builder would mostly
+  duplicate `into_element_parts(...)` without clarifying the entry-model contract.
 - Note: Fret exposes an explicit `close_on_select` policy per item; upstream Radix typically relies
   on `onSelect(e) { e.preventDefault() }` to keep menus open for toggles.
 
