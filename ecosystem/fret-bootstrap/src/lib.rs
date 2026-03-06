@@ -156,7 +156,7 @@ core-command-title-app-quit = 退出
 
 /// Builder wrapper around `fret_launch::WinitAppBuilder` with common bootstrapping conveniences.
 #[cfg(not(target_arch = "wasm32"))]
-pub struct BootstrapBuilder<D: fret_launch::WinitAppDriver> {
+pub struct BootstrapBuilder<D> {
     inner: fret_launch::WinitAppBuilder<D>,
     on_gpu_ready_hooks: Vec<
         Box<dyn FnOnce(&mut App, &fret_render::WgpuContext, &mut fret_render::Renderer) + 'static>,
@@ -665,9 +665,7 @@ impl<D: 'static, S: 'static> BootstrapBuilder<fret_launch::FnDriver<D, S>> {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-impl<D: fret_launch::WinitAppDriver + 'static> From<fret_launch::WinitAppBuilder<D>>
-    for BootstrapBuilder<D>
-{
+impl<D> From<fret_launch::WinitAppBuilder<D>> for BootstrapBuilder<D> {
     fn from(inner: fret_launch::WinitAppBuilder<D>) -> Self {
         Self {
             inner,

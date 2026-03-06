@@ -155,7 +155,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
     }
 }
 
-pub struct WinitAppBuilder<D: super::WinitAppDriver> {
+pub struct WinitAppBuilder<D> {
     config: super::WinitRunnerConfig,
     app: App,
     driver: D,

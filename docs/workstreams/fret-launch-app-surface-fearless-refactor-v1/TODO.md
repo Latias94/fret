@@ -1,4 +1,4 @@
-# Fret Launch + App Surface (Fearless Refactor v1) 鈥?TODO
+# Fret Launch + App Surface (Fearless Refactor v1) TODO
 
 This checklist is scoped to the launch/public-surface refactor only.
 
@@ -59,7 +59,7 @@ Companion docs:
   - [ ] `fret` for app authors
   - [ ] `fret-framework` for manual assembly
   - [ ] `fret-launch` for advanced integration
-- [x] Migrate representative launch examples from direct `WinitAppDriver` impls to `FnDriver` (`chart_demo`, `bars_demo`, `error_bars_demo`, `area_demo`, `candlestick_demo`, `grouped_bars_demo`, `stacked_bars_demo`, `horizontal_bars_demo`, `histogram_demo`, `plot_demo`, `plot_image_demo`, `heatmap_demo`, `histogram2d_demo`, `inf_lines_demo`, `linked_cursor_demo`).
+- [x] Migrate representative launch examples from direct `WinitAppDriver` impls to `FnDriver` implementation paths while keeping public `build_driver()` helpers opaque (`chart_demo`, `bars_demo`, `error_bars_demo`, `area_demo`, `candlestick_demo`, `grouped_bars_demo`, `stacked_bars_demo`, `horizontal_bars_demo`, `histogram_demo`, `plot_demo`, `plot_image_demo`, `heatmap_demo`, `histogram2d_demo`, `inf_lines_demo`, `linked_cursor_demo`).
 - [x] Add one minimal advanced example that shows the supported launch escape hatch without exposing unnecessary internals.
 - [ ] Cross-link this workstream from any relevant builder/onboarding docs if the final surface changes.
 
