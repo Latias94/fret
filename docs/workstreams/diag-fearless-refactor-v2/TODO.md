@@ -106,6 +106,10 @@ Tracking doc: `docs/workstreams/diag-fearless-refactor-v2/README.md`
   - [x] the `Regression` tab now lists `failing_summaries` from `regression.index.json`,
   - [x] selecting a row loads the corresponding `regression.summary.json`,
   - [x] selected summary path and bundle dirs can be copied for evidence follow-up.
+- [x] Add a thin GUI summarize trigger over the shared aggregate artifacts:
+  - [x] the `Regression` tab now includes a `Summarize` action next to `Refresh`,
+  - [x] the action runs the existing `diag summarize` flow against the current artifacts root,
+  - [x] successful completion refreshes the aggregate artifacts instead of creating a GUI-only summary model.
 - [x] Expose aggregate summary/index artifacts through the MCP consumer lane:
   - [x] `apps/fret-devtools-mcp` now exposes `regression.summary.json`,
   - [x] `apps/fret-devtools-mcp` now exposes `regression.index.json`,

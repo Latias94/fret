@@ -33,6 +33,7 @@ use fret_ui_shadcn as shadcn;
 mod pack;
 mod script_studio;
 mod semantics;
+mod summarize;
 mod ws;
 
 const CMD_COPY_WS_URL: &str = "fret.devtools.copy_ws_url";
@@ -53,6 +54,7 @@ const CMD_PACK_LAST_BUNDLE: &str = "fret.devtools.pack_last_bundle";
 const CMD_COPY_PACK_PATH: &str = "fret.devtools.copy_pack_path";
 const CMD_OPEN_VIEWER_URL: &str = "fret.devtools.open_viewer_url";
 const CMD_REGRESSION_REFRESH: &str = "fret.devtools.regression.refresh";
+const CMD_REGRESSION_SUMMARIZE: &str = "fret.devtools.regression.summarize";
 
 #[derive(Clone)]
 struct DevtoolsConfig {
@@ -120,6 +122,8 @@ struct State {
     last_pack_path: Model<Option<Arc<str>>>,
     pack_in_flight: Model<bool>,
     pack_last_error: Model<Option<Arc<str>>>,
+    summarize_in_flight: Model<bool>,
+    summarize_last_error: Model<Option<Arc<str>>>,
     viewer_url: Model<String>,
 
     last_pick_json: Model<String>,
@@ -162,6 +166,8 @@ struct State {
 
     pack_tx: std::sync::mpsc::Sender<pack::PackJobResult>,
     pack_rx: std::sync::mpsc::Receiver<pack::PackJobResult>,
+    summarize_tx: std::sync::mpsc::Sender<summarize::SummarizeJobResult>,
+    summarize_rx: std::sync::mpsc::Receiver<summarize::SummarizeJobResult>,
 }
 
 fn main() -> anyhow::Result<()> {
@@ -280,6 +286,8 @@ fn init_window(app: &mut App, _window: AppWindowId) -> State {
     let last_pack_path = app.models_mut().insert(None::<Arc<str>>);
     let pack_in_flight = app.models_mut().insert(false);
     let pack_last_error = app.models_mut().insert(None::<Arc<str>>);
+    let summarize_in_flight = app.models_mut().insert(false);
+    let summarize_last_error = app.models_mut().insert(None::<Arc<str>>);
     let viewer_url = app.models_mut().insert("http://localhost:5173".to_string());
     let last_pick_json = app.models_mut().insert(String::new());
     let last_inspect_hover_json = app.models_mut().insert(String::new());
@@ -345,6 +353,7 @@ fn init_window(app: &mut App, _window: AppWindowId) -> State {
     let devtools = DevtoolsOps::new(client);
 
     let (pack_tx, pack_rx) = pack::new_pack_channel();
+    let (summarize_tx, summarize_rx) = summarize::new_summarize_channel();
 
     let mut st = State {
         cfg,
@@ -399,6 +408,8 @@ fn init_window(app: &mut App, _window: AppWindowId) -> State {
         last_pack_path,
         pack_in_flight,
         pack_last_error,
+        summarize_in_flight,
+        summarize_last_error,
         viewer_url,
         last_pick_json,
         last_inspect_hover_json,
@@ -436,6 +447,8 @@ fn init_window(app: &mut App, _window: AppWindowId) -> State {
         live_semantics_last_force_nonce: 0,
         pack_tx,
         pack_rx,
+        summarize_tx,
+        summarize_rx,
     };
 
     refresh_script_library(app, &mut st);
@@ -445,6 +458,7 @@ fn init_window(app: &mut App, _window: AppWindowId) -> State {
 
 fn view(cx: &mut ElementContext<'_, App>, st: &mut State) -> ViewElements {
     pack::poll_pack_jobs(cx.app, st);
+    summarize::poll_summarize_jobs(cx.app, st);
     ws::drain_ws_messages(cx.app, st);
     ws::sync_selected_session_to_client(cx.app, st);
     semantics::refresh_semantics_cache_if_needed(cx.app, st);
@@ -525,6 +539,8 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut State) -> ViewElements {
     cx.observe_model(&st.last_pack_path, Invalidation::Paint);
     cx.observe_model(&st.pack_in_flight, Invalidation::Paint);
     cx.observe_model(&st.pack_last_error, Invalidation::Paint);
+    cx.observe_model(&st.summarize_in_flight, Invalidation::Paint);
+    cx.observe_model(&st.summarize_last_error, Invalidation::Paint);
     cx.observe_model(&st.viewer_url, Invalidation::Paint);
     cx.observe_model(&st.last_pick_json, Invalidation::Paint);
     cx.observe_model(&st.last_inspect_hover_json, Invalidation::Paint);
@@ -1931,8 +1947,29 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
         .models()
         .read(&st.target_out_dir, |v| v.is_some())
         .unwrap_or(false);
+    let summarize_in_flight = cx
+        .app
+        .models()
+        .read(&st.summarize_in_flight, |v| *v)
+        .unwrap_or(false);
+    let summarize_last_error = cx
+        .app
+        .models()
+        .read(&st.summarize_last_error, |v| v.clone())
+        .ok()
+        .flatten();
     let repo_root = repo_root_from_script_paths(&st.script_paths);
     let failing_rows = regression_failing_summary_rows(&index_json, 10);
+    let summarize_status_line = {
+        let err = summarize_last_error
+            .as_deref()
+            .map(|s| s.to_string())
+            .unwrap_or_else(|| "-".to_string());
+        format!(
+            "summarize_in_flight={} summarize_last_error={err}",
+            if summarize_in_flight { "true" } else { "false" }
+        )
+    };
 
     let aggregate_content = {
         let mut parts: Vec<String> = Vec::new();
@@ -2127,6 +2164,13 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
                         .disabled(!can_refresh)
                         .on_click(CMD_REGRESSION_REFRESH)
                         .into_element(cx),
+                    shadcn::Button::new("Summarize")
+                        .variant(shadcn::ButtonVariant::Secondary)
+                        .size(shadcn::ButtonSize::Sm)
+                        .disabled(!can_refresh || summarize_in_flight)
+                        .on_click(CMD_REGRESSION_SUMMARIZE)
+                        .into_element(cx),
+                    cx.text(summarize_status_line),
                 ]
             })
             .gap(fret_ui_kit::Space::N2)
@@ -2442,6 +2486,12 @@ fn on_command(
         }
         CMD_REGRESSION_REFRESH => {
             refresh_regression_artifacts(app, st);
+            app.request_redraw(window);
+        }
+        CMD_REGRESSION_SUMMARIZE => {
+            if let Err(err) = summarize::start_regression_summarize(app, st) {
+                push_log(app, &st.log_lines, &format!("regression summarize refused: {err}"));
+            }
             app.request_redraw(window);
         }
         CMD_SCRIPT_FORK => {

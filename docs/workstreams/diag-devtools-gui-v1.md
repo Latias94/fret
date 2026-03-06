@@ -46,6 +46,8 @@ The missing piece for “everyday use” is a **DevTools GUI** that:
 - The tab reuses the existing artifacts-root contract and reads:
   - `regression.summary.json`,
   - `regression.index.json`.
+- The tab now also exposes a thin `Summarize` trigger that runs the existing aggregate summarization flow
+  against the current artifacts root and refreshes the panel when the job completes.
 - It does not invent a new campaign model; it is only a thin GUI consumer over the same aggregate
   artifacts already used by CLI and MCP.
 
