@@ -38,6 +38,10 @@ Current snapshot (2026-03-06):
 - `fret-ui-ai/web_preview` console rows are now also covered: timestamp + message log rows keep
   word-wrap behavior without overflowing beside the timestamp, and the fix is locked with a
   targeted regression test.
+- The Material 3 chip audit now also covers natural-width chip chrome: `chip`,
+  `suggestion_chip`, `filter_chip`, and `input_chip` all keep one-line ellipsis semantics while
+  remaining shrinkable within icon-bearing chip rows via explicit `min-w-0` + `flex-shrink: 1`,
+  without forcing fill width.
 - `fret-ui-ai/inline_citation` hover-card content is now covered too: fixed-width cards keep title
   / URL truncation and quote wrapping stable because the content stacks and text/link surfaces now
   explicitly fill available width and opt into `min-w-0`.
@@ -74,6 +78,10 @@ Current snapshot (2026-03-06):
 - `fret-ui-material3/segmented_button` labels are now covered too: equal-width segment
   labels keep centered one-line clip semantics because the label text explicitly fills the segment
   slot and opts into `min-w-0`.
+- The `fret-ui-material3` chip family is now covered too: `chip`, `suggestion_chip`,
+  `filter_chip`, and `input_chip` all keep one-line ellipsis semantics while remaining shrinkable
+  inside natural-width chip chrome because the label text now explicitly opts into `min-w-0` plus
+  `flex-shrink: 1` without being forced to fill width.
 
 ---
 
