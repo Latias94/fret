@@ -1327,7 +1327,15 @@ impl PopoverContent {
         let children = self.children;
         let label = self.a11y_label;
 
-        let container = shadcn_layout::container_vstack_gap(cx, props, Space::N4, children);
+        let container = cx.container(props, move |cx| {
+            vec![
+                ui::v_flex(move |_cx| children)
+                    .gap(Space::N4)
+                    .items_stretch()
+                    .layout(LayoutRefinement::default().w_full().min_w_0())
+                    .into_element(cx),
+            ]
+        });
 
         container.attach_semantics(SemanticsDecoration {
             role: Some(SemanticsRole::Panel),
@@ -1678,6 +1686,136 @@ mod tests {
         ui.set_root(root);
         OverlayController::render(ui, app, services, window, bounds);
         trigger_id.expect("trigger id")
+    }
+
+    #[test]
+    fn popover_content_keeps_command_children_fill_width() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(false);
+        let query = app.models_mut().insert(String::new());
+        let content_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+
+        let mut services = FakeServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(800.0), Px(600.0)),
+        );
+
+        let render_frame = |ui: &mut UiTree<App>, app: &mut App, services: &mut FakeServices| {
+            let _ = render_overlay_frame(
+                ui,
+                app,
+                services,
+                window,
+                bounds,
+                "popover-command-fill-width",
+                |cx| {
+                    let trigger = cx.pressable(
+                        PressableProps {
+                            layout: {
+                                let mut layout = LayoutStyle::default();
+                                layout.size.width = Length::Px(Px(220.0));
+                                layout.size.height = Length::Px(Px(40.0));
+                                layout.inset.left = Some(Px(120.0)).into();
+                                layout.inset.top = Some(Px(80.0)).into();
+                                layout.position = fret_ui::element::PositionStyle::Absolute;
+                                layout
+                            },
+                            enabled: true,
+                            focusable: true,
+                            ..Default::default()
+                        },
+                        |_cx, _st| Vec::new(),
+                    );
+
+                    let query_for_content = query.clone();
+                    let content_id_out = content_id_out.clone();
+                    let popover = Popover::new(open.clone()).into_element(
+                        cx,
+                        |_cx| trigger,
+                        move |cx| {
+                            let input = crate::CommandInput::new(query_for_content.clone())
+                                .input_test_id("popover-command-input")
+                                .into_element(cx);
+                            let list = crate::CommandList::new(vec![
+                                crate::CommandItem::new("Default Microphone (1234:abcd)")
+                                    .test_id("popover-command-item-default"),
+                                crate::CommandItem::new("USB Audio Device (5678:ef01)")
+                                    .test_id("popover-command-item-usb"),
+                            ])
+                            .query_model(query_for_content.clone())
+                            .into_element(cx);
+
+                            let content = PopoverContent::new(vec![input, list]).into_element(cx);
+                            content_id_out.set(Some(content.id));
+                            content
+                        },
+                    );
+
+                    vec![popover]
+                },
+            );
+        };
+
+        render_frame(&mut ui, &mut app, &mut services);
+        let _ = app.models_mut().update(&open, |v| *v = true);
+        render_frame(&mut ui, &mut app, &mut services);
+        render_frame(&mut ui, &mut app, &mut services);
+
+        let content_element = content_id_out.get().expect("content element id");
+        let content_node = fret_ui::elements::node_for_element(&mut app, window, content_element)
+            .expect("content node");
+        let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
+
+        let content = snap
+            .nodes
+            .iter()
+            .find(|n| n.id == content_node)
+            .expect("popover content semantics node");
+        let input = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("popover-command-input"))
+            .expect("command input semantics node");
+        let list = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::ListBox)
+            .expect("command list semantics node");
+        let item = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("popover-command-item-default"))
+            .expect("command item semantics node");
+
+        assert_eq!(item.role, SemanticsRole::ListBoxOption);
+
+        let content_w = content.bounds.size.width.0;
+        let input_w = input.bounds.size.width.0;
+        let list_w = list.bounds.size.width.0;
+        let item_w = item.bounds.size.width.0;
+
+        assert!(
+            content_w > 0.0,
+            "expected non-zero popover content width, got {content_w}"
+        );
+        assert!(
+            input_w > content_w * 0.5,
+            "expected command input to keep substantial width inside popover; input={input_w}, content={content_w}"
+        );
+        assert!(
+            list_w > content_w * 0.75,
+            "expected command list to keep fill width inside popover; list={list_w}, content={content_w}"
+        );
+        assert!(
+            item_w > content_w * 0.75,
+            "expected command item to keep fill width inside popover; item={item_w}, content={content_w}"
+        );
     }
 
     fn render_popover_frame_with_auto_focus_hooks(

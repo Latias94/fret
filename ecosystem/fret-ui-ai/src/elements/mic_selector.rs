@@ -203,6 +203,65 @@ impl MicSelector {
         self
     }
 
+    /// Rust-friendly compound entrypoint for the upstream JSX children shape.
+    ///
+    /// This mirrors the existing AI Elements pattern used elsewhere in the repo: descendants are
+    /// built under the nearest provider context, while callers still write an explicit trigger /
+    /// content pair.
+    pub fn into_element_with_children<H, F>(
+        self,
+        cx: &mut ElementContext<'_, H>,
+        children: F,
+    ) -> AnyElement
+    where
+        H: UiHost + 'static,
+        F: Fn(&mut ElementContext<'_, H>) -> (AnyElement, AnyElement) + Clone + 'static,
+    {
+        let open = fret_ui_kit::primitives::popover::PopoverRoot::new()
+            .open(self.open.clone())
+            .default_open(self.default_open)
+            .open_model(cx);
+
+        let value = controllable_state::use_controllable_model(cx, self.value.clone(), || {
+            self.default_value.clone()
+        })
+        .model();
+
+        let query = query_model(cx);
+        let controller = MicSelectorController {
+            devices: self.devices.clone(),
+            value: value.clone(),
+            open: open.clone(),
+            query: query.clone(),
+            on_value_change: self.on_value_change.clone(),
+        };
+
+        let controller_for_trigger = controller.clone();
+        let controller_for_content = controller;
+        let children_for_trigger = children.clone();
+        let children_for_content = children;
+
+        Popover::new(open.clone()).into_element_with_anchor(
+            cx,
+            move |cx| {
+                cx.with_state(MicSelectorProviderState::default, |st| {
+                    st.controller = Some(controller_for_trigger.clone());
+                    st.anchor_width = None;
+                });
+                let (trigger, _) = children_for_trigger(cx);
+                trigger
+            },
+            move |cx, anchor_rect| {
+                cx.with_state(MicSelectorProviderState::default, |st| {
+                    st.controller = Some(controller_for_content.clone());
+                    st.anchor_width = Some(anchor_rect.size.width);
+                });
+                let (_, content) = children_for_content(cx);
+                content
+            },
+        )
+    }
+
     pub fn into_element<H: UiHost + 'static>(
         self,
         cx: &mut ElementContext<'_, H>,
@@ -299,6 +358,7 @@ impl MicSelectorTrigger {
         let Some(controller) = use_mic_selector_controller(cx) else {
             return visually_hidden(cx, |_| Vec::new());
         };
+        let query = controller.query.clone();
 
         let icon = decl_icon::icon(
             cx,
@@ -307,9 +367,16 @@ impl MicSelectorTrigger {
         let mut children = self.children;
         children.push(icon);
 
+        let on_activate: fret_ui::action::OnActivate = Arc::new(move |host, action_cx, _| {
+            let _ = host.models_mut().update(&query, |v| v.clear());
+            host.notify(action_cx);
+            host.request_redraw(action_cx.window);
+        });
+
         let mut btn = Button::new("Microphone")
             .variant(ButtonVariant::Outline)
             .size(ButtonSize::Default)
+            .on_activate(on_activate)
             .toggle_model(controller.open)
             .children(children)
             .disabled(self.disabled)
@@ -612,11 +679,176 @@ impl MicSelectorLabel {
     }
 }
 
-/// Convenience list renderer: filters devices by the current query and commits selection on activate.
+fn mic_selector_select_action(
+    controller: &MicSelectorController,
+    value: Arc<str>,
+) -> fret_ui::action::OnActivate {
+    let value_model = controller.value.clone();
+    let open_model = controller.open.clone();
+    let query_model = controller.query.clone();
+    let on_value_change = controller.on_value_change.clone();
+
+    Arc::new(move |host, action_cx, _| {
+        let _ = host
+            .models_mut()
+            .update(&value_model, |v| *v = Some(value.clone()));
+        let _ = host.models_mut().update(&query_model, |v| v.clear());
+        let _ = host.models_mut().update(&open_model, |v| *v = false);
+        if let Some(cb) = on_value_change.clone() {
+            cb(host, action_cx, Some(value.clone()));
+        }
+        host.notify(action_cx);
+        host.request_redraw(action_cx.window);
+    })
+}
+
+fn default_mic_selector_item_test_id(
+    prefix: Option<&Arc<str>>,
+    value: &Arc<str>,
+) -> Option<Arc<str>> {
+    prefix.map(|prefix| Arc::from(format!("{prefix}-{}", value.as_ref().replace(' ', "-"))))
+}
+
 #[derive(Clone)]
+pub struct MicSelectorEmpty {
+    text: Arc<str>,
+}
+
+impl std::fmt::Debug for MicSelectorEmpty {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("MicSelectorEmpty")
+            .field("text", &self.text.as_ref())
+            .finish()
+    }
+}
+
+impl MicSelectorEmpty {
+    pub fn new() -> Self {
+        Self {
+            text: Arc::from("No microphone found."),
+        }
+    }
+
+    pub fn text(mut self, text: impl Into<Arc<str>>) -> Self {
+        self.text = text.into();
+        self
+    }
+}
+
+pub struct MicSelectorItem {
+    label: Arc<str>,
+    value: Arc<str>,
+    disabled: bool,
+    force_mount: bool,
+    keywords: Vec<Arc<str>>,
+    test_id: Option<Arc<str>>,
+    children: Vec<AnyElement>,
+}
+
+impl std::fmt::Debug for MicSelectorItem {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("MicSelectorItem")
+            .field("label", &self.label.as_ref())
+            .field("value", &self.value.as_ref())
+            .field("disabled", &self.disabled)
+            .field("force_mount", &self.force_mount)
+            .field("keywords_len", &self.keywords.len())
+            .field("test_id", &self.test_id.as_deref())
+            .field("children_len", &self.children.len())
+            .finish()
+    }
+}
+
+impl MicSelectorItem {
+    pub fn new(label: impl Into<Arc<str>>) -> Self {
+        let label = label.into();
+        Self {
+            label: label.clone(),
+            value: label,
+            disabled: false,
+            force_mount: false,
+            keywords: Vec::new(),
+            test_id: None,
+            children: Vec::new(),
+        }
+    }
+
+    pub fn value(mut self, value: impl Into<Arc<str>>) -> Self {
+        self.value = value.into();
+        self
+    }
+
+    pub fn keywords<I, S>(mut self, keywords: I) -> Self
+    where
+        I: IntoIterator<Item = S>,
+        S: Into<Arc<str>>,
+    {
+        self.keywords = keywords.into_iter().map(Into::into).collect();
+        self
+    }
+
+    pub fn disabled(mut self, disabled: bool) -> Self {
+        self.disabled = disabled;
+        self
+    }
+
+    pub fn force_mount(mut self, force_mount: bool) -> Self {
+        self.force_mount = force_mount;
+        self
+    }
+
+    pub fn test_id(mut self, test_id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(test_id.into());
+        self
+    }
+
+    pub fn children(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {
+        self.children = children.into_iter().collect();
+        self
+    }
+
+    fn into_command_item(
+        self,
+        controller: &MicSelectorController,
+        test_id_prefix: Option<&Arc<str>>,
+    ) -> CommandItem {
+        let value = self.value.clone();
+        let on_select = mic_selector_select_action(controller, value.clone());
+
+        let mut item = CommandItem::new(self.label)
+            .value(value.clone())
+            .keywords(self.keywords)
+            .disabled(self.disabled)
+            .force_mount(self.force_mount)
+            .on_select_action(on_select);
+
+        if !self.children.is_empty() {
+            item = item.children(self.children);
+        }
+
+        if let Some(test_id) = self
+            .test_id
+            .or_else(|| default_mic_selector_item_test_id(test_id_prefix, &value))
+        {
+            item = item.test_id(test_id);
+        }
+
+        item
+    }
+}
+
+#[derive(Debug)]
+enum MicSelectorListMode {
+    Auto,
+    Entries(Vec<MicSelectorItem>),
+}
+
+/// List renderer aligned with upstream `MicSelectorList` outcomes.
 pub struct MicSelectorList {
     empty_text: Arc<str>,
     test_id_prefix: Option<Arc<str>>,
+    mode: MicSelectorListMode,
+    scroll_layout: LayoutRefinement,
 }
 
 impl std::fmt::Debug for MicSelectorList {
@@ -624,6 +856,7 @@ impl std::fmt::Debug for MicSelectorList {
         f.debug_struct("MicSelectorList")
             .field("empty_text", &self.empty_text.as_ref())
             .field("test_id_prefix", &self.test_id_prefix.as_deref())
+            .field("scroll_layout", &self.scroll_layout)
             .finish()
     }
 }
@@ -633,7 +866,21 @@ impl MicSelectorList {
         Self {
             empty_text: Arc::from("No microphone found."),
             test_id_prefix: None,
+            mode: MicSelectorListMode::Auto,
+            scroll_layout: LayoutRefinement::default(),
         }
+    }
+
+    pub fn new_entries(entries: impl IntoIterator<Item = MicSelectorItem>) -> Self {
+        Self {
+            mode: MicSelectorListMode::Entries(entries.into_iter().collect()),
+            ..Self::new()
+        }
+    }
+
+    pub fn empty(mut self, empty: MicSelectorEmpty) -> Self {
+        self.empty_text = empty.text;
+        self
     }
 
     pub fn empty_text(mut self, text: impl Into<Arc<str>>) -> Self {
@@ -646,57 +893,71 @@ impl MicSelectorList {
         self
     }
 
+    pub fn entries(mut self, entries: impl IntoIterator<Item = MicSelectorItem>) -> Self {
+        self.mode = MicSelectorListMode::Entries(entries.into_iter().collect());
+        self
+    }
+
+    pub fn refine_scroll_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.scroll_layout = self.scroll_layout.merge(layout);
+        self
+    }
+
     pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let Some(controller) = use_mic_selector_controller(cx) else {
             return visually_hidden(cx, |_| Vec::new());
         };
 
-        let query = cx
-            .app
-            .models()
-            .read(&controller.query, |s| s.trim().to_ascii_lowercase())
-            .ok()
-            .unwrap_or_default();
+        let Self {
+            empty_text,
+            test_id_prefix,
+            mode,
+            scroll_layout,
+        } = self;
 
-        let mut items: Vec<CommandItem> = Vec::new();
-        for device in controller.devices.iter() {
-            if !query.is_empty() && !device.label.to_ascii_lowercase().contains(&query) {
-                continue;
-            }
-
-            let id = device.id.clone();
-            let value_model = controller.value.clone();
-            let open_model = controller.open.clone();
-            let on_value_change = controller.on_value_change.clone();
-            let device_clone = device.clone();
-
-            let on_select: fret_ui::action::OnActivate = Arc::new(move |host, action_cx, _| {
-                let _ = host
-                    .models_mut()
-                    .update(&value_model, |v| *v = Some(id.clone()));
-                let _ = host.models_mut().update(&open_model, |v| *v = false);
-                if let Some(cb) = on_value_change.clone() {
-                    cb(host, action_cx, Some(id.clone()));
-                }
-                host.notify(action_cx);
-                host.request_redraw(action_cx.window);
-            });
-
-            let mut item = CommandItem::new(device.label.clone())
-                .value(device.id.clone())
-                .on_select_action(on_select)
-                .children([MicSelectorLabel::new(device_clone).into_element(cx)]);
-
-            if let Some(prefix) = self.test_id_prefix.as_deref() {
-                item = item.test_id(format!("{prefix}-{}", device.id.as_ref().replace(' ', "-")));
-            }
-
-            items.push(item);
-        }
+        let items = match mode {
+            MicSelectorListMode::Auto => controller
+                .devices
+                .iter()
+                .cloned()
+                .map(|device| {
+                    MicSelectorItem::new(device.label.clone())
+                        .value(device.id.clone())
+                        .children([MicSelectorLabel::new(device).into_element(cx)])
+                        .into_command_item(&controller, test_id_prefix.as_ref())
+                })
+                .collect::<Vec<_>>(),
+            MicSelectorListMode::Entries(entries) => entries
+                .into_iter()
+                .map(|entry| entry.into_command_item(&controller, test_id_prefix.as_ref()))
+                .collect::<Vec<_>>(),
+        };
 
         CommandList::new(items)
-            .empty_text(self.empty_text)
+            .empty_text(empty_text)
+            .query_model(controller.query.clone())
             .highlight_query_model(controller.query)
+            .refine_scroll_layout(scroll_layout)
             .into_element(cx)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::split_device_label;
+
+    #[test]
+    fn split_device_label_parses_trailing_hex_id() {
+        assert_eq!(
+            split_device_label("Default Microphone (1234:abcd)"),
+            Some(("Default Microphone", "1234:abcd"))
+        );
+    }
+
+    #[test]
+    fn split_device_label_rejects_non_matching_suffix() {
+        assert_eq!(split_device_label("Loopback"), None);
+        assert_eq!(split_device_label("Mic (123:abcd)"), None);
+        assert_eq!(split_device_label("Mic (1234:abcg)"), None);
     }
 }

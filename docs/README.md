@@ -55,6 +55,7 @@ Unless a document says otherwise:
 - CPU timeline profiling (Tracy): `docs/tracy.md`
 - UI gallery profiling report (native): `docs/perf/ui-gallery-profile-report.md`
 - UI Gallery docs-style component pages tracker: `docs/workstreams/ui-gallery-docs-page-layout-refactor.md`
+- AI Elements port + selector surface alignment: `docs/workstreams/ai-elements-port.md`, `docs/workstreams/ai-elements-port-todo.md`, and `docs/workstreams/ai-elements-upstream-alignment.md`
 - UI diagnostics + scripted repros: `docs/ui-diagnostics-and-scripted-tests.md`
 - Inspect workflow (picker + scripts): `docs/debugging-ui-with-inspector-and-scripts.md`
 - Window style profiles (ecosystem recipes): `docs/window-style-profiles.md`

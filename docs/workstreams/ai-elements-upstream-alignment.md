@@ -96,7 +96,7 @@ Legend:
 | `agent.tsx` | `fret-ui-ai` | `agent.rs` | Ported (prototype) | UI-only chrome (instructions/tools/output schema). Add gates: `tools/diag-scripts/ui-gallery-ai-agent-demo-expand-tool.json`. |
 | `persona.tsx` | `fret-ui-ai` | `persona.rs` | Ported (prototype) | UI-only placeholder (upstream uses Rive/webgl2). Add gates: `tools/diag-scripts/ui-gallery-ai-persona-demo.json`. |
 | `sandbox.tsx` | `fret-ui-ai` | `sandbox.rs` | Ported (prototype) | UI-only chrome (collapsible + tabs). Add gates: `tools/diag-scripts/ui-gallery-ai-sandbox-demo-switch-tab.json`. |
-| `mic-selector.tsx` | `fret-ui-ai` | `mic_selector.rs` | Ported (prototype) | UI-only chrome + explicit seams (device enumeration is app-owned). |
+| `mic-selector.tsx` | `fret-ui-ai` | `mic_selector.rs` | Ported (prototype) | UI-only chrome + explicit seams (device enumeration is app-owned). Thin selector-level `MicSelectorItem` / `MicSelectorEmpty` wrappers exist; remaining gap is render-props list composition. |
 | `speech-input.tsx` | `fret-ui-ai` | `speech_input.rs` | Ported (prototype) | UI-only chrome + explicit seams (capture/ASR backends app-owned). |
 | `voice-selector.tsx` | `fret-ui-ai` | `voice_selector.rs` | Ported (prototype) | UI-only chrome + explicit seams (voices list app-owned). |
 | `canvas.tsx` | `fret-ui-ai` (chrome) | `workflow/canvas.rs` | Ported (prototype) | UI-only canvas host (editor-like wheel pan + ctrl/cmd wheel zoom via `fret-canvas/ui`). UI Gallery pages: `ai_workflow_canvas_demo`, `ai_workflow_chrome_demo`. Gate: `tools/diag-scripts/ui-gallery-ai-workflow-canvas-demo.json`. |
@@ -107,12 +107,68 @@ Legend:
 | `controls.tsx` | `fret-ui-ai` (chrome) | `workflow/controls.rs` | Ported (prototype) | UI-only controls chrome. UI Gallery pages: `ai_workflow_controls_demo`, `ai_workflow_chrome_demo`. Gate: `tools/diag-scripts/ui-gallery-ai-workflow-controls-demo.json`. |
 | `connection.tsx` | `fret-ui-ai` (chrome) | `workflow/connection.rs` | Ported (prototype) | UI-only connection line chrome. UI Gallery page: `ai_workflow_connection_demo`. Gate: `tools/diag-scripts/ui-gallery-ai-workflow-edge-demo.json`. |
 
+## Selector surface alignment (2026-03-06)
+
+The upstream `mic-selector`, `voice-selector`, and `model-selector` surfaces look similar at a glance,
+but they should not collapse into one policy-heavy abstraction in Fret.
+
+The current alignment decision is:
+
+| Surface | Current Fret shape | Upstream shape | Recommendation |
+| --- | --- | --- | --- |
+| `MicSelector` | UI-only root with controlled/uncontrolled `value_model` + `open_model`, a Rust compound entrypoint (`into_element_with_children(...)`), explicit `MicSelectorItem` / `MicSelectorEmpty` wrappers, and a `MicSelectorList` that supports both auto rows and explicit entries. | Root + `Trigger` + `Value` + `Content` + `Input` + render-props `List(children(data))` + explicit `Empty` / `Item` / `Label`. | Keep the current UI-only seam (device enumeration and permission prompts remain app-owned). Treat the remaining gap as **ecosystem surface alignment**, not a runtime contract gap. The main remaining delta is upstream-style render-props list composition, which should be solved on top of shared `Command` composition rather than by adding new runtime mechanisms. |
+| `VoiceSelector` | Richest selector-owned compound surface today: root, content/input/list, shared `Command*` aliases, plus metadata/presentation parts such as `Name`, `Description`, `Gender`, `Accent`, `Age`, `Attributes`, `Bullet`, and `Preview`. | Root + dialog/content/input/list/items plus metadata/presentation parts and a context hook. | Use this as the **naming and taxonomy baseline** for selector compounds, but do not force every selector to grow the same presentation parts. The metadata/presentation parts are selector policy, not universal selector contracts. |
+| `ModelSelector` | Thin wrapper over dialog + shared `Command*` parts, plus selector-specific presentation helpers (`Logo`, `LogoGroup`, `Name`). | Thin wrapper over `Dialog` + `Command*` + provider logo/name helpers. | Keep this surface intentionally thin and alias-heavy. Do not turn `ModelSelector` into a policy-heavy root just to match `VoiceSelector`. Thin-wrapper parity is the correct outcome here. |
+
+### Smallest common selector surface
+
+The three selectors should align around a **smallest common surface**, not a fully identical API:
+
+- Root + trigger/content decomposition.
+- Shared command-family parts where they exist: `Input`, `List`, `Empty`, `Item`, `Group`,
+  `Separator`, `Shortcut`.
+- Controlled/uncontrolled open state on the root; controlled/uncontrolled selection state only for
+  selectors that semantically own a selected value.
+- Docs-style gallery pages that explain which parts are selector-owned vs shared `Command*`
+  composition.
+
+### Intentional divergences
+
+These are **intentional** and should stay out of `crates/fret-ui`:
+
+- `MicSelector`: device enumeration, permission prompts, and `devicechange` refresh remain app-owned.
+- `VoiceSelector`: voice inventory and preview playback transport remain app-owned.
+- `ModelSelector`: provider logo fetching remains local/recipe-owned for now (the current port uses a
+  local placeholder badge rather than remote `models.dev` fetches).
+
+### Mechanism vs recipe note
+
+The March 2026 `MicSelector` width regression was not a `crates/fret-ui` contract bug. The root cause
+was recipe-level width/stretch propagation in `fret-ui-shadcn::PopoverContent`, fixed in
+`ecosystem/fret-ui-shadcn/src/popover.rs` with a focused regression test.
+
+### Evidence anchors
+
+- `ecosystem/fret-ui-ai/src/elements/mic_selector.rs`
+- `ecosystem/fret-ui-ai/src/elements/voice_selector.rs`
+- `ecosystem/fret-ui-ai/src/elements/model_selector.rs`
+- `apps/fret-ui-gallery/src/ui/pages/ai_mic_selector_demo.rs`
+- `apps/fret-ui-gallery/src/ui/pages/ai_voice_selector_demo.rs`
+- `apps/fret-ui-gallery/src/ui/pages/ai_model_selector_demo.rs`
+- `ecosystem/fret-ui-shadcn/src/popover.rs`
+
 ## Known upstream files not yet ported
 
 As of the snapshot above, **all** upstream `.tsx` surfaces are accounted for in `fret-ui-ai`.
  
 
 ## Evidence bundles (local)
+
+- 2026-03-06 mic selector open -> filter -> select -> close (PASS):
+  - Script: `tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-mic-selector-demo-select.json`
+  - Launch: `target/debug/fret-ui-gallery` via `cargo run -q -p fretboard -- diag run ... --launch -- target/debug/fret-ui-gallery`
+  - Session: `target/fret-diag-mic-selector-binary-debug/sessions/1772779723882-41378`
+  - Run id: `1772779726455-ui-gallery-ai-mic-selector-demo-select`
 
 - 2026-03-05 model selector open → filter → select → close (PASS):
   - Script: `tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-model-selector-demo-open-filter-select.json`
