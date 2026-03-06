@@ -286,6 +286,46 @@ fn aggregate_regression_summaries(
     summary
 }
 
+fn map_counts_to_json(counts: std::collections::BTreeMap<String, u64>) -> serde_json::Value {
+    serde_json::Value::Object(
+        counts
+            .into_iter()
+            .map(|(key, count)| (key, serde_json::Value::Number(count.into())))
+            .collect(),
+    )
+}
+
+fn regression_index_counters_json(loaded: &[LoadedRegressionSummary]) -> serde_json::Value {
+    let mut by_lane = std::collections::BTreeMap::<String, u64>::new();
+    let mut by_tool = std::collections::BTreeMap::<String, u64>::new();
+    let mut by_reason_code = std::collections::BTreeMap::<String, u64>::new();
+
+    for loaded_summary in loaded {
+        let lane = serde_json::to_value(loaded_summary.summary.campaign.lane)
+            .ok()
+            .and_then(|v| v.as_str().map(|s| s.to_string()))
+            .unwrap_or_else(|| "full".to_string());
+        *by_lane.entry(lane).or_default() += loaded_summary.summary.items.len() as u64;
+
+        *by_tool
+            .entry(loaded_summary.summary.run.tool.clone())
+            .or_default() += loaded_summary.summary.items.len() as u64;
+
+        for item in &loaded_summary.summary.items {
+            if let Some(reason_code) = item.reason_code.as_deref().filter(|v| !v.trim().is_empty())
+            {
+                *by_reason_code.entry(reason_code.to_string()).or_default() += 1;
+            }
+        }
+    }
+
+    serde_json::json!({
+        "by_lane": map_counts_to_json(by_lane),
+        "by_tool": map_counts_to_json(by_tool),
+        "by_reason_code": map_counts_to_json(by_reason_code),
+    })
+}
+
 fn regression_index_json(
     workspace_root: &Path,
     resolved_out_dir: &Path,
@@ -297,6 +337,7 @@ fn regression_index_json(
         "generated_unix_ms": generated_unix_ms,
         "kind": DIAG_REGRESSION_INDEX_KIND_V1,
         "out_dir": resolved_out_dir.display().to_string(),
+        "counters": regression_index_counters_json(loaded),
         "summaries": loaded.iter().map(|loaded_summary| {
             serde_json::json!({
                 "path": normalize_repo_relative_path(workspace_root, &loaded_summary.path),
@@ -379,6 +420,76 @@ mod tests {
             notes: None,
         });
         summary
+    }
+
+    #[test]
+    fn regression_index_json_includes_lane_tool_and_reason_counters() {
+        let workspace_root = Path::new("F:/repo");
+        let resolved_out_dir = Path::new("F:/repo/out");
+        let mut suite = sample_summary("suite", RegressionLaneV1::Correctness, "case-a");
+        suite.items[0].status = crate::regression_summary::RegressionStatusV1::FailedDeterministic;
+        suite.items[0].reason_code = Some("assert.focus_restore.mismatch".to_string());
+
+        let mut perf = sample_summary("perf", RegressionLaneV1::Perf, "case-b");
+        perf.run.tool = "fretboard diag perf".to_string();
+        perf.items[0].status = crate::regression_summary::RegressionStatusV1::FailedDeterministic;
+        perf.items[0].reason_code = Some("diag.perf.threshold_failed".to_string());
+
+        let loaded = vec![
+            LoadedRegressionSummary {
+                path: PathBuf::from(format!(
+                    "F:/repo/out/suite/{}",
+                    DIAG_REGRESSION_SUMMARY_FILENAME_V1
+                )),
+                summary: suite,
+            },
+            LoadedRegressionSummary {
+                path: PathBuf::from(format!(
+                    "F:/repo/out/perf/{}",
+                    DIAG_REGRESSION_SUMMARY_FILENAME_V1
+                )),
+                summary: perf,
+            },
+        ];
+
+        let index = regression_index_json(workspace_root, resolved_out_dir, 42, &loaded);
+
+        assert_eq!(
+            index
+                .pointer("/counters/by_lane/correctness")
+                .and_then(|v| v.as_u64()),
+            Some(1)
+        );
+        assert_eq!(
+            index
+                .pointer("/counters/by_lane/perf")
+                .and_then(|v| v.as_u64()),
+            Some(1)
+        );
+        assert_eq!(
+            index
+                .pointer("/counters/by_tool/fretboard diag suite")
+                .and_then(|v| v.as_u64()),
+            Some(1)
+        );
+        assert_eq!(
+            index
+                .pointer("/counters/by_tool/fretboard diag perf")
+                .and_then(|v| v.as_u64()),
+            Some(1)
+        );
+        assert_eq!(
+            index
+                .pointer("/counters/by_reason_code/assert.focus_restore.mismatch")
+                .and_then(|v| v.as_u64()),
+            Some(1)
+        );
+        assert_eq!(
+            index
+                .pointer("/counters/by_reason_code/diag.perf.threshold_failed")
+                .and_then(|v| v.as_u64()),
+            Some(1)
+        );
     }
 
     #[test]
