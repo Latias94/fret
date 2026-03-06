@@ -250,6 +250,9 @@ Execution companion: `design.md` (surface map + next worktree order).
   - Landed declarative test-fixture follow-up: controller/store callback setup and
     pointer-session finish assertions now share small fixtures/helpers, reducing repetition in
     release/cancel coverage tests.
+  - Landed private submodule follow-up: release/cancel/session host helpers now live in
+    `paint_only/pointer_session.rs`, keeping the main paint-only surface file focused on
+    orchestration while tests keep the same behavior gates.
   - Landed cancel/effects follow-up: Escape and pointer-cancel now share a mode-aware transient
     cleanup reducer, pointer session finish effects are routed through shared helpers, and focused
     tests lock the already-canceled node-drag divergence between Escape and pointer-cancel.

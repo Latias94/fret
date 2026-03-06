@@ -179,6 +179,9 @@ First landing in this worktree:
 - declarative paint-only tests now share small controller/store and pointer-session
   fixtures, so new reducer/session slices can land focused gates without duplicating large setup
   blocks.
+- the first private paint-only submodule split is landed: release/cancel/session-host
+  helpers now live in `paint_only/pointer_session.rs`, so the main surface file keeps orchestration
+  responsibilities while this interaction slice gets a named boundary.
 
 ### Slice 3 - portal and overlay closure
 
