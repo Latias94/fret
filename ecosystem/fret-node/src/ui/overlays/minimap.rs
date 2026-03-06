@@ -299,7 +299,7 @@ impl NodeGraphMiniMapOverlay {
                     pan,
                     z,
                     NodeGraphSetViewportOptions::default(),
-                ) && controller.view_queue().is_none()
+                ) && controller.transport_view_queue().is_none()
                 {
                     let _ = controller.sync_view_state_model_from_store(host, &self.view_state);
                 }

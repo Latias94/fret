@@ -138,7 +138,8 @@ fn controller_set_viewport_preserves_queue_transport_when_present() {
         NodeGraphViewState::default(),
     ));
     let queue = host.models.insert(NodeGraphViewQueue::default());
-    let controller = NodeGraphController::new(store.clone()).with_view_queue(queue.clone());
+    let controller =
+        NodeGraphController::new(store.clone()).bind_view_queue_transport(queue.clone());
 
     let applied = controller.set_viewport_with_options(
         &mut host,

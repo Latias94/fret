@@ -840,7 +840,7 @@ fn minimap_supports_controller_navigation_binding_without_teaching_raw_queue() {
         graph_value,
         NodeGraphViewState::default(),
     ));
-    let controller = NodeGraphController::new(store).with_view_queue(queue.clone());
+    let controller = NodeGraphController::new(store).bind_view_queue_transport(queue.clone());
 
     let internals = Arc::new(NodeGraphInternalsStore::new());
     let mut snap = NodeGraphInternalsSnapshot::default();

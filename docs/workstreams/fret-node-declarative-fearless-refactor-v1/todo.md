@@ -160,8 +160,8 @@ land in code review; move design discussion back to `README.md` if a TODO turns 
   - Raw queue / viewport transport still exported from `ecosystem/fret-node/src/ui/advanced.rs`
     (`NodeGraphEditQueue`, `NodeGraphViewQueue`, `NodeGraphViewRequest`, viewport request option types):
     now explicit and bounded, but still a likely future shrink target once controller-first coverage is complete.
-  - `NodeGraphController::with_edit_queue` / `NodeGraphController::with_view_queue`
-    (`ecosystem/fret-node/src/ui/controller.rs`): probably keep, but document as advanced transport
+  - `fret_node::ui::advanced::NodeGraphControllerTransportExt::{bind_edit_queue_transport, bind_view_queue_transport}`
+    (`ecosystem/fret-node/src/ui/advanced.rs`): probably keep, but document as advanced transport
     binding rather than the default integration recipe.
 
 - **Landable follow-ups from this audit**
@@ -274,6 +274,8 @@ land in code review; move design discussion back to `README.md` if a TODO turns 
 - [ ] Whether controlled sync should expose diff-first helpers by default.
 - [ ] Which retained-only behaviors still need a deliberate temporary home while declarative parity
       is being built.
+
+
 
 
 

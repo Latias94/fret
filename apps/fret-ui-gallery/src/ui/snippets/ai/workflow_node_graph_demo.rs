@@ -12,7 +12,7 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
     use fret_icons::IconId;
     use fret_node::io::NodeGraphViewState;
     use fret_node::runtime::store::NodeGraphStore;
-    use fret_node::ui::advanced::NodeGraphViewQueue;
+    use fret_node::ui::advanced::{NodeGraphControllerTransportExt as _, NodeGraphViewQueue};
     use fret_node::ui::{NodeGraphCanvas, NodeGraphController, NodeGraphEditor};
     use fret_node::{
         CanvasPoint, Edge, EdgeId, EdgeKind, Graph, GraphId, Node, NodeId, NodeKindKey, Port,
@@ -296,7 +296,7 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
             graph_value,
             NodeGraphViewState::default(),
         ));
-        let controller = NodeGraphController::new(store).with_view_queue(view_queue);
+        let controller = NodeGraphController::new(store).bind_view_queue_transport(view_queue);
         let bounds = cx.app.models_mut().insert(None);
 
         cx.with_state(HarnessState::default, |st| {

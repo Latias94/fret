@@ -57,12 +57,12 @@ impl NodeGraphController {
         }
     }
 
-    pub fn with_edit_queue(mut self, queue: Model<NodeGraphEditQueue>) -> Self {
+    pub(crate) fn bind_edit_queue_transport(mut self, queue: Model<NodeGraphEditQueue>) -> Self {
         self.edit_queue = Some(queue);
         self
     }
 
-    pub fn with_view_queue(mut self, queue: Model<NodeGraphViewQueue>) -> Self {
+    pub(crate) fn bind_view_queue_transport(mut self, queue: Model<NodeGraphViewQueue>) -> Self {
         self.view_queue = Some(queue);
         self
     }
@@ -71,11 +71,11 @@ impl NodeGraphController {
         self.store.clone()
     }
 
-    pub fn edit_queue(&self) -> Option<Model<NodeGraphEditQueue>> {
+    pub(crate) fn transport_edit_queue(&self) -> Option<Model<NodeGraphEditQueue>> {
         self.edit_queue.clone()
     }
 
-    pub fn view_queue(&self) -> Option<Model<NodeGraphViewQueue>> {
+    pub(crate) fn transport_view_queue(&self) -> Option<Model<NodeGraphViewQueue>> {
         self.view_queue.clone()
     }
 
@@ -1230,7 +1230,8 @@ mod tests {
             NodeGraphViewState::default(),
         ));
         let queue = host.models.insert(NodeGraphViewQueue::default());
-        let controller = NodeGraphController::new(store.clone()).with_view_queue(queue.clone());
+        let controller =
+            NodeGraphController::new(store.clone()).bind_view_queue_transport(queue.clone());
 
         assert!(controller.set_viewport_with_options(
             &mut host,
@@ -1436,7 +1437,7 @@ mod tests {
             .models
             .insert(NodeGraphStore::new(graph, NodeGraphViewState::default()));
         let queue = host.models.insert(NodeGraphViewQueue::default());
-        let controller = NodeGraphController::new(store).with_view_queue(queue.clone());
+        let controller = NodeGraphController::new(store).bind_view_queue_transport(queue.clone());
         let bounds = Rect::new(
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(800.0), Px(600.0)),
@@ -1592,7 +1593,8 @@ mod tests {
             NodeGraphViewState::default(),
         ));
         let edits = host.models.insert(NodeGraphEditQueue::default());
-        let controller = NodeGraphController::new(store.clone()).with_edit_queue(edits.clone());
+        let controller =
+            NodeGraphController::new(store.clone()).bind_edit_queue_transport(edits.clone());
         let tx = GraphTransaction {
             label: Some("Move Node".to_string()),
             ops: vec![GraphOp::SetNodePos {

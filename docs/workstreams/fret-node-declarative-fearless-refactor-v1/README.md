@@ -254,7 +254,8 @@ In the landed shape, `NodeGraphViewportHelper::new(view_state, view_queue)` rema
 transport-first constructor for retained-only integrations that still own the raw queue/models
 directly, while controller-first integrations no longer wrap the controller in a second helper
 surface.
-`fret_node::ui::advanced::*` is now the explicit namespace for those retained transport seams, and
+`fret_node::ui::advanced::*` is now the explicit namespace for those retained transport seams,
+including queue-bound controller construction via `NodeGraphControllerTransportExt`, and
 root `fret_node::ui::*` no longer re-exports the raw queue/helper surfaces. Retained-backed samples
 and crate-internal retained/test callers now use `advanced::*` or explicit module paths directly.
 Because this repo does not need a public compatibility window, the old root queue/helper aliases are
@@ -493,6 +494,7 @@ Canonical gate families to keep alive:
 - `cargo run -p fretboard -- diag suite fret-examples-node-graph-paint-only --dir target/fret-diag-node-graph --launch -- cargo run -p fret-demo --bin node_graph_demo --features node-graph-demos`
 
 The TODO tracker defines the new gate additions required for transaction-safe declarative parity.
+
 
 
 
