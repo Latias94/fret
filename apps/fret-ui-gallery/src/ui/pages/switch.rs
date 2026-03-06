@@ -4,6 +4,7 @@ use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::switch as snippets;
 
 pub(super) fn preview_switch(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    let usage = snippets::usage::render(cx);
     let sizes = snippets::sizes::render(cx);
     let airplane_mode = snippets::airplane_mode::render(cx);
     let bluetooth = snippets::bluetooth::render(cx);
@@ -15,18 +16,24 @@ pub(super) fn preview_switch(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
     let notes = doc_layout::notes(
         cx,
         [
-            "Preview follows shadcn Switch demo (new-york-v4).",
+            "API reference: `ecosystem/fret-ui-shadcn/src/switch.rs` (Switch, SwitchSize, SwitchStyle).",
+            "Switch is a leaf control surface, so the main parity gap here is documentation clarity rather than missing composition APIs.",
             "Switch sizes are controlled via `SwitchSize` to match upstream `size=\"sm\" | \"default\"`.",
             "Use `SwitchStyle` (ADR 0220 override slots) for token-safe styling like checked track background changes.",
+            "Use `Switch::control_id(...)` together with `FieldLabel::for_control(...)` when label clicks should toggle the switch.",
         ],
     );
 
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview follows shadcn Switch demo order: Sizes, Airplane Mode, Bluetooth, Label Card. Extras include invalid/disabled/RTL.",
+            "Preview follows shadcn Switch docs flow: Usage -> Sizes -> Airplane Mode -> Bluetooth -> Label Card -> RTL -> Extras.",
         ),
         vec![
+            DocSection::new("Usage", usage)
+                .description("Copyable minimal usage for `Switch`.")
+                .test_id_prefix("ui-gallery-switch-usage")
+                .code_rust_from_file_region(snippets::usage::SOURCE, "example"),
             DocSection::new("Sizes", sizes)
                 .test_id_prefix("ui-gallery-switch-sizes")
                 .code_rust_from_file_region(snippets::sizes::SOURCE, "example"),

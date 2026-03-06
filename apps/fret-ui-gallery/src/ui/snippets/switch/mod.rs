@@ -5,3 +5,4 @@ pub mod label;
 pub mod label_card;
 pub mod rtl;
 pub mod sizes;
+pub mod usage;
