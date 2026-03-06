@@ -1,4 +1,4 @@
-pub const SOURCE: &str = include_str!("parts.rs");
+pub const SOURCE: &str = include_str!("usage.rs");
 
 // region: example
 use fret_ui_shadcn::{self as shadcn, prelude::*};
@@ -8,37 +8,43 @@ struct Models {
     open: Option<Model<bool>>,
 }
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+fn open_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<bool> {
     let state = cx.with_state(Models::default, |st| st.clone());
-    let open = match state.open {
+    match state.open {
         Some(model) => model,
         None => {
             let model = cx.app.models_mut().insert(false);
             cx.with_state(Models::default, |st| st.open = Some(model.clone()));
             model
         }
-    };
+    }
+}
+
+pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+    let open = open_model(cx);
 
     let trigger = shadcn::DialogTrigger::new(
-        shadcn::Button::new("Open Dialog (Parts)")
+        shadcn::Button::new("Open")
             .variant(shadcn::ButtonVariant::Outline)
-            .test_id("ui-gallery-dialog-parts-trigger")
             .into_element(cx),
     );
 
     let content = shadcn::DialogContent::new([
-        shadcn::DialogClose::from_scope()
-            .into_element(cx)
-            .test_id("ui-gallery-dialog-parts-close"),
         shadcn::DialogHeader::new([
-            shadcn::DialogTitle::new("Parts dialog").into_element(cx),
-            shadcn::DialogDescription::new("Part surface adapter for shadcn-style authoring.")
-                .into_element(cx),
+            shadcn::DialogTitle::new("Edit profile").into_element(cx),
+            shadcn::DialogDescription::new(
+                "Make changes to your profile here. Click save when you're done.",
+            )
+            .into_element(cx),
+        ])
+        .into_element(cx),
+        shadcn::DialogFooter::new([
+            shadcn::Button::new("Save changes").into_element(cx),
+            shadcn::DialogClose::from_scope().into_element(cx),
         ])
         .into_element(cx),
     ])
-    .into_element(cx)
-    .test_id("ui-gallery-dialog-parts-content");
+    .into_element(cx);
 
     shadcn::Dialog::new(open)
         .compose()

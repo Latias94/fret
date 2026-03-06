@@ -14,7 +14,7 @@ use fret_ui::element::{
 use fret_ui::{ElementContext, Invalidation, Theme, ThemeNamedColorKey, ThemeSnapshot, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
-use fret_ui_kit::declarative::glass::{glass_panel, GlassPanelProps};
+use fret_ui_kit::declarative::glass::{GlassPanelProps, glass_panel};
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
@@ -22,8 +22,8 @@ use fret_ui_kit::primitives::dialog as radix_dialog;
 use fret_ui_kit::primitives::portal_inherited;
 use fret_ui_kit::recipes::glass::GlassEffectRefinement;
 use fret_ui_kit::{
-    ui, ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayController,
-    OverlayPresence, Space,
+    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayController, OverlayPresence,
+    Space, ui,
 };
 
 use crate::layout as shadcn_layout;
@@ -370,6 +370,14 @@ impl Dialog {
         self
     }
 
+    /// Returns a recipe-level composition builder for shadcn-style part assembly.
+    ///
+    /// This bridges Fret's closure-root authoring model with the nested part mental model used by
+    /// shadcn/Radix/Base UI while keeping the underlying mechanism surface unchanged.
+    pub fn compose(self) -> DialogComposition {
+        DialogComposition::new(self)
+    }
+
     #[track_caller]
     pub fn into_element<H: UiHost>(
         self,
@@ -667,6 +675,78 @@ impl Dialog {
     }
 }
 
+/// Recipe-level builder for composing a dialog from shadcn-style parts.
+///
+/// This builder stores already-authored Fret elements/parts and lowers them into the existing
+/// closure-based `into_element_parts(...)` entry point at the end.
+pub struct DialogComposition {
+    dialog: Dialog,
+    trigger: Option<DialogTrigger>,
+    portal: DialogPortal,
+    overlay: DialogOverlay,
+    content: Option<AnyElement>,
+}
+
+impl std::fmt::Debug for DialogComposition {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("DialogComposition")
+            .field("dialog", &self.dialog)
+            .field("trigger", &self.trigger.is_some())
+            .field("portal", &self.portal)
+            .field("overlay", &self.overlay)
+            .field("content", &self.content.is_some())
+            .finish()
+    }
+}
+
+impl DialogComposition {
+    pub fn new(dialog: Dialog) -> Self {
+        Self {
+            dialog,
+            trigger: None,
+            portal: DialogPortal::new(),
+            overlay: DialogOverlay::new(),
+            content: None,
+        }
+    }
+
+    pub fn trigger(mut self, trigger: DialogTrigger) -> Self {
+        self.trigger = Some(trigger);
+        self
+    }
+
+    pub fn portal(mut self, portal: DialogPortal) -> Self {
+        self.portal = portal;
+        self
+    }
+
+    pub fn overlay(mut self, overlay: DialogOverlay) -> Self {
+        self.overlay = overlay;
+        self
+    }
+
+    pub fn content(mut self, content: AnyElement) -> Self {
+        self.content = Some(content);
+        self
+    }
+
+    #[track_caller]
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let trigger = self
+            .trigger
+            .expect("Dialog::compose().trigger(...) must be provided before into_element()");
+        let content = self
+            .content
+            .expect("Dialog::compose().content(...) must be provided before into_element()");
+
+        let portal = self.portal;
+        let overlay = self.overlay;
+
+        self.dialog
+            .into_element_parts(cx, move |_cx| trigger, portal, overlay, move |_cx| content)
+    }
+}
+
 /// shadcn/ui `DialogContent` (v4).
 #[derive(Debug)]
 pub struct DialogContent {
@@ -899,10 +979,12 @@ impl DialogClose {
                     );
                     let icon = cx.opacity(opacity, move |_cx| vec![icon]);
 
-                    vec![ui::h_row(|_cx| vec![icon])
-                        .justify_center()
-                        .items_center()
-                        .into_element(cx)]
+                    vec![
+                        ui::h_row(|_cx| vec![icon])
+                            .justify_center()
+                            .items_center()
+                            .into_element(cx),
+                    ]
                 };
 
                 (pressable_props, chrome_props, children)
@@ -1145,9 +1227,9 @@ mod tests {
     use super::*;
     use std::cell::Cell;
     use std::rc::Rc;
-    use std::sync::atomic::{AtomicUsize, Ordering};
     use std::sync::Arc;
     use std::sync::Mutex;
+    use std::sync::atomic::{AtomicUsize, Ordering};
 
     use crate::test_support::render_overlay_frame;
     use fret_app::App;
@@ -1158,8 +1240,8 @@ mod tests {
     use fret_core::{PathConstraints, PathId, PathMetrics, PathService, PathStyle};
     use fret_runtime::Effect;
     use fret_runtime::FrameId;
-    use fret_ui::element::PositionStyle;
     use fret_ui::UiTree;
+    use fret_ui::element::PositionStyle;
     use fret_ui_kit::declarative::action_hooks::ActionHooksExt;
 
     #[test]
@@ -3111,7 +3193,7 @@ mod tests {
                         |_cx| trigger,
                         |cx| {
                             DialogContent::new(vec![
-                                cx.container(ContainerProps::default(), |_cx| Vec::new())
+                                cx.container(ContainerProps::default(), |_cx| Vec::new()),
                             ])
                             .into_element(cx)
                         },
@@ -3198,7 +3280,7 @@ mod tests {
                         |_cx| trigger,
                         |cx| {
                             DialogContent::new(vec![
-                                cx.container(ContainerProps::default(), |_cx| Vec::new())
+                                cx.container(ContainerProps::default(), |_cx| Vec::new()),
                             ])
                             .into_element(cx)
                         },
@@ -3309,7 +3391,7 @@ mod tests {
                         |_cx| trigger,
                         |cx| {
                             DialogContent::new(vec![
-                                cx.container(ContainerProps::default(), |_cx| Vec::new())
+                                cx.container(ContainerProps::default(), |_cx| Vec::new()),
                             ])
                             .into_element(cx)
                         },
