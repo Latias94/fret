@@ -42,6 +42,9 @@ Current snapshot (2026-03-06):
   `suggestion_chip`, `filter_chip`, and `input_chip` all keep one-line ellipsis semantics while
   remaining shrinkable within icon-bearing chip rows via explicit `min-w-0` + `flex-shrink: 1`,
   without forcing fill width.
+- The Material 3 button audit now also covers natural-width button chrome: icon-bearing
+  buttons keep one-line clip semantics while remaining shrinkable between icon slots via explicit
+  `min-w-0` + `flex-shrink: 1`, without forcing fill width on the label.
 - `fret-ui-ai/inline_citation` hover-card content is now covered too: fixed-width cards keep title
   / URL truncation and quote wrapping stable because the content stacks and text/link surfaces now
   explicitly fill available width and opt into `min-w-0`.
@@ -82,6 +85,9 @@ Current snapshot (2026-03-06):
   `filter_chip`, and `input_chip` all keep one-line ellipsis semantics while remaining shrinkable
   inside natural-width chip chrome because the label text now explicitly opts into `min-w-0` plus
   `flex-shrink: 1` without being forced to fill width.
+- `fret-ui-material3/button` is now covered too: icon-bearing buttons keep one-line clip
+  semantics while remaining shrinkable inside natural-width button chrome because the label text
+  now explicitly opts into `min-w-0` plus `flex-shrink: 1` without being forced to fill width.
 
 ---
 
