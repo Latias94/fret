@@ -4,18 +4,25 @@
 //! existing primitives from `fret-launch` and friends to provide a convenient “golden path”
 //! startup experience.
 //!
+//! ## Choosing an entry path
+//!
+//! - `ui_app(...)` / `ui_app_with_hooks(...)`: recommended author-facing path for general UI apps.
+//! - `BootstrapBuilder::new_fn(...)` / `BootstrapBuilder::new_fn_with_hooks(...)`: recommended
+//!   advanced path when you need runner-level control but still want the bootstrap/defaults story.
+//! - `BootstrapBuilder::new(...)`: generic/compatibility path for existing low-level drivers that
+//!   already implement `fret_launch::WinitAppDriver`, or for code that already holds a fully built
+//!   driver value.
+//!
 //! Minimal example (native):
 //!
 //! ```no_run
 //! use fret_app::App;
 //! use fret_bootstrap::BootstrapBuilder;
-//! use fret_launch::FnDriver;
 //!
 //! # fn event(_d: &mut (), _cx: fret_launch::WinitEventContext<'_, ()>, _e: &fret_core::Event) {}
 //! # fn render(_d: &mut (), _cx: fret_launch::WinitRenderContext<'_, ()>) {}
 //! #
-//! let driver = FnDriver::new((), |_d, _app, _w| (), event, render);
-//! let builder = BootstrapBuilder::new(App::new(), driver)
+//! let builder = BootstrapBuilder::new_fn(App::new(), (), |_d, _app, _w| (), event, render)
 //!     .with_default_config_files()?
 //!     .register_icon_pack(|_icons| {});
 //! builder.run()?;
@@ -157,8 +164,13 @@ core-command-title-app-quit = 退出
 "#;
 
 /// Builder wrapper around `fret_launch::WinitAppBuilder` with common bootstrapping conveniences.
+///
+/// Entry guidance:
+/// - prefer `ui_app(...)` / `ui_app_with_hooks(...)` for app-author-facing UI code,
+/// - prefer `BootstrapBuilder::new_fn(...)` for new advanced integrations,
+/// - use `BootstrapBuilder::new(...)` for generic/compatibility low-level driver integration.
 #[cfg(not(target_arch = "wasm32"))]
-pub struct BootstrapBuilder<D: fret_launch::WinitAppDriver> {
+pub struct BootstrapBuilder<D> {
     inner: fret_launch::WinitAppBuilder<D>,
     on_gpu_ready_hooks: Vec<
         Box<dyn FnOnce(&mut App, &fret_render::WgpuContext, &mut fret_render::Renderer) + 'static>,
@@ -167,6 +179,12 @@ pub struct BootstrapBuilder<D: fret_launch::WinitAppDriver> {
 
 #[cfg(not(target_arch = "wasm32"))]
 impl<D: fret_launch::WinitAppDriver + 'static> BootstrapBuilder<D> {
+    /// Create a bootstrap builder from an already-constructed low-level driver.
+    ///
+    /// Prefer `new_fn(...)` for new advanced integrations and `ui_app(...)` for general app code.
+    /// This constructor remains useful for compatibility-oriented code that still implements
+    /// `fret_launch::WinitAppDriver` directly, or for callers that already have a concrete driver
+    /// value and simply want the bootstrap/defaults layer.
     pub fn new(app: App, driver: D) -> Self {
         Self {
             inner: fret_launch::WinitAppBuilder::new(app, driver),
@@ -642,9 +660,104 @@ impl<D: fret_launch::WinitAppDriver + 'static> BootstrapBuilder<D> {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-impl<D: fret_launch::WinitAppDriver + 'static> From<fret_launch::WinitAppBuilder<D>>
-    for BootstrapBuilder<D>
-{
+impl<D: 'static, S: 'static> BootstrapBuilder<fret_launch::FnDriver<D, S>> {
+    /// Create a bootstrap builder directly from `FnDriver` pieces.
+    ///
+    /// This is the recommended advanced escape hatch when the app wants the `fret-bootstrap`
+    /// defaults and builder ergonomics, but does not want to manually construct
+    /// `fret_launch::FnDriver` first.
+    pub fn new_fn(
+        app: App,
+        driver_state: D,
+        create_window_state: fn(&mut D, &mut App, fret_core::AppWindowId) -> S,
+        handle_event: for<'d, 'cx, 'e> fn(
+            &'d mut D,
+            fret_launch::WinitEventContext<'cx, S>,
+            &'e fret_core::Event,
+        ),
+        render: for<'d, 'cx> fn(&'d mut D, fret_launch::WinitRenderContext<'cx, S>),
+    ) -> Self {
+        Self::new(
+            app,
+            fret_launch::FnDriver::new(driver_state, create_window_state, handle_event, render),
+        )
+    }
+
+    /// Same as [`new_fn`](Self::new_fn), but preserves access to `FnDriverHooks`.
+    pub fn new_fn_with_hooks(
+        app: App,
+        driver_state: D,
+        create_window_state: fn(&mut D, &mut App, fret_core::AppWindowId) -> S,
+        handle_event: for<'d, 'cx, 'e> fn(
+            &'d mut D,
+            fret_launch::WinitEventContext<'cx, S>,
+            &'e fret_core::Event,
+        ),
+        render: for<'d, 'cx> fn(&'d mut D, fret_launch::WinitRenderContext<'cx, S>),
+        configure_hooks: impl FnOnce(&mut fret_launch::FnDriverHooks<D, S>),
+    ) -> Self {
+        Self::new(
+            app,
+            fret_launch::FnDriver::new(driver_state, create_window_state, handle_event, render)
+                .with_hooks(configure_hooks),
+        )
+    }
+}
+
+#[cfg(all(test, not(target_arch = "wasm32")))]
+mod fn_driver_builder_tests {
+    use fret_app::App;
+    use fret_core::AppWindowId;
+    use fret_launch::{
+        FnDriverHooks, WinitEventContext, WinitHotReloadContext, WinitRenderContext,
+    };
+
+    use super::BootstrapBuilder;
+
+    struct DriverState;
+    struct WindowState;
+
+    fn create_window_state(
+        _driver: &mut DriverState,
+        _app: &mut App,
+        _window: AppWindowId,
+    ) -> WindowState {
+        WindowState
+    }
+
+    fn handle_event(
+        _driver: &mut DriverState,
+        _context: WinitEventContext<'_, WindowState>,
+        _event: &fret_core::Event,
+    ) {
+    }
+
+    fn render(_driver: &mut DriverState, _context: WinitRenderContext<'_, WindowState>) {}
+
+    fn hot_reload_window(
+        _driver: &mut DriverState,
+        _context: WinitHotReloadContext<'_, WindowState>,
+    ) {
+    }
+
+    #[test]
+    fn new_fn_with_hooks_builds() {
+        let _builder = BootstrapBuilder::new_fn_with_hooks(
+            App::new(),
+            DriverState,
+            create_window_state,
+            handle_event,
+            render,
+            |hooks: &mut FnDriverHooks<DriverState, WindowState>| {
+                hooks.hot_reload_window = Some(hot_reload_window);
+            },
+        )
+        .configure(|_config| {});
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+impl<D> From<fret_launch::WinitAppBuilder<D>> for BootstrapBuilder<D> {
     fn from(inner: fret_launch::WinitAppBuilder<D>) -> Self {
         Self {
             inner,
@@ -874,6 +987,9 @@ pub type UiAppBootstrapBuilder<S> = BootstrapBuilder<
 /// Create a “golden path” native UI app builder, using `App::new()` by default and allowing a
 /// hook to configure the driver before it is wrapped into `FnDriver`.
 ///
+/// This is the recommended author-facing path for general applications that want the bootstrap
+/// defaults without dealing with runner-level driver details.
+///
 /// Prefer passing a non-capturing closure so it can coerce to a `fn` pointer (hotpatch-friendly).
 #[cfg(all(not(target_arch = "wasm32"), feature = "ui-app-driver"))]
 pub fn ui_app_with_hooks<S: 'static>(
@@ -887,7 +1003,8 @@ pub fn ui_app_with_hooks<S: 'static>(
 
 /// Create a “golden path” native UI app builder, using `App::new()` by default.
 ///
-/// This hides the `FnDriver` boilerplate and keeps example code short.
+/// This is the shortest recommended entry for general applications. It hides the `FnDriver`
+/// boilerplate and keeps example code short.
 #[cfg(all(not(target_arch = "wasm32"), feature = "ui-app-driver"))]
 pub fn ui_app<S: 'static>(
     root_name: &'static str,

@@ -475,3 +475,33 @@ The cleanup milestone must:
 - keep diagnostics selectors stable and update scripts when IDs move.
 
 This workstream should treat cleanup as a first-class deliverable, not “nice to have”.
+
+## 14) Post-v1 design review (2026-03-06)
+
+The repo should now treat action-first authoring v1 as successful on architecture, migration, and
+default teaching-surface convergence. The workstream achieved the reset it set out to make, even
+though it did not yet reach the full GPUI/Zed-style authoring density end-state described in the
+early design discussion.
+
+What v1 succeeded at:
+
+- action-first dispatch is the default authoring story across the migrated teaching surfaces,
+- a minimal `View` + `ViewCx` runtime landed with `use_selector` / `use_query` integration,
+- the default closure helpers converged to a small surface (`on_action_notify_models`,
+  `on_action_notify_transient`, local `on_activate*`),
+- in-tree MVU was removed and guarded by regression gates so the repo now teaches one primary path.
+
+What remains intentionally deferred to a later phase:
+
+- `ViewCx::use_state` still returns `Model<T>` rather than offering a plain-Rust local-state story,
+- medium demos still rely on `watch_model(...)` / `models.update(...)` for common state reads/writes,
+- `ui::children!` remains the dominant composition style instead of builder-only composition,
+- widget-local action sugar such as `listener` / `dispatch` / `shortcut` is not yet the default mental model,
+- some App/transient-effect cases still require explicit scheduling ceremony.
+
+Recommendation:
+
+- close v1 as successful on architecture + migration + teaching-surface convergence,
+- track the remaining "authoring density / ergonomics" work as a separate post-v1 phase rather than
+  keeping v1 open indefinitely,
+- avoid adding more narrow helpers until another round of template/demo evidence shows a repeated need.

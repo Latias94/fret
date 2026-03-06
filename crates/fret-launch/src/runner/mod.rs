@@ -19,9 +19,7 @@ pub mod yuv;
 #[doc(hidden)]
 pub mod yuv_gpu;
 
-pub use imported_viewport_target::*;
 pub use native_external_import::*;
-pub use streaming_upload::*;
 pub use viewport_overlay_immediate_3d::*;
 pub use viewport_target::*;
 
@@ -46,16 +44,9 @@ pub mod android_mediacodec_video;
 pub mod desktop;
 
 #[cfg(not(target_arch = "wasm32"))]
-pub use desktop::{
-    RunnerUserEvent, WinitAppBuilder, WinitRunner, run_app, run_app_with_event_loop,
-};
-
-#[cfg(all(not(target_arch = "wasm32"), target_os = "windows"))]
-pub use desktop::windows_msg_hook;
+pub use desktop::{WinitAppBuilder, run_app, run_app_with_event_loop};
 
 #[cfg(target_arch = "wasm32")]
 mod web;
 #[cfg(target_arch = "wasm32")]
-pub use web::{WebRunnerHandle, run_app_with_event_loop_and_handle, run_app_with_handle};
-#[cfg(target_arch = "wasm32")]
-pub use web::{WinitRunner, run_app, run_app_with_event_loop};
+pub use web::{WebRunnerHandle, run_app, run_app_with_event_loop, run_app_with_handle};

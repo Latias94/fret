@@ -13,7 +13,7 @@ fn env_flag(key: &str) -> bool {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-pub fn configure_stacksafe_from_env() {
+pub(crate) fn configure_stacksafe_from_env() {
     static ONCE: Once = Once::new();
     ONCE.call_once(|| {
         let preset_enabled = env_flag("FRET_STACKSAFE");
@@ -47,4 +47,4 @@ pub fn configure_stacksafe_from_env() {
 }
 
 #[cfg(target_arch = "wasm32")]
-pub fn configure_stacksafe_from_env() {}
+pub(crate) fn configure_stacksafe_from_env() {}

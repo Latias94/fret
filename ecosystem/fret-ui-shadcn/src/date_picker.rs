@@ -27,6 +27,7 @@ pub struct DatePicker {
     pub month: Model<CalendarMonth>,
     pub selected: Model<Option<Date>>,
     control_id: Option<ControlId>,
+    test_id_prefix: Option<Arc<str>>,
     week_start: Weekday,
     placeholder: Arc<str>,
     format_selected: Arc<dyn Fn(Date) -> Arc<str> + Send + Sync + 'static>,
@@ -44,6 +45,7 @@ impl std::fmt::Debug for DatePicker {
             .field("open", &"<model>")
             .field("month", &"<model>")
             .field("selected", &"<model>")
+            .field("test_id_prefix", &self.test_id_prefix.as_deref())
             .field("week_start", &self.week_start)
             .field("placeholder", &self.placeholder)
             .field("format_selected", &"<fn>")
@@ -66,6 +68,7 @@ impl DatePicker {
             month,
             selected,
             control_id: None,
+            test_id_prefix: None,
             week_start: Weekday::Sunday,
             placeholder: Arc::from("Pick a date"),
             format_selected: Arc::new(format_selected_ppp_en),
@@ -148,6 +151,16 @@ impl DatePicker {
         self
     }
 
+    /// Sets a stable automation prefix for the date picker trigger/content/calendar surfaces.
+    ///
+    /// Derived ids include `{prefix}-trigger`, `{prefix}-content`, and `{prefix}-calendar`. The
+    /// calendar also forwards `{prefix}-calendar` into `Calendar::test_id_prefix(...)` so its inner
+    /// navigation/day anchors remain stable for diagnostics.
+    pub fn test_id_prefix(mut self, prefix: impl Into<Arc<str>>) -> Self {
+        self.test_id_prefix = Some(prefix.into());
+        self
+    }
+
     pub fn week_start(mut self, week_start: Weekday) -> Self {
         self.week_start = week_start;
         self
@@ -190,6 +203,7 @@ impl DatePicker {
             let month = self.month.clone();
             let selected = self.selected.clone();
             let control_id = self.control_id.clone();
+            let test_id_prefix = self.test_id_prefix.clone();
             let disabled_predicate = self.disabled_predicate.clone();
             let open_trigger = open.clone();
             let open_content = open.clone();
@@ -197,6 +211,15 @@ impl DatePicker {
                 Rc::new(Cell::new(None));
             let trigger_chrome = self.chrome.clone();
             let trigger_layout = self.layout.clone();
+            let trigger_test_id = test_id_prefix
+                .as_ref()
+                .map(|prefix| Arc::<str>::from(format!("{prefix}-trigger")));
+            let content_test_id = test_id_prefix
+                .as_ref()
+                .map(|prefix| Arc::<str>::from(format!("{prefix}-content")));
+            let calendar_test_id = test_id_prefix
+                .as_ref()
+                .map(|prefix| Arc::<str>::from(format!("{prefix}-calendar")));
             let calendar_icon = fret_icons::IconId::new_static("lucide.calendar");
 
             let selected_value = cx.watch_model(&selected).copied().flatten();
@@ -239,6 +262,9 @@ impl DatePicker {
                                 })),
                             ));
                         }
+                        if let Some(test_id) = trigger_test_id.clone() {
+                            button = button.test_id(test_id);
+                        }
 
                         button.into_element(cx)
                     },
@@ -253,13 +279,23 @@ impl DatePicker {
                         if let Some(pred) = disabled_predicate.clone() {
                             calendar = calendar.disabled_by(move |d| pred(d));
                         }
+                        if let Some(prefix) = calendar_test_id.clone() {
+                            calendar = calendar.test_id_prefix(prefix);
+                        }
 
-                        let calendar = calendar.into_element(cx);
-                        PopoverContent::new([calendar])
+                        let mut calendar = calendar.into_element(cx);
+                        if let Some(test_id) = calendar_test_id.clone() {
+                            calendar = calendar.test_id(test_id);
+                        }
+                        let mut content = PopoverContent::new([calendar])
                             // shadcn/ui DatePicker demo uses `PopoverContent` with `w-auto p-0`.
                             .refine_style(ChromeRefinement::default().p(Space::N0))
                             .refine_layout(LayoutRefinement::default().w(LengthRefinement::Auto))
-                            .into_element(cx)
+                            .into_element(cx);
+                        if let Some(test_id) = content_test_id.clone() {
+                            content = content.test_id(test_id);
+                        }
+                        content
                     },
                 )
         })

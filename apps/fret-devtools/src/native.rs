@@ -136,6 +136,10 @@ struct State {
     semantics_selected_node_live_status: Model<Option<Arc<str>>>,
     semantics_selected_node_live_updated_unix_ms: Model<Option<u64>>,
     semantics_selected_node_live_children: Model<Vec<u64>>,
+    semantics_selected_hit_test_explain_json: Model<String>,
+    semantics_selected_hit_test_explain_summary: Model<String>,
+    semantics_selected_hit_test_explain_status: Model<Option<Arc<str>>>,
+    semantics_selected_hit_test_explain_updated_unix_ms: Model<Option<u64>>,
     semantics_live_enabled: Model<bool>,
     semantics_live_force_nonce: Model<u64>,
 
@@ -294,6 +298,10 @@ fn init_window(app: &mut App, _window: AppWindowId) -> State {
     let semantics_selected_node_live_status = app.models_mut().insert(None::<Arc<str>>);
     let semantics_selected_node_live_updated_unix_ms = app.models_mut().insert(None::<u64>);
     let semantics_selected_node_live_children = app.models_mut().insert(Vec::<u64>::new());
+    let semantics_selected_hit_test_explain_json = app.models_mut().insert(String::new());
+    let semantics_selected_hit_test_explain_summary = app.models_mut().insert(String::new());
+    let semantics_selected_hit_test_explain_status = app.models_mut().insert(None::<Arc<str>>);
+    let semantics_selected_hit_test_explain_updated_unix_ms = app.models_mut().insert(None::<u64>);
     let semantics_live_enabled = app.models_mut().insert(true);
     let semantics_live_force_nonce = app.models_mut().insert(0u64);
 
@@ -395,6 +403,10 @@ fn init_window(app: &mut App, _window: AppWindowId) -> State {
         semantics_selected_node_live_status,
         semantics_selected_node_live_updated_unix_ms,
         semantics_selected_node_live_children,
+        semantics_selected_hit_test_explain_json,
+        semantics_selected_hit_test_explain_summary,
+        semantics_selected_hit_test_explain_status,
+        semantics_selected_hit_test_explain_updated_unix_ms,
         semantics_live_enabled,
         semantics_live_force_nonce,
         devtools,
@@ -516,6 +528,22 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut State) -> ViewElements {
         &st.semantics_selected_node_live_children,
         Invalidation::Paint,
     );
+    cx.observe_model(
+        &st.semantics_selected_hit_test_explain_json,
+        Invalidation::Paint,
+    );
+    cx.observe_model(
+        &st.semantics_selected_hit_test_explain_summary,
+        Invalidation::Paint,
+    );
+    cx.observe_model(
+        &st.semantics_selected_hit_test_explain_status,
+        Invalidation::Paint,
+    );
+    cx.observe_model(
+        &st.semantics_selected_hit_test_explain_updated_unix_ms,
+        Invalidation::Paint,
+    );
     cx.observe_model(&st.semantics_live_enabled, Invalidation::Paint);
     cx.observe_model(&st.semantics_live_force_nonce, Invalidation::Paint);
 
@@ -554,100 +582,100 @@ fn header_bar(
     ));
 
     let actions = ui::h_row(|cx: &mut ElementContext<'_, App>| {
-            let has_session = cx
-                .app
-                .models()
-                .read(&st.selected_session_id, |v| v.is_some())
-                .unwrap_or(false);
+        let has_session = cx
+            .app
+            .models()
+            .read(&st.selected_session_id, |v| v.is_some())
+            .unwrap_or(false);
 
-            let session_items = cx
-                .app
-                .models()
-                .read(&st.sessions, |sessions| {
-                    sessions
-                        .iter()
-                        .map(|s| {
-                            let label = if s.client_version.trim().is_empty() {
-                                format!("{} ({})", s.session_id, s.client_kind)
-                            } else {
-                                format!("{} ({} {})", s.session_id, s.client_kind, s.client_version)
-                            };
-                            shadcn::SelectItem::new(s.session_id.clone(), label)
-                        })
-                        .collect::<Vec<_>>()
-                })
-                .unwrap_or_default();
-
- 	            let session_select = shadcn::Select::new(
- 	                st.selected_session_id.clone(),
- 	                st.selected_session_open.clone(),
- 	            )
- 	            .value(shadcn::SelectValue::new().placeholder("Session"))
- 	            .items(session_items)
- 	            .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(220.0)))
- 	            .into_element(cx);
-
-            let left = ui::h_row(|_cx| [title, subtitle])
-                .gap(fret_ui_kit::Space::N2)
-                .items_center()
-                .into_element(cx);
-
-            let right = ui::h_row(|cx| {
-                [
-                    session_select,
-                    shadcn::Button::new("Copy WS URL")
-                        .variant(shadcn::ButtonVariant::Secondary)
-                        .size(shadcn::ButtonSize::Sm)
-                        .on_click(CMD_COPY_WS_URL)
-                        .into_element(cx),
-                    shadcn::Button::new("Copy Token")
-                        .variant(shadcn::ButtonVariant::Secondary)
-                        .size(shadcn::ButtonSize::Sm)
-                        .on_click(CMD_COPY_TOKEN)
-                        .into_element(cx),
-                    shadcn::Button::new("Inspect On")
-                        .variant(shadcn::ButtonVariant::Outline)
-                        .size(shadcn::ButtonSize::Sm)
-                        .disabled(!has_session)
-                        .on_click(CMD_INSPECT_ENABLE)
-                        .into_element(cx),
-                    shadcn::Button::new("Inspect Off")
-                        .variant(shadcn::ButtonVariant::Outline)
-                        .size(shadcn::ButtonSize::Sm)
-                        .disabled(!has_session)
-                        .on_click(CMD_INSPECT_DISABLE)
-                        .into_element(cx),
-                    shadcn::Button::new("Pick")
-                        .variant(shadcn::ButtonVariant::Outline)
-                        .size(shadcn::ButtonSize::Sm)
-                        .disabled(!has_session)
-                        .on_click(CMD_PICK_ARM)
-                        .into_element(cx),
-                    shadcn::Button::new("Dump Bundle")
-                        .variant(shadcn::ButtonVariant::Outline)
-                        .size(shadcn::ButtonSize::Sm)
-                        .disabled(!has_session)
-                        .on_click(CMD_BUNDLE_DUMP)
-                        .into_element(cx),
-                    shadcn::Button::new("Screenshot")
-                        .variant(shadcn::ButtonVariant::Outline)
-                        .size(shadcn::ButtonSize::Sm)
-                        .disabled(!has_session)
-                        .on_click(CMD_SCREENSHOT_REQUEST)
-                        .into_element(cx),
-                ]
+        let session_items = cx
+            .app
+            .models()
+            .read(&st.sessions, |sessions| {
+                sessions
+                    .iter()
+                    .map(|s| {
+                        let label = if s.client_version.trim().is_empty() {
+                            format!("{} ({})", s.session_id, s.client_kind)
+                        } else {
+                            format!("{} ({} {})", s.session_id, s.client_kind, s.client_version)
+                        };
+                        shadcn::SelectItem::new(s.session_id.clone(), label)
+                    })
+                    .collect::<Vec<_>>()
             })
+            .unwrap_or_default();
+
+        let session_select = shadcn::Select::new(
+            st.selected_session_id.clone(),
+            st.selected_session_open.clone(),
+        )
+        .value(shadcn::SelectValue::new().placeholder("Session"))
+        .items(session_items)
+        .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(220.0)))
+        .into_element(cx);
+
+        let left = ui::h_row(|_cx| [title, subtitle])
             .gap(fret_ui_kit::Space::N2)
             .items_center()
             .into_element(cx);
 
-            [left, right]
+        let right = ui::h_row(|cx| {
+            [
+                session_select,
+                shadcn::Button::new("Copy WS URL")
+                    .variant(shadcn::ButtonVariant::Secondary)
+                    .size(shadcn::ButtonSize::Sm)
+                    .on_click(CMD_COPY_WS_URL)
+                    .into_element(cx),
+                shadcn::Button::new("Copy Token")
+                    .variant(shadcn::ButtonVariant::Secondary)
+                    .size(shadcn::ButtonSize::Sm)
+                    .on_click(CMD_COPY_TOKEN)
+                    .into_element(cx),
+                shadcn::Button::new("Inspect On")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .size(shadcn::ButtonSize::Sm)
+                    .disabled(!has_session)
+                    .on_click(CMD_INSPECT_ENABLE)
+                    .into_element(cx),
+                shadcn::Button::new("Inspect Off")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .size(shadcn::ButtonSize::Sm)
+                    .disabled(!has_session)
+                    .on_click(CMD_INSPECT_DISABLE)
+                    .into_element(cx),
+                shadcn::Button::new("Pick")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .size(shadcn::ButtonSize::Sm)
+                    .disabled(!has_session)
+                    .on_click(CMD_PICK_ARM)
+                    .into_element(cx),
+                shadcn::Button::new("Dump Bundle")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .size(shadcn::ButtonSize::Sm)
+                    .disabled(!has_session)
+                    .on_click(CMD_BUNDLE_DUMP)
+                    .into_element(cx),
+                shadcn::Button::new("Screenshot")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .size(shadcn::ButtonSize::Sm)
+                    .disabled(!has_session)
+                    .on_click(CMD_SCREENSHOT_REQUEST)
+                    .into_element(cx),
+            ]
         })
         .gap(fret_ui_kit::Space::N2)
-        .layout(fret_ui_kit::LayoutRefinement::default().w_full())
         .items_center()
-        .justify_between()
         .into_element(cx);
+
+        [left, right]
+    })
+    .gap(fret_ui_kit::Space::N2)
+    .layout(fret_ui_kit::LayoutRefinement::default().w_full())
+    .items_center()
+    .justify_between()
+    .into_element(cx);
 
     let bg = theme.color_token("muted");
     let chrome = fret_ui_kit::ChromeRefinement::default()
@@ -711,12 +739,10 @@ fn left_panel(
         rows.push(cx.keyed(i as u64, |cx| cx.text(line.as_ref())));
     }
 
-    let list = shadcn::ScrollArea::new([
-        ui::v_stack(|_cx| rows)
-            .gap(fret_ui_kit::Space::N1)
-            .layout(fret_ui_kit::LayoutRefinement::default().w_full())
-            .into_element(cx),
-    ])
+    let list = shadcn::ScrollArea::new([ui::v_stack(|_cx| rows)
+        .gap(fret_ui_kit::Space::N1)
+        .layout(fret_ui_kit::LayoutRefinement::default().w_full())
+        .into_element(cx)])
     .into_element(cx);
 
     let tabs = shadcn::Tabs::new(st.left_tab.clone())
@@ -918,6 +944,17 @@ fn semantics_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement {
                     let selected_live_status_model = st.semantics_selected_node_live_status.clone();
                     let selected_live_updated_model =
                         st.semantics_selected_node_live_updated_unix_ms.clone();
+                    let selected_live_children_model =
+                        st.semantics_selected_node_live_children.clone();
+                    let selected_hit_test_explain_json_model =
+                        st.semantics_selected_hit_test_explain_json.clone();
+                    let selected_hit_test_explain_summary_model =
+                        st.semantics_selected_hit_test_explain_summary.clone();
+                    let selected_hit_test_explain_status_model =
+                        st.semantics_selected_hit_test_explain_status.clone();
+                    let selected_hit_test_explain_updated_model = st
+                        .semantics_selected_hit_test_explain_updated_unix_ms
+                        .clone();
                     let index_for_select = Arc::clone(&index_for_list);
                     let on_select: fret_ui::action::OnActivate =
                         Arc::new(move |host, action_cx, _reason| {
@@ -938,6 +975,21 @@ fn semantics_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement {
                             let _ = host
                                 .models_mut()
                                 .update(&selected_live_updated_model, |v| *v = None);
+                            let _ = host
+                                .models_mut()
+                                .update(&selected_live_children_model, |v| v.clear());
+                            let _ = host
+                                .models_mut()
+                                .update(&selected_hit_test_explain_json_model, |v| v.clear());
+                            let _ = host
+                                .models_mut()
+                                .update(&selected_hit_test_explain_summary_model, |v| v.clear());
+                            let _ = host
+                                .models_mut()
+                                .update(&selected_hit_test_explain_status_model, |v| *v = None);
+                            let _ = host
+                                .models_mut()
+                                .update(&selected_hit_test_explain_updated_model, |v| *v = None);
                             host.request_redraw(action_cx.window);
                         });
 
@@ -1153,97 +1205,97 @@ fn center_panel(
     };
 
     let buttons = ui::h_row(|cx| {
-            [
-                shadcn::Button::new("Push Script")
-                    .variant(shadcn::ButtonVariant::Secondary)
-                    .size(shadcn::ButtonSize::Sm)
-                    .disabled(!has_session || !script_is_valid)
-                    .on_click(CMD_SCRIPT_PUSH)
-                    .into_element(cx),
-                shadcn::Button::new("Run Script")
-                    .variant(shadcn::ButtonVariant::Default)
-                    .size(shadcn::ButtonSize::Sm)
-                    .disabled(!has_session || !script_is_valid)
-                    .on_click(CMD_SCRIPT_RUN)
-                    .into_element(cx),
-                shadcn::Button::new("Run & Pack")
-                    .variant(shadcn::ButtonVariant::Secondary)
-                    .size(shadcn::ButtonSize::Sm)
-                    .disabled(!has_session || !script_is_valid)
-                    .on_click(CMD_SCRIPT_RUN_AND_PACK)
-                    .into_element(cx),
-                shadcn::Button::new("Refresh Scripts")
-                    .variant(shadcn::ButtonVariant::Outline)
-                    .size(shadcn::ButtonSize::Sm)
-                    .on_click(CMD_SCRIPTS_REFRESH)
-                    .into_element(cx),
-                shadcn::Button::new("Fork")
-                    .variant(shadcn::ButtonVariant::Outline)
-                    .size(shadcn::ButtonSize::Sm)
-                    .disabled(!can_fork)
-                    .on_click(CMD_SCRIPT_FORK)
-                    .into_element(cx),
-                shadcn::Button::new("Save")
-                    .variant(shadcn::ButtonVariant::Outline)
-                    .size(shadcn::ButtonSize::Sm)
-                    .disabled(!can_save)
-                    .on_click(CMD_SCRIPT_SAVE)
-                    .into_element(cx),
-                consume_toggle,
-                cx.text(format!(
-                    "consume_clicks={}",
-                    if consume_clicks { "true" } else { "false" }
-                )),
-            ]
-        })
-        .gap(fret_ui_kit::Space::N2)
-        .items_center()
-        .into_element(cx);
+        [
+            shadcn::Button::new("Push Script")
+                .variant(shadcn::ButtonVariant::Secondary)
+                .size(shadcn::ButtonSize::Sm)
+                .disabled(!has_session || !script_is_valid)
+                .on_click(CMD_SCRIPT_PUSH)
+                .into_element(cx),
+            shadcn::Button::new("Run Script")
+                .variant(shadcn::ButtonVariant::Default)
+                .size(shadcn::ButtonSize::Sm)
+                .disabled(!has_session || !script_is_valid)
+                .on_click(CMD_SCRIPT_RUN)
+                .into_element(cx),
+            shadcn::Button::new("Run & Pack")
+                .variant(shadcn::ButtonVariant::Secondary)
+                .size(shadcn::ButtonSize::Sm)
+                .disabled(!has_session || !script_is_valid)
+                .on_click(CMD_SCRIPT_RUN_AND_PACK)
+                .into_element(cx),
+            shadcn::Button::new("Refresh Scripts")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Sm)
+                .on_click(CMD_SCRIPTS_REFRESH)
+                .into_element(cx),
+            shadcn::Button::new("Fork")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Sm)
+                .disabled(!can_fork)
+                .on_click(CMD_SCRIPT_FORK)
+                .into_element(cx),
+            shadcn::Button::new("Save")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Sm)
+                .disabled(!can_save)
+                .on_click(CMD_SCRIPT_SAVE)
+                .into_element(cx),
+            consume_toggle,
+            cx.text(format!(
+                "consume_clicks={}",
+                if consume_clicks { "true" } else { "false" }
+            )),
+        ]
+    })
+    .gap(fret_ui_kit::Space::N2)
+    .items_center()
+    .into_element(cx);
 
     let pack_row = ui::h_row(|cx| {
-            let copy_enabled = last_pack_path.is_some();
-            [
-                cx.text("Artifacts:"),
-                shadcn::Button::new("Pack last bundle")
-                    .variant(shadcn::ButtonVariant::Outline)
-                    .size(shadcn::ButtonSize::Sm)
-                    .disabled(!can_pack || pack_in_flight)
-                    .on_click(CMD_PACK_LAST_BUNDLE)
-                    .into_element(cx),
-                shadcn::Button::new("Copy pack path")
-                    .variant(shadcn::ButtonVariant::Outline)
-                    .size(shadcn::ButtonSize::Sm)
-                    .disabled(!copy_enabled)
-                    .on_click(CMD_COPY_PACK_PATH)
-                    .into_element(cx),
-                viewer_url_input,
-                shadcn::Button::new("Open viewer")
-                    .variant(shadcn::ButtonVariant::Outline)
-                    .size(shadcn::ButtonSize::Sm)
-                    .disabled(viewer_url.trim().is_empty())
-                    .on_click(CMD_OPEN_VIEWER_URL)
-                    .into_element(cx),
-            ]
-        })
-        .gap(fret_ui_kit::Space::N2)
-        .items_center()
-        .into_element(cx);
+        let copy_enabled = last_pack_path.is_some();
+        [
+            cx.text("Artifacts:"),
+            shadcn::Button::new("Pack last bundle")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Sm)
+                .disabled(!can_pack || pack_in_flight)
+                .on_click(CMD_PACK_LAST_BUNDLE)
+                .into_element(cx),
+            shadcn::Button::new("Copy pack path")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Sm)
+                .disabled(!copy_enabled)
+                .on_click(CMD_COPY_PACK_PATH)
+                .into_element(cx),
+            viewer_url_input,
+            shadcn::Button::new("Open viewer")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Sm)
+                .disabled(viewer_url.trim().is_empty())
+                .on_click(CMD_OPEN_VIEWER_URL)
+                .into_element(cx),
+        ]
+    })
+    .gap(fret_ui_kit::Space::N2)
+    .items_center()
+    .into_element(cx);
 
     let apply_row = ui::h_row(|cx| {
-            [
-                cx.text("Pick-to-fill:"),
-                pointer_input,
-                shadcn::Button::new("Apply Pick")
-                    .variant(shadcn::ButtonVariant::Secondary)
-                    .size(shadcn::ButtonSize::Sm)
-                    .disabled(!can_apply_pick)
-                    .on_click(CMD_SCRIPT_APPLY_PICK)
-                    .into_element(cx),
-            ]
-        })
-        .gap(fret_ui_kit::Space::N2)
-        .items_center()
-        .into_element(cx);
+        [
+            cx.text("Pick-to-fill:"),
+            pointer_input,
+            shadcn::Button::new("Apply Pick")
+                .variant(shadcn::ButtonVariant::Secondary)
+                .size(shadcn::ButtonSize::Sm)
+                .disabled(!can_apply_pick)
+                .on_click(CMD_SCRIPT_APPLY_PICK)
+                .into_element(cx),
+        ]
+    })
+    .gap(fret_ui_kit::Space::N2)
+    .items_center()
+    .into_element(cx);
 
     let loaded_line = match (loaded_origin, loaded_path.as_deref()) {
         (Some(origin), Some(path)) => format!("Loaded: [{}] {path}", origin.label()),
@@ -1323,12 +1375,10 @@ fn center_panel(
         );
     }
 
-    let scripts_list = shadcn::ScrollArea::new([
-        ui::v_stack(|_cx| script_rows)
-            .gap(fret_ui_kit::Space::N1)
-            .layout(fret_ui_kit::LayoutRefinement::default().w_full())
-            .into_element(cx),
-    ])
+    let scripts_list = shadcn::ScrollArea::new([ui::v_stack(|_cx| script_rows)
+        .gap(fret_ui_kit::Space::N1)
+        .layout(fret_ui_kit::LayoutRefinement::default().w_full())
+        .into_element(cx)])
     .into_element(cx);
 
     let script_schema_version = infer_script_schema_version(&script_text).unwrap_or(1);
@@ -1406,42 +1456,40 @@ fn center_panel(
         );
     }
 
-    let steps_tab = shadcn::ScrollArea::new([
-        ui::v_stack(|cx| {
-            let mut out: Vec<AnyElement> = Vec::new();
-            out.push(cx.text(format!("Schema v{script_schema_version} step palette")));
-            out.push(step_index_input);
-            out.extend(step_buttons);
-            if !pointer_candidates.is_empty() {
-                out.push(cx.text("Pointer candidates:"));
-                for p in pointer_candidates.iter().take(64) {
-                    let pointer_model = st.script_apply_pointer.clone();
-                    let p_value = p.clone();
-                    let p_label = p.clone();
-                    let on_activate: fret_ui::action::OnActivate =
-                        Arc::new(move |host, action_cx, _reason| {
-                            let _ = host
-                                .models_mut()
-                                .update(&pointer_model, |v| *v = p_value.clone());
-                            host.request_redraw(action_cx.window);
-                            host.push_effect(Effect::RequestAnimationFrame(action_cx.window));
-                        });
-                    out.push(
-                        shadcn::Button::new(p_label)
-                            .variant(shadcn::ButtonVariant::Ghost)
-                            .size(shadcn::ButtonSize::Sm)
-                            .on_activate(on_activate)
-                            .refine_layout(fret_ui_kit::LayoutRefinement::default().w_full())
-                            .into_element(cx),
-                    );
-                }
+    let steps_tab = shadcn::ScrollArea::new([ui::v_stack(|cx| {
+        let mut out: Vec<AnyElement> = Vec::new();
+        out.push(cx.text(format!("Schema v{script_schema_version} step palette")));
+        out.push(step_index_input);
+        out.extend(step_buttons);
+        if !pointer_candidates.is_empty() {
+            out.push(cx.text("Pointer candidates:"));
+            for p in pointer_candidates.iter().take(64) {
+                let pointer_model = st.script_apply_pointer.clone();
+                let p_value = p.clone();
+                let p_label = p.clone();
+                let on_activate: fret_ui::action::OnActivate =
+                    Arc::new(move |host, action_cx, _reason| {
+                        let _ = host
+                            .models_mut()
+                            .update(&pointer_model, |v| *v = p_value.clone());
+                        host.request_redraw(action_cx.window);
+                        host.push_effect(Effect::RequestAnimationFrame(action_cx.window));
+                    });
+                out.push(
+                    shadcn::Button::new(p_label)
+                        .variant(shadcn::ButtonVariant::Ghost)
+                        .size(shadcn::ButtonSize::Sm)
+                        .on_activate(on_activate)
+                        .refine_layout(fret_ui_kit::LayoutRefinement::default().w_full())
+                        .into_element(cx),
+                );
             }
-            out
-        })
-        .gap(fret_ui_kit::Space::N2)
-        .layout(fret_ui_kit::LayoutRefinement::default().w_full())
-        .into_element(cx),
-    ])
+        }
+        out
+    })
+    .gap(fret_ui_kit::Space::N2)
+    .layout(fret_ui_kit::LayoutRefinement::default().w_full())
+    .into_element(cx)])
     .into_element(cx);
 
     let selector_kind_items = [
@@ -1451,14 +1499,14 @@ fn center_panel(
         shadcn::SelectItem::new("node_id", "node_id"),
         shadcn::SelectItem::new("global_element_id", "global_element_id"),
     ];
-	    let selector_kind_select = shadcn::Select::new(
-	        st.script_selector_kind.clone(),
-	        st.script_selector_kind_open.clone(),
-	    )
-	    .value(shadcn::SelectValue::new().placeholder("selector kind"))
-	    .items(selector_kind_items)
-	    .refine_layout(fret_ui_kit::LayoutRefinement::default().w_full())
-	    .into_element(cx);
+    let selector_kind_select = shadcn::Select::new(
+        st.script_selector_kind.clone(),
+        st.script_selector_kind_open.clone(),
+    )
+    .value(shadcn::SelectValue::new().placeholder("selector kind"))
+    .items(selector_kind_items)
+    .refine_layout(fret_ui_kit::LayoutRefinement::default().w_full())
+    .into_element(cx);
 
     let selector_kind = cx
         .app
@@ -1531,34 +1579,34 @@ fn center_panel(
     };
 
     let selector_tab = ui::v_stack(|cx| {
-            let fields = selector_fields(cx, st, selector_kind.as_ref());
-            let preview = text_blob(cx, selector_json.clone());
-            [
-                selector_kind_select,
-                fields,
-                ui::h_row(|cx| {
-                    [
-                        shadcn::Button::new("Apply to pointer")
-                            .variant(shadcn::ButtonVariant::Secondary)
-                            .size(shadcn::ButtonSize::Sm)
-                            .on_activate(selector_apply)
-                            .into_element(cx),
-                        shadcn::Button::new("Copy JSON")
-                            .variant(shadcn::ButtonVariant::Outline)
-                            .size(shadcn::ButtonSize::Sm)
-                            .on_activate(selector_copy)
-                            .into_element(cx),
-                    ]
-                })
-                .gap(fret_ui_kit::Space::N2)
-                .items_center()
-                .into_element(cx),
-                preview,
-            ]
-        })
-        .gap(fret_ui_kit::Space::N2)
-        .layout(fret_ui_kit::LayoutRefinement::default().w_full())
-        .into_element(cx);
+        let fields = selector_fields(cx, st, selector_kind.as_ref());
+        let preview = text_blob(cx, selector_json.clone());
+        [
+            selector_kind_select,
+            fields,
+            ui::h_row(|cx| {
+                [
+                    shadcn::Button::new("Apply to pointer")
+                        .variant(shadcn::ButtonVariant::Secondary)
+                        .size(shadcn::ButtonSize::Sm)
+                        .on_activate(selector_apply)
+                        .into_element(cx),
+                    shadcn::Button::new("Copy JSON")
+                        .variant(shadcn::ButtonVariant::Outline)
+                        .size(shadcn::ButtonSize::Sm)
+                        .on_activate(selector_copy)
+                        .into_element(cx),
+                ]
+            })
+            .gap(fret_ui_kit::Space::N2)
+            .items_center()
+            .into_element(cx),
+            preview,
+        ]
+    })
+    .gap(fret_ui_kit::Space::N2)
+    .layout(fret_ui_kit::LayoutRefinement::default().w_full())
+    .into_element(cx);
 
     let predicate_kind_items = [
         shadcn::SelectItem::new("exists", "exists"),
@@ -1580,14 +1628,14 @@ fn center_panel(
         shadcn::SelectItem::new("bounds_overlapping_x", "bounds_overlapping_x"),
         shadcn::SelectItem::new("bounds_overlapping_y", "bounds_overlapping_y"),
     ];
-	    let predicate_kind_select = shadcn::Select::new(
-	        st.script_predicate_kind.clone(),
-	        st.script_predicate_kind_open.clone(),
-	    )
-	    .value(shadcn::SelectValue::new().placeholder("predicate kind"))
-	    .items(predicate_kind_items)
-	    .refine_layout(fret_ui_kit::LayoutRefinement::default().w_full())
-	    .into_element(cx);
+    let predicate_kind_select = shadcn::Select::new(
+        st.script_predicate_kind.clone(),
+        st.script_predicate_kind_open.clone(),
+    )
+    .value(shadcn::SelectValue::new().placeholder("predicate kind"))
+    .items(predicate_kind_items)
+    .refine_layout(fret_ui_kit::LayoutRefinement::default().w_full())
+    .into_element(cx);
 
     let predicate_kind = cx
         .app
@@ -1661,34 +1709,34 @@ fn center_panel(
     };
 
     let predicate_tab = ui::v_stack(|cx| {
-            let fields = predicate_fields(cx, st, predicate_kind.as_ref());
-            let preview = text_blob(cx, predicate_json.clone());
-            [
-                predicate_kind_select,
-                fields,
-                ui::h_row(|cx| {
-                    [
-                        shadcn::Button::new("Apply to pointer")
-                            .variant(shadcn::ButtonVariant::Secondary)
-                            .size(shadcn::ButtonSize::Sm)
-                            .on_activate(predicate_apply)
-                            .into_element(cx),
-                        shadcn::Button::new("Copy JSON")
-                            .variant(shadcn::ButtonVariant::Outline)
-                            .size(shadcn::ButtonSize::Sm)
-                            .on_activate(predicate_copy)
-                            .into_element(cx),
-                    ]
-                })
-                .gap(fret_ui_kit::Space::N2)
-                .items_center()
-                .into_element(cx),
-                preview,
-            ]
-        })
-        .gap(fret_ui_kit::Space::N2)
-        .layout(fret_ui_kit::LayoutRefinement::default().w_full())
-        .into_element(cx);
+        let fields = predicate_fields(cx, st, predicate_kind.as_ref());
+        let preview = text_blob(cx, predicate_json.clone());
+        [
+            predicate_kind_select,
+            fields,
+            ui::h_row(|cx| {
+                [
+                    shadcn::Button::new("Apply to pointer")
+                        .variant(shadcn::ButtonVariant::Secondary)
+                        .size(shadcn::ButtonSize::Sm)
+                        .on_activate(predicate_apply)
+                        .into_element(cx),
+                    shadcn::Button::new("Copy JSON")
+                        .variant(shadcn::ButtonVariant::Outline)
+                        .size(shadcn::ButtonSize::Sm)
+                        .on_activate(predicate_copy)
+                        .into_element(cx),
+                ]
+            })
+            .gap(fret_ui_kit::Space::N2)
+            .items_center()
+            .into_element(cx),
+            preview,
+        ]
+    })
+    .gap(fret_ui_kit::Space::N2)
+    .layout(fret_ui_kit::LayoutRefinement::default().w_full())
+    .into_element(cx);
 
     let helpers_tabs = shadcn::Tabs::new(st.script_studio_helper_tab.clone())
         .refine_layout(fret_ui_kit::LayoutRefinement::default().w_full())
@@ -1715,7 +1763,10 @@ fn center_panel(
                 fret_ui_kit::declarative::style::container_props(
                     &theme,
                     fret_ui_kit::ChromeRefinement::default(),
-                    fret_ui_kit::LayoutRefinement::default().flex_1().min_w_0().h_full(),
+                    fret_ui_kit::LayoutRefinement::default()
+                        .flex_1()
+                        .min_w_0()
+                        .h_full(),
                 ),
                 |_cx| [textarea],
             ),
@@ -1872,6 +1923,36 @@ fn sem_node_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement {
         .models()
         .read(&st.semantics_selected_node_live_children, |v| v.clone())
         .unwrap_or_default();
+    let hit_test_explain = cx
+        .app
+        .models()
+        .read(&st.semantics_selected_hit_test_explain_json, |v| v.clone())
+        .unwrap_or_default();
+    let hit_test_explain_summary = cx
+        .app
+        .models()
+        .read(&st.semantics_selected_hit_test_explain_summary, |v| {
+            v.clone()
+        })
+        .unwrap_or_default();
+    let hit_test_explain_status = cx
+        .app
+        .models()
+        .read(&st.semantics_selected_hit_test_explain_status, |v| {
+            v.clone()
+        })
+        .ok()
+        .flatten()
+        .unwrap_or_else(|| Arc::<str>::from("unknown"));
+    let hit_test_explain_updated = cx
+        .app
+        .models()
+        .read(
+            &st.semantics_selected_hit_test_explain_updated_unix_ms,
+            |v| *v,
+        )
+        .ok()
+        .flatten();
     let live_enabled = cx
         .app
         .models()
@@ -1896,6 +1977,17 @@ fn sem_node_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement {
             live_status.as_ref()
         );
         if let Some(ts) = live_updated {
+            line.push_str(&format!(" updated_unix_ms={ts}"));
+        }
+        line
+    };
+
+    let hit_test_explain_status_line = {
+        let mut line = format!(
+            "hit_test.explain status={}",
+            hit_test_explain_status.as_ref()
+        );
+        if let Some(ts) = hit_test_explain_updated {
             line.push_str(&format!(" updated_unix_ms={ts}"));
         }
         line
@@ -1961,6 +2053,15 @@ fn sem_node_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement {
             let selected_live_updated_model =
                 st.semantics_selected_node_live_updated_unix_ms.clone();
             let selected_live_children_model = st.semantics_selected_node_live_children.clone();
+            let selected_hit_test_explain_json_model =
+                st.semantics_selected_hit_test_explain_json.clone();
+            let selected_hit_test_explain_summary_model =
+                st.semantics_selected_hit_test_explain_summary.clone();
+            let selected_hit_test_explain_status_model =
+                st.semantics_selected_hit_test_explain_status.clone();
+            let selected_hit_test_explain_updated_model = st
+                .semantics_selected_hit_test_explain_updated_unix_ms
+                .clone();
             let index_for_select = Arc::clone(&index);
             let on_child: fret_ui::action::OnActivate =
                 Arc::new(move |host, action_cx, _reason| {
@@ -1983,6 +2084,18 @@ fn sem_node_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement {
                     let _ = host
                         .models_mut()
                         .update(&selected_live_children_model, |v| v.clear());
+                    let _ = host
+                        .models_mut()
+                        .update(&selected_hit_test_explain_json_model, |v| v.clear());
+                    let _ = host
+                        .models_mut()
+                        .update(&selected_hit_test_explain_summary_model, |v| v.clear());
+                    let _ = host
+                        .models_mut()
+                        .update(&selected_hit_test_explain_status_model, |v| *v = None);
+                    let _ = host
+                        .models_mut()
+                        .update(&selected_hit_test_explain_updated_model, |v| *v = None);
                     host.request_redraw(action_cx.window);
                 });
 
@@ -1999,12 +2112,10 @@ fn sem_node_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement {
     let children_panel = if child_buttons.is_empty() {
         cx.text("children: <none>")
     } else {
-        shadcn::ScrollArea::new([
-            ui::v_stack(|_cx| child_buttons)
-                .gap(fret_ui_kit::Space::N1)
-                .layout(fret_ui_kit::LayoutRefinement::default().w_full())
-                .into_element(cx),
-        ])
+        shadcn::ScrollArea::new([ui::v_stack(|_cx| child_buttons)
+            .gap(fret_ui_kit::Space::N1)
+            .layout(fret_ui_kit::LayoutRefinement::default().w_full())
+            .into_element(cx)])
         .refine_layout(
             fret_ui_kit::LayoutRefinement::default()
                 .w_full()
@@ -2014,9 +2125,37 @@ fn sem_node_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement {
     };
 
     let json_text = if !live.is_empty() { live } else { fallback };
-    let body = text_blob(cx, json_text);
+    let live_body_title = cx.text("Live semantics JSON");
+    let live_body_content = text_blob(cx, json_text);
+    let live_body = ui::v_stack(|_cx| [live_body_title, live_body_content])
+        .gap(fret_ui_kit::Space::N1)
+        .layout(fret_ui_kit::LayoutRefinement::default().w_full())
+        .into_element(cx);
+    let hit_test_explain_summary_body = if hit_test_explain_summary.is_empty() {
+        cx.text("<no summary yet>")
+    } else {
+        text_blob(cx, hit_test_explain_summary)
+    };
+    let hit_test_explain_body = if hit_test_explain.is_empty() {
+        cx.text("<no hit_test.explain_ack yet>")
+    } else {
+        text_blob(cx, hit_test_explain)
+    };
+    let hit_test_explain_status_text = cx.text(hit_test_explain_status_line);
+    let hit_test_explain_summary_title = cx.text("Readable summary");
+    let hit_test_explain_panel = ui::v_stack(|_cx| {
+        [
+            hit_test_explain_status_text,
+            hit_test_explain_summary_title,
+            hit_test_explain_summary_body,
+            hit_test_explain_body,
+        ]
+    })
+    .gap(fret_ui_kit::Space::N1)
+    .layout(fret_ui_kit::LayoutRefinement::default().w_full())
+    .into_element(cx);
 
-    ui::v_stack(|_cx| [header, children_panel, body])
+    ui::v_stack(|_cx| [header, children_panel, live_body, hit_test_explain_panel])
         .gap(fret_ui_kit::Space::N2)
         .layout(fret_ui_kit::LayoutRefinement::default().w_full().h_full())
         .into_element(cx)
@@ -3004,32 +3143,32 @@ fn predicate_fields(cx: &mut ElementContext<'_, App>, st: &State, kind: &str) ->
                 shadcn::SelectItem::new("false", "false"),
             ];
 
-	            let barrier_root = shadcn::Select::new(
-	                st.script_predicate_barrier_root.clone(),
-	                st.script_predicate_barrier_root_open.clone(),
-	            )
-	            .value(shadcn::SelectValue::new().placeholder("barrier_root"))
-	            .items(barrier_root_items)
-	            .refine_layout(fret_ui_kit::LayoutRefinement::default().w_full())
-	            .into_element(cx);
+            let barrier_root = shadcn::Select::new(
+                st.script_predicate_barrier_root.clone(),
+                st.script_predicate_barrier_root_open.clone(),
+            )
+            .value(shadcn::SelectValue::new().placeholder("barrier_root"))
+            .items(barrier_root_items)
+            .refine_layout(fret_ui_kit::LayoutRefinement::default().w_full())
+            .into_element(cx);
 
-	            let focus_root = shadcn::Select::new(
-	                st.script_predicate_focus_barrier_root.clone(),
-	                st.script_predicate_focus_barrier_root_open.clone(),
-	            )
-	            .value(shadcn::SelectValue::new().placeholder("focus_barrier_root"))
-	            .items(focus_root_items)
-	            .refine_layout(fret_ui_kit::LayoutRefinement::default().w_full())
-	            .into_element(cx);
+            let focus_root = shadcn::Select::new(
+                st.script_predicate_focus_barrier_root.clone(),
+                st.script_predicate_focus_barrier_root_open.clone(),
+            )
+            .value(shadcn::SelectValue::new().placeholder("focus_barrier_root"))
+            .items(focus_root_items)
+            .refine_layout(fret_ui_kit::LayoutRefinement::default().w_full())
+            .into_element(cx);
 
-	            let require_equal = shadcn::Select::new(
-	                st.script_predicate_require_equal.clone(),
-	                st.script_predicate_require_equal_open.clone(),
-	            )
-	            .value(shadcn::SelectValue::new().placeholder("require_equal"))
-	            .items(require_items)
-	            .refine_layout(fret_ui_kit::LayoutRefinement::default().w_full())
-	            .into_element(cx);
+            let require_equal = shadcn::Select::new(
+                st.script_predicate_require_equal.clone(),
+                st.script_predicate_require_equal_open.clone(),
+            )
+            .value(shadcn::SelectValue::new().placeholder("require_equal"))
+            .items(require_items)
+            .refine_layout(fret_ui_kit::LayoutRefinement::default().w_full())
+            .into_element(cx);
 
             let other_selector =
                 shadcn::Textarea::new(st.script_predicate_other_selector_json.clone())

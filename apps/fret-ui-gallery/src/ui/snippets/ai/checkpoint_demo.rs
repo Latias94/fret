@@ -11,100 +11,131 @@ use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::ui;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, Space};
 use fret_ui_shadcn::prelude::*;
+use fret_ui_shadcn::{ButtonSize, ButtonVariant};
 use std::sync::Arc;
 
+#[derive(Clone, Copy)]
+struct DemoMessage {
+    role: ui_ai::MessageRole,
+    content: &'static str,
+}
+
+#[derive(Clone, Copy)]
+struct DemoCheckpoint {
+    message_count: usize,
+    trigger_label: &'static str,
+    tooltip: &'static str,
+}
+
+const INITIAL_MESSAGES: &[DemoMessage] = &[
+    DemoMessage {
+        role: ui_ai::MessageRole::User,
+        content: "What is React?",
+    },
+    DemoMessage {
+        role: ui_ai::MessageRole::Assistant,
+        content: "React is a JavaScript library for building user interfaces. It was developed by Facebook and is now maintained by Meta and a community of developers.",
+    },
+    DemoMessage {
+        role: ui_ai::MessageRole::User,
+        content: "How does component state work?",
+    },
+];
+
+const INITIAL_CHECKPOINTS: &[DemoCheckpoint] = &[DemoCheckpoint {
+    message_count: 2,
+    trigger_label: "Restore checkpoint",
+    tooltip: "Restores workspace and chat to this point",
+}];
+
 #[derive(Default)]
-struct DemoModels {
-    visible_len: Option<Model<usize>>,
+struct CheckpointDemoModels {
+    visible_message_count: Option<Model<usize>>,
 }
 
 pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    const CHECKPOINT_MESSAGE_COUNT: usize = 2;
-
-    #[derive(Clone, Copy)]
-    struct DemoMessage {
-        role: ui_ai::MessageRole,
-        content: &'static str,
-    }
-
-    let messages: &[DemoMessage] = &[
-        DemoMessage {
-            role: ui_ai::MessageRole::User,
-            content: "What is React?",
-        },
-        DemoMessage {
-            role: ui_ai::MessageRole::Assistant,
-            content: "React is a JavaScript library for building user interfaces. It was developed by Facebook and is now maintained by Meta and a community of developers.",
-        },
-        DemoMessage {
-            role: ui_ai::MessageRole::User,
-            content: "How does component state work?",
-        },
-    ];
-
-    let needs_init = cx.with_state(DemoModels::default, |st| st.visible_len.is_none());
+    let needs_init = cx.with_state(CheckpointDemoModels::default, |st| {
+        st.visible_message_count.is_none()
+    });
     if needs_init {
-        let model = cx.app.models_mut().insert(messages.len());
-        cx.with_state(DemoModels::default, |st| {
-            st.visible_len = Some(model.clone())
+        let model = cx.app.models_mut().insert(INITIAL_MESSAGES.len());
+        cx.with_state(CheckpointDemoModels::default, |st| {
+            st.visible_message_count = Some(model.clone())
         });
     }
 
-    let visible_len_model = cx
-        .with_state(DemoModels::default, |st| st.visible_len.clone())
-        .expect("visible_len");
-    let visible_len = cx
-        .get_model_copied(&visible_len_model, Invalidation::Layout)
-        .unwrap_or(messages.len())
-        .min(messages.len());
+    let visible_message_count_model = cx
+        .with_state(CheckpointDemoModels::default, |st| {
+            st.visible_message_count.clone()
+        })
+        .expect("visible_message_count");
+    let visible_message_count = cx
+        .get_model_copied(&visible_message_count_model, Invalidation::Layout)
+        .unwrap_or(INITIAL_MESSAGES.len())
+        .min(INITIAL_MESSAGES.len());
 
-    let restore: OnActivate = Arc::new({
-        let visible_len_model = visible_len_model.clone();
+    let restore_to_checkpoint: OnActivate = Arc::new({
+        let visible_message_count_model = visible_message_count_model.clone();
         move |host, acx, _reason| {
             let _ = host
                 .models_mut()
-                .update(&visible_len_model, |v| *v = CHECKPOINT_MESSAGE_COUNT);
+                .update(&visible_message_count_model, |count| {
+                    *count = INITIAL_CHECKPOINTS[0].message_count;
+                });
             host.request_redraw(acx.window);
         }
     });
 
-    let reset: OnActivate = Arc::new({
-        let visible_len_model = visible_len_model.clone();
+    let reset_demo: OnActivate = Arc::new({
+        let visible_message_count_model = visible_message_count_model.clone();
         move |host, acx, _reason| {
             let _ = host
                 .models_mut()
-                .update(&visible_len_model, |v| *v = messages.len());
+                .update(&visible_message_count_model, |count| {
+                    *count = INITIAL_MESSAGES.len();
+                });
             host.request_redraw(acx.window);
         }
     });
 
-    let restored_marker = (visible_len == CHECKPOINT_MESSAGE_COUNT)
+    let restored_marker = (visible_message_count == INITIAL_CHECKPOINTS[0].message_count)
         .then(|| {
-            cx.text("restored=true")
+            cx.text("Preview restored to the checkpoint.")
                 .test_id("ui-ai-checkpoint-restored-marker")
         })
-        .unwrap_or_else(|| cx.text("restored=false"));
+        .unwrap_or_else(|| cx.text("The preview currently shows the latest conversation state."));
 
     let transcript = ui::v_flex(move |cx| {
         let mut out: Vec<AnyElement> = Vec::new();
 
-        for (idx, msg) in messages.iter().enumerate().take(visible_len) {
-            let message = ui_ai::Message::new(
-                msg.role,
-                [ui_ai::MessageContent::new(msg.role, [cx.text(msg.content)]).into_element(cx)],
+        for (idx, message) in INITIAL_MESSAGES
+            .iter()
+            .enumerate()
+            .take(visible_message_count)
+        {
+            let bubble = ui_ai::Message::new(
+                message.role,
+                [
+                    ui_ai::MessageContent::new(message.role, [cx.text(message.content)])
+                        .into_element(cx),
+                ],
             )
             .into_element(cx);
-            out.push(message);
+            out.push(bubble);
 
-            if idx + 1 == CHECKPOINT_MESSAGE_COUNT {
+            if let Some(checkpoint) = INITIAL_CHECKPOINTS
+                .iter()
+                .find(|checkpoint| checkpoint.message_count == idx + 1)
+                .copied()
+            {
                 out.push(
                     ui_ai::Checkpoint::new([
                         ui_ai::CheckpointIcon::default().into_element(cx),
-                        ui_ai::CheckpointTrigger::new([cx.text("Restore checkpoint")])
-                            .tooltip("Restores workspace and chat to this point")
+                        ui_ai::CheckpointTrigger::new([cx.text(checkpoint.trigger_label)])
+                            .tooltip(checkpoint.tooltip)
                             .tooltip_panel_test_id("ui-ai-checkpoint-tooltip-panel")
                             .test_id("ui-ai-checkpoint-trigger")
-                            .on_activate(restore.clone())
+                            .on_activate(restore_to_checkpoint.clone())
                             .into_element(cx),
                     ])
                     .test_id("ui-ai-checkpoint-row")
@@ -115,24 +146,11 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
 
         out
     })
-    .layout(LayoutRefinement::default().w_full().min_w_0())
-    .gap(Space::N4)
+    .layout(LayoutRefinement::default().w_full().min_w_0().mt(Space::N3))
+    .gap(Space::N5)
     .into_element(cx);
 
-    let controls = ui::h_flex(move |cx| {
-        vec![
-            fret_ui_shadcn::Button::new("Reset")
-                .test_id("ui-ai-checkpoint-reset")
-                .on_activate(reset.clone())
-                .into_element(cx),
-        ]
-    })
-    .layout(LayoutRefinement::default().w_full().min_w_0())
-    .gap(Space::N2)
-    .items_center()
-    .into_element(cx);
-
-    let conversation_props = cx.with_theme(|theme| {
+    let conversation_shell_props = cx.with_theme(|theme| {
         let chrome = ChromeRefinement::default()
             .rounded(Radius::Lg)
             .border_1()
@@ -143,21 +161,46 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
             chrome,
             LayoutRefinement::default()
                 .w_full()
-                .h_px(Px(360.0))
+                .max_w(Px(896.0))
+                .h_px(Px(520.0))
                 .min_w_0()
                 .min_h_0(),
         )
     });
+    let conversation_shell = cx.container(conversation_shell_props, move |_cx| vec![transcript]);
+    let conversation_shell = ui::h_flex(move |_cx| vec![conversation_shell])
+        .layout(LayoutRefinement::default().w_full().min_w_0())
+        .justify_center()
+        .items_center()
+        .into_element(cx);
 
-    let conversation = cx.container(conversation_props, move |_cx| vec![transcript]);
+    let controls = ui::h_flex(move |cx| {
+        vec![
+            fret_ui_shadcn::Button::new("Reset preview")
+                .variant(ButtonVariant::Outline)
+                .size(ButtonSize::Sm)
+                .test_id("ui-ai-checkpoint-reset")
+                .on_activate(reset_demo.clone())
+                .into_element(cx),
+        ]
+    })
+    .layout(LayoutRefinement::default().w_full().min_w_0())
+    .gap(Space::N2)
+    .justify_end()
+    .items_center()
+    .into_element(cx);
 
     ui::v_flex(move |cx| {
         vec![
-            cx.text("Checkpoint (AI Elements): restore a conversation to a prior state."),
-            cx.text("Hover the trigger for tooltip; click to restore messages."),
+            cx.text(
+                "The `Checkpoint` component provides a way to mark specific points in a conversation history and restore the chat to that state.",
+            ),
+            cx.text(
+                "Hover the trigger to preview the tooltip, then activate it to restore the conversation.",
+            ),
             controls,
             restored_marker,
-            conversation,
+            conversation_shell,
         ]
     })
     .layout(LayoutRefinement::default().w_full().min_w_0())
@@ -165,3 +208,43 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
     .into_element(cx)
 }
 // endregion: example
+
+// region: custom_icon
+fn custom_checkpoint_icon<H: fret_ui::UiHost>(
+    cx: &mut fret_ui::ElementContext<'_, H>,
+) -> fret_ui::element::AnyElement {
+    fret_ui_ai::CheckpointIcon::default()
+        .children(cx.text("⟲"))
+        .into_element(cx)
+}
+// endregion: custom_icon
+
+// region: manual_checkpoints
+#[derive(Debug, Clone, Copy)]
+struct ManualCheckpoint {
+    message_count: usize,
+}
+
+fn create_checkpoint(checkpoints: &mut Vec<ManualCheckpoint>, message_count: usize) {
+    checkpoints.push(ManualCheckpoint { message_count });
+}
+// endregion: manual_checkpoints
+
+// region: automatic_checkpoints
+fn maybe_create_automatic_checkpoint(
+    checkpoints: &mut Vec<ManualCheckpoint>,
+    message_count: usize,
+) {
+    if message_count > 0 && message_count % 5 == 0 {
+        create_checkpoint(checkpoints, message_count);
+    }
+}
+// endregion: automatic_checkpoints
+
+// region: branching_conversations
+fn restore_and_branch<T: Clone>(messages: &[T], message_count: usize) -> (Vec<T>, Vec<T>) {
+    let restored = messages[..message_count].to_vec();
+    let branch = messages[message_count..].to_vec();
+    (restored, branch)
+}
+// endregion: branching_conversations

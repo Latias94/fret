@@ -1,6 +1,5 @@
 # shadcn/ui v4 Audit - Hover Card (new-york)
 
-
 ## Upstream references (non-normative)
 
 This document references optional local checkouts under `repo-ref/` for convenience.
@@ -34,6 +33,13 @@ the `new-york-v4` registry implementation in `repo-ref/ui`.
   ancestor `overflow: Clip`.
 - Pass: Supports an optional custom placement anchor via `HoverCardAnchor` +
   `HoverCard::anchor_element(...)` (anchor can be separate from the trigger).
+- Pass: `HoverCard::new(trigger, content)` already acts as the recipe-level composition entry point,
+  with `HoverCardTrigger` / `HoverCardContent` preserving shadcn-style part naming at call sites.
+- Note: Fret intentionally does not add a separate generic `compose()` builder for `HoverCard`
+  today. Unlike modal overlays that need explicit portal/overlay/content slot assembly, hover card
+  authoring is already expressed by the root's two required slots plus root-owned hover/anchor
+  policy (`open_delay`, `close_delay`, `anchor_element`). An extra builder would mostly duplicate
+  the current contract without improving semantics.
 
 ### Open/close behavior
 

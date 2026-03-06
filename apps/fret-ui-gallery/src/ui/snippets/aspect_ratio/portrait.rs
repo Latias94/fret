@@ -37,7 +37,8 @@ fn ratio_example<H: UiHost>(
     let border = theme.color_token("border");
     let content = portrait_image(cx, demo_image, content_test_id);
 
-    let frame = shadcn::AspectRatio::new(ratio, content)
+    let frame = shadcn::AspectRatio::with_child(content)
+        .ratio(ratio)
         .refine_style(
             ChromeRefinement::default()
                 .rounded(Radius::Lg)
@@ -93,7 +94,8 @@ pub fn render_preview<H: UiHost>(
     let muted_bg = theme.color_token("muted");
     let border = theme.color_token("border");
 
-    let frame = shadcn::AspectRatio::new(9.0 / 16.0, image)
+    let frame = shadcn::AspectRatio::with_child(image)
+        .ratio(9.0 / 16.0)
         .refine_style(
             ChromeRefinement::default()
                 .rounded(Radius::Lg)

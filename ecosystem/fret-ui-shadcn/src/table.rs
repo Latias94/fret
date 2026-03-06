@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{marker::PhantomData, sync::Arc};
 
 use fret_core::geometry::Edges;
 use fret_core::{Axis, FontId, FontWeight, TextAlign, TextOverflow, TextStyle, TextWrap};
@@ -13,7 +13,10 @@ use fret_ui_kit::declarative::motion::drive_tween_color_for_element;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::scroll_area::ScrollAreaType;
 use fret_ui_kit::typography;
-use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Space, ui};
+use fret_ui_kit::{
+    ChromeRefinement, ColorRef, LayoutRefinement, Space, UiChildIntoElement,
+    UiHostBoundIntoElement, UiPatch, UiPatchTarget, UiSupportsChrome, UiSupportsLayout, ui,
+};
 
 use crate::direction::{LayoutDirection, use_direction};
 use crate::layout as shadcn_layout;
@@ -164,6 +167,15 @@ fn apply_table_footer_inherited_style(mut child: AnyElement, style: &TextStyle) 
     child
 }
 
+fn collect_built_table_children<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    build: impl FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+) -> Vec<AnyElement> {
+    let mut out = Vec::new();
+    build(cx, &mut out);
+    out
+}
+
 /// shadcn/ui `Table` root.
 ///
 /// Upstream wraps `<table>` in a horizontally scrollable container (`overflow-x-auto`). We model
@@ -182,6 +194,19 @@ impl Table {
             children,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
+        }
+    }
+
+    /// Builder-first variant that collects children at `into_element(cx)` time.
+    pub fn build<H: UiHost, B>(build: B) -> TableBuild<H, B>
+    where
+        B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+    {
+        TableBuild {
+            build: Some(build),
+            chrome: ChromeRefinement::default(),
+            layout: LayoutRefinement::default(),
+            _phantom: PhantomData,
         }
     }
 
@@ -225,6 +250,77 @@ impl Table {
     }
 }
 
+pub struct TableBuild<H, B> {
+    build: Option<B>,
+    chrome: ChromeRefinement,
+    layout: LayoutRefinement,
+    _phantom: PhantomData<fn() -> H>,
+}
+
+impl<H: UiHost, B> TableBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
+        self.chrome = self.chrome.merge(style);
+        self
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
+    }
+
+    #[track_caller]
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let children =
+            collect_built_table_children(cx, self.build.expect("expected table build closure"));
+        Table::new(children)
+            .refine_style(self.chrome)
+            .refine_layout(self.layout)
+            .into_element(cx)
+    }
+}
+
+impl<H: UiHost, B> UiPatchTarget for TableBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    fn apply_ui_patch(self, patch: UiPatch) -> Self {
+        self.refine_style(patch.chrome).refine_layout(patch.layout)
+    }
+}
+
+impl<H: UiHost, B> UiSupportsChrome for TableBuild<H, B> where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>)
+{
+}
+
+impl<H: UiHost, B> UiSupportsLayout for TableBuild<H, B> where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>)
+{
+}
+
+impl<H: UiHost, B> UiHostBoundIntoElement<H> for TableBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        TableBuild::into_element(self, cx)
+    }
+}
+
+impl<H: UiHost, B> UiChildIntoElement<H> for TableBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        TableBuild::into_element(self, cx)
+    }
+}
+
 /// shadcn/ui `TableHeader` (`thead`).
 #[derive(Debug)]
 pub struct TableHeader {
@@ -235,6 +331,17 @@ impl TableHeader {
     pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
         let children = children.into_iter().collect();
         Self { children }
+    }
+
+    /// Builder-first variant that collects children at `into_element(cx)` time.
+    pub fn build<H: UiHost, B>(build: B) -> TableHeaderBuild<H, B>
+    where
+        B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+    {
+        TableHeaderBuild {
+            build: Some(build),
+            _phantom: PhantomData,
+        }
     }
 
     #[track_caller]
@@ -256,6 +363,54 @@ impl TableHeader {
     }
 }
 
+pub struct TableHeaderBuild<H, B> {
+    build: Option<B>,
+    _phantom: PhantomData<fn() -> H>,
+}
+
+impl<H: UiHost, B> TableHeaderBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let children = collect_built_table_children(
+            cx,
+            self.build.expect("expected table header build closure"),
+        );
+        TableHeader::new(children).into_element(cx)
+    }
+}
+
+impl<H: UiHost, B> UiPatchTarget for TableHeaderBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    fn apply_ui_patch(self, _patch: UiPatch) -> Self {
+        self
+    }
+}
+
+impl<H: UiHost, B> UiHostBoundIntoElement<H> for TableHeaderBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        TableHeaderBuild::into_element(self, cx)
+    }
+}
+
+impl<H: UiHost, B> UiChildIntoElement<H> for TableHeaderBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        TableHeaderBuild::into_element(self, cx)
+    }
+}
+
 /// shadcn/ui `TableBody` (`tbody`).
 #[derive(Debug)]
 pub struct TableBody {
@@ -266,6 +421,17 @@ impl TableBody {
     pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
         let children = children.into_iter().collect();
         Self { children }
+    }
+
+    /// Builder-first variant that collects children at `into_element(cx)` time.
+    pub fn build<H: UiHost, B>(build: B) -> TableBodyBuild<H, B>
+    where
+        B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+    {
+        TableBodyBuild {
+            build: Some(build),
+            _phantom: PhantomData,
+        }
     }
 
     #[track_caller]
@@ -290,6 +456,54 @@ impl TableBody {
     }
 }
 
+pub struct TableBodyBuild<H, B> {
+    build: Option<B>,
+    _phantom: PhantomData<fn() -> H>,
+}
+
+impl<H: UiHost, B> TableBodyBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let children = collect_built_table_children(
+            cx,
+            self.build.expect("expected table body build closure"),
+        );
+        TableBody::new(children).into_element(cx)
+    }
+}
+
+impl<H: UiHost, B> UiPatchTarget for TableBodyBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    fn apply_ui_patch(self, _patch: UiPatch) -> Self {
+        self
+    }
+}
+
+impl<H: UiHost, B> UiHostBoundIntoElement<H> for TableBodyBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        TableBodyBuild::into_element(self, cx)
+    }
+}
+
+impl<H: UiHost, B> UiChildIntoElement<H> for TableBodyBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        TableBodyBuild::into_element(self, cx)
+    }
+}
+
 /// shadcn/ui `TableFooter` (`tfoot`).
 #[derive(Debug)]
 pub struct TableFooter {
@@ -300,6 +514,17 @@ impl TableFooter {
     pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
         let children = children.into_iter().collect();
         Self { children }
+    }
+
+    /// Builder-first variant that collects children at `into_element(cx)` time.
+    pub fn build<H: UiHost, B>(build: B) -> TableFooterBuild<H, B>
+    where
+        B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+    {
+        TableFooterBuild {
+            build: Some(build),
+            _phantom: PhantomData,
+        }
     }
 
     #[track_caller]
@@ -343,6 +568,54 @@ impl TableFooter {
             shadcn_layout::VStackProps::default().layout(LayoutRefinement::default().w_full()),
             children,
         )
+    }
+}
+
+pub struct TableFooterBuild<H, B> {
+    build: Option<B>,
+    _phantom: PhantomData<fn() -> H>,
+}
+
+impl<H: UiHost, B> TableFooterBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let children = collect_built_table_children(
+            cx,
+            self.build.expect("expected table footer build closure"),
+        );
+        TableFooter::new(children).into_element(cx)
+    }
+}
+
+impl<H: UiHost, B> UiPatchTarget for TableFooterBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    fn apply_ui_patch(self, _patch: UiPatch) -> Self {
+        self
+    }
+}
+
+impl<H: UiHost, B> UiHostBoundIntoElement<H> for TableFooterBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        TableFooterBuild::into_element(self, cx)
+    }
+}
+
+impl<H: UiHost, B> UiChildIntoElement<H> for TableFooterBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        TableFooterBuild::into_element(self, cx)
     }
 }
 
@@ -405,6 +678,23 @@ impl TableRow {
             on_click: None,
             on_activate: None,
             border_bottom: true,
+        }
+    }
+
+    /// Builder-first variant that collects children at `into_element(cx)` time.
+    pub fn build<H: UiHost, B>(cols: u16, build: B) -> TableRowBuild<H, B>
+    where
+        B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+    {
+        TableRowBuild {
+            build: Some(build),
+            cols: cols.max(1),
+            selected: false,
+            enabled: true,
+            on_click: None,
+            on_activate: None,
+            border_bottom: true,
+            _phantom: PhantomData,
         }
     }
 
@@ -536,6 +826,94 @@ impl TableRow {
     }
 }
 
+pub struct TableRowBuild<H, B> {
+    build: Option<B>,
+    cols: u16,
+    selected: bool,
+    enabled: bool,
+    on_click: Option<fret_runtime::CommandId>,
+    on_activate: Option<OnActivate>,
+    border_bottom: bool,
+    _phantom: PhantomData<fn() -> H>,
+}
+
+impl<H: UiHost, B> TableRowBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    pub fn selected(mut self, selected: bool) -> Self {
+        self.selected = selected;
+        self
+    }
+
+    pub fn enabled(mut self, enabled: bool) -> Self {
+        self.enabled = enabled;
+        self
+    }
+
+    pub fn on_click(mut self, cmd: impl Into<fret_runtime::CommandId>) -> Self {
+        self.on_click = Some(cmd.into());
+        self
+    }
+
+    pub fn on_activate(mut self, handler: OnActivate) -> Self {
+        self.on_activate = Some(handler);
+        self
+    }
+
+    pub fn border_bottom(mut self, enabled: bool) -> Self {
+        self.border_bottom = enabled;
+        self
+    }
+
+    #[track_caller]
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let mut row = TableRow::new(
+            self.cols,
+            collect_built_table_children(cx, self.build.expect("expected table row build closure")),
+        )
+        .selected(self.selected)
+        .enabled(self.enabled)
+        .border_bottom(self.border_bottom);
+        if let Some(cmd) = self.on_click {
+            row = row.on_click(cmd);
+        }
+        if let Some(on_activate) = self.on_activate {
+            row = row.on_activate(on_activate);
+        }
+        row.into_element(cx)
+    }
+}
+
+impl<H: UiHost, B> UiPatchTarget for TableRowBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    fn apply_ui_patch(self, _patch: UiPatch) -> Self {
+        self
+    }
+}
+
+impl<H: UiHost, B> UiHostBoundIntoElement<H> for TableRowBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        TableRowBuild::into_element(self, cx)
+    }
+}
+
+impl<H: UiHost, B> UiChildIntoElement<H> for TableRowBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        TableRowBuild::into_element(self, cx)
+    }
+}
+
 /// shadcn/ui `TableHead` (`th`).
 #[derive(Debug, Clone)]
 pub struct TableHead {
@@ -663,6 +1041,21 @@ impl TableCell {
         }
     }
 
+    /// Builder-first variant that late-lands a single child at `into_element(cx)` time.
+    pub fn build<H: UiHost, T>(child: T) -> TableCellBuild<H, T>
+    where
+        T: UiChildIntoElement<H>,
+    {
+        TableCellBuild {
+            child,
+            col_span: None,
+            chrome: ChromeRefinement::default(),
+            layout: LayoutRefinement::default(),
+            text_align: None,
+            _phantom: PhantomData,
+        }
+    }
+
     /// Sets `colSpan` semantics for a flex-backed table row.
     ///
     /// This is modeled as `flex-grow = span` (only when the caller did not provide an explicit
@@ -746,6 +1139,91 @@ impl TableCell {
     }
 }
 
+pub struct TableCellBuild<H, T> {
+    child: T,
+    col_span: Option<u16>,
+    chrome: ChromeRefinement,
+    layout: LayoutRefinement,
+    text_align: Option<TextAlign>,
+    _phantom: PhantomData<fn() -> H>,
+}
+
+impl<H: UiHost, T> TableCellBuild<H, T>
+where
+    T: UiChildIntoElement<H>,
+{
+    pub fn col_span(mut self, span: u16) -> Self {
+        self.col_span = Some(span.max(1));
+        self
+    }
+
+    pub fn text_align(mut self, align: TextAlign) -> Self {
+        self.text_align = Some(align);
+        self
+    }
+
+    pub fn text_align_end(self) -> Self {
+        self.text_align(TextAlign::End)
+    }
+
+    pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
+        self.chrome = self.chrome.merge(style);
+        self
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
+    }
+
+    #[track_caller]
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let child = UiChildIntoElement::into_child_element(self.child, cx);
+        let mut cell = TableCell::new(child)
+            .refine_style(self.chrome)
+            .refine_layout(self.layout);
+        if let Some(span) = self.col_span {
+            cell = cell.col_span(span);
+        }
+        if let Some(text_align) = self.text_align {
+            cell = cell.text_align(text_align);
+        }
+        cell.into_element(cx)
+    }
+}
+
+impl<H: UiHost, T> UiPatchTarget for TableCellBuild<H, T>
+where
+    T: UiChildIntoElement<H>,
+{
+    fn apply_ui_patch(self, patch: UiPatch) -> Self {
+        self.refine_style(patch.chrome).refine_layout(patch.layout)
+    }
+}
+
+impl<H: UiHost, T> UiSupportsChrome for TableCellBuild<H, T> where T: UiChildIntoElement<H> {}
+impl<H: UiHost, T> UiSupportsLayout for TableCellBuild<H, T> where T: UiChildIntoElement<H> {}
+
+impl<H: UiHost, T> UiHostBoundIntoElement<H> for TableCellBuild<H, T>
+where
+    T: UiChildIntoElement<H>,
+{
+    #[track_caller]
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        TableCellBuild::into_element(self, cx)
+    }
+}
+
+impl<H: UiHost, T> UiChildIntoElement<H> for TableCellBuild<H, T>
+where
+    T: UiChildIntoElement<H>,
+{
+    #[track_caller]
+    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        TableCellBuild::into_element(self, cx)
+    }
+}
+
 /// shadcn/ui `TableCaption` (`caption`).
 #[derive(Debug, Clone)]
 pub struct TableCaption {
@@ -795,7 +1273,9 @@ mod tests {
 
     use fret_app::App;
     use fret_core::{AppWindowId, Color, Point, Px, Rect, Size};
-    use fret_ui::element::{ContainerProps, Length, Overflow, TextProps};
+    use fret_ui::element::{ContainerProps, ElementKind, Length, Overflow, TextProps};
+    use fret_ui_kit::ui::UiElementSinkExt as _;
+    use fret_ui_kit::{UiBuilderHostBoundIntoElementExt as _, UiExt as _};
 
     use fret_ui::UiTree;
 
@@ -814,6 +1294,14 @@ mod tests {
             }
         }
         None
+    }
+
+    fn contains_kind(el: &AnyElement, pred: &impl Fn(&ElementKind) -> bool) -> bool {
+        pred(&el.kind) || el.children.iter().any(|child| contains_kind(child, pred))
+    }
+
+    fn contains_inherited_foreground(el: &AnyElement) -> bool {
+        el.inherited_foreground.is_some() || el.children.iter().any(contains_inherited_foreground)
     }
 
     #[derive(Default)]
@@ -908,6 +1396,134 @@ mod tests {
                 .into_element(cx);
             let props = find_container_with_background(&el, bg).expect("table inner container");
             assert_eq!(props.layout.size.width, Length::Px(Px(320.0)));
+        });
+    }
+
+    #[test]
+    fn table_build_children_macro_accepts_host_bound_builders() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(300.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let children = ui::children![cx;
+                Table::build(|_cx, _out| {}).ui().w_full(),
+                TableHeader::build(|_cx, _out| {}).ui(),
+                TableBody::build(|_cx, _out| {}).ui(),
+                TableFooter::build(|_cx, _out| {}).ui(),
+                TableRow::build(1, |_cx, _out| {}).ui(),
+            ];
+
+            assert_eq!(children.len(), 5);
+            assert!(contains_kind(&children[0], &|kind| matches!(
+                kind,
+                ElementKind::Container(_)
+            )));
+            assert!(contains_kind(&children[4], &|kind| matches!(
+                kind,
+                ElementKind::Pressable(_)
+            )));
+        });
+    }
+
+    #[test]
+    fn table_build_push_ui_accepts_host_bound_builders() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(300.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let mut out = Vec::new();
+            out.push_ui(cx, Table::build(|_cx, _out| {}));
+            out.push_ui(cx, TableHeader::build(|_cx, _out| {}));
+            out.push_ui(cx, TableBody::build(|_cx, _out| {}));
+            out.push_ui(cx, TableFooter::build(|_cx, _out| {}));
+            out.push_ui(cx, TableRow::build(1, |_cx, _out| {}));
+
+            assert_eq!(out.len(), 5);
+            assert!(contains_kind(&out[0], &|kind| matches!(
+                kind,
+                ElementKind::Container(_)
+            )));
+            assert!(contains_kind(&out[4], &|kind| matches!(
+                kind,
+                ElementKind::Pressable(_)
+            )));
+        });
+    }
+
+    #[test]
+    fn table_cell_build_push_ui_accepts_host_bound_child() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(300.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let mut out = Vec::new();
+            out.push_ui(cx, TableCell::build(crate::Card::build(|_cx, _out| {})));
+
+            assert_eq!(out.len(), 1);
+            assert!(contains_inherited_foreground(&out[0]));
+        });
+    }
+
+    #[test]
+    fn table_cell_build_ui_builder_path_late_lands_child() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(300.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let cell = TableCell::build(crate::Card::build(|_cx, _out| {}))
+                .ui()
+                .w_px(Px(240.0))
+                .into_element(cx);
+
+            let ElementKind::Container(ContainerProps { layout, .. }) = &cell.kind else {
+                panic!("expected TableCell root to be a container element");
+            };
+            assert_eq!(layout.size.width, Length::Px(Px(240.0)));
+            assert!(contains_inherited_foreground(&cell));
+        });
+    }
+
+    #[test]
+    fn table_build_ui_builder_path_applies_layout_patches() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(300.0)),
+        );
+
+        let bg = Color {
+            r: 1.0,
+            g: 0.0,
+            b: 1.0,
+            a: 1.0,
+        };
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let table = Table::build(|_cx, _out| {})
+                .ui()
+                .bg(ColorRef::Color(bg))
+                .w_px(Px(320.0))
+                .into_element(cx);
+            let props = find_container_with_background(&table, bg).expect("table inner container");
+            assert_eq!(props.layout.size.width, Length::Px(Px(320.0)));
+            assert_eq!(props.layout.overflow, Overflow::Visible);
         });
     }
 

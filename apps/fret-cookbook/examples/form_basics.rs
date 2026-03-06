@@ -99,15 +99,6 @@ impl View for FormBasicsView {
         });
         cx.on_action_availability::<act::Reset>(|_host, _acx| CommandAvailability::Available);
 
-        let header = shadcn::CardHeader::new([
-            shadcn::CardTitle::new("Form basics").into_element(cx),
-            shadcn::CardDescription::new(
-                "A minimal form with validation (no extra form registry dependency).",
-            )
-            .into_element(cx),
-        ])
-        .into_element(cx);
-
         let name_input = ui::v_flex(|cx| {
             [
                 shadcn::Label::new("Name").into_element(cx),
@@ -190,11 +181,30 @@ impl View for FormBasicsView {
             .gap(Space::N3)
             .into_element(cx);
 
-        let card = shadcn::Card::new([header, shadcn::CardContent::new([body]).into_element(cx)])
-            .ui()
-            .w_full()
-            .max_w(Px(640.0))
-            .into_element(cx);
+        let card = shadcn::Card::build(|cx, out| {
+            out.push_ui(
+                cx,
+                shadcn::CardHeader::build(|cx, out| {
+                    out.push_ui(cx, shadcn::CardTitle::new("Form basics"));
+                    out.push_ui(
+                        cx,
+                        shadcn::CardDescription::new(
+                            "A minimal form with validation (no extra form registry dependency).",
+                        ),
+                    );
+                }),
+            );
+            out.push_ui(
+                cx,
+                shadcn::CardContent::build(|_cx, out| {
+                    out.push(body);
+                }),
+            );
+        })
+        .ui()
+        .w_full()
+        .max_w(Px(640.0))
+        .into_element(cx);
 
         fret_cookbook::scaffold::centered_page_muted(cx, TEST_ID_ROOT, card).into()
     }

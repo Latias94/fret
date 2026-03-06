@@ -32,6 +32,9 @@ Base UI `Tabs.Root` behavior.
 
 - Pass: Exposes composable `TabsRoot` / `TabsList` / `TabsTrigger` / `TabsContent`, and keeps
   `Tabs` + `TabsItem` recipe builder for convenience.
+- Note: Fret intentionally does not add a separate generic `compose()` builder for `Tabs` because
+  the composable part surface already matches upstream authoring directly; the builder is purely a
+  convenience layer, not a contract gap.
 - Pass: Supports controlled selection via `Model<Option<Arc<str>>>` and uncontrolled `default_value`.
 - Pass: Aligns with Base UI `onValueChange` intent via
   `Tabs::on_value_change(...)` and `TabsRoot::on_value_change(...)`.

@@ -75,12 +75,14 @@ actions:
 
 - Define typed unit actions with stable IDs via `fret::actions!([..])`.
 - Bind UI triggers via `.action(act::Something)` (or `cx.dispatch(...)` for programmatic dispatch).
-- Handle actions via `ViewCx::on_action*` hooks.
+- Handle actions via `ViewCx::on_action_notify_models`, `ViewCx::on_action_notify_transient`, and local `on_activate*` by default; keep raw `on_action_notify` for cookbook/reference host-side cases.
 
-MVU note:
+Authoring and historical note:
 
-- `fret::mvu::*` remains a compatibility surface for older codebases, but new templates and docs
-  should prefer `View` + typed actions.
+- New code should use `View` + typed unit actions (`fret::actions!`) and typed payload actions
+  (`fret::payload_actions!`) instead of historical MVU-era helpers.
+- In-tree `fret::mvu::*` has been removed; keep MVU discussion only as an external migration/history reference.
+- If you are migrating an older external MVU codebase, use `docs/workstreams/action-first-authoring-fearless-refactor-v1/MIGRATION_GUIDE.md` as the mapping guide rather than as an alternative authoring recommendation.
 
 ### 3) Use identity helpers early
 
@@ -141,7 +143,7 @@ Use `rg` to find patterns:
 - `.into_element(cx)` call sites
 - `Theme::global(...)` usage
 - `watch_model(...).layout()` chains
-- typed action handlers (`on_action*`) and action IDs
+- typed action handlers (`on_action_notify_models`, `on_action_notify_transient`, `on_activate*`, and rare cookbook/reference `on_action_notify`) plus action IDs
 
 ### Prefer templates and golden demos as migration references
 

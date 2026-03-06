@@ -150,9 +150,27 @@ impl View for EmbeddedViewportDemoView {
         .max_w(Px(980.0))
         .into_element(cx);
 
-        cx.on_action_notify_model_set::<act::PickSize640, usize>(self.size_preset.clone(), 0);
-        cx.on_action_notify_model_set::<act::PickSize960, usize>(self.size_preset.clone(), 1);
-        cx.on_action_notify_model_set::<act::PickSize1280, usize>(self.size_preset.clone(), 2);
+        cx.on_action_notify_models::<act::PickSize640>({
+            let size_preset = self.size_preset.clone();
+            move |models| {
+                let _ = models.update(&size_preset, |v| *v = 0);
+                true
+            }
+        });
+        cx.on_action_notify_models::<act::PickSize960>({
+            let size_preset = self.size_preset.clone();
+            move |models| {
+                let _ = models.update(&size_preset, |v| *v = 1);
+                true
+            }
+        });
+        cx.on_action_notify_models::<act::PickSize1280>({
+            let size_preset = self.size_preset.clone();
+            move |models| {
+                let _ = models.update(&size_preset, |v| *v = 2);
+                true
+            }
+        });
 
         let page = ui::container(|cx| {
             ui::children![
@@ -273,19 +291,20 @@ fn record_engine_frame(
 }
 
 pub fn run() -> anyhow::Result<()> {
-    fret::app_with_hooks("embedded-viewport-demo", init_window, view, |d| {
-        d.viewport_input(embedded::handle_viewport_input)
-            .record_engine_frame(record_engine_frame)
-    })?
-    .with_main_window("embedded_viewport_demo", (1120.0, 720.0))
-    .init_app(|app| {
-        shadcn::shadcn_themes::apply_shadcn_new_york(
-            app,
-            shadcn::shadcn_themes::ShadcnBaseColor::Slate,
-            shadcn::shadcn_themes::ShadcnColorScheme::Light,
-        );
-        fret_icons_lucide::install_app(app);
-    })
-    .run()?;
+    FretApp::new("embedded-viewport-demo")
+        .window("embedded_viewport_demo", (1120.0, 720.0))
+        .ui_with_hooks(init_window, view, |d| {
+            d.viewport_input(embedded::handle_viewport_input)
+                .record_engine_frame(record_engine_frame)
+        })?
+        .init_app(|app| {
+            shadcn::shadcn_themes::apply_shadcn_new_york(
+                app,
+                shadcn::shadcn_themes::ShadcnBaseColor::Slate,
+                shadcn::shadcn_themes::ShadcnColorScheme::Light,
+            );
+            fret_icons_lucide::install_app(app);
+        })
+        .run()?;
     Ok(())
 }

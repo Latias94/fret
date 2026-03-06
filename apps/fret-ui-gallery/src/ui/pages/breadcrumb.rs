@@ -5,6 +5,7 @@ use crate::ui::snippets::breadcrumb as snippets;
 
 pub(super) fn preview_breadcrumb(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     let demo = snippets::demo::render(cx);
+    let usage = snippets::usage::render(cx);
     let basic = snippets::basic::render(cx);
     let custom_separator = snippets::custom_separator::render(cx);
     let dropdown = snippets::dropdown::render(cx);
@@ -16,6 +17,8 @@ pub(super) fn preview_breadcrumb(cx: &mut ElementContext<'_, App>) -> Vec<AnyEle
     let notes = doc_layout::notes(
         cx,
         [
+            "API reference: `ecosystem/fret-ui-shadcn/src/breadcrumb.rs`.",
+            "Breadcrumb already exposes both a compact builder and upstream-shaped primitives, so the main parity gap here is usage clarity rather than missing composition APIs.",
             "Prefer short, task-oriented labels and keep only the current page as non-clickable text.",
             "Use separators and collapse strategy (`BreadcrumbItem::ellipsis`) to keep paths readable in narrow sidebars.",
             "Dropdown and router-link samples use typed pressables/links (ADR 0115 avoids general Slot/`asChild` prop merging).",
@@ -26,13 +29,17 @@ pub(super) fn preview_breadcrumb(cx: &mut ElementContext<'_, App>) -> Vec<AnyEle
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview follows shadcn Breadcrumb docs order for quick lookup and side-by-side behavior checks.",
+            "Preview follows shadcn Breadcrumb docs flow: Demo -> Usage -> Custom Separator -> Dropdown -> Collapsed -> Link Component -> Responsive. Gallery also keeps a Basic and RTL check.",
         ),
         vec![
             DocSection::new("Demo", demo)
                 .title_test_id("ui-gallery-breadcrumb-section-title-demo")
                 .description("Basic breadcrumb recipe with ellipsis and current page.")
                 .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
+            DocSection::new("Usage", usage)
+                .title_test_id("ui-gallery-breadcrumb-section-title-usage")
+                .description("Copyable minimal usage for the compact `Breadcrumb` builder.")
+                .code_rust_from_file_region(snippets::usage::SOURCE, "example"),
             DocSection::new("Basic", basic)
                 .title_test_id("ui-gallery-breadcrumb-section-title-basic")
                 .description("A minimal breadcrumb list with three items.")

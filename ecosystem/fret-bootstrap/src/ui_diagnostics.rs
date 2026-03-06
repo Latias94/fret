@@ -7,7 +7,7 @@ use fret_core::{
 use fret_diag_protocol::{
     DevtoolsAppExitRequestV1, DevtoolsBundleDumpV1, DevtoolsBundleDumpedV1,
     DevtoolsScreenshotRequestV1, DevtoolsScreenshotResultV1, DiagTransportMessageV1,
-    UiSemanticsNodeGetAckV1, UiSemanticsNodeGetV1,
+    UiHitTestExplainAckV1, UiHitTestExplainV1, UiSemanticsNodeGetAckV1, UiSemanticsNodeGetV1,
 };
 use fret_diag_protocol::{
     UiActionScriptV1, UiActionScriptV2, UiActionStepV2, UiActivationPolicyV1, UiArtifactStatsV1,
@@ -99,6 +99,7 @@ mod script_steps_pointer;
 mod script_steps_pointer_session;
 mod script_steps_pointer_sweep;
 mod script_steps_scroll;
+mod script_steps_semantics;
 mod script_steps_slider;
 mod script_steps_visibility;
 mod script_steps_wait;
@@ -3625,8 +3626,10 @@ mod tests {
         svc.pending_script_run_id = Some(1);
 
         let mut app = App::new();
+        let mut services = FakeUiServices;
         let _ = svc.drive_script_for_window(
             &mut app,
+            &mut services,
             window,
             window_bounds,
             1.0,

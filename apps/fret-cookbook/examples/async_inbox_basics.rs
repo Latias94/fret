@@ -207,15 +207,6 @@ impl View for AsyncInboxBasicsView {
         let progress = cx.watch_model(&self.st.progress).layout().copied_or(0.0);
         let inbox_stats = self.st.inbox.stats();
 
-        let header = shadcn::CardHeader::new([
-            shadcn::CardTitle::new("Async inbox basics").into_element(cx),
-            shadcn::CardDescription::new(
-                "Background work sends data-only messages into an Inbox, drained at a runner boundary (ADR 0175).",
-            )
-            .into_element(cx),
-        ])
-        .into_element(cx);
-
         let start_button = shadcn::Button::new("Start background job")
             .variant(shadcn::ButtonVariant::Default)
             .size(shadcn::ButtonSize::Sm)
@@ -293,37 +284,59 @@ impl View for AsyncInboxBasicsView {
             .gap(Space::N3)
             .into_element(cx);
 
-        let card = shadcn::Card::new([header, shadcn::CardContent::new([body]).into_element(cx)])
-            .ui()
-            .w_full()
-            .max_w(Px(720.0))
-            .into_element(cx);
+        let card = shadcn::Card::build(|cx, out| {
+            out.push_ui(
+                cx,
+                shadcn::CardHeader::build(|cx, out| {
+                    out.push_ui(cx, shadcn::CardTitle::new("Async inbox basics"));
+                    out.push_ui(
+                        cx,
+                        shadcn::CardDescription::new(
+                            "Background work sends data-only messages into an Inbox, drained at a runner boundary (ADR 0175).",
+                        ),
+                    );
+                }),
+            );
+            out.push_ui(
+                cx,
+                shadcn::CardContent::build(|_cx, out| {
+                    out.push(body);
+                }),
+            );
+        })
+        .ui()
+        .w_full()
+        .max_w(Px(720.0))
+        .into_element(cx);
 
         cx.on_action_notify_model_update::<act::ClearLog, String>(
             self.st.log.clone(),
             String::clear,
         );
 
-        cx.on_action_notify::<act::Cancel>({
+        cx.on_action_notify_models::<act::Cancel>({
             let task = self.st.task.clone();
             let running = self.st.running.clone();
             let status = self.st.status.clone();
-            move |host, _acx| {
-                let _ = host.models_mut().update(&task, |slot| {
-                    if let Some(task) = slot.take() {
-                        task.cancel();
-                    }
-                });
+            move |models| {
+                let task_updated = models
+                    .update(&task, |slot| {
+                        if let Some(task) = slot.take() {
+                            task.cancel();
+                        }
+                    })
+                    .is_ok();
+                let running_updated = models.update(&running, |v| *v = false).is_ok();
+                let status_updated = models
+                    .update(&status, |v| *v = Arc::<str>::from("Cancelling?"))
+                    .is_ok();
 
-                let _ = host.models_mut().update(&running, |v| *v = false);
-                let _ = host
-                    .models_mut()
-                    .update(&status, |v| *v = Arc::<str>::from("Cancelling…"));
-
-                true
+                task_updated && running_updated && status_updated
             }
         });
 
+        // `Start` stays on the advanced helper because it combines model writes with
+        // host-side background scheduling (`spawn_background` + dispatcher wake).
         cx.on_action_notify::<act::Start>({
             let dispatcher = self.st.dispatcher.clone();
             let current_job = self.st.current_job.clone();

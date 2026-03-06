@@ -112,77 +112,74 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
         }))
         .into_element(cx);
 
-    let actions = ui_ai::ConfirmationActions::new(state_now, [reject_btn, approve_btn])
-        .test_id("ui-ai-confirmation-actions")
-        .into_element(cx);
+    let confirmation = match approval_now {
+        Some(approval) => {
+            let theme = Theme::global(&*cx.app).snapshot();
+            let success = theme
+                .color_by_key("success")
+                .unwrap_or_else(|| theme.color_token("primary"));
+            let destructive = theme.color_token("destructive");
 
-    let theme = Theme::global(&*cx.app).snapshot();
-    let success = theme
-        .color_by_key("success")
-        .unwrap_or_else(|| theme.color_token("primary"));
-    let destructive = theme.color_token("destructive");
-
-    let accepted = [
-        decl_icon::icon_with(
-            cx,
-            fret_icons::IconId::new_static("lucide.check"),
-            Some(fret_core::Px(16.0)),
-            Some(ColorRef::Color(success)),
-        ),
-        cx.text("You approved this tool execution"),
-    ];
-
-    let rejected = [
-        decl_icon::icon_with(
-            cx,
-            fret_icons::IconId::new_static("lucide.x"),
-            Some(fret_core::Px(16.0)),
-            Some(ColorRef::Color(destructive)),
-        ),
-        cx.text("You rejected this tool execution"),
-    ];
-
-    let request = ui_ai::ConfirmationRequest::new(
-        state_now,
-        [
-            cx.text("This tool wants to execute a query on the production database:"),
-            ui::v_flex(|cx| {
-                vec![decl_text::text_code_wrap(
-                    cx,
-                    "SELECT * FROM users WHERE role = 'admin'",
-                )]
-            })
-            .layout(LayoutRefinement::default().mt(Space::N2).w_full().min_w_0())
-            .gap(Space::N1)
-            .into_element(cx),
-        ],
-    )
-    .into_element(cx);
-
-    let mut confirmation = ui_ai::Confirmation::new(state_now)
-        .children([
-            ui_ai::ConfirmationTitle::new([
-                request,
-                ui_ai::ConfirmationAccepted::new(approval_now.clone(), state_now, accepted)
-                    .test_id("ui-ai-confirmation-accepted")
+            ui_ai::Confirmation::new(state_now)
+                .approval(approval)
+                .test_id("ui-ai-confirmation-root")
+                .children([
+                    ui_ai::ConfirmationTitle::new([
+                        ui_ai::ConfirmationRequest::new([
+                            cx.text(
+                                "This tool wants to execute a query on the production database:",
+                            ),
+                            ui::v_flex(|cx| {
+                                vec![decl_text::text_code_wrap(
+                                    cx,
+                                    "SELECT * FROM users WHERE role = 'admin'",
+                                )]
+                            })
+                            .layout(LayoutRefinement::default().mt(Space::N2).w_full().min_w_0())
+                            .into_element(cx),
+                        ])
+                        .into_element(cx),
+                        ui_ai::ConfirmationAccepted::new([
+                            decl_icon::icon_with(
+                                cx,
+                                fret_icons::IconId::new_static("lucide.check"),
+                                Some(fret_core::Px(16.0)),
+                                Some(ColorRef::Color(success)),
+                            ),
+                            cx.text("You approved this tool execution"),
+                        ])
+                        .test_id("ui-ai-confirmation-accepted")
+                        .into_element(cx),
+                        ui_ai::ConfirmationRejected::new([
+                            decl_icon::icon_with(
+                                cx,
+                                fret_icons::IconId::new_static("lucide.x"),
+                                Some(fret_core::Px(16.0)),
+                                Some(ColorRef::Color(destructive)),
+                            ),
+                            cx.text("You rejected this tool execution"),
+                        ])
+                        .test_id("ui-ai-confirmation-rejected")
+                        .into_element(cx),
+                    ])
                     .into_element(cx),
-                ui_ai::ConfirmationRejected::new(approval_now.clone(), state_now, rejected)
-                    .test_id("ui-ai-confirmation-rejected")
-                    .into_element(cx),
-            ])
+                    ui_ai::ConfirmationActions::new([reject_btn, approve_btn])
+                        .test_id("ui-ai-confirmation-actions")
+                        .into_element(cx),
+                ])
+                .into_element(cx)
+        }
+        None => ui_ai::Confirmation::new(state_now)
+            .test_id("ui-ai-confirmation-root")
             .into_element(cx),
-            actions,
-        ])
-        .test_id("ui-ai-confirmation-root");
-    if let Some(approval) = approval_now {
-        confirmation = confirmation.approval(approval);
-    }
-    let confirmation = confirmation.into_element(cx);
+    };
 
     ui::v_flex(move |cx| {
         vec![
             cx.text("Confirmation (AI Elements)"),
-            cx.text("Click to request, then approve to transition to accepted state."),
+            cx.text(
+                "Click to request, then approve or reject to transition between the canonical states.",
+            ),
             request_btn,
             confirmation,
         ]

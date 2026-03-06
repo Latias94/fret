@@ -145,6 +145,7 @@ impl ElementInstance {
 pub(crate) struct ElementRecord {
     pub element: GlobalElementId,
     pub instance: ElementInstance,
+    pub inherited_foreground: Option<Color>,
     pub semantics_decoration: Option<crate::element::SemanticsDecoration>,
     pub key_context: Option<Arc<str>>,
 }

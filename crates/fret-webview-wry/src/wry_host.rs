@@ -129,6 +129,20 @@ const CONSOLE_BRIDGE_JS: &str = r#"
 })();
 "#;
 
+fn page_load_events(
+    id: WebViewId,
+    url: Arc<str>,
+    nav: WebViewNavigationState,
+) -> [WebViewEvent; 2] {
+    [
+        WebViewEvent::UrlChanged {
+            id,
+            url: url.clone(),
+        },
+        WebViewEvent::NavigationStateChanged { id, state: nav },
+    ]
+}
+
 impl WryWebViewHost {
     pub fn new() -> Self {
         Self {
@@ -283,26 +297,7 @@ impl WryWebViewHost {
 
                                 if let Ok(mut map) = events_for_load.lock() {
                                     let q = map.entry(target_window_for_load).or_default();
-                                    q.push_back(WebViewEvent::ConsoleMessage {
-                                        id: id_for_load,
-                                        level: fret_webview::WebViewConsoleLevel::Log,
-                                        message: Arc::<str>::from(match event {
-                                            PageLoadEvent::Started => {
-                                                format!("load started: {}", url.as_ref())
-                                            }
-                                            PageLoadEvent::Finished => {
-                                                format!("load finished: {}", url.as_ref())
-                                            }
-                                        }),
-                                    });
-                                    q.push_back(WebViewEvent::UrlChanged {
-                                        id: id_for_load,
-                                        url: url.clone(),
-                                    });
-                                    q.push_back(WebViewEvent::NavigationStateChanged {
-                                        id: id_for_load,
-                                        state: nav,
-                                    });
+                                    q.extend(page_load_events(id_for_load, url, nav));
                                 }
                             })
                         },
@@ -340,6 +335,12 @@ impl WryWebViewHost {
                     }
                 }
                 WebViewRequest::Destroy { id } => {
+                    if let Some(instance) = self.instances.get(&id)
+                        && instance.window != window_id
+                    {
+                        unhandled.push(WebViewRequest::Destroy { id });
+                        continue;
+                    }
                     if let Some(inst) = self.instances.remove(&id) {
                         if let Ok(mut map) = self.events.lock() {
                             map.entry(inst.window)
@@ -354,6 +355,11 @@ impl WryWebViewHost {
                         // is not ready yet.
                         continue;
                     };
+
+                    if instance.window != window_id {
+                        unhandled.push(WebViewRequest::SetPlacement { id, placement });
+                        continue;
+                    }
 
                     if instance.last_placement == Some(placement) {
                         continue;
@@ -372,6 +378,10 @@ impl WryWebViewHost {
                         unhandled.push(WebViewRequest::LoadUrl { id, url });
                         continue;
                     };
+                    if instance.window != window_id {
+                        unhandled.push(WebViewRequest::LoadUrl { id, url });
+                        continue;
+                    }
                     // TODO: Consider tracking current URL and skipping no-op loads.
                     if let Ok(mut st) = instance.state.lock() {
                         st.pending = Some(PendingNav::LoadUrl);
@@ -379,12 +389,12 @@ impl WryWebViewHost {
                     if let Err(err) = instance.webview.load_url(url.as_ref()) {
                         warn!(?id, ?err, "wry webview load_url failed");
                         if let Ok(mut map) = self.events.lock() {
-                            map.entry(window_id)
-                                .or_default()
-                                .push_back(WebViewEvent::LoadFailed {
+                            map.entry(instance.window).or_default().push_back(
+                                WebViewEvent::LoadFailed {
                                     id,
                                     error: Arc::<str>::from(err.to_string()),
-                                });
+                                },
+                            );
                         }
                     }
                 }
@@ -393,6 +403,10 @@ impl WryWebViewHost {
                         unhandled.push(WebViewRequest::GoBack { id });
                         continue;
                     };
+                    if instance.window != window_id {
+                        unhandled.push(WebViewRequest::GoBack { id });
+                        continue;
+                    }
                     if let Ok(mut st) = instance.state.lock() {
                         st.pending = Some(PendingNav::Back);
                     }
@@ -405,6 +419,10 @@ impl WryWebViewHost {
                         unhandled.push(WebViewRequest::GoForward { id });
                         continue;
                     };
+                    if instance.window != window_id {
+                        unhandled.push(WebViewRequest::GoForward { id });
+                        continue;
+                    }
                     if let Ok(mut st) = instance.state.lock() {
                         st.pending = Some(PendingNav::Forward);
                     }
@@ -417,6 +435,10 @@ impl WryWebViewHost {
                         unhandled.push(WebViewRequest::Reload { id });
                         continue;
                     };
+                    if instance.window != window_id {
+                        unhandled.push(WebViewRequest::Reload { id });
+                        continue;
+                    }
                     if let Ok(mut st) = instance.state.lock() {
                         st.pending = Some(PendingNav::Reload);
                     }
@@ -477,5 +499,32 @@ impl WryWebViewHost {
 
     pub fn window_for(&self, id: WebViewId) -> Option<AppWindowId> {
         self.instances.get(&id).map(|inst| inst.window)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::sync::Arc;
+
+    use super::page_load_events;
+    use fret_webview::{WebViewEvent, WebViewId, WebViewNavigationState};
+
+    #[test]
+    fn page_load_events_do_not_emit_synthetic_console_logs() {
+        let events = page_load_events(
+            WebViewId(7),
+            Arc::<str>::from("https://example.com"),
+            WebViewNavigationState {
+                can_go_back: true,
+                can_go_forward: false,
+                is_loading: true,
+            },
+        );
+
+        assert!(matches!(&events[0], WebViewEvent::UrlChanged { .. }));
+        assert!(matches!(
+            &events[1],
+            WebViewEvent::NavigationStateChanged { .. }
+        ));
     }
 }

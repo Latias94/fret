@@ -39,14 +39,14 @@
     {
       "type": "scroll_into_view",
       "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
-      "target": { "kind": "test_id", "id": "ui-gallery-avatar-dropdown-trigger" },
-      "delta_y": -360.0,
+      "target": { "kind": "test_id", "id": "ui-gallery-avatar-dropdown-trigger-avatar" },
+      "delta_y": -520.0,
       "padding_px": 16.0,
       "timeout_frames": 1800
     },
     {
       "type": "click_stable",
-      "target": { "kind": "test_id", "id": "ui-gallery-avatar-dropdown-trigger" }
+      "target": { "kind": "test_id", "id": "ui-gallery-avatar-dropdown-trigger-avatar" }
     },
     {
       "type": "wait_until",
@@ -77,7 +77,7 @@
         "kind": "focus_is",
         "target": {
           "kind": "test_id",
-          "id": "ui-gallery-avatar-dropdown-trigger"
+          "id": "ui-gallery-avatar-dropdown-trigger-avatar"
         }
       },
       "timeout_frames": 240
@@ -86,3 +86,4 @@
     { "type": "capture_bundle", "label": "ui-gallery-avatar-dropdown-escape-focus-restore" }
   ]
 }
+

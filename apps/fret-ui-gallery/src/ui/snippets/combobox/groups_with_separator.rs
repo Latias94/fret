@@ -87,7 +87,6 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
         .a11y_label("Combobox groups with separator")
         .query_model(query.clone())
         .test_id_prefix("ui-gallery-combobox-groups-separator")
-        .trigger_test_id("ui-gallery-combobox-groups-separator-trigger")
         .group_separators(true)
         .groups([
             shadcn::ComboboxGroup::new()

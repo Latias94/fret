@@ -17,7 +17,6 @@ use fret_ui::{ElementContext, TextAreaStyle, TextInputStyle, Theme, UiHost, focu
 use fret_ui_kit::command::ElementCommandGatingExt as _;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
-use fret_ui_kit::declarative::current_color;
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::motion::{
     drive_tween_color_for_element, drive_tween_f32_for_element,
@@ -639,7 +638,7 @@ impl InputGroup {
                             } else {
                                 flex
                             };
-                            vec![cx.foreground_scope(muted_foreground, move |_cx| vec![content])]
+                            vec![content.inherit_foreground(muted_foreground)]
                         },
                     )
                 };
@@ -844,7 +843,7 @@ impl InputGroup {
                         let entry = ControlEntry {
                             element: control_element_id,
                             enabled: !disabled,
-                            action: ControlAction::Noop,
+                            action: ControlAction::FocusOnly,
                         };
                         let _ = cx.app.models_mut().update(&control_registry, |reg| {
                             reg.register_control(
@@ -1019,7 +1018,7 @@ impl InputGroup {
                                 } else {
                                     row
                                 };
-                                vec![cx.foreground_scope(muted_foreground, move |_cx| vec![row])]
+                                vec![row.inherit_foreground(muted_foreground)]
                             },
                         )
                     });
@@ -1088,7 +1087,7 @@ impl InputGroup {
                                 } else {
                                     row
                                 };
-                                vec![cx.foreground_scope(muted_foreground, move |_cx| vec![row])]
+                                vec![row.inherit_foreground(muted_foreground)]
                             },
                         )
                     });
@@ -1194,7 +1193,7 @@ impl InputGroup {
                         let entry = ControlEntry {
                             element: control_element_id,
                             enabled: !disabled,
-                            action: ControlAction::Noop,
+                            action: ControlAction::FocusOnly,
                         };
                         let _ = cx.app.models_mut().update(&control_registry, |reg| {
                             reg.register_control(
@@ -2041,50 +2040,50 @@ impl InputGroupButton {
                 };
 
                 let content = move |cx: &mut ElementContext<'_, H>| {
-                    current_color::scope_children(cx, fret_ui_kit::ColorRef::Color(fg), |cx| {
-                        let icon_px = Px(16.0);
+                    let icon_px = Px(16.0);
 
-                        let mut row = Vec::new();
-                        if let Some(icon) = icon {
+                    let mut row = Vec::new();
+                    if let Some(icon) = icon {
+                        row.push(decl_icon::icon_with(cx, icon, Some(icon_px), None));
+                    } else {
+                        if let Some(icon) = leading_icon {
                             row.push(decl_icon::icon_with(cx, icon, Some(icon_px), None));
-                        } else {
-                            if let Some(icon) = leading_icon {
-                                row.push(decl_icon::icon_with(cx, icon, Some(icon_px), None));
-                            }
-
-                            if !label.is_empty() {
-                                let mut style = typography::fixed_line_box_style(
-                                    FontId::ui(),
-                                    text_px,
-                                    line_height,
-                                );
-                                style.weight = FontWeight::MEDIUM;
-                                row.push(cx.text_props(TextProps {
-                                    layout: LayoutStyle {
-                                        size: fret_ui::element::SizeStyle {
-                                            width: Length::Auto,
-                                            height: Length::Px(line_height),
-                                            ..Default::default()
-                                        },
-                                        ..Default::default()
-                                    },
-                                    text: label,
-                                    style: Some(style),
-                                    color: Some(fg),
-                                    wrap: TextWrap::None,
-                                    overflow: TextOverflow::Clip,
-                                    align: fret_core::TextAlign::Start,
-                                    ink_overflow: Default::default(),
-                                }));
-                            }
-                            row.extend(children);
-
-                            if let Some(icon) = trailing_icon {
-                                row.push(decl_icon::icon_with(cx, icon, Some(icon_px), None));
-                            }
                         }
 
-                        vec![cx.flex(
+                        if !label.is_empty() {
+                            let mut style = typography::fixed_line_box_style(
+                                FontId::ui(),
+                                text_px,
+                                line_height,
+                            );
+                            style.weight = FontWeight::MEDIUM;
+                            row.push(cx.text_props(TextProps {
+                                layout: LayoutStyle {
+                                    size: fret_ui::element::SizeStyle {
+                                        width: Length::Auto,
+                                        height: Length::Px(line_height),
+                                        ..Default::default()
+                                    },
+                                    ..Default::default()
+                                },
+                                text: label,
+                                style: Some(style),
+                                color: Some(fg),
+                                wrap: TextWrap::None,
+                                overflow: TextOverflow::Clip,
+                                align: fret_core::TextAlign::Start,
+                                ink_overflow: Default::default(),
+                            }));
+                        }
+                        row.extend(children);
+
+                        if let Some(icon) = trailing_icon {
+                            row.push(decl_icon::icon_with(cx, icon, Some(icon_px), None));
+                        }
+                    }
+
+                    vec![
+                        cx.flex(
                             FlexProps {
                                 layout: LayoutStyle {
                                     size: fret_ui::element::SizeStyle {
@@ -2106,8 +2105,9 @@ impl InputGroupButton {
                                 wrap: false,
                             },
                             move |_cx| row,
-                        )]
-                    })
+                        )
+                        .inherit_foreground(fg),
+                    ]
                 };
 
                 (pressable_props, chrome_props, content)
@@ -2258,16 +2258,31 @@ mod tests {
     }
 
     fn find_foreground_scope_with_color(node: &AnyElement, color: Color) -> bool {
-        let matches = match &node.kind {
-            ElementKind::ForegroundScope(props) => props.foreground == Some(color),
-            _ => false,
-        };
+        let matches = node.inherited_foreground == Some(color)
+            || match &node.kind {
+                ElementKind::ForegroundScope(props) => props.foreground == Some(color),
+                _ => false,
+            };
         if matches {
             return true;
         }
         node.children
             .iter()
             .any(|c| find_foreground_scope_with_color(c, color))
+    }
+
+    fn find_first_inherited_foreground_node(node: &AnyElement) -> Option<&AnyElement> {
+        if node.inherited_foreground.is_some() {
+            return Some(node);
+        }
+        node.children
+            .iter()
+            .find_map(find_first_inherited_foreground_node)
+    }
+
+    fn contains_foreground_scope(node: &AnyElement) -> bool {
+        matches!(node.kind, ElementKind::ForegroundScope(_))
+            || node.children.iter().any(contains_foreground_scope)
     }
 
     #[test]
@@ -2513,7 +2528,38 @@ mod tests {
 
                 assert!(
                     find_foreground_scope_with_color(&el, muted),
-                    "expected addons to stamp a ForegroundScope with muted-foreground"
+                    "expected addons to stamp inherited foreground with muted-foreground"
+                );
+            },
+        );
+    }
+
+    #[test]
+    fn input_group_button_content_attaches_foreground_without_wrapper() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+
+        fret_ui::elements::with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "input_group_button_fg",
+            |cx| {
+                let theme = Theme::global(&*cx.app);
+                let (_, _, _, _, expected_fg) = variant_colors(theme, ButtonVariant::Ghost);
+
+                let el = InputGroupButton::new("Search")
+                    .leading_icon(fret_icons::IconId::new_static("lucide.search"))
+                    .trailing_icon(fret_icons::IconId::new_static("lucide.chevron-right"))
+                    .into_element(cx);
+
+                let inherited = find_first_inherited_foreground_node(&el)
+                    .expect("expected input-group button subtree to carry inherited foreground");
+                assert_eq!(inherited.inherited_foreground, Some(expected_fg));
+                assert!(
+                    !contains_foreground_scope(&el),
+                    "expected input-group button content to attach inherited foreground without inserting a ForegroundScope"
                 );
             },
         );

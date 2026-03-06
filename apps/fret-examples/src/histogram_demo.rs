@@ -4,7 +4,7 @@ use fret_app::{App, Effect, WindowRequest};
 use fret_core::scene::Color;
 use fret_core::{AppWindowId, Event};
 use fret_launch::{
-    WindowCreateSpec, WinitAppDriver, WinitEventContext, WinitRenderContext, WinitRunnerConfig,
+    FnDriver, WinitEventContext, WinitHotReloadContext, WinitRenderContext, WinitRunnerConfig,
 };
 use fret_plot::retained::{
     HistogramPlotCanvas, HistogramPlotModel, HistogramSeries, LinePlotStyle, PlotOutput, PlotState,
@@ -113,120 +113,112 @@ impl HistogramDemoDriver {
     }
 }
 
-impl WinitAppDriver for HistogramDemoDriver {
-    type WindowState = HistogramDemoWindowState;
+fn create_window_state(
+    _driver: &mut HistogramDemoDriver,
+    app: &mut App,
+    window: AppWindowId,
+) -> HistogramDemoWindowState {
+    HistogramDemoDriver::build_ui(app, window)
+}
 
-    fn create_window_state(&mut self, app: &mut App, window: AppWindowId) -> Self::WindowState {
-        Self::build_ui(app, window)
-    }
+fn hot_reload_window(
+    _driver: &mut HistogramDemoDriver,
+    context: WinitHotReloadContext<'_, HistogramDemoWindowState>,
+) {
+    let WinitHotReloadContext {
+        app, window, state, ..
+    } = context;
 
-    fn hot_reload_window(
-        &mut self,
-        app: &mut App,
-        _services: &mut dyn fret_core::UiServices,
-        window: AppWindowId,
-        state: &mut Self::WindowState,
-    ) {
-        crate::hotpatch::reset_ui_tree(app, window, &mut state.ui);
-        state.root = None;
-    }
+    crate::hotpatch::reset_ui_tree(app, window, &mut state.ui);
+    state.root = None;
+}
 
-    fn handle_event(&mut self, context: WinitEventContext<'_, Self::WindowState>, event: &Event) {
-        let WinitEventContext {
-            app,
-            services,
-            window,
-            state,
+fn handle_event(
+    _driver: &mut HistogramDemoDriver,
+    context: WinitEventContext<'_, HistogramDemoWindowState>,
+    event: &Event,
+) {
+    let WinitEventContext {
+        app,
+        services,
+        window,
+        state,
+        ..
+    } = context;
+
+    match event {
+        Event::WindowCloseRequested
+        | Event::KeyDown {
+            key: fret_core::KeyCode::Escape,
             ..
-        } = context;
-
-        match event {
-            Event::WindowCloseRequested
-            | Event::KeyDown {
-                key: fret_core::KeyCode::Escape,
-                ..
-            } => {
-                app.push_effect(Effect::Window(WindowRequest::Close(window)));
-                return;
-            }
-            _ => {
-                state.ui.dispatch_event(app, services, event);
-                if matches!(
-                    event,
-                    Event::Pointer(fret_core::PointerEvent::Up { .. }) | Event::KeyDown { .. }
-                ) {
-                    let output = state
-                        .plot_output
-                        .read(app, |_app, o| *o)
-                        .unwrap_or_default();
-                    if output.revision != state.last_logged_output_revision {
-                        state.last_logged_output_revision = output.revision;
-                        if let Some(query) = output.snapshot.query {
-                            tracing::info!(
-                                "query: x=[{:.3}, {:.3}], y=[{:.3}, {:.3}]",
-                                query.x_min,
-                                query.x_max,
-                                query.y_min,
-                                query.y_max
-                            );
-                        }
+        } => {
+            app.push_effect(Effect::Window(WindowRequest::Close(window)));
+            return;
+        }
+        _ => {
+            state.ui.dispatch_event(app, services, event);
+            if matches!(
+                event,
+                Event::Pointer(fret_core::PointerEvent::Up { .. }) | Event::KeyDown { .. }
+            ) {
+                let output = state
+                    .plot_output
+                    .read(app, |_app, o| *o)
+                    .unwrap_or_default();
+                if output.revision != state.last_logged_output_revision {
+                    state.last_logged_output_revision = output.revision;
+                    if let Some(query) = output.snapshot.query {
+                        tracing::info!(
+                            "query: x=[{:.3}, {:.3}], y=[{:.3}, {:.3}]",
+                            query.x_min,
+                            query.x_max,
+                            query.y_min,
+                            query.y_max
+                        );
                     }
                 }
             }
         }
     }
+}
 
-    fn render(&mut self, context: WinitRenderContext<'_, Self::WindowState>) {
-        let WinitRenderContext {
-            app,
-            services,
-            window,
-            state,
-            bounds,
-            scale_factor,
-            scene,
-        } = context;
+fn render(
+    _driver: &mut HistogramDemoDriver,
+    context: WinitRenderContext<'_, HistogramDemoWindowState>,
+) {
+    let WinitRenderContext {
+        app,
+        services,
+        window,
+        state,
+        bounds,
+        scale_factor,
+        scene,
+    } = context;
 
-        let root = state.root.get_or_insert_with(|| {
-            let style = LinePlotStyle {
-                series_tooltip: SeriesTooltipMode::NearestAtCursor,
-                ..Default::default()
-            };
-            let canvas = HistogramPlotCanvas::new(state.plot.clone())
-                .style(style)
-                .state(state.plot_state.clone())
-                .output(state.plot_output.clone());
-            let node = HistogramPlotCanvas::create_node(&mut state.ui, canvas);
-            state.ui.set_root(node);
-            node
-        });
+    let root = state.root.get_or_insert_with(|| {
+        let style = LinePlotStyle {
+            series_tooltip: SeriesTooltipMode::NearestAtCursor,
+            ..Default::default()
+        };
+        let canvas = HistogramPlotCanvas::new(state.plot.clone())
+            .style(style)
+            .state(state.plot_state.clone())
+            .output(state.plot_output.clone());
+        let node = HistogramPlotCanvas::create_node(&mut state.ui, canvas);
+        state.ui.set_root(node);
+        node
+    });
 
-        state.ui.set_root(*root);
-        state.ui.request_semantics_snapshot();
-        state.ui.ingest_paint_cache_source(scene);
+    state.ui.set_root(*root);
+    state.ui.request_semantics_snapshot();
+    state.ui.ingest_paint_cache_source(scene);
 
-        scene.clear();
-        let mut frame =
-            fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
-        frame.layout_all();
-        frame.paint_all(scene);
-    }
-
-    fn window_create_spec(
-        &mut self,
-        _app: &mut App,
-        _request: &fret_app::CreateWindowRequest,
-    ) -> Option<WindowCreateSpec> {
-        None
-    }
-
-    fn window_created(
-        &mut self,
-        _app: &mut App,
-        _request: &fret_app::CreateWindowRequest,
-        _new_window: AppWindowId,
-    ) {
-    }
+    scene.clear();
+    let mut frame =
+        fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
+    frame.layout_all();
+    frame.paint_all(scene);
 }
 
 pub fn build_app() -> App {
@@ -245,8 +237,16 @@ pub fn build_runner_config() -> WinitRunnerConfig {
     }
 }
 
-pub fn build_driver() -> impl WinitAppDriver {
-    HistogramDemoDriver::default()
+fn build_fn_driver() -> FnDriver<HistogramDemoDriver, HistogramDemoWindowState> {
+    FnDriver::new(
+        HistogramDemoDriver::default(),
+        create_window_state,
+        handle_event,
+        render,
+    )
+    .with_hooks(|hooks| {
+        hooks.hot_reload_window = Some(hot_reload_window);
+    })
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -262,9 +262,9 @@ pub fn run() -> anyhow::Result<()> {
 
     let app = build_app();
     let config = build_runner_config();
-    let driver = build_driver();
+    let driver = build_fn_driver();
 
-    crate::run_native_demo(config, app, driver).context("run histogram_demo app")
+    crate::run_native_with_compat_driver(config, app, driver).context("run histogram_demo app")
 }
 
 #[cfg(target_arch = "wasm32")]

@@ -1,10 +1,14 @@
+use std::marker::PhantomData;
 use std::sync::Arc;
 
 use fret_core::{Px, TextWrap};
 use fret_ui::element::{AnyElement, ElementKind};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Space, ui};
+use fret_ui_kit::{
+    ChromeRefinement, ColorRef, LayoutRefinement, Space, UiChildIntoElement,
+    UiHostBoundIntoElement, UiPatch, UiPatchTarget, UiSupportsChrome, UiSupportsLayout, ui,
+};
 
 use crate::layout as shadcn_layout;
 use crate::surface_slot::{ShadcnSurfaceSlot, with_surface_slot_provider};
@@ -123,6 +127,20 @@ impl Card {
         }
     }
 
+    /// Builder-first variant that collects children inside the card size provider.
+    pub fn build<H: UiHost, B>(build: B) -> CardBuild<H, B>
+    where
+        B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+    {
+        CardBuild {
+            build: Some(build),
+            size: CardSize::Default,
+            chrome: ChromeRefinement::default(),
+            layout: LayoutRefinement::default(),
+            _phantom: PhantomData,
+        }
+    }
+
     pub fn size(mut self, size: CardSize) -> Self {
         self.size = size;
         self
@@ -167,16 +185,15 @@ impl Card {
 
             // Cards behave like block containers in shadcn/ui examples: their sections are expected to
             // stretch to the card width unless explicitly constrained.
-            cx.foreground_scope(fg, |cx| {
-                [shadcn_layout::container_vstack(
-                    cx,
-                    props,
-                    shadcn_layout::VStackProps::default()
-                        .gap(gap)
-                        .layout(LayoutRefinement::default().w_full()),
-                    children,
-                )]
-            })
+            shadcn_layout::container_vstack(
+                cx,
+                props,
+                shadcn_layout::VStackProps::default()
+                    .gap(gap)
+                    .layout(LayoutRefinement::default().w_full()),
+                children,
+            )
+            .inherit_foreground(fg)
         })
     }
 }
@@ -188,7 +205,7 @@ pub fn card<H: UiHost, I>(
 where
     I: IntoIterator<Item = AnyElement>,
 {
-    Card::new(f(cx)).into_element(cx)
+    Card::build(move |cx, out| out.extend(f(cx))).into_element(cx)
 }
 
 /// Build a card and its sections inside a size provider.
@@ -203,8 +220,89 @@ pub fn card_sized<H: UiHost, I>(
 where
     I: IntoIterator<Item = AnyElement>,
 {
-    let children = with_card_size_provider(cx, size, |cx| f(cx).into_iter().collect::<Vec<_>>());
-    Card::new(children).size(size).into_element(cx)
+    Card::build(move |cx, out| out.extend(f(cx)))
+        .size(size)
+        .into_element(cx)
+}
+
+pub struct CardBuild<H, B> {
+    build: Option<B>,
+    size: CardSize,
+    chrome: ChromeRefinement,
+    layout: LayoutRefinement,
+    _phantom: PhantomData<fn() -> H>,
+}
+
+impl<H: UiHost, B> CardBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    pub fn size(mut self, size: CardSize) -> Self {
+        self.size = size;
+        self
+    }
+
+    pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
+        self.chrome = self.chrome.merge(style);
+        self
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
+    }
+
+    #[track_caller]
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let size = self.size;
+        let children = with_card_size_provider(cx, size, |cx| {
+            collect_built_card_children(cx, self.build.expect("expected card build closure"))
+        });
+        Card::new(children)
+            .size(size)
+            .refine_style(self.chrome)
+            .refine_layout(self.layout)
+            .into_element(cx)
+    }
+}
+
+impl<H: UiHost, B> UiPatchTarget for CardBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    fn apply_ui_patch(self, patch: UiPatch) -> Self {
+        self.refine_style(patch.chrome).refine_layout(patch.layout)
+    }
+}
+
+impl<H: UiHost, B> UiSupportsChrome for CardBuild<H, B> where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>)
+{
+}
+
+impl<H: UiHost, B> UiSupportsLayout for CardBuild<H, B> where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>)
+{
+}
+
+impl<H: UiHost, B> UiHostBoundIntoElement<H> for CardBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        CardBuild::into_element(self, cx)
+    }
+}
+
+impl<H: UiHost, B> UiChildIntoElement<H> for CardBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        CardBuild::into_element(self, cx)
+    }
 }
 
 pub fn card_content<H: UiHost, I>(
@@ -217,6 +315,15 @@ where
     with_surface_slot_provider(cx, ShadcnSurfaceSlot::CardContent, |cx| {
         CardContent::new(f(cx)).into_element(cx)
     })
+}
+
+fn collect_built_card_children<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    build: impl FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+) -> Vec<AnyElement> {
+    let mut out = Vec::new();
+    build(cx, &mut out);
+    out
 }
 
 #[derive(Debug)]
@@ -237,6 +344,21 @@ impl CardHeader {
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
             border_bottom: false,
+        }
+    }
+
+    /// Builder-first variant that collects children at `into_element(cx)` time.
+    pub fn build<H: UiHost, B>(build: B) -> CardHeaderBuild<H, B>
+    where
+        B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+    {
+        CardHeaderBuild {
+            build: Some(build),
+            size: None,
+            chrome: ChromeRefinement::default(),
+            layout: LayoutRefinement::default(),
+            border_bottom: false,
+            _phantom: PhantomData,
         }
     }
 
@@ -361,6 +483,95 @@ impl CardHeader {
     }
 }
 
+pub struct CardHeaderBuild<H, B> {
+    build: Option<B>,
+    size: Option<CardSize>,
+    chrome: ChromeRefinement,
+    layout: LayoutRefinement,
+    border_bottom: bool,
+    _phantom: PhantomData<fn() -> H>,
+}
+
+impl<H: UiHost, B> CardHeaderBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    pub fn size(mut self, size: CardSize) -> Self {
+        self.size = Some(size);
+        self
+    }
+
+    pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
+        self.chrome = self.chrome.merge(style);
+        self
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
+    }
+
+    pub fn border_bottom(mut self, value: bool) -> Self {
+        self.border_bottom = value;
+        self
+    }
+
+    #[track_caller]
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let children = collect_built_card_children(
+            cx,
+            self.build.expect("expected card header build closure"),
+        );
+        let mut header = CardHeader::new(children)
+            .refine_style(self.chrome)
+            .refine_layout(self.layout)
+            .border_bottom(self.border_bottom);
+        if let Some(size) = self.size {
+            header = header.size(size);
+        }
+        header.into_element(cx)
+    }
+}
+
+impl<H: UiHost, B> UiPatchTarget for CardHeaderBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    fn apply_ui_patch(self, patch: UiPatch) -> Self {
+        self.refine_style(patch.chrome).refine_layout(patch.layout)
+    }
+}
+
+impl<H: UiHost, B> UiSupportsChrome for CardHeaderBuild<H, B> where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>)
+{
+}
+
+impl<H: UiHost, B> UiSupportsLayout for CardHeaderBuild<H, B> where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>)
+{
+}
+
+impl<H: UiHost, B> UiHostBoundIntoElement<H> for CardHeaderBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        CardHeaderBuild::into_element(self, cx)
+    }
+}
+
+impl<H: UiHost, B> UiChildIntoElement<H> for CardHeaderBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        CardHeaderBuild::into_element(self, cx)
+    }
+}
+
 #[derive(Debug)]
 pub struct CardAction {
     children: Vec<AnyElement>,
@@ -424,11 +635,11 @@ mod tests {
     use fret_app::App;
     use fret_core::{AppWindowId, Axis, Point, Rect, Size};
     use fret_ui::element::{
-        ColumnProps, ContainerProps, CrossAlign, ForegroundScopeProps, Length, Overflow,
-        SemanticsProps,
+        ColumnProps, ContainerProps, CrossAlign, Length, Overflow, SemanticsProps,
     };
     use fret_ui::elements::GlobalElementId;
-    use fret_ui_kit::MetricRef;
+    use fret_ui_kit::ui::UiElementSinkExt as _;
+    use fret_ui_kit::{MetricRef, UiBuilderHostBoundIntoElementExt as _, UiExt as _};
 
     #[test]
     fn card_action_marker_matches_semantics_decoration_test_id() {
@@ -483,20 +694,13 @@ mod tests {
             let py = fret_ui_kit::MetricRef::space(Space::N6).resolve(theme);
             let el = Card::new([cx.text("body")]).into_element(cx);
 
-            let ElementKind::ForegroundScope(ForegroundScopeProps { foreground, .. }) = &el.kind
-            else {
-                panic!("expected Card root to install a ForegroundScope wrapper");
-            };
             assert_eq!(
-                *foreground,
+                el.inherited_foreground,
                 Some(fg),
-                "expected Card to install `text-card-foreground` behavior via ForegroundScope"
+                "expected Card to install `text-card-foreground` behavior on the existing root"
             );
 
-            let card = el
-                .children
-                .first()
-                .unwrap_or_else(|| panic!("expected ForegroundScope wrapper to have one child"));
+            let card = &el;
             let ElementKind::Container(ContainerProps {
                 layout, padding, ..
             }) = &card.kind
@@ -701,6 +905,295 @@ mod tests {
     }
 
     #[test]
+    fn card_header_build_matches_eager_defaults() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(300.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let eager = CardHeader::new(Vec::<AnyElement>::new()).into_element(cx);
+            let built = CardHeader::build(|_cx, _out| {}).into_element(cx);
+
+            let ElementKind::Container(ContainerProps {
+                padding: eager_padding,
+                ..
+            }) = &eager.kind
+            else {
+                panic!("expected eager CardHeader to be a container element");
+            };
+            let ElementKind::Container(ContainerProps {
+                padding: built_padding,
+                ..
+            }) = &built.kind
+            else {
+                panic!("expected built CardHeader to be a container element");
+            };
+
+            assert_eq!(built_padding.top, eager_padding.top);
+            assert_eq!(built_padding.right, eager_padding.right);
+            assert_eq!(built_padding.bottom, eager_padding.bottom);
+            assert_eq!(built_padding.left, eager_padding.left);
+        });
+    }
+
+    #[test]
+    fn card_build_matches_eager_defaults() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(300.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let eager = Card::new(Vec::<AnyElement>::new()).into_element(cx);
+            let built = Card::build(|_cx, _out| {}).into_element(cx);
+
+            let eager_foreground = eager.inherited_foreground;
+            let built_foreground = built.inherited_foreground;
+            assert_eq!(built_foreground, eager_foreground);
+
+            let ElementKind::Container(ContainerProps {
+                layout: eager_layout,
+                padding: eager_padding,
+                ..
+            }) = &eager.kind
+            else {
+                panic!("expected eager Card root to be a container element");
+            };
+            let ElementKind::Container(ContainerProps {
+                layout: built_layout,
+                padding: built_padding,
+                ..
+            }) = &built.kind
+            else {
+                panic!("expected built Card root to be a container element");
+            };
+
+            assert_eq!(built_layout.overflow, eager_layout.overflow);
+            assert_eq!(built_layout.size.width, eager_layout.size.width);
+            assert_eq!(built_padding.top, eager_padding.top);
+            assert_eq!(built_padding.right, eager_padding.right);
+            assert_eq!(built_padding.bottom, eager_padding.bottom);
+            assert_eq!(built_padding.left, eager_padding.left);
+        });
+    }
+
+    #[test]
+    fn card_build_children_macro_accepts_host_bound_builders() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(300.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let children = ui::children![cx;
+                Card::build(|_cx, _out| {}).ui().w_full(),
+                CardHeader::build(|_cx, _out| {}).ui().w_full(),
+                CardContent::build(|_cx, _out| {}).ui().w_full(),
+            ];
+
+            assert_eq!(children.len(), 3);
+            assert!(matches!(children[0].kind, ElementKind::Container(_)));
+            assert!(children[0].inherited_foreground.is_some());
+            assert!(matches!(children[1].kind, ElementKind::Container(_)));
+            assert!(matches!(children[2].kind, ElementKind::Container(_)));
+        });
+    }
+
+    #[test]
+    fn card_build_push_ui_accepts_host_bound_builders() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(300.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let mut out = Vec::new();
+            out.push_ui(cx, Card::build(|_cx, _out| {}));
+            out.push_ui(cx, CardHeader::build(|_cx, _out| {}));
+            out.push_ui(cx, CardContent::build(|_cx, _out| {}));
+
+            assert_eq!(out.len(), 3);
+            assert!(matches!(out[0].kind, ElementKind::Container(_)));
+            assert!(out[0].inherited_foreground.is_some());
+            assert!(matches!(out[1].kind, ElementKind::Container(_)));
+            assert!(matches!(out[2].kind, ElementKind::Container(_)));
+        });
+    }
+
+    #[test]
+    fn card_build_ui_builder_path_applies_layout_patches() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(300.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let theme = Theme::global(&*cx.app);
+            let background = theme.color_token("background");
+            let border = theme.color_token("border");
+
+            let card = Card::build(|_cx, _out| {})
+                .ui()
+                .bg(ColorRef::Color(background))
+                .border_1()
+                .border_color(ColorRef::Color(border))
+                .max_w(Px(320.0))
+                .into_element(cx);
+            let header = CardHeader::build(|_cx, _out| {})
+                .ui()
+                .max_w(Px(240.0))
+                .into_element(cx);
+            let content = CardContent::build(|_cx, _out| {})
+                .ui()
+                .max_w(Px(200.0))
+                .into_element(cx);
+
+            let ElementKind::Container(ContainerProps {
+                layout: card_layout,
+                background: card_background,
+                border_color: card_border_color,
+                ..
+            }) = &card.kind
+            else {
+                panic!("expected ui()-patched Card root to be a container element");
+            };
+            let ElementKind::Container(ContainerProps {
+                layout: header_layout,
+                ..
+            }) = &header.kind
+            else {
+                panic!("expected ui()-patched CardHeader to be a container element");
+            };
+            let ElementKind::Container(ContainerProps {
+                layout: content_layout,
+                ..
+            }) = &content.kind
+            else {
+                panic!("expected ui()-patched CardContent to be a container element");
+            };
+
+            assert_eq!(card_background, &Some(background));
+            assert_eq!(card_border_color, &Some(border));
+            assert_eq!(card_layout.size.max_width, Some(Length::Px(Px(320.0))));
+            assert_eq!(header_layout.size.max_width, Some(Length::Px(Px(240.0))));
+            assert_eq!(content_layout.size.max_width, Some(Length::Px(Px(200.0))));
+        });
+    }
+
+    #[test]
+    fn card_build_provides_inherited_sm_size_to_sections() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(300.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            fn find_descendant_with_children<'a>(
+                root: &'a AnyElement,
+                child_count: usize,
+            ) -> &'a AnyElement {
+                let mut stack = vec![root];
+                while let Some(node) = stack.pop() {
+                    if node.children.len() >= child_count {
+                        return node;
+                    }
+                    for child in node.children.iter().rev() {
+                        stack.push(child);
+                    }
+                }
+                panic!("expected descendant with at least {child_count} children");
+            }
+
+            let theme = Theme::global(&*cx.app);
+            let px_sm = MetricRef::space(Space::N4).resolve(theme);
+            let built = Card::build(|cx, out| {
+                out.push(CardHeader::build(|_cx, _out| {}).into_element(cx));
+                out.push(CardContent::build(|_cx, _out| {}).into_element(cx));
+            })
+            .size(CardSize::Sm)
+            .into_element(cx);
+
+            let stack = find_descendant_with_children(&built, 2);
+            let header = stack
+                .children
+                .first()
+                .unwrap_or_else(|| panic!("expected built Card header child"));
+            let content = stack
+                .children
+                .get(1)
+                .unwrap_or_else(|| panic!("expected built Card content child"));
+
+            let ElementKind::Container(ContainerProps {
+                padding: header_padding,
+                ..
+            }) = &header.kind
+            else {
+                panic!("expected built Card header to be a container element");
+            };
+            let ElementKind::Container(ContainerProps {
+                padding: content_padding,
+                ..
+            }) = &content.kind
+            else {
+                panic!("expected built Card content to be a container element");
+            };
+
+            assert_eq!(header_padding.left, px_sm.into());
+            assert_eq!(header_padding.right, px_sm.into());
+            assert_eq!(content_padding.left, px_sm.into());
+            assert_eq!(content_padding.right, px_sm.into());
+        });
+    }
+
+    #[test]
+    fn card_content_build_matches_eager_defaults() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(300.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let eager = CardContent::new(Vec::<AnyElement>::new()).into_element(cx);
+            let built = CardContent::build(|_cx, _out| {}).into_element(cx);
+
+            let ElementKind::Container(ContainerProps {
+                padding: eager_padding,
+                ..
+            }) = &eager.kind
+            else {
+                panic!("expected eager CardContent to be a container element");
+            };
+            let ElementKind::Container(ContainerProps {
+                padding: built_padding,
+                ..
+            }) = &built.kind
+            else {
+                panic!("expected built CardContent to be a container element");
+            };
+
+            assert_eq!(built_padding.top, eager_padding.top);
+            assert_eq!(built_padding.right, eager_padding.right);
+            assert_eq!(built_padding.bottom, eager_padding.bottom);
+            assert_eq!(built_padding.left, eager_padding.left);
+        });
+    }
+
+    #[test]
     fn card_header_border_bottom_adds_pb_6() {
         let window = AppWindowId::default();
         let mut app = App::new();
@@ -895,6 +1388,20 @@ impl CardContent {
         }
     }
 
+    /// Builder-first variant that collects children at `into_element(cx)` time.
+    pub fn build<H: UiHost, B>(build: B) -> CardContentBuild<H, B>
+    where
+        B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+    {
+        CardContentBuild {
+            build: Some(build),
+            size: None,
+            chrome: ChromeRefinement::default(),
+            layout: LayoutRefinement::default(),
+            _phantom: PhantomData,
+        }
+    }
+
     /// Explicitly set the card size for this section.
     ///
     /// Most compositions rely on `Card` installing a size provider; however, some callers build
@@ -946,6 +1453,88 @@ impl CardContent {
                 children,
             )
         })
+    }
+}
+
+pub struct CardContentBuild<H, B> {
+    build: Option<B>,
+    size: Option<CardSize>,
+    chrome: ChromeRefinement,
+    layout: LayoutRefinement,
+    _phantom: PhantomData<fn() -> H>,
+}
+
+impl<H: UiHost, B> CardContentBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    pub fn size(mut self, size: CardSize) -> Self {
+        self.size = Some(size);
+        self
+    }
+
+    pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
+        self.chrome = self.chrome.merge(style);
+        self
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
+    }
+
+    #[track_caller]
+    pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let children = collect_built_card_children(
+            cx,
+            self.build.expect("expected card content build closure"),
+        );
+        let mut content = CardContent::new(children)
+            .refine_style(self.chrome)
+            .refine_layout(self.layout);
+        if let Some(size) = self.size {
+            content = content.size(size);
+        }
+        content.into_element(cx)
+    }
+}
+
+impl<H: UiHost, B> UiPatchTarget for CardContentBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    fn apply_ui_patch(self, patch: UiPatch) -> Self {
+        self.refine_style(patch.chrome).refine_layout(patch.layout)
+    }
+}
+
+impl<H: UiHost, B> UiSupportsChrome for CardContentBuild<H, B> where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>)
+{
+}
+
+impl<H: UiHost, B> UiSupportsLayout for CardContentBuild<H, B> where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>)
+{
+}
+
+impl<H: UiHost, B> UiHostBoundIntoElement<H> for CardContentBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        CardContentBuild::into_element(self, cx)
+    }
+}
+
+impl<H: UiHost, B> UiChildIntoElement<H> for CardContentBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        CardContentBuild::into_element(self, cx)
     }
 }
 

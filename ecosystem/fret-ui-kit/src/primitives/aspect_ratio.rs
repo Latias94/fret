@@ -35,6 +35,19 @@ impl AspectRatio {
         }
     }
 
+    /// Starts a composable builder with the upstream default ratio (`1 / 1`).
+    ///
+    /// This matches the Radix/shadcn shape where `ratio` is optional and `children` are supplied
+    /// first, then refined via props.
+    pub fn with_child(child: AnyElement) -> Self {
+        Self::new(1.0, child)
+    }
+
+    pub fn ratio(mut self, ratio: f32) -> Self {
+        self.ratio = ratio;
+        self
+    }
+
     pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
         self.chrome = self.chrome.merge(style);
         self
@@ -105,6 +118,48 @@ mod tests {
             };
             assert_eq!(props.layout.aspect_ratio, Some(16.0 / 9.0));
             assert_eq!(props.layout.overflow, Overflow::Visible);
+        });
+    }
+
+    #[test]
+    fn aspect_ratio_with_child_defaults_to_square_ratio() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(200.0), Px(120.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let child = cx.container(Default::default(), |_cx| Vec::new());
+            let el = AspectRatio::with_child(child).into_element(cx);
+
+            let ElementKind::Container(props) = &el.kind else {
+                panic!("expected a container element");
+            };
+            assert_eq!(props.layout.aspect_ratio, Some(1.0));
+        });
+    }
+
+    #[test]
+    fn aspect_ratio_ratio_builder_overrides_default() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(200.0), Px(120.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let child = cx.container(Default::default(), |_cx| Vec::new());
+            let el = AspectRatio::with_child(child)
+                .ratio(4.0 / 3.0)
+                .into_element(cx);
+
+            let ElementKind::Container(props) = &el.kind else {
+                panic!("expected a container element");
+            };
+            assert_eq!(props.layout.aspect_ratio, Some(4.0 / 3.0));
         });
     }
 }

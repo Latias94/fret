@@ -16,8 +16,10 @@ pub(super) fn preview_skeleton(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
     let notes = doc_layout::notes(
         cx,
         [
+            "API reference: `ecosystem/fret-ui-shadcn/src/skeleton.rs` (Skeleton).",
+            "Skeleton is a visual placeholder primitive, so the main parity work here is sizing guidance rather than mechanism changes or composition APIs.",
             "Use Skeleton for loading placeholders, not empty states.",
-            "In Fret, `Skeleton::new()` does not impose size; use `Skeleton::block()` or `refine_layout` to set dimensions.",
+            "In Fret, `Skeleton::new()` does not impose size; use `Skeleton::block()` or `refine_layout(...)` to set dimensions.",
             "Prefer consistent sizes and spacing so content doesn't jump when loaded.",
             "Keep semantics grouped so screen readers can skip placeholder-only regions.",
         ],
@@ -25,7 +27,9 @@ pub(super) fn preview_skeleton(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
 
     let body = doc_layout::render_doc_page(
         cx,
-        Some("Use to show a placeholder while content is loading."),
+        Some(
+            "Preview follows shadcn Skeleton docs flow: Usage -> Demo -> Card. Fret gallery adds avatar/text/form/table/RTL variants for sizing audits.",
+        ),
         vec![
             DocSection::new("Usage", usage)
                 .description("Basic skeleton block.")

@@ -17,7 +17,6 @@ use fret_render::{
     ImageColorSpace, ImageDescriptor, Renderer, WgpuContext, write_rgba8_texture_region,
 };
 use fret_runtime::Model;
-use fret_ui::action::UiActionHost;
 use fret_ui::element::{
     ContainerProps, EffectLayerProps, LayoutStyle, Length, Overflow, PositionStyle, SpacerProps,
     TextProps,
@@ -218,25 +217,15 @@ fn upload_input_image(app: &mut App, context: &WgpuContext, renderer: &mut Rende
 }
 
 impl CustomEffectV2State {
-    fn reset(host: &mut dyn UiActionHost, st: &CustomEffectV2State) {
-        let _ = host.models_mut().update(&st.enabled, |v| *v = true);
-        let _ = host
-            .models_mut()
-            .update(&st.use_non_filterable_input, |v| *v = false);
-        let _ = host
-            .models_mut()
-            .update(&st.sampling, |v| *v = Some(Arc::from("linear")));
-        let _ = host.models_mut().update(&st.uv_span, |v| *v = vec![0.25]);
-        let _ = host
-            .models_mut()
-            .update(&st.input_strength, |v| *v = vec![0.35]);
-        let _ = host
-            .models_mut()
-            .update(&st.rim_strength, |v| *v = vec![0.65]);
-        let _ = host
-            .models_mut()
-            .update(&st.blur_radius_px, |v| *v = vec![10.0]);
-        let _ = host.models_mut().update(&st.debug_input, |v| *v = false);
+    fn reset(models: &mut fret_runtime::ModelStore, st: &CustomEffectV2State) {
+        let _ = models.update(&st.enabled, |v| *v = true);
+        let _ = models.update(&st.use_non_filterable_input, |v| *v = false);
+        let _ = models.update(&st.sampling, |v| *v = Some(Arc::from("linear")));
+        let _ = models.update(&st.uv_span, |v| *v = vec![0.25]);
+        let _ = models.update(&st.input_strength, |v| *v = vec![0.35]);
+        let _ = models.update(&st.rim_strength, |v| *v = vec![0.65]);
+        let _ = models.update(&st.blur_radius_px, |v| *v = vec![10.0]);
+        let _ = models.update(&st.debug_input, |v| *v = false);
     }
 }
 
@@ -258,10 +247,10 @@ impl View for CustomEffectV2View {
     }
 
     fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
-        cx.on_action_notify::<act::Reset>({
+        cx.on_action_notify_models::<act::Reset>({
             let st = self.clone_for_reset();
-            move |host, _acx| {
-                CustomEffectV2State::reset(host, &st);
+            move |models| {
+                CustomEffectV2State::reset(models, &st);
                 true
             }
         });

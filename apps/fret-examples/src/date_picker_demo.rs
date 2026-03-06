@@ -2,8 +2,8 @@ use anyhow::Context as _;
 use fret_app::{App, CommandId, Effect, Model, WindowRequest};
 use fret_core::{AppWindowId, Corners, Edges, Event, Px};
 use fret_launch::{
-    WindowCreateSpec, WinitAppDriver, WinitCommandContext, WinitEventContext, WinitRenderContext,
-    WinitRunnerConfig, WinitWindowContext,
+    FnDriver, WindowCreateSpec, WinitCommandContext, WinitEventContext, WinitHotReloadContext,
+    WinitRenderContext, WinitRunnerConfig, WinitWindowContext,
 };
 use fret_runtime::PlatformCapabilities;
 use fret_ui::declarative;
@@ -20,7 +20,7 @@ use fret_ui_shadcn::{Calendar, DatePicker, Space, Switch};
 use std::sync::Arc;
 use time::{OffsetDateTime, Weekday};
 
-struct DemoWindowState {
+pub struct DemoWindowState {
     ui: UiTree<App>,
     open: Model<bool>,
     month: Model<CalendarMonth>,
@@ -33,7 +33,7 @@ struct DemoWindowState {
 }
 
 #[derive(Default)]
-struct DatePickerDemoDriver;
+pub struct DatePickerDemoDriver;
 
 impl DatePickerDemoDriver {
     fn build_ui(app: &mut App, window: AppWindowId) -> DemoWindowState {
@@ -65,132 +65,140 @@ impl DatePickerDemoDriver {
     }
 }
 
-impl WinitAppDriver for DatePickerDemoDriver {
-    type WindowState = DemoWindowState;
+fn create_window_state(
+    _driver: &mut DatePickerDemoDriver,
+    app: &mut App,
+    window: AppWindowId,
+) -> DemoWindowState {
+    DatePickerDemoDriver::build_ui(app, window)
+}
 
-    fn create_window_state(&mut self, app: &mut App, window: AppWindowId) -> Self::WindowState {
-        Self::build_ui(app, window)
+fn hot_reload_window(
+    _driver: &mut DatePickerDemoDriver,
+    context: WinitHotReloadContext<'_, DemoWindowState>,
+) {
+    let WinitHotReloadContext {
+        app,
+        services: _,
+        window,
+        state,
+    } = context;
+    crate::hotpatch::reset_ui_tree(app, window, &mut state.ui);
+}
+
+fn handle_model_changes(
+    _driver: &mut DatePickerDemoDriver,
+    context: WinitWindowContext<'_, DemoWindowState>,
+    changed: &[fret_app::ModelId],
+) {
+    context
+        .state
+        .ui
+        .propagate_model_changes(context.app, changed);
+}
+
+fn handle_global_changes(
+    _driver: &mut DatePickerDemoDriver,
+    context: WinitWindowContext<'_, DemoWindowState>,
+    changed: &[std::any::TypeId],
+) {
+    context
+        .state
+        .ui
+        .propagate_global_changes(context.app, changed);
+}
+
+fn handle_command(
+    _driver: &mut DatePickerDemoDriver,
+    context: WinitCommandContext<'_, DemoWindowState>,
+    command: CommandId,
+) {
+    let WinitCommandContext {
+        app,
+        services,
+        window,
+        state,
+    } = context;
+
+    if state.ui.dispatch_command(app, services, &command) {
+        return;
     }
 
-    fn hot_reload_window(
-        &mut self,
-        app: &mut App,
-        _services: &mut dyn fret_core::UiServices,
-        window: AppWindowId,
-        state: &mut Self::WindowState,
-    ) {
-        crate::hotpatch::reset_ui_tree(app, window, &mut state.ui);
-    }
-
-    fn handle_model_changes(
-        &mut self,
-        context: WinitWindowContext<'_, Self::WindowState>,
-        changed: &[fret_app::ModelId],
-    ) {
-        context
-            .state
-            .ui
-            .propagate_model_changes(context.app, changed);
-    }
-
-    fn handle_global_changes(
-        &mut self,
-        context: WinitWindowContext<'_, Self::WindowState>,
-        changed: &[std::any::TypeId],
-    ) {
-        context
-            .state
-            .ui
-            .propagate_global_changes(context.app, changed);
-    }
-
-    fn handle_command(
-        &mut self,
-        context: WinitCommandContext<'_, Self::WindowState>,
-        command: CommandId,
-    ) {
-        let WinitCommandContext {
-            app,
-            services,
-            window,
-            state,
-        } = context;
-
-        if state.ui.dispatch_command(app, services, &command) {
-            return;
-        }
-
-        match command.as_str() {
-            "date_picker_demo.close" => {
-                app.push_effect(Effect::Window(WindowRequest::Close(window)));
-            }
-            "date_picker_demo.reset_today" => {
-                let today = OffsetDateTime::now_utc().date();
-                let _ = app
-                    .models_mut()
-                    .update(&state.selected, |v| *v = Some(today));
-                let _ = app
-                    .models_mut()
-                    .update(&state.month, |m| *m = CalendarMonth::from_date(today));
-                app.request_redraw(window);
-            }
-            "date_picker_demo.clear" => {
-                let _ = app.models_mut().update(&state.selected, |v| *v = None);
-                app.request_redraw(window);
-            }
-            _ => {}
-        }
-    }
-
-    fn handle_event(&mut self, context: WinitEventContext<'_, Self::WindowState>, event: &Event) {
-        let WinitEventContext {
-            app,
-            services,
-            window,
-            state,
-        } = context;
-
-        if matches!(event, Event::WindowCloseRequested) {
+    match command.as_str() {
+        "date_picker_demo.close" => {
             app.push_effect(Effect::Window(WindowRequest::Close(window)));
-            return;
         }
-
-        if let Event::KeyDown { key, modifiers, .. } = event {
-            if !modifiers.ctrl && !modifiers.alt && !modifiers.shift && !modifiers.meta {
-                if *key == fret_core::KeyCode::Escape {
-                    app.push_effect(Effect::Window(WindowRequest::Close(window)));
-                    return;
-                }
-            }
+        "date_picker_demo.reset_today" => {
+            let today = OffsetDateTime::now_utc().date();
+            let _ = app
+                .models_mut()
+                .update(&state.selected, |v| *v = Some(today));
+            let _ = app
+                .models_mut()
+                .update(&state.month, |m| *m = CalendarMonth::from_date(today));
+            app.request_redraw(window);
         }
+        "date_picker_demo.clear" => {
+            let _ = app.models_mut().update(&state.selected, |v| *v = None);
+            app.request_redraw(window);
+        }
+        _ => {}
+    }
+}
 
-        state.ui.dispatch_event(app, services, event);
+fn handle_event(
+    _driver: &mut DatePickerDemoDriver,
+    context: WinitEventContext<'_, DemoWindowState>,
+    event: &Event,
+) {
+    let WinitEventContext {
+        app,
+        services,
+        window,
+        state,
+    } = context;
+
+    if matches!(event, Event::WindowCloseRequested) {
+        app.push_effect(Effect::Window(WindowRequest::Close(window)));
+        return;
     }
 
-    fn render(&mut self, context: WinitRenderContext<'_, Self::WindowState>) {
-        let scale_factor = context.scale_factor;
-        let WinitRenderContext {
-            app,
-            services,
-            window,
-            state,
-            bounds,
-            scene,
-            ..
-        } = context;
+    if let Event::KeyDown { key, modifiers, .. } = event {
+        if !modifiers.ctrl && !modifiers.alt && !modifiers.shift && !modifiers.meta {
+            if *key == fret_core::KeyCode::Escape {
+                app.push_effect(Effect::Window(WindowRequest::Close(window)));
+                return;
+            }
+        }
+    }
 
-        OverlayController::begin_frame(app, window);
+    state.ui.dispatch_event(app, services, event);
+}
 
-        let open = state.open.clone();
-        let month = state.month.clone();
-        let selected = state.selected.clone();
-        let week_start_monday = state.week_start_monday.clone();
-        let show_outside_days = state.show_outside_days.clone();
-        let disable_outside_days = state.disable_outside_days.clone();
-        let disable_weekends = state.disable_weekends.clone();
-        let disabled = state.disabled.clone();
+fn render(_driver: &mut DatePickerDemoDriver, context: WinitRenderContext<'_, DemoWindowState>) {
+    let scale_factor = context.scale_factor;
+    let WinitRenderContext {
+        app,
+        services,
+        window,
+        state,
+        bounds,
+        scene,
+        ..
+    } = context;
 
-        let root =
+    OverlayController::begin_frame(app, window);
+
+    let open = state.open.clone();
+    let month = state.month.clone();
+    let selected = state.selected.clone();
+    let week_start_monday = state.week_start_monday.clone();
+    let show_outside_days = state.show_outside_days.clone();
+    let disable_outside_days = state.disable_outside_days.clone();
+    let disable_weekends = state.disable_weekends.clone();
+    let disabled = state.disabled.clone();
+
+    let root =
             declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds)
                 .render_root("date-picker-demo", move |cx| {
                     cx.observe_model(&open, Invalidation::Layout);
@@ -425,25 +433,44 @@ impl WinitAppDriver for DatePickerDemoDriver {
                     )]
                 });
 
-        state.ui.set_root(root);
-        OverlayController::render(&mut state.ui, app, services, window, bounds);
-        state.ui.request_semantics_snapshot();
-        state.ui.ingest_paint_cache_source(scene);
-        scene.clear();
+    state.ui.set_root(root);
+    OverlayController::render(&mut state.ui, app, services, window, bounds);
+    state.ui.request_semantics_snapshot();
+    state.ui.ingest_paint_cache_source(scene);
+    scene.clear();
 
-        let mut frame =
-            fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
-        frame.layout_all();
-        frame.paint_all(scene);
-    }
+    let mut frame =
+        fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
+    frame.layout_all();
+    frame.paint_all(scene);
+}
 
-    fn window_create_spec(
-        &mut self,
-        _app: &mut App,
-        _request: &fret_app::CreateWindowRequest,
-    ) -> Option<WindowCreateSpec> {
-        None
-    }
+fn window_create_spec(
+    _driver: &mut DatePickerDemoDriver,
+    _app: &mut App,
+    _request: &fret_app::CreateWindowRequest,
+) -> Option<WindowCreateSpec> {
+    None
+}
+
+fn configure_fn_driver_hooks(
+    hooks: &mut fret_launch::FnDriverHooks<DatePickerDemoDriver, DemoWindowState>,
+) {
+    hooks.hot_reload_window = Some(hot_reload_window);
+    hooks.handle_model_changes = Some(handle_model_changes);
+    hooks.handle_global_changes = Some(handle_global_changes);
+    hooks.handle_command = Some(handle_command);
+    hooks.window_create_spec = Some(window_create_spec);
+}
+
+pub fn build_fn_driver() -> FnDriver<DatePickerDemoDriver, DemoWindowState> {
+    FnDriver::new(
+        DatePickerDemoDriver::default(),
+        create_window_state,
+        handle_event,
+        render,
+    )
+    .with_hooks(configure_fn_driver_hooks)
 }
 
 pub fn run() -> anyhow::Result<()> {
@@ -465,6 +492,14 @@ pub fn run() -> anyhow::Result<()> {
         ..Default::default()
     };
 
-    crate::run_native_demo(config, app, DatePickerDemoDriver::default())
-        .context("run date_picker_demo app")
+    crate::run_native_with_fn_driver_with_hooks(
+        config,
+        app,
+        DatePickerDemoDriver::default(),
+        create_window_state,
+        handle_event,
+        render,
+        configure_fn_driver_hooks,
+    )
+    .context("run date_picker_demo app")
 }

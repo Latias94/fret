@@ -1,5 +1,24 @@
 use super::prelude::*;
 
+pub(super) fn with_scoped_foreground<H: UiHost, R>(
+    cx: &mut PaintCx<'_, H>,
+    foreground: Option<Color>,
+    f: impl FnOnce(&mut PaintCx<'_, H>) -> R,
+) -> R {
+    let Some(foreground) = foreground else {
+        return f(cx);
+    };
+
+    let prev = cx.paint_style;
+    let mut next = prev;
+    next.foreground = Some(foreground);
+    cx.paint_style = next;
+
+    let out = f(cx);
+    cx.paint_style = prev;
+    out
+}
+
 pub(super) fn scrollbar_track_padding_px(track_main_axis: f32, padding: Px) -> f32 {
     padding.0.max(0.0).min(track_main_axis.max(0.0) * 0.5)
 }

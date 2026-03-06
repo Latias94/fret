@@ -7,3 +7,4 @@ pub mod invalid;
 pub mod pattern;
 pub mod rtl;
 pub mod separator;
+pub mod usage;

@@ -110,6 +110,7 @@ pub(super) fn preview_native_select(cx: &mut ElementContext<'_, App>) -> Vec<Any
     };
 
     let demo = snippets::demo::render(cx, demo_value, demo_open);
+    let usage = snippets::usage::render(cx);
     let label = snippets::label::render(cx);
     let with_groups = snippets::with_groups::render(cx, groups_value, groups_open);
     let disabled_state = snippets::disabled::render(cx, disabled_value, disabled_open);
@@ -121,6 +122,7 @@ pub(super) fn preview_native_select(cx: &mut ElementContext<'_, App>) -> Vec<Any
         [
             "API reference: `ecosystem/fret-ui-shadcn/src/native_select.rs`.",
             "Gallery alignment note: upstream NativeSelect is a DOM `<select>`; Fret's `NativeSelect` is a popover-backed fallback today (platform-native pickers TBD).",
+            "NativeSelect already exposes the important authoring surface (`new`, `new_controllable`, options, optgroups, control_id), so the main parity gap here is usage clarity rather than missing composition APIs.",
             "Use `Select` for rich overlays and custom interactions; revisit `NativeSelect` when platform-native select widgets are implemented per backend.",
         ],
     );
@@ -128,15 +130,18 @@ pub(super) fn preview_native_select(cx: &mut ElementContext<'_, App>) -> Vec<Any
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview follows shadcn Native Select docs: Demo, With Groups, Disabled State, Invalid State.",
+            "Preview follows shadcn Native Select docs flow: Demo -> Usage -> With Groups -> Disabled State -> Invalid State. RTL remains a Fret-specific smoke check.",
         ),
         vec![
             DocSection::new("Demo", demo)
                 .description("A styled native-select-like control (upstream is a DOM `<select>`).")
                 .no_shell()
                 .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
+            DocSection::new("Usage", usage)
+                .description("Copyable minimal usage for `NativeSelect`.")
+                .code_rust_from_file_region(snippets::usage::SOURCE, "example"),
             DocSection::new("Label Association", label)
-                .description("Use `FieldLabel::for_control` + `NativeSelect::control_id` to forward focus on label click.")
+                .description("Use `FieldLabel::for_control` + `NativeSelect::control_id` so label clicks route to the trigger and open the popup.")
                 .test_id_prefix("ui-gallery-native-select-label")
                 .code_rust_from_file_region(snippets::label::SOURCE, "example"),
             DocSection::new("With Groups", with_groups)

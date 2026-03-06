@@ -5,6 +5,7 @@ use crate::ui::snippets::menubar as snippets;
 
 pub(super) fn preview_menubar(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     let demo = snippets::demo::render(cx);
+    let usage = snippets::usage::render(cx);
     let checkbox = snippets::checkbox::render(cx);
     let radio = snippets::radio::render(cx);
     let submenu = snippets::submenu::render(cx);
@@ -15,9 +16,9 @@ pub(super) fn preview_menubar(cx: &mut ElementContext<'_, App>) -> Vec<AnyElemen
     let notes = doc_layout::notes(
         cx,
         [
-            "Preview follows the upstream shadcn Menubar docs (v4 Base UI): Demo, Checkbox, Radio, Submenu, With Icons, RTL.",
+            "Preview follows the upstream shadcn Menubar docs (v4 Base UI): Demo, Usage, Checkbox, Radio, Submenu, With Icons, RTL.",
             "This page also includes a `Parts` section for the Trigger/Content authoring adapter surface.",
-            "Examples are snippet-backed: Preview ≡ Code (single source of truth).",
+            "Menubar already has a usable parts bridge, so the remaining parity gap here is mostly documentation clarity rather than missing mechanism.",
             "Keep `ui-gallery-menubar-*` test IDs stable; multiple diag scripts depend on them.",
         ],
     );
@@ -31,6 +32,11 @@ pub(super) fn preview_menubar(cx: &mut ElementContext<'_, App>) -> Vec<AnyElemen
             DocSection::new("Demo", demo)
                 .test_id_prefix("ui-gallery-menubar-demo")
                 .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
+            DocSection::new("Usage", usage)
+                .title_test_id("ui-gallery-section-usage-title")
+                .description("Copyable shadcn-style composition reference for Menubar.")
+                .test_id_prefix("ui-gallery-menubar-usage")
+                .code_rust_from_file_region(snippets::usage::SOURCE, "example"),
             DocSection::new("Checkbox", checkbox)
                 .test_id_prefix("ui-gallery-menubar-checkbox")
                 .code_rust_from_file_region(snippets::checkbox::SOURCE, "example"),

@@ -69,6 +69,7 @@ pub(super) fn preview_command_palette(
                 .descriptions([
                     "This section demonstrates action-first authoring using the ecosystem view runtime (`View` + `ViewCx`).",
                     "The button binds a stable `ActionId` via `.action(...)`, while the view root uses the default `cx.on_action_notify_models::<...>(...)` entrypoint for model updates.",
+                    "Advanced host-side action-handler cases stay in cookbook/reference docs; the gallery keeps the default teaching path small on purpose.",
                 ])
                 .code_rust_from_file_region(
                     snippets::action_first_view::SOURCE,

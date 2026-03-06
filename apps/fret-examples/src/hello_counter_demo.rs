@@ -39,14 +39,7 @@ pub fn run() -> anyhow::Result<()> {
         .map_err(anyhow::Error::from)
 }
 
-struct HelloCounterState {
-    count: Model<i64>,
-    step: Model<String>,
-}
-
-struct HelloCounterView {
-    st: HelloCounterState,
-}
+struct HelloCounterView;
 
 fn parse_step(step_text: &str) -> (i64, bool) {
     let raw = step_text.trim();
@@ -59,9 +52,9 @@ fn parse_step(step_text: &str) -> (i64, bool) {
     (step, true)
 }
 
-fn read_effective_step(models: &fret_runtime::ModelStore, step: &Model<String>) -> i64 {
+fn read_effective_step(models: &fret_runtime::ModelStore, step: &LocalState<String>) -> i64 {
     let step_text = models
-        .read(step, Clone::clone)
+        .read(step.model(), Clone::clone)
         .ok()
         .unwrap_or_else(|| "1".to_string());
     let (step, _) = parse_step(&step_text);
@@ -69,58 +62,61 @@ fn read_effective_step(models: &fret_runtime::ModelStore, step: &Model<String>) 
 }
 
 impl View for HelloCounterView {
-    fn init(app: &mut App, _window: AppWindowId) -> Self {
-        Self {
-            st: HelloCounterState {
-                count: app.models_mut().insert(0i64),
-                step: app.models_mut().insert("1".to_string()),
-            },
-        }
+    fn init(_app: &mut App, _window: AppWindowId) -> Self {
+        Self
     }
 
     fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
         let theme = Theme::global(&*cx.app).snapshot();
 
-        let count = cx.watch_model(&self.st.count).layout().copied_or(0);
+        let count_state = cx.use_local_with(|| 0i64);
+        let step_state = cx.use_local_with(|| "1".to_string());
+
+        let count = cx.watch_local(&count_state).layout().copied_or(0);
         let step_text = cx
-            .watch_model(&self.st.step)
+            .watch_local(&step_state)
             .layout()
-            .cloned_or_else(String::new);
+            .cloned_or_else(|| "1".to_string());
         let (effective_step, step_valid) = parse_step(&step_text);
 
         cx.on_action_notify_models::<act::Inc>({
-            let count = self.st.count.clone();
-            let step = self.st.step.clone();
+            let count_state = count_state.clone();
+            let step_state = step_state.clone();
             move |models| {
-                let step = read_effective_step(models, &step);
-                let _ = models.update(&count, |v| *v = v.saturating_add(step));
-                true
+                let step = read_effective_step(models, &step_state);
+                count_state.update_in(models, |value| {
+                    *value = value.saturating_add(step);
+                })
             }
         });
 
         cx.on_action_notify_models::<act::Dec>({
-            let count = self.st.count.clone();
-            let step = self.st.step.clone();
+            let count_state = count_state.clone();
+            let step_state = step_state.clone();
             move |models| {
-                let step = read_effective_step(models, &step);
-                let _ = models.update(&count, |v| *v = v.saturating_sub(step));
-                true
+                let step = read_effective_step(models, &step_state);
+                count_state.update_in(models, |value| {
+                    *value = value.saturating_sub(step);
+                })
             }
         });
 
-        cx.on_action_notify_model_set::<act::Reset, i64>(self.st.count.clone(), 0);
-        cx.on_action_notify_model_set::<act::SetStep1, String>(
-            self.st.step.clone(),
-            "1".to_string(),
-        );
-        cx.on_action_notify_model_set::<act::SetStep5, String>(
-            self.st.step.clone(),
-            "5".to_string(),
-        );
-        cx.on_action_notify_model_set::<act::SetStep10, String>(
-            self.st.step.clone(),
-            "10".to_string(),
-        );
+        cx.on_action_notify_models::<act::Reset>({
+            let count_state = count_state.clone();
+            move |models| count_state.set_in(models, 0)
+        });
+        cx.on_action_notify_models::<act::SetStep1>({
+            let step_state = step_state.clone();
+            move |models| step_state.set_in(models, "1".to_string())
+        });
+        cx.on_action_notify_models::<act::SetStep5>({
+            let step_state = step_state.clone();
+            move |models| step_state.set_in(models, "5".to_string())
+        });
+        cx.on_action_notify_models::<act::SetStep10>({
+            let step_state = step_state.clone();
+            move |models| step_state.set_in(models, "10".to_string())
+        });
 
         let count_color = if count > 0 {
             theme.color_token("primary")
@@ -221,7 +217,7 @@ impl View for HelloCounterView {
             ink_overflow: Default::default(),
         });
 
-        let step_input = shadcn::Input::new(self.st.step.clone())
+        let step_input = shadcn::Input::new(step_state.clone_model())
             .placeholder("Step (e.g. 1)")
             .submit_command(inc_cmd)
             .into_element(cx)

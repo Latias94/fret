@@ -149,6 +149,51 @@ impl TestResultsSummaryData {
     }
 }
 
+#[derive(Debug, Default, Clone)]
+struct TestResultsProviderState {
+    summary: Option<TestResultsSummaryData>,
+}
+
+fn use_test_results_summary<H: UiHost>(
+    cx: &ElementContext<'_, H>,
+) -> Option<TestResultsSummaryData> {
+    cx.inherited_state::<TestResultsProviderState>()
+        .and_then(|st| st.summary.clone())
+}
+
+#[derive(Debug, Clone)]
+struct TestSuiteContextData {
+    name: Arc<str>,
+    status: TestStatusKind,
+}
+
+#[derive(Debug, Default, Clone)]
+struct TestSuiteProviderState {
+    context: Option<TestSuiteContextData>,
+}
+
+fn use_test_suite_context<H: UiHost>(cx: &ElementContext<'_, H>) -> Option<TestSuiteContextData> {
+    cx.inherited_state::<TestSuiteProviderState>()
+        .and_then(|st| st.context.clone())
+}
+
+#[derive(Debug, Clone)]
+struct TestContextData {
+    name: Arc<str>,
+    status: TestStatusKind,
+    duration_ms: Option<u32>,
+}
+
+#[derive(Debug, Default, Clone)]
+struct TestProviderState {
+    context: Option<TestContextData>,
+}
+
+fn use_test_context<H: UiHost>(cx: &ElementContext<'_, H>) -> Option<TestContextData> {
+    cx.inherited_state::<TestProviderState>()
+        .and_then(|st| st.context.clone())
+}
+
 fn status_badge<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     theme: &Theme,
@@ -197,13 +242,11 @@ fn status_badge<H: UiHost>(
             ink_overflow: Default::default(),
         });
 
-        vec![
-            ui::h_row(move |_cx| vec![icon, text])
-                .items(Items::Center)
-                .justify(Justify::Center)
-                .gap(Space::N1)
-                .into_element(cx),
-        ]
+        vec![ui::h_row(move |_cx| vec![icon, text])
+            .items(Items::Center)
+            .justify(Justify::Center)
+            .gap(Space::N1)
+            .into_element(cx)]
     })
 }
 
@@ -288,23 +331,30 @@ impl TestResults {
             .min_w_0()
             .merge(self.layout);
 
-        let children = if let Some(children) = self.children {
-            children
-        } else if let Some(summary) = self.summary.clone() {
-            vec![
-                TestResultsHeader::new([
-                    TestResultsSummary::new(summary.clone()).into_element(cx),
-                    TestResultsDuration::new(summary).into_element(cx),
-                ])
-                .into_element(cx),
-            ]
-        } else {
-            Vec::new()
-        };
+        let summary = self.summary.clone();
+        let explicit_children = self.children;
 
         let root = cx.container(
             decl_style::container_props(&theme, chrome, layout),
-            move |_cx| children,
+            move |cx| {
+                cx.with_state(TestResultsProviderState::default, |st| {
+                    st.summary = summary.clone();
+                });
+
+                if let Some(children) = explicit_children {
+                    return children;
+                }
+
+                let Some(summary) = summary.clone() else {
+                    return Vec::new();
+                };
+
+                vec![TestResultsHeader::new([
+                    TestResultsSummary::new(summary.clone()).into_element(cx),
+                    TestResultsDuration::new(summary).into_element(cx),
+                ])
+                .into_element(cx)]
+            },
         );
 
         let Some(test_id) = self.test_id_root else {
@@ -392,7 +442,7 @@ impl TestResultsHeader {
 /// Summary badges aligned with AI Elements `TestResultsSummary`.
 #[derive(Debug, Clone)]
 pub struct TestResultsSummary {
-    summary: TestResultsSummaryData,
+    summary: Option<TestResultsSummaryData>,
     layout: LayoutRefinement,
     chrome: ChromeRefinement,
 }
@@ -400,7 +450,15 @@ pub struct TestResultsSummary {
 impl TestResultsSummary {
     pub fn new(summary: TestResultsSummaryData) -> Self {
         Self {
-            summary,
+            summary: Some(summary),
+            layout: LayoutRefinement::default().min_w_0(),
+            chrome: ChromeRefinement::default(),
+        }
+    }
+
+    pub fn from_context() -> Self {
+        Self {
+            summary: None,
             layout: LayoutRefinement::default().min_w_0(),
             chrome: ChromeRefinement::default(),
         }
@@ -418,30 +476,36 @@ impl TestResultsSummary {
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
+        let Some(summary) = self.summary.or_else(|| use_test_results_summary(cx)) else {
+            return cx.container(
+                decl_style::container_props(&theme, self.chrome, LayoutRefinement::default()),
+                |_cx| Vec::new(),
+            );
+        };
 
         let mut badges: Vec<AnyElement> = Vec::new();
         badges.push(status_badge(
             cx,
             &theme,
             TestStatusKind::Passed,
-            Arc::<str>::from(format!("{} passed", self.summary.passed)),
+            Arc::<str>::from(format!("{} passed", summary.passed)),
         ));
 
-        if self.summary.failed > 0 {
+        if summary.failed > 0 {
             badges.push(status_badge(
                 cx,
                 &theme,
                 TestStatusKind::Failed,
-                Arc::<str>::from(format!("{} failed", self.summary.failed)),
+                Arc::<str>::from(format!("{} failed", summary.failed)),
             ));
         }
 
-        if self.summary.skipped > 0 {
+        if summary.skipped > 0 {
             badges.push(status_badge(
                 cx,
                 &theme,
                 TestStatusKind::Skipped,
-                Arc::<str>::from(format!("{} skipped", self.summary.skipped)),
+                Arc::<str>::from(format!("{} skipped", summary.skipped)),
             ));
         }
 
@@ -461,7 +525,7 @@ impl TestResultsSummary {
 /// Duration label aligned with AI Elements `TestResultsDuration`.
 #[derive(Debug, Clone)]
 pub struct TestResultsDuration {
-    summary: TestResultsSummaryData,
+    summary: Option<TestResultsSummaryData>,
     layout: LayoutRefinement,
     chrome: ChromeRefinement,
 }
@@ -469,7 +533,15 @@ pub struct TestResultsDuration {
 impl TestResultsDuration {
     pub fn new(summary: TestResultsSummaryData) -> Self {
         Self {
-            summary,
+            summary: Some(summary),
+            layout: LayoutRefinement::default().min_w_0(),
+            chrome: ChromeRefinement::default(),
+        }
+    }
+
+    pub fn from_context() -> Self {
+        Self {
+            summary: None,
             layout: LayoutRefinement::default().min_w_0(),
             chrome: ChromeRefinement::default(),
         }
@@ -487,7 +559,13 @@ impl TestResultsDuration {
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
-        let Some(ms) = self.summary.duration_ms else {
+        let Some(summary) = self.summary.or_else(|| use_test_results_summary(cx)) else {
+            return cx.container(
+                decl_style::container_props(&theme, self.chrome, LayoutRefinement::default()),
+                |_cx| Vec::new(),
+            );
+        };
+        let Some(ms) = summary.duration_ms else {
             return cx.container(
                 decl_style::container_props(&theme, self.chrome, LayoutRefinement::default()),
                 |_cx| Vec::new(),
@@ -518,7 +596,7 @@ impl TestResultsDuration {
 /// Progress bar aligned with AI Elements `TestResultsProgress`.
 #[derive(Debug, Clone)]
 pub struct TestResultsProgress {
-    summary: TestResultsSummaryData,
+    summary: Option<TestResultsSummaryData>,
     test_id: Option<Arc<str>>,
     layout: LayoutRefinement,
     chrome: ChromeRefinement,
@@ -527,7 +605,16 @@ pub struct TestResultsProgress {
 impl TestResultsProgress {
     pub fn new(summary: TestResultsSummaryData) -> Self {
         Self {
-            summary,
+            summary: Some(summary),
+            test_id: None,
+            layout: LayoutRefinement::default().w_full().min_w_0(),
+            chrome: ChromeRefinement::default(),
+        }
+    }
+
+    pub fn from_context() -> Self {
+        Self {
+            summary: None,
             test_id: None,
             layout: LayoutRefinement::default().w_full().min_w_0(),
             chrome: ChromeRefinement::default(),
@@ -551,16 +638,22 @@ impl TestResultsProgress {
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
-        if self.summary.total == 0 {
+        let Some(summary) = self.summary.or_else(|| use_test_results_summary(cx)) else {
+            return cx.container(
+                decl_style::container_props(&theme, self.chrome, LayoutRefinement::default()),
+                |_cx| Vec::new(),
+            );
+        };
+        if summary.total == 0 {
             return cx.container(
                 decl_style::container_props(&theme, self.chrome, LayoutRefinement::default()),
                 |_cx| Vec::new(),
             );
         }
 
-        let passed = self.summary.passed as f32;
-        let failed = self.summary.failed as f32;
-        let total = self.summary.total as f32;
+        let passed = summary.passed as f32;
+        let failed = summary.failed as f32;
+        let total = summary.total as f32;
         let passed_percent = ((passed / total) * 100.0).clamp(0.0, 100.0);
 
         let bar_bg = theme.color_token("muted");
@@ -610,20 +703,16 @@ impl TestResultsProgress {
                     cx.container(props, |_cx| Vec::new())
                 };
 
-                vec![
-                    ui::h_row(move |_cx| vec![passed_seg, failed_seg])
-                        .layout(LayoutRefinement::default().w_full().h_full())
-                        .gap(Space::N0)
-                        .items(Items::Stretch)
-                        .into_element(cx),
-                ]
+                vec![ui::h_row(move |_cx| vec![passed_seg, failed_seg])
+                    .layout(LayoutRefinement::default().w_full().h_full())
+                    .gap(Space::N0)
+                    .items(Items::Stretch)
+                    .into_element(cx)]
             })
         };
 
-        let text_left: Arc<str> = Arc::from(format!(
-            "{}/{} tests passed",
-            self.summary.passed, self.summary.total
-        ));
+        let text_left: Arc<str> =
+            Arc::from(format!("{}/{} tests passed", summary.passed, summary.total));
         let text_right: Arc<str> = Arc::from(format!("{:.0}%", passed_percent));
         let fg = theme.color_token("muted-foreground");
 
@@ -702,21 +791,49 @@ fn status_icon<H: UiHost>(
 #[derive(Debug)]
 pub struct TestSuite {
     default_open: bool,
-    header: TestSuiteName,
-    content: TestSuiteContent,
+    name: Arc<str>,
+    status: TestStatusKind,
+    trigger: Option<TestSuiteName>,
+    content: Option<TestSuiteContent>,
     layout: LayoutRefinement,
     chrome: ChromeRefinement,
 }
 
 impl TestSuite {
-    pub fn new(header: TestSuiteName, content: TestSuiteContent) -> Self {
+    pub fn new(trigger: TestSuiteName, content: TestSuiteContent) -> Self {
+        let name = trigger.name.clone().unwrap_or_default();
+        let status = trigger.status.unwrap_or(TestStatusKind::Passed);
         Self {
             default_open: false,
-            header,
-            content,
+            name,
+            status,
+            trigger: Some(trigger),
+            content: Some(content),
             layout: LayoutRefinement::default().w_full().min_w_0(),
             chrome: ChromeRefinement::default(),
         }
+    }
+
+    pub fn named(name: impl Into<Arc<str>>, status: TestStatusKind) -> Self {
+        Self {
+            default_open: false,
+            name: name.into(),
+            status,
+            trigger: None,
+            content: None,
+            layout: LayoutRefinement::default().w_full().min_w_0(),
+            chrome: ChromeRefinement::default(),
+        }
+    }
+
+    pub fn trigger(mut self, trigger: TestSuiteName) -> Self {
+        self.trigger = Some(trigger);
+        self
+    }
+
+    pub fn content(mut self, content: TestSuiteContent) -> Self {
+        self.content = Some(content);
+        self
     }
 
     pub fn default_open(mut self, default_open: bool) -> Self {
@@ -747,28 +864,45 @@ impl TestSuite {
                 fallback: ColorFallback::ThemePanelBorder,
             });
 
-        let header = self.header;
-        let content = self.content;
+        let suite_context = TestSuiteContextData {
+            name: self.name,
+            status: self.status,
+        };
+        let trigger = self.trigger.unwrap_or_else(TestSuiteName::from_context);
+        let content = self
+            .content
+            .unwrap_or_else(|| TestSuiteContent::new(Vec::<AnyElement>::new()));
+        let suite_context_for_content = suite_context.clone();
 
         Collapsible::uncontrolled(self.default_open)
             .refine_layout(self.layout)
             .refine_style(base_chrome.merge(self.chrome))
             .into_element_with_open_model(
                 cx,
-                move |cx, open_model, is_open| header.into_trigger(cx, open_model, is_open),
-                move |cx| content.into_element(cx),
+                move |cx, open_model, is_open| {
+                    cx.with_state(TestSuiteProviderState::default, |st| {
+                        st.context = Some(suite_context.clone());
+                    });
+                    trigger.into_trigger(cx, open_model, is_open)
+                },
+                move |cx| {
+                    cx.with_state(TestSuiteProviderState::default, |st| {
+                        st.context = Some(suite_context_for_content.clone());
+                    });
+                    content.into_element(cx)
+                },
             )
     }
 }
 
 /// Collapsible trigger row aligned with AI Elements `TestSuiteName`.
-#[derive(Clone)]
 pub struct TestSuiteName {
-    name: Arc<str>,
-    status: TestStatusKind,
+    name: Option<Arc<str>>,
+    status: Option<TestStatusKind>,
     passed: u32,
     failed: u32,
     skipped: u32,
+    children: Option<Vec<AnyElement>>,
     test_id: Option<Arc<str>>,
     layout: LayoutRefinement,
     chrome: ChromeRefinement,
@@ -777,11 +911,15 @@ pub struct TestSuiteName {
 impl std::fmt::Debug for TestSuiteName {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("TestSuiteName")
-            .field("name", &self.name.as_ref())
+            .field("name", &self.name.as_deref())
             .field("status", &self.status)
             .field("passed", &self.passed)
             .field("failed", &self.failed)
             .field("skipped", &self.skipped)
+            .field(
+                "children_len",
+                &self.children.as_ref().map(|c| c.len()).unwrap_or(0),
+            )
             .field("test_id", &self.test_id.as_deref())
             .field("layout", &self.layout)
             .field("chrome", &self.chrome)
@@ -792,11 +930,26 @@ impl std::fmt::Debug for TestSuiteName {
 impl TestSuiteName {
     pub fn new(name: impl Into<Arc<str>>, status: TestStatusKind) -> Self {
         Self {
-            name: name.into(),
-            status,
+            name: Some(name.into()),
+            status: Some(status),
             passed: 0,
             failed: 0,
             skipped: 0,
+            children: None,
+            test_id: None,
+            layout: LayoutRefinement::default().w_full().min_w_0(),
+            chrome: ChromeRefinement::default().px(Space::N4).py(Space::N3),
+        }
+    }
+
+    pub fn from_context() -> Self {
+        Self {
+            name: None,
+            status: None,
+            passed: 0,
+            failed: 0,
+            skipped: 0,
+            children: None,
             test_id: None,
             layout: LayoutRefinement::default().w_full().min_w_0(),
             chrome: ChromeRefinement::default().px(Space::N4).py(Space::N3),
@@ -807,6 +960,11 @@ impl TestSuiteName {
         self.passed = passed;
         self.failed = failed;
         self.skipped = skipped;
+        self
+    }
+
+    pub fn children(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {
+        self.children = Some(children.into_iter().collect());
         self
     }
 
@@ -832,6 +990,16 @@ impl TestSuiteName {
         is_open: bool,
     ) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
+        let suite_context = use_test_suite_context(cx);
+        let name = self
+            .name
+            .clone()
+            .or_else(|| suite_context.as_ref().map(|ctx| ctx.name.clone()))
+            .unwrap_or_default();
+        let status = self
+            .status
+            .or_else(|| suite_context.as_ref().map(|ctx| ctx.status))
+            .unwrap_or(TestStatusKind::Passed);
 
         let chevron_size = Px(16.0);
         let center = Point::new(Px(8.0), Px(8.0));
@@ -859,18 +1027,34 @@ impl TestSuiteName {
             },
         );
 
-        let status_icon = status_icon(cx, &theme, self.status, Px(16.0));
+        let status_icon = status_icon(cx, &theme, status, Px(16.0));
 
-        let name_text = cx.text_props(TextProps {
-            layout: LayoutStyle::default(),
-            text: self.name.clone(),
-            style: None,
-            color: None,
-            wrap: TextWrap::None,
-            overflow: TextOverflow::Clip,
-            align: fret_core::TextAlign::Start,
-            ink_overflow: Default::default(),
-        });
+        let name_text = if let Some(children) = self.children {
+            ui::h_row(move |_cx| children)
+                .layout(LayoutRefinement::default().w_full().min_w_0())
+                .gap(Space::N2)
+                .items(Items::Center)
+                .into_element(cx)
+        } else {
+            cx.text_props(TextProps {
+                layout: LayoutStyle {
+                    size: SizeStyle {
+                        width: Length::Fill,
+                        height: Length::Auto,
+                        min_width: Some(Length::Px(Px(0.0))),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                text: name,
+                style: None,
+                color: None,
+                wrap: TextWrap::None,
+                overflow: TextOverflow::Ellipsis,
+                align: fret_core::TextAlign::Start,
+                ink_overflow: Default::default(),
+            })
+        };
 
         let stats = {
             let mut parts: Vec<AnyElement> = Vec::new();
@@ -916,7 +1100,7 @@ impl TestSuiteName {
             } else {
                 Some(
                     ui::h_row(move |_cx| parts)
-                        .layout(LayoutRefinement::default().flex_shrink_0())
+                        .layout(LayoutRefinement::default().ml_auto().flex_shrink_0())
                         .gap(Space::N2)
                         .items(Items::Center)
                         .into_element(cx),
@@ -955,6 +1139,78 @@ impl TestSuiteName {
     }
 }
 
+/// Optional suite stats part aligned with AI Elements `TestSuiteStats`.
+#[derive(Debug, Clone)]
+pub struct TestSuiteStats {
+    passed: u32,
+    failed: u32,
+    skipped: u32,
+    layout: LayoutRefinement,
+}
+
+impl TestSuiteStats {
+    pub fn new(passed: u32, failed: u32, skipped: u32) -> Self {
+        Self {
+            passed,
+            failed,
+            skipped,
+            layout: LayoutRefinement::default().ml_auto().flex_shrink_0(),
+        }
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
+    }
+
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let theme = Theme::global(&*cx.app).clone();
+        let mut parts: Vec<AnyElement> = Vec::new();
+        if self.passed > 0 {
+            parts.push(cx.text_props(TextProps {
+                layout: LayoutStyle::default(),
+                text: Arc::<str>::from(format!("{} passed", self.passed)),
+                style: None,
+                color: Some(TestStatusKind::Passed.color(&theme)),
+                wrap: TextWrap::None,
+                overflow: TextOverflow::Clip,
+                align: fret_core::TextAlign::Start,
+                ink_overflow: Default::default(),
+            }));
+        }
+        if self.failed > 0 {
+            parts.push(cx.text_props(TextProps {
+                layout: LayoutStyle::default(),
+                text: Arc::<str>::from(format!("{} failed", self.failed)),
+                style: None,
+                color: Some(TestStatusKind::Failed.color(&theme)),
+                wrap: TextWrap::None,
+                overflow: TextOverflow::Clip,
+                align: fret_core::TextAlign::Start,
+                ink_overflow: Default::default(),
+            }));
+        }
+        if self.skipped > 0 {
+            parts.push(cx.text_props(TextProps {
+                layout: LayoutStyle::default(),
+                text: Arc::<str>::from(format!("{} skipped", self.skipped)),
+                style: None,
+                color: Some(TestStatusKind::Skipped.color(&theme)),
+                wrap: TextWrap::None,
+                overflow: TextOverflow::Clip,
+                align: fret_core::TextAlign::Start,
+                ink_overflow: Default::default(),
+            }));
+        }
+
+        ui::h_row(move |_cx| parts)
+            .layout(self.layout)
+            .gap(Space::N2)
+            .items(Items::Center)
+            .into_element(cx)
+    }
+}
+
 /// Collapsible content wrapper aligned with AI Elements `TestSuiteContent`.
 #[derive(Debug)]
 pub struct TestSuiteContent {
@@ -970,6 +1226,7 @@ pub struct Test {
     status: TestStatusKind,
     duration_ms: Option<u32>,
     children: Option<Vec<AnyElement>>,
+    details: Option<Vec<AnyElement>>,
     on_activate: Option<OnTestActivate>,
     test_id: Option<Arc<str>>,
     layout: LayoutRefinement,
@@ -986,11 +1243,161 @@ impl std::fmt::Debug for Test {
                 "children_len",
                 &self.children.as_ref().map(|c| c.len()).unwrap_or(0),
             )
+            .field(
+                "details_len",
+                &self.details.as_ref().map(|c| c.len()).unwrap_or(0),
+            )
             .field("has_on_activate", &self.on_activate.is_some())
             .field("test_id", &self.test_id.as_deref())
             .field("layout", &self.layout)
             .field("chrome", &self.chrome)
             .finish()
+    }
+}
+
+/// Status icon part aligned with AI Elements `TestStatus`.
+#[derive(Debug, Clone)]
+pub struct TestStatus {
+    status: Option<TestStatusKind>,
+    layout: LayoutRefinement,
+}
+
+impl TestStatus {
+    pub fn new(status: TestStatusKind) -> Self {
+        Self {
+            status: Some(status),
+            layout: LayoutRefinement::default().flex_shrink_0(),
+        }
+    }
+
+    pub fn from_context() -> Self {
+        Self {
+            status: None,
+            layout: LayoutRefinement::default().flex_shrink_0(),
+        }
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
+    }
+
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let theme = Theme::global(&*cx.app).clone();
+        let status = self
+            .status
+            .or_else(|| use_test_context(cx).map(|ctx| ctx.status))
+            .unwrap_or(TestStatusKind::Passed);
+
+        cx.container(
+            ContainerProps {
+                layout: decl_style::layout_style(&theme, self.layout),
+                ..Default::default()
+            },
+            move |cx| vec![status_icon(cx, &theme, status, Px(16.0))],
+        )
+    }
+}
+
+/// Name label part aligned with AI Elements `TestName`.
+#[derive(Debug, Clone)]
+pub struct TestName {
+    name: Option<Arc<str>>,
+    layout: LayoutRefinement,
+}
+
+impl TestName {
+    pub fn new(name: impl Into<Arc<str>>) -> Self {
+        Self {
+            name: Some(name.into()),
+            layout: LayoutRefinement::default().flex_1().min_w_0(),
+        }
+    }
+
+    pub fn from_context() -> Self {
+        Self {
+            name: None,
+            layout: LayoutRefinement::default().flex_1().min_w_0(),
+        }
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
+    }
+
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let theme = Theme::global(&*cx.app).clone();
+        let name = self
+            .name
+            .or_else(|| use_test_context(cx).map(|ctx| ctx.name))
+            .unwrap_or_default();
+
+        cx.text_props(TextProps {
+            layout: decl_style::layout_style(&theme, self.layout),
+            text: name,
+            style: None,
+            color: None,
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Ellipsis,
+            align: fret_core::TextAlign::Start,
+            ink_overflow: Default::default(),
+        })
+    }
+}
+
+/// Duration label part aligned with AI Elements `TestDuration`.
+#[derive(Debug, Clone)]
+pub struct TestDuration {
+    duration_ms: Option<u32>,
+    layout: LayoutRefinement,
+}
+
+impl TestDuration {
+    pub fn new(duration_ms: u32) -> Self {
+        Self {
+            duration_ms: Some(duration_ms),
+            layout: LayoutRefinement::default().ml_auto().flex_shrink_0(),
+        }
+    }
+
+    pub fn from_context() -> Self {
+        Self {
+            duration_ms: None,
+            layout: LayoutRefinement::default().ml_auto().flex_shrink_0(),
+        }
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
+    }
+
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let theme = Theme::global(&*cx.app).clone();
+        let duration_ms = self
+            .duration_ms
+            .or_else(|| use_test_context(cx).and_then(|ctx| ctx.duration_ms));
+        let Some(duration_ms) = duration_ms else {
+            return cx.container(
+                ContainerProps {
+                    layout: decl_style::layout_style(&theme, self.layout),
+                    ..Default::default()
+                },
+                |_cx| Vec::new(),
+            );
+        };
+
+        cx.text_props(TextProps {
+            layout: decl_style::layout_style(&theme, self.layout),
+            text: Arc::<str>::from(format!("{duration_ms}ms")),
+            style: None,
+            color: Some(theme.color_token("muted-foreground")),
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Clip,
+            align: fret_core::TextAlign::Start,
+            ink_overflow: Default::default(),
+        })
     }
 }
 
@@ -1001,6 +1408,7 @@ impl Test {
             status,
             duration_ms: None,
             children: None,
+            details: None,
             on_activate: None,
             test_id: None,
             layout: LayoutRefinement::default().w_full().min_w_0(),
@@ -1015,6 +1423,11 @@ impl Test {
 
     pub fn children(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {
         self.children = Some(children.into_iter().collect());
+        self
+    }
+
+    pub fn details(mut self, details: impl IntoIterator<Item = AnyElement>) -> Self {
+        self.details = Some(details.into_iter().collect());
         self
     }
 
@@ -1045,65 +1458,53 @@ impl Test {
         let status = self.status;
         let name = self.name;
         let duration = self.duration_ms;
+        let test_context = TestContextData {
+            name: name.clone(),
+            status,
+            duration_ms: duration,
+        };
 
         let layout = self.layout;
         let chrome = self.chrome;
         let test_id = self.test_id;
 
         let children = self.children;
-        let theme_for_content = theme.clone();
-        let name_for_content = name.clone();
+        let details = self.details;
         let content_factory = move |cx: &mut ElementContext<'_, H>| {
-            if let Some(children) = children {
-                return ui::h_row(move |_cx| children)
+            cx.with_state(TestProviderState::default, |st| {
+                st.context = Some(test_context.clone());
+            });
+
+            let content = if let Some(children) = children {
+                ui::h_row(move |_cx| children)
                     .layout(LayoutRefinement::default().w_full().min_w_0())
                     .gap(Space::N2)
                     .items(Items::Center)
-                    .into_element(cx);
-            }
-
-            let status_el = status_icon(cx, &theme_for_content, status, Px(16.0));
-            let name_el = cx.text_props(TextProps {
-                layout: LayoutStyle {
-                    size: SizeStyle {
-                        width: Length::Fill,
-                        height: Length::Auto,
-                        min_width: Some(Length::Px(Px(0.0))),
-                        ..Default::default()
-                    },
-                    ..Default::default()
-                },
-                text: name_for_content.clone(),
-                style: None,
-                color: None,
-                wrap: TextWrap::None,
-                overflow: TextOverflow::Ellipsis,
-                align: fret_core::TextAlign::Start,
-                ink_overflow: Default::default(),
-            });
-
-            let duration_el = duration.map(|ms| {
-                cx.text_props(TextProps {
-                    layout: LayoutStyle::default(),
-                    text: Arc::<str>::from(format!("{ms}ms")),
-                    style: None,
-                    color: Some(theme_for_content.color_token("muted-foreground")),
-                    wrap: TextWrap::None,
-                    overflow: TextOverflow::Clip,
-                    align: fret_core::TextAlign::Start,
-                    ink_overflow: Default::default(),
+                    .into_element(cx)
+            } else {
+                ui::h_row(move |cx| {
+                    vec![
+                        TestStatus::from_context().into_element(cx),
+                        TestName::from_context().into_element(cx),
+                        TestDuration::from_context().into_element(cx),
+                    ]
                 })
-            });
-
-            let mut children = vec![status_el, name_el];
-            if let Some(duration_el) = duration_el {
-                children.push(duration_el);
-            }
-
-            ui::h_row(move |_cx| children)
                 .layout(LayoutRefinement::default().w_full().min_w_0())
                 .gap(Space::N2)
                 .items(Items::Center)
+                .into_element(cx)
+            };
+
+            let Some(details) = details else {
+                return content;
+            };
+
+            let mut stacked = vec![content];
+            stacked.extend(details);
+            ui::v_stack(move |_cx| stacked)
+                .layout(LayoutRefinement::default().w_full().min_w_0())
+                .gap(Space::N2)
+                .items(Items::Stretch)
                 .into_element(cx)
         };
 
@@ -1206,9 +1607,15 @@ impl TestError {
 
         let chrome = self.chrome.bg(ColorRef::Color(bg));
         let children = self.children;
+        let content = ui::v_stack(move |_cx| children)
+            .layout(LayoutRefinement::default().w_full().min_w_0())
+            .gap(Space::N2)
+            .items(Items::Stretch)
+            .into_element(cx);
+
         cx.container(
             decl_style::container_props(&theme, chrome, self.layout),
-            move |_cx| children,
+            move |_cx| vec![content],
         )
     }
 }
@@ -1439,13 +1846,11 @@ impl TestResultsContent {
         let content = cx.container(
             decl_style::container_props(&theme, self.chrome, LayoutRefinement::default()),
             move |cx| {
-                vec![
-                    ui::v_stack(move |_cx| children)
-                        .layout(layout)
-                        .gap(Space::N2)
-                        .items(Items::Stretch)
-                        .into_element(cx),
-                ]
+                vec![ui::v_stack(move |_cx| children)
+                    .layout(layout)
+                    .gap(Space::N2)
+                    .items(Items::Stretch)
+                    .into_element(cx)]
             },
         );
 
@@ -1457,5 +1862,53 @@ impl TestResultsContent {
                 .role(SemanticsRole::Group)
                 .test_id(test_id),
         )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn summary_parts_can_defer_to_root_context() {
+        let summary = TestResultsSummary::from_context();
+        let duration = TestResultsDuration::from_context();
+        let progress = TestResultsProgress::from_context();
+
+        assert!(summary.summary.is_none());
+        assert!(duration.summary.is_none());
+        assert!(progress.summary.is_none());
+    }
+
+    #[test]
+    fn suite_named_constructor_keeps_part_context() {
+        let suite = TestSuite::named("Auth", TestStatusKind::Passed)
+            .trigger(TestSuiteName::from_context())
+            .content(TestSuiteContent::new(Vec::<AnyElement>::new()));
+
+        assert_eq!(suite.name.as_ref(), "Auth");
+        assert_eq!(suite.status, TestStatusKind::Passed);
+        assert!(suite.trigger.is_some());
+        assert!(suite.content.is_some());
+    }
+
+    #[test]
+    fn test_row_parts_can_defer_to_test_context() {
+        let status = TestStatus::from_context();
+        let name = TestName::from_context();
+        let duration = TestDuration::from_context();
+
+        assert!(status.status.is_none());
+        assert!(name.name.is_none());
+        assert!(duration.duration_ms.is_none());
+    }
+
+    #[test]
+    fn suite_name_from_context_starts_without_explicit_values() {
+        let trigger = TestSuiteName::from_context();
+
+        assert!(trigger.name.is_none());
+        assert!(trigger.status.is_none());
+        assert!(trigger.children.is_none());
     }
 }

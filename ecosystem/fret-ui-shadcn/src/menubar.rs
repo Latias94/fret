@@ -1007,11 +1007,11 @@ fn menu_row_children<H: UiHost>(
             }
 
             if let Some(l) = leading {
-                let scoped = cx.foreground_scope(icon_fg, move |_cx| vec![l]);
+                let scoped = l.inherit_foreground(icon_fg);
                 row.push(menu_icon_slot(cx, scoped));
             } else if let Some(icon) = leading_icon {
                 let icon_el = decl_icon::icon_with(cx, icon, Some(Px(16.0)), None);
-                let scoped = cx.foreground_scope(icon_fg, move |_cx| vec![icon_el]);
+                let scoped = icon_el.inherit_foreground(icon_fg);
                 row.push(menu_icon_slot(cx, scoped));
             } else if reserve_leading_slot {
                 row.push(menu_icon_slot_empty(cx));
@@ -1460,6 +1460,12 @@ impl MenubarMenu {
 
     pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
         self.test_id = Some(id.into());
+        self
+    }
+
+    pub fn test_id_prefix(mut self, prefix: impl Into<Arc<str>>) -> Self {
+        let prefix = prefix.into();
+        self.test_id = Some(Arc::<str>::from(format!("{prefix}-trigger")));
         self
     }
 
@@ -3962,6 +3968,20 @@ mod tests {
     use std::sync::Mutex;
     use std::sync::atomic::{AtomicUsize, Ordering};
 
+    fn contains_foreground_scope(el: &AnyElement) -> bool {
+        matches!(el.kind, fret_ui::element::ElementKind::ForegroundScope(_))
+            || el.children.iter().any(contains_foreground_scope)
+    }
+
+    fn find_first_inherited_foreground_node(el: &AnyElement) -> Option<&AnyElement> {
+        if el.inherited_foreground.is_some() {
+            return Some(el);
+        }
+        el.children
+            .iter()
+            .find_map(find_first_inherited_foreground_node)
+    }
+
     #[test]
     fn menubar_modal_builder_updates_flag() {
         let menubar = Menubar::new(std::iter::empty::<MenubarMenuEntries>()).modal(true);
@@ -3982,6 +4002,178 @@ mod tests {
         );
 
         assert_eq!(entries.menu.side_offset, Px(3.0));
+    }
+
+    #[test]
+    fn menubar_menu_test_id_prefix_derives_trigger_test_id() {
+        let menu = MenubarMenu::new("File").test_id_prefix("menu-file");
+        assert_eq!(menu.test_id.as_deref(), Some("menu-file-trigger"));
+    }
+
+    #[test]
+    fn menubar_test_id_prefix_derives_item_ids_when_open() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        let mut services = FakeServices::default();
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(480.0), Px(240.0)),
+        );
+
+        app.set_frame_id(FrameId(app.frame_id().0.saturating_add(1)));
+        OverlayController::begin_frame(&mut app, window);
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "menubar-prefix-items",
+            |cx| {
+                vec![
+                    Menubar::new(vec![
+                        MenubarMenu::new("File")
+                            .test_id_prefix("menu-file")
+                            .entries(vec![
+                                MenubarEntry::Item(MenubarItem::new("New")),
+                                MenubarEntry::Separator,
+                                MenubarEntry::Item(MenubarItem::new("Open")),
+                            ]),
+                    ])
+                    .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        OverlayController::render(&mut ui, &mut app, &mut services, window, bounds);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap0 = ui.semantics_snapshot().expect("semantics snapshot");
+        let file = menu_trigger_node_id(snap0, "File");
+        ui.set_focus(Some(file));
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::KeyDown {
+                key: fret_core::KeyCode::ArrowDown,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+
+        app.set_frame_id(FrameId(app.frame_id().0.saturating_add(1)));
+        let changed_models = app.take_changed_models();
+        let changed_globals = app.take_changed_globals();
+        let _ = fret_ui::frame_pipeline::propagate_changes(
+            &mut ui,
+            &mut app,
+            &changed_models,
+            &changed_globals,
+        );
+        OverlayController::begin_frame(&mut app, window);
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "menubar-prefix-items",
+            |cx| {
+                vec![
+                    Menubar::new(vec![
+                        MenubarMenu::new("File")
+                            .test_id_prefix("menu-file")
+                            .entries(vec![
+                                MenubarEntry::Item(MenubarItem::new("New")),
+                                MenubarEntry::Separator,
+                                MenubarEntry::Item(MenubarItem::new("Open")),
+                            ]),
+                    ])
+                    .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        OverlayController::render(&mut ui, &mut app, &mut services, window, bounds);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap1 = ui.semantics_snapshot().expect("semantics snapshot");
+        assert!(
+            snap1
+                .nodes
+                .iter()
+                .any(|n| n.test_id.as_deref() == Some("menu-file-item-new"))
+        );
+
+        let _ = root;
+    }
+
+    #[test]
+    fn menubar_row_attaches_inherited_foreground_without_wrapper() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(240.0), Px(120.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let expected_icon_fg = fret_core::Color {
+                r: 0.8,
+                g: 0.5,
+                b: 0.2,
+                a: 1.0,
+            };
+            let elements: Vec<AnyElement> = menu_row_children(
+                cx,
+                Arc::from("File"),
+                Some(fret_icons::IconId::new_static("lucide.folder")),
+                None,
+                false,
+                None,
+                None,
+                false,
+                fret_core::Color::TRANSPARENT,
+                fret_core::Color {
+                    r: 0.95,
+                    g: 0.95,
+                    b: 0.95,
+                    a: 1.0,
+                },
+                expected_icon_fg,
+                Px(8.0),
+                Px(12.0),
+                Px(6.0),
+                Px(6.0),
+                fret_core::TextStyle {
+                    size: Px(14.0),
+                    weight: fret_core::FontWeight::NORMAL,
+                    line_height: Some(Px(20.0)),
+                    ..Default::default()
+                },
+                None,
+            )
+            .into_iter()
+            .collect();
+
+            assert_eq!(elements.len(), 1);
+            let inherited = find_first_inherited_foreground_node(&elements[0])
+                .expect("expected menubar row subtree to carry inherited foreground");
+            assert!(matches!(
+                inherited.kind,
+                fret_ui::element::ElementKind::SvgIcon(_)
+            ));
+            assert_eq!(inherited.inherited_foreground, Some(expected_icon_fg));
+            assert!(
+                !contains_foreground_scope(&elements[0]),
+                "expected menubar row to attach inherited foreground without inserting a ForegroundScope"
+            );
+        });
     }
 
     #[derive(Default)]

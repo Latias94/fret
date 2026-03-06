@@ -71,26 +71,27 @@ impl embedded::EmbeddedViewportRecord for ImUiEditorProofState {
 }
 
 pub fn run() -> anyhow::Result<()> {
-    fret::app_with_hooks("imui-editor-proof-demo", init_window, view, |d| {
-        d.drive_embedded_viewport()
-            .dock_op(on_dock_op)
-            .window_create_spec(window_create_spec)
-            .window_created(window_created)
-            .before_close_window(before_close_window)
-    })?
-    .with_main_window("imui_editor_proof_demo", (1120.0, 720.0))
-    .init_app(|app| {
-        configure_single_window_caps_if_requested(app);
-        shadcn::shadcn_themes::apply_shadcn_new_york(
-            app,
-            shadcn::shadcn_themes::ShadcnBaseColor::Slate,
-            shadcn::shadcn_themes::ShadcnColorScheme::Dark,
-        );
-        fret_ui_editor::theme::apply_editor_theme_patch_v1(app);
-        fret_icons_lucide::install_app(app);
-        install_dock_panel_registry(app);
-    })
-    .run()?;
+    FretApp::new("imui-editor-proof-demo")
+        .window("imui_editor_proof_demo", (1120.0, 720.0))
+        .ui_with_hooks(init_window, view, |d| {
+            d.drive_embedded_viewport()
+                .dock_op(on_dock_op)
+                .window_create_spec(window_create_spec)
+                .window_created(window_created)
+                .before_close_window(before_close_window)
+        })?
+        .init_app(|app| {
+            configure_single_window_caps_if_requested(app);
+            shadcn::shadcn_themes::apply_shadcn_new_york(
+                app,
+                shadcn::shadcn_themes::ShadcnBaseColor::Slate,
+                shadcn::shadcn_themes::ShadcnColorScheme::Dark,
+            );
+            fret_ui_editor::theme::apply_editor_theme_patch_v1(app);
+            fret_icons_lucide::install_app(app);
+            install_dock_panel_registry(app);
+        })
+        .run()?;
     Ok(())
 }
 

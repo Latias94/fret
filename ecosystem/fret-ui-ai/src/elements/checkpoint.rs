@@ -86,8 +86,9 @@ impl Checkpoint {
 }
 
 /// Default icon aligned with AI Elements `CheckpointIcon` (Bookmark).
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct CheckpointIcon {
+    children: Option<AnyElement>,
     icon: fret_icons::IconId,
     size: Px,
     color: Option<ColorRef>,
@@ -97,6 +98,7 @@ pub struct CheckpointIcon {
 impl Default for CheckpointIcon {
     fn default() -> Self {
         Self {
+            children: None,
             icon: fret_icons::IconId::new_static("lucide.bookmark"),
             size: Px(16.0),
             color: None,
@@ -106,6 +108,11 @@ impl Default for CheckpointIcon {
 }
 
 impl CheckpointIcon {
+    pub fn children(mut self, child: AnyElement) -> Self {
+        self.children = Some(child);
+        self
+    }
+
     pub fn icon_id(mut self, icon: fret_icons::IconId) -> Self {
         self.icon = icon;
         self
@@ -128,9 +135,13 @@ impl CheckpointIcon {
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
-        let fg = theme.color_token("muted-foreground");
-        let color = self.color.unwrap_or(ColorRef::Color(fg));
-        let icon = decl_icon::icon_with(cx, self.icon, Some(self.size), Some(color));
+        let icon = if let Some(children) = self.children {
+            children
+        } else {
+            let fg = theme.color_token("muted-foreground");
+            let color = self.color.unwrap_or(ColorRef::Color(fg));
+            decl_icon::icon_with(cx, self.icon, Some(self.size), Some(color))
+        };
         let layout = decl_style::layout_style(&theme, self.layout);
         cx.container(
             fret_ui::element::ContainerProps {
@@ -275,5 +286,63 @@ impl CheckpointTrigger {
             tooltip = tooltip.panel_test_id(panel_test_id);
         }
         tooltip.into_element(cx)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_app::App;
+    use fret_core::{AppWindowId, Point, Rect, Size};
+    use fret_ui::element::ElementKind;
+
+    fn bounds() -> Rect {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(200.0)),
+        )
+    }
+
+    #[test]
+    fn checkpoint_keeps_group_role_when_stamping_test_id() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let element =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+                Checkpoint::new([cx.text("Restore point")])
+                    .test_id("ui-ai-checkpoint-row")
+                    .into_element(cx)
+            });
+
+        assert_eq!(
+            element.semantics_decoration.as_ref().and_then(|d| d.role),
+            Some(SemanticsRole::Group)
+        );
+        assert_eq!(
+            element
+                .semantics_decoration
+                .as_ref()
+                .and_then(|d| d.test_id.as_deref()),
+            Some("ui-ai-checkpoint-row")
+        );
+    }
+
+    #[test]
+    fn checkpoint_icon_accepts_custom_child_content() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let element =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+                CheckpointIcon::default()
+                    .children(cx.text("Custom icon"))
+                    .into_element(cx)
+            });
+
+        assert!(matches!(element.kind, ElementKind::Container(_)));
+        assert_eq!(element.children.len(), 1);
+        assert!(matches!(element.children[0].kind, ElementKind::Text(_)));
     }
 }

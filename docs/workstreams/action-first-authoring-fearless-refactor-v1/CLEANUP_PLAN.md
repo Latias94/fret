@@ -18,8 +18,8 @@ not complete yet:
 
 - Templates: `fretboard new` scaffolds prefer View + typed actions.
 - Cookbook/examples: migrations are ongoing; keep teaching surfaces consistent and regression-gated.
-- MVU: still exists in-tree as a compatibility surface, but it is not the recommended authoring path.
-  - Planned: MVU deprecation window (M8), then hard delete (M9) once adoption gates are met.
+- MVU: removed in-tree; only historical/external migration docs remain.
+  - Guardrails: `tools/gate_no_mvu_in_tree.py` and `tools/gate_no_mvu_in_cookbook.py`.
 
 This plan exists to keep the refactor boring at the end: no drift, no split teaching surfaces, and a
 clear deprecation → deletion sequence.
@@ -70,15 +70,14 @@ These should remain disallowed in golden-path code:
 - ad-hoc routing tables built from string patterns
 
 Repo already has checks for these patterns; keep them and update them to the new golden path.
-
-### 3.2 MVU typed command routers (`MessageRouter`, `KeyedMessageRouter`) — planned removal
+### 3.2 Historical MVU typed command routers (`MessageRouter`, `KeyedMessageRouter`) - removed in-tree
 
 These legacy routers existed as a first-party ecosystem surface during the v1 transition.
 
 Status (as of 2026-03-06):
 
-- Compatibility-only today.
-- Planned removal at M9 once all in-tree teaching surfaces and ecosystem defaults have migrated.
+- Removed from in-tree code surfaces as part of M9.
+- Historical docs may still reference them when explaining external migrations.
 
 Replacement guidance:
 
@@ -99,7 +98,7 @@ Avoid two overlapping entry points that teach different patterns:
 - Update `fretboard` templates to generate action-first + view-runtime examples.
 - Update `docs/README.md` “State management” section to list the new golden path primitives.
 - Keep `docs/workstreams/authoring-paradigm-gpui-style-v1.md` aligned:
-  - it may reference MVU as legacy or as an alternative; but it must not contradict the golden path.
+  - it may reference MVU only as historical/external migration context; it must not contradict the golden path.
 
 ---
 

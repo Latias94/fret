@@ -7,6 +7,7 @@ UI Gallery is our “component gallery” surface. It is used for:
 - Quick manual verification (visual + interaction).
 - Demonstrating shadcn-aligned recipes (copy/paste friendly).
 - Diagnostics anchors (`test_id`) for scripted runs and parity gates.
+- Label-association closure for form controls (`control_id` / `test_id_prefix` or direct control `test_id`) so gallery docs double as focused accessibility/automation gates.
 
 Today, many pages render a preview with real Rust code, but the “Code” tab shows a separately
 maintained string literal. This creates drift (the preview is correct, the copyable code is not),
@@ -154,6 +155,7 @@ Macros (`stringify!`) tend to:
 ### 4) Tracking + enforcement
 
 - Add a component tracker table (see `todo.md`) and update it as we migrate pages.
+- Update tracker notes when a page gains explicit Label Association closure (example section + diag gate), not just when it becomes snippet-backed.
 - Add a lightweight check (test or build-time check) that ensures “Code tabs” are sourced from
   files, not raw string literals, for migrated pages.
   - For migrated pages, the desired end-state is “no raw code literals”, only file-backed snippets.

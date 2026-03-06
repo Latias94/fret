@@ -24,19 +24,153 @@ use crate::{
     UiBuilder, UiIntoElement, UiPatch, UiPatchTarget, UiSupportsChrome, UiSupportsLayout,
 };
 
+/// A child value that can be converted into `AnyElement` inside heterogeneous authoring pipelines.
+///
+/// This extends the classic `UiIntoElement` path with ecosystem builder wrappers whose final
+/// landing still depends on the current host-typed `ElementContext`.
+pub trait UiChildIntoElement<H: UiHost>: Sized {
+    #[track_caller]
+    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement;
+}
+
+impl<H: UiHost, T> UiChildIntoElement<H> for T
+where
+    T: UiIntoElement,
+{
+    #[track_caller]
+    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        crate::UiIntoElement::into_element(self, cx)
+    }
+}
+
+impl<H: UiHost, F, I> UiChildIntoElement<H> for UiBuilder<FlexBox<H, F>>
+where
+    F: FnOnce(&mut ElementContext<'_, H>) -> I,
+    I: IntoIterator,
+    I::Item: UiChildIntoElement<H>,
+{
+    #[track_caller]
+    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        UiBuilder::<FlexBox<H, F>>::into_element(self, cx)
+    }
+}
+
+impl<H: UiHost, B> UiChildIntoElement<H> for UiBuilder<FlexBoxBuild<H, B>>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        UiBuilder::<FlexBoxBuild<H, B>>::into_element(self, cx)
+    }
+}
+
+impl<H: UiHost, F, I> UiChildIntoElement<H> for UiBuilder<ContainerBox<H, F>>
+where
+    F: FnOnce(&mut ElementContext<'_, H>) -> I,
+    I: IntoIterator,
+    I::Item: UiChildIntoElement<H>,
+{
+    #[track_caller]
+    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        UiBuilder::<ContainerBox<H, F>>::into_element(self, cx)
+    }
+}
+
+impl<H: UiHost, B> UiChildIntoElement<H> for UiBuilder<ContainerBoxBuild<H, B>>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        UiBuilder::<ContainerBoxBuild<H, B>>::into_element(self, cx)
+    }
+}
+
+impl<H: UiHost, F, I> UiChildIntoElement<H> for UiBuilder<ScrollAreaBox<H, F>>
+where
+    F: FnOnce(&mut ElementContext<'_, H>) -> I,
+    I: IntoIterator,
+    I::Item: UiChildIntoElement<H>,
+{
+    #[track_caller]
+    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        UiBuilder::<ScrollAreaBox<H, F>>::into_element(self, cx)
+    }
+}
+
+impl<H: UiHost, B> UiChildIntoElement<H> for UiBuilder<ScrollAreaBoxBuild<H, B>>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        UiBuilder::<ScrollAreaBoxBuild<H, B>>::into_element(self, cx)
+    }
+}
+
+impl<H: UiHost, F, I> UiChildIntoElement<H> for UiBuilder<StackBox<H, F>>
+where
+    F: FnOnce(&mut ElementContext<'_, H>) -> I,
+    I: IntoIterator,
+    I::Item: UiChildIntoElement<H>,
+{
+    #[track_caller]
+    fn into_child_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        UiBuilder::<StackBox<H, F>>::into_element(self, cx)
+    }
+}
+
 fn collect_ui_children<H: UiHost, I>(
     cx: &mut ElementContext<'_, H>,
     iter: I,
 ) -> SmallVec<[AnyElement; 8]>
 where
     I: IntoIterator,
-    I::Item: UiIntoElement,
+    I::Item: UiChildIntoElement<H>,
 {
     let mut out: SmallVec<[AnyElement; 8]> = SmallVec::new();
     for child in iter {
-        out.push(crate::UiIntoElement::into_element(child, cx));
+        out.push(UiChildIntoElement::into_child_element(child, cx));
     }
     out
+}
+
+/// Extension helpers for `*_build` child sinks.
+///
+/// These helpers make builder-first layout code read more like direct composition without falling
+/// back to `ui::children!` only to convert a heterogeneous list into `AnyElement` values.
+pub trait UiElementSinkExt {
+    fn push_ui<H: UiHost, T: UiChildIntoElement<H>>(
+        &mut self,
+        cx: &mut ElementContext<'_, H>,
+        child: T,
+    );
+
+    fn extend_ui<H: UiHost, I>(&mut self, cx: &mut ElementContext<'_, H>, children: I)
+    where
+        I: IntoIterator,
+        I::Item: UiChildIntoElement<H>;
+}
+
+impl UiElementSinkExt for Vec<AnyElement> {
+    fn push_ui<H: UiHost, T: UiChildIntoElement<H>>(
+        &mut self,
+        cx: &mut ElementContext<'_, H>,
+        child: T,
+    ) {
+        self.push(UiChildIntoElement::into_child_element(child, cx));
+    }
+
+    fn extend_ui<H: UiHost, I>(&mut self, cx: &mut ElementContext<'_, H>, children: I)
+    where
+        I: IntoIterator,
+        I::Item: UiChildIntoElement<H>,
+    {
+        for child in children {
+            self.push_ui(cx, child);
+        }
+    }
 }
 
 fn resolve_text_align_for_direction(
@@ -157,7 +291,7 @@ impl<H: UiHost, F, I> FlexBox<H, F>
 where
     F: FnOnce(&mut ElementContext<'_, H>) -> I,
     I: IntoIterator,
-    I::Item: UiIntoElement,
+    I::Item: UiChildIntoElement<H>,
 {
     #[track_caller]
     pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
@@ -246,7 +380,7 @@ pub fn h_flex<H: UiHost, F, I>(children: F) -> UiBuilder<FlexBox<H, F>>
 where
     F: FnOnce(&mut ElementContext<'_, H>) -> I,
     I: IntoIterator,
-    I::Item: UiIntoElement,
+    I::Item: UiChildIntoElement<H>,
 {
     UiBuilder::new(FlexBox::new(Axis::Horizontal, children))
 }
@@ -259,7 +393,7 @@ pub fn h_row<H: UiHost, F, I>(children: F) -> UiBuilder<FlexBox<H, F>>
 where
     F: FnOnce(&mut ElementContext<'_, H>) -> I,
     I: IntoIterator,
-    I::Item: UiIntoElement,
+    I::Item: UiChildIntoElement<H>,
 {
     let mut flex = FlexBox::new(Axis::Horizontal, children);
     flex.force_width_fill = false;
@@ -292,7 +426,7 @@ pub fn v_flex<H: UiHost, F, I>(children: F) -> UiBuilder<FlexBox<H, F>>
 where
     F: FnOnce(&mut ElementContext<'_, H>) -> I,
     I: IntoIterator,
-    I::Item: UiIntoElement,
+    I::Item: UiChildIntoElement<H>,
 {
     UiBuilder::new(FlexBox::new(Axis::Vertical, children))
 }
@@ -305,7 +439,7 @@ pub fn v_stack<H: UiHost, F, I>(children: F) -> UiBuilder<FlexBox<H, F>>
 where
     F: FnOnce(&mut ElementContext<'_, H>) -> I,
     I: IntoIterator,
-    I::Item: UiIntoElement,
+    I::Item: UiChildIntoElement<H>,
 {
     let mut flex = FlexBox::new(Axis::Vertical, children);
     flex.force_width_fill = false;
@@ -401,7 +535,7 @@ impl<H: UiHost, F, I> ContainerBox<H, F>
 where
     F: FnOnce(&mut ElementContext<'_, H>) -> I,
     I: IntoIterator,
-    I::Item: UiIntoElement,
+    I::Item: UiChildIntoElement<H>,
 {
     #[track_caller]
     pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
@@ -440,7 +574,7 @@ pub fn container<H: UiHost, F, I>(children: F) -> UiBuilder<ContainerBox<H, F>>
 where
     F: FnOnce(&mut ElementContext<'_, H>) -> I,
     I: IntoIterator,
-    I::Item: UiIntoElement,
+    I::Item: UiChildIntoElement<H>,
 {
     UiBuilder::new(ContainerBox::new(children))
 }
@@ -537,7 +671,7 @@ impl<H: UiHost, F, I> ScrollAreaBox<H, F>
 where
     F: FnOnce(&mut ElementContext<'_, H>) -> I,
     I: IntoIterator,
-    I::Item: UiIntoElement,
+    I::Item: UiChildIntoElement<H>,
 {
     #[track_caller]
     pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
@@ -849,7 +983,7 @@ pub fn scroll_area<H: UiHost, F, I>(children: F) -> UiBuilder<ScrollAreaBox<H, F
 where
     F: FnOnce(&mut ElementContext<'_, H>) -> I,
     I: IntoIterator,
-    I::Item: UiIntoElement,
+    I::Item: UiChildIntoElement<H>,
 {
     UiBuilder::new(ScrollAreaBox::new(children))
 }
@@ -900,7 +1034,7 @@ impl<H: UiHost, F, I> StackBox<H, F>
 where
     F: FnOnce(&mut ElementContext<'_, H>) -> I,
     I: IntoIterator,
-    I::Item: UiIntoElement,
+    I::Item: UiChildIntoElement<H>,
 {
     #[track_caller]
     pub fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
@@ -925,7 +1059,7 @@ pub fn stack<H: UiHost, F, I>(children: F) -> UiBuilder<StackBox<H, F>>
 where
     F: FnOnce(&mut ElementContext<'_, H>) -> I,
     I: IntoIterator,
-    I::Item: UiIntoElement,
+    I::Item: UiChildIntoElement<H>,
 {
     UiBuilder::new(StackBox::new(children))
 }
@@ -1294,9 +1428,25 @@ mod tests {
     // (e.g. `UiBuilder<TextBox>`) without requiring call-site `.into_element(cx)`.
     #[allow(dead_code)]
     fn h_flex_accepts_ui_builder_children<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-        h_flex(|cx| [text("a"), text("b")])
+        h_flex(|_cx| [text("a"), text("b")])
             .gap(Space::N2)
             .into_element(cx)
+    }
+
+    // Compile-only: ensure `ui::children!` accepts nested layout builders without requiring an
+    // explicit `.into_element(cx)` cliff at heterogeneous child boundaries.
+    #[allow(dead_code)]
+    fn children_macro_accepts_nested_layout_builders<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+    ) -> AnyElement {
+        h_flex(|cx| {
+            children![cx;
+                v_flex(|cx| children![cx; text("a"), text("b")]).gap(Space::N1),
+                container(|cx| children![cx; text("c")]).p_1(),
+            ]
+        })
+        .gap(Space::N2)
+        .into_element(cx)
     }
 
     // Compile-only: ensure layout constructor roots can be decorated on the builder path without
@@ -1305,7 +1455,7 @@ mod tests {
     fn h_flex_root_accepts_semantics_decorators<H: UiHost>(
         cx: &mut ElementContext<'_, H>,
     ) -> AnyElement {
-        h_flex(cx, |cx| [text(cx, "a"), text(cx, "b")])
+        h_flex(|_cx| [text("a"), text("b")])
             .test_id("root")
             .a11y_role(SemanticsRole::Group)
             .into_element(cx)
@@ -1315,11 +1465,9 @@ mod tests {
     // `into_element(cx)` (so callsites can avoid "decorate-only" early landing).
     #[allow(dead_code)]
     fn h_flex_accepts_decorated_children<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-        h_flex(cx, |cx| {
-            [text(cx, "a").test_id("a"), text(cx, "b").test_id("b")]
-        })
-        .gap(Space::N2)
-        .into_element(cx)
+        h_flex(|_cx| [text("a").test_id("a"), text("b").test_id("b")])
+            .gap(Space::N2)
+            .into_element(cx)
     }
 
     #[test]
@@ -1373,7 +1521,7 @@ mod tests {
         );
 
         fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
-            let el = text(cx, "hello").selectable_on().into_element(cx);
+            let el = text("hello").selectable_on().into_element(cx);
             assert!(
                 matches!(el.kind, ElementKind::SelectableText(_)),
                 "expected ui::text(...).selectable_on() to render a SelectableText element"
@@ -1401,28 +1549,21 @@ mod tests {
             let mut els = crate::declarative::current_color::scope_children(
                 cx,
                 crate::ColorRef::Color(expected),
-                |cx| [text(cx, "hello").into_element(cx)],
+                |cx| [text("hello").into_element(cx)],
             );
 
-            let scope = els
-                .pop()
-                .expect("expected a ForegroundScope wrapper element");
-            assert!(
-                matches!(scope.kind, ElementKind::ForegroundScope(_)),
-                "expected current_color::scope_children(...) to install a ForegroundScope wrapper"
+            let child = els.pop().expect("expected a child element");
+            assert_eq!(
+                child.inherited_foreground,
+                Some(expected),
+                "expected current_color::scope_children(...) to stamp inherited foreground on the existing root"
             );
-
-            let child = scope
-                .children
-                .into_iter()
-                .next()
-                .expect("expected a child element");
             let ElementKind::Text(props) = child.kind else {
                 panic!("expected Text element");
             };
             assert_eq!(
                 props.color, None,
-                "expected text to keep color late-bound for ForegroundScope inheritance"
+                "expected text to keep color late-bound for inherited foreground paint resolution"
             );
         });
     }

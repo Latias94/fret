@@ -8,6 +8,7 @@ Related:
 - Design: `docs/workstreams/action-first-authoring-fearless-refactor-v1/DESIGN.md`
 - Milestones: `docs/workstreams/action-first-authoring-fearless-refactor-v1/MILESTONES.md`
 - Evidence/gates: `docs/workstreams/action-first-authoring-fearless-refactor-v1/EVIDENCE_AND_GATES.md`
+- Post-v1 proposal: `docs/workstreams/action-first-authoring-fearless-refactor-v1/POST_V1_AUTHORING_V2_PROPOSAL.md`
 
 ADRs (decision gates for this workstream):
 
@@ -233,6 +234,9 @@ ID format:
       - `apps/fret-cookbook/examples/async_inbox_basics.rs`
       - `apps/fret-cookbook/examples/virtual_list_basics.rs`
       - `apps/fret-cookbook/examples/icons_and_assets_basics.rs`
+      - `apps/fret-cookbook/examples/assets_reload_epoch_basics.rs`
+      - `apps/fret-cookbook/examples/commands_keymap_basics.rs`
+      - `apps/fret-cookbook/examples/router_basics.rs`
       - `apps/fret-cookbook/examples/effects_layer_basics.rs`
       - `apps/fret-cookbook/examples/markdown_and_code_basics.rs`
       - `apps/fret-cookbook/examples/canvas_pan_zoom_basics.rs`
@@ -314,52 +318,57 @@ ID format:
 
 This phase is intentionally last.
 
-- [ ] AFA-clean-060 Remove legacy MVU routing glue once it is no longer recommended in templates/docs.
-  - Note: MVU hard delete is planned for M9; until then only migration guidance for external
-    codebases should remain.
+- [x] AFA-clean-060 Remove legacy MVU routing glue once it is no longer recommended in templates/docs.
+  - Status (as of 2026-03-06): completed in-tree; only historical/external migration guidance remains.
   - Evidence:
-    - `docs/workstreams/action-first-authoring-fearless-refactor-v1/MVU_POLICY.md` (archived)
-    - `tools/gate_no_mvu_in_tree.py` (or `tools/gate_no_mvu_in_tree.ps1`)
-    - `tools/gate_no_mvu_in_cookbook.py` (or `tools/gate_no_mvu_in_cookbook.ps1`)
-- [ ] AFA-clean-061 Update docs and templates:
+    - `docs/workstreams/action-first-authoring-fearless-refactor-v1/MVU_POLICY.md`
+    - `docs/workstreams/action-first-authoring-fearless-refactor-v1/LEGACY_MVU_INVENTORY.md`
+    - `tools/gate_no_mvu_in_tree.py`
+    - `tools/gate_no_mvu_in_cookbook.py`
+- [x] AFA-clean-061 Update docs and templates:
   - `docs/README.md` state management section shows actions + view runtime as the golden path.
   - `fretboard` templates generate action-first demos by default.
-  - Status (as of 2026-03-06): `README.md`, `docs/README.md`, the migration guide, and scaffold templates align on the narrowed default entrypoints; keep cookbook/ui-gallery narrative pages in sync as examples migrate.
+  - Status (as of 2026-03-06): `README.md`, `docs/README.md`, `docs/first-hour.md`, `docs/examples/README.md`, `docs/examples/todo-app-golden-path.md`, `docs/fearless-refactoring.md`, `docs/crate-usage-guide.md`, `docs/ui-ergonomics-and-interop.md`, the migration guide, scaffold templates, and the ui-gallery command teaching page align on the narrowed default entrypoints; keep future narrative pages in sync as examples migrate.
   - Evidence:
     - `README.md`
     - `docs/README.md`
+    - `docs/first-hour.md`
+    - `docs/examples/README.md`
+    - `docs/examples/todo-app-golden-path.md`
+    - `docs/fearless-refactoring.md`
+    - `docs/crate-usage-guide.md`
+    - `docs/ui-ergonomics-and-interop.md`
     - `docs/workstreams/action-first-authoring-fearless-refactor-v1/MIGRATION_GUIDE.md`
     - `apps/fretboard/src/scaffold/templates.rs` (`todo_template_main_rs`, `simple_todo_template_main_rs`, `hello_template_main_rs`)
-- [ ] AFA-clean-062 Delete or quarantine redundant APIs/modules once adoption is complete.
-  - Rule: do not delete until all in-tree demos + ecosystem crates have migrated or have explicit “legacy” labeling.
+    - `apps/fret-ui-gallery/src/ui/pages/command.rs`
+- [x] AFA-clean-062 Delete or quarantine redundant APIs/modules once adoption is complete.
+  - Rule: do not delete until all in-tree demos + ecosystem crates have migrated or have explicit ?legacy? labeling.
   - Migration inventory:
     - `docs/workstreams/action-first-authoring-fearless-refactor-v1/LEGACY_MVU_INVENTORY.md`
-  - Status (as of 2026-03-06): pending (MVU still exists in-tree; removal planned for M9).
+  - Status (as of 2026-03-06): completed in-tree; `ecosystem/fret` MVU modules/feature gate are gone, legacy MVU demo copies are absent, and templates no longer scaffold MVU.
   - Evidence:
-    - `docs/workstreams/action-first-authoring-fearless-refactor-v1/MILESTONES.md` (M9)
-    - `tools/gate_no_mvu_in_tree.py` (or `tools/gate_no_mvu_in_tree.ps1`)
-    - `tools/gate_no_mvu_in_cookbook.py` (or `tools/gate_no_mvu_in_cookbook.ps1`)
+    - `docs/workstreams/action-first-authoring-fearless-refactor-v1/LEGACY_MVU_INVENTORY.md`
+    - `ecosystem/fret/src/lib.rs`
+    - `tools/gate_no_mvu_in_tree.py`
+    - `tools/gate_no_mvu_in_cookbook.py`
 
 ### Next cleanup steps (post-v1)
-
-- [ ] AFA-clean-063 Decide MVU’s long-term status (supported alternative vs legacy-only).
+- [x] AFA-clean-063 Decide MVU's long-term status (supported alternative vs legacy-only).
   - Decision:
-    - Proposed: MVU is not a supported alternative golden path; plan to delete it in-tree (M9).
+    - Adopted: MVU is not a supported alternative golden path; it has been removed in-tree and only historical/external migration notes remain.
   - Historical note:
     - During v1, the lack of structured payload actions (and view-cache parity risk) was a practical
       reason to keep MVU during the deprecation window. Payload actions v2 (ADR 0312) landed later.
   - Evidence:
-    - Policy: `docs/workstreams/action-first-authoring-fearless-refactor-v1/MVU_POLICY.md` (archived)
+    - Policy: `docs/workstreams/action-first-authoring-fearless-refactor-v1/MVU_POLICY.md`
     - Milestone: `docs/workstreams/action-first-authoring-fearless-refactor-v1/MILESTONES.md` (M9)
-    - Gate: `tools/gate_no_mvu_in_tree.py` (or `tools/gate_no_mvu_in_tree.ps1`)
+    - Gate: `tools/gate_no_mvu_in_tree.py`
 
-- [ ] AFA-clean-064 Add compile-time deprecation warnings for legacy MVU surfaces (if feasible).
-  - Status: pending (applies during the M8 deprecation window).
+- [x] AFA-clean-064 Add compile-time deprecation warnings for legacy MVU surfaces (if feasible).
+  - Status: not needed; the repo reached the M9 hard delete before a separate warning window was implemented in-tree.
 
-- [ ] AFA-clean-065 Consider feature-gating MVU behind an explicit legacy feature.
-  - Goal: keep `fret::prelude::*` boring, and make MVU opt-in in downstream apps.
-  - Non-goal: break existing users without a deprecation window.
-  - Status: pending (applies if MVU must remain in-tree through M8).
+- [x] AFA-clean-065 Consider feature-gating MVU behind an explicit legacy feature.
+  - Status: not needed; the repo removed MVU in-tree instead of preserving it behind a legacy feature.
 
 ---
 
@@ -367,6 +376,30 @@ This phase is intentionally last.
 
 These are intentionally *not* part of the v1 milestone closure, but they are likely the next
 practical steps:
+
+- [~] AFA-postv1-001 Investigate direct local-state ergonomics beyond `Model<T>` in `ViewCx::use_state`.
+  - Goal: let simple demos keep state in a plain-Rust shape without weakening dirty/notify semantics
+    or shared-model interop.
+  - Evidence target: rewrite one medium demo as a comparison branch before promoting any new surface.
+  - Update (as of 2026-03-06): additive prototype landed as `LocalState<T>` + `ViewCx::use_local*` / `watch_local(...)`; `hello_counter_demo`, `query_demo`, and `query_async_tokio_demo` now use the prototype instead of storing explicit local model handles in the view struct, with the query demos validating `use_local` alongside `use_query` / `use_query_async` + transient invalidation.
+- [~] AFA-postv1-002 Investigate builder-first composition paths that reduce `ui::children!` and nested
+  `into_element(cx)` in medium demos.
+  - Goal: measure whether a builder-only path materially improves density without helper sprawl.
+  - Evidence target: compare `hello_counter_demo` or `query_demo` against the current default path.
+  - Update (as of 2026-03-06): `fret-ui-kit::ui::UiElementSinkExt`, `UiChildIntoElement`, and `ui::*_build` sinks now power builder-first `query_demo` and `query_async_tokio_demo` variants while also letting `ui::children!` / `push_ui()` accept nested layout builders plus host-bound `Card::build(...)` / `CardHeader::build(...)` / `CardContent::build(...)` values without an extra `.into_element(cx)` cliff. That same card-builder path now also covers the `fretboard` todo/simple-todo templates plus `commands_keymap_basics`, `form_basics`, and `async_inbox_basics` through the generic `.ui()` patch path; `ecosystem/fret-ui-shadcn/src/layout.rs` now exposes `container_vstack_build(...)` / `container_hstack_build(...)` / `container_hstack_centered_build(...)` so the first older helper family can stay on the same late-landing pipeline; `ecosystem/fret-ui-shadcn/src/table.rs` plus `ecosystem/fret-genui-shadcn/src/resolver/data.rs` now extend that same pattern into the table composite stack (`Table::build(...)` / `TableHeader::build(...)` / `TableBody::build(...)` / `TableFooter::build(...)` / `TableRow::build(...)`) for GenUI-driven data tables; and `TableCell::build(child)` now serves as the first single-child late-landing sample (also reflected in the UI Gallery typography table snippet). Remaining gap: broader composite APIs and the wider family of single-child wrappers that still insist on eager `AnyElement` inputs remain outside the modern child pipeline.
+- [ ] AFA-postv1-003 Investigate widget-local action sugar (`listener` / `dispatch` / `shortcut`)
+  without expanding the default helper surface prematurely.
+  - Goal: keep action-first semantics while lowering local event-wiring noise.
+  - Guardrail: only promote if at least two real demos/templates need the same shape.
+
+- [~] AFA-postv1-004 Evaluate v2 invalidation ergonomics: keep explicit `notify()` as a low-level runtime escape hatch while making local-state writes rerender implicitly by default.
+  - Goal: preserve cache/debug determinism without forcing users to call `notify()` after most tracked state writes.
+  - Evidence target: prototype one medium demo and confirm diagnostics still explain rebuild reasons.
+  - Update (as of 2026-03-06): the prototype keeps explicit `notify()` out of the call site by combining `LocalState::update_in` / `set_in` with the existing `on_action_notify_models` path in `hello_counter_demo`, `query_demo`, and `query_async_tokio_demo`; `LocalState::update_action` / `set_action` remain available for future widget-local experiments once widget-local dispatch ergonomics are revisited.
+- [ ] AFA-postv1-005 Evaluate narrow authoring macros that reduce repeated child/list boilerplate without introducing a full `rsx!`-style DSL as the default surface.
+  - Goal: decide whether keyed child-list macros or optional layout collection sugar materially improve density after builder-first improvements.
+  - Guardrail: no macro should hide action identity, key context, or cache-boundary semantics.
+  - Note: this is optional polish, not a prerequisite for declaring v2 successful.
 
 - Done: key context stack + diagnostics-visible context naming/stacking rules.
   - Evidence:
@@ -392,6 +425,8 @@ practical steps:
       - In progress: `apps/fret-ui-gallery` (large surface; migrate in batches)
         - Started: `apps/fret-ui-gallery/src/ui/doc_layout.rs`, `apps/fret-ui-gallery/src/ui/content.rs`
         - Default-helper alignment landed for the command docs surface: `apps/fret-ui-gallery/src/ui/snippets/command/action_first_view.rs`, `apps/fret-ui-gallery/src/ui/pages/command.rs`
+        - Teaching-surface gate now covers ui-gallery pages/snippets for bare `cx.on_action*` regressions: `tools/gate_no_on_action_in_teaching_surfaces.py`
+        - Advanced helper exceptions are now locked by allowlist: `tools/gate_only_allowed_on_action_notify_in_teaching_surfaces.py`
         - Gate (shell-only): `tools/gate_no_stack_in_ui_gallery_shell.py` (or `tools/gate_no_stack_in_ui_gallery_shell.ps1`)
       - As needed: shadcn/genui crates (only when they block teaching-surface convergence)
   - Done: hard delete legacy stack helpers once internal implementations are migrated.
@@ -428,18 +463,35 @@ practical steps:
     - `apps/fret-examples/src/custom_effect_v2_web_demo.rs` (uses `on_activate_request_redraw`)
 - Demo authoring review snapshot (as of 2026-03-06):
   - Simple demo status: `hello_template_main_rs` is close to the intended golden path (typed actions + `ui::children!` + one model-update helper).
-  - Medium demo status: `hello_counter_demo` and `query_demo` are substantially improved, but still expose three recurring noise classes:
-    1. model read boilerplate (`watch_model(...).layout()/paint().copied_or/cloned_or_default()`),
-    2. nested `into_element(cx)` landing inside composed card/layout sections,
+  - Medium demo status: `hello_counter_demo`, `query_demo`, and `query_async_tokio_demo` now use the `LocalState<T>` prototype for view-local state; the query demos, scaffold todo templates, cookbook `commands_keymap_basics` / `form_basics` / `async_inbox_basics`, and `fret-genui-shadcn` data-table resolver now carry the current card/table-focused builder-first experiment. The remaining recurring noise classes are:
+    1. tracked-state read boilerplate (`watch_local(...).layout()/paint().copied_or/cloned_or_default()` and `watch_model(...).layout()/paint().copied_or/cloned_or_default()`),
+    2. broader composite helpers plus the wider family of single-child wrappers still remain outside the modern `ui::children!` / `push_ui()` pipeline, even though the current card/table builder paths and the first `TableCell::build(child)` sample now round-trip through the generic `.ui()` patch surface,
     3. explicit transient scheduling for App-only effects (`take_transient_on_action_root` + `with_query_client`).
   - Recommended next phase:
     - keep `on_action*` / `on_activate*` as the current closure story (do not add more tiny helpers yet),
     - prefer template/doc guidance first for transient/App-effect patterns,
     - re-evaluate only after one more round of template/demo authoring feedback.
+- Post-v1 design review (as of 2026-03-06):
+  - v1 is successful at architecture + teaching-surface convergence: action-first dispatch landed,
+    `View` / `ViewCx` plus hooks are in tree, the default helper story narrowed, and MVU is hard-deleted
+    behind reintroduction gates.
+  - The repo has not yet reached the full GPUI/Zed-style authoring density end-state. The remaining
+    gaps are intentionally treated as post-v1 ergonomics work, not as unfinished migration closure.
+  - Remaining pressure points:
+    1. `use_state` still returns `Model<T>` instead of a plain-Rust local-state authoring story.
+    2. Default demos still rely on `watch_model(...)` / `models.update(...)` for common state reads/writes.
+    3. the query demos, scaffold templates, a first cookbook slice, the GenUI data-table resolver, and the UI Gallery typography table snippet now demonstrate builder-first card/table paths plus the first single-child late-landing sample (`TableCell::build(child)`) on the generic `.ui()` patch path, and those values now flow through `ui::children!` / `push_ui()` as well; the remaining visible `into_element(cx)` boundaries are mostly tied to the rest of the single-child wrapper family and older helper wrappers that still insist on eager `AnyElement` values.
+    4. Widget-local `listener` / `dispatch` / `shortcut` sugar is not the default event story yet.
+  - Recommendation:
+    - close v1 as successful on architecture + migration + default teaching surface,
+    - track density/ergonomics work in a separate post-v1 phase,
+    - do not add more tiny helpers until another round of template/demo evidence shows repeated pressure.
 - Helper visibility policy snapshot (as of 2026-03-06):
   - Default teaching surface: `cx.on_action_notify_models::<A>(|models| ...)`, `cx.on_action_notify_transient::<A>(...)`, and local `on_activate(...)` / `on_activate_notify(...)` only.
   - Advanced/reference surface: raw `cx.on_action(...)` / `cx.on_action_notify(...)`, single-model aliases (`on_action_notify_model_update`, `on_action_notify_model_set`, `on_action_notify_toggle_bool`), payload hooks, and redraw-oriented `on_activate_request_redraw*` helpers.
   - Promotion rule: do not promote additional helpers into README/templates/first-hour docs unless at least two real demos/templates need the same shape and the generic defaults are clearly noisier.
+  - Remaining intentional advanced cookbook cases are now explicitly cookbook-only host-side categories: `toast_basics` (imperative Sonner host integration), `router_basics` back/forward (router availability sync), `async_inbox_basics::Start` (dispatcher/inbox scheduling), and `undo_basics::Undo`/`Redo` (history traversal + RAF effect).
+  - `fret-examples` and ui-gallery teaching pages/snippets are now on the zero-exception path for raw `cx.on_action_notify::<...>` and single-model helper aliases, while scaffold templates keep equivalent unit-test assertions; `async_playground_demo::ToggleTheme`, `embedded_viewport_demo`, and the query demos stay on `on_action_notify_models` / `on_action_notify_transient` with render-time side effects where needed, while `hello_counter_demo` plus both query demos are the intentional `use_local` prototypes and still keep the default `on_action_notify_models` action surface.
 - Payload actions (v2+), behind strict determinism + validation rules.
   - See: `docs/adr/0312-payload-actions-v2.md`
 
@@ -488,39 +540,37 @@ practical steps:
 
 ---
 
-## H. Hard delete legacy MVU (planned M9)
+## H. Hard delete legacy MVU (M9 closure)
 
-Planned: this checklist becomes active once the repo teaching surfaces (templates + cookbook +
-examples) have fully converged on View runtime + typed actions and the compatibility window (M8) has
-ended. Until then, keep MVU usage quarantined and avoid expanding its surface.
+Completed: the repo teaching surfaces (templates + cookbook + examples) have converged on View
+runtime + typed actions, and in-tree MVU has been removed. Historical MVU discussion remains only
+for external migration guidance and archival context.
 
 Exit target:
 
 - no remaining MVU usage in-tree,
 - no MVU-related feature gates or demo-level opt-ins,
 - no `fret::legacy::*` module,
-- no MVU references in templates/docs.
+- no MVU references in default templates/docs as an available authoring path.
 
 Tasks:
 
-- [ ] AFA-m9-001 Migrate remaining non-action-first demos in `apps/fret-examples` to View+actions.
-- [ ] AFA-m9-002 Delete legacy MVU demo copies once the migrated versions exist (remove `*_legacy.rs` files):
-  - `apps/fret-examples/src/todo_demo_legacy.rs`
-  - `apps/fret-examples/src/query_demo_legacy.rs`
-  - `apps/fret-examples/src/query_async_tokio_demo_legacy.rs`
-  - `apps/fret-examples/src/hello_counter_demo_legacy.rs`
-  - `apps/fret-examples/src/async_playground_demo_legacy.rs`
-  - `apps/fret-examples/src/embedded_viewport_demo_legacy.rs`
-  - `apps/fret-examples/src/drop_shadow_demo_legacy.rs`
-  - `apps/fret-examples/src/postprocess_theme_demo_legacy.rs`
-- [ ] AFA-m9-003 Remove the demo-level MVU opt-in and any routing/printing branches in `apps/fret-demo`.
-- [ ] AFA-m9-004 Remove the `ecosystem/fret` MVU feature gate and delete MVU modules:
-  - `ecosystem/fret/src/mvu.rs`
-  - `ecosystem/fret/src/mvu_router.rs`
-  - `ecosystem/fret/src/legacy.rs`
-- [ ] AFA-m9-005 Remove any legacy MVU scaffolding sources from `apps/fretboard/src/scaffold/templates.rs`.
-- [ ] AFA-m9-006 Update docs to remove MVU guidance:
-  - `docs/workstreams/action-first-authoring-fearless-refactor-v1/MVU_POLICY.md`
-  - `docs/workstreams/action-first-authoring-fearless-refactor-v1/MIGRATION_GUIDE.md`
-  - `docs/workstreams/action-first-authoring-fearless-refactor-v1/CLEANUP_PLAN.md`
-- [ ] AFA-m9-007 Add a lightweight gate that fails if MVU identifiers reappear (file list + `git grep` is enough).
+- [x] AFA-m9-001 Migrate remaining non-action-first demos in `apps/fret-examples` to View+actions.
+  - Status: completed; `apps/fret-examples` now stays on the view runtime + typed actions surface.
+- [x] AFA-m9-002 Delete legacy MVU demo copies once the migrated versions exist (remove `*_legacy.rs` files).
+  - Status: completed; the former MVU legacy demo copies are absent from `apps/fret-examples/src`.
+- [x] AFA-m9-003 Remove the demo-level MVU opt-in and any routing/printing branches in `apps/fret-demo`.
+  - Status: completed; the remaining `node-graph-demos-legacy` feature is unrelated to MVU and stays out of scope for this checklist.
+- [x] AFA-m9-004 Remove the `ecosystem/fret` MVU feature gate and delete MVU modules.
+  - Status: completed; `ecosystem/fret/src/mvu.rs`, `ecosystem/fret/src/mvu_router.rs`, and `ecosystem/fret/src/legacy.rs` are absent.
+- [x] AFA-m9-005 Remove any legacy MVU scaffolding sources from `apps/fretboard/src/scaffold/templates.rs`.
+  - Status: completed; only regression assertions remain to keep the golden path honest.
+- [x] AFA-m9-006 Update docs to remove MVU as an in-tree authoring path while keeping historical migration notes.
+  - Evidence:
+    - `docs/workstreams/action-first-authoring-fearless-refactor-v1/MVU_POLICY.md`
+    - `docs/workstreams/action-first-authoring-fearless-refactor-v1/MIGRATION_GUIDE.md`
+    - `docs/workstreams/action-first-authoring-fearless-refactor-v1/CLEANUP_PLAN.md`
+- [x] AFA-m9-007 Add a lightweight gate that fails if MVU identifiers reappear (file list + `git grep` is enough).
+  - Evidence:
+    - `tools/gate_no_mvu_in_tree.py`
+    - `tools/gate_no_mvu_in_cookbook.py`

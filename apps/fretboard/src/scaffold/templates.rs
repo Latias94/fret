@@ -431,22 +431,23 @@ impl View for TodoView {
             }
         });
 
-        cx.on_action_notify_model_update::<act::RefreshTip, u64>(self.tip_nonce.clone(), |v| {
-            *v = v.saturating_add(1);
-        });
+        cx.on_action_notify_models::<act::RefreshTip>({{
+            let tip_nonce = self.tip_nonce.clone();
+            move |models| models.update(&tip_nonce, |v| *v = v.saturating_add(1)).is_ok()
+        }});
 
-        cx.on_action_notify_model_set::<act::FilterAll, TodoFilter>(
-            self.filter.clone(),
-            TodoFilter::All,
-        );
-        cx.on_action_notify_model_set::<act::FilterActive, TodoFilter>(
-            self.filter.clone(),
-            TodoFilter::Active,
-        );
-        cx.on_action_notify_model_set::<act::FilterCompleted, TodoFilter>(
-            self.filter.clone(),
-            TodoFilter::Completed,
-        );
+        cx.on_action_notify_models::<act::FilterAll>({{
+            let filter = self.filter.clone();
+            move |models| models.update(&filter, |v| *v = TodoFilter::All).is_ok()
+        }});
+        cx.on_action_notify_models::<act::FilterActive>({{
+            let filter = self.filter.clone();
+            move |models| models.update(&filter, |v| *v = TodoFilter::Active).is_ok()
+        }});
+        cx.on_action_notify_models::<act::FilterCompleted>({{
+            let filter = self.filter.clone();
+            move |models| models.update(&filter, |v| *v = TodoFilter::Completed).is_ok()
+        }});
 
         let derived: TodoDerived = cx.use_selector(
             |cx| {
@@ -600,13 +601,24 @@ __PALETTE_BUTTON__
         .gap(Space::N4)
         .w_full();
 
-        let card = shadcn::Card::new(ui::children![cx;
-            shadcn::CardHeader::new(ui::children![cx;
-                shadcn::CardTitle::new("Todo"),
-                shadcn::CardDescription::new("View runtime + typed actions + selector + query (v1)."),
-            ]),
-            shadcn::CardContent::new(ui::children![cx; content]),
-        ])
+        let card = shadcn::Card::build(|cx, out| {
+            out.push_ui(
+                cx,
+                shadcn::CardHeader::build(|cx, out| {
+                    out.push_ui(cx, shadcn::CardTitle::new("Todo"));
+                    out.push_ui(
+                        cx,
+                        shadcn::CardDescription::new("View runtime + typed actions + selector + query (v1)."),
+                    );
+                }),
+            );
+            out.push_ui(
+                cx,
+                shadcn::CardContent::build(|cx, out| {
+                    out.push_ui(cx, content);
+                }),
+            );
+        })
         .ui()
         .bg(ColorRef::Color(theme.color_token("background")))
         .rounded(Radius::Lg)
@@ -743,8 +755,9 @@ impl View for HelloView {{
         let click_count = cx.use_state::<u32>();
         let click_count_value = cx.watch_model(&click_count).layout().copied_or(0);
 
-        cx.on_action_notify_model_update::<act::Click, u32>(click_count.clone(), |v| {{
-            *v = v.saturating_add(1);
+        cx.on_action_notify_models::<act::Click>({{
+            let click_count = click_count.clone();
+            move |models| models.update(&click_count, |v| *v = v.saturating_add(1)).is_ok()
         }});
 
         ui::v_flex(|cx| {{
@@ -979,14 +992,25 @@ __ADD_BTN_DEF__
             .gap(Space::N4)
             .w_full();
 
-        let card = shadcn::Card::new(ui::children![cx;
-            shadcn::CardHeader::new(ui::children![cx;
-                shadcn::CardTitle::new("Simple Todo"),
-                shadcn::CardDescription::new("View runtime + typed actions + keyed lists (no selector/query)."),
-                header_actions,
-            ]),
-            shadcn::CardContent::new(ui::children![cx; content]),
-        ])
+        let card = shadcn::Card::build(|cx, out| {
+            out.push_ui(
+                cx,
+                shadcn::CardHeader::build(|cx, out| {
+                    out.push_ui(cx, shadcn::CardTitle::new("Simple Todo"));
+                    out.push_ui(
+                        cx,
+                        shadcn::CardDescription::new("View runtime + typed actions + keyed lists (no selector/query)."),
+                    );
+                    out.push(header_actions);
+                }),
+            );
+            out.push_ui(
+                cx,
+                shadcn::CardContent::build(|cx, out| {
+                    out.push_ui(cx, content);
+                }),
+            );
+        })
         .ui()
         .bg(ColorRef::Color(theme.color_token("background")))
         .rounded(Radius::Lg)
@@ -1115,6 +1139,7 @@ cargo run --release
 - Authoring: view runtime + typed unit actions (action-first, v1)
 - Hooks: selector + query (v1)
 - Default entrypoints: `on_action_notify_models`, `on_action_notify_transient`, and local `on_activate*` only when you truly need widget-local pressable glue.
+- Treat raw `on_action_notify` as cookbook/reference-only host-side glue.
 - Read model values near the top of `render()` before building nested card/layout sections.
 - For App-only effects, prefer `on_action_notify_transient` in the handler and consume the transient in `render()`.
 ## Next steps
@@ -1192,6 +1217,7 @@ cargo run --release
 {ui_assets_line}
 - Authoring: view runtime + typed unit actions (action-first, v1)
 - Default entrypoints: start with `on_action_notify_models`; keep `on_activate*` for local widget glue only.
+- Treat raw `on_action_notify` as cookbook/reference-only host-side glue.
 - Read model values near the top of `render()` and keep row rendering driven by locals.
 ## Next steps
 
@@ -1240,6 +1266,7 @@ cargo run --release
 {icons_line}{palette_line}
 - Authoring: view runtime + typed unit actions (action-first, v1)
 - Default entrypoints: start with `on_action_notify_models`; use `on_activate*` only for local pressable glue.
+- Treat raw `on_action_notify` as cookbook/reference-only host-side glue.
 - Read model values near the top of `render()` and keep action handlers on `on_action_notify*` when possible.
 - Next: edit `src/main.rs` and replace the view tree
 "#
@@ -1271,11 +1298,19 @@ mod tests {
         assert!(src.contains("impl View for TodoView"));
         assert!(src.contains(".run_view::<TodoView>()"));
         assert!(src.contains("fret::actions!(["));
-        assert!(src.contains(".ui()"));
+        assert!(src.contains("shadcn::Card::build(|cx, out| {"));
+        assert!(src.contains("shadcn::CardHeader::build(|cx, out| {"));
+        assert!(src.contains("shadcn::CardContent::build(|cx, out| {"));
+        assert!(src.contains("out.push_ui(\n                cx,\n                shadcn::CardHeader::build(|cx, out| {"));
+        assert!(src.contains("out.push_ui(\n                cx,\n                shadcn::CardContent::build(|cx, out| {"));
         assert!(src.contains("cx.on_action_notify_models::<act::Add>"));
         assert!(src.contains("cx.on_action_notify_models::<act::ClearDone>"));
-        assert!(src.contains("cx.on_action_notify_model_update::<act::RefreshTip, u64>"));
+        assert!(src.contains("cx.on_action_notify_models::<act::RefreshTip>"));
+        assert!(!src.contains("cx.on_action_notify_model_update::<act::RefreshTip"));
+        assert!(!src.contains("cx.on_action_notify_model_set::<act::Filter"));
         assert!(!src.contains("decl_style::container_props"));
+        assert!(!src.contains(".refine_style("));
+        assert!(!src.contains(".refine_layout("));
 
         let into_element_count = src.matches(".into_element(cx)").count();
         assert!(
@@ -1291,7 +1326,8 @@ mod tests {
         assert!(!src.contains("ui::v_flex( |"));
         assert!(src.contains("impl View for HelloView"));
         assert!(src.contains(".run_view::<HelloView>()"));
-        assert!(src.contains("cx.on_action_notify_model_update::<act::Click, u32>"));
+        assert!(src.contains("cx.on_action_notify_models::<act::Click>"));
+        assert!(!src.contains("cx.on_action_notify_model_update::<act::Click"));
         assert!(src.contains(".into_element(cx)"));
         assert!(!src.contains("decl_style::container_props"));
     }
@@ -1308,10 +1344,17 @@ mod tests {
         assert!(src.contains("impl View for TodoView"));
         assert!(src.contains(".run_view::<TodoView>()"));
         assert!(src.contains("fret::actions!(["));
+        assert!(src.contains("shadcn::Card::build(|cx, out| {"));
+        assert!(src.contains("shadcn::CardHeader::build(|cx, out| {"));
+        assert!(src.contains("shadcn::CardContent::build(|cx, out| {"));
+        assert!(src.contains("out.push_ui(\n                cx,\n                shadcn::CardHeader::build(|cx, out| {"));
+        assert!(src.contains("out.push_ui(\n                cx,\n                shadcn::CardContent::build(|cx, out| {"));
         assert!(src.contains("cx.on_action_notify_models::<act::Add>"));
         assert!(src.contains("cx.on_action_notify_models::<act::ClearDone>"));
         assert!(!src.contains("fret_query"));
         assert!(!src.contains("fret_selector"));
+        assert!(!src.contains(".refine_style("));
+        assert!(!src.contains(".refine_layout("));
 
         let into_element_count = src.matches(".into_element(cx)").count();
         assert!(
@@ -1332,14 +1375,17 @@ mod tests {
         let hello = hello_template_readme_md("hello-app", opts());
         assert!(hello.contains("Read model values near the top of `render()`"));
         assert!(hello.contains("Default entrypoints"));
+        assert!(hello.contains("cookbook/reference-only host-side glue"));
 
         let simple = simple_todo_template_readme_md("simple-todo-app", opts());
         assert!(simple.contains("When rendering dynamic lists, prefer `cx.keyed(id, |cx| ...)`"));
         assert!(simple.contains("Read model values near the top of `render()`"));
         assert!(simple.contains("start with `on_action_notify_models`"));
+        assert!(simple.contains("cookbook/reference-only host-side glue"));
 
         let todo = todo_template_readme_md("todo-app", opts());
         assert!(todo.contains("For App-only effects, prefer `on_action_notify_transient`"));
+        assert!(todo.contains("cookbook/reference-only host-side glue"));
         assert!(todo.contains(
             "Default entrypoints: `on_action_notify_models`, `on_action_notify_transient`"
         ));

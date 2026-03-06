@@ -5,24 +5,35 @@ use crate::ui::snippets::radio_group as snippets;
 
 pub(super) fn preview_radio_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     let demo = snippets::demo::render(cx);
+    let usage = snippets::usage::render(cx);
     let label = snippets::label::render(cx);
     let plans = snippets::plans::render(cx);
     let extras = snippets::extras::render(cx);
 
     let notes = doc_layout::notes(
         cx,
-        ["Preview follows shadcn RadioGroup demo (new-york-v4)."],
+        [
+            "API reference: `ecosystem/fret-ui-shadcn/src/radio_group.rs` (RadioGroup, RadioGroupItem).",
+            "RadioGroup already exposes the important authoring surface: direct item labels for the common case and `RadioGroupItem::children(...)` for richer item content.",
+            "The main parity gap here is gallery usage clarity rather than missing mechanism or a generic `compose()` builder.",
+            "Use `control_id(...)` together with `FieldLabel::for_control(...)` when you want label clicks to focus the active radio item.",
+            "Use `RadioGroup::uncontrolled(default)` for the smallest shadcn-style snippet and switch to `RadioGroup::new(model)` for controlled forms.",
+        ],
     );
 
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview follows shadcn RadioGroup demo order: basic options, plan cards. Extras include invalid/fieldset/RTL.",
+            "Preview follows shadcn RadioGroup docs flow: Demo -> Usage -> Label Association -> Plans -> Extras.",
         ),
         vec![
             DocSection::new("Demo", demo)
                 .test_id_prefix("ui-gallery-radio-group-demo")
                 .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
+            DocSection::new("Usage", usage)
+                .description("Copyable minimal usage for `RadioGroup`.")
+                .test_id_prefix("ui-gallery-radio-group-usage")
+                .code_rust_from_file_region(snippets::usage::SOURCE, "example"),
             DocSection::new("Label Association", label)
                 .description("Use `FieldLabel::for_control` + `RadioGroup::control_id` to focus the active item on label click.")
                 .test_id_prefix("ui-gallery-radio-group-label")

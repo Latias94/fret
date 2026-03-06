@@ -31,11 +31,11 @@ View runtime (v1):
 - `ecosystem/fret-ui-kit/src/imui.rs` (imui pressable activation paths reuse `on_activate` / `on_activate_notify` helpers)
 - `ecosystem/fret-ui-kit/src/primitives/navigation_menu.rs` / `ecosystem/fret-ui-kit/src/window_overlays/render.rs` (navigation and overlay pressables reuse `on_activate` helpers)
 
-Legacy MVU removal (planned M9):
+Legacy MVU removal (M9 landed):
 
-- MVU authoring still exists in-tree today as a compatibility surface.
-- The hard delete is planned for M9, after the M8 deprecation/migration window.
-- Gate (planned for M9): `tools/gate_no_mvu_in_tree.py` (or `tools/gate_no_mvu_in_tree.ps1`) prevents reintroduction once MVU is removed.
+- In-tree MVU code surfaces are removed.
+- Historical MVU discussion remains only in migration/archive docs.
+- Gates: `tools/gate_no_mvu_in_tree.py` and `tools/gate_no_mvu_in_cookbook.py` prevent reintroduction.
 
 UI gallery adoption (v1):
 
@@ -45,11 +45,13 @@ UI gallery adoption (v1):
 Fretboard scaffolding templates (teaching surface):
 
 - `apps/fretboard/src/scaffold/templates.rs` (`hello_template_main_rs`, `todo_template_main_rs`, `simple_todo_template_main_rs`)
-  - Unit tests gate that templates use `ui::children![cx; ...]` and keep explicit `.into_element(cx)` calls low.
-- `README.md`, `docs/README.md`, `docs/workstreams/action-first-authoring-fearless-refactor-v1/MIGRATION_GUIDE.md`
-  - All three align on the same default entrypoints: `on_action_notify_models`,
+  - Unit tests gate that templates use `ui::children![cx; ...]`, keep explicit `.into_element(cx)` calls low, and keep first-contact templates on `on_action_notify_models` instead of single-model aliases.
+- `README.md`, `docs/README.md`, `docs/first-hour.md`, `docs/examples/README.md`, `docs/examples/todo-app-golden-path.md`, `docs/fearless-refactoring.md`, `docs/crate-usage-guide.md`, `docs/ui-ergonomics-and-interop.md`, `apps/fret-ui-gallery/src/ui/pages/command.rs`, `docs/workstreams/action-first-authoring-fearless-refactor-v1/MIGRATION_GUIDE.md`
+  - These first-contact, golden-path, and ergonomics narrative surfaces now align on the same default entrypoints: `on_action_notify_models`,
     `on_action_notify_transient`, and local `on_activate*`; advanced helpers are documented as
-    optional/reference aliases.
+    cookbook/reference-only host-side categories.
+- `apps/fret-examples/src/hello_counter_demo.rs`, `apps/fret-examples/src/embedded_viewport_demo.rs`, `apps/fret-examples/src/query_demo.rs`, `apps/fret-examples/src/query_async_tokio_demo.rs`, `tools/gate_no_single_model_action_helpers_in_default_teaching_surfaces.py`
+  - Keeps the default demo surfaces on `on_action_notify_models` / `on_action_notify_transient` and prevents single-model helper aliases from drifting back into `fret-examples` or ui-gallery teaching pages/snippets; scaffold templates keep equivalent unit-test assertions in `apps/fretboard/src/scaffold/templates.rs`.
 
 Editor-grade adoption (workspace shell demo):
 
@@ -72,8 +74,14 @@ Teaching-surface ergonomics gates:
 
 - `tools/gate_no_models_mut_in_action_handlers.py` (guards cookbook/examples against regressing to verbose
   `move |host, _acx| host.models_mut()...` patterns; prefers `ViewCx` helpers instead).
-- `tools/gate_no_on_action_in_teaching_surfaces.py` (guards cookbook/examples against regressing to
-  bare `cx.on_action` handlers; prefers `ViewCx::on_action_notify*` helpers).
+- `tools/gate_no_on_action_in_teaching_surfaces.py` (guards cookbook/examples plus ui-gallery
+  teaching pages/snippets against regressing to bare `cx.on_action` handlers; prefers
+  `ViewCx::on_action_notify*` helpers).
+- `tools/gate_only_allowed_on_action_notify_in_teaching_surfaces.py` (locks the remaining
+  intentional advanced `cx.on_action_notify::<...>` teaching-surface exceptions to a small,
+  reasoned cookbook allowlist, while also keeping `fret-examples` and ui-gallery pages/snippets
+  at zero advanced `on_action_notify` occurrences: imperative Sonner host integration, router
+  availability sync, dispatcher/inbox scheduling, and undo/redo RAF effects).
 - `tools/pre_release.ps1` runs the teaching-surface gates as part of the pre-release policy suite.
 
 Examples adoption (authoring-noise reduction):
@@ -86,6 +94,19 @@ Examples adoption (authoring-noise reduction):
 - `apps/fret-examples/src/query_demo.rs` (current guidance sample: top-of-render model reads + transient App-effect scheduling)
 - `apps/fret-examples/src/hello_counter_demo.rs` (current guidance sample: action helper placement + card/layout subtree boundaries)
 - `apps/fret-examples/src/query_async_tokio_demo.rs` (current guidance sample: async query variant using the same transient + subtree-boundary patterns)
+- `apps/fret-examples/src/custom_effect_v1_demo.rs` (reset action now uses the default `on_action_notify_models` transaction path)
+- `apps/fret-examples/src/custom_effect_v2_demo.rs` (reset action now uses the default `on_action_notify_models` transaction path)
+- `apps/fret-examples/src/custom_effect_v3_demo.rs` (reset action now uses the default `on_action_notify_models` transaction path)
+- `apps/fret-examples/src/postprocess_theme_demo.rs` (reset action now uses the default `on_action_notify_models` transaction path)
+- `apps/fret-examples/src/liquid_glass_demo.rs` (reset/preset/toggle-inspector actions now use the default `on_action_notify_models` transaction path)
+- `apps/fret-examples/src/async_playground_demo.rs` (`ToggleTheme` now uses `on_action_notify_models`; theme application is synchronized in `render()` from the observed model state)
+- `apps/fret-cookbook/examples/icons_and_assets_basics.rs` (reload bump action now uses the default `on_action_notify_models` transaction path)
+- `apps/fret-cookbook/examples/assets_reload_epoch_basics.rs` (reload bump action now uses the default `on_action_notify_models` transaction path)
+- `apps/fret-cookbook/examples/commands_keymap_basics.rs` (command toggle handler now uses the default `on_action_notify_models` transaction path while availability stays explicit)
+- `apps/fret-cookbook/examples/toast_basics.rs` (intentional advanced reference case: imperative Sonner host integration still needs `UiActionHost` + window)
+- `apps/fret-cookbook/examples/router_basics.rs` (`ClearIntents` now uses the default `on_action_notify_models` transaction path; back/forward remain advanced because they also sync router command availability)
+- `apps/fret-cookbook/examples/async_inbox_basics.rs` (`Cancel` now uses the default `on_action_notify_models` transaction path; `Start` remains advanced because it spawns dispatcher/inbox work)
+- `apps/fret-cookbook/examples/undo_basics.rs` (`Inc`/`Dec`/`Reset` now use the default `on_action_notify_models` transaction path; `Undo`/`Redo` remain advanced because they combine history traversal with RAF scheduling)
 
 Pointer-trigger authoring integration (v1 still dispatches through the command pipeline):
 
@@ -242,7 +263,8 @@ Prefer `cargo nextest run` when available.
   - `tools/gates_wasm_smoke.ps1`
 - Run the Action-first authoring diagnostics gate set (commands/keymap + modal barrier + cross-frontend):
   - `pwsh tools/diag_gate_action_first_authoring_v1.ps1`
-- Prevent legacy MVU drift in the cookbook (compile-time grep gate):
+- Prevent legacy MVU drift in-tree (compile-time grep gates):
+  - `python tools/gate_no_mvu_in_tree.py`
   - `python tools/gate_no_mvu_in_cookbook.py` (or `pwsh tools/gate_no_mvu_in_cookbook.ps1`)
 - Prevent `stack::*` authoring drift (cookbook/examples stay on `fret-ui-kit::ui::*` builders):
   - `python tools/gate_no_stack_in_cookbook.py` (or `pwsh tools/gate_no_stack_in_cookbook.ps1`)

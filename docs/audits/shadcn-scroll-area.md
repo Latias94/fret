@@ -32,6 +32,8 @@ docs and the `new-york-v4` registry implementation in `repo-ref/ui`.
 - Pass: Exposes a composable `ScrollAreaRoot` / `ScrollAreaViewport` / `ScrollAreaScrollbar` /
   `ScrollAreaCorner` surface (Radix-shaped), while keeping the compact `ScrollArea::new(children)`
   builder for convenience.
+- Note: Because both the compact builder and the Radix-shaped parts surface already exist, Fret does
+  not need an additional generic `compose()` builder for this component.
 - Pass: Supports passing a `ScrollHandle` when consumers need programmatic scrolling.
 - Pass: Mirrors the Radix `Viewport` content minimum width behavior: the scroll content bounds are
   clamped to at least the viewport bounds so `w-full` descendants do not collapse under
@@ -57,5 +59,4 @@ docs and the `new-york-v4` registry implementation in `repo-ref/ui`.
 
 ## Validation
 
-- `cargo test -p fret-ui-shadcn --lib collapsible` (for interaction scaffolding patterns)
 - `cargo test -p fret-ui-shadcn --lib scroll_area`

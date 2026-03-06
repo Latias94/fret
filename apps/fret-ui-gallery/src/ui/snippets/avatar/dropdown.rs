@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("dropdown.rs");
 
 // region: example
-use fret_core::ImageId;
+use fret_core::{Corners, ImageId, Px};
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 
 fn wrap_row<H: UiHost>(
@@ -23,29 +23,6 @@ pub fn render<H: UiHost>(
 ) -> AnyElement {
     wrap_row(cx, |cx| {
         let avatar_image_for_trigger = avatar_image.clone();
-        let trigger = move |cx: &mut ElementContext<'_, H>| {
-            let image =
-                shadcn::AvatarImage::model(avatar_image_for_trigger.clone()).into_element(cx);
-            let fallback = shadcn::AvatarFallback::new("CN")
-                .when_image_missing_model(avatar_image_for_trigger.clone())
-                .delay_ms(120)
-                .into_element(cx);
-
-            let avatar = shadcn::Avatar::new([image, fallback])
-                .size(shadcn::AvatarSize::Default)
-                .into_element(cx);
-
-            // Match shadcn docs: Avatar is composed inside a ghost icon button used as the
-            // dropdown trigger (`asChild`-style).
-            shadcn::Button::new("")
-                .variant(shadcn::ButtonVariant::Ghost)
-                .size(shadcn::ButtonSize::Icon)
-                .a11y_label("Open user menu")
-                .refine_style(ChromeRefinement::default().rounded(Radius::Full))
-                .children([avatar])
-                .test_id("ui-gallery-avatar-dropdown-trigger")
-                .into_element(cx)
-        };
 
         let entries = |_cx: &mut ElementContext<'_, H>| {
             vec![
@@ -70,7 +47,39 @@ pub fn render<H: UiHost>(
             ]
         };
 
-        vec![shadcn::DropdownMenu::new(open).into_element(cx, trigger, entries)]
+        vec![shadcn::DropdownMenu::new(open).into_element_parts(
+            cx,
+            move |cx| {
+                let image =
+                    shadcn::AvatarImage::model(avatar_image_for_trigger.clone()).into_element(cx);
+                let fallback = shadcn::AvatarFallback::new("CN")
+                    .when_image_missing_model(avatar_image_for_trigger.clone())
+                    .delay_ms(120)
+                    .into_element(cx);
+
+                let avatar = shadcn::Avatar::new([image, fallback])
+                    .size(shadcn::AvatarSize::Default)
+                    .into_element(cx);
+
+                let trigger = shadcn::Button::new("")
+                    .variant(shadcn::ButtonVariant::Ghost)
+                    .size(shadcn::ButtonSize::Icon)
+                    .a11y_label("Open user menu")
+                    .corner_radii_override(Corners::all(Px(999.0)))
+                    .children([avatar])
+                    .test_id("ui-gallery-avatar-dropdown-trigger-avatar")
+                    .into_element(cx);
+
+                // shadcn/Radix parity: the authored child button is the actual trigger surface.
+                // The nested Avatar is presentational content inside that pressable child.
+                shadcn::DropdownMenuTrigger::new(trigger)
+            },
+            shadcn::DropdownMenuContent::new()
+                .align(shadcn::DropdownMenuAlign::End)
+                .side_offset(Px(4.0))
+                .min_width(Px(224.0)),
+            entries,
+        )]
     })
     .test_id("ui-gallery-avatar-dropdown-row")
 }

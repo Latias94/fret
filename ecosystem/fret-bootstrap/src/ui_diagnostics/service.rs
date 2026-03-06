@@ -1,4 +1,3 @@
-
 #[derive(Default)]
 pub struct UiDiagnosticsService {
     cfg: UiDiagnosticsConfig,
@@ -36,6 +35,9 @@ pub struct UiDiagnosticsService {
     #[cfg(feature = "diagnostics-ws")]
     pending_devtools_semantics_node_get:
         Option<ui_diagnostics_devtools_ws::PendingDevtoolsSemanticsNodeGetRequest>,
+    #[cfg(feature = "diagnostics-ws")]
+    pending_devtools_hit_test_explain:
+        Option<ui_diagnostics_devtools_ws::PendingDevtoolsHitTestExplainRequest>,
     #[cfg(feature = "diagnostics-ws")]
     ws_bridge: UiDiagnosticsWsBridge,
 }
@@ -178,7 +180,10 @@ impl UiDiagnosticsService {
         if !self.is_enabled() {
             return false;
         }
-        if !self.cfg.isolate_external_keyboard_input_while_script_running {
+        if !self
+            .cfg
+            .isolate_external_keyboard_input_while_script_running
+        {
             return false;
         }
         if Self::in_script_injection_scope() {
@@ -276,7 +281,8 @@ impl UiDiagnosticsService {
         target: Option<&UiWindowTargetV1>,
         test_id_hint: Option<&str>,
     ) -> Option<AppWindowId> {
-        let resolved = self.resolve_window_target_for_active_step(current_window, anchor_window, target)?;
+        let resolved =
+            self.resolve_window_target_for_active_step(current_window, anchor_window, target)?;
         let Some(test_id_hint) = test_id_hint else {
             return Some(resolved);
         };
@@ -286,10 +292,14 @@ impl UiDiagnosticsService {
 
         // Do not override fully explicit targets.
         match target {
-            UiWindowTargetV1::Current | UiWindowTargetV1::FirstSeen | UiWindowTargetV1::WindowFfi { .. } => {
+            UiWindowTargetV1::Current
+            | UiWindowTargetV1::FirstSeen
+            | UiWindowTargetV1::WindowFfi { .. } => {
                 return Some(resolved);
             }
-            UiWindowTargetV1::FirstSeenOther | UiWindowTargetV1::LastSeenOther | UiWindowTargetV1::LastSeen => {}
+            UiWindowTargetV1::FirstSeenOther
+            | UiWindowTargetV1::LastSeenOther
+            | UiWindowTargetV1::LastSeen => {}
         }
 
         let candidates: Vec<AppWindowId> = match target {
@@ -330,6 +340,8 @@ impl UiDiagnosticsService {
             | UiActionStepV2::Swipe { target, .. }
             | UiActionStepV2::Pinch { target, .. }
             | UiActionStepV2::SetBaseRef { target, .. }
+            | UiActionStepV2::Activate { target, .. }
+            | UiActionStepV2::Focus { target, .. }
             | UiActionStepV2::MovePointer { target, .. }
             | UiActionStepV2::MovePointerSweep { target, .. }
             | UiActionStepV2::PointerDown { target, .. }
@@ -405,10 +417,7 @@ impl UiDiagnosticsService {
             .global::<fret_runtime::WindowInputContextService>()
             .map(|ctx_svc| ctx_svc.window_count() as u32);
 
-        from_runner
-            .or(from_input_ctx)
-            .unwrap_or(0)
-            .max(1)
+        from_runner.or(from_input_ctx).unwrap_or(0).max(1)
     }
 
     const CACHED_TEST_ID_PREDICATE_MAX_AGE_MS: u64 = 30_000;
@@ -620,6 +629,8 @@ impl UiDiagnosticsService {
                 | UiActionStepV2::WaitFrames { window, .. }
                 | UiActionStepV2::WaitMs { window, .. }
                 | UiActionStepV2::WaitUntil { window, .. }
+                | UiActionStepV2::Activate { window, .. }
+                | UiActionStepV2::Focus { window, .. }
                 | UiActionStepV2::Assert { window, .. } => window.as_ref(),
                 _ => None,
             };
@@ -668,6 +679,8 @@ impl UiDiagnosticsService {
             | UiActionStepV2::WaitFrames { window, .. }
             | UiActionStepV2::WaitMs { window, .. }
             | UiActionStepV2::WaitUntil { window, .. }
+            | UiActionStepV2::Activate { window, .. }
+            | UiActionStepV2::Focus { window, .. }
             | UiActionStepV2::Assert { window, .. } => window.as_ref(),
             _ => None,
         };
@@ -862,7 +875,10 @@ impl UiDiagnosticsService {
             // sequences), keep the script alive by migrating it to a remaining window instead of
             // silently dropping it and letting tooling time out.
             let fallback = if active.anchor_window != window
-                && self.known_windows.iter().any(|w| *w == active.anchor_window)
+                && self
+                    .known_windows
+                    .iter()
+                    .any(|w| *w == active.anchor_window)
             {
                 Some(active.anchor_window)
             } else {
@@ -884,7 +900,9 @@ impl UiDiagnosticsService {
                     stage: UiScriptStageV1::Failed,
                     step_index: Some(active.next_step.min(u32::MAX as usize) as u32),
                     reason_code: Some("window.closed".to_string()),
-                    reason: Some("active script window closed and no fallback window exists".to_string()),
+                    reason: Some(
+                        "active script window closed and no fallback window exists".to_string(),
+                    ),
                     evidence: None,
                     last_bundle_dir: self
                         .last_dump_dir
@@ -1038,16 +1056,19 @@ impl UiDiagnosticsService {
             .flatten()
             .map(|pos| UiHitTestSnapshotV1::from_tree(pos, ui));
 
-        let element_diag = want_debug_snapshot.then_some(element_runtime).flatten().and_then(|runtime| {
-            runtime.diagnostics_snapshot(window).map(|snapshot| {
-                ElementDiagnosticsSnapshotV1::from_runtime(
-                    window,
-                    runtime,
-                    snapshot,
-                    self.cfg.max_debug_string_bytes,
-                )
-            })
-        });
+        let element_diag = want_debug_snapshot
+            .then_some(element_runtime)
+            .flatten()
+            .and_then(|runtime| {
+                runtime.diagnostics_snapshot(window).map(|snapshot| {
+                    ElementDiagnosticsSnapshotV1::from_runtime(
+                        window,
+                        runtime,
+                        snapshot,
+                        self.cfg.max_debug_string_bytes,
+                    )
+                })
+            });
 
         let raw_semantics = ui.semantics_snapshot();
         let semantics_fingerprint = raw_semantics.map(|snapshot| {
@@ -1096,8 +1117,7 @@ impl UiDiagnosticsService {
                             break;
                         }
                         if let Some(test_id) = node.test_id.as_deref() {
-                            ring.test_id_bounds
-                                .insert(test_id.to_string(), node.bounds);
+                            ring.test_id_bounds.insert(test_id.to_string(), node.bounds);
                         }
                     }
                 }
@@ -1390,8 +1410,7 @@ impl UiDiagnosticsService {
             });
 
         let max_entries = MAX_SHORTCUT_ROUTING_TRACE_ENTRIES;
-        let decisions =
-            store.snapshot_since(window, active.last_command_dispatch_seq, max_entries);
+        let decisions = store.snapshot_since(window, active.last_command_dispatch_seq, max_entries);
         if decisions.is_empty() {
             return;
         }

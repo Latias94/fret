@@ -170,14 +170,14 @@ Design note:
 
 ---
 
-## E. MVU ergonomics (clarity + future escape hatch)
+## E. Action-first/view-runtime clarity
 
  - [x] ONB-mvu-040 Document the MVU “tick refresh” posture and its implications.
    - Evidence:
-     - `ecosystem/fret/src/mvu.rs` (internal `tick` model)
+     - `ecosystem/fret/src/view.rs`
      - `docs/examples/todo-app-golden-path.md`
 
-- [ ] ONB-mvu-041 Explore an opt-in mode for more precise invalidation (future).
+- [ ] ONB-view-041 Explore whether any additional ?more precise invalidation? guidance is needed.
   - Decision gate:
     - do we keep MVU always “simple + safe”, and push perf apps toward manual driver wiring?
 
@@ -257,7 +257,7 @@ Design note:
     - `apps/fretboard/src/dev.rs` (`fretboard dev native --demo <demo>` parity with web)
     - `apps/fretboard/src/demos.rs` (`fretboard dev web --demo simple-todo` validation list)
   - Note:
-    - `todo_demo` remains desktop-first until `fret::mvu` supports wasm (`ecosystem/fret/src/mvu.rs` is `desktop`-gated).
+    - `todo_demo` remains desktop-first because the current example targets the native builder/view path; wasm onboarding should be tracked as its own view-runtime adoption task.
 
 - [ ] ONB-demo-062 Evaluate whether we still need separate `*-web` shells for individual apps once they are selectable in `fret-demo-web`.
   - Decision gate:

@@ -1987,7 +1987,7 @@ impl WinitAppDriver for ComponentsGalleryDriver {
     ) {
     }
 
-    fn accessibility_snapshot(
+    fn semantics_snapshot(
         &mut self,
         _app: &mut App,
         _window: AppWindowId,
@@ -2162,6 +2162,6 @@ pub fn run() -> anyhow::Result<()> {
     let app = build_app();
     let config = build_runner_config();
 
-    fret::run_native_demo(config, app, ComponentsGalleryDriver)
+    fret::run_native_with_compat_driver(config, app, ComponentsGalleryDriver)
         .context("run components_gallery app")
 }

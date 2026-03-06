@@ -42,7 +42,7 @@ Related ADR:
 
 ## Building blocks (first-party ecosystem)
 
-- `fret::mvu::MessageRouter<M>`: typed routing for dynamic commands.
+- `fret::actions!` + `fret::payload_actions!`: typed unit/payload intent routing without string parsing.
 - `ecosystem/fret-selector`: derived state memoization (+ optional `use_selector` UI sugar).
 - `ecosystem/fret-query`: query-style async resource state.
 - `ecosystem/fret-executor`: portable execution helpers (inboxes, cancellation, task spawning).

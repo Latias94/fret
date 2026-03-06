@@ -5,6 +5,7 @@ use crate::ui::snippets::input_otp as snippets;
 
 pub(super) fn preview_input_otp(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     let demo = snippets::demo::render(cx);
+    let usage = snippets::usage::render(cx);
     let pattern = snippets::pattern::render(cx);
     let separator = snippets::separator::render(cx);
     let disabled = snippets::disabled::render(cx);
@@ -17,9 +18,9 @@ pub(super) fn preview_input_otp(cx: &mut ElementContext<'_, App>) -> Vec<AnyElem
     let notes = doc_layout::notes(
         cx,
         [
-            "This page follows shadcn Input OTP patterns (grouping, separators, and active slot behavior).",
-            "Invalid state is modeled via `InputOtp::aria_invalid(true)` (shadcn docs: `aria-invalid`).",
             "API reference: `ecosystem/fret-ui-shadcn/src/input_otp.rs`.",
+            "Input OTP already supports the upstream composition model via `InputOTP`, `InputOTPGroup`, `InputOTPSlot`, `InputOTPSeparator`, and `InputOtp::into_element_parts(...)`, so the main parity gap here was usage clarity rather than missing mechanism work.",
+            "Invalid state is modeled via `InputOtp::aria_invalid(true)` (shadcn docs: `aria-invalid`).",
             "Pattern parity: `InputOtpPattern::DigitsAndChars` mirrors shadcn `REGEXP_ONLY_DIGITS_AND_CHARS` outcomes.",
         ],
     );
@@ -27,13 +28,18 @@ pub(super) fn preview_input_otp(cx: &mut ElementContext<'_, App>) -> Vec<AnyElem
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview follows shadcn Input OTP docs order: Demo, Pattern, Separator, Disabled, Controlled, Invalid, Four Digits, Alphanumeric, RTL.",
+            "Preview follows shadcn Input OTP docs order: Demo, Usage, Pattern, Separator, Disabled, Controlled, Invalid, Four Digits, Alphanumeric, RTL.",
         ),
         vec![
             DocSection::new("Demo", demo)
+                .description("shadcn demo: grouped OTP slots backed by a single input model.")
                 .no_shell()
                 .test_id_prefix("ui-gallery-input-otp-demo")
                 .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
+            DocSection::new("Usage", usage)
+                .description("Copyable minimal usage for the composable `InputOTP*` parts API.")
+                .test_id_prefix("ui-gallery-input-otp-usage")
+                .code_rust_from_file_region(snippets::usage::SOURCE, "example"),
             DocSection::new("Pattern", pattern)
                 .description("Alphanumeric OTP filtering using shadcn-like patterns.")
                 .code_rust_from_file_region(snippets::pattern::SOURCE, "example"),
@@ -60,7 +66,7 @@ pub(super) fn preview_input_otp(cx: &mut ElementContext<'_, App>) -> Vec<AnyElem
             DocSection::new("RTL", rtl)
                 .description("Same OTP surface under an RTL direction provider.")
                 .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
-            DocSection::new("Notes", notes),
+            DocSection::new("Notes", notes).description("API surface and parity notes."),
         ],
     );
 

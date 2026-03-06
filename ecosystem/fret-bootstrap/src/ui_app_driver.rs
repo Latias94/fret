@@ -269,7 +269,7 @@ impl<S> UiAppDriver<S> {
             hooks.window_created = Some(ui_app_window_created::<S>);
             hooks.before_close_window = Some(ui_app_before_close_window::<S>);
 
-            hooks.accessibility_snapshot = Some(ui_app_accessibility_snapshot::<S>);
+            hooks.semantics_snapshot = Some(ui_app_accessibility_snapshot::<S>);
             hooks.accessibility_focus = Some(ui_app_accessibility_focus::<S>);
             hooks.accessibility_invoke = Some(ui_app_accessibility_invoke::<S>);
             hooks.accessibility_set_value_text = Some(ui_app_accessibility_set_value_text::<S>);
@@ -2213,6 +2213,7 @@ fn ui_app_render<S>(
         let drive = app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
             svc.drive_script_for_window(
                 app,
+                services,
                 window,
                 bounds,
                 scale_factor,

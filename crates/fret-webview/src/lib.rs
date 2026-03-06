@@ -166,70 +166,56 @@ pub struct WebViewRuntimeState {
 #[derive(Debug, Default)]
 pub struct WebViewHost {
     requests: VecDeque<WebViewRequest>,
-    events: VecDeque<WebViewEvent>,
     surfaces: HashMap<WebViewId, WebViewSurfaceRegistration>,
     runtime: HashMap<WebViewId, WebViewRuntimeState>,
     console: HashMap<WebViewId, VecDeque<WebViewConsoleEntry>>,
 }
 
 impl WebViewHost {
-    const EVENTS_CAP: usize = 512;
     const CONSOLE_CAP: usize = 200;
 
-    pub fn push_request(&mut self, request: WebViewRequest) {
+    fn push_request(&mut self, request: WebViewRequest) {
         self.requests.push_back(request);
     }
 
-    pub fn push_requests(&mut self, requests: impl IntoIterator<Item = WebViewRequest>) {
-        self.requests.extend(requests);
-    }
-
-    pub fn drain_requests(&mut self) -> Vec<WebViewRequest> {
+    fn drain_requests(&mut self) -> Vec<WebViewRequest> {
         self.requests.drain(..).collect()
     }
 
-    pub fn push_event(&mut self, event: WebViewEvent) {
+    fn apply_event(&mut self, event: WebViewEvent) {
         self.apply_event_to_runtime(&event);
-        self.events.push_back(event);
-        while self.events.len() > Self::EVENTS_CAP {
-            let _ = self.events.pop_front();
-        }
     }
 
-    pub fn push_events(&mut self, events: impl IntoIterator<Item = WebViewEvent>) {
+    fn apply_events(&mut self, events: impl IntoIterator<Item = WebViewEvent>) {
         for ev in events {
-            self.push_event(ev);
+            self.apply_event(ev);
         }
     }
 
-    pub fn drain_events(&mut self) -> Vec<WebViewEvent> {
-        self.events.drain(..).collect()
-    }
-
-    pub fn runtime_state(&self, id: WebViewId) -> Option<&WebViewRuntimeState> {
+    fn runtime_state(&self, id: WebViewId) -> Option<&WebViewRuntimeState> {
         self.runtime.get(&id)
     }
 
-    pub fn console_entries(&self, id: WebViewId) -> Vec<WebViewConsoleEntry> {
+    fn console_entries(&self, id: WebViewId) -> Vec<WebViewConsoleEntry> {
         self.console
             .get(&id)
             .map(|q| q.iter().cloned().collect())
             .unwrap_or_default()
     }
 
-    pub fn clear_console(&mut self, id: WebViewId) {
+    fn clear_console(&mut self, id: WebViewId) {
         if let Some(q) = self.console.get_mut(&id) {
             q.clear();
         }
     }
 
-    pub fn requeue_requests_front(&mut self, requests: impl IntoIterator<Item = WebViewRequest>) {
+    fn requeue_requests_front(&mut self, requests: impl IntoIterator<Item = WebViewRequest>) {
         let mut head: VecDeque<WebViewRequest> = requests.into_iter().collect();
         head.append(&mut self.requests);
         self.requests = head;
     }
 
-    pub fn drop_requests_for_ids(&mut self, ids: &[WebViewId]) -> usize {
+    fn drop_requests_for_ids(&mut self, ids: &[WebViewId]) -> usize {
         use std::collections::HashSet;
 
         let ids: HashSet<WebViewId> = ids.iter().copied().collect();
@@ -246,7 +232,7 @@ impl WebViewHost {
         before.saturating_sub(self.requests.len())
     }
 
-    pub fn drop_requests_for_window_close(
+    fn drop_requests_for_window_close(
         &mut self,
         window: AppWindowId,
         ids: &[WebViewId],
@@ -267,11 +253,11 @@ impl WebViewHost {
         before.saturating_sub(self.requests.len())
     }
 
-    pub fn register_surface(&mut self, surface: WebViewSurfaceRegistration) {
+    fn register_surface(&mut self, surface: WebViewSurfaceRegistration) {
         self.surfaces.insert(surface.id, surface);
     }
 
-    pub fn remove_surfaces_for_window(
+    fn remove_surfaces_for_window(
         &mut self,
         window: AppWindowId,
     ) -> Vec<WebViewSurfaceRegistration> {
@@ -287,11 +273,12 @@ impl WebViewHost {
                 removed.push(s);
             }
             self.runtime.remove(&id);
+            self.console.remove(&id);
         }
         removed
     }
 
-    pub fn gc_stale_surfaces(
+    fn gc_stale_surfaces(
         &mut self,
         window: AppWindowId,
         now_frame: u64,
@@ -314,6 +301,7 @@ impl WebViewHost {
         for id in &stale {
             self.surfaces.remove(id);
             self.runtime.remove(id);
+            self.console.remove(id);
             self.requests.push_back(WebViewRequest::Destroy { id: *id });
         }
 
@@ -365,11 +353,7 @@ impl WebViewHost {
         }
     }
 
-    pub fn surface(&self, id: WebViewId) -> Option<&WebViewSurfaceRegistration> {
-        self.surfaces.get(&id)
-    }
-
-    pub fn surfaces_for_window(&self, window: AppWindowId) -> Vec<WebViewSurfaceRegistration> {
+    fn surfaces_for_window(&self, window: AppWindowId) -> Vec<WebViewSurfaceRegistration> {
         self.surfaces
             .values()
             .filter(|s| s.window == window)
@@ -377,7 +361,7 @@ impl WebViewHost {
             .collect()
     }
 
-    pub fn has_surfaces_for_window(&self, window: AppWindowId) -> bool {
+    fn has_surfaces_for_window(&self, window: AppWindowId) -> bool {
         self.surfaces.values().any(|s| s.window == window)
     }
 }
@@ -409,14 +393,14 @@ impl WebViewSurfaceRegistration {
     }
 }
 
-pub fn with_webview_host_mut<H: GlobalsHost, R>(
+fn with_webview_host_mut<H: GlobalsHost, R>(
     host: &mut H,
     f: impl FnOnce(&mut WebViewHost) -> R,
 ) -> R {
     host.with_global_mut_untracked(WebViewHost::default, |state, _host| f(state))
 }
 
-pub fn with_webview_host<H: GlobalsHost, R>(
+fn with_webview_host<H: GlobalsHost, R>(
     host: &H,
     f: impl FnOnce(Option<&WebViewHost>) -> R,
 ) -> R {
@@ -425,13 +409,6 @@ pub fn with_webview_host<H: GlobalsHost, R>(
 
 pub fn webview_push_request(host: &mut impl GlobalsHost, request: WebViewRequest) {
     with_webview_host_mut(host, |st| st.push_request(request));
-}
-
-pub fn webview_push_requests(
-    host: &mut impl GlobalsHost,
-    requests: impl IntoIterator<Item = WebViewRequest>,
-) {
-    with_webview_host_mut(host, |st| st.push_requests(requests));
 }
 
 pub fn webview_drain_requests(host: &mut impl GlobalsHost) -> Vec<WebViewRequest> {
@@ -445,19 +422,11 @@ pub fn webview_requeue_requests_front(
     with_webview_host_mut(host, |st| st.requeue_requests_front(requests));
 }
 
-pub fn webview_push_event(host: &mut impl GlobalsHost, event: WebViewEvent) {
-    with_webview_host_mut(host, |st| st.push_event(event));
-}
-
-pub fn webview_push_events(
+pub fn webview_apply_events(
     host: &mut impl GlobalsHost,
     events: impl IntoIterator<Item = WebViewEvent>,
 ) {
-    with_webview_host_mut(host, |st| st.push_events(events));
-}
-
-pub fn webview_drain_events(host: &mut impl GlobalsHost) -> Vec<WebViewEvent> {
-    with_webview_host_mut(host, |st| st.drain_events())
+    with_webview_host_mut(host, |st| st.apply_events(events));
 }
 
 pub fn webview_runtime_state(
@@ -477,10 +446,6 @@ pub fn webview_clear_console(host: &mut impl GlobalsHost, id: WebViewId) {
     with_webview_host_mut(host, |st| st.clear_console(id));
 }
 
-pub fn webview_register_surface(host: &mut impl GlobalsHost, surface: WebViewSurfaceRegistration) {
-    with_webview_host_mut(host, |st| st.register_surface(surface));
-}
-
 pub fn webview_register_surface_tracked(
     host: &mut (impl GlobalsHost + TimeHost),
     mut surface: WebViewSurfaceRegistration,
@@ -494,10 +459,6 @@ pub fn webview_remove_surfaces_for_window(
     window: AppWindowId,
 ) -> Vec<WebViewSurfaceRegistration> {
     with_webview_host_mut(host, |st| st.remove_surfaces_for_window(window))
-}
-
-pub fn webview_drop_requests_for_ids(host: &mut impl GlobalsHost, ids: &[WebViewId]) -> usize {
-    with_webview_host_mut(host, |st| st.drop_requests_for_ids(ids))
 }
 
 pub fn webview_drop_requests_for_window_close(
@@ -652,20 +613,20 @@ mod tests {
     }
 
     #[test]
-    fn push_event_updates_runtime_state() {
+    fn apply_event_updates_runtime_state() {
         let mut host = WebViewHost::default();
         let id = WebViewId(1);
 
-        host.push_event(WebViewEvent::Created { id });
-        host.push_event(WebViewEvent::UrlChanged {
+        host.apply_event(WebViewEvent::Created { id });
+        host.apply_event(WebViewEvent::UrlChanged {
             id,
             url: Arc::<str>::from("https://example.com"),
         });
-        host.push_event(WebViewEvent::TitleChanged {
+        host.apply_event(WebViewEvent::TitleChanged {
             id,
             title: Arc::<str>::from("Example Domain"),
         });
-        host.push_event(WebViewEvent::NavigationStateChanged {
+        host.apply_event(WebViewEvent::NavigationStateChanged {
             id,
             state: WebViewNavigationState {
                 can_go_back: false,

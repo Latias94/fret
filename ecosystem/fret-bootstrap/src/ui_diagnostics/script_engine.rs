@@ -61,6 +61,8 @@ pub(super) fn active_script_needs_semantics_snapshot(active: &ActiveScript) -> b
         | UiActionStepV2::Swipe { .. }
         | UiActionStepV2::Pinch { .. }
         | UiActionStepV2::SetBaseRef { .. }
+        | UiActionStepV2::Activate { .. }
+        | UiActionStepV2::Focus { .. }
         | UiActionStepV2::ClickStable { .. }
         | UiActionStepV2::ClickSelectableTextSpanStable { .. }
         | UiActionStepV2::WaitBoundsStable { .. }
@@ -125,6 +127,8 @@ pub(super) fn script_step_kind_name(step: &UiActionStepV2) -> &'static str {
         UiActionStepV2::Pinch { .. } => "pinch",
         UiActionStepV2::SetBaseRef { .. } => "set_base_ref",
         UiActionStepV2::ClearBaseRef => "clear_base_ref",
+        UiActionStepV2::Activate { .. } => "activate",
+        UiActionStepV2::Focus { .. } => "focus",
         UiActionStepV2::ClickStable { .. } => "click_stable",
         UiActionStepV2::ClickSelectableTextSpanStable { .. } => "click_selectable_text_span_stable",
         UiActionStepV2::DragPointer { .. } => "drag_pointer",
@@ -222,7 +226,8 @@ pub(super) enum DriveScriptStepDispatchOutcome {
 
 pub(super) fn dispatch_drive_script_step(
     service: &mut UiDiagnosticsService,
-    app: &App,
+    app: &mut App,
+    services: &mut dyn fret_core::UiServices,
     window: AppWindowId,
     window_bounds: Rect,
     anchor_window: AppWindowId,
@@ -704,6 +709,42 @@ pub(super) fn dispatch_drive_script_step(
             if should_return {
                 return DriveScriptStepDispatchOutcome::ReturnOutput;
             }
+        }
+        step @ UiActionStepV2::Focus { .. } => {
+            let handled = script_steps_semantics::handle_focus_step(
+                service,
+                window,
+                step_index,
+                step,
+                element_runtime,
+                semantics_snapshot,
+                ui.as_deref_mut(),
+                active,
+                output,
+                force_dump_label,
+                stop_script,
+                failure_reason,
+            );
+            debug_assert!(handled);
+        }
+        step @ UiActionStepV2::Activate { .. } => {
+            let handled = script_steps_semantics::handle_activate_step(
+                service,
+                app,
+                services,
+                window,
+                step_index,
+                step,
+                element_runtime,
+                semantics_snapshot,
+                ui.as_deref_mut(),
+                active,
+                output,
+                force_dump_label,
+                stop_script,
+                failure_reason,
+            );
+            debug_assert!(handled);
         }
         step @ UiActionStepV2::ClickStable { .. } => {
             let handled = script_steps_pointer::handle_click_stable_step(
@@ -2143,6 +2184,7 @@ impl UiDiagnosticsService {
     pub fn drive_script_for_window(
         &mut self,
         app: &mut App,
+        services: &mut dyn fret_core::UiServices,
         window: AppWindowId,
         window_bounds: Rect,
         scale_factor: f32,
@@ -2172,7 +2214,7 @@ impl UiDiagnosticsService {
         self.sync_script_keepalive_timer(app);
 
         let devtools_request_redraw =
-            self.drive_devtools_requests_for_window(app, window, scale_factor, ui.as_deref());
+            self.drive_devtools_requests_for_window(app, window, scale_factor, ui.as_deref_mut());
 
         self.maybe_start_pending_script(app, window);
 
@@ -2322,18 +2364,42 @@ impl UiDiagnosticsService {
                     debug_assert!(handled);
                     DriveScriptStepDispatchOutcome::Continue
                 }
-                _ => {
-                    let element_runtime = app.global::<ElementRuntime>();
+                UiActionStepV2::Activate { .. } => dispatch_drive_script_step(
+                    self,
+                    app,
+                    services,
+                    window,
+                    window_bounds,
+                    anchor_window,
+                    step_index,
+                    step,
+                    scale_factor,
+                    None,
+                    semantics_snapshot,
+                    &mut ui,
+                    text_font_stack_key_stable_frames,
+                    font_catalog_populated,
+                    system_font_rescan_idle,
+                    &mut active,
+                    &mut output,
+                    &mut force_dump_label,
+                    &mut force_dump_max_snapshots,
+                    &mut handoff_to,
+                    &mut stop_script,
+                    &mut failure_reason,
+                ),
+                _ => app.with_global_mut_untracked(ElementRuntime::new, |element_runtime, app| {
                     dispatch_drive_script_step(
                         self,
                         app,
+                        services,
                         window,
                         window_bounds,
                         anchor_window,
                         step_index,
                         step,
                         scale_factor,
-                        element_runtime,
+                        Some(&*element_runtime),
                         semantics_snapshot,
                         &mut ui,
                         text_font_stack_key_stable_frames,
@@ -2347,7 +2413,7 @@ impl UiDiagnosticsService {
                         &mut stop_script,
                         &mut failure_reason,
                     )
-                }
+                }),
             };
 
             match outcome {

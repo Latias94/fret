@@ -1,4 +1,4 @@
-# shadcn/ui v4 Audit — Textarea
+# shadcn/ui v4 Audit - Textarea
 
 
 ## Upstream references (non-normative)
@@ -9,7 +9,7 @@ Upstream sources:
 - shadcn/ui: https://github.com/shadcn-ui/ui
 
 See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
-This audit compares Fret’s shadcn-aligned `Textarea` against the upstream shadcn/ui v4 docs and the
+This audit compares Fret's shadcn-aligned `Textarea` against the upstream shadcn/ui v4 docs and the
 `new-york-v4` registry implementation in `repo-ref/ui`.
 
 ## Upstream references (source of truth)
@@ -22,6 +22,12 @@ This audit compares Fret’s shadcn-aligned `Textarea` against the upstream shad
 - Component code: `ecosystem/fret-ui-shadcn/src/textarea.rs`
 
 ## Audit checklist
+
+### Authoring surface
+
+- Pass: `Textarea::new(model)` covers the common shadcn authoring path.
+- Pass: `Textarea::control_id(ControlId)` supports label association via `Label::for_control(...)` when forms need click-to-focus semantics.
+- Note: `Textarea` is a leaf text control, so Fret intentionally does not add a generic `compose()` builder here.
 
 ### Layout & geometry (shadcn parity)
 

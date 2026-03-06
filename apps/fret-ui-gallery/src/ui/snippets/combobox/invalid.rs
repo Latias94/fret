@@ -96,7 +96,6 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
         .a11y_label("Combobox invalid")
         .query_model(query.clone())
         .test_id_prefix("ui-gallery-combobox-invalid")
-        .trigger_test_id("ui-gallery-combobox-invalid-trigger")
         .items(base_items())
         .into_element_parts(cx, |_cx| {
             vec![

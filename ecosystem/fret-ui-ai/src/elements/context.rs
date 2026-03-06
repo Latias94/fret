@@ -35,12 +35,21 @@ fn format_compact_u64(v: u64) -> Arc<str> {
     const M: u64 = 1_000_000;
     const B: u64 = 1_000_000_000;
 
+    fn with_suffix(value: f64, suffix: &str) -> String {
+        let rounded = (value * 10.0).round() / 10.0;
+        if rounded.fract().abs() < f64::EPSILON {
+            format!("{rounded:.0}{suffix}")
+        } else {
+            format!("{rounded:.1}{suffix}")
+        }
+    }
+
     let s = if v >= B {
-        format!("{:.1}B", v as f64 / B as f64)
+        with_suffix(v as f64 / B as f64, "B")
     } else if v >= M {
-        format!("{:.1}M", v as f64 / M as f64)
+        with_suffix(v as f64 / M as f64, "M")
     } else if v >= K {
-        format!("{:.1}K", v as f64 / K as f64)
+        with_suffix(v as f64 / K as f64, "K")
     } else {
         v.to_string()
     };
@@ -83,7 +92,8 @@ pub struct ContextUsage {
     pub output_tokens: Option<u64>,
     pub reasoning_tokens: Option<u64>,
     pub cached_input_tokens: Option<u64>,
-    /// Optional precomputed USD costs (app-owned). When omitted, the UI renders `$0.00`.
+    /// Optional precomputed USD costs (app-owned). When omitted, Fret falls back to built-in
+    /// model pricing for known `model_id` aliases. Explicit values override computed estimates.
     pub input_cost_usd: Option<f64>,
     pub output_cost_usd: Option<f64>,
     pub reasoning_cost_usd: Option<f64>,
@@ -118,6 +128,166 @@ struct ContextSchema {
 #[derive(Debug, Default, Clone)]
 struct ContextProviderState {
     schema: Option<ContextSchema>,
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq)]
+struct ContextUsageCosts {
+    input_cost_usd: Option<f64>,
+    output_cost_usd: Option<f64>,
+    reasoning_cost_usd: Option<f64>,
+    cached_cost_usd: Option<f64>,
+    total_cost_usd: Option<f64>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+struct ContextModelPricing {
+    input_per_million_usd: f64,
+    cached_input_per_million_usd: Option<f64>,
+    output_per_million_usd: f64,
+    reasoning_per_million_usd: Option<f64>,
+}
+
+fn normalize_context_model_id(model_id: &str) -> Arc<str> {
+    let lower = model_id.trim().to_ascii_lowercase();
+
+    if let Some(rest) = lower.strip_prefix("openai-") {
+        return Arc::<str>::from(format!("openai:{rest}"));
+    }
+    if let Some(rest) = lower.strip_prefix("anthropic-") {
+        return Arc::<str>::from(format!("anthropic:{rest}"));
+    }
+    if let Some(rest) = lower.strip_prefix("google-") {
+        return Arc::<str>::from(format!("google:{rest}"));
+    }
+    if let Some(rest) = lower.strip_prefix("google-vertex-") {
+        return Arc::<str>::from(format!("google:{rest}"));
+    }
+    if let Some((provider, rest)) = lower.split_once('/') {
+        return Arc::<str>::from(format!("{provider}:{rest}"));
+    }
+
+    Arc::<str>::from(lower)
+}
+
+fn built_in_context_model_pricing(model_id: &str) -> Option<ContextModelPricing> {
+    let normalized = normalize_context_model_id(model_id);
+    match normalized.as_ref() {
+        "openai:gpt-5" => Some(ContextModelPricing {
+            input_per_million_usd: 1.25,
+            cached_input_per_million_usd: Some(0.125),
+            output_per_million_usd: 10.0,
+            reasoning_per_million_usd: Some(10.0),
+        }),
+        "openai:gpt-4.1-mini" => Some(ContextModelPricing {
+            input_per_million_usd: 0.40,
+            cached_input_per_million_usd: Some(0.10),
+            output_per_million_usd: 1.60,
+            reasoning_per_million_usd: Some(1.60),
+        }),
+        "openai:gpt-4o" => Some(ContextModelPricing {
+            input_per_million_usd: 2.50,
+            cached_input_per_million_usd: Some(1.25),
+            output_per_million_usd: 10.0,
+            reasoning_per_million_usd: Some(10.0),
+        }),
+        "openai:gpt-4o-mini" => Some(ContextModelPricing {
+            input_per_million_usd: 0.15,
+            cached_input_per_million_usd: Some(0.075),
+            output_per_million_usd: 0.60,
+            reasoning_per_million_usd: Some(0.60),
+        }),
+        "anthropic:claude-3-5-sonnet"
+        | "anthropic:claude-3-5-sonnet-20241022"
+        | "anthropic:claude-sonnet-4-5"
+        | "anthropic:claude-sonnet-4"
+        | "anthropic:claude-sonnet-4-20250514" => Some(ContextModelPricing {
+            input_per_million_usd: 3.0,
+            cached_input_per_million_usd: Some(0.30),
+            output_per_million_usd: 15.0,
+            reasoning_per_million_usd: Some(15.0),
+        }),
+        "anthropic:claude-opus-4-20250514"
+        | "anthropic:claude-opus-4"
+        | "anthropic:claude-opus-4-1-20250805" => Some(ContextModelPricing {
+            input_per_million_usd: 15.0,
+            cached_input_per_million_usd: Some(1.50),
+            output_per_million_usd: 75.0,
+            reasoning_per_million_usd: Some(75.0),
+        }),
+        "google:gemini-2-0-flash" => Some(ContextModelPricing {
+            input_per_million_usd: 0.10,
+            cached_input_per_million_usd: Some(0.025),
+            output_per_million_usd: 0.40,
+            reasoning_per_million_usd: Some(0.40),
+        }),
+        _ => None,
+    }
+}
+
+fn cost_from_million_rate(tokens: Option<u64>, rate_per_million_usd: Option<f64>) -> Option<f64> {
+    let tokens = tokens.unwrap_or(0);
+    let rate_per_million_usd = rate_per_million_usd?;
+    Some(tokens as f64 / 1_000_000.0 * rate_per_million_usd)
+}
+
+fn estimated_usage_costs(schema: &ContextSchema) -> Option<ContextUsageCosts> {
+    let usage = schema.usage.as_ref()?;
+    let pricing = built_in_context_model_pricing(schema.model_id.as_deref()?)?;
+
+    let input_cost_usd =
+        cost_from_million_rate(usage.input_tokens, Some(pricing.input_per_million_usd));
+    let output_cost_usd =
+        cost_from_million_rate(usage.output_tokens, Some(pricing.output_per_million_usd));
+    let reasoning_cost_usd = cost_from_million_rate(
+        usage.reasoning_tokens,
+        pricing
+            .reasoning_per_million_usd
+            .or(Some(pricing.output_per_million_usd)),
+    );
+    let cached_cost_usd = cost_from_million_rate(
+        usage.cached_input_tokens,
+        pricing.cached_input_per_million_usd,
+    );
+    let total_cost_usd = Some(
+        input_cost_usd.unwrap_or(0.0)
+            + output_cost_usd.unwrap_or(0.0)
+            + reasoning_cost_usd.unwrap_or(0.0)
+            + cached_cost_usd.unwrap_or(0.0),
+    );
+
+    Some(ContextUsageCosts {
+        input_cost_usd,
+        output_cost_usd,
+        reasoning_cost_usd,
+        cached_cost_usd,
+        total_cost_usd,
+    })
+}
+
+fn resolved_usage_costs(schema: &ContextSchema) -> Option<ContextUsageCosts> {
+    let usage = schema.usage.as_ref()?;
+    let estimated = estimated_usage_costs(schema).unwrap_or_default();
+
+    let input_cost_usd = usage.input_cost_usd.or(estimated.input_cost_usd);
+    let output_cost_usd = usage.output_cost_usd.or(estimated.output_cost_usd);
+    let reasoning_cost_usd = usage.reasoning_cost_usd.or(estimated.reasoning_cost_usd);
+    let cached_cost_usd = usage.cached_cost_usd.or(estimated.cached_cost_usd);
+    let total_cost_usd = usage.total_cost_usd.or_else(|| {
+        Some(
+            input_cost_usd.unwrap_or(0.0)
+                + output_cost_usd.unwrap_or(0.0)
+                + reasoning_cost_usd.unwrap_or(0.0)
+                + cached_cost_usd.unwrap_or(0.0),
+        )
+    });
+
+    Some(ContextUsageCosts {
+        input_cost_usd,
+        output_cost_usd,
+        reasoning_cost_usd,
+        cached_cost_usd,
+        total_cost_usd,
+    })
 }
 
 fn use_context_schema<H: UiHost>(cx: &ElementContext<'_, H>) -> Option<ContextSchema> {
@@ -638,23 +808,12 @@ impl ContextContentFooter {
         };
 
         let theme = Theme::global(&*cx.app).clone();
+        let resolved_costs = resolved_usage_costs(&schema);
 
         let children = self.children.unwrap_or_else(|| {
-            if schema.model_id.is_none()
-                && schema
-                    .usage
-                    .as_ref()
-                    .and_then(|u| u.total_cost_usd)
-                    .is_none()
-            {
+            let Some(total_cost) = resolved_costs.and_then(|costs| costs.total_cost_usd) else {
                 return Vec::new();
-            }
-
-            let total_cost = schema
-                .usage
-                .as_ref()
-                .and_then(|u| u.total_cost_usd)
-                .unwrap_or(0.0);
+            };
 
             let mut label_style =
                 typography::TypographyPreset::control_ui(typography::UiTextSize::Xs)
@@ -817,9 +976,10 @@ impl ContextInputUsage {
         let Some(schema) = use_context_schema(cx) else {
             return hidden(cx);
         };
-        let Some(usage) = schema.usage else {
+        let Some(ref usage) = schema.usage else {
             return hidden(cx);
         };
+        let resolved_costs = resolved_usage_costs(&schema);
 
         let tokens = usage.input_tokens.unwrap_or(0);
         if tokens == 0 {
@@ -830,8 +990,8 @@ impl ContextInputUsage {
             cx,
             "Input",
             tokens,
-            usage.input_cost_usd,
-            schema.model_id.is_some(),
+            resolved_costs.and_then(|costs| costs.input_cost_usd),
+            resolved_costs.is_some(),
         );
         if let Some(test_id) = self.test_id {
             el.attach_semantics(SemanticsDecoration::default().test_id(test_id))
@@ -867,9 +1027,10 @@ impl ContextOutputUsage {
         let Some(schema) = use_context_schema(cx) else {
             return hidden(cx);
         };
-        let Some(usage) = schema.usage else {
+        let Some(ref usage) = schema.usage else {
             return hidden(cx);
         };
+        let resolved_costs = resolved_usage_costs(&schema);
 
         let tokens = usage.output_tokens.unwrap_or(0);
         if tokens == 0 {
@@ -880,8 +1041,8 @@ impl ContextOutputUsage {
             cx,
             "Output",
             tokens,
-            usage.output_cost_usd,
-            schema.model_id.is_some(),
+            resolved_costs.and_then(|costs| costs.output_cost_usd),
+            resolved_costs.is_some(),
         );
         if let Some(test_id) = self.test_id {
             el.attach_semantics(SemanticsDecoration::default().test_id(test_id))
@@ -917,9 +1078,10 @@ impl ContextReasoningUsage {
         let Some(schema) = use_context_schema(cx) else {
             return hidden(cx);
         };
-        let Some(usage) = schema.usage else {
+        let Some(ref usage) = schema.usage else {
             return hidden(cx);
         };
+        let resolved_costs = resolved_usage_costs(&schema);
 
         let tokens = usage.reasoning_tokens.unwrap_or(0);
         if tokens == 0 {
@@ -930,8 +1092,8 @@ impl ContextReasoningUsage {
             cx,
             "Reasoning",
             tokens,
-            usage.reasoning_cost_usd,
-            schema.model_id.is_some(),
+            resolved_costs.and_then(|costs| costs.reasoning_cost_usd),
+            resolved_costs.is_some(),
         );
         if let Some(test_id) = self.test_id {
             el.attach_semantics(SemanticsDecoration::default().test_id(test_id))
@@ -967,9 +1129,10 @@ impl ContextCacheUsage {
         let Some(schema) = use_context_schema(cx) else {
             return hidden(cx);
         };
-        let Some(usage) = schema.usage else {
+        let Some(ref usage) = schema.usage else {
             return hidden(cx);
         };
+        let resolved_costs = resolved_usage_costs(&schema);
 
         let tokens = usage.cached_input_tokens.unwrap_or(0);
         if tokens == 0 {
@@ -980,8 +1143,8 @@ impl ContextCacheUsage {
             cx,
             "Cache",
             tokens,
-            usage.cached_cost_usd,
-            schema.model_id.is_some(),
+            resolved_costs.and_then(|costs| costs.cached_cost_usd),
+            resolved_costs.is_some(),
         );
         if let Some(test_id) = self.test_id {
             el.attach_semantics(SemanticsDecoration::default().test_id(test_id))
@@ -1006,6 +1169,15 @@ mod tests {
         )
     }
 
+    fn assert_approx_eq(actual: Option<f64>, expected: f64) {
+        let actual = actual.expect("expected a computed cost");
+        let delta = (actual - expected).abs();
+        assert!(
+            delta < 0.000_001,
+            "expected {expected}, got {actual} (delta={delta})"
+        );
+    }
+
     #[test]
     fn context_content_inserts_separators_by_default() {
         let window = AppWindowId::default();
@@ -1022,16 +1194,31 @@ mod tests {
                 );
             };
 
-            let Some(column) = root.children.first() else {
+            let Some(inner_container) = root.children.first() else {
                 panic!("expected ContextContent root container to have one child");
             };
 
-            let ElementKind::Column(_) = &column.kind else {
+            let ElementKind::Container(_) = &inner_container.kind else {
                 panic!(
-                    "expected ContextContent inner to be a Column, got {:?}",
-                    column.kind
+                    "expected ContextContent first child to be a Container, got {:?}",
+                    inner_container.kind
                 );
             };
+
+            let Some(column) = inner_container.children.first() else {
+                panic!("expected inner container to contain the content column");
+            };
+
+            match &column.kind {
+                ElementKind::Column(_) => {}
+                ElementKind::Flex(props) if props.direction == fret_core::Axis::Vertical => {}
+                other => {
+                    panic!(
+                        "expected ContextContent innermost child to be a vertical stack, got {:?}",
+                        other
+                    );
+                }
+            }
 
             assert_eq!(
                 column.children.len(),
@@ -1039,5 +1226,58 @@ mod tests {
                 "expected ContextContent to interleave separators between children"
             );
         });
+    }
+
+    #[test]
+    fn compact_token_formatting_matches_ai_elements_style() {
+        assert_eq!(&*format_compact_u64(842), "842");
+        assert_eq!(&*format_compact_u64(19_134), "19.1K");
+        assert_eq!(&*format_compact_u64(100_000), "100K");
+        assert_eq!(&*format_compact_u64(1_500_000), "1.5M");
+        assert_eq!(&*format_compact_u64(2_100_000_000), "2.1B");
+    }
+
+    #[test]
+    fn resolved_usage_costs_estimate_known_model_aliases() {
+        let schema = ContextSchema {
+            used_tokens: 42_560,
+            max_tokens: 128_000,
+            model_id: Some(Arc::<str>::from("openai:gpt-5")),
+            usage: Some(ContextUsage {
+                input_tokens: Some(32_000),
+                output_tokens: Some(8_000),
+                reasoning_tokens: Some(512),
+                cached_input_tokens: Some(2_048),
+                ..Default::default()
+            }),
+        };
+
+        let costs = resolved_usage_costs(&schema).expect("resolved costs");
+        assert_approx_eq(costs.input_cost_usd, 0.04);
+        assert_approx_eq(costs.output_cost_usd, 0.08);
+        assert_approx_eq(costs.reasoning_cost_usd, 0.005_12);
+        assert_approx_eq(costs.cached_cost_usd, 0.000_256);
+        assert_approx_eq(costs.total_cost_usd, 0.125_376);
+    }
+
+    #[test]
+    fn resolved_usage_costs_prefer_explicit_values_over_auto_estimates() {
+        let schema = ContextSchema {
+            used_tokens: 40_000,
+            max_tokens: 128_000,
+            model_id: Some(Arc::<str>::from("openai-gpt-4o")),
+            usage: Some(ContextUsage {
+                input_tokens: Some(32_000),
+                output_tokens: Some(8_000),
+                input_cost_usd: Some(9.99),
+                total_cost_usd: Some(12.34),
+                ..Default::default()
+            }),
+        };
+
+        let costs = resolved_usage_costs(&schema).expect("resolved costs");
+        assert_approx_eq(costs.input_cost_usd, 9.99);
+        assert_approx_eq(costs.output_cost_usd, 0.08);
+        assert_approx_eq(costs.total_cost_usd, 12.34);
     }
 }

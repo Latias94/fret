@@ -3,7 +3,12 @@
   "meta": {
     "name": "ui-gallery-select-label-click-focus",
     "required_capabilities": ["diag.script_v2"],
-    "tags": ["ui_gallery", "shadcn", "select", "label", "focus"]
+    "tags": ["ui_gallery", "shadcn", "select", "label", "focus", "a11y"],
+    "target_hints": [
+      "Navigates to the Select page.",
+      "Scrolls the Label Association example into view.",
+      "Clicks the FieldLabel and verifies the Select popup opens."
+    ]
   },
   "steps": [
     { "type": "reset_diagnostics" },
@@ -21,6 +26,11 @@
     { "type": "type_text", "text": "select" },
     { "type": "wait_frames", "n": 2 },
 
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-nav-select" } },
+      "timeout_frames": 600
+    },
     { "type": "click_stable", "target": { "kind": "test_id", "id": "ui-gallery-nav-select" } },
     {
       "type": "wait_until",
@@ -29,16 +39,26 @@
     },
     {
       "type": "wait_until",
-      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-select-label-label" } },
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-select-label-content" } },
       "timeout_frames": 600
     },
     {
       "type": "scroll_into_view",
       "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
-      "target": { "kind": "test_id", "id": "ui-gallery-select-label-label" },
+      "target": { "kind": "test_id", "id": "ui-gallery-select-label-content" },
       "delta_y": -240.0,
       "require_fully_within_window": true,
       "padding_px": 24.0,
+      "timeout_frames": 1200
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-select-label-label" } },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-select-label-trigger.chrome" } },
       "timeout_frames": 600
     },
 
@@ -52,4 +72,3 @@
     { "type": "capture_bundle", "label": "ui-gallery-select-label-click-focus" }
   ]
 }
-

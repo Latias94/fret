@@ -29,6 +29,34 @@ use fret_ui_kit::{
 use crate::layout as shadcn_layout;
 use crate::overlay_motion;
 
+#[derive(Debug, Default)]
+struct DialogOpenProviderState {
+    current: Option<Model<bool>>,
+}
+
+fn inherited_dialog_open<H: UiHost>(cx: &ElementContext<'_, H>) -> Option<Model<bool>> {
+    cx.inherited_state_where::<DialogOpenProviderState>(|st| st.current.is_some())
+        .and_then(|st| st.current.clone())
+}
+
+#[track_caller]
+fn with_dialog_open_provider<H: UiHost, R>(
+    cx: &mut ElementContext<'_, H>,
+    open: Model<bool>,
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> R,
+) -> R {
+    let prev = cx.with_state(DialogOpenProviderState::default, |st| {
+        let prev = st.current.clone();
+        st.current = Some(open);
+        prev
+    });
+    let out = f(cx);
+    cx.with_state(DialogOpenProviderState::default, |st| {
+        st.current = prev;
+    });
+    out
+}
+
 fn default_overlay_color(theme: &ThemeSnapshot) -> Color {
     let mut scrim = theme.named_color(ThemeNamedColorKey::Black);
     scrim.a = 0.5;
@@ -342,6 +370,14 @@ impl Dialog {
         self
     }
 
+    /// Returns a recipe-level composition builder for shadcn-style part assembly.
+    ///
+    /// This bridges Fret's closure-root authoring model with the nested part mental model used by
+    /// shadcn/Radix/Base UI while keeping the underlying mechanism surface unchanged.
+    pub fn compose(self) -> DialogComposition {
+        DialogComposition::new(self)
+    }
+
     #[track_caller]
     pub fn into_element<H: UiHost>(
         self,
@@ -499,7 +535,7 @@ impl Dialog {
                         };
 
                         crate::a11y_modal::begin_modal_a11y_scope(cx.app, open_id);
-                        let content = content(cx);
+                        let content = with_dialog_open_provider(cx, self.open.clone(), content);
                         let content_id = content.id;
                         content_element_for_trigger.set(Some(content_id));
                         crate::a11y_modal::end_modal_a11y_scope(cx.app, open_id);
@@ -639,6 +675,78 @@ impl Dialog {
     }
 }
 
+/// Recipe-level builder for composing a dialog from shadcn-style parts.
+///
+/// This builder stores already-authored Fret elements/parts and lowers them into the existing
+/// closure-based `into_element_parts(...)` entry point at the end.
+pub struct DialogComposition {
+    dialog: Dialog,
+    trigger: Option<DialogTrigger>,
+    portal: DialogPortal,
+    overlay: DialogOverlay,
+    content: Option<AnyElement>,
+}
+
+impl std::fmt::Debug for DialogComposition {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("DialogComposition")
+            .field("dialog", &self.dialog)
+            .field("trigger", &self.trigger.is_some())
+            .field("portal", &self.portal)
+            .field("overlay", &self.overlay)
+            .field("content", &self.content.is_some())
+            .finish()
+    }
+}
+
+impl DialogComposition {
+    pub fn new(dialog: Dialog) -> Self {
+        Self {
+            dialog,
+            trigger: None,
+            portal: DialogPortal::new(),
+            overlay: DialogOverlay::new(),
+            content: None,
+        }
+    }
+
+    pub fn trigger(mut self, trigger: DialogTrigger) -> Self {
+        self.trigger = Some(trigger);
+        self
+    }
+
+    pub fn portal(mut self, portal: DialogPortal) -> Self {
+        self.portal = portal;
+        self
+    }
+
+    pub fn overlay(mut self, overlay: DialogOverlay) -> Self {
+        self.overlay = overlay;
+        self
+    }
+
+    pub fn content(mut self, content: AnyElement) -> Self {
+        self.content = Some(content);
+        self
+    }
+
+    #[track_caller]
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let trigger = self
+            .trigger
+            .expect("Dialog::compose().trigger(...) must be provided before into_element()");
+        let content = self
+            .content
+            .expect("Dialog::compose().content(...) must be provided before into_element()");
+
+        let portal = self.portal;
+        let overlay = self.overlay;
+
+        self.dialog
+            .into_element_parts(cx, move |_cx| trigger, portal, overlay, move |_cx| content)
+    }
+}
+
 /// shadcn/ui `DialogContent` (v4).
 #[derive(Debug)]
 pub struct DialogContent {
@@ -734,7 +842,7 @@ impl DialogContent {
 /// child in `DialogContent` so it stays on top during hit testing.
 #[derive(Clone)]
 pub struct DialogClose {
-    open: Model<bool>,
+    open: Option<Model<bool>>,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
 }
@@ -750,9 +858,29 @@ impl std::fmt::Debug for DialogClose {
 }
 
 impl DialogClose {
+    /// Creates a close affordance that explicitly toggles the provided dialog open model.
+    ///
+    /// Prefer this constructor when you want fully explicit data flow or when the close control is
+    /// authored outside the dialog content subtree.
     pub fn new(open: Model<bool>) -> Self {
         Self {
-            open,
+            open: Some(open),
+            chrome: ChromeRefinement::default(),
+            layout: LayoutRefinement::default(),
+        }
+    }
+
+    /// Creates a close affordance that closes the dialog resolved from the current content scope.
+    ///
+    /// This is recipe-layer sugar for shadcn-style composition inside
+    /// [`Dialog::into_element`] / [`Dialog::into_element_parts`] content closures. Explicit
+    /// `DialogClose::new(open)` remains available and should be preferred when the element is built
+    /// outside the dialog content subtree.
+    ///
+    /// Panics if no dialog content scope is active when the element is rendered.
+    pub fn from_scope() -> Self {
+        Self {
+            open: None,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
         }
@@ -779,7 +907,11 @@ impl DialogClose {
                 .unwrap_or_else(|| theme.color_token("muted.foreground"));
 
             let a11y_label: Arc<str> = Arc::from("Close");
-            let open = self.open.clone();
+            let open = self.open.clone().unwrap_or_else(|| {
+                inherited_dialog_open(cx).unwrap_or_else(|| {
+                    panic!("DialogClose::from_scope() must be used while rendering Dialog content")
+                })
+            });
 
             let radius = Px(2.0);
 
@@ -1584,6 +1716,23 @@ mod tests {
     }
 
     #[test]
+    #[should_panic(
+        expected = "DialogClose::from_scope() must be used while rendering Dialog content"
+    )]
+    fn dialog_close_from_scope_panics_outside_dialog_content() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(200.0), Px(120.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let _ = DialogClose::from_scope().into_element(cx);
+        });
+    }
+
+    #[test]
     fn dialog_does_not_jump_on_first_open_frame_with_tall_content() {
         let window = AppWindowId::default();
         let mut app = App::new();
@@ -1790,7 +1939,7 @@ mod tests {
                                 },
                             );
 
-                            let close = DialogClose::new(open.clone()).into_element(cx);
+                            let close = DialogClose::from_scope().into_element(cx);
                             close_id_out.set(Some(close.id));
 
                             let content =

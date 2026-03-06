@@ -25,7 +25,7 @@ pub fn run_app_with_event_loop<D: super::WinitAppDriver + 'static>(
     app: App,
     driver: D,
 ) -> Result<(), RunnerError> {
-    crate::configure_stacksafe_from_env();
+    crate::stacksafe_config::configure_stacksafe_from_env();
     let mut runner = super::WinitRunner::new_app(config, app, driver);
     #[cfg(target_os = "android")]
     runner.set_android_app(event_loop.android_app().clone());
@@ -79,6 +79,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             last_window_surface_size_changed_at: None,
             no_services: NoUiServices,
             diag_bundle_screenshots: DiagBundleScreenshotCapture::from_env(),
+            webviews: RunnerWebViewState::default(),
             windows: SlotMap::with_key(),
             window_registry: fret_runner_winit::window_registry::WinitWindowRegistry::default(),
             main_window: None,
@@ -155,7 +156,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
     }
 }
 
-pub struct WinitAppBuilder<D: super::WinitAppDriver> {
+pub struct WinitAppBuilder<D> {
     config: super::WinitRunnerConfig,
     app: App,
     driver: D,
@@ -472,13 +473,13 @@ impl<D: super::WinitAppDriver> super::WinitAppDriver for HookedDriver<D> {
         self.inner.before_close_window(app, window)
     }
 
-    fn accessibility_snapshot(
+    fn semantics_snapshot(
         &mut self,
         app: &mut App,
         window: fret_core::AppWindowId,
         state: &mut Self::WindowState,
     ) -> Option<std::sync::Arc<fret_core::SemanticsSnapshot>> {
-        self.inner.accessibility_snapshot(app, window, state)
+        self.inner.semantics_snapshot(app, window, state)
     }
 
     fn accessibility_focus(

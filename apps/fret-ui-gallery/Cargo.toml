@@ -28,6 +28,7 @@ gallery-dev = [
 ]
 gallery-material3 = ["dep:fret-ui-material3"]
 gallery-full = ["gallery-dev", "gallery-material3"]
+webview-wry = ["gallery-dev", "fret-launch/webview-wry", "fret-ui-ai/webview"]
 
 [dependencies]
 anyhow.workspace = true

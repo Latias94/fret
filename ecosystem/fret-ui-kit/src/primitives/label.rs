@@ -10,7 +10,7 @@ use fret_ui::element::{
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 
-use super::control_registry::{ControlId, LabelEntry, control_registry_model};
+use super::control_registry::{ControlAction, ControlId, LabelEntry, control_registry_model};
 use crate::typography::{self, TextIntent};
 
 #[derive(Debug, Clone)]
@@ -166,17 +166,24 @@ fn label_for_control<H: UiHost>(
                     return false;
                 }
 
-                let enabled = host
+                let target = host
                     .models_mut()
                     .read(&control_registry_on_down, |reg| {
                         reg.control_for(acx.window, &for_control_on_down)
-                            .map(|c| c.enabled)
+                            .map(|c| (c.enabled, c.element, matches!(c.action, ControlAction::FocusOnly)))
                     })
                     .ok()
                     .flatten()
-                    .or_else(|| control_snapshot_on_down.as_ref().map(|c| c.enabled))
-                    .unwrap_or(true);
-                if enabled {
+                    .or_else(|| {
+                        control_snapshot_on_down.as_ref().map(|c| {
+                            (c.enabled, c.element, matches!(c.action, ControlAction::FocusOnly))
+                        })
+                    });
+                if let Some((true, element, focus_on_pointer_down)) = target {
+                    if focus_on_pointer_down {
+                        host.request_focus(element);
+                        return false;
+                    }
                     host.capture_pointer();
                 }
                 true
@@ -205,6 +212,9 @@ fn label_for_control<H: UiHost>(
                     return true;
                 };
                 if !control.enabled {
+                    return true;
+                }
+                if matches!(control.action, ControlAction::FocusOnly) {
                     return true;
                 }
 

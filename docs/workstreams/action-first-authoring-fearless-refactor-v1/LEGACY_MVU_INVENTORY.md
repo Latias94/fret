@@ -1,6 +1,6 @@
 # Legacy MVU Inventory (Action-First Authoring v1)
 
-Last updated: 2026-03-05
+Last updated: 2026-03-06
 
 This document tracks remaining in-tree usage of legacy MVU/message-routing helpers after the
 action-first + view runtime v1 adoption.
@@ -16,8 +16,8 @@ Note:
 - MVU surfaces were removed from `ecosystem/fret` (feature gate + `mvu` / `mvu_router` / `legacy`
   modules) as part of M9.
 - In-tree demos no longer carry a separate demo-level opt-in feature.
-- Any remaining MVU references are expected to be limited to internal scaffolding sources and docs
-  until M9 completes.
+- Any remaining MVU references should now be limited to historical documentation only; code
+  surfaces are guarded by `tools/gate_no_mvu_in_tree.py` and `tools/gate_no_mvu_in_cookbook.py`.
 
 ## Why this inventory exists
 
@@ -56,13 +56,13 @@ Removal-track note:
   - `apps/fret-cookbook/examples/virtual_list_basics.rs`
   - `apps/fret-cookbook/examples/icons_and_assets_basics.rs`
 
-## Remaining legacy MVU usage (as of 2026-03-05)
+## Historical closure snapshot (as of 2026-03-06)
 
-### 1) Cookbook examples (still MVU)
+### 1) Cookbook examples
 
 These examples implement `MvuProgram` and/or use `MessageRouter`:
 
-- None (as of 2026-03-05). All cookbook examples now use the view runtime + typed actions.
+- None (as of 2026-03-06). All cookbook examples now use the view runtime + typed actions.
 
 Recommendation:
 

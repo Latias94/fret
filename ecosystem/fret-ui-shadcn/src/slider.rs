@@ -255,9 +255,23 @@ impl Slider {
         self
     }
 
-    pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
-        self.test_id = Some(id.into());
+    /// Sets the stable automation prefix used to derive slider sub-part ids.
+    ///
+    /// Derived ids include `{prefix}-track`, `{prefix}-range`, `{prefix}-thumb-{index}`, and
+    /// `{prefix}-thumb-ring`. This matches the slider's existing diagnostics surface while making
+    /// the prefix semantics explicit for call sites.
+    pub fn test_id_prefix(mut self, prefix: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(prefix.into());
         self
+    }
+
+    /// Legacy alias for `Slider::test_id_prefix(...)`.
+    ///
+    /// Historically `Slider::test_id(...)` behaved as a prefix that derived sub-part ids rather than
+    /// attaching a single root id. Keep it for compatibility, but prefer `test_id_prefix(...)` in
+    /// new code so the API matches the actual behavior.
+    pub fn test_id(self, id: impl Into<Arc<str>>) -> Self {
+        self.test_id_prefix(id)
     }
 
     /// Called when the user commits a value change (Radix `onValueCommit`).

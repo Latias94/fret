@@ -87,7 +87,6 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
         .a11y_label("Combobox input group")
         .query_model(query.clone())
         .test_id_prefix("ui-gallery-combobox-input-group")
-        .trigger_test_id("ui-gallery-combobox-input-group-trigger")
         .items([
             shadcn::ComboboxItem::new("new-file", "New File"),
             shadcn::ComboboxItem::new("open-file", "Open File"),

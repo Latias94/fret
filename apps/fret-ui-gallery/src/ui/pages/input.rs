@@ -7,6 +7,7 @@ pub(super) fn preview_input(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
     let basic = snippets::basic::render(cx);
     let field = snippets::field::render(cx);
     let field_group = snippets::field_group::render(cx);
+    let label = snippets::label::render(cx);
     let disabled = snippets::disabled::render(cx);
     let invalid = snippets::invalid::render(cx);
     let file = snippets::file::render(cx);
@@ -45,6 +46,10 @@ pub(super) fn preview_input(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
             DocSection::new("Field Group", field_group)
                 .description("FieldGroup stacks related fields and action rows.")
                 .code_rust_from_file_region(snippets::field_group::SOURCE, "example"),
+            DocSection::new("Label Association", label)
+                .description("Use `FieldLabel::for_control` + `Input::control_id` so label clicks focus the text input.")
+                .test_id_prefix("ui-gallery-input-label")
+                .code_rust_from_file_region(snippets::label::SOURCE, "example"),
             DocSection::new("Disabled", disabled)
                 .description(
                     "Disabled inputs should block focus/interaction and use muted styling.",

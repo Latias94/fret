@@ -156,7 +156,7 @@ Acceptance:
 
 ---
 
-## Milestone 6 (M6): MVU clarity + future escape hatch definition
+## Milestone 6 (M6): Action-first/view-runtime clarity
 
 Outcome:
 
@@ -169,12 +169,12 @@ Deliverables:
 
 Acceptance:
 
-- MVU posture is explicit in docs; perf-sensitive users have clear guidance.
+- the action-first posture is explicit in docs; perf-sensitive users have clear guidance.
 
 Evidence (current):
 
-- `docs/examples/todo-app-golden-path.md` (tick refresh notes)
-- `ecosystem/fret/src/mvu.rs` (internal `tick` model)
+- `docs/examples/todo-app-golden-path.md`
+- `ecosystem/fret/src/view.rs`
 
 ---
 
