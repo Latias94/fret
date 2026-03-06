@@ -13,6 +13,9 @@ Tracking files:
 
 - `docs/workstreams/diag-fearless-refactor-v2/TODO.md`
 - `docs/workstreams/diag-fearless-refactor-v2/MILESTONES.md`
+- `docs/workstreams/diag-fearless-refactor-v2/CRATE_AND_MODULE_MAP.md`
+- `docs/workstreams/diag-fearless-refactor-v2/REGRESSION_CAMPAIGN_V1.md`
+- `docs/workstreams/diag-fearless-refactor-v2/REGRESSION_SUMMARY_SCHEMA_V1.md`
 
 Related workstreams and context:
 
@@ -209,8 +212,10 @@ By the end of this workstream, we should be able to say:
 Recommended order for landable work:
 
 1. consolidate architecture narrative and boundaries,
+   - start with `docs/workstreams/diag-fearless-refactor-v2/CRATE_AND_MODULE_MAP.md`,
 2. clean up runtime/tooling seams that affect every consumer,
 3. unify regression orchestration vocabulary,
+   - see `docs/workstreams/diag-fearless-refactor-v2/REGRESSION_CAMPAIGN_V1.md`,
 4. align DevTools GUI to the same contracts,
 5. remove redundancy and close migration debt.
 

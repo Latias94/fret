@@ -13,7 +13,7 @@ Outcome:
 Deliverables:
 
 - A v2 umbrella workstream note.
-- A boundary map for runtime, tooling, transport, artifacts, and GUI.
+- A boundary map for runtime, tooling, transport, artifacts, and GUI (`CRATE_AND_MODULE_MAP.md`).
 - A documented decision that DevTools GUI is included as a consumer lane.
 
 Exit criteria:
@@ -62,6 +62,8 @@ Deliverables:
 - A documented lane model (`smoke`, `correctness`, `matrix`, `perf`, `nightly/full`).
 - A metadata plan for suites/scripts.
 - A summary/evidence contract for orchestrated runs.
+- Initial design note: `REGRESSION_CAMPAIGN_V1.md`.
+- Initial summary schema note: `REGRESSION_SUMMARY_SCHEMA_V1.md`.
 
 Exit criteria:
 

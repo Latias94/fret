@@ -9,7 +9,8 @@ Tracking doc: `docs/workstreams/diag-fearless-refactor-v2/README.md`
 - [ ] Confirm the umbrella positioning:
   - [ ] diagnostics is a general automation/debugging/evidence platform,
   - [ ] DevTools GUI is included as a consumer lane, not the architecture center.
-- [ ] Write a short “where does this change belong?” mapping for:
+- [x] Write a short “where does this change belong?” mapping for:
+  - evidence: `docs/workstreams/diag-fearless-refactor-v2/CRATE_AND_MODULE_MAP.md`
   - [ ] protocol/contracts,
   - [ ] runtime service,
   - [ ] transport,
@@ -51,6 +52,13 @@ Tracking doc: `docs/workstreams/diag-fearless-refactor-v2/README.md`
 
 ## M3 — Regression orchestration model
 
+- [x] Write a first-pass campaign model for repo-level regression lanes:
+  - [x] `smoke`
+  - [x] `correctness`
+  - [x] `matrix`
+  - [x] `perf`
+  - [x] `nightly/full`
+  - evidence: `docs/workstreams/diag-fearless-refactor-v2/REGRESSION_CAMPAIGN_V1.md`
 - [ ] Write a single vocabulary for regression lanes:
   - [ ] smoke,
   - [ ] correctness,
@@ -66,7 +74,8 @@ Tracking doc: `docs/workstreams/diag-fearless-refactor-v2/README.md`
   - [ ] capability/feature tags.
 - [ ] Decide whether to introduce a first-class “campaign” or “regression” orchestration layer.
 - [ ] Define expected outputs for orchestrated runs:
-  - [ ] one machine-readable summary,
+  - [x] one machine-readable summary,
+    - evidence: `docs/workstreams/diag-fearless-refactor-v2/REGRESSION_SUMMARY_SCHEMA_V1.md`
   - [ ] stable reason codes,
   - [ ] evidence bundle/artifact paths,
   - [ ] optional compact pack for sharing.
