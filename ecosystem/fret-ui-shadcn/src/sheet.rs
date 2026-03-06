@@ -17,7 +17,7 @@ use fret_ui_kit::declarative::{
 use fret_ui_kit::primitives::dialog as radix_dialog;
 use fret_ui_kit::primitives::portal_inherited;
 use fret_ui_kit::{
-    ChromeRefinement, ColorRef, LayoutRefinement, OverlayController, OverlayPresence, Space, ui,
+    ui, ChromeRefinement, ColorRef, LayoutRefinement, OverlayController, OverlayPresence, Space,
 };
 
 use crate::layout as shadcn_layout;
@@ -172,11 +172,6 @@ fn sheet_side_in_scope<H: UiHost>(cx: &ElementContext<'_, H>) -> SheetSide {
 #[derive(Debug, Default)]
 struct SheetOpenProviderState {
     current: Option<Model<bool>>,
-}
-
-fn inherited_sheet_open<H: UiHost>(cx: &ElementContext<'_, H>) -> Option<Model<bool>> {
-    cx.inherited_state_where::<SheetOpenProviderState>(|st| st.current.is_some())
-        .and_then(|st| st.current.clone())
 }
 
 #[track_caller]
@@ -874,6 +869,14 @@ impl SheetClose {
         }
     }
 
+    /// Creates a close affordance that resolves the current sheet/dialog scope at render time.
+    pub fn from_scope() -> Self {
+        Self {
+            inner: crate::DialogClose::from_scope()
+                .refine_layout(LayoutRefinement::default().relative().inset(Space::N0)),
+        }
+    }
+
     pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
         self.inner = self.inner.refine_style(style);
         self
@@ -1028,10 +1031,8 @@ impl SheetContent {
 
         let mut children = self.children;
         if self.show_close_button {
-            if let Some(open) = inherited_sheet_open(cx) {
-                let close = crate::dialog::DialogClose::new(open).into_element(cx);
-                children.push(close);
-            }
+            let close = crate::dialog::DialogClose::from_scope().into_element(cx);
+            children.push(close);
         }
         let container = shadcn_layout::container_vstack(
             cx,
@@ -1189,17 +1190,17 @@ mod tests {
     use super::*;
     use std::cell::Cell;
     use std::rc::Rc;
+    use std::sync::atomic::{AtomicUsize, Ordering};
     use std::sync::Arc;
     use std::sync::Mutex;
-    use std::sync::atomic::{AtomicUsize, Ordering};
 
     use fret_app::App;
     use fret_core::{AppWindowId, Edges, PathCommand, Point, Rect, Size, SvgId, SvgService};
     use fret_core::{PathConstraints, PathId, PathMetrics, PathService, PathStyle};
     use fret_core::{Px, TextBlobId, TextConstraints, TextMetrics, TextService};
-    use fret_ui::UiTree;
     use fret_ui::action::DismissReason;
     use fret_ui::element::{ContainerProps, ElementKind, PressableProps};
+    use fret_ui::UiTree;
     use fret_ui_kit::declarative::action_hooks::ActionHooksExt;
 
     #[test]

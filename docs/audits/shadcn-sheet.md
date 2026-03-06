@@ -46,6 +46,8 @@ Upstream shadcn/ui exports a thin wrapper around Radix Dialog:
 - Pass: Trigger/content composition matches the shadcn mental model.
 - Pass: Content is rendered via a per-window overlay root (portal-like), so it is not clipped by
   underlay layout/overflow.
+- Pass: `SheetClose::from_scope()` is available as recipe-layer sugar for content-local close
+  buttons while preserving `SheetClose::new(open)` as the explicit constructor.
 
 ### Placement & sizing
 

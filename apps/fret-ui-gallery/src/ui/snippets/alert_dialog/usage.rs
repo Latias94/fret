@@ -1,4 +1,4 @@
-pub const SOURCE: &str = include_str!("parts.rs");
+pub const SOURCE: &str = include_str!("usage.rs");
 
 // region: example
 use fret_ui_shadcn::{self as shadcn, prelude::*};
@@ -22,15 +22,12 @@ fn open_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<bool> {
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let open = open_model(cx);
-    let open_for_trigger = open.clone();
 
     shadcn::AlertDialog::new(open).into_element_parts(
         cx,
-        move |cx| {
-            let trigger = shadcn::Button::new("Show Dialog (Parts)")
+        |cx| {
+            let trigger = shadcn::Button::new("Open")
                 .variant(shadcn::ButtonVariant::Outline)
-                .toggle_model(open_for_trigger.clone())
-                .test_id("ui-gallery-alert-dialog-parts-trigger")
                 .into_element(cx);
             shadcn::AlertDialogTrigger::new(trigger)
         },
@@ -38,27 +35,20 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         shadcn::AlertDialogOverlay::new(),
         move |cx| {
             let header = shadcn::AlertDialogHeader::new(vec![
-                shadcn::AlertDialogTitle::new("Part-based AlertDialog").into_element(cx),
+                shadcn::AlertDialogTitle::new("Are you absolutely sure?").into_element(cx),
                 shadcn::AlertDialogDescription::new(
-                    "Thin adapters for shadcn-style authoring (Trigger/Portal/Overlay).",
+                    "This action cannot be undone. This will permanently delete your account and remove your data from our servers.",
                 )
                 .into_element(cx),
             ])
             .into_element(cx);
-
             let footer = shadcn::AlertDialogFooter::new(vec![
-                shadcn::AlertDialogCancel::from_scope("Cancel")
-                    .test_id("ui-gallery-alert-dialog-parts-cancel")
-                    .into_element(cx),
-                shadcn::AlertDialogAction::from_scope("Continue")
-                    .test_id("ui-gallery-alert-dialog-parts-action")
-                    .into_element(cx),
+                shadcn::AlertDialogCancel::from_scope("Cancel").into_element(cx),
+                shadcn::AlertDialogAction::from_scope("Continue").into_element(cx),
             ])
             .into_element(cx);
 
-            shadcn::AlertDialogContent::new(vec![header, footer])
-                .into_element(cx)
-                .test_id("ui-gallery-alert-dialog-parts-content")
+            shadcn::AlertDialogContent::new(vec![header, footer]).into_element(cx)
         },
     )
 }
