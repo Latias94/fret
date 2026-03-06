@@ -95,7 +95,10 @@ impl View for QueryAsyncTokioDemoView {
         cx.on_action_notify_transient::<act::Invalidate>(TRANSIENT_INVALIDATE_KEY);
         cx.on_action_notify_transient::<act::InvalidateNamespace>(TRANSIENT_INVALIDATE_NAMESPACE);
 
-        let fail_mode = cx.watch_local(&fail_mode_state).layout().copied_or_default();
+        let fail_mode = cx
+            .watch_local(&fail_mode_state)
+            .layout()
+            .copied_or_default();
 
         let query_handle = cx.use_query_async(
             demo_key(),
@@ -161,55 +164,66 @@ impl View for QueryAsyncTokioDemoView {
             theme.color_token("muted-foreground")
         };
 
-        let status_row = ui::h_flex(|cx| {
-            ui::children![cx;
-                shadcn::Badge::new(status_label).variant(status_variant),
+        let status_row = ui::h_row_build(|cx, out| {
+            out.push_ui(cx, shadcn::Badge::new(status_label).variant(status_variant));
+            out.push_ui(
+                cx,
                 shadcn::Badge::new(if fail_mode { "Mode: Error" } else { "Mode: Ok" })
                     .variant(shadcn::BadgeVariant::Secondary),
-            ]
+            );
         })
         .gap(Space::N2)
         .items_center()
         .into_element(cx);
 
-        let buttons = ui::h_flex(|cx| {
-            ui::children![cx;
+        let buttons = ui::h_row_build(|cx, out| {
+            out.push_ui(
+                cx,
                 shadcn::Button::new("Invalidate")
                     .variant(shadcn::ButtonVariant::Default)
                     .action(act::Invalidate),
+            );
+            out.push_ui(
+                cx,
                 shadcn::Button::new("Invalidate namespace")
                     .variant(shadcn::ButtonVariant::Ghost)
                     .action(act::InvalidateNamespace),
+            );
+            out.push_ui(
+                cx,
                 shadcn::Button::new("Toggle error mode")
                     .variant(shadcn::ButtonVariant::Secondary)
                     .action(act::ToggleFailMode),
-            ]
+            );
         })
         .gap(Space::N2)
         .items_center()
         .into_element(cx);
 
-        let detail_lines = ui::children![cx;
-            ui::raw_text(info_line),
-            ui::raw_text(data_line),
-            ui::raw_text(error_line).text_color(ColorRef::Color(error_color)),
-        ];
+        let detail_body = ui::v_flex_build(|cx, out| {
+            out.push_ui(cx, ui::raw_text(info_line));
+            out.push_ui(cx, ui::raw_text(data_line));
+            out.push_ui(
+                cx,
+                ui::raw_text(error_line).text_color(ColorRef::Color(error_color)),
+            );
+        })
+        .gap(Space::N2)
+        .into_element(cx);
 
-        let detail_body = ui::v_flex(|_cx| detail_lines)
-            .gap(Space::N2)
-            .into_element(cx);
-
-        let header = shadcn::CardHeader::new(ui::children![cx;
-            shadcn::CardTitle::new("Async query demo (Tokio)"),
-            shadcn::CardDescription::new("use_query_async + FutureSpawnerHandle"),
+        let header = shadcn::CardHeader::new([
+            shadcn::CardTitle::new("Async query demo (Tokio)").into_element(cx),
+            shadcn::CardDescription::new("use_query_async + FutureSpawnerHandle").into_element(cx),
             status_row,
         ])
         .into_element(cx);
 
-        let content_body = ui::v_flex(|_cx| [buttons, detail_body])
-            .gap(Space::N4)
-            .w_full()
-            .into_element(cx);
+        let content_body = ui::v_flex_build(|_cx, out| {
+            out.extend([buttons, detail_body]);
+        })
+        .gap(Space::N4)
+        .w_full()
+        .into_element(cx);
 
         let content = shadcn::CardContent::new([content_body]).into_element(cx);
 
@@ -219,21 +233,17 @@ impl View for QueryAsyncTokioDemoView {
             .max_w(Px(520.0))
             .into_element(cx);
 
-        let page = ui::container(|cx| {
-            [ui::v_flex(|_cx| [card])
-                .w_full()
-                .h_full()
-                .justify_center()
-                .items_center()
-                .into_element(cx)]
+        ui::v_flex_build(|_cx, out| {
+            out.push(card);
         })
         .bg(ColorRef::Color(theme.color_token("background")))
         .p(Space::N6)
         .w_full()
         .h_full()
-        .into_element(cx);
-
-        page.into()
+        .justify_center()
+        .items_center()
+        .into_element(cx)
+        .into()
     }
 }
 

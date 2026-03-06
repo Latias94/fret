@@ -49,7 +49,7 @@ Evidence anchors (verified in-tree as of 2026-03-06):
 - `apps/fret-examples/src/async_playground_demo.rs` (`ToggleTheme` now uses the default `on_action_notify_models` path and keeps the theme side effect as render-time state synchronization)
 - `apps/fret-examples/src/hello_counter_demo.rs` (first `use_local` prototype; removes explicit model-handle fields while keeping the default `on_action_notify_models` action surface)
 - `apps/fret-examples/src/query_demo.rs` (second `use_local` prototype; also the first builder-first composition experiment using `ui::*_build` sinks plus `UiElementSinkExt`, while keeping the default teaching-surface action path)
-- `apps/fret-examples/src/query_async_tokio_demo.rs` (third `use_local` prototype; proves the same local-state surface coexists with `use_query_async`, transient invalidation, and Tokio-backed async spawning)
+- `apps/fret-examples/src/query_async_tokio_demo.rs` (third `use_local` prototype; now also mirrors the builder-first composition experiment for the async query path while keeping transient invalidation and Tokio-backed async spawning)
 - `apps/fret-examples/src/embedded_viewport_demo.rs` (default demo avoids single-model aliases and stays on `on_action_notify_models` / `on_action_notify_transient`)
 - `apps/fret-examples/src/custom_effect_v2_web_demo.rs` (reset button uses `on_activate_request_redraw`)
 - `apps/fret-examples/src/imui_floating_windows_demo.rs` (pressable overlap target uses `on_activate_notify`)
