@@ -12,8 +12,9 @@ struct ImUiFloatingWindowsState {
 }
 
 pub fn run() -> anyhow::Result<()> {
-    fret::app("imui-floating-windows-demo", init_window, view)?
-        .with_main_window("imui_floating_windows_demo", (720.0, 480.0))
+    FretApp::new("imui-floating-windows-demo")
+        .window("imui_floating_windows_demo", (720.0, 480.0))
+        .ui(init_window, view)?
         .run()?;
     Ok(())
 }

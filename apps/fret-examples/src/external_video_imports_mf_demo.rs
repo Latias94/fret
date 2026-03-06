@@ -440,18 +440,19 @@ pub fn run() -> anyhow::Result<()> {
         )
         .try_init();
 
-    let builder = fret::app_with_hooks("external-video-imports-mf", init_window, view, |driver| {
-        driver
-            .on_event(on_event)
-            .record_engine_frame(record_engine_frame)
-    })?
-    .init_app(|app| {
-        app.set_global(PlatformCapabilities::default());
-    })
-    .with_main_window(
-        "fret-demo external_video_imports_mf_demo (V toggles visibility, I toggles source)",
-        (980.0, 720.0),
-    );
+    let builder = fret::App::new("external-video-imports-mf")
+        .window(
+            "fret-demo external_video_imports_mf_demo (V toggles visibility, I toggles source)",
+            (980.0, 720.0),
+        )
+        .ui_with_hooks(init_window, view, |driver| {
+            driver
+                .on_event(on_event)
+                .record_engine_frame(record_engine_frame)
+        })?
+        .init_app(|app| {
+            app.set_global(PlatformCapabilities::default());
+        });
 
     builder.run().context("run external_video_imports_mf_demo")
 }

@@ -77,4 +77,4 @@ Companion docs:
 - [x] Land documentation and export classification before removing or hiding launch exports.
 - [x] Prefer staged de-emphasis + migration docs before hard API removal.
 - [x] Keep host-integration use cases working throughout the refactor.
-- [ ] Coordinate any `fret` top-level API changes with `docs/workstreams/app-entry-builder-v1/`.
+- [x] Coordinate any `fret` top-level API changes with `docs/workstreams/app-entry-builder-v1/`.

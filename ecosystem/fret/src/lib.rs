@@ -64,6 +64,8 @@ mod pending_shortcut_overlay;
 mod app_entry;
 #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
 pub use app_entry::App;
+#[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
+pub use app_entry::App as AppBuilder;
 
 /// Runtime defaults applied by the `fret` facade (within the enabled crate features).
 ///
@@ -177,6 +179,9 @@ pub mod prelude {
     pub use fret_ui_kit::prelude::*;
 
     #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
+    pub use crate::AppBuilder;
+
+    #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
     pub use crate::App as FretApp;
 
     #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
@@ -235,11 +240,11 @@ pub struct UiAppDriver<S> {
 
 #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
 impl<S> UiAppDriver<S> {
-    fn new(inner: fret_bootstrap::ui_app_driver::UiAppDriver<S>) -> Self {
+    pub(crate) fn new(inner: fret_bootstrap::ui_app_driver::UiAppDriver<S>) -> Self {
         Self { inner }
     }
 
-    fn into_inner(self) -> fret_bootstrap::ui_app_driver::UiAppDriver<S> {
+    pub(crate) fn into_inner(self) -> fret_bootstrap::ui_app_driver::UiAppDriver<S> {
         self.inner
     }
 
@@ -655,6 +660,11 @@ pub fn run_native_with_fn_driver<D: 'static, S: 'static>(
     Ok(())
 }
 
+/// Compatibility shorthand for [`App::new(...).ui_with_hooks(...)`](crate::App::ui_with_hooks).
+///
+/// Prefer the builder chain for new code so window/defaults/app-install configuration stays in one
+/// place.
+///
 /// Create a desktop-first UI app builder with conservative defaults applied.
 ///
 /// Defaults (when the corresponding features are enabled):
@@ -695,6 +705,10 @@ fn shadcn_sync_theme_from_environment_on_global_changes<S>(
         fret_ui_shadcn::sync_theme_from_environment(app, window, config.base_color, config.scheme);
 }
 
+/// Compatibility shorthand for [`App::new(...).ui(...)`](crate::App::ui).
+///
+/// Prefer the builder chain for new code.
+///
 /// Same as [`app_with_hooks`], but without a driver configuration hook.
 #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
 pub fn app<S: 'static>(
@@ -705,6 +719,10 @@ pub fn app<S: 'static>(
     app_with_hooks(root_name, init_window, view, |d| d)
 }
 
+/// Compatibility shorthand for [`App::run_ui_with_hooks`](crate::App::run_ui_with_hooks).
+///
+/// Prefer the builder chain for new code.
+///
 /// Run a desktop-first UI app using default window settings.
 #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
 pub fn run_with_hooks<S: 'static>(
@@ -718,6 +736,10 @@ pub fn run_with_hooks<S: 'static>(
         .run()
 }
 
+/// Compatibility shorthand for [`App::run_ui`](crate::App::run_ui).
+///
+/// Prefer the builder chain for new code.
+///
 /// Run a desktop-first UI app using default window settings.
 #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
 pub fn run<S: 'static>(

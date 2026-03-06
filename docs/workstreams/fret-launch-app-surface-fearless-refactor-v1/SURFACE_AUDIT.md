@@ -49,8 +49,11 @@ Evidence:
 
 Why this is enough:
 
-- `fret::App::new(...).window(...).ui(...)` provides the short path.
-- `fret::app(...)` / `fret::run(...)` keep the minimal “root name + init + view” loop available.
+- `fret::App::new(...).window(...).ui(...)` is the recommended short path.
+- `fret::App::new(...).window(...).ui_with_hooks(...)` keeps advanced driver hooks on that same
+  builder path.
+- `fret::app(...)` / `fret::run(...)` still exist, but they now read as compatibility shorthands
+  rather than the primary onboarding story.
 - `UiAppBuilder` still exposes real extension points without forcing app authors to start from
   `fret-launch`.
 
@@ -58,6 +61,7 @@ Why this is enough:
 
 The `fret` facade already exposes the advanced hooks that matter for non-trivial products:
 
+- `App::{ui_with_hooks, view_with_hooks::<V>}`
 - `configure(...)`
 - `on_gpu_ready(...)`
 - `install_custom_effects(...)`

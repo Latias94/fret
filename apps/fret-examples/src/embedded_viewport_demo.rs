@@ -273,19 +273,20 @@ fn record_engine_frame(
 }
 
 pub fn run() -> anyhow::Result<()> {
-    fret::app_with_hooks("embedded-viewport-demo", init_window, view, |d| {
-        d.viewport_input(embedded::handle_viewport_input)
-            .record_engine_frame(record_engine_frame)
-    })?
-    .with_main_window("embedded_viewport_demo", (1120.0, 720.0))
-    .init_app(|app| {
-        shadcn::shadcn_themes::apply_shadcn_new_york(
-            app,
-            shadcn::shadcn_themes::ShadcnBaseColor::Slate,
-            shadcn::shadcn_themes::ShadcnColorScheme::Light,
-        );
-        fret_icons_lucide::install_app(app);
-    })
-    .run()?;
+    FretApp::new("embedded-viewport-demo")
+        .window("embedded_viewport_demo", (1120.0, 720.0))
+        .ui_with_hooks(init_window, view, |d| {
+            d.viewport_input(embedded::handle_viewport_input)
+                .record_engine_frame(record_engine_frame)
+        })?
+        .init_app(|app| {
+            shadcn::shadcn_themes::apply_shadcn_new_york(
+                app,
+                shadcn::shadcn_themes::ShadcnBaseColor::Slate,
+                shadcn::shadcn_themes::ShadcnColorScheme::Light,
+            );
+            fret_icons_lucide::install_app(app);
+        })
+        .run()?;
     Ok(())
 }

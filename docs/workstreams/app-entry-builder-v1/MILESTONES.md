@@ -1,61 +1,90 @@
 # App Entry Builder v1 (Milestones)
 
-## M0 — Design approved
+## Status summary
 
-**Exit criteria**
+- `M0` Design convergence: **Completed**
+- `M1` Builder implementation: **Completed**
+- `M2` Onboarding switch: **Completed**
+- `M3` Extension-seam polish: **In progress**
+- `M4` Optional closure entry: **Deferred / undecided**
 
-- This folder contains an agreed design and TODO list.
-- Naming and minimal API surface are agreed.
-- Feature/preset strategy is agreed (at least for `desktop`, `batteries`, `config-files`).
+## M0 ? Design convergence
 
-## M1 — Builder prototype (no template switch)
+**Status:** Completed
 
-**Scope**
+**What closed**
 
-- Add builder types in `ecosystem/fret` only.
-- Implement MVU and UI entry variants that wrap existing `fret-bootstrap` wiring.
-- Preserve existing entry points (no breaking changes).
+- Ownership settled on `ecosystem/fret`.
+- Primary naming settled on `fret::App`.
+- Ergonomic aliases settled on `FretApp` and `AppBuilder`.
+- The recommended mental model is now builder-first instead of helper-first.
 
-**Exit criteria**
+**Evidence**
 
-- `cargo check -p fret` passes (defaults and minimal features).
-- A small doc example compiles using the new builder chain.
+- `docs/workstreams/app-entry-builder-v1/DESIGN.md`
+- `ecosystem/fret/src/lib.rs`
 
-## M2 — Onboarding switch (templates + docs)
+## M1 ? Builder implementation
 
-**Scope**
+**Status:** Completed
 
-- Update `fretboard new hello/simple-todo/todo` templates to use the builder chain.
-- Update onboarding docs to match.
+**What shipped**
 
-**Exit criteria**
+- Builder-chain entry type implemented in `fret`.
+- UI entry and view entry both supported.
+- Default main-window fallback preserved.
+- Builder remains backed by existing `UiAppDriver` / bootstrap wiring.
 
-- New templates compile and run in the repo’s demo shells.
-- Docs are consistent and do not mention internal runner types in the “first hour” path.
+**Evidence**
 
-## M3 — Ecosystem extension polish
+- `ecosystem/fret/src/app_entry.rs`
+- `ecosystem/fret/src/lib.rs`
 
-**Scope**
+## M2 ? Onboarding switch
 
-- Add the most important extension seams to the builder surface (without bloat), e.g.:
-  - icon pack selection convenience
-  - ui-assets budgets convenience
-  - router/workspace-shell opt-ins (feature gated)
+**Status:** Completed
 
-**Exit criteria**
+**What shipped**
 
-- A “golden path + one extension” example exists (e.g. router commands or workspace shell).
-- Users can reach advanced wiring via `install_*` hooks without leaving the `fret` surface.
+- Templates use the builder chain.
+- Golden-path docs use the builder chain.
+- Representative examples now use the builder chain instead of the older helper-only story.
+- `ecosystem/fret/README.md` teaches the builder chain as the first recommendation.
 
-## M4 — Optional closure entry (if chosen)
+**Evidence**
 
-**Scope**
+- `apps/fretboard/src/scaffold/templates.rs`
+- `docs/examples/todo-app-golden-path.md`
+- `apps/fret-examples/src/assets_demo.rs`
+- `apps/fret-examples/src/imui_editor_proof_demo.rs`
+- `ecosystem/fret/README.md`
 
-- Introduce closure-based entry behind explicit opt-in.
-- Document hotpatch tradeoffs clearly.
+## M3 ? Extension-seam polish
 
-**Exit criteria**
+**Status:** In progress
 
-- Closure entry exists without impacting the default fn-pointer entry.
-- Documentation and type naming make the tradeoffs unambiguous.
+**What shipped already**
 
+- `ui_with_hooks(...)` keeps driver configuration on the builder path.
+- `view_with_hooks::<V>(...)` does the same for the view runtime path.
+- Advanced users can keep using `UiAppBuilder` and `UiAppDriver` seams without dropping down early.
+
+**What remains**
+
+- Add stronger compile/doc regression coverage for the new hook-preserving builder paths.
+- Keep docs/examples consistent about when to stay on `fret` versus when to drop down.
+- Decide whether more builder conveniences should become first-class.
+
+**Evidence**
+
+- `ecosystem/fret/src/app_entry.rs`
+- `ecosystem/fret/README.md`
+- `docs/workstreams/fret-launch-app-surface-fearless-refactor-v1/SURFACE_AUDIT.md`
+
+## M4 ? Optional closure entry
+
+**Status:** Deferred / undecided
+
+This remains intentionally unresolved. The default Fret posture is still function-pointer based.
+Any closure entry, if it ever exists, must be explicit about tradeoffs and must not weaken the
+current hotpatch-friendly default.

@@ -58,9 +58,12 @@ fret = { path = "../fret", default-features = false, features = ["desktop", "sha
 use fret::prelude::*;
 
 fn main() -> fret::Result<()> {
-    fret::run("hello", |_app, _window| (), |cx, _st| {
-        shadcn::Label::new("Hello from Fret!").into_element(cx).into()
-    })
+    FretApp::new("hello")
+        .window("Hello", (560.0, 360.0))
+        .ui(|_app, _window| (), |cx, _st| {
+            shadcn::Label::new("Hello from Fret!").into_element(cx).into()
+        })?
+        .run()
 }
 ```
 
@@ -93,7 +96,9 @@ Related workstream: `docs/workstreams/fret-launch-app-surface-fearless-refactor-
 
 ## Choosing a native entry path
 
-- App authors: `fret::App::new(...).window(...).ui(...)?`
+- App authors (default recommendation): `fret::App::new(...).window(...).ui(...)?`
+- App authors with driver hooks: `fret::App::new(...).window(...).ui_with_hooks(...)?`
+- View runtime authors: `fret::App::new(...).window(...).view::<V>()?`
 - Advanced integration with `fret` defaults: `fret::run_native_with_fn_driver(...)`
 - Compatibility-only low-level driver path: `fret::run_native_with_compat_driver(...)`
 
@@ -102,11 +107,15 @@ Related workstream: `docs/workstreams/fret-launch-app-surface-fearless-refactor-
 Advanced users do **not** need to drop to `fret-launch` immediately. The `fret` facade keeps the
 following seams first-class:
 
+- `App::{ui_with_hooks, view::<V>, view_with_hooks::<V>}`
 - `UiAppBuilder::configure(...)` for launch/window config
 - `UiAppBuilder::on_gpu_ready(...)`
 - `UiAppBuilder::install_custom_effects(...)`
 - `UiAppDriver::{window_create_spec, window_created, before_close_window}`
 - `UiAppDriver::{record_engine_frame, viewport_input, handle_global_command}`
+
+Legacy helpers (`fret::app`, `fret::app_with_hooks`, `fret::run`, `fret::run_with_hooks`) still
+exist, but they are compatibility shorthands rather than the primary onboarding story.
 
 That makes `fret` suitable for both general-purpose desktop apps and many editor-style customizations
 before you need to depend on `fret-bootstrap` or `fret-launch` directly.
@@ -123,11 +132,11 @@ to manual assembly when you need:
 
 Mapping (rough):
 
-- `fret::app_with_hooks(...)` → `fret_bootstrap::ui_app_with_hooks(...)`
-- `fret::UiAppBuilder` → `fret_bootstrap::UiAppBootstrapBuilder`
-- `fret::UiAppDriver` → `fret_bootstrap::ui_app_driver::UiAppDriver`
-- `fret::run_native_with_fn_driver(...)` → `fret_bootstrap::BootstrapBuilder::new_fn(...)`
-- `fret::run_native_with_compat_driver(...)` → `fret_bootstrap::BootstrapBuilder::new(...)`
+- `fret::App::new(...).ui_with_hooks(...)` ? `fret_bootstrap::ui_app_with_hooks(...)`
+- `fret::UiAppBuilder` ? `fret_bootstrap::UiAppBootstrapBuilder`
+- `fret::UiAppDriver` ? `fret_bootstrap::ui_app_driver::UiAppDriver`
+- `fret::run_native_with_fn_driver(...)` ? `fret_bootstrap::BootstrapBuilder::new_fn(...)`
+- `fret::run_native_with_compat_driver(...)` ? `fret_bootstrap::BootstrapBuilder::new(...)`
 
 The recommended manual-assembly entry point remains `fret-bootstrap`, keeping the underlying driver
 hotpatch-friendly (function-pointer `FnDriver` surface, per ADR 0105 / 0110).

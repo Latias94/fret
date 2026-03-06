@@ -1,45 +1,55 @@
 # App Entry Builder v1 (TODO)
 
-## Design / API
+## Decision closure
 
-- Decide the public naming (`fret::App` vs `fret::UiApp` vs `fret::AppBuilder`).
-- Finalize the minimal builder surface:
-  - `new(root_name)`
-  - `window(title, size)`
-  - `mvu::<P>()` / `ui(init, view)`
-  - `install_app(...)` / `install(...)`
-  - `defaults(...)` and a small `Defaults` preset set.
-- Decide whether “closure entry” exists in v1, and if so:
-  - feature gating
-  - documentation warnings
-  - API naming that makes the tradeoff obvious.
+- [x] Keep the builder in `ecosystem/fret`.
+- [x] Use `fret::App` as the primary public type.
+- [x] Provide `FretApp` in the prelude for ergonomic authoring.
+- [x] Provide `AppBuilder` as a discoverability/doc alias.
+- [x] Keep the underlying runtime function-pointer based by default.
+- [x] Keep the older top-level helpers as compatibility shorthands instead of deleting them now.
 
-## Feature simplification
+## Builder surface
 
-- Propose a small set of feature aliases (e.g. `batteries`) and document them.
-- Ensure filesystem-touching defaults can be disabled (`config-files`).
-- Ensure icon-related ergonomics do not require users to understand `fret-ui-kit/icons` vs pack
-  installers.
+- [x] `new(root_name)`
+- [x] `window(title, size)`
+- [x] `defaults(...)` / `minimal_defaults()` / `config_files(...)`
+- [x] `ui_assets_budgets(...)`
+- [x] `install_app(...)` / `install(...)`
+- [x] `register_icon_pack(...)`
+- [x] `ui(init_window, view)`
+- [x] `ui_with_hooks(init_window, view, configure)`
+- [x] `view::<V>()`
+- [x] `view_with_hooks::<V>(configure)`
+- [x] `run_ui(...)` / `run_ui_with_hooks(...)`
+- [x] `run_view::<V>()` / `run_view_with_hooks::<V>(...)`
 
-## Templates / Docs
+## Onboarding convergence
 
-- Update `fretboard new hello` to use the builder chain.
-- Update `fretboard new simple-todo` and `fretboard new todo` to use the builder chain.
-- Update `docs/first-hour.md` and `docs/examples/todo-app-golden-path.md` to show the new entry.
-- Add a short “Drop down to `fret-bootstrap`” section with a mapping table.
+- [x] `fretboard new hello` uses the builder chain.
+- [x] `fretboard new simple-todo` uses the builder chain.
+- [x] `fretboard new todo` uses the builder chain.
+- [x] `docs/examples/todo-app-golden-path.md` uses the builder chain.
+- [x] Representative `apps/fret-examples` demos use the builder chain for the recommended path.
+- [x] `ecosystem/fret/README.md` teaches the builder chain as the primary entry story.
+- [x] Cross-link this workstream from `docs/README.md`.
 
-## Validation gates
+## Remaining work
 
-- Add a compile-only doc test snippet that uses the new builder chain.
-- Add a minimal smoke test that ensures the builder uses fn-pointer hooks by default (no captured
-  closures).
-- Verify `cargo check -p fret` with:
-  - defaults
-  - `--no-default-features --features "desktop"`
+- [ ] Decide whether compatibility shorthands should eventually be doc-deemphasized even harder or
+      soft-deprecated.
+- [ ] Add a compile-oriented regression gate that covers `ui_with_hooks(...)` and
+      `view_with_hooks(...)` directly.
+- [ ] Audit more cookbook/examples for wording consistency when describing manual assembly vs builder
+      entry.
+- [ ] Decide whether a closure-based entry should exist at all.
+- [ ] Decide whether more convenience methods belong on `fret::App` or should stay as install-hook
+      recipes.
 
-## Rollout
+## Validation
 
-- Land design doc + milestones first (this folder).
-- Implement builder behind a feature if needed.
-- Switch templates and docs after the API is stable enough.
-
+- [x] `cargo fmt -p fret`
+- [x] `cargo check -p fret --all-targets`
+- [x] `cargo check -p fret --no-default-features --features desktop`
+- [x] `cargo check -p fret-examples --all-targets`
+- [x] `python tools/check_layering.py`
