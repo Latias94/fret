@@ -25,7 +25,7 @@ Goals:
    - `WinitAppDriver`
    - dev-state exports
    - `ViewportRenderTarget`
-3. `crates/fret-framework` does not curate launch types; with `feature = "launch"` it re-exports the full `fret_launch::*` root surface.
+3. In this worktree, `crates/fret-framework::launch` re-exports a curated subset of the core launch contract instead of mirroring the full `fret_launch::*` root surface.
 4. In-tree `apps/` callers no longer need `fret_launch::runner::*` for the platform helper modules that were migrated to crate-root imports.
 5. In this worktree, `pub mod runner` has been removed from the public root surface; launch consumers now go through curated crate-root exports only.
 
@@ -91,21 +91,25 @@ Implication:
 
 Current posture:
 
-- `crates/fret-framework/src/lib.rs` exposes `pub mod launch { pub use fret_launch::*; }` behind `feature = "launch"`.
+- `crates/fret-framework/src/lib.rs` exposes a curated `launch` module behind `feature = "launch"`.
+- The facade includes driver/core-context/config/app-entry types such as `FnDriver`, `WinitAppDriver`, `WinitRunnerConfig`, `WindowCreateSpec`, `WgpuInit`, and top-level `run_app*` / `WinitAppBuilder` entry wiring.
+- Specialized media / interop / imported-viewport helpers remain available from `fret-launch` directly.
 
 Implication:
 
-- any accidental root export in `fret-launch` also becomes part of the manual-assembly facade,
-- so `fret-launch` root curation matters even if `fret-framework` itself stays intentionally thin.
+- accidental root-export growth in `fret-launch` no longer automatically becomes part of the manual-assembly facade,
+- `fret-framework` can stay a compact umbrella for common advanced assembly,
+- callers that need specialized launch integration can still opt into `fret-launch` directly.
 
 ## Immediate conclusions
 
 ### What we can do now with low risk
 
-1. Keep new launch-facing code on curated crate-root imports only.
-2. Keep adding crate-root re-exports for specialized-but-real launch helpers where that reduces `runner::*` dependence.
-3. Stop teaching `WinitAppDriver` as the first recommendation in new docs/examples.
-4. Avoid adding new root exports unless they are explicitly classified first.
+1. Keep `fret-framework::launch` limited to the curated core contract unless a new export has explicit facade-level justification.
+2. Keep new launch-facing code on curated crate-root imports only.
+3. Keep adding crate-root re-exports for specialized-but-real launch helpers where that reduces `runner::*` dependence.
+4. Stop teaching `WinitAppDriver` as the first recommendation in new docs/examples.
+5. Avoid adding new root exports unless they are explicitly classified first.
 
 ### What is not yet safe to do
 

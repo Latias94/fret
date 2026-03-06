@@ -70,7 +70,25 @@ pub mod runner_web {
 
 #[cfg(feature = "launch")]
 pub mod launch {
-    pub use fret_launch::*;
+    //! Curated launch-facing exports for manual assembly.
+    //!
+    //! This module intentionally exposes the core launch/builder/driver contract used by advanced
+    //! assembly code while avoiding a full mirror of `fret_launch::*`.
+    //!
+    //! Prefer depending on `fret-launch` directly when you need specialized interop/media helpers
+    //! or when runner-facing naming itself is part of your public API.
+    pub use fret_launch::{
+        EngineFrameKeepalive, EngineFrameUpdate, FnDriver, FnDriverHooks, RunnerError, WgpuInit,
+        WindowCreateSpec, WindowLogicalSize, WindowPhysicalPosition, WindowPosition,
+        WinitAppDriver, WinitCommandContext, WinitEventContext, WinitGlobalContext,
+        WinitHotReloadContext, WinitRenderContext, WinitRunnerConfig, WinitWindowContext,
+    };
+
+    #[cfg(not(target_arch = "wasm32"))]
+    pub use fret_launch::{WinitAppBuilder, run_app, run_app_with_event_loop};
+
+    #[cfg(target_arch = "wasm32")]
+    pub use fret_launch::{WebRunnerHandle, run_app_with_handle};
 }
 
 pub mod prelude {

@@ -97,6 +97,20 @@ Related workstream: `docs/workstreams/fret-launch-app-surface-fearless-refactor-
 - Advanced integration with `fret` defaults: `fret::run_native_with_fn_driver(...)`
 - Compatibility-only low-level driver path: `fret::run_native_with_compat_driver(...)`
 
+## What remains first-class on `fret`
+
+Advanced users do **not** need to drop to `fret-launch` immediately. The `fret` facade keeps the
+following seams first-class:
+
+- `UiAppBuilder::configure(...)` for launch/window config
+- `UiAppBuilder::on_gpu_ready(...)`
+- `UiAppBuilder::install_custom_effects(...)`
+- `UiAppDriver::{window_create_spec, window_created, before_close_window}`
+- `UiAppDriver::{record_engine_frame, viewport_input, handle_global_command}`
+
+That makes `fret` suitable for both general-purpose desktop apps and many editor-style customizations
+before you need to depend on `fret-bootstrap` or `fret-launch` directly.
+
 ## When to drop down to `fret-framework` + `fret-bootstrap`
 
 `fret` is designed to keep the “first app” and “small app” story simple. Prefer dropping down

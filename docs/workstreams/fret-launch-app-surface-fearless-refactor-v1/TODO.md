@@ -7,6 +7,7 @@ Companion docs:
 - Design: `docs/workstreams/fret-launch-app-surface-fearless-refactor-v1/DESIGN.md`
 - Export inventory: `docs/workstreams/fret-launch-app-surface-fearless-refactor-v1/EXPORT_INVENTORY.md`
 - Config inventory: `docs/workstreams/fret-launch-app-surface-fearless-refactor-v1/CONFIG_INVENTORY.md`
+- Surface audit: `docs/workstreams/fret-launch-app-surface-fearless-refactor-v1/SURFACE_AUDIT.md`
 - Milestones: `docs/workstreams/fret-launch-app-surface-fearless-refactor-v1/MILESTONES.md`
 
 ## Setup / Inventory
@@ -22,11 +23,12 @@ Companion docs:
 ## Surface contract decisions
 
 - [x] Decide whether `pub mod runner` should remain public in `crates/fret-launch`.
-- [ ] Decide the intended long-term advanced entry recommendation:
+- [x] Decide the intended long-term advanced entry recommendation:
   - [ ] `FnDriver` only
   - [x] `FnDriver` recommended, `WinitAppDriver` compatibility-only
 - [x] Write down a deprecation/migration posture for `WinitAppDriver` if we choose a single-path model.
 - [x] Decide which host-integration helper types are currently contract-worthy enough to keep at crate root.
+- [x] Decide whether `crates/fret-framework::launch` should remain a full mirror of `fret_launch::*`.
 
 ## Config curation
 
@@ -36,21 +38,21 @@ Companion docs:
   - [x] streaming/media tuning
   - [x] platform/web specifics
 - [x] Decide which config fields should be documented as advanced-only.
-- [ ] Decide whether the future direction is:
+- [x] Decide whether the future direction is:
   - [ ] nested config groups
-  - [ ] helper builders only
+  - [x] helper builders only
   - [ ] new public wrapper type
 
 ## `fret` facade alignment
 
-- [ ] Verify that `fret::App`, `UiAppDriver`, and `UiAppBuilder` expose the minimum lower-layer concepts needed for common apps.
-- [ ] Identify where current docs/examples force users to learn runner-centric concepts too early.
-- [ ] Map which advanced seams should remain first-class on `fret`:
-  - [ ] `configure(...)`
-  - [ ] `on_gpu_ready(...)`
-  - [ ] `install_custom_effects(...)`
-  - [ ] window create/close hooks
-  - [ ] engine-frame customization
+- [x] Verify that `fret::App`, `UiAppDriver`, and `UiAppBuilder` expose the minimum lower-layer concepts needed for common apps.
+- [x] Identify where current docs/examples force users to learn runner-centric concepts too early.
+- [x] Map which advanced seams should remain first-class on `fret`:
+  - [x] `configure(...)`
+  - [x] `on_gpu_ready(...)`
+  - [x] `install_custom_effects(...)`
+  - [x] window create/close hooks
+  - [x] engine-frame customization
 - [x] Add a high-level `FnDriver` bootstrap escape hatch (`fret_bootstrap::BootstrapBuilder::new_fn(...)`, `fret::run_native_with_fn_driver(...)`).
 
 ## Docs / Examples
@@ -72,7 +74,7 @@ Companion docs:
 
 ## Rollout notes
 
-- [ ] Land documentation and export classification before removing or hiding launch exports.
-- [ ] Prefer staged de-emphasis + migration docs before hard API removal.
-- [ ] Keep host-integration use cases working throughout the refactor.
+- [x] Land documentation and export classification before removing or hiding launch exports.
+- [x] Prefer staged de-emphasis + migration docs before hard API removal.
+- [x] Keep host-integration use cases working throughout the refactor.
 - [ ] Coordinate any `fret` top-level API changes with `docs/workstreams/app-entry-builder-v1/`.
