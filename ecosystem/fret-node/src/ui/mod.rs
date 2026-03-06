@@ -59,6 +59,8 @@ pub use controller::{
     NodeGraphPortConnectionsQuery,
 };
 pub use edge_types::{EdgeCustomPath, EdgePathInput, EdgeTypeKey, NodeGraphEdgeTypes};
+/// Advanced edit transport seam for retained/compat integrations.
+/// Prefer `NodeGraphController` for app-facing graph updates.
 pub use edit_queue::NodeGraphEditQueue;
 pub use geometry_overrides::{
     EdgeGeometryOverrideV1, NodeGeometryOverrideV1, NodeGraphGeometryOverrides,
@@ -88,9 +90,13 @@ pub use skin::{
     PortShapeHint, WireGlowHint, WireHighlightHint, WireOutlineHint,
 };
 pub use style::{NodeGraphColorMode, NodeGraphStyle};
+/// Advanced viewport transport types for retained/compat integrations.
+/// Prefer `NodeGraphController` for app-facing viewport control.
 pub use view_queue::{
     NodeGraphFitViewOptions, NodeGraphSetViewportOptions, NodeGraphViewQueue, NodeGraphViewRequest,
 };
+/// Advanced helper for viewport transport.
+/// Prefer `NodeGraphViewportHelper::from_controller` or `NodeGraphController` in app-facing code.
 pub use viewport_helper::NodeGraphViewportHelper;
 
 #[cfg(feature = "compat-retained-canvas")]

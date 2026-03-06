@@ -249,6 +249,11 @@ app-facing integration surface. In particular, `NodeGraphViewportHelper::fit_vie
 relies on queue/canvas-bounds semantics, so collapsing it behind a pure controller-only API needs a
 deliberate follow-up design rather than an incidental rename.
 
+As a transitional landing step, `NodeGraphViewportHelper::from_controller(...)` is now the
+preferred helper entrypoint for app-facing composition, while
+`NodeGraphViewportHelper::new(view_state, view_queue)` remains the explicit transport-first
+constructor for retained-only integrations that still own the raw queue/models directly.
+
 Current controller-facing XyFlow mapping (review helper, not a final contract):
 
 - viewport read:

@@ -177,6 +177,11 @@ points rather than direct graph mutation.
     controller-owned transaction submission, `NodeGraphBlackboardOverlay::new(...).with_controller(...)`
     now gives retained symbol actions the same controller-first path, and `compat_retained` now
     takes a controller binding directly instead of exposing public queue transport props.
+  - `NodeGraphViewportHelper` now also has a controller-first constructor
+    (`NodeGraphViewportHelper::from_controller(...)`) so app-facing helper composition can share the
+    same store fallback / queued transport split as the controller, while
+    `NodeGraphViewportHelper::new(view_state, view_queue)` remains the explicit advanced transport
+    seam for retained-only integrations.
   - Declarative keyboard zoom / wheel zoom / pinch zoom / drag-pan updates now start converging on
     controller/store-backed view-state replacement instead of only mutating the external
     `NodeGraphViewState` model.

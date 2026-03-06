@@ -169,11 +169,13 @@ land in code review; move design discussion back to `README.md` if a TODO turns 
     binding rather than the default integration recipe.
 
 - **Landable follow-ups from this audit**
-  - [ ] Decide whether `NodeGraphViewportHelper` should become a thin wrapper around
-        `NodeGraphController` or move under an explicitly advanced/compat namespace.
+  - [x] Add a controller-first constructor to `NodeGraphViewportHelper` without deleting the
+        existing queue-model seam.
+  - [ ] Decide whether `NodeGraphViewportHelper` should stay re-exported from `fret_node::ui` or
+        move under an explicitly advanced/compat namespace after controller-first callers converge.
   - [ ] Decide whether queue types stay re-exported from `fret_node::ui` or move behind a more explicit
         advanced/compat surface.
-  - [ ] Add one short README/workstream note that queue APIs are advanced retained transport seams, not
+  - [x] Add one short README/workstream note that queue APIs are advanced retained transport seams, not
         the default app-facing integration surface.
 
 ## M3 - Transaction-safe declarative commits
