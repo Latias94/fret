@@ -322,7 +322,7 @@ fn capture_label_origin_for_route(route: EdgeRouteKind, zoom: f32) -> (Point, Po
     let view = insert_view(&mut host);
     let _ = view.update(&mut host, |s, _cx| {
         s.zoom = zoom;
-        s.interaction.only_render_visible_elements = false;
+        s.runtime_tuning.only_render_visible_elements = false;
         s.interaction.frame_view_duration_ms = 0;
         s.interaction.bezier_hit_test_steps = 8;
     });

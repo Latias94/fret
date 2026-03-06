@@ -66,7 +66,7 @@ fn paint_uses_node_corner_radius_from_style() {
     let _ = view.update(&mut host, |s, _cx| {
         s.pan = CanvasPoint::default();
         s.zoom = 1.0;
-        s.interaction.only_render_visible_elements = false;
+        s.runtime_tuning.only_render_visible_elements = false;
         s.interaction.frame_view_duration_ms = 0;
     });
 

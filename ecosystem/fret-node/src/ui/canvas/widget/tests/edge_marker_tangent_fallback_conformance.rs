@@ -154,7 +154,7 @@ fn custom_edge_marker_falls_back_to_from_to_tangent_when_path_has_no_tangents() 
     let view = insert_view(&mut host);
     let _ = view.update(&mut host, |s, _cx| {
         s.zoom = 1.0;
-        s.interaction.only_render_visible_elements = false;
+        s.runtime_tuning.only_render_visible_elements = false;
         s.interaction.frame_view_duration_ms = 0;
     });
 

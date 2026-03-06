@@ -112,6 +112,9 @@ runtime tuning.
   - runtime tuning.
 - A serialization compatibility plan for existing persisted data.
 - Store/runtime wiring updated to use the new boundaries without breaking the editor contract.
+- First landed slice: `NodeGraphViewState` persists `NodeGraphInteractionConfig` +
+  `NodeGraphRuntimeTuning`, while widget/runtime snapshots still resolve a combined
+  `NodeGraphInteractionState` for compatibility.
 
 ### Done criteria
 
@@ -129,6 +132,8 @@ runtime tuning.
 ### Evidence anchors
 
 - `ecosystem/fret-node/src/io/mod.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/view_state/sync.rs`
+- `ecosystem/fret-node/src/ui/declarative/paint_only.rs`
 - `ecosystem/fret-node/src/runtime/store.rs`
 - `ecosystem/fret-node/src/runtime/tests.rs`
 

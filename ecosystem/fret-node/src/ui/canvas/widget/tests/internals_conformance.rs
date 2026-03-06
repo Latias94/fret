@@ -315,7 +315,7 @@ fn spatial_index_tuning_rebuilds_index_without_rebuilding_geometry() {
     let counters1 = canvas.debug_derived_build_counters();
 
     let _ = view.update(&mut host, |s, _cx| {
-        s.interaction.spatial_index.edge_aabb_pad_screen_px = 200.0;
+        s.runtime_tuning.spatial_index.edge_aabb_pad_screen_px = 200.0;
     });
     let snapshot2 = canvas.sync_view_state(&mut host);
     let (geom2, index2) = canvas.canvas_derived(&host, &snapshot2);

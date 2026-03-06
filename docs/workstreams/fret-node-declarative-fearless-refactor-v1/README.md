@@ -118,8 +118,12 @@ update rather than an incidental refactor.
     committed edit flows and converge behind a clearer controller/instance surface.
 
 - **Overgrown view-state boundary**
-  - `NodeGraphViewState` currently bundles pure view state together with interaction configuration
-    and runtime tuning concerns.
+  - The first M2 slice is now landed: `NodeGraphViewState` persists `interaction`
+    (`NodeGraphInteractionConfig`) separately from `runtime_tuning`
+    (`NodeGraphRuntimeTuning`), while runtime/widget code still resolves a combined
+    `NodeGraphInteractionState` for compatibility.
+  - Full closure is still unresolved: `NodeGraphViewState` still carries persisted interaction
+    policy alongside pure view state, and the long-term ownership/persistence story is not final.
 
 - **Ergonomic API fragmentation**
   - Viewport helpers, lookups, commands, store subscriptions, and controlled updates do not yet read
@@ -145,10 +149,14 @@ convergence slices.
 
 ### H2. `NodeGraphViewState` still persists more than true view state
 
-- `NodeGraphViewState` still serializes `interaction`, and that shape currently mixes interaction
-  policy with runtime tuning.
+- The first extraction slice is landed: runtime-heavy knobs now live in
+  `NodeGraphRuntimeTuning`, separate from `NodeGraphInteractionConfig`.
+- The remaining hazard is that persisted interaction policy still lives inside `NodeGraphViewState`,
+  so the final ?pure view state only? boundary is not closed yet.
 - Evidence:
-  - `ecosystem/fret-node/src/io/mod.rs` (`NodeGraphViewState`, `NodeGraphInteractionState`)
+  - `ecosystem/fret-node/src/io/mod.rs` (`NodeGraphViewState`, `NodeGraphInteractionConfig`,
+    `NodeGraphRuntimeTuning`, `NodeGraphInteractionState`)
+  - `ecosystem/fret-node/src/ui/canvas/widget/view_state/sync.rs`
   - `docs/workstreams/fret-node-declarative-fearless-refactor-v1/milestones.md` (`M2`)
 
 ### H3. `NodeGraphController` is landed, but not yet fully closed as the teaching surface

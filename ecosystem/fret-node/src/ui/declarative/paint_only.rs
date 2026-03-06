@@ -1642,6 +1642,7 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
     let graph_rev = graph.revision(&*cx.app).unwrap_or(0);
     let draw_order_hash = stable_hash_u64(2, &view_value.draw_order);
     let node_origin = view_value.interaction.node_origin;
+    let resolved_interaction = view_value.resolved_interaction_state();
 
     // Attempt to rebuild the cached grid ops when the view/bounds key changes.
     // Bounds are initially learned from pointer hooks (and optionally from `last_bounds_for_element`).
@@ -1680,7 +1681,7 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
             view_for_paint.zoom,
             node_origin,
             &view_value.draw_order,
-            &view_value.interaction,
+            &resolved_interaction,
             &style_tokens,
             geometry_overrides_rev,
             max_edge_interaction_width_override_px,
@@ -1703,7 +1704,7 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
                         geometry_overrides,
                     );
 
-                    let tuning = view_value.interaction.spatial_index;
+                    let tuning = view_value.runtime_tuning.spatial_index;
                     let edge_aabb_pad_screen_px = tuning
                         .edge_aabb_pad_screen_px
                         .max(view_value.interaction.edge_interaction_width)

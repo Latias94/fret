@@ -49,17 +49,22 @@ land in code review; move design discussion back to `README.md` if a TODO turns 
   - zoom
   - selected nodes/edges/groups
   - draw order
-- [ ] Introduce a separate interaction config type for:
+- [x] Introduce a separate interaction config type for:
   - selection/connect/drag toggles
   - connection mode
   - key semantics and activation policy
   - interaction defaults that are not pure view state
-- [ ] Introduce a separate runtime tuning type for:
+- [x] Introduce a separate runtime tuning type for:
   - spatial index tuning
   - cache prune tuning
   - expensive runtime knobs
+- [x] Land the first persisted split slice:
+  - `NodeGraphViewState.interaction` now stores `NodeGraphInteractionConfig`
+  - `NodeGraphViewState.runtime_tuning` now stores `NodeGraphRuntimeTuning`
+  - runtime/widget code still resolves `NodeGraphInteractionState` for compatibility
+  - legacy serialized `interaction` payloads migrate at load time
 - [ ] Decide where these new types live and who owns persistence for them.
-- [ ] Design the migration/compat strategy for existing serialized `NodeGraphViewState` payloads.
+- [x] Design the migration/compat strategy for existing serialized `NodeGraphViewState` payloads.
 - [ ] Update store code and tests so the new boundary is explicit in subscriptions and controlled
       synchronization.
 - [ ] Add focused tests for serialization migration and store behavior after the split.
