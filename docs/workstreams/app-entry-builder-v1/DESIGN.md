@@ -17,7 +17,7 @@ Companion naming decisions:
 - Primary public type: `fret::App`
 - Prelude ergonomic alias: `FretApp`
 - Doc/discoverability alias: `AppBuilder`
-- Legacy helpers kept as compatibility shorthands: `fret::app`, `fret::app_with_hooks`, `fret::run`, `fret::run_with_hooks`
+- Older top-level shorthand helpers were removed from `fret` during this fearless refactor.
 
 Implementation anchor:
 
@@ -124,17 +124,15 @@ path:
 
 This keeps `fret` suitable for both general-purpose apps and many editor-style apps.
 
-### 5) Compatibility helpers remain, but they are no longer the primary story
+### 5) The crate-root story is builder-only
 
-The older helpers still exist because the project is pre-release and they are useful as shorthands:
+The older top-level shorthand helpers have now been removed from `fret`.
 
-- `fret::app(...)`
-- `fret::app_with_hooks(...)`
-- `fret::run(...)`
-- `fret::run_with_hooks(...)`
+That is intentional for this pre-release, fearless-refactor phase:
 
-However, new docs, templates, and examples should prefer the builder chain. These helpers should be
-explained as compatibility shorthands, not as the recommended onboarding path.
+- the crate root now teaches a single mental model,
+- docs/examples/templates no longer have to carry two competing first-contact paths,
+- advanced seams remain available through the builder-preserving hook entry points.
 
 ## Why this shape works
 
@@ -179,7 +177,7 @@ The recommended documentation order is now:
 
 ## Remaining questions
 
-- Should the compatibility shorthands eventually receive a soft deprecation signal in docs or code?
+- Do we want to remove or archive any remaining historical docs that still teach pre-builder entry paths?
 - Do we want an explicit closure-based entry later, and if yes, behind what naming/feature gate?
 - Which additional conveniences deserve first-class builder methods versus remaining install-hook
   recipes?

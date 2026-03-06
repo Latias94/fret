@@ -17,7 +17,7 @@
 - Ownership settled on `ecosystem/fret`.
 - Primary naming settled on `fret::App`.
 - Ergonomic aliases settled on `FretApp` and `AppBuilder`.
-- The recommended mental model is now builder-first instead of helper-first.
+- The recommended mental model is now builder-first, and the old top-level shorthand helpers are gone from `fret`.
 
 **Evidence**
 
@@ -48,7 +48,7 @@
 
 - Templates use the builder chain.
 - Golden-path docs use the builder chain.
-- Representative examples now use the builder chain instead of the older helper-only story.
+- Representative examples now use the builder chain instead of the older helper-first story.
 - `ecosystem/fret/README.md` teaches the builder chain as the first recommendation.
 
 **Evidence**

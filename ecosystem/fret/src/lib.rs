@@ -586,24 +586,6 @@ pub(crate) fn apply_desktop_defaults<D: fret_launch::WinitAppDriver + 'static>(
     apply_desktop_defaults_with(builder, Defaults::default())
 }
 
-#[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
-pub(crate) fn ui_bootstrap_builder_with_hooks<S: 'static>(
-    root_name: &'static str,
-    init_window: fn(&mut KernelApp, fret_core::AppWindowId) -> S,
-    view: for<'a> fn(&mut fret_ui::ElementContext<'a, KernelApp>, &mut S) -> ViewElements,
-    configure: fn(UiAppDriver<S>) -> UiAppDriver<S>,
-) -> fret_bootstrap::UiAppBootstrapBuilder<S> {
-    let driver = fret_bootstrap::ui_app_driver::UiAppDriver::new(root_name, init_window, view)
-        .on_preferences(fret_bootstrap::ui_app_driver::default_on_preferences::<S>);
-    #[cfg(feature = "shadcn")]
-    let driver = driver
-        .on_global_changes_middleware(shadcn_sync_theme_from_environment_on_global_changes::<S>);
-    let driver = configure(UiAppDriver::new(driver)).into_inner();
-    let builder = fret_bootstrap::BootstrapBuilder::new(KernelApp::new(), driver.into_fn_driver());
-
-    builder
-}
-
 /// Run a native desktop app using the compatibility driver path.
 ///
 /// Prefer `fret::App` / `UiAppBuilder` for general applications and
@@ -660,34 +642,6 @@ pub fn run_native_with_fn_driver<D: 'static, S: 'static>(
     Ok(())
 }
 
-/// Compatibility shorthand for [`App::new(...).ui_with_hooks(...)`](crate::App::ui_with_hooks).
-///
-/// Prefer the builder chain for new code so window/defaults/app-install configuration stays in one
-/// place.
-///
-/// Legacy compatibility shorthand that builds a desktop-first UI app builder with
-/// conservative defaults applied.
-///
-/// Defaults (when the corresponding features are enabled):
-/// - diagnostics (`diagnostics`)
-/// - layered config files (`.fret/settings.json`, `.fret/keymap.json`, `.fret/menubar.json`)
-/// - shadcn app integration (`shadcn`)
-/// - icon pack installation + optional SVG preloading
-/// - UI assets caches with default budgets (`ui-assets`)
-#[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
-#[doc(hidden)]
-pub fn app_with_hooks<S: 'static>(
-    root_name: &'static str,
-    init_window: fn(&mut KernelApp, fret_core::AppWindowId) -> S,
-    view: for<'a> fn(&mut fret_ui::ElementContext<'a, KernelApp>, &mut S) -> ViewElements,
-    configure: fn(UiAppDriver<S>) -> UiAppDriver<S>,
-) -> Result<UiAppBuilder<S>> {
-    let builder = ui_bootstrap_builder_with_hooks(root_name, init_window, view, configure);
-    let builder =
-        apply_desktop_defaults_with(builder, Defaults::default()).map_err(BootstrapError::from)?;
-    Ok(UiAppBuilder::from_bootstrap(builder))
-}
-
 #[cfg(all(not(target_arch = "wasm32"), feature = "desktop", feature = "shadcn"))]
 fn shadcn_sync_theme_from_environment_on_global_changes<S>(
     app: &mut KernelApp,
@@ -705,54 +659,6 @@ fn shadcn_sync_theme_from_environment_on_global_changes<S>(
         .unwrap_or_default();
     let _ =
         fret_ui_shadcn::sync_theme_from_environment(app, window, config.base_color, config.scheme);
-}
-
-/// Compatibility shorthand for [`App::new(...).ui(...)`](crate::App::ui).
-///
-/// Prefer the builder chain for new code.
-///
-/// Same as [`app_with_hooks`], but without a driver configuration hook.
-#[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
-#[doc(hidden)]
-pub fn app<S: 'static>(
-    root_name: &'static str,
-    init_window: fn(&mut KernelApp, fret_core::AppWindowId) -> S,
-    view: for<'a> fn(&mut fret_ui::ElementContext<'a, KernelApp>, &mut S) -> ViewElements,
-) -> Result<UiAppBuilder<S>> {
-    app_with_hooks(root_name, init_window, view, |d| d)
-}
-
-/// Compatibility shorthand for [`App::run_ui_with_hooks`](crate::App::run_ui_with_hooks).
-///
-/// Prefer the builder chain for new code.
-///
-/// Run a desktop-first UI app using default window settings.
-#[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
-#[doc(hidden)]
-pub fn run_with_hooks<S: 'static>(
-    root_name: &'static str,
-    init_window: fn(&mut KernelApp, fret_core::AppWindowId) -> S,
-    view: for<'a> fn(&mut fret_ui::ElementContext<'a, KernelApp>, &mut S) -> ViewElements,
-    configure: fn(UiAppDriver<S>) -> UiAppDriver<S>,
-) -> Result<()> {
-    app_with_hooks(root_name, init_window, view, configure)?
-        .with_main_window(root_name, (960.0, 720.0))
-        .run()
-}
-
-/// Compatibility shorthand for [`App::run_ui`](crate::App::run_ui).
-///
-/// Prefer the builder chain for new code.
-///
-/// Run a desktop-first UI app using default window settings.
-#[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
-#[doc(hidden)]
-pub fn run<S: 'static>(
-    root_name: &'static str,
-    init_window: fn(&mut KernelApp, fret_core::AppWindowId) -> S,
-    view: for<'a> fn(&mut fret_ui::ElementContext<'a, KernelApp>, &mut S) -> ViewElements,
-) -> Result<()> {
-    run_with_hooks(root_name, init_window, view, |d| d)
 }
 
 #[cfg(all(test, not(target_arch = "wasm32"), feature = "desktop"))]

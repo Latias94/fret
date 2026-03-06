@@ -52,8 +52,8 @@ Why this is enough:
 - `fret::App::new(...).window(...).ui(...)` is the recommended short path.
 - `fret::App::new(...).window(...).ui_with_hooks(...)` keeps advanced driver hooks on that same
   builder path.
-- `fret::app(...)` / `fret::run(...)` still exist, but they now read as compatibility shorthands
-  rather than the primary onboarding story.
+- The builder chain is now the only `fret` app-author entry story, which removes first-contact
+  ambiguity at the crate root.
 - `UiAppBuilder` still exposes real extension points without forcing app authors to start from
   `fret-launch`.
 

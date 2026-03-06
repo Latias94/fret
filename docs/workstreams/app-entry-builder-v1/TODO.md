@@ -7,7 +7,7 @@
 - [x] Provide `FretApp` in the prelude for ergonomic authoring.
 - [x] Provide `AppBuilder` as a discoverability/doc alias.
 - [x] Keep the underlying runtime function-pointer based by default.
-- [x] Keep the older top-level helpers as compatibility shorthands instead of deleting them now.
+- [x] Remove the older top-level shorthand helpers from `fret` crate root so the app-author story stays builder-only.
 
 ## Builder surface
 
@@ -36,8 +36,7 @@
 
 ## Remaining work
 
-- [ ] Decide whether compatibility shorthands should eventually be doc-deemphasized even harder or
-      soft-deprecated.
+- [ ] Sweep remaining historical docs that still teach removed helper paths or older MVU-era entry snippets.
 - [x] Add a compile-oriented regression gate that covers `ui_with_hooks(...)` and
       `view_with_hooks(...)` directly.
 - [ ] Audit more cookbook/examples for wording consistency when describing manual assembly vs builder

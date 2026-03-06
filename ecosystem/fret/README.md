@@ -114,8 +114,8 @@ following seams first-class:
 - `UiAppDriver::{window_create_spec, window_created, before_close_window}`
 - `UiAppDriver::{record_engine_frame, viewport_input, handle_global_command}`
 
-Legacy helpers (`fret::app`, `fret::app_with_hooks`, `fret::run`, `fret::run_with_hooks`) still
-exist, but they are compatibility shorthands rather than the primary onboarding story.
+The builder chain is now the only app-author entry story on `fret`. Advanced users still keep
+real extension seams without dropping to `fret-launch` immediately.
 
 That makes `fret` suitable for both general-purpose desktop apps and many editor-style customizations
 before you need to depend on `fret-bootstrap` or `fret-launch` directly.
@@ -132,11 +132,11 @@ to manual assembly when you need:
 
 Mapping (rough):
 
-- `fret::App::new(...).ui_with_hooks(...)` ? `fret_bootstrap::ui_app_with_hooks(...)`
-- `fret::UiAppBuilder` ? `fret_bootstrap::UiAppBootstrapBuilder`
-- `fret::UiAppDriver` ? `fret_bootstrap::ui_app_driver::UiAppDriver`
-- `fret::run_native_with_fn_driver(...)` ? `fret_bootstrap::BootstrapBuilder::new_fn(...)`
-- `fret::run_native_with_compat_driver(...)` ? `fret_bootstrap::BootstrapBuilder::new(...)`
+- `fret::App::new(...).ui_with_hooks(...)` -> `fret_bootstrap::ui_app_with_hooks(...)`
+- `fret::UiAppBuilder` -> `fret_bootstrap::UiAppBootstrapBuilder`
+- `fret::UiAppDriver` -> `fret_bootstrap::ui_app_driver::UiAppDriver`
+- `fret::run_native_with_fn_driver(...)` -> `fret_bootstrap::BootstrapBuilder::new_fn(...)`
+- `fret::run_native_with_compat_driver(...)` -> `fret_bootstrap::BootstrapBuilder::new(...)`
 
 The recommended manual-assembly entry point remains `fret-bootstrap`, keeping the underlying driver
 hotpatch-friendly (function-pointer `FnDriver` surface, per ADR 0105 / 0110).

@@ -123,8 +123,8 @@ impl App {
         self.ui_with_hooks(init_window, view, |driver| driver)
     }
 
-    /// Same as [`ui`](Self::ui), but keeps the `UiAppDriver` configuration seam on the builder
-    /// path so callers do not need to drop back to `fret::app_with_hooks(...)`.
+    /// Same as [`ui`](Self::ui), but keeps the `UiAppDriver` configuration seam available on
+    /// the builder path.
     pub fn ui_with_hooks<S: 'static>(
         self,
         init_window: fn(&mut fret_app::App, fret_core::AppWindowId) -> S,
