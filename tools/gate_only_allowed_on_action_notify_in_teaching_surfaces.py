@@ -17,7 +17,6 @@ ALLOWED: dict[str, tuple[str, ...]] = {
         "act::DismissAll",
     ),
     "apps/fret-cookbook/examples/undo_basics.rs": ("act::Undo", "act::Redo"),
-    "apps/fret-examples/src/async_playground_demo.rs": ("act::ToggleTheme",),
 }
 
 

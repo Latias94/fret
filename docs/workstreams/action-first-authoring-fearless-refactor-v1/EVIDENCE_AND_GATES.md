@@ -77,9 +77,9 @@ Teaching-surface ergonomics gates:
   `ViewCx::on_action_notify*` helpers).
 - `tools/gate_only_allowed_on_action_notify_in_teaching_surfaces.py` (locks the remaining
   intentional advanced `cx.on_action_notify::<...>` teaching-surface exceptions to a small
-  allowlist across cookbook/examples, while also keeping ui-gallery pages/snippets at zero
+  cookbook allowlist, while also keeping `fret-examples` and ui-gallery pages/snippets at zero
   advanced `on_action_notify` occurrences: toast host APIs, router back/forward, async inbox
-  start, undo/redo, and async-playground theme toggle).
+  start, and undo/redo).
 - `tools/pre_release.ps1` runs the teaching-surface gates as part of the pre-release policy suite.
 
 Examples adoption (authoring-noise reduction):
@@ -97,7 +97,7 @@ Examples adoption (authoring-noise reduction):
 - `apps/fret-examples/src/custom_effect_v3_demo.rs` (reset action now uses the default `on_action_notify_models` transaction path)
 - `apps/fret-examples/src/postprocess_theme_demo.rs` (reset action now uses the default `on_action_notify_models` transaction path)
 - `apps/fret-examples/src/liquid_glass_demo.rs` (reset/preset/toggle-inspector actions now use the default `on_action_notify_models` transaction path)
-- `apps/fret-examples/src/async_playground_demo.rs` (`ToggleTheme` intentionally stays advanced because it combines a model update with transient App-effect scheduling)
+- `apps/fret-examples/src/async_playground_demo.rs` (`ToggleTheme` now uses `on_action_notify_models`; theme application is synchronized in `render()` from the observed model state)
 - `apps/fret-cookbook/examples/icons_and_assets_basics.rs` (reload bump action now uses the default `on_action_notify_models` transaction path)
 - `apps/fret-cookbook/examples/assets_reload_epoch_basics.rs` (reload bump action now uses the default `on_action_notify_models` transaction path)
 - `apps/fret-cookbook/examples/commands_keymap_basics.rs` (command toggle handler now uses the default `on_action_notify_models` transaction path while availability stays explicit)

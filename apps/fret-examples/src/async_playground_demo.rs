@@ -28,7 +28,6 @@ mod act {
     ]);
 }
 
-const TRANSIENT_APPLY_THEME: u64 = 0xAFA0_1001;
 const TRANSIENT_INVALIDATE_SELECTED: u64 = 0xAFA0_1002;
 const TRANSIENT_CANCEL_SELECTED: u64 = 0xAFA0_1003;
 const TRANSIENT_INVALIDATE_NAMESPACE: u64 = 0xAFA0_1004;
@@ -190,6 +189,7 @@ struct AsyncPlaygroundState {
 
 struct AsyncPlaygroundView {
     st: AsyncPlaygroundState,
+    applied_dark: bool,
 }
 
 fn default_namespace_for_id(id: QueryId) -> &'static str {
@@ -221,6 +221,7 @@ impl View for AsyncPlaygroundView {
         }
 
         Self {
+            applied_dark: false,
             st: AsyncPlaygroundState {
                 selected: app.models_mut().insert(QueryId::Tip),
                 dark: app.models_mut().insert(false),
@@ -238,13 +239,14 @@ impl View for AsyncPlaygroundView {
     }
 
     fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
-        if cx.take_transient_on_action_root(TRANSIENT_APPLY_THEME) {
-            let dark = cx
-                .app
-                .models()
-                .get_copied(&self.st.dark)
-                .unwrap_or_default();
-            apply_theme(cx.app, dark);
+        let dark_for_theme = cx
+            .app
+            .models()
+            .get_copied(&self.st.dark)
+            .unwrap_or_default();
+        if self.applied_dark != dark_for_theme {
+            self.applied_dark = dark_for_theme;
+            apply_theme(cx.app, dark_for_theme);
         }
 
         if cx.take_transient_on_action_root(TRANSIENT_INVALIDATE_SELECTED) {
@@ -342,15 +344,9 @@ impl View for AsyncPlaygroundView {
             }
         });
 
-        // This stays on the advanced helper because the action also records a transient event
-        // that is consumed later in `render()` to apply the theme side effect.
-        cx.on_action_notify::<act::ToggleTheme>({
+        cx.on_action_notify_models::<act::ToggleTheme>({
             let dark = self.st.dark.clone();
-            move |host, acx| {
-                let _ = host.models_mut().update(&dark, |v| *v = !*v);
-                host.record_transient_event(acx, TRANSIENT_APPLY_THEME);
-                true
-            }
+            move |models| models.update(&dark, |v| *v = !*v).is_ok()
         });
 
         cx.on_action_notify_transient::<act::InvalidateSelected>(TRANSIENT_INVALIDATE_SELECTED);
