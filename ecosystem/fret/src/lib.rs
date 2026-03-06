@@ -593,8 +593,9 @@ pub(crate) fn ui_bootstrap_builder_with_hooks<S: 'static>(
 
 /// Run a native desktop demo using the `winit + wgpu` stack.
 ///
-/// This is a small convenience wrapper for examples that implement `WinitAppDriver` directly,
-/// keeping "how to boot the app" consistent with the `fret` golden path.
+/// This is a small convenience wrapper for legacy examples that still implement
+/// `fret_launch::WinitAppDriver` directly, keeping "how to boot the app" consistent with the
+/// `fret` golden path while new advanced code moves toward `fret_launch::FnDriver`.
 #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
 pub fn run_native_demo<D: fret_launch::WinitAppDriver + 'static>(
     config: fret_launch::WinitRunnerConfig,

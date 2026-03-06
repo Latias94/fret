@@ -9,15 +9,10 @@
 #[cfg(all(feature = "dev-state", not(target_arch = "wasm32")))]
 pub mod dev_state;
 mod error;
-/// Compatibility module for older `fret_launch::runner::*` imports.
-///
-/// Prefer the curated root-level re-exports from `fret_launch::*` for long-lived public entry
-/// points when possible.
-pub mod runner;
+mod runner;
 mod stacksafe_config;
 
 pub use error::RunnerError;
-pub use stacksafe_config::configure_stacksafe_from_env;
 
 #[cfg(all(feature = "dev-state", not(target_arch = "wasm32")))]
 pub use dev_state::DevStateService;
@@ -34,7 +29,7 @@ pub use runner::{
     ViewportOverlay3dHooksService, ViewportOverlay3dImmediateService, ViewportRenderTarget,
     ViewportRenderTargetWithDepth, WgpuInit, WindowCreateSpec, WindowLogicalSize,
     WindowPhysicalPosition, WindowPosition, WinitAppDriver, WinitCommandContext, WinitEventContext,
-    WinitGlobalContext, WinitHotReloadContext, WinitRenderContext, WinitRunner, WinitRunnerConfig,
+    WinitGlobalContext, WinitHotReloadContext, WinitRenderContext, WinitRunnerConfig,
     WinitWindowContext, install_viewport_overlay_3d_immediate, record_viewport_overlay_3d, run_app,
     run_app_with_event_loop, upload_viewport_overlay_3d_immediate,
 };
@@ -55,10 +50,10 @@ pub use runner::apple_avfoundation_video;
 pub use runner::android_mediacodec_video;
 
 #[cfg(not(target_arch = "wasm32"))]
-pub use runner::{RunnerUserEvent, WinitAppBuilder};
+pub use runner::WinitAppBuilder;
 
 #[cfg(not(target_arch = "wasm32"))]
 pub use runner::SharedAllocationExportError;
 
 #[cfg(target_arch = "wasm32")]
-pub use runner::{WebRunnerHandle, run_app_with_event_loop_and_handle, run_app_with_handle};
+pub use runner::{WebRunnerHandle, run_app_with_handle};

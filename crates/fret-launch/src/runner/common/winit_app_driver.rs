@@ -10,9 +10,11 @@ use super::{
 
 /// Trait-based runner driver integration.
 ///
-/// Prefer `FnDriver` when you want a stable, function-pointer based “hot anchor” surface for dev
-/// hotpatch workflows (see ADR 0105). This trait remains supported for compatibility and for
-/// drivers that benefit from trait-based struct organization.
+/// New code should prefer [`super::FnDriver`] when you want a stable, function-pointer based
+/// “hot anchor” surface for dev hotpatch workflows (see ADR 0105).
+///
+/// This trait remains public as a compatibility surface while in-tree examples and higher-level
+/// bootstrap layers are still generic over it. It is no longer the preferred advanced entry path.
 ///
 /// TODO: Once `FnDriver` covers all required hooks and in-tree call sites have migrated, remove
 /// `WinitAppDriver` from the public surface to make `FnDriver` the single supported entrypoint.

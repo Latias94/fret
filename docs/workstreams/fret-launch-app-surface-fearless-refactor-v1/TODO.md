@@ -21,7 +21,7 @@ Companion docs:
 
 ## Surface contract decisions
 
-- [ ] Decide whether `pub mod runner` should remain public in `crates/fret-launch`.
+- [x] Decide whether `pub mod runner` should remain public in `crates/fret-launch`.
 - [ ] Decide the intended long-term advanced entry recommendation:
   - [ ] `FnDriver` only
   - [x] `FnDriver` recommended, `WinitAppDriver` compatibility-only

@@ -27,12 +27,13 @@ Goals:
    - `ViewportRenderTarget`
 3. `crates/fret-framework` does not curate launch types; with `feature = "launch"` it re-exports the full `fret_launch::*` root surface.
 4. In-tree `apps/` callers no longer need `fret_launch::runner::*` for the platform helper modules that were migrated to crate-root imports.
+5. In this worktree, `pub mod runner` has been removed from the public root surface; launch consumers now go through curated crate-root exports only.
 
 ### Current recommendation
 
 - App authors should prefer `fret`.
 - Manual framework assemblers should use `fret-framework`.
-- Advanced launch/integration users may depend on `fret-launch`, but should prefer crate-root imports over `fret_launch::runner::*`.
+- Advanced launch/integration users may depend on `fret-launch`, and should use crate-root imports only.
 - Advanced driver recommendation: prefer `FnDriver`; treat `WinitAppDriver` as compatibility surface.
 
 ## Root export classification (`crates/fret-launch/src/lib.rs`)
@@ -47,9 +48,9 @@ Goals:
 | Root export(s) | Classification | Why |
 | --- | --- | --- |
 | `RunnerError` | Stable public contract | Clear error boundary for launch/bootstrap callers. |
-| `configure_stacksafe_from_env` | Transitional public surface | Useful env-based bootstrap helper, but not central to the long-term author model. |
+| `configure_stacksafe_from_env` | Removed from root surface | Kept as crate-internal bootstrap plumbing used by the native run path. |
 | `dev_state` module + `DevState*` exports | Transitional public surface | Explicitly dev-only and feature-gated; should remain available without being treated as core runtime contract. |
-| `runner` module | Compatibility-only | Needed for older import paths, but should not be the preferred namespace for new code. |
+| `runner` module | Removed from root surface | The module remains internal implementation plumbing and is no longer a public import path. |
 | `FnDriver`, `FnDriverHooks` | Stable public contract | Best match for the repo's hotpatch-friendly advanced driver posture. |
 | `EngineFrameKeepalive`, `EngineFrameUpdate` | Stable specialized contract | Used by advanced engine-frame and interop paths, including `ecosystem/fret`. |
 | `WgpuInit` | Stable specialized contract | Required for host-provided GPU context / factory integration. |
@@ -57,14 +58,15 @@ Goals:
 | `WinitCommandContext`, `WinitEventContext`, `WinitGlobalContext`, `WinitHotReloadContext`, `WinitRenderContext`, `WinitWindowContext` | Stable specialized contract | Advanced driver-hook contexts; valid long-lived API for integrators. |
 | `WinitRunnerConfig` | Stable public contract (with curation debt) | Widely needed and currently central, but too broad as a single long-term config surface. |
 | `run_app`, `run_app_with_event_loop`, `WinitAppBuilder` | Stable public contract | Native launch entry points that advanced callers can reasonably depend on. |
-| `WinitRunner` | Transitional public surface | Too implementation-shaped to keep expanding as part of the recommended surface. |
+| `WinitRunner` | Removed from root surface | Internal implementation type; not part of the curated public launch contract. |
 | `WinitAppDriver` | Compatibility-only | Still heavily used in-tree, but the documented direction is to prefer `FnDriver`. |
-| `RunnerUserEvent` | Transitional public surface | Winit/backend-specific event coupling; valid but not ideal as a broad public promise. |
+| `RunnerUserEvent` | Removed from root surface | Internal runner event type; not part of the intended public launch surface. |
 | `ViewportRenderTarget`, `ViewportRenderTargetWithDepth`, `ImportedViewport*`, `NativeExternalImport*`, `NativeExternalTextureFrame`, `OwnedWgpuTextureFrame`, `RenderTargetUpdate` | Stable specialized contract | Advanced external texture / imported viewport / interop seams that are valid framework capabilities. |
 | `ViewportOverlay3dHooks*`, `install_viewport_overlay_3d_immediate`, `record_viewport_overlay_3d`, `upload_viewport_overlay_3d_immediate` | Transitional public surface | Real advanced features, but still niche and implementation-sensitive. |
 | `dx12`, `windows_mf_video`, `apple_avfoundation_video`, `android_mediacodec_video` | Stable specialized contract | Platform-specific integration helpers; not beginner surface, but legitimate advanced launch helpers. |
 | `SharedAllocationExportError` | Transitional public surface | Mostly meaningful together with `dx12` interop helpers; keep available without treating it as a broad top-level abstraction. |
-| `WebRunnerHandle`, `run_app_with_event_loop_and_handle`, `run_app_with_handle` | Stable specialized contract | Web-specific launch/interop entry points. |
+| `WebRunnerHandle`, `run_app_with_handle` | Stable specialized contract | Web-specific launch/interop entry points. |
+| `run_app_with_event_loop_and_handle` | Removed from root surface | Unused in-tree root export; retained as internal/runner-level implementation entry. |
 
 ## Downstream coupling inventory
 
@@ -100,14 +102,14 @@ Implication:
 
 ### What we can do now with low risk
 
-1. Keep migrating in-tree callers from `fret_launch::runner::*` to curated crate-root imports.
+1. Keep new launch-facing code on curated crate-root imports only.
 2. Keep adding crate-root re-exports for specialized-but-real launch helpers where that reduces `runner::*` dependence.
 3. Stop teaching `WinitAppDriver` as the first recommendation in new docs/examples.
 4. Avoid adding new root exports unless they are explicitly classified first.
 
 ### What is not yet safe to do
 
-1. Hide or remove `pub mod runner` outright.
+1. Remove more implementation-shaped root exports once in-tree callers are proven absent.
 2. Remove `WinitAppDriver` from the public surface.
 3. Treat `WinitRunnerConfig` as if its current shape were already the final public config story.
 
