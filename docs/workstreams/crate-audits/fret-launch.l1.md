@@ -225,8 +225,11 @@ Evidence anchors:
   propagation, command routing, persistence debounce, diagnostics interception, and the
   retained/declarative render split all fit the existing free-hook surface, reducing the remaining
   direct impl inventory again to three.
-- The current remaining direct example impl inventory is now limited to `components_gallery`,
-  `gizmo3d_demo`, and `node_graph_domain_demo`.
+- `node_graph_domain_demo` closes the domain/runtime-oriented node-graph harness too: model/global
+  propagation, command routing, persistence debounce, and retained canvas rendering all fit the
+  existing free-hook surface, reducing the remaining direct impl inventory again to two.
+- The current remaining direct example impl inventory is now limited to `components_gallery` and
+  `gizmo3d_demo`.
 
 Evidence anchors:
 
@@ -253,6 +256,7 @@ Evidence anchors:
 - `apps/fret-examples/src/container_queries_docking_demo.rs`
 - `apps/fret-examples/src/docking_arbitration_demo.rs`
 - `apps/fret-examples/src/node_graph_legacy_demo.rs`
+- `apps/fret-examples/src/node_graph_domain_demo.rs`
 - `ecosystem/fret/src/lib.rs`
 - `docs/workstreams/fret-launch-app-surface-fearless-refactor-v1/SURFACE_AUDIT.md`
 
