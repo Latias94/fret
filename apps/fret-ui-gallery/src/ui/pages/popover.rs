@@ -5,6 +5,7 @@ pub(super) fn preview_popover(cx: &mut ElementContext<'_, App>) -> Vec<AnyElemen
     use crate::ui::snippets::popover as snippets;
 
     let demo = snippets::demo::render(cx);
+    let usage = snippets::usage::render(cx);
     let basic = snippets::basic::render(cx);
     let align = snippets::align::render(cx);
     let with_form = snippets::with_form::render(cx);
@@ -14,6 +15,7 @@ pub(super) fn preview_popover(cx: &mut ElementContext<'_, App>) -> Vec<AnyElemen
         cx,
         [
             "Preview follows shadcn Popover demo (new-york-v4).",
+            "Popover keeps an anchor-aware content path (`into_element_with_anchor(...)`), so Fret currently keeps closure-based authoring as the primary API instead of forcing a generic compose builder.",
             "Keep content width explicit (e.g. 320px) for predictable layout.",
             "For dense input rows, prefer `Field`/`FieldGroup` recipes to keep spacing consistent with other form surfaces.",
         ],
@@ -26,6 +28,10 @@ pub(super) fn preview_popover(cx: &mut ElementContext<'_, App>) -> Vec<AnyElemen
             DocSection::new("Demo", demo)
                 .test_id_prefix("ui-gallery-popover-demo")
                 .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
+            DocSection::new("Usage", usage)
+                .title_test_id("ui-gallery-section-usage-title")
+                .description("Copyable shadcn-style composition reference for Popover.")
+                .code_rust_from_file_region(snippets::usage::SOURCE, "example"),
             DocSection::new("Basic", basic)
                 .test_id_prefix("ui-gallery-popover-basic")
                 .code_rust_from_file_region(snippets::basic::SOURCE, "example"),
