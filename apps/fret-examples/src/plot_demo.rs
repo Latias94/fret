@@ -3,8 +3,7 @@ use anyhow::Context as _;
 use fret_app::{App, Effect, WindowRequest};
 use fret_core::{AppWindowId, Event};
 use fret_launch::{
-    FnDriver, WinitAppDriver, WinitEventContext, WinitHotReloadContext, WinitRenderContext,
-    WinitRunnerConfig,
+    FnDriver, WinitEventContext, WinitHotReloadContext, WinitRenderContext, WinitRunnerConfig,
 };
 use fret_plot::cartesian::{AxisScale, DataPoint};
 use fret_plot::plot::axis::AxisLabelFormatter;
@@ -15,7 +14,7 @@ use fret_plot::series::Series;
 use fret_runtime::PlatformCapabilities;
 use fret_ui::UiTree;
 
-struct PlotDemoWindowState {
+pub struct PlotDemoWindowState {
     ui: UiTree<App>,
     root: Option<fret_core::NodeId>,
     plot: fret_runtime::Model<fret_plot::retained::LinePlotModel>,
@@ -25,7 +24,7 @@ struct PlotDemoWindowState {
 }
 
 #[derive(Default)]
-struct PlotDemoDriver;
+pub struct PlotDemoDriver;
 
 impl PlotDemoDriver {
     fn build_ui(app: &mut App, window: AppWindowId) -> PlotDemoWindowState {
@@ -266,7 +265,7 @@ pub fn build_runner_config() -> WinitRunnerConfig {
     }
 }
 
-pub fn build_fn_driver() -> impl WinitAppDriver {
+pub fn build_fn_driver() -> FnDriver<PlotDemoDriver, PlotDemoWindowState> {
     FnDriver::new(
         PlotDemoDriver::default(),
         create_window_state,

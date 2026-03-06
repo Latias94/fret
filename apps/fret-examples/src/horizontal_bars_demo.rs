@@ -4,9 +4,7 @@ use fret_app::{App, Effect, WindowRequest};
 use fret_core::{AppWindowId, Event};
 #[cfg(not(target_arch = "wasm32"))]
 use fret_launch::run_app;
-use fret_launch::{
-    FnDriver, WinitAppDriver, WinitEventContext, WinitRenderContext, WinitRunnerConfig,
-};
+use fret_launch::{FnDriver, WinitEventContext, WinitRenderContext, WinitRunnerConfig};
 use fret_runtime::PlatformCapabilities;
 use fret_ui::UiTree;
 
@@ -294,7 +292,7 @@ pub fn build_runner_config() -> WinitRunnerConfig {
     }
 }
 
-pub fn build_fn_driver() -> impl WinitAppDriver {
+fn build_fn_driver() -> FnDriver<HorizontalBarsDemoDriver, HorizontalBarsDemoWindowState> {
     FnDriver::new(
         HorizontalBarsDemoDriver::default(),
         create_window_state,

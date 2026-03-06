@@ -5,9 +5,7 @@ use fret_core::geometry::Px;
 use fret_core::{AppWindowId, Event, ImageColorSpace};
 #[cfg(not(target_arch = "wasm32"))]
 use fret_launch::run_app;
-use fret_launch::{
-    FnDriver, WinitAppDriver, WinitEventContext, WinitRenderContext, WinitRunnerConfig,
-};
+use fret_launch::{FnDriver, WinitEventContext, WinitRenderContext, WinitRunnerConfig};
 use fret_plot::plot::axis::{AxisLabelFormatter, AxisNumberFormat};
 use fret_plot::retained::{
     LinePlotCanvas, LinePlotStyle, LineSeries, PlotImage, PlotImageLayer, PlotOutput, PlotOverlays,
@@ -252,7 +250,7 @@ pub fn build_runner_config() -> WinitRunnerConfig {
     }
 }
 
-pub fn build_fn_driver() -> impl WinitAppDriver {
+fn build_fn_driver() -> FnDriver<PlotImageDemoDriver, PlotImageDemoWindowState> {
     FnDriver::new(
         PlotImageDemoDriver::default(),
         create_window_state,

@@ -4,8 +4,7 @@ use fret_app::{App, Effect, WindowRequest};
 use fret_core::scene::Color;
 use fret_core::{AppWindowId, Event};
 use fret_launch::{
-    FnDriver, WinitAppDriver, WinitEventContext, WinitHotReloadContext, WinitRenderContext,
-    WinitRunnerConfig,
+    FnDriver, WinitEventContext, WinitHotReloadContext, WinitRenderContext, WinitRunnerConfig,
 };
 use fret_plot::retained::{
     HistogramPlotCanvas, HistogramPlotModel, HistogramSeries, LinePlotStyle, PlotOutput, PlotState,
@@ -238,7 +237,7 @@ pub fn build_runner_config() -> WinitRunnerConfig {
     }
 }
 
-pub fn build_fn_driver() -> impl WinitAppDriver {
+fn build_fn_driver() -> FnDriver<HistogramDemoDriver, HistogramDemoWindowState> {
     FnDriver::new(
         HistogramDemoDriver::default(),
         create_window_state,

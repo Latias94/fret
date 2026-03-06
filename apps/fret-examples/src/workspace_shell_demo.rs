@@ -1322,7 +1322,7 @@ fn render(
     <WorkspaceShellDemoDriver as WinitAppDriver>::render(driver, context)
 }
 
-pub fn build_fn_driver() -> impl WinitAppDriver {
+fn build_fn_driver() -> FnDriver<WorkspaceShellDemoDriver, WorkspaceShellWindowState> {
     FnDriver::new(
         WorkspaceShellDemoDriver::default(),
         create_window_state,

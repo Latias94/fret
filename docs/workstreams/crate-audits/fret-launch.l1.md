@@ -127,8 +127,8 @@ Evidence anchors:
   `impl WinitAppDriver` as the visible type boundary.
 - Why this matters: this is not a capability gap, but it weakens the de-emphasis story and makes a
   future hard contraction more expensive.
-- Existing gates: launch/example coverage in the current launch surface workstream plus `tools/gate_fn_driver_example_naming.py` for representative `FnDriver`-backed helpers.
-- Missing gate to add: a follow-up check for cases that can expose concrete `FnDriver<...>` return types instead of `impl WinitAppDriver` without hurting local ergonomics.
+- Existing gates: launch/example coverage in the current launch surface workstream plus `tools/gate_fn_driver_example_naming.py` for representative `FnDriver`-backed helpers and concrete `FnDriver<...>` return types.
+- Missing gate to add: a narrower follow-up check for non-helper direct `FnDriver::new(...)` call sites if we decide those should also standardize on named helper surfaces.
 
 Evidence anchors:
 

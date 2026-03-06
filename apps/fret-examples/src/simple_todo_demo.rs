@@ -30,7 +30,7 @@ struct TodoItem {
     text: Arc<str>,
 }
 
-struct SimpleTodoWindowState {
+pub struct SimpleTodoWindowState {
     ui: UiTree<App>,
     root: Option<fret_core::NodeId>,
     todos: Model<Vec<TodoItem>>,
@@ -39,7 +39,7 @@ struct SimpleTodoWindowState {
 }
 
 #[derive(Default)]
-struct SimpleTodoDriver;
+pub struct SimpleTodoDriver;
 
 impl SimpleTodoDriver {
     fn render(
@@ -466,7 +466,7 @@ fn configure_fn_driver_hooks(
     hooks.window_create_spec = Some(window_create_spec);
 }
 
-pub fn build_fn_driver() -> impl WinitAppDriver {
+pub fn build_fn_driver() -> FnDriver<SimpleTodoDriver, SimpleTodoWindowState> {
     FnDriver::new(
         SimpleTodoDriver::default(),
         create_window_state,

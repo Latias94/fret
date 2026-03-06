@@ -553,7 +553,7 @@ fn window_create_spec(
     <SonnerDemoDriver as WinitAppDriver>::window_create_spec(driver, app, request)
 }
 
-pub fn build_fn_driver() -> impl WinitAppDriver {
+fn build_fn_driver() -> FnDriver<SonnerDemoDriver, SonnerDemoWindowState> {
     FnDriver::new(
         SonnerDemoDriver::default(),
         create_window_state,

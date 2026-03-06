@@ -789,7 +789,7 @@ fn window_create_spec(
     <TableDemoDriver as WinitAppDriver>::window_create_spec(driver, app, request)
 }
 
-pub fn build_fn_driver() -> impl WinitAppDriver {
+fn build_fn_driver() -> FnDriver<TableDemoDriver, TableDemoWindowState> {
     FnDriver::new(
         TableDemoDriver::default(),
         create_window_state,

@@ -511,7 +511,7 @@ fn build_driver_with_options(
     points: usize,
     series: usize,
     max_frames: Option<u64>,
-) -> impl WinitAppDriver {
+) -> FnDriver<PlotStressDriver, PlotStressWindowState> {
     let driver = PlotStressDriver {
         points,
         series,
@@ -528,7 +528,7 @@ fn build_driver_with_options(
     })
 }
 
-pub fn build_fn_driver() -> impl WinitAppDriver {
+fn build_fn_driver() -> FnDriver<PlotStressDriver, PlotStressWindowState> {
     build_driver_with_options(DEFAULT_POINTS, DEFAULT_SERIES, None)
 }
 
@@ -580,7 +580,11 @@ pub fn run() -> anyhow::Result<()> {
 
     let app = build_app();
     let config = build_runner_config();
-    let driver = build_driver_with_options(points, series, max_frames);
+    let driver = if points == DEFAULT_POINTS && series == DEFAULT_SERIES && max_frames.is_none() {
+        build_fn_driver()
+    } else {
+        build_driver_with_options(points, series, max_frames)
+    };
 
     crate::run_native_with_compat_driver(config, app, driver).context("run plot_stress_demo app")
 }

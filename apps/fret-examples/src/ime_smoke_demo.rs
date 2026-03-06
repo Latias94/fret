@@ -330,7 +330,7 @@ fn window_created(
     <ImeSmokeDriver as WinitAppDriver>::window_created(driver, app, request, new_window)
 }
 
-pub fn build_fn_driver() -> impl WinitAppDriver {
+fn build_fn_driver() -> FnDriver<ImeSmokeDriver, ImeSmokeWindowState> {
     FnDriver::new(
         ImeSmokeDriver::default(),
         create_window_state,

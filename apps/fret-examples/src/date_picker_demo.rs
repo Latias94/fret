@@ -513,7 +513,7 @@ fn window_create_spec(
     <DatePickerDemoDriver as WinitAppDriver>::window_create_spec(driver, app, request)
 }
 
-pub fn build_fn_driver() -> impl WinitAppDriver {
+fn build_fn_driver() -> FnDriver<DatePickerDemoDriver, DemoWindowState> {
     FnDriver::new(
         DatePickerDemoDriver::default(),
         create_window_state,

@@ -471,7 +471,7 @@ fn window_create_spec(
     <DataTableDemoDriver as WinitAppDriver>::window_create_spec(driver, app, request)
 }
 
-pub fn build_fn_driver() -> impl WinitAppDriver {
+fn build_fn_driver() -> FnDriver<DataTableDemoDriver, DemoWindowState> {
     FnDriver::new(
         DataTableDemoDriver::default(),
         create_window_state,

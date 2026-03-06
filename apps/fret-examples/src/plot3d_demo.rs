@@ -2,8 +2,8 @@ use anyhow::Context as _;
 use fret_app::{App, Effect, WindowRequest};
 use fret_core::{AppWindowId, Event, RenderTargetId};
 use fret_launch::{
-    EngineFrameUpdate, FnDriver, ViewportRenderTarget, WinitAppDriver, WinitEventContext,
-    WinitHotReloadContext, WinitRenderContext, WinitRunnerConfig,
+    EngineFrameUpdate, FnDriver, ViewportRenderTarget, WinitEventContext, WinitHotReloadContext,
+    WinitRenderContext, WinitRunnerConfig,
 };
 use fret_plot3d::retained::{Plot3dCanvas, Plot3dModel, Plot3dStyle, Plot3dViewport};
 use fret_render::{RenderTargetColorSpace, Renderer, WgpuContext};
@@ -225,7 +225,7 @@ pub fn build_runner_config() -> WinitRunnerConfig {
     }
 }
 
-pub fn build_fn_driver() -> impl WinitAppDriver {
+fn build_fn_driver() -> FnDriver<Plot3dDemoDriver, Plot3dDemoWindowState> {
     FnDriver::new(Plot3dDemoDriver, create_window_state, handle_event, render).with_hooks(|hooks| {
         hooks.hot_reload_window = Some(hot_reload_window);
         hooks.record_engine_frame = Some(record_engine_frame);

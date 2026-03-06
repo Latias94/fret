@@ -2731,7 +2731,9 @@ fn window_created(
     <NodeGraphDemoDriver as WinitAppDriver>::window_created(driver, app, request, new_window)
 }
 
-fn build_driver_with_state(driver_state: NodeGraphDemoDriver) -> impl WinitAppDriver {
+fn build_driver_with_state(
+    driver_state: NodeGraphDemoDriver,
+) -> FnDriver<NodeGraphDemoDriver, NodeGraphDemoWindowState> {
     FnDriver::new(driver_state, create_window_state, handle_event, render).with_hooks(|hooks| {
         hooks.handle_model_changes = Some(handle_model_changes);
         hooks.handle_global_changes = Some(handle_global_changes);
@@ -2741,7 +2743,7 @@ fn build_driver_with_state(driver_state: NodeGraphDemoDriver) -> impl WinitAppDr
     })
 }
 
-pub fn build_fn_driver() -> impl WinitAppDriver {
+fn build_fn_driver() -> FnDriver<NodeGraphDemoDriver, NodeGraphDemoWindowState> {
     build_driver_with_state(NodeGraphDemoDriver::new_from_env())
 }
 

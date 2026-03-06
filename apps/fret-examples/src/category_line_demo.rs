@@ -1,8 +1,6 @@
 use fret_app::{App, Effect, WindowRequest};
 use fret_core::{AppWindowId, Event};
-use fret_launch::{
-    FnDriver, WinitAppDriver, WinitEventContext, WinitRenderContext, WinitRunnerConfig,
-};
+use fret_launch::{FnDriver, WinitEventContext, WinitRenderContext, WinitRunnerConfig};
 use fret_runtime::PlatformCapabilities;
 use fret_ui::UiTree;
 
@@ -262,7 +260,7 @@ pub fn build_runner_config() -> WinitRunnerConfig {
     }
 }
 
-pub fn build_fn_driver() -> impl WinitAppDriver {
+fn build_fn_driver() -> FnDriver<CategoryLineDemoDriver, CategoryLineDemoWindowState> {
     FnDriver::new(
         CategoryLineDemoDriver::default(),
         create_window_state,

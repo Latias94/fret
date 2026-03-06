@@ -926,7 +926,7 @@ fn accessibility_replace_selected_text(
     )
 }
 
-pub fn build_fn_driver() -> impl WinitAppDriver {
+fn build_fn_driver() -> FnDriver<DockingDemoDriver, DockingDemoWindowState> {
     FnDriver::new(
         DockingDemoDriver::default(),
         create_window_state,

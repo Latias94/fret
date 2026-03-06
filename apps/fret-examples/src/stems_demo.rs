@@ -3,8 +3,7 @@ use anyhow::Context as _;
 use fret_app::{App, Effect, WindowRequest};
 use fret_core::{AppWindowId, Event};
 use fret_launch::{
-    FnDriver, WinitAppDriver, WinitEventContext, WinitHotReloadContext, WinitRenderContext,
-    WinitRunnerConfig,
+    FnDriver, WinitEventContext, WinitHotReloadContext, WinitRenderContext, WinitRunnerConfig,
 };
 use fret_plot::cartesian::DataPoint;
 use fret_plot::retained::{
@@ -185,7 +184,7 @@ pub fn build_runner_config() -> WinitRunnerConfig {
     }
 }
 
-pub fn build_fn_driver() -> impl WinitAppDriver {
+fn build_fn_driver() -> FnDriver<StemsDemoDriver, StemsDemoWindowState> {
     FnDriver::new(
         StemsDemoDriver::default(),
         create_window_state,

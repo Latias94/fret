@@ -3,8 +3,7 @@ use anyhow::Context as _;
 use fret_app::{App, Effect, WindowRequest};
 use fret_core::{AppWindowId, Event};
 use fret_launch::{
-    FnDriver, WinitAppDriver, WinitEventContext, WinitHotReloadContext, WinitRenderContext,
-    WinitRunnerConfig,
+    FnDriver, WinitEventContext, WinitHotReloadContext, WinitRenderContext, WinitRunnerConfig,
 };
 use fret_plot::cartesian::DataPoint;
 use fret_plot::retained::{
@@ -14,7 +13,7 @@ use fret_plot::series::Series;
 use fret_runtime::PlatformCapabilities;
 use fret_ui::UiTree;
 
-struct BarsDemoWindowState {
+pub struct BarsDemoWindowState {
     ui: UiTree<App>,
     root: Option<fret_core::NodeId>,
     plot: fret_runtime::Model<BarsPlotModel>,
@@ -24,7 +23,7 @@ struct BarsDemoWindowState {
 }
 
 #[derive(Default)]
-struct BarsDemoDriver;
+pub struct BarsDemoDriver;
 
 impl BarsDemoDriver {
     fn build_ui(app: &mut App, window: AppWindowId) -> BarsDemoWindowState {
@@ -181,7 +180,7 @@ pub fn build_runner_config() -> WinitRunnerConfig {
     }
 }
 
-pub fn build_fn_driver() -> impl WinitAppDriver {
+pub fn build_fn_driver() -> FnDriver<BarsDemoDriver, BarsDemoWindowState> {
     FnDriver::new(
         BarsDemoDriver::default(),
         create_window_state,

@@ -3505,7 +3505,7 @@ fn build_fn_driver(
     viewport_tools: Arc<Mutex<DemoViewportToolState>>,
     layout_preset: DockingArbitrationLayoutPreset,
     persist_layout_on_exit: bool,
-) -> impl WinitAppDriver {
+) -> FnDriver<DockingArbitrationDriver, DockingArbitrationWindowState> {
     let driver_state = DockingArbitrationDriver::new(
         pending_layout,
         viewport_tools,

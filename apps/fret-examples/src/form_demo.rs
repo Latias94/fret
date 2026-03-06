@@ -469,7 +469,7 @@ fn window_create_spec(
     <FormDemoDriver as WinitAppDriver>::window_create_spec(driver, app, request)
 }
 
-pub fn build_fn_driver() -> impl WinitAppDriver {
+fn build_fn_driver() -> FnDriver<FormDemoDriver, DemoWindowState> {
     FnDriver::new(
         FormDemoDriver::default(),
         create_window_state,

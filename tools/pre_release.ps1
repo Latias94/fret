@@ -95,7 +95,7 @@ Invoke-Checked `
   )
 
 Invoke-Checked `
-  "FnDriver example naming policy" `
+  "FnDriver example helper policy" `
   "python" `
   @(
     (Join-Path $repoRoot "tools/gate_fn_driver_example_naming.py")

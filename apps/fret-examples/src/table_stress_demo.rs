@@ -848,7 +848,7 @@ fn window_create_spec(
     <TableStressDriver as WinitAppDriver>::window_create_spec(driver, app, request)
 }
 
-pub fn build_fn_driver() -> impl WinitAppDriver {
+fn build_fn_driver() -> FnDriver<TableStressDriver, TableStressWindowState> {
     FnDriver::new(
         TableStressDriver::default(),
         create_window_state,

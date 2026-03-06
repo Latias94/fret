@@ -4,9 +4,7 @@ use fret_app::{App, Effect, WindowRequest};
 use fret_core::{AppWindowId, Event};
 #[cfg(not(target_arch = "wasm32"))]
 use fret_launch::run_app;
-use fret_launch::{
-    FnDriver, WinitAppDriver, WinitEventContext, WinitRenderContext, WinitRunnerConfig,
-};
+use fret_launch::{FnDriver, WinitEventContext, WinitRenderContext, WinitRunnerConfig};
 use fret_plot::plot::axis::AxisLabelFormatter;
 use fret_plot::plot::histogram2d::{Histogram2DConfig, histogram2d_counts};
 use fret_plot::retained::{Histogram2DPlotCanvas, Histogram2DPlotModel, PlotOutput, PlotState};
@@ -152,7 +150,7 @@ pub fn build_runner_config() -> WinitRunnerConfig {
     }
 }
 
-pub fn build_fn_driver() -> impl WinitAppDriver {
+fn build_fn_driver() -> FnDriver<Histogram2DDemoDriver, Histogram2DDemoWindowState> {
     FnDriver::new(
         Histogram2DDemoDriver::default(),
         create_window_state,

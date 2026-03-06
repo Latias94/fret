@@ -572,7 +572,7 @@ fn window_create_spec(
     <VirtualListStressDriver as WinitAppDriver>::window_create_spec(driver, app, request)
 }
 
-pub fn build_fn_driver() -> impl WinitAppDriver {
+fn build_fn_driver() -> FnDriver<VirtualListStressDriver, VirtualListStressWindowState> {
     FnDriver::new(
         VirtualListStressDriver::default(),
         create_window_state,
