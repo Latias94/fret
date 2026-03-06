@@ -205,8 +205,10 @@ Execution companion: `design.md` (surface map + next worktree order).
 - [ ] Add undo/redo coverage for the declarative path once commits stop mutating `Graph` directly.
 - [x] Add at least one gate proving that a declarative drag or marquee commit produces a
       transaction-safe update path.
-  - Landed via `paint_only.rs` callback gate: controller-backed node-drag commit now proves it
-    dispatches through store callbacks rather than only syncing local graph/view models.
+  - Landed via `paint_only.rs` callback gates: controller-backed node-drag commit proves it
+    dispatches through store commit callbacks, and controller-backed pending-selection / marquee
+    commits prove they dispatch through store selection callbacks rather than only syncing local
+    view models.
 - [ ] Define the policy for full replace vs diff-based replace in controlled mode.
 - [ ] Consider adding `replace_graph_with_diff` or equivalent if full reset semantics are not enough
       for editor-grade controlled integrations.

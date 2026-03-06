@@ -3994,7 +3994,7 @@ mod tests {
     use crate::ops::GraphOp;
     use crate::runtime::callbacks::{
         NodeGraphCommitCallbacks, NodeGraphGestureCallbacks, NodeGraphViewCallbacks,
-        install_callbacks,
+        SelectionChange, install_callbacks,
     };
     use crate::runtime::changes::NodeGraphChanges;
     use crate::runtime::store::NodeGraphStore;
@@ -4341,6 +4341,146 @@ mod tests {
         assert_eq!(callback_commits.len(), 1);
         assert_eq!(callback_commits[0].0.as_deref(), Some("Move Node"));
         assert_eq!(callback_commits[0].1, 1);
+    }
+
+    #[derive(Clone)]
+    struct SelectionRecorder {
+        selections: Rc<RefCell<Vec<SelectionChange>>>,
+    }
+
+    impl NodeGraphCommitCallbacks for SelectionRecorder {}
+
+    impl NodeGraphViewCallbacks for SelectionRecorder {
+        fn on_selection_change(&mut self, sel: SelectionChange) {
+            self.selections.borrow_mut().push(sel);
+        }
+    }
+
+    impl NodeGraphGestureCallbacks for SelectionRecorder {}
+
+    #[test]
+    fn commit_pending_selection_action_host_notifies_selection_callbacks_through_controller() {
+        let mut host = TestActionHostImpl::default();
+        let node_a = NodeId::from_u128(9801);
+        let node_b = NodeId::from_u128(9802);
+        let mut graph_value = Graph::new(GraphId::from_u128(7));
+        graph_value
+            .nodes
+            .insert(node_a, test_node(CanvasPoint { x: 0.0, y: 0.0 }));
+        graph_value
+            .nodes
+            .insert(node_b, test_node(CanvasPoint { x: 40.0, y: 20.0 }));
+        let initial_view = NodeGraphViewState {
+            selected_nodes: vec![node_a],
+            ..Default::default()
+        };
+        let view_state = host.models.insert(initial_view.clone());
+        let store = host
+            .models
+            .insert(NodeGraphStore::new(graph_value, initial_view.clone()));
+        let controller = NodeGraphController::new(store.clone());
+        let selections: Rc<RefCell<Vec<SelectionChange>>> = Rc::new(RefCell::new(Vec::new()));
+        let _callbacks_token = host
+            .models
+            .update(&store, |store| {
+                install_callbacks(
+                    store,
+                    SelectionRecorder {
+                        selections: selections.clone(),
+                    },
+                )
+            })
+            .expect("install callbacks");
+        let pending = PendingSelectionState {
+            nodes: Arc::from([node_b]),
+            clear_edges: false,
+            clear_groups: false,
+        };
+
+        assert!(commit_pending_selection_action_host(
+            &mut host,
+            &view_state,
+            Some(&controller),
+            Some(&store),
+            &pending,
+        ));
+
+        let got = selections.borrow();
+        assert_eq!(got.len(), 1);
+        assert_eq!(
+            got[0],
+            SelectionChange {
+                nodes: vec![node_b],
+                edges: Vec::new(),
+                groups: Vec::new(),
+            }
+        );
+    }
+
+    #[test]
+    fn commit_marquee_selection_action_host_notifies_selection_callbacks_through_controller() {
+        let mut host = TestActionHostImpl::default();
+        let node_a = NodeId::from_u128(9901);
+        let node_b = NodeId::from_u128(9902);
+        let edge = EdgeId::new();
+        let group = GroupId::new();
+        let mut graph_value = Graph::new(GraphId::from_u128(8));
+        graph_value
+            .nodes
+            .insert(node_a, test_node(CanvasPoint { x: 0.0, y: 0.0 }));
+        graph_value
+            .nodes
+            .insert(node_b, test_node(CanvasPoint { x: 60.0, y: 20.0 }));
+        let initial_view = NodeGraphViewState {
+            selected_nodes: vec![node_a],
+            selected_edges: vec![edge],
+            selected_groups: vec![group],
+            ..Default::default()
+        };
+        let view_state = host.models.insert(initial_view.clone());
+        let store = host
+            .models
+            .insert(NodeGraphStore::new(graph_value, initial_view.clone()));
+        let controller = NodeGraphController::new(store.clone());
+        let selections: Rc<RefCell<Vec<SelectionChange>>> = Rc::new(RefCell::new(Vec::new()));
+        let _callbacks_token = host
+            .models
+            .update(&store, |store| {
+                install_callbacks(
+                    store,
+                    SelectionRecorder {
+                        selections: selections.clone(),
+                    },
+                )
+            })
+            .expect("install callbacks");
+        let marquee = MarqueeDragState {
+            start_screen: Point::new(Px(0.0), Px(0.0)),
+            current_screen: Point::new(Px(0.0), Px(0.0)),
+            active: true,
+            toggle: false,
+            base_selected_nodes: Arc::from([node_a]),
+            preview_selected_nodes: Arc::from([node_b]),
+        };
+
+        assert!(commit_marquee_selection_action_host(
+            &mut host,
+            &view_state,
+            Some(&controller),
+            Some(&store),
+            &marquee,
+        ));
+
+        let got = selections.borrow();
+        assert_eq!(got.len(), 1);
+        assert_eq!(
+            got[0],
+            SelectionChange {
+                nodes: vec![node_b],
+                edges: Vec::new(),
+                groups: Vec::new(),
+            }
+        );
     }
 
     #[test]
