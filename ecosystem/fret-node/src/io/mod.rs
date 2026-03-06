@@ -143,6 +143,42 @@ pub enum GraphFileError {
     InconsistentGraphId,
 }
 
+/// Pure persisted view-state payload.
+///
+/// This excludes interaction policy and runtime tuning so persistence boundaries can evolve without
+/// forcing every in-memory/runtime consumer to change in the same step.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct NodeGraphPureViewState {
+    #[serde(default)]
+    pub pan: crate::core::CanvasPoint,
+    #[serde(default = "default_zoom")]
+    pub zoom: f32,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub selected_nodes: Vec<NodeId>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub selected_edges: Vec<EdgeId>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub selected_groups: Vec<GroupId>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub draw_order: Vec<NodeId>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub group_draw_order: Vec<GroupId>,
+}
+
+impl Default for NodeGraphPureViewState {
+    fn default() -> Self {
+        Self {
+            pan: crate::core::CanvasPoint::default(),
+            zoom: default_zoom(),
+            selected_nodes: Vec::new(),
+            selected_edges: Vec::new(),
+            selected_groups: Vec::new(),
+            draw_order: Vec::new(),
+            group_draw_order: Vec::new(),
+        }
+    }
+}
+
 /// Node graph editor view-state.
 ///
 /// This is intentionally separate from graph semantics and may be stored per-user/per-project.
@@ -199,6 +235,38 @@ impl Default for NodeGraphViewState {
 }
 
 impl NodeGraphViewState {
+    /// Rebuilds the in-memory view state from persisted pure-view data plus config/tuning.
+    pub fn from_parts(
+        state: NodeGraphPureViewState,
+        interaction: NodeGraphInteractionConfig,
+        runtime_tuning: NodeGraphRuntimeTuning,
+    ) -> Self {
+        Self {
+            pan: state.pan,
+            zoom: state.zoom,
+            selected_nodes: state.selected_nodes,
+            selected_edges: state.selected_edges,
+            selected_groups: state.selected_groups,
+            draw_order: state.draw_order,
+            group_draw_order: state.group_draw_order,
+            interaction,
+            runtime_tuning,
+        }
+    }
+
+    /// Extracts the pure persisted view-state payload.
+    pub fn pure_view_state(&self) -> NodeGraphPureViewState {
+        NodeGraphPureViewState {
+            pan: self.pan,
+            zoom: self.zoom,
+            selected_nodes: self.selected_nodes.clone(),
+            selected_edges: self.selected_edges.clone(),
+            selected_groups: self.selected_groups.clone(),
+            draw_order: self.draw_order.clone(),
+            group_draw_order: self.group_draw_order.clone(),
+        }
+    }
+
     /// Resolves the persisted interaction parts into the runtime interaction state used by the UI.
     pub fn resolved_interaction_state(&self) -> NodeGraphInteractionState {
         NodeGraphInteractionState::from_parts(&self.interaction, &self.runtime_tuning)
@@ -1247,7 +1315,10 @@ pub enum NodeGraphViewStateFileError {
     InconsistentGraphId,
 }
 
-/// View-state persistence file (v1).
+/// View-state persistence file helper.
+///
+/// The type name is historical, but the emitted on-disk wrapper now follows `state_version = 2` and
+/// stores pure view-state separately from persisted interaction config and runtime tuning.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NodeGraphViewStateFileV1 {
     /// Graph id.
@@ -1295,6 +1366,10 @@ impl NodeGraphViewStateFileV1 {
                 graph_id: GraphId,
                 state_version: u32,
                 state: serde_json::Value,
+                #[serde(default)]
+                interaction: Option<serde_json::Value>,
+                #[serde(default)]
+                runtime_tuning: Option<serde_json::Value>,
             }
 
             let wrapped: WrappedViewStateFile = serde_json::from_value(root).map_err(|source| {
@@ -1306,11 +1381,21 @@ impl NodeGraphViewStateFileV1 {
             if wrapped.graph_id != graph_id {
                 return Err(NodeGraphViewStateFileError::InconsistentGraphId);
             }
-            let state = parse_view_state_json_value(wrapped.state).map_err(|source| {
-                NodeGraphViewStateFileError::Parse {
-                    path: path.display().to_string(),
-                    source,
-                }
+            let state = if wrapped.state_version >= 2
+                || wrapped.interaction.is_some()
+                || wrapped.runtime_tuning.is_some()
+            {
+                parse_wrapped_view_state_json_values(
+                    wrapped.state,
+                    wrapped.interaction,
+                    wrapped.runtime_tuning,
+                )
+            } else {
+                parse_view_state_json_value(wrapped.state)
+            }
+            .map_err(|source| NodeGraphViewStateFileError::Parse {
+                path: path.display().to_string(),
+                source,
             })?;
             return Ok(Self {
                 graph_id: wrapped.graph_id,
@@ -1351,7 +1436,14 @@ impl NodeGraphViewStateFileV1 {
                 }
             })?;
         }
-        let bytes = serde_json::to_vec_pretty(self).map_err(|source| {
+        let persisted = PersistedNodeGraphViewStateFileV2 {
+            graph_id: self.graph_id,
+            state_version: VIEW_STATE_VERSION,
+            state: self.state.pure_view_state(),
+            interaction: self.state.interaction.clone(),
+            runtime_tuning: self.state.runtime_tuning,
+        };
+        let bytes = serde_json::to_vec_pretty(&persisted).map_err(|source| {
             NodeGraphViewStateFileError::Serialize {
                 path: path.display().to_string(),
                 source,
@@ -1361,6 +1453,57 @@ impl NodeGraphViewStateFileV1 {
             path: path.display().to_string(),
             source,
         })
+    }
+}
+
+#[derive(Serialize, Deserialize)]
+struct PersistedNodeGraphViewStateFileV2 {
+    graph_id: GraphId,
+    state_version: u32,
+    state: NodeGraphPureViewState,
+    #[serde(
+        default,
+        skip_serializing_if = "NodeGraphInteractionConfig::is_default"
+    )]
+    interaction: NodeGraphInteractionConfig,
+    #[serde(default, skip_serializing_if = "NodeGraphRuntimeTuning::is_default")]
+    runtime_tuning: NodeGraphRuntimeTuning,
+}
+
+fn parse_wrapped_view_state_json_values(
+    state: serde_json::Value,
+    interaction: Option<serde_json::Value>,
+    runtime_tuning: Option<serde_json::Value>,
+) -> Result<NodeGraphViewState, serde_json::Error> {
+    let state: NodeGraphPureViewState = serde_json::from_value(state)?;
+    let (interaction, migrated_runtime_tuning) = parse_interaction_config_json_value(interaction)?;
+    let runtime_tuning = if let Some(value) = runtime_tuning {
+        serde_json::from_value(value)?
+    } else {
+        migrated_runtime_tuning
+    };
+    Ok(NodeGraphViewState::from_parts(
+        state,
+        interaction,
+        runtime_tuning,
+    ))
+}
+
+fn parse_interaction_config_json_value(
+    value: Option<serde_json::Value>,
+) -> Result<(NodeGraphInteractionConfig, NodeGraphRuntimeTuning), serde_json::Error> {
+    let Some(value) = value else {
+        return Ok((
+            NodeGraphInteractionConfig::default(),
+            NodeGraphRuntimeTuning::default(),
+        ));
+    };
+    match serde_json::from_value::<NodeGraphInteractionConfig>(value.clone()) {
+        Ok(config) => Ok((config, NodeGraphRuntimeTuning::default())),
+        Err(config_err) => match serde_json::from_value::<NodeGraphInteractionState>(value) {
+            Ok(legacy) => Ok(legacy.split()),
+            Err(_) => Err(config_err),
+        },
     }
 }
 
@@ -1394,20 +1537,50 @@ mod tests {
         let graph_id = GraphId::new();
         let path = temp_path("view_state_roundtrip", graph_id);
 
-        let state = NodeGraphViewState {
+        let mut state = NodeGraphViewState {
             pan: crate::core::CanvasPoint { x: 12.5, y: -3.0 },
             zoom: 1.25,
             ..NodeGraphViewState::default()
         };
+        state.interaction.selection_on_drag = true;
+        state.runtime_tuning.only_render_visible_elements = false;
 
         let file = NodeGraphViewStateFileV1::new(graph_id, state.clone());
         file.save_json(&path).unwrap();
+
+        let root: serde_json::Value =
+            serde_json::from_slice(&std::fs::read(&path).unwrap()).unwrap();
+        assert_eq!(root.get("state_version").and_then(|v| v.as_u64()), Some(2));
+        assert!(
+            root.get("state")
+                .and_then(|v| v.get("interaction"))
+                .is_none()
+        );
+        assert!(
+            root.get("state")
+                .and_then(|v| v.get("runtime_tuning"))
+                .is_none()
+        );
+        assert_eq!(
+            root.get("interaction")
+                .and_then(|v| v.get("selection_on_drag"))
+                .and_then(|v| v.as_bool()),
+            Some(true)
+        );
+        assert_eq!(
+            root.get("runtime_tuning")
+                .and_then(|v| v.get("only_render_visible_elements"))
+                .and_then(|v| v.as_bool()),
+            Some(false)
+        );
 
         let loaded = NodeGraphViewStateFileV1::load_json(&path, graph_id).unwrap();
         assert_eq!(loaded.graph_id, graph_id);
         assert_eq!(loaded.state.pan.x, state.pan.x);
         assert_eq!(loaded.state.pan.y, state.pan.y);
         assert_eq!(loaded.state.zoom, state.zoom);
+        assert!(loaded.state.interaction.selection_on_drag);
+        assert!(!loaded.state.runtime_tuning.only_render_visible_elements);
 
         let _ = std::fs::remove_file(&path);
     }

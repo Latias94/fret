@@ -124,8 +124,11 @@ update rather than an incidental refactor.
     `NodeGraphInteractionState` for compatibility.
   - Store selector subscriptions now observe non-viewport view-state changes (draw order,
     interaction config, runtime tuning) without emitting misleading empty `ViewChanged` events.
-  - Full closure is still unresolved: `NodeGraphViewState` still carries persisted interaction
-    policy alongside pure view state, and the long-term ownership/persistence story is not final.
+  - Persistence ownership is now explicit: `NodeGraphViewStateFileV1` writes pure view-state in
+    `state`, with `interaction` and `runtime_tuning` promoted to wrapper-owned fields.
+  - Full closure is still unresolved: in-memory `NodeGraphViewState` still carries persisted
+    interaction policy alongside pure view state, and the long-term runtime ownership story is not
+    final.
 
 - **Ergonomic API fragmentation**
   - Viewport helpers, lookups, commands, store subscriptions, and controlled updates do not yet read

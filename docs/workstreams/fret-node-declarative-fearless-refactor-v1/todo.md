@@ -63,7 +63,7 @@ land in code review; move design discussion back to `README.md` if a TODO turns 
   - `NodeGraphViewState.runtime_tuning` now stores `NodeGraphRuntimeTuning`
   - runtime/widget code still resolves `NodeGraphInteractionState` for compatibility
   - legacy serialized `interaction` payloads migrate at load time
-- [ ] Decide where these new types live and who owns persistence for them.
+- [x] Decide where these new types live and who owns persistence for them.
 - [x] Design the migration/compat strategy for existing serialized `NodeGraphViewState` payloads.
 - [x] Update store code and tests so the new boundary is explicit in subscriptions and controlled
       synchronization.

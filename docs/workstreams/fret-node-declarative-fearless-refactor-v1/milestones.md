@@ -115,6 +115,8 @@ runtime tuning.
 - First landed slice: `NodeGraphViewState` persists `NodeGraphInteractionConfig` +
   `NodeGraphRuntimeTuning`, while widget/runtime snapshots still resolve a combined
   `NodeGraphInteractionState` for compatibility.
+- Persistence ownership is now explicit: the file wrapper writes pure view-state under `state`, with
+  `interaction` / `runtime_tuning` stored as wrapper-owned fields in `state_version = 2`.
 
 ### Done criteria
 
