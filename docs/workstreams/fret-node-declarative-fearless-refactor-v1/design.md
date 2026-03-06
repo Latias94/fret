@@ -123,6 +123,14 @@ What should be true after landing:
 - controller/store commit callbacks stop getting mixed with retained gesture glue,
 - app code has one obvious callback layer to adopt.
 
+First landing in this worktree:
+
+- `runtime::callbacks` is now split into `NodeGraphCommitCallbacks`,
+  `NodeGraphViewCallbacks`, and `NodeGraphGestureCallbacks`.
+- `NodeGraphCallbacks` remains only as the composite seam consumed by
+  `install_callbacks(...)` and `NodeGraphCanvas::with_callbacks(...)`.
+- App-facing docs/examples now teach commit/view first, while retained glue owns gesture hooks.
+
 ### Slice 2 - declarative transaction closure
 
 Why next:

@@ -3,7 +3,8 @@ use crate::io::NodeGraphViewState;
 use crate::ops::{GraphOp, GraphTransaction, apply_transaction};
 use crate::runtime::apply::{apply_edge_changes, apply_node_changes};
 use crate::runtime::callbacks::{
-    ConnectionChange, NodeGraphCallbacks, connection_changes_from_transaction, install_callbacks,
+    ConnectionChange, NodeGraphCommitCallbacks, NodeGraphGestureCallbacks, NodeGraphViewCallbacks,
+    connection_changes_from_transaction, install_callbacks,
 };
 use crate::runtime::changes::{EdgeChange, NodeChange, NodeGraphChanges};
 use crate::runtime::events::NodeGraphStoreEvent;
@@ -354,7 +355,7 @@ fn install_callbacks_receives_graph_and_view_events() {
         log: Rc<RefCell<Vec<&'static str>>>,
     }
 
-    impl NodeGraphCallbacks for Recorder {
+    impl NodeGraphCommitCallbacks for Recorder {
         fn on_graph_commit(&mut self, _committed: &GraphTransaction, _changes: &NodeGraphChanges) {
             self.log.borrow_mut().push("commit");
         }
@@ -370,11 +371,15 @@ fn install_callbacks_receives_graph_and_view_events() {
         fn on_connection_change(&mut self, _change: ConnectionChange) {
             self.log.borrow_mut().push("conn");
         }
+    }
 
+    impl NodeGraphViewCallbacks for Recorder {
         fn on_view_change(&mut self, _changes: &[crate::runtime::events::ViewChange]) {
             self.log.borrow_mut().push("view");
         }
     }
+
+    impl NodeGraphGestureCallbacks for Recorder {}
 
     let (g0, a, _b, _out_port, _in_port, _eid) = make_graph();
     let mut store = NodeGraphStore::new(g0, NodeGraphViewState::default());
@@ -413,7 +418,7 @@ fn controlled_graph_can_apply_store_changes_via_callbacks() {
         graph: Rc<RefCell<Graph>>,
     }
 
-    impl NodeGraphCallbacks for ControlledApply {
+    impl NodeGraphCommitCallbacks for ControlledApply {
         fn on_nodes_change(&mut self, changes: &[NodeChange]) {
             apply_node_changes(&mut self.graph.borrow_mut(), changes);
         }
@@ -422,6 +427,10 @@ fn controlled_graph_can_apply_store_changes_via_callbacks() {
             apply_edge_changes(&mut self.graph.borrow_mut(), changes);
         }
     }
+
+    impl NodeGraphViewCallbacks for ControlledApply {}
+
+    impl NodeGraphGestureCallbacks for ControlledApply {}
 
     let (g0, a, _b, _out_port, _in_port, _eid) = make_graph();
     let mut store = NodeGraphStore::new(g0.clone(), NodeGraphViewState::default());
@@ -463,19 +472,7 @@ fn install_callbacks_calls_viewport_selection_and_connection_hooks() {
         log: Rc<RefCell<Vec<&'static str>>>,
     }
 
-    impl NodeGraphCallbacks for Recorder {
-        fn on_viewport_change(&mut self, _pan: CanvasPoint, _zoom: f32) {
-            self.log.borrow_mut().push("viewport");
-        }
-
-        fn on_move(&mut self, _pan: CanvasPoint, _zoom: f32) {
-            self.log.borrow_mut().push("move");
-        }
-
-        fn on_selection_change(&mut self, _sel: SelectionChange) {
-            self.log.borrow_mut().push("selection");
-        }
-
+    impl NodeGraphCommitCallbacks for Recorder {
         fn on_connect(&mut self, _conn: crate::runtime::callbacks::EdgeConnection) {
             self.log.borrow_mut().push("connect");
         }
@@ -492,6 +489,22 @@ fn install_callbacks_calls_viewport_selection_and_connection_hooks() {
             self.log.borrow_mut().push("edge_update");
         }
     }
+
+    impl NodeGraphViewCallbacks for Recorder {
+        fn on_viewport_change(&mut self, _pan: CanvasPoint, _zoom: f32) {
+            self.log.borrow_mut().push("viewport");
+        }
+
+        fn on_move(&mut self, _pan: CanvasPoint, _zoom: f32) {
+            self.log.borrow_mut().push("move");
+        }
+
+        fn on_selection_change(&mut self, _sel: SelectionChange) {
+            self.log.borrow_mut().push("selection");
+        }
+    }
+
+    impl NodeGraphGestureCallbacks for Recorder {}
 
     let (mut g0, a, _b, out_port, in_port, eid) = make_graph();
 
@@ -619,7 +632,7 @@ fn install_callbacks_calls_delete_hooks_for_remove_node() {
         disconnected: Rc<RefCell<Vec<EdgeId>>>,
     }
 
-    impl NodeGraphCallbacks for Recorder {
+    impl NodeGraphCommitCallbacks for Recorder {
         fn on_nodes_delete(&mut self, nodes: &[NodeId]) {
             self.nodes_deleted.borrow_mut().extend_from_slice(nodes);
         }
@@ -632,6 +645,10 @@ fn install_callbacks_calls_delete_hooks_for_remove_node() {
             self.disconnected.borrow_mut().push(conn.edge);
         }
     }
+
+    impl NodeGraphViewCallbacks for Recorder {}
+
+    impl NodeGraphGestureCallbacks for Recorder {}
 
     let (g0, a, _b, _out_port, _in_port, eid) = make_graph();
     let mut store = NodeGraphStore::new(g0, NodeGraphViewState::default());

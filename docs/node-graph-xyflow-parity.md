@@ -182,11 +182,12 @@ These are the primary gaps between "a working canvas" and "a production-ready no
 - [x] **ReactFlow-style callbacks (onNodesChange/onEdgesChange/onConnect/...)**
   - XyFlow: component-level callbacks + store actions
   - fret-node:
-    - callback contract + store adapter: `ecosystem/fret-node/src/runtime/callbacks.rs` (`NodeGraphCallbacks`, `install_callbacks`)
+    - callback contract + store adapter: `ecosystem/fret-node/src/runtime/callbacks.rs` (`NodeGraphCommitCallbacks`, `NodeGraphViewCallbacks`, `NodeGraphGestureCallbacks`, `NodeGraphCallbacks`, `install_callbacks`)
     - connection change extraction: `ecosystem/fret-node/src/runtime/callbacks.rs` (`connection_changes_from_transaction`)
     - UI glue (canvas surface): `ecosystem/fret-node/src/ui/canvas/widget.rs` (`NodeGraphCanvas::with_callbacks`)
     - demo usage: `apps/fret-examples/src/node_graph_domain_demo.rs` (`DomainDemoCallbacks`)
   - Notes:
+    - Callback layers are now explicit: committed graph diffs (`NodeGraphCommitCallbacks`), view-state sync (`NodeGraphViewCallbacks`), and transient UI gesture lifecycle (`NodeGraphGestureCallbacks`).
     - UI callbacks are emitted for graph commits and view-state changes (selection/viewport).
     - Convenience hooks are provided alongside the raw streams:
       - connections: `on_connect` / `on_disconnect` / `on_reconnect` (derived from committed ops)
@@ -199,7 +200,8 @@ These are the primary gaps between "a working canvas" and "a production-ready no
       - node drag lifecycle: `on_node_drag_start` / `on_node_drag_end` (UI-driven)
       - node drag move: `on_node_drag` (UI-driven)
       - view: `on_viewport_change` / `on_selection_change` (derived from `ViewChange`)
-    - Store-level callbacks (`install_callbacks`) are headless-safe and can be used without `fret-ui`.
+    - Store-level commit/view callbacks (`install_callbacks`) remain headless-safe and can be used without `fret-ui`.
+    - App code should usually implement commit/view layers; retained canvas glue owns gesture lifecycle hooks.
 
 - [~] **Controlled/uncontrolled patterns**
   - XyFlow: controlled nodes/edges vs internal store
@@ -208,12 +210,12 @@ These are the primary gaps between "a working canvas" and "a production-ready no
       - `NodeGraphCanvas::with_store`: `ecosystem/fret-node/src/ui/canvas/widget.rs`
       - optional callbacks: `NodeGraphCanvas::with_callbacks`: `ecosystem/fret-node/src/ui/canvas/widget.rs`
     - controlled mode building blocks (keep your own `Graph`/`NodeGraphViewState` as source of truth):
-      - callbacks + apply: `ecosystem/fret-node/src/runtime/callbacks.rs`, `ecosystem/fret-node/src/runtime/apply.rs`
+      - layered callbacks + apply: `ecosystem/fret-node/src/runtime/callbacks.rs`, `ecosystem/fret-node/src/runtime/apply.rs`
       - conformance test: `ecosystem/fret-node/src/runtime/tests.rs` (`controlled_graph_can_apply_store_changes_via_callbacks`)
       - guide: `docs/node-graph-controlled-mode.md`
       - runnable example: `ecosystem/fret-node/examples/controlled_mode.rs`
   - Notes:
-    - view-state remains separate (`NodeGraphViewState`); callbacks receive `ViewChange` for viewport/selection.
+    - view-state remains separate (`NodeGraphViewState`); `NodeGraphViewCallbacks` receives `ViewChange`-derived viewport/selection updates.
     - the exact "ReactFlow-like" contract is: `GraphTransaction` (undo unit) + `NodeGraphChanges` (diff) + `ViewChange` (viewport/selection).
 
 ### Callback wiring quick sketch (fret-node)
@@ -223,7 +225,7 @@ These are the primary gaps between "a working canvas" and "a production-ready no
   - optionally attach `NodeGraphCanvas::with_callbacks` for analytics, editor shells, and middleware
   - reference: `apps/fret-examples/src/node_graph_domain_demo.rs`
 - Headless / tooling:
-  - attach `runtime::callbacks::install_callbacks(store, callbacks)` and react to `NodeGraphCallbacks`
+  - attach `runtime::callbacks::install_callbacks(store, callbacks)` and compose the layered callback traits through `NodeGraphCallbacks`
 
 ## 0.3 View registry (NodeTypes / EdgeTypes) and interaction policies
 

@@ -559,9 +559,11 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         self
     }
 
-    /// Attaches B-layer callbacks for controlled/uncontrolled integrations (ReactFlow-style).
+    /// Attaches layered B-layer callbacks for controlled/uncontrolled integrations.
     ///
-    /// This is a convenience surface: callbacks are invoked for commits originating from this
+    /// Implement the smallest concern traits you need (`NodeGraphCommitCallbacks`,
+    /// `NodeGraphViewCallbacks`, `NodeGraphGestureCallbacks`) and rely on the composite
+    /// `NodeGraphCallbacks` boundary here. Callbacks are invoked for commits originating from this
     /// canvas (including undo/redo).
     pub fn with_callbacks(mut self, callbacks: impl NodeGraphCallbacks) -> Self {
         self.callbacks = Some(Box::new(callbacks));

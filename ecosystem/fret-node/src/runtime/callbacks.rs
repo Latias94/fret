@@ -158,20 +158,19 @@ pub struct ConnectEnd {
     pub outcome: ConnectEndOutcome,
 }
 
-/// Object-safe callback trait for B-layer consumers.
+/// Headless/store commit callbacks for B-layer consumers.
 ///
-/// Ordering guarantees (per store event):
+/// Use this layer for controlled graph synchronization, analytics, and transaction-driven
+/// integrations that only care about committed graph diffs.
 ///
-/// - For `GraphCommitted`:
-///   1) `on_graph_commit`
-///   2) `on_nodes_change` (if non-empty)
-///   3) `on_edges_change` (if non-empty)
-///   4) `on_connection_change` for each derived `ConnectionChange`
-///   5) `on_connect`/`on_disconnect`/`on_reconnect` for each derived `ConnectionChange`
-/// - For `ViewChanged`:
-///   1) `on_view_change`
-///   2) `on_viewport_change` / `on_selection_change` for each derived `ViewChange`
-pub trait NodeGraphCallbacks: 'static {
+/// Ordering guarantees (per `GraphCommitted` store event):
+///
+/// 1) `on_graph_commit`
+/// 2) `on_nodes_change` (if non-empty)
+/// 3) `on_edges_change` (if non-empty)
+/// 4) `on_connection_change` for each derived `ConnectionChange`
+/// 5) `on_connect`/`on_disconnect`/`on_reconnect` for each derived `ConnectionChange`
+pub trait NodeGraphCommitCallbacks: 'static {
     fn on_graph_commit(&mut self, _committed: &GraphTransaction, _changes: &NodeGraphChanges) {}
 
     fn on_nodes_change(&mut self, _changes: &[NodeChange]) {}
@@ -198,7 +197,18 @@ pub trait NodeGraphCallbacks: 'static {
     fn on_sticky_notes_delete(&mut self, _notes: &[StickyNoteId]) {}
     /// Combined delete hook (ReactFlow `onDelete`-like).
     fn on_delete(&mut self, _change: DeleteChange) {}
+}
 
+/// Headless/store view callbacks for B-layer consumers.
+///
+/// Use this layer for app-owned viewport/selection synchronization. These hooks are derived from
+/// `ViewChange` and remain headless-safe.
+///
+/// Ordering guarantees (per `ViewChanged` store event):
+///
+/// 1) `on_view_change`
+/// 2) `on_viewport_change` / `on_selection_change` for each derived `ViewChange`
+pub trait NodeGraphViewCallbacks: 'static {
     fn on_view_change(&mut self, _changes: &[ViewChange]) {}
 
     fn on_viewport_change(&mut self, _pan: CanvasPoint, _zoom: f32) {}
@@ -208,7 +218,14 @@ pub trait NodeGraphCallbacks: 'static {
     ///
     /// This hook is derived from view-state changes (headless-safe), just like `on_viewport_change`.
     fn on_move(&mut self, _pan: CanvasPoint, _zoom: f32) {}
+}
 
+/// UI gesture lifecycle callbacks for retained/editor shells.
+///
+/// Use this layer for canvas-owned transient gesture observation. App-facing controlled
+/// integrations usually only need commit/view callbacks unless they intentionally react to
+/// pointer-driven lifecycle events.
+pub trait NodeGraphGestureCallbacks: 'static {
     /// UI-driven hook: viewport pan/zoom gesture start (ReactFlow `onMoveStart`).
     fn on_move_start(&mut self, _ev: ViewportMoveStart) {}
     /// UI-driven hook: viewport pan/zoom gesture end (ReactFlow `onMoveEnd`).
@@ -249,6 +266,26 @@ pub trait NodeGraphCallbacks: 'static {
     /// This is a reconnect-only alias that mirrors ReactFlow's `onEdgeUpdateEnd`.
     /// Note that `on_connect_end` is still emitted (with `ConnectDragKind::Reconnect*`).
     fn on_edge_update_end(&mut self, _ev: ConnectEnd) {}
+}
+
+/// Composite callback surface consumed by store/canvas adapters.
+///
+/// Prefer implementing the smallest concern traits:
+///
+/// - `NodeGraphCommitCallbacks` for committed graph diffs,
+/// - `NodeGraphViewCallbacks` for viewport/selection synchronization,
+/// - `NodeGraphGestureCallbacks` for transient UI gesture lifecycle.
+///
+/// `NodeGraphCallbacks` itself is only the composition boundary used by `install_callbacks` and
+/// retained canvas wiring.
+pub trait NodeGraphCallbacks:
+    NodeGraphCommitCallbacks + NodeGraphViewCallbacks + NodeGraphGestureCallbacks
+{
+}
+
+impl<T> NodeGraphCallbacks for T where
+    T: NodeGraphCommitCallbacks + NodeGraphViewCallbacks + NodeGraphGestureCallbacks
+{
 }
 
 /// Installs callbacks into a store via a subscription.

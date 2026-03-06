@@ -32,7 +32,7 @@ single place to attach middleware/callbacks.
 - Apply helpers:
   - `ecosystem/fret-node/src/runtime/apply.rs` (`apply_node_changes`, `apply_edge_changes`)
 - Callback adapter:
-  - `ecosystem/fret-node/src/runtime/callbacks.rs` (`NodeGraphCallbacks`, `install_callbacks`)
+  - `ecosystem/fret-node/src/runtime/callbacks.rs` (`NodeGraphCommitCallbacks`, `NodeGraphViewCallbacks`, `NodeGraphGestureCallbacks`, `NodeGraphCallbacks`, `install_callbacks`)
 - Store (optional, but recommended as the interaction surface):
   - `ecosystem/fret-node/src/runtime/store.rs` (`NodeGraphStore`)
 
@@ -41,6 +41,8 @@ single place to attach middleware/callbacks.
 - Create a `NodeGraphStore` from an initial `Graph` + `NodeGraphViewState`.
 - Pass the store to `NodeGraphCanvas::with_store` (UI) or drive it headlessly (tooling).
 - Optionally attach callbacks (`NodeGraphCanvas::with_callbacks` or `install_callbacks`).
+  - Apps usually implement `NodeGraphCommitCallbacks` and optionally `NodeGraphViewCallbacks`.
+  - Retained UI glue owns `NodeGraphGestureCallbacks` when transient gesture lifecycle matters.
 
 This is the default used by `apps/fret-examples/src/node_graph_demo.rs`.
 
@@ -57,14 +59,17 @@ High-level idea:
 
 ```rust
 use fret_node::runtime::apply::{apply_edge_changes, apply_node_changes};
-use fret_node::runtime::callbacks::{install_callbacks, NodeGraphCallbacks};
+use fret_node::runtime::callbacks::{
+    install_callbacks, NodeGraphCommitCallbacks, NodeGraphGestureCallbacks,
+    NodeGraphViewCallbacks,
+};
 
 struct ControlledGraph {
     // Your app-owned graph state.
     graph: std::rc::Rc<std::cell::RefCell<fret_node::core::Graph>>,
 }
 
-impl NodeGraphCallbacks for ControlledGraph {
+impl NodeGraphCommitCallbacks for ControlledGraph {
     fn on_nodes_change(&mut self, changes: &[fret_node::runtime::changes::NodeChange]) {
         apply_node_changes(&mut self.graph.borrow_mut(), changes);
     }
@@ -73,6 +78,10 @@ impl NodeGraphCallbacks for ControlledGraph {
         apply_edge_changes(&mut self.graph.borrow_mut(), changes);
     }
 }
+
+impl NodeGraphViewCallbacks for ControlledGraph {}
+
+impl NodeGraphGestureCallbacks for ControlledGraph {}
 
 // install_callbacks(&mut store, ControlledGraph { graph: ... });
 ```
@@ -85,7 +94,7 @@ impl NodeGraphCallbacks for ControlledGraph {
   (`GraphTransaction`) via `ops::apply_transaction` instead of applying `NodeChange`/`EdgeChange`.
 - Viewport/selection is modeled separately:
   - app-owned view state: `io::NodeGraphViewState`
-  - change events: `runtime::events::ViewChange` via callbacks (`on_view_change` / `on_viewport_change`)
+  - change events: `runtime::events::ViewChange` via `NodeGraphViewCallbacks` (`on_view_change` / `on_viewport_change`)
 
 ## Runnable example
 

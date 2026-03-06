@@ -212,6 +212,10 @@ points rather than direct graph mutation.
     mutation or queue ownership for those core surfaces.
   - Feature-gated retained coverage now also includes a blackboard controller-first gate proving
     symbol creation prefers controller/store commit over raw queue transport.
+  - Callback layering is now explicit: `NodeGraphCommitCallbacks` owns committed graph diffs,
+    `NodeGraphViewCallbacks` owns viewport/selection synchronization, and
+    `NodeGraphGestureCallbacks` is reserved for retained/editor gesture lifecycle hooks, while
+    `install_callbacks(...)` / `NodeGraphCanvas::with_callbacks(...)` keep the composite seam.
 - Remaining M3 scope is still substantial: we still need a broader controller surface, more
   declarative commit coverage, and explicit undo/redo / controlled-mode gates.
 
@@ -224,7 +228,7 @@ points rather than direct graph mutation.
   - canonical update/edit entry points,
   - controlled synchronization helpers.
 - Declarative interaction paths that commit through controller/store/transactions.
-- A clearer separation between headless/store callbacks and UI gesture callbacks.
+- A clearer separation between headless/store callbacks and UI gesture callbacks, with view-state callbacks called out as their own middle layer.
 
 ### Done criteria
 

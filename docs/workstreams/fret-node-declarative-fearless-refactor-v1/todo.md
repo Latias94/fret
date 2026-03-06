@@ -211,12 +211,17 @@ Execution companion: `design.md` (surface map + next worktree order).
 
 ## M3 - Callback surface split
 
-- [ ] Split or layer callback surfaces so reviewers can clearly distinguish:
+- [x] Split callback surfaces so reviewers can clearly distinguish:
   - headless/store commit callbacks,
   - view-state callbacks,
   - UI gesture lifecycle callbacks.
-- [ ] Keep compatibility adapters where useful instead of forcing a flag day.
-- [ ] Add one small note explaining which callback layer should be used by apps vs internal UI glue.
+  - Landed as `NodeGraphCommitCallbacks`, `NodeGraphViewCallbacks`, and
+    `NodeGraphGestureCallbacks` in `ecosystem/fret-node/src/runtime/callbacks.rs`.
+- [x] Keep the main adapter seams stable where useful instead of reopening transport cleanup.
+  - `install_callbacks(...)` and `NodeGraphCanvas::with_callbacks(...)` still consume the composite
+    `NodeGraphCallbacks` surface.
+- [x] Add one small note explaining which callback layer should be used by apps vs internal UI glue.
+  - Controlled-mode docs and parity docs now teach app code = commit/view, retained glue = gesture.
 
 ## M4 - Declarative interaction closure
 
