@@ -36,14 +36,12 @@
       "timeout_frames": 600
     },
     {
-      "type": "scroll_into_view",
-      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
-      "target": { "kind": "test_id", "id": "ui-ai-checkpoint-row" },
-      "delta_y": -240.0,
-      "require_fully_within_window": true,
-      "padding_px": 12.0,
-      "timeout_frames": 1200
+      "type": "wheel",
+      "target": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "delta_x": 0.0,
+      "delta_y": -180.0
     },
+    { "type": "wait_frames", "n": 8 },
     {
       "type": "move_pointer",
       "pointer_kind": "mouse",
