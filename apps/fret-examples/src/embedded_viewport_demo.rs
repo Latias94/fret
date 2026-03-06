@@ -150,9 +150,27 @@ impl View for EmbeddedViewportDemoView {
         .max_w(Px(980.0))
         .into_element(cx);
 
-        cx.on_action_notify_model_set::<act::PickSize640, usize>(self.size_preset.clone(), 0);
-        cx.on_action_notify_model_set::<act::PickSize960, usize>(self.size_preset.clone(), 1);
-        cx.on_action_notify_model_set::<act::PickSize1280, usize>(self.size_preset.clone(), 2);
+        cx.on_action_notify_models::<act::PickSize640>({
+            let size_preset = self.size_preset.clone();
+            move |models| {
+                let _ = models.update(&size_preset, |v| *v = 0);
+                true
+            }
+        });
+        cx.on_action_notify_models::<act::PickSize960>({
+            let size_preset = self.size_preset.clone();
+            move |models| {
+                let _ = models.update(&size_preset, |v| *v = 1);
+                true
+            }
+        });
+        cx.on_action_notify_models::<act::PickSize1280>({
+            let size_preset = self.size_preset.clone();
+            move |models| {
+                let _ = models.update(&size_preset, |v| *v = 2);
+                true
+            }
+        });
 
         let page = ui::container(|cx| {
             ui::children![

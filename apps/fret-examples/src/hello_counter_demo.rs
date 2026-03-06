@@ -108,19 +108,43 @@ impl View for HelloCounterView {
             }
         });
 
-        cx.on_action_notify_model_set::<act::Reset, i64>(self.st.count.clone(), 0);
-        cx.on_action_notify_model_set::<act::SetStep1, String>(
-            self.st.step.clone(),
-            "1".to_string(),
-        );
-        cx.on_action_notify_model_set::<act::SetStep5, String>(
-            self.st.step.clone(),
-            "5".to_string(),
-        );
-        cx.on_action_notify_model_set::<act::SetStep10, String>(
-            self.st.step.clone(),
-            "10".to_string(),
-        );
+        cx.on_action_notify_models::<act::Reset>({
+            let count = self.st.count.clone();
+            move |models| {
+                let _ = models.update(&count, |v| *v = 0);
+                true
+            }
+        });
+        cx.on_action_notify_models::<act::SetStep1>({
+            let step = self.st.step.clone();
+            move |models| {
+                let _ = models.update(&step, |v| {
+                    v.clear();
+                    v.push('1');
+                });
+                true
+            }
+        });
+        cx.on_action_notify_models::<act::SetStep5>({
+            let step = self.st.step.clone();
+            move |models| {
+                let _ = models.update(&step, |v| {
+                    v.clear();
+                    v.push('5');
+                });
+                true
+            }
+        });
+        cx.on_action_notify_models::<act::SetStep10>({
+            let step = self.st.step.clone();
+            move |models| {
+                let _ = models.update(&step, |v| {
+                    v.clear();
+                    v.push_str("10");
+                });
+                true
+            }
+        });
 
         let count_color = if count > 0 {
             theme.color_token("primary")

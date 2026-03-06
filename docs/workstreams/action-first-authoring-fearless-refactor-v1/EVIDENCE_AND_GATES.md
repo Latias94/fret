@@ -50,6 +50,8 @@ Fretboard scaffolding templates (teaching surface):
   - These first-contact, golden-path, and ergonomics narrative surfaces now align on the same default entrypoints: `on_action_notify_models`,
     `on_action_notify_transient`, and local `on_activate*`; advanced helpers are documented as
     cookbook/reference-only host-side categories.
+- `apps/fret-examples/src/hello_counter_demo.rs`, `apps/fret-examples/src/embedded_viewport_demo.rs`, `apps/fret-examples/src/query_demo.rs`, `apps/fret-examples/src/query_async_tokio_demo.rs`, `tools/gate_no_single_model_action_helpers_in_default_teaching_surfaces.py`
+  - Keeps the default demo surfaces on `on_action_notify_models` / `on_action_notify_transient` and prevents single-model helper aliases from drifting back into `fret-examples` or ui-gallery teaching pages/snippets; scaffold templates keep equivalent unit-test assertions in `apps/fretboard/src/scaffold/templates.rs`.
 
 Editor-grade adoption (workspace shell demo):
 
