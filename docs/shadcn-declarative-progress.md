@@ -348,7 +348,7 @@ Audit column is a lightweight review marker for shadcn parity against `repo-ref/
 | accordion | `accordion` | Present | In review | Selection model drives open/close; measured-height motion is wired; shadcn-web layout gate: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs` (`accordion-demo`, light+dark) |
 | alert | `alert` | Present | In review | shadcn-web chrome gate: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs` (`alert-demo`) |
 | alert-dialog | `alert_dialog` | Present | In review | Audit: `docs/audits/shadcn-alert-dialog.md`; shadcn-web chrome gate: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome.rs` |
-| aspect-ratio | `aspect_ratio` | Present | Unreviewed |  |
+| aspect-ratio | `aspect_ratio` | Present | In review | Audit: `docs/audits/radix-aspect-ratio.md`; layout gate: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/basic.rs` (`aspect-ratio-demo`); docs page: `apps/fret-ui-gallery/src/ui/pages/aspect_ratio.rs` |
 | avatar | `avatar` | Present | In review | shadcn-web layout gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs` (`avatar-demo`) |
 | badge | `badge` | Present | In review | shadcn-web chrome gate: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs` (`badge-demo`) |
 | breadcrumb | `breadcrumb` | Present | Unreviewed |  |

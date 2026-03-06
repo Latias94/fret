@@ -132,6 +132,77 @@
       "timeout_frames": 600
     },
     {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-aspect-ratio-usage" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-aspect-ratio-usage-content"
+        }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_bounds_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-aspect-ratio-usage" },
+      "stable_frames": 10,
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_bounds_stable",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-aspect-ratio-usage-content"
+      },
+      "stable_frames": 10,
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_center_approx_equal",
+        "a": { "kind": "test_id", "id": "ui-gallery-aspect-ratio-usage" },
+        "b": {
+          "kind": "test_id",
+          "id": "ui-gallery-aspect-ratio-usage-content"
+        },
+        "eps_px": 8.0
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "docsec-usage-content" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_bounds_stable",
+      "target": { "kind": "test_id", "id": "docsec-usage-content" },
+      "stable_frames": 10,
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_center_approx_equal",
+        "a": { "kind": "test_id", "id": "docsec-usage-content" },
+        "b": { "kind": "test_id", "id": "ui-gallery-aspect-ratio-usage" },
+        "eps_px": 48.0
+      },
+      "timeout_frames": 600
+    },
+    {
       "type": "wait_bounds_stable",
       "target": { "kind": "test_id", "id": "docsec-square-content" },
       "stable_frames": 10,
@@ -143,6 +214,145 @@
         "kind": "bounds_center_approx_equal",
         "a": { "kind": "test_id", "id": "docsec-square-content" },
         "b": { "kind": "test_id", "id": "ui-gallery-aspect-ratio-square" },
+        "eps_px": 64.0
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-aspect-ratio-portrait" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-aspect-ratio-portrait-content"
+        }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_bounds_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-aspect-ratio-portrait" },
+      "stable_frames": 10,
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_bounds_stable",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-aspect-ratio-portrait-content"
+      },
+      "stable_frames": 10,
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_center_approx_equal",
+        "a": { "kind": "test_id", "id": "ui-gallery-aspect-ratio-portrait" },
+        "b": {
+          "kind": "test_id",
+          "id": "ui-gallery-aspect-ratio-portrait-content"
+        },
+        "eps_px": 8.0
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "docsec-portrait-content" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_bounds_stable",
+      "target": { "kind": "test_id", "id": "docsec-portrait-content" },
+      "stable_frames": 10,
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_center_approx_equal",
+        "a": { "kind": "test_id", "id": "docsec-portrait-content" },
+        "b": { "kind": "test_id", "id": "ui-gallery-aspect-ratio-portrait" },
+        "eps_px": 64.0
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-aspect-ratio-rtl" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-aspect-ratio-rtl-content"
+        }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_bounds_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-aspect-ratio-rtl" },
+      "stable_frames": 10,
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_bounds_stable",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-aspect-ratio-rtl-content"
+      },
+      "stable_frames": 10,
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_center_approx_equal",
+        "a": { "kind": "test_id", "id": "ui-gallery-aspect-ratio-rtl" },
+        "b": { "kind": "test_id", "id": "ui-gallery-aspect-ratio-rtl-content" },
+        "eps_px": 8.0
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "docsec-rtl-content" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_bounds_stable",
+      "target": { "kind": "test_id", "id": "docsec-rtl-content" },
+      "stable_frames": 10,
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_center_approx_equal",
+        "a": { "kind": "test_id", "id": "docsec-rtl-content" },
+        "b": { "kind": "test_id", "id": "ui-gallery-aspect-ratio-rtl" },
         "eps_px": 64.0
       },
       "timeout_frames": 600

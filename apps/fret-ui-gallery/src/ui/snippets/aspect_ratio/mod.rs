@@ -13,3 +13,4 @@ pub mod demo;
 pub mod portrait;
 pub mod rtl;
 pub mod square;
+pub mod usage;

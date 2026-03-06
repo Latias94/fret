@@ -62,8 +62,7 @@ mod tests {
             .build();
         let _ = Separator::new().ui().w_full().build();
 
-        // Compile-only smoke: `AspectRatio::new` requires an `AnyElement` child, so we validate
-        // builder wiring via a type-checked helper.
+        // Compile-only smoke: `AspectRatio` stays compatible with the UI patch/builder surface.
         fn assert_aspect_ratio_builds(ar: AspectRatio) {
             let _ = ar.ui().p(crate::Space::N4).w_full().build();
         }
