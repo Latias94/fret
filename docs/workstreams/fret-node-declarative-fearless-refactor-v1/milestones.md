@@ -154,6 +154,8 @@ points rather than direct graph mutation.
   - Declarative click selection / marquee preview / cancel restore also now start converging on
     controller/store-backed selection helpers instead of only mutating the external
     `NodeGraphViewState` selection fields.
+  - Diagnostics-only `Digit3/4/5` graph tweaks now build transactions from `graph_diff` and commit
+    through the same controller/store transaction path instead of mutating `Graph` in place.
   - `apps/fret-examples/src/node_graph_demo.rs` now passes a controller into the declarative
     surface so the recommended demo path exercises the transaction-safe commit architecture.
 - Remaining M3 scope is still substantial: we still need a broader controller surface, more

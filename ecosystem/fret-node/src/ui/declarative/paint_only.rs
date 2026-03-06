@@ -27,7 +27,7 @@ use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 
 use crate::core::Graph;
 use crate::io::NodeGraphViewState;
-use crate::ops::{GraphOp, GraphTransaction, apply_transaction, normalize_transaction};
+use crate::ops::{GraphOp, GraphTransaction, apply_transaction, graph_diff, normalize_transaction};
 use crate::runtime::store::NodeGraphStore;
 use crate::ui::NodeGraphController;
 use crate::ui::canvas::{CanvasGeometry, CanvasSpatialDerived};
@@ -763,7 +763,7 @@ fn build_node_drag_transaction(
     tx.with_label(label)
 }
 
-fn commit_node_drag_transaction(
+fn commit_graph_transaction(
     host: &mut dyn fret_ui::action::UiActionHost,
     graph: &Model<Graph>,
     view_state: &Model<NodeGraphViewState>,
@@ -800,6 +800,67 @@ fn commit_node_drag_transaction(
             *g = scratch;
         })
         .is_ok()
+}
+
+fn commit_node_drag_transaction(
+    host: &mut dyn fret_ui::action::UiActionHost,
+    graph: &Model<Graph>,
+    view_state: &Model<NodeGraphViewState>,
+    controller: Option<&NodeGraphController>,
+    store: Option<&Model<NodeGraphStore>>,
+    tx: &GraphTransaction,
+) -> bool {
+    commit_graph_transaction(host, graph, view_state, controller, store, tx)
+}
+
+fn build_diag_nudge_visible_node_transaction(graph: &Graph) -> GraphTransaction {
+    let mut next = graph.clone();
+    for node in next.nodes.values_mut() {
+        if node.hidden {
+            continue;
+        }
+        node.pos.x += 1.0;
+        break;
+    }
+
+    let tx = graph_diff(graph, &next);
+    if tx.is_empty() {
+        tx
+    } else {
+        tx.with_label("Diag Nudge Visible Node")
+    }
+}
+
+fn build_diag_normalize_visible_node_transaction(graph: &Graph) -> GraphTransaction {
+    let mut next = graph.clone();
+    let first_visible = next
+        .nodes
+        .iter()
+        .find_map(|(id, node)| (!node.hidden).then_some(*id));
+    let Some(first_visible) = first_visible else {
+        return GraphTransaction::new();
+    };
+
+    for (id, node) in &mut next.nodes {
+        if *id == first_visible {
+            node.hidden = false;
+            node.pos.x = 0.0;
+            node.pos.y = 0.0;
+            node.size = Some(crate::core::CanvasSize {
+                width: 220.0,
+                height: 140.0,
+            });
+        } else {
+            node.hidden = true;
+        }
+    }
+
+    let tx = graph_diff(graph, &next);
+    if tx.is_empty() {
+        tx
+    } else {
+        tx.with_label("Diag Normalize Visible Node")
+    }
 }
 
 fn update_view_state_action_host(
@@ -1972,15 +2033,20 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
                         // Diagnostics-only: a deterministic graph mutation to validate that
                         // geometry caches rebuild on graph revision changes (without relying on
                         // demo command routing).
-                        let _ = host.models_mut().update(&graph_debug, |g| {
-                            for node in g.nodes.values_mut() {
-                                if node.hidden {
-                                    continue;
-                                }
-                                node.pos.x += 1.0;
-                                break;
-                            }
-                        });
+                        let tx = host
+                            .models_mut()
+                            .read(&graph_debug, build_diag_nudge_visible_node_transaction)
+                            .ok();
+                        if let Some(tx) = tx.as_ref() {
+                            let _ = commit_graph_transaction(
+                                host,
+                                &graph_debug,
+                                &view_zoom_kb,
+                                controller_zoom_kb.as_ref(),
+                                store_zoom_kb.as_ref(),
+                                tx,
+                            );
+                        }
                         host.request_redraw(action_cx.window);
                         return true;
                     }
@@ -1993,32 +2059,20 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
                         // - Hide all other nodes to avoid ambiguity.
                         // - Set a deterministic pan so the node center lands at window center for
                         //   the demo's default 980x720 config.
-                        let _ = host.models_mut().update(&graph_debug, |g| {
-                            let mut first: Option<crate::core::NodeId> = None;
-                            for (id, node) in g.nodes.iter() {
-                                if !node.hidden {
-                                    first = Some(*id);
-                                    break;
-                                }
-                            }
-                            let Some(first) = first else {
-                                return;
-                            };
-
-                            for (id, node) in g.nodes.iter_mut() {
-                                if *id == first {
-                                    node.hidden = false;
-                                    node.pos.x = 0.0;
-                                    node.pos.y = 0.0;
-                                    node.size = Some(crate::core::CanvasSize {
-                                        width: 220.0,
-                                        height: 140.0,
-                                    });
-                                } else {
-                                    node.hidden = true;
-                                }
-                            }
-                        });
+                        let tx = host
+                            .models_mut()
+                            .read(&graph_debug, build_diag_normalize_visible_node_transaction)
+                            .ok();
+                        if let Some(tx) = tx.as_ref() {
+                            let _ = commit_graph_transaction(
+                                host,
+                                &graph_debug,
+                                &view_zoom_kb,
+                                controller_zoom_kb.as_ref(),
+                                store_zoom_kb.as_ref(),
+                                tx,
+                            );
+                        }
 
                         let _ = update_view_state_action_host(
                             host,
@@ -2046,32 +2100,20 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
                         // Diagnostics-only: place the normalized node slightly away from the canvas
                         // center so scripted marquee selection can start from the center (empty
                         // space) and intersect the node via a deterministic drag.
-                        let _ = host.models_mut().update(&graph_debug, |g| {
-                            let mut first: Option<crate::core::NodeId> = None;
-                            for (id, node) in g.nodes.iter() {
-                                if !node.hidden {
-                                    first = Some(*id);
-                                    break;
-                                }
-                            }
-                            let Some(first) = first else {
-                                return;
-                            };
-
-                            for (id, node) in g.nodes.iter_mut() {
-                                if *id == first {
-                                    node.hidden = false;
-                                    node.pos.x = 0.0;
-                                    node.pos.y = 0.0;
-                                    node.size = Some(crate::core::CanvasSize {
-                                        width: 220.0,
-                                        height: 140.0,
-                                    });
-                                } else {
-                                    node.hidden = true;
-                                }
-                            }
-                        });
+                        let tx = host
+                            .models_mut()
+                            .read(&graph_debug, build_diag_normalize_visible_node_transaction)
+                            .ok();
+                        if let Some(tx) = tx.as_ref() {
+                            let _ = commit_graph_transaction(
+                                host,
+                                &graph_debug,
+                                &view_zoom_kb,
+                                controller_zoom_kb.as_ref(),
+                                store_zoom_kb.as_ref(),
+                                tx,
+                            );
+                        }
 
                         let _ = update_view_state_action_host(
                             host,
@@ -3737,8 +3779,11 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
 
 #[cfg(test)]
 mod tests {
-    use super::build_node_drag_transaction;
-    use crate::core::{CanvasPoint, Graph, GraphId, Node, NodeId, NodeKindKey};
+    use super::{
+        build_diag_normalize_visible_node_transaction, build_diag_nudge_visible_node_transaction,
+        build_node_drag_transaction,
+    };
+    use crate::core::{CanvasPoint, CanvasSize, Graph, GraphId, Node, NodeId, NodeKindKey};
     use crate::ops::GraphOp;
     use serde_json::Value;
 
@@ -3809,5 +3854,75 @@ mod tests {
 
         assert!(tx.is_empty());
         assert_eq!(tx.label, None);
+    }
+
+    #[test]
+    fn build_diag_nudge_visible_node_transaction_uses_set_node_pos() {
+        let mut graph = Graph::new(GraphId::from_u128(3));
+        let hidden = NodeId::from_u128(55);
+        let visible = NodeId::from_u128(66);
+        let mut hidden_node = test_node(CanvasPoint { x: 1.0, y: 2.0 });
+        hidden_node.hidden = true;
+        graph.nodes.insert(hidden, hidden_node);
+        graph
+            .nodes
+            .insert(visible, test_node(CanvasPoint { x: 10.0, y: 20.0 }));
+
+        let tx = build_diag_nudge_visible_node_transaction(&graph);
+
+        assert_eq!(tx.label.as_deref(), Some("Diag Nudge Visible Node"));
+        assert_eq!(tx.ops.len(), 1);
+        assert!(matches!(
+            tx.ops[0],
+            GraphOp::SetNodePos {
+                id,
+                from: CanvasPoint { x: 10.0, y: 20.0 },
+                to: CanvasPoint { x: 11.0, y: 20.0 },
+            } if id == visible
+        ));
+    }
+
+    #[test]
+    fn build_diag_normalize_visible_node_transaction_hides_other_nodes() {
+        let mut graph = Graph::new(GraphId::from_u128(4));
+        let first = NodeId::from_u128(77);
+        let other = NodeId::from_u128(88);
+        graph
+            .nodes
+            .insert(first, test_node(CanvasPoint { x: 10.0, y: 20.0 }));
+        graph
+            .nodes
+            .insert(other, test_node(CanvasPoint { x: -5.0, y: 7.5 }));
+
+        let tx = build_diag_normalize_visible_node_transaction(&graph);
+
+        assert_eq!(tx.label.as_deref(), Some("Diag Normalize Visible Node"));
+        assert!(tx.ops.iter().any(|op| matches!(
+            op,
+            GraphOp::SetNodePos {
+                id,
+                from: CanvasPoint { x: 10.0, y: 20.0 },
+                to: CanvasPoint { x: 0.0, y: 0.0 },
+            } if *id == first
+        )));
+        assert!(tx.ops.iter().any(|op| matches!(
+            op,
+            GraphOp::SetNodeSize {
+                id,
+                from,
+                to: Some(CanvasSize {
+                    width: 220.0,
+                    height: 140.0,
+                }),
+            } if *id == first && from.is_none()
+        )));
+        assert!(tx.ops.iter().any(|op| matches!(
+            op,
+            GraphOp::SetNodeHidden {
+                id,
+                from: false,
+                to: true,
+            } if *id == other
+        )));
     }
 }

@@ -177,6 +177,8 @@ A first minimal slice is now landed in `ecosystem/fret-node/src/ui/controller.rs
   controller/store-backed view-state path when a controller/store is present,
 - declarative selection and marquee preview/cancel flows have also started converging on
   controller/store-backed selection helpers when a controller/store is present,
+- diagnostics-only paint-only graph hotkeys now also build/commit transactions instead of teaching
+  direct `Graph` mutation,
 - it can sync external graph/view models from store after commits,
 - the default declarative demo now uses it.
 

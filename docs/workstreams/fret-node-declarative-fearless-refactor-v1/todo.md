@@ -91,6 +91,9 @@ land in code review; move design discussion back to `README.md` if a TODO turns 
   - empty-click clear selection
   - marquee preview selection updates
   - marquee cancel / escape restore
+- [x] Stop teaching diagnostics-only direct graph mutation in `paint_only` hotkeys:
+  - the `Digit3/4/5` deterministic graph tweaks now build transactions from `graph_diff`
+  - those transactions now commit through the same controller/store transaction path when present
 - [ ] Extend the controller surface further for broader imperative viewport choreography beyond the
       first bounds-aware helper set.
 - [ ] Decide whether `view_queue` stays as the transport for imperative viewport requests or becomes
