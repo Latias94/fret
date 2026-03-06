@@ -84,12 +84,18 @@ For a session `<session_id>`:
   - zip blob (base64) containing `bundle.json` in the same layout as `diag pack`
 - `fret-diag://sessions/<session_id>/repro.summary.json`
   - JSON text (only if present on disk in the artifacts root)
+- `fret-diag://sessions/<session_id>/regression.summary.json`
+  - JSON text for the aggregate regression summary in the artifacts root (only if present on disk)
+- `fret-diag://sessions/<session_id>/regression.index.json`
+  - JSON text for the lighter consumer-oriented regression index in the artifacts root (only if present on disk)
 
 The server also accepts `selected` as an alias for the default session:
 
 - `fret-diag://selected/bundle.json`
 - `fret-diag://selected/bundle.zip`
 - `fret-diag://selected/repro.summary.json`
+- `fret-diag://selected/regression.summary.json`
+- `fret-diag://selected/regression.index.json`
 
 ### Notes
 
@@ -109,4 +115,5 @@ about instead of polling.
   - `notifications/resources/list_changed` when sessions/resources appear/disappear.
 
 If updates do not arrive, trigger a fresh dump via the tool `fret_diag_bundle_dump` and then read the
-resource again.
+resource again. For aggregate regression resources, ensure the artifacts root also contains
+`regression.summary.json` / `regression.index.json` (for example via `fretboard diag summarize`).

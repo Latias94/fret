@@ -220,6 +220,10 @@ The workstream already has a first end-to-end aggregate path in-tree:
 - retboard diag dashboard is the first thin consumer over the aggregate index:
   - default output is a human-readable first-open summary,
   - --json keeps machine-readable access to the full index payload.
+- pps/fret-devtools-mcp now exposes the same aggregate artifacts as MCP resources when they
+  exist in the active artifacts root:
+  - egression.summary.json,
+  - egression.index.json.
 
 This means the current question is no longer whether aggregate summaries are useful, but how
 presentation surfaces should reuse them without creating a second diagnostics model.
@@ -237,3 +241,4 @@ Recommended order for landable work:
 5. remove redundancy and close migration debt.
 
 See `TODO.md` and `MILESTONES.md` for the staged plan.
+

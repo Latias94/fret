@@ -98,6 +98,10 @@ Tracking doc: `docs/workstreams/diag-fearless-refactor-v2/README.md`
   - [ ] resource subscriptions.
 - [ ] Explicitly defer GUI-only polish that should not block core refactors.
 - [ ] Ensure GUI uses the same contracts and artifact terminology as CLI/tooling.
+- [x] Expose aggregate summary/index artifacts through the MCP consumer lane:
+  - [x] `apps/fret-devtools-mcp` now exposes `regression.summary.json`,
+  - [x] `apps/fret-devtools-mcp` now exposes `regression.index.json`,
+  - [x] resources reuse the existing artifacts-root contract instead of defining a new store.
 - [ ] Add one end-to-end “dogfood” workflow that proves alignment:
   - [ ] pick selector,
   - [ ] patch or choose script,

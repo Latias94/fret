@@ -7,6 +7,9 @@ use std::time::Duration;
 
 use base64::Engine;
 use fret_diag::artifacts;
+use fret_diag::regression_summary::{
+    DIAG_REGRESSION_INDEX_FILENAME_V1, DIAG_REGRESSION_SUMMARY_FILENAME_V1,
+};
 use fret_diag::transport::{
     ClientKindV1, DevtoolsWsClientConfig, DiagTransportKind, FsDiagTransportConfig,
     ToolingDiagClient, WsDiagTransportConfig,
@@ -34,6 +37,8 @@ const RESOURCE_SCHEME: &str = "fret-diag://";
 const RESOURCE_KIND_BUNDLE_JSON: &str = "bundle.json";
 const RESOURCE_KIND_BUNDLE_ZIP: &str = "bundle.zip";
 const RESOURCE_KIND_REPRO_SUMMARY_JSON: &str = "repro.summary.json";
+const RESOURCE_KIND_REGRESSION_SUMMARY_JSON: &str = DIAG_REGRESSION_SUMMARY_FILENAME_V1;
+const RESOURCE_KIND_REGRESSION_INDEX_JSON: &str = DIAG_REGRESSION_INDEX_FILENAME_V1;
 
 #[derive(Clone)]
 struct WsState {
@@ -995,6 +1000,38 @@ impl ServerHandler for FretDevtoolsMcp {
                     );
                     resources.push(repro.no_annotation());
                 }
+
+                if let Some(summary_path) =
+                    regression_summary_path_from_latest_bundle_dumped_payload(&inbox, &sid)
+                    && summary_path.is_file()
+                {
+                    let mut summary = RawResource::new(
+                        format!("{base}{RESOURCE_KIND_REGRESSION_SUMMARY_JSON}"),
+                        format!("regression.summary.json [{sid}]"),
+                    );
+                    summary.mime_type = Some("application/json".to_string());
+                    summary.description = Some(
+                        "Aggregate regression summary for the artifacts root (if present on disk)."
+                            .to_string(),
+                    );
+                    resources.push(summary.no_annotation());
+                }
+
+                if let Some(index_path) =
+                    regression_index_path_from_latest_bundle_dumped_payload(&inbox, &sid)
+                    && index_path.is_file()
+                {
+                    let mut index = RawResource::new(
+                        format!("{base}{RESOURCE_KIND_REGRESSION_INDEX_JSON}"),
+                        format!("regression.index.json [{sid}]"),
+                    );
+                    index.mime_type = Some("application/json".to_string());
+                    index.description = Some(
+                        "Consumer-oriented regression index for the artifacts root (if present on disk)."
+                            .to_string(),
+                    );
+                    resources.push(index.no_annotation());
+                }
             }
 
             Ok(ListResourcesResult::with_all_items(resources))
@@ -1038,6 +1075,18 @@ impl ServerHandler for FretDevtoolsMcp {
                     "repro.summary.json",
                     "application/json",
                     "Repro summary for a session (only if present on disk).",
+                ),
+                mk(
+                    "fret-diag://sessions/{session_id}/regression.summary.json",
+                    "regression.summary.json",
+                    "application/json",
+                    "Aggregate regression summary for a session artifacts root (only if present on disk).",
+                ),
+                mk(
+                    "fret-diag://sessions/{session_id}/regression.index.json",
+                    "regression.index.json",
+                    "application/json",
+                    "Consumer-oriented regression index for a session artifacts root (only if present on disk).",
                 ),
             ]))
         }
@@ -1126,6 +1175,56 @@ impl ServerHandler for FretDevtoolsMcp {
                     if !path.is_file() {
                         return Err(McpError::resource_not_found(
                             "repro.summary.json not found for this session",
+                            None,
+                        ));
+                    }
+                    let text = std::fs::read_to_string(&path)
+                        .map_err(|e| McpError::internal_error(e.to_string(), None))?;
+                    Ok(ReadResourceResult {
+                        contents: vec![ResourceContents::TextResourceContents {
+                            uri: uri.to_string(),
+                            mime_type: Some("application/json".to_string()),
+                            text,
+                            meta: None,
+                        }],
+                    })
+                }
+                RESOURCE_KIND_REGRESSION_SUMMARY_JSON => {
+                    let path = regression_summary_path_from_bundle_dumped_payload(
+                        &repo_root,
+                        &dumped_payload,
+                    )
+                    .ok_or_else(|| {
+                        McpError::resource_not_found("bundle.dumped missing out_dir/dir", None)
+                    })?;
+                    if !path.is_file() {
+                        return Err(McpError::resource_not_found(
+                            "regression.summary.json not found for this session",
+                            None,
+                        ));
+                    }
+                    let text = std::fs::read_to_string(&path)
+                        .map_err(|e| McpError::internal_error(e.to_string(), None))?;
+                    Ok(ReadResourceResult {
+                        contents: vec![ResourceContents::TextResourceContents {
+                            uri: uri.to_string(),
+                            mime_type: Some("application/json".to_string()),
+                            text,
+                            meta: None,
+                        }],
+                    })
+                }
+                RESOURCE_KIND_REGRESSION_INDEX_JSON => {
+                    let path = regression_index_path_from_bundle_dumped_payload(
+                        &repo_root,
+                        &dumped_payload,
+                    )
+                    .ok_or_else(|| {
+                        McpError::resource_not_found("bundle.dumped missing out_dir/dir", None)
+                    })?;
+                    if !path.is_file() {
+                        return Err(McpError::resource_not_found(
+                            "regression.index.json not found for this session",
                             None,
                         ));
                     }
@@ -1558,6 +1657,10 @@ async fn run_client_task(
                         resource_updated_uris.push(format!("{base}{RESOURCE_KIND_BUNDLE_ZIP}"));
                         resource_updated_uris
                             .push(format!("{base}{RESOURCE_KIND_REPRO_SUMMARY_JSON}"));
+                        resource_updated_uris
+                            .push(format!("{base}{RESOURCE_KIND_REGRESSION_SUMMARY_JSON}"));
+                        resource_updated_uris
+                            .push(format!("{base}{RESOURCE_KIND_REGRESSION_INDEX_JSON}"));
 
                         let selected = selected_session_id.lock().await.clone();
                         if selected.as_deref() == Some(sid) {
@@ -1568,6 +1671,12 @@ async fn run_client_task(
                                 .push(format!("{selected_base}{RESOURCE_KIND_BUNDLE_ZIP}"));
                             resource_updated_uris
                                 .push(format!("{selected_base}{RESOURCE_KIND_REPRO_SUMMARY_JSON}"));
+                            resource_updated_uris.push(format!(
+                                "{selected_base}{RESOURCE_KIND_REGRESSION_SUMMARY_JSON}"
+                            ));
+                            resource_updated_uris.push(format!(
+                                "{selected_base}{RESOURCE_KIND_REGRESSION_INDEX_JSON}"
+                            ));
                         }
                     }
                 }
@@ -2017,6 +2126,40 @@ fn repro_summary_path_from_latest_bundle_dumped_payload(
     inbox: &VecDeque<DiagTransportMessageV1>,
     session_id: &str,
 ) -> Option<PathBuf> {
+    artifact_path_from_latest_bundle_dumped_payload(
+        inbox,
+        session_id,
+        RESOURCE_KIND_REPRO_SUMMARY_JSON,
+    )
+}
+
+fn regression_summary_path_from_latest_bundle_dumped_payload(
+    inbox: &VecDeque<DiagTransportMessageV1>,
+    session_id: &str,
+) -> Option<PathBuf> {
+    artifact_path_from_latest_bundle_dumped_payload(
+        inbox,
+        session_id,
+        RESOURCE_KIND_REGRESSION_SUMMARY_JSON,
+    )
+}
+
+fn regression_index_path_from_latest_bundle_dumped_payload(
+    inbox: &VecDeque<DiagTransportMessageV1>,
+    session_id: &str,
+) -> Option<PathBuf> {
+    artifact_path_from_latest_bundle_dumped_payload(
+        inbox,
+        session_id,
+        RESOURCE_KIND_REGRESSION_INDEX_JSON,
+    )
+}
+
+fn artifact_path_from_latest_bundle_dumped_payload(
+    inbox: &VecDeque<DiagTransportMessageV1>,
+    session_id: &str,
+    filename: &str,
+) -> Option<PathBuf> {
     let payload = inbox
         .iter()
         .rev()
@@ -2024,10 +2167,52 @@ fn repro_summary_path_from_latest_bundle_dumped_payload(
         .map(|m| m.payload.clone())?;
 
     let repo_root = repo_root_from_manifest_dir().or_else(|| std::env::current_dir().ok())?;
-    repro_summary_path_from_bundle_dumped_payload(&repo_root, &payload)
+    artifact_path_from_bundle_dumped_payload(&repo_root, &payload, filename)
 }
 
 fn repro_summary_path_from_bundle_dumped_payload(
+    repo_root: &Path,
+    dumped_payload: &serde_json::Value,
+) -> Option<PathBuf> {
+    artifact_path_from_bundle_dumped_payload(
+        repo_root,
+        dumped_payload,
+        RESOURCE_KIND_REPRO_SUMMARY_JSON,
+    )
+}
+
+fn regression_summary_path_from_bundle_dumped_payload(
+    repo_root: &Path,
+    dumped_payload: &serde_json::Value,
+) -> Option<PathBuf> {
+    artifact_path_from_bundle_dumped_payload(
+        repo_root,
+        dumped_payload,
+        RESOURCE_KIND_REGRESSION_SUMMARY_JSON,
+    )
+}
+
+fn regression_index_path_from_bundle_dumped_payload(
+    repo_root: &Path,
+    dumped_payload: &serde_json::Value,
+) -> Option<PathBuf> {
+    artifact_path_from_bundle_dumped_payload(
+        repo_root,
+        dumped_payload,
+        RESOURCE_KIND_REGRESSION_INDEX_JSON,
+    )
+}
+
+fn artifact_path_from_bundle_dumped_payload(
+    repo_root: &Path,
+    dumped_payload: &serde_json::Value,
+    filename: &str,
+) -> Option<PathBuf> {
+    let artifacts_root = artifacts_root_from_bundle_dumped_payload(repo_root, dumped_payload)?;
+    Some(artifacts_root.join(filename))
+}
+
+fn artifacts_root_from_bundle_dumped_payload(
     repo_root: &Path,
     dumped_payload: &serde_json::Value,
 ) -> Option<PathBuf> {
@@ -2053,5 +2238,45 @@ fn repro_summary_path_from_bundle_dumped_payload(
         bundle_dir.parent().unwrap_or(repo_root).to_path_buf()
     };
 
-    Some(artifacts_root.join("repro.summary.json"))
+    Some(artifacts_root)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parse_resource_uri_accepts_regression_index_for_selected_alias() {
+        let parsed = parse_resource_uri("fret-diag://selected/regression.index.json")
+            .expect("selected regression index resource uri should parse");
+        assert_eq!(parsed.session_id, None);
+        assert_eq!(parsed.kind, RESOURCE_KIND_REGRESSION_INDEX_JSON);
+    }
+
+    #[test]
+    fn artifact_path_from_bundle_dumped_payload_resolves_regression_files() {
+        let repo_root = Path::new("F:/repo");
+        let payload = serde_json::json!({
+            "out_dir": "target/fret-diag/campaigns/ui-gallery-pr",
+            "dir": "runs/case-a",
+        });
+
+        let summary = regression_summary_path_from_bundle_dumped_payload(repo_root, &payload)
+            .expect("summary path");
+        let index = regression_index_path_from_bundle_dumped_payload(repo_root, &payload)
+            .expect("index path");
+
+        assert_eq!(
+            summary,
+            PathBuf::from("F:/repo")
+                .join("target/fret-diag/campaigns/ui-gallery-pr")
+                .join(RESOURCE_KIND_REGRESSION_SUMMARY_JSON)
+        );
+        assert_eq!(
+            index,
+            PathBuf::from("F:/repo")
+                .join("target/fret-diag/campaigns/ui-gallery-pr")
+                .join(RESOURCE_KIND_REGRESSION_INDEX_JSON)
+        );
+    }
 }
