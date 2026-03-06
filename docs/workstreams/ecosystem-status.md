@@ -58,10 +58,10 @@ apps still need ecosystem-level ergonomics to avoid re-inventing patterns.
 
 Current ecosystem surfaces:
 
-- Typed UI → app routing for dynamic per-item actions: `fret::mvu::MessageRouter<M>` (avoids
-  `"prefix.{id}"` command parsing in demos/templates).
-- Typed UI → app routing for dynamic actions inside `view_cache(...)` subtrees: `fret::mvu::KeyedMessageRouter<K, M>`
-  (stable per key; persistent lookup table so cached subtrees can keep routing without relying on per-frame rebuild).
+- Typed UI ? app routing for dynamic per-item actions: `fret::payload_actions!` +
+  `ViewCx::on_payload_action*` (avoids `"prefix.{id}"` parsing and does not rely on per-frame router maps).
+- Typed UI ? app routing for globally addressable actions: `fret::actions!` + `ViewCx::on_action*`
+  (stable `CommandId`s where keymaps/menus/palette integration matters).
 - Async resource state (loading/error/cache/invalidation): `ecosystem/fret-query` (TanStack Query-like,
   adapted to ADR 0175 and `Dispatcher.exec_capabilities()`).
 - Derived state (selectors/computed): `ecosystem/fret-selector` (memoized derived values with explicit

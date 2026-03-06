@@ -270,13 +270,15 @@ Policy:
 
 Planned sequence (subject to the workstream exit gates):
 
-- **M8**: MVU deprecation window (warn + migrate).
-- **M9**: hard delete legacy MVU in-tree (remove modules, templates/docs cleanup, add a regression gate).
+- The public in-tree MVU compat surface has already been removed.
+- This migration guide remains useful for older external codebases, but new in-tree work should
+  target `View` + typed unit/payload actions only.
 
 Evidence anchors:
 
-- `ecosystem/fret/src/mvu.rs` (current MVU compat)
-- `docs/workstreams/action-first-authoring-fearless-refactor-v1/TODO.md` (planned M9 checklist)
+- `ecosystem/fret/src/view.rs` (current view-runtime authoring hooks)
+- `ecosystem/fret/src/actions.rs` (unit + payload action macros/traits)
+- `docs/workstreams/action-first-authoring-fearless-refactor-v1/TODO.md` (remaining historical cleanup tasks)
 
 ---
 

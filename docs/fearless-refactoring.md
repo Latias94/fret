@@ -77,10 +77,11 @@ actions:
 - Bind UI triggers via `.action(act::Something)` (or `cx.dispatch(...)` for programmatic dispatch).
 - Handle actions via `ViewCx::on_action*` hooks.
 
-MVU note:
+Authoring note:
 
-- `fret::mvu::*` remains a compatibility surface for older codebases, but new templates and docs
-  should prefer `View` + typed actions.
+- New code should use `View` + typed unit actions (`fret::actions!`) and typed payload actions
+  (`fret::payload_actions!`) instead of historical MVU-era helpers.
+- Treat older MVU references in archived docs as migration context, not as a current public surface.
 
 ### 3) Use identity helpers early
 
