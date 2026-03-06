@@ -7,8 +7,9 @@ in small, reviewable slices.
 
 Note:
 
-- This repo no longer ships MVU authoring surfaces in-tree (M9 hard delete). The “MVU → View runtime”
-  section is retained only as a mapping guide for migrating older external codebases.
+- MVU is still treated as a compatibility surface during the refactor, but it is not the recommended
+  authoring path for new code. The `MVU -> View runtime` section is retained as a mapping guide for
+  migrating older external codebases and for the planned M8/M9 deprecation/removal path.
 
 ---
 
