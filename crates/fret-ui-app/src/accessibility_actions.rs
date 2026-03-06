@@ -144,8 +144,48 @@ fn press_key(
     );
 }
 
+fn invoke_key_for_role(role: SemanticsRole) -> KeyCode {
+    match role {
+        SemanticsRole::Checkbox
+        | SemanticsRole::Switch
+        | SemanticsRole::RadioButton
+        | SemanticsRole::MenuItemCheckbox
+        | SemanticsRole::MenuItemRadio => KeyCode::Space,
+        SemanticsRole::Button
+        | SemanticsRole::Link
+        | SemanticsRole::MenuItem
+        | SemanticsRole::Tab
+        | SemanticsRole::ListBoxOption
+        | SemanticsRole::TreeItem
+        | SemanticsRole::ComboBox => KeyCode::Enter,
+        _ => KeyCode::Space,
+    }
+}
+
+pub fn invoke_with_role(
+    ui: &mut UiTree,
+    app: &mut App,
+    services: &mut dyn UiServices,
+    target: NodeId,
+    preferred_role: Option<SemanticsRole>,
+) {
+    let key = preferred_role
+        .or_else(|| {
+            ui.semantics_snapshot().and_then(|snapshot| {
+                snapshot
+                    .nodes
+                    .iter()
+                    .find(|node| node.id == target)
+                    .map(|node| node.role)
+            })
+        })
+        .map(invoke_key_for_role)
+        .unwrap_or(KeyCode::Space);
+    press_key(ui, app, services, target, key);
+}
+
 pub fn invoke(ui: &mut UiTree, app: &mut App, services: &mut dyn UiServices, target: NodeId) {
-    press_key(ui, app, services, target, KeyCode::Space);
+    invoke_with_role(ui, app, services, target, None);
 }
 
 pub fn set_value_text(
@@ -306,5 +346,19 @@ mod tests {
             )),
             "expected unaligned jump to avoid page actions"
         );
+    }
+
+    #[test]
+    fn invoke_key_for_button_like_roles_uses_enter() {
+        assert_eq!(invoke_key_for_role(SemanticsRole::Button), KeyCode::Enter);
+        assert_eq!(invoke_key_for_role(SemanticsRole::MenuItem), KeyCode::Enter);
+        assert_eq!(invoke_key_for_role(SemanticsRole::ComboBox), KeyCode::Enter);
+    }
+
+    #[test]
+    fn invoke_key_for_toggle_like_roles_uses_space() {
+        assert_eq!(invoke_key_for_role(SemanticsRole::Checkbox), KeyCode::Space);
+        assert_eq!(invoke_key_for_role(SemanticsRole::Switch), KeyCode::Space);
+        assert_eq!(invoke_key_for_role(SemanticsRole::MenuItemCheckbox), KeyCode::Space);
     }
 }

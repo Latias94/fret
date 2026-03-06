@@ -2364,6 +2364,30 @@ impl UiDiagnosticsService {
                     debug_assert!(handled);
                     DriveScriptStepDispatchOutcome::Continue
                 }
+                UiActionStepV2::Activate { .. } => dispatch_drive_script_step(
+                    self,
+                    app,
+                    services,
+                    window,
+                    window_bounds,
+                    anchor_window,
+                    step_index,
+                    step,
+                    scale_factor,
+                    None,
+                    semantics_snapshot,
+                    &mut ui,
+                    text_font_stack_key_stable_frames,
+                    font_catalog_populated,
+                    system_font_rescan_idle,
+                    &mut active,
+                    &mut output,
+                    &mut force_dump_label,
+                    &mut force_dump_max_snapshots,
+                    &mut handoff_to,
+                    &mut stop_script,
+                    &mut failure_reason,
+                ),
                 _ => app.with_global_mut_untracked(ElementRuntime::new, |element_runtime, app| {
                     dispatch_drive_script_step(
                         self,

@@ -22,13 +22,21 @@ pub(super) struct PendingDevtoolsSemanticsNodeGetRequest {
     pub(super) node_id: u64,
 }
 
+#[cfg(feature = "diagnostics-ws")]
+#[derive(Debug, Clone)]
+pub(super) struct PendingDevtoolsHitTestExplainRequest {
+    pub(super) request_id: Option<u64>,
+    pub(super) window_ffi: u64,
+    pub(super) target: UiSelectorV1,
+}
+
 impl UiDiagnosticsService {
     pub(super) fn drive_devtools_requests_for_window(
         &mut self,
         app: &App,
         window: AppWindowId,
         scale_factor: f32,
-        ui: Option<&UiTree<App>>,
+        ui: Option<&mut UiTree<App>>,
     ) -> bool {
         #[cfg(feature = "diagnostics-ws")]
         {
@@ -108,10 +116,11 @@ impl UiDiagnosticsService {
         app: &App,
         window: AppWindowId,
         scale_factor: f32,
-        ui: Option<&UiTree<App>>,
+        mut ui: Option<&mut UiTree<App>>,
     ) -> bool {
         let mut request_redraw = false;
-        request_redraw |= self.drive_devtools_ws_semantics_node_get(window, ui);
+        request_redraw |= self.drive_devtools_ws_semantics_node_get(window, ui.as_deref());
+        request_redraw |= self.drive_devtools_ws_hit_test_explain(window, ui.as_deref_mut());
         request_redraw |= self.drive_devtools_ws_screenshot_request(app, window, scale_factor);
         request_redraw
     }
@@ -143,6 +152,35 @@ impl UiDiagnosticsService {
         );
         let payload = serde_json::to_value(ack).unwrap_or(serde_json::Value::Null);
         self.ws_send_with_request_id("semantics.node.get_ack", pending.request_id, payload);
+        false
+    }
+
+    #[cfg(feature = "diagnostics-ws")]
+    fn drive_devtools_ws_hit_test_explain(
+        &mut self,
+        window: AppWindowId,
+        ui: Option<&mut UiTree<App>>,
+    ) -> bool {
+        let Some(pending) = self.pending_devtools_hit_test_explain.clone() else {
+            return false;
+        };
+        if pending.window_ffi != window.data().as_ffi() {
+            return false;
+        }
+        let pending = self
+            .pending_devtools_hit_test_explain
+            .take()
+            .unwrap_or(pending);
+
+        let ack = build_hit_test_explain_ack_v1(
+            ui,
+            self.cfg.redact_text,
+            self.cfg.max_debug_string_bytes,
+            pending.window_ffi,
+            pending.target.clone(),
+        );
+        let payload = serde_json::to_value(ack).unwrap_or(serde_json::Value::Null);
+        self.ws_send_with_request_id("hit_test.explain_ack", pending.request_id, payload);
         false
     }
 
