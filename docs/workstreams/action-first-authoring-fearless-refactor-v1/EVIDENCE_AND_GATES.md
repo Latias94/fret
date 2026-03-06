@@ -39,13 +39,17 @@ Legacy MVU removal (planned M9):
 
 UI gallery adoption (v1):
 
-- `apps/fret-ui-gallery/src/ui/snippets/command/action_first_view.rs` (action-first `.action(...)` + `cx.on_action::<...>(...)` via the view runtime)
+- `apps/fret-ui-gallery/src/ui/snippets/command/action_first_view.rs` (action-first `.action(...)` + `cx.on_action_notify_models::<...>(...)` via the view runtime)
 - `apps/fret-ui-gallery/src/ui/pages/command.rs` (wiring as a `DocSection` + code extraction region)
 
 Fretboard scaffolding templates (teaching surface):
 
 - `apps/fretboard/src/scaffold/templates.rs` (`hello_template_main_rs`, `todo_template_main_rs`, `simple_todo_template_main_rs`)
   - Unit tests gate that templates use `ui::children![cx; ...]` and keep explicit `.into_element(cx)` calls low.
+- `README.md`, `docs/README.md`, `docs/workstreams/action-first-authoring-fearless-refactor-v1/MIGRATION_GUIDE.md`
+  - All three align on the same default entrypoints: `on_action_notify_models`,
+    `on_action_notify_transient`, and local `on_activate*`; advanced helpers are documented as
+    optional/reference aliases.
 
 Editor-grade adoption (workspace shell demo):
 

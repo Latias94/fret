@@ -68,7 +68,7 @@ pub(super) fn preview_command_palette(
                 .test_id_prefix("ui-gallery-command-action-first-view-runtime")
                 .descriptions([
                     "This section demonstrates action-first authoring using the ecosystem view runtime (`View` + `ViewCx`).",
-                    "The button binds a stable `ActionId` via `.action(...)`, while the handler is registered at the view root via `cx.on_action::<...>(...)`.",
+                    "The button binds a stable `ActionId` via `.action(...)`, while the view root uses the default `cx.on_action_notify_models::<...>(...)` entrypoint for model updates.",
                 ])
                 .code_rust_from_file_region(
                     snippets::action_first_view::SOURCE,
