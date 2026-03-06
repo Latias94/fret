@@ -11,14 +11,14 @@ fn side_content<H: UiHost>(
 ) -> shadcn::HoverCardContent {
     let body = ui::v_flex(move |cx| {
         vec![
-            ui::text(side_label)
+            ui::text_block(side_label)
                 .wrap(TextWrap::WordBreak)
                 .into_element(cx),
         ]
     })
     .layout(LayoutRefinement::default().w_full().min_w_0())
     .gap(Space::N1)
-    .items_start()
+    .items_stretch()
     .into_element(cx);
 
     shadcn::HoverCardContent::new(vec![body]).test_id(test_id)

@@ -18,8 +18,8 @@ use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::typography;
 use fret_ui_kit::ui;
 use fret_ui_kit::{
-    ChromeRefinement, ColorFallback, ColorRef, Items, Justify, LayoutRefinement, MetricRef,
-    Radius, Space,
+    ChromeRefinement, ColorFallback, ColorRef, Items, Justify, LayoutRefinement, MetricRef, Radius,
+    Space,
 };
 use fret_ui_shadcn::{Collapsible, CollapsibleContent};
 
@@ -221,7 +221,9 @@ impl CommitHeader {
         let chrome = self.chrome;
 
         let hover_layout = decl_style::layout_style(&theme, layout.clone());
-        let hover = fret_ui::element::HoverRegionProps { layout: hover_layout };
+        let hover = fret_ui::element::HoverRegionProps {
+            layout: hover_layout,
+        };
 
         let row = cx.hover_region(hover, move |cx, hovered| {
             let opacity = if hovered { 0.8 } else { 1.0 };
@@ -333,11 +335,12 @@ impl CommitHash {
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
+        let color = muted_fg(&theme);
         let icon = decl_icon::icon_with(
             cx,
             ids::ui::GIT_COMMIT,
             Some(Px(12.0)),
-            Some(ColorRef::Color(theme.color_token("foreground"))),
+            Some(ColorRef::Color(color)),
         );
 
         let text = cx.text_props(TextProps {
@@ -350,7 +353,7 @@ impl CommitHash {
                     .unwrap_or(Px(12.0)),
                 FontWeight::NORMAL,
             )),
-            color: Some(theme.color_token("foreground")),
+            color: Some(color),
             wrap: TextWrap::None,
             overflow: TextOverflow::Clip,
             align: fret_core::TextAlign::Start,
@@ -393,7 +396,7 @@ impl CommitMessage {
                 ..Default::default()
             })),
             color: Some(theme.color_token("foreground")),
-            wrap: TextWrap::None,
+            wrap: TextWrap::Word,
             overflow: TextOverflow::Clip,
             align: fret_core::TextAlign::Start,
             ink_overflow: Default::default(),
@@ -482,7 +485,7 @@ impl CommitInfo {
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        ui::v_stack(move |_cx| self.children)
+        ui::v_flex(move |_cx| self.children)
             .layout(LayoutRefinement::default().flex_1().min_w_0())
             .gap(Space::N1)
             .into_element(cx)
@@ -853,7 +856,7 @@ impl CommitFiles {
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let el = ui::v_stack(move |_cx| self.children)
+        let el = ui::v_flex(move |_cx| self.children)
             .layout(LayoutRefinement::default().w_full().min_w_0())
             .gap(Space::N1)
             .into_element(cx);

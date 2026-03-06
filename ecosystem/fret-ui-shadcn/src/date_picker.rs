@@ -9,6 +9,7 @@ use fret_ui::{ElementContext, UiHost};
 use fret_ui_headless::calendar::CalendarMonth;
 use fret_ui_kit::declarative::controllable_state;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
+use fret_ui_kit::primitives::control_registry::ControlId;
 use fret_ui_kit::primitives::popover as radix_popover;
 use fret_ui_kit::{
     ChromeRefinement, ColorFallback, ColorRef, LayoutRefinement, LengthRefinement, Space,
@@ -25,6 +26,7 @@ pub struct DatePicker {
     pub open: Model<bool>,
     pub month: Model<CalendarMonth>,
     pub selected: Model<Option<Date>>,
+    control_id: Option<ControlId>,
     week_start: Weekday,
     placeholder: Arc<str>,
     format_selected: Arc<dyn Fn(Date) -> Arc<str> + Send + Sync + 'static>,
@@ -63,6 +65,7 @@ impl DatePicker {
             open,
             month,
             selected,
+            control_id: None,
             week_start: Weekday::Sunday,
             placeholder: Arc::from("Pick a date"),
             format_selected: Arc::new(format_selected_ppp_en),
@@ -136,6 +139,15 @@ impl DatePicker {
         self
     }
 
+    /// Binds the trigger button to a logical form control id (similar to HTML `id`).
+    ///
+    /// This enables `Label::for_control(ControlId)` to focus the trigger and populate
+    /// `aria-labelledby` / `aria-describedby`-like semantics via the control registry.
+    pub fn control_id(mut self, id: impl Into<ControlId>) -> Self {
+        self.control_id = Some(id.into());
+        self
+    }
+
     pub fn week_start(mut self, week_start: Weekday) -> Self {
         self.week_start = week_start;
         self
@@ -177,6 +189,7 @@ impl DatePicker {
             let open = self.open.clone();
             let month = self.month.clone();
             let selected = self.selected.clone();
+            let control_id = self.control_id.clone();
             let disabled_predicate = self.disabled_predicate.clone();
             let open_trigger = open.clone();
             let open_content = open.clone();
@@ -214,6 +227,9 @@ impl DatePicker {
                                     .w_full()
                                     .merge(trigger_layout.clone()),
                             );
+                        if let Some(control_id) = control_id.clone() {
+                            button = button.control_id(control_id);
+                        }
 
                         if label_is_placeholder {
                             button = button.style(ButtonStyle::default().foreground(

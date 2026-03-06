@@ -5,6 +5,7 @@ use crate::ui::snippets::dialog as snippets;
 
 pub(super) fn preview_dialog(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     let demo = snippets::demo::render(cx);
+    let usage = snippets::usage::render(cx);
     let parts = snippets::parts::render(cx);
     let custom_close = snippets::custom_close_button::render(cx);
     let no_close = snippets::no_close_button::render(cx);
@@ -16,8 +17,10 @@ pub(super) fn preview_dialog(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
         cx,
         [
             "Docs parity uses the same section sequence as upstream: custom close, no close, sticky footer, scrollable content, then RTL.",
+            "`Dialog::compose()` is a recipe-level bridge for shadcn-style part composition without pushing children API concerns into the mechanism layer.",
             "Part surface adapters exist for shadcn-style call sites (DialogTrigger/DialogPortal/DialogOverlay).",
             "Current Fret API models close controls explicitly with DialogClose; omitting it is equivalent to showCloseButton={false} in shadcn docs.",
+            "Content-local examples now prefer `DialogClose::from_scope()` so the close affordance stays close to shadcn composition without threading the same open model into every close icon.",
             "Scrollable examples isolate long content in ScrollArea so footer/header placement remains predictable under constrained viewport sizes.",
             "Each scenario has stable test IDs to support fretboard diag scripts and regression screenshots.",
         ],
@@ -32,6 +35,10 @@ pub(super) fn preview_dialog(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
             DocSection::new("Demo", demo)
                 .description("Basic dialog with header, form fields, and footer actions.")
                 .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
+            DocSection::new("Usage", usage)
+                .title_test_id("ui-gallery-section-usage-title")
+                .description("Copyable shadcn-style composition reference for Dialog.")
+                .code_rust_from_file_region(snippets::usage::SOURCE, "example"),
             DocSection::new("Parts", parts)
                 .description("shadcn-style part surface adapters (Trigger/Portal/Overlay).")
                 .code_rust_from_file_region(snippets::parts::SOURCE, "example"),

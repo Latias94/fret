@@ -112,17 +112,18 @@ mod hotpatch {
             ])
             .into_element(cx),
             shadcn::CardContent::new([ui::v_stack(|cx| {
-                    [
-                        shadcn::Button::new("Increment")
-                            .on_click(CMD_INC)
-                            .into_element(cx),
-                        shadcn::Button::new("Increment (Secondary)")
-                            .on_click(CMD_INC)
-                            .variant(shadcn::ButtonVariant::Secondary)
-                            .into_element(cx),
-                    ]
-                })
-                    .gap(fret_ui_kit::Space::N2).into_element(cx)])
+                [
+                    shadcn::Button::new("Increment")
+                        .on_click(CMD_INC)
+                        .into_element(cx),
+                    shadcn::Button::new("Increment (Secondary)")
+                        .on_click(CMD_INC)
+                        .variant(shadcn::ButtonVariant::Secondary)
+                        .into_element(cx),
+                ]
+            })
+            .gap(fret_ui_kit::Space::N2)
+            .into_element(cx)])
             .into_element(cx),
         ])
         .into_element(cx);

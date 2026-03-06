@@ -1042,7 +1042,7 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
             PageSpec::new(
                 PAGE_AI_TRANSCRIPTION_DEMO,
                 "AI Transcription (Demo)",
-                "AI Elements Transcription / Segment Seek Demo",
+                "AI Elements Transcription / Interactive Transcript Demo",
                 "fret-ui-ai (transcription)",
                 CMD_NAV_AI_TRANSCRIPTION_DEMO,
                 &["ai", "transcription", "segments", "seek", "voice", "demo"],
@@ -1050,7 +1050,7 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
             PageSpec::new(
                 PAGE_AI_SPEECH_INPUT_DEMO,
                 "AI Speech Input (Demo)",
-                "AI Elements SpeechInput / Record Button Chrome Demo",
+                "AI Elements SpeechInput / Docs-Aligned Voice Input Demo",
                 "fret-ui-ai (speech input)",
                 CMD_NAV_AI_SPEECH_INPUT_DEMO,
                 &["ai", "speech", "voice", "input", "record", "demo"],
@@ -1098,10 +1098,10 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
             PageSpec::new(
                 PAGE_AI_PERSONA_DEMO,
                 "AI Persona (Demo)",
-                "AI Elements Persona / Visual Placeholder Demo",
-                "fret-ui-ai (persona placeholder)",
+                "AI Elements Persona / Docs-aligned Placeholder + Custom Visual Slot",
+                "fret-ui-ai (persona surface)",
                 CMD_NAV_AI_PERSONA_DEMO,
-                &["ai", "persona", "visual", "placeholder", "demo"],
+                &["ai", "persona", "visual", "variants", "docs", "demo"],
             ),
             PageSpec::new(
                 PAGE_AI_WORKFLOW_CHROME_DEMO,
@@ -1392,11 +1392,11 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
             ),
             PageSpec::new(
                 PAGE_AI_CHECKPOINT_DEMO,
-                "AI Checkpoint (Demo)",
-                "AI Elements Checkpoint / Tooltip Trigger Demo",
-                "fret-ui-ai (tooling chrome)",
+                "Checkpoint",
+                "A simple component for marking conversation history points and restoring the chat to a previous state.",
+                "fret-ui-ai (chatbot chrome)",
                 CMD_NAV_AI_CHECKPOINT_DEMO,
-                &["ai", "checkpoint", "tooltip", "demo"],
+                &["ai", "checkpoint", "tooltip", "chatbot", "demo"],
             ),
             PageSpec::new(
                 PAGE_AI_CONFIRMATION_DEMO,

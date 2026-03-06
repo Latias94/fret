@@ -72,6 +72,44 @@ impl AlertDialogOverlay {
 
 type OnOpenChange = Arc<dyn Fn(bool) + Send + Sync + 'static>;
 
+/// Tracks the currently rendering alert dialog content scope.
+///
+/// This is a recipe-layer authoring helper only. It exists so leaf parts whose primary semantic
+/// meaning is “close the current alert dialog” can offer an ergonomic `from_scope(...)` builder
+/// without changing the lower-level mechanism contract. Callers that prefer explicit data flow can
+/// keep using constructors that take an explicit `Model<bool>`.
+#[derive(Default)]
+struct AlertDialogScopeRegistry {
+    stack: Vec<Model<bool>>,
+}
+
+fn begin_alert_dialog_scope<H: UiHost>(app: &mut H, open: Model<bool>) {
+    app.with_global_mut_untracked(AlertDialogScopeRegistry::default, |reg, _app| {
+        reg.stack.push(open);
+    });
+}
+
+fn end_alert_dialog_scope<H: UiHost>(app: &mut H, expected: fret_runtime::ModelId) {
+    app.with_global_mut_untracked(AlertDialogScopeRegistry::default, |reg, _app| {
+        let popped = reg.stack.pop();
+        if cfg!(debug_assertions) {
+            assert_eq!(
+                popped.as_ref().map(Model::id),
+                Some(expected),
+                "alert dialog scope stack mismatch"
+            );
+        } else if popped.as_ref().map(Model::id) != Some(expected) {
+            reg.stack.clear();
+        }
+    });
+}
+
+fn alert_dialog_open_for_current_scope<H: UiHost>(app: &mut H) -> Option<Model<bool>> {
+    app.with_global_mut_untracked(AlertDialogScopeRegistry::default, |reg, _app| {
+        reg.stack.last().cloned()
+    })
+}
+
 #[derive(Default)]
 struct AlertDialogOpenChangeCallbackState {
     initialized: bool,
@@ -202,6 +240,15 @@ impl AlertDialog {
     ) -> Self {
         self.on_open_change_complete = on_open_change_complete;
         self
+    }
+
+    /// Returns a recipe-level composition builder for shadcn-style part assembly.
+    ///
+    /// This is an ergonomic bridge between Fret's closure-root authoring model and the nested part
+    /// mental model used by shadcn/Radix/Base UI. It intentionally stays in the recipe layer: the
+    /// lower-level mechanism still routes through [`AlertDialog::into_element_parts`].
+    pub fn compose(self) -> AlertDialogComposition {
+        AlertDialogComposition::new(self)
     }
 
     /// Part-based authoring surface aligned with shadcn/ui v4 exports.
@@ -341,7 +388,9 @@ impl AlertDialog {
                         );
 
                         crate::a11y_modal::begin_modal_a11y_scope(cx.app, open_id);
+                        begin_alert_dialog_scope(cx.app, self.open.clone());
                         let content = content(cx);
+                        end_alert_dialog_scope(cx.app, open_id);
                         content_element_for_trigger.set(Some(content.id));
                         crate::a11y_modal::end_modal_a11y_scope(cx.app, open_id);
 
@@ -436,6 +485,79 @@ impl AlertDialog {
             let content_element = content_element_for_trigger.get().or(prev_content_element);
             radix_alert_dialog::apply_alert_dialog_trigger_a11y(trigger, is_open, content_element)
         })
+    }
+}
+
+/// Recipe-level builder for composing an alert dialog from shadcn-style parts.
+///
+/// Unlike upstream React children composition, this builder stores already-authored Fret elements
+/// and lowers them into the existing closure-based entry point at the end. That keeps the
+/// mechanism surface unchanged while giving call sites a more composable authoring style.
+pub struct AlertDialogComposition {
+    dialog: AlertDialog,
+    trigger: Option<AlertDialogTrigger>,
+    portal: AlertDialogPortal,
+    overlay: AlertDialogOverlay,
+    content: Option<AnyElement>,
+}
+
+impl std::fmt::Debug for AlertDialogComposition {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("AlertDialogComposition")
+            .field("dialog", &self.dialog)
+            .field("trigger", &self.trigger.is_some())
+            .field("portal", &self.portal)
+            .field("overlay", &self.overlay)
+            .field("content", &self.content.is_some())
+            .finish()
+    }
+}
+
+impl AlertDialogComposition {
+    pub fn new(dialog: AlertDialog) -> Self {
+        Self {
+            dialog,
+            trigger: None,
+            portal: AlertDialogPortal::new(),
+            overlay: AlertDialogOverlay::new(),
+            content: None,
+        }
+    }
+
+    pub fn trigger(mut self, trigger: AlertDialogTrigger) -> Self {
+        self.trigger = Some(trigger);
+        self
+    }
+
+    pub fn portal(mut self, portal: AlertDialogPortal) -> Self {
+        self.portal = portal;
+        self
+    }
+
+    pub fn overlay(mut self, overlay: AlertDialogOverlay) -> Self {
+        self.overlay = overlay;
+        self
+    }
+
+    pub fn content(mut self, content: AnyElement) -> Self {
+        self.content = Some(content);
+        self
+    }
+
+    #[track_caller]
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let trigger = self
+            .trigger
+            .expect("AlertDialog::compose().trigger(...) must be provided before into_element()");
+        let content = self
+            .content
+            .expect("AlertDialog::compose().content(...) must be provided before into_element()");
+
+        let portal = self.portal;
+        let overlay = self.overlay;
+
+        self.dialog
+            .into_element_parts(cx, move |_cx| trigger, portal, overlay, move |_cx| content)
     }
 }
 
@@ -906,7 +1028,7 @@ impl AlertDialogDescription {
 #[derive(Clone)]
 pub struct AlertDialogAction {
     label: Arc<str>,
-    open: Model<bool>,
+    open: Option<Model<bool>>,
     variant: ButtonVariant,
     disabled: bool,
     test_id: Option<Arc<str>>,
@@ -924,10 +1046,33 @@ impl std::fmt::Debug for AlertDialogAction {
 }
 
 impl AlertDialogAction {
+    /// Creates an action button that explicitly toggles the provided alert dialog open model.
+    ///
+    /// Prefer this constructor when you want fully explicit data flow or when the action is built
+    /// outside the alert dialog content subtree.
     pub fn new(label: impl Into<Arc<str>>, open: Model<bool>) -> Self {
         Self {
             label: label.into(),
-            open,
+            open: Some(open),
+            variant: ButtonVariant::Default,
+            disabled: false,
+            test_id: None,
+        }
+    }
+
+    /// Creates an action button that closes the alert dialog resolved from the current content
+    /// scope.
+    ///
+    /// This is an authoring convenience for shadcn-style composition inside
+    /// [`AlertDialog::into_element`] / [`AlertDialog::into_element_parts`] content closures. It is
+    /// intentionally recipe-layer sugar: explicit `new(label, open)` remains available and should
+    /// be preferred when the button is created outside the alert dialog content subtree.
+    ///
+    /// Panics if no alert dialog content scope is active when the element is rendered.
+    pub fn from_scope(label: impl Into<Arc<str>>) -> Self {
+        Self {
+            label: label.into(),
+            open: None,
             variant: ButtonVariant::Default,
             disabled: false,
             test_id: None,
@@ -952,10 +1097,17 @@ impl AlertDialogAction {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let open = self.open.unwrap_or_else(|| {
+            alert_dialog_open_for_current_scope(cx.app).unwrap_or_else(|| {
+                panic!(
+                    "AlertDialogAction::from_scope(...) must be used while rendering AlertDialog content"
+                )
+            })
+        });
         let mut button = Button::new(self.label)
             .variant(self.variant)
             .disabled(self.disabled)
-            .toggle_model(self.open);
+            .toggle_model(open);
         if let Some(test_id) = self.test_id {
             button = button.test_id(test_id);
         }
@@ -969,7 +1121,7 @@ impl AlertDialogAction {
 #[derive(Clone)]
 pub struct AlertDialogCancel {
     label: Arc<str>,
-    open: Model<bool>,
+    open: Option<Model<bool>>,
     disabled: bool,
     test_id: Option<Arc<str>>,
 }
@@ -985,10 +1137,32 @@ impl std::fmt::Debug for AlertDialogCancel {
 }
 
 impl AlertDialogCancel {
+    /// Creates a cancel button that explicitly toggles the provided alert dialog open model.
+    ///
+    /// Prefer this constructor when you want fully explicit data flow or when the cancel button is
+    /// built outside the alert dialog content subtree.
     pub fn new(label: impl Into<Arc<str>>, open: Model<bool>) -> Self {
         Self {
             label: label.into(),
-            open,
+            open: Some(open),
+            disabled: false,
+            test_id: None,
+        }
+    }
+
+    /// Creates a cancel button that closes the alert dialog resolved from the current content
+    /// scope.
+    ///
+    /// This is an authoring convenience for shadcn-style composition inside
+    /// [`AlertDialog::into_element`] / [`AlertDialog::into_element_parts`] content closures. It is
+    /// intentionally recipe-layer sugar: explicit `new(label, open)` remains available and should
+    /// be preferred when the button is created outside the alert dialog content subtree.
+    ///
+    /// Panics if no alert dialog content scope is active when the element is rendered.
+    pub fn from_scope(label: impl Into<Arc<str>>) -> Self {
+        Self {
+            label: label.into(),
+            open: None,
             disabled: false,
             test_id: None,
         }
@@ -1007,11 +1181,18 @@ impl AlertDialogCancel {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let open_id = self.open.id();
+        let open = self.open.unwrap_or_else(|| {
+            alert_dialog_open_for_current_scope(cx.app).unwrap_or_else(|| {
+                panic!(
+                    "AlertDialogCancel::from_scope(...) must be used while rendering AlertDialog content"
+                )
+            })
+        });
+        let open_id = open.id();
         let mut button = Button::new(self.label)
             .variant(ButtonVariant::Outline)
             .disabled(self.disabled)
-            .toggle_model(self.open);
+            .toggle_model(open);
         if let Some(test_id) = self.test_id {
             button = button.test_id(test_id);
         }
@@ -2548,18 +2729,14 @@ mod tests {
                     );
 
                     let open_for_dialog = open.clone();
-                    let open_for_action = open.clone();
-                    let open_for_cancel = open.clone();
                     let cancel_id_out = cancel_id.clone();
 
                     let alert = AlertDialog::new(open_for_dialog).into_element(
                         cx,
                         |_cx| trigger,
                         move |cx| {
-                            let action =
-                                AlertDialogAction::new("Delete", open_for_action).into_element(cx);
-                            let cancel =
-                                AlertDialogCancel::new("Cancel", open_for_cancel).into_element(cx);
+                            let action = AlertDialogAction::from_scope("Delete").into_element(cx);
+                            let cancel = AlertDialogCancel::from_scope("Cancel").into_element(cx);
                             cancel_id_out.set(Some(cancel.id));
 
                             AlertDialogContent::new(vec![action, cancel]).into_element(cx)
@@ -2629,6 +2806,40 @@ mod tests {
             ui.layout_all(&mut app, &mut services, bounds, 1.0);
         }
         assert_eq!(ui.focus(), Some(trigger_node));
+    }
+
+    #[test]
+    #[should_panic(
+        expected = "AlertDialogCancel::from_scope(...) must be used while rendering AlertDialog content"
+    )]
+    fn alert_dialog_cancel_from_scope_panics_outside_alert_dialog_content() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(200.0), Px(120.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let _ = AlertDialogCancel::from_scope("Cancel").into_element(cx);
+        });
+    }
+
+    #[test]
+    #[should_panic(
+        expected = "AlertDialogAction::from_scope(...) must be used while rendering AlertDialog content"
+    )]
+    fn alert_dialog_action_from_scope_panics_outside_alert_dialog_content() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(200.0), Px(120.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let _ = AlertDialogAction::from_scope("Continue").into_element(cx);
+        });
     }
 
     #[test]

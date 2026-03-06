@@ -11,13 +11,12 @@ documentation.workspace = true
 
 [features]
 default = []
-wry = ["dep:wry", "dep:raw-window-handle"]
-inspector = ["wry", "wry/devtools"]
+inspector = ["wry/devtools"]
 
 [dependencies]
 fret-core = { path = "../fret-core" }
 fret-webview = { path = "../fret-webview" }
 tracing.workspace = true
 serde_json.workspace = true
-wry = { version = "0.53.3", package = "lb-wry", optional = true }
-raw-window-handle = { version = "0.6", optional = true }
+wry = { version = "0.53.3", package = "lb-wry" }
+raw-window-handle = { version = "0.6" }

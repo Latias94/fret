@@ -16,27 +16,14 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
         .max_w(MetricRef::Px(Px(760.0)))
         .min_w_0();
 
-    let tab_label = |cx: &mut ElementContext<'_, H>, text: &'static str, test_id: &'static str| {
-        cx.text(text).attach_semantics(
-            SemanticsDecoration::default()
-                .role(fret_core::SemanticsRole::Generic)
-                .test_id(test_id),
-        )
-    };
-
     let list = shadcn::TabsList::new()
         .trigger(
-            shadcn::TabsTrigger::new("console", "Console").child(tab_label(
-                cx,
-                "Console",
-                "ui-ai-sandbox-demo-tab-console",
-            )),
+            shadcn::TabsTrigger::new("console", "Console")
+                .test_id("ui-ai-sandbox-demo-tab-console"),
         )
-        .trigger(shadcn::TabsTrigger::new("files", "Files").child(tab_label(
-            cx,
-            "Files",
-            "ui-ai-sandbox-demo-tab-files",
-        )));
+        .trigger(
+            shadcn::TabsTrigger::new("files", "Files").test_id("ui-ai-sandbox-demo-tab-files"),
+        );
 
     let console_panel = {
         let panel = ui::v_flex(move |cx| {
@@ -102,6 +89,7 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
             .test_id("ui-ai-sandbox-demo-trigger"),
         ui_ai::SandboxContent::new([tabs]),
     )
+    .default_open(false)
     .refine_layout(max_w)
     .refine_style(ChromeRefinement::default().rounded(Radius::Md))
     .into_element(cx);

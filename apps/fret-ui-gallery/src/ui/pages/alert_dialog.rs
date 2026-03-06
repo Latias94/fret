@@ -17,7 +17,10 @@ pub(super) fn preview_alert_dialog(cx: &mut ElementContext<'_, App>) -> Vec<AnyE
         cx,
         [
             "Alert Dialog is modal by default and should be reserved for destructive or irreversible decisions.",
-            "Use `AlertDialogCancel` + `AlertDialogAction` with the same open model to guarantee close behavior stays predictable.",
+            "Current Fret parity is strongest on semantics and policy defaults: outside press does not dismiss, and initial focus prefers AlertDialogCancel when present.",
+            "Authoring ergonomics improved: AlertDialogAction and AlertDialogCancel can now resolve the current open model from AlertDialog content scope via `from_scope(...)`.",
+            "The main remaining gap is that Fret still uses a closure root instead of a fully nested children API.",
+            "Base UI style detached triggers, handle/payload wiring, and function-as-children composition are not implemented for Alert Dialog today.",
             "Keep dialog copy concise and explicit, and ensure destructive actions have clear labels and visual hierarchy.",
         ],
     );
@@ -25,7 +28,8 @@ pub(super) fn preview_alert_dialog(cx: &mut ElementContext<'_, App>) -> Vec<AnyE
     let usage = doc_layout::notes(
         cx,
         [
-            "Use `AlertDialog` when you need explicit confirmation for destructive/irreversible actions.",
+            "Use `AlertDialog` when you need explicit confirmation for destructive or irreversible actions.",
+            "Start with the parts adapter (`into_element_parts`) when you want a call site that stays closest to shadcn docs composition.",
             "Prefer `AlertDialogCancel` + `AlertDialogAction` over custom buttons to preserve consistent semantics and focus handling.",
         ],
     );
@@ -40,6 +44,10 @@ pub(super) fn preview_alert_dialog(cx: &mut ElementContext<'_, App>) -> Vec<AnyE
                 .description("Default-sized modal alert dialog.")
                 .test_id_prefix("ui-gallery-alert-dialog-demo-docsec")
                 .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
+            DocSection::new("Usage", usage)
+                .title_test_id("ui-gallery-section-usage-title")
+                .description("Copyable shadcn-style composition reference for Alert Dialog.")
+                .code_rust_from_file_region(snippets::usage::SOURCE, "example"),
             DocSection::new("Basic", basic)
                 .description("A minimal alert dialog with default buttons.")
                 .code_rust_from_file_region(snippets::basic::SOURCE, "example"),
@@ -65,9 +73,6 @@ pub(super) fn preview_alert_dialog(cx: &mut ElementContext<'_, App>) -> Vec<AnyE
             DocSection::new("RTL", rtl)
                 .description("All shadcn components should work under an RTL direction provider.")
                 .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
-            DocSection::new("Usage", usage)
-                .title_test_id("ui-gallery-section-usage-title")
-                .description("Quick reference for composing an alert dialog."),
             DocSection::new("Notes", notes)
                 .title_test_id("ui-gallery-section-notes-title")
                 .description("Guidelines and best practices for alert dialogs."),

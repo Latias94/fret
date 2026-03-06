@@ -30,6 +30,23 @@ This is the suggested dev sequence for the next parity passes (optimize for “h
 1. Start `select` / `combobox` deep redesign gates (lock `test_id` + focus/keyboard outcomes). Workstream: `docs/workstreams/select-combobox-deep-redesign-v1/`.
 2. Continue part-surface audits for other components (prioritize “missing split” and provider footguns).
 
+## Scope-derived authoring helpers (`from_scope`) audit list
+
+This section tracks recipe-layer parts that are allowed to read the current local component scope as
+an authoring convenience. These helpers are **sugar only**: explicit constructors must remain
+available so callers can keep data flow visible when needed.
+
+| Component | Part(s) | Status | Why it fits | Notes |
+|---|---|---|---|---|
+| `alert-dialog` | `AlertDialogAction`, `AlertDialogCancel` | Landed | The part’s semantic job is “close the current alert dialog”. | Audit anchor: `ecosystem/fret-ui-shadcn/src/alert_dialog.rs`; doc: `docs/audits/shadcn-alert-dialog.md` |
+| `dialog` | `DialogClose` | Landed | Close buttons are usually authored inside dialog content and otherwise require repetitive `open.clone()` plumbing. | Explicit `DialogClose::new(open)` remains the escape hatch. |
+| `sheet` | `SheetClose` | Landed | Thin wrapper over dialog-style close semantics; same ergonomics rationale as `DialogClose`. | Implemented as a wrapper over `DialogClose::from_scope()`. |
+| `drawer` | `DrawerClose` | Landed | Same “close current overlay” semantics as `DialogClose`/`SheetClose`. | Implemented as a wrapper over `DialogClose::from_scope()`. |
+| `popover` | (none yet) | Deferred | Popover often closes via trigger/selection/outside press; a dedicated close part is not the primary authoring shape. | Revisit only if a stable close part is introduced. |
+| `hover-card` | (none) | Deferred | Hover card is not primarily driven by explicit close controls. | No rollout planned right now. |
+| `dropdown-menu` | (none) | Deferred | Menu items have richer semantics than “close current overlay”; scope-derived sugar is more footgun-prone here. | Prefer explicit action wiring. |
+| `context-menu` | (none) | Deferred | Same rationale as dropdown menu. | Prefer explicit action wiring. |
+
 ## Tracker table
 
 | Component | Upstream parts (radix base) | Fret surface today | Gaps / drift | Footgun risk | Proposed refactor / additions | Gate | Priority | Status |

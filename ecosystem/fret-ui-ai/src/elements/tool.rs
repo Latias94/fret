@@ -211,7 +211,10 @@ impl ToolHeader {
             .or_else(|| theme.metric_by_key("font.line_height"))
             .unwrap_or_else(|| theme.metric_token("font.line_height"));
         let label_text = cx.text_props(TextProps {
-            layout: LayoutStyle::default(),
+            layout: decl_style::layout_style(
+                &theme,
+                LayoutRefinement::default().flex_grow(1.0).min_w_0(),
+            ),
             text: label.clone(),
             style: Some(typography::as_control_text(TextStyle {
                 font: Default::default(),
@@ -252,6 +255,7 @@ impl ToolHeader {
             ]
         })
         .gap(Space::N2)
+        .layout(LayoutRefinement::default().flex_grow(1.0).min_w_0())
         .items(Items::Center)
         .into_element(cx);
 
@@ -267,7 +271,7 @@ impl ToolHeader {
         );
 
         let row = ui::h_row(move |_cx| vec![left, chevron])
-            .layout(LayoutRefinement::default().w_full())
+            .layout(LayoutRefinement::default().w_full().min_w_0())
             .gap(Space::N2)
             .justify(Justify::Between)
             .items(Items::Center)
@@ -637,4 +641,52 @@ fn derive_tool_label(name: &Arc<str>) -> Arc<str> {
     raw.strip_prefix("tool-")
         .map(Arc::<str>::from)
         .unwrap_or_else(|| name.clone())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_app::App;
+    use fret_core::{AppWindowId, Point, Px, Rect, Size};
+    use fret_ui::element::{ElementKind, Length};
+
+    fn bounds() -> Rect {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(360.0), Px(220.0)),
+        )
+    }
+
+    fn find_text_by_content<'a>(el: &'a AnyElement, text: &str) -> Option<&'a TextProps> {
+        match &el.kind {
+            ElementKind::Text(props) if props.text.as_ref() == text => Some(props),
+            _ => el
+                .children
+                .iter()
+                .find_map(|child| find_text_by_content(child, text)),
+        }
+    }
+
+    #[test]
+    fn tool_header_label_can_shrink_within_trigger_row() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let title =
+            "A very long tool title that should wrap instead of overflowing the trigger row";
+        let open_model = app.models_mut().insert(false);
+
+        let el = fret_ui::elements::with_element_cx(&mut app, window, bounds(), "tool", |cx| {
+            ToolHeader::new("tool-shell_exec", ToolStatus::InputAvailable)
+                .title(title)
+                .into_trigger(cx, open_model.clone(), false)
+        });
+
+        let label = find_text_by_content(&el, title).expect("tool header label text");
+        assert_eq!(label.wrap, TextWrap::Word);
+        assert_eq!(label.layout.flex.grow, 1.0);
+        assert_eq!(label.layout.flex.shrink, 1.0);
+        assert_eq!(label.layout.flex.basis, Length::Auto);
+        assert_eq!(label.layout.size.min_width, Some(Length::Px(Px(0.0))));
+    }
 }

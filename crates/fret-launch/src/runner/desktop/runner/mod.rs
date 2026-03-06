@@ -145,6 +145,7 @@ mod render;
 mod run;
 mod streaming_images;
 mod timers;
+mod webview;
 #[cfg(target_os = "windows")]
 mod win32;
 mod window;
@@ -161,6 +162,7 @@ use dispatcher::DesktopDispatcher;
 use no_services::NoUiServices;
 #[cfg(any(target_os = "windows", target_os = "macos", target_os = "linux"))]
 use renderdoc_capture::RenderDocCapture;
+use webview::RunnerWebViewState;
 
 #[cfg(not(any(target_os = "windows", target_os = "macos", target_os = "linux")))]
 struct RenderDocCapture;
@@ -219,6 +221,7 @@ pub struct WinitRunner<D: WinitAppDriver> {
     last_window_surface_size_changed_at: Option<Instant>,
     no_services: NoUiServices,
     diag_bundle_screenshots: DiagBundleScreenshotCapture,
+    webviews: RunnerWebViewState,
 
     windows: SlotMap<fret_core::AppWindowId, WindowRuntime<D::WindowState>>,
     window_registry: fret_runner_winit::window_registry::WinitWindowRegistry,
@@ -936,7 +939,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 "runner: window reset complete generation={generation} window={window:?}"
             ));
 
-            state.last_accessibility_snapshot = None;
+            state.last_semantics_snapshot = None;
             state.window.request_redraw();
         }
         hotpatch::hotpatch_diag_log(&format!(

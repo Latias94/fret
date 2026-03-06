@@ -1552,25 +1552,18 @@ mod tests {
                 |cx| [text("hello").into_element(cx)],
             );
 
-            let scope = els
-                .pop()
-                .expect("expected a ForegroundScope wrapper element");
-            assert!(
-                matches!(scope.kind, ElementKind::ForegroundScope(_)),
-                "expected current_color::scope_children(...) to install a ForegroundScope wrapper"
+            let child = els.pop().expect("expected a child element");
+            assert_eq!(
+                child.inherited_foreground,
+                Some(expected),
+                "expected current_color::scope_children(...) to stamp inherited foreground on the existing root"
             );
-
-            let child = scope
-                .children
-                .into_iter()
-                .next()
-                .expect("expected a child element");
             let ElementKind::Text(props) = child.kind else {
                 panic!("expected Text element");
             };
             assert_eq!(
                 props.color, None,
-                "expected text to keep color late-bound for ForegroundScope inheritance"
+                "expected text to keep color late-bound for inherited foreground paint resolution"
             );
         });
     }

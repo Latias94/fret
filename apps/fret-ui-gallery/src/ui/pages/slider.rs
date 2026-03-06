@@ -39,6 +39,7 @@ pub(super) fn preview_slider(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
         let demo = cx.keyed("ui_gallery.slider.demo", |cx| {
             snippets::demo::render(cx, controlled_values.clone())
         });
+        let label = cx.keyed("ui_gallery.slider.label", |cx| snippets::label::render(cx));
 
         let notes = doc_layout::notes(
             cx,
@@ -60,6 +61,10 @@ pub(super) fn preview_slider(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
                 DocSection::new("Demo", demo)
                     .description("shadcn demo: single, range, multiple, vertical, and controlled.")
                     .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
+                DocSection::new("Label Association", label)
+                    .description("Use `FieldLabel::for_control` + `Slider::control_id` to focus the active thumb on label click.")
+                    .test_id_prefix("ui-gallery-slider-label")
+                    .code_rust_from_file_region(snippets::label::SOURCE, "example"),
                 DocSection::new("Extras", extras)
                     .description("Fret extras: disabled, RTL, inverted, and onValueCommit.")
                     .code_rust_from_file_region(snippets::extras::SOURCE, "example"),

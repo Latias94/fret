@@ -1,11 +1,11 @@
 use std::sync::Arc;
 
-use fret_core::{Color, Corners, Edges, Px};
+use fret_core::{Color, Corners, Edges, Px, SemanticsRole};
 use fret_icons::IconId;
 use fret_runtime::Model;
 use fret_ui::element::{
     AnyElement, CrossAlign, FlexProps, MainAlign, PressableProps, RovingFlexProps,
-    RovingFocusProps, SpinnerProps, SvgIconProps,
+    RovingFocusProps, SemanticsDecoration, SpinnerProps, SvgIconProps,
 };
 use fret_ui::{ElementContext, Theme, ThemeSnapshot, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt;
@@ -14,12 +14,16 @@ use fret_ui_kit::declarative::current_color;
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::primitives::control_registry::{
+    ControlAction, ControlEntry, ControlId, control_registry_model,
+};
 use fret_ui_kit::{
     ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverrideSlot, Radius, Space,
     WidgetState, WidgetStateProperty, WidgetStates, resolve_override_slot,
     resolve_override_slot_opt,
 };
 
+use crate::test_id::test_id_slug;
 use crate::toggle::{ToggleSize, ToggleVariant};
 
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
@@ -152,6 +156,7 @@ pub struct ToggleGroupItem {
     disabled: bool,
     a11y_label: Option<Arc<str>>,
     test_id: Option<Arc<str>>,
+    style: ToggleGroupStyle,
 }
 
 impl std::fmt::Debug for ToggleGroupItem {
@@ -176,6 +181,7 @@ impl ToggleGroupItem {
             disabled: false,
             a11y_label: None,
             test_id: None,
+            style: ToggleGroupStyle::default(),
         }
     }
 
@@ -197,6 +203,16 @@ impl ToggleGroupItem {
         self
     }
 
+    pub fn child(mut self, child: AnyElement) -> Self {
+        self.children.push(child);
+        self
+    }
+
+    pub fn children(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {
+        self.children.extend(children);
+        self
+    }
+
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = disabled;
         self
@@ -210,6 +226,11 @@ impl ToggleGroupItem {
     /// Optional diagnostics selector for the toggle item pressable root.
     pub fn test_id(mut self, test_id: impl Into<Arc<str>>) -> Self {
         self.test_id = Some(test_id.into());
+        self
+    }
+
+    pub fn style(mut self, style: ToggleGroupStyle) -> Self {
+        self.style = self.style.merged(style);
         self
     }
 }
@@ -264,6 +285,8 @@ pub struct ToggleGroup {
     model: ToggleGroupModel,
     items: Vec<ToggleGroupItem>,
     disabled: bool,
+    control_id: Option<ControlId>,
+    test_id_prefix: Option<Arc<str>>,
     roving_focus: bool,
     orientation: ToggleGroupOrientation,
     loop_navigation: bool,
@@ -293,6 +316,10 @@ impl std::fmt::Debug for ToggleGroup {
             .field("variant", &self.variant)
             .field("size", &self.size)
             .field("spacing", &self.spacing)
+            .field(
+                "test_id_prefix",
+                &self.test_id_prefix.as_ref().map(|s| s.as_ref()),
+            )
             .field("chrome", &self.chrome)
             .field("layout", &self.layout)
             .finish()
@@ -308,6 +335,8 @@ impl ToggleGroup {
             },
             items: Vec::new(),
             disabled: false,
+            control_id: None,
+            test_id_prefix: None,
             roving_focus: true,
             orientation: ToggleGroupOrientation::default(),
             loop_navigation: true,
@@ -331,6 +360,8 @@ impl ToggleGroup {
             },
             items: Vec::new(),
             disabled: false,
+            control_id: None,
+            test_id_prefix: None,
             roving_focus: true,
             orientation: ToggleGroupOrientation::default(),
             loop_navigation: true,
@@ -352,6 +383,8 @@ impl ToggleGroup {
             },
             items: Vec::new(),
             disabled: false,
+            control_id: None,
+            test_id_prefix: None,
             roving_focus: true,
             orientation: ToggleGroupOrientation::default(),
             loop_navigation: true,
@@ -380,6 +413,8 @@ impl ToggleGroup {
             },
             items: Vec::new(),
             disabled: false,
+            control_id: None,
+            test_id_prefix: None,
             roving_focus: true,
             orientation: ToggleGroupOrientation::default(),
             loop_navigation: true,
@@ -395,6 +430,25 @@ impl ToggleGroup {
 
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = disabled;
+        self
+    }
+
+    /// Binds this ToggleGroup to a logical form control id (similar to HTML `id`).
+    ///
+    /// When set, `Label::for_control(ControlId)` forwards focus to the group's current "tab stop"
+    /// item (or the first enabled item).
+    pub fn control_id(mut self, id: impl Into<ControlId>) -> Self {
+        self.control_id = Some(id.into());
+        self
+    }
+
+    /// Optional stable automation prefix for deriving item `test_id`s.
+    ///
+    /// Derived ids follow `{prefix}-item-{value_slug}` unless an item already has an explicit
+    /// `ToggleGroupItem::test_id(...)`. This keeps docs/demo automation stable without forcing every
+    /// callsite to hand-author item ids.
+    pub fn test_id_prefix(mut self, prefix: impl Into<Arc<str>>) -> Self {
+        self.test_id_prefix = Some(prefix.into());
         self
     }
 
@@ -477,6 +531,8 @@ impl ToggleGroup {
         let model = self.model;
         let items = self.items;
         let group_disabled = self.disabled;
+        let control_id = self.control_id;
+        let test_id_prefix = self.test_id_prefix;
         let roving_focus = self.roving_focus;
         let orientation = self.orientation;
         let loop_navigation = self.loop_navigation;
@@ -487,6 +543,9 @@ impl ToggleGroup {
         let chrome = self.chrome;
         let layout = self.layout;
         let style_override = self.style;
+
+        let control_id = control_id.clone();
+        let control_registry = control_id.as_ref().map(|_| control_registry_model(cx));
 
         let theme = Theme::global(&*cx.app).snapshot();
 
@@ -544,6 +603,9 @@ impl ToggleGroup {
         } else {
             None
         };
+        let control_target_index = tab_stop.or_else(|| {
+            fret_ui_kit::primitives::roving_focus_group::first_enabled(&disabled_flags)
+        });
 
         let gap = MetricRef::space(spacing).resolve(&theme);
         let radius = MetricRef::radius(Radius::Md).resolve(&theme);
@@ -559,11 +621,7 @@ impl ToggleGroup {
         let bg_on = toggle_bg_on(&theme);
         let border = toggle_border(&theme);
 
-        let ToggleGroupStyle {
-            item_background,
-            item_foreground,
-            item_border_color,
-        } = style_override;
+        let group_style = style_override;
 
         let hover_bg = match variant {
             ToggleVariant::Default => bg_hover_muted,
@@ -601,10 +659,6 @@ impl ToggleGroup {
             )
             .when(WidgetStates::DISABLED, None);
 
-        let item_background_override = item_background;
-        let item_foreground_override = item_foreground;
-        let item_border_color_override = item_border_color;
-
         let mut group_props = decl_style::container_props(&theme, chrome, layout);
         group_props.corner_radii = Corners::all(radius);
         if matches!(variant, ToggleVariant::Outline) && gap.0 > 0.0 {
@@ -629,12 +683,13 @@ impl ToggleGroup {
         };
 
         cx.container(group_props, move |cx| {
-            let item_background_override = item_background_override.clone();
-            let item_foreground_override = item_foreground_override.clone();
-            let item_border_color_override = item_border_color_override.clone();
+            let group_style = group_style.clone();
             let default_item_background = default_item_background.clone();
             let default_item_foreground = default_item_foreground.clone();
             let default_item_border_color = default_item_border_color.clone();
+            let control_id = control_id.clone();
+            let control_registry = control_registry.clone();
+            let test_id_prefix = test_id_prefix.clone();
 
             let flex = FlexProps {
                 direction: match orientation {
@@ -664,6 +719,8 @@ impl ToggleGroup {
                 for (idx, item) in items.into_iter().enumerate() {
                     let item_disabled = disabled_flags.get(idx).copied().unwrap_or(true);
                     let enabled = !item_disabled;
+                    let is_control_target =
+                        control_target_index.is_some_and(|control_idx| control_idx == idx);
                     let focusable = if roving_focus {
                         tab_stop.is_some_and(|i| i == idx)
                     } else {
@@ -675,6 +732,28 @@ impl ToggleGroup {
                         || selected_multi.as_ref().is_some_and(|selected| {
                             selected.iter().any(|v| v.as_ref() == item.value.as_ref())
                         });
+                    let ToggleGroupItem {
+                        value,
+                        children,
+                        leading_icon,
+                        trailing_icon,
+                        disabled: _,
+                        a11y_label,
+                        test_id,
+                        style: item_style,
+                    } = item;
+                    let test_id = test_id.or_else(|| {
+                        test_id_prefix.as_ref().map(|prefix| {
+                            Arc::<str>::from(format!(
+                                "{prefix}-item-{}",
+                                test_id_slug(value.as_ref())
+                            ))
+                        })
+                    });
+                    let item_style = group_style.clone().merged(item_style);
+                    let item_background_override = item_style.item_background;
+                    let item_foreground_override = item_style.item_foreground;
+                    let item_border_color_override = item_style.item_border_color;
 
                     let corners = if gap.0 <= 0.0 {
                         let first = idx == 0;
@@ -726,8 +805,7 @@ impl ToggleGroup {
                         }
                     }
 
-                    let value = item.value.clone();
-                    let a11y_label = item.a11y_label.clone().unwrap_or_else(|| value.clone());
+                    let a11y_label = a11y_label.unwrap_or_else(|| value.clone());
                     let mut a11y = if model_single.is_some() {
                         fret_ui_kit::primitives::toggle_group::toggle_group_item_a11y_single(
                             a11y_label.clone(),
@@ -739,12 +817,9 @@ impl ToggleGroup {
                             on,
                         )
                     };
-                    if let Some(test_id) = item.test_id.clone() {
+                    if let Some(test_id) = test_id {
                         a11y.test_id = Some(test_id);
                     }
-                    let children = item.children;
-                    let leading_icon = item.leading_icon;
-                    let trailing_icon = item.trailing_icon;
                     let model_single = model_single.clone();
                     let model_multi = model_multi.clone();
                     let pressable_layout = {
@@ -769,9 +844,28 @@ impl ToggleGroup {
                     let default_item_foreground = default_item_foreground.clone();
                     let default_item_border_color = default_item_border_color.clone();
                     let inner_gap = inner_gap;
+                    let control_id_for_register = control_id.clone();
+                    let control_registry_for_register = control_registry.clone();
+                    let is_control_target_for_register = is_control_target;
 
                     out.push(cx.keyed(value.clone(), move |cx| {
                         control_chrome_pressable_with_id_props(cx, move |cx, st, _id| {
+                            if is_control_target_for_register
+                                && let (Some(control_id), Some(control_registry)) = (
+                                    control_id_for_register.clone(),
+                                    control_registry_for_register.clone(),
+                                )
+                            {
+                                let entry = ControlEntry {
+                                    element: _id,
+                                    enabled,
+                                    action: ControlAction::Noop,
+                                };
+                                let _ = cx.app.models_mut().update(&control_registry, |reg| {
+                                    reg.register_control(cx.window, cx.frame_id, control_id, entry);
+                                });
+                            }
+
                             if let Some(m) = model_single.as_ref() {
                                 let model = m.clone();
                                 let value = value.clone();
@@ -904,6 +998,7 @@ impl ToggleGroup {
                 vec![cx.flex(flex, render_items)]
             }
         })
+        .attach_semantics(SemanticsDecoration::default().role(SemanticsRole::Group))
     }
 }
 
@@ -966,7 +1061,9 @@ mod tests {
     };
     use fret_core::{PathCommand, PathConstraints, PathId, PathMetrics, PathService, PathStyle};
     use fret_core::{TextBlobId, TextConstraints, TextMetrics, TextService};
-    use fret_ui::element::{CrossAlign, ElementKind, Length, SpacingLength};
+    use fret_ui::element::{
+        AnyElement, CrossAlign, ElementKind, Length, PressableProps, SpacingLength,
+    };
     use fret_ui::tree::UiTree;
 
     #[derive(Default)]
@@ -1530,6 +1627,21 @@ mod tests {
         ]
     }
 
+    fn find_pressable_with_test_id<'a>(
+        el: &'a AnyElement,
+        test_id: &str,
+    ) -> Option<&'a PressableProps> {
+        match &el.kind {
+            ElementKind::Pressable(props) if props.a11y.test_id.as_deref() == Some(test_id) => {
+                Some(props)
+            }
+            _ => el
+                .children
+                .iter()
+                .find_map(|child| find_pressable_with_test_id(child, test_id)),
+        }
+    }
+
     #[test]
     fn toggle_group_root_defaults_to_w_fit_and_zero_gap() {
         let window = AppWindowId::default();
@@ -1546,6 +1658,10 @@ mod tests {
         let ElementKind::Container(props) = &el.kind else {
             panic!("expected ToggleGroup root to be a container");
         };
+        assert_eq!(
+            el.semantics_decoration.as_ref().and_then(|d| d.role),
+            Some(SemanticsRole::Group)
+        );
         assert_eq!(props.layout.size.width, Length::Auto);
 
         let child = el.children.first().expect("container child");
@@ -1580,5 +1696,24 @@ mod tests {
         };
         assert_eq!(flex.direction, fret_core::Axis::Vertical);
         assert_eq!(flex.align, CrossAlign::Stretch);
+    }
+
+    #[test]
+    fn toggle_group_test_id_prefix_derives_item_test_ids() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_theme(&mut app);
+
+        let model = app.models_mut().insert(None::<Arc<str>>);
+        let el = render_group_props(
+            &mut app,
+            window,
+            ToggleGroup::single(model)
+                .test_id_prefix("toggle-group-demo")
+                .items(group_items()),
+        );
+
+        assert!(find_pressable_with_test_id(&el, "toggle-group-demo-item-one").is_some());
+        assert!(find_pressable_with_test_id(&el, "toggle-group-demo-item-two").is_some());
     }
 }

@@ -185,16 +185,15 @@ impl Card {
 
             // Cards behave like block containers in shadcn/ui examples: their sections are expected to
             // stretch to the card width unless explicitly constrained.
-            cx.foreground_scope(fg, |cx| {
-                [shadcn_layout::container_vstack(
-                    cx,
-                    props,
-                    shadcn_layout::VStackProps::default()
-                        .gap(gap)
-                        .layout(LayoutRefinement::default().w_full()),
-                    children,
-                )]
-            })
+            shadcn_layout::container_vstack(
+                cx,
+                props,
+                shadcn_layout::VStackProps::default()
+                    .gap(gap)
+                    .layout(LayoutRefinement::default().w_full()),
+                children,
+            )
+            .inherit_foreground(fg)
         })
     }
 }
@@ -636,8 +635,7 @@ mod tests {
     use fret_app::App;
     use fret_core::{AppWindowId, Axis, Point, Rect, Size};
     use fret_ui::element::{
-        ColumnProps, ContainerProps, CrossAlign, ForegroundScopeProps, Length, Overflow,
-        SemanticsProps,
+        ColumnProps, ContainerProps, CrossAlign, Length, Overflow, SemanticsProps,
     };
     use fret_ui::elements::GlobalElementId;
     use fret_ui_kit::ui::UiElementSinkExt as _;
@@ -696,20 +694,13 @@ mod tests {
             let py = fret_ui_kit::MetricRef::space(Space::N6).resolve(theme);
             let el = Card::new([cx.text("body")]).into_element(cx);
 
-            let ElementKind::ForegroundScope(ForegroundScopeProps { foreground, .. }) = &el.kind
-            else {
-                panic!("expected Card root to install a ForegroundScope wrapper");
-            };
             assert_eq!(
-                *foreground,
+                el.inherited_foreground,
                 Some(fg),
-                "expected Card to install `text-card-foreground` behavior via ForegroundScope"
+                "expected Card to install `text-card-foreground` behavior on the existing root"
             );
 
-            let card = el
-                .children
-                .first()
-                .unwrap_or_else(|| panic!("expected ForegroundScope wrapper to have one child"));
+            let card = &el;
             let ElementKind::Container(ContainerProps {
                 layout, padding, ..
             }) = &card.kind
@@ -961,46 +952,25 @@ mod tests {
             let eager = Card::new(Vec::<AnyElement>::new()).into_element(cx);
             let built = Card::build(|_cx, _out| {}).into_element(cx);
 
-            let ElementKind::ForegroundScope(ForegroundScopeProps {
-                foreground: eager_foreground,
-                ..
-            }) = &eager.kind
-            else {
-                panic!("expected eager Card to install a ForegroundScope wrapper");
-            };
-            let ElementKind::ForegroundScope(ForegroundScopeProps {
-                foreground: built_foreground,
-                ..
-            }) = &built.kind
-            else {
-                panic!("expected built Card to install a ForegroundScope wrapper");
-            };
+            let eager_foreground = eager.inherited_foreground;
+            let built_foreground = built.inherited_foreground;
             assert_eq!(built_foreground, eager_foreground);
-
-            let eager_surface = eager
-                .children
-                .first()
-                .unwrap_or_else(|| panic!("expected eager Card foreground scope child"));
-            let built_surface = built
-                .children
-                .first()
-                .unwrap_or_else(|| panic!("expected built Card foreground scope child"));
 
             let ElementKind::Container(ContainerProps {
                 layout: eager_layout,
                 padding: eager_padding,
                 ..
-            }) = &eager_surface.kind
+            }) = &eager.kind
             else {
-                panic!("expected eager Card surface to be a container element");
+                panic!("expected eager Card root to be a container element");
             };
             let ElementKind::Container(ContainerProps {
                 layout: built_layout,
                 padding: built_padding,
                 ..
-            }) = &built_surface.kind
+            }) = &built.kind
             else {
-                panic!("expected built Card surface to be a container element");
+                panic!("expected built Card root to be a container element");
             };
 
             assert_eq!(built_layout.overflow, eager_layout.overflow);
@@ -1029,7 +999,8 @@ mod tests {
             ];
 
             assert_eq!(children.len(), 3);
-            assert!(matches!(children[0].kind, ElementKind::ForegroundScope(_)));
+            assert!(matches!(children[0].kind, ElementKind::Container(_)));
+            assert!(children[0].inherited_foreground.is_some());
             assert!(matches!(children[1].kind, ElementKind::Container(_)));
             assert!(matches!(children[2].kind, ElementKind::Container(_)));
         });
@@ -1051,7 +1022,8 @@ mod tests {
             out.push_ui(cx, CardContent::build(|_cx, _out| {}));
 
             assert_eq!(out.len(), 3);
-            assert!(matches!(out[0].kind, ElementKind::ForegroundScope(_)));
+            assert!(matches!(out[0].kind, ElementKind::Container(_)));
+            assert!(out[0].inherited_foreground.is_some());
             assert!(matches!(out[1].kind, ElementKind::Container(_)));
             assert!(matches!(out[2].kind, ElementKind::Container(_)));
         });
@@ -1087,19 +1059,14 @@ mod tests {
                 .max_w(Px(200.0))
                 .into_element(cx);
 
-            let card_surface = card
-                .children
-                .first()
-                .unwrap_or_else(|| panic!("expected built Card foreground scope child"));
-
             let ElementKind::Container(ContainerProps {
                 layout: card_layout,
                 background: card_background,
                 border_color: card_border_color,
                 ..
-            }) = &card_surface.kind
+            }) = &card.kind
             else {
-                panic!("expected ui()-patched Card surface to be a container element");
+                panic!("expected ui()-patched Card root to be a container element");
             };
             let ElementKind::Container(ContainerProps {
                 layout: header_layout,

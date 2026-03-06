@@ -91,6 +91,7 @@ pub struct Input {
     control_id: Option<ControlId>,
     test_id: Option<Arc<str>>,
     placeholder: Option<Arc<str>>,
+    obscure_text: bool,
     aria_invalid: bool,
     aria_required: bool,
     disabled: bool,
@@ -117,6 +118,7 @@ impl Input {
             control_id: None,
             test_id: None,
             placeholder: None,
+            obscure_text: false,
             aria_invalid: false,
             aria_required: false,
             disabled: false,
@@ -173,6 +175,17 @@ impl Input {
     pub fn placeholder(mut self, placeholder: impl Into<Arc<str>>) -> Self {
         self.placeholder = Some(placeholder.into());
         self
+    }
+
+    /// Visually obscures the rendered text (password field outcome) without changing the model.
+    pub fn obscure_text(mut self, obscure: bool) -> Self {
+        self.obscure_text = obscure;
+        self
+    }
+
+    /// Shorthand for `type="password"` parity with shadcn/ui examples.
+    pub fn password(self) -> Self {
+        self.obscure_text(true)
     }
 
     /// Apply the upstream `aria-invalid` error state chrome (border + focus ring color).
@@ -282,6 +295,7 @@ impl Input {
             self.a11y_role,
             self.test_id,
             self.placeholder,
+            self.obscure_text,
             self.aria_invalid,
             self.aria_required,
             self.disabled,
@@ -323,6 +337,7 @@ pub fn input<H: UiHost>(
         false,
         false,
         false,
+        false,
         active_descendant,
         expanded,
         submit_command,
@@ -348,6 +363,7 @@ fn input_with_style_and_submit<H: UiHost>(
     a11y_role: Option<SemanticsRole>,
     test_id: Option<Arc<str>>,
     placeholder: Option<Arc<str>>,
+    obscure_text: bool,
     aria_invalid: bool,
     aria_required: bool,
     disabled: bool,
@@ -453,6 +469,7 @@ fn input_with_style_and_submit<H: UiHost>(
     props.a11y_role = a11y_role;
     props.test_id = test_id;
     props.placeholder = placeholder;
+    props.obscure_text = obscure_text;
     props.a11y_required = aria_required;
     props.a11y_invalid = aria_invalid.then_some(fret_core::SemanticsInvalid::True);
     props.active_descendant = active_descendant;

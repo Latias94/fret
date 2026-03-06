@@ -1,0 +1,10 @@
+{
+  "schema_version": 1,
+  "kind": "diag_script_suite_manifest",
+  "scripts": [
+    "tools/diag-scripts/ui-gallery-ai-package-info-demo-basics.json",
+    "tools/diag-scripts/ui-gallery-ai-package-info-demo-screenshot-zinc-dark.json",
+    "tools/diag-scripts/ui-gallery-ai-sandbox-demo-switch-tab.json",
+    "tools/diag-scripts/ui-gallery-ai-sandbox-demo-screenshots-zinc-dark.json"
+  ]
+}

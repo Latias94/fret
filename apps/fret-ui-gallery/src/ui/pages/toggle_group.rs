@@ -5,13 +5,17 @@ use crate::ui::snippets::toggle_group as snippets;
 
 pub(super) fn preview_toggle_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     let demo = snippets::demo::render(cx);
+    let usage = snippets::usage::render(cx);
     let outline = snippets::outline::render(cx);
+    let single = snippets::single::render(cx);
+    let small = snippets::small::render(cx);
+    let large = snippets::large::render(cx);
+    let label = snippets::label::render(cx);
+    let spacing = snippets::spacing::render(cx);
+    let disabled = snippets::disabled::render(cx);
+    let vertical = snippets::vertical::render(cx);
     let full_width_items = snippets::full_width_items::render(cx);
     let stretch = snippets::flex_1_items::render(cx);
-    let size = snippets::size::render(cx);
-    let spacing = snippets::spacing::render(cx);
-    let vertical = snippets::vertical::render(cx);
-    let disabled = snippets::disabled::render(cx);
     let rtl = snippets::rtl::render(cx);
     let notes = doc_layout::notes(
         cx,
@@ -19,41 +23,57 @@ pub(super) fn preview_toggle_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyE
             "API reference: `ecosystem/fret-ui-shadcn/src/toggle_group.rs` and `ecosystem/fret-ui-shadcn/src/toggle.rs`.",
             "Use Single mode for mutually-exclusive options (alignment, list/grid/cards).",
             "Use Multiple mode for formatting toggles where users may combine states.",
-            "`spacing` is useful when each item needs stronger visual separation.",
+            "Use `ToggleGroupItem::style(...)` when a docs recipe needs per-item selected accents.",
             "For icon-only groups, keep explicit `a11y_label` for assistive technologies.",
+            "Rust does not need a DOM-style root `children` slot here: `ToggleGroup::item(s)` plus `ToggleGroupItem::new(..., children)` is the typed equivalent, and `ToggleGroupItem::child(...)` now covers incremental composition.",
         ],
     );
 
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview follows shadcn Toggle Group docs order: Demo, Outline, Size, Spacing, Vertical, Disabled, RTL (plus a flex-1 regression gate section).",
+            "Preview starts with a compact overview, then mirrors the shadcn Toggle Group docs order: Usage, Outline, Single, Small, Large, Disabled, Spacing. Fret-only regression sections follow.",
         ),
         vec![
-            DocSection::new("Demo", demo)
-                .description("Multiple selection with icon-only items.")
+            DocSection::new("Preview", demo)
+                .description("Compact icon-only preview for quick visual scanning.")
                 .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
+            DocSection::new("Usage", usage)
+                .description("Minimal typed usage matching the upstream docs example.")
+                .code_rust_from_file_region(snippets::usage::SOURCE, "example"),
             DocSection::new("Outline", outline)
-                .description("Text items with outline chrome.")
+                .description("Outline variant matching the shadcn toolbar example.")
                 .code_rust_from_file_region(snippets::outline::SOURCE, "example"),
-            DocSection::new("Full Width Items", full_width_items)
-                .description("Stretched items (flex-1) to gate control-chrome fill invariants.")
-                .code_rust_from_file_region(snippets::full_width_items::SOURCE, "example"),
-            DocSection::new("Flex-1 items", stretch)
-                .description("Regression gate for hit/visual alignment under `flex-1` sizing.")
-                .code_rust_from_file_region(snippets::flex_1_items::SOURCE, "example"),
-            DocSection::new("Size", size)
-                .description("Size presets for toolbar density.")
-                .code_rust_from_file_region(snippets::size::SOURCE, "example"),
+            DocSection::new("Single", single)
+                .description("Single-selection icon group, matching the upstream example.")
+                .code_rust_from_file_region(snippets::single::SOURCE, "example"),
+            DocSection::new("Small", small)
+                .description("Small size preset for compact formatting toolbars.")
+                .code_rust_from_file_region(snippets::small::SOURCE, "example"),
+            DocSection::new("Large", large)
+                .description("Large size preset for roomier touch-friendly controls.")
+                .code_rust_from_file_region(snippets::large::SOURCE, "example"),
+            DocSection::new("Label Association", label)
+                .description("Use `FieldLabel::for_control`, `ToggleGroup::control_id`, and `ToggleGroup::test_id_prefix` to keep label-focus behavior and automation anchors aligned.")
+                .test_id_prefix("ui-gallery-toggle-group-label")
+                .code_rust_from_file_region(snippets::label::SOURCE, "example"),
+            DocSection::new("Disabled", disabled)
+                .description("Disabled groups keep layout but block interaction.")
+                .code_rust_from_file_region(snippets::disabled::SOURCE, "example"),
             DocSection::new("Spacing", spacing)
-                .description("Explicit spacing between items to reduce mis-clicks.")
+                .description(
+                    "Per-item selected accents with explicit spacing, closer to the docs recipe.",
+                )
                 .code_rust_from_file_region(snippets::spacing::SOURCE, "example"),
             DocSection::new("Vertical", vertical)
                 .description("Vertical orientation for side panels / inspectors.")
                 .code_rust_from_file_region(snippets::vertical::SOURCE, "example"),
-            DocSection::new("Disabled", disabled)
-                .description("Disabled groups keep layout but block interaction.")
-                .code_rust_from_file_region(snippets::disabled::SOURCE, "example"),
+            DocSection::new("Full Width Items", full_width_items)
+                .description("Stretched items (`flex-1`) to gate control-chrome fill invariants.")
+                .code_rust_from_file_region(snippets::full_width_items::SOURCE, "example"),
+            DocSection::new("Flex-1 Items", stretch)
+                .description("Regression gate for hit and visual alignment under `flex-1` sizing.")
+                .code_rust_from_file_region(snippets::flex_1_items::SOURCE, "example"),
             DocSection::new("RTL", rtl)
                 .description("Item ordering and pressed visuals under RTL.")
                 .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),

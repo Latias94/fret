@@ -114,149 +114,147 @@ impl MessageParts {
         let selected_source_id = selected_source_id.clone();
 
         let content = ui::v_stack(move |cx| {
-                let mut out = Vec::new();
-                for (index, part) in parts.iter().enumerate() {
-                    let part_id = test_id_prefix
-                        .clone()
-                        .map(|p| Arc::<str>::from(format!("{p}part-{index}")));
-                    match part {
-                        MessagePart::Text(text) => {
-                            let text_style = typography::as_content_text(TextStyle {
-                                font: Default::default(),
-                                size: theme.metric_token("font.size"),
-                                weight: FontWeight::NORMAL,
-                                slant: Default::default(),
-                                line_height: Some(theme.metric_token("font.line_height")),
-                                letter_spacing_em: None,
-                                ..Default::default()
-                            });
+            let mut out = Vec::new();
+            for (index, part) in parts.iter().enumerate() {
+                let part_id = test_id_prefix
+                    .clone()
+                    .map(|p| Arc::<str>::from(format!("{p}part-{index}")));
+                match part {
+                    MessagePart::Text(text) => {
+                        let text_style = typography::as_content_text(TextStyle {
+                            font: Default::default(),
+                            size: theme.metric_token("font.size"),
+                            weight: FontWeight::NORMAL,
+                            slant: Default::default(),
+                            line_height: Some(theme.metric_token("font.line_height")),
+                            letter_spacing_em: None,
+                            ..Default::default()
+                        });
 
-                            let el = cx.text_props(TextProps {
-                                layout: LayoutStyle::default(),
-                                text: text.clone(),
-                                style: Some(text_style),
-                                color: Some(fg),
-                                wrap: TextWrap::Word,
-                                overflow: TextOverflow::Clip,
-                                align: fret_core::TextAlign::Start,
+                        let el = cx.text_props(TextProps {
+                            layout: LayoutStyle::default(),
+                            text: text.clone(),
+                            style: Some(text_style),
+                            color: Some(fg),
+                            wrap: TextWrap::Word,
+                            overflow: TextOverflow::Clip,
+                            align: fret_core::TextAlign::Start,
 
-                                ink_overflow: fret_ui::element::TextInkOverflow::None,
-                            });
+                            ink_overflow: fret_ui::element::TextInkOverflow::None,
+                        });
 
-                            let Some(test_id) = part_id else {
-                                out.push(el);
-                                continue;
-                            };
+                        let Some(test_id) = part_id else {
+                            out.push(el);
+                            continue;
+                        };
 
-                            out.push(
-                                el.attach_semantics(
-                                    SemanticsDecoration::default()
-                                        .role(SemanticsRole::Group)
-                                        .test_id(test_id),
-                                ),
-                            );
+                        out.push(
+                            el.attach_semantics(
+                                SemanticsDecoration::default()
+                                    .role(SemanticsRole::Group)
+                                    .test_id(test_id),
+                            ),
+                        );
+                    }
+                    MessagePart::Markdown(md) => {
+                        let mut response =
+                            MessageResponse::new(md.text.clone()).finalized(md.finalized);
+                        if let Some(handler) = on_link_activate.clone() {
+                            response = response.on_link_activate(handler);
                         }
-                        MessagePart::Markdown(md) => {
-                            let mut response =
-                                MessageResponse::new(md.text.clone()).finalized(md.finalized);
-                            if let Some(handler) = on_link_activate.clone() {
-                                response = response.on_link_activate(handler);
-                            }
-                            if let Some(prefix) = test_id_prefix.clone() {
-                                response = response.test_id_prefix(prefix);
-                            }
-                            let el = response.into_element(cx);
-                            let Some(test_id) = part_id else {
-                                out.push(el);
-                                continue;
-                            };
-
-                            out.push(
-                                el.attach_semantics(
-                                    SemanticsDecoration::default()
-                                        .role(SemanticsRole::Group)
-                                        .test_id(test_id),
-                                ),
-                            );
+                        if let Some(prefix) = test_id_prefix.clone() {
+                            response = response.test_id_prefix(prefix);
                         }
-                        MessagePart::ToolCall(call) => {
-                            let mut block = ToolCallBlock::new(call.clone());
-                            if let Some(prefix) = test_id_prefix.clone() {
-                                let root = Arc::<str>::from(format!("{prefix}toolcall-{index}"));
-                                let trigger =
-                                    Arc::<str>::from(format!("{prefix}toolcall-trigger-{index}"));
-                                block = block.test_id_root(root).test_id_trigger(trigger);
-                            }
-                            out.push(block.into_element(cx));
+                        let el = response.into_element(cx);
+                        let Some(test_id) = part_id else {
+                            out.push(el);
+                            continue;
+                        };
+
+                        out.push(
+                            el.attach_semantics(
+                                SemanticsDecoration::default()
+                                    .role(SemanticsRole::Group)
+                                    .test_id(test_id),
+                            ),
+                        );
+                    }
+                    MessagePart::ToolCall(call) => {
+                        let mut block = ToolCallBlock::new(call.clone());
+                        if let Some(prefix) = test_id_prefix.clone() {
+                            let root = Arc::<str>::from(format!("{prefix}toolcall-{index}"));
+                            let trigger =
+                                Arc::<str>::from(format!("{prefix}toolcall-trigger-{index}"));
+                            block = block.test_id_root(root).test_id_trigger(trigger);
                         }
-                        MessagePart::Sources(items) => {
-                            let mut block = SourcesBlock::new(items.clone())
-                                .highlighted_source_model(selected_source_id.clone());
-                            if let Some(handler) = on_link_activate.clone() {
-                                block = block.on_open_url(handler);
-                            }
-                            if let Some(prefix) = test_id_prefix.clone() {
-                                block = block
-                                    .test_id_root(Arc::<str>::from(format!(
-                                        "{prefix}sources-{index}"
-                                    )))
-                                    .test_id_row_prefix(Arc::<str>::from(format!(
-                                        "{prefix}source-row-{index}-"
-                                    )));
-                            }
-                            out.push(block.into_element(cx));
+                        out.push(block.into_element(cx));
+                    }
+                    MessagePart::Sources(items) => {
+                        let mut block = SourcesBlock::new(items.clone())
+                            .highlighted_source_model(selected_source_id.clone());
+                        if let Some(handler) = on_link_activate.clone() {
+                            block = block.on_open_url(handler);
                         }
-                        MessagePart::Citations(items) => {
-                            let row = ui::h_row(|cx| {
-                                let mut out = Vec::new();
-                                for (citation_index, item) in items.iter().enumerate() {
-                                    out.push(cx.keyed(citation_index, |cx| {
-                                        let mut citation = InlineCitation::new(item.label.clone())
-                                            .source_ids(item.source_ids.clone())
-                                            .select_source_model(selected_source_id.clone());
-                                        if let Some(sources) = sources_for_citations.clone() {
-                                            citation = citation.sources(sources);
-                                        }
-                                        if let Some(handler) = on_link_activate.clone() {
-                                            citation = citation.on_open_url(handler);
-                                        }
-
-                                        if let Some(prefix) = test_id_prefix.clone() {
-                                            citation = citation.test_id(Arc::<str>::from(format!(
-                                                "{prefix}citation-{index}-{citation_index}"
-                                            )));
-                                        }
-
-                                        citation.into_element(cx)
-                                    }));
-                                }
-                                out
-                            })
-                            .layout(LayoutRefinement::default().w_full())
-                            .gap(Space::N2)
-                            .into_element(cx);
-
-                            let Some(test_id) = part_id else {
-                                out.push(row);
-                                continue;
-                            };
-
-                            out.push(
-                                row.attach_semantics(
-                                    SemanticsDecoration::default()
-                                        .role(SemanticsRole::Group)
-                                        .test_id(test_id),
-                                ),
-                            );
+                        if let Some(prefix) = test_id_prefix.clone() {
+                            block = block
+                                .test_id_root(Arc::<str>::from(format!("{prefix}sources-{index}")))
+                                .test_id_row_prefix(Arc::<str>::from(format!(
+                                    "{prefix}source-row-{index}-"
+                                )));
                         }
+                        out.push(block.into_element(cx));
+                    }
+                    MessagePart::Citations(items) => {
+                        let row = ui::h_row(|cx| {
+                            let mut out = Vec::new();
+                            for (citation_index, item) in items.iter().enumerate() {
+                                out.push(cx.keyed(citation_index, |cx| {
+                                    let mut citation = InlineCitation::new(item.label.clone())
+                                        .source_ids(item.source_ids.clone())
+                                        .select_source_model(selected_source_id.clone());
+                                    if let Some(sources) = sources_for_citations.clone() {
+                                        citation = citation.sources(sources);
+                                    }
+                                    if let Some(handler) = on_link_activate.clone() {
+                                        citation = citation.on_open_url(handler);
+                                    }
+
+                                    if let Some(prefix) = test_id_prefix.clone() {
+                                        citation = citation.test_id(Arc::<str>::from(format!(
+                                            "{prefix}citation-{index}-{citation_index}"
+                                        )));
+                                    }
+
+                                    citation.into_element(cx)
+                                }));
+                            }
+                            out
+                        })
+                        .layout(LayoutRefinement::default().w_full())
+                        .gap(Space::N2)
+                        .into_element(cx);
+
+                        let Some(test_id) = part_id else {
+                            out.push(row);
+                            continue;
+                        };
+
+                        out.push(
+                            row.attach_semantics(
+                                SemanticsDecoration::default()
+                                    .role(SemanticsRole::Group)
+                                    .test_id(test_id),
+                            ),
+                        );
                     }
                 }
+            }
 
-                out
-            })
-            .layout(LayoutRefinement::default().min_w_0())
-            .gap(Space::N3)
-            .into_element(cx);
+            out
+        })
+        .layout(LayoutRefinement::default().min_w_0())
+        .gap(Space::N3)
+        .into_element(cx);
 
         let content = MessageContent::new(self.role, [content])
             .refine_layout(self.layout)

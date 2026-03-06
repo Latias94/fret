@@ -10,5 +10,6 @@ pub mod demo;
 pub mod disabled_button;
 pub mod keyboard_focus;
 pub mod keyboard_shortcut;
+pub mod long_content;
 pub mod rtl;
 pub mod sides;

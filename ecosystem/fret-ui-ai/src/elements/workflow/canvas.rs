@@ -160,16 +160,18 @@ impl WorkflowCanvas {
         );
 
         let body = cx.container(root_props, move |cx| {
-            vec![ui::v_stack(move |_cx| vec![canvas, overlay])
-                .gap(Space::N0)
-                .layout(
-                    LayoutRefinement::default()
-                        .w_full()
-                        .h_full()
-                        .min_w_0()
-                        .min_h_0(),
-                )
-                .into_element(cx)]
+            vec![
+                ui::v_stack(move |_cx| vec![canvas, overlay])
+                    .gap(Space::N0)
+                    .layout(
+                        LayoutRefinement::default()
+                            .w_full()
+                            .h_full()
+                            .min_w_0()
+                            .min_h_0(),
+                    )
+                    .into_element(cx),
+            ]
         });
 
         let Some(test_id) = self.test_id else {

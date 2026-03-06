@@ -79,6 +79,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             last_window_surface_size_changed_at: None,
             no_services: NoUiServices,
             diag_bundle_screenshots: DiagBundleScreenshotCapture::from_env(),
+            webviews: RunnerWebViewState::default(),
             windows: SlotMap::with_key(),
             window_registry: fret_runner_winit::window_registry::WinitWindowRegistry::default(),
             main_window: None,
@@ -472,13 +473,13 @@ impl<D: super::WinitAppDriver> super::WinitAppDriver for HookedDriver<D> {
         self.inner.before_close_window(app, window)
     }
 
-    fn accessibility_snapshot(
+    fn semantics_snapshot(
         &mut self,
         app: &mut App,
         window: fret_core::AppWindowId,
         state: &mut Self::WindowState,
     ) -> Option<std::sync::Arc<fret_core::SemanticsSnapshot>> {
-        self.inner.accessibility_snapshot(app, window, state)
+        self.inner.semantics_snapshot(app, window, state)
     }
 
     fn accessibility_focus(

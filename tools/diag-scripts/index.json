@@ -1533,6 +1533,84 @@
       "target_hints": []
     },
     {
+      "id": "image-heavy-memory-count-12-steady",
+      "path": "tools/diag-scripts/tooling/images/image-heavy-memory-count-12-steady.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "tooling-image-heavy-memory-sweep-count"
+      ],
+      "tags": [
+        "images",
+        "memory",
+        "steady",
+        "sweep"
+      ],
+      "target_hints": [
+        "Count sweep point for attributing macOS (graphics) unmapped footprint vs image pressure.",
+        "Run with `diag repro --session-auto` to collect a small sample distribution."
+      ]
+    },
+    {
+      "id": "image-heavy-memory-count-48-steady",
+      "path": "tools/diag-scripts/tooling/images/image-heavy-memory-count-48-steady.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "tooling-image-heavy-memory-sweep-count"
+      ],
+      "tags": [
+        "images",
+        "memory",
+        "steady",
+        "sweep"
+      ],
+      "target_hints": [
+        "Count sweep point for attributing macOS (graphics) unmapped footprint vs image pressure.",
+        "Run with `diag repro --session-auto` to collect a small sample distribution."
+      ]
+    },
+    {
+      "id": "image-heavy-memory-count-6-steady",
+      "path": "tools/diag-scripts/tooling/images/image-heavy-memory-count-6-steady.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "tooling-image-heavy-memory-sweep-count"
+      ],
+      "tags": [
+        "images",
+        "memory",
+        "steady",
+        "sweep"
+      ],
+      "target_hints": [
+        "Count sweep point for attributing macOS (graphics) unmapped footprint vs image pressure.",
+        "Run with `diag repro --session-auto` to collect a small sample distribution."
+      ]
+    },
+    {
+      "id": "image-heavy-memory-steady",
+      "path": "tools/diag-scripts/tooling/images/image-heavy-memory-steady.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "tooling-image-heavy-memory-sweep-count"
+      ],
+      "tags": [
+        "images",
+        "memory",
+        "steady"
+      ],
+      "target_hints": [
+        "Captures a steady-state bundle; intended to grow IOSurface/IOAccelerator (textures) and wgpu Metal allocation size."
+      ]
+    },
+    {
       "id": "liquid-glass-backdrop-warp-steady",
       "path": "tools/diag-scripts/renderer/effects/liquid-glass-backdrop-warp-steady.json",
       "required_capabilities": [],
@@ -2239,6 +2317,126 @@
       ]
     },
     {
+      "id": "ui-gallery-ai-file-tree-demo-actions",
+      "path": "tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-file-tree-demo-actions.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-ai-file-tree"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-ai-file-tree-demo-screenshot-zinc-dark",
+      "path": "tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-file-tree-demo-screenshot-zinc-dark.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-ai-file-tree"
+      ],
+      "tags": [
+        "ai-elements",
+        "file-tree",
+        "screenshots",
+        "ui-gallery",
+        "zinc-dark"
+      ],
+      "target_hints": [
+        "Sets theme preset to zinc/dark.",
+        "Navigates to the AI Elements file tree demo.",
+        "Expands a folder, selects a file, and captures screenshots."
+      ]
+    },
+    {
+      "id": "ui-gallery-ai-file-tree-demo-toggle",
+      "path": "tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-file-tree-demo-toggle.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-ai-file-tree"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-ai-file-tree-large-scroll",
+      "path": "tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-file-tree-large-scroll.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-ai-file-tree"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-ai-package-info-demo-basics",
+      "path": "tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-package-info-demo-basics.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-ai-elements"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-ai-package-info-demo-screenshot-zinc-dark",
+      "path": "tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-package-info-demo-screenshot-zinc-dark.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-ai-elements"
+      ],
+      "tags": [
+        "ai-elements",
+        "package-info",
+        "screenshots",
+        "ui-gallery",
+        "zinc-dark"
+      ],
+      "target_hints": [
+        "Sets theme preset to zinc/dark.",
+        "Navigates to the AI Elements package info demo.",
+        "Captures a screenshot to gate badge and version contrast."
+      ]
+    },
+    {
+      "id": "ui-gallery-ai-sandbox-demo-screenshots-zinc-dark",
+      "path": "tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-sandbox-demo-screenshots-zinc-dark.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-ai-elements"
+      ],
+      "tags": [
+        "ai-elements",
+        "sandbox",
+        "screenshots",
+        "tabs",
+        "ui-gallery",
+        "zinc-dark"
+      ],
+      "target_hints": [
+        "Sets theme preset to zinc/dark.",
+        "Navigates to the AI Elements sandbox demo.",
+        "Opens the disclosure and switches tabs to capture screenshots."
+      ]
+    },
+    {
+      "id": "ui-gallery-ai-sandbox-demo-switch-tab",
+      "path": "tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-sandbox-demo-switch-tab.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-ai-elements"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-ai-sources-demo",
       "path": "tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-sources-demo.json",
       "required_capabilities": [
@@ -2276,6 +2474,22 @@
         "ui-gallery-ai-transcript-retained"
       ],
       "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-alert-action-text-non-overlap",
+      "path": "tools/diag-scripts/ui-gallery/alert/ui-gallery-alert-action-text-non-overlap.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "alert",
+        "shadcn",
+        "ui-gallery"
+      ],
       "target_hints": []
     },
     {
@@ -4630,11 +4844,14 @@
       "tags": [
         "gate",
         "hover",
+        "hover_card",
         "hovercard",
-        "overlay",
         "ui_gallery"
       ],
-      "target_hints": []
+      "target_hints": [
+        "Navigates to the Hover Card page (available in the default ui-gallery build).",
+        "Opens the instant-delay HoverCard via pointer hover and captures a bundle."
+      ]
     },
     {
       "id": "ui-gallery-incoming-open-inject-smoke",
@@ -5800,6 +6017,29 @@
       ],
       "tags": [],
       "target_hints": []
+    },
+    {
+      "id": "ui-gallery-select-label-click-focus",
+      "path": "tools/diag-scripts/ui-gallery/select/ui-gallery-select-label-click-focus.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-select"
+      ],
+      "tags": [
+        "a11y",
+        "focus",
+        "label",
+        "select",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Navigates to the Select page.",
+        "Scrolls the Label Association example into view.",
+        "Clicks the FieldLabel and verifies the Select popup opens."
+      ]
     },
     {
       "id": "ui-gallery-select-open-jitter-click-stable-v2",

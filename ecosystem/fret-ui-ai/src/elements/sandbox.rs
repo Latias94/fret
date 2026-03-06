@@ -4,7 +4,7 @@ use fret_core::{
     Color, FontWeight, Px, SemanticsRole, TextAlign, TextOverflow, TextStyle, TextWrap,
 };
 use fret_icons::{IconId, ids};
-use fret_ui::element::{AnyElement, LayoutStyle, SemanticsProps, TextProps};
+use fret_ui::element::{AnyElement, SemanticsProps, TextProps};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::style as decl_style;
@@ -14,6 +14,7 @@ use fret_ui_kit::{
     ChromeRefinement, ColorFallback, ColorRef, Items, Justify, LayoutRefinement, Radius, Space,
     WidgetStateProperty, WidgetStates,
 };
+use fret_ui_shadcn::tabs::{TabsListHeightOverride, TabsListVariant};
 use fret_ui_shadcn::{Badge, Collapsible, CollapsibleContent, CollapsibleTrigger};
 use fret_ui_shadcn::{TabsContent, TabsList, TabsRoot};
 
@@ -180,7 +181,10 @@ impl SandboxHeader {
         );
 
         let label_text = cx.text_props(TextProps {
-            layout: LayoutStyle::default(),
+            layout: decl_style::layout_style(
+                &theme,
+                LayoutRefinement::default().flex_grow(1.0).min_w_0(),
+            ),
             text: label,
             style: Some(text_sm_style(&theme, FontWeight::MEDIUM)),
             color: Some(theme.color_required("foreground")),
@@ -194,6 +198,7 @@ impl SandboxHeader {
         let status_badge = tool_status_badge(cx, self.status);
 
         let left = ui::h_row(move |_cx| vec![code_icon, label_text, status_badge])
+            .layout(LayoutRefinement::default().flex_grow(1.0).min_w_0())
             .gap(Space::N2)
             .items(Items::Center)
             .into_element(cx);
@@ -295,8 +300,8 @@ impl SandboxContent {
 
 /// A tabs surface pre-styled to match AI Elements `sandbox.tsx`.
 ///
-/// Note: Fret's shadcn `Tabs` currently hardcodes the list background to `muted`. We still align
-/// trigger border/active styling here; list background parity can be tightened later if needed.
+/// Note: This uses the shadcn `TabsListVariant::Line` affordance to approximate the AI Elements
+/// underline-style triggers.
 #[derive(Debug)]
 pub struct SandboxTabs {
     inner: TabsRoot,
@@ -308,18 +313,39 @@ impl SandboxTabs {
             key: "primary",
             fallback: ColorFallback::ThemeAccent,
         };
+        let muted_fg = ColorRef::Token {
+            key: "muted-foreground",
+            fallback: ColorFallback::ThemeTextMuted,
+        };
+        let fg = ColorRef::Token {
+            key: "foreground",
+            fallback: ColorFallback::ThemeTextPrimary,
+        };
         let line_style = fret_ui_shadcn::tabs::TabsStyle::default()
             .trigger_background(WidgetStateProperty::new(Some(ColorRef::Color(
                 Color::TRANSPARENT,
             ))))
+            .trigger_foreground(
+                WidgetStateProperty::new(Some(muted_fg)).when(WidgetStates::SELECTED, Some(fg)),
+            )
             .trigger_border_color(
                 WidgetStateProperty::new(Some(ColorRef::Color(Color::TRANSPARENT)))
-                    .when(WidgetStates::SELECTED, Some(primary)),
+                    .when(WidgetStates::SELECTED, Some(primary.clone())),
             );
 
         Self {
             inner: TabsRoot::uncontrolled(default_value)
+                .list_variant(TabsListVariant::Line)
                 .style(line_style)
+                .gap_px(Px(0.0))
+                .list_padding_px(Px(0.0))
+                .list_height_override(TabsListHeightOverride::Auto)
+                .indicator_line_color(primary)
+                .indicator_line_outset(Px(0.0))
+                .trigger_padding(Px(16.0), Px(8.0))
+                .trigger_radius(Px(0.0))
+                .trigger_border_width(Px(0.0))
+                .list_bar_borders(true)
                 .refine_style(ChromeRefinement::default().bg(ColorRef::Color(Color::TRANSPARENT)))
                 .refine_layout(LayoutRefinement::default().w_full().min_w_0()),
         }
@@ -352,5 +378,53 @@ impl SandboxTabs {
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         self.inner.into_element(cx)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_app::App;
+    use fret_core::{AppWindowId, Point, Px, Rect, Size};
+    use fret_ui::element::{ElementKind, Length};
+
+    fn bounds() -> Rect {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(360.0), Px(220.0)),
+        )
+    }
+
+    fn find_text_by_content<'a>(el: &'a AnyElement, text: &str) -> Option<&'a TextProps> {
+        match &el.kind {
+            ElementKind::Text(props) if props.text.as_ref() == text => Some(props),
+            _ => el
+                .children
+                .iter()
+                .find_map(|child| find_text_by_content(child, text)),
+        }
+    }
+
+    #[test]
+    fn sandbox_header_label_can_shrink_within_trigger_row() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let title =
+            "A very long sandbox title that should wrap instead of overflowing the header row";
+        let open_model = app.models_mut().insert(false);
+
+        let el = fret_ui::elements::with_element_cx(&mut app, window, bounds(), "sandbox", |cx| {
+            SandboxHeader::new(ToolStatus::InputAvailable)
+                .title(title)
+                .into_trigger(cx, open_model.clone(), false)
+        });
+
+        let label = find_text_by_content(&el, title).expect("sandbox header label text");
+        assert_eq!(label.wrap, TextWrap::Word);
+        assert_eq!(label.layout.flex.grow, 1.0);
+        assert_eq!(label.layout.flex.shrink, 1.0);
+        assert_eq!(label.layout.flex.basis, Length::Auto);
+        assert_eq!(label.layout.size.min_width, Some(Length::Px(Px(0.0))));
     }
 }

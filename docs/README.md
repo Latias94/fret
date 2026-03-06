@@ -29,9 +29,11 @@ Unless a document says otherwise:
 - Examples redesign (Flutter-like ladder + cookbook + labs + gates): `docs/workstreams/example-suite-fearless-refactor-v1/design.md`
 - Open source readiness (README + examples + defaults polish): [docs/workstreams/open-source-readiness-fearless-refactor-v1/DESIGN.md](./workstreams/open-source-readiness-fearless-refactor-v1/DESIGN.md)
 - Framework modularity (Bevy-like consumption profiles): `docs/workstreams/framework-modularity-fearless-refactor-v1/design.md`
+- Launch/app public surface refactor (`fret-launch` + `fret` facade + GPUI comparison): `docs/workstreams/fret-launch-app-surface-fearless-refactor-v1/DESIGN.md`, `docs/workstreams/fret-launch-app-surface-fearless-refactor-v1/TODO.md`, and `docs/workstreams/fret-launch-app-surface-fearless-refactor-v1/MILESTONES.md`
 - Overlay + input arbitration v2: `docs/overlay-and-input-arbitration-v2-refactor-roadmap.md`
 - Overlay + pointer occlusion v2 progress: `docs/workstreams/overlay-input-arbitration-v2.md`
 - UI focus + overlay focus containment (fearless refactor v1): `docs/workstreams/ui-focus-overlay-fearless-refactor-v1/DESIGN.md`
+- Foreground style context refactor (inheritance is context, not a wrapper fragment): `docs/workstreams/foreground-style-context-fearless-refactor-v1/DESIGN.md`
 - Foundation closure (P0, cross-workstream milestones): `docs/workstreams/foundation-closure-p0.md` and `docs/workstreams/foundation-closure-p0-todo.md`
 - Headless table engine parity (TanStack Table core): `docs/workstreams/headless-table-tanstack-parity.md` and `docs/workstreams/headless-table-tanstack-parity-todo.md`
 - Theme token alignment (semantic vs named vs component-derived): `docs/workstreams/theme-token-alignment-v1/design.md`, `docs/workstreams/theme-token-alignment-v1/todo.md`, and `docs/workstreams/theme-token-alignment-v1/milestones.md`

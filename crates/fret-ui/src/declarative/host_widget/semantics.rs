@@ -163,6 +163,7 @@ impl ElementHostWidget {
                 input.set_chrome_style(props.chrome);
                 input.set_text_style(props.text_style);
                 input.set_placeholder(props.placeholder);
+                input.set_obscure_text(props.obscure_text);
                 input.set_submit_command(props.submit_command);
                 input.set_cancel_command(props.cancel_command);
                 if let Some(label) = props.a11y_label.as_ref() {

@@ -87,7 +87,6 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
         .a11y_label("Combobox custom items")
         .query_model(query.clone())
         .test_id_prefix("ui-gallery-combobox-custom-items")
-        .trigger_test_id("ui-gallery-combobox-custom-items-trigger")
         .items([
             shadcn::ComboboxItem::new("next", "Next.js").detail("React"),
             shadcn::ComboboxItem::new("nuxt", "Nuxt.js").detail("Vue"),

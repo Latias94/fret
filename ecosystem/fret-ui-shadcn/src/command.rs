@@ -739,18 +739,28 @@ impl Command {
                 )
                 .merge(self.chrome);
             (
-                decl_style::container_props(&theme, base, self.layout),
+                decl_style::container_props(
+                    &theme,
+                    base,
+                    LayoutRefinement::default()
+                        .w_full()
+                        .min_w_0()
+                        .overflow_hidden()
+                        .merge(self.layout),
+                ),
                 theme.color_token("popover-foreground"),
             )
         };
-        let children = current_color::scope_children(cx, ColorRef::Color(fg_root), move |cx| {
-            vec![
-                ui::v_stack(move |_cx| self.children)
-                    .gap(Space::N0)
-                    .into_element(cx),
-            ]
-        });
-        shadcn_layout::container_flow(cx, props, children)
+        let content = ui::v_flex(move |_cx| self.children)
+            .gap(Space::N0)
+            .layout(LayoutRefinement::default().w_full().min_w_0())
+            .into_element(cx);
+        let children = vec![current_color::scope_element(
+            cx,
+            ColorRef::Color(fg_root),
+            content,
+        )];
+        shadcn_layout::container_flow_fill_width(cx, props, children)
     }
 }
 
@@ -2588,6 +2598,23 @@ impl CommandPalette {
         self
     }
 
+    /// Installs a shared stable `test_id` prefix for command palette surfaces.
+    ///
+    /// This derives:
+    /// - `{prefix}-input`
+    /// - `{prefix}-listbox`
+    /// - `{prefix}-item-{sanitized_value}`
+    /// - `{prefix}-heading-{sanitized_heading}`
+    pub fn test_id_prefix(mut self, prefix: impl Into<Arc<str>>) -> Self {
+        let prefix = prefix.into();
+        self.input_test_id = Some(Arc::<str>::from(format!("{prefix}-input")));
+        self.list_test_id = Some(Arc::<str>::from(format!("{prefix}-listbox")));
+        self.test_id_input = Some(Arc::<str>::from(format!("{prefix}-input")));
+        self.test_id_item_prefix = Some(Arc::<str>::from(format!("{prefix}-item-")));
+        self.test_id_heading_prefix = Some(Arc::<str>::from(format!("{prefix}-heading-")));
+        self
+    }
+
     /// Installs stable `test_id`s on item rows using `{prefix}{sanitized_value}`.
     pub fn test_id_item_prefix(mut self, prefix: impl Into<Arc<str>>) -> Self {
         self.test_id_item_prefix = Some(prefix.into());
@@ -4388,6 +4415,32 @@ mod tests {
     }
 
     #[test]
+    fn command_root_defaults_to_fill_width_and_hidden_overflow() {
+        use fret_ui::element::ElementKind;
+        use fret_ui::elements::GlobalElementId;
+
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+            let command = Command::new(vec![AnyElement::new(
+                GlobalElementId(1),
+                ElementKind::Text(fret_ui::element::TextProps::new("item")),
+                Vec::new(),
+            )])
+            .into_element(cx);
+
+            let ElementKind::Container(props) = command.kind else {
+                panic!("expected Command to build a Container element");
+            };
+
+            assert!(matches!(props.layout.size.width, Length::Fill));
+            assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
+            assert!(matches!(props.layout.overflow, Overflow::Clip));
+        });
+    }
+
+    #[test]
     fn command_palette_new_controllable_prefers_controlled_query_model() {
         let window = AppWindowId::default();
         let mut app = App::new();
@@ -5350,6 +5403,60 @@ mod tests {
             active_node.flags.selected,
             "highlighted row should be selected"
         );
+    }
+
+    #[test]
+    fn command_palette_test_id_prefix_derives_surface_ids() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let query = app.models_mut().insert(String::new());
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let next_frame = fret_runtime::FrameId(app.frame_id().0.saturating_add(1));
+        app.set_frame_id(next_frame);
+
+        fret_ui_kit::OverlayController::begin_frame(&mut app, window);
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "cmdk-test-id-prefix",
+            |cx| {
+                vec![
+                    CommandPalette::new(
+                        query.clone(),
+                        vec![CommandItem::new("Alpha"), CommandItem::new("Beta")],
+                    )
+                    .test_id_prefix("cmd")
+                    .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let ids: Vec<&str> = snap
+            .nodes
+            .iter()
+            .filter_map(|n| n.test_id.as_deref())
+            .collect();
+        assert!(ids.iter().copied().any(|id| id == "cmd-input"));
+        assert!(ids.iter().copied().any(|id| id == "cmd-listbox"));
+        assert!(ids.iter().copied().any(|id| id == "cmd-item-alpha"));
+
+        let _ = root;
     }
 
     #[test]

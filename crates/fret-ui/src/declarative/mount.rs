@@ -373,6 +373,7 @@ where
                     ElementRecord {
                         element: root_id,
                         instance: ElementInstance::Stack(root_stack),
+                        inherited_foreground: None,
                         semantics_decoration: None,
                         key_context: None,
                     },
@@ -907,6 +908,7 @@ where
                         instance: ElementInstance::DismissibleLayer(
                             DismissibleLayerProps::default(),
                         ),
+                        inherited_foreground: None,
                         semantics_decoration: None,
                         key_context: None,
                     },
@@ -1278,6 +1280,7 @@ fn mount_element<H: UiHost + 'static>(
 ) -> NodeId {
     let mut element = element;
     let id = element.id;
+    let inherited_foreground = element.inherited_foreground;
     let semantics_decoration = element.semantics_decoration.clone();
     let key_context = element.key_context.clone();
     let mut children = std::mem::take(&mut element.children);
@@ -1529,6 +1532,7 @@ fn mount_element<H: UiHost + 'static>(
             ElementRecord {
                 element: id,
                 instance,
+                inherited_foreground,
                 semantics_decoration,
                 key_context,
             },

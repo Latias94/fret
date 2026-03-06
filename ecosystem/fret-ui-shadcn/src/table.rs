@@ -1300,6 +1300,10 @@ mod tests {
         pred(&el.kind) || el.children.iter().any(|child| contains_kind(child, pred))
     }
 
+    fn contains_inherited_foreground(el: &AnyElement) -> bool {
+        el.inherited_foreground.is_some() || el.children.iter().any(contains_inherited_foreground)
+    }
+
     #[derive(Default)]
     struct FakeServices;
 
@@ -1468,10 +1472,7 @@ mod tests {
             out.push_ui(cx, TableCell::build(crate::Card::build(|_cx, _out| {})));
 
             assert_eq!(out.len(), 1);
-            assert!(contains_kind(&out[0], &|kind| matches!(
-                kind,
-                ElementKind::ForegroundScope(_)
-            )));
+            assert!(contains_inherited_foreground(&out[0]));
         });
     }
 
@@ -1494,10 +1495,7 @@ mod tests {
                 panic!("expected TableCell root to be a container element");
             };
             assert_eq!(layout.size.width, Length::Px(Px(240.0)));
-            assert!(contains_kind(&cell, &|kind| matches!(
-                kind,
-                ElementKind::ForegroundScope(_)
-            )));
+            assert!(contains_inherited_foreground(&cell));
         });
     }
 

@@ -131,11 +131,13 @@ impl ConversationDownload {
                 ..Default::default()
             },
             move |cx| {
-                vec![ui::h_row(move |_cx| vec![btn])
-                    .layout(LayoutRefinement::default().w_full())
-                    .justify(Justify::End)
-                    .items(Items::Center)
-                    .into_element(cx)]
+                vec![
+                    ui::h_row(move |_cx| vec![btn])
+                        .layout(LayoutRefinement::default().w_full())
+                        .justify(Justify::End)
+                        .items(Items::Center)
+                        .into_element(cx),
+                ]
             },
         )
     }

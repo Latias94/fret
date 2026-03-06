@@ -64,11 +64,15 @@ fn field(
     label: &'static str,
     model: Model<String>,
     a11y: &'static str,
+    password: bool,
 ) -> AnyElement {
-    let input = shadcn::Input::new(model)
+    let mut input = shadcn::Input::new(model)
         .a11y_label(a11y)
-        .refine_layout(LayoutRefinement::default().w_full().min_w_0())
-        .into_element(cx);
+        .refine_layout(LayoutRefinement::default().w_full().min_w_0());
+    if password {
+        input = input.password();
+    }
+    let input = input.into_element(cx);
     ui::v_flex(move |cx| vec![shadcn::Label::new(label).into_element(cx), input])
         .gap(Space::N2)
         .items_start()
@@ -91,8 +95,8 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
 
         let content = ui::v_flex(move |cx| {
             vec![
-                field(cx, "Name", name.clone(), "Name"),
-                field(cx, "Username", username.clone(), "Username"),
+                field(cx, "Name", name.clone(), "Name", false),
+                field(cx, "Username", username.clone(), "Username", false),
             ]
         })
         .gap(Space::N4)
@@ -123,8 +127,15 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
                     "Current password",
                     current_password.clone(),
                     "Current password",
+                    true,
                 ),
-                field(cx, "New password", new_password.clone(), "New password"),
+                field(
+                    cx,
+                    "New password",
+                    new_password.clone(),
+                    "New password",
+                    true,
+                ),
             ]
         })
         .gap(Space::N4)

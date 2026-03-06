@@ -190,179 +190,183 @@ impl SourcesBlock {
         let chrome = self.chrome;
 
         let list = ui::v_stack(move |cx| {
-                let mut out = Vec::new();
-                for (index, item) in items_for_list.iter().enumerate() {
-                    let row_test_id = row_prefix
-                        .clone()
-                        .map(|p| Arc::<str>::from(format!("{p}{index}")));
+            let mut out = Vec::new();
+            for (index, item) in items_for_list.iter().enumerate() {
+                let row_test_id = row_prefix
+                    .clone()
+                    .map(|p| Arc::<str>::from(format!("{p}{index}")));
 
-                    let is_highlighted = highlighted_source_id
-                        .as_ref()
-                        .is_some_and(|id| id.as_ref() == item.id.as_ref());
+                let is_highlighted = highlighted_source_id
+                    .as_ref()
+                    .is_some_and(|id| id.as_ref() == item.id.as_ref());
 
-                    let row_title_color = if is_highlighted {
-                        list_theme.color_token("accent-foreground")
-                    } else {
-                        title_color
-                    };
-                    let row_icon_color = if is_highlighted {
-                        ColorRef::Token {
-                            key: "accent-foreground",
-                            fallback: ColorFallback::ThemeTextPrimary,
-                        }
-                    } else {
-                        icon_color.clone()
-                    };
+                let row_title_color = if is_highlighted {
+                    list_theme.color_token("accent-foreground")
+                } else {
+                    title_color
+                };
+                let row_icon_color = if is_highlighted {
+                    ColorRef::Token {
+                        key: "accent-foreground",
+                        fallback: ColorFallback::ThemeTextPrimary,
+                    }
+                } else {
+                    icon_color.clone()
+                };
 
-                    let icon = decl_icon::icon_with(
-                        cx,
-                        ids::ui::BOOK,
-                        Some(Px(16.0)),
-                        Some(row_icon_color),
-                    );
+                let icon =
+                    decl_icon::icon_with(cx, ids::ui::BOOK, Some(Px(16.0)), Some(row_icon_color));
 
-                    let title_text = cx.text_props(TextProps {
-                        layout: LayoutStyle::default(),
-                        text: item.title.clone(),
-                        style: Some(text_xs_style(&list_theme, FontWeight::MEDIUM)),
-                        color: Some(row_title_color),
-                        wrap: TextWrap::None,
-                        overflow: TextOverflow::Ellipsis,
-                        align: TextAlign::Start,
-                        ink_overflow: Default::default(),
-                    });
+                let title_text = cx.text_props(TextProps {
+                    layout: decl_style::layout_style(
+                        &list_theme,
+                        LayoutRefinement::default().flex_grow(1.0).min_w_0(),
+                    ),
+                    text: item.title.clone(),
+                    style: Some(text_xs_style(&list_theme, FontWeight::MEDIUM)),
+                    color: Some(row_title_color),
+                    wrap: TextWrap::None,
+                    overflow: TextOverflow::Ellipsis,
+                    align: TextAlign::Start,
+                    ink_overflow: Default::default(),
+                });
 
-                    let title_row = ui::h_row(move |_cx| vec![icon, title_text])
-                        .gap(Space::N2)
-                        .items(Items::Center)
-                        .into_element(cx);
-
-                    let title_el: AnyElement = match (&item.url, on_open_url.clone()) {
-                        (Some(url), Some(handler)) => {
-                            let link = fret_markdown::LinkInfo {
-                                href: url.clone(),
-                                text: item.title.clone(),
-                            };
-
-                            let on_activate: OnActivate = Arc::new(move |host, cx, reason| {
-                                handler(host, cx, reason, link.clone());
-                            });
-
-                            let link_test_id = row_test_id
-                                .clone()
-                                .map(|id| Arc::<str>::from(format!("{id}-link")));
-
-                            cx.pressable(
-                                PressableProps {
-                                    key_activation: PressableKeyActivation::EnterOnly,
-                                    a11y: PressableA11y {
-                                        role: Some(SemanticsRole::Link),
-                                        label: Some(item.title.clone()),
-                                        test_id: link_test_id,
-                                        ..Default::default()
-                                    },
-                                    ..Default::default()
-                                },
-                                move |cx, _state| {
-                                    cx.pressable_on_activate(on_activate.clone());
-                                    [title_row]
-                                },
-                            )
-                        }
-                        _ => title_row,
-                    };
-
-                    let active_badge = if is_highlighted {
-                        row_test_id.clone().map(|id| {
-                            let badge = Badge::new("Active")
-                                .variant(BadgeVariant::Secondary)
-                                .into_element(cx);
-                            cx.semantics(
-                                SemanticsProps {
-                                    role: SemanticsRole::Group,
-                                    test_id: Some(Arc::<str>::from(format!("{id}-active"))),
-                                    ..Default::default()
-                                },
-                                move |_cx| vec![badge],
-                            )
-                        })
-                    } else {
-                        None
-                    };
-
-                    let row = ui::h_row(move |_cx| {
-                        let mut row = Vec::new();
-                        row.push(title_el);
-                        if let Some(active_badge) = active_badge {
-                            row.push(active_badge);
-                        }
-                        row
-                    })
-                    .layout(LayoutRefinement::default())
+                let title_row = ui::h_row(move |_cx| vec![icon, title_text])
+                    .layout(LayoutRefinement::default().flex_grow(1.0).min_w_0())
                     .gap(Space::N2)
-                    .justify(Justify::Between)
                     .items(Items::Center)
                     .into_element(cx);
 
-                    let excerpt_el = item.excerpt.clone().map(|excerpt| {
-                        cx.text_props(TextProps {
-                            layout: LayoutStyle::default(),
-                            text: excerpt,
-                            style: Some(text_xs_style(&list_theme, FontWeight::NORMAL)),
-                            color: Some(excerpt_color),
-                            wrap: TextWrap::Word,
-                            overflow: TextOverflow::Clip,
-                            align: fret_core::TextAlign::Start,
-                            ink_overflow: Default::default(),
-                        })
-                    });
+                let title_el: AnyElement = match (&item.url, on_open_url.clone()) {
+                    (Some(url), Some(handler)) => {
+                        let link = fret_markdown::LinkInfo {
+                            href: url.clone(),
+                            text: item.title.clone(),
+                        };
 
-                    let body = ui::v_stack(move |_cx| {
-                        let mut body = Vec::new();
-                        body.push(row);
-                        if let Some(excerpt_el) = excerpt_el {
-                            body.push(excerpt_el);
-                        }
-                        body
-                    })
-                    .layout(LayoutRefinement::default().w_full())
-                    .gap(Space::N1)
-                    .into_element(cx);
+                        let on_activate: OnActivate = Arc::new(move |host, cx, reason| {
+                            handler(host, cx, reason, link.clone());
+                        });
 
-                    let body: AnyElement = if is_highlighted {
-                        cx.container(
-                            ContainerProps {
-                                layout: highlight_layout,
-                                padding: Edges::all(highlight_padding).into(),
-                                background: Some(highlight_bg),
-                                corner_radii: Corners::all(highlight_radius),
+                        let link_test_id = row_test_id
+                            .clone()
+                            .map(|id| Arc::<str>::from(format!("{id}-link")));
+
+                        cx.pressable(
+                            PressableProps {
+                                layout: decl_style::layout_style(
+                                    &list_theme,
+                                    LayoutRefinement::default().flex_grow(1.0).min_w_0(),
+                                ),
+                                key_activation: PressableKeyActivation::EnterOnly,
+                                a11y: PressableA11y {
+                                    role: Some(SemanticsRole::Link),
+                                    label: Some(item.title.clone()),
+                                    test_id: link_test_id,
+                                    ..Default::default()
+                                },
                                 ..Default::default()
                             },
-                            move |_cx| vec![body],
+                            move |cx, _state| {
+                                cx.pressable_on_activate(on_activate.clone());
+                                [title_row]
+                            },
                         )
-                    } else {
-                        body
-                    };
+                    }
+                    _ => title_row,
+                };
 
-                    let Some(test_id) = row_test_id else {
-                        out.push(body);
-                        continue;
-                    };
+                let active_badge = if is_highlighted {
+                    row_test_id.clone().map(|id| {
+                        let badge = Badge::new("Active")
+                            .variant(BadgeVariant::Secondary)
+                            .into_element(cx);
+                        cx.semantics(
+                            SemanticsProps {
+                                role: SemanticsRole::Group,
+                                test_id: Some(Arc::<str>::from(format!("{id}-active"))),
+                                ..Default::default()
+                            },
+                            move |_cx| vec![badge],
+                        )
+                    })
+                } else {
+                    None
+                };
 
-                    out.push(cx.semantics(
-                        SemanticsProps {
-                            role: SemanticsRole::Group,
-                            test_id: Some(test_id),
+                let row = ui::h_row(move |_cx| {
+                    let mut row = Vec::new();
+                    row.push(title_el);
+                    if let Some(active_badge) = active_badge {
+                        row.push(active_badge);
+                    }
+                    row
+                })
+                .layout(LayoutRefinement::default().w_full().min_w_0())
+                .gap(Space::N2)
+                .justify(Justify::Between)
+                .items(Items::Center)
+                .into_element(cx);
+
+                let excerpt_el = item.excerpt.clone().map(|excerpt| {
+                    cx.text_props(TextProps {
+                        layout: LayoutStyle::default(),
+                        text: excerpt,
+                        style: Some(text_xs_style(&list_theme, FontWeight::NORMAL)),
+                        color: Some(excerpt_color),
+                        wrap: TextWrap::Word,
+                        overflow: TextOverflow::Clip,
+                        align: fret_core::TextAlign::Start,
+                        ink_overflow: Default::default(),
+                    })
+                });
+
+                let body = ui::v_stack(move |_cx| {
+                    let mut body = Vec::new();
+                    body.push(row);
+                    if let Some(excerpt_el) = excerpt_el {
+                        body.push(excerpt_el);
+                    }
+                    body
+                })
+                .layout(LayoutRefinement::default().w_full().min_w_0())
+                .gap(Space::N1)
+                .into_element(cx);
+
+                let body: AnyElement = if is_highlighted {
+                    cx.container(
+                        ContainerProps {
+                            layout: highlight_layout,
+                            padding: Edges::all(highlight_padding).into(),
+                            background: Some(highlight_bg),
+                            corner_radii: Corners::all(highlight_radius),
                             ..Default::default()
                         },
                         move |_cx| vec![body],
-                    ));
-                }
-                out
-            })
-            .layout(LayoutRefinement::default())
-            .gap(Space::N2)
-            .into_element(cx);
+                    )
+                } else {
+                    body
+                };
+
+                let Some(test_id) = row_test_id else {
+                    out.push(body);
+                    continue;
+                };
+
+                out.push(cx.semantics(
+                    SemanticsProps {
+                        role: SemanticsRole::Group,
+                        test_id: Some(test_id),
+                        ..Default::default()
+                    },
+                    move |_cx| vec![body],
+                ));
+            }
+            out
+        })
+        .layout(LayoutRefinement::default())
+        .gap(Space::N2)
+        .into_element(cx);
 
         let default_open = self.default_open;
 
@@ -375,7 +379,10 @@ impl SourcesBlock {
                     title.clone()
                 };
                 let label = cx.text_props(TextProps {
-                    layout: LayoutStyle::default(),
+                    layout: decl_style::layout_style(
+                        &trigger_theme,
+                        LayoutRefinement::default().flex_grow(1.0).min_w_0(),
+                    ),
                     text: label_text,
                     style: Some(text_xs_style(&trigger_theme, FontWeight::MEDIUM)),
                     color: Some(title_color),
@@ -396,8 +403,9 @@ impl SourcesBlock {
                     Some(trigger_icon_color.clone()),
                 );
                 let row = ui::h_row(move |_cx| vec![label, chevron])
-                    .layout(LayoutRefinement::default())
+                    .layout(LayoutRefinement::default().w_full().min_w_0())
                     .gap(Space::N2)
+                    .justify(Justify::Between)
                     .items(Items::Center)
                     .into_element(cx);
 
@@ -465,5 +473,106 @@ impl SourcesBlock {
             },
             move |_cx| vec![root],
         )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_app::App;
+    use fret_core::{AppWindowId, Point, Rect, Size};
+    use fret_ui::element::{ElementKind, Length, PressableProps};
+
+    fn bounds() -> Rect {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(420.0), Px(260.0)),
+        )
+    }
+
+    fn find_text_by_content<'a>(el: &'a AnyElement, text: &str) -> Option<&'a TextProps> {
+        match &el.kind {
+            ElementKind::Text(props) if props.text.as_ref() == text => Some(props),
+            _ => el
+                .children
+                .iter()
+                .find_map(|child| find_text_by_content(child, text)),
+        }
+    }
+
+    fn find_pressable_by_label<'a>(el: &'a AnyElement, label: &str) -> Option<&'a PressableProps> {
+        match &el.kind {
+            ElementKind::Pressable(props) if props.a11y.label.as_deref() == Some(label) => {
+                Some(props)
+            }
+            _ => el
+                .children
+                .iter()
+                .find_map(|child| find_pressable_by_label(child, label)),
+        }
+    }
+
+    #[test]
+    fn sources_block_item_title_can_shrink_within_row() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let title =
+            "A very long cited source title that should truncate instead of overflowing the row";
+        let on_open_url: fret_markdown::OnLinkActivate = Arc::new(|_, _, _, _| {});
+
+        let el = fret_ui::elements::with_element_cx(&mut app, window, bounds(), "sources", |cx| {
+            SourcesBlock::new([SourceItem::new("source-1", title)
+                .url("https://example.com/source-1")
+                .excerpt("Supporting excerpt text that can wrap under the title row.")])
+            .default_open(true)
+            .highlighted_source_id("source-1")
+            .on_open_url(on_open_url.clone())
+            .into_element(cx)
+        });
+
+        let title_text = find_text_by_content(&el, title).expect("sources block title text");
+        assert_eq!(title_text.wrap, TextWrap::None);
+        assert_eq!(title_text.overflow, TextOverflow::Ellipsis);
+        assert_eq!(title_text.layout.flex.grow, 1.0);
+        assert_eq!(title_text.layout.flex.shrink, 1.0);
+        assert_eq!(title_text.layout.flex.basis, Length::Auto);
+        assert_eq!(title_text.layout.size.min_width, Some(Length::Px(Px(0.0))));
+
+        let pressable =
+            find_pressable_by_label(&el, title).expect("sources block title link pressable");
+        assert_eq!(pressable.layout.flex.grow, 1.0);
+        assert_eq!(pressable.layout.flex.shrink, 1.0);
+        assert_eq!(pressable.layout.flex.basis, Length::Auto);
+        assert_eq!(pressable.layout.size.min_width, Some(Length::Px(Px(0.0))));
+    }
+
+    #[test]
+    fn sources_block_trigger_label_can_shrink_within_row() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let title =
+            "Used {count} sources with a very long trigger title that should truncate cleanly";
+        let resolved = "Used 1 sources with a very long trigger title that should truncate cleanly";
+
+        let el = fret_ui::elements::with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "sources-trigger",
+            |cx| {
+                SourcesBlock::new([SourceItem::new("source-1", "Alpha")])
+                    .title(title)
+                    .into_element(cx)
+            },
+        );
+
+        let label = find_text_by_content(&el, resolved).expect("sources block trigger label");
+        assert_eq!(label.wrap, TextWrap::None);
+        assert_eq!(label.overflow, TextOverflow::Clip);
+        assert_eq!(label.layout.flex.grow, 1.0);
+        assert_eq!(label.layout.flex.shrink, 1.0);
+        assert_eq!(label.layout.flex.basis, Length::Auto);
+        assert_eq!(label.layout.size.min_width, Some(Length::Px(Px(0.0))));
     }
 }

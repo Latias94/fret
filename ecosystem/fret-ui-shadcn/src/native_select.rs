@@ -16,6 +16,9 @@ use fret_ui_kit::declarative::motion::{
     drive_tween_color_for_element, drive_tween_f32_for_element,
 };
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::primitives::control_registry::{
+    ControlAction, ControlEntry, ControlId, control_registry_model,
+};
 use fret_ui_kit::primitives::controllable_state;
 use fret_ui_kit::primitives::popover as radix_popover;
 use fret_ui_kit::recipes::input::{InputTokenKeys, resolve_input_chrome};
@@ -108,6 +111,7 @@ pub struct NativeSelect {
     placeholder: Arc<str>,
     options: Vec<NativeSelectOption>,
     optgroups: Vec<NativeSelectOptGroup>,
+    control_id: Option<ControlId>,
     test_id_prefix: Option<Arc<str>>,
     trigger_test_id: Option<Arc<str>>,
     a11y_label: Option<Arc<str>>,
@@ -142,6 +146,7 @@ impl NativeSelect {
             placeholder: Arc::from("Select..."),
             options: Vec::new(),
             optgroups: Vec::new(),
+            control_id: None,
             test_id_prefix: None,
             trigger_test_id: None,
             a11y_label: None,
@@ -196,6 +201,15 @@ impl NativeSelect {
         self
     }
 
+    /// Binds this NativeSelect to a logical form control id (similar to HTML `id`).
+    ///
+    /// When set, `Label::for_control(ControlId)` forwards activation to the select trigger, and the
+    /// select uses `aria-labelledby` / `aria-describedby`-like semantics via the control registry.
+    pub fn control_id(mut self, id: impl Into<ControlId>) -> Self {
+        self.control_id = Some(id.into());
+        self
+    }
+
     pub fn test_id_prefix(mut self, prefix: impl Into<Arc<str>>) -> Self {
         self.test_id_prefix = Some(prefix.into());
         self
@@ -245,6 +259,7 @@ impl NativeSelect {
             self.placeholder,
             &self.options,
             &self.optgroups,
+            self.control_id,
             self.test_id_prefix,
             self.trigger_test_id,
             self.a11y_label,
@@ -265,6 +280,7 @@ pub fn native_select<H: UiHost>(
     placeholder: Arc<str>,
     options: &[NativeSelectOption],
     optgroups: &[NativeSelectOptGroup],
+    control_id: Option<ControlId>,
     test_id_prefix: Option<Arc<str>>,
     trigger_test_id: Option<Arc<str>>,
     a11y_label: Option<Arc<str>>,
@@ -275,6 +291,37 @@ pub fn native_select<H: UiHost>(
     layout: LayoutRefinement,
 ) -> AnyElement {
     cx.scope(|cx| {
+        let control_id = control_id.clone();
+        let control_registry = control_id.as_ref().map(|_| control_registry_model(cx));
+        let labelled_by_element = if a11y_label.is_some() {
+            None
+        } else if let (Some(control_id), Some(control_registry)) =
+            (control_id.as_ref(), control_registry.as_ref())
+        {
+            cx.app
+                .models()
+                .read(control_registry, |reg| {
+                    reg.label_for(cx.window, control_id).map(|l| l.element)
+                })
+                .ok()
+                .flatten()
+        } else {
+            None
+        };
+        let described_by_element = if let (Some(control_id), Some(control_registry)) =
+            (control_id.as_ref(), control_registry.as_ref())
+        {
+            cx.app
+                .models()
+                .read(control_registry, |reg| {
+                    reg.described_by_for(cx.window, control_id)
+                })
+                .ok()
+                .flatten()
+        } else {
+            None
+        };
+
         let theme = Theme::global(&*cx.app).snapshot();
 
         let focus_restore_target = {
@@ -354,19 +401,46 @@ pub fn native_select<H: UiHost>(
         let has_entries = !options.is_empty() || !optgroups.is_empty();
 
         let open_for_trigger = open.clone();
-        let a11y_label_for_trigger = a11y_label
-            .clone()
-            .or_else(|| Some(Arc::from("Native select")));
-        let trigger_test_id_for_trigger = trigger_test_id.clone();
+        let a11y_label_for_trigger = if a11y_label.is_some() {
+            a11y_label.clone()
+        } else if control_id.is_some() {
+            None
+        } else {
+            Some(Arc::from("Native select"))
+        };
+        let trigger_test_id_for_trigger = trigger_test_id.clone().or_else(|| {
+            test_id_prefix
+                .as_ref()
+                .map(|prefix| Arc::<str>::from(format!("{prefix}-trigger")))
+        });
         let theme_for_trigger = theme.clone();
         let focus_restore_target_for_trigger = focus_restore_target.clone();
         let test_id_prefix_for_trigger = test_id_prefix.clone();
         let test_id_prefix_for_content = test_id_prefix.clone();
+        let control_id_for_register = control_id.clone();
+        let control_registry_for_register = control_registry.clone();
+        let labelled_by_element_for_trigger = labelled_by_element;
+        let described_by_element_for_trigger = described_by_element;
+        let has_a11y_label_for_trigger = a11y_label.is_some();
 
         let trigger = control_chrome_pressable_with_id_props(cx, move |cx, st, trigger_id| {
             *focus_restore_target_for_trigger
                 .lock()
                 .unwrap_or_else(|e| e.into_inner()) = Some(trigger_id);
+
+            if let (Some(control_id), Some(control_registry)) = (
+                control_id_for_register.clone(),
+                control_registry_for_register.clone(),
+            ) {
+                let entry = ControlEntry {
+                    element: trigger_id,
+                    enabled: !disabled,
+                    action: ControlAction::ToggleBool(open_for_trigger.clone()),
+                };
+                let _ = cx.app.models_mut().update(&control_registry, |reg| {
+                    reg.register_control(cx.window, cx.frame_id, control_id, entry);
+                });
+            }
 
             if has_entries && !disabled {
                 cx.pressable_toggle_bool(&open_for_trigger);
@@ -443,6 +517,12 @@ pub fn native_select<H: UiHost>(
                     label: a11y_label_for_trigger.clone(),
                     test_id: trigger_test_id_for_trigger.clone(),
                     expanded: Some(is_open),
+                    labelled_by_element: if has_a11y_label_for_trigger {
+                        None
+                    } else {
+                        labelled_by_element_for_trigger.map(|id| id.0)
+                    },
+                    described_by_element: described_by_element_for_trigger.map(|id| id.0),
                     ..Default::default()
                 },
                 ..Default::default()

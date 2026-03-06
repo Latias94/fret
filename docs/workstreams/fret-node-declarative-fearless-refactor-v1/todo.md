@@ -1,130 +1,153 @@
-# `fret-node` Declarative-First Fearless Refactor (v1) — TODO
+# `fret-node` Fearless Refactor (v1) - TODO
 
-Keep this list concrete. Prefer tasks that can land independently with a single gate.
+This tracker is intentionally biased toward small, reviewable slices. Keep items concrete enough to
+land in code review; move design discussion back to `README.md` if a TODO turns into prose.
 
-## Cross-cutting: contract gap log (must stay current)
+## Cross-cutting guardrails
 
-- [ ] Maintain a short “contract gap log” section in this file:
-  - what is missing,
-  - which milestone is blocked,
-  - can it be solved in ecosystem (preferred) or does it require a runtime ADR.
+- [x] Keep `compat-retained-canvas` out of default features.
+- [x] Keep the compatibility retained path feature-gated and explicitly named.
+- [x] Keep the default lightweight declarative demo path (`node_graph_demo`).
+- [ ] Keep the workstream docs aligned with the actual public recommendation after each milestone.
+- [ ] Update ADR alignment or ADR text when a hard contract changes rather than hiding the change in
+      implementation-only diffs.
 
-## Cross-cutting: evidence discipline
+## Cross-cutting red lines
 
-- [ ] For every milestone task that changes behavior/perf, add:
-  - [ ] 1–3 evidence anchors (file + function/module name),
-  - [ ] 1 regression artifact (test and/or diag script and/or perf counter gate).
+- [ ] Do not add new long-term public APIs that require retained widget types.
+- [ ] Do not bless direct `Graph` mutation as the editor-grade commit path for declarative surfaces.
+- [ ] Do not expand `NodeGraphViewState` with more policy or tuning fields.
+- [ ] Do not solve recipe/policy gaps by smuggling new defaults into mechanism code.
 
-## M0 — Baseline + gates
+## M0 - Decision gates and inventory
 
-- [x] Identify the smallest runnable node-graph demo target (native-first).
-- [x] Add one scripted regression artifact:
-  - [x] `fretboard diag` script for pan/zoom + pointer capture cancellation, or
-  - [ ] integration test for input mapping invariants.
-- [ ] Document current retained-only hot spots and why they exist (perf vs missing contracts).
+- [x] Reframe the workstream docs around architecture closure rather than a paint-only lab log.
+- [x] Preserve the historical folder path to avoid breaking references.
+- [ ] Add one short "current hazards" section with evidence anchors for:
+  - direct graph mutation in the declarative path,
+  - overgrown `NodeGraphViewState`,
+  - missing controller facade.
+- [ ] Add one short reviewer checklist to the README so a reviewer can verify the intended posture
+      in under five minutes.
 
-Suggested starting artifacts (already present in this worktree):
+## M1 - Public posture and API closure
 
-- Gate (Rust): `ecosystem/fret-node/src/ui/canvas/widget/tests/escape_cancel_releases_pointer_capture_conformance.rs`
-- Repro (diag script): `tools/diag-scripts/node-graph/node-graph-pan-middle-escape-cancel.json` (asserts `panning true` → `panning false` via viewport semantics `value`)
+- [ ] State explicitly in docs which path is recommended **today** for shipping editor-grade usage.
+- [ ] State explicitly in docs which path is the **target** posture after this refactor.
+- [ ] State explicitly in docs when `compat-retained-canvas` is acceptable.
+- [ ] Document that direct retained `NodeGraphCanvas` authoring is internal-only except for tests,
+      diagnostics, or temporary compatibility harnesses.
+- [ ] Audit examples and internal guides for wording that still suggests retained authoring is the
+      normal downstream path.
+- [ ] Decide whether to introduce a future canonical wrapper name such as `node_graph_surface(...)`
+      over the existing paint-only / compat-retained milestones.
 
-Suggested run commands (Windows-friendly):
+## M2 - State boundary split
 
-- Run the demo (auto-enables the feature gate):
-  - `cargo run -p fretboard -- dev native --bin node_graph_demo`
-- Run the repro script and capture a diagnostics bundle:
-  - `cargo run -p fretboard -- diag run tools/diag-scripts/node-graph/node-graph-pan-middle-escape-cancel.json --dir target/fret-diag-node-graph --launch -- cargo run -p fret-demo --bin node_graph_demo --features node-graph-demos`
+- [ ] Shrink `NodeGraphViewState` to true view state only:
+  - pan
+  - zoom
+  - selected nodes/edges/groups
+  - draw order
+- [ ] Introduce a separate interaction config type for:
+  - selection/connect/drag toggles
+  - connection mode
+  - key semantics and activation policy
+  - interaction defaults that are not pure view state
+- [ ] Introduce a separate runtime tuning type for:
+  - spatial index tuning
+  - cache prune tuning
+  - expensive runtime knobs
+- [ ] Decide where these new types live and who owns persistence for them.
+- [ ] Design the migration/compat strategy for existing serialized `NodeGraphViewState` payloads.
+- [ ] Update store code and tests so the new boundary is explicit in subscriptions and controlled
+      synchronization.
+- [ ] Add focused tests for serialization migration and store behavior after the split.
 
-## M1 — Declarative surface skeleton
+## M3 - Controller / instance facade
 
-- [x] Define the declarative “surface” API (public) that does not expose retained types.
-- [x] Provide a declarative entrypoint that can host the current retained canvas internally.
-- [x] Split demos so the default path is declarative-first:
-  - `apps/fret-examples/src/node_graph_demo.rs` (paint-only declarative)
-  - `apps/fret-examples/src/node_graph_legacy_demo.rs` (legacy retained bridge, feature-gated)
-- [x] Add a paint-only declarative skeleton surface (hosted caches, revisioned keys).
-- [x] Implement `Canvas` paint pass for:
-  - [x] grid/background
-  - [x] edges (initial)
-  - [x] node chrome (initial)
-- [x] Introduce externalized render-data caches:
-  - [x] stable key strategy (node/edge ids + view/style keys)
-  - [x] cache invalidation by revision + viewport + scale factor (pan is paint-only)
-- [x] Reduce debug grid cache churn under pan:
-  - snap grid ops extents to grid indices (no per-pixel rebuild)
-  - key grid cache by snapped indices + theme-derived colors
-- [ ] Investigate “wire looks truncated / partially missing” reports in paint-only:
-  - [ ] confirm whether it is viewport culling (`cull_margin_screen_px`) vs edge bbox math vs raster cache,
-  - [x] add a regression artifact (render snapshot gate preferred; semantics proxy acceptable).
-    - [x] semantics proxy gate: `tools/diag-scripts/node-graph/node-graph-paint-only-edges-paint-stats-ok.json` (asserts `edges_paint_ok:true;` on `test_id=node_graph.canvas`)
-  - [x] add repro screenshot script:
-    - [x] `tools/diag-scripts/node-graph/node-graph-paint-only-wires-screenshot.json` (requires `FRET_DIAG_GPU_SCREENSHOTS=1`)
-- [ ] Add cache observability counters (prepares/hits/evictions) for tuning.
-- [ ] Add one “steady-state” gate:
-  - [x] fixed viewport + idle frames do not rebuild heavy render data (paint-only baselines):
-    - grid: `tools/diag-scripts/node-graph/node-graph-paint-only-steady-grid-cache.json`
-    - nodes: `tools/diag-scripts/node-graph/node-graph-paint-only-steady-nodes-cache.json`
-    - edges: `tools/diag-scripts/node-graph/node-graph-paint-only-steady-edges-cache.json`
-  - [x] panning does not rebuild node/edge geometry (paint-only baseline):
-    - `tools/diag-scripts/node-graph/node-graph-paint-only-pan-does-not-rebuild-geometry.json`
-  - [x] keyboard zoom rebuilds geometry exactly once (paint-only baseline):
-    - `tools/diag-scripts/node-graph/node-graph-paint-only-keyboard-zoom-rebuilds-geometry.json`
-  - [x] diagnostics graph bump rebuilds geometry exactly once (paint-only baseline):
-    - `tools/diag-scripts/node-graph/node-graph-paint-only-diag-graph-bump-rebuilds-geometry.json`
-- [x] hover + selection do not rebuild geometry caches (paint-only baseline):
-    - `tools/diag-scripts/node-graph/node-graph-paint-only-hover-and-select-do-not-rebuild-geometry.json`
-- [x] Wire `NodeGraphGeometryOverrides` into derived geometry + spatial index cache keys (revisioned).
-- [x] Wire `NodeGraphPaintOverrides` into paint-only rendering + add a diag gate (revision bump does not rebuild geometry):
-  - `tools/diag-scripts/node-graph/node-graph-paint-only-paint-overrides-revision-does-not-rebuild-geometry.json` (Ctrl+6, requires `FRET_DIAG=1`)
-- [x] Add a screenshot repro for non-solid edge paint overrides:
-  - `tools/diag-scripts/node-graph/node-graph-paint-only-paint-overrides-screenshot.json` (Ctrl+6, requires `FRET_DIAG=1`, `FRET_DIAG_GPU_SCREENSHOTS=1`)
+- [ ] Introduce a thin controller or instance facade over store/lookups/view helpers.
+- [ ] Make the facade responsible for the ergonomic app-facing surface for:
+  - viewport manipulation
+  - fit-view / set-center
+  - controlled graph replacement / synchronization
+  - common graph queries
+  - canonical graph update entry points
+- [ ] Decide whether `view_queue` stays as the transport for imperative viewport requests or becomes
+      an internal detail of the controller.
+- [ ] Decide whether `edit_queue` stays public, becomes controller-owned, or is limited to internal
+      composition seams.
+- [ ] Add a clear mapping from XyFlow-style expectations to the controller API:
+  - viewport helpers
+  - get node/handle connections
+  - update node/edge style helpers where appropriate
 
-## M2 — Interaction + portals
+## M3 - Transaction-safe declarative commits
 
-- [x] Add a paint-only marquee selection baseline + gate:
-  - `tools/diag-scripts/node-graph/node-graph-paint-only-marquee-select-does-not-rebuild-geometry.json`
-- [x] Add a paint-only node dragging baseline + gate:
-  - `tools/diag-scripts/node-graph/node-graph-paint-only-node-drag-preview-and-commit.json`
-- [x] Fix “drag not following” coupling gap under paint caching:
-  - Root cause: canvas node could replay cached ops while portal/layout updated.
-  - Evidence anchor: `ecosystem/fret-node/src/ui/declarative/paint_only.rs` (`CanvasPainter::observe_model_id`)
-  - Repro artifact (screenshots): `tools/diag-scripts/node-graph/node-graph-paint-only-node-drag-preview-screenshot.json`
-- [x] Add a paint-only Escape cancel baseline + gate:
-  - `tools/diag-scripts/node-graph/node-graph-paint-only-node-drag-escape-cancel-does-not-commit.json`
-- [x] Add a paint-only PointerCancel baseline + gate:
-  - `tools/diag-scripts/node-graph/node-graph-paint-only-node-drag-pointer-cancel-does-not-commit.json`
-- [x] Host a minimal portal layer for visible nodes (paint-only):
-  - `ecosystem/fret-node/src/ui/declarative/paint_only.rs` (minimal node portal subtree, hit-test gated)
-- [x] Harvest portal subtree bounds into a local store (paint-only):
-  - `ecosystem/fret-node/src/ui/declarative/paint_only.rs` (`PortalBoundsStore` + `LayoutQueryRegion`)
-- [x] Add a gate that consumes portal bounds to update view (paint-only):
-  - `tools/diag-scripts/node-graph/node-graph-paint-only-fit-view-to-portals-updates-view.json` (Ctrl+9, requires `FRET_DIAG=1`)
-- [x] Add a gate for a declarative hover tooltip overlay (paint-only):
-  - `tools/diag-scripts/node-graph/node-graph-paint-only-hover-shows-portal-tooltip.json` (asserts `source=portal_bounds_store;`, requires `FRET_DIAG=1`)
-- [x] Add a hover anchor store independent of portal caps (paint-only):
-  - `ecosystem/fret-node/src/ui/declarative/paint_only.rs` (`HoverAnchorStore`)
-- [x] Add a gate that forces tooltip fallback to HoverAnchorStore (paint-only):
-  - `tools/diag-scripts/node-graph/node-graph-paint-only-hover-tooltip-falls-back-to-hover-anchor.json` (asserts `source=hover_anchor_store;`, requires `FRET_DIAG=1`)
-- [ ] Migrate selection + marquee to declarative input wiring + model reducers (full policy parity).
-- [ ] Port node “portal” host to declarative elements for the visible subset.
-- [ ] Move overlays (menus/rename/toolbars) to ecosystem overlay policy surfaces.
-- [ ] Add one cancellation gate:
-  - [x] PointerCancel during drag clears pressed/drag state and releases capture.
+- [ ] Replace direct committed graph mutation in the declarative interaction path with
+      transaction-safe controller/store entry points.
+- [ ] Keep ephemeral drag/hover session state local where that improves ergonomics, but route final
+      commits through transactions.
+- [ ] Add undo/redo coverage for the declarative path once commits stop mutating `Graph` directly.
+- [ ] Add at least one gate proving that a declarative drag or marquee commit produces a
+      transaction-safe update path.
+- [ ] Define the policy for full replace vs diff-based replace in controlled mode.
+- [ ] Consider adding `replace_graph_with_diff` or equivalent if full reset semantics are not enough
+      for editor-grade controlled integrations.
 
-## M3 — Defaults and compatibility
+## M3 - Callback surface split
 
-- [x] Remove `unstable-retained-bridge` from `fret-node` default features.
-- [x] Keep retained implementation behind an explicit `compat-retained-canvas` feature.
-- [ ] Add a short “Ecosystem authoring guide” section describing:
-  - [x] when to use declarative canvas composition,
-  - [x] when a compatibility path is justified.
+- [ ] Split or layer callback surfaces so reviewers can clearly distinguish:
+  - headless/store commit callbacks,
+  - view-state callbacks,
+  - UI gesture lifecycle callbacks.
+- [ ] Keep compatibility adapters where useful instead of forcing a flag day.
+- [ ] Add one small note explaining which callback layer should be used by apps vs internal UI glue.
 
-## Contract gap log (living)
+## M4 - Declarative interaction closure
 
-- Escape cancel cannot release pointer capture from declarative key hooks today:
-  - Symptom: a declarative surface can clear its drag state on Escape, but cannot call
-    `release_pointer_capture()` without a pointer hook.
-  - Impact: full parity for “Escape cancels pan drag immediately” needs either:
-    - a mechanism-level contract to release capture from key hooks, or
-    - an ecosystem-level re-framing of pan as an internal drag kind that the runtime cancels on Escape.
-  - Proposed ADR: `docs/adr/0307-non-pointer-hooks-can-cancel-pointer-capture-v1.md`
+- [ ] Migrate selection/marquee state machines toward declarative reducers with explicit commit and
+      cancel semantics.
+- [ ] Keep pointer-capture and cancel behavior as a first-class regression target while doing this.
+- [ ] Decide which interaction pieces remain local surface state vs store-backed editor state.
+- [ ] Ensure new declarative interaction work does not regress cache discipline.
+- [ ] Add at least one parity gate meaningful to real editor usage, not just synthetic paint-only
+      counters.
+
+## M4 - Portal and overlay closure
+
+- [ ] Move from portal/bounds experimentation toward a declared editor-grade portal hosting path for
+      the visible subset.
+- [ ] Clarify how node content subtrees publish measured geometry into derived stores.
+- [ ] Clarify how portal-hosted controls emit edits without bypassing the transaction architecture.
+- [ ] Move overlay/menu/toolbar policy to the right ecosystem surfaces where that boundary is
+      currently blurry.
+- [ ] Add at least one gate that exercises portal + overlay anchoring under motion.
+
+## M5 - Compatibility retained convergence
+
+- [ ] Write explicit exit criteria for `compat-retained-canvas`.
+- [ ] Decide which retained-only behaviors still block deprecation.
+- [ ] Keep the legacy demo as a compatibility harness, not the default teaching surface.
+- [ ] Prevent new retained-only surface area from growing without a documented justification.
+- [ ] Add a comparison checklist for declarative vs compat-retained behavior on the flows that matter
+      most to editor-grade usage.
+
+## Existing evidence and gates to keep alive
+
+- [x] Paint-only cache and invalidation diagnostics under `tools/diag-scripts/node-graph/`.
+- [x] Paint-only portal bounds and hover-anchor diagnostics.
+- [x] Retained editor conformance tests in `ecosystem/fret-node/src/ui/canvas/widget/tests/`.
+- [x] Store/runtime tests in `ecosystem/fret-node/src/runtime/tests.rs`.
+- [ ] Add a compact gate matrix to the README once the first transaction-safe declarative milestone
+      lands.
+
+## Open questions that must not get lost
+
+- [ ] Exact naming for the split state types.
+- [ ] Exact naming for the controller/instance facade.
+- [ ] Whether `edit_queue` and `view_queue` remain public long-term or collapse behind the
+      controller surface.
+- [ ] Whether controlled sync should expose diff-first helpers by default.
+- [ ] Which retained-only behaviors still need a deliberate temporary home while declarative parity
+      is being built.

@@ -26,7 +26,7 @@
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-ai-package-info-demo-badge-minor" }
+        "target": { "kind": "test_id", "id": "ui-ai-package-info-demo-badge-major" }
       },
       "timeout_frames": 240
     },
@@ -34,11 +34,10 @@
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-ai-package-info-demo-version-minor" }
+        "target": { "kind": "test_id", "id": "ui-ai-package-info-demo-version-major" }
       },
       "timeout_frames": 240
     },
     { "type": "capture_bundle", "label": "ui-gallery-ai-package-info-demo-basics" }
   ]
 }
-

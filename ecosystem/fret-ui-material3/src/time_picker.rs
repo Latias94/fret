@@ -768,6 +768,10 @@ fn time_picker_contents<H: UiHost>(
             let mut t = TextProps::new(Arc::<str>::from("Select time"));
             t.style = Some(style);
             t.color = Some(color);
+            t.layout.size.width = Length::Fill;
+            t.layout.size.min_width = Some(Length::Px(Px(0.0)));
+            t.layout.flex.grow = 1.0;
+            t.layout.flex.basis = Length::Px(Px(0.0));
             t.wrap = TextWrap::None;
             t.overflow = TextOverflow::Ellipsis;
             cx.text_props(t)
@@ -2738,4 +2742,75 @@ fn absolute_fill_layout() -> LayoutStyle {
         left: Some(Px(0.0)).into(),
     };
     layout
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use fret_app::App;
+    use fret_core::{Point, Rect, Size};
+    use fret_ui::element::{ElementKind, Length, TextProps};
+
+    fn bounds() -> Rect {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(560.0)),
+        )
+    }
+
+    fn find_text_by_content<'a>(el: &'a AnyElement, text: &str) -> Option<&'a TextProps> {
+        match &el.kind {
+            ElementKind::Text(props) if props.text.as_ref() == text => Some(props),
+            _ => el
+                .children
+                .iter()
+                .find_map(|child| find_text_by_content(child, text)),
+        }
+    }
+
+    #[test]
+    fn time_picker_titles_can_truncate_beside_mode_toggle() {
+        let window = fret_core::AppWindowId::default();
+        let mut app = App::new();
+        let selected_time = Time::from_hms(10, 15, 0).expect("time");
+        let time_model = app.models_mut().insert(selected_time);
+        let selection_model = app.models_mut().insert(TimePickerSelection::Hour);
+        let display_mode_model = app.models_mut().insert(TimePickerDisplayMode::Dial);
+        let dial_dragging_model = app.models_mut().insert(false);
+        let time_input_edit = app.models_mut().insert(TimeInputEditState::default());
+        let input_hour = app.models_mut().insert(String::from("10"));
+        let input_minute = app.models_mut().insert(String::from("15"));
+
+        let el = fret_ui::elements::with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "m3-time-picker",
+            |cx| {
+                time_picker_contents(
+                    cx,
+                    selected_time,
+                    time_model.clone(),
+                    selection_model.clone(),
+                    TimePickerSelection::Hour,
+                    display_mode_model.clone(),
+                    TimePickerDisplayMode::Dial,
+                    dial_dragging_model.clone(),
+                    time_input_edit.clone(),
+                    input_hour.clone(),
+                    input_minute.clone(),
+                    false,
+                    None,
+                )
+            },
+        );
+
+        let title = find_text_by_content(&el, "Select time").expect("time picker title");
+        assert_eq!(title.wrap, TextWrap::None);
+        assert_eq!(title.overflow, TextOverflow::Ellipsis);
+        assert_eq!(title.layout.size.width, Length::Fill);
+        assert_eq!(title.layout.size.min_width, Some(Length::Px(Px(0.0))));
+        assert_eq!(title.layout.flex.grow, 1.0);
+        assert_eq!(title.layout.flex.basis, Length::Px(Px(0.0)));
+    }
 }

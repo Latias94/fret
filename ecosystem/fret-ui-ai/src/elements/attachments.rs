@@ -25,6 +25,16 @@ use fret_ui_shadcn::{Button, ButtonSize, ButtonVariant};
 pub type OnAttachmentActivate = Arc<dyn Fn(&mut dyn UiActionHost, ActionCx, Arc<str>) + 'static>;
 pub type OnAttachmentRemove = Arc<dyn Fn(&mut dyn UiActionHost, ActionCx, Arc<str>) + 'static>;
 
+#[derive(Debug, Default, Clone)]
+struct AttachmentProviderState {
+    parts: Option<AttachmentChildParts>,
+}
+
+fn use_attachment_parts<H: UiHost>(cx: &ElementContext<'_, H>) -> Option<AttachmentChildParts> {
+    cx.inherited_state::<AttachmentProviderState>()
+        .and_then(|st| st.parts.clone())
+}
+
 fn alpha(color: Color, a: f32) -> Color {
     Color {
         a: a.clamp(0.0, 1.0),
@@ -416,15 +426,22 @@ impl Attachment {
         self
     }
 
-    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+    pub fn into_element_with_children<H: UiHost + 'static>(
+        self,
+        cx: &mut ElementContext<'_, H>,
+        children: impl for<'a> Fn(&mut ElementContext<'a, H>, AttachmentChildParts) -> Vec<AnyElement>
+        + 'static,
+    ) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
+        let children: Arc<
+            dyn for<'a> Fn(&mut ElementContext<'a, H>, AttachmentChildParts) -> Vec<AnyElement>,
+        > = Arc::new(children);
 
         let data = self.data;
         let variant = self.variant;
 
         let label = attachment_label_for(&data);
         let hover_bg_inline = resolve_accent_hover(&theme);
-        // Upstream: `hover:bg-accent/50` for list rows.
         let hover_bg_list = alpha(theme.color_token("accent"), 0.5);
         let hover_fg_inline = theme.color_token("accent-foreground");
 
@@ -467,6 +484,7 @@ impl Attachment {
         hover.layout = decl_style::layout_style(&theme, item_layout);
 
         let el = cx.hover_region(hover, move |cx, hovered| {
+            let children = children.clone();
             let row = control_chrome_pressable_with_id_props(cx, move |cx, _st, _id| {
                 if let Some(on_activate) = on_activate.clone() {
                     cx.pressable_on_activate({
@@ -480,8 +498,6 @@ impl Attachment {
                 }
 
                 let mut pressable = PressableProps::default();
-                // Even without an activation handler, keep the row present so nested controls
-                // (e.g. the remove button) remain hittable.
                 pressable.enabled = true;
                 pressable.focusable = on_activate.is_some();
                 match variant {
@@ -503,8 +519,6 @@ impl Attachment {
                         SemanticsRole::Generic
                     }),
                     label: Some(label.clone()),
-                    // Stamp `test_id` on the hover region (outer wrapper) to avoid duplicate IDs
-                    // when the pressable also contributes semantics.
                     test_id: None,
                     ..Default::default()
                 };
@@ -524,70 +538,22 @@ impl Attachment {
                     decl_style::container_props(&theme, base_chrome.clone(), chrome_layout);
                 chrome.background = bg.or(chrome.background);
 
-                let preview = AttachmentPreview::new(data.clone())
-                    .variant(variant)
-                    .test_id_opt(preview_test_id.clone())
-                    .into_element(cx);
-                let info = AttachmentInfo::new(data.clone())
-                    .variant(variant)
-                    .show_media_type(show_media_type)
-                    .label_color_opt(
-                        (variant == AttachmentVariant::Inline && hovered)
-                            .then_some(hover_fg_inline),
-                    )
-                    .test_id_opt(info_test_id.clone())
-                    .into_element(cx);
-
-                let remove = AttachmentRemove::new(data.id().clone())
-                    .variant(variant)
-                    .visible(hovered)
-                    .test_id_opt(remove_test_id.clone())
-                    .on_remove_opt(on_remove.clone())
-                    .into_element(cx);
-
-                let content = match variant {
-                    AttachmentVariant::Grid => {
-                        let mut overlay = ContainerProps::default();
-                        overlay.layout = decl_style::layout_style(
-                            &theme,
-                            LayoutRefinement::default().relative().w_full().h_full(),
-                        );
-
-                        let abs_layout = decl_style::layout_style(
-                            &theme,
-                            LayoutRefinement::default()
-                                .absolute()
-                                .top_px(Px(8.0))
-                                .right_px(Px(8.0)),
-                        );
-                        let remove = cx.interactivity_gate_props(
-                            InteractivityGateProps {
-                                present: true,
-                                interactive: true,
-                                layout: abs_layout,
-                            },
-                            move |_cx| vec![remove],
-                        );
-                        let overlay = cx.container(overlay, move |_cx| vec![preview, remove]);
-                        vec![overlay]
-                    }
-                    AttachmentVariant::Inline => {
-                        let row = ui::h_row(move |_cx| vec![preview, info, remove])
-                            .layout(LayoutRefinement::default().min_w_0())
-                            .gap(Space::N2)
-                            .items(Items::Center)
-                            .into_element(cx);
-                        vec![row]
-                    }
-                    AttachmentVariant::List => {
-                        let row = ui::h_row(move |_cx| vec![preview, info, remove])
-                            .layout(LayoutRefinement::default().w_full().min_w_0())
-                            .gap(Space::N3)
-                            .items(Items::Center)
-                            .into_element(cx);
-                        vec![row]
-                    }
+                let parts = AttachmentChildParts {
+                    data: data.clone(),
+                    variant,
+                    hovered,
+                    show_media_type,
+                    label_color: (variant == AttachmentVariant::Inline && hovered)
+                        .then_some(hover_fg_inline),
+                    on_remove: on_remove.clone(),
+                    preview_test_id: preview_test_id.clone(),
+                    info_test_id: info_test_id.clone(),
+                    remove_test_id: remove_test_id.clone(),
                 };
+                cx.with_state(AttachmentProviderState::default, |st| {
+                    st.parts = Some(parts.clone());
+                });
+                let content = (children.as_ref())(cx, parts);
 
                 (pressable, chrome, move |_cx| content)
             });
@@ -605,12 +571,166 @@ impl Attachment {
 
         el
     }
+
+    pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        self.into_element_with_children(cx, move |cx, parts| {
+            let preview = parts.preview().into_element(cx);
+            let info = parts.info().into_element(cx);
+            let remove = parts.remove().into_element(cx);
+
+            match parts.variant() {
+                AttachmentVariant::Grid => {
+                    let mut overlay = ContainerProps::default();
+                    overlay.layout = decl_style::layout_style(
+                        &Theme::global(&*cx.app).clone(),
+                        LayoutRefinement::default().relative().w_full().h_full(),
+                    );
+
+                    let abs_layout = decl_style::layout_style(
+                        &Theme::global(&*cx.app).clone(),
+                        LayoutRefinement::default()
+                            .absolute()
+                            .top_px(Px(8.0))
+                            .right_px(Px(8.0)),
+                    );
+                    let remove = cx.interactivity_gate_props(
+                        InteractivityGateProps {
+                            present: true,
+                            interactive: true,
+                            layout: abs_layout,
+                        },
+                        move |_cx| vec![remove],
+                    );
+                    let overlay = cx.container(overlay, move |_cx| vec![preview, remove]);
+                    vec![overlay]
+                }
+                AttachmentVariant::Inline => {
+                    let theme = Theme::global(&*cx.app).clone();
+                    let mut affordance_props = ContainerProps::default();
+                    affordance_props.layout = decl_style::layout_style(
+                        &theme,
+                        LayoutRefinement::default()
+                            .relative()
+                            .w_px(MetricRef::Px(Px(20.0)))
+                            .h_px(MetricRef::Px(Px(20.0)))
+                            .min_w(MetricRef::Px(Px(20.0)))
+                            .min_h(MetricRef::Px(Px(20.0)))
+                            .flex_shrink_0(),
+                    );
+
+                    let remove = cx.interactivity_gate_props(
+                        InteractivityGateProps {
+                            present: true,
+                            interactive: parts.hovered(),
+                            layout: decl_style::layout_style(
+                                &theme,
+                                LayoutRefinement::default()
+                                    .absolute()
+                                    .top_px(Px(0.0))
+                                    .left_px(Px(0.0))
+                                    .w_px(MetricRef::Px(Px(20.0)))
+                                    .h_px(MetricRef::Px(Px(20.0))),
+                            ),
+                        },
+                        move |_cx| vec![remove],
+                    );
+
+                    let hovered = parts.hovered();
+                    let affordance = cx.container(affordance_props, move |cx| {
+                        vec![
+                            cx.opacity(if hovered { 0.0 } else { 1.0 }, move |_cx| vec![preview]),
+                            remove,
+                        ]
+                    });
+
+                    let row = ui::h_row(move |_cx| vec![affordance, info])
+                        .layout(LayoutRefinement::default().min_w_0())
+                        .gap(Space::N2)
+                        .items(Items::Center)
+                        .into_element(cx);
+                    vec![row]
+                }
+                AttachmentVariant::List => {
+                    let row = ui::h_row(move |_cx| vec![preview, info, remove])
+                        .layout(LayoutRefinement::default().w_full().min_w_0())
+                        .gap(Space::N3)
+                        .items(Items::Center)
+                        .into_element(cx);
+                    vec![row]
+                }
+            }
+        })
+    }
+}
+
+#[derive(Clone)]
+pub struct AttachmentChildParts {
+    data: AttachmentData,
+    variant: AttachmentVariant,
+    hovered: bool,
+    show_media_type: bool,
+    label_color: Option<Color>,
+    on_remove: Option<OnAttachmentRemove>,
+    preview_test_id: Option<Arc<str>>,
+    info_test_id: Option<Arc<str>>,
+    remove_test_id: Option<Arc<str>>,
+}
+
+impl std::fmt::Debug for AttachmentChildParts {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("AttachmentChildParts")
+            .field("data_id", &self.data.id().as_ref())
+            .field("variant", &self.variant)
+            .field("hovered", &self.hovered)
+            .field("show_media_type", &self.show_media_type)
+            .finish()
+    }
+}
+
+impl AttachmentChildParts {
+    pub fn data(&self) -> &AttachmentData {
+        &self.data
+    }
+
+    pub fn variant(&self) -> AttachmentVariant {
+        self.variant
+    }
+
+    pub fn hovered(&self) -> bool {
+        self.hovered
+    }
+
+    pub fn label(&self) -> Arc<str> {
+        attachment_label_for(&self.data)
+    }
+
+    pub fn preview(&self) -> AttachmentPreview {
+        AttachmentPreview::new(self.data.clone())
+            .variant(self.variant)
+            .test_id_opt(self.preview_test_id.clone())
+    }
+
+    pub fn info(&self) -> AttachmentInfo {
+        AttachmentInfo::new(self.data.clone())
+            .variant(self.variant)
+            .show_media_type(self.show_media_type)
+            .label_color_opt(self.label_color)
+            .test_id_opt(self.info_test_id.clone())
+    }
+
+    pub fn remove(&self) -> AttachmentRemove {
+        AttachmentRemove::new(self.data.id().clone())
+            .variant(self.variant)
+            .visible(self.hovered)
+            .test_id_opt(self.remove_test_id.clone())
+            .on_remove_opt(self.on_remove.clone())
+    }
 }
 
 #[derive(Debug, Clone)]
 pub struct AttachmentPreview {
-    data: AttachmentData,
-    variant: AttachmentVariant,
+    data: Option<AttachmentData>,
+    variant: Option<AttachmentVariant>,
     test_id: Option<Arc<str>>,
     layout: LayoutRefinement,
 }
@@ -618,15 +738,24 @@ pub struct AttachmentPreview {
 impl AttachmentPreview {
     pub fn new(data: AttachmentData) -> Self {
         Self {
-            data,
-            variant: AttachmentVariant::Grid,
+            data: Some(data),
+            variant: Some(AttachmentVariant::Grid),
+            test_id: None,
+            layout: LayoutRefinement::default(),
+        }
+    }
+
+    pub fn from_context() -> Self {
+        Self {
+            data: None,
+            variant: None,
             test_id: None,
             layout: LayoutRefinement::default(),
         }
     }
 
     pub fn variant(mut self, variant: AttachmentVariant) -> Self {
-        self.variant = variant;
+        self.variant = Some(variant);
         self
     }
 
@@ -646,26 +775,43 @@ impl AttachmentPreview {
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let Some(parts) = use_attachment_parts(cx).or_else(|| {
+            self.data.clone().map(|data| AttachmentChildParts {
+                data,
+                variant: self.variant.unwrap_or(AttachmentVariant::Grid),
+                hovered: false,
+                show_media_type: false,
+                label_color: None,
+                on_remove: None,
+                preview_test_id: None,
+                info_test_id: None,
+                remove_test_id: None,
+            })
+        }) else {
+            return cx.text("");
+        };
+
         let theme = Theme::global(&*cx.app).clone();
 
         let muted = resolve_muted(&theme);
         let fg = resolve_muted_fg(&theme);
 
-        let category = media_category_for(&self.data);
+        let category = media_category_for(parts.data());
+        let variant = self.variant.unwrap_or(parts.variant());
 
-        let size = match self.variant {
+        let size = match variant {
             AttachmentVariant::Inline => Px(20.0),
             AttachmentVariant::Grid => Px(96.0),
             AttachmentVariant::List => Px(48.0),
         };
 
-        let corner = match self.variant {
+        let corner = match variant {
             AttachmentVariant::Inline => MetricRef::radius(Radius::Sm).resolve(&theme),
             AttachmentVariant::Grid => Px(0.0),
             AttachmentVariant::List => MetricRef::radius(Radius::Md).resolve(&theme),
         };
 
-        let bg = match self.variant {
+        let bg = match variant {
             AttachmentVariant::Grid | AttachmentVariant::List => Some(muted),
             AttachmentVariant::Inline => Some(theme.color_token("background")),
         };
@@ -683,7 +829,7 @@ impl AttachmentPreview {
         wrapper.corner_radii = Corners::all(corner);
         wrapper.snap_to_device_pixels = true;
 
-        let content = match &self.data {
+        let content = match parts.data() {
             AttachmentData::File(file)
                 if category == AttachmentMediaCategory::Image && file.preview_image.is_some() =>
             {
@@ -702,7 +848,7 @@ impl AttachmentPreview {
             _ => vec![decl_icon::icon_with(
                 cx,
                 media_category_icon(category),
-                Some(if self.variant == AttachmentVariant::Inline {
+                Some(if variant == AttachmentVariant::Inline {
                     Px(12.0)
                 } else {
                     Px(16.0)
@@ -725,8 +871,8 @@ impl AttachmentPreview {
 
 #[derive(Debug, Clone)]
 pub struct AttachmentInfo {
-    data: AttachmentData,
-    variant: AttachmentVariant,
+    data: Option<AttachmentData>,
+    variant: Option<AttachmentVariant>,
     show_media_type: bool,
     label_color: Option<Color>,
     test_id: Option<Arc<str>>,
@@ -736,8 +882,19 @@ pub struct AttachmentInfo {
 impl AttachmentInfo {
     pub fn new(data: AttachmentData) -> Self {
         Self {
-            data,
-            variant: AttachmentVariant::Grid,
+            data: Some(data),
+            variant: Some(AttachmentVariant::Grid),
+            show_media_type: false,
+            label_color: None,
+            test_id: None,
+            layout: LayoutRefinement::default(),
+        }
+    }
+
+    pub fn from_context() -> Self {
+        Self {
+            data: None,
+            variant: None,
             show_media_type: false,
             label_color: None,
             test_id: None,
@@ -746,7 +903,7 @@ impl AttachmentInfo {
     }
 
     pub fn variant(mut self, variant: AttachmentVariant) -> Self {
-        self.variant = variant;
+        self.variant = Some(variant);
         self
     }
 
@@ -781,7 +938,24 @@ impl AttachmentInfo {
     }
 
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        if self.variant == AttachmentVariant::Grid {
+        let Some(parts) = use_attachment_parts(cx).or_else(|| {
+            self.data.clone().map(|data| AttachmentChildParts {
+                data,
+                variant: self.variant.unwrap_or(AttachmentVariant::Grid),
+                hovered: false,
+                show_media_type: self.show_media_type,
+                label_color: self.label_color,
+                on_remove: None,
+                preview_test_id: None,
+                info_test_id: None,
+                remove_test_id: None,
+            })
+        }) else {
+            return cx.text("");
+        };
+
+        let variant = self.variant.unwrap_or(parts.variant());
+        if variant == AttachmentVariant::Grid {
             return cx.text("");
         }
 
@@ -791,7 +965,7 @@ impl AttachmentInfo {
             .label_color
             .unwrap_or_else(|| theme.color_token("foreground"));
 
-        let label = attachment_label_for(&self.data);
+        let label = attachment_label_for(parts.data());
         let label_el = cx.text_props(TextProps {
             layout: decl_style::layout_style(&theme, LayoutRefinement::default().min_w_0()),
             text: label,
@@ -809,7 +983,7 @@ impl AttachmentInfo {
         let media_type_row = self
             .show_media_type
             .then_some(())
-            .and_then(|_| self.data.media_type().cloned())
+            .and_then(|_| parts.data().media_type().cloned())
             .map(|media_type| {
                 cx.text_props(TextProps {
                     layout: decl_style::layout_style(&theme, LayoutRefinement::default().min_w_0()),
@@ -841,11 +1015,13 @@ impl AttachmentInfo {
         );
 
         let mut el = cx.container(props, move |cx| {
-            vec![ui::v_stack(move |_cx| rows)
-                .layout(LayoutRefinement::default().min_w_0())
-                .gap(Space::N0)
-                .items(Items::Start)
-                .into_element(cx)]
+            vec![
+                ui::v_stack(move |_cx| rows)
+                    .layout(LayoutRefinement::default().min_w_0())
+                    .gap(Space::N0)
+                    .items(Items::Start)
+                    .into_element(cx),
+            ]
         });
 
         if let Some(test_id) = self.test_id {
@@ -861,7 +1037,7 @@ impl AttachmentInfo {
 
 #[derive(Clone)]
 pub struct AttachmentRemove {
-    id: Arc<str>,
+    id: Option<Arc<str>>,
     label: Arc<str>,
     on_remove: Option<OnAttachmentRemove>,
     visible: bool,
@@ -872,7 +1048,7 @@ pub struct AttachmentRemove {
 impl std::fmt::Debug for AttachmentRemove {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("AttachmentRemove")
-            .field("id", &self.id.as_ref())
+            .field("id", &self.id.as_deref())
             .field("has_on_remove", &self.on_remove.is_some())
             .field("visible", &self.visible)
             .field("test_id", &self.test_id.as_deref())
@@ -884,7 +1060,18 @@ impl std::fmt::Debug for AttachmentRemove {
 impl AttachmentRemove {
     pub fn new(id: impl Into<Arc<str>>) -> Self {
         Self {
-            id: id.into(),
+            id: Some(id.into()),
+            label: Arc::<str>::from("Remove"),
+            on_remove: None,
+            visible: true,
+            test_id: None,
+            variant: AttachmentVariant::Grid,
+        }
+    }
+
+    pub fn from_context() -> Self {
+        Self {
+            id: None,
             label: Arc::<str>::from("Remove"),
             on_remove: None,
             visible: true,
@@ -929,13 +1116,23 @@ impl AttachmentRemove {
     }
 
     pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let Some(on_remove) = self.on_remove else {
+        let parts = use_attachment_parts(cx);
+        let on_remove = self
+            .on_remove
+            .or_else(|| parts.as_ref().and_then(|p| p.on_remove.clone()));
+        let Some(on_remove) = on_remove else {
             return cx.text("");
         };
 
         let theme = Theme::global(&*cx.app).clone();
 
-        let id = self.id.clone();
+        let id = self
+            .id
+            .clone()
+            .or_else(|| parts.as_ref().map(|p| p.data().id().clone()));
+        let Some(id) = id else {
+            return cx.text("");
+        };
         let label = self.label.clone();
         let mut btn = Button::new("")
             .a11y_label(label.clone())
@@ -986,8 +1183,9 @@ impl AttachmentRemove {
         }
 
         let btn = btn.into_element(cx);
-        let opacity = if self.visible { 1.0 } else { 0.0 };
-        let interactive = self.visible;
+        let visible = parts.as_ref().map(|p| p.hovered()).unwrap_or(self.visible);
+        let opacity = if visible { 1.0 } else { 0.0 };
+        let interactive = visible;
 
         cx.interactivity_gate(true, interactive, move |cx| {
             vec![cx.opacity(opacity, move |_cx| vec![btn])]

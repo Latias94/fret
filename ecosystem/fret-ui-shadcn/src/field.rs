@@ -4,7 +4,7 @@ use crate::LayoutDirection;
 use fret_core::{Edges, Px, SemanticsLive, SemanticsRole, TextAlign, TextOverflow, TextWrap};
 use fret_ui::element::{
     AnyElement, ColumnProps, ContainerProps, CrossAlign, ElementKind, LayoutQueryRegionProps,
-    LayoutStyle, MainAlign, PressableA11y, PressableProps, RowProps, SemanticsDecoration,
+    LayoutStyle, MainAlign, PointerRegionProps, RowProps, SemanticsDecoration, SemanticsProps,
 };
 use fret_ui::{ElementContext, Invalidation, Theme, ThemeSnapshot, UiHost};
 use fret_ui_kit::declarative::style as decl_style;
@@ -244,7 +244,7 @@ fn responsive_md_width_auto(mut element: AnyElement) -> AnyElement {
         ElementKind::TextInput(props) => {
             // When shadcn's `Field(orientation="responsive")` flips to a row layout, upstream
             // applies `w-auto` to direct children via container queries. For `<input>` / `<textarea>`
-            // this surfaces the HTML default `cols=20` intrinsic width (≈218px at `text-sm`).
+            // this surfaces the HTML default `cols=20` intrinsic width (~218px at `text-sm`).
             //
             // Fret's `TextInput` intrinsic sizing is placeholder/content driven, so we approximate
             // the browser behavior by explicitly setting a 20ch-like width derived from the input's
@@ -948,7 +948,27 @@ impl FieldLabel {
         let test_id = self.test_id.clone();
         let render_text = self.render_text;
 
-        let el = cx.pressable_with_id_props(move |cx, _st, id| {
+        let control_snapshot = cx
+            .app
+            .models()
+            .read(&control_registry, |reg| {
+                reg.control_for(cx.window, &for_control).cloned()
+            })
+            .ok()
+            .flatten();
+        let controls_element = control_snapshot.as_ref().map(|c| c.element.0);
+        let enabled = control_snapshot.as_ref().map(|c| c.enabled).unwrap_or(true);
+        let semantics_props = SemanticsProps {
+            role: SemanticsRole::Text,
+            label: Some(text.clone()),
+            test_id: test_id.clone(),
+            controls_element,
+            disabled: !enabled,
+            ..Default::default()
+        };
+
+        let el = cx.semantics(semantics_props, move |cx| {
+            let id = cx.root_id();
             let _ = cx.app.models_mut().update(&control_registry, |reg| {
                 reg.register_label(
                     cx.window,
@@ -958,11 +978,12 @@ impl FieldLabel {
                 );
             });
 
-            // Best-effort snapshot of the target control entry at render time.
-            //
-            // This is used as a fallback for label forwarding when the per-window registry is
-            // temporarily missing the control entry at action time (for example due to view-cache
-            // reuse or ordering in the declarative tree).
+            let mut interactive_layout = LayoutStyle::default();
+            interactive_layout.size.width = fret_ui::element::Length::Fill;
+            if !matches!(pressable_layout.size.height, fret_ui::element::Length::Auto) {
+                interactive_layout.size.height = fret_ui::element::Length::Fill;
+            }
+
             let control_snapshot = cx
                 .app
                 .models()
@@ -972,126 +993,115 @@ impl FieldLabel {
                 .ok()
                 .flatten();
 
-            let control_registry_on_pointer = control_registry.clone();
-            let for_control_on_pointer = for_control.clone();
-            let control_snapshot_on_pointer = control_snapshot.clone();
-            let label_element = id;
-            cx.pressable_add_on_pointer_down(Arc::new(move |host, acx, down| {
-                // Avoid label click-to-focus forwarding when the pointer down originated from a
-                // nested pressable (e.g. an inline button inside the label subtree).
-                if down
-                    .hit_pressable_target
-                    .is_some_and(|target| target != label_element)
-                {
-                    return fret_ui::action::PressablePointerDownResult::Continue;
-                }
+            vec![cx.container(
+                ContainerProps {
+                    layout: pressable_layout,
+                    ..Default::default()
+                },
+                move |cx| {
+                    vec![cx.pointer_region(
+                        PointerRegionProps {
+                            layout: interactive_layout,
+                            enabled: true,
+                            ..Default::default()
+                        },
+                        move |cx| {
+                            let control_registry_on_pointer = control_registry.clone();
+                            let for_control_on_pointer = for_control.clone();
+                            let control_snapshot_on_pointer = control_snapshot.clone();
+                            cx.pointer_region_add_on_pointer_down(Arc::new(
+                                move |host, acx, _down| {
+                                    let target = host
+                                        .models_mut()
+                                        .read(&control_registry_on_pointer, |reg| {
+                                            reg.control_for(acx.window, &for_control_on_pointer)
+                                                .map(|c| (c.enabled, c.element))
+                                        })
+                                        .ok()
+                                        .flatten()
+                                        .or_else(|| {
+                                            control_snapshot_on_pointer
+                                                .as_ref()
+                                                .map(|c| (c.enabled, c.element))
+                                        });
+                                    if let Some((true, element)) = target {
+                                        host.request_focus(element);
+                                        host.capture_pointer();
+                                    }
+                                    true
+                                },
+                            ));
 
-                let target = host
-                    .models_mut()
-                    .read(&control_registry_on_pointer, |reg| {
-                        reg.control_for(acx.window, &for_control_on_pointer)
-                            .map(|c| (c.enabled, c.element))
-                    })
-                    .ok()
-                    .flatten();
-                let target = target.or_else(|| {
-                    control_snapshot_on_pointer
-                        .as_ref()
-                        .map(|c| (c.enabled, c.element))
-                });
-                if let Some((true, element)) = target {
-                    host.request_focus(element);
-                }
-                fret_ui::action::PressablePointerDownResult::Continue
-            }));
+                            let control_registry_on_pointer_up = control_registry.clone();
+                            let for_control_on_pointer_up = for_control.clone();
+                            let control_snapshot_on_pointer_up = control_snapshot.clone();
+                            cx.pointer_region_add_on_pointer_up(Arc::new(move |host, acx, up| {
+                                host.release_pointer_capture();
+                                if !up.is_click {
+                                    return true;
+                                }
+                                let control = host
+                                    .models_mut()
+                                    .read(&control_registry_on_pointer_up, |reg| {
+                                        reg.control_for(acx.window, &for_control_on_pointer_up)
+                                            .cloned()
+                                    })
+                                    .ok()
+                                    .flatten();
+                                let Some(control) =
+                                    control.or_else(|| control_snapshot_on_pointer_up.clone())
+                                else {
+                                    return true;
+                                };
+                                if !control.enabled {
+                                    return true;
+                                }
 
-            let control_registry_on_activate = control_registry.clone();
-            let for_control_on_activate = for_control.clone();
-            let control_snapshot_on_activate = control_snapshot.clone();
-            cx.pressable_add_on_activate(Arc::new(move |host, acx, _reason| {
-                let control = host
-                    .models_mut()
-                    .read(&control_registry_on_activate, |reg| {
-                        reg.control_for(acx.window, &for_control_on_activate)
-                            .cloned()
-                    })
-                    .ok()
-                    .flatten();
-                let Some(control) = control.or_else(|| control_snapshot_on_activate.clone()) else {
-                    return;
-                };
-                if !control.enabled {
-                    return;
-                }
-                control.action.invoke(host);
-                host.request_redraw(acx.window);
-            }));
+                                host.request_focus(control.element);
+                                control.action.invoke(host);
+                                host.request_redraw(acx.window);
+                                true
+                            }));
 
-            let controls_element = control_snapshot.as_ref().map(|c| c.element).or_else(|| {
-                cx.app
-                    .models()
-                    .read(&control_registry, |reg| {
-                        reg.control_for(cx.window, &for_control).map(|c| c.element)
-                    })
-                    .ok()
-                    .flatten()
-            });
-
-            let mut a11y = PressableA11y {
-                role: Some(SemanticsRole::Text),
-                label: Some(text.clone()),
-                test_id: test_id.clone(),
-                ..Default::default()
-            };
-            if let Some(element) = controls_element {
-                a11y.controls_element = Some(element.0);
-            }
-
-            let props = PressableProps {
-                layout: pressable_layout,
-                enabled: true,
-                focusable: false,
-                a11y,
-                ..Default::default()
-            };
-
-            let children: Vec<AnyElement> = if let Some(children) = wrap_children {
-                let theme = Theme::global(&*cx.app);
-                let border = theme.color_token("border");
-                let wrapper = decl_style::container_props(
-                    theme,
-                    ChromeRefinement::default()
-                        .rounded_md()
-                        .border_1()
-                        .border_color(ColorRef::Color(border))
-                        .p_4(),
-                    LayoutRefinement::default(),
-                );
-                let inner = cx.container(wrapper, move |_cx| children);
-                vec![inner]
-            } else if render_text {
-                let align = match crate::use_direction(cx, None) {
-                    LayoutDirection::Rtl => TextAlign::End,
-                    LayoutDirection::Ltr => TextAlign::Start,
-                };
-                let mut builder = ui::label(text.clone());
-                if render_text_block {
-                    builder = builder.w_full().min_w_0();
-                }
-                let label = builder
-                    .text_size_px(px)
-                    .line_height_px(line_height)
-                    .font_medium()
-                    .text_color(fg.clone())
-                    .wrap(TextWrap::Word)
-                    .text_align(align)
-                    .into_element(cx);
-                vec![label]
-            } else {
-                Vec::new()
-            };
-
-            (props, children)
+                            if let Some(children) = wrap_children {
+                                let theme = Theme::global(&*cx.app);
+                                let border = theme.color_token("border");
+                                let wrapper = decl_style::container_props(
+                                    theme,
+                                    ChromeRefinement::default()
+                                        .rounded_md()
+                                        .border_1()
+                                        .border_color(ColorRef::Color(border))
+                                        .p_4(),
+                                    LayoutRefinement::default(),
+                                );
+                                let inner = cx.container(wrapper, move |_cx| children);
+                                vec![inner]
+                            } else if render_text {
+                                let align = match crate::use_direction(cx, None) {
+                                    LayoutDirection::Rtl => TextAlign::End,
+                                    LayoutDirection::Ltr => TextAlign::Start,
+                                };
+                                let mut builder = ui::label(text.clone());
+                                if render_text_block {
+                                    builder = builder.w_full().min_w_0();
+                                }
+                                let label = builder
+                                    .text_size_px(px)
+                                    .line_height_px(line_height)
+                                    .font_medium()
+                                    .text_color(fg.clone())
+                                    .wrap(TextWrap::Word)
+                                    .text_align(align)
+                                    .into_element(cx);
+                                vec![label]
+                            } else {
+                                Vec::new()
+                            }
+                        },
+                    )]
+                },
+            )]
         });
 
         if field_state.disabled {
@@ -1822,7 +1832,7 @@ mod tests {
         let gap = find_first_column_gap(&element).expect("field should contain a Column");
         assert!(
             (gap.0 - expected.0).abs() <= 0.5,
-            "expected Field gap≈{}px, got {}px",
+            "expected Field gap ~ {}px, got {}px",
             expected.0,
             gap.0
         );
@@ -1903,11 +1913,12 @@ mod tests {
         // Error takes precedence over description for `described-by`.
         assert_eq!(decoration.described_by_element, Some(err.id.0));
 
-        let ElementKind::Pressable(pressable) = &label.kind else {
-            panic!("expected FieldLabel(for_control) to be a Pressable");
+        let ElementKind::Semantics(semantics) = &label.kind else {
+            panic!("expected FieldLabel(for_control) to be a Semantics wrapper");
         };
+        assert_eq!(semantics.role, SemanticsRole::Text);
         assert!(
-            pressable.a11y.controls_element.is_some(),
+            semantics.controls_element.is_some(),
             "expected FieldLabel to set `controls_element` when a control is registered"
         );
 
@@ -2091,5 +2102,92 @@ mod tests {
         );
 
         assert_eq!(ui.focus(), Some(control_focus_target));
+    }
+
+    #[test]
+    fn field_label_click_invokes_registered_control_action() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let mut services = FakeServices;
+        let bounds = bounds();
+        let model: Model<bool> = app.models_mut().insert(false);
+        let control_id = ControlId::from("field.toggle.action");
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "shadcn-field-label-click-invokes-control-action",
+            |cx| {
+                vec![cx.column(fret_ui::element::ColumnProps::default(), |cx| {
+                    vec![
+                        FieldLabel::new("Enabled")
+                            .for_control(control_id.clone())
+                            .test_id("field.label.action")
+                            .into_element(cx),
+                        crate::Toggle::new(model.clone())
+                            .label("Enabled")
+                            .control_id(control_id.clone())
+                            .into_element(cx),
+                    ]
+                })]
+            },
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot_arc().expect("semantics snapshot");
+        let label_node = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("field.label.action"))
+            .map(|n| n.id)
+            .expect("expected label semantics node");
+        let label_bounds = ui
+            .debug_node_bounds(label_node)
+            .expect("expected label bounds");
+        let label_center = Point::new(
+            Px(label_bounds.origin.x.0 + label_bounds.size.width.0 * 0.5),
+            Px(label_bounds.origin.y.0 + label_bounds.size.height.0 * 0.5),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(2),
+                position: label_center,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(2),
+                position: label_center,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                is_click: true,
+                click_count: 1,
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+
+        assert!(
+            app.models().get_copied(&model).unwrap_or(false),
+            "expected FieldLabel click to invoke the registered control action"
+        );
     }
 }

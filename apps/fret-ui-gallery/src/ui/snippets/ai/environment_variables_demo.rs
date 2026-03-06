@@ -90,8 +90,7 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
 
             let content = ui_ai::EnvironmentVariablesContent::new(rows).into_element(cx);
             vec![header, content]
-        })
-        ;
+        });
 
     ui::v_flex(move |cx| {
         vec![

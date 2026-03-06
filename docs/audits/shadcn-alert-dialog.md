@@ -48,6 +48,10 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
 
 - Pass: Fret exposes `AlertDialog` as a recipe driven by a `Model<bool>` open state.
 - Pass: Trigger/content composition matches the shadcn mental model.
+- Pass: `AlertDialogAction` / `AlertDialogCancel` now provide `from_scope(...)` authoring helpers for
+  content-local composition while preserving the explicit `new(label, open)` constructors.
+- Pass: `AlertDialog::compose()` provides a recipe-level builder for part assembly without pushing
+  shadcn-specific composition concerns into the lower-level mechanism contract.
 
 ### Dismissal behavior (safety defaults)
 
@@ -80,6 +84,29 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
   (`web_vs_fret_alert_dialog_demo_overlay_center_matches`).
 - Radix Web overlay geometry gate: `cargo nextest run -p fret-ui-shadcn --test radix_web_overlay_geometry`
   (`radix_web_alert_dialog_open_geometry_matches_fret`).
+
+## Authoring note: `from_scope(...)`
+
+Fret now exposes `AlertDialogAction::from_scope(...)` and `AlertDialogCancel::from_scope(...)` as
+recipe-layer sugar.
+
+- Scope: only for parts whose semantic job is “close the current alert dialog”.
+- Layering: this does **not** change the underlying mechanism contract; it only reads the current
+  alert dialog content scope while rendering the recipe.
+- Escape hatch: `new(label, open)` remains the explicit constructor and should be preferred when
+  building the part outside the alert dialog content subtree.
+- Failure mode: `from_scope(...)` panics when rendered outside alert-dialog content so misuse is
+  caught early during development.
+
+## Authoring note: `compose()`
+
+`AlertDialog::compose()` is a recipe-layer bridge for authors who want a more composable part-based
+style than the raw closure root.
+
+- Scope: ergonomics only; it lowers into `AlertDialog::into_element_parts(...)`.
+- Layering: it does **not** change the underlying overlay/focus/dismiss mechanism.
+- Limitation: this is still not a full React-style nested children API; Fret stores already-built
+  elements and assembles them at the final call site.
 
 ## Follow-ups (recommended)
 

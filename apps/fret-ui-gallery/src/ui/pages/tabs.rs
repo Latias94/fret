@@ -17,7 +17,7 @@ pub(super) fn preview_tabs(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> 
         cx,
         [
             "Preview follows `tabs-demo.tsx` (new-york-v4) order: Demo, list-only, disabled, icons, line, vertical, vertical line.",
-            "Fret shadcn `Input` does not implement a password-masked input yet; password fields here are plain text (parity gap).",
+            "Password fields use `Input::password()` to mirror `type=\\\"password\\\"` in shadcn/ui examples.",
             "API reference: `ecosystem/fret-ui-shadcn/src/tabs.rs`.",
         ],
     );

@@ -653,8 +653,6 @@ mod tests {
 
     use fret_app::App;
     use fret_core::{AppWindowId, FontWeight, Point, Rect, Size};
-    use fret_ui::element::ForegroundScopeProps;
-
     fn blend_over(fg: Color, bg: Color) -> Color {
         let a = fg.a.clamp(0.0, 1.0);
         Color {
@@ -703,13 +701,17 @@ mod tests {
         }
     }
 
-    fn find_foreground_scope(el: &AnyElement) -> Option<ForegroundScopeProps> {
-        match &el.kind {
-            ElementKind::ForegroundScope(props) => return Some(*props),
-            _ => {}
+    fn find_inherited_foreground(el: &AnyElement) -> Option<Color> {
+        if let Some(fg) = el.inherited_foreground {
+            return Some(fg);
+        }
+        if let ElementKind::ForegroundScope(props) = &el.kind
+            && let Some(fg) = props.foreground
+        {
+            return Some(fg);
         }
         for child in &el.children {
-            if let Some(found) = find_foreground_scope(child) {
+            if let Some(found) = find_inherited_foreground(child) {
                 return Some(found);
             }
         }
@@ -734,10 +736,10 @@ mod tests {
             let mut icons = Vec::new();
             collect_colors(&el, &mut texts, &mut icons);
 
-            let scope = find_foreground_scope(&el).expect("expected a ForegroundScope wrapper");
+            let scope_fg = find_inherited_foreground(&el)
+                .expect("expected badge root to carry inherited foreground");
             assert_eq!(
-                scope.foreground,
-                Some(expected_fg),
+                scope_fg, expected_fg,
                 "expected badge currentColor scope to resolve to variant fg"
             );
 
@@ -749,7 +751,7 @@ mod tests {
             );
             assert!(
                 icons.len() >= 2 && icons.iter().all(|(_, inherit)| *inherit),
-                "expected badge icon(s) to inherit currentColor via ForegroundScope"
+                "expected badge icon(s) to inherit currentColor via inherited foreground"
             );
         });
     }

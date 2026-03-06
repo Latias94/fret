@@ -211,6 +211,15 @@ impl FileTree {
         self
     }
 
+    pub fn default_expanded_paths(
+        mut self,
+        paths: impl IntoIterator<Item = impl Into<Arc<str>>>,
+    ) -> Self {
+        let v: Vec<Arc<str>> = paths.into_iter().map(Into::into).collect();
+        self.default_expanded = Arc::from(v);
+        self
+    }
+
     pub fn selected_path(mut self, selected_path: Option<impl Into<Arc<str>>>) -> Self {
         self.selected_path = selected_path.map(Into::into);
         self
@@ -723,11 +732,13 @@ fn render_actions<H: UiHost + 'static>(
                 })
                 .collect::<Vec<_>>();
 
-            vec![ui::h_row(move |_cx| buttons)
-                .layout(LayoutRefinement::default().flex_shrink_0())
-                .gap(Space::N1)
-                .items(Items::Center)
-                .into_element(cx)]
+            vec![
+                ui::h_row(move |_cx| buttons)
+                    .layout(LayoutRefinement::default().flex_shrink_0())
+                    .gap(Space::N1)
+                    .items(Items::Center)
+                    .into_element(cx),
+            ]
         },
     );
 

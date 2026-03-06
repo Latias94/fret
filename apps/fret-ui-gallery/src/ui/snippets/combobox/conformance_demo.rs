@@ -25,7 +25,6 @@ pub fn render(
         .auto_highlight(true)
         .query_model(query.clone())
         .test_id_prefix("ui-gallery-combobox-demo")
-        .trigger_test_id("ui-gallery-combobox-demo-trigger")
         .items(base_items())
         .into_element_parts(cx, |_cx| {
             vec![

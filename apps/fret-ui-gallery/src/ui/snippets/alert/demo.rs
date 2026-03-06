@@ -34,13 +34,13 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                         .into_element(cx),
                     ui::v_flex(|cx| {
                         vec![
-                            ui::text("• Check your card number.")
+                            ui::text("- Check your card number.")
                                 .text_sm()
                                 .into_element(cx),
-                            ui::text("• Check the expiration date.")
+                            ui::text("- Check the expiration date.")
                                 .text_sm()
                                 .into_element(cx),
-                            ui::text("• Verify your billing address.")
+                            ui::text("- Verify your billing address.")
                                 .text_sm()
                                 .into_element(cx),
                         ]

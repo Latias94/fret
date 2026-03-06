@@ -5,7 +5,8 @@
 use std::sync::Arc;
 
 use fret_core::{
-    Color, Edges, FontId, FontWeight, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap,
+    Color, ColorScheme, Edges, FontId, FontWeight, Px, SemanticsRole, TextOverflow, TextStyle,
+    TextWrap,
 };
 use fret_icons::IconId;
 use fret_ui::element::{
@@ -31,13 +32,13 @@ pub enum PackageInfoChangeKind {
 }
 
 impl PackageInfoChangeKind {
-    fn label(self) -> &'static str {
+    fn display_label(self) -> &'static str {
         match self {
-            Self::Major => "major",
-            Self::Minor => "minor",
-            Self::Patch => "patch",
-            Self::Added => "added",
-            Self::Removed => "removed",
+            Self::Major => "Major",
+            Self::Minor => "Minor",
+            Self::Patch => "Patch",
+            Self::Added => "Added",
+            Self::Removed => "Removed",
         }
     }
 
@@ -100,34 +101,85 @@ fn monospace_style(theme: &Theme, size: Px, weight: FontWeight) -> TextStyle {
     })
 }
 
-fn change_type_bg(change_type: PackageInfoChangeKind) -> ColorRef {
-    // These are tailwind-ish sRGB values (light-theme) used as a safe default. Apps can override
-    // via theme tokens.
+fn with_alpha(mut c: Color, alpha: f32) -> Color {
+    c.a = alpha.clamp(0.0, 1.0);
+    c
+}
+
+fn is_dark(theme: &Theme) -> bool {
+    matches!(theme.color_scheme, Some(ColorScheme::Dark))
+}
+
+fn change_type_bg(theme: &Theme, change_type: PackageInfoChangeKind) -> ColorRef {
+    // Apps can override via theme tokens. Defaults mirror AI Elements:
+    // - light: `bg-*-100`
+    // - dark:  `bg-*-900/30`
+    let dark = is_dark(theme);
     let (key, fallback) = match change_type {
         PackageInfoChangeKind::Added => (
             "color.ai.package_info.change.added.bg",
-            // Tailwind blue-100 (#dbeafe).
-            fret_ui_kit::colors::linear_from_hex_rgb(0xDB_EA_FE),
+            if dark {
+                with_alpha(
+                    // Tailwind blue-900 (#1e3a8a) / 30%.
+                    fret_ui_kit::colors::linear_from_hex_rgb(0x1E_3A_8A),
+                    0.30,
+                )
+            } else {
+                // Tailwind blue-100 (#dbeafe).
+                fret_ui_kit::colors::linear_from_hex_rgb(0xDB_EA_FE)
+            },
         ),
         PackageInfoChangeKind::Major => (
             "color.ai.package_info.change.major.bg",
-            // Tailwind red-100 (#fee2e2).
-            fret_ui_kit::colors::linear_from_hex_rgb(0xFE_E2_E2),
+            if dark {
+                with_alpha(
+                    // Tailwind red-900 (#7f1d1d) / 30%.
+                    fret_ui_kit::colors::linear_from_hex_rgb(0x7F_1D_1D),
+                    0.30,
+                )
+            } else {
+                // Tailwind red-100 (#fee2e2).
+                fret_ui_kit::colors::linear_from_hex_rgb(0xFE_E2_E2)
+            },
         ),
         PackageInfoChangeKind::Minor => (
             "color.ai.package_info.change.minor.bg",
-            // Tailwind yellow-100 (#fef9c3).
-            fret_ui_kit::colors::linear_from_hex_rgb(0xFE_F9_C3),
+            if dark {
+                with_alpha(
+                    // Tailwind yellow-900 (#713f12) / 30%.
+                    fret_ui_kit::colors::linear_from_hex_rgb(0x71_3F_12),
+                    0.30,
+                )
+            } else {
+                // Tailwind yellow-100 (#fef9c3).
+                fret_ui_kit::colors::linear_from_hex_rgb(0xFE_F9_C3)
+            },
         ),
         PackageInfoChangeKind::Patch => (
             "color.ai.package_info.change.patch.bg",
-            // Tailwind green-100 (#dcfce7).
-            fret_ui_kit::colors::linear_from_hex_rgb(0xDC_FC_E7),
+            if dark {
+                with_alpha(
+                    // Tailwind green-900 (#14532d) / 30%.
+                    fret_ui_kit::colors::linear_from_hex_rgb(0x14_53_2D),
+                    0.30,
+                )
+            } else {
+                // Tailwind green-100 (#dcfce7).
+                fret_ui_kit::colors::linear_from_hex_rgb(0xDC_FC_E7)
+            },
         ),
         PackageInfoChangeKind::Removed => (
             "color.ai.package_info.change.removed.bg",
-            // Tailwind gray-100 (#f3f4f6).
-            fret_ui_kit::colors::linear_from_hex_rgb(0xF3_F4_F6),
+            if dark {
+                with_alpha(
+                    // Tailwind gray-900 (#111827) / 30%.
+                    fret_ui_kit::colors::linear_from_hex_rgb(0x11_18_27),
+                    0.30,
+                )
+            } else {
+                // Tailwind gray-100 (#f3f4f6).
+                fret_ui_kit::colors::linear_from_hex_rgb(0xF3_F4_F6)
+            },
         ),
     };
     ColorRef::Token {
@@ -136,32 +188,61 @@ fn change_type_bg(change_type: PackageInfoChangeKind) -> ColorRef {
     }
 }
 
-fn change_type_fg(change_type: PackageInfoChangeKind) -> ColorRef {
+fn change_type_fg(theme: &Theme, change_type: PackageInfoChangeKind) -> ColorRef {
+    // Defaults mirror AI Elements:
+    // - light: `text-*-700`
+    // - dark:  `text-*-400`
+    let dark = is_dark(theme);
     let (key, fallback) = match change_type {
         PackageInfoChangeKind::Added => (
             "color.ai.package_info.change.added.fg",
-            // Tailwind blue-700 (#1d4ed8).
-            fret_ui_kit::colors::linear_from_hex_rgb(0x1D_4E_D8),
+            if dark {
+                // Tailwind blue-400 (#60a5fa).
+                fret_ui_kit::colors::linear_from_hex_rgb(0x60_A5_FA)
+            } else {
+                // Tailwind blue-700 (#1d4ed8).
+                fret_ui_kit::colors::linear_from_hex_rgb(0x1D_4E_D8)
+            },
         ),
         PackageInfoChangeKind::Major => (
             "color.ai.package_info.change.major.fg",
-            // Tailwind red-700 (#b91c1c).
-            fret_ui_kit::colors::linear_from_hex_rgb(0xB9_1C_1C),
+            if dark {
+                // Tailwind red-400 (#f87171).
+                fret_ui_kit::colors::linear_from_hex_rgb(0xF8_71_71)
+            } else {
+                // Tailwind red-700 (#b91c1c).
+                fret_ui_kit::colors::linear_from_hex_rgb(0xB9_1C_1C)
+            },
         ),
         PackageInfoChangeKind::Minor => (
             "color.ai.package_info.change.minor.fg",
-            // Tailwind amber-700 (#a16207).
-            fret_ui_kit::colors::linear_from_hex_rgb(0xA1_62_07),
+            if dark {
+                // Tailwind yellow-400 (#facc15).
+                fret_ui_kit::colors::linear_from_hex_rgb(0xFA_CC_15)
+            } else {
+                // Tailwind yellow-700 (#a16207).
+                fret_ui_kit::colors::linear_from_hex_rgb(0xA1_62_07)
+            },
         ),
         PackageInfoChangeKind::Patch => (
             "color.ai.package_info.change.patch.fg",
-            // Tailwind green-700 (#15803d).
-            fret_ui_kit::colors::linear_from_hex_rgb(0x15_80_3D),
+            if dark {
+                // Tailwind green-400 (#4ade80).
+                fret_ui_kit::colors::linear_from_hex_rgb(0x4A_DE_80)
+            } else {
+                // Tailwind green-700 (#15803d).
+                fret_ui_kit::colors::linear_from_hex_rgb(0x15_80_3D)
+            },
         ),
         PackageInfoChangeKind::Removed => (
             "color.ai.package_info.change.removed.fg",
-            // Tailwind gray-700 (#374151).
-            fret_ui_kit::colors::linear_from_hex_rgb(0x37_41_51),
+            if dark {
+                // Tailwind gray-400 (#9ca3af).
+                fret_ui_kit::colors::linear_from_hex_rgb(0x9C_A3_AF)
+            } else {
+                // Tailwind gray-700 (#374151).
+                fret_ui_kit::colors::linear_from_hex_rgb(0x37_41_51)
+            },
         ),
     };
     ColorRef::Token {
@@ -289,11 +370,12 @@ impl PackageInfo {
 
     pub fn into_element<H: UiHost + 'static>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         self.into_element_with_children(cx, move |cx, controller| {
+            let mut header_children = vec![PackageInfoName::new().into_element(cx)];
+            if controller.change_type.is_some() {
+                header_children.push(PackageInfoChangeType::new().into_element(cx));
+            }
             let header = PackageInfoHeader::new()
-                .children([
-                    PackageInfoName::new().into_element(cx),
-                    PackageInfoChangeType::new().into_element(cx),
-                ])
+                .children(header_children)
                 .into_element(cx);
 
             let mut out = vec![header];
@@ -473,21 +555,14 @@ impl PackageInfoChangeType {
             return cx.text("");
         };
 
-        let icon = decl_icon::icon_with(
-            cx,
-            change_type.icon(),
-            Some(Px(12.0)),
-            Some(change_type_fg(change_type)),
-        );
-        let text = cx.text(change_type.label());
-
-        let badge = Badge::new(change_type.label())
+        let theme = Theme::global(&*cx.app).clone();
+        let badge = Badge::new(change_type.display_label())
             .variant(BadgeVariant::Secondary)
-            .children([icon, text])
+            .leading_icon(change_type.icon())
             .refine_style(
                 ChromeRefinement::default()
-                    .bg(change_type_bg(change_type))
-                    .text_color(change_type_fg(change_type))
+                    .bg(change_type_bg(&theme, change_type))
+                    .text_color(change_type_fg(&theme, change_type))
                     .merge(self.chrome),
             )
             .refine_layout(self.layout)
@@ -584,7 +659,7 @@ impl PackageInfoVersion {
                     theme.metric_token("component.text.sm_px"),
                     FontWeight::MEDIUM,
                 )),
-                color: None,
+                color: Some(theme.color_token("foreground")),
                 wrap: TextWrap::None,
                 overflow: TextOverflow::Clip,
                 align: fret_core::TextAlign::Start,
@@ -593,15 +668,16 @@ impl PackageInfoVersion {
         }
 
         let row = ui::h_row(move |_cx| parts)
-            .layout(self.layout)
             .items(Items::Center)
             .gap(Space::N2)
             .into_element(cx);
 
-        let chrome = ChromeRefinement::default()
-            .text_color(ColorRef::Color(muted_fg(&theme)))
-            .merge(self.chrome);
-        let layout = LayoutRefinement::default().w_full().min_w_0().mt(Space::N2);
+        let chrome = ChromeRefinement::default().merge(self.chrome);
+        let layout = LayoutRefinement::default()
+            .w_full()
+            .min_w_0()
+            .mt(Space::N2)
+            .merge(self.layout);
 
         let container = cx.container(
             decl_style::container_props(&theme, chrome, layout),
@@ -757,7 +833,7 @@ impl PackageInfoDependencies {
         let theme = Theme::global(&*cx.app).clone();
         let label = cx.text_props(TextProps {
             layout: LayoutStyle::default(),
-            text: Arc::<str>::from("Dependencies"),
+            text: Arc::<str>::from("DEPENDENCIES"),
             style: Some(typography::as_control_text(TextStyle {
                 font: FontId::default(),
                 size: theme.metric_token("component.text.xs_px"),
@@ -774,12 +850,12 @@ impl PackageInfoDependencies {
             ink_overflow: Default::default(),
         });
 
-        let list = ui::v_stack(move |_cx| self.children)
+        let list = ui::v_flex(move |_cx| self.children)
             .layout(LayoutRefinement::default().w_full().min_w_0())
             .gap(Space::N1)
             .into_element(cx);
 
-        let body = ui::v_stack(move |_cx| vec![label, list])
+        let body = ui::v_flex(move |_cx| vec![label, list])
             .layout(self.layout)
             .gap(Space::N2)
             .into_element(cx);

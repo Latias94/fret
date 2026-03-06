@@ -206,6 +206,35 @@ pub(crate) fn container_flow<H: UiHost>(
     container_vstack(cx, props, VStackProps::default().gap(Space::N0), children)
 }
 
+/// Flow stack variant that forces `width: fill`.
+///
+/// Use this for panel/content roots (popover/hover-card-like surfaces) where wrapped text should
+/// resolve its wrap width against the container's inner width rather than shrink-wrapping to its
+/// min-content size.
+///
+/// Important:
+///
+/// - This is intentionally stronger than `container_flow(...)`: the inner flow child requests
+///   `w_full().min_w_0()`, and the layout engine will promote an auto-sized passthrough wrapper to
+///   a definite width when needed so percent sizing does not collapse to zero.
+/// - Use it only for roots that are expected to own panel/content width.
+/// - Do not use it for shrink-wrapped trigger/button/menu-row chrome; those surfaces should keep
+///   intrinsic width and rely on `container_flow(...)` (or a custom row/flex root) instead.
+pub(crate) fn container_flow_fill_width<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    props: ContainerProps,
+    children: Vec<AnyElement>,
+) -> AnyElement {
+    cx.container(props, move |cx| {
+        vec![
+            ui::v_flex(move |_cx| children)
+                .layout(LayoutRefinement::default().w_full().min_w_0())
+                .gap(Space::N0)
+                .into_element(cx),
+        ]
+    })
+}
+
 pub(crate) fn container_hstack_build<H: UiHost, B>(
     cx: &mut ElementContext<'_, H>,
     props: ContainerProps,
@@ -287,6 +316,10 @@ mod tests {
         pred(&el.kind) || el.children.iter().any(|child| contains_kind(child, pred))
     }
 
+    fn contains_inherited_foreground(el: &AnyElement) -> bool {
+        el.inherited_foreground.is_some() || el.children.iter().any(contains_inherited_foreground)
+    }
+
     #[test]
     fn container_vstack_build_accepts_host_bound_builders() {
         let window = AppWindowId::default();
@@ -342,10 +375,7 @@ mod tests {
                 kind,
                 ElementKind::Flex(_)
             )));
-            assert!(contains_kind(&container, &|kind| matches!(
-                kind,
-                ElementKind::ForegroundScope(_)
-            )));
+            assert!(contains_inherited_foreground(&container));
             assert!(contains_kind(&container, &|kind| matches!(
                 kind,
                 ElementKind::Container(_)

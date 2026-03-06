@@ -24,6 +24,12 @@ pub struct AnyElement {
     pub id: GlobalElementId,
     pub kind: ElementKind,
     pub children: Vec<AnyElement>,
+    /// Layout-transparent inherited foreground installed on this subtree root.
+    ///
+    /// This is the non-wrapper equivalent of `ForegroundScope`: descendants that opt into
+    /// `currentColor`-style paint inheritance can resolve this value during paint without adding a
+    /// new layout node.
+    pub inherited_foreground: Option<Color>,
     /// Layout-transparent semantics overrides applied when producing semantics snapshots.
     pub semantics_decoration: Option<SemanticsDecoration>,
     /// Layout-transparent key context identifier used by shortcut/keymap `when` expressions.
@@ -36,9 +42,19 @@ impl AnyElement {
             id,
             kind,
             children,
+            inherited_foreground: None,
             semantics_decoration: None,
             key_context: None,
         }
+    }
+
+    /// Attach a subtree-local inherited foreground without introducing a layout wrapper.
+    ///
+    /// Descendants that support `currentColor` / `IconTheme`-style paint inheritance resolve this
+    /// value at paint time.
+    pub fn inherit_foreground(mut self, foreground: Color) -> Self {
+        self.inherited_foreground = Some(foreground);
+        self
     }
 
     /// Attach layout-transparent semantics metadata to this element (ADR 0222).
@@ -1875,6 +1891,9 @@ pub struct TextInputProps {
     pub a11y_role: Option<SemanticsRole>,
     pub test_id: Option<std::sync::Arc<str>>,
     pub placeholder: Option<std::sync::Arc<str>>,
+    /// When true, visually obscures the rendered text (e.g. password fields) while keeping the
+    /// underlying model value unchanged.
+    pub obscure_text: bool,
     pub a11y_required: bool,
     pub a11y_invalid: Option<fret_core::SemanticsInvalid>,
     pub active_descendant: Option<NodeId>,
@@ -1908,6 +1927,7 @@ impl TextInputProps {
             a11y_role: None,
             test_id: None,
             placeholder: None,
+            obscure_text: false,
             a11y_required: false,
             a11y_invalid: None,
             active_descendant: None,
@@ -1936,6 +1956,7 @@ impl std::fmt::Debug for TextInputProps {
                 "placeholder",
                 &self.placeholder.as_ref().map(|s| s.as_ref()),
             )
+            .field("obscure_text", &self.obscure_text)
             .field("controls_element", &self.controls_element)
             .field("expanded", &self.expanded)
             .field("chrome", &self.chrome)

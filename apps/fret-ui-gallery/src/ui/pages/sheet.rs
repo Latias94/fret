@@ -5,6 +5,7 @@ pub(super) fn preview_sheet(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
     use crate::ui::snippets::sheet as snippets;
 
     let demo = snippets::demo::render(cx);
+    let usage = snippets::usage::render(cx);
     let parts = snippets::parts::render(cx);
     let side = snippets::side::render(cx);
     let no_close_button = snippets::no_close_button::render(cx);
@@ -14,6 +15,7 @@ pub(super) fn preview_sheet(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
         cx,
         [
             "Preview follows shadcn Sheet demo (new-york-v4).",
+            "`Sheet::compose()` is a recipe-level bridge for shadcn-style part composition without pushing children API concerns into the mechanism layer.",
             "Part surface adapters exist for shadcn-style call sites (SheetTrigger/SheetPortal/SheetOverlay).",
             "Fret renders a default top-right close affordance in `SheetContent` (disable via `show_close_button(false)`).",
             "Fret also exposes `SheetClose` for additional close affordances.",
@@ -28,6 +30,11 @@ pub(super) fn preview_sheet(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
                 .max_w(Px(980.0))
                 .test_id_prefix("ui-gallery-sheet-demo")
                 .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
+            DocSection::new("Usage", usage)
+                .max_w(Px(980.0))
+                .title_test_id("ui-gallery-section-usage-title")
+                .description("Copyable shadcn-style composition reference for Sheet.")
+                .code_rust_from_file_region(snippets::usage::SOURCE, "example"),
             DocSection::new("Parts", parts)
                 .max_w(Px(980.0))
                 .test_id_prefix("ui-gallery-sheet-parts")

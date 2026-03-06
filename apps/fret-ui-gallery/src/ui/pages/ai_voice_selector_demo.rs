@@ -14,6 +14,8 @@ pub(super) fn preview_ai_voice_selector_demo(
         Some("AI Elements are policy-level compositions built on top of lower-level primitives."),
         vec![
             DocSection::new("VoiceSelector", demo)
+                .description("Composable dialog + command recipe aligned with AI Elements `voice-selector`.")
+                .description("Voice inventory and preview playback remain app-owned; this page keeps that state local so the example stays copy-paste friendly.")
                 .test_id_prefix("ui-gallery-ai-voice-selector-demo")
                 .code_rust_from_file_region(snippets::voice_selector_demo::SOURCE, "example"),
         ],

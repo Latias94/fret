@@ -11,7 +11,9 @@ pub(super) fn preview_ai_chain_of_thought_demo(
 
     let body = crate::ui::doc_layout::render_doc_page(
         cx,
-        Some("AI Elements are policy-level compositions built on top of lower-level primitives."),
+        Some(
+            "A collapsible component that visualizes AI reasoning steps with support for search results, images, and step-by-step progress indicators.",
+        ),
         vec![
             DocSection::new("Chain of Thought", demo)
                 .test_id_prefix("ui-gallery-ai-chain-of-thought-demo")

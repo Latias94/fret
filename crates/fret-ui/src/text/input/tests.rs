@@ -97,6 +97,75 @@ impl fret_core::MaterialService for FakeTextService {
     }
 }
 
+#[derive(Default)]
+struct IndexRecordingTextService {
+    prepared: Vec<String>,
+    caret_x_calls: Vec<usize>,
+}
+
+impl TextService for IndexRecordingTextService {
+    fn prepare(
+        &mut self,
+        input: &fret_core::TextInput,
+        _constraints: TextConstraints,
+    ) -> (fret_core::TextBlobId, TextMetrics) {
+        self.prepared.push(input.text().to_string());
+        (
+            fret_core::TextBlobId::default(),
+            TextMetrics {
+                size: Size::new(Px(10.0), Px(10.0)),
+                baseline: Px(8.0),
+            },
+        )
+    }
+
+    fn caret_x(&mut self, _blob: fret_core::TextBlobId, index: usize) -> Px {
+        self.caret_x_calls.push(index);
+        Px(index as f32)
+    }
+
+    fn release(&mut self, _blob: fret_core::TextBlobId) {}
+}
+
+impl fret_core::PathService for IndexRecordingTextService {
+    fn prepare(
+        &mut self,
+        _commands: &[fret_core::PathCommand],
+        _style: fret_core::PathStyle,
+        _constraints: fret_core::PathConstraints,
+    ) -> (fret_core::PathId, fret_core::PathMetrics) {
+        (
+            fret_core::PathId::default(),
+            fret_core::PathMetrics::default(),
+        )
+    }
+
+    fn release(&mut self, _path: fret_core::PathId) {}
+}
+
+impl fret_core::SvgService for IndexRecordingTextService {
+    fn register_svg(&mut self, _bytes: &[u8]) -> fret_core::SvgId {
+        fret_core::SvgId::default()
+    }
+
+    fn unregister_svg(&mut self, _svg: fret_core::SvgId) -> bool {
+        false
+    }
+}
+
+impl fret_core::MaterialService for IndexRecordingTextService {
+    fn register_material(
+        &mut self,
+        _desc: fret_core::MaterialDescriptor,
+    ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+        Err(fret_core::MaterialRegistrationError::Unsupported)
+    }
+
+    fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
+        false
+    }
+}
+
 fn event_cx<'a>(
     app: &'a mut TestHost,
     services: &'a mut dyn fret_core::UiServices,
@@ -204,6 +273,67 @@ fn text_input_hover_sets_text_cursor_effect() {
                 if *w == window && *icon == fret_core::CursorIcon::Text
         )),
         "expected a text cursor effect when hovering a text input"
+    );
+}
+
+#[test]
+fn text_input_obscures_paint_text_when_requested() {
+    let window = AppWindowId::default();
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(240.0), Px(40.0)));
+
+    let mut ui = UiTree::new();
+    ui.set_window(window);
+
+    let mut widget = TextInput::new().with_text("abc");
+    widget.set_obscure_text(true);
+    let root = ui.create_node(widget);
+    ui.set_root(root);
+    ui.set_focus(Some(root));
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    let mut services = FakeTextService::default();
+
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    let _ = app.take_effects();
+
+    let mut scene = fret_core::Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+    assert!(
+        services.prepared.iter().any(|s| s == "•••"),
+        "expected text service to see an obscured string for password-style text inputs"
+    );
+}
+
+#[test]
+fn text_input_obscure_text_maps_caret_queries_to_paint_indices() {
+    let window = AppWindowId::default();
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(240.0), Px(40.0)));
+
+    let mut ui = UiTree::new();
+    ui.set_window(window);
+
+    let mut widget = TextInput::new().with_text("abc");
+    widget.set_obscure_text(true);
+    let root = ui.create_node(widget);
+    ui.set_root(root);
+    ui.set_focus(Some(root));
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    let mut services = IndexRecordingTextService::default();
+
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    let _ = app.take_effects();
+
+    let mut scene = fret_core::Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+    // "abc" becomes "•••" (3 UTF-8 bytes per dot), so the caret at the end should query index 9.
+    assert!(
+        services.caret_x_calls.iter().any(|&i| i == 9),
+        "expected caret_x to be queried in paint-space indices for obscured text"
     );
 }
 

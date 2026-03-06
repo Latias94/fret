@@ -354,11 +354,13 @@ impl ModelSelectorLogo {
                     a: 0.8,
                 }))
                 .into_element(cx);
-            vec![ui::h_row(move |_cx| vec![text])
-                .layout(LayoutRefinement::default().w_full().h_full())
-                .justify(Justify::Center)
-                .items(Items::Center)
-                .into_element(cx)]
+            vec![
+                ui::h_row(move |_cx| vec![text])
+                    .layout(LayoutRefinement::default().w_full().h_full())
+                    .justify(Justify::Center)
+                    .items(Items::Center)
+                    .into_element(cx),
+            ]
         });
 
         element = element.attach_semantics(SemanticsDecoration {
