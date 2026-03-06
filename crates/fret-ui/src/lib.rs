@@ -36,6 +36,8 @@ pub mod internal_drag;
 mod layout;
 pub use layout::constraints as layout_constraints;
 pub use layout::engine as layout_engine;
+#[doc(hidden)]
+pub use layout::overflow::LayoutOverflowContext;
 pub use layout::pass as layout_pass;
 pub mod overlay_placement;
 pub mod paint;

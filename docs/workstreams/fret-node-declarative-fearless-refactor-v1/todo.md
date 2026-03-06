@@ -188,7 +188,8 @@ land in code review; move design discussion back to `README.md` if a TODO turns 
 - [ ] Add at least one gate that exercises portal + overlay anchoring under motion.
   - Progress: the feature-gated retained conformance files now include controller-first rename and
     portal commit scenarios (`overlay_group_rename_conformance.rs`,
-    `portal_lifecycle_conformance.rs`), pending the existing retained test-harness compile drift.
+    `portal_lifecycle_conformance.rs`), and those retained gates now run again after the harness was
+    updated for the latest `EventCx` / `LayoutCx` contract.
 
 ## M5 - Compatibility retained convergence
 

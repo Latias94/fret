@@ -250,6 +250,8 @@ real editors.
   (`NodeGraphPortalHost::with_controller`, `NodeGraphOverlayHost::new_with_controller`).
 - `node_graph_domain_demo` and `compat_retained` now exercise that path, reducing how often new
   app-facing examples need to teach raw `edit_queue` mutation.
+- The retained widget test harness is back in sync with the latest `fret-ui` retained bridge
+  contracts, so controller-first rename / portal retained conformance gates run again.
 
 ### Deliverables
 

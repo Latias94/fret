@@ -9,6 +9,7 @@ use fret_core::{
 };
 use fret_runtime::ModelId;
 use fret_ui::Invalidation;
+use fret_ui::LayoutOverflowContext;
 use fret_ui::UiTree;
 use fret_ui::retained_bridge::Widget as _;
 
@@ -615,6 +616,7 @@ fn layout_once(
         bounds,
         available: bounds.size,
         pass_kind: fret_ui::layout_pass::LayoutPassKind::Final,
+        overflow_ctx: LayoutOverflowContext::default(),
         scale_factor: 1.0,
         services,
         observe_model: &mut observe_model,
