@@ -19,8 +19,8 @@ use fret_core::{
     TextWrap,
 };
 use fret_launch::{
-    WinitAppDriver, WinitCommandContext, WinitEventContext, WinitRenderContext, WinitRunnerConfig,
-    WinitWindowContext,
+    FnDriver, WindowCreateSpec, WinitAppDriver, WinitCommandContext, WinitEventContext,
+    WinitRenderContext, WinitRunnerConfig, WinitWindowContext,
 };
 use fret_runtime::PlatformCapabilities;
 use fret_runtime::{
@@ -2667,6 +2667,84 @@ impl WinitAppDriver for NodeGraphDemoDriver {
     }
 }
 
+fn create_window_state(
+    driver: &mut NodeGraphDemoDriver,
+    app: &mut App,
+    window: AppWindowId,
+) -> NodeGraphDemoWindowState {
+    <NodeGraphDemoDriver as WinitAppDriver>::create_window_state(driver, app, window)
+}
+
+fn handle_model_changes(
+    driver: &mut NodeGraphDemoDriver,
+    context: WinitWindowContext<'_, NodeGraphDemoWindowState>,
+    changed: &[fret_app::ModelId],
+) {
+    <NodeGraphDemoDriver as WinitAppDriver>::handle_model_changes(driver, context, changed)
+}
+
+fn handle_global_changes(
+    driver: &mut NodeGraphDemoDriver,
+    context: WinitWindowContext<'_, NodeGraphDemoWindowState>,
+    changed: &[std::any::TypeId],
+) {
+    <NodeGraphDemoDriver as WinitAppDriver>::handle_global_changes(driver, context, changed)
+}
+
+fn handle_event(
+    driver: &mut NodeGraphDemoDriver,
+    context: WinitEventContext<'_, NodeGraphDemoWindowState>,
+    event: &Event,
+) {
+    <NodeGraphDemoDriver as WinitAppDriver>::handle_event(driver, context, event)
+}
+
+fn handle_command(
+    driver: &mut NodeGraphDemoDriver,
+    context: WinitCommandContext<'_, NodeGraphDemoWindowState>,
+    command: CommandId,
+) {
+    <NodeGraphDemoDriver as WinitAppDriver>::handle_command(driver, context, command)
+}
+
+fn render(
+    driver: &mut NodeGraphDemoDriver,
+    context: WinitRenderContext<'_, NodeGraphDemoWindowState>,
+) {
+    <NodeGraphDemoDriver as WinitAppDriver>::render(driver, context)
+}
+
+fn window_create_spec(
+    driver: &mut NodeGraphDemoDriver,
+    app: &mut App,
+    request: &fret_app::CreateWindowRequest,
+) -> Option<WindowCreateSpec> {
+    <NodeGraphDemoDriver as WinitAppDriver>::window_create_spec(driver, app, request)
+}
+
+fn window_created(
+    driver: &mut NodeGraphDemoDriver,
+    app: &mut App,
+    request: &fret_app::CreateWindowRequest,
+    new_window: AppWindowId,
+) {
+    <NodeGraphDemoDriver as WinitAppDriver>::window_created(driver, app, request, new_window)
+}
+
+fn build_driver_with_state(driver_state: NodeGraphDemoDriver) -> impl WinitAppDriver {
+    FnDriver::new(driver_state, create_window_state, handle_event, render).with_hooks(|hooks| {
+        hooks.handle_model_changes = Some(handle_model_changes);
+        hooks.handle_global_changes = Some(handle_global_changes);
+        hooks.handle_command = Some(handle_command);
+        hooks.window_create_spec = Some(window_create_spec);
+        hooks.window_created = Some(window_created);
+    })
+}
+
+pub fn build_driver() -> impl WinitAppDriver {
+    build_driver_with_state(NodeGraphDemoDriver::new_from_env())
+}
+
 fn set_float_value_in_node_data(mut data: Value, value: f64) -> Value {
     match &mut data {
         Value::Object(map) => {
@@ -2784,13 +2862,14 @@ pub fn run() -> anyhow::Result<()> {
         ..Default::default()
     };
 
-    let driver = NodeGraphDemoDriver::new_from_env();
-    if driver.declarative_mode.enabled() {
+    let driver_state = NodeGraphDemoDriver::new_from_env();
+    if driver_state.declarative_mode.enabled() {
         tracing::info!(
-            mode = ?driver.declarative_mode,
+            mode = ?driver_state.declarative_mode,
             "node_graph_demo: declarative root enabled (FRET_NODE_GRAPH_DECLARATIVE)"
         );
     }
+    let driver = build_driver_with_state(driver_state);
     fret::run_native_with_compat_driver(config, app, driver).map_err(anyhow::Error::from)
 }
 

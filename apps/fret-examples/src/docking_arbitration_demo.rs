@@ -13,9 +13,9 @@ use fret_docking::{
     DockingRuntime, render_and_bind_dock_panels, render_cached_panel_root,
 };
 use fret_launch::{
-    DevStateExport, DevStateHook, DevStateHooks, DevStateWindowKeyRegistry, WindowCreateSpec,
-    WinitAppDriver, WinitCommandContext, WinitEventContext, WinitRenderContext, WinitRunnerConfig,
-    WinitWindowContext,
+    DevStateExport, DevStateHook, DevStateHooks, DevStateWindowKeyRegistry, FnDriver,
+    WindowCreateSpec, WinitAppDriver, WinitCommandContext, WinitEventContext,
+    WinitHotReloadContext, WinitRenderContext, WinitRunnerConfig, WinitWindowContext,
 };
 use fret_runtime::PlatformCapabilities;
 use fret_ui::declarative;
@@ -3310,6 +3310,231 @@ impl WinitAppDriver for DockingArbitrationDriver {
     }
 }
 
+fn init(driver: &mut DockingArbitrationDriver, app: &mut App, main_window: AppWindowId) {
+    <DockingArbitrationDriver as WinitAppDriver>::init(driver, app, main_window)
+}
+
+fn create_window_state(
+    driver: &mut DockingArbitrationDriver,
+    app: &mut App,
+    window: AppWindowId,
+) -> DockingArbitrationWindowState {
+    <DockingArbitrationDriver as WinitAppDriver>::create_window_state(driver, app, window)
+}
+
+fn hot_reload_window(
+    driver: &mut DockingArbitrationDriver,
+    context: WinitHotReloadContext<'_, DockingArbitrationWindowState>,
+) {
+    let WinitHotReloadContext {
+        app,
+        services,
+        window,
+        state,
+    } = context;
+    <DockingArbitrationDriver as WinitAppDriver>::hot_reload_window(
+        driver, app, services, window, state,
+    )
+}
+
+fn handle_model_changes(
+    driver: &mut DockingArbitrationDriver,
+    context: WinitWindowContext<'_, DockingArbitrationWindowState>,
+    changed: &[fret_app::ModelId],
+) {
+    <DockingArbitrationDriver as WinitAppDriver>::handle_model_changes(driver, context, changed)
+}
+
+fn handle_global_changes(
+    driver: &mut DockingArbitrationDriver,
+    context: WinitWindowContext<'_, DockingArbitrationWindowState>,
+    changed: &[std::any::TypeId],
+) {
+    <DockingArbitrationDriver as WinitAppDriver>::handle_global_changes(driver, context, changed)
+}
+
+fn handle_command(
+    driver: &mut DockingArbitrationDriver,
+    context: WinitCommandContext<'_, DockingArbitrationWindowState>,
+    command: CommandId,
+) {
+    <DockingArbitrationDriver as WinitAppDriver>::handle_command(driver, context, command)
+}
+
+fn handle_event(
+    driver: &mut DockingArbitrationDriver,
+    context: WinitEventContext<'_, DockingArbitrationWindowState>,
+    event: &Event,
+) {
+    <DockingArbitrationDriver as WinitAppDriver>::handle_event(driver, context, event)
+}
+
+fn viewport_input(driver: &mut DockingArbitrationDriver, app: &mut App, event: ViewportInputEvent) {
+    <DockingArbitrationDriver as WinitAppDriver>::viewport_input(driver, app, event)
+}
+
+fn dock_op(driver: &mut DockingArbitrationDriver, app: &mut App, op: fret_core::DockOp) {
+    <DockingArbitrationDriver as WinitAppDriver>::dock_op(driver, app, op)
+}
+
+fn render(
+    driver: &mut DockingArbitrationDriver,
+    context: WinitRenderContext<'_, DockingArbitrationWindowState>,
+) {
+    <DockingArbitrationDriver as WinitAppDriver>::render(driver, context)
+}
+
+fn window_create_spec(
+    driver: &mut DockingArbitrationDriver,
+    app: &mut App,
+    request: &fret_app::CreateWindowRequest,
+) -> Option<WindowCreateSpec> {
+    <DockingArbitrationDriver as WinitAppDriver>::window_create_spec(driver, app, request)
+}
+
+fn window_created(
+    driver: &mut DockingArbitrationDriver,
+    app: &mut App,
+    request: &fret_app::CreateWindowRequest,
+    new_window: AppWindowId,
+) {
+    <DockingArbitrationDriver as WinitAppDriver>::window_created(driver, app, request, new_window)
+}
+
+fn before_close_window(
+    driver: &mut DockingArbitrationDriver,
+    app: &mut App,
+    window: AppWindowId,
+) -> bool {
+    <DockingArbitrationDriver as WinitAppDriver>::before_close_window(driver, app, window)
+}
+
+fn accessibility_snapshot(
+    driver: &mut DockingArbitrationDriver,
+    app: &mut App,
+    window: AppWindowId,
+    state: &mut DockingArbitrationWindowState,
+) -> Option<Arc<fret_core::SemanticsSnapshot>> {
+    <DockingArbitrationDriver as WinitAppDriver>::accessibility_snapshot(driver, app, window, state)
+}
+
+fn accessibility_focus(
+    driver: &mut DockingArbitrationDriver,
+    app: &mut App,
+    window: AppWindowId,
+    state: &mut DockingArbitrationWindowState,
+    target: fret_core::NodeId,
+) {
+    <DockingArbitrationDriver as WinitAppDriver>::accessibility_focus(
+        driver, app, window, state, target,
+    )
+}
+
+fn accessibility_invoke(
+    driver: &mut DockingArbitrationDriver,
+    app: &mut App,
+    services: &mut dyn UiServices,
+    window: AppWindowId,
+    state: &mut DockingArbitrationWindowState,
+    target: fret_core::NodeId,
+) {
+    <DockingArbitrationDriver as WinitAppDriver>::accessibility_invoke(
+        driver, app, services, window, state, target,
+    )
+}
+
+fn accessibility_set_value_text(
+    driver: &mut DockingArbitrationDriver,
+    app: &mut App,
+    services: &mut dyn UiServices,
+    window: AppWindowId,
+    state: &mut DockingArbitrationWindowState,
+    target: fret_core::NodeId,
+    value: &str,
+) {
+    <DockingArbitrationDriver as WinitAppDriver>::accessibility_set_value_text(
+        driver, app, services, window, state, target, value,
+    )
+}
+
+fn accessibility_set_value_numeric(
+    driver: &mut DockingArbitrationDriver,
+    app: &mut App,
+    services: &mut dyn UiServices,
+    window: AppWindowId,
+    state: &mut DockingArbitrationWindowState,
+    target: fret_core::NodeId,
+    value: f64,
+) {
+    <DockingArbitrationDriver as WinitAppDriver>::accessibility_set_value_numeric(
+        driver, app, services, window, state, target, value,
+    )
+}
+
+fn accessibility_set_text_selection(
+    driver: &mut DockingArbitrationDriver,
+    app: &mut App,
+    services: &mut dyn UiServices,
+    window: AppWindowId,
+    state: &mut DockingArbitrationWindowState,
+    target: fret_core::NodeId,
+    anchor: u32,
+    focus: u32,
+) {
+    <DockingArbitrationDriver as WinitAppDriver>::accessibility_set_text_selection(
+        driver, app, services, window, state, target, anchor, focus,
+    )
+}
+
+fn accessibility_replace_selected_text(
+    driver: &mut DockingArbitrationDriver,
+    app: &mut App,
+    services: &mut dyn UiServices,
+    window: AppWindowId,
+    state: &mut DockingArbitrationWindowState,
+    target: fret_core::NodeId,
+    value: &str,
+) {
+    <DockingArbitrationDriver as WinitAppDriver>::accessibility_replace_selected_text(
+        driver, app, services, window, state, target, value,
+    )
+}
+
+fn build_driver(
+    pending_layout: Option<fret_core::DockLayout>,
+    viewport_tools: Arc<Mutex<DemoViewportToolState>>,
+    layout_preset: DockingArbitrationLayoutPreset,
+    persist_layout_on_exit: bool,
+) -> impl WinitAppDriver {
+    let driver_state = DockingArbitrationDriver::new(
+        pending_layout,
+        viewport_tools,
+        layout_preset,
+        persist_layout_on_exit,
+    );
+
+    FnDriver::new(driver_state, create_window_state, handle_event, render)
+        .with_init(init)
+        .with_hooks(|hooks| {
+            hooks.hot_reload_window = Some(hot_reload_window);
+            hooks.viewport_input = Some(viewport_input);
+            hooks.dock_op = Some(dock_op);
+            hooks.handle_model_changes = Some(handle_model_changes);
+            hooks.handle_global_changes = Some(handle_global_changes);
+            hooks.handle_command = Some(handle_command);
+            hooks.window_create_spec = Some(window_create_spec);
+            hooks.window_created = Some(window_created);
+            hooks.before_close_window = Some(before_close_window);
+            hooks.accessibility_snapshot = Some(accessibility_snapshot);
+            hooks.accessibility_focus = Some(accessibility_focus);
+            hooks.accessibility_invoke = Some(accessibility_invoke);
+            hooks.accessibility_set_value_text = Some(accessibility_set_value_text);
+            hooks.accessibility_set_value_numeric = Some(accessibility_set_value_numeric);
+            hooks.accessibility_set_text_selection = Some(accessibility_set_text_selection);
+            hooks.accessibility_replace_selected_text = Some(accessibility_replace_selected_text);
+        })
+}
+
 pub fn run() -> anyhow::Result<()> {
     let _ = tracing_subscriber::fmt()
         .with_env_filter(
@@ -3463,7 +3688,7 @@ pub fn run() -> anyhow::Result<()> {
         None
     };
 
-    let driver = DockingArbitrationDriver::new(
+    let driver = build_driver(
         pending_layout,
         viewport_tools,
         layout_preset,
