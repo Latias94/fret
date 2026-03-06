@@ -3,6 +3,8 @@
 This tracker is intentionally biased toward small, reviewable slices. Keep items concrete enough to
 land in code review; move design discussion back to `README.md` if a TODO turns into prose.
 
+Execution companion: `design.md` (surface map + next worktree order).
+
 ## Cross-cutting guardrails
 
 - [x] Keep `compat-retained-canvas` out of default features.

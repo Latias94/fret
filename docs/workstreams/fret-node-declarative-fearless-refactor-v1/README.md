@@ -1,6 +1,11 @@
 # Workstream: `fret-node` Fearless Refactor (v1)
 
 Status: Reframed and active (last updated 2026-03-06)
+Quick navigation:
+
+- `design.md` - current surface map + next worktree order
+- `todo.md` - actionable backlog
+- `milestones.md` - done criteria + regression expectations
 Scope: `ecosystem/fret-node` with focused touch points in `ecosystem/fret-canvas`, `apps/fret-examples`, and node-graph diagnostics
 
 Historical note:

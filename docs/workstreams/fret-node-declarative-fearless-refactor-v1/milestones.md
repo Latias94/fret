@@ -3,6 +3,8 @@
 This file defines what must be true before each milestone can be considered complete. The goal is
 not to maximize activity; the goal is to reduce ambiguity and make the landing path reviewable.
 
+Execution companion: `design.md` (surface map + next worktree order).
+
 ## Global success criteria
 
 Every milestone should improve one of these axes without regressing the others, or explicitly
@@ -60,6 +62,7 @@ be reviewed without re-reading the whole crate.
 ### Evidence anchors
 
 - `docs/workstreams/fret-node-declarative-fearless-refactor-v1/README.md`
+- `docs/workstreams/fret-node-declarative-fearless-refactor-v1/design.md`
 - `docs/workstreams/fret-node-declarative-fearless-refactor-v1/milestones.md`
 - `docs/workstreams/fret-node-declarative-fearless-refactor-v1/todo.md`
 
