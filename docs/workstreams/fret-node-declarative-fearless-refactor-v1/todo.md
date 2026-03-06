@@ -85,6 +85,7 @@ land in code review; move design discussion back to `README.md` if a TODO turns 
   - wheel zoom / pinch zoom
   - drag-pan viewport updates
   - diagnostics viewport normalization hotkeys
+  - deferred `fit-to-portals` viewport application in the render/portal pass
 - [x] Start routing declarative selection commits through controller/store-backed selection helpers
       when a controller/store exists:
   - click-to-select / toggle-select

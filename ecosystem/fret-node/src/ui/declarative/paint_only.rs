@@ -895,6 +895,38 @@ fn update_view_state_action_host(
         .is_ok()
 }
 
+fn update_view_state_ui_host<H: UiHost>(
+    host: &mut H,
+    view_state: &Model<NodeGraphViewState>,
+    controller: Option<&NodeGraphController>,
+    store: Option<&Model<NodeGraphStore>>,
+    f: impl FnOnce(&mut NodeGraphViewState),
+) -> bool {
+    let Ok(mut next_view_state) = host.models_mut().read(view_state, |state| state.clone()) else {
+        return false;
+    };
+    f(&mut next_view_state);
+
+    if let Some(controller) = controller {
+        return controller
+            .replace_view_state_and_sync_model(host, view_state, next_view_state)
+            .is_ok();
+    }
+
+    if let Some(store) = store {
+        let controller = NodeGraphController::new(store.clone());
+        return controller
+            .replace_view_state_and_sync_model(host, view_state, next_view_state)
+            .is_ok();
+    }
+
+    host.models_mut()
+        .update(view_state, |state| {
+            *state = next_view_state;
+        })
+        .is_ok()
+}
+
 fn update_selection_action_host(
     host: &mut dyn fret_ui::action::UiActionHost,
     view_state: &Model<NodeGraphViewState>,
@@ -3674,16 +3706,17 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
                         .flatten();
 
                     if bounds_valid && let Some(target) = target {
-                        let applied = cx
-                            .app
-                            .models_mut()
-                            .update(&view_state, |state| {
-                                apply_fit_view_to_canvas_rect(
+                        let applied = update_view_state_ui_host(
+                            cx.app,
+                            &view_state,
+                            controller.as_ref(),
+                            store.as_ref(),
+                            |state| {
+                                let _ = apply_fit_view_to_canvas_rect(
                                     state, bounds, target, 24.0, min_zoom, max_zoom,
-                                )
-                            })
-                            .ok()
-                            .unwrap_or(false);
+                                );
+                            },
+                        );
 
                         if applied {
                             let _ = cx.app.models_mut().update(&portal_bounds_store, |st| {

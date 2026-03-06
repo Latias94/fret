@@ -151,6 +151,8 @@ points rather than direct graph mutation.
   - Declarative keyboard zoom / wheel zoom / pinch zoom / drag-pan updates now start converging on
     controller/store-backed view-state replacement instead of only mutating the external
     `NodeGraphViewState` model.
+  - The deferred `fit-to-portals` viewport apply path in the render/portal pass now also uses the
+    same controller/store-backed view-state replacement path.
   - Declarative click selection / marquee preview / cancel restore also now start converging on
     controller/store-backed selection helpers instead of only mutating the external
     `NodeGraphViewState` selection fields.
