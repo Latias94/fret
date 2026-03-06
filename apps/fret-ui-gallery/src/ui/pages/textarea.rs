@@ -6,6 +6,7 @@ use crate::ui::snippets::textarea as snippets;
 pub(super) fn preview_textarea(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     let demo = snippets::demo::render(cx);
     let usage = snippets::usage::render(cx);
+    let label = snippets::label::render(cx);
     let disabled = snippets::disabled::render(cx);
     let with_label = snippets::field::render(cx);
     let with_text = snippets::with_text::render(cx);
@@ -36,6 +37,10 @@ pub(super) fn preview_textarea(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
                 .description("Copyable minimal usage for `Textarea`.")
                 .test_id_prefix("ui-gallery-textarea-usage")
                 .code_rust_from_file_region(snippets::usage::SOURCE, "example"),
+            DocSection::new("Label Association", label)
+                .description("Use `FieldLabel::for_control` + `Textarea::control_id` so label clicks focus the textarea.")
+                .test_id_prefix("ui-gallery-textarea-label")
+                .code_rust_from_file_region(snippets::label::SOURCE, "example"),
             DocSection::new("With Label", with_label)
                 .test_id_prefix("ui-gallery-textarea-field")
                 .code_rust_from_file_region(snippets::field::SOURCE, "example"),
