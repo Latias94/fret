@@ -170,6 +170,9 @@ First landing in this worktree:
   oversized event closure,
 - pointer-move now also dispatches through dedicated node-drag, marquee, and hover helpers,
   so activation/preview/paint-only hover updates no longer live in one monolithic branch.
+- left-button pointer-up now also dispatches through dedicated node-drag,
+  pending-selection, and marquee release helpers, so release commit ordering and transient
+  cleanup no longer depend on one mixed branch.
 
 ### Slice 3 - portal and overlay closure
 

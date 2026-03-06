@@ -226,6 +226,9 @@ points rather than direct graph mutation.
   - Declarative pointer-move now dispatches through explicit node-drag, marquee, and hover
     helpers, with focused tests covering drag activation, canceled drag cleanup, marquee
     preview/cancel, and hover hit updates.
+  - Declarative left-button pointer-up now dispatches through explicit node-drag,
+    pending-selection, and marquee release helpers, with focused tests covering branch
+    cleanup and commit semantics.
   - Diagnostics-only `Digit3/4/5` graph tweaks now build transactions from `graph_diff` and commit
     through the same controller/store transaction path instead of mutating `Graph` in place.
   - `apps/fret-examples/src/node_graph_demo.rs` now passes a controller into the declarative
@@ -271,7 +274,8 @@ points rather than direct graph mutation.
   `paint_only.rs`)
 - cancel/release gates for selection-only release, escape cancel, and pointer-cancel transient
   cleanup in the declarative path
-- left-release arbitration gates for pending-only, inactive-toggle-marquee, and no-state releases
+- left-release reducer gates for node-drag, pending-only, inactive-toggle-marquee, and no-state
+  releases
 - cancel reducer + pointer session helper gates for Escape-vs-pointer-cancel divergence around
   already-canceled node drags
 - keydown dispatch gates for diag-key parsing, diag view presets, portal-disable cleanup, zoom

@@ -1251,71 +1251,91 @@ fn complete_node_drag_release_action_host(
     }
 }
 
-fn complete_left_pointer_release_action_host(
+fn handle_node_drag_left_pointer_release_action_host(
     host: &mut dyn fret_ui::action::UiActionHost,
     node_drag: &Model<Option<NodeDragState>>,
     pending_selection: &Model<Option<PendingSelectionState>>,
-    marquee: &Model<Option<MarqueeDragState>>,
     graph: &Model<Graph>,
     view_state: &Model<NodeGraphViewState>,
     controller: Option<&NodeGraphController>,
     store: Option<&Model<NodeGraphStore>>,
-) -> LeftPointerReleaseOutcome {
+) -> Option<LeftPointerReleaseOutcome> {
     let node_drag_value = host
         .models_mut()
         .read(node_drag, |state| state.clone())
         .ok()
         .flatten();
-    if let Some(node_drag_value) = node_drag_value {
-        let pending_selection_value = host
-            .models_mut()
-            .read(pending_selection, |state| state.clone())
-            .ok()
-            .flatten();
-        let outcome = complete_node_drag_release_action_host(
-            host,
-            graph,
-            view_state,
-            controller,
-            store,
-            &node_drag_value,
-            pending_selection_value.as_ref(),
-        );
-        let _ = host
-            .models_mut()
-            .update(pending_selection, |state| *state = None);
-        let _ = host.models_mut().update(node_drag, |state| *state = None);
-        return LeftPointerReleaseOutcome::NodeDrag(outcome);
-    }
+    let Some(node_drag_value) = node_drag_value else {
+        return None;
+    };
 
     let pending_selection_value = host
         .models_mut()
         .read(pending_selection, |state| state.clone())
         .ok()
         .flatten();
-    if let Some(pending_selection_value) = pending_selection_value.as_ref() {
-        let selection_committed = commit_pending_selection_action_host(
-            host,
-            view_state,
-            controller,
-            store,
-            pending_selection_value,
-        );
-        let _ = host
-            .models_mut()
-            .update(pending_selection, |state| *state = None);
-        return LeftPointerReleaseOutcome::PendingSelection {
-            selection_committed,
-        };
-    }
+    let outcome = complete_node_drag_release_action_host(
+        host,
+        graph,
+        view_state,
+        controller,
+        store,
+        &node_drag_value,
+        pending_selection_value.as_ref(),
+    );
+    let _ = host
+        .models_mut()
+        .update(pending_selection, |state| *state = None);
+    let _ = host.models_mut().update(node_drag, |state| *state = None);
+    Some(LeftPointerReleaseOutcome::NodeDrag(outcome))
+}
 
+fn handle_pending_selection_left_pointer_release_action_host(
+    host: &mut dyn fret_ui::action::UiActionHost,
+    pending_selection: &Model<Option<PendingSelectionState>>,
+    view_state: &Model<NodeGraphViewState>,
+    controller: Option<&NodeGraphController>,
+    store: Option<&Model<NodeGraphStore>>,
+) -> Option<LeftPointerReleaseOutcome> {
+    let pending_selection_value = host
+        .models_mut()
+        .read(pending_selection, |state| state.clone())
+        .ok()
+        .flatten();
+    let Some(pending_selection_value) = pending_selection_value else {
+        return None;
+    };
+
+    let selection_committed = commit_pending_selection_action_host(
+        host,
+        view_state,
+        controller,
+        store,
+        &pending_selection_value,
+    );
+    let _ = host
+        .models_mut()
+        .update(pending_selection, |state| *state = None);
+    Some(LeftPointerReleaseOutcome::PendingSelection {
+        selection_committed,
+    })
+}
+
+fn handle_marquee_left_pointer_release_action_host(
+    host: &mut dyn fret_ui::action::UiActionHost,
+    marquee: &Model<Option<MarqueeDragState>>,
+    pending_selection: &Model<Option<PendingSelectionState>>,
+    view_state: &Model<NodeGraphViewState>,
+    controller: Option<&NodeGraphController>,
+    store: Option<&Model<NodeGraphStore>>,
+) -> Option<LeftPointerReleaseOutcome> {
     let marquee_value = host
         .models_mut()
         .read(marquee, |state| state.clone())
         .ok()
         .flatten();
     let Some(marquee_value) = marquee_value else {
-        return LeftPointerReleaseOutcome::None;
+        return None;
     };
 
     let selection_committed = if marquee_value.active || !marquee_value.toggle {
@@ -1327,9 +1347,52 @@ fn complete_left_pointer_release_action_host(
         .models_mut()
         .update(pending_selection, |state| *state = None);
     let _ = host.models_mut().update(marquee, |state| *state = None);
-    LeftPointerReleaseOutcome::Marquee {
+    Some(LeftPointerReleaseOutcome::Marquee {
         selection_committed,
+    })
+}
+
+fn complete_left_pointer_release_action_host(
+    host: &mut dyn fret_ui::action::UiActionHost,
+    node_drag: &Model<Option<NodeDragState>>,
+    pending_selection: &Model<Option<PendingSelectionState>>,
+    marquee: &Model<Option<MarqueeDragState>>,
+    graph: &Model<Graph>,
+    view_state: &Model<NodeGraphViewState>,
+    controller: Option<&NodeGraphController>,
+    store: Option<&Model<NodeGraphStore>>,
+) -> LeftPointerReleaseOutcome {
+    if let Some(release) = handle_node_drag_left_pointer_release_action_host(
+        host,
+        node_drag,
+        pending_selection,
+        graph,
+        view_state,
+        controller,
+        store,
+    ) {
+        return release;
     }
+
+    if let Some(release) = handle_pending_selection_left_pointer_release_action_host(
+        host,
+        pending_selection,
+        view_state,
+        controller,
+        store,
+    ) {
+        return release;
+    }
+
+    handle_marquee_left_pointer_release_action_host(
+        host,
+        marquee,
+        pending_selection,
+        view_state,
+        controller,
+        store,
+    )
+    .unwrap_or(LeftPointerReleaseOutcome::None)
 }
 
 fn cancel_declarative_interactions_action_host(
@@ -4367,8 +4430,8 @@ mod tests {
         DeclarativeDiagKeyAction, DeclarativeDiagViewPreset, DeclarativeKeyboardZoomAction,
         DerivedGeometryCacheState, DragState, LeftPointerDownOutcome, LeftPointerDownSnapshot,
         LeftPointerReleaseOutcome, MarqueeDragState, MarqueePointerMoveOutcome, NodeDragPhase,
-        NodeDragPointerMoveOutcome, NodeDragState, PendingSelectionState, PortalBoundsStore,
-        PortalDebugFlags, apply_declarative_diag_view_preset_action_host,
+        NodeDragPointerMoveOutcome, NodeDragReleaseOutcome, NodeDragState, PendingSelectionState,
+        PortalBoundsStore, PortalDebugFlags, apply_declarative_diag_view_preset_action_host,
         begin_left_pointer_down_action_host, begin_pan_pointer_down_action_host,
         build_click_selection_preview_nodes, build_diag_normalize_visible_node_transaction,
         build_diag_nudge_visible_node_transaction, build_marquee_preview_selected_nodes,
@@ -4377,9 +4440,12 @@ mod tests {
         commit_pending_selection_action_host, complete_left_pointer_release_action_host,
         complete_node_drag_release_action_host, escape_cancel_declarative_interactions_action_host,
         handle_declarative_diag_key_action_host, handle_declarative_keyboard_zoom_action_host,
-        handle_marquee_pointer_move_action_host, handle_node_drag_pointer_move_action_host,
-        node_drag_commit_delta, pointer_cancel_declarative_interactions_action_host,
-        pointer_crossed_threshold, update_hovered_node_pointer_move_action_host,
+        handle_marquee_left_pointer_release_action_host, handle_marquee_pointer_move_action_host,
+        handle_node_drag_left_pointer_release_action_host,
+        handle_node_drag_pointer_move_action_host,
+        handle_pending_selection_left_pointer_release_action_host, node_drag_commit_delta,
+        pointer_cancel_declarative_interactions_action_host, pointer_crossed_threshold,
+        update_hovered_node_pointer_move_action_host,
     };
     use crate::core::{
         CanvasPoint, CanvasSize, EdgeId, Graph, GraphId, GroupId, Node, NodeId, NodeKindKey,
@@ -5084,6 +5150,180 @@ mod tests {
         );
 
         assert_eq!(outcome, LeftPointerReleaseOutcome::None);
+    }
+
+    #[test]
+    fn handle_node_drag_left_pointer_release_action_host_clears_drag_and_pending_selection() {
+        let mut host = TestActionHostImpl::default();
+        let node_a = NodeId::from_u128(9945);
+        let node_b = NodeId::from_u128(9946);
+        let mut graph_value = Graph::new(GraphId::from_u128(13));
+        graph_value
+            .nodes
+            .insert(node_a, test_node(CanvasPoint { x: 0.0, y: 0.0 }));
+        graph_value
+            .nodes
+            .insert(node_b, test_node(CanvasPoint { x: 40.0, y: 20.0 }));
+        let initial_view = NodeGraphViewState {
+            selected_nodes: vec![node_a],
+            ..Default::default()
+        };
+        let graph = host.models.insert(graph_value.clone());
+        let view_state = host.models.insert(initial_view.clone());
+        let store = host
+            .models
+            .insert(NodeGraphStore::new(graph_value, initial_view.clone()));
+        let controller = NodeGraphController::new(store.clone());
+        let node_drag = host.models.insert(Some(NodeDragState {
+            start_screen: Point::new(Px(0.0), Px(0.0)),
+            current_screen: Point::new(Px(12.0), Px(0.0)),
+            phase: NodeDragPhase::Armed,
+            nodes_sorted: Arc::from([node_b]),
+        }));
+        let pending = host.models.insert(Some(PendingSelectionState {
+            nodes: Arc::from([node_b]),
+            clear_edges: false,
+            clear_groups: false,
+        }));
+        let trace = install_declarative_callback_trace(&mut host, &store);
+
+        let outcome = handle_node_drag_left_pointer_release_action_host(
+            &mut host,
+            &node_drag,
+            &pending,
+            &graph,
+            &view_state,
+            Some(&controller),
+            Some(&store),
+        );
+
+        assert_eq!(
+            outcome,
+            Some(LeftPointerReleaseOutcome::NodeDrag(
+                NodeDragReleaseOutcome {
+                    selection_committed: true,
+                    drag_committed: false,
+                }
+            ))
+        );
+        assert!(
+            host.models
+                .read(&node_drag, |state| state.is_none())
+                .expect("node drag readable")
+        );
+        assert!(
+            host.models
+                .read(&pending, |state| state.is_none())
+                .expect("pending readable")
+        );
+        let got = trace.borrow();
+        assert!(got.commit_labels.is_empty());
+        assert_eq!(
+            got.selection_changes,
+            vec![SelectionChange {
+                nodes: vec![node_b],
+                edges: Vec::new(),
+                groups: Vec::new(),
+            }]
+        );
+    }
+
+    #[test]
+    fn handle_pending_selection_left_pointer_release_action_host_commits_and_clears_pending_only() {
+        let mut host = TestActionHostImpl::default();
+        let node_a = NodeId::from_u128(9947);
+        let node_b = NodeId::from_u128(9948);
+        let view_state = host.models.insert(NodeGraphViewState {
+            selected_nodes: vec![node_a],
+            ..Default::default()
+        });
+        let pending = host.models.insert(Some(PendingSelectionState {
+            nodes: Arc::from([node_b]),
+            clear_edges: true,
+            clear_groups: true,
+        }));
+
+        let outcome = handle_pending_selection_left_pointer_release_action_host(
+            &mut host,
+            &pending,
+            &view_state,
+            None,
+            None,
+        );
+
+        assert_eq!(
+            outcome,
+            Some(LeftPointerReleaseOutcome::PendingSelection {
+                selection_committed: true,
+            })
+        );
+        assert!(
+            host.models
+                .read(&pending, |state| state.is_none())
+                .expect("pending readable")
+        );
+        assert_eq!(
+            host.models
+                .read(&view_state, |state| state.selected_nodes.clone())
+                .expect("view state readable"),
+            vec![node_b]
+        );
+    }
+
+    #[test]
+    fn handle_marquee_left_pointer_release_action_host_clears_pending_and_marquee_without_commit() {
+        let mut host = TestActionHostImpl::default();
+        let node_a = NodeId::from_u128(9949);
+        let node_b = NodeId::from_u128(9950);
+        let view_state = host.models.insert(NodeGraphViewState {
+            selected_nodes: vec![node_a],
+            ..Default::default()
+        });
+        let marquee = host.models.insert(Some(MarqueeDragState {
+            start_screen: Point::new(Px(0.0), Px(0.0)),
+            current_screen: Point::new(Px(4.0), Px(4.0)),
+            active: false,
+            toggle: true,
+            base_selected_nodes: Arc::from([node_a]),
+            preview_selected_nodes: Arc::from([node_b]),
+        }));
+        let pending = host.models.insert(Some(PendingSelectionState {
+            nodes: Arc::from([node_b]),
+            clear_edges: false,
+            clear_groups: false,
+        }));
+
+        let outcome = handle_marquee_left_pointer_release_action_host(
+            &mut host,
+            &marquee,
+            &pending,
+            &view_state,
+            None,
+            None,
+        );
+
+        assert_eq!(
+            outcome,
+            Some(LeftPointerReleaseOutcome::Marquee {
+                selection_committed: false,
+            })
+        );
+        assert!(
+            host.models
+                .read(&marquee, |state| state.is_none())
+                .expect("marquee readable")
+        );
+        assert!(
+            host.models
+                .read(&pending, |state| state.is_none())
+                .expect("pending readable")
+        );
+        assert_eq!(
+            host.models
+                .read(&view_state, |state| state.selected_nodes.clone())
+                .expect("view state readable"),
+            vec![node_a]
+        );
     }
 
     #[test]
