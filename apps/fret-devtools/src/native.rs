@@ -1894,6 +1894,7 @@ fn right_panel(
 }
 
 fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement {
+    let theme = cx.theme_snapshot();
     let loaded_dir = cx
         .app
         .models()
@@ -1967,6 +1968,8 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
         .flatten();
     let repo_root = repo_root_from_script_paths(&st.script_paths);
     let failing_rows = regression_failing_summary_rows(&index_json, 10);
+    let failing_count = failing_rows.len();
+    let selected_bundle_count = selected_bundle_dirs.len();
     let summarize_status_line = {
         let err = summarize_last_error
             .as_deref()
@@ -1976,6 +1979,17 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
             "summarize_in_flight={} summarize_last_error={err}",
             if summarize_in_flight { "true" } else { "false" }
         )
+    };
+    let loaded_dir_line = loaded_dir
+        .as_deref()
+        .map(|v| format!("Artifacts root: {v}"))
+        .unwrap_or_else(|| "Artifacts root: <not loaded>".to_string());
+    let aggregate_preview = if !dashboard.trim().is_empty() {
+        dashboard.clone()
+    } else if let Some(err) = error.as_deref() {
+        format!("Regression load error: {err}")
+    } else {
+        "No aggregate dashboard loaded yet. Use Refresh or Summarize against the current artifacts root.".to_string()
     };
 
     let aggregate_content = {
@@ -2008,16 +2022,27 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
     };
 
     let failing_list = if failing_rows.is_empty() {
-        cx.text("No failing summaries in the current regression index.")
+        shadcn::ScrollArea::new([cx.text(
+            "No failing summaries in the current regression index.",
+        )])
+        .refine_layout(
+            fret_ui_kit::LayoutRefinement::default()
+                .w_full()
+                .min_h(Px(220.0)),
+        )
+        .into_element(cx)
     } else {
         let mut rows: Vec<AnyElement> = Vec::new();
         for row in failing_rows {
+            let resolved_summary_path = resolve_repo_or_abs_path(&repo_root, &row.path);
+            let resolved_summary_path_str = resolved_summary_path.to_string_lossy().to_string();
+            let is_selected = selected_summary_path
+                .as_deref()
+                .is_some_and(|selected| selected == resolved_summary_path_str);
             let label = format!(
                 "{} | lane={} failures={} items={}",
                 row.path, row.lane, row.failures, row.items_total
             );
-            let resolved_summary_path = resolve_repo_or_abs_path(&repo_root, &row.path);
-            let resolved_summary_path_str = resolved_summary_path.to_string_lossy().to_string();
             let selected_summary_path_model = st.regression_selected_summary_path.clone();
             let selected_summary_json_model = st.regression_selected_summary_json.clone();
             let selected_bundle_dirs_model = st.regression_selected_bundle_dirs.clone();
@@ -2074,7 +2099,11 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
                 ui::h_row(|cx| {
                     [
                         shadcn::Button::new(label.clone())
-                            .variant(shadcn::ButtonVariant::Secondary)
+                            .variant(if is_selected {
+                                shadcn::ButtonVariant::Secondary
+                            } else {
+                                shadcn::ButtonVariant::Ghost
+                            })
                             .size(shadcn::ButtonSize::Sm)
                             .on_activate(on_select)
                             .into_element(cx),
@@ -2089,9 +2118,18 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
                 .into_element(cx),
             );
         }
-        ui::v_stack(|_cx| rows)
-            .gap(fret_ui_kit::Space::N2)
-            .into_element(cx)
+        shadcn::ScrollArea::new([
+            ui::v_stack(|_cx| rows)
+                .gap(fret_ui_kit::Space::N2)
+                .layout(fret_ui_kit::LayoutRefinement::default().w_full())
+                .into_element(cx),
+        ])
+        .refine_layout(
+            fret_ui_kit::LayoutRefinement::default()
+                .w_full()
+                .min_h(Px(260.0)),
+        )
+        .into_element(cx)
     };
 
     let selected_bundle_dirs_text = selected_bundle_dirs
@@ -2100,6 +2138,21 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
         .collect::<Vec<_>>()
         .join("
 ");
+    let selected_summary_overview = {
+        let mut parts: Vec<String> = Vec::new();
+        match selected_summary_path.as_deref() {
+            Some(path) => parts.push(format!("Selected summary: {path}")),
+            None => parts.push("Selected summary: <none>".to_string()),
+        }
+        parts.push(format!("Failing bundle dirs: {selected_bundle_count}"));
+        if let Some(first) = selected_bundle_dirs.first() {
+            parts.push(format!("First bundle dir: {}", first.as_ref()));
+        }
+        if let Some(err) = selected_error.as_deref() {
+            parts.push(format!("Selected error: {err}"));
+        }
+        parts.join("\r\n")
+    };
     let selected_detail_content = {
         let mut parts: Vec<String> = Vec::new();
         if let Some(path) = selected_summary_path.as_deref() {
@@ -2186,68 +2239,160 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
     .gap(fret_ui_kit::Space::N2)
     .into_element(cx);
 
-    ui::v_stack(|cx| {
+    let status_row = ui::h_row(|cx| {
         [
-            ui::h_row(|cx| {
-                [
-                    shadcn::Button::new("Refresh")
-                        .variant(shadcn::ButtonVariant::Outline)
-                        .size(shadcn::ButtonSize::Sm)
-                        .disabled(!can_refresh)
-                        .on_click(CMD_REGRESSION_REFRESH)
-                        .into_element(cx),
-                    shadcn::Button::new("Summarize")
-                        .variant(shadcn::ButtonVariant::Secondary)
-                        .size(shadcn::ButtonSize::Sm)
-                        .disabled(!can_refresh || summarize_in_flight)
-                        .on_click(CMD_REGRESSION_SUMMARIZE)
-                        .into_element(cx),
-                    cx.text(summarize_status_line),
-                ]
+            shadcn::Badge::new(if can_refresh {
+                "Artifacts root ready"
+            } else {
+                "No artifacts root"
             })
-            .gap(fret_ui_kit::Space::N2)
+            .variant(if can_refresh {
+                shadcn::BadgeVariant::Secondary
+            } else {
+                shadcn::BadgeVariant::Outline
+            })
             .into_element(cx),
-            shadcn::Card::new([
-                shadcn::CardHeader::new([
-                    shadcn::CardTitle::new("Aggregate").into_element(cx),
-                    shadcn::CardDescription::new(
-                        "Shared aggregate artifacts loaded from the current diagnostics artifacts root.",
-                    )
-                    .into_element(cx),
-                ])
+            shadcn::Badge::new(format!("failing {failing_count}"))
+                .variant(if failing_count > 0 {
+                    shadcn::BadgeVariant::Destructive
+                } else {
+                    shadcn::BadgeVariant::Secondary
+                })
                 .into_element(cx),
-                shadcn::CardContent::new([text_blob(cx, aggregate_content)]).into_element(cx),
-            ])
-            .into_element(cx),
-            shadcn::Card::new([
-                shadcn::CardHeader::new([
-                    shadcn::CardTitle::new("Failing Summaries").into_element(cx),
-                    shadcn::CardDescription::new(
-                        "Click a summary row to load its drill-down payload and copy its evidence path.",
-                    )
-                    .into_element(cx),
-                ])
+            shadcn::Badge::new(format!("selected bundles {selected_bundle_count}"))
+                .variant(shadcn::BadgeVariant::Outline)
                 .into_element(cx),
-                shadcn::CardContent::new([failing_list]).into_element(cx),
-            ])
-            .into_element(cx),
-            shadcn::Card::new([
-                shadcn::CardHeader::new([
-                    shadcn::CardTitle::new("Selected Summary").into_element(cx),
-                    shadcn::CardDescription::new(
-                        "Drill-down view over one failing regression summary and its bundle directories.",
-                    )
-                    .into_element(cx),
-                ])
-                .into_element(cx),
-                shadcn::CardContent::new([selected_actions, text_blob(cx, selected_detail_content)])
-                    .into_element(cx),
-            ])
+            shadcn::Badge::new(if summarize_in_flight {
+                "Summarizing"
+            } else {
+                "Summarize idle"
+            })
+            .variant(if summarize_in_flight {
+                shadcn::BadgeVariant::Default
+            } else {
+                shadcn::BadgeVariant::Outline
+            })
             .into_element(cx),
         ]
     })
     .gap(fret_ui_kit::Space::N2)
-    .into_element(cx)
+    .into_element(cx);
+
+    let top_actions = ui::h_row(|cx| {
+        [
+            shadcn::Button::new("Refresh")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Sm)
+                .disabled(!can_refresh)
+                .on_click(CMD_REGRESSION_REFRESH)
+                .into_element(cx),
+            shadcn::Button::new("Summarize")
+                .variant(shadcn::ButtonVariant::Secondary)
+                .size(shadcn::ButtonSize::Sm)
+                .disabled(!can_refresh || summarize_in_flight)
+                .on_click(CMD_REGRESSION_SUMMARIZE)
+                .into_element(cx),
+            cx.text(summarize_status_line),
+        ]
+    })
+    .gap(fret_ui_kit::Space::N2)
+    .items_center()
+    .into_element(cx);
+
+    let overview_card = shadcn::Card::new([
+        shadcn::CardHeader::new([
+            shadcn::CardTitle::new("Regression Workspace").into_element(cx),
+            shadcn::CardDescription::new(
+                "Summary-first view over aggregate artifacts, failing summaries, and evidence actions.",
+            )
+            .into_element(cx),
+        ])
+        .into_element(cx),
+        shadcn::CardContent::new([
+            status_row,
+            top_actions,
+            cx.text(loaded_dir_line),
+            text_blob_sized(cx, aggregate_preview, Px(120.0)),
+        ])
+        .into_element(cx),
+    ])
+    .into_element(cx);
+
+    let left_card = shadcn::Card::new([
+        shadcn::CardHeader::new([
+            shadcn::CardTitle::new("Failing Summaries").into_element(cx),
+            shadcn::CardDescription::new(
+                "Select one failing summary to open its evidence-focused drill-down.",
+            )
+            .into_element(cx),
+        ])
+        .into_element(cx),
+        shadcn::CardContent::new([failing_list]).into_element(cx),
+    ])
+    .into_element(cx);
+
+    let right_card = shadcn::Card::new([
+        shadcn::CardHeader::new([
+            shadcn::CardTitle::new("Selected Summary").into_element(cx),
+            shadcn::CardDescription::new(
+                "Evidence actions stay close to the currently selected failing summary.",
+            )
+            .into_element(cx),
+        ])
+        .into_element(cx),
+        shadcn::CardContent::new([
+            cx.text(selected_summary_overview),
+            selected_actions,
+            text_blob_sized(cx, selected_detail_content, Px(280.0)),
+        ])
+        .into_element(cx),
+    ])
+    .into_element(cx);
+
+    let split = ui::h_row(|cx| {
+        [
+            cx.container(
+                fret_ui_kit::declarative::style::container_props(
+                    &theme,
+                    fret_ui_kit::ChromeRefinement::default(),
+                    fret_ui_kit::LayoutRefinement::default().w_px(Px(380.0)).h_full(),
+                ),
+                |_cx| [left_card],
+            ),
+            cx.container(
+                fret_ui_kit::declarative::style::container_props(
+                    &theme,
+                    fret_ui_kit::ChromeRefinement::default(),
+                    fret_ui_kit::LayoutRefinement::default().flex_1().min_w_0().h_full(),
+                ),
+                |_cx| [right_card],
+            ),
+        ]
+    })
+    .gap(fret_ui_kit::Space::N2)
+    .layout(fret_ui_kit::LayoutRefinement::default().w_full())
+    .items_start()
+    .into_element(cx);
+
+    let raw_payloads = shadcn::Card::new([
+        shadcn::CardHeader::new([
+            shadcn::CardTitle::new("Raw Aggregate Payloads").into_element(cx),
+            shadcn::CardDescription::new(
+                "Keep raw dashboard/index/summary payloads available for debugging, but secondary to the main workflow.",
+            )
+            .into_element(cx),
+        ])
+        .into_element(cx),
+        shadcn::CardContent::new([
+            text_blob_sized(cx, aggregate_content, Px(220.0)),
+        ])
+        .into_element(cx),
+    ])
+    .into_element(cx);
+
+    ui::v_stack(|_cx| [overview_card, split, raw_payloads])
+        .gap(fret_ui_kit::Space::N2)
+        .into_element(cx)
 }
 
 fn text_blob(cx: &mut ElementContext<'_, App>, text: String) -> AnyElement {
@@ -2259,6 +2404,19 @@ fn text_blob(cx: &mut ElementContext<'_, App>, text: String) -> AnyElement {
 
     let pre = cx.text(text);
     shadcn::ScrollArea::new([pre]).into_element(cx)
+}
+
+fn text_blob_sized(cx: &mut ElementContext<'_, App>, text: String, min_h: Px) -> AnyElement {
+    let text = if text.is_empty() {
+        "<empty>".to_string()
+    } else {
+        text
+    };
+
+    let pre = cx.text(text);
+    shadcn::ScrollArea::new([pre])
+        .refine_layout(fret_ui_kit::LayoutRefinement::default().w_full().min_h(min_h))
+        .into_element(cx)
 }
 
 fn sem_node_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement {
