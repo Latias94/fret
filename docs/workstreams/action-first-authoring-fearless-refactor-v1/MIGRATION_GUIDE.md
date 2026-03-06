@@ -393,8 +393,10 @@ This is a style guide, not a contract, but it is the repo’s default teaching b
   - `stack::h_flex(...)` → `ui::h_flex(...)` (forces `width: fill`)
   - `stack::h_row(...)` → `ui::h_row(...)` (does **not** force `width: fill`)
   - `stack::container_vstack(...)` → `ui::container(...)` + `ui::v_stack(...)` (explicit composition)
+    - Internal policy/helper code that still wants a sink-based composition path can use `container_vstack_build(...)` / `container_hstack_build(...)` in `ecosystem/fret-ui-shadcn::layout` to stay on the same late-landing child pipeline without rebuilding a temporary `Vec<AnyElement>`.
 - When rendering dynamic lists, prefer `*_build(|cx, out| ...)` + `cx.keyed(id, |cx| ...)` to keep
   identity stable and reduce allocation noise.
+- For table-like composite trees, prefer `Table::build(...)` / `TableHeader::build(...)` / `TableBody::build(...)` / `TableFooter::build(...)` / `TableRow::build(...)` when the children naturally come from loops or generated data; when the final cell child is itself a builder, prefer `TableCell::build(child)` over early `into_element(cx)` and keep `TableCell::new(child)` only for already-landed `AnyElement` values.
 - Attach `test_id` / `a11y_*` / `key_context` on builders before `into_element(cx)`; only land to
   `AnyElement` at the end of a subtree boundary.
 - Keep the teaching surfaces consistent: the repo gates forbid `stack::*` authoring helpers in

@@ -34,8 +34,8 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         ])
         .into_element(cx),
         shadcn::SheetFooter::new([shadcn::SheetClose::from_scope()
-            .test_id("ui-gallery-sheet-parts-close")
-            .into_element(cx)])
+            .into_element(cx)
+            .test_id("ui-gallery-sheet-parts-close")])
         .into_element(cx),
     ])
     .into_element(cx)

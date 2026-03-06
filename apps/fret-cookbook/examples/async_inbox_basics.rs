@@ -285,7 +285,8 @@ impl View for AsyncInboxBasicsView {
             .into_element(cx);
 
         let card = shadcn::Card::build(|cx, out| {
-            out.push(
+            out.push_ui(
+                cx,
                 shadcn::CardHeader::build(|cx, out| {
                     out.push_ui(cx, shadcn::CardTitle::new("Async inbox basics"));
                     out.push_ui(
@@ -294,14 +295,13 @@ impl View for AsyncInboxBasicsView {
                             "Background work sends data-only messages into an Inbox, drained at a runner boundary (ADR 0175).",
                         ),
                     );
-                })
-                .into_element(cx),
+                }),
             );
-            out.push(
+            out.push_ui(
+                cx,
                 shadcn::CardContent::build(|_cx, out| {
                     out.push(body);
-                })
-                .into_element(cx),
+                }),
             );
         })
         .ui()

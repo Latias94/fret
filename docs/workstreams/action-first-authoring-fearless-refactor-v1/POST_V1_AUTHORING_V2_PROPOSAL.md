@@ -120,8 +120,12 @@ should no longer be the primary authoring pattern in demos/templates.
 Prototype status (as of 2026-03-06):
 
 - `apps/fret-examples/src/query_demo.rs` and `apps/fret-examples/src/query_async_tokio_demo.rs` now demonstrate builder-first passes using `ui::h_row_build`, `ui::v_flex_build`, and `UiElementSinkExt` to remove `ui::children!` from their main layout sections,
-- `ecosystem/fret-ui-shadcn/src/card.rs` now provides `Card::build(...)` / `CardHeader::build(...)` / `CardContent::build(...)`, and that same card-builder path now powers the `fretboard` todo/simple-todo templates plus cookbook `commands_keymap_basics`, `form_basics`, and `async_inbox_basics` through the generic `.ui()` patch path,
-- the remaining visible landing points mostly come from other top-level composite wrappers that still collect `AnyElement` eagerly outside the current card path, plus heterogeneous child pipelines (`ui::children!`, `push_ui()`) that still require explicit `.into_element(cx)` at those boundaries.
+- `ecosystem/fret-ui-kit/src/ui.rs` now bridges heterogeneous child pipelines through `UiChildIntoElement`, so `ui::children!` / `push_ui()` accept nested layout builders plus host-bound late builders without an extra `.into_element(cx)` cliff,
+- `ecosystem/fret-ui-shadcn/src/card.rs` now provides `Card::build(...)` / `CardHeader::build(...)` / `CardContent::build(...)`, and that same card-builder path powers the `fretboard` todo/simple-todo templates plus cookbook `commands_keymap_basics`, `form_basics`, and `async_inbox_basics` through the generic `.ui()` patch path,
+- `ecosystem/fret-ui-shadcn/src/layout.rs` now adds `container_vstack_build(...)` / `container_hstack_build(...)` / `container_hstack_centered_build(...)`, so older shadcn layout helpers can also stay on the same late-landing child pipeline,
+- `ecosystem/fret-ui-shadcn/src/table.rs` now adds `Table::build(...)` / `TableHeader::build(...)` / `TableBody::build(...)` / `TableFooter::build(...)` / `TableRow::build(...)`, and `ecosystem/fret-genui-shadcn/src/resolver/data.rs` uses that same builder-first path for generated data tables,
+- `ecosystem/fret-ui-shadcn/src/table.rs` also adds `TableCell::build(child)` as the first single-child late-landing sample, with `apps/fret-ui-gallery/src/ui/snippets/typography/table.rs` reflecting the intended teaching shape,
+- the remaining visible landing points mostly come from broader composite wrappers plus the rest of the single-child API family that still collect `AnyElement` eagerly outside the modern child pipeline.
 
 ### 4.4 Invalidation and caching
 

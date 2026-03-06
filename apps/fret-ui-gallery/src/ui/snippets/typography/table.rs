@@ -21,16 +21,16 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             shadcn::TableRow::new(
                 2,
                 vec![
-                    shadcn::TableCell::new(cx.text("Empty")).into_element(cx),
-                    shadcn::TableCell::new(cx.text("Overflowing")).into_element(cx),
+                    shadcn::TableCell::build(ui::text("Empty")).into_element(cx),
+                    shadcn::TableCell::build(ui::text("Overflowing")).into_element(cx),
                 ],
             )
             .into_element(cx),
             shadcn::TableRow::new(
                 2,
                 vec![
-                    shadcn::TableCell::new(cx.text("Modest")).into_element(cx),
-                    shadcn::TableCell::new(cx.text("Satisfied")).into_element(cx),
+                    shadcn::TableCell::build(ui::text("Modest")).into_element(cx),
+                    shadcn::TableCell::build(ui::text("Satisfied")).into_element(cx),
                 ],
             )
             .into_element(cx),

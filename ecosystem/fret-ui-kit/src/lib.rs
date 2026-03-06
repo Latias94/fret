@@ -7,10 +7,10 @@
 //! Note: This crate is declarative-only. Retained-widget authoring is intentionally not part of
 //! the public component surface.
 
-/// Build a heterogeneous `Vec<AnyElement>` without repetitive `.into_element(cx)` boilerplate.
+/// Build a heterogeneous `Vec<AnyElement>` without repetitive child landing boilerplate.
 ///
-/// Intended for ergonomic authoring inside layout builders, e.g.:
-/// `ui::h_flex(|cx| ui::children![cx; Button::new("OK").ui(), cx.text("...")])`.
+/// Intended for ergonomic authoring inside layout builders, including host-bound late builders,
+/// e.g.: `ui::h_flex(|cx| ui::children![cx; Button::new("OK").ui(), cx.text("...")])`.
 #[macro_export]
 macro_rules! children {
     ($cx:ident;) => {
@@ -20,8 +20,10 @@ macro_rules! children {
         let mut children = ::std::vec::Vec::new();
         $(
             {
+                use $crate::UiBuilderHostBoundIntoElementExt as _;
+                use $crate::UiIntoElement as _;
                 let child = $child;
-                let element = $crate::UiIntoElement::into_element(child, &mut *$cx);
+                let element = child.into_element(&mut *$cx);
                 children.push(element);
             }
         )+
@@ -227,6 +229,7 @@ pub use style::{
     resolve_override_slot_with, resolve_slot,
 };
 pub use styled::{RefineStyle, Stylable, Styled, StyledExt};
+pub use ui::UiChildIntoElement;
 pub use ui_builder::{
     UiBuilder, UiBuilderHostBoundIntoElementExt, UiExt, UiHostBoundIntoElement, UiIntoElement,
     UiPatch, UiPatchTarget, UiSupportsChrome, UiSupportsLayout,
@@ -284,10 +287,11 @@ pub mod prelude {
     pub use crate::{
         ChromeRefinement, ColorFallback, ColorRef, Corners4, Edges4, ImageMetadata,
         ImageMetadataStore, ImageSamplingExt, LayoutRefinement, MarginEdge, MetricRef,
-        OverrideSlot, Radius, ShadowPreset, SignedMetricRef, Size, Space, StyledExt, UiExt,
-        UiHostBoundIntoElement, UiIntoElement, WidgetState, WidgetStateProperty, WidgetStates,
-        merge_override_slot, merge_slot, resolve_override_slot, resolve_override_slot_opt,
-        resolve_override_slot_opt_with, resolve_override_slot_with, resolve_slot,
+        OverrideSlot, Radius, ShadowPreset, SignedMetricRef, Size, Space, StyledExt,
+        UiChildIntoElement, UiExt, UiHostBoundIntoElement, UiIntoElement, WidgetState,
+        WidgetStateProperty, WidgetStates, merge_override_slot, merge_slot, resolve_override_slot,
+        resolve_override_slot_opt, resolve_override_slot_opt_with, resolve_override_slot_with,
+        resolve_slot,
     };
     pub use crate::{OverlayArbitrationSnapshot, OverlayController, OverlayKind, OverlayPresence};
     pub use crate::{OverlayRequest, OverlayStackEntryKind};
