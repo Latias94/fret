@@ -3,7 +3,7 @@
 //! This module provides an ergonomic, desktop-first entry surface (ecosystem-level) while
 //! preserving the golden-path driver's hotpatch-friendly posture (function-pointer hooks).
 
-use crate::{Defaults, Result, UiAppBuilder, ViewElements};
+use crate::{Defaults, Result, UiAppBuilder, UiAppDriver, ViewElements};
 
 /// Builder-chain facade for creating and running a desktop-first Fret UI app.
 ///
@@ -11,6 +11,7 @@ use crate::{Defaults, Result, UiAppBuilder, ViewElements};
 /// - This is an ecosystem-level convenience layer (not a kernel contract).
 /// - The builder composes existing `fret` entry points (the view/runtime + driver wiring) and
 ///   applies a default main window if none is configured.
+#[doc(alias = "AppBuilder")]
 #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
 pub struct App {
     root_name: &'static str,
@@ -119,6 +120,17 @@ impl App {
         init_window: fn(&mut fret_app::App, fret_core::AppWindowId) -> S,
         view: for<'a> fn(&mut fret_ui::ElementContext<'a, fret_app::App>, &mut S) -> ViewElements,
     ) -> Result<UiAppBuilder<S>> {
+        self.ui_with_hooks(init_window, view, |driver| driver)
+    }
+
+    /// Same as [`ui`](Self::ui), but keeps the `UiAppDriver` configuration seam available on
+    /// the builder path.
+    pub fn ui_with_hooks<S: 'static>(
+        self,
+        init_window: fn(&mut fret_app::App, fret_core::AppWindowId) -> S,
+        view: for<'a> fn(&mut fret_ui::ElementContext<'a, fret_app::App>, &mut S) -> ViewElements,
+        configure: fn(UiAppDriver<S>) -> UiAppDriver<S>,
+    ) -> Result<UiAppBuilder<S>> {
         let App {
             root_name,
             main_window,
@@ -129,49 +141,35 @@ impl App {
             register_icon_pack_hooks,
         } = self;
 
-        fn configure_ui_driver<S>(d: crate::UiAppDriver<S>) -> crate::UiAppDriver<S> {
-            d
-        }
-
+        let driver = fret_bootstrap::ui_app_driver::UiAppDriver::new(root_name, init_window, view)
+            .on_preferences(fret_bootstrap::ui_app_driver::default_on_preferences::<S>);
+        #[cfg(feature = "shadcn")]
+        let driver = driver.on_global_changes_middleware(
+            crate::shadcn_sync_theme_from_environment_on_global_changes::<S>,
+        );
         #[cfg(feature = "command-palette")]
-        fn configure_ui_driver_with_palette<S>(d: crate::UiAppDriver<S>) -> crate::UiAppDriver<S> {
-            d.command_palette(true)
-        }
-
-        let configure: fn(crate::UiAppDriver<S>) -> crate::UiAppDriver<S> = {
-            #[cfg(feature = "command-palette")]
-            {
-                if command_palette {
-                    configure_ui_driver_with_palette::<S>
-                } else {
-                    configure_ui_driver::<S>
-                }
+        let driver = {
+            let mut driver = configure(UiAppDriver::new(driver));
+            if command_palette {
+                driver = driver.command_palette(true);
             }
-            #[cfg(not(feature = "command-palette"))]
-            {
-                let _ = command_palette;
-                configure_ui_driver::<S>
-            }
+            driver
+        };
+        #[cfg(not(feature = "command-palette"))]
+        let driver = {
+            let _ = command_palette;
+            configure(UiAppDriver::new(driver))
         };
 
-        let mut builder =
-            crate::ui_bootstrap_builder_with_hooks(root_name, init_window, view, configure);
-
-        for f in install_app_hooks {
-            builder = builder.install_app(f);
-        }
-        for f in install_hooks {
-            builder = builder.install(f);
-        }
-        for f in register_icon_pack_hooks {
-            builder = builder.register_icon_pack(f);
-        }
-
-        let builder = crate::apply_desktop_defaults_with(builder, defaults)
-            .map_err(crate::BootstrapError::from)?;
-        let mut builder = UiAppBuilder::from_bootstrap(builder);
-        builder = apply_main_window(root_name, main_window, builder);
-        Ok(builder)
+        finish_builder(
+            root_name,
+            main_window,
+            defaults,
+            install_app_hooks,
+            install_hooks,
+            register_icon_pack_hooks,
+            driver,
+        )
     }
 
     /// Build a view-runtime app (`fret::view`) and return a runnable builder.
@@ -179,6 +177,17 @@ impl App {
     /// This is the recommended authoring loop once `ViewCx` adoption lands for the target area.
     pub fn view<V: crate::view::View>(
         self,
+    ) -> Result<UiAppBuilder<crate::view::ViewWindowState<V>>> {
+        self.view_with_hooks::<V>(|driver| driver)
+    }
+
+    /// Same as [`view`](Self::view), but keeps the `UiAppDriver` configuration seam available on
+    /// the builder path.
+    pub fn view_with_hooks<V: crate::view::View>(
+        self,
+        configure: fn(
+            UiAppDriver<crate::view::ViewWindowState<V>>,
+        ) -> UiAppDriver<crate::view::ViewWindowState<V>>,
     ) -> Result<UiAppBuilder<crate::view::ViewWindowState<V>>> {
         let App {
             root_name,
@@ -190,65 +199,59 @@ impl App {
             register_icon_pack_hooks,
         } = self;
 
-        fn configure_view_driver<V: crate::view::View>(
-            d: crate::UiAppDriver<crate::view::ViewWindowState<V>>,
-        ) -> crate::UiAppDriver<crate::view::ViewWindowState<V>> {
-            d.record_engine_frame(crate::view::view_record_engine_frame::<V>)
-        }
-
-        #[cfg(feature = "command-palette")]
-        fn configure_view_driver_with_palette<V: crate::view::View>(
-            d: crate::UiAppDriver<crate::view::ViewWindowState<V>>,
-        ) -> crate::UiAppDriver<crate::view::ViewWindowState<V>> {
-            d.record_engine_frame(crate::view::view_record_engine_frame::<V>)
-                .command_palette(true)
-        }
-
-        let configure: fn(
-            crate::UiAppDriver<crate::view::ViewWindowState<V>>,
-        ) -> crate::UiAppDriver<crate::view::ViewWindowState<V>> = {
-            #[cfg(feature = "command-palette")]
-            {
-                if command_palette {
-                    configure_view_driver_with_palette::<V>
-                } else {
-                    configure_view_driver::<V>
-                }
-            }
-            #[cfg(not(feature = "command-palette"))]
-            {
-                let _ = command_palette;
-                configure_view_driver::<V>
-            }
-        };
-
-        let mut builder = crate::ui_bootstrap_builder_with_hooks(
-            root_name,
-            crate::view::view_init_window::<V>,
-            crate::view::view_view::<V>,
-            configure,
+        let driver =
+            fret_bootstrap::ui_app_driver::UiAppDriver::new(
+                root_name,
+                crate::view::view_init_window::<V>,
+                crate::view::view_view::<V>,
+            )
+            .on_preferences(
+                fret_bootstrap::ui_app_driver::default_on_preferences::<
+                    crate::view::ViewWindowState<V>,
+                >,
+            );
+        #[cfg(feature = "shadcn")]
+        let driver = driver.on_global_changes_middleware(
+            crate::shadcn_sync_theme_from_environment_on_global_changes::<
+                crate::view::ViewWindowState<V>,
+            >,
         );
+        let mut driver = UiAppDriver::new(driver)
+            .record_engine_frame(crate::view::view_record_engine_frame::<V>);
+        driver = configure(driver);
+        #[cfg(feature = "command-palette")]
+        {
+            if command_palette {
+                driver = driver.command_palette(true);
+            }
+        }
+        #[cfg(not(feature = "command-palette"))]
+        let _ = command_palette;
 
-        for f in install_app_hooks {
-            builder = builder.install_app(f);
-        }
-        for f in install_hooks {
-            builder = builder.install(f);
-        }
-        for f in register_icon_pack_hooks {
-            builder = builder.register_icon_pack(f);
-        }
-
-        let builder = crate::apply_desktop_defaults_with(builder, defaults)
-            .map_err(crate::BootstrapError::from)?;
-        let mut builder = UiAppBuilder::from_bootstrap(builder);
-        builder = apply_main_window(root_name, main_window, builder);
-        Ok(builder)
+        finish_builder(
+            root_name,
+            main_window,
+            defaults,
+            install_app_hooks,
+            install_hooks,
+            register_icon_pack_hooks,
+            driver,
+        )
     }
 
     /// Convenience: build a view-runtime app and run it immediately.
     pub fn run_view<V: crate::view::View>(self) -> Result<()> {
         self.view::<V>()?.run()
+    }
+
+    /// Convenience: build a view-runtime app with driver hooks and run it immediately.
+    pub fn run_view_with_hooks<V: crate::view::View>(
+        self,
+        configure: fn(
+            UiAppDriver<crate::view::ViewWindowState<V>>,
+        ) -> UiAppDriver<crate::view::ViewWindowState<V>>,
+    ) -> Result<()> {
+        self.view_with_hooks::<V>(configure)?.run()
     }
 
     /// Convenience: build a UI app and run it immediately.
@@ -259,6 +262,48 @@ impl App {
     ) -> Result<()> {
         self.ui(init_window, view)?.run()
     }
+
+    /// Convenience: build a UI app with driver hooks and run it immediately.
+    pub fn run_ui_with_hooks<S: 'static>(
+        self,
+        init_window: fn(&mut fret_app::App, fret_core::AppWindowId) -> S,
+        view: for<'a> fn(&mut fret_ui::ElementContext<'a, fret_app::App>, &mut S) -> ViewElements,
+        configure: fn(UiAppDriver<S>) -> UiAppDriver<S>,
+    ) -> Result<()> {
+        self.ui_with_hooks(init_window, view, configure)?.run()
+    }
+}
+
+#[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
+fn finish_builder<S: 'static>(
+    root_name: &'static str,
+    main_window: Option<(String, (f64, f64))>,
+    defaults: Defaults,
+    install_app_hooks: Vec<fn(&mut fret_app::App)>,
+    install_hooks: Vec<fn(&mut fret_app::App, &mut dyn fret_core::UiServices)>,
+    register_icon_pack_hooks: Vec<fn(&mut crate::IconRegistry)>,
+    driver: UiAppDriver<S>,
+) -> Result<UiAppBuilder<S>> {
+    let mut builder = fret_bootstrap::BootstrapBuilder::new(
+        fret_app::App::new(),
+        driver.into_inner().into_fn_driver(),
+    );
+
+    for f in install_app_hooks {
+        builder = builder.install_app(f);
+    }
+    for f in install_hooks {
+        builder = builder.install(f);
+    }
+    for f in register_icon_pack_hooks {
+        builder = builder.register_icon_pack(f);
+    }
+
+    let builder = crate::apply_desktop_defaults_with(builder, defaults)
+        .map_err(crate::BootstrapError::from)?;
+    let mut builder = UiAppBuilder::from_bootstrap(builder);
+    builder = apply_main_window(root_name, main_window, builder);
+    Ok(builder)
 }
 
 #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]

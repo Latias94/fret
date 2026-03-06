@@ -77,8 +77,10 @@ actions:
 - Bind UI triggers via `.action(act::Something)` (or `cx.dispatch(...)` for programmatic dispatch).
 - Handle actions via `ViewCx::on_action_notify_models`, `ViewCx::on_action_notify_transient`, and local `on_activate*` by default; keep raw `on_action_notify` for cookbook/reference host-side cases.
 
-Historical MVU note:
+Authoring and historical note:
 
+- New code should use `View` + typed unit actions (`fret::actions!`) and typed payload actions
+  (`fret::payload_actions!`) instead of historical MVU-era helpers.
 - In-tree `fret::mvu::*` has been removed; keep MVU discussion only as an external migration/history reference.
 - If you are migrating an older external MVU codebase, use `docs/workstreams/action-first-authoring-fearless-refactor-v1/MIGRATION_GUIDE.md` as the mapping guide rather than as an alternative authoring recommendation.
 

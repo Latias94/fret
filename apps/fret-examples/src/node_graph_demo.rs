@@ -25,8 +25,9 @@ struct NodeGraphDemoState {
 }
 
 pub fn run() -> anyhow::Result<()> {
-    fret::app("node-graph-demo", init_window, view)?
-        .with_main_window("node_graph_demo", (980.0, 720.0))
+    FretApp::new("node-graph-demo")
+        .window("node_graph_demo", (980.0, 720.0))
+        .ui(init_window, view)?
         .run()?;
     Ok(())
 }

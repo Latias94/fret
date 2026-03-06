@@ -22,7 +22,7 @@ use fret_core::scene::{
     ImageSamplingHint, Paint, UvRect,
 };
 use fret_core::{AppWindowId, Corners, Edges, ImageId, KeyCode, Px};
-use fret_launch::{WinitAppDriver, WinitEventContext, WinitRenderContext, WinitRunnerConfig};
+use fret_launch::{FnDriver, WinitEventContext, WinitRenderContext, WinitRunnerConfig};
 use fret_render::{
     ImageColorSpace, ImageDescriptor, Renderer, RendererCapabilities, WgpuContext,
     write_rgba8_texture_region,
@@ -1057,180 +1057,195 @@ impl CustomEffectV2WebDriver {
     }
 }
 
-impl WinitAppDriver for CustomEffectV2WebDriver {
-    type WindowState = CustomEffectV2WebWindowState;
+fn handle_model_changes(
+    _driver: &mut CustomEffectV2WebDriver,
+    context: fret_launch::WinitWindowContext<'_, CustomEffectV2WebWindowState>,
+    changed: &[fret_app::ModelId],
+) {
+    let fret_launch::WinitWindowContext {
+        app, state, window, ..
+    } = context;
 
-    fn handle_model_changes(
-        &mut self,
-        context: fret_launch::WinitWindowContext<'_, Self::WindowState>,
-        changed: &[fret_app::ModelId],
-    ) {
-        let fret_launch::WinitWindowContext {
-            app, state, window, ..
-        } = context;
+    app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
+        svc.record_model_changes(window, changed);
+    });
+    state.ui.propagate_model_changes(app, changed);
+}
 
-        app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
-            svc.record_model_changes(window, changed);
+fn handle_global_changes(
+    _driver: &mut CustomEffectV2WebDriver,
+    context: fret_launch::WinitWindowContext<'_, CustomEffectV2WebWindowState>,
+    changed: &[std::any::TypeId],
+) {
+    let fret_launch::WinitWindowContext {
+        app, state, window, ..
+    } = context;
+
+    app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
+        svc.record_global_changes(app, window, changed);
+    });
+    state.ui.propagate_global_changes(app, changed);
+}
+
+fn create_window_state(
+    _driver: &mut CustomEffectV2WebDriver,
+    app: &mut App,
+    window: AppWindowId,
+) -> CustomEffectV2WebWindowState {
+    CustomEffectV2WebDriver::build_ui(app, window)
+}
+
+fn gpu_ready(
+    _driver: &mut CustomEffectV2WebDriver,
+    app: &mut App,
+    context: &WgpuContext,
+    renderer: &mut Renderer,
+) {
+    app.set_global(PlatformCapabilities::default());
+    CustomEffectV2WebDriver::install_custom_effect_and_input(app, context, renderer);
+}
+
+fn handle_event(
+    _driver: &mut CustomEffectV2WebDriver,
+    context: WinitEventContext<'_, CustomEffectV2WebWindowState>,
+    event: &fret_core::Event,
+) {
+    let WinitEventContext {
+        app,
+        services,
+        window,
+        state,
+        ..
+    } = context;
+
+    let diag_enabled =
+        app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, _| svc.is_enabled());
+    state.ui.set_debug_enabled(diag_enabled);
+
+    let consumed = app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
+        if !svc.is_enabled() {
+            return false;
+        }
+        if svc.maybe_intercept_event_for_inspect_shortcuts(app, window, event) {
+            return true;
+        }
+        svc.maybe_intercept_event_for_picking(app, window, event)
+    });
+    if consumed {
+        return;
+    }
+
+    if let fret_core::Event::KeyDown { key, .. } = event
+        && *key == KeyCode::KeyV
+    {
+        let _ = app.models_mut().update(&state.show, |v| *v = !*v);
+        app.request_redraw(window);
+    }
+    if let fret_core::Event::KeyDown { key, .. } = event
+        && *key == KeyCode::KeyR
+    {
+        CustomEffectV2WebDriver::reset_controls(app, &state.controls);
+        app.request_redraw(window);
+    }
+
+    state.ui.dispatch_event(app, services, event);
+}
+
+fn render(
+    _driver: &mut CustomEffectV2WebDriver,
+    context: WinitRenderContext<'_, CustomEffectV2WebWindowState>,
+) {
+    let WinitRenderContext {
+        app,
+        services,
+        window,
+        state,
+        bounds,
+        scale_factor,
+        scene,
+        ..
+    } = context;
+
+    let diag_enabled =
+        app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, _| svc.is_enabled());
+    state.ui.set_debug_enabled(diag_enabled);
+
+    let show = state.show.clone();
+    let controls = state.controls.clone();
+
+    let root = declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds)
+        .render_root("custom-effect-v2-web", |cx| {
+            CustomEffectV2WebDriver::render_root(cx, show.clone(), controls.clone())
         });
-        state.ui.propagate_model_changes(app, changed);
-    }
 
-    fn handle_global_changes(
-        &mut self,
-        context: fret_launch::WinitWindowContext<'_, Self::WindowState>,
-        changed: &[std::any::TypeId],
-    ) {
-        let fret_launch::WinitWindowContext {
-            app, state, window, ..
-        } = context;
+    state.ui.set_root(root);
+    state.root = Some(root);
 
-        app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
-            svc.record_global_changes(app, window, changed);
-        });
-        state.ui.propagate_global_changes(app, changed);
-    }
+    state.ui.request_semantics_snapshot();
+    state.ui.ingest_paint_cache_source(scene);
 
-    fn create_window_state(&mut self, app: &mut App, window: AppWindowId) -> Self::WindowState {
-        Self::build_ui(app, window)
-    }
+    scene.clear();
+    let mut frame =
+        fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
+    frame.layout_all();
 
-    fn gpu_ready(&mut self, app: &mut App, context: &WgpuContext, renderer: &mut Renderer) {
-        app.set_global(PlatformCapabilities::default());
-        Self::install_custom_effect_and_input(app, context, renderer);
-    }
-
-    fn handle_event(
-        &mut self,
-        context: WinitEventContext<'_, Self::WindowState>,
-        event: &fret_core::Event,
-    ) {
-        let WinitEventContext {
+    let semantics_snapshot = state.ui.semantics_snapshot_arc();
+    let drive = app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
+        svc.drive_script_for_window(
             app,
-            services,
             window,
-            state,
-            ..
-        } = context;
-
-        let diag_enabled =
-            app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, _| svc.is_enabled());
-        state.ui.set_debug_enabled(diag_enabled);
-
-        let consumed = app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
-            if !svc.is_enabled() {
-                return false;
-            }
-            if svc.maybe_intercept_event_for_inspect_shortcuts(app, window, event) {
-                return true;
-            }
-            svc.maybe_intercept_event_for_picking(app, window, event)
-        });
-        if consumed {
-            return;
-        }
-
-        if let fret_core::Event::KeyDown { key, .. } = event
-            && *key == KeyCode::KeyV
-        {
-            let _ = app.models_mut().update(&state.show, |v| *v = !*v);
-            app.request_redraw(window);
-        }
-        if let fret_core::Event::KeyDown { key, .. } = event
-            && *key == KeyCode::KeyR
-        {
-            Self::reset_controls(app, &state.controls);
-            app.request_redraw(window);
-        }
-
-        state.ui.dispatch_event(app, services, event);
-    }
-
-    fn render(&mut self, context: WinitRenderContext<'_, Self::WindowState>) {
-        let WinitRenderContext {
-            app,
-            services,
-            window,
-            state,
             bounds,
             scale_factor,
-            scene,
-            ..
-        } = context;
+            Some(&mut state.ui),
+            semantics_snapshot.as_deref(),
+        )
+    });
 
-        let diag_enabled =
-            app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, _| svc.is_enabled());
-        state.ui.set_debug_enabled(diag_enabled);
+    if drive.request_redraw {
+        app.request_redraw(window);
+        app.push_effect(Effect::RequestAnimationFrame(window));
+    }
 
-        let show = state.show.clone();
-        let controls = state.controls.clone();
-
-        let root =
-            declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds)
-                .render_root("custom-effect-v2-web", |cx| {
-                    Self::render_root(cx, show.clone(), controls.clone())
-                });
-
-        state.ui.set_root(root);
-        state.root = Some(root);
-
+    let mut injected_any = false;
+    for event in drive.events {
+        injected_any = true;
+        state.ui.dispatch_event(app, services, &event);
+    }
+    if injected_any {
         state.ui.request_semantics_snapshot();
-        state.ui.ingest_paint_cache_source(scene);
-
-        scene.clear();
         let mut frame =
             fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
         frame.layout_all();
+    }
 
-        let semantics_snapshot = state.ui.semantics_snapshot_arc();
-        let drive = app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
-            svc.drive_script_for_window(
-                app,
-                window,
-                bounds,
-                scale_factor,
-                Some(&mut state.ui),
-                semantics_snapshot.as_deref(),
-            )
-        });
+    let mut frame =
+        fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
+    frame.paint_all(scene);
 
-        if drive.request_redraw {
-            app.request_redraw(window);
+    app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
+        let element_runtime = app.global::<fret_ui::elements::ElementRuntime>();
+        svc.record_snapshot(
+            app,
+            window,
+            bounds,
+            scale_factor,
+            &mut state.ui,
+            element_runtime,
+            scene,
+        );
+        let _ = svc.maybe_dump_if_triggered();
+        if svc.is_enabled() {
             app.push_effect(Effect::RequestAnimationFrame(window));
         }
+    });
+}
 
-        let mut injected_any = false;
-        for event in drive.events {
-            injected_any = true;
-            state.ui.dispatch_event(app, services, &event);
-        }
-        if injected_any {
-            state.ui.request_semantics_snapshot();
-            let mut frame =
-                fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
-            frame.layout_all();
-        }
-
-        let mut frame =
-            fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
-        frame.paint_all(scene);
-
-        app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
-            let element_runtime = app.global::<fret_ui::elements::ElementRuntime>();
-            svc.record_snapshot(
-                app,
-                window,
-                bounds,
-                scale_factor,
-                &mut state.ui,
-                element_runtime,
-                scene,
-            );
-            let _ = svc.maybe_dump_if_triggered();
-            if svc.is_enabled() {
-                app.push_effect(Effect::RequestAnimationFrame(window));
-            }
-        });
-    }
+fn configure_fn_driver_hooks(
+    hooks: &mut fret_launch::FnDriverHooks<CustomEffectV2WebDriver, CustomEffectV2WebWindowState>,
+) {
+    hooks.handle_model_changes = Some(handle_model_changes);
+    hooks.handle_global_changes = Some(handle_global_changes);
+    hooks.gpu_ready = Some(gpu_ready);
 }
 
 pub fn build_app() -> App {
@@ -1253,6 +1268,12 @@ pub fn build_runner_config() -> WinitRunnerConfig {
     }
 }
 
-pub fn build_driver() -> impl WinitAppDriver {
-    CustomEffectV2WebDriver::default()
+pub fn build_fn_driver() -> FnDriver<CustomEffectV2WebDriver, CustomEffectV2WebWindowState> {
+    FnDriver::new(
+        CustomEffectV2WebDriver::default(),
+        create_window_state,
+        handle_event,
+        render,
+    )
+    .with_hooks(configure_fn_driver_hooks)
 }

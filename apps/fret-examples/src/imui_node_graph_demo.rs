@@ -17,8 +17,9 @@ struct ImUiNodeGraphState {
 }
 
 pub fn run() -> anyhow::Result<()> {
-    fret::app("imui-node-graph-demo", init_window, view)?
-        .with_main_window("imui_node_graph_demo", (980.0, 720.0))
+    FretApp::new("imui-node-graph-demo")
+        .window("imui_node_graph_demo", (980.0, 720.0))
+        .ui(init_window, view)?
         .run()?;
     Ok(())
 }

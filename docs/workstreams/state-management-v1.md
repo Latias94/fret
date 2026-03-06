@@ -126,31 +126,22 @@ Problem:
 - many demos/templates still build dynamic commands like `"todo.remove.{id}"` and parse them in
   `on_command(...)`.
 
-Existing solution (ecosystem-level):
+Current solution (ecosystem-level):
 
-- `fret::mvu::MessageRouter<M>` allocates per-frame `CommandId`s and routes them back to typed
-  messages in the driver hook.
+- `fret::actions!` for stable unit actions that must remain reachable from keymaps/menus/palette,
+- `fret::payload_actions!` for per-item pointer/programmatic intents with typed payloads,
+- `ViewCx::{on_action*, on_payload_action*}` for handling without string parsing.
 
-Plan:
+Guidance:
 
-- make `MessageRouter` usable outside the MVU helper (public take/resolve API)
-- migrate representative demos/templates/docs to typed routing:
-  - keep **stable** `CommandId`s for keybindable actions (e.g. `todo.add`)
-  - use `MessageRouter` for per-item/per-row actions (remove/toggle/etc.)
+- keep **stable** unit action IDs for keybindable/global commands (e.g. `todo.add`),
+- use payload actions for per-item/per-row intents (remove/toggle/etc.),
+- avoid rebuilding ad-hoc `CommandId -> payload` routers in new code.
 
-Caveat (view-cache reuse):
+Historical note:
 
-- `MessageRouter` is **per-frame**: it relies on rebuilding the view to (re)register dynamic
-  commands in the current router map.
-- `view_cache(...)` roots can **reuse** a subtree and skip running the subtree builder closure.
-  This means per-frame routing tables will not be refreshed.
-- For dynamic commands inside a view-cached subtree, prefer **stable** command IDs and a persistent
-  lookup table (`CommandId -> message`) owned by the window/app state.
-  - Recommended helper: `fret::mvu::KeyedMessageRouter<K, M>`.
-    - allocate stable command IDs per key (`cmd(key, message)`),
-    - prune on each view build (`retain_keys(...)`) to avoid unbounded growth,
-    - resolve in `on_command(...)` (`try_resolve(...)`).
-  - Example: UI Gallery keeps stable command→payload helpers in `apps/fret-ui-gallery/src/spec.rs`.
+- older drafts used per-frame typed command routers; the current tree has converged on payload
+  actions v2 instead.
 
 ## User experience target (“what app authors should feel”)
 
@@ -158,7 +149,7 @@ Caveat (view-cache reuse):
   - `Model<T>` for state
   - `Selector` for derived state (no manual “tick” model)
   - `use_query` for async resources (loading/error/cache/invalidate)
-  - typed messages in UI code (no prefix parsing)
+  - typed actions in UI code (unit/payload; no prefix parsing)
 - Keybindings/menus still use stable `CommandId`s where it matters.
 
 ## Migration plan (repo targets)

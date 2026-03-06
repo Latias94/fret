@@ -3,8 +3,11 @@ use fret_app::App;
 use fret_core::scene::Paint;
 use fret_core::{AppWindowId, Event, KeyCode, Px};
 use fret_launch::{
-    EngineFrameUpdate, ImportedViewportRenderTarget, NativeExternalTextureFrame,
-    OwnedWgpuTextureFrame,
+    EngineFrameUpdate,
+    imported_viewport_target::{
+        ImportedViewportFallbacks, ImportedViewportRenderTarget, NativeExternalImportOutcome,
+    },
+    native_external_import::{NativeExternalTextureFrame, OwnedWgpuTextureFrame},
 };
 use fret_render::{
     RenderTargetColorSpace, RenderTargetIngestStrategy, RenderTargetMetadata, Renderer,
@@ -738,7 +741,7 @@ fn record_engine_frame(
             size: st.target_px_size,
             ingest_strategy: effective_strategy,
         });
-        let fallbacks = fret_launch::ImportedViewportFallbacks::single_view(
+        let fallbacks = ImportedViewportFallbacks::single_view(
             effective_strategy,
             view.clone(),
             st.target_px_size,
@@ -754,8 +757,8 @@ fn record_engine_frame(
             frame,
             fallbacks,
         ) {
-            fret_launch::NativeExternalImportOutcome::Imported { .. } => {}
-            fret_launch::NativeExternalImportOutcome::FellBack { err, .. } => {
+            NativeExternalImportOutcome::Imported { .. } => {}
+            NativeExternalImportOutcome::FellBack { err, .. } => {
                 tracing::warn!(
                     ?err,
                     "native external import adapter path failed; fell back"
@@ -763,7 +766,7 @@ fn record_engine_frame(
             }
         }
     } else {
-        let fallbacks = fret_launch::ImportedViewportFallbacks::single_view(
+        let fallbacks = ImportedViewportFallbacks::single_view(
             effective_strategy,
             view.clone(),
             st.target_px_size,
@@ -853,21 +856,22 @@ fn record_engine_frame(
         }
         #[cfg(all(not(target_arch = "wasm32"), target_os = "windows"))]
         ExternalTextureImportsMode::Dx12ClearSharedAllocation => {
-            let guard = match fret_launch::runner::dx12::Dx12SharedAllocationWriteGuard::begin(
-                context,
-                texture,
-                wgpu::wgt::TextureUses::COLOR_TARGET,
-            ) {
-                Ok(guard) => guard,
-                Err(err) => {
-                    tracing::warn!(
-                        ?err,
-                        "dx12 clear mode: shared allocation export unavailable; falling back"
-                    );
-                    st.mode = ExternalTextureImportsMode::CheckerGpu;
-                    return update;
-                }
-            };
+            let guard =
+                match fret_launch::shared_allocation::dx12::Dx12SharedAllocationWriteGuard::begin(
+                    context,
+                    texture,
+                    wgpu::wgt::TextureUses::COLOR_TARGET,
+                ) {
+                    Ok(guard) => guard,
+                    Err(err) => {
+                        tracing::warn!(
+                            ?err,
+                            "dx12 clear mode: shared allocation export unavailable; falling back"
+                        );
+                        st.mode = ExternalTextureImportsMode::CheckerGpu;
+                        return update;
+                    }
+                };
 
             if st.dx12_clear.is_none() {
                 let Some(rtv_format) = dx12_clear::rtv_format_for_wgpu(st.target.format()) else {
@@ -939,18 +943,19 @@ pub fn run() -> anyhow::Result<()> {
         )
         .try_init();
 
-    let builder = fret::app_with_hooks("external-texture-imports", init_window, view, |driver| {
-        driver
-            .on_event(on_event)
-            .record_engine_frame(record_engine_frame)
-    })?
-    .init_app(|app| {
-        app.set_global(PlatformCapabilities::default());
-    })
-    .with_main_window(
-        "fret-demo external_texture_imports_demo (V toggles visibility, I toggles source, N toggles native adapter)",
-        (960.0, 640.0),
-    );
+    let builder = fret::App::new("external-texture-imports")
+        .window(
+            "fret-demo external_texture_imports_demo (V toggles visibility, I toggles source, N toggles native adapter)",
+            (960.0, 640.0),
+        )
+        .ui_with_hooks(init_window, view, |driver| {
+            driver
+                .on_event(on_event)
+                .record_engine_frame(record_engine_frame)
+        })?
+        .init_app(|app| {
+            app.set_global(PlatformCapabilities::default());
+        });
 
     builder.run().context("run external_texture_imports_demo")
 }

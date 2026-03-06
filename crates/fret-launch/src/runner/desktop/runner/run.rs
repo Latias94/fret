@@ -25,7 +25,7 @@ pub fn run_app_with_event_loop<D: super::WinitAppDriver + 'static>(
     app: App,
     driver: D,
 ) -> Result<(), RunnerError> {
-    crate::configure_stacksafe_from_env();
+    crate::stacksafe_config::configure_stacksafe_from_env();
     let mut runner = super::WinitRunner::new_app(config, app, driver);
     #[cfg(target_os = "android")]
     runner.set_android_app(event_loop.android_app().clone());
@@ -156,7 +156,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
     }
 }
 
-pub struct WinitAppBuilder<D: super::WinitAppDriver> {
+pub struct WinitAppBuilder<D> {
     config: super::WinitRunnerConfig,
     app: App,
     driver: D,

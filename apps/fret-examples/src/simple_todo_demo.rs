@@ -3,8 +3,8 @@ use std::sync::Arc;
 use fret_app::{App, CommandId, Effect, Model, WindowRequest};
 use fret_core::{AppWindowId, Event, Px, Rect, UiServices};
 use fret_launch::{
-    WindowCreateSpec, WinitAppDriver, WinitCommandContext, WinitEventContext, WinitRenderContext,
-    WinitRunnerConfig,
+    FnDriver, WindowCreateSpec, WinitCommandContext, WinitEventContext, WinitHotReloadContext,
+    WinitRenderContext, WinitRunnerConfig,
 };
 use fret_runtime::PlatformCapabilities;
 use fret_ui::Invalidation;
@@ -30,7 +30,7 @@ struct TodoItem {
     text: Arc<str>,
 }
 
-struct SimpleTodoWindowState {
+pub struct SimpleTodoWindowState {
     ui: UiTree<App>,
     root: Option<fret_core::NodeId>,
     todos: Model<Vec<TodoItem>>,
@@ -39,7 +39,7 @@ struct SimpleTodoWindowState {
 }
 
 #[derive(Default)]
-struct SimpleTodoDriver;
+pub struct SimpleTodoDriver;
 
 impl SimpleTodoDriver {
     fn render(
@@ -102,7 +102,7 @@ impl SimpleTodoDriver {
                         .rounded_md();
 
                     let input = shadcn::Input::new(draft_model.clone())
-                        .placeholder("Add a task…")
+                        .placeholder("Add a task...")
                         .submit_command(add_cmd)
                         .into_element(cx)
                         .test_id(TEST_ID_INPUT);
@@ -269,125 +269,124 @@ fn todo_row(
         .into_element(cx)
 }
 
-impl WinitAppDriver for SimpleTodoDriver {
-    type WindowState = SimpleTodoWindowState;
+fn create_window_state(
+    _driver: &mut SimpleTodoDriver,
+    app: &mut App,
+    window: AppWindowId,
+) -> SimpleTodoWindowState {
+    let done_1 = app.models_mut().insert(false);
+    let done_2 = app.models_mut().insert(true);
+    let todos = app.models_mut().insert(vec![
+        TodoItem {
+            id: 1,
+            done: done_1,
+            text: Arc::from("Use keyed rows for dynamic lists"),
+        },
+        TodoItem {
+            id: 2,
+            done: done_2,
+            text: Arc::from("Try the shadcn theme tokens"),
+        },
+    ]);
+    let draft = app.models_mut().insert(String::new());
 
-    fn create_window_state(&mut self, app: &mut App, window: AppWindowId) -> Self::WindowState {
-        let done_1 = app.models_mut().insert(false);
-        let done_2 = app.models_mut().insert(true);
-        let todos = app.models_mut().insert(vec![
-            TodoItem {
-                id: 1,
-                done: done_1,
-                text: Arc::from("Use keyed rows for dynamic lists"),
-            },
-            TodoItem {
-                id: 2,
-                done: done_2,
-                text: Arc::from("Try the shadcn theme tokens"),
-            },
-        ]);
-        let draft = app.models_mut().insert(String::new());
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
 
-        let mut ui: UiTree<App> = UiTree::new();
-        ui.set_window(window);
+    SimpleTodoWindowState {
+        ui,
+        root: None,
+        todos,
+        draft,
+        next_id: 3,
+    }
+}
 
-        SimpleTodoWindowState {
-            ui,
-            root: None,
-            todos,
-            draft,
-            next_id: 3,
+fn hot_reload_window(
+    _driver: &mut SimpleTodoDriver,
+    context: WinitHotReloadContext<'_, SimpleTodoWindowState>,
+) {
+    let WinitHotReloadContext {
+        app,
+        services: _,
+        window,
+        state,
+    } = context;
+    crate::hotpatch::reset_ui_tree(app, window, &mut state.ui);
+    state.root = None;
+}
+
+fn handle_command(
+    _driver: &mut SimpleTodoDriver,
+    context: WinitCommandContext<'_, SimpleTodoWindowState>,
+    command: CommandId,
+) {
+    let WinitCommandContext {
+        app, state, window, ..
+    } = context;
+    SimpleTodoDriver::handle_command(app, state, &command);
+    app.request_redraw(window);
+}
+
+fn handle_event(
+    _driver: &mut SimpleTodoDriver,
+    context: WinitEventContext<'_, SimpleTodoWindowState>,
+    event: &Event,
+) {
+    let WinitEventContext {
+        app,
+        services,
+        window,
+        state,
+    } = context;
+
+    match event {
+        Event::WindowCloseRequested
+        | Event::KeyDown {
+            key: fret_core::KeyCode::Escape,
+            ..
+        } => {
+            app.push_effect(Effect::Window(WindowRequest::Close(window)));
+            return;
         }
+        _ => {}
     }
 
-    fn hot_reload_window(
-        &mut self,
-        app: &mut App,
-        _services: &mut dyn UiServices,
-        window: AppWindowId,
-        state: &mut Self::WindowState,
-    ) {
-        crate::hotpatch::reset_ui_tree(app, window, &mut state.ui);
-        state.root = None;
+    state.ui.dispatch_event(app, services, event);
+}
+
+fn render(_driver: &mut SimpleTodoDriver, context: WinitRenderContext<'_, SimpleTodoWindowState>) {
+    let WinitRenderContext {
+        app,
+        services,
+        window,
+        state,
+        bounds,
+        scale_factor,
+        scene,
+    } = context;
+
+    SimpleTodoDriver::render(app, services, window, state, bounds);
+
+    if let Some(root) = state.root {
+        state.ui.set_root(root);
     }
+    state.ui.request_semantics_snapshot();
+    state.ui.ingest_paint_cache_source(scene);
 
-    fn handle_command(
-        &mut self,
-        context: WinitCommandContext<'_, Self::WindowState>,
-        command: CommandId,
-    ) {
-        let WinitCommandContext {
-            app, state, window, ..
-        } = context;
-        Self::handle_command(app, state, &command);
-        app.request_redraw(window);
-    }
+    scene.clear();
+    let mut frame =
+        fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
+    frame.layout_all();
+    frame.paint_all(scene);
+}
 
-    fn handle_event(&mut self, context: WinitEventContext<'_, Self::WindowState>, event: &Event) {
-        let WinitEventContext {
-            app,
-            services,
-            window,
-            state,
-        } = context;
-
-        match event {
-            Event::WindowCloseRequested
-            | Event::KeyDown {
-                key: fret_core::KeyCode::Escape,
-                ..
-            } => {
-                app.push_effect(Effect::Window(WindowRequest::Close(window)));
-                return;
-            }
-            _ => {}
-        }
-
-        state.ui.dispatch_event(app, services, event);
-    }
-
-    fn render(&mut self, context: WinitRenderContext<'_, Self::WindowState>) {
-        let WinitRenderContext {
-            app,
-            services,
-            window,
-            state,
-            bounds,
-            scale_factor,
-            scene,
-        } = context;
-
-        Self::render(app, services, window, state, bounds);
-
-        if let Some(root) = state.root {
-            state.ui.set_root(root);
-        }
-        state.ui.request_semantics_snapshot();
-        state.ui.ingest_paint_cache_source(scene);
-
-        scene.clear();
-        let mut frame =
-            fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
-        frame.layout_all();
-        frame.paint_all(scene);
-    }
-
-    fn window_create_spec(
-        &mut self,
-        _app: &mut App,
-        _request: &fret_app::CreateWindowRequest,
-    ) -> Option<WindowCreateSpec> {
-        None
-    }
-
-    fn window_created(
-        &mut self,
-        _app: &mut App,
-        _request: &fret_app::CreateWindowRequest,
-        _new_window: AppWindowId,
-    ) {
-    }
+fn window_create_spec(
+    _driver: &mut SimpleTodoDriver,
+    _app: &mut App,
+    _request: &fret_app::CreateWindowRequest,
+) -> Option<WindowCreateSpec> {
+    None
 }
 
 pub fn build_app() -> App {
@@ -409,8 +408,22 @@ pub fn build_runner_config() -> WinitRunnerConfig {
     }
 }
 
-pub fn build_driver() -> impl WinitAppDriver {
-    SimpleTodoDriver::default()
+fn configure_fn_driver_hooks(
+    hooks: &mut fret_launch::FnDriverHooks<SimpleTodoDriver, SimpleTodoWindowState>,
+) {
+    hooks.hot_reload_window = Some(hot_reload_window);
+    hooks.handle_command = Some(handle_command);
+    hooks.window_create_spec = Some(window_create_spec);
+}
+
+pub fn build_fn_driver() -> FnDriver<SimpleTodoDriver, SimpleTodoWindowState> {
+    FnDriver::new(
+        SimpleTodoDriver::default(),
+        create_window_state,
+        handle_event,
+        render,
+    )
+    .with_hooks(configure_fn_driver_hooks)
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -426,8 +439,15 @@ pub fn run() -> anyhow::Result<()> {
 
     let app = build_app();
     let config = build_runner_config();
-    let driver = build_driver();
-    crate::run_native_demo(config, app, driver)
+    crate::run_native_with_fn_driver_with_hooks(
+        config,
+        app,
+        SimpleTodoDriver::default(),
+        create_window_state,
+        handle_event,
+        render,
+        configure_fn_driver_hooks,
+    )
 }
 
 #[cfg(target_arch = "wasm32")]

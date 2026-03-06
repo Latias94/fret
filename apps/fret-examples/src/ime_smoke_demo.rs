@@ -2,8 +2,8 @@ use anyhow::Context as _;
 use fret_app::{App, CommandId, Effect};
 use fret_core::{AppWindowId, Event, Px, Rect, UiServices};
 use fret_launch::{
-    WinitAppDriver, WinitCommandContext, WinitEventContext, WinitRenderContext, WinitRunnerConfig,
-    WinitWindowContext,
+    FnDriver, WindowCreateSpec, WinitCommandContext, WinitEventContext, WinitHotReloadContext,
+    WinitRenderContext, WinitRunnerConfig, WinitWindowContext,
 };
 use fret_runtime::{
     BindingV1, KeySpecV1, Keymap, KeymapFileV1, KeymapService, Model, PlatformCapabilities,
@@ -13,7 +13,7 @@ use fret_ui::element::{ContainerProps, CrossAlign, FlexProps, LayoutStyle, Lengt
 use fret_ui::{Invalidation, Theme, UiTree};
 use fret_ui_shadcn as shadcn;
 use std::sync::Arc;
-struct ImeSmokeWindowState {
+pub struct ImeSmokeWindowState {
     ui: UiTree<App>,
     input_single: Model<String>,
     input_multi: Model<String>,
@@ -21,7 +21,7 @@ struct ImeSmokeWindowState {
 }
 
 #[derive(Default)]
-struct ImeSmokeDriver;
+pub struct ImeSmokeDriver;
 
 impl ImeSmokeDriver {
     fn build_ui(app: &mut App, window: AppWindowId) -> ImeSmokeWindowState {
@@ -118,142 +118,170 @@ impl ImeSmokeDriver {
     }
 }
 
-impl WinitAppDriver for ImeSmokeDriver {
-    type WindowState = ImeSmokeWindowState;
+fn create_window_state(
+    _driver: &mut ImeSmokeDriver,
+    app: &mut App,
+    window: AppWindowId,
+) -> ImeSmokeWindowState {
+    ImeSmokeDriver::build_ui(app, window)
+}
 
-    fn create_window_state(&mut self, app: &mut App, window: AppWindowId) -> Self::WindowState {
-        ImeSmokeDriver::build_ui(app, window)
+fn hot_reload_window(
+    _driver: &mut ImeSmokeDriver,
+    context: WinitHotReloadContext<'_, ImeSmokeWindowState>,
+) {
+    let WinitHotReloadContext {
+        app,
+        services: _,
+        window,
+        state,
+    } = context;
+    crate::hotpatch::reset_ui_tree(app, window, &mut state.ui);
+}
+
+fn handle_model_changes(
+    _driver: &mut ImeSmokeDriver,
+    context: WinitWindowContext<'_, ImeSmokeWindowState>,
+    changed: &[fret_app::ModelId],
+) {
+    context
+        .state
+        .ui
+        .propagate_model_changes(context.app, changed);
+}
+
+fn handle_global_changes(
+    _driver: &mut ImeSmokeDriver,
+    context: WinitWindowContext<'_, ImeSmokeWindowState>,
+    changed: &[std::any::TypeId],
+) {
+    context
+        .state
+        .ui
+        .propagate_global_changes(context.app, changed);
+}
+
+fn handle_command(
+    _driver: &mut ImeSmokeDriver,
+    context: WinitCommandContext<'_, ImeSmokeWindowState>,
+    command: CommandId,
+) {
+    let WinitCommandContext {
+        app,
+        services,
+        window,
+        state,
+    } = context;
+    if state.ui.dispatch_command(app, services, &command) {
+        return;
+    }
+    if command.as_str() == "window.close" {
+        app.push_effect(Effect::Window(fret_app::WindowRequest::Close(window)));
+    }
+}
+
+fn handle_event(
+    _driver: &mut ImeSmokeDriver,
+    context: WinitEventContext<'_, ImeSmokeWindowState>,
+    event: &Event,
+) {
+    let WinitEventContext {
+        app,
+        services,
+        window,
+        state,
+    } = context;
+    if matches!(event, Event::WindowCloseRequested) {
+        app.push_effect(Effect::Window(fret_app::WindowRequest::Close(window)));
+        return;
     }
 
-    fn hot_reload_window(
-        &mut self,
-        app: &mut App,
-        _services: &mut dyn fret_core::UiServices,
-        window: AppWindowId,
-        state: &mut Self::WindowState,
-    ) {
-        crate::hotpatch::reset_ui_tree(app, window, &mut state.ui);
+    if let Event::Ime(ime) = event {
+        let msg: Arc<str> = match ime {
+            fret_core::ImeEvent::Enabled => Arc::from("IME: Enabled"),
+            fret_core::ImeEvent::Disabled => Arc::from("IME: Disabled"),
+            fret_core::ImeEvent::Commit(text) => Arc::from(format!("IME: Commit({text:?})")),
+            fret_core::ImeEvent::Preedit { text, cursor } => {
+                Arc::from(format!("IME: Preedit(text={text:?}, cursor={cursor:?})"))
+            }
+            fret_core::ImeEvent::DeleteSurrounding {
+                before_bytes,
+                after_bytes,
+            } => Arc::from(format!(
+                "IME: DeleteSurrounding(before_bytes={before_bytes}, after_bytes={after_bytes})"
+            )),
+        };
+        let _ = app.models_mut().update(&state.last_ime, |v| *v = msg);
     }
 
-    fn handle_model_changes(
-        &mut self,
-        context: WinitWindowContext<'_, Self::WindowState>,
-        changed: &[fret_app::ModelId],
-    ) {
-        context
-            .state
-            .ui
-            .propagate_model_changes(context.app, changed);
-    }
+    state.ui.dispatch_event(app, services, event);
+}
 
-    fn handle_global_changes(
-        &mut self,
-        context: WinitWindowContext<'_, Self::WindowState>,
-        changed: &[std::any::TypeId],
-    ) {
-        context
-            .state
-            .ui
-            .propagate_global_changes(context.app, changed);
-    }
+fn render(_driver: &mut ImeSmokeDriver, context: WinitRenderContext<'_, ImeSmokeWindowState>) {
+    let WinitRenderContext {
+        app,
+        services,
+        window,
+        state,
+        bounds,
+        scale_factor,
+        scene,
+    } = context;
+    ImeSmokeDriver::render(
+        app,
+        &mut state.ui,
+        services,
+        window,
+        bounds,
+        state.input_single.clone(),
+        state.input_multi.clone(),
+        state.last_ime.clone(),
+    );
 
-    fn handle_command(
-        &mut self,
-        context: WinitCommandContext<'_, Self::WindowState>,
-        command: CommandId,
-    ) {
-        let WinitCommandContext {
-            app,
-            services,
-            window,
-            state,
-        } = context;
-        if state.ui.dispatch_command(app, services, &command) {
-            return;
-        }
-        if command.as_str() == "window.close" {
-            app.push_effect(Effect::Window(fret_app::WindowRequest::Close(window)));
-        }
-    }
+    state.ui.request_semantics_snapshot();
+    state.ui.ingest_paint_cache_source(scene);
+    scene.clear();
+    let mut frame =
+        fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
+    frame.layout_all();
+    frame.paint_all(scene);
+}
 
-    fn handle_event(&mut self, context: WinitEventContext<'_, Self::WindowState>, event: &Event) {
-        let WinitEventContext {
-            app,
-            services,
-            window,
-            state,
-        } = context;
-        if matches!(event, Event::WindowCloseRequested) {
-            app.push_effect(Effect::Window(fret_app::WindowRequest::Close(window)));
-            return;
-        }
+fn window_create_spec(
+    _driver: &mut ImeSmokeDriver,
+    _app: &mut App,
+    _request: &fret_app::CreateWindowRequest,
+) -> Option<WindowCreateSpec> {
+    None
+}
 
-        if let Event::Ime(ime) = event {
-            let msg: Arc<str> = match ime {
-                fret_core::ImeEvent::Enabled => Arc::from("IME: Enabled"),
-                fret_core::ImeEvent::Disabled => Arc::from("IME: Disabled"),
-                fret_core::ImeEvent::Commit(text) => Arc::from(format!("IME: Commit({text:?})")),
-                fret_core::ImeEvent::Preedit { text, cursor } => {
-                    Arc::from(format!("IME: Preedit(text={text:?}, cursor={cursor:?})"))
-                }
-                fret_core::ImeEvent::DeleteSurrounding {
-                    before_bytes,
-                    after_bytes,
-                } => Arc::from(format!(
-                    "IME: DeleteSurrounding(before_bytes={before_bytes}, after_bytes={after_bytes})"
-                )),
-            };
-            let _ = app.models_mut().update(&state.last_ime, |v| *v = msg);
-        }
+fn window_created(
+    _driver: &mut ImeSmokeDriver,
+    _app: &mut App,
+    _request: &fret_app::CreateWindowRequest,
+    _new_window: AppWindowId,
+) {
+}
 
-        state.ui.dispatch_event(app, services, event);
-    }
+fn configure_fn_driver_hooks(
+    hooks: &mut fret_launch::FnDriverHooks<ImeSmokeDriver, ImeSmokeWindowState>,
+) {
+    hooks.hot_reload_window = Some(hot_reload_window);
+    hooks.handle_model_changes = Some(handle_model_changes);
+    hooks.handle_global_changes = Some(handle_global_changes);
+    hooks.handle_command = Some(handle_command);
+    hooks.window_create_spec = Some(window_create_spec);
+    hooks.window_created = Some(window_created);
+}
 
-    fn render(&mut self, context: WinitRenderContext<'_, Self::WindowState>) {
-        let WinitRenderContext {
-            app,
-            services,
-            window,
-            state,
-            bounds,
-            scale_factor,
-            scene,
-        } = context;
-        ImeSmokeDriver::render(
-            app,
-            &mut state.ui,
-            services,
-            window,
-            bounds,
-            state.input_single.clone(),
-            state.input_multi.clone(),
-            state.last_ime.clone(),
-        );
-
-        state.ui.request_semantics_snapshot();
-        state.ui.ingest_paint_cache_source(scene);
-        scene.clear();
-        let mut frame =
-            fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
-        frame.layout_all();
-        frame.paint_all(scene);
-    }
-
-    fn window_create_spec(
-        &mut self,
-        _app: &mut App,
-        _request: &fret_app::CreateWindowRequest,
-    ) -> Option<fret_launch::WindowCreateSpec> {
-        None
-    }
-
-    fn window_created(
-        &mut self,
-        _app: &mut App,
-        _request: &fret_app::CreateWindowRequest,
-        _new_window: AppWindowId,
-    ) {
-    }
+pub fn build_fn_driver() -> FnDriver<ImeSmokeDriver, ImeSmokeWindowState> {
+    FnDriver::new(
+        ImeSmokeDriver::default(),
+        create_window_state,
+        handle_event,
+        render,
+    )
+    .with_hooks(configure_fn_driver_hooks)
 }
 
 pub fn run() -> anyhow::Result<()> {
@@ -311,6 +339,14 @@ pub fn run() -> anyhow::Result<()> {
         ..Default::default()
     };
 
-    let driver = ImeSmokeDriver::default();
-    crate::run_native_demo(config, app, driver).context("run ime_smoke_demo app")
+    crate::run_native_with_fn_driver_with_hooks(
+        config,
+        app,
+        ImeSmokeDriver::default(),
+        create_window_state,
+        handle_event,
+        render,
+        configure_fn_driver_hooks,
+    )
+    .context("run ime_smoke_demo app")
 }

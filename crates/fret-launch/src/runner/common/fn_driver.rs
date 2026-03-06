@@ -10,10 +10,10 @@ use super::{
     WinitGlobalContext, WinitHotReloadContext, WinitRenderContext, WinitWindowContext,
 };
 
-/// A function-pointer based `WinitAppDriver`.
+/// The recommended function-pointer based driver surface for `fret-launch`.
 ///
-/// This is intended as an ergonomic and hotpatch-friendly alternative to implementing
-/// the `WinitAppDriver` trait directly.
+/// Prefer this over implementing `WinitAppDriver` directly for new advanced integrations. It keeps
+/// runner wiring ergonomic while matching the repo''s hotpatch-friendly posture.
 pub struct FnDriver<D, S> {
     driver_state: D,
     create_window_state: fn(&mut D, &mut App, fret_core::AppWindowId) -> S,

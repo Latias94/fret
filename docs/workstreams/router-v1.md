@@ -116,7 +116,7 @@ Navigation flow:
 
 - `fret-selector`: derive UI projections from route snapshot (`active section`, `breadcrumbs`, etc).
 - `fret-query`: derive query keys from route params and trigger explicit prefetch/invalidate.
-- `MessageRouter`/`KeyedMessageRouter`: route navigation can remain typed in command handlers.
+- `fret::actions!` / `fret::payload_actions!`: route navigation can remain typed without string parsing.
 
 ## Migration targets (first wave)
 

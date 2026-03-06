@@ -1,8 +1,8 @@
-# Fret Launch + App Surface (Fearless Refactor v1) 鈥?Milestones
+# Fret Launch + App Surface (Fearless Refactor v1) 闂?Milestones
 
 This workstream is staged to keep the launch stack landable while tightening public contracts.
 
-## M0 鈥?Audit captured + documentation aligned
+## M0 闂?Audit captured + documentation aligned
 
 **Outcome**
 
@@ -15,7 +15,7 @@ This workstream is staged to keep the launch stack landable while tightening pub
 - Links from `docs/README.md` point to this folder.
 - The design doc includes evidence anchors for all major claims.
 
-## M1 鈥?Export inventory and contract classification
+## M1 闂?Export inventory and contract classification
 
 **Outcome**
 
@@ -36,7 +36,7 @@ This workstream is staged to keep the launch stack landable while tightening pub
 - A reviewable export table exists in the implementation PR or linked audit note.
 - No new launch exports are added without classification.
 
-## M2 鈥?Single advanced driver recommendation
+## M2 闂?Single advanced driver recommendation
 
 **Outcome**
 
@@ -44,18 +44,37 @@ This workstream is staged to keep the launch stack landable while tightening pub
 - Any remaining `WinitAppDriver`-only requirements are either:
   - moved into `FnDriverHooks`, or
   - explicitly justified as compatibility surface.
+- `fret-framework::launch` stops re-exporting compatibility-only `WinitAppDriver`.
 
 **Evidence anchors**
 
 - `crates/fret-launch/src/runner/common/fn_driver.rs`
 - `crates/fret-launch/src/runner/common/winit_app_driver.rs`
+- `apps/fret-examples/src/chart_demo.rs`
+- `apps/fret-examples/src/bars_demo.rs`
+- `apps/fret-examples/src/error_bars_demo.rs`
 
 **Gates**
 
 - `cargo nextest run -p fret-launch`
 - Any touched docs/examples build or type-check if compile-checked in the relevant crate.
+- Representative advanced examples prefer `FnDriver` over bespoke `WinitAppDriver` impls.
+- Recent web custom-effect helpers (`custom_effect_v2_identity_web_demo`, `custom_effect_v2_glass_chrome_web_demo`, `custom_effect_v3_web_demo`) now also expose explicit `build_fn_driver()` entrypoints.
+- Recent low-risk demos (`first_frame_smoke_demo`, `effects_demo`, `external_texture_imports_web_demo`) now also run through `FnDriver`-backed entrypoints.
+- Single-window UI demos (`datatable_demo`, `date_picker_demo`, `form_demo`, `ime_smoke_demo`, `sonner_demo`) now also use pure `FnDriver` hooks instead of keeping local compat impls.
+- Medium-complexity desktop demos (`plot_stress_demo`, `table_demo`, `table_stress_demo`, `virtual_list_stress_demo`, `workspace_shell_demo`) now also run through pure `FnDriver` hook assembly, reducing the remaining direct `WinitAppDriver` example inventory to eight without expanding launch surface area.
+- `canvas_datagrid_stress_demo` now also uses pure free `FnDriver` hooks, reducing the remaining direct `WinitAppDriver` example inventory to seven while keeping stress/perf reporting inside the existing hook set.
+- `fret::run_native_with_configured_fn_driver(...)` now covers the preconfigured-`FnDriver` posture (including `.with_init(...)`) without falling back to compat naming, and `docking_demo` uses it to reduce the remaining direct `WinitAppDriver` example inventory to six.
+- `container_queries_docking_demo` now follows the same configured-`FnDriver` posture, reducing the remaining direct `WinitAppDriver` example inventory to five without introducing any new docking/runtime hooks.
+- `docking_arbitration_demo` now follows the same configured-`FnDriver` posture too, proving that multi-window docking arbitration, dev-state wiring, and floating-window lifecycle hooks still fit the existing free-hook surface while reducing the remaining direct `WinitAppDriver` example inventory to four.
+- `node_graph_legacy_demo` now follows the same pure free-hook `FnDriver` posture on the retained node-graph reference path too, reducing the remaining direct `WinitAppDriver` example inventory to three without expanding launch surface area.
+- Any remaining direct `WinitAppDriver` examples are verified to stay within current `FnDriver` hook coverage until they migrate.
+- `python tools/gate_fret_launch_root_surface_snapshot.py`
+- `python tools/gate_fret_framework_launch_surface.py`
+- `python tools/gate_fn_driver_example_naming.py`
+- `python tools/gate_winit_driver_example_hook_coverage.py`
 
-## M3 鈥?Config curation without capability loss
+## M3 闂?Config curation without capability loss
 
 **Outcome**
 
@@ -74,7 +93,7 @@ This workstream is staged to keep the launch stack landable while tightening pub
 - `cargo nextest run -p fret`
 - No regression in examples that depend on GPU init customization or window-create hooks.
 
-## M4 鈥?Cross-surface docs and naming closure
+## M4 闂?Cross-surface docs and naming closure
 
 **Outcome**
 
@@ -88,13 +107,19 @@ This workstream is staged to keep the launch stack landable while tightening pub
 - `docs/adr/0109-user-facing-crate-surfaces-and-golden-path.md`
 - `crates/fret-framework/src/lib.rs`
 - `crates/fret-launch/README.md`
+- `tools/gate_fret_builder_only_surface.py`
+- `tools/gate_fret_framework_launch_surface.py`
+- `tools/gate_fn_driver_example_naming.py`
 
 **Gates**
 
 - `cargo nextest run -p fret -p fret-launch -p fret-framework`
 - `python tools/check_layering.py`
+- `python tools/gate_fret_builder_only_surface.py`
+- `python tools/gate_fret_framework_launch_surface.py`
+- `python tools/gate_fn_driver_example_naming.py`
 
-## M5 鈥?Optional follow-up: web/high-level symmetry
+## M5 闂?Optional follow-up: web/high-level symmetry
 
 **Outcome**
 

@@ -180,21 +180,21 @@ pub fn start() -> Result<(), JsValue> {
             let app = fret_examples::simple_todo_demo::build_app();
             let mut config = fret_examples::simple_todo_demo::build_runner_config();
             config.main_window_title = "fret-demo simple-todo (web)".to_string();
-            let driver = fret_examples::simple_todo_demo::build_driver();
+            let driver = fret_examples::simple_todo_demo::build_fn_driver();
             fret_launch::run_app_with_handle(config, app, driver)
         }
         Demo::CustomEffectV2WebDemo => {
             let app = fret_examples::custom_effect_v2_web_demo::build_app();
             let mut config = fret_examples::custom_effect_v2_web_demo::build_runner_config();
             config.main_window_title = "fret-demo custom_effect_v2_web_demo (web)".to_string();
-            let driver = fret_examples::custom_effect_v2_web_demo::build_driver();
+            let driver = fret_examples::custom_effect_v2_web_demo::build_fn_driver();
             fret_launch::run_app_with_handle(config, app, driver)
         }
         Demo::CustomEffectV2LutWebDemo => {
             let app = fret_examples::custom_effect_v2_lut_web_demo::build_app();
             let mut config = fret_examples::custom_effect_v2_lut_web_demo::build_runner_config();
             config.main_window_title = "fret-demo custom_effect_v2_lut_web_demo (web)".to_string();
-            let driver = fret_examples::custom_effect_v2_lut_web_demo::build_driver();
+            let driver = fret_examples::custom_effect_v2_lut_web_demo::build_fn_driver();
             fret_launch::run_app_with_handle(config, app, driver)
         }
         Demo::CustomEffectV2IdentityWebDemo => {
@@ -203,7 +203,7 @@ pub fn start() -> Result<(), JsValue> {
                 fret_examples::custom_effect_v2_identity_web_demo::build_runner_config();
             config.main_window_title =
                 "fret-demo custom_effect_v2_identity_web_demo (web)".to_string();
-            let driver = fret_examples::custom_effect_v2_identity_web_demo::build_driver();
+            let driver = fret_examples::custom_effect_v2_identity_web_demo::build_fn_driver();
             fret_launch::run_app_with_handle(config, app, driver)
         }
         Demo::CustomEffectV2GlassChromeWebDemo => {
@@ -212,14 +212,14 @@ pub fn start() -> Result<(), JsValue> {
                 fret_examples::custom_effect_v2_glass_chrome_web_demo::build_runner_config();
             config.main_window_title =
                 "fret-demo custom_effect_v2_glass_chrome_web_demo (web)".to_string();
-            let driver = fret_examples::custom_effect_v2_glass_chrome_web_demo::build_driver();
+            let driver = fret_examples::custom_effect_v2_glass_chrome_web_demo::build_fn_driver();
             fret_launch::run_app_with_handle(config, app, driver)
         }
         Demo::CustomEffectV3WebDemo => {
             let app = fret_examples::custom_effect_v3_web_demo::build_app();
             let mut config = fret_examples::custom_effect_v3_web_demo::build_runner_config();
             config.main_window_title = "fret-demo custom_effect_v3_web_demo (web)".to_string();
-            let driver = fret_examples::custom_effect_v3_web_demo::build_driver();
+            let driver = fret_examples::custom_effect_v3_web_demo::build_fn_driver();
             fret_launch::run_app_with_handle(config, app, driver)
         }
         Demo::ExternalTextureImportsWebDemo => {
@@ -228,21 +228,21 @@ pub fn start() -> Result<(), JsValue> {
                 fret_examples::external_texture_imports_web_demo::build_runner_config();
             config.main_window_title =
                 "fret-demo external_texture_imports_web_demo (web)".to_string();
-            let driver = fret_examples::external_texture_imports_web_demo::build_driver();
+            let driver = fret_examples::external_texture_imports_web_demo::build_fn_driver();
             fret_launch::run_app_with_handle(config, app, driver)
         }
         Demo::EmojiConformanceDemo => {
             let app = fret_examples::emoji_conformance_demo::build_app();
             let mut config = fret_examples::emoji_conformance_demo::build_runner_config();
             config.main_window_title = "fret-demo emoji_conformance_demo (web)".to_string();
-            let driver = fret_examples::emoji_conformance_demo::build_driver();
+            let driver = fret_examples::emoji_conformance_demo::build_fn_driver();
             fret_launch::run_app_with_handle(config, app, driver)
         }
         Demo::CjkConformanceDemo => {
             let app = fret_examples::cjk_conformance_demo::build_app();
             let mut config = fret_examples::cjk_conformance_demo::build_runner_config();
             config.main_window_title = "fret-demo cjk_conformance_demo (web)".to_string();
-            let driver = fret_examples::cjk_conformance_demo::build_driver();
+            let driver = fret_examples::cjk_conformance_demo::build_fn_driver();
             fret_launch::run_app_with_handle(config, app, driver)
         }
         Demo::ChartDemo => {
@@ -256,7 +256,7 @@ pub fn start() -> Result<(), JsValue> {
             let app = fret_examples::chart_multi_axis_demo::build_app();
             let mut config = fret_examples::chart_multi_axis_demo::build_runner_config();
             config.main_window_title = "fret-demo chart_multi_axis_demo (web)".to_string();
-            let driver = fret_examples::chart_multi_axis_demo::build_driver();
+            let driver = fret_examples::chart_multi_axis_demo::build_fn_driver();
             fret_launch::run_app_with_handle(config, app, driver)
         }
         Demo::HorizontalBarsDemo => {
@@ -270,7 +270,7 @@ pub fn start() -> Result<(), JsValue> {
             let app = fret_examples::plot_demo::build_app();
             let mut config = fret_examples::plot_demo::build_runner_config();
             config.main_window_title = "fret-demo plot_demo (web)".to_string();
-            let driver = fret_examples::plot_demo::build_driver();
+            let driver = fret_examples::plot_demo::build_fn_driver();
             fret_launch::run_app_with_handle(config, app, driver)
         }
         Demo::PlotImageDemo => {
@@ -284,7 +284,7 @@ pub fn start() -> Result<(), JsValue> {
             let app = fret_examples::bars_demo::build_app();
             let mut config = fret_examples::bars_demo::build_runner_config();
             config.main_window_title = "fret-demo bars_demo (web)".to_string();
-            let driver = fret_examples::bars_demo::build_driver();
+            let driver = fret_examples::bars_demo::build_fn_driver();
             fret_launch::run_app_with_handle(config, app, driver)
         }
         Demo::GroupedBarsDemo => {
@@ -347,7 +347,7 @@ pub fn start() -> Result<(), JsValue> {
             let app = fret_examples::shaded_demo::build_app();
             let mut config = fret_examples::shaded_demo::build_runner_config();
             config.main_window_title = "fret-demo shaded_demo (web)".to_string();
-            let driver = fret_examples::shaded_demo::build_driver();
+            let driver = fret_examples::shaded_demo::build_fn_driver();
             fret_launch::run_app_with_handle(config, app, driver)
         }
         Demo::StairsDemo => {
@@ -389,7 +389,7 @@ pub fn start() -> Result<(), JsValue> {
             let app = fret_examples::drag_demo::build_app();
             let mut config = fret_examples::drag_demo::build_runner_config();
             config.main_window_title = "fret-demo drag_demo (web)".to_string();
-            let driver = fret_examples::drag_demo::build_driver();
+            let driver = fret_examples::drag_demo::build_fn_driver();
             fret_launch::run_app_with_handle(config, app, driver)
         }
     }

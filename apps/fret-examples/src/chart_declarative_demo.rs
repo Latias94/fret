@@ -15,8 +15,9 @@ struct ChartDeclarativeState {
 }
 
 pub fn run() -> anyhow::Result<()> {
-    fret::app("chart-declarative-demo", init_window, view)?
-        .with_main_window("chart_declarative_demo", (960.0, 720.0))
+    FretApp::new("chart-declarative-demo")
+        .window("chart_declarative_demo", (960.0, 720.0))
+        .ui(init_window, view)?
         .run()?;
     Ok(())
 }
