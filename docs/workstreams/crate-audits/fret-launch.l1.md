@@ -215,6 +215,9 @@ Evidence anchors:
   gap for preconfigured `.with_init(...)` `FnDriver` values, not a missing hook. Adding
   `fret::run_native_with_configured_fn_driver(...)` closes that posture gap and reduces the
   remaining direct impl inventory to six.
+- `container_queries_docking_demo` confirms the helper is generic enough for another docking-heavy
+  example with container-query behavior, reducing the remaining direct impl inventory again to five
+  without expanding the hook matrix.
 
 Evidence anchors:
 
@@ -238,6 +241,7 @@ Evidence anchors:
 - `apps/fret-examples/src/workspace_shell_demo.rs`
 - `apps/fret-examples/src/canvas_datagrid_stress_demo.rs`
 - `apps/fret-examples/src/docking_demo.rs`
+- `apps/fret-examples/src/container_queries_docking_demo.rs`
 - `ecosystem/fret/src/lib.rs`
 - `docs/workstreams/fret-launch-app-surface-fearless-refactor-v1/SURFACE_AUDIT.md`
 
