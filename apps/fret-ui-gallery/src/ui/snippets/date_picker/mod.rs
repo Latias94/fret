@@ -3,6 +3,7 @@ pub mod demo;
 pub mod dob;
 pub mod dropdowns;
 pub mod input;
+pub mod label;
 pub mod natural_language;
 pub mod notes;
 pub mod presets;
