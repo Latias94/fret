@@ -16,10 +16,10 @@ use std::hash::Hash;
 
 use fret_app::App;
 use fret_core::AppWindowId;
-use fret_runtime::Model;
+use fret_runtime::{Model, ModelStore, ModelUpdateError};
 use fret_ui::action::{OnCommand, OnCommandAvailability};
 use fret_ui::element::Elements;
-use fret_ui::{ElementContext, UiHost};
+use fret_ui::{ElementContext, Invalidation, UiHost};
 #[cfg(feature = "state-query")]
 use std::future::Future;
 
@@ -32,6 +32,156 @@ pub trait View: 'static {
 
     /// Render the view into declarative elements.
     fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements;
+}
+
+#[derive(Clone)]
+pub struct LocalState<T> {
+    model: Model<T>,
+}
+
+impl<T> LocalState<T> {
+    pub fn model(&self) -> &Model<T> {
+        &self.model
+    }
+
+    pub fn clone_model(&self) -> Model<T> {
+        self.model.clone()
+    }
+
+    pub fn update_in(&self, models: &mut ModelStore, f: impl FnOnce(&mut T)) -> bool
+    where
+        T: Any,
+    {
+        models.update(&self.model, f).is_ok()
+    }
+
+    pub fn set_in(&self, models: &mut ModelStore, value: T) -> bool
+    where
+        T: Any,
+    {
+        self.update_in(models, move |slot| *slot = value)
+    }
+
+    pub fn update_action(
+        &self,
+        host: &mut dyn fret_ui::action::UiFocusActionHost,
+        action_cx: fret_ui::action::ActionCx,
+        f: impl FnOnce(&mut T),
+    ) -> bool
+    where
+        T: Any,
+    {
+        let handled = self.update_in(host.models_mut(), f);
+        if handled {
+            host.request_redraw(action_cx.window);
+            host.notify(action_cx);
+        }
+        handled
+    }
+
+    pub fn set_action(
+        &self,
+        host: &mut dyn fret_ui::action::UiFocusActionHost,
+        action_cx: fret_ui::action::ActionCx,
+        value: T,
+    ) -> bool
+    where
+        T: Any,
+    {
+        self.update_action(host, action_cx, move |slot| *slot = value)
+    }
+}
+
+#[must_use]
+pub struct WatchedLocal<'cx, 'm, 'a, H: UiHost, T: Any> {
+    cx: &'cx mut ElementContext<'a, H>,
+    local: &'m LocalState<T>,
+    invalidation: Invalidation,
+}
+
+impl<'cx, 'm, 'a, H: UiHost, T: Any> WatchedLocal<'cx, 'm, 'a, H, T> {
+    pub fn invalidation(mut self, invalidation: Invalidation) -> Self {
+        self.invalidation = invalidation;
+        self
+    }
+
+    pub fn paint(self) -> Self {
+        self.invalidation(Invalidation::Paint)
+    }
+
+    pub fn layout(self) -> Self {
+        self.invalidation(Invalidation::Layout)
+    }
+
+    pub fn hit_test(self) -> Self {
+        self.invalidation(Invalidation::HitTest)
+    }
+
+    pub fn observe(self) {
+        self.cx.observe_model(self.local.model(), self.invalidation);
+    }
+
+    pub fn revision(self) -> Option<u64> {
+        self.cx.observe_model(self.local.model(), self.invalidation);
+        self.cx.app.models().revision(self.local.model())
+    }
+
+    pub fn copied(self) -> Option<T>
+    where
+        T: Copy,
+    {
+        self.cx.get_model_copied(self.local.model(), self.invalidation)
+    }
+
+    pub fn copied_or(self, default: T) -> T
+    where
+        T: Copy,
+    {
+        self.copied().unwrap_or(default)
+    }
+
+    pub fn copied_or_default(self) -> T
+    where
+        T: Copy + Default,
+    {
+        self.copied().unwrap_or_default()
+    }
+
+    pub fn cloned(self) -> Option<T>
+    where
+        T: Clone,
+    {
+        self.cx.get_model_cloned(self.local.model(), self.invalidation)
+    }
+
+    pub fn cloned_or(self, default: T) -> T
+    where
+        T: Clone,
+    {
+        self.cloned().unwrap_or(default)
+    }
+
+    pub fn cloned_or_else(self, f: impl FnOnce() -> T) -> T
+    where
+        T: Clone,
+    {
+        self.cloned().unwrap_or_else(f)
+    }
+
+    pub fn cloned_or_default(self) -> T
+    where
+        T: Clone + Default,
+    {
+        self.cloned().unwrap_or_default()
+    }
+
+    pub fn read_ref<R>(self, f: impl FnOnce(&T) -> R) -> Result<R, ModelUpdateError> {
+        self.cx.read_model_ref(self.local.model(), self.invalidation, f)
+    }
+
+    pub fn read<R>(self, f: impl FnOnce(&mut H, &T) -> R) -> Result<R, ModelUpdateError> {
+        self.cx.read_model(self.local.model(), self.invalidation, f)
+    }
 }
 
 /// Per-frame view construction context passed to [`View::render`].
@@ -103,16 +253,14 @@ impl<'cx, 'a, H: UiHost> ViewCx<'cx, 'a, H> {
         out
     }
 
-    /// View-local state hook backed by an app-owned model.
-    ///
-    /// v1: returns a `Model<T>` so action handlers can update state via `UiActionHost::models_mut`.
     #[track_caller]
-    pub fn use_state<T>(&mut self) -> Model<T>
+    fn use_state_with<T>(&mut self, init: impl FnOnce() -> T) -> Model<T>
     where
-        T: Any + Default,
+        T: Any,
     {
         let callsite = std::panic::Location::caller();
         let key = (callsite.file(), callsite.line(), callsite.column());
+        let mut init = Some(init);
 
         self.cx.keyed(key, |cx| {
             struct UseStateSlot<T> {
@@ -155,13 +303,13 @@ impl<'cx, 'a, H: UiHost> ViewCx<'cx, 'a, H> {
                 });
             }
 
-            // Two-phase init to avoid capturing `cx` in `with_state` init closures.
             let existing = cx.with_state(UseStateSlot::<T>::default, |slot| slot.model.clone());
             if let Some(model) = existing {
                 return model;
             }
 
-            let model = cx.app.models_mut().insert(T::default());
+            let init = init.take().expect("use_state init closure is available");
+            let model = cx.app.models_mut().insert(init());
             cx.with_state(UseStateSlot::<T>::default, |slot| {
                 if slot.model.is_none() {
                     slot.model = Some(model.clone());
@@ -171,6 +319,17 @@ impl<'cx, 'a, H: UiHost> ViewCx<'cx, 'a, H> {
         })
     }
 
+    /// View-local state hook backed by an app-owned model.
+    ///
+    /// v1: returns a `Model<T>` so action handlers can update state via `UiActionHost::models_mut`.
+    #[track_caller]
+    pub fn use_state<T>(&mut self) -> Model<T>
+    where
+        T: Any + Default,
+    {
+        self.use_state_with(T::default)
+    }
+
     /// Keyed variant of [`use_state`], intended for loops.
     #[track_caller]
     pub fn use_state_keyed<K: Hash, T>(&mut self, key: K) -> Model<T>
@@ -178,6 +337,44 @@ impl<'cx, 'a, H: UiHost> ViewCx<'cx, 'a, H> {
         T: Any + Default,
     {
         self.keyed(key, |cx| cx.use_state::<T>())
+    }
+
+    /// v2 prototype: a model-backed local-state wrapper with a lower-noise authoring surface.
+    #[track_caller]
+    pub fn use_local<T>(&mut self) -> LocalState<T>
+    where
+        T: Any + Default,
+    {
+        self.use_local_with(T::default)
+    }
+
+    /// v2 prototype: keyed local-state variant intended for loops.
+    #[track_caller]
+    pub fn use_local_keyed<K: Hash, T>(&mut self, key: K) -> LocalState<T>
+    where
+        T: Any + Default,
+    {
+        self.keyed(key, |cx| cx.use_local::<T>())
+    }
+
+    /// v2 prototype: local state with explicit initializer.
+    #[track_caller]
+    pub fn use_local_with<T>(&mut self, init: impl FnOnce() -> T) -> LocalState<T>
+    where
+        T: Any,
+    {
+        LocalState {
+            model: self.use_state_with(init),
+        }
+    }
+
+    /// Observe and read a model-backed local state handle.
+    pub fn watch_local<'m, T: Any>(&'m mut self, local: &'m LocalState<T>) -> WatchedLocal<'m, 'm, 'a, H, T> {
+        WatchedLocal {
+            cx: self.cx,
+            local,
+            invalidation: Invalidation::Paint,
+        }
     }
 
     /// Derived state hook backed by `ecosystem/fret-selector` (UI feature).
