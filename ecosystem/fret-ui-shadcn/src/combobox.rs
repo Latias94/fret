@@ -241,9 +241,9 @@ impl ComboboxClear {
 
 /// Part-based authoring surface aligned with shadcn/ui v4 exports.
 ///
-/// Upstream uses Base UI render props to map `items` → list rows. In Fret we expose a structured
+/// Upstream uses Base UI render props to map `items` 闂?list rows. In Fret we expose a structured
 /// adapter that maps part configuration onto the existing Popover + Command recipe so upstream
-/// “Usage” shapes remain expressible in Rust.
+/// 闂傚倸鍊烽懗鍫曞磻閵娾晛纾块柡灞诲劜閸庢绱掔捄铏光攬ge闂?shapes remain expressible in Rust.
 #[derive(Debug)]
 pub enum ComboboxPart {
     Trigger(ComboboxTrigger),
@@ -1476,7 +1476,11 @@ fn combobox_with_patch<H: UiHost>(
         let open_for_trigger = open.clone();
         let trigger_gap = MetricRef::space(Space::N2).resolve(&theme);
         let a11y_label_for_trigger = a11y_label.clone();
-        let trigger_test_id_for_trigger = trigger_test_id.clone();
+        let trigger_test_id_for_trigger = trigger_test_id.clone().or_else(|| {
+            test_id_prefix
+                .as_ref()
+                .map(|prefix| Arc::<str>::from(format!("{prefix}-trigger")))
+        });
         let label_is_placeholder = !has_selection;
         let placeholder_fg_for_trigger = muted_fg;
 
@@ -3445,6 +3449,46 @@ mod tests {
     }
 
     #[test]
+    fn combobox_test_id_prefix_derives_trigger_test_id() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(320.0), Px(200.0)),
+        );
+        let model = app.models_mut().insert(None::<Arc<str>>);
+        let open = app.models_mut().insert(false);
+
+        let el = fret_ui::elements::with_element_cx(
+            &mut app,
+            window,
+            bounds,
+            "combobox-derived-trigger-id",
+            |cx| {
+                Combobox::new(model, open)
+                    .test_id_prefix("cb")
+                    .into_element_parts(cx, |_cx| {
+                        vec![
+                            ComboboxPart::trigger(ComboboxTrigger::new()),
+                            ComboboxPart::input(ComboboxInput::new()),
+                            ComboboxPart::content(ComboboxContent::new([
+                                ComboboxContentPart::list(ComboboxList::new().items([
+                                    ComboboxItem::new("apple", "Apple"),
+                                    ComboboxItem::new("banana", "Banana"),
+                                ])),
+                            ])),
+                        ]
+                    })
+            },
+        );
+
+        let trigger = find_pressable_with_test_id(&el, "cb-trigger");
+        assert!(
+            trigger.is_some(),
+            "expected derived combobox trigger test id"
+        );
+    }
+
     fn combobox_show_clear_renders_only_when_selected() {
         let window = AppWindowId::default();
         let mut app = App::new();
