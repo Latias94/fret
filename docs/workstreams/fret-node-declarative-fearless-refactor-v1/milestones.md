@@ -319,6 +319,8 @@ removed or permanently demoted.
   - what new work must not be added there,
   - what declarative parity conditions are required before deletion.
 - A stable gate matrix comparing compatibility retained vs declarative behavior where it matters.
+- An external downstream audit note + inventory before root queue/helper aliases receive deprecated markers
+  (`docs/workstreams/fret-node-declarative-fearless-refactor-v1/external-downstream-audit.md`).
 
 ### Done criteria
 
@@ -331,6 +333,7 @@ removed or permanently demoted.
 - `ecosystem/fret-node/Cargo.toml`
 - `ecosystem/fret-node/src/ui/declarative/compat_retained.rs`
 - `apps/fret-examples/src/node_graph_legacy_demo.rs`
+- `docs/workstreams/fret-node-declarative-fearless-refactor-v1/external-downstream-audit.md`
 
 ## Suggested milestone order
 

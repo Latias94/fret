@@ -180,6 +180,7 @@ land in code review; move design discussion back to `README.md` if a TODO turns 
   - [x] Migrate retained-only examples / docs that still import queue types from root `fret_node::ui::*`
         to `fret_node::ui::advanced::*` (`node_graph_domain_demo`, workflow gallery snippet).
   - [x] Clear in-tree uses of root queue/helper aliases (apps, gallery snippet, crate-internal retained/tests).
+  - [ ] Execute `external-downstream-audit.md` and record the downstream inventory.
   - [ ] Reassess whether root aliases should be deprecated after one explicit external downstream audit pass.
 
 ## M3 - Transaction-safe declarative commits
