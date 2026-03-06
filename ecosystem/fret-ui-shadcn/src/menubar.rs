@@ -1463,6 +1463,12 @@ impl MenubarMenu {
         self
     }
 
+    pub fn test_id_prefix(mut self, prefix: impl Into<Arc<str>>) -> Self {
+        let prefix = prefix.into();
+        self.test_id = Some(Arc::<str>::from(format!("{prefix}-trigger")));
+        self
+    }
+
     pub fn entries(self, entries: impl IntoIterator<Item = MenubarEntry>) -> MenubarMenuEntries {
         MenubarMenuEntries {
             menu: self,
@@ -3996,6 +4002,12 @@ mod tests {
         );
 
         assert_eq!(entries.menu.side_offset, Px(3.0));
+    }
+
+    #[test]
+    fn menubar_menu_test_id_prefix_derives_trigger_test_id() {
+        let menu = MenubarMenu::new("File").test_id_prefix("menu-file");
+        assert_eq!(menu.test_id.as_deref(), Some("menu-file-trigger"));
     }
 
     #[test]
