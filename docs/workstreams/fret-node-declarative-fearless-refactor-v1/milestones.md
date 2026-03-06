@@ -151,6 +151,9 @@ points rather than direct graph mutation.
   - Declarative keyboard zoom / wheel zoom / pinch zoom / drag-pan updates now start converging on
     controller/store-backed view-state replacement instead of only mutating the external
     `NodeGraphViewState` model.
+  - Declarative click selection / marquee preview / cancel restore also now start converging on
+    controller/store-backed selection helpers instead of only mutating the external
+    `NodeGraphViewState` selection fields.
   - `apps/fret-examples/src/node_graph_demo.rs` now passes a controller into the declarative
     surface so the recommended demo path exercises the transaction-safe commit architecture.
 - Remaining M3 scope is still substantial: we still need a broader controller surface, more

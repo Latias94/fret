@@ -196,6 +196,54 @@ impl NodeGraphController {
         Ok(())
     }
 
+    pub fn set_selection<H: UiHost>(
+        &self,
+        host: &mut H,
+        nodes: Vec<NodeId>,
+        edges: Vec<EdgeId>,
+        groups: Vec<crate::core::GroupId>,
+    ) -> Result<(), NodeGraphControllerError> {
+        self.set_selection_in_models(host.models_mut(), nodes, edges, groups)
+    }
+
+    pub fn set_selection_action_host(
+        &self,
+        host: &mut dyn UiActionHost,
+        nodes: Vec<NodeId>,
+        edges: Vec<EdgeId>,
+        groups: Vec<crate::core::GroupId>,
+    ) -> Result<(), NodeGraphControllerError> {
+        self.set_selection_in_models(host.models_mut(), nodes, edges, groups)
+    }
+
+    pub fn set_selection_and_sync_view_model<H: UiHost>(
+        &self,
+        host: &mut H,
+        view_state_model: &Model<NodeGraphViewState>,
+        nodes: Vec<NodeId>,
+        edges: Vec<EdgeId>,
+        groups: Vec<crate::core::GroupId>,
+    ) -> Result<(), NodeGraphControllerError> {
+        self.set_selection_in_models(host.models_mut(), nodes, edges, groups)?;
+        let _ =
+            self.sync_view_state_model_from_store_in_models(host.models_mut(), view_state_model);
+        Ok(())
+    }
+
+    pub fn set_selection_and_sync_view_model_action_host(
+        &self,
+        host: &mut dyn UiActionHost,
+        view_state_model: &Model<NodeGraphViewState>,
+        nodes: Vec<NodeId>,
+        edges: Vec<EdgeId>,
+        groups: Vec<crate::core::GroupId>,
+    ) -> Result<(), NodeGraphControllerError> {
+        self.set_selection_in_models(host.models_mut(), nodes, edges, groups)?;
+        let _ =
+            self.sync_view_state_model_from_store_in_models(host.models_mut(), view_state_model);
+        Ok(())
+    }
+
     pub fn set_viewport<H: UiHost>(&self, host: &mut H, pan: CanvasPoint, zoom: f32) -> bool {
         self.set_viewport_with_options(host, pan, zoom, NodeGraphSetViewportOptions::default())
     }
@@ -460,6 +508,21 @@ impl NodeGraphController {
         view_state: NodeGraphViewState,
     ) -> Result<(), NodeGraphControllerError> {
         match models.update(&self.store, |store| store.replace_view_state(view_state)) {
+            Ok(()) => Ok(()),
+            Err(_) => Err(NodeGraphControllerError::StoreUnavailable),
+        }
+    }
+
+    fn set_selection_in_models(
+        &self,
+        models: &mut ModelStore,
+        nodes: Vec<NodeId>,
+        edges: Vec<EdgeId>,
+        groups: Vec<crate::core::GroupId>,
+    ) -> Result<(), NodeGraphControllerError> {
+        match models.update(&self.store, |store| {
+            store.set_selection(nodes, edges, groups)
+        }) {
             Ok(()) => Ok(()),
             Err(_) => Err(NodeGraphControllerError::StoreUnavailable),
         }
@@ -932,6 +995,49 @@ mod tests {
         assert_eq!(model_view.zoom, next_view.zoom);
         assert_eq!(store_view.pan, next_view.pan);
         assert_eq!(store_view.zoom, next_view.zoom);
+    }
+
+    #[test]
+    fn controller_set_selection_and_sync_view_model_action_host_updates_bound_view_model() {
+        let mut host = TestUiHostImpl::default();
+        let (mut graph, node_a, a_out, node_b, b_in) = make_test_graph_two_nodes_with_ports();
+        let edge = EdgeId::new();
+        graph.edges.insert(
+            edge,
+            Edge {
+                kind: EdgeKind::Data,
+                from: a_out,
+                to: b_in,
+                selectable: None,
+                deletable: None,
+                reconnectable: None,
+            },
+        );
+        let view = host.models.insert(NodeGraphViewState::default());
+        let store = host
+            .models
+            .insert(NodeGraphStore::new(graph, NodeGraphViewState::default()));
+        let controller = NodeGraphController::new(store.clone());
+
+        controller
+            .set_selection_and_sync_view_model_action_host(
+                &mut host,
+                &view,
+                vec![node_a, node_b],
+                vec![edge],
+                Vec::new(),
+            )
+            .expect("set selection through controller");
+
+        let model_view = view.read_ref(&host, |state| state.clone()).ok().unwrap();
+        let store_view = store
+            .read_ref(&host, |store| store.view_state().clone())
+            .ok()
+            .unwrap();
+        assert_eq!(model_view.selected_nodes, vec![node_a, node_b]);
+        assert_eq!(model_view.selected_edges, vec![edge]);
+        assert_eq!(store_view.selected_nodes, vec![node_a, node_b]);
+        assert_eq!(store_view.selected_edges, vec![edge]);
     }
 
     #[test]

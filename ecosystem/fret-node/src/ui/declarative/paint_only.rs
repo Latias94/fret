@@ -834,6 +834,63 @@ fn update_view_state_action_host(
         .is_ok()
 }
 
+fn update_selection_action_host(
+    host: &mut dyn fret_ui::action::UiActionHost,
+    view_state: &Model<NodeGraphViewState>,
+    controller: Option<&NodeGraphController>,
+    store: Option<&Model<NodeGraphStore>>,
+    f: impl FnOnce(
+        &mut Vec<crate::core::NodeId>,
+        &mut Vec<crate::core::EdgeId>,
+        &mut Vec<crate::core::GroupId>,
+    ),
+) -> bool {
+    let Ok(state) = host.models_mut().read(view_state, |state| state.clone()) else {
+        return false;
+    };
+    let mut selected_nodes = state.selected_nodes;
+    let mut selected_edges = state.selected_edges;
+    let mut selected_groups = state.selected_groups;
+    f(
+        &mut selected_nodes,
+        &mut selected_edges,
+        &mut selected_groups,
+    );
+
+    if let Some(controller) = controller {
+        return controller
+            .set_selection_and_sync_view_model_action_host(
+                host,
+                view_state,
+                selected_nodes,
+                selected_edges,
+                selected_groups,
+            )
+            .is_ok();
+    }
+
+    if let Some(store) = store {
+        let controller = NodeGraphController::new(store.clone());
+        return controller
+            .set_selection_and_sync_view_model_action_host(
+                host,
+                view_state,
+                selected_nodes,
+                selected_edges,
+                selected_groups,
+            )
+            .is_ok();
+    }
+
+    host.models_mut()
+        .update(view_state, |state| {
+            state.selected_nodes = selected_nodes;
+            state.selected_edges = selected_edges;
+            state.selected_groups = selected_groups;
+        })
+        .is_ok()
+}
+
 fn hit_test_node_at_point(
     view: PanZoom2D,
     bounds: Rect,
@@ -1885,10 +1942,16 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
                         let _ = host.models_mut().update(&drag_escape, |st| *st = None);
                         if let Some(marquee) = marquee {
                             let base_selected = marquee.base_selected_nodes.clone();
-                            let _ = host.models_mut().update(&view_escape, |state| {
-                                state.selected_nodes.clear();
-                                state.selected_nodes.extend(base_selected.iter().copied());
-                            });
+                            let _ = update_selection_action_host(
+                                host,
+                                &view_escape,
+                                controller_zoom_kb.as_ref(),
+                                store_zoom_kb.as_ref(),
+                                |selected_nodes, _selected_edges, _selected_groups| {
+                                    selected_nodes.clear();
+                                    selected_nodes.extend(base_selected.iter().copied());
+                                },
+                            );
                         }
                         let _ = host.models_mut().update(&marquee_escape, |st| *st = None);
                         let _ = host.models_mut().update(&node_drag_escape, |st| {
@@ -2178,6 +2241,8 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
             cx.key_on_key_down_capture_for(element, on_key_down_capture);
 
             let view_pan_down = view_state.clone();
+            let controller_pan_down = controller.clone();
+            let store_pan_down = store.clone();
             let drag_start = drag.clone();
             let marquee_start = marquee_drag.clone();
             let node_drag_start = node_drag.clone();
@@ -2273,22 +2338,28 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
                                 .models_mut()
                                 .update(&hovered_for_down, |h| *h = Some(hit));
                             if interaction.elements_selectable {
-                                let _ = host.models_mut().update(&view_pan_down, |state| {
-                                    let already_selected =
-                                        state.selected_nodes.iter().any(|id| *id == hit);
-                                    if multi {
-                                        if let Some(ix) =
-                                            state.selected_nodes.iter().position(|id| *id == hit)
-                                        {
-                                            state.selected_nodes.remove(ix);
-                                        } else {
-                                            state.selected_nodes.push(hit);
+                                let _ = update_selection_action_host(
+                                    host,
+                                    &view_pan_down,
+                                    controller_pan_down.as_ref(),
+                                    store_pan_down.as_ref(),
+                                    |selected_nodes, _selected_edges, _selected_groups| {
+                                        let already_selected =
+                                            selected_nodes.iter().any(|id| *id == hit);
+                                        if multi {
+                                            if let Some(ix) =
+                                                selected_nodes.iter().position(|id| *id == hit)
+                                            {
+                                                selected_nodes.remove(ix);
+                                            } else {
+                                                selected_nodes.push(hit);
+                                            }
+                                        } else if !already_selected {
+                                            selected_nodes.clear();
+                                            selected_nodes.push(hit);
                                         }
-                                    } else if !already_selected {
-                                        state.selected_nodes.clear();
-                                        state.selected_nodes.push(hit);
-                                    }
-                                });
+                                    },
+                                );
                             }
 
                             if interaction.nodes_draggable
@@ -2340,11 +2411,17 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
                             });
 
                             if !multi {
-                                let _ = host.models_mut().update(&view_pan_down, |state| {
-                                    state.selected_nodes.clear();
-                                    state.selected_edges.clear();
-                                    state.selected_groups.clear();
-                                });
+                                let _ = update_selection_action_host(
+                                    host,
+                                    &view_pan_down,
+                                    controller_pan_down.as_ref(),
+                                    store_pan_down.as_ref(),
+                                    |selected_nodes, selected_edges, selected_groups| {
+                                        selected_nodes.clear();
+                                        selected_edges.clear();
+                                        selected_groups.clear();
+                                    },
+                                );
                             }
 
                             host.notify(action_cx);
@@ -2354,11 +2431,17 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
 
                         // Clicking empty space clears selection (unless multi-selection modifier is held).
                         if interaction.elements_selectable && !multi {
-                            let _ = host.models_mut().update(&view_pan_down, |state| {
-                                state.selected_nodes.clear();
-                                state.selected_edges.clear();
-                                state.selected_groups.clear();
-                            });
+                            let _ = update_selection_action_host(
+                                host,
+                                &view_pan_down,
+                                controller_pan_down.as_ref(),
+                                store_pan_down.as_ref(),
+                                |selected_nodes, selected_edges, selected_groups| {
+                                    selected_nodes.clear();
+                                    selected_edges.clear();
+                                    selected_groups.clear();
+                                },
+                            );
                             host.notify(action_cx);
                             host.request_redraw(action_cx.window);
                             return true;
@@ -2527,44 +2610,54 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
                                         });
 
                                         let base_selected = marquee.base_selected_nodes.clone();
-                                        let _ = host.models_mut().update(&view_pan, |state| {
-                                            state.selected_nodes.clear();
-                                            state
-                                                .selected_nodes
-                                                .extend(base_selected.iter().copied());
-                                            for id in candidates.iter().copied() {
-                                                if let Some(ix) = state
-                                                    .selected_nodes
-                                                    .iter()
-                                                    .position(|v| *v == id)
-                                                {
-                                                    state.selected_nodes.remove(ix);
-                                                } else {
-                                                    state.selected_nodes.push(id);
+                                        let _ = update_selection_action_host(
+                                            host,
+                                            &view_pan,
+                                            controller_pan.as_ref(),
+                                            store_pan.as_ref(),
+                                            |selected_nodes, _selected_edges, _selected_groups| {
+                                                selected_nodes.clear();
+                                                selected_nodes
+                                                    .extend(base_selected.iter().copied());
+                                                for id in candidates.iter().copied() {
+                                                    if let Some(ix) = selected_nodes
+                                                        .iter()
+                                                        .position(|v| *v == id)
+                                                    {
+                                                        selected_nodes.remove(ix);
+                                                    } else {
+                                                        selected_nodes.push(id);
+                                                    }
                                                 }
-                                            }
-                                        });
+                                            },
+                                        );
                                     } else {
-                                        let _ = host.models_mut().update(&view_pan, |state| {
-                                            state.selected_nodes.clear();
-                                            index.query_nodes_in_rect(
-                                                rect_canvas,
-                                                &mut state.selected_nodes,
-                                            );
-                                            state.selected_nodes.retain(|id| {
-                                                let Some(node) = geom.nodes.get(id) else {
-                                                    return false;
-                                                };
-                                                match selection_mode {
-                                                    crate::io::NodeGraphSelectionMode::Full => {
-                                                        rect_contains_rect(rect_canvas, node.rect)
+                                        let _ = update_selection_action_host(
+                                            host,
+                                            &view_pan,
+                                            controller_pan.as_ref(),
+                                            store_pan.as_ref(),
+                                            |selected_nodes, _selected_edges, _selected_groups| {
+                                                selected_nodes.clear();
+                                                index.query_nodes_in_rect(
+                                                    rect_canvas,
+                                                    selected_nodes,
+                                                );
+                                                selected_nodes.retain(|id| {
+                                                    let Some(node) = geom.nodes.get(id) else {
+                                                        return false;
+                                                    };
+                                                    match selection_mode {
+                                                        crate::io::NodeGraphSelectionMode::Full => {
+                                                            rect_contains_rect(rect_canvas, node.rect)
+                                                        }
+                                                        crate::io::NodeGraphSelectionMode::Partial => {
+                                                            rects_intersect(rect_canvas, node.rect)
+                                                        }
                                                     }
-                                                    crate::io::NodeGraphSelectionMode::Partial => {
-                                                        rects_intersect(rect_canvas, node.rect)
-                                                    }
-                                                }
-                                            });
-                                        });
+                                                });
+                                            },
+                                        );
                                     }
                                 }
                             }
@@ -2763,6 +2856,8 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
             let marquee_cancel = marquee_drag.clone();
             let node_drag_cancel = node_drag.clone();
             let view_cancel = view_state.clone();
+            let controller_cancel = controller.clone();
+            let store_cancel = store.clone();
             let on_pointer_cancel: OnPointerCancel = Arc::new(
                 move |host: &mut dyn fret_ui::action::UiPointerActionHost,
                       action_cx: fret_ui::action::ActionCx,
@@ -2776,10 +2871,16 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
                     let _ = host.models_mut().update(&drag_cancel, |st| *st = None);
                     if let Some(marquee) = marquee {
                         let base_selected = marquee.base_selected_nodes.clone();
-                        let _ = host.models_mut().update(&view_cancel, |state| {
-                            state.selected_nodes.clear();
-                            state.selected_nodes.extend(base_selected.iter().copied());
-                        });
+                        let _ = update_selection_action_host(
+                            host,
+                            &view_cancel,
+                            controller_cancel.as_ref(),
+                            store_cancel.as_ref(),
+                            |selected_nodes, _selected_edges, _selected_groups| {
+                                selected_nodes.clear();
+                                selected_nodes.extend(base_selected.iter().copied());
+                            },
+                        );
                     }
                     let _ = host.models_mut().update(&marquee_cancel, |st| *st = None);
                     let _ = host.models_mut().update(&node_drag_cancel, |st| *st = None);
