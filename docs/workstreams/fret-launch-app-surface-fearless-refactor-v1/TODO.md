@@ -10,6 +10,7 @@ Companion docs:
 - Surface audit: `docs/workstreams/fret-launch-app-surface-fearless-refactor-v1/SURFACE_AUDIT.md`
 - Crate audit (L1): `docs/workstreams/crate-audits/fret-launch.l1.md`
 - Milestones: `docs/workstreams/fret-launch-app-surface-fearless-refactor-v1/MILESTONES.md`
+- Final status: `docs/workstreams/fret-launch-app-surface-fearless-refactor-v1/FINAL_STATUS.md`
 
 ## Setup / Inventory
 
