@@ -44,6 +44,5 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     .into_element(cx)])
     .refine_layout(LayoutRefinement::default().w_full().max_w(Px(320.0)))
     .into_element(cx)
-    .test_id("ui-gallery-slider-label")
 }
 // endregion: example

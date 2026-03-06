@@ -67,4 +67,3 @@ Legend:
   - `tools/diag-scripts/ui-gallery/native-select/ui-gallery-native-select-label-click-focus.json`
   - `tools/diag-scripts/ui-gallery/slider/ui-gallery-slider-label-click-focus.json`
   - `tools/diag-scripts/ui-gallery/radio-group/ui-gallery-radio-group-label-click-focus.json`
-

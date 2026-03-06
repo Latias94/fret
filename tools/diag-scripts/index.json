@@ -2241,6 +2241,16 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-ai-agent-demo-expand-tool",
+      "path": "tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-agent-demo-expand-tool.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-ai-agent"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-ai-checkpoint-restore-tooltip",
       "path": "tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-checkpoint-restore-tooltip.json",
       "required_capabilities": [
@@ -2464,6 +2474,22 @@
         "ui-gallery-ai-transcript-retained"
       ],
       "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-alert-action-text-non-overlap",
+      "path": "tools/diag-scripts/ui-gallery/alert/ui-gallery-alert-action-text-non-overlap.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "alert",
+        "shadcn",
+        "ui-gallery"
+      ],
       "target_hints": []
     },
     {
@@ -5991,6 +6017,29 @@
       ],
       "tags": [],
       "target_hints": []
+    },
+    {
+      "id": "ui-gallery-select-label-click-focus",
+      "path": "tools/diag-scripts/ui-gallery/select/ui-gallery-select-label-click-focus.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-select"
+      ],
+      "tags": [
+        "a11y",
+        "focus",
+        "label",
+        "select",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Navigates to the Select page.",
+        "Scrolls the Label Association example into view.",
+        "Clicks the FieldLabel and verifies the Select popup opens."
+      ]
     },
     {
       "id": "ui-gallery-select-open-jitter-click-stable-v2",

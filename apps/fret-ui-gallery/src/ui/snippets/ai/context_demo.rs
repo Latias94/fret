@@ -2,25 +2,28 @@ pub const SOURCE: &str = include_str!("context_demo.rs");
 
 // region: example
 use fret_ui_ai as ui_ai;
+use fret_ui_kit::LayoutRefinement;
 use fret_ui_kit::ui;
-use fret_ui_kit::{LayoutRefinement, Space};
 use fret_ui_shadcn::prelude::*;
+
+fn centered<H: UiHost>(cx: &mut ElementContext<'_, H>, body: AnyElement) -> AnyElement {
+    ui::h_flex(move |_cx| [body])
+        .layout(LayoutRefinement::default().w_full().min_w_0())
+        .justify_center()
+        .into_element(cx)
+}
 
 pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let usage = ui_ai::ContextUsage {
-        input_tokens: Some(12_345),
-        output_tokens: Some(6_789),
-        reasoning_tokens: Some(321),
-        cached_input_tokens: Some(1_024),
-        input_cost_usd: Some(0.12),
-        output_cost_usd: Some(0.08),
-        reasoning_cost_usd: Some(0.01),
-        cached_cost_usd: Some(0.00),
-        total_cost_usd: Some(0.21),
+        input_tokens: Some(32_000),
+        output_tokens: Some(8_000),
+        reasoning_tokens: Some(512),
+        cached_input_tokens: Some(2_048),
+        ..Default::default()
     };
 
-    let context = ui_ai::Context::new(19_134, 100_000)
-        .model_id("openai:gpt-4.1-mini")
+    let context = ui_ai::Context::new(42_560, 128_000)
+        .model_id("openai:gpt-5")
         .usage(usage)
         .test_id_root("ui-ai-context-demo-root")
         .into_element_with_children(cx, |cx| {
@@ -58,15 +61,6 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
             (trigger, content)
         });
 
-    ui::v_flex(move |cx| {
-        vec![
-            cx.text("Context (AI Elements)"),
-            cx.text("Hover to inspect model usage + token budget."),
-            context,
-        ]
-    })
-    .layout(LayoutRefinement::default().w_full().min_w_0())
-    .gap(Space::N4)
-    .into_element(cx)
+    centered(cx, context)
 }
 // endregion: example

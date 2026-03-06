@@ -24,6 +24,12 @@ pub struct AnyElement {
     pub id: GlobalElementId,
     pub kind: ElementKind,
     pub children: Vec<AnyElement>,
+    /// Layout-transparent inherited foreground installed on this subtree root.
+    ///
+    /// This is the non-wrapper equivalent of `ForegroundScope`: descendants that opt into
+    /// `currentColor`-style paint inheritance can resolve this value during paint without adding a
+    /// new layout node.
+    pub inherited_foreground: Option<Color>,
     /// Layout-transparent semantics overrides applied when producing semantics snapshots.
     pub semantics_decoration: Option<SemanticsDecoration>,
     /// Layout-transparent key context identifier used by shortcut/keymap `when` expressions.
@@ -36,9 +42,19 @@ impl AnyElement {
             id,
             kind,
             children,
+            inherited_foreground: None,
             semantics_decoration: None,
             key_context: None,
         }
+    }
+
+    /// Attach a subtree-local inherited foreground without introducing a layout wrapper.
+    ///
+    /// Descendants that support `currentColor` / `IconTheme`-style paint inheritance resolve this
+    /// value at paint time.
+    pub fn inherit_foreground(mut self, foreground: Color) -> Self {
+        self.inherited_foreground = Some(foreground);
+        self
     }
 
     /// Attach layout-transparent semantics metadata to this element (ADR 0222).

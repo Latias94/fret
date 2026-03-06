@@ -59,7 +59,6 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     };
 
     let trigger_open = open.clone();
-    let close_open = open.clone();
     let save_open = open.clone();
 
     let name_model = name.clone();
@@ -69,14 +68,12 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         cx,
         move |cx| {
             ui::h_flex(|cx| {
-                vec![
-                    shadcn::Button::new("Open Dialog")
-                        .variant(shadcn::ButtonVariant::Outline)
-                        .refine_layout(LayoutRefinement::default().flex_1())
-                        .test_id("ui-gallery-dialog-demo-trigger")
-                        .toggle_model(trigger_open.clone())
-                        .into_element(cx),
-                ]
+                vec![shadcn::Button::new("Open Dialog")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .refine_layout(LayoutRefinement::default().flex_1())
+                    .test_id("ui-gallery-dialog-demo-trigger")
+                    .toggle_model(trigger_open.clone())
+                    .into_element(cx)]
             })
             .gap(Space::N2)
             .items_center()
@@ -85,7 +82,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         },
         move |cx| {
             shadcn::DialogContent::new([
-                shadcn::DialogClose::new(close_open.clone()).into_element(cx),
+                shadcn::DialogClose::from_scope().into_element(cx),
                 shadcn::DialogHeader::new([
                     shadcn::DialogTitle::new("Edit profile").into_element(cx),
                     shadcn::DialogDescription::new(
@@ -98,7 +95,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                 shadcn::DialogFooter::new([
                     shadcn::Button::new("Cancel")
                         .variant(shadcn::ButtonVariant::Outline)
-                        .toggle_model(close_open.clone())
+                        .toggle_model(open.clone())
                         .into_element(cx),
                     shadcn::Button::new("Save changes")
                         .toggle_model(save_open.clone())

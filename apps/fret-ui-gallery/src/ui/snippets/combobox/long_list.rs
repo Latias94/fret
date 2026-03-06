@@ -95,7 +95,6 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
         .a11y_label("Combobox long list")
         .query_model(query.clone())
         .test_id_prefix("ui-gallery-combobox-long-list")
-        .trigger_test_id("ui-gallery-combobox-long-list-trigger")
         .items(items)
         .into_element_parts(cx, |_cx| {
             vec![

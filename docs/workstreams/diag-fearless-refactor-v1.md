@@ -18,6 +18,11 @@ This is an implementation-focused companion to the contract-first workstreams:
 - Extensibility + capabilities contract: `docs/workstreams/diag-extensibility-and-capabilities-v1/README.md`
 - AI/size tooling (indexes, packets, hotspots): `docs/workstreams/diag-ai-agent-debugging-v1.md`
 
+For the newer umbrella framing that treats diag as a general automation/debugging/evidence platform
+(and explicitly decides how DevTools GUI fits into the refactor scope), see:
+
+- `docs/workstreams/diag-fearless-refactor-v2/README.md`
+
 ## Problem statement
 
 Today, diagnostics is powerful but the “fearless refactor” tax is high:

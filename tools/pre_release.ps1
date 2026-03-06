@@ -95,6 +95,13 @@ Invoke-Checked `
   )
 
 Invoke-Checked `
+  "Teaching surfaces policy (only approved advanced on_action_notify cases)" `
+  "python" `
+  @(
+    (Join-Path $repoRoot "tools/gate_only_allowed_on_action_notify_in_teaching_surfaces.py")
+  )
+
+Invoke-Checked `
   "Teaching surfaces policy (no legacy stack helpers)" `
   "python" `
   @(

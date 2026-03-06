@@ -1023,6 +1023,10 @@ fn select_trigger_element<H: UiHost>(
                     props.style =
                         style.map(|style| typography::with_intent(style, TextIntent::Control));
                     props.color = Some(display_color);
+                    props.layout.size.width = Length::Fill;
+                    props.layout.size.min_width = Some(Length::Px(Px(0.0)));
+                    props.layout.flex.grow = 1.0;
+                    props.layout.flex.basis = Length::Px(Px(0.0));
                     props.wrap = TextWrap::None;
                     props.overflow = TextOverflow::Ellipsis;
                     cx.text_props(props)
@@ -1105,7 +1109,9 @@ fn select_trigger_element<H: UiHost>(
                             layout: {
                                 let mut l = fret_ui::element::LayoutStyle::default();
                                 l.size.width = Length::Fill;
+                                l.size.min_width = Some(Length::Px(Px(0.0)));
                                 l.flex.grow = 1.0;
+                                l.flex.basis = Length::Px(Px(0.0));
                                 l.overflow = Overflow::Clip;
                                 l
                             },
@@ -1114,6 +1120,7 @@ fn select_trigger_element<H: UiHost>(
                         move |cx| {
                             let mut left = FlexProps::default();
                             left.layout.size.width = Length::Fill;
+                            left.layout.size.min_width = Some(Length::Px(Px(0.0)));
                             left.layout.overflow = Overflow::Clip;
                             left.direction = Axis::Horizontal;
                             left.justify = MainAlign::Start;
@@ -1541,6 +1548,26 @@ fn estimate_select_menu_content_width<H: UiHost>(
 #[cfg(test)]
 mod item_text_tests {
     use super::*;
+    use fret_app::App;
+    use fret_core::{Point, Px, Size};
+    use fret_ui::element::{ElementKind, Length, TextProps};
+
+    fn bounds() -> Rect {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(200.0)),
+        )
+    }
+
+    fn find_text_by_content<'a>(el: &'a AnyElement, text: &str) -> Option<&'a TextProps> {
+        match &el.kind {
+            ElementKind::Text(props) if props.text.as_ref() == text => Some(props),
+            _ => el
+                .children
+                .iter()
+                .find_map(|child| find_text_by_content(child, text)),
+        }
+    }
 
     #[test]
     fn select_item_display_text_prefers_display_text_then_typeahead_then_label() {
@@ -1613,6 +1640,148 @@ mod item_text_tests {
             super::resolve_select_menu_width(select_width, estimate, floor).0,
             480.0
         );
+    }
+
+    #[test]
+    fn select_trigger_value_can_truncate_within_trigger_row() {
+        let window = fret_core::AppWindowId::default();
+        let mut app = App::new();
+        let selected_value = Arc::<str>::from("selected");
+        let selected_label = Arc::<str>::from(
+            "A very long select value that should truncate inside the trigger row",
+        );
+        let model = app.models_mut().insert(Some(selected_value.clone()));
+
+        let el =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "m3-select", |cx| {
+                Select::new(model.clone())
+                    .items(vec![SelectItem::new(
+                        selected_value.clone(),
+                        selected_label.clone(),
+                    )])
+                    .leading_icon(ids::ui::SEARCH)
+                    .into_element(cx)
+            });
+
+        let value =
+            find_text_by_content(&el, selected_label.as_ref()).expect("select trigger value text");
+        assert_eq!(value.wrap, TextWrap::None);
+        assert_eq!(value.overflow, TextOverflow::Ellipsis);
+        assert_eq!(value.layout.size.width, Length::Fill);
+        assert_eq!(value.layout.size.min_width, Some(Length::Px(Px(0.0))));
+    }
+
+    #[test]
+    fn select_menu_item_labels_can_shrink_within_listbox_rows() {
+        let window = fret_core::AppWindowId::default();
+        let mut app = App::new();
+        let label = Arc::<str>::from(
+            "A very long select menu item label that should shrink between the icon slots",
+        );
+        let model = app.models_mut().insert(None);
+        let open = app.models_mut().insert(true);
+        let initial_focus = Rc::new(Cell::new(None));
+
+        let el = fret_ui::elements::with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "m3-select-list-item",
+            |cx| {
+                select_list_item(
+                    cx,
+                    SelectVariant::Outlined,
+                    SelectItem::new("item", label.clone())
+                        .leading_icon(ids::ui::SEARCH)
+                        .trailing_icon(ids::ui::CLOSE),
+                    false,
+                    model.clone(),
+                    open.clone(),
+                    None,
+                    Color::TRANSPARENT,
+                    true,
+                    0,
+                    1,
+                    initial_focus.clone(),
+                )
+            },
+        );
+
+        let label = find_text_by_content(&el, label.as_ref()).expect("select menu item label text");
+        assert_eq!(label.wrap, TextWrap::None);
+        assert_eq!(label.overflow, TextOverflow::Clip);
+        assert_eq!(label.layout.size.width, Length::Fill);
+        assert_eq!(label.layout.size.min_width, Some(Length::Px(Px(0.0))));
+        assert_eq!(label.layout.flex.grow, 1.0);
+        assert_eq!(label.layout.flex.basis, Length::Px(Px(0.0)));
+    }
+
+    #[test]
+    fn select_menu_item_supporting_text_can_shrink_within_two_line_rows() {
+        let window = fret_core::AppWindowId::default();
+        let mut app = App::new();
+        let label = Arc::<str>::from(
+            "A very long select menu headline that should shrink within the two-line body slot",
+        );
+        let supporting =
+            Arc::<str>::from("A supporting line that should shrink before it overflows the row");
+        let trailing = Arc::<str>::from("Trailing metadata");
+        let model = app.models_mut().insert(None);
+        let open = app.models_mut().insert(true);
+        let initial_focus = Rc::new(Cell::new(None));
+
+        let el = fret_ui::elements::with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "m3-select-two-line-item",
+            |cx| {
+                select_list_item(
+                    cx,
+                    SelectVariant::Outlined,
+                    SelectItem::new("item", label.clone())
+                        .supporting_text(supporting.clone())
+                        .trailing_supporting_text(trailing.clone())
+                        .leading_icon(ids::ui::SEARCH)
+                        .trailing_icon(ids::ui::CLOSE),
+                    true,
+                    model.clone(),
+                    open.clone(),
+                    None,
+                    Color::TRANSPARENT,
+                    true,
+                    0,
+                    1,
+                    initial_focus.clone(),
+                )
+            },
+        );
+
+        let headline =
+            find_text_by_content(&el, label.as_ref()).expect("select two-line item headline");
+        assert_eq!(headline.wrap, TextWrap::None);
+        assert_eq!(headline.overflow, TextOverflow::Clip);
+        assert_eq!(headline.layout.size.width, Length::Fill);
+        assert_eq!(headline.layout.size.min_width, Some(Length::Px(Px(0.0))));
+        assert_eq!(headline.layout.flex.grow, 1.0);
+        assert_eq!(headline.layout.flex.basis, Length::Px(Px(0.0)));
+
+        let supporting = find_text_by_content(&el, supporting.as_ref())
+            .expect("select two-line item supporting text");
+        assert_eq!(supporting.wrap, TextWrap::None);
+        assert_eq!(supporting.overflow, TextOverflow::Clip);
+        assert_eq!(supporting.layout.size.width, Length::Fill);
+        assert_eq!(supporting.layout.size.min_width, Some(Length::Px(Px(0.0))));
+        assert_eq!(supporting.layout.flex.grow, 1.0);
+        assert_eq!(supporting.layout.flex.basis, Length::Px(Px(0.0)));
+
+        let trailing = find_text_by_content(&el, trailing.as_ref())
+            .expect("select two-line item trailing supporting text");
+        assert_eq!(trailing.wrap, TextWrap::None);
+        assert_eq!(trailing.overflow, TextOverflow::Clip);
+        assert_eq!(trailing.layout.size.width, Length::Auto);
+        assert_eq!(trailing.layout.size.min_width, Some(Length::Px(Px(0.0))));
+        assert_eq!(trailing.layout.flex.shrink, 1.0);
     }
 }
 
@@ -2134,6 +2303,10 @@ fn select_list_item<H: UiHost>(
                                 props.color = Some(label_color);
                                 props.wrap = TextWrap::None;
                                 props.overflow = TextOverflow::Clip;
+                                props.layout.size.width = Length::Fill;
+                                props.layout.size.min_width = Some(Length::Px(Px(0.0)));
+                                props.layout.flex.grow = 1.0;
+                                props.layout.flex.basis = Length::Px(Px(0.0));
                                 cx.text_props(props)
                             };
 
@@ -2143,6 +2316,10 @@ fn select_list_item<H: UiHost>(
                                 props.color = Some(supporting_color);
                                 props.wrap = TextWrap::None;
                                 props.overflow = TextOverflow::Clip;
+                                props.layout.size.width = Length::Fill;
+                                props.layout.size.min_width = Some(Length::Px(Px(0.0)));
+                                props.layout.flex.grow = 1.0;
+                                props.layout.flex.basis = Length::Px(Px(0.0));
                                 cx.text_props(props)
                             });
 
@@ -2153,6 +2330,8 @@ fn select_list_item<H: UiHost>(
                                     props.color = Some(trailing_supporting_color);
                                     props.wrap = TextWrap::None;
                                     props.overflow = TextOverflow::Clip;
+                                    props.layout.size.min_width = Some(Length::Px(Px(0.0)));
+                                    props.layout.flex.shrink = 1.0;
                                     cx.text_props(props)
                                 });
 
@@ -2162,8 +2341,10 @@ fn select_list_item<H: UiHost>(
                             column.align = CrossAlign::Stretch;
                             column.gap = Px(2.0).into();
                             column.layout.size.width = Length::Fill;
+                            column.layout.size.min_width = Some(Length::Px(Px(0.0)));
                             column.layout.overflow = Overflow::Clip;
                             column.layout.flex.grow = 1.0;
+                            column.layout.flex.basis = Length::Px(Px(0.0));
 
                             cx.flex(column, move |cx| {
                                 let mut out = Vec::new();
@@ -2175,6 +2356,7 @@ fn select_list_item<H: UiHost>(
                                 second_row.align = CrossAlign::Center;
                                 second_row.gap = Px(8.0).into();
                                 second_row.layout.size.width = Length::Fill;
+                                second_row.layout.size.min_width = Some(Length::Px(Px(0.0)));
                                 second_row.layout.overflow = Overflow::Clip;
 
                                 out.push(cx.flex(second_row, move |cx| {
@@ -2203,6 +2385,10 @@ fn select_list_item<H: UiHost>(
                                 props.color = Some(label_color);
                                 props.wrap = TextWrap::None;
                                 props.overflow = TextOverflow::Clip;
+                                props.layout.size.width = Length::Fill;
+                                props.layout.size.min_width = Some(Length::Px(Px(0.0)));
+                                props.layout.flex.grow = 1.0;
+                                props.layout.flex.basis = Length::Px(Px(0.0));
                                 cx.text_props(props)
                             };
 
@@ -2211,7 +2397,9 @@ fn select_list_item<H: UiHost>(
                                     layout: {
                                         let mut l = fret_ui::element::LayoutStyle::default();
                                         l.size.width = Length::Fill;
+                                        l.size.min_width = Some(Length::Px(Px(0.0)));
                                         l.flex.grow = 1.0;
+                                        l.flex.basis = Length::Px(Px(0.0));
                                         l.overflow = Overflow::Clip;
                                         l
                                     },

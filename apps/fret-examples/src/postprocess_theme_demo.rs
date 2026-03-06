@@ -13,7 +13,6 @@ use fret_core::scene::{
 };
 use fret_core::{Color, Corners, Edges, EffectId, Px};
 use fret_runtime::Model;
-use fret_ui::action::UiActionHost;
 use fret_ui::element::{
     ContainerProps, EffectLayerProps, LayoutStyle, Length, Overflow, PositionStyle, SpacerProps,
     TextProps,
@@ -169,34 +168,18 @@ fn install_custom_effect(app: &mut App, effects: &mut dyn fret_core::CustomEffec
 }
 
 impl ThemePostprocessState {
-    fn reset(host: &mut dyn UiActionHost, st: &ThemePostprocessState) {
-        let _ = host.models_mut().update(&st.enabled, |v| *v = true);
-        let _ = host.models_mut().update(&st.compare, |v| *v = true);
-        let _ = host
-            .models_mut()
-            .update(&st.theme, |v| *v = Some(Arc::from("cyberpunk")));
-        let _ = host
-            .models_mut()
-            .update(&st.chromatic_offset_px, |v| *v = vec![4.0]);
-        let _ = host
-            .models_mut()
-            .update(&st.scanline_strength, |v| *v = vec![0.32]);
-        let _ = host
-            .models_mut()
-            .update(&st.scanline_spacing_px, |v| *v = vec![3.0]);
-        let _ = host
-            .models_mut()
-            .update(&st.vignette_strength, |v| *v = vec![0.6]);
-        let _ = host
-            .models_mut()
-            .update(&st.grain_strength, |v| *v = vec![0.12]);
-        let _ = host
-            .models_mut()
-            .update(&st.grain_scale, |v| *v = vec![1.5]);
-        let _ = host
-            .models_mut()
-            .update(&st.retro_pixel_scale, |v| *v = vec![10.0]);
-        let _ = host.models_mut().update(&st.retro_dither, |v| *v = true);
+    fn reset(models: &mut fret_runtime::ModelStore, st: &ThemePostprocessState) {
+        let _ = models.update(&st.enabled, |v| *v = true);
+        let _ = models.update(&st.compare, |v| *v = true);
+        let _ = models.update(&st.theme, |v| *v = Some(Arc::from("cyberpunk")));
+        let _ = models.update(&st.chromatic_offset_px, |v| *v = vec![4.0]);
+        let _ = models.update(&st.scanline_strength, |v| *v = vec![0.32]);
+        let _ = models.update(&st.scanline_spacing_px, |v| *v = vec![3.0]);
+        let _ = models.update(&st.vignette_strength, |v| *v = vec![0.6]);
+        let _ = models.update(&st.grain_strength, |v| *v = vec![0.12]);
+        let _ = models.update(&st.grain_scale, |v| *v = vec![1.5]);
+        let _ = models.update(&st.retro_pixel_scale, |v| *v = vec![10.0]);
+        let _ = models.update(&st.retro_dither, |v| *v = true);
     }
 }
 
@@ -279,10 +262,10 @@ impl View for ThemePostprocessView {
             retro_dither,
         );
 
-        cx.on_action_notify::<act::Reset>({
+        cx.on_action_notify_models::<act::Reset>({
             let st = self.clone_for_reset();
-            move |host, _acx| {
-                ThemePostprocessState::reset(host, &st);
+            move |models| {
+                ThemePostprocessState::reset(models, &st);
                 true
             }
         });

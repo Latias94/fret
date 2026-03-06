@@ -49,7 +49,8 @@ The template is intentionally small:
 
 - `TodoState` holds app-owned `Model<T>` state.
 - `act::*` are typed unit actions (stable IDs).
-- `TodoView` wires the view runtime (`init`, `render`) and registers action handlers via `cx.on_action`.
+- `TodoView` wires the view runtime (`init`, `render`) and starts with `cx.on_action_notify_models`, `cx.on_action_notify_transient`, plus local `on_activate*` only when widget glue truly needs it.
+- Treat raw `on_action_notify` as cookbook/reference material for host-side integrations, not as the first-hour default.
 
 ## 3) The three things you should learn first
 

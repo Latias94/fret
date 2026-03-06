@@ -2,6 +2,7 @@ use std::cell::Cell;
 use std::sync::Arc;
 use std::time::Duration;
 
+use crate::test_id::test_id_slug;
 use fret_core::window::ColorScheme;
 use fret_core::{Color, Corners, DrawOrder, Edges, FontId, FontWeight, Px, TextStyle};
 use fret_icons::IconId;
@@ -2192,7 +2193,14 @@ impl Tabs {
                                     let trigger_children = item.trigger.take();
                                     let trigger_leading_icon = item.trigger_leading_icon.clone();
                                     let trigger_trailing_icon = item.trigger_trailing_icon.clone();
-                                    let trigger_test_id = item.trigger_test_id.clone();
+                                    let trigger_test_id = item.trigger_test_id.clone().or_else(|| {
+                                        root_test_id_for_children.as_ref().map(|id| {
+                                            Arc::<str>::from(format!(
+                                                "{id}-trigger-{}",
+                                                test_id_slug(item.value.as_ref())
+                                            ))
+                                        })
+                                    });
                                     let model = model.clone();
                                     let text_style = text_style.clone();
 
@@ -2889,6 +2897,37 @@ mod tests {
     use fret_ui::tree::UiTree;
     use fret_ui_kit::ColorRef;
 
+    fn contains_foreground_scope(el: &AnyElement) -> bool {
+        matches!(el.kind, fret_ui::element::ElementKind::ForegroundScope(_))
+            || el.children.iter().any(contains_foreground_scope)
+    }
+
+    fn find_first_inherited_foreground_node(el: &AnyElement) -> Option<&AnyElement> {
+        if el.inherited_foreground.is_some() {
+            return Some(el);
+        }
+        el.children
+            .iter()
+            .find_map(find_first_inherited_foreground_node)
+    }
+
+    fn find_pressable_element_with_test_id<'a>(
+        el: &'a AnyElement,
+        test_id: &str,
+    ) -> Option<&'a AnyElement> {
+        match &el.kind {
+            fret_ui::element::ElementKind::Pressable(props) => {
+                if props.a11y.test_id.as_deref() == Some(test_id) {
+                    return Some(el);
+                }
+            }
+            _ => {}
+        }
+        el.children
+            .iter()
+            .find_map(|child| find_pressable_element_with_test_id(child, test_id))
+    }
+
     #[test]
     fn tabs_list_variants_match_upstream_default_and_line_intent() {
         let mut app = App::new();
@@ -2962,6 +3001,49 @@ mod tests {
         assert_eq!(panel.layout.flex.shrink, 1.0);
         assert_eq!(panel.layout.size.width, Length::Fill);
         assert_eq!(panel.layout.size.min_width, Some(Length::Px(Px(0.0))));
+    }
+
+    #[test]
+    fn tabs_trigger_content_attaches_foreground_without_wrapper() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        crate::shadcn_themes::apply_shadcn_new_york(
+            &mut app,
+            crate::shadcn_themes::ShadcnBaseColor::Slate,
+            crate::shadcn_themes::ShadcnColorScheme::Light,
+        );
+
+        let model = app.models_mut().insert(Some(Arc::from("alpha")));
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(360.0), Px(200.0)),
+        );
+
+        let el = fret_ui::elements::with_element_cx(&mut app, window, bounds, "tabs-fg", |cx| {
+            Tabs::new(model.clone())
+                .items([
+                    TabsItem::new("alpha", "Alpha", Vec::<AnyElement>::new())
+                        .trigger_test_id("tabs.trigger.alpha")
+                        .trigger_leading_icon(IconId::new_static("lucide.star"))
+                        .trigger_trailing_icon(IconId::new_static("lucide.chevron-right")),
+                    TabsItem::new("beta", "Beta", Vec::<AnyElement>::new()),
+                ])
+                .into_element(cx)
+        });
+
+        let pressable = find_pressable_element_with_test_id(&el, "tabs.trigger.alpha")
+            .expect("tabs trigger pressable with test_id");
+        let inherited = find_first_inherited_foreground_node(pressable)
+            .expect("expected tabs trigger subtree to carry inherited foreground");
+
+        assert!(matches!(
+            inherited.kind,
+            fret_ui::element::ElementKind::Flex(_)
+        ));
+        assert!(
+            !contains_foreground_scope(pressable),
+            "expected tabs trigger content to attach inherited foreground without inserting a ForegroundScope"
+        );
     }
 
     #[test]
@@ -3187,6 +3269,52 @@ mod tests {
             wdiff <= 0.51,
             "expected vertical line variant triggers to share width: w0={w0:.3}, w1={w1:.3}, diff={wdiff:.3}"
         );
+    }
+    #[test]
+    fn tabs_root_test_id_derives_trigger_test_ids() {
+        fn find_pressable_with_test_id<'a>(
+            el: &'a AnyElement,
+            test_id: &str,
+        ) -> Option<&'a PressableProps> {
+            match &el.kind {
+                fret_ui::element::ElementKind::Pressable(props) => {
+                    if props.a11y.test_id.as_deref() == Some(test_id) {
+                        return Some(props);
+                    }
+                }
+                _ => {}
+            }
+            el.children
+                .iter()
+                .find_map(|child| find_pressable_with_test_id(child, test_id))
+        }
+
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(320.0), Px(200.0)),
+        );
+        let model = app.models_mut().insert(Some(Arc::<str>::from("alpha")));
+
+        let el = fret_ui::elements::with_element_cx(
+            &mut app,
+            window,
+            bounds,
+            "tabs-derived-trigger-id",
+            |cx| {
+                Tabs::new(model)
+                    .test_id("tabs-demo")
+                    .items([
+                        TabsItem::new("alpha", "Alpha", Vec::<AnyElement>::new()),
+                        TabsItem::new("beta", "Beta", Vec::<AnyElement>::new()),
+                    ])
+                    .into_element(cx)
+            },
+        );
+
+        assert!(find_pressable_with_test_id(&el, "tabs-demo-trigger-alpha").is_some());
+        assert!(find_pressable_with_test_id(&el, "tabs-demo-trigger-beta").is_some());
     }
 
     #[test]

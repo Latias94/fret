@@ -625,7 +625,27 @@ impl TopAppBar {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use fret_app::App;
     use fret_core::{Point, Px, Size};
+    use fret_icons::ids;
+    use fret_ui::element::{ElementKind, Length, TextProps};
+
+    fn bounds() -> fret_core::Rect {
+        fret_core::Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(480.0), Px(200.0)),
+        )
+    }
+
+    fn find_text_by_content<'a>(el: &'a AnyElement, text: &str) -> Option<&'a TextProps> {
+        match &el.kind {
+            ElementKind::Text(props) if props.text.as_ref() == text => Some(props),
+            _ => el
+                .children
+                .iter()
+                .find_map(|child| find_text_by_content(child, text)),
+        }
+    }
 
     #[test]
     fn pinned_scroll_behavior_reports_scrolled_from_handle_offset() {
@@ -894,6 +914,31 @@ mod tests {
             "expected a snapped-to-collapsed scroll offset to keep the scrolled container state"
         );
     }
+
+    #[test]
+    fn top_app_bar_titles_can_truncate_within_horizontal_slots() {
+        let window = fret_core::AppWindowId::default();
+        let mut app = App::new();
+        let title = "A very long top app bar title that should truncate instead of overflowing the action row";
+
+        let el = fret_ui::elements::with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "m3-top-app-bar",
+            |cx| {
+                TopAppBar::new(title)
+                    .actions(vec![TopAppBarAction::new(ids::ui::SEARCH)])
+                    .into_element(cx)
+            },
+        );
+
+        let title = find_text_by_content(&el, title).expect("top app bar title text");
+        assert_eq!(title.wrap, TextWrap::None);
+        assert_eq!(title.overflow, TextOverflow::Ellipsis);
+        assert_eq!(title.layout.size.width, Length::Fill);
+        assert_eq!(title.layout.size.min_width, Some(Length::Px(Px(0.0))));
+    }
 }
 
 fn top_app_bar_icon_button<H: UiHost>(
@@ -952,6 +997,8 @@ fn top_app_bar_title_element_for_variant<H: UiHost>(
     color: Color,
 ) -> AnyElement {
     let mut props = fret_ui::element::TextProps::new(title);
+    props.layout.size.width = Length::Fill;
+    props.layout.size.min_width = Some(Length::Px(Px(0.0)));
     props.style = Some(style);
     props.color = Some(color);
     props.wrap = TextWrap::None;
@@ -1057,6 +1104,7 @@ fn top_app_bar_single_row<H: UiHost>(
             let mut title_layout = LayoutStyle::default();
             title_layout.flex.grow = 1.0;
             title_layout.flex.basis = Length::Px(Px(0.0));
+            title_layout.size.min_width = Some(Length::Px(Px(0.0)));
 
             let mut title_container_props = FlexProps::default();
             title_container_props.direction = Axis::Horizontal;
@@ -1127,6 +1175,7 @@ fn top_app_bar_two_rows<H: UiHost>(
         let mut title_layout = LayoutStyle::default();
         title_layout.flex.grow = 1.0;
         title_layout.flex.basis = Length::Px(Px(0.0));
+        title_layout.size.min_width = Some(Length::Px(Px(0.0)));
         let mut title_container = FlexProps::default();
         title_container.direction = Axis::Horizontal;
         title_container.align = CrossAlign::Center;
@@ -1159,6 +1208,7 @@ fn top_app_bar_two_rows<H: UiHost>(
         wrapper.layout.size.height = Length::Fill;
         wrapper.layout.flex.grow = 1.0;
         wrapper.layout.flex.basis = Length::Px(Px(0.0));
+        wrapper.layout.size.min_width = Some(Length::Px(Px(0.0)));
         wrapper.padding = Edges {
             left: Px(12.0),
             right: Px(12.0),

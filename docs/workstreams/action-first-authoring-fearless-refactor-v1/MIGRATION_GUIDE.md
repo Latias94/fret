@@ -7,9 +7,9 @@ in small, reviewable slices.
 
 Note:
 
-- MVU is still treated as a compatibility surface during the refactor, but it is not the recommended
-  authoring path for new code. The `MVU -> View runtime` section is retained as a mapping guide for
-  migrating older external codebases and for the planned M8/M9 deprecation/removal path.
+- In-tree MVU has already been removed. The `MVU -> View runtime` section is retained only as a
+  mapping guide for migrating older external codebases and as historical context for the completed
+  M9 hard-delete path.
 
 ---
 
@@ -127,9 +127,12 @@ UI gallery reference:
 
 Migration steps:
 
-1) Move state into:
-   - app-owned models (recommended for shared state), or
-   - view-local state slots for simple demos.
+1) Move state into app-owned models.
+   - Shared state should stay in explicit models.
+   - For simple demo-local state, `cx.use_state::<T>()` is still model-backed in v1: it returns a
+     view-local `Model<T>` handle whose identity is retained in keyed view state.
+   - Direct plain-Rust local state is a post-v1 ergonomics exploration, not part of the landed v1
+     migration surface.
 2) Replace:
    - `msg.cmd(Msg::X)` with `act::X` action references.
 3) Replace `update(...)` with `cx.on_action...` handlers.
@@ -140,7 +143,7 @@ Migration steps:
    - `cx.notify()` and/or
    - selector/query hooks that carry proper dependency observation.
 
-Small ergonomics helpers (recommended for simple state):
+Helper layering for migration code:
 
 ### Default entrypoints (recommended mental model)
 
@@ -161,6 +164,18 @@ Everything else (`on_action_notify_model_update`, `on_action_notify_model_set`,
 `on_action_notify_toggle_bool`, `on_activate_request_redraw`, ...) should be treated as optional
 shorthand, not as the first thing new users need to memorize.
 
+### North-star vs landed v1
+
+The original north-star discussion remains valid, but it is important to separate the landed v1
+surface from the post-v1 density goals:
+
+- Landed in v1: `View` + typed actions, `use_selector` / `use_query`, cx-less `ui::*` constructors,
+  semantics/test IDs before `into_element(cx)`, and a narrowed default helper surface.
+- Not yet the default story: plain-Rust local state, builder-only composition that removes most
+  `ui::children!`, and widget-local `listener` / `dispatch` / `shortcut` sugar.
+- Recommendation: migrate to the landed v1 surface first, then evaluate post-v1 ergonomics changes
+  with side-by-side demo evidence rather than mixing them into the migration baseline.
+
 ### Helper visibility policy (docs/templates)
 
 - Default onboarding material should teach only the three entrypoints above.
@@ -170,7 +185,7 @@ shorthand, not as the first thing new users need to memorize.
 - A helper should graduate into first-contact docs/templates only after it solves repeated noise
   across multiple real demos/templates, not a single local call site.
 
-- For common “update a single model” handlers (counters, toggles, flags), prefer `ViewCx` helpers:
+- Optional advanced shorthand for obviously single-model handlers (keep these out of first-contact teaching unless they are materially clearer):
 
 ```rust,ignore
 let count = cx.use_state::<u32>();
@@ -208,6 +223,11 @@ Choosing the helper:
 - Use `on_action_notify_transient` when the real work must happen with `&mut App` in `render()`.
 - Use `on_action_notify` (or raw `on_action`) for advanced host-only cases (focus, timers, clipboard,
   custom effects) where the built-in shorthands do not fit.
+  - Current intentional cookbook cases fall into four host-side categories:
+    - `toast_basics`: imperative host integration (`Sonner` toast dispatch needs `UiActionHost` + window).
+    - `router_basics` back/forward: router command availability sync on the host path.
+    - `async_inbox_basics::Start`: background dispatcher/inbox scheduling plus wake integration.
+    - `undo_basics::Undo` / `Redo`: history traversal plus an explicit RAF effect.
 - Use `on_activate` / `on_activate_notify` for local pressable/widget glue, not as the default
   replacement for typed action handlers.
 
@@ -217,13 +237,15 @@ Side effects that need `App` access (v1 note):
 - View action handlers (`cx.on_action*`) run on a restricted host (`UiActionHost`) by design, so they
   should avoid direct `App`-only calls.
 
-Recommended v1 pattern (schedule in handler, execute in `render()`):
+Recommended v1 patterns:
 
-- Preferred: use transient events (one-shot flags) to schedule work for the next render pass:
+- For event-like App effects, prefer transient events (one-shot flags) to schedule work for the next render pass:
   - In the action handler: record a transient event (see `ViewCx::on_action_notify_transient`).
   - In `render()`: consume the transient flag (see `ViewCx::take_transient_on_action_root`) and
     apply the `App`-scoped effect.
-- If you need payload/data (not just a boolean flag), use a small “pending effect” model value
+- If the App-only effect is a pure projection of model state, keep the action as a normal model
+  transaction and synchronize the effect idempotently in `render()` from that state.
+- If you need payload/data (not just a boolean flag), use a small `pending effect` model value
   instead.
 
 Example:
@@ -231,6 +253,7 @@ Example:
 - `ecosystem/fret/src/view.rs` (`ViewCx::on_action_notify_transient`, `ViewCx::take_transient_on_action_root`).
 - `apps/fret-examples/src/query_demo.rs` (uses transient events + `with_query_client`).
 - `apps/fret-examples/src/query_async_tokio_demo.rs` (same, but with `use_query_async`).
+- `apps/fret-examples/src/async_playground_demo.rs` (theme mirrors `Model<bool>`; `render()` applies the theme when the value changes).
 
 ### Current authoring review notes
 
@@ -257,28 +280,32 @@ If you previously relied on MVU routers for per-item/payloaded routing, prefer p
 - See: `docs/adr/0312-payload-actions-v2.md`
 - Example: `apps/fret-cookbook/examples/payload_actions_basics.rs`
 
-## 3.2) MVU deprecation / removal plan (M8/M9)
+## 3.2) MVU removal status (M9 landed)
 
-MVU authoring still exists in-tree today as a compatibility surface, but it is not the recommended
-golden path for new code.
+MVU authoring is no longer available in-tree.
 
 Policy:
 
-- Do not add new MVU demos or expand MVU API surface.
-- Prefer migrating MVU demos to View runtime + typed actions as part of the adoption milestones.
-- Use this guide as the mapping reference when migrating an external MVU-based codebase.
+- Do not reintroduce MVU code paths into the repo.
+- Use this guide as the mapping reference only when migrating an external MVU-based codebase.
+- Prefer payload actions v2 plus the view runtime for any remaining per-item or payloaded dispatch needs.
 
-Planned sequence (subject to the workstream exit gates):
+Completed in-tree state:
 
-- The public in-tree MVU compat surface has already been removed.
-- This migration guide remains useful for older external codebases, but new in-tree work should
-  target `View` + typed unit/payload actions only.
+- `ecosystem/fret` no longer exposes MVU modules or legacy re-exports.
+- `apps/fret-examples`, `apps/fret-demo`, and scaffold templates no longer carry MVU demo routing.
+- Guardrails prevent MVU from drifting back into code surfaces.
+- New in-tree work should target `View` + typed unit/payload actions only; keep this guide as an
+  external migration mapping reference.
 
 Evidence anchors:
 
 - `ecosystem/fret/src/view.rs` (current view-runtime authoring hooks)
 - `ecosystem/fret/src/actions.rs` (unit + payload action macros/traits)
-- `docs/workstreams/action-first-authoring-fearless-refactor-v1/TODO.md` (remaining historical cleanup tasks)
+- `docs/workstreams/action-first-authoring-fearless-refactor-v1/LEGACY_MVU_INVENTORY.md`
+- `tools/gate_no_mvu_in_tree.py`
+- `tools/gate_no_mvu_in_cookbook.py`
+- `docs/workstreams/action-first-authoring-fearless-refactor-v1/TODO.md` (M9 closure checklist)
 
 ---
 

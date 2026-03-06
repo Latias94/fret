@@ -10,20 +10,16 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
 
     let select = shadcn::Select::new_controllable(cx, None, Some("apple"), None, false)
         .control_id(control_id.clone())
-        .trigger_test_id("ui-gallery-select-label-trigger")
+        .test_id_prefix("ui-gallery-select-label")
         .into_element_parts(
             cx,
             |_cx| shadcn::SelectTrigger::new(),
             |_cx| shadcn::SelectValue::new(),
             |_cx| {
                 shadcn::SelectContent::new().with_entries([
-                    shadcn::SelectItem::new("apple", "Apple")
-                        .test_id("ui-gallery-select-label-item-apple")
-                        .into(),
+                    shadcn::SelectItem::new("apple", "Apple").into(),
                     shadcn::SelectItem::new("banana", "Banana").into(),
-                    shadcn::SelectItem::new("blueberry", "Blueberry")
-                        .test_id("ui-gallery-select-label-item-blueberry")
-                        .into(),
+                    shadcn::SelectItem::new("blueberry", "Blueberry").into(),
                     shadcn::SelectItem::new("grapes", "Grapes").into(),
                     shadcn::SelectItem::new("pineapple", "Pineapple").into(),
                 ])

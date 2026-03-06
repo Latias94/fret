@@ -2,6 +2,7 @@ use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 use std::sync::Arc;
 
+use crate::test_id::test_id_slug;
 use fret_core::{Edges, FontId, FontWeight, Point, Px, Rect, Size, TextStyle};
 use fret_icons::{IconId, ids};
 use fret_runtime::{CommandId, Model};
@@ -1530,6 +1531,7 @@ fn menu_icon_slot_empty<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement
 pub struct DropdownMenu {
     open: Model<bool>,
     disabled: bool,
+    test_id_prefix: Option<Arc<str>>,
     modal: bool,
     align: DropdownMenuAlign,
     align_offset: Px,
@@ -1573,6 +1575,7 @@ impl DropdownMenu {
         Self {
             open,
             disabled: false,
+            test_id_prefix: None,
             modal: true,
             align: DropdownMenuAlign::default(),
             align_offset: Px(0.0),
@@ -1632,6 +1635,11 @@ impl DropdownMenu {
     /// Whether trigger keyboard interaction should be ignored.
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = disabled;
+        self
+    }
+
+    pub fn test_id_prefix(mut self, prefix: impl Into<Arc<str>>) -> Self {
+        self.test_id_prefix = Some(prefix.into());
         self
     }
 
@@ -1754,6 +1762,7 @@ impl DropdownMenu {
         cx.scope(|cx| {
             let overlay_id = dropdown_menu_overlay_id(cx.window, &self.open);
             let theme = Theme::global(&*cx.app).snapshot();
+            let test_id_prefix = self.test_id_prefix.clone();
             // `open` gates overlay request creation, so treat it as a structural/layout invalidation
             // (not paint-only). This avoids view-cache reuse keeping the closed subtree when `open`
             // flips between frames (notably in test harnesses that toggle `open` and snapshot
@@ -3263,6 +3272,11 @@ impl DropdownMenu {
                             )]
                         },
                     );
+                    let content = if let Some(prefix) = test_id_prefix.as_deref() {
+                        content.test_id(format!("{prefix}-content"))
+                    } else {
+                        content
+                    };
                     let content = if hide_semantics_when_closed {
                         content.attach_semantics(SemanticsDecoration {
                             hidden: Some(true),
@@ -3453,6 +3467,7 @@ impl DropdownMenu {
                                                     #[derive(Clone)]
                                                     struct RenderEnv {
                                                         reserve_leading_slot_enabled: bool,
+                                                        test_id_prefix: Option<Arc<str>>,
                                                         item_count: usize,
                                                         ring: RingStyle,
                                                         border: fret_core::Color,
@@ -3897,7 +3912,14 @@ impl DropdownMenu {
                                                             .a11y_label
                                                             .clone()
                                                             .or_else(|| Some(label.clone()));
-                                                        let test_id = item.test_id.clone();
+                                                        let test_id = item.test_id.clone().or_else(|| {
+                                                            env.test_id_prefix.as_ref().map(|prefix| {
+                                                                Arc::<str>::from(format!(
+                                                                    "{prefix}-item-{}",
+                                                                    test_id_slug(value.as_ref())
+                                                                ))
+                                                            })
+                                                        });
                                                         let close_on_select = item.close_on_select;
                                                         let command = item.command;
                                                          let disabled = item.disabled
@@ -4113,6 +4135,7 @@ impl DropdownMenu {
 
                                                     let env = RenderEnv {
                                                         reserve_leading_slot_enabled,
+                                                        test_id_prefix: test_id_prefix.clone(),
                                                         item_count,
                                                         ring,
                                                         border,
@@ -4306,7 +4329,21 @@ mod tests {
     use fret_core::{TextBlobId, TextConstraints, TextMetrics, TextService};
     use fret_runtime::{Effect, FrameId};
     use fret_ui::UiTree;
-    use fret_ui::element::PressableA11y;
+    use fret_ui::element::{AnyElement, ElementKind, PressableA11y};
+
+    fn contains_foreground_scope(el: &AnyElement) -> bool {
+        matches!(el.kind, ElementKind::ForegroundScope(_))
+            || el.children.iter().any(contains_foreground_scope)
+    }
+
+    fn find_first_inherited_foreground_node(el: &AnyElement) -> Option<&AnyElement> {
+        if el.inherited_foreground.is_some() {
+            return Some(el);
+        }
+        el.children
+            .iter()
+            .find_map(find_first_inherited_foreground_node)
+    }
 
     #[test]
     fn dropdown_menu_new_controllable_uses_controlled_model_when_provided() {
@@ -4334,6 +4371,63 @@ mod tests {
         let menu = DropdownMenuContent::from(content).apply_to(DropdownMenu::new(open));
 
         assert_eq!(menu.side_offset, Px(9.0));
+    }
+
+    #[test]
+    fn dropdown_menu_checkable_row_attaches_foreground_to_existing_root() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(240.0), Px(120.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let expected_fg = fret_core::Color {
+                r: 0.2,
+                g: 0.4,
+                b: 0.8,
+                a: 1.0,
+            };
+            let text_style = fret_core::TextStyle {
+                size: Px(14.0),
+                weight: fret_core::FontWeight::NORMAL,
+                line_height: Some(Px(20.0)),
+                ..Default::default()
+            };
+
+            let els = checkable_menu_row_children(
+                cx,
+                Arc::from("Alpha"),
+                None,
+                Some(fret_icons::IconId::new_static("lucide.check")),
+                false,
+                None,
+                CheckableIndicatorKind::Check,
+                true,
+                false,
+                fret_core::Color::TRANSPARENT,
+                expected_fg,
+                text_style,
+                Px(14.0),
+                Px(20.0),
+                Px(8.0),
+                Px(12.0),
+                Px(6.0),
+                Px(6.0),
+            );
+
+            assert_eq!(els.len(), 1);
+            let root = find_first_inherited_foreground_node(&els[0])
+                .expect("expected menu row subtree to carry inherited foreground");
+            assert!(matches!(root.kind, ElementKind::Container(_)));
+            assert_eq!(root.inherited_foreground, Some(expected_fg));
+            assert_eq!(root.children.len(), 2);
+            assert!(
+                !contains_foreground_scope(root),
+                "expected checkable menu row to attach inherited foreground without inserting a ForegroundScope"
+            );
+        });
     }
 
     #[test]
@@ -4526,6 +4620,82 @@ mod tests {
         ui.request_semantics_snapshot();
         ui.layout_all(app, services, bounds, 1.0);
         root
+    }
+
+    #[test]
+    fn dropdown_menu_test_id_prefix_derives_content_and_item_ids() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(true);
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(320.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let next_frame = FrameId(app.frame_id().0.saturating_add(1));
+        app.set_frame_id(next_frame);
+
+        let changed_models = app.take_changed_models();
+        let changed_globals = app.take_changed_globals();
+        let _ = fret_ui::frame_pipeline::propagate_changes(
+            &mut ui,
+            &mut app,
+            &changed_models,
+            &changed_globals,
+        );
+
+        OverlayController::begin_frame(&mut app, window);
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "dropdown-menu-test-id-prefix",
+            move |cx| {
+                vec![
+                    DropdownMenu::new(open.clone())
+                        .test_id_prefix("dd")
+                        .into_element(
+                            cx,
+                            |cx| {
+                                cx.container(
+                                    ContainerProps {
+                                        layout: {
+                                            let mut layout = LayoutStyle::default();
+                                            layout.size.width = Length::Px(Px(120.0));
+                                            layout.size.height = Length::Px(Px(40.0));
+                                            layout
+                                        },
+                                        ..Default::default()
+                                    },
+                                    |_cx| Vec::new(),
+                                )
+                            },
+                            |_cx| vec![DropdownMenuItem::new("Alpha").value("alpha").into()],
+                        ),
+                ]
+            },
+        );
+        ui.set_root(root);
+        OverlayController::render(&mut ui, &mut app, &mut services, window, bounds);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let ids: Vec<&str> = snap
+            .nodes
+            .iter()
+            .filter_map(|n| n.test_id.as_deref())
+            .collect();
+        assert!(ids.iter().copied().any(|id| id == "dd-content"));
+        assert!(ids.iter().copied().any(|id| id == "dd-item-alpha"));
+
+        let _ = root;
     }
 
     fn render_frame_capture_submenu_models(

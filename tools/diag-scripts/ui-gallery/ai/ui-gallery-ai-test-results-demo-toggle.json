@@ -37,27 +37,36 @@
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-ai-test-suite-1-trigger" }
+        "target": { "kind": "test_id", "id": "ui-ai-test-suite-database-trigger" }
       },
       "timeout_frames": 240
+    },
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-viewport" },
+      "target": { "kind": "test_id", "id": "ui-ai-test-suite-database-trigger" },
+      "delta_y": -120.0,
+      "require_fully_within_window": true,
+      "padding_px": 16.0,
+      "timeout_frames": 1800
     },
     {
       "type": "wait_until",
       "predicate": {
         "kind": "not_exists",
-        "target": { "kind": "test_id", "id": "ui-ai-test-suite-1-content" }
+        "target": { "kind": "test_id", "id": "ui-ai-test-suite-database-content" }
       },
       "timeout_frames": 240
     },
     {
       "type": "click_stable",
-      "target": { "kind": "test_id", "id": "ui-ai-test-suite-1-trigger" }
+      "target": { "kind": "test_id", "id": "ui-ai-test-suite-database-trigger" }
     },
     {
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-ai-test-suite-1-content" }
+        "target": { "kind": "test_id", "id": "ui-ai-test-suite-database-content" }
       },
       "timeout_frames": 240
     },
@@ -65,4 +74,3 @@
     { "type": "capture_bundle", "label": "ui-gallery-ai-test-results-demo-toggle" }
   ]
 }
-

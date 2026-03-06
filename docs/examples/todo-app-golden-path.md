@@ -139,6 +139,8 @@ fn install_app(app: &mut App) {
 Notes:
 
 - The action-first + view runtime path is the recommended golden path for new apps (ADRs 0307/0308).
+- Start with `on_action_notify_models`, `on_action_notify_transient`, and local `on_activate*` only when widget glue truly needs it.
+- In-tree MVU is removed; if you are migrating an older external MVU codebase, use the workstream migration guide as a mapping reference rather than treating MVU as a current option.
 - Use typed unit actions for globally addressable intents and typed payload actions for per-item UI intents.
 
 ## App state (models)
@@ -221,10 +223,8 @@ mod act {
 
 impl View for TodoView {
     fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
-        cx.on_action::<act::Add>(move |host, acx| {
+        cx.on_action_notify_models::<act::Add>(move |models| {
             // mutate models
-            host.request_redraw(acx.window);
-            host.notify(acx);
             true
         });
 
@@ -291,10 +291,12 @@ let state: QueryState<T> = cx.watch_model(handle.model()).layout().cloned_or_def
 To invalidate/refetch from app logic:
 
 ```rust,ignore
-// v1 (view runtime): action handlers only receive `UiFocusActionHost`, so "refetch" is typically
-// modeled as a key change.
-// (have a `Model<u64>` nonce, e.g. `tip_nonce`)
-let _ = host.models_mut().update(&tip_nonce, |v| *v = v.saturating_add(1));
+// v1 (view runtime): if refetch is just a pure state projection, keep it as a normal model
+// transaction (for example, bump a `Model<u64>` nonce like `tip_nonce`).
+cx.on_action_notify_models::<act::RefreshTip>({
+    let tip_nonce = self.tip_nonce.clone();
+    move |models| models.update(&tip_nonce, |v| *v = v.saturating_add(1)).is_ok()
+});
 
 // then include the nonce in the query key:
 let nonce = cx.watch_model(&tip_nonce).paint().copied_or(0);
@@ -310,14 +312,32 @@ In a typical window driver:
 
 ## Action handlers (logic)
 
-In the view runtime shape, typed action handlers are the boundary where you mutate models and request UI updates:
+In the view runtime shape, typed action handlers are the boundary where you mutate models and request UI updates. Start with `on_action_notify_models`, use `on_action_notify_transient` when the real work must happen with `&mut App` in `render()`, and keep raw `on_action_notify` for cookbook/reference host-side cases only:
 
 ```rust,ignore
-cx.on_action::<act::Add>(move |host, acx| {
-    // read draft, push todo, clear draft
-    host.request_redraw(acx.window);
-    host.notify(acx);
-    true
+cx.on_action_notify_models::<act::Add>({
+    let draft = self.draft.clone();
+    let todos = self.todos.clone();
+    move |models| {
+        let text = models
+            .read(&draft, |v| v.trim().to_string())
+            .ok()
+            .unwrap_or_default();
+        if text.is_empty() {
+            return false;
+        }
+
+        let done = models.insert(false);
+        let _ = models.update(&todos, |todos| {
+            todos.push(TodoItem {
+                id: todos.len() as u64,
+                done,
+                text: Arc::from(text.clone()),
+            });
+        });
+        let _ = models.update(&draft, String::clear);
+        true
+    }
 });
 ```
 

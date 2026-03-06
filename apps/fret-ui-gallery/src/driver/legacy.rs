@@ -3873,16 +3873,15 @@ impl WinitAppDriver for UiGalleryDriver {
     ) {
     }
 
-    fn accessibility_snapshot(
+    fn semantics_snapshot(
         &mut self,
         _app: &mut App,
         _window: AppWindowId,
         state: &mut Self::WindowState,
     ) -> Option<Arc<fret_core::SemanticsSnapshot>> {
-        // This is called by the runner after layout when accessibility is active (or when a
-        // platform feature like WebView placement needs semantics). Requesting semantics here
-        // ensures we start producing snapshots on the next frame without forcing semantics on
-        // every frame.
+        // This is the primary semantics hook used by accessibility and other runner integrations.
+        // Requesting semantics here ensures we start producing snapshots on the next frame without
+        // forcing semantics on every frame.
         state.ui.request_semantics_snapshot();
         state.ui.semantics_snapshot_arc()
     }

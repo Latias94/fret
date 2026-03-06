@@ -4,6 +4,7 @@ use std::rc::Rc;
 use std::sync::{Arc, Mutex};
 
 use crate::LayoutDirection;
+use crate::test_id::test_id_slug;
 use fret_core::time::Duration;
 use fret_core::{Edges, Point, Px, Rect, Size, TextStyle};
 use fret_icons::{IconId, ids};
@@ -1062,6 +1063,7 @@ struct ContextMenuRenderEnv {
     open: Model<bool>,
     cancel_open: ContextMenuCancelOpenShared,
     gating: WindowCommandGatingSnapshot,
+    test_id_prefix: Option<Arc<str>>,
     reserve_leading_slot: bool,
     item_count: usize,
     ring: RingStyle,
@@ -1209,7 +1211,11 @@ impl ContextMenuRenderEnv {
         let label = item.label.clone();
         let value = item.value.clone();
         let a11y_label = item.a11y_label.clone().or_else(|| Some(label.clone()));
-        let test_id = item.test_id.clone();
+        let test_id = item.test_id.clone().or_else(|| {
+            self.test_id_prefix.as_ref().map(|prefix| {
+                Arc::<str>::from(format!("{prefix}-item-{}", test_id_slug(value.as_ref())))
+            })
+        });
         let chrome_test_id = test_id
             .clone()
             .map(|id| Arc::<str>::from(format!("{id}.chrome")));
@@ -2295,11 +2301,11 @@ fn menu_row_children<H: UiHost>(
             }
 
             if let Some(l) = leading.take() {
-                let scoped = cx.foreground_scope(icon_fg, move |_cx| vec![l]);
+                let scoped = l.inherit_foreground(icon_fg);
                 row.push(menu_icon_slot(cx, scoped));
             } else if let Some(icon) = leading_icon.clone() {
                 let icon_el = decl_icon::icon_with(cx, icon, Some(Px(16.0)), None);
-                let scoped = cx.foreground_scope(icon_fg, move |_cx| vec![icon_el]);
+                let scoped = icon_el.inherit_foreground(icon_fg);
                 row.push(menu_icon_slot(cx, scoped));
             } else if reserve_leading_slot {
                 row.push(menu_icon_slot_empty(cx));
@@ -2452,6 +2458,7 @@ fn context_menu_submenu_panel<H: UiHost>(
     open_value: Arc<str>,
     placed: Rect,
     entries: Vec<ContextMenuEntry>,
+    test_id_prefix: Option<Arc<str>>,
     open: Model<bool>,
     typeahead_timeout_ticks: u64,
     align_leading_icons: bool,
@@ -2647,6 +2654,7 @@ fn context_menu_submenu_panel<H: UiHost>(
                 open: open.clone(),
                 cancel_open: cancel_open.clone(),
                 gating: gating.clone(),
+                test_id_prefix,
                 reserve_leading_slot,
                 item_count,
                 ring,
@@ -2713,6 +2721,7 @@ fn context_menu_submenu_panel<H: UiHost>(
 pub struct ContextMenu {
     open: Model<bool>,
     disabled: bool,
+    test_id_prefix: Option<Arc<str>>,
     modal: bool,
     align: DropdownMenuAlign,
     side: DropdownMenuSide,
@@ -2761,6 +2770,7 @@ impl ContextMenu {
         Self {
             open,
             disabled: false,
+            test_id_prefix: None,
             modal: true,
             align: DropdownMenuAlign::Start,
             // Match Radix/shadcn defaults:
@@ -2856,6 +2866,13 @@ impl ContextMenu {
     /// Optional debug/test-only identifier for the menu content semantics node (`role=menu`).
     pub fn content_test_id(mut self, id: impl Into<Arc<str>>) -> Self {
         self.content_test_id = Some(id.into());
+        self
+    }
+
+    pub fn test_id_prefix(mut self, prefix: impl Into<Arc<str>>) -> Self {
+        let prefix = prefix.into();
+        self.content_test_id = Some(Arc::<str>::from(format!("{prefix}-content")));
+        self.test_id_prefix = Some(prefix);
         self
     }
 
@@ -4349,6 +4366,7 @@ impl ContextMenu {
                                 open_value.clone(),
                                 geometry.floating,
                                 submenu_entries,
+                                self.test_id_prefix.clone(),
                                 open_for_submenu.clone(),
                                 typeahead_timeout_ticks,
                                 align_leading_icons,
@@ -4448,6 +4466,20 @@ mod tests {
     use fret_ui::tree::UiTree;
     use fret_ui::{Theme, ThemeConfig};
 
+    fn contains_foreground_scope(el: &AnyElement) -> bool {
+        matches!(el.kind, fret_ui::element::ElementKind::ForegroundScope(_))
+            || el.children.iter().any(contains_foreground_scope)
+    }
+
+    fn find_first_inherited_foreground_node(el: &AnyElement) -> Option<&AnyElement> {
+        if el.inherited_foreground.is_some() {
+            return Some(el);
+        }
+        el.children
+            .iter()
+            .find_map(find_first_inherited_foreground_node)
+    }
+
     #[test]
     fn destructive_focus_bg_fallback_tracks_theme_color_scheme() {
         let mut app = App::new();
@@ -4524,6 +4556,78 @@ mod tests {
         fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
             let menu = ContextMenu::new_controllable(cx, Some(controlled.clone()), false);
             assert_eq!(menu.open, controlled);
+        });
+    }
+
+    #[test]
+    fn context_menu_row_attaches_inherited_foreground_without_wrapper() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(120.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let expected_icon_fg = fret_core::Color {
+                r: 0.3,
+                g: 0.6,
+                b: 0.9,
+                a: 1.0,
+            };
+            let elements: Vec<AnyElement> = menu_row_children(
+                cx,
+                Arc::from("Inspect"),
+                None,
+                Some(fret_icons::IconId::new_static("lucide.eye")),
+                false,
+                None,
+                false,
+                None,
+                false,
+                fret_core::Color::TRANSPARENT,
+                fret_core::Color {
+                    r: 0.9,
+                    g: 0.9,
+                    b: 0.9,
+                    a: 1.0,
+                },
+                expected_icon_fg,
+                fret_core::TextStyle {
+                    size: Px(14.0),
+                    weight: fret_core::FontWeight::NORMAL,
+                    line_height: Some(Px(20.0)),
+                    ..Default::default()
+                },
+                Px(14.0),
+                Px(20.0),
+                Px(8.0),
+                Px(12.0),
+                Px(6.0),
+                Px(6.0),
+                fret_core::Color {
+                    r: 0.5,
+                    g: 0.5,
+                    b: 0.5,
+                    a: 1.0,
+                },
+                None,
+            )
+            .into_iter()
+            .collect();
+
+            assert_eq!(elements.len(), 1);
+            let inherited = find_first_inherited_foreground_node(&elements[0])
+                .expect("expected context menu row subtree to carry inherited foreground");
+            assert!(matches!(
+                inherited.kind,
+                fret_ui::element::ElementKind::SvgIcon(_)
+            ));
+            assert_eq!(inherited.inherited_foreground, Some(expected_icon_fg));
+            assert!(
+                !contains_foreground_scope(&elements[0]),
+                "expected context menu row to attach inherited foreground without inserting a ForegroundScope"
+            );
         });
     }
 
@@ -4719,6 +4823,71 @@ mod tests {
         ui.request_semantics_snapshot();
         ui.layout_all(app, services, bounds, 1.0);
         root
+    }
+
+    #[test]
+    fn context_menu_test_id_prefix_derives_content_id() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(true);
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(320.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let next_frame = FrameId(app.frame_id().0.saturating_add(1));
+        app.set_frame_id(next_frame);
+        OverlayController::begin_frame(&mut app, window);
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "context-menu-test-id-prefix",
+            move |cx| {
+                vec![
+                    ContextMenu::new(open.clone())
+                        .test_id_prefix("ctx")
+                        .into_element(
+                            cx,
+                            |cx| {
+                                cx.container(
+                                    ContainerProps {
+                                        layout: {
+                                            let mut layout = LayoutStyle::default();
+                                            layout.size.width = Length::Px(Px(120.0));
+                                            layout.size.height = Length::Px(Px(40.0));
+                                            layout
+                                        },
+                                        ..Default::default()
+                                    },
+                                    |_cx| Vec::new(),
+                                )
+                            },
+                            |_cx| vec![ContextMenuEntry::Item(ContextMenuItem::new("Alpha"))],
+                        ),
+                ]
+            },
+        );
+        ui.set_root(root);
+        OverlayController::render(&mut ui, &mut app, &mut services, window, bounds);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let ids: Vec<&str> = snap
+            .nodes
+            .iter()
+            .filter_map(|n| n.test_id.as_deref())
+            .collect();
+        assert!(ids.iter().copied().any(|id| id == "ctx-content"));
+
+        let _ = root;
     }
 
     fn render_frame_with_dismiss_handler(

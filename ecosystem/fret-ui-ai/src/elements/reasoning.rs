@@ -498,9 +498,9 @@ impl ReasoningContent {
         // Reasoning content is usually non-interactive; keep links inert by default.
         components.on_link_activate = None;
 
-        let content = cx.foreground_scope(muted_fg, move |cx| {
-            vec![fret_markdown::Markdown::new(self.markdown).into_element_with(cx, &components)]
-        });
+        let content = fret_markdown::Markdown::new(self.markdown)
+            .into_element_with(cx, &components)
+            .inherit_foreground(muted_fg);
 
         let inner = cx.container(
             fret_ui::element::ContainerProps {

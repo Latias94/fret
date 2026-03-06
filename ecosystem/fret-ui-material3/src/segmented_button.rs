@@ -683,6 +683,11 @@ fn material_segment_content<H: UiHost>(
     let mut text = TextProps::new(label);
     text.style = Some(label_style);
     text.color = Some(label_color);
+    text.layout.size.width = Length::Fill;
+    text.layout.size.min_width = Some(Length::Px(Px(0.0)));
+    text.layout.flex.grow = 1.0;
+    text.layout.flex.basis = Length::Px(Px(0.0));
+    text.align = fret_core::TextAlign::Center;
     text.wrap = TextWrap::None;
     text.overflow = TextOverflow::Clip;
 
@@ -716,4 +721,64 @@ fn material_icon<H: UiHost>(
     props.layout.size.height = Length::Px(size);
     props.color = color;
     cx.svg_icon_props(props)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use fret_app::App;
+    use fret_core::{Point, Rect, Size};
+    use fret_ui::element::{ElementKind, Length, TextProps};
+
+    fn bounds() -> Rect {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(120.0)),
+        )
+    }
+
+    fn find_text_by_content<'a>(el: &'a AnyElement, text: &str) -> Option<&'a TextProps> {
+        match &el.kind {
+            ElementKind::Text(props) if props.text.as_ref() == text => Some(props),
+            _ => el
+                .children
+                .iter()
+                .find_map(|child| find_text_by_content(child, text)),
+        }
+    }
+
+    #[test]
+    fn segmented_button_labels_can_shrink_within_equal_width_segments() {
+        let window = fret_core::AppWindowId::default();
+        let mut app = App::new();
+        let selected = Arc::<str>::from("overview");
+        let label = Arc::<str>::from(
+            "A very long segmented button label that should shrink inside the segment slot",
+        );
+        let model = app.models_mut().insert(selected.clone());
+
+        let el = fret_ui::elements::with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "m3-segmented-button",
+            |cx| {
+                SegmentedButtonSet::single(model.clone())
+                    .items(vec![
+                        SegmentedButtonItem::new(selected.clone(), label.clone()),
+                        SegmentedButtonItem::new("details", "Details"),
+                    ])
+                    .into_element(cx)
+            },
+        );
+
+        let label = find_text_by_content(&el, label.as_ref()).expect("segmented button label text");
+        assert_eq!(label.wrap, TextWrap::None);
+        assert_eq!(label.overflow, TextOverflow::Clip);
+        assert_eq!(label.layout.size.width, Length::Fill);
+        assert_eq!(label.layout.size.min_width, Some(Length::Px(Px(0.0))));
+        assert_eq!(label.layout.flex.grow, 1.0);
+        assert_eq!(label.layout.flex.basis, Length::Px(Px(0.0)));
+        assert_eq!(label.align, fret_core::TextAlign::Center);
+    }
 }

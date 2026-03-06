@@ -602,9 +602,60 @@ fn menu_item_label<H: UiHost>(
     let mut props = TextProps::new(text.clone());
     props.style = Some(style);
     props.color = Some(color);
+    props.layout.size.width = Length::Fill;
+    props.layout.size.min_width = Some(Length::Px(Px(0.0)));
+    props.layout.flex.grow = 1.0;
+    props.layout.flex.basis = Length::Px(Px(0.0));
     props.wrap = TextWrap::None;
     props.overflow = TextOverflow::Clip;
     cx.text_props(props)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use fret_app::App;
+    use fret_core::{Point, Rect, Size};
+    use fret_ui::element::{ElementKind, TextProps};
+
+    fn bounds() -> Rect {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(220.0), Px(160.0)),
+        )
+    }
+
+    fn find_text_by_content<'a>(el: &'a AnyElement, text: &str) -> Option<&'a TextProps> {
+        match &el.kind {
+            ElementKind::Text(props) if props.text.as_ref() == text => Some(props),
+            _ => el
+                .children
+                .iter()
+                .find_map(|child| find_text_by_content(child, text)),
+        }
+    }
+
+    #[test]
+    fn menu_item_labels_can_shrink_within_menu_rows() {
+        let window = fret_core::AppWindowId::default();
+        let mut app = App::new();
+        let label =
+            Arc::<str>::from("A very long menu item label that should shrink within the menu row");
+
+        let el = fret_ui::elements::with_element_cx(&mut app, window, bounds(), "m3-menu", |cx| {
+            Menu::new()
+                .entries(vec![MenuEntry::Item(MenuItem::new(label.clone()))])
+                .into_element(cx)
+        });
+
+        let label = find_text_by_content(&el, label.as_ref()).expect("menu item label text");
+        assert_eq!(label.wrap, TextWrap::None);
+        assert_eq!(label.overflow, TextOverflow::Clip);
+        assert_eq!(label.layout.size.width, Length::Fill);
+        assert_eq!(label.layout.size.min_width, Some(Length::Px(Px(0.0))));
+        assert_eq!(label.layout.flex.grow, 1.0);
+        assert_eq!(label.layout.flex.basis, Length::Px(Px(0.0)));
+    }
 }
 
 fn roving_typeahead_prefix_arc_str_always_wrap<H: UiHost>(

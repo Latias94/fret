@@ -113,12 +113,12 @@ so the default authoring story lives in ecosystem crates.
   - View runtime + hooks + typed unit actions (golden path): `ecosystem/fret` (`View`, `ViewCx`, `fret::actions!`)
   - Derived state (selectors/computed): `ecosystem/fret-selector`
   - Async resources (loading/error/cache/invalidation): `ecosystem/fret-query`
-  - Dynamic per-item UI intents: `fret::payload_actions!` + `ViewCx::on_payload_action*`
+  - Per-item/payload dispatch (advanced): `fret::payload_actions!` + `ViewCx::on_payload_action*` (use when unit actions are not enough).
 - Default entrypoints (recommended mental model):
   - `cx.on_action_notify_models::<A>(|models| ...)` - default for most typed UI actions.
   - `cx.on_action_notify_transient::<A>(...)` - default when the real work must happen with `&mut App` in `render()`.
   - `on_activate(...)` / `on_activate_notify(...)` - local pressable/widget glue only; do not treat these as the default replacement for typed action handlers.
-  - Treat raw `on_action` / `on_action_notify` and single-model aliases as advanced shorthands; keep first-contact docs and templates focused on the three entrypoints above.
+  - Treat raw `on_action` / `on_action_notify` and single-model aliases as advanced shorthands; keep first-contact docs and templates focused on the three entrypoints above. The remaining in-tree examples are cookbook-only host-side categories (toasts, router availability sync, background scheduling, RAF effects).
 - Upgrade guidance (app authors): `docs/fearless-refactoring.md`
 - Integration guidance:
   - Async fetch (tokio/wasm): `docs/integrating-tokio-and-reqwest.md`

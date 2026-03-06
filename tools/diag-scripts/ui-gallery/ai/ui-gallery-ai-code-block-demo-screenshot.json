@@ -1,0 +1,51 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "ui-gallery ai code block demo: screenshot",
+    "tags": ["ui-gallery", "ui-gallery.ai", "ui-gallery.ai.code_block", "screenshot"],
+    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
+    "target_hints": [
+      "Run `fret-ui-gallery` with `--features gallery-dev` so AI pages are wired.",
+      "Navigates to the AI CodeBlock demo page and captures a screenshot + bundle."
+    ]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "set_window_inner_size", "width_px": 980.0, "height_px": 760.0 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+      },
+      "timeout_frames": 360
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
+    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
+    { "type": "press_key", "key": "backspace" },
+    { "type": "type_text", "text": "ai code block" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-ai-code-block-demo" }
+      },
+      "timeout_frames": 360
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-nav-ai-code-block-demo" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-ai-code-block-root" }
+      },
+      "timeout_frames": 360
+    },
+    { "type": "wait_frames", "n": 10 },
+    { "type": "capture_screenshot", "label": "ui-gallery-ai-code-block-demo" },
+    { "type": "capture_bundle", "label": "ui-gallery-ai-code-block-demo-screenshot" }
+  ]
+}

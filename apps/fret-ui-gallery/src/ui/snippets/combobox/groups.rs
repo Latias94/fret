@@ -87,7 +87,6 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
         .a11y_label("Combobox groups")
         .query_model(query.clone())
         .test_id_prefix("ui-gallery-combobox-groups")
-        .trigger_test_id("ui-gallery-combobox-groups-trigger")
         .groups([
             shadcn::ComboboxGroup::new()
                 .label(shadcn::ComboboxLabel::new("Americas"))

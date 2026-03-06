@@ -575,7 +575,7 @@ impl WinitAppDriver for ContainerQueriesDockingDemoDriver {
         true
     }
 
-    fn accessibility_snapshot(
+    fn semantics_snapshot(
         &mut self,
         _app: &mut App,
         _window: AppWindowId,

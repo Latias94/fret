@@ -20,8 +20,6 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     };
 
     let trigger_open = open.clone();
-    let close_open = open.clone();
-
     shadcn::Dialog::new(open.clone()).into_element_parts(
         cx,
         move |cx| {
@@ -37,7 +35,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         shadcn::DialogOverlay::new(),
         move |cx| {
             shadcn::DialogContent::new([
-                shadcn::DialogClose::new(close_open.clone())
+                shadcn::DialogClose::from_scope()
                     .into_element(cx)
                     .test_id("ui-gallery-dialog-parts-close"),
                 shadcn::DialogHeader::new([

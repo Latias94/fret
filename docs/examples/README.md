@@ -7,6 +7,8 @@ the right one.
 
 These are intentionally stable and should be your default onboarding path:
 
+They all teach the same small authoring model first: `on_action_notify_models`, `on_action_notify_transient`, and local `on_activate*` only when widget glue truly needs it.
+
 1. `hello` (template) — smallest runnable UI surface.
    - Generate: `cargo run -p fretboard -- new hello --name hello-world`
 2. `simple-todo` (template) — view runtime + typed actions + models + keyed lists (no selectors/queries).
@@ -58,7 +60,7 @@ Preview / still-evolving examples (not recommended for onboarding) are labeled i
 
 - [apps/fret-cookbook/EXAMPLES.md](../../apps/fret-cookbook/EXAMPLES.md)
 
-Legacy MVU inventory (applies to maintainer demos, not cookbook):
+Historical MVU removal inventory (applies to maintainer demos, not cookbook):
 
 - [docs/workstreams/action-first-authoring-fearless-refactor-v1/LEGACY_MVU_INVENTORY.md](../workstreams/action-first-authoring-fearless-refactor-v1/LEGACY_MVU_INVENTORY.md)
 

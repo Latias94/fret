@@ -182,6 +182,43 @@ The recommended documentation order is now:
 - Which additional conveniences deserve first-class builder methods versus remaining install-hook
   recipes?
 
+### Optional “closure entry”
+
+If we introduce a closure-based variant, it must be:
+
+- opt-in via an explicit feature and/or type name (e.g. `ClosureApp`),
+- documented as “not guaranteed hotpatch-friendly”.
+
+## Migration / Compatibility
+
+- Historical top-level helpers such as `fret::run` / `fret::app_with_hooks` are removed from the
+  current `fret` surface.
+- The builder chain is now the recommended author-facing app entry on `fret`.
+- When app authors need lower-level ownership, docs should teach dropping down to
+  `fret-bootstrap` / `fret-framework` rather than reviving parallel `fret` helpers.
+- Templates (`fretboard new hello/simple-todo/todo`) and golden-path docs should stay on the
+  builder chain.
+- Keep docs showing both:
+  - “recommended builder chain”
+  - “drop down to `fret-bootstrap` for manual assembly”
+
+## Open Questions
+
+1) Naming: should the builder be `fret::App` or something less likely to confuse with
+   `fret_app::App` (e.g. `fret::AppBuilder`, `fret::UiApp`)?
+2) Where should the builder live?
+   - `ecosystem/fret` only (recommended), or
+   - also mirrored in `fret-bootstrap`?
+3) How many “first-class knobs” are worth including before we push users to `install_*` hooks?
+4) Do we want a single `Defaults::desktop_batteries()` preset, or multiple smaller presets?
+
+## References (in-repo)
+
+- Golden path driver contracts: `docs/adr/0110-golden-path-ui-app-driver-and-pipelines.md`
+- Hotpatch safety: `docs/adr/0105-dev-hotpatch-subsecond-and-hot-reload-safety.md`
+- Ecosystem bootstrap: `docs/adr/0106-ecosystem-bootstrap-ui-assets-and-dev-tools.md`
+- Existing templates & onboarding ladder: `docs/examples/todo-app-golden-path.md`
+
 ## Evidence anchors
 
 - `ecosystem/fret/src/app_entry.rs`

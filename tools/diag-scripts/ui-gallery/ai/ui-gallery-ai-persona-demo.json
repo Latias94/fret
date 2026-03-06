@@ -27,12 +27,17 @@
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-ai-persona-demo-idle" }
+        "target": { "kind": "test_id", "id": "ui-ai-persona-demo-current" }
       },
       "timeout_frames": 240
     },
-
+    { "type": "capture_screenshot", "label": "ui-gallery-ai-persona-demo-default" },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-ai-persona-demo-state-listening" } },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-ai-persona-demo-variant-opal" } },
+    { "type": "capture_screenshot", "label": "ui-gallery-ai-persona-demo-opal-listening" },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-ai-persona-demo-state-speaking" } },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-ai-persona-demo-variant-command" } },
+    { "type": "capture_screenshot", "label": "ui-gallery-ai-persona-demo-command-speaking" },
     { "type": "capture_bundle", "label": "ui-gallery-ai-persona-demo" }
   ]
 }
-

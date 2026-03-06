@@ -408,7 +408,11 @@ pub fn native_select<H: UiHost>(
         } else {
             Some(Arc::from("Native select"))
         };
-        let trigger_test_id_for_trigger = trigger_test_id.clone();
+        let trigger_test_id_for_trigger = trigger_test_id.clone().or_else(|| {
+            test_id_prefix
+                .as_ref()
+                .map(|prefix| Arc::<str>::from(format!("{prefix}-trigger")))
+        });
         let theme_for_trigger = theme.clone();
         let focus_restore_target_for_trigger = focus_restore_target.clone();
         let test_id_prefix_for_trigger = test_id_prefix.clone();

@@ -130,16 +130,18 @@ impl ElementHostWidget {
         }
 
         let instance_started = cx.tree.debug_enabled().then(Instant::now);
-        let instance = self.instance(cx.app, window, cx.node);
+        let record = with_element_record_for_node(cx.app, window, cx.node, Clone::clone);
         if let Some(instance_started) = instance_started {
             cx.tree
                 .debug_record_paint_host_widget_instance_lookup(instance_started.elapsed());
         }
-        let Some(instance) = instance else {
+        let Some(record) = record else {
             return;
         };
+        let inherited_foreground = record.inherited_foreground;
+        let instance = record.instance;
 
-        match instance {
+        with_scoped_foreground(cx, inherited_foreground, |cx| match instance {
             ElementInstance::Container(props) => {
                 let bounds = if props.snap_to_device_pixels {
                     crate::pixel_snap::snap_rect_edges_round(cx.bounds, cx.scale_factor)
@@ -315,19 +317,13 @@ impl ElementHostWidget {
                 );
             }
             ElementInstance::ForegroundScope(props) => {
-                let prev = cx.paint_style;
-                let mut next = prev;
-                if let Some(fg) = props.foreground {
-                    next.foreground = Some(fg);
-                }
-
-                cx.paint_style = next;
-                paint_children_clipped_if(
-                    cx,
-                    matches!(props.layout.overflow, Overflow::Clip),
-                    None,
-                );
-                cx.paint_style = prev;
+                with_scoped_foreground(cx, props.foreground, |cx| {
+                    paint_children_clipped_if(
+                        cx,
+                        matches!(props.layout.overflow, Overflow::Clip),
+                        None,
+                    );
+                });
             }
             ElementInstance::Opacity(props) => {
                 let opacity = props.opacity.clamp(0.0, 1.0);
@@ -2102,7 +2098,7 @@ impl ElementHostWidget {
                     corner_radii: fret_core::Corners::all(Px(999.0)),
                 });
             }
-        }
+        });
     }
 }
 

@@ -2,12 +2,13 @@ use std::sync::Arc;
 
 use fret_core::{Color, FontWeight, Px, SemanticsRole, TextWrap};
 use fret_ui::element::{
-    AnyElement, ContainerProps, ElementKind, InsetStyle, LayoutStyle, Length, PositionStyle,
-    SemanticsDecoration,
+    AnyElement, ContainerProps, ElementKind, Length, PositionStyle, SemanticsDecoration,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space, ui};
+use fret_ui_kit::{
+    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, PaddingRefinement, Radius, Space, ui,
+};
 
 const ALERT_ACTION_MARKER_TEST_ID: &str = "__fret_shadcn.alert_action";
 
@@ -48,16 +49,14 @@ impl AlertAction {
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app);
-        let inset = MetricRef::space(Space::N4).resolve(theme);
-
-        let mut layout = LayoutStyle::default();
-        layout.position = PositionStyle::Absolute;
-        layout.inset = InsetStyle {
-            top: Some(inset).into(),
-            right: Some(inset).into(),
-            bottom: None.into(),
-            left: None.into(),
-        };
+        let mut layout = decl_style::layout_style(
+            theme,
+            LayoutRefinement::default()
+                .absolute()
+                .top(Space::N2p5)
+                .right(Space::N3)
+                .merge(self.layout),
+        );
         layout.size.width = Length::Auto;
         layout.size.height = Length::Auto;
 
@@ -157,7 +156,11 @@ fn patch_text_color_recursive(el: &mut AnyElement, from: Color, to: Color) {
     }
 }
 
-fn patch_foreground_scope_recursive(el: &mut AnyElement, from: Color, to: Color) {
+fn patch_inherited_foreground_recursive(el: &mut AnyElement, from: Color, to: Color) {
+    if el.inherited_foreground == Some(from) {
+        el.inherited_foreground = Some(to);
+    }
+
     if let ElementKind::ForegroundScope(props) = &mut el.kind {
         if props.foreground == Some(from) {
             props.foreground = Some(to);
@@ -165,7 +168,7 @@ fn patch_foreground_scope_recursive(el: &mut AnyElement, from: Color, to: Color)
     }
 
     for child in &mut el.children {
-        patch_foreground_scope_recursive(child, from, to);
+        patch_inherited_foreground_recursive(child, from, to);
     }
 }
 
@@ -177,6 +180,13 @@ fn alert_with_patch<H: UiHost>(
     layout_override: LayoutRefinement,
 ) -> AnyElement {
     let theme = Theme::global(&*cx.app).snapshot();
+    let has_action = children.iter().any(|child| {
+        child
+            .semantics_decoration
+            .as_ref()
+            .and_then(|d| d.test_id.as_deref())
+            == Some(ALERT_ACTION_MARKER_TEST_ID)
+    });
 
     let bg = theme.color_token("card");
     let border = theme.color_token("border");
@@ -213,7 +223,7 @@ fn alert_with_patch<H: UiHost>(
     if variant == AlertVariant::Destructive {
         if let Some(description) = body_children.get_mut(1) {
             patch_text_color_recursive(description, muted_fg, destructive_description);
-            patch_foreground_scope_recursive(description, muted_fg, destructive_description);
+            patch_inherited_foreground_recursive(description, muted_fg, destructive_description);
         }
     }
 
@@ -222,6 +232,17 @@ fn alert_with_patch<H: UiHost>(
         ChromeRefinement::default()
             .px(Space::N4)
             .py(Space::N3)
+            .merge(ChromeRefinement {
+                padding: Some(PaddingRefinement {
+                    right: Some(if has_action {
+                        MetricRef::Px(Px(72.0))
+                    } else {
+                        MetricRef::space(Space::N4)
+                    }),
+                    ..Default::default()
+                }),
+                ..Default::default()
+            })
             .rounded(Radius::Lg)
             .border_1()
             .bg(ColorRef::Color(bg))
@@ -259,8 +280,8 @@ fn alert_with_patch<H: UiHost>(
     let mut props = props;
     props.layout.position = PositionStyle::Relative;
 
-    cx.container(props, move |cx| {
-        let mut out: Vec<AnyElement> = vec![cx.foreground_scope(fg, move |_cx| vec![main])];
+    cx.container(props, move |_cx| {
+        let mut out: Vec<AnyElement> = vec![main.inherit_foreground(fg)];
         if let Some(action) = action {
             out.push(action);
         }
@@ -297,8 +318,7 @@ impl AlertTitle {
             .font_weight(FontWeight::MEDIUM)
             // Tailwind: `tracking-tight` ~= `-0.025em`.
             .letter_spacing_em(-0.025)
-            // Upstream shadcn/ui `AlertTitle` uses `line-clamp-1` (single-line truncation).
-            .truncate()
+            .wrap(TextWrap::Word)
             .into_element(cx)
     }
 }
@@ -341,25 +361,19 @@ impl AlertDescription {
             .unwrap_or_else(|| theme.metric_token("font.line_height"));
 
         match self.content {
-            AlertDescriptionContent::Text(text) => cx.foreground_scope(fg, move |cx| {
-                vec![
-                    ui::text(text)
-                        .text_size_px(px)
-                        .line_height_px(line_height)
-                        .font_weight(FontWeight::NORMAL)
-                        .wrap(TextWrap::Word)
-                        .into_element(cx),
-                ]
-            }),
-            AlertDescriptionContent::Children(children) => cx.foreground_scope(fg, move |cx| {
-                vec![
-                    ui::v_flex(move |_cx| children)
-                        .gap(Space::N1)
-                        .items_start()
-                        .layout(LayoutRefinement::default().w_full())
-                        .into_element(cx),
-                ]
-            }),
+            AlertDescriptionContent::Text(text) => ui::text(text)
+                .text_size_px(px)
+                .line_height_px(line_height)
+                .font_weight(FontWeight::NORMAL)
+                .wrap(TextWrap::Word)
+                .into_element(cx)
+                .inherit_foreground(fg),
+            AlertDescriptionContent::Children(children) => ui::v_flex(move |_cx| children)
+                .gap(Space::N1)
+                .items_start()
+                .layout(LayoutRefinement::default().w_full())
+                .into_element(cx)
+                .inherit_foreground(fg),
         }
     }
 }
@@ -371,8 +385,22 @@ mod tests {
     use fret_app::App;
     use fret_core::{AppWindowId, Color, Point, Px, Rect, Size, TextOverflow};
     use fret_icons::IconId;
-    use fret_ui::element::ElementKind;
+    use fret_ui::element::{ElementKind, InsetEdge, SpacingLength};
     use fret_ui_kit::declarative::icon as decl_icon;
+
+    fn contains_foreground_scope(el: &AnyElement) -> bool {
+        matches!(el.kind, ElementKind::ForegroundScope(_))
+            || el.children.iter().any(contains_foreground_scope)
+    }
+
+    fn find_first_inherited_foreground_node(el: &AnyElement) -> Option<&AnyElement> {
+        if el.inherited_foreground.is_some() {
+            return Some(el);
+        }
+        el.children
+            .iter()
+            .find_map(find_first_inherited_foreground_node)
+    }
 
     #[test]
     fn alert_stamps_role_without_layout_wrapper() {
@@ -399,7 +427,7 @@ mod tests {
     }
 
     #[test]
-    fn alert_title_defaults_to_single_line_truncation() {
+    fn alert_title_wraps_by_default_like_shadcn() {
         let window = AppWindowId::default();
         let mut app = App::new();
 
@@ -409,7 +437,7 @@ mod tests {
         );
 
         let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
-            AlertTitle::new("A very long alert title that should truncate").into_element(cx)
+            AlertTitle::new("A very long alert title that should wrap").into_element(cx)
         });
 
         let ElementKind::Text(props) = &element.kind else {
@@ -419,8 +447,73 @@ mod tests {
             );
         };
 
-        assert_eq!(props.wrap, TextWrap::None);
-        assert_eq!(props.overflow, TextOverflow::Ellipsis);
+        assert_eq!(props.wrap, TextWrap::Word);
+        assert_eq!(props.overflow, TextOverflow::Clip);
+    }
+
+    #[test]
+    fn alert_with_action_reserves_right_padding_like_shadcn() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(120.0)),
+        );
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            Alert::new([
+                AlertTitle::new("Heads up!").into_element(cx),
+                AlertDescription::new("You can add components to your app.").into_element(cx),
+                AlertAction::new([cx.text("Undo")]).into_element(cx),
+            ])
+            .into_element(cx)
+        });
+
+        let ElementKind::Container(props) = &element.kind else {
+            panic!(
+                "expected Alert root to be a Container, got {:?}",
+                element.kind
+            );
+        };
+
+        assert_eq!(props.padding.right, SpacingLength::Px(Px(72.0)));
+    }
+
+    #[test]
+    fn alert_action_uses_upstream_offsets_and_merges_layout_refinement() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(120.0)),
+        );
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            AlertAction::new([cx.text("Undo")])
+                .refine_layout(LayoutRefinement::default().w_px(Px(88.0)))
+                .into_element(cx)
+        });
+
+        let ElementKind::Container(props) = &element.kind else {
+            panic!(
+                "expected AlertAction root to be a Container, got {:?}",
+                element.kind
+            );
+        };
+
+        assert_eq!(props.layout.position, PositionStyle::Absolute);
+        let theme = Theme::global(&app);
+        assert_eq!(
+            props.layout.inset.top,
+            InsetEdge::Px(MetricRef::space(Space::N2p5).resolve(theme))
+        );
+        assert_eq!(
+            props.layout.inset.right,
+            InsetEdge::Px(MetricRef::space(Space::N3).resolve(theme))
+        );
+        assert_eq!(props.layout.size.width, Length::Px(Px(88.0)));
     }
 
     #[test]
@@ -471,5 +564,34 @@ mod tests {
             icon.inherit_color,
             "expected Alert icon to inherit currentColor via ForegroundScope"
         );
+    }
+
+    #[test]
+    fn alert_attaches_foreground_to_main_content_without_wrapper() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(120.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let expected_fg = Theme::global(&*cx.app).color_token("foreground");
+            let el = Alert::new([
+                decl_icon::icon_with(cx, IconId::new_static("lucide.terminal"), None, None),
+                AlertTitle::new("Heads up!").into_element(cx),
+                AlertDescription::new("You can add components to your app.").into_element(cx),
+            ])
+            .into_element(cx);
+
+            let inherited = find_first_inherited_foreground_node(&el)
+                .expect("expected alert subtree to carry inherited foreground");
+            assert_eq!(inherited.inherited_foreground, Some(expected_fg));
+            assert!(
+                !contains_foreground_scope(&el),
+                "expected Alert to attach inherited foreground without inserting a ForegroundScope"
+            );
+        });
     }
 }

@@ -136,7 +136,7 @@ pub(super) fn preview_native_select(cx: &mut ElementContext<'_, App>) -> Vec<Any
                 .no_shell()
                 .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
             DocSection::new("Label Association", label)
-                .description("Use `FieldLabel::for_control` + `NativeSelect::control_id` to forward focus on label click.")
+                .description("Use `FieldLabel::for_control` + `NativeSelect::control_id` so label clicks route to the trigger and open the popup.")
                 .test_id_prefix("ui-gallery-native-select-label")
                 .code_rust_from_file_region(snippets::label::SOURCE, "example"),
             DocSection::new("With Groups", with_groups)

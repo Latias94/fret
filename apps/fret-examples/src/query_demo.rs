@@ -36,25 +36,16 @@ fn query_policy() -> QueryPolicy {
     }
 }
 
-struct QueryDemoState {
-    fail_mode: Model<bool>,
-}
-
-struct QueryDemoView {
-    st: QueryDemoState,
-}
+struct QueryDemoView;
 
 impl View for QueryDemoView {
-    fn init(app: &mut App, _window: AppWindowId) -> Self {
-        Self {
-            st: QueryDemoState {
-                fail_mode: app.models_mut().insert(false),
-            },
-        }
+    fn init(_app: &mut App, _window: AppWindowId) -> Self {
+        Self
     }
 
     fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
         let theme = Theme::global(&*cx.app).snapshot();
+        let fail_mode_state = cx.use_local_with(|| false);
 
         if cx.take_transient_on_action_root(TRANSIENT_INVALIDATE_KEY) {
             let _ = with_query_client(cx.app, |client, app| {
@@ -68,12 +59,15 @@ impl View for QueryDemoView {
             });
         }
 
-        cx.on_action_notify_toggle_bool::<act::ToggleFailMode>(self.st.fail_mode.clone());
+        cx.on_action_notify_models::<act::ToggleFailMode>({
+            let fail_mode_state = fail_mode_state.clone();
+            move |models| fail_mode_state.update_in(models, |value| *value = !*value)
+        });
         cx.on_action_notify_transient::<act::Invalidate>(TRANSIENT_INVALIDATE_KEY);
         cx.on_action_notify_transient::<act::InvalidateNamespace>(TRANSIENT_INVALIDATE_NAMESPACE);
 
         let fail_mode = cx
-            .watch_model(&self.st.fail_mode)
+            .watch_local(&fail_mode_state)
             .layout()
             .copied_or_default();
 
@@ -136,90 +130,105 @@ impl View for QueryDemoView {
             ))
         });
 
-        let status_row = ui::h_flex(|cx| {
-            ui::children![cx;
-                shadcn::Badge::new(status_label).variant(status_variant),
+        let status_row = ui::h_row_build(|cx, out| {
+            out.push_ui(cx, shadcn::Badge::new(status_label).variant(status_variant));
+            out.push_ui(
+                cx,
                 shadcn::Badge::new(if fail_mode { "Mode: Error" } else { "Mode: Ok" })
                     .variant(shadcn::BadgeVariant::Secondary),
-            ]
+            );
         })
         .gap(Space::N2)
         .items_center()
         .into_element(cx);
 
-        let buttons = ui::h_flex(|cx| {
-            ui::children![cx;
+        let buttons = ui::h_row_build(|cx, out| {
+            out.push_ui(
+                cx,
                 shadcn::Button::new("Invalidate")
                     .variant(shadcn::ButtonVariant::Default)
                     .action(act::Invalidate),
+            );
+            out.push_ui(
+                cx,
                 shadcn::Button::new("Invalidate namespace")
                     .variant(shadcn::ButtonVariant::Ghost)
                     .action(act::InvalidateNamespace),
+            );
+            out.push_ui(
+                cx,
                 shadcn::Button::new("Toggle error mode")
                     .variant(shadcn::ButtonVariant::Secondary)
                     .action(act::ToggleFailMode),
-            ]
+            );
         })
         .gap(Space::N2)
         .items_center()
         .into_element(cx);
 
-        let mut detail_lines = ui::children![cx;
-            ui::raw_text(info_line),
-            ui::raw_text(data_line),
-            ui::raw_text(error_line).text_color(ColorRef::Color(error_color)),
-        ];
-        if let Some(duration_line) = duration_line {
-            detail_lines.push(
-                ui::raw_text(duration_line)
-                    .text_color(ColorRef::Color(theme.color_token("muted-foreground")))
-                    .into_element(cx),
+        let detail_body = ui::v_flex_build(|cx, out| {
+            out.push_ui(cx, ui::raw_text(info_line));
+            out.push_ui(cx, ui::raw_text(data_line));
+            out.push_ui(
+                cx,
+                ui::raw_text(error_line).text_color(ColorRef::Color(error_color)),
             );
-        }
-        if let Some(retry_line) = retry_line {
-            detail_lines.push(
-                ui::raw_text(retry_line)
-                    .text_color(ColorRef::Color(theme.color_token("muted-foreground")))
-                    .into_element(cx),
-            );
-        }
-
-        let detail_body = ui::v_flex(|_cx| detail_lines)
-            .gap(Space::N2)
-            .into_element(cx);
-
-        let header = shadcn::CardHeader::new(ui::children![cx;
-            shadcn::CardTitle::new("Query demo"),
-            shadcn::CardDescription::new("Async resource state via fret-query."),
-            status_row,
-        ])
+            if let Some(duration_line) = duration_line {
+                out.push_ui(
+                    cx,
+                    ui::raw_text(duration_line)
+                        .text_color(ColorRef::Color(theme.color_token("muted-foreground"))),
+                );
+            }
+            if let Some(retry_line) = retry_line {
+                out.push_ui(
+                    cx,
+                    ui::raw_text(retry_line)
+                        .text_color(ColorRef::Color(theme.color_token("muted-foreground"))),
+                );
+            }
+        })
+        .gap(Space::N2)
         .into_element(cx);
 
-        let content_body = ui::v_flex(|_cx| [buttons, detail_body])
-            .gap(Space::N4)
-            .w_full()
-            .into_element(cx);
+        let card = shadcn::Card::build(|cx, out| {
+            out.push(
+                shadcn::CardHeader::build(|cx, out| {
+                    out.push_ui(cx, shadcn::CardTitle::new("Query demo"));
+                    out.push_ui(
+                        cx,
+                        shadcn::CardDescription::new("Async resource state via fret-query."),
+                    );
+                    out.push(status_row);
+                })
+                .into_element(cx),
+            );
+            out.push(
+                shadcn::CardContent::build(|cx, out| {
+                    out.push(
+                        ui::v_flex_build(|_cx, out| {
+                            out.extend([buttons, detail_body]);
+                        })
+                        .gap(Space::N4)
+                        .w_full()
+                        .into_element(cx),
+                    );
+                })
+                .into_element(cx),
+            );
+        })
+        .refine_layout(LayoutRefinement::default().w_full().max_w(Px(520.0)))
+        .into_element(cx);
 
-        let content = shadcn::CardContent::new([content_body]).into_element(cx);
-
-        let card = shadcn::Card::new([header, content])
-            .ui()
-            .w_full()
-            .max_w(Px(520.0))
-            .into_element(cx);
-
-        ui::container(|cx| {
-            [ui::v_flex(|_cx| [card])
-                .w_full()
-                .h_full()
-                .justify_center()
-                .items_center()
-                .into_element(cx)]
+        ui::v_flex_build(|_cx, out| {
+            out.push(card);
         })
         .bg(ColorRef::Color(theme.color_token("background")))
         .p(Space::N6)
         .w_full()
         .h_full()
+        .justify_center()
+        .items_center()
         .into_element(cx)
         .into()
     }

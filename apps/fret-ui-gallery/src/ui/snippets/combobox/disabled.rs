@@ -96,7 +96,6 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
         .a11y_label("Combobox disabled")
         .query_model(query.clone())
         .test_id_prefix("ui-gallery-combobox-disabled")
-        .trigger_test_id("ui-gallery-combobox-disabled-trigger")
         .items(base_items())
         .into_element_parts(cx, |_cx| {
             vec![
