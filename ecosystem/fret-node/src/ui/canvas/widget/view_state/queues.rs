@@ -6,7 +6,9 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         host: &mut H,
         window: Option<AppWindowId>,
     ) {
-        let Some(queue) = self.edit_queue.as_ref() else {
+        let Some(queue): Option<&fret_runtime::Model<crate::ui::edit_queue::NodeGraphEditQueue>> =
+            self.edit_queue.as_ref()
+        else {
             return;
         };
         let Some(rev) = queue.revision(host) else {
@@ -17,7 +19,10 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         }
         self.edit_queue_key = Some(rev);
 
-        let Ok(txs) = queue.update(host, |q, _cx| q.drain()) else {
+        let Ok(txs) = queue.update(
+            host,
+            |q: &mut crate::ui::edit_queue::NodeGraphEditQueue, _cx| q.drain(),
+        ) else {
             return;
         };
         for tx in txs {
@@ -30,7 +35,9 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         host: &mut H,
         window: Option<AppWindowId>,
     ) -> bool {
-        let Some(queue) = self.view_queue.as_ref() else {
+        let Some(queue): Option<&fret_runtime::Model<crate::ui::view_queue::NodeGraphViewQueue>> =
+            self.view_queue.as_ref()
+        else {
             return false;
         };
         let Some(rev) = queue.revision(host) else {
@@ -41,7 +48,10 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         }
         self.view_queue_key = Some(rev);
 
-        let Ok(reqs) = queue.update(host, |q, _cx| q.drain()) else {
+        let Ok(reqs) = queue.update(
+            host,
+            |q: &mut crate::ui::view_queue::NodeGraphViewQueue, _cx| q.drain(),
+        ) else {
             return false;
         };
         if reqs.is_empty() {

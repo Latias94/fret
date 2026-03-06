@@ -3,10 +3,11 @@ use fret_core::{Point, Px, Rect, Size};
 use crate::core::CanvasPoint;
 use crate::io::NodeGraphViewState;
 use crate::runtime::store::NodeGraphStore;
-use crate::ui::{
-    NodeGraphController, NodeGraphSetViewportOptions, NodeGraphViewQueue, NodeGraphViewRequest,
-    NodeGraphViewportHelper,
+use crate::ui::NodeGraphController;
+use crate::ui::view_queue::{
+    NodeGraphSetViewportOptions, NodeGraphViewQueue, NodeGraphViewRequest,
 };
+use crate::ui::viewport_helper::NodeGraphViewportHelper;
 
 use super::{TestUiHostImpl, insert_view, make_test_graph_two_nodes};
 

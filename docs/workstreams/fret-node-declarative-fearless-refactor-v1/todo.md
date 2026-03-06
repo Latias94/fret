@@ -19,7 +19,7 @@ land in code review; move design discussion back to `README.md` if a TODO turns 
 - [ ] Do not expand `NodeGraphViewState` with more policy or tuning fields.
 - [ ] Do not solve recipe/policy gaps by smuggling new defaults into mechanism code.
 
-## M0 - Decision gates and inventory
+## M0 - Decision gates and internal seam map
 
 - [x] Reframe the workstream docs around architecture closure rather than a paint-only lab log.
 - [x] Preserve the historical folder path to avoid breaking references.
@@ -137,7 +137,7 @@ land in code review; move design discussion back to `README.md` if a TODO turns 
 - [ ] Decide the long-term public naming/ownership story (`Controller` vs `Instance` vs split
       facades) before widening the teaching surface further.
 
-### Queue seam inventory (audit snapshot 2026-03-06)
+### Retained transport seam audit (snapshot 2026-03-06)
 
 - **Keep as retained-only compatibility seams for now**
   - `NodeGraphCanvas::with_edit_queue` / `NodeGraphCanvas::with_view_queue`
@@ -157,13 +157,13 @@ land in code review; move design discussion back to `README.md` if a TODO turns 
     ownership.
 
 - **Most likely next shrink targets**
-  - `NodeGraphViewportHelper` (`ecosystem/fret-node/src/ui/viewport_helper.rs`, re-exported from
-    `ecosystem/fret-node/src/ui/mod.rs`): duplicates controller viewport helpers and still teaches a
-    queue-first mental model; strongest candidate to de-emphasize or collapse behind controller-first
-    naming.
-  - Public queue re-exports in `ecosystem/fret-node/src/ui/mod.rs`
+  - `NodeGraphViewportHelper` (`ecosystem/fret-node/src/ui/viewport_helper.rs`, surfaced via
+    `ecosystem/fret-node/src/ui/advanced.rs`): still duplicates controller viewport helpers and
+    teaches queue/canvas-bounds semantics; strongest candidate to collapse behind a controller-first
+    naming story once the remaining viewport edge cases are covered.
+  - Raw queue / viewport transport still exported from `ecosystem/fret-node/src/ui/advanced.rs`
     (`NodeGraphEditQueue`, `NodeGraphViewQueue`, `NodeGraphViewRequest`, viewport request option types):
-    still very visible at the crate root even though app-facing examples now teach controller-first.
+    now explicit and bounded, but still a likely future shrink target once controller-first coverage is complete.
   - `NodeGraphController::with_edit_queue` / `NodeGraphController::with_view_queue`
     (`ecosystem/fret-node/src/ui/controller.rs`): probably keep, but document as advanced transport
     binding rather than the default integration recipe.
@@ -171,18 +171,15 @@ land in code review; move design discussion back to `README.md` if a TODO turns 
 - **Landable follow-ups from this audit**
   - [x] Add a controller-first constructor to `NodeGraphViewportHelper` without deleting the
         existing queue-model seam.
-  - [ ] Decide whether `NodeGraphViewportHelper` should stay re-exported from `fret_node::ui` or
-        move fully under `fret_node::ui::advanced` after controller-first callers converge.
-  - [x] Add an explicit `fret_node::ui::advanced::*` namespace for raw queue / viewport transport
-        seams while keeping root `fret_node::ui::*` re-exports as compatibility aliases.
+  - [x] Move raw queue / viewport transport into the explicit `fret_node::ui::advanced::*`
+        namespace.
+  - [x] Remove root `fret_node::ui::*` queue/helper re-exports from the public surface.
   - [x] Add one short README/workstream note that queue APIs are advanced retained transport seams, not
         the default app-facing integration surface.
   - [x] Migrate retained-only examples / docs that still import queue types from root `fret_node::ui::*`
         to `fret_node::ui::advanced::*` (`node_graph_domain_demo`, workflow gallery snippet).
   - [x] Clear in-tree uses of root queue/helper aliases (apps, gallery snippet, crate-internal retained/tests).
-  - [ ] Execute `external-downstream-audit.md` and record the downstream inventory in
-        `external-downstream-inventory.md`.
-  - [ ] Reassess whether root aliases should be deprecated after one explicit external downstream audit pass.
+  - [x] Skip the external compatibility/deprecation phase and remove the old root aliases directly.
 
 ## M3 - Transaction-safe declarative commits
 
@@ -277,5 +274,8 @@ land in code review; move design discussion back to `README.md` if a TODO turns 
 - [ ] Whether controlled sync should expose diff-first helpers by default.
 - [ ] Which retained-only behaviors still need a deliberate temporary home while declarative parity
       is being built.
+
+
+
 
 

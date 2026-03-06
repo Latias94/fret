@@ -59,18 +59,19 @@ use crate::ui::commands::{
     CMD_NODE_GRAPH_SELECT_ALL, CMD_NODE_GRAPH_TOGGLE_CONNECTION_MODE, CMD_NODE_GRAPH_UNDO,
     CMD_NODE_GRAPH_ZOOM_IN, CMD_NODE_GRAPH_ZOOM_OUT,
 };
+use crate::ui::edit_queue::NodeGraphEditQueue;
 use crate::ui::presenter::{
     DefaultNodeGraphPresenter, EdgeRenderHint, EdgeRouteKind, InsertNodeCandidate,
     NodeGraphContextMenuAction, NodeGraphContextMenuItem, NodeGraphPresenter, NodeResizeHandleSet,
     PortAnchorHint,
 };
 use crate::ui::style::{NodeGraphBackgroundStyle, NodeGraphColorMode, NodeGraphStyle};
+use crate::ui::view_queue::{NodeGraphFitViewOptions, NodeGraphViewQueue};
 use crate::ui::{
     FallbackMeasuredNodeGraphPresenter, GroupRenameOverlay, MeasuredGeometryStore,
-    NodeGraphCanvasTransform, NodeGraphController, NodeGraphEdgeTypes, NodeGraphEditQueue,
-    NodeGraphFitViewOptions, NodeGraphGeometryOverridesRef, NodeGraphInternalsSnapshot,
-    NodeGraphInternalsStore, NodeGraphOverlayState, NodeGraphPaintOverridesRef, NodeGraphSkinRef,
-    NodeGraphViewQueue,
+    NodeGraphCanvasTransform, NodeGraphController, NodeGraphEdgeTypes,
+    NodeGraphGeometryOverridesRef, NodeGraphInternalsSnapshot, NodeGraphInternalsStore,
+    NodeGraphOverlayState, NodeGraphPaintOverridesRef, NodeGraphSkinRef,
 };
 
 use super::middleware::{

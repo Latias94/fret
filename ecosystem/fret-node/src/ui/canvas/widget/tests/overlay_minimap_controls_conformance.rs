@@ -17,10 +17,11 @@ use crate::core::{Graph, GraphId};
 use crate::io::NodeGraphViewState;
 use crate::runtime::store::NodeGraphStore;
 use crate::ui::commands::CMD_NODE_GRAPH_ZOOM_IN;
+use crate::ui::view_queue::{NodeGraphViewQueue, NodeGraphViewRequest};
 use crate::ui::{
     NodeGraphController, NodeGraphControlsBindings, NodeGraphControlsCommandBinding,
     NodeGraphControlsOverlay, NodeGraphEditor, NodeGraphInternalsSnapshot, NodeGraphInternalsStore,
-    NodeGraphMiniMapOverlay, NodeGraphStyle, NodeGraphViewQueue, NodeGraphViewRequest,
+    NodeGraphMiniMapOverlay, NodeGraphStyle,
 };
 
 use super::{NullServices, TestUiHostImpl, insert_graph_view, insert_view};

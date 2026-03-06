@@ -249,16 +249,15 @@ app-facing integration surface. In particular, `NodeGraphViewportHelper::fit_vie
 relies on queue/canvas-bounds semantics, so collapsing it behind a pure controller-only API needs a
 deliberate follow-up design rather than an incidental rename.
 
-As a transitional landing step, `NodeGraphViewportHelper::from_controller(...)` is now the
-preferred helper entrypoint for app-facing composition, while
-`NodeGraphViewportHelper::new(view_state, view_queue)` remains the explicit transport-first
-constructor for retained-only integrations that still own the raw queue/models directly.
-`fret_node::ui::advanced::*` is now the explicit namespace for those retained transport seams,
-while root `fret_node::ui::*` queue/helper exports remain temporary compatibility aliases during
-migration. The retained-backed domain demo and the workflow gallery snippet now import those queue
-surfaces from `advanced::*` instead of the root `ui::*` namespace, and crate-internal retained/test
-callers now also avoid the root aliases. The remaining decision is governance-facing: whether we
-want to add deprecated markers after one explicit external downstream audit pass.
+In the landed shape, `NodeGraphViewportHelper::from_controller(...)` is the preferred helper
+entrypoint for app-facing composition, while `NodeGraphViewportHelper::new(view_state, view_queue)`
+remains the explicit transport-first constructor for retained-only integrations that still own the
+raw queue/models directly.
+`fret_node::ui::advanced::*` is now the explicit namespace for those retained transport seams, and
+root `fret_node::ui::*` no longer re-exports the raw queue/helper surfaces. Retained-backed samples
+and crate-internal retained/test callers now use `advanced::*` or explicit module paths directly.
+Because this repo does not need a public compatibility window, the old root queue/helper aliases are
+removed outright instead of going through a deprecation cycle.
 
 Current controller-facing XyFlow mapping (review helper, not a final contract):
 
@@ -465,8 +464,6 @@ This workstream is complete only when it leaves behind:
 - Node graph roadmap: `docs/node-graph-roadmap.md`
 - XyFlow parity map: `docs/node-graph-xyflow-parity.md`
 - XYFlow gap analysis: `docs/workstreams/xyflow-gap-analysis.md`
-- External downstream alias audit: `docs/workstreams/fret-node-declarative-fearless-refactor-v1/external-downstream-audit.md`
-- External downstream inventory: `docs/workstreams/fret-node-declarative-fearless-refactor-v1/external-downstream-inventory.md`
 
 ## Evidence anchors to preserve while refactoring
 
@@ -496,5 +493,6 @@ Canonical gate families to keep alive:
 - `cargo run -p fretboard -- diag suite fret-examples-node-graph-paint-only --dir target/fret-diag-node-graph --launch -- cargo run -p fret-demo --bin node_graph_demo --features node-graph-demos`
 
 The TODO tracker defines the new gate additions required for transaction-safe declarative parity.
+
 
 

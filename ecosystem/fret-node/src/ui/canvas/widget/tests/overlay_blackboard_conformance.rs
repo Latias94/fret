@@ -15,9 +15,10 @@ use crate::core::{SYMBOL_REF_NODE_KIND, symbol_ref_node_data};
 use crate::io::NodeGraphViewState;
 use crate::ops::{GraphOp, GraphTransaction};
 use crate::runtime::store::NodeGraphStore;
+use crate::ui::edit_queue::NodeGraphEditQueue;
 use crate::ui::{
-    NodeGraphBlackboardOverlay, NodeGraphController, NodeGraphEditQueue, NodeGraphEditor,
-    NodeGraphOverlayHost, NodeGraphOverlayState, NodeGraphStyle,
+    NodeGraphBlackboardOverlay, NodeGraphController, NodeGraphEditor, NodeGraphOverlayHost,
+    NodeGraphOverlayState, NodeGraphStyle,
 };
 
 use super::{NullServices, TestUiHostImpl, insert_graph_view};

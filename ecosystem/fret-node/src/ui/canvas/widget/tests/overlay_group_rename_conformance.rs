@@ -13,9 +13,10 @@ use crate::core::{CanvasPoint, CanvasRect, CanvasSize, Graph, GraphId, Group, Gr
 use crate::io::NodeGraphViewState;
 use crate::ops::{GraphOp, GraphTransaction};
 use crate::runtime::store::NodeGraphStore;
+use crate::ui::edit_queue::NodeGraphEditQueue;
 use crate::ui::{
-    GroupRenameOverlay, NodeGraphController, NodeGraphEditQueue, NodeGraphEditor,
-    NodeGraphOverlayHost, NodeGraphOverlayState, NodeGraphStyle,
+    GroupRenameOverlay, NodeGraphController, NodeGraphEditor, NodeGraphOverlayHost,
+    NodeGraphOverlayState, NodeGraphStyle,
 };
 
 use super::{NullServices, TestUiHostImpl, insert_graph_view};

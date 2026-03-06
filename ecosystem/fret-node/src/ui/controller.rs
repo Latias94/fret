@@ -794,9 +794,10 @@ mod tests {
     };
     use crate::runtime::lookups::{ConnectionSide, HandleConnection};
     use crate::runtime::store::NodeGraphStore;
-    use crate::ui::{
-        NodeGraphEditQueue, NodeGraphFitViewOptions, NodeGraphSetViewportOptions,
-        NodeGraphViewQueue, NodeGraphViewRequest,
+    use crate::ui::edit_queue::NodeGraphEditQueue;
+    use crate::ui::view_queue::{
+        NodeGraphFitViewOptions, NodeGraphSetViewportOptions, NodeGraphViewQueue,
+        NodeGraphViewRequest,
     };
 
     #[derive(Default)]

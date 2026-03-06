@@ -24,7 +24,7 @@ document the tradeoff:
   - existing useful gates remain green,
   - new architecture claims add new evidence, not just prose.
 
-## M0 - Decision gates and baseline inventory
+## M0 - Decision gates and baseline seam map
 
 Status target: short, reviewable, mostly-documentation closure
 
@@ -43,7 +43,7 @@ be reviewed without re-reading the whole crate.
 - A milestone plan and TODO tracker aligned to those decisions.
 - A short current-hazards section with evidence anchors for the active architectural risks.
 - A short reviewer checklist so posture regressions are easy to spot in review.
-- A minimal inventory of the current "best available" surfaces:
+- A minimal seam map of the current "best available" surfaces:
   - paint-only declarative surface,
   - compat-retained declarative surface,
   - retained engine,
@@ -182,14 +182,13 @@ points rather than direct graph mutation.
     same store fallback / queued transport split as the controller, while
     `NodeGraphViewportHelper::new(view_state, view_queue)` remains the explicit advanced transport
     seam for retained-only integrations.
-  - Raw queue / viewport transport exports now also have an explicit `fret_node::ui::advanced::*`
-    namespace, with root `fret_node::ui::*` queue/helper exports kept only as compatibility aliases
-    during the migration window.
+  - Raw queue / viewport transport exports now live under the explicit `fret_node::ui::advanced::*`
+    namespace, and the old root `fret_node::ui::*` queue/helper aliases are removed from the
+    public surface.
   - The retained-backed domain demo and the workflow gallery snippet now also import those raw queue
     surfaces from `advanced::*`, so the sample code no longer teaches root `ui::*` queue imports.
-  - Crate-internal retained/test callers now also use explicit module paths instead of the root queue
-    aliases, so the remaining question before deprecation is external downstream compatibility, not
-    in-tree cleanup.
+  - Crate-internal retained/test callers now also use explicit module paths instead of the old root
+    queue aliases, completing the in-tree cleanup for this transport seam.
   - Declarative keyboard zoom / wheel zoom / pinch zoom / drag-pan updates now start converging on
     controller/store-backed view-state replacement instead of only mutating the external
     `NodeGraphViewState` model.
@@ -319,10 +318,6 @@ removed or permanently demoted.
   - what new work must not be added there,
   - what declarative parity conditions are required before deletion.
 - A stable gate matrix comparing compatibility retained vs declarative behavior where it matters.
-- An external downstream audit note + inventory before root queue/helper aliases receive deprecated markers
-  (`docs/workstreams/fret-node-declarative-fearless-refactor-v1/external-downstream-audit.md`).
-- A populated external downstream inventory ledger
-  (`docs/workstreams/fret-node-declarative-fearless-refactor-v1/external-downstream-inventory.md`).
 
 ### Done criteria
 
@@ -335,8 +330,6 @@ removed or permanently demoted.
 - `ecosystem/fret-node/Cargo.toml`
 - `ecosystem/fret-node/src/ui/declarative/compat_retained.rs`
 - `apps/fret-examples/src/node_graph_legacy_demo.rs`
-- `docs/workstreams/fret-node-declarative-fearless-refactor-v1/external-downstream-audit.md`
-- `docs/workstreams/fret-node-declarative-fearless-refactor-v1/external-downstream-inventory.md`
 
 ## Suggested milestone order
 
@@ -348,5 +341,7 @@ Land in this order unless a blocking bug forces a smaller detour:
 4. `M3` controller + transaction-safe declarative commits
 5. `M4` declarative interaction/portal closure
 6. `M5` retained compatibility convergence
+
+
 
 

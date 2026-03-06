@@ -8,9 +8,10 @@ use fret_ui::retained_bridge::UiTreeRetainedExt as _;
 
 use crate::core::{Graph, GraphId, Symbol, SymbolId};
 use crate::ops::{GraphOp, GraphTransaction};
+use crate::ui::edit_queue::NodeGraphEditQueue;
 use crate::ui::{
-    NodeGraphEditQueue, NodeGraphEditor, NodeGraphOverlayHost, NodeGraphOverlayState,
-    NodeGraphStyle, SymbolRenameOverlay,
+    NodeGraphEditor, NodeGraphOverlayHost, NodeGraphOverlayState, NodeGraphStyle,
+    SymbolRenameOverlay,
 };
 
 use super::{NullServices, TestUiHostImpl, insert_graph_view};
