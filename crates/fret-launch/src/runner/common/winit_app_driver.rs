@@ -14,7 +14,9 @@ use super::{
 /// “hot anchor” surface for dev hotpatch workflows (see ADR 0105).
 ///
 /// This trait remains public as a compatibility surface while in-tree examples and higher-level
-/// bootstrap layers are still generic over it. It is no longer the preferred advanced entry path.
+/// bootstrap layers are still generic over it. It is no longer the recommended advanced entry
+/// path, and should mainly be used for existing trait-based integrations or generic low-level
+/// driver plumbing that has not yet moved to `FnDriver`.
 ///
 /// TODO: Once `FnDriver` covers all required hooks and in-tree call sites have migrated, remove
 /// `WinitAppDriver` from the public surface to make `FnDriver` the single supported entrypoint.

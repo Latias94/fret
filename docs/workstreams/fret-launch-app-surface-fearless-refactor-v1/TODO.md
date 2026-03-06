@@ -55,20 +55,20 @@ Companion docs:
 
 ## Docs / Examples
 
-- [ ] Update launch-facing docs so they describe three paths consistently:
-  - [ ] `fret` for app authors
-  - [ ] `fret-framework` for manual assembly
-  - [ ] `fret-launch` for advanced integration
+- [x] Update launch-facing docs so they describe three paths consistently:
+  - [x] `fret` for app authors
+  - [x] `fret-framework` for manual assembly
+  - [x] `fret-launch` for advanced integration
 - [x] Migrate representative launch examples from direct `WinitAppDriver` impls to `FnDriver` implementation paths while keeping public `build_driver()` helpers opaque (`chart_demo`, `bars_demo`, `error_bars_demo`, `area_demo`, `candlestick_demo`, `grouped_bars_demo`, `stacked_bars_demo`, `horizontal_bars_demo`, `histogram_demo`, `plot_demo`, `plot_image_demo`, `heatmap_demo`, `histogram2d_demo`, `inf_lines_demo`, `linked_cursor_demo`).
 - [x] Add one minimal advanced example that shows the supported launch escape hatch without exposing unnecessary internals.
 - [x] Cross-link this workstream from any relevant builder/onboarding docs if the final surface changes.
 
 ## Validation gates
 
-- [ ] `cargo nextest run -p fret-launch`
-- [ ] `cargo nextest run -p fret-framework`
-- [ ] `cargo nextest run -p fret`
-- [ ] `python tools/check_layering.py`
+- [x] `cargo nextest run -p fret-launch`
+- [x] `cargo nextest run -p fret-framework`
+- [x] `cargo nextest run -p fret`
+- [x] `python tools/check_layering.py`
 
 ## Rollout notes
 
