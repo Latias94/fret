@@ -9,5 +9,6 @@
 pub mod demo;
 pub mod disabled;
 pub mod invalid;
+pub mod label;
 pub mod rtl;
 pub mod with_groups;

@@ -15,6 +15,7 @@ pub(super) fn preview_select(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
             .into_element(cx)
             .test_id("ui-gallery-select-demo")
     };
+    let label = snippets::label::render(cx);
     let diag_surface = snippets::diag_surface::render(cx);
     let align_item = snippets::align_item_with_trigger::render(cx);
     let groups = snippets::groups::render(cx);
@@ -42,6 +43,10 @@ pub(super) fn preview_select(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
                 .description("Minimal shadcn-aligned demo (matches upstream `select-demo.tsx`).")
                 .test_id_prefix("ui-gallery-select-demo")
                 .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
+            DocSection::new("Label Association", label)
+                .description("Use `FieldLabel::for_control` + `Select::control_id` to forward focus on label click.")
+                .test_id_prefix("ui-gallery-select-label")
+                .code_rust_from_file_region(snippets::label::SOURCE, "example"),
             DocSection::new("Diag Surface", diag_surface)
                 .description("Long-list surface with stable test_ids used by diagnostics scripts.")
                 .test_id_prefix("ui-gallery-select-diag-surface")

@@ -14,6 +14,9 @@ use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::motion::drive_tween_color_for_element;
 use fret_ui_kit::declarative::motion::drive_tween_f32_for_element;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::primitives::control_registry::{
+    ControlAction, ControlEntry, ControlId, control_registry_model,
+};
 pub use fret_ui_kit::primitives::toggle::ToggleRoot;
 use fret_ui_kit::typography;
 use fret_ui_kit::{
@@ -252,6 +255,7 @@ pub struct Toggle {
     leading_icon: Option<IconId>,
     trailing_icon: Option<IconId>,
     disabled: bool,
+    control_id: Option<ControlId>,
     a11y_label: Option<Arc<str>>,
     on_click: Option<CommandId>,
     variant: ToggleVariant,
@@ -289,6 +293,7 @@ impl Toggle {
             leading_icon: None,
             trailing_icon: None,
             disabled: false,
+            control_id: None,
             a11y_label: None,
             on_click: None,
             variant: ToggleVariant::default(),
@@ -309,6 +314,7 @@ impl Toggle {
             leading_icon: None,
             trailing_icon: None,
             disabled: false,
+            control_id: None,
             a11y_label: None,
             on_click: None,
             variant: ToggleVariant::default(),
@@ -348,6 +354,15 @@ impl Toggle {
 
     pub fn label(mut self, label: impl Into<Arc<str>>) -> Self {
         self.label = Some(label.into());
+        self
+    }
+
+    /// Binds this Toggle to a logical form control id (similar to HTML `id`).
+    ///
+    /// When set, `Label::for_control(ControlId)` forwards focus to the toggle pressable, and the
+    /// label click toggles the pressed state via the control registry.
+    pub fn control_id(mut self, id: impl Into<ControlId>) -> Self {
+        self.control_id = Some(id.into());
         self
     }
 
@@ -412,6 +427,7 @@ impl Toggle {
         let trailing_icon = self.trailing_icon;
         let disabled_explicit = self.disabled;
         let a11y_label = self.a11y_label.clone();
+        let control_id = self.control_id;
         let on_click = self.on_click;
         let disabled = disabled_explicit
             || on_click
@@ -518,7 +534,58 @@ impl Toggle {
         }
         .merge(chrome);
 
+        let control_id = control_id.clone();
+        let control_registry = control_id.as_ref().map(|_| control_registry_model(cx));
+        let labelled_by_element = if a11y_label.is_some() {
+            None
+        } else if let (Some(control_id), Some(control_registry)) =
+            (control_id.as_ref(), control_registry.as_ref())
+        {
+            cx.app
+                .models()
+                .read(control_registry, |reg| {
+                    reg.label_for(cx.window, control_id).map(|l| l.element)
+                })
+                .ok()
+                .flatten()
+        } else {
+            None
+        };
+        let described_by_element = if let (Some(control_id), Some(control_registry)) =
+            (control_id.as_ref(), control_registry.as_ref())
+        {
+            cx.app
+                .models()
+                .read(control_registry, |reg| {
+                    reg.described_by_for(cx.window, control_id)
+                })
+                .ok()
+                .flatten()
+        } else {
+            None
+        };
+
+        let control_id_for_register = control_id.clone();
+        let control_registry_for_register = control_registry.clone();
+        let labelled_by_element_for_toggle = labelled_by_element;
+        let described_by_element_for_toggle = described_by_element;
+        let has_a11y_label_for_toggle = a11y_label.is_some();
+
         control_chrome_pressable_with_id_props(cx, move |cx, state, _id| {
+            if let (Some(control_id), Some(control_registry)) = (
+                control_id_for_register.clone(),
+                control_registry_for_register.clone(),
+            ) {
+                let entry = ControlEntry {
+                    element: _id,
+                    enabled: !disabled,
+                    action: ControlAction::ToggleBool(model.clone()),
+                };
+                let _ = cx.app.models_mut().update(&control_registry, |reg| {
+                    reg.register_control(cx.window, cx.frame_id, control_id, entry);
+                });
+            }
+
             cx.pressable_dispatch_command_if_enabled_opt(on_click);
             cx.pressable_toggle_bool(&model);
 
@@ -627,13 +694,19 @@ impl Toggle {
 
             chrome_props.layout.size = pressable_layout.size;
 
+            let mut a11y = fret_ui_kit::primitives::toggle::toggle_a11y(a11y_label, on);
+            if !has_a11y_label_for_toggle {
+                a11y.labelled_by_element = labelled_by_element_for_toggle.map(|id| id.0);
+            }
+            a11y.described_by_element = described_by_element_for_toggle.map(|id| id.0);
+
             let pressable_props = PressableProps {
                 layout: pressable_layout,
                 enabled: !disabled,
                 focusable: true,
                 focus_ring: Some(ring),
                 focus_ring_always_paint: ring_alpha.animating,
-                a11y: fret_ui_kit::primitives::toggle::toggle_a11y(a11y_label, on),
+                a11y,
                 ..Default::default()
             };
 

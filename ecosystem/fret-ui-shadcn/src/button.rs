@@ -18,6 +18,9 @@ use fret_ui_kit::declarative::motion::{
     drive_tween_color_for_element, drive_tween_f32_for_element,
 };
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::primitives::control_registry::{
+    ControlAction, ControlEntry, ControlId, control_registry_model,
+};
 use fret_ui_kit::typography;
 use fret_ui_kit::{
     ChromeRefinement, ColorFallback, ColorRef, Justify, LayoutRefinement, OverrideSlot, Radius,
@@ -433,6 +436,7 @@ pub struct Button {
     disabled: bool,
     focusable: bool,
     test_id: Option<Arc<str>>,
+    control_id: Option<ControlId>,
     render: Option<ButtonRender>,
     variant: ButtonVariant,
     size: ButtonSize,
@@ -503,6 +507,7 @@ impl Button {
             disabled: false,
             focusable: true,
             test_id: None,
+            control_id: None,
             render: None,
             variant: ButtonVariant::default(),
             size: ButtonSize::default(),
@@ -520,6 +525,16 @@ impl Button {
     /// Overrides the semantic label (useful for icon-only buttons).
     pub fn a11y_label(mut self, label: impl Into<Arc<str>>) -> Self {
         self.a11y_label = Some(label.into());
+        self
+    }
+
+    /// Binds this Button to a logical control id (similar to HTML `id`).
+    ///
+    /// When set, `Label::for_control(ControlId)` forwards focus to the button pressable. This is
+    /// useful for "button-as-form-control" triggers (e.g. date picker / combobox triggers) where
+    /// the field label should focus the trigger.
+    pub fn control_id(mut self, id: impl Into<ControlId>) -> Self {
+        self.control_id = Some(id.into());
         self
     }
 
@@ -827,6 +842,37 @@ impl Button {
                 ),
                 None => (None, PressableKeyActivation::EnterAndSpace, None),
             };
+            let has_a11y_label_override = self.a11y_label.is_some();
+            let control_id = self.control_id.clone();
+            let control_registry = control_id.as_ref().map(|_| control_registry_model(cx));
+            let labelled_by_element = if has_a11y_label_override {
+                None
+            } else if let (Some(control_id), Some(control_registry)) =
+                (control_id.as_ref(), control_registry.as_ref())
+            {
+                cx.app
+                    .models()
+                    .read(control_registry, |reg| {
+                        reg.label_for(cx.window, control_id).map(|l| l.element)
+                    })
+                    .ok()
+                    .flatten()
+            } else {
+                None
+            };
+            let described_by_element = if let (Some(control_id), Some(control_registry)) =
+                (control_id.as_ref(), control_registry.as_ref())
+            {
+                cx.app
+                    .models()
+                    .read(control_registry, |reg| {
+                        reg.described_by_for(cx.window, control_id)
+                    })
+                    .ok()
+                    .flatten()
+            } else {
+                None
+            };
             let a11y_label = self.label.clone();
             let a11y_label = self
                 .a11y_label
@@ -873,8 +919,26 @@ impl Button {
             let label_font_override = self.label_font_override;
             let label_features_override = self.label_features_override;
             let label_axes_override = self.label_axes_override;
+            let control_id_for_register = control_id.clone();
+            let control_registry_for_register = control_registry.clone();
+            let labelled_by_element_for_a11y = labelled_by_element;
+            let described_by_element_for_a11y = described_by_element;
 
             let pressable = control_chrome_pressable_with_id_props(cx, move |cx, st, _id| {
+                if let (Some(control_id), Some(control_registry)) = (
+                    control_id_for_register.clone(),
+                    control_registry_for_register.clone(),
+                ) {
+                    let entry = ControlEntry {
+                        element: _id,
+                        enabled: !disabled,
+                        action: ControlAction::Noop,
+                    };
+                    let _ = cx.app.models_mut().update(&control_registry, |reg| {
+                        reg.register_control(cx.window, cx.frame_id, control_id, entry);
+                    });
+                }
+
                 if let Some(payload) = action_payload.clone() {
                     cx.pressable_dispatch_command_with_payload_factory_if_enabled_opt(
                         command.clone(),
@@ -1043,8 +1107,18 @@ impl Button {
                     key_activation: render_key_activation,
                     a11y: PressableA11y {
                         role: render_role,
-                        label: Some(a11y_label.clone()),
+                        label: if has_a11y_label_override || control_id.is_none() {
+                            Some(a11y_label.clone())
+                        } else {
+                            None
+                        },
                         test_id: test_id.clone(),
+                        labelled_by_element: if has_a11y_label_override {
+                            None
+                        } else {
+                            labelled_by_element_for_a11y.map(|id| id.0)
+                        },
+                        described_by_element: described_by_element_for_a11y.map(|id| id.0),
                         ..Default::default()
                     },
                     ..Default::default()

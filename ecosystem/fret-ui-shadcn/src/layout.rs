@@ -208,6 +208,7 @@ pub(crate) fn container_flow_fill_width<H: UiHost>(
     cx.container(props, move |cx| {
         vec![
             ui::v_flex(move |_cx| children)
+                .layout(LayoutRefinement::default().w_full().min_w_0())
                 .gap(Space::N0)
                 .into_element(cx),
         ]

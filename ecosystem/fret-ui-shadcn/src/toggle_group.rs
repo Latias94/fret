@@ -14,6 +14,9 @@ use fret_ui_kit::declarative::current_color;
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::primitives::control_registry::{
+    ControlAction, ControlEntry, ControlId, control_registry_model,
+};
 use fret_ui_kit::{
     ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverrideSlot, Radius, Space,
     WidgetState, WidgetStateProperty, WidgetStates, resolve_override_slot,
@@ -264,6 +267,7 @@ pub struct ToggleGroup {
     model: ToggleGroupModel,
     items: Vec<ToggleGroupItem>,
     disabled: bool,
+    control_id: Option<ControlId>,
     roving_focus: bool,
     orientation: ToggleGroupOrientation,
     loop_navigation: bool,
@@ -308,6 +312,7 @@ impl ToggleGroup {
             },
             items: Vec::new(),
             disabled: false,
+            control_id: None,
             roving_focus: true,
             orientation: ToggleGroupOrientation::default(),
             loop_navigation: true,
@@ -331,6 +336,7 @@ impl ToggleGroup {
             },
             items: Vec::new(),
             disabled: false,
+            control_id: None,
             roving_focus: true,
             orientation: ToggleGroupOrientation::default(),
             loop_navigation: true,
@@ -352,6 +358,7 @@ impl ToggleGroup {
             },
             items: Vec::new(),
             disabled: false,
+            control_id: None,
             roving_focus: true,
             orientation: ToggleGroupOrientation::default(),
             loop_navigation: true,
@@ -380,6 +387,7 @@ impl ToggleGroup {
             },
             items: Vec::new(),
             disabled: false,
+            control_id: None,
             roving_focus: true,
             orientation: ToggleGroupOrientation::default(),
             loop_navigation: true,
@@ -395,6 +403,15 @@ impl ToggleGroup {
 
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = disabled;
+        self
+    }
+
+    /// Binds this ToggleGroup to a logical form control id (similar to HTML `id`).
+    ///
+    /// When set, `Label::for_control(ControlId)` forwards focus to the group's current "tab stop"
+    /// item (or the first enabled item).
+    pub fn control_id(mut self, id: impl Into<ControlId>) -> Self {
+        self.control_id = Some(id.into());
         self
     }
 
@@ -477,6 +494,7 @@ impl ToggleGroup {
         let model = self.model;
         let items = self.items;
         let group_disabled = self.disabled;
+        let control_id = self.control_id;
         let roving_focus = self.roving_focus;
         let orientation = self.orientation;
         let loop_navigation = self.loop_navigation;
@@ -487,6 +505,9 @@ impl ToggleGroup {
         let chrome = self.chrome;
         let layout = self.layout;
         let style_override = self.style;
+
+        let control_id = control_id.clone();
+        let control_registry = control_id.as_ref().map(|_| control_registry_model(cx));
 
         let theme = Theme::global(&*cx.app).snapshot();
 
@@ -544,6 +565,9 @@ impl ToggleGroup {
         } else {
             None
         };
+        let control_target_index = tab_stop.or_else(|| {
+            fret_ui_kit::primitives::roving_focus_group::first_enabled(&disabled_flags)
+        });
 
         let gap = MetricRef::space(spacing).resolve(&theme);
         let radius = MetricRef::radius(Radius::Md).resolve(&theme);
@@ -635,6 +659,8 @@ impl ToggleGroup {
             let default_item_background = default_item_background.clone();
             let default_item_foreground = default_item_foreground.clone();
             let default_item_border_color = default_item_border_color.clone();
+            let control_id = control_id.clone();
+            let control_registry = control_registry.clone();
 
             let flex = FlexProps {
                 direction: match orientation {
@@ -664,6 +690,8 @@ impl ToggleGroup {
                 for (idx, item) in items.into_iter().enumerate() {
                     let item_disabled = disabled_flags.get(idx).copied().unwrap_or(true);
                     let enabled = !item_disabled;
+                    let is_control_target =
+                        control_target_index.is_some_and(|control_idx| control_idx == idx);
                     let focusable = if roving_focus {
                         tab_stop.is_some_and(|i| i == idx)
                     } else {
@@ -769,9 +797,28 @@ impl ToggleGroup {
                     let default_item_foreground = default_item_foreground.clone();
                     let default_item_border_color = default_item_border_color.clone();
                     let inner_gap = inner_gap;
+                    let control_id_for_register = control_id.clone();
+                    let control_registry_for_register = control_registry.clone();
+                    let is_control_target_for_register = is_control_target;
 
                     out.push(cx.keyed(value.clone(), move |cx| {
                         control_chrome_pressable_with_id_props(cx, move |cx, st, _id| {
+                            if is_control_target_for_register
+                                && let (Some(control_id), Some(control_registry)) = (
+                                    control_id_for_register.clone(),
+                                    control_registry_for_register.clone(),
+                                )
+                            {
+                                let entry = ControlEntry {
+                                    element: _id,
+                                    enabled,
+                                    action: ControlAction::Noop,
+                                };
+                                let _ = cx.app.models_mut().update(&control_registry, |reg| {
+                                    reg.register_control(cx.window, cx.frame_id, control_id, entry);
+                                });
+                            }
+
                             if let Some(m) = model_single.as_ref() {
                                 let model = m.clone();
                                 let value = value.clone();

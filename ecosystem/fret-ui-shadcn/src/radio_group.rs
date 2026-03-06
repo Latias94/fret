@@ -8,7 +8,7 @@ use fret_core::{
 use fret_runtime::Model;
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign,
-    PressableProps, RovingFlexProps, RovingFocusProps, SizeStyle, TextProps,
+    PressableProps, RovingFlexProps, RovingFocusProps, SemanticsDecoration, SizeStyle, TextProps,
 };
 use fret_ui::{ElementContext, Theme, ThemeSnapshot, UiHost};
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
@@ -16,6 +16,9 @@ use fret_ui_kit::declarative::motion::{
     drive_tween_color_for_element, drive_tween_f32_for_element,
 };
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::primitives::control_registry::{
+    ControlAction, ControlEntry, ControlId, control_registry_model,
+};
 use fret_ui_kit::primitives::radio_group as radio_group_prim;
 use fret_ui_kit::primitives::roving_focus_group;
 use fret_ui_kit::typography;
@@ -197,7 +200,9 @@ pub struct RadioGroup {
     default_value: Option<Arc<str>>,
     items: Vec<RadioGroupItem>,
     disabled: bool,
+    control_id: Option<ControlId>,
     a11y_label: Option<Arc<str>>,
+    test_id_prefix: Option<Arc<str>>,
     orientation: RadioGroupOrientation,
     loop_navigation: bool,
     chrome: ChromeRefinement,
@@ -212,7 +217,9 @@ impl RadioGroup {
             default_value: None,
             items: Vec::new(),
             disabled: false,
+            control_id: None,
             a11y_label: None,
+            test_id_prefix: None,
             orientation: RadioGroupOrientation::default(),
             loop_navigation: true,
             chrome: ChromeRefinement::default(),
@@ -228,7 +235,9 @@ impl RadioGroup {
             default_value: default_value.map(Into::into),
             items: Vec::new(),
             disabled: false,
+            control_id: None,
             a11y_label: None,
+            test_id_prefix: None,
             orientation: RadioGroupOrientation::default(),
             loop_navigation: true,
             chrome: ChromeRefinement::default(),
@@ -247,8 +256,25 @@ impl RadioGroup {
         self
     }
 
+    /// Binds this RadioGroup to a logical form control id (similar to HTML `id`).
+    ///
+    /// When set, `Label::for_control(ControlId)` forwards focus to the active radio item, and the
+    /// group uses `aria-labelledby` / `aria-describedby`-like semantics via the control registry.
+    pub fn control_id(mut self, id: impl Into<ControlId>) -> Self {
+        self.control_id = Some(id.into());
+        self
+    }
+
     pub fn a11y_label(mut self, label: impl Into<Arc<str>>) -> Self {
         self.a11y_label = Some(label.into());
+        self
+    }
+
+    /// Sets a stable `test_id` prefix for radio items (useful for diag scripts).
+    ///
+    /// Items use the shape `{prefix}-item-{idx}`.
+    pub fn test_id_prefix(mut self, prefix: impl Into<Arc<str>>) -> Self {
+        self.test_id_prefix = Some(prefix.into());
         self
     }
 
@@ -293,7 +319,9 @@ impl RadioGroup {
             default_value,
             items,
             disabled,
+            control_id,
             a11y_label,
+            test_id_prefix,
             orientation,
             loop_navigation,
             chrome,
@@ -302,6 +330,35 @@ impl RadioGroup {
         } = self;
 
         cx.scope(|cx| {
+            let control_id = control_id.clone();
+            let control_registry = control_id.as_ref().map(|_| control_registry_model(cx));
+            let labelled_by_element = if a11y_label.is_some() {
+                None
+            } else if let (Some(control_id), Some(control_registry)) =
+                (control_id.as_ref(), control_registry.as_ref())
+            {
+                cx.app
+                    .models()
+                    .read(control_registry, |reg| {
+                        reg.label_for(cx.window, control_id).map(|l| l.element)
+                    })
+                    .ok()
+                    .flatten()
+            } else {
+                None
+            };
+            let described_by_element = if let (Some(control_id), Some(control_registry)) =
+                (control_id.as_ref(), control_registry.as_ref())
+            {
+                cx.app
+                    .models()
+                    .read(control_registry, |reg| reg.described_by_for(cx.window, control_id))
+                    .ok()
+                    .flatten()
+            } else {
+                None
+            };
+
             let theme = Theme::global(&*cx.app).snapshot();
             let gap_y = row_gap(&theme);
             let gap_x = label_gap(&theme);
@@ -332,6 +389,7 @@ impl RadioGroup {
 
             let group_disabled = disabled;
             let group_label = a11y_label.clone();
+            let test_id_prefix = test_id_prefix.clone();
             let style_override = style;
             let model = radio_group_prim::radio_group_use_model(cx, model.clone(), || {
                 default_value.clone()
@@ -366,6 +424,8 @@ impl RadioGroup {
 
             let root_for_items = radix_root.clone();
             let list = radix_root.list(values_arc.clone(), disabled_arc.clone());
+            let control_id_for_register = control_id.clone();
+            let control_registry_for_register = control_registry.clone();
 
             let container_props = decl_style::container_props(&theme, chrome, layout);
             let fit_width = matches!(container_props.layout.size.width, Length::Auto);
@@ -416,6 +476,12 @@ impl RadioGroup {
                         let tab_stop = active.is_some_and(|a| a == idx);
                         let aria_invalid = item.aria_invalid;
                         let item_variant = item.variant;
+                        let control_id_for_register = control_id_for_register.clone();
+                        let control_registry_for_register = control_registry_for_register.clone();
+                        let tab_stop_for_register = tab_stop;
+                        let item_test_id = test_id_prefix.as_ref().map(|p| {
+                            Arc::<str>::from(format!("{p}-item-{idx}"))
+                        });
 
                         let radius = Px((icon.0 * 0.5).max(0.0));
                         let mut ring_style = decl_style::focus_ring(&theme, radius);
@@ -483,6 +549,25 @@ impl RadioGroup {
                                         ..Default::default()
                                     },
                                     move |cx, st, id, checked, props| {
+                                        if let Some(test_id) = item_test_id.clone() {
+                                            props.a11y.test_id = Some(test_id);
+                                        }
+                                        if tab_stop_for_register
+                                            && let (Some(control_id), Some(control_registry)) = (
+                                                control_id_for_register.clone(),
+                                                control_registry_for_register.clone(),
+                                            )
+                                        {
+                                            let entry = ControlEntry {
+                                                element: id,
+                                                enabled: item_enabled,
+                                                action: ControlAction::Noop,
+                                            };
+                                            let _ = cx.app.models_mut().update(&control_registry, |reg| {
+                                                reg.register_control(cx.window, cx.frame_id, control_id, entry);
+                                            });
+                                        }
+
                                         let theme = Theme::global(&*cx.app).snapshot();
                                         let theme_for_icon = theme.clone();
 
@@ -768,6 +853,20 @@ impl RadioGroup {
                     out
                 },
             );
+            let list_element = if labelled_by_element.is_some() || described_by_element.is_some() {
+                let mut decoration = SemanticsDecoration::default();
+                if a11y_label.is_none() {
+                    if let Some(labelled_by) = labelled_by_element {
+                        decoration.labelled_by_element = Some(labelled_by.0);
+                    }
+                }
+                if let Some(desc) = described_by_element {
+                    decoration.described_by_element = Some(desc.0);
+                }
+                list_element.attach_semantics(decoration)
+            } else {
+                list_element
+            };
 
             cx.container(container_props, move |_cx| vec![list_element])
         })

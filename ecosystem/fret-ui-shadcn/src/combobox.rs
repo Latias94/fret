@@ -21,6 +21,9 @@ use fret_ui_kit::declarative::motion::{
 };
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::combobox as kit_combobox;
+use fret_ui_kit::primitives::control_registry::{
+    ControlAction, ControlEntry, ControlId, control_registry_model,
+};
 use fret_ui_kit::primitives::controllable_state;
 use fret_ui_kit::primitives::popover as radix_popover;
 use fret_ui_kit::primitives::popper;
@@ -733,6 +736,7 @@ pub struct Combobox {
     auto_highlight: bool,
     test_id_prefix: Option<Arc<str>>,
     trigger_test_id: Option<Arc<str>>,
+    control_id: Option<ControlId>,
     width: Option<Px>,
     content_side: popper::Side,
     content_align: popper::Align,
@@ -775,6 +779,7 @@ impl Combobox {
             auto_highlight: true,
             test_id_prefix: None,
             trigger_test_id: None,
+            control_id: None,
             width: None,
             content_side: popper::Side::Bottom,
             content_align: popper::Align::Start,
@@ -970,6 +975,15 @@ impl Combobox {
         self
     }
 
+    /// Binds this Combobox to a logical form control id (similar to HTML `id`).
+    ///
+    /// When set, `Label::for_control(ControlId)` forwards focus to the trigger, and the combobox
+    /// uses `aria-labelledby` / `aria-describedby`-like semantics via the control registry.
+    pub fn control_id(mut self, id: impl Into<ControlId>) -> Self {
+        self.control_id = Some(id.into());
+        self
+    }
+
     pub fn a11y_label(mut self, label: impl Into<Arc<str>>) -> Self {
         self.a11y_label = Some(label.into());
         self
@@ -1065,6 +1079,7 @@ impl Combobox {
             self.empty_text,
             self.aria_invalid,
             self.disabled,
+            self.control_id,
             self.a11y_label,
             self.responsive,
             self.responsive_device_md_breakpoint,
@@ -1125,6 +1140,7 @@ pub fn combobox<H: UiHost>(
         empty_text,
         false,
         disabled,
+        None,
         a11y_label,
         false,
         fret_ui_kit::declarative::viewport_tailwind::MD,
@@ -1168,6 +1184,7 @@ fn combobox_with_patch<H: UiHost>(
     empty_text: Arc<str>,
     aria_invalid: bool,
     disabled: bool,
+    control_id: Option<ControlId>,
     a11y_label: Option<Arc<str>>,
     responsive: bool,
     responsive_device_md_breakpoint: Px,
@@ -1189,6 +1206,35 @@ fn combobox_with_patch<H: UiHost>(
     style_override: ComboboxStyle,
 ) -> AnyElement {
     cx.scope(|cx| {
+        let control_id = control_id.clone();
+        let control_registry = control_id.as_ref().map(|_| control_registry_model(cx));
+        let labelled_by_element = if a11y_label.is_some() {
+            None
+        } else if let (Some(control_id), Some(control_registry)) =
+            (control_id.as_ref(), control_registry.as_ref())
+        {
+            cx.app
+                .models()
+                .read(control_registry, |reg| {
+                    reg.label_for(cx.window, control_id).map(|l| l.element)
+                })
+                .ok()
+                .flatten()
+        } else {
+            None
+        };
+        let described_by_element = if let (Some(control_id), Some(control_registry)) =
+            (control_id.as_ref(), control_registry.as_ref())
+        {
+            cx.app
+                .models()
+                .read(control_registry, |reg| reg.described_by_for(cx.window, control_id))
+                .ok()
+                .flatten()
+        } else {
+            None
+        };
+
         let theme = Theme::global(&*cx.app).snapshot();
         let open_change_reason_model = {
             let existing =
@@ -1548,6 +1594,19 @@ fn combobox_with_patch<H: UiHost>(
                             );
                             cx.pressable_toggle_bool(&open_for_trigger);
 
+                            if let (Some(control_id), Some(control_registry)) =
+                                (control_id.clone(), control_registry.clone())
+                            {
+                                let entry = ControlEntry {
+                                    element: trigger_id,
+                                    enabled,
+                                    action: ControlAction::Noop,
+                                };
+                                let _ = cx.app.models_mut().update(&control_registry, |reg| {
+                                    reg.register_control(cx.window, cx.frame_id, control_id, entry);
+                                });
+                            }
+
                             let props = PressableProps {
                                 layout: trigger_layout,
                                 enabled,
@@ -1556,11 +1615,21 @@ fn combobox_with_patch<H: UiHost>(
                                 focus_ring_always_paint: ring_alpha.animating,
                                 a11y: PressableA11y {
                                     role: Some(SemanticsRole::ComboBox),
-                                    label: a11y_label_for_trigger
-                                        .clone()
-                                        .or_else(|| Some(resolved_label.clone())),
+                                    label: if a11y_label_for_trigger.is_some() {
+                                        a11y_label_for_trigger.clone()
+                                    } else if control_id.is_some() {
+                                        None
+                                    } else {
+                                        Some(resolved_label.clone())
+                                    },
                                     test_id: trigger_test_id_for_trigger.clone(),
                                     expanded: Some(is_open),
+                                    labelled_by_element: if a11y_label_for_trigger.is_some() {
+                                        None
+                                    } else {
+                                        labelled_by_element.map(|id| id.0)
+                                    },
+                                    described_by_element: described_by_element.map(|id| id.0),
                                     ..Default::default()
                                 },
                                 ..Default::default()
@@ -2302,6 +2371,19 @@ fn combobox_with_patch<H: UiHost>(
                     ));
                     cx.pressable_toggle_bool(&open_for_trigger);
 
+                    if let (Some(control_id), Some(control_registry)) =
+                        (control_id.clone(), control_registry.clone())
+                    {
+                        let entry = ControlEntry {
+                            element: trigger_id,
+                            enabled,
+                            action: ControlAction::Noop,
+                        };
+                        let _ = cx.app.models_mut().update(&control_registry, |reg| {
+                            reg.register_control(cx.window, cx.frame_id, control_id, entry);
+                        });
+                    }
+
                     let props = PressableProps {
                         layout: trigger_layout,
                         enabled,
@@ -2310,11 +2392,21 @@ fn combobox_with_patch<H: UiHost>(
                         focus_ring_always_paint: ring_alpha.animating,
                         a11y: PressableA11y {
                             role: Some(SemanticsRole::ComboBox),
-                            label: a11y_label_for_trigger
-                                .clone()
-                                .or_else(|| Some(resolved_label.clone())),
+                            label: if a11y_label_for_trigger.is_some() {
+                                a11y_label_for_trigger.clone()
+                            } else if control_id.is_some() {
+                                None
+                            } else {
+                                Some(resolved_label.clone())
+                            },
                             test_id: trigger_test_id_for_trigger.clone(),
                             expanded: Some(is_open),
+                            labelled_by_element: if a11y_label_for_trigger.is_some() {
+                                None
+                            } else {
+                                labelled_by_element.map(|id| id.0)
+                            },
+                            described_by_element: described_by_element.map(|id| id.0),
                             ..Default::default()
                         },
                         ..Default::default()

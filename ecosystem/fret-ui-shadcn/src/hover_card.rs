@@ -1233,6 +1233,7 @@ mod tests {
         AppWindowId, Edges, Event, Modifiers, MouseButton, MouseButtons, PathCommand,
         PathConstraints, PathId, PathMetrics, PathService, PathStyle, Point, Px, Rect,
         SemanticsRole, SvgId, SvgService, TextBlobId, TextConstraints, TextMetrics, TextService,
+        TextWrap,
     };
     use fret_runtime::{FrameId, TickId};
     use fret_ui::element::{
@@ -3173,5 +3174,157 @@ mod tests {
         render_frame(&mut ui, &mut app, &mut services, 5);
         ui.layout_all(&mut app, &mut services, bounds, 1.0);
         assert_eq!(app.models().get_copied(&open), Some(false));
+    }
+
+    #[derive(Default)]
+    struct RecordingServices {
+        prepared: Vec<TextConstraints>,
+    }
+
+    impl TextService for RecordingServices {
+        fn prepare(
+            &mut self,
+            input: &fret_core::TextInput,
+            constraints: TextConstraints,
+        ) -> (TextBlobId, TextMetrics) {
+            self.prepared.push(constraints);
+
+            let base_w = (input.text().chars().count() as f32) * 10.0;
+            let w = match (constraints.wrap, constraints.max_width) {
+                (fret_core::TextWrap::None, _) => base_w,
+                (_, Some(max_w)) => base_w.min(max_w.0.max(0.0)),
+                (_, None) => base_w,
+            };
+
+            (
+                TextBlobId::default(),
+                TextMetrics {
+                    size: fret_core::Size::new(Px(w), Px(10.0)),
+                    baseline: Px(8.0),
+                },
+            )
+        }
+
+        fn release(&mut self, _blob: TextBlobId) {}
+    }
+
+    impl PathService for RecordingServices {
+        fn prepare(
+            &mut self,
+            _commands: &[PathCommand],
+            _style: PathStyle,
+            _constraints: PathConstraints,
+        ) -> (PathId, PathMetrics) {
+            (PathId::default(), PathMetrics::default())
+        }
+
+        fn release(&mut self, _path: PathId) {}
+    }
+
+    impl SvgService for RecordingServices {
+        fn register_svg(&mut self, _bytes: &[u8]) -> SvgId {
+            SvgId::default()
+        }
+
+        fn unregister_svg(&mut self, _svg: SvgId) -> bool {
+            true
+        }
+    }
+
+    impl fret_core::MaterialService for RecordingServices {
+        fn register_material(
+            &mut self,
+            _desc: fret_core::MaterialDescriptor,
+        ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+            Ok(fret_core::MaterialId::default())
+        }
+
+        fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
+            true
+        }
+    }
+
+    #[test]
+    fn hover_card_content_wraps_text_against_clamped_panel_width() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        let mut services = RecordingServices::default();
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(200.0)),
+        );
+
+        let content_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+        let text_id_out: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
+            Rc::new(Cell::new(None));
+        let content_id_out_for_render = content_id_out.clone();
+        let text_id_out_for_render = text_id_out.clone();
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "test",
+            move |cx| {
+                let text = ui::text_block("HoverCard content: multiline description with WordBreak wrapping. This string should wrap when the panel width is clamped.")
+                    .text_sm()
+                    .wrap(TextWrap::WordBreak)
+                    .into_element(cx);
+                text_id_out_for_render.set(Some(text.id));
+
+                let content = HoverCardContent::new(vec![text]).into_element(cx);
+                content_id_out_for_render.set(Some(content.id));
+
+                let container = cx.flex(
+                    FlexProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Fill;
+                            layout.size.height = Length::Fill;
+                            layout
+                        },
+                        direction: fret_core::Axis::Vertical,
+                        gap: Px(0.0).into(),
+                        padding: Edges::all(Px(0.0)).into(),
+                        justify: MainAlign::Start,
+                        align: CrossAlign::Start,
+                        wrap: false,
+                    },
+                    move |_cx| vec![content],
+                );
+                vec![container]
+            },
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let content_id = content_id_out.get().expect("content id");
+        let content_bounds =
+            fret_ui::elements::current_bounds_for_element(&mut app, window, content_id)
+                .expect("bounds");
+        assert_eq!(content_bounds.size.width, Px(256.0));
+
+        let text_id = text_id_out.get().expect("text id");
+        let text_bounds = fret_ui::elements::current_bounds_for_element(&mut app, window, text_id)
+            .expect("text bounds");
+        assert!(
+            text_bounds.size.width.0 > 0.0 && text_bounds.size.width.0 <= 256.0,
+            "expected text to be constrained by the clamped hover-card width; text_bounds={text_bounds:?}"
+        );
+
+        assert!(
+            services.prepared.iter().any(|c| {
+                c.wrap == TextWrap::WordBreak
+                    && c.max_width.is_some_and(|w| w.0 > 0.0 && w.0 <= 256.0)
+            }),
+            "expected text backend to receive a clamped max_width for wrapping; prepared={:?}",
+            services.prepared
+        );
     }
 }

@@ -7,6 +7,7 @@
     "tools/diag-scripts/ui-gallery-select-dismiss-outside-press.json",
     "tools/diag-scripts/ui-gallery-select-escape-dismiss-focus-restore.json",
     "tools/diag-scripts/ui-gallery-select-keyboard-commit-apple.json",
+    "tools/diag-scripts/ui-gallery-select-label-click-focus.json",
     "tools/diag-scripts/ui-gallery-select-open-jitter-click-stable-v2.json",
     "tools/diag-scripts/ui-gallery-select-reopen-no-residue-screenshots.json",
     "tools/diag-scripts/ui-gallery-select-roving-skips-disabled-orange.json",
