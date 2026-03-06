@@ -2,8 +2,8 @@ use anyhow::Context as _;
 use fret_app::{App, CommandId, Effect, Model, WindowRequest};
 use fret_core::{AppWindowId, Corners, Edges, Event, Px};
 use fret_launch::{
-    FnDriver, WindowCreateSpec, WinitAppDriver, WinitCommandContext, WinitEventContext,
-    WinitHotReloadContext, WinitRenderContext, WinitRunnerConfig, WinitWindowContext,
+    FnDriver, WindowCreateSpec, WinitCommandContext, WinitEventContext, WinitHotReloadContext,
+    WinitRenderContext, WinitRunnerConfig, WinitWindowContext,
 };
 use fret_runtime::PlatformCapabilities;
 use fret_ui::declarative;
@@ -22,7 +22,7 @@ use fret_ui_shadcn::{DatePicker, Form, FormField, Input, Select, SelectItem, Spa
 use std::sync::Arc;
 use time::Date;
 
-struct DemoWindowState {
+pub struct DemoWindowState {
     ui: UiTree<App>,
     form_state: Model<FormState>,
     registry: FormRegistry,
@@ -35,7 +35,7 @@ struct DemoWindowState {
 }
 
 #[derive(Default)]
-struct FormDemoDriver;
+pub struct FormDemoDriver;
 
 impl FormDemoDriver {
     fn build_ui(app: &mut App, window: AppWindowId) -> DemoWindowState {
@@ -86,403 +86,346 @@ impl FormDemoDriver {
     }
 }
 
-impl WinitAppDriver for FormDemoDriver {
-    type WindowState = DemoWindowState;
-
-    fn create_window_state(&mut self, app: &mut App, window: AppWindowId) -> Self::WindowState {
-        Self::build_ui(app, window)
-    }
-
-    fn hot_reload_window(
-        &mut self,
-        app: &mut App,
-        _services: &mut dyn fret_core::UiServices,
-        window: AppWindowId,
-        state: &mut Self::WindowState,
-    ) {
-        crate::hotpatch::reset_ui_tree(app, window, &mut state.ui);
-    }
-
-    fn handle_model_changes(
-        &mut self,
-        context: WinitWindowContext<'_, Self::WindowState>,
-        changed: &[fret_app::ModelId],
-    ) {
-        context.state.registry.handle_model_changes(
-            context.app,
-            &context.state.form_state,
-            changed,
-        );
-        context
-            .state
-            .ui
-            .propagate_model_changes(context.app, changed);
-    }
-
-    fn handle_global_changes(
-        &mut self,
-        context: WinitWindowContext<'_, Self::WindowState>,
-        changed: &[std::any::TypeId],
-    ) {
-        context
-            .state
-            .ui
-            .propagate_global_changes(context.app, changed);
-    }
-
-    fn handle_command(
-        &mut self,
-        context: WinitCommandContext<'_, Self::WindowState>,
-        command: CommandId,
-    ) {
-        let WinitCommandContext {
-            app,
-            services,
-            window,
-            state,
-        } = context;
-
-        if state.ui.dispatch_command(app, services, &command) {
-            return;
-        }
-
-        match command.as_str() {
-            "form_demo.close" => {
-                app.push_effect(Effect::Window(WindowRequest::Close(window)));
-            }
-            "form_demo.reset" => {
-                let _ = app.models_mut().update(&state.name, |v| v.clear());
-                let _ = app.models_mut().update(&state.email, |v| v.clear());
-                let _ = app.models_mut().update(&state.role, |v| *v = None);
-                let _ = app.models_mut().update(&state.role_open, |v| *v = false);
-                let _ = app.models_mut().update(&state.start_date, |v| *v = None);
-                let _ = app.models_mut().update(&state.form_state, |st| st.reset());
-                state
-                    .registry
-                    .register_into_form_state(app, &state.form_state);
-                let _ = app
-                    .models_mut()
-                    .update(&state.status, |v| *v = Arc::from("Reset"));
-                app.request_redraw(window);
-            }
-            "form_demo.submit" => {
-                let ok = state.registry.submit(app, &state.form_state);
-                let msg = if ok {
-                    "Submitted (valid)"
-                } else {
-                    "Submitted (errors)"
-                };
-                let _ = app
-                    .models_mut()
-                    .update(&state.status, |v| *v = Arc::from(msg));
-                app.request_redraw(window);
-            }
-            _ => {}
-        }
-    }
-
-    fn handle_event(&mut self, context: WinitEventContext<'_, Self::WindowState>, event: &Event) {
-        let WinitEventContext {
-            app,
-            services,
-            window,
-            state,
-        } = context;
-
-        if matches!(event, Event::WindowCloseRequested) {
-            app.push_effect(Effect::Window(WindowRequest::Close(window)));
-            return;
-        }
-
-        if let Event::KeyDown { key, modifiers, .. } = event {
-            if !modifiers.ctrl && !modifiers.alt && !modifiers.shift && !modifiers.meta {
-                if *key == fret_core::KeyCode::Escape {
-                    app.push_effect(Effect::Window(WindowRequest::Close(window)));
-                    return;
-                }
-            }
-        }
-
-        state.ui.dispatch_event(app, services, event);
-    }
-
-    fn render(&mut self, context: WinitRenderContext<'_, Self::WindowState>) {
-        let scale_factor = context.scale_factor;
-        let WinitRenderContext {
-            app,
-            services,
-            window,
-            state,
-            bounds,
-            scene,
-            ..
-        } = context;
-
-        OverlayController::begin_frame(app, window);
-
-        let name = state.name.clone();
-        let email = state.email.clone();
-        let role = state.role.clone();
-        let role_open = state.role_open.clone();
-        let start_date = state.start_date.clone();
-        let form_state = state.form_state.clone();
-        let status = state.status.clone();
-        let root =
-            declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds)
-                .render_root("form-demo", move |cx| {
-                    cx.observe_model(&form_state, Invalidation::Layout);
-                    cx.observe_model(&name, Invalidation::Layout);
-                    cx.observe_model(&email, Invalidation::Layout);
-                    cx.observe_model(&role, Invalidation::Layout);
-                    cx.observe_model(&start_date, Invalidation::Layout);
-                    cx.observe_model(&status, Invalidation::Layout);
-
-                    let theme = cx.theme_snapshot();
-                    let padding = theme.metric_token("metric.padding.md");
-
-                    let (submit_count, valid, dirty) = cx
-                        .app
-                        .models()
-                        .read(&form_state, |st| {
-                            (st.submit_count, st.is_valid(), st.is_dirty())
-                        })
-                        .unwrap_or((0, true, false));
-
-                    let status_text = cx
-                        .app
-                        .models()
-                        .read(&status, |v| Arc::clone(v))
-                        .unwrap_or_else(|_| Arc::from("Idle"));
-
-                    let mut root_layout = LayoutStyle::default();
-                    root_layout.size.width = Length::Fill;
-                    root_layout.size.height = Length::Fill;
-
-                    let header = ui::h_row(|cx| {
-                        [
-                            Button::new("Close")
-                                .variant(ButtonVariant::Outline)
-                                .size(ButtonSize::Sm)
-                                .on_click(CommandId::from("form_demo.close"))
-                                .into_element(cx),
-                            Button::new("Reset")
-                                .variant(ButtonVariant::Outline)
-                                .size(ButtonSize::Sm)
-                                .on_click(CommandId::from("form_demo.reset"))
-                                .into_element(cx),
-                            Button::new("Submit")
-                                .size(ButtonSize::Sm)
-                                .on_click(CommandId::from("form_demo.submit"))
-                                .into_element(cx),
-                            cx.text(Arc::from(format!(
-                                "submit_count={submit_count} valid={valid} dirty={dirty} status={}",
-                                status_text.as_ref()
-                            ))),
-                        ]
-                    })
-                    .gap(Space::N2)
-                    .items_center()
-                    .into_element(cx);
-
-                    let form = {
-                        Form::new(vec![
-                            FormField::new(
-                                form_state.clone(),
-                                "name",
-                                vec![Input::new(name.clone()).into_element(cx)],
-                            )
-                            .label("Name")
-                            .into_element(cx),
-                            FormField::new(
-                                form_state.clone(),
-                                "email",
-                                vec![Input::new(email.clone()).into_element(cx)],
-                            )
-                            .label("Email")
-                            .into_element(cx),
-                            FormField::new(
-                                form_state.clone(),
-                                "role",
-                                vec![
-                                    Select::new(role.clone(), role_open.clone())
-                                        .a11y_label("Role")
-                                        .value(
-                                            fret_ui_shadcn::SelectValue::new()
-                                                .placeholder("Pick a role"),
-                                        )
-                                        .items([
-                                            SelectItem::new("admin", "Admin"),
-                                            SelectItem::new("editor", "Editor"),
-                                            SelectItem::new("viewer", "Viewer"),
-                                        ])
-                                        .into_element(cx),
-                                ],
-                            )
-                            .label("Role")
-                            .into_element(cx),
-                            FormField::new(
-                                form_state.clone(),
-                                "start_date",
-                                vec![
-                                    DatePicker::new_controllable(
-                                        cx,
-                                        Some(start_date.clone()),
-                                        None,
-                                        None,
-                                        false,
-                                    )
-                                    .placeholder("Pick a start date")
-                                    .into_element(cx),
-                                ],
-                            )
-                            .label("Start date")
-                            .into_element(cx),
-                        ])
-                        .into_element(cx)
-                    };
-
-                    vec![cx.container(
-                        ContainerProps {
-                            layout: root_layout,
-                            background: Some(theme.color_token("background")),
-                            ..Default::default()
-                        },
-                        move |cx| {
-                            vec![cx.flex(
-                                FlexProps {
-                                    layout: root_layout,
-                                    direction: fret_core::Axis::Vertical,
-                                    gap: fret_ui::element::SpacingLength::Px(Px(12.0)),
-                                    padding: Edges::all(padding).into(),
-                                    justify: MainAlign::Start,
-                                    align: CrossAlign::Stretch,
-                                    wrap: false,
-                                },
-                                move |cx| {
-                                    vec![
-                                        header,
-                                        cx.container(
-                                            ContainerProps {
-                                                layout: LayoutStyle {
-                                                    overflow: Overflow::Clip,
-                                                    ..Default::default()
-                                                },
-                                                border: Edges::all(Px(1.0)),
-                                                border_color: Some(theme.color_token("border")),
-                                                corner_radii: Corners::all(
-                                                    theme.metric_token("metric.radius.md"),
-                                                ),
-                                                ..Default::default()
-                                            },
-                                            move |_cx| vec![form],
-                                        ),
-                                    ]
-                                },
-                            )]
-                        },
-                    )]
-                });
-
-        state.ui.set_root(root);
-        OverlayController::render(&mut state.ui, app, services, window, bounds);
-        state.ui.request_semantics_snapshot();
-        state.ui.ingest_paint_cache_source(scene);
-        scene.clear();
-
-        let mut frame =
-            fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
-        frame.layout_all();
-        frame.paint_all(scene);
-    }
-
-    fn window_create_spec(
-        &mut self,
-        _app: &mut App,
-        _request: &fret_app::CreateWindowRequest,
-    ) -> Option<WindowCreateSpec> {
-        None
-    }
-}
-
 fn create_window_state(
-    driver: &mut FormDemoDriver,
+    _driver: &mut FormDemoDriver,
     app: &mut App,
     window: AppWindowId,
 ) -> DemoWindowState {
-    <FormDemoDriver as WinitAppDriver>::create_window_state(driver, app, window)
+    FormDemoDriver::build_ui(app, window)
 }
 
 fn hot_reload_window(
-    driver: &mut FormDemoDriver,
+    _driver: &mut FormDemoDriver,
     context: WinitHotReloadContext<'_, DemoWindowState>,
 ) {
     let WinitHotReloadContext {
+        app,
+        services: _,
+        window,
+        state,
+    } = context;
+    crate::hotpatch::reset_ui_tree(app, window, &mut state.ui);
+}
+
+fn handle_model_changes(
+    _driver: &mut FormDemoDriver,
+    context: WinitWindowContext<'_, DemoWindowState>,
+    changed: &[fret_app::ModelId],
+) {
+    context
+        .state
+        .registry
+        .handle_model_changes(context.app, &context.state.form_state, changed);
+    context
+        .state
+        .ui
+        .propagate_model_changes(context.app, changed);
+}
+
+fn handle_global_changes(
+    _driver: &mut FormDemoDriver,
+    context: WinitWindowContext<'_, DemoWindowState>,
+    changed: &[std::any::TypeId],
+) {
+    context
+        .state
+        .ui
+        .propagate_global_changes(context.app, changed);
+}
+
+fn handle_command(
+    _driver: &mut FormDemoDriver,
+    context: WinitCommandContext<'_, DemoWindowState>,
+    command: CommandId,
+) {
+    let WinitCommandContext {
         app,
         services,
         window,
         state,
     } = context;
-    <FormDemoDriver as WinitAppDriver>::hot_reload_window(driver, app, services, window, state)
-}
 
-fn handle_model_changes(
-    driver: &mut FormDemoDriver,
-    context: WinitWindowContext<'_, DemoWindowState>,
-    changed: &[fret_app::ModelId],
-) {
-    <FormDemoDriver as WinitAppDriver>::handle_model_changes(driver, context, changed)
-}
+    if state.ui.dispatch_command(app, services, &command) {
+        return;
+    }
 
-fn handle_global_changes(
-    driver: &mut FormDemoDriver,
-    context: WinitWindowContext<'_, DemoWindowState>,
-    changed: &[std::any::TypeId],
-) {
-    <FormDemoDriver as WinitAppDriver>::handle_global_changes(driver, context, changed)
-}
-
-fn handle_command(
-    driver: &mut FormDemoDriver,
-    context: WinitCommandContext<'_, DemoWindowState>,
-    command: CommandId,
-) {
-    <FormDemoDriver as WinitAppDriver>::handle_command(driver, context, command)
+    match command.as_str() {
+        "form_demo.close" => {
+            app.push_effect(Effect::Window(WindowRequest::Close(window)));
+        }
+        "form_demo.reset" => {
+            let _ = app.models_mut().update(&state.name, |v| v.clear());
+            let _ = app.models_mut().update(&state.email, |v| v.clear());
+            let _ = app.models_mut().update(&state.role, |v| *v = None);
+            let _ = app.models_mut().update(&state.role_open, |v| *v = false);
+            let _ = app.models_mut().update(&state.start_date, |v| *v = None);
+            let _ = app.models_mut().update(&state.form_state, |st| st.reset());
+            state
+                .registry
+                .register_into_form_state(app, &state.form_state);
+            let _ = app
+                .models_mut()
+                .update(&state.status, |v| *v = Arc::from("Reset"));
+            app.request_redraw(window);
+        }
+        "form_demo.submit" => {
+            let ok = state.registry.submit(app, &state.form_state);
+            let msg = if ok {
+                "Submitted (valid)"
+            } else {
+                "Submitted (errors)"
+            };
+            let _ = app
+                .models_mut()
+                .update(&state.status, |v| *v = Arc::from(msg));
+            app.request_redraw(window);
+        }
+        _ => {}
+    }
 }
 
 fn handle_event(
-    driver: &mut FormDemoDriver,
+    _driver: &mut FormDemoDriver,
     context: WinitEventContext<'_, DemoWindowState>,
     event: &Event,
 ) {
-    <FormDemoDriver as WinitAppDriver>::handle_event(driver, context, event)
+    let WinitEventContext {
+        app,
+        services,
+        window,
+        state,
+    } = context;
+
+    if matches!(event, Event::WindowCloseRequested) {
+        app.push_effect(Effect::Window(WindowRequest::Close(window)));
+        return;
+    }
+
+    if let Event::KeyDown { key, modifiers, .. } = event {
+        if !modifiers.ctrl && !modifiers.alt && !modifiers.shift && !modifiers.meta {
+            if *key == fret_core::KeyCode::Escape {
+                app.push_effect(Effect::Window(WindowRequest::Close(window)));
+                return;
+            }
+        }
+    }
+
+    state.ui.dispatch_event(app, services, event);
 }
 
-fn render(driver: &mut FormDemoDriver, context: WinitRenderContext<'_, DemoWindowState>) {
-    <FormDemoDriver as WinitAppDriver>::render(driver, context)
+fn render(_driver: &mut FormDemoDriver, context: WinitRenderContext<'_, DemoWindowState>) {
+    let scale_factor = context.scale_factor;
+    let WinitRenderContext {
+        app,
+        services,
+        window,
+        state,
+        bounds,
+        scene,
+        ..
+    } = context;
+
+    OverlayController::begin_frame(app, window);
+
+    let name = state.name.clone();
+    let email = state.email.clone();
+    let role = state.role.clone();
+    let role_open = state.role_open.clone();
+    let start_date = state.start_date.clone();
+    let form_state = state.form_state.clone();
+    let status = state.status.clone();
+    let root = declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds)
+        .render_root("form-demo", move |cx| {
+            cx.observe_model(&form_state, Invalidation::Layout);
+            cx.observe_model(&name, Invalidation::Layout);
+            cx.observe_model(&email, Invalidation::Layout);
+            cx.observe_model(&role, Invalidation::Layout);
+            cx.observe_model(&start_date, Invalidation::Layout);
+            cx.observe_model(&status, Invalidation::Layout);
+
+            let theme = cx.theme_snapshot();
+            let padding = theme.metric_token("metric.padding.md");
+
+            let (submit_count, valid, dirty) = cx
+                .app
+                .models()
+                .read(&form_state, |st| {
+                    (st.submit_count, st.is_valid(), st.is_dirty())
+                })
+                .unwrap_or((0, true, false));
+
+            let status_text = cx
+                .app
+                .models()
+                .read(&status, |v| Arc::clone(v))
+                .unwrap_or_else(|_| Arc::from("Idle"));
+
+            let mut root_layout = LayoutStyle::default();
+            root_layout.size.width = Length::Fill;
+            root_layout.size.height = Length::Fill;
+
+            let header = ui::h_row(|cx| {
+                [
+                    Button::new("Close")
+                        .variant(ButtonVariant::Outline)
+                        .size(ButtonSize::Sm)
+                        .on_click(CommandId::from("form_demo.close"))
+                        .into_element(cx),
+                    Button::new("Reset")
+                        .variant(ButtonVariant::Outline)
+                        .size(ButtonSize::Sm)
+                        .on_click(CommandId::from("form_demo.reset"))
+                        .into_element(cx),
+                    Button::new("Submit")
+                        .size(ButtonSize::Sm)
+                        .on_click(CommandId::from("form_demo.submit"))
+                        .into_element(cx),
+                    cx.text(Arc::from(format!(
+                        "submit_count={submit_count} valid={valid} dirty={dirty} status={}",
+                        status_text.as_ref()
+                    ))),
+                ]
+            })
+            .gap(Space::N2)
+            .items_center()
+            .into_element(cx);
+
+            let form = {
+                Form::new(vec![
+                    FormField::new(
+                        form_state.clone(),
+                        "name",
+                        vec![Input::new(name.clone()).into_element(cx)],
+                    )
+                    .label("Name")
+                    .into_element(cx),
+                    FormField::new(
+                        form_state.clone(),
+                        "email",
+                        vec![Input::new(email.clone()).into_element(cx)],
+                    )
+                    .label("Email")
+                    .into_element(cx),
+                    FormField::new(
+                        form_state.clone(),
+                        "role",
+                        vec![
+                            Select::new(role.clone(), role_open.clone())
+                                .a11y_label("Role")
+                                .value(
+                                    fret_ui_shadcn::SelectValue::new().placeholder("Pick a role"),
+                                )
+                                .items([
+                                    SelectItem::new("admin", "Admin"),
+                                    SelectItem::new("editor", "Editor"),
+                                    SelectItem::new("viewer", "Viewer"),
+                                ])
+                                .into_element(cx),
+                        ],
+                    )
+                    .label("Role")
+                    .into_element(cx),
+                    FormField::new(
+                        form_state.clone(),
+                        "start_date",
+                        vec![
+                            DatePicker::new_controllable(
+                                cx,
+                                Some(start_date.clone()),
+                                None,
+                                None,
+                                false,
+                            )
+                            .placeholder("Pick a start date")
+                            .into_element(cx),
+                        ],
+                    )
+                    .label("Start date")
+                    .into_element(cx),
+                ])
+                .into_element(cx)
+            };
+
+            vec![cx.container(
+                ContainerProps {
+                    layout: root_layout,
+                    background: Some(theme.color_token("background")),
+                    ..Default::default()
+                },
+                move |cx| {
+                    vec![cx.flex(
+                        FlexProps {
+                            layout: root_layout,
+                            direction: fret_core::Axis::Vertical,
+                            gap: fret_ui::element::SpacingLength::Px(Px(12.0)),
+                            padding: Edges::all(padding).into(),
+                            justify: MainAlign::Start,
+                            align: CrossAlign::Stretch,
+                            wrap: false,
+                        },
+                        move |cx| {
+                            vec![
+                                header,
+                                cx.container(
+                                    ContainerProps {
+                                        layout: LayoutStyle {
+                                            overflow: Overflow::Clip,
+                                            ..Default::default()
+                                        },
+                                        border: Edges::all(Px(1.0)),
+                                        border_color: Some(theme.color_token("border")),
+                                        corner_radii: Corners::all(
+                                            theme.metric_token("metric.radius.md"),
+                                        ),
+                                        ..Default::default()
+                                    },
+                                    move |_cx| vec![form],
+                                ),
+                            ]
+                        },
+                    )]
+                },
+            )]
+        });
+
+    state.ui.set_root(root);
+    OverlayController::render(&mut state.ui, app, services, window, bounds);
+    state.ui.request_semantics_snapshot();
+    state.ui.ingest_paint_cache_source(scene);
+    scene.clear();
+
+    let mut frame =
+        fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
+    frame.layout_all();
+    frame.paint_all(scene);
 }
 
 fn window_create_spec(
-    driver: &mut FormDemoDriver,
-    app: &mut App,
-    request: &fret_app::CreateWindowRequest,
+    _driver: &mut FormDemoDriver,
+    _app: &mut App,
+    _request: &fret_app::CreateWindowRequest,
 ) -> Option<WindowCreateSpec> {
-    <FormDemoDriver as WinitAppDriver>::window_create_spec(driver, app, request)
+    None
 }
 
-fn build_fn_driver() -> FnDriver<FormDemoDriver, DemoWindowState> {
+fn configure_fn_driver_hooks(
+    hooks: &mut fret_launch::FnDriverHooks<FormDemoDriver, DemoWindowState>,
+) {
+    hooks.hot_reload_window = Some(hot_reload_window);
+    hooks.handle_model_changes = Some(handle_model_changes);
+    hooks.handle_global_changes = Some(handle_global_changes);
+    hooks.handle_command = Some(handle_command);
+    hooks.window_create_spec = Some(window_create_spec);
+}
+
+pub fn build_fn_driver() -> FnDriver<FormDemoDriver, DemoWindowState> {
     FnDriver::new(
         FormDemoDriver::default(),
         create_window_state,
         handle_event,
         render,
     )
-    .with_hooks(|hooks| {
-        hooks.hot_reload_window = Some(hot_reload_window);
-        hooks.handle_model_changes = Some(handle_model_changes);
-        hooks.handle_global_changes = Some(handle_global_changes);
-        hooks.handle_command = Some(handle_command);
-        hooks.window_create_spec = Some(window_create_spec);
-    })
+    .with_hooks(configure_fn_driver_hooks)
 }
 
 pub fn run() -> anyhow::Result<()> {
@@ -504,7 +447,14 @@ pub fn run() -> anyhow::Result<()> {
         ..Default::default()
     };
 
-    let driver = build_fn_driver();
-
-    fret::run_native_with_compat_driver(config, app, driver).context("run form_demo app")
+    fret::run_native_with_fn_driver_with_hooks(
+        config,
+        app,
+        FormDemoDriver::default(),
+        create_window_state,
+        handle_event,
+        render,
+        configure_fn_driver_hooks,
+    )
+    .context("run form_demo app")
 }

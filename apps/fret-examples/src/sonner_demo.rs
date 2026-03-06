@@ -6,8 +6,8 @@ use anyhow::Context as _;
 use fret_app::{App, CommandId, Effect, Model, WindowRequest};
 use fret_core::{AppWindowId, Edges, Event, Px, Rect, UiServices};
 use fret_launch::{
-    FnDriver, WindowCreateSpec, WinitAppDriver, WinitCommandContext, WinitEventContext,
-    WinitHotReloadContext, WinitRenderContext, WinitRunnerConfig, WinitWindowContext,
+    FnDriver, WindowCreateSpec, WinitCommandContext, WinitEventContext, WinitHotReloadContext,
+    WinitRenderContext, WinitRunnerConfig, WinitWindowContext,
 };
 use fret_runtime::PlatformCapabilities;
 use fret_ui::action::UiActionHostAdapter;
@@ -17,7 +17,7 @@ use fret_ui::{Invalidation, UiTree};
 use fret_ui_kit::OverlayController;
 use fret_ui_shadcn as shadcn;
 
-struct SonnerDemoWindowState {
+pub struct SonnerDemoWindowState {
     ui: UiTree<App>,
     root: Option<fret_core::NodeId>,
     last_action: Model<Arc<str>>,
@@ -25,7 +25,7 @@ struct SonnerDemoWindowState {
 }
 
 #[derive(Default)]
-struct SonnerDemoDriver;
+pub struct SonnerDemoDriver;
 
 impl SonnerDemoDriver {
     fn build_ui(app: &mut App, window: AppWindowId) -> SonnerDemoWindowState {
@@ -211,275 +211,281 @@ impl SonnerDemoDriver {
     }
 }
 
-impl WinitAppDriver for SonnerDemoDriver {
-    type WindowState = SonnerDemoWindowState;
+fn create_window_state(
+    _driver: &mut SonnerDemoDriver,
+    app: &mut App,
+    window: AppWindowId,
+) -> SonnerDemoWindowState {
+    SonnerDemoDriver::build_ui(app, window)
+}
 
-    fn create_window_state(&mut self, app: &mut App, window: AppWindowId) -> Self::WindowState {
-        Self::build_ui(app, window)
+fn hot_reload_window(
+    _driver: &mut SonnerDemoDriver,
+    context: WinitHotReloadContext<'_, SonnerDemoWindowState>,
+) {
+    let WinitHotReloadContext {
+        app,
+        services: _,
+        window,
+        state,
+    } = context;
+    crate::hotpatch::reset_ui_tree(app, window, &mut state.ui);
+    state.root = None;
+}
+
+fn handle_global_changes(
+    _driver: &mut SonnerDemoDriver,
+    context: WinitWindowContext<'_, SonnerDemoWindowState>,
+    changed: &[std::any::TypeId],
+) {
+    let WinitWindowContext { app, state, .. } = context;
+    state.ui.propagate_global_changes(app, changed);
+}
+
+fn handle_event(
+    _driver: &mut SonnerDemoDriver,
+    context: WinitEventContext<'_, SonnerDemoWindowState>,
+    event: &Event,
+) {
+    let WinitEventContext {
+        app,
+        services,
+        window,
+        state,
+    } = context;
+    if matches!(event, Event::WindowCloseRequested) {
+        app.push_effect(Effect::Window(WindowRequest::Close(window)));
+        return;
     }
 
-    fn hot_reload_window(
-        &mut self,
-        app: &mut App,
-        _services: &mut dyn fret_core::UiServices,
-        window: AppWindowId,
-        state: &mut Self::WindowState,
-    ) {
-        crate::hotpatch::reset_ui_tree(app, window, &mut state.ui);
-        state.root = None;
+    state.ui.dispatch_event(app, services, event);
+}
+
+fn handle_command(
+    _driver: &mut SonnerDemoDriver,
+    context: WinitCommandContext<'_, SonnerDemoWindowState>,
+    command: CommandId,
+) {
+    let WinitCommandContext {
+        app,
+        services,
+        window,
+        state,
+    } = context;
+
+    if state.ui.dispatch_command(app, services, &command) {
+        return;
     }
 
-    fn handle_global_changes(
-        &mut self,
-        context: WinitWindowContext<'_, Self::WindowState>,
-        changed: &[std::any::TypeId],
-    ) {
-        let WinitWindowContext { app, state, .. } = context;
-        state.ui.propagate_global_changes(app, changed);
-    }
+    let sonner = shadcn::Sonner::global(app);
 
-    fn handle_event(&mut self, context: WinitEventContext<'_, Self::WindowState>, event: &Event) {
-        let WinitEventContext {
-            app,
-            services,
-            window,
-            state,
-        } = context;
-        if matches!(event, Event::WindowCloseRequested) {
-            app.push_effect(Effect::Window(WindowRequest::Close(window)));
-            return;
+    match command.as_str() {
+        "sonner.toast.default" => {
+            let mut host = UiActionHostAdapter { app };
+            sonner.toast_message(
+                &mut host,
+                window,
+                "Default toast",
+                shadcn::ToastMessageOptions::new(),
+            );
         }
-
-        state.ui.dispatch_event(app, services, event);
-    }
-
-    fn handle_command(
-        &mut self,
-        context: WinitCommandContext<'_, Self::WindowState>,
-        command: CommandId,
-    ) {
-        let WinitCommandContext {
-            app,
-            services,
-            window,
-            state,
-        } = context;
-
-        if state.ui.dispatch_command(app, services, &command) {
-            return;
+        "sonner.toast.description" => {
+            let mut host = UiActionHostAdapter { app };
+            sonner.toast_message(
+                &mut host,
+                window,
+                "Description toast",
+                shadcn::ToastMessageOptions::new().description("This is a description."),
+            );
         }
-
-        let sonner = shadcn::Sonner::global(app);
-
-        match command.as_str() {
-            "sonner.toast.default" => {
+        "sonner.toast.success" => {
+            let mut host = UiActionHostAdapter { app };
+            sonner.toast_success_message(
+                &mut host,
+                window,
+                "Success!",
+                shadcn::ToastMessageOptions::new().description("Everything worked."),
+            );
+        }
+        "sonner.toast.info" => {
+            let mut host = UiActionHostAdapter { app };
+            sonner.toast_info_message(
+                &mut host,
+                window,
+                "Info",
+                shadcn::ToastMessageOptions::new().description("FYI: this is informational."),
+            );
+        }
+        "sonner.toast.warning" => {
+            let mut host = UiActionHostAdapter { app };
+            sonner.toast_warning_message(
+                &mut host,
+                window,
+                "Warning",
+                shadcn::ToastMessageOptions::new().description("Something looks off."),
+            );
+        }
+        "sonner.toast.error" => {
+            let mut host = UiActionHostAdapter { app };
+            sonner.toast_error_message(
+                &mut host,
+                window,
+                "Error",
+                shadcn::ToastMessageOptions::new().description("Something failed."),
+            );
+        }
+        "sonner.toast.loading" => {
+            let mut host = UiActionHostAdapter { app };
+            sonner.toast_loading_message(
+                &mut host,
+                window,
+                "Loading…",
+                shadcn::ToastMessageOptions::new().description("This is pinned by default."),
+            );
+        }
+        "sonner.toast.action_cancel" => {
+            let mut host = UiActionHostAdapter { app };
+            sonner.toast_message(
+                &mut host,
+                window,
+                "Action toast",
+                shadcn::ToastMessageOptions::new()
+                    .description("Try the action/cancel buttons.")
+                    .action("Undo", "sonner.toast.action")
+                    .cancel("Cancel", "sonner.toast.cancel"),
+            );
+        }
+        "sonner.toast.pinned" => {
+            let mut host = UiActionHostAdapter { app };
+            sonner.toast_message(
+                &mut host,
+                window,
+                "Pinned toast",
+                shadcn::ToastMessageOptions::new()
+                    .description("This toast does not auto-close.")
+                    .pinned(),
+            );
+        }
+        "sonner.toast.not_dismissible" => {
+            let mut host = UiActionHostAdapter { app };
+            sonner.toast_message(
+                &mut host,
+                window,
+                "Not dismissible",
+                shadcn::ToastMessageOptions::new()
+                    .description("Swipe-to-dismiss is disabled.")
+                    .dismissible(false)
+                    .duration(Duration::from_secs(6)),
+            );
+        }
+        "sonner.promise.start" => {
+            let promise = {
                 let mut host = UiActionHostAdapter { app };
-                sonner.toast_message(
-                    &mut host,
-                    window,
-                    "Default toast",
-                    shadcn::ToastMessageOptions::new(),
-                );
-            }
-            "sonner.toast.description" => {
-                let mut host = UiActionHostAdapter { app };
-                sonner.toast_message(
-                    &mut host,
-                    window,
-                    "Description toast",
-                    shadcn::ToastMessageOptions::new().description("This is a description."),
-                );
-            }
-            "sonner.toast.success" => {
-                let mut host = UiActionHostAdapter { app };
-                sonner.toast_success_message(
-                    &mut host,
-                    window,
-                    "Success!",
-                    shadcn::ToastMessageOptions::new().description("Everything worked."),
-                );
-            }
-            "sonner.toast.info" => {
+                sonner.toast_promise(&mut host, window, "Working…")
+            };
+            state.promise = Some(promise);
+            let _ = app.models_mut().update(&state.last_action, |v| {
+                *v = Arc::<str>::from("promise.start");
+            });
+        }
+        "sonner.promise.success" => {
+            if let Some(promise) = state.promise.take() {
+                {
+                    let mut host = UiActionHostAdapter { app };
+                    promise.success_with(
+                        &mut host,
+                        "Done!",
+                        shadcn::ToastMessageOptions::new().description("Promise resolved."),
+                    );
+                }
+                let _ = app.models_mut().update(&state.last_action, |v| {
+                    *v = Arc::<str>::from("promise.success");
+                });
+            } else {
                 let mut host = UiActionHostAdapter { app };
                 sonner.toast_info_message(
                     &mut host,
                     window,
-                    "Info",
-                    shadcn::ToastMessageOptions::new().description("FYI: this is informational."),
+                    "No active promise",
+                    shadcn::ToastMessageOptions::new().description("Click “Promise: start” first."),
                 );
             }
-            "sonner.toast.warning" => {
-                let mut host = UiActionHostAdapter { app };
-                sonner.toast_warning_message(
-                    &mut host,
-                    window,
-                    "Warning",
-                    shadcn::ToastMessageOptions::new().description("Something looks off."),
-                );
-            }
-            "sonner.toast.error" => {
-                let mut host = UiActionHostAdapter { app };
-                sonner.toast_error_message(
-                    &mut host,
-                    window,
-                    "Error",
-                    shadcn::ToastMessageOptions::new().description("Something failed."),
-                );
-            }
-            "sonner.toast.loading" => {
-                let mut host = UiActionHostAdapter { app };
-                sonner.toast_loading_message(
-                    &mut host,
-                    window,
-                    "Loading…",
-                    shadcn::ToastMessageOptions::new().description("This is pinned by default."),
-                );
-            }
-            "sonner.toast.action_cancel" => {
-                let mut host = UiActionHostAdapter { app };
-                sonner.toast_message(
-                    &mut host,
-                    window,
-                    "Action toast",
-                    shadcn::ToastMessageOptions::new()
-                        .description("Try the action/cancel buttons.")
-                        .action("Undo", "sonner.toast.action")
-                        .cancel("Cancel", "sonner.toast.cancel"),
-                );
-            }
-            "sonner.toast.pinned" => {
-                let mut host = UiActionHostAdapter { app };
-                sonner.toast_message(
-                    &mut host,
-                    window,
-                    "Pinned toast",
-                    shadcn::ToastMessageOptions::new()
-                        .description("This toast does not auto-close.")
-                        .pinned(),
-                );
-            }
-            "sonner.toast.not_dismissible" => {
-                let mut host = UiActionHostAdapter { app };
-                sonner.toast_message(
-                    &mut host,
-                    window,
-                    "Not dismissible",
-                    shadcn::ToastMessageOptions::new()
-                        .description("Swipe-to-dismiss is disabled.")
-                        .dismissible(false)
-                        .duration(Duration::from_secs(6)),
-                );
-            }
-            "sonner.promise.start" => {
-                let promise = {
-                    let mut host = UiActionHostAdapter { app };
-                    sonner.toast_promise(&mut host, window, "Working…")
-                };
-                state.promise = Some(promise);
-                let _ = app.models_mut().update(&state.last_action, |v| {
-                    *v = Arc::<str>::from("promise.start");
-                });
-            }
-            "sonner.promise.success" => {
-                if let Some(promise) = state.promise.take() {
-                    {
-                        let mut host = UiActionHostAdapter { app };
-                        promise.success_with(
-                            &mut host,
-                            "Done!",
-                            shadcn::ToastMessageOptions::new().description("Promise resolved."),
-                        );
-                    }
-                    let _ = app.models_mut().update(&state.last_action, |v| {
-                        *v = Arc::<str>::from("promise.success");
-                    });
-                } else {
-                    let mut host = UiActionHostAdapter { app };
-                    sonner.toast_info_message(
-                        &mut host,
-                        window,
-                        "No active promise",
-                        shadcn::ToastMessageOptions::new()
-                            .description("Click “Promise: start” first."),
-                    );
-                }
-            }
-            "sonner.promise.error" => {
-                if let Some(promise) = state.promise.take() {
-                    {
-                        let mut host = UiActionHostAdapter { app };
-                        promise.error_with(
-                            &mut host,
-                            "Failed",
-                            shadcn::ToastMessageOptions::new().description("Promise rejected."),
-                        );
-                    }
-                    let _ = app.models_mut().update(&state.last_action, |v| {
-                        *v = Arc::<str>::from("promise.error");
-                    });
-                } else {
-                    let mut host = UiActionHostAdapter { app };
-                    sonner.toast_info_message(
-                        &mut host,
-                        window,
-                        "No active promise",
-                        shadcn::ToastMessageOptions::new()
-                            .description("Click “Promise: start” first."),
-                    );
-                }
-            }
-            "sonner.toast.action" => {
-                let _ = app.models_mut().update(&state.last_action, |v| {
-                    *v = Arc::<str>::from("toast.action");
-                });
-            }
-            "sonner.toast.cancel" => {
-                let _ = app.models_mut().update(&state.last_action, |v| {
-                    *v = Arc::<str>::from("toast.cancel");
-                });
-            }
-            _ => {}
         }
-
-        app.request_redraw(window);
+        "sonner.promise.error" => {
+            if let Some(promise) = state.promise.take() {
+                {
+                    let mut host = UiActionHostAdapter { app };
+                    promise.error_with(
+                        &mut host,
+                        "Failed",
+                        shadcn::ToastMessageOptions::new().description("Promise rejected."),
+                    );
+                }
+                let _ = app.models_mut().update(&state.last_action, |v| {
+                    *v = Arc::<str>::from("promise.error");
+                });
+            } else {
+                let mut host = UiActionHostAdapter { app };
+                sonner.toast_info_message(
+                    &mut host,
+                    window,
+                    "No active promise",
+                    shadcn::ToastMessageOptions::new().description("Click “Promise: start” first."),
+                );
+            }
+        }
+        "sonner.toast.action" => {
+            let _ = app.models_mut().update(&state.last_action, |v| {
+                *v = Arc::<str>::from("toast.action");
+            });
+        }
+        "sonner.toast.cancel" => {
+            let _ = app.models_mut().update(&state.last_action, |v| {
+                *v = Arc::<str>::from("toast.cancel");
+            });
+        }
+        _ => {}
     }
 
-    fn render(&mut self, context: WinitRenderContext<'_, Self::WindowState>) {
-        let WinitRenderContext {
-            app,
-            services,
-            window,
-            state,
-            bounds,
-            scale_factor,
-            scene,
-        } = context;
-        Self::render_demo(app, services, window, state, bounds);
+    app.request_redraw(window);
+}
 
-        state.ui.request_semantics_snapshot();
-        state.ui.ingest_paint_cache_source(scene);
-        scene.clear();
-        let mut frame =
-            fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
-        frame.layout_all();
-        frame.paint_all(scene);
-    }
+fn render(_driver: &mut SonnerDemoDriver, context: WinitRenderContext<'_, SonnerDemoWindowState>) {
+    let WinitRenderContext {
+        app,
+        services,
+        window,
+        state,
+        bounds,
+        scale_factor,
+        scene,
+    } = context;
+    SonnerDemoDriver::render_demo(app, services, window, state, bounds);
 
-    fn window_create_spec(
-        &mut self,
-        _app: &mut App,
-        _request: &fret_app::CreateWindowRequest,
-    ) -> Option<WindowCreateSpec> {
-        None
-    }
+    state.ui.request_semantics_snapshot();
+    state.ui.ingest_paint_cache_source(scene);
+    scene.clear();
+    let mut frame =
+        fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
+    frame.layout_all();
+    frame.paint_all(scene);
+}
 
-    fn window_created(
-        &mut self,
-        _app: &mut App,
-        _request: &fret_app::CreateWindowRequest,
-        _new_window: AppWindowId,
-    ) {
-    }
+fn window_create_spec(
+    _driver: &mut SonnerDemoDriver,
+    _app: &mut App,
+    _request: &fret_app::CreateWindowRequest,
+) -> Option<WindowCreateSpec> {
+    None
+}
+
+fn configure_fn_driver_hooks(
+    hooks: &mut fret_launch::FnDriverHooks<SonnerDemoDriver, SonnerDemoWindowState>,
+) {
+    hooks.hot_reload_window = Some(hot_reload_window);
+    hooks.handle_global_changes = Some(handle_global_changes);
+    hooks.handle_command = Some(handle_command);
+    hooks.window_create_spec = Some(window_create_spec);
 }
 
 pub fn build_app() -> App {
@@ -496,76 +502,14 @@ pub fn build_runner_config() -> WinitRunnerConfig {
     }
 }
 
-fn create_window_state(
-    driver: &mut SonnerDemoDriver,
-    app: &mut App,
-    window: AppWindowId,
-) -> SonnerDemoWindowState {
-    <SonnerDemoDriver as WinitAppDriver>::create_window_state(driver, app, window)
-}
-
-fn hot_reload_window(
-    driver: &mut SonnerDemoDriver,
-    context: WinitHotReloadContext<'_, SonnerDemoWindowState>,
-) {
-    let WinitHotReloadContext {
-        app,
-        services,
-        window,
-        state,
-    } = context;
-    <SonnerDemoDriver as WinitAppDriver>::hot_reload_window(driver, app, services, window, state)
-}
-
-fn handle_global_changes(
-    driver: &mut SonnerDemoDriver,
-    context: WinitWindowContext<'_, SonnerDemoWindowState>,
-    changed: &[std::any::TypeId],
-) {
-    <SonnerDemoDriver as WinitAppDriver>::handle_global_changes(driver, context, changed)
-}
-
-fn handle_event(
-    driver: &mut SonnerDemoDriver,
-    context: WinitEventContext<'_, SonnerDemoWindowState>,
-    event: &Event,
-) {
-    <SonnerDemoDriver as WinitAppDriver>::handle_event(driver, context, event)
-}
-
-fn handle_command(
-    driver: &mut SonnerDemoDriver,
-    context: WinitCommandContext<'_, SonnerDemoWindowState>,
-    command: CommandId,
-) {
-    <SonnerDemoDriver as WinitAppDriver>::handle_command(driver, context, command)
-}
-
-fn render(driver: &mut SonnerDemoDriver, context: WinitRenderContext<'_, SonnerDemoWindowState>) {
-    <SonnerDemoDriver as WinitAppDriver>::render(driver, context)
-}
-
-fn window_create_spec(
-    driver: &mut SonnerDemoDriver,
-    app: &mut App,
-    request: &fret_app::CreateWindowRequest,
-) -> Option<WindowCreateSpec> {
-    <SonnerDemoDriver as WinitAppDriver>::window_create_spec(driver, app, request)
-}
-
-fn build_fn_driver() -> FnDriver<SonnerDemoDriver, SonnerDemoWindowState> {
+pub fn build_fn_driver() -> FnDriver<SonnerDemoDriver, SonnerDemoWindowState> {
     FnDriver::new(
         SonnerDemoDriver::default(),
         create_window_state,
         handle_event,
         render,
     )
-    .with_hooks(|hooks| {
-        hooks.hot_reload_window = Some(hot_reload_window);
-        hooks.handle_global_changes = Some(handle_global_changes);
-        hooks.handle_command = Some(handle_command);
-        hooks.window_create_spec = Some(window_create_spec);
-    })
+    .with_hooks(configure_fn_driver_hooks)
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -581,7 +525,14 @@ pub fn run() -> anyhow::Result<()> {
 
     let app = build_app();
     let config = build_runner_config();
-    let driver = build_fn_driver();
-
-    fret::run_native_with_compat_driver(config, app, driver).context("run sonner_demo app")
+    fret::run_native_with_fn_driver_with_hooks(
+        config,
+        app,
+        SonnerDemoDriver::default(),
+        create_window_state,
+        handle_event,
+        render,
+        configure_fn_driver_hooks,
+    )
+    .context("run sonner_demo app")
 }

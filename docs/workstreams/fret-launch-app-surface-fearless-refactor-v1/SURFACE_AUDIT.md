@@ -238,6 +238,11 @@ Additional evidence:
 - `apps/fret-examples/src/first_frame_smoke_demo.rs`
 - `apps/fret-examples/src/effects_demo.rs`
 - `apps/fret-examples/src/external_texture_imports_web_demo.rs`
+- `apps/fret-examples/src/datatable_demo.rs`
+- `apps/fret-examples/src/date_picker_demo.rs`
+- `apps/fret-examples/src/form_demo.rs`
+- `apps/fret-examples/src/ime_smoke_demo.rs`
+- `apps/fret-examples/src/sonner_demo.rs`
 - `apps/fret-demo-web/src/wasm.rs`
 - `tools/gate_winit_driver_example_hook_coverage.py`
 
@@ -250,6 +255,7 @@ Interpretation update:
   or engine-frame customization examples; that is migration debt and review surface, not a
   demonstrated `FnDriver` capability gap.
 - the low-risk batch (`first_frame_smoke_demo`, `effects_demo`, `external_texture_imports_web_demo`) further reduces the remaining direct `WinitAppDriver` inventory to 18 at this checkpoint, without requiring any new `FnDriver` hook surface.
+- the current single-window UI batch (`datatable_demo`, `date_picker_demo`, `form_demo`, `ime_smoke_demo`, `sonner_demo`) reduces that inventory again to 13, reinforcing that the remaining blockers are composition complexity and migration effort, not launch-hook insufficiency.
 
 ### H3) Specialized launch modules still need classification discipline
 

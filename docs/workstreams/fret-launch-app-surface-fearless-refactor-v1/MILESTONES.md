@@ -61,6 +61,7 @@ This workstream is staged to keep the launch stack landable while tightening pub
 - Representative advanced examples prefer `FnDriver` over bespoke `WinitAppDriver` impls.
 - Recent web custom-effect helpers (`custom_effect_v2_identity_web_demo`, `custom_effect_v2_glass_chrome_web_demo`, `custom_effect_v3_web_demo`) now also expose explicit `build_fn_driver()` entrypoints.
 - Recent low-risk demos (`first_frame_smoke_demo`, `effects_demo`, `external_texture_imports_web_demo`) now also run through `FnDriver`-backed entrypoints.
+- Single-window UI demos (`datatable_demo`, `date_picker_demo`, `form_demo`, `ime_smoke_demo`, `sonner_demo`) now also use pure `FnDriver` hooks instead of keeping local compat impls.
 - Any remaining direct `WinitAppDriver` examples are verified to stay within current `FnDriver` hook coverage until they migrate.
 - `python tools/gate_fret_launch_root_surface_snapshot.py`
 - `python tools/gate_fret_framework_launch_surface.py`

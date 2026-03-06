@@ -199,6 +199,10 @@ Evidence anchors:
 - The same holds for the low-risk batch (`first_frame_smoke_demo`, `effects_demo`,
   `external_texture_imports_web_demo`): even smoke/profiling/external-texture demos can move to
   `FnDriver` without exposing additional launch hooks.
+- The same also holds for the single-window UI batch (`datatable_demo`, `date_picker_demo`,
+  `form_demo`, `ime_smoke_demo`, `sonner_demo`): local hot-reload/command/model/global-change
+  wiring migrates cleanly to free `FnDriver` hooks, so the remaining direct impl inventory is no
+  longer a meaningful argument for keeping compat posture as the default story.
 
 Evidence anchors:
 
@@ -210,6 +214,11 @@ Evidence anchors:
 - `apps/fret-examples/src/first_frame_smoke_demo.rs`
 - `apps/fret-examples/src/effects_demo.rs`
 - `apps/fret-examples/src/external_texture_imports_web_demo.rs`
+- `apps/fret-examples/src/datatable_demo.rs`
+- `apps/fret-examples/src/date_picker_demo.rs`
+- `apps/fret-examples/src/form_demo.rs`
+- `apps/fret-examples/src/ime_smoke_demo.rs`
+- `apps/fret-examples/src/sonner_demo.rs`
 - `docs/workstreams/fret-launch-app-surface-fearless-refactor-v1/SURFACE_AUDIT.md`
 
 ## 8) Recommended refactor steps (small, gated)
