@@ -39,6 +39,35 @@ where
     out
 }
 
+/// Extension helpers for `*_build` child sinks.
+///
+/// These helpers make builder-first layout code read more like direct composition without falling
+/// back to `ui::children!` only to convert a heterogeneous list into `AnyElement` values.
+pub trait UiElementSinkExt {
+    fn push_ui<H: UiHost, T: UiIntoElement>(&mut self, cx: &mut ElementContext<'_, H>, child: T);
+
+    fn extend_ui<H: UiHost, I>(&mut self, cx: &mut ElementContext<'_, H>, children: I)
+    where
+        I: IntoIterator,
+        I::Item: UiIntoElement;
+}
+
+impl UiElementSinkExt for Vec<AnyElement> {
+    fn push_ui<H: UiHost, T: UiIntoElement>(&mut self, cx: &mut ElementContext<'_, H>, child: T) {
+        self.push(crate::UiIntoElement::into_element(child, cx));
+    }
+
+    fn extend_ui<H: UiHost, I>(&mut self, cx: &mut ElementContext<'_, H>, children: I)
+    where
+        I: IntoIterator,
+        I::Item: UiIntoElement,
+    {
+        for child in children {
+            self.push_ui(cx, child);
+        }
+    }
+}
+
 fn resolve_text_align_for_direction(
     align: TextAlign,
     direction: crate::primitives::direction::LayoutDirection,

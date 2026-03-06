@@ -117,6 +117,11 @@ The default composition surface should become builder-first:
 `ui::children!` should remain available for compatibility and heterogeneous escape-hatch cases, but it
 should no longer be the primary authoring pattern in demos/templates.
 
+Prototype status (as of 2026-03-06):
+
+- `apps/fret-examples/src/query_demo.rs` now demonstrates a builder-first pass using `ui::h_row_build`, `ui::v_flex_build`, and `UiElementSinkExt` to remove `ui::children!` from its main layout sections,
+- the remaining visible landing points mostly come from section components that still collect `AnyElement` eagerly (for example `CardHeader` / `CardContent`).
+
 ### 4.4 Invalidation and caching
 
 The core rebuild contract should stay aligned with GPUI:

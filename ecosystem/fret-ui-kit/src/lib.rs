@@ -262,6 +262,7 @@ pub mod prelude {
     pub use crate::declarative::style;
     pub use crate::declarative::{CachedSubtreeExt, CachedSubtreeProps};
     pub use crate::ui;
+    pub use crate::ui::UiElementSinkExt as _;
     pub use crate::{
         on_activate, on_activate_notify, on_activate_request_redraw,
         on_activate_request_redraw_notify,
