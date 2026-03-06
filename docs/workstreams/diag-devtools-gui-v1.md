@@ -25,6 +25,7 @@ Related foundations:
 - Offline viewer: `tools/fret-bundle-viewer`
 - UI prototype (rough): `docs/devtool.html`
 - v2 dogfood workflow: `docs/workstreams/diag-fearless-refactor-v2/DEVTOOLS_GUI_DOGFOOD_WORKFLOW.md`
+- GUI refresh follow-up: `docs/workstreams/diag-devtools-gui-refresh-v1.md`
 
 ## Problem statement
 
@@ -53,6 +54,8 @@ The missing piece for “everyday use” is a **DevTools GUI** that:
   artifacts already used by CLI and MCP.
 - The current end-to-end dogfood path is documented in
   `docs/workstreams/diag-fearless-refactor-v2/DEVTOOLS_GUI_DOGFOOD_WORKFLOW.md`.
+- A product/UX-focused follow-up track now lives in
+  `docs/workstreams/diag-devtools-gui-refresh-v1.md`.
 
 ## Goals (v1)
 
