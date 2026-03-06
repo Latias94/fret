@@ -1,8 +1,8 @@
-# Fret Launch + App Surface (Fearless Refactor v1) — Milestones
+# Fret Launch + App Surface (Fearless Refactor v1) 鈥?Milestones
 
 This workstream is staged to keep the launch stack landable while tightening public contracts.
 
-## M0 — Audit captured + documentation aligned
+## M0 鈥?Audit captured + documentation aligned
 
 **Outcome**
 
@@ -15,7 +15,7 @@ This workstream is staged to keep the launch stack landable while tightening pub
 - Links from `docs/README.md` point to this folder.
 - The design doc includes evidence anchors for all major claims.
 
-## M1 — Export inventory and contract classification
+## M1 鈥?Export inventory and contract classification
 
 **Outcome**
 
@@ -36,7 +36,7 @@ This workstream is staged to keep the launch stack landable while tightening pub
 - A reviewable export table exists in the implementation PR or linked audit note.
 - No new launch exports are added without classification.
 
-## M2 — Single advanced driver recommendation
+## M2 鈥?Single advanced driver recommendation
 
 **Outcome**
 
@@ -55,7 +55,7 @@ This workstream is staged to keep the launch stack landable while tightening pub
 - `cargo nextest run -p fret-launch`
 - Any touched docs/examples build or type-check if compile-checked in the relevant crate.
 
-## M3 — Config curation without capability loss
+## M3 鈥?Config curation without capability loss
 
 **Outcome**
 
@@ -74,7 +74,7 @@ This workstream is staged to keep the launch stack landable while tightening pub
 - `cargo nextest run -p fret`
 - No regression in examples that depend on GPU init customization or window-create hooks.
 
-## M4 — Cross-surface docs and naming closure
+## M4 鈥?Cross-surface docs and naming closure
 
 **Outcome**
 
@@ -94,7 +94,7 @@ This workstream is staged to keep the launch stack landable while tightening pub
 - `cargo nextest run -p fret -p fret-launch -p fret-framework`
 - `python tools/check_layering.py`
 
-## M5 — Optional follow-up: web/high-level symmetry
+## M5 鈥?Optional follow-up: web/high-level symmetry
 
 **Outcome**
 
@@ -108,4 +108,3 @@ This workstream is staged to keep the launch stack landable while tightening pub
 **Gates**
 
 - Decision recorded in docs with a clear scope boundary.
-

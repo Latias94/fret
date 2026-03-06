@@ -1,4 +1,4 @@
-# Fret Launch + App Surface (Fearless Refactor v1) — TODO
+# Fret Launch + App Surface (Fearless Refactor v1) 鈥?TODO
 
 This checklist is scoped to the launch/public-surface refactor only.
 
@@ -67,4 +67,3 @@ This checklist is scoped to the launch/public-surface refactor only.
 - [ ] Prefer staged de-emphasis + migration docs before hard API removal.
 - [ ] Keep host-integration use cases working throughout the refactor.
 - [ ] Coordinate any `fret` top-level API changes with `docs/workstreams/app-entry-builder-v1/`.
-

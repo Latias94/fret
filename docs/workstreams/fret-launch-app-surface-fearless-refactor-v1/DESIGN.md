@@ -308,4 +308,3 @@ This workstream is complete when:
 2. Do we want a future `LaunchOptions`-style public wrapper around `WinitRunnerConfig`, or is staged curation enough?
 3. Should web gain a peer high-level entry surface in `fret`, or should the docs remain explicit that the current top-level builder is desktop-first?
 4. Which currently exported launch helper types are truly contract-worthy versus merely convenient today?
-
