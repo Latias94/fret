@@ -1,6 +1,9 @@
 use serde::{Deserialize, Serialize};
 
 pub const DIAG_REGRESSION_SUMMARY_KIND_V1: &str = "diag_regression_summary";
+pub const DIAG_REGRESSION_SUMMARY_FILENAME_V1: &str = "regression.summary.json";
+pub const DIAG_REGRESSION_INDEX_FILENAME_V1: &str = "regression.index.json";
+pub const DIAG_MATRIX_SUMMARY_FILENAME_V1: &str = "matrix.summary.json";
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct RegressionSummaryV1 {
@@ -215,6 +218,8 @@ pub struct RegressionItemSummaryV1 {
     pub status: RegressionStatusV1,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub reason_code: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub source_reason_code: Option<String>,
     pub lane: RegressionLaneV1,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub owner: Option<String>,
@@ -380,6 +385,7 @@ mod tests {
             name: "matrix check".to_string(),
             status: RegressionStatusV1::FailedDeterministic,
             reason_code: Some("assert.mismatch".to_string()),
+            source_reason_code: None,
             lane: RegressionLaneV1::Perf,
             owner: None,
             feature_tags: vec!["overlay".to_string()],
@@ -400,6 +406,7 @@ mod tests {
             Some("failed_deterministic")
         );
         assert_eq!(value.get("lane").and_then(|v| v.as_str()), Some("perf"));
+        assert!(value.get("source_reason_code").is_none());
     }
 
     #[test]
@@ -444,6 +451,7 @@ mod tests {
             name: "dialog escape focus restore".to_string(),
             status: RegressionStatusV1::FailedDeterministic,
             reason_code: Some("assert.focus_restore.mismatch".to_string()),
+            source_reason_code: None,
             lane: RegressionLaneV1::Smoke,
             owner: None,
             feature_tags: Vec::new(),
@@ -530,6 +538,7 @@ mod tests {
                 name: "ok".to_string(),
                 status: RegressionStatusV1::Passed,
                 reason_code: None,
+                source_reason_code: None,
                 lane: RegressionLaneV1::Smoke,
                 owner: None,
                 feature_tags: Vec::new(),
@@ -545,6 +554,7 @@ mod tests {
                 name: "bad".to_string(),
                 status: RegressionStatusV1::FailedDeterministic,
                 reason_code: Some("assert.mismatch".to_string()),
+                source_reason_code: None,
                 lane: RegressionLaneV1::Smoke,
                 owner: None,
                 feature_tags: Vec::new(),
@@ -560,6 +570,7 @@ mod tests {
                 name: "bad-2".to_string(),
                 status: RegressionStatusV1::FailedDeterministic,
                 reason_code: Some("assert.mismatch".to_string()),
+                source_reason_code: None,
                 lane: RegressionLaneV1::Smoke,
                 owner: None,
                 feature_tags: Vec::new(),

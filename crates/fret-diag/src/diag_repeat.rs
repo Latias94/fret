@@ -1,10 +1,11 @@
 use super::*;
 
 use crate::regression_summary::{
-    RegressionArtifactsV1, RegressionAttemptsV1, RegressionCampaignSummaryV1, RegressionEvidenceV1,
-    RegressionHighlightsV1, RegressionItemKindV1, RegressionItemSummaryV1, RegressionLaneV1,
-    RegressionNotesV1, RegressionRunSummaryV1, RegressionSourceV1, RegressionStatusV1,
-    RegressionSummaryV1, RegressionTotalsV1,
+    DIAG_REGRESSION_SUMMARY_FILENAME_V1, RegressionArtifactsV1, RegressionAttemptsV1,
+    RegressionCampaignSummaryV1, RegressionEvidenceV1, RegressionHighlightsV1,
+    RegressionItemKindV1, RegressionItemSummaryV1, RegressionLaneV1, RegressionNotesV1,
+    RegressionRunSummaryV1, RegressionSourceV1, RegressionStatusV1, RegressionSummaryV1,
+    RegressionTotalsV1,
 };
 
 fn repeat_run_to_regression_item(
@@ -62,6 +63,10 @@ fn repeat_run_to_regression_item(
         name: format!("repeat run #{index}"),
         status,
         reason_code,
+        source_reason_code: run
+            .get("reason_code")
+            .and_then(|v| v.as_str())
+            .map(|v| v.to_string()),
         lane: RegressionLaneV1::Correctness,
         owner: None,
         feature_tags: Vec::new(),
@@ -137,11 +142,11 @@ fn write_regression_summary_for_repeat(
             kind: RegressionItemKindV1::CampaignStep,
             name: "repeat".to_string(),
             status: RegressionStatusV1::FailedTooling,
-            reason_code: payload
+            reason_code: Some("tooling.diag_repeat.failed".to_string()),
+            source_reason_code: payload
                 .get("error_reason_code")
                 .and_then(|v| v.as_str())
-                .map(|v| v.to_string())
-                .or_else(|| Some("tooling.diag_repeat.failed".to_string())),
+                .map(|v| v.to_string()),
             lane: RegressionLaneV1::Correctness,
             owner: None,
             feature_tags: Vec::new(),
@@ -213,7 +218,7 @@ fn write_regression_summary_for_repeat(
         html_report: None,
     });
 
-    let regression_summary_path = resolved_out_dir.join("regression.summary.json");
+    let regression_summary_path = resolved_out_dir.join(DIAG_REGRESSION_SUMMARY_FILENAME_V1);
     if let Err(err) = write_json_value(
         &regression_summary_path,
         &serde_json::to_value(&summary).unwrap_or_else(|_| serde_json::json!({})),

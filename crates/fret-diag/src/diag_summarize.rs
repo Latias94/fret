@@ -1,9 +1,9 @@
 use super::*;
 
 use crate::regression_summary::{
-    RegressionArtifactsV1, RegressionCampaignSummaryV1, RegressionHighlightsV1,
-    RegressionItemSummaryV1, RegressionLaneV1, RegressionRunSummaryV1, RegressionSourceV1,
-    RegressionSummaryV1, RegressionTotalsV1,
+    DIAG_REGRESSION_INDEX_FILENAME_V1, DIAG_REGRESSION_SUMMARY_FILENAME_V1, RegressionArtifactsV1,
+    RegressionCampaignSummaryV1, RegressionHighlightsV1, RegressionItemSummaryV1, RegressionLaneV1,
+    RegressionRunSummaryV1, RegressionSourceV1, RegressionSummaryV1, RegressionTotalsV1,
 };
 
 const DIAG_REGRESSION_INDEX_KIND_V1: &str = "diag_regression_index";
@@ -46,7 +46,7 @@ pub(crate) fn cmd_summarize(ctx: SummarizeCmdContext) -> Result<(), String> {
         generated_unix_ms,
         &loaded,
     );
-    let index_path = resolved_out_dir.join("regression.index.json");
+    let index_path = resolved_out_dir.join(DIAG_REGRESSION_INDEX_FILENAME_V1);
     write_json_value(&index_path, &index_payload)?;
 
     let aggregate = aggregate_regression_summaries(
@@ -56,7 +56,7 @@ pub(crate) fn cmd_summarize(ctx: SummarizeCmdContext) -> Result<(), String> {
         &loaded,
         &index_path,
     );
-    let summary_path = resolved_out_dir.join("regression.summary.json");
+    let summary_path = resolved_out_dir.join(DIAG_REGRESSION_SUMMARY_FILENAME_V1);
     write_json_value(
         &summary_path,
         &serde_json::to_value(&aggregate).unwrap_or_else(|_| serde_json::json!({})),
@@ -89,7 +89,7 @@ fn resolve_summary_inputs(
     rest: &[String],
 ) -> Result<Vec<PathBuf>, String> {
     let mut summary_paths: Vec<PathBuf> = Vec::new();
-    let skip_output_summary = resolved_out_dir.join("regression.summary.json");
+    let skip_output_summary = resolved_out_dir.join(DIAG_REGRESSION_SUMMARY_FILENAME_V1);
 
     if rest.is_empty() {
         collect_regression_summaries_recursively(
@@ -101,9 +101,12 @@ fn resolve_summary_inputs(
         for raw in rest {
             let path = resolve_summary_input_path(workspace_root, raw);
             if path.is_file() {
-                if path.file_name().and_then(|v| v.to_str()) != Some("regression.summary.json") {
+                if path.file_name().and_then(|v| v.to_str())
+                    != Some(DIAG_REGRESSION_SUMMARY_FILENAME_V1)
+                {
                     return Err(format!(
-                        "expected a regression summary file named regression.summary.json: {}",
+                        "expected a regression summary file named {}: {}",
+                        DIAG_REGRESSION_SUMMARY_FILENAME_V1,
                         path.display()
                     ));
                 }
@@ -153,7 +156,8 @@ fn collect_regression_summaries_recursively(
             continue;
         }
         if ty.is_file()
-            && path.file_name().and_then(|v| v.to_str()) == Some("regression.summary.json")
+            && path.file_name().and_then(|v| v.to_str())
+                == Some(DIAG_REGRESSION_SUMMARY_FILENAME_V1)
             && path != skip_output_summary
         {
             out.push(path);
@@ -359,6 +363,7 @@ mod tests {
             name: item_id.to_string(),
             status: crate::regression_summary::RegressionStatusV1::Passed,
             reason_code: None,
+            source_reason_code: None,
             lane,
             owner: None,
             feature_tags: Vec::new(),
@@ -382,11 +387,17 @@ mod tests {
         let resolved_out_dir = Path::new("F:/repo/out");
         let loaded = vec![
             LoadedRegressionSummary {
-                path: PathBuf::from("F:/repo/out/suite/regression.summary.json"),
+                path: PathBuf::from(format!(
+                    "F:/repo/out/suite/{}",
+                    DIAG_REGRESSION_SUMMARY_FILENAME_V1
+                )),
                 summary: sample_summary("suite", RegressionLaneV1::Correctness, "case-a"),
             },
             LoadedRegressionSummary {
-                path: PathBuf::from("F:/repo/out/perf/regression.summary.json"),
+                path: PathBuf::from(format!(
+                    "F:/repo/out/perf/{}",
+                    DIAG_REGRESSION_SUMMARY_FILENAME_V1
+                )),
                 summary: sample_summary("perf", RegressionLaneV1::Perf, "case-a"),
             },
         ];
@@ -427,12 +438,12 @@ mod tests {
         let nested = root.join("suite-a");
         std::fs::create_dir_all(&nested).unwrap();
         write_json_value(
-            &root.join("regression.summary.json"),
+            &root.join(DIAG_REGRESSION_SUMMARY_FILENAME_V1),
             &serde_json::json!({"schema_version":1}),
         )
         .unwrap();
         write_json_value(
-            &nested.join("regression.summary.json"),
+            &nested.join(DIAG_REGRESSION_SUMMARY_FILENAME_V1),
             &serde_json::json!({"schema_version":1}),
         )
         .unwrap();
@@ -440,7 +451,7 @@ mod tests {
         let found = resolve_summary_inputs(&root, &root, &[]).unwrap();
 
         assert_eq!(found.len(), 1);
-        assert_eq!(found[0], nested.join("regression.summary.json"));
+        assert_eq!(found[0], nested.join(DIAG_REGRESSION_SUMMARY_FILENAME_V1));
 
         let _ = std::fs::remove_dir_all(&root);
     }

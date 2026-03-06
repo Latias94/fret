@@ -1,10 +1,10 @@
 use super::*;
 
 use crate::regression_summary::{
-    RegressionArtifactsV1, RegressionCampaignSummaryV1, RegressionEvidenceV1,
-    RegressionHighlightsV1, RegressionItemKindV1, RegressionItemSummaryV1, RegressionLaneV1,
-    RegressionNotesV1, RegressionRunSummaryV1, RegressionSourceV1, RegressionStatusV1,
-    RegressionSummaryV1, RegressionTotalsV1,
+    DIAG_REGRESSION_SUMMARY_FILENAME_V1, RegressionArtifactsV1, RegressionCampaignSummaryV1,
+    RegressionEvidenceV1, RegressionHighlightsV1, RegressionItemKindV1, RegressionItemSummaryV1,
+    RegressionLaneV1, RegressionNotesV1, RegressionRunSummaryV1, RegressionSourceV1,
+    RegressionStatusV1, RegressionSummaryV1, RegressionTotalsV1,
 };
 
 pub(crate) type SuiteChecks = diag_run::RunChecks;
@@ -102,6 +102,7 @@ fn suite_row_to_regression_item(
         name: item_id,
         status,
         reason_code,
+        source_reason_code: None,
         lane,
         owner: None,
         feature_tags: Vec::new(),
@@ -171,9 +172,8 @@ fn write_regression_summary_for_suite(
             kind: RegressionItemKindV1::CampaignStep,
             name: suite_name.unwrap_or("suite").to_string(),
             status: RegressionStatusV1::FailedTooling,
-            reason_code: failure_kind
-                .clone()
-                .or_else(|| Some("tooling.diag_suite.failed".to_string())),
+            reason_code: Some("tooling.diag_suite.failed".to_string()),
+            source_reason_code: failure_kind.clone(),
             lane,
             owner: None,
             feature_tags: Vec::new(),
@@ -939,7 +939,7 @@ hint: list promoted scripts via `fretboard diag list scripts --contains {name}`"
     let trace_chrome = false;
 
     let suite_summary_path = resolved_out_dir.join("suite.summary.json");
-    let regression_summary_path = resolved_out_dir.join("regression.summary.json");
+    let regression_summary_path = resolved_out_dir.join(DIAG_REGRESSION_SUMMARY_FILENAME_V1);
     let suite_summary_suite = (rest.len() == 1).then(|| rest[0].clone());
     let suite_summary_generated_unix_ms = now_unix_ms();
     let mut suite_stage_counts: std::collections::BTreeMap<String, u64> =

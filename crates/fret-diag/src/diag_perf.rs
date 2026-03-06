@@ -1,8 +1,8 @@
 use super::*;
 
 use crate::regression_summary::{
-    RegressionArtifactsV1, RegressionCampaignSummaryV1, RegressionEvidenceV1,
-    RegressionHighlightRefV1, RegressionHighlightsV1, RegressionItemKindV1,
+    DIAG_REGRESSION_SUMMARY_FILENAME_V1, RegressionArtifactsV1, RegressionCampaignSummaryV1,
+    RegressionEvidenceV1, RegressionHighlightRefV1, RegressionHighlightsV1, RegressionItemKindV1,
     RegressionItemSummaryV1, RegressionLaneV1, RegressionNotesV1, RegressionRunSummaryV1,
     RegressionSourceV1, RegressionStatusV1, RegressionSummaryV1, RegressionTotalsV1,
 };
@@ -35,7 +35,7 @@ fn perf_row_status_and_reason(
     row: &serde_json::Value,
     threshold_failures: &[serde_json::Value],
     hint_failures: &[serde_json::Value],
-) -> (RegressionStatusV1, Option<String>) {
+) -> (RegressionStatusV1, Option<String>, Option<String>) {
     if let Some(row_error) = row.get("error").and_then(|v| v.as_str()) {
         let reason_code = match row_error {
             "no_last_bundle_dir" => "tooling.diag_perf.no_last_bundle_dir",
@@ -44,6 +44,7 @@ fn perf_row_status_and_reason(
         return (
             RegressionStatusV1::FailedTooling,
             Some(reason_code.to_string()),
+            Some(row_error.to_string()),
         );
     }
 
@@ -51,6 +52,11 @@ fn perf_row_status_and_reason(
         return (
             RegressionStatusV1::FailedDeterministic,
             Some("diag.perf.threshold_failed".to_string()),
+            threshold_failures
+                .first()
+                .and_then(|failure| failure.get("metric"))
+                .and_then(|v| v.as_str())
+                .map(|v| v.to_string()),
         );
     }
 
@@ -58,10 +64,15 @@ fn perf_row_status_and_reason(
         return (
             RegressionStatusV1::FailedDeterministic,
             Some("diag.perf.hint_failed".to_string()),
+            hint_failures
+                .first()
+                .and_then(|failure| failure.get("code"))
+                .and_then(|v| v.as_str())
+                .map(|v| v.to_string()),
         );
     }
 
-    (RegressionStatusV1::Passed, None)
+    (RegressionStatusV1::Passed, None, None)
 }
 
 fn perf_row_to_regression_item(
@@ -86,7 +97,8 @@ fn perf_row_to_regression_item(
         .and_then(|v| v.get("bundle"))
         .and_then(|v| v.as_str())
         .map(|v| v.to_string());
-    let (status, reason_code) = perf_row_status_and_reason(row, threshold_failures, hint_failures);
+    let (status, reason_code, source_reason_code) =
+        perf_row_status_and_reason(row, threshold_failures, hint_failures);
     let threshold_failure_count = threshold_failures.len();
     let hint_failure_count = hint_failures.len();
 
@@ -113,6 +125,7 @@ fn perf_row_to_regression_item(
         name: script.clone(),
         status,
         reason_code,
+        source_reason_code,
         lane: RegressionLaneV1::Perf,
         owner: None,
         feature_tags: Vec::new(),
@@ -234,6 +247,7 @@ fn write_regression_summary_for_perf(
             name: "perf".to_string(),
             status: RegressionStatusV1::FailedTooling,
             reason_code: Some("tooling.diag_perf.no_rows".to_string()),
+            source_reason_code: None,
             lane: RegressionLaneV1::Perf,
             owner: None,
             feature_tags: Vec::new(),
@@ -335,7 +349,7 @@ fn write_regression_summary_for_perf(
         html_report: None,
     });
 
-    let regression_summary_path = resolved_out_dir.join("regression.summary.json");
+    let regression_summary_path = resolved_out_dir.join(DIAG_REGRESSION_SUMMARY_FILENAME_V1);
     if let Err(err) = crate::util::write_json_value(
         &regression_summary_path,
         &serde_json::to_value(&summary).unwrap_or_else(|_| serde_json::json!({})),
@@ -2372,6 +2386,10 @@ mod tests {
             item.reason_code.as_deref(),
             Some("diag.perf.threshold_failed")
         );
+        assert_eq!(
+            item.source_reason_code.as_deref(),
+            Some("top_total_time_us")
+        );
         assert_eq!(item.name, "apps/demo.perf.json");
     }
 
@@ -2391,6 +2409,10 @@ mod tests {
         assert_eq!(
             item.reason_code.as_deref(),
             Some("tooling.diag_perf.no_last_bundle_dir")
+        );
+        assert_eq!(
+            item.source_reason_code.as_deref(),
+            Some("no_last_bundle_dir")
         );
         assert_eq!(item.name, "apps/demo.perf.json");
     }

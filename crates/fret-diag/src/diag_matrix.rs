@@ -1,10 +1,11 @@
 use super::*;
 
 use crate::regression_summary::{
-    RegressionArtifactsV1, RegressionCampaignSummaryV1, RegressionEvidenceV1,
-    RegressionHighlightsV1, RegressionItemKindV1, RegressionItemSummaryV1, RegressionLaneV1,
-    RegressionNotesV1, RegressionRunSummaryV1, RegressionSourceV1, RegressionStatusV1,
-    RegressionSummaryV1, RegressionTotalsV1,
+    DIAG_MATRIX_SUMMARY_FILENAME_V1, DIAG_REGRESSION_SUMMARY_FILENAME_V1, RegressionArtifactsV1,
+    RegressionCampaignSummaryV1, RegressionEvidenceV1, RegressionHighlightsV1,
+    RegressionItemKindV1, RegressionItemSummaryV1, RegressionLaneV1, RegressionNotesV1,
+    RegressionRunSummaryV1, RegressionSourceV1, RegressionStatusV1, RegressionSummaryV1,
+    RegressionTotalsV1,
 };
 
 fn matrix_comparison_to_regression_item(
@@ -28,6 +29,17 @@ fn matrix_comparison_to_regression_item(
         .and_then(|v| v.as_array())
         .map(|diffs| diffs.len())
         .unwrap_or(0);
+    let source_reason_code = (!ok)
+        .then(|| {
+            report
+                .get("diffs")
+                .and_then(|v| v.as_array())
+                .and_then(|diffs| diffs.first())
+                .and_then(|diff| diff.get("kind"))
+                .and_then(|v| v.as_str())
+                .map(|v| v.to_string())
+        })
+        .flatten();
     let bundle_a = report
         .get("bundle_a")
         .and_then(|v| v.as_str())
@@ -47,6 +59,7 @@ fn matrix_comparison_to_regression_item(
             RegressionStatusV1::FailedDeterministic
         },
         reason_code: (!ok).then(|| "diag.matrix.compare_failed".to_string()),
+        source_reason_code,
         lane: RegressionLaneV1::Matrix,
         owner: None,
         feature_tags: Vec::new(),
@@ -115,6 +128,7 @@ fn write_regression_summary_for_matrix(
             name: target.to_string(),
             status: RegressionStatusV1::FailedTooling,
             reason_code: Some("tooling.diag_matrix.no_rows".to_string()),
+            source_reason_code: None,
             lane: RegressionLaneV1::Matrix,
             owner: None,
             feature_tags: Vec::new(),
@@ -184,7 +198,7 @@ fn write_regression_summary_for_matrix(
         html_report: None,
     });
 
-    let regression_summary_path = resolved_out_dir.join("regression.summary.json");
+    let regression_summary_path = resolved_out_dir.join(DIAG_REGRESSION_SUMMARY_FILENAME_V1);
     if let Err(err) = write_json_value(
         &regression_summary_path,
         &serde_json::to_value(&summary).unwrap_or_else(|_| serde_json::json!({})),
@@ -411,7 +425,7 @@ pub(crate) fn cmd_matrix(ctx: MatrixCmdContext) -> Result<(), String> {
             "report": report.to_json(),
         })).collect::<Vec<_>>(),
     });
-    let matrix_summary_path = resolved_out_dir.join("matrix.summary.json");
+    let matrix_summary_path = resolved_out_dir.join(DIAG_MATRIX_SUMMARY_FILENAME_V1);
     if let Err(err) = write_json_value(&matrix_summary_path, &matrix_payload) {
         eprintln!(
             "warning: failed to write matrix summary {}: {}",
@@ -501,6 +515,7 @@ mod tests {
             item.reason_code.as_deref(),
             Some("diag.matrix.compare_failed")
         );
+        assert_eq!(item.source_reason_code.as_deref(), Some("scene_mismatch"));
         assert_eq!(item.name, "apps/ui-gallery/button.diag.ron");
         assert_eq!(
             item.evidence
