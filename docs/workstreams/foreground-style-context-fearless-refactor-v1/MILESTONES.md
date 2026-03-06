@@ -32,6 +32,9 @@ Current snapshot (2026-03-06):
   `agent`, `sandbox`, and `tool` all had icon/label/badge rows tightened with explicit shrink-
   friendly constraints, and each surface now has a targeted regression test that locks the label
   text to `wrap: Word` plus `flex_grow(1.0)` + `min_w_0()`.
+- The audit has also reached `fret-ui-ai/sources_block`: both per-source title/link rows and the
+  collapsible trigger label now keep their truncation semantics while shrinking within horizontal
+  rows, with targeted regression tests covering the item-row and trigger-row paths.
 
 ---
 
