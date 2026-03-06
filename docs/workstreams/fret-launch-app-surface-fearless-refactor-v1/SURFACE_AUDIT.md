@@ -271,7 +271,10 @@ Interpretation update:
 - `container_queries_docking_demo` confirms that the same helper is reusable rather than one-off: container-query-aware docking also migrates cleanly and the inventory drops again to 5, still without any new `FnDriverHooks`.
 - `docking_arbitration_demo` closes the next multi-window docking case too: viewport input, dock-op arbitration, floating-window lifecycle, and dev-state export/import all move to the existing free-hook surface, reducing the remaining direct `WinitAppDriver` inventory again to 4 without adding any new `FnDriverHooks`.
 - `node_graph_legacy_demo` closes the retained node-graph reference path as well: model/global propagation, command routing, persistence debounce, diagnostics interception, and retained/declarative render selection all fit the existing free-hook surface, reducing the remaining direct `WinitAppDriver` inventory again to 3 without adding any new `FnDriverHooks`.
-- the current remaining direct-example inventory is now limited to `components_gallery`, `gizmo3d_demo`, and `node_graph_domain_demo`.
+- `node_graph_domain_demo` closes the domain/runtime-oriented node-graph path too: model/global propagation, command routing, persistence debounce, and retained canvas rendering all fit the existing free-hook surface, reducing the remaining direct `WinitAppDriver` inventory again to 2 without adding any new `FnDriverHooks`.
+- `gizmo3d_demo` closes the viewport-tool / engine-frame / 3D overlay path too: init hooks, command routing, global-change redraw arbitration, viewport input routing, engine-frame recording, and retained HUD rendering all fit the existing free-hook surface, reducing the remaining direct `WinitAppDriver` inventory again to 1 without adding any new `FnDriverHooks`.
+- `components_gallery` closes the accessibility / semantics / diagnostics-heavy gallery path too: init/gpu-ready hooks, hot-reload reset, model/global propagation, command/event routing, semantics snapshots, and accessibility action plumbing all fit the existing free-hook surface, reducing the remaining direct `WinitAppDriver` inventory again to 0 without adding any new `FnDriverHooks`.
+- the current remaining direct-example inventory is now zero.
 
 ### H3) Specialized launch modules still need classification discipline
 
