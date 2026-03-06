@@ -127,8 +127,8 @@ Evidence anchors:
   `impl WinitAppDriver` as the visible type boundary.
 - Why this matters: this is not a capability gap, but it weakens the de-emphasis story and makes a
   future hard contraction more expensive.
-- Existing gates: launch/example coverage in the current launch surface workstream plus `tools/gate_fn_driver_example_naming.py` for representative `FnDriver`-backed helpers and concrete `FnDriver<...>` return types.
-- Missing gate to add: a narrower follow-up check for non-helper direct `FnDriver::new(...)` call sites if we decide those should also standardize on named helper surfaces.
+- Existing gates: launch/example coverage in the current launch surface workstream plus `tools/gate_fn_driver_example_naming.py` for representative `FnDriver`-backed helpers and concrete `FnDriver<...>` return types, and `tools/gate_winit_driver_example_hook_coverage.py` to keep remaining direct trait examples inside current `FnDriver` hook coverage.
+- Updated reading: remaining direct `WinitAppDriver` examples now look like migration debt, not evidence of a missing advanced hook.
 
 Evidence anchors:
 
@@ -151,17 +151,18 @@ Evidence anchors:
 - `crates/fret-launch/src/runner/common/config.rs`
 - `docs/workstreams/fret-launch-app-surface-fearless-refactor-v1/CONFIG_INVENTORY.md`
 
-### H3) There is still no explicit public-surface snapshot gate for `fret-launch`
+### H3) Root-surface drift is now guarded, but classification discipline still matters
 
-- Failure mode: future root exports or re-export growth slips in without classification.
-- Why this matters: `fret-launch` intentionally sits on many specialized seams, so surface drift is
-  easier here than in contract crates.
-- Existing gates: export inventory docs and review discipline.
-- Missing gate to add: a narrow root-surface guardrail or snapshot for `crates/fret-launch/src/lib.rs`.
+- Failure mode: future root exports or re-export growth could still bypass the intended classification story if the snapshot is updated casually.
+- Why this matters: `fret-launch` intentionally sits on many specialized seams, so every root-surface addition should still justify why it belongs at crate root instead of under a specialized module.
+- Existing gates: `tools/gate_fret_launch_surface_contract.py`, `tools/gate_fret_launch_root_surface_snapshot.py`, export inventory docs, and review discipline.
+- Remaining work: keep the snapshot aligned with explicit export classification instead of treating it as a mechanical allowlist.
 
 Evidence anchors:
 
 - `crates/fret-launch/src/lib.rs`
+- `tools/gate_fret_launch_surface_contract.py`
+- `tools/gate_fret_launch_root_surface_snapshot.py`
 - `docs/workstreams/fret-launch-app-surface-fearless-refactor-v1/EXPORT_INVENTORY.md`
 
 ### H4) Native/web control asymmetry is still an open design edge
@@ -199,9 +200,9 @@ Evidence anchors:
 
 ## 8) Recommended refactor steps (small, gated)
 
-1. Add a root-surface guardrail for `crates/fret-launch/src/lib.rs`
-   - Outcome: export creep becomes reviewable and classification-driven.
-   - Gate: a small Python/PowerShell guardrail plus the existing export inventory docs.
+1. Keep the root-surface guardrails for `crates/fret-launch/src/lib.rs` classification-driven
+   - Outcome: export creep stays reviewable and every snapshot change still carries a surface-classification reason.
+   - Gate: `python tools/gate_fret_launch_surface_contract.py`, `python tools/gate_fret_launch_root_surface_snapshot.py`.
 
 2. Keep `fret-framework::launch` free of compatibility-only launch traits
    - Outcome: manual assembly stays curated; callers that truly need `WinitAppDriver` depend on
@@ -210,7 +211,7 @@ Evidence anchors:
 
 3. Make the advanced example story name `FnDriver` more directly
    - Outcome: compatibility trait remains public, but stops feeling like the recommended mental model.
-   - Gate: `cargo nextest run -p fret-examples`.
+   - Gate: `cargo nextest run -p fret-examples`, `python tools/gate_winit_driver_example_hook_coverage.py`.
 
 4. Continue helper-layer config curation instead of reshaping `WinitRunnerConfig` directly
    - Outcome: keep power where it is, but move more app-facing convenience up to `fret` / `fret-bootstrap`.
@@ -222,7 +223,7 @@ Evidence anchors:
 
 ## 9) Open questions / decisions needed
 
-- What exact criteria would let the direct `fret-launch` `WinitAppDriver` surface shrink further in a future cycle?
+- What exact caller-inventory criteria would let the direct `fret-launch` `WinitAppDriver` surface shrink further in a future cycle, now that example hook coverage is no longer the blocker?
 - Do we want a native equivalent of `WebRunnerHandle`, or is `WinitAppBuilder` + host-owned event
   loop enough for the intended embedding stories?
 - Should representative examples keep returning `impl WinitAppDriver`, or should we standardize on
@@ -234,5 +235,4 @@ Evidence anchors:
   public plumbing” problem has already been reduced.
 - **Is extension/customization capability insufficient?** Not for the current target. General apps
   and editor-grade apps both have enough room.
-- **What still needs fearless closure?** Naming, docs/example posture, config curation, and an
-  explicit guardrail against root-surface drift.
+- **What still needs fearless closure?** Naming, docs/example posture, config curation, and disciplined caller migration; not more advanced hook surface.

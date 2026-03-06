@@ -224,7 +224,15 @@ Evidence:
 Interpretation:
 
 - acceptable short term,
-- but future removal/de-emphasis still needs explicit sunset criteria.
+- the remaining de-emphasis blocker is caller migration and naming posture, not a missing `FnDriver` hook gap.
+- current remaining direct example impls only use hooks already covered by `FnDriver`.
+
+Additional evidence:
+
+- `apps/fret-examples/src/chart_multi_axis_demo.rs`
+- `apps/fret-examples/src/components_gallery.rs`
+- `apps/fret-examples/src/gizmo3d_demo.rs`
+- `tools/gate_winit_driver_example_hook_coverage.py`
 
 ### H3) Specialized launch modules still need classification discipline
 
@@ -248,9 +256,9 @@ Evidence:
      `fret` / `fret-bootstrap` instead of teaching the full config object by default.
    - Gate: `cargo nextest run -p fret -p fret-bootstrap`
 
-3. **Define a sunset bar for `WinitAppDriver`**
-   - Outcome: write down which missing hook(s), if any, still block stronger de-emphasis.
-   - Gate: docs update + representative example coverage remains green.
+3. **Define a sunset bar for `WinitAppDriver` based on caller inventory**
+   - Outcome: track which remaining callers still opt into the compatibility trait, since the current example inventory no longer points to a hook-coverage gap.
+   - Gate: docs update + `python tools/gate_winit_driver_example_hook_coverage.py`.
 
 4. **Keep specialized launch modules classification-driven**
    - Outcome: future specialized additions land under explicit modules and must still be tagged as stable / specialized / transitional.

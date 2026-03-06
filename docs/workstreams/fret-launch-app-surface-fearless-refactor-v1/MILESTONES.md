@@ -58,9 +58,12 @@ This workstream is staged to keep the launch stack landable while tightening pub
 
 - `cargo nextest run -p fret-launch`
 - Any touched docs/examples build or type-check if compile-checked in the relevant crate.
-- Representative advanced examples prefer `FnDriver` over bespoke `WinitAppDriver` impls unless a hook gap remains.
+- Representative advanced examples prefer `FnDriver` over bespoke `WinitAppDriver` impls.
+- Any remaining direct `WinitAppDriver` examples are verified to stay within current `FnDriver` hook coverage until they migrate.
+- `python tools/gate_fret_launch_root_surface_snapshot.py`
 - `python tools/gate_fret_framework_launch_surface.py`
 - `python tools/gate_fn_driver_example_naming.py`
+- `python tools/gate_winit_driver_example_hook_coverage.py`
 
 ## M3 鈥?Config curation without capability loss
 

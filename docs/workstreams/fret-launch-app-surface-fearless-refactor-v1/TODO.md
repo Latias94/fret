@@ -68,6 +68,8 @@ Companion docs:
 - [x] Cross-link this workstream from any relevant builder/onboarding docs if the final surface changes.
 - [x] Add a focused guardrail so `fret` crate-root helper regressions and README drift are caught early.
 - [x] Add a focused guardrail so `fret-launch` crate-root exports stay curated and specialized helpers remain namespaced.
+- [x] Add an explicit root-surface snapshot guardrail for `crates/fret-launch/src/lib.rs` so future export creep becomes diffable.
+- [x] Add a focused guardrail so remaining direct `WinitAppDriver` example impls cannot introduce hooks outside current `FnDriver` coverage without an explicit review.
 - [x] Add a focused guardrail so `fret-framework::launch` stays a curated manual-assembly facade and does not re-export compatibility-only launch traits.
 
 ## Validation gates
@@ -78,12 +80,15 @@ Companion docs:
 - [x] `python tools/check_layering.py`
 - [x] `python tools/gate_fret_builder_only_surface.py`
 - [x] `python tools/gate_fret_launch_surface_contract.py`
+- [x] `python tools/gate_fret_launch_root_surface_snapshot.py`
 - [x] `python tools/gate_fret_framework_launch_surface.py`
 - [x] `python tools/gate_fn_driver_example_naming.py`
+- [x] `python tools/gate_winit_driver_example_hook_coverage.py`
 
 ## Rollout notes
 
 - [x] Land documentation and export classification before removing or hiding launch exports.
 - [x] Prefer staged de-emphasis + migration docs before hard API removal.
+- [x] Treat the current remaining direct `WinitAppDriver` examples as migration debt, not as evidence of missing `FnDriver` hooks.
 - [x] Keep host-integration use cases working throughout the refactor.
 - [x] Coordinate any `fret` top-level API changes with `docs/workstreams/app-entry-builder-v1/`.

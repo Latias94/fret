@@ -88,6 +88,13 @@ Invoke-Checked `
   )
 
 Invoke-Checked `
+  "Fret launch root snapshot policy" `
+  "python" `
+  @(
+    (Join-Path $repoRoot "tools/gate_fret_launch_root_surface_snapshot.py")
+  )
+
+Invoke-Checked `
   "Fret framework launch facade policy (curated manual-assembly exports)" `
   "python" `
   @(
@@ -99,6 +106,13 @@ Invoke-Checked `
   "python" `
   @(
     (Join-Path $repoRoot "tools/gate_fn_driver_example_naming.py")
+  )
+
+Invoke-Checked `
+  "WinitAppDriver example hook coverage" `
+  "python" `
+  @(
+    (Join-Path $repoRoot "tools/gate_winit_driver_example_hook_coverage.py")
   )
 
 Invoke-Checked `
