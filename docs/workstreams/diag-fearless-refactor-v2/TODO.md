@@ -145,7 +145,9 @@ Tracking doc: `docs/workstreams/diag-fearless-refactor-v2/README.md`
     - `campaigns/<campaign_id>/<run_id>/regression.summary.json`
   - [x] Kept DevTools and MCP on the same aggregate artifact handoff (`regression.index.json` + `regression.summary.json`).
 - [ ] Expand the campaign surface beyond the first skeleton:
-  - [ ] move campaign definitions behind an explicit resolver seam,
+  - [x] move campaign definitions behind an explicit resolver seam (`registry/campaigns.rs`),
+  - [x] promote that seam from built-in-only registry to manifest-backed resolver (`tools/diag-campaigns/*.json`),
+  - [ ] decide whether to keep JSON-only or add TOML / generated registry inputs later,
   - [ ] add richer suite metadata (owner/platform/tier/duration/tags),
   - [ ] add direct script items in addition to suites,
   - [ ] decide whether campaign runs should emit a persisted dashboard text or HTML projection.

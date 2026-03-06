@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "kind": "diag_campaign_manifest",
+  "id": "docking-smoke",
+  "description": "Docking-focused smoke run covering arbitration and hardening basics.",
+  "lane": "smoke",
+  "profile": "bounded",
+  "suites": [
+    "diag-hardening-smoke-docking",
+    "docking-arbitration"
+  ],
+  "tags": [
+    "docking",
+    "smoke"
+  ]
+}

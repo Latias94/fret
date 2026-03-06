@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "kind": "diag_campaign_manifest",
+  "id": "ui-gallery-smoke",
+  "description": "Fast UI gallery smoke coverage with layout sanity.",
+  "lane": "smoke",
+  "profile": "bounded",
+  "suites": [
+    "ui-gallery-lite-smoke",
+    "ui-gallery-layout"
+  ],
+  "tags": [
+    "ui-gallery",
+    "smoke",
+    "developer-loop"
+  ]
+}

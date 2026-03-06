@@ -26,7 +26,7 @@ Current shipped surface:
 
 Current shipped behavior:
 
-- a small built-in Rust registry resolves campaign ids,
+- a workspace-backed registry now resolves campaign ids from `tools/diag-campaigns/*.json`, with built-in definitions as fallback,
 - campaign `run` expands to suites only (not direct script items yet),
 - each run writes under `campaigns/<campaign_id>/<run_id>/`,
 - suite runs reuse the existing `diag suite` implementation,
@@ -35,7 +35,7 @@ Current shipped behavior:
 
 Known gaps after the first landing:
 
-- no external JSON/TOML campaign manifest format yet,
+- no richer manifest-backed item model yet beyond suite-only JSON manifests,
 - no direct script-item support yet,
 - no persisted dashboard text/HTML projection yet,
 - no campaign-aware metadata resolver beyond the built-in registry,

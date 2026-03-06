@@ -1,5 +1,8 @@
 use super::*;
 
+use crate::registry::campaigns::{
+    CampaignDefinition, CampaignRegistry, campaign_to_json, lane_to_str, parse_lane,
+};
 use crate::regression_summary::RegressionLaneV1;
 
 const DIAG_CAMPAIGN_MANIFEST_KIND_V1: &str = "diag_campaign_manifest";
@@ -36,47 +39,6 @@ pub(crate) struct CampaignCmdContext {
     pub keep_open: bool,
     pub checks: diag_suite::SuiteChecks,
 }
-
-#[derive(Debug, Clone, Copy)]
-struct BuiltinCampaignDefinition {
-    id: &'static str,
-    description: &'static str,
-    lane: RegressionLaneV1,
-    profile: Option<&'static str>,
-    suites: &'static [&'static str],
-    tags: &'static [&'static str],
-}
-
-const UI_GALLERY_SMOKE_SUITES: &[&str] = &["ui-gallery-lite-smoke", "ui-gallery-layout"];
-const UI_GALLERY_CORRECTNESS_SUITES: &[&str] = &["ui-gallery", "ui-gallery-code-editor"];
-const DOCKING_SMOKE_SUITES: &[&str] = &["diag-hardening-smoke-docking", "docking-arbitration"];
-
-const BUILTIN_CAMPAIGNS: &[BuiltinCampaignDefinition] = &[
-    BuiltinCampaignDefinition {
-        id: "ui-gallery-smoke",
-        description: "Fast UI gallery smoke coverage with layout sanity.",
-        lane: RegressionLaneV1::Smoke,
-        profile: Some("bounded"),
-        suites: UI_GALLERY_SMOKE_SUITES,
-        tags: &["ui-gallery", "smoke", "developer-loop"],
-    },
-    BuiltinCampaignDefinition {
-        id: "ui-gallery-correctness",
-        description: "Broader UI gallery correctness pass for common interaction surfaces.",
-        lane: RegressionLaneV1::Correctness,
-        profile: Some("bounded"),
-        suites: UI_GALLERY_CORRECTNESS_SUITES,
-        tags: &["ui-gallery", "correctness"],
-    },
-    BuiltinCampaignDefinition {
-        id: "docking-smoke",
-        description: "Docking-focused smoke run covering arbitration and hardening basics.",
-        lane: RegressionLaneV1::Smoke,
-        profile: Some("bounded"),
-        suites: DOCKING_SMOKE_SUITES,
-        tags: &["docking", "smoke"],
-    },
-];
 
 #[derive(Debug, Clone)]
 struct CampaignRunOptions {
@@ -115,6 +77,8 @@ pub(crate) fn cmd_campaign(ctx: CampaignCmdContext) -> Result<(), String> {
         checks,
     } = ctx;
 
+    let registry = CampaignRegistry::load_from_workspace_root(&workspace_root)?;
+
     let Some(sub) = rest.first().map(|value| value.as_str()) else {
         return Err(
             "missing campaign subcommand (try: fretboard diag campaign list | show <id> | run <id>)"
@@ -123,9 +87,10 @@ pub(crate) fn cmd_campaign(ctx: CampaignCmdContext) -> Result<(), String> {
     };
 
     match sub {
-        "list" => cmd_campaign_list(&rest[1..], stats_json),
-        "show" => cmd_campaign_show(&rest[1..], stats_json),
+        "list" => cmd_campaign_list(&registry, &rest[1..], stats_json),
+        "show" => cmd_campaign_show(&registry, &rest[1..], stats_json),
         "run" => cmd_campaign_run(
+            &registry,
             &rest[1..],
             CampaignRunContext {
                 pack_after_run,
@@ -201,7 +166,11 @@ struct CampaignSuiteRunResult {
     error: Option<String>,
 }
 
-fn cmd_campaign_list(rest: &[String], json: bool) -> Result<(), String> {
+fn cmd_campaign_list(
+    registry: &CampaignRegistry,
+    rest: &[String],
+    json: bool,
+) -> Result<(), String> {
     if let Some(other) = rest.first() {
         return Err(format!(
             "unexpected positional for `diag campaign list`: {other}"
@@ -210,7 +179,8 @@ fn cmd_campaign_list(rest: &[String], json: bool) -> Result<(), String> {
 
     if json {
         let payload = serde_json::json!({
-            "campaigns": BUILTIN_CAMPAIGNS
+            "campaigns": registry
+                .list_campaigns()
                 .iter()
                 .map(campaign_to_json)
                 .collect::<Vec<_>>(),
@@ -222,10 +192,10 @@ fn cmd_campaign_list(rest: &[String], json: bool) -> Result<(), String> {
         return Ok(());
     }
 
-    for campaign in BUILTIN_CAMPAIGNS {
+    for campaign in registry.list_campaigns() {
         println!(
             "{} ({}, {} suites) - {}",
-            campaign.id,
+            campaign.id.as_str(),
             lane_to_str(campaign.lane),
             campaign.suites.len(),
             campaign.description
@@ -235,7 +205,11 @@ fn cmd_campaign_list(rest: &[String], json: bool) -> Result<(), String> {
     Ok(())
 }
 
-fn cmd_campaign_show(rest: &[String], json: bool) -> Result<(), String> {
+fn cmd_campaign_show(
+    registry: &CampaignRegistry,
+    rest: &[String],
+    json: bool,
+) -> Result<(), String> {
     let Some(campaign_id) = rest.first() else {
         return Err("missing campaign id for `diag campaign show`".to_string());
     };
@@ -246,7 +220,7 @@ fn cmd_campaign_show(rest: &[String], json: bool) -> Result<(), String> {
         ));
     }
 
-    let campaign = resolve_builtin_campaign(campaign_id)?;
+    let campaign = registry.resolve(campaign_id)?;
 
     if json {
         println!(
@@ -259,33 +233,37 @@ fn cmd_campaign_show(rest: &[String], json: bool) -> Result<(), String> {
     println!("id: {}", campaign.id);
     println!("description: {}", campaign.description);
     println!("lane: {}", lane_to_str(campaign.lane));
-    if let Some(profile) = campaign.profile {
+    if let Some(profile) = campaign.profile.as_deref() {
         println!("profile: {profile}");
     }
     if !campaign.tags.is_empty() {
         println!("tags: {}", campaign.tags.join(", "));
     }
     println!("suites:");
-    for suite in campaign.suites {
+    for suite in &campaign.suites {
         println!("  - {suite}");
     }
 
     Ok(())
 }
 
-fn cmd_campaign_run(rest: &[String], ctx: CampaignRunContext) -> Result<(), String> {
+fn cmd_campaign_run(
+    registry: &CampaignRegistry,
+    rest: &[String],
+    ctx: CampaignRunContext,
+) -> Result<(), String> {
     let Some(campaign_id) = rest.first() else {
         return Err("missing campaign id for `diag campaign run`".to_string());
     };
     let options = parse_campaign_run_options(&rest[1..])?;
-    let campaign = resolve_builtin_campaign(campaign_id)?;
+    let campaign = registry.resolve(campaign_id)?;
 
     if let Some(requested_lane) = options.requested_lane
         && requested_lane != campaign.lane
     {
         return Err(format!(
             "campaign `{}` is lane `{}` but `--lane {}` was requested",
-            campaign.id,
+            campaign.id.as_str(),
             lane_to_str(campaign.lane),
             lane_to_str(requested_lane)
         ));
@@ -296,7 +274,7 @@ fn cmd_campaign_run(rest: &[String], ctx: CampaignRunContext) -> Result<(), Stri
     let campaign_root = ctx
         .resolved_out_dir
         .join("campaigns")
-        .join(zip_safe_component(campaign.id))
+        .join(zip_safe_component(&campaign.id))
         .join(&run_id);
     let suite_results_root = campaign_root.join("suite-results");
     std::fs::create_dir_all(&suite_results_root).map_err(|e| {
@@ -325,7 +303,7 @@ fn cmd_campaign_run(rest: &[String], ctx: CampaignRunContext) -> Result<(), Stri
             suite_dir.join(crate::regression_summary::DIAG_REGRESSION_SUMMARY_FILENAME_V1);
         let suite_result = match diag_suite::cmd_suite(diag_suite::SuiteCmdContext {
             pack_after_run: ctx.pack_after_run,
-            rest: vec![(*suite_id).to_string()],
+            rest: vec![suite_id.clone()],
             suite_script_inputs: ctx.suite_script_inputs.clone(),
             suite_prewarm_scripts: ctx.suite_prewarm_scripts.clone(),
             suite_prelude_scripts: ctx.suite_prelude_scripts.clone(),
@@ -356,14 +334,14 @@ fn cmd_campaign_run(rest: &[String], ctx: CampaignRunContext) -> Result<(), Stri
             checks: ctx.checks.clone(),
         }) {
             Ok(()) => CampaignSuiteRunResult {
-                suite_id: (*suite_id).to_string(),
+                suite_id: suite_id.clone(),
                 out_dir: suite_dir,
                 regression_summary_path,
                 ok: true,
                 error: None,
             },
             Err(error) => CampaignSuiteRunResult {
-                suite_id: (*suite_id).to_string(),
+                suite_id: suite_id.clone(),
                 out_dir: suite_dir,
                 regression_summary_path,
                 ok: false,
@@ -403,7 +381,8 @@ fn cmd_campaign_run(rest: &[String], ctx: CampaignRunContext) -> Result<(), Stri
     if let Err(error) = summarize_result {
         return Err(format!(
             "campaign `{}` finished suite execution but summarize failed: {}",
-            campaign.id, error
+            campaign.id.as_str(),
+            error
         ));
     }
 
@@ -420,7 +399,7 @@ fn cmd_campaign_run(rest: &[String], ctx: CampaignRunContext) -> Result<(), Stri
             .join("; ");
         return Err(format!(
             "campaign `{}` completed with {} failed suite(s) under {}: {}",
-            campaign.id,
+            campaign.id.as_str(),
             suites_failed,
             campaign_root.display(),
             failing
@@ -445,7 +424,7 @@ fn cmd_campaign_run(rest: &[String], ctx: CampaignRunContext) -> Result<(), Stri
     } else {
         println!(
             "campaign: ok (id={}, suites={}, suites_failed={}, out_dir={})",
-            campaign.id,
+            campaign.id.as_str(),
             suite_results.len(),
             suites_failed,
             campaign_root.display()
@@ -477,62 +456,9 @@ fn parse_campaign_run_options(rest: &[String]) -> Result<CampaignRunOptions, Str
     Ok(out)
 }
 
-fn resolve_builtin_campaign(
-    campaign_id: &str,
-) -> Result<&'static BuiltinCampaignDefinition, String> {
-    BUILTIN_CAMPAIGNS
-        .iter()
-        .find(|campaign| campaign.id == campaign_id)
-        .ok_or_else(|| {
-            format!(
-                "unknown diag campaign: {}\nknown campaigns: {}",
-                campaign_id,
-                BUILTIN_CAMPAIGNS
-                    .iter()
-                    .map(|campaign| campaign.id)
-                    .collect::<Vec<_>>()
-                    .join(", ")
-            )
-        })
-}
-
-fn campaign_to_json(campaign: &BuiltinCampaignDefinition) -> serde_json::Value {
-    serde_json::json!({
-        "id": campaign.id,
-        "description": campaign.description,
-        "lane": campaign.lane,
-        "profile": campaign.profile,
-        "suites": campaign.suites,
-        "tags": campaign.tags,
-    })
-}
-
-fn parse_lane(raw: &str) -> Result<RegressionLaneV1, String> {
-    match raw {
-        "smoke" => Ok(RegressionLaneV1::Smoke),
-        "correctness" => Ok(RegressionLaneV1::Correctness),
-        "matrix" => Ok(RegressionLaneV1::Matrix),
-        "perf" => Ok(RegressionLaneV1::Perf),
-        "nightly" => Ok(RegressionLaneV1::Nightly),
-        "full" => Ok(RegressionLaneV1::Full),
-        other => Err(format!("unknown regression lane: {other}")),
-    }
-}
-
-fn lane_to_str(lane: RegressionLaneV1) -> &'static str {
-    match lane {
-        RegressionLaneV1::Smoke => "smoke",
-        RegressionLaneV1::Correctness => "correctness",
-        RegressionLaneV1::Matrix => "matrix",
-        RegressionLaneV1::Perf => "perf",
-        RegressionLaneV1::Nightly => "nightly",
-        RegressionLaneV1::Full => "full",
-    }
-}
-
 fn write_campaign_manifest(
     campaign_root: &Path,
-    campaign: &BuiltinCampaignDefinition,
+    campaign: &CampaignDefinition,
     run_id: &str,
     created_unix_ms: u64,
     ctx: &CampaignRunContext,
@@ -562,7 +488,7 @@ fn write_campaign_manifest(
 #[allow(clippy::too_many_arguments)]
 fn write_campaign_result(
     campaign_root: &Path,
-    campaign: &BuiltinCampaignDefinition,
+    campaign: &CampaignDefinition,
     run_id: &str,
     created_unix_ms: u64,
     finished_unix_ms: u64,
@@ -610,33 +536,4 @@ fn write_campaign_result(
         })).collect::<Vec<_>>(),
     });
     write_json_value(&result_path, &payload)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn parse_lane_accepts_known_values() {
-        assert_eq!(parse_lane("smoke").unwrap(), RegressionLaneV1::Smoke);
-        assert_eq!(
-            parse_lane("correctness").unwrap(),
-            RegressionLaneV1::Correctness
-        );
-        assert_eq!(parse_lane("perf").unwrap(), RegressionLaneV1::Perf);
-    }
-
-    #[test]
-    fn resolve_builtin_campaign_finds_known_id() {
-        let campaign = resolve_builtin_campaign("ui-gallery-smoke").unwrap();
-        assert_eq!(campaign.id, "ui-gallery-smoke");
-        assert_eq!(campaign.suites, UI_GALLERY_SMOKE_SUITES);
-    }
-
-    #[test]
-    fn resolve_builtin_campaign_rejects_unknown_id() {
-        let error = resolve_builtin_campaign("missing-campaign").unwrap_err();
-        assert!(error.contains("unknown diag campaign"));
-        assert!(error.contains("ui-gallery-smoke"));
-    }
 }

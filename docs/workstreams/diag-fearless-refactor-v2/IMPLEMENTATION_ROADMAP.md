@@ -208,6 +208,8 @@ Current status:
 
 - A first minimal `fretboard diag campaign` surface is now landed.
 - The new entry currently provides `list`, `show`, and `run` over a small built-in registry.
+- Campaign definitions are now routed through `crates/fret-diag/src/registry/campaigns.rs` so the command layer no longer owns built-in campaign data directly.
+- The first external resolver path now reads `tools/diag-campaigns/*.json` and lets repo-owned manifests override same-id built-in fallbacks.
 - `run` composes existing `diag suite` and `diag summarize` flows instead of introducing a second execution engine.
 - Campaign runs now leave a predictable root under `campaigns/<campaign_id>/<run_id>/` with
   `campaign.manifest.json`, `campaign.result.json`, `regression.index.json`, and
