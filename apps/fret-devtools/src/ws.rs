@@ -8,7 +8,9 @@ use fret_diag_protocol::{
     DiagTransportMessageV1, UiScriptResultV1, UiScriptStageV1, UiSemanticsNodeGetAckV1,
 };
 
-use crate::{State, is_abs_path, pack, push_log};
+use crate::{
+    State, clear_regression_artifacts, is_abs_path, pack, push_log, refresh_regression_artifacts,
+};
 
 pub(crate) fn require_session_selected(app: &mut App, st: &State) -> bool {
     let selected = app
@@ -190,6 +192,7 @@ pub(crate) fn drain_ws_messages(app: &mut App, st: &mut State) {
                 if let Ok(text) = serde_json::to_string_pretty(&msg.payload) {
                     let _ = app.models_mut().update(&st.last_bundle_json, |v| *v = text);
                 }
+                refresh_regression_artifacts(app, st);
                 maybe_start_pack_after_run(app, st);
             }
             "screenshot.result" => {
@@ -296,6 +299,10 @@ pub(crate) fn sync_selected_session_to_client(app: &mut App, st: &mut State) {
     let _ = app
         .models_mut()
         .update(&st.semantics_selected_node_live_children, |v| v.clear());
+    if st.cfg.transport == DiagTransportKind::WebSocket {
+        let _ = app.models_mut().update(&st.target_out_dir, |v| *v = None);
+        clear_regression_artifacts(app, st);
+    }
 }
 
 pub(crate) fn maybe_request_semantics_node_details(app: &mut App, st: &mut State) {

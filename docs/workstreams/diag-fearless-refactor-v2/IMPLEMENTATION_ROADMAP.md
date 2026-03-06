@@ -267,7 +267,8 @@ Recommended PR slices:
      `fretboard diag summarize`, including session-scoped MCP resource update notifications,
    - `apps/fret-devtools-mcp` now also provides `fret_diag_regression_dashboard` as a thin
      consumer over `regression.index.json`,
-3. add summary browsing panels,
+3. [in progress] add summary browsing panels,
+   - `apps/fret-devtools` now includes a first read-only `Regression` details tab over the shared aggregate artifacts,
 4. add flake/evidence drill-down UX.
 
 Important rule:

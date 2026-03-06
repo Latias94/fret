@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use fret_app::{App, CommandId, Effect};
@@ -8,6 +8,9 @@ use fret_bootstrap::BootstrapBuilder;
 use fret_bootstrap::ui_app_driver::{UiAppDriver, ViewElements};
 use fret_core::{AppWindowId, Px, UiServices};
 use fret_diag::devtools::DevtoolsOps;
+use fret_diag::regression_summary::{
+    DIAG_REGRESSION_INDEX_FILENAME_V1, DIAG_REGRESSION_SUMMARY_FILENAME_V1,
+};
 use fret_diag::transport::{
     ClientKindV1, DevtoolsWsClientConfig, DiagTransportKind, FsDiagTransportConfig,
     ToolingDiagClient, WsDiagTransportConfig,
@@ -48,6 +51,7 @@ const CMD_SCRIPT_APPLY_PICK: &str = "fret.devtools.script.apply_pick";
 const CMD_PACK_LAST_BUNDLE: &str = "fret.devtools.pack_last_bundle";
 const CMD_COPY_PACK_PATH: &str = "fret.devtools.copy_pack_path";
 const CMD_OPEN_VIEWER_URL: &str = "fret.devtools.open_viewer_url";
+const CMD_REGRESSION_REFRESH: &str = "fret.devtools.regression.refresh";
 
 #[derive(Clone)]
 struct DevtoolsConfig {
@@ -123,6 +127,11 @@ struct State {
     last_script_result_json: Model<String>,
     last_bundle_json: Model<String>,
     last_screenshot_json: Model<String>,
+    regression_summary_json: Model<String>,
+    regression_index_json: Model<String>,
+    regression_dashboard_human: Model<String>,
+    regression_loaded_dir: Model<Option<Arc<str>>>,
+    regression_last_error: Model<Option<Arc<str>>>,
     log_lines: Model<Vec<Arc<str>>>,
 
     semantics_cache: Model<Option<Arc<semantics::SemanticsIndex>>>,
@@ -273,6 +282,11 @@ fn init_window(app: &mut App, _window: AppWindowId) -> State {
     let last_script_result_json = app.models_mut().insert(String::new());
     let last_bundle_json = app.models_mut().insert(String::new());
     let last_screenshot_json = app.models_mut().insert(String::new());
+    let regression_summary_json = app.models_mut().insert(String::new());
+    let regression_index_json = app.models_mut().insert(String::new());
+    let regression_dashboard_human = app.models_mut().insert(String::new());
+    let regression_loaded_dir = app.models_mut().insert(None::<Arc<str>>);
+    let regression_last_error = app.models_mut().insert(None::<Arc<str>>);
     let log_lines = match cfg.transport {
         DiagTransportKind::FileSystem => app.models_mut().insert(vec![Arc::<str>::from(format!(
             "filesystem transport: polling FRET_DIAG_DIR={}",
@@ -383,6 +397,11 @@ fn init_window(app: &mut App, _window: AppWindowId) -> State {
         last_script_result_json,
         last_bundle_json,
         last_screenshot_json,
+        regression_summary_json,
+        regression_index_json,
+        regression_dashboard_human,
+        regression_loaded_dir,
+        regression_last_error,
         log_lines,
         semantics_cache,
         semantics_source_hash,
@@ -407,6 +426,7 @@ fn init_window(app: &mut App, _window: AppWindowId) -> State {
     };
 
     refresh_script_library(app, &mut st);
+    refresh_regression_artifacts(app, &mut st);
     st
 }
 
@@ -499,6 +519,11 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut State) -> ViewElements {
     cx.observe_model(&st.last_script_result_json, Invalidation::Paint);
     cx.observe_model(&st.last_bundle_json, Invalidation::Paint);
     cx.observe_model(&st.last_screenshot_json, Invalidation::Paint);
+    cx.observe_model(&st.regression_summary_json, Invalidation::Paint);
+    cx.observe_model(&st.regression_index_json, Invalidation::Paint);
+    cx.observe_model(&st.regression_dashboard_human, Invalidation::Paint);
+    cx.observe_model(&st.regression_loaded_dir, Invalidation::Paint);
+    cx.observe_model(&st.regression_last_error, Invalidation::Paint);
     cx.observe_model(&st.log_lines, Invalidation::Paint);
     cx.observe_model(&st.semantics_cache, Invalidation::Paint);
     cx.observe_model(&st.semantics_error, Invalidation::Paint);
@@ -1801,6 +1826,7 @@ fn right_panel(
         .models()
         .read(&st.last_screenshot_json, |v| v.clone())
         .unwrap_or_default();
+    let regression = regression_panel(cx, st);
     let semantics_node = sem_node_panel(cx, st);
 
     let inspect = if inspect_hover.trim().is_empty() && inspect_focus.trim().is_empty() {
@@ -1817,6 +1843,7 @@ fn right_panel(
             shadcn::TabsItem::new("script", "Script", [text_blob(cx, script)]),
             shadcn::TabsItem::new("bundle", "Bundle", [text_blob(cx, bundle)]),
             shadcn::TabsItem::new("screenshot", "Screenshot", [text_blob(cx, screenshot)]),
+            shadcn::TabsItem::new("regression", "Regression", [regression]),
             shadcn::TabsItem::new("sem_node", "Sem Node", [semantics_node]),
         ])
         .into_element(cx);
@@ -1824,11 +1851,94 @@ fn right_panel(
     shadcn::Card::new([
         shadcn::CardHeader::new([
             shadcn::CardTitle::new("Latest").into_element(cx),
-            shadcn::CardDescription::new("Latest pick/script/bundle payloads.").into_element(cx),
+            shadcn::CardDescription::new("Latest pick/script/bundle/regression payloads.").into_element(cx),
         ])
         .into_element(cx),
         shadcn::CardContent::new([tabs]).into_element(cx),
     ])
+    .into_element(cx)
+}
+
+fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement {
+    let loaded_dir = cx
+        .app
+        .models()
+        .read(&st.regression_loaded_dir, |v| v.clone())
+        .ok()
+        .flatten();
+    let error = cx
+        .app
+        .models()
+        .read(&st.regression_last_error, |v| v.clone())
+        .ok()
+        .flatten();
+    let dashboard = cx
+        .app
+        .models()
+        .read(&st.regression_dashboard_human, |v| v.clone())
+        .unwrap_or_default();
+    let index_json = cx
+        .app
+        .models()
+        .read(&st.regression_index_json, |v| v.clone())
+        .unwrap_or_default();
+    let summary_json = cx
+        .app
+        .models()
+        .read(&st.regression_summary_json, |v| v.clone())
+        .unwrap_or_default();
+    let can_refresh = cx
+        .app
+        .models()
+        .read(&st.target_out_dir, |v| v.is_some())
+        .unwrap_or(false);
+
+    let mut parts: Vec<String> = Vec::new();
+    if let Some(dir) = loaded_dir.as_deref() {
+        parts.push(format!("loaded_dir: {dir}"));
+    }
+    if let Some(err) = error.as_deref() {
+        parts.push(format!("error: {err}"));
+    }
+    if !dashboard.trim().is_empty() {
+        parts.push("dashboard:".to_string());
+        parts.push(dashboard);
+    }
+    if !index_json.trim().is_empty() {
+        parts.push("regression.index.json:".to_string());
+        parts.push(index_json);
+    }
+    if !summary_json.trim().is_empty() {
+        parts.push("regression.summary.json:".to_string());
+        parts.push(summary_json);
+    }
+
+    let content = if parts.is_empty() {
+        "<empty>".to_string()
+    } else {
+        parts.join("
+
+")
+    };
+
+    ui::v_stack(|cx| {
+        [
+            ui::h_row(|cx| {
+                [
+                    shadcn::Button::new("Refresh")
+                        .variant(shadcn::ButtonVariant::Outline)
+                        .size(shadcn::ButtonSize::Sm)
+                        .disabled(!can_refresh)
+                        .on_click(CMD_REGRESSION_REFRESH)
+                        .into_element(cx),
+                ]
+            })
+            .gap(fret_ui_kit::Space::N2)
+            .into_element(cx),
+            text_blob(cx, content),
+        ]
+    })
+    .gap(fret_ui_kit::Space::N2)
     .into_element(cx)
 }
 
@@ -2096,6 +2206,10 @@ fn on_command(
         }
         CMD_SCRIPTS_REFRESH => {
             refresh_script_library(app, st);
+            app.request_redraw(window);
+        }
+        CMD_REGRESSION_REFRESH => {
+            refresh_regression_artifacts(app, st);
             app.request_redraw(window);
         }
         CMD_SCRIPT_FORK => {
@@ -3275,6 +3389,173 @@ fn parse_ancestors_lines(text: &str) -> Vec<serde_json::Value> {
     out
 }
 
+fn regression_artifacts_root(app: &mut App, st: &State) -> Option<PathBuf> {
+    let out_dir = app
+        .models()
+        .read(&st.target_out_dir, |v| v.clone())
+        .ok()
+        .flatten()?;
+    let repo_root = repo_root_from_script_paths(&st.script_paths);
+    Some(resolve_repo_or_abs_path(&repo_root, out_dir.as_ref()))
+}
+
+pub(crate) fn clear_regression_artifacts(app: &mut App, st: &State) {
+    let _ = app
+        .models_mut()
+        .update(&st.regression_summary_json, |v| v.clear());
+    let _ = app
+        .models_mut()
+        .update(&st.regression_index_json, |v| v.clear());
+    let _ = app
+        .models_mut()
+        .update(&st.regression_dashboard_human, |v| v.clear());
+    let _ = app
+        .models_mut()
+        .update(&st.regression_loaded_dir, |v| *v = None);
+    let _ = app
+        .models_mut()
+        .update(&st.regression_last_error, |v| *v = None);
+}
+
+pub(crate) fn refresh_regression_artifacts(app: &mut App, st: &mut State) {
+    let Some(root) = regression_artifacts_root(app, st) else {
+        clear_regression_artifacts(app, st);
+        return;
+    };
+
+    let summary_path = root.join(DIAG_REGRESSION_SUMMARY_FILENAME_V1);
+    let index_path = root.join(DIAG_REGRESSION_INDEX_FILENAME_V1);
+    let summary_json = std::fs::read_to_string(&summary_path).ok();
+    let index_json = std::fs::read_to_string(&index_path).ok();
+
+    let dashboard_human = index_json
+        .as_deref()
+        .and_then(|text| serde_json::from_str::<serde_json::Value>(text).ok())
+        .map(|payload| build_regression_dashboard_human(&index_path, &payload, 5))
+        .unwrap_or_default();
+
+    let error = match (summary_json.is_some(), index_json.is_some()) {
+        (false, false) => Some(Arc::<str>::from(format!(
+            "no regression artifacts found under {}",
+            root.display()
+        ))),
+        (true, false) => Some(Arc::<str>::from(format!(
+            "{} is present but {} is missing under {}",
+            DIAG_REGRESSION_SUMMARY_FILENAME_V1,
+            DIAG_REGRESSION_INDEX_FILENAME_V1,
+            root.display()
+        ))),
+        _ => None,
+    };
+
+    let _ = app.models_mut().update(&st.regression_summary_json, |v| {
+        *v = summary_json.unwrap_or_default();
+    });
+    let _ = app.models_mut().update(&st.regression_index_json, |v| {
+        *v = index_json.unwrap_or_default();
+    });
+    let _ = app.models_mut().update(&st.regression_dashboard_human, |v| {
+        *v = dashboard_human;
+    });
+    let _ = app.models_mut().update(&st.regression_loaded_dir, |v| {
+        *v = Some(Arc::<str>::from(root.to_string_lossy().to_string()));
+    });
+    let _ = app.models_mut().update(&st.regression_last_error, |v| {
+        *v = error;
+    });
+}
+
+fn build_regression_dashboard_human(
+    index_path: &Path,
+    payload: &serde_json::Value,
+    top: usize,
+) -> String {
+    let mut lines = vec![format!("dashboard index: {}", index_path.display())];
+    if let Some(kind) = payload.get("kind").and_then(|v| v.as_str()) {
+        lines.push(format!("kind: {kind}"));
+    }
+    if let Some(out_dir) = payload.get("out_dir").and_then(|v| v.as_str()) {
+        lines.push(format!("out_dir: {out_dir}"));
+    }
+    let summaries_total = payload
+        .get("summaries")
+        .and_then(|v| v.as_array())
+        .map(|rows| rows.len())
+        .unwrap_or(0);
+    let items_total = payload
+        .get("summaries")
+        .and_then(|v| v.as_array())
+        .map(|rows| {
+            rows.iter()
+                .map(|row| row.get("items_total").and_then(|v| v.as_u64()).unwrap_or(0))
+                .sum::<u64>()
+        })
+        .unwrap_or(0);
+    lines.push(format!("summaries_total: {summaries_total}"));
+    lines.push(format!("items_total: {items_total}"));
+    push_dashboard_counter_lines(&mut lines, payload, "/counters/by_status", "status counters");
+    push_dashboard_counter_lines(&mut lines, payload, "/counters/by_lane", "lane counters");
+    push_dashboard_counter_lines(&mut lines, payload, "/counters/by_tool", "tool counters");
+    if let Some(rows) = payload.get("top_reason_codes").and_then(|v| v.as_array()) {
+        if !rows.is_empty() {
+            lines.push("top reason codes:".to_string());
+            for row in rows.iter().take(top) {
+                let reason_code = row
+                    .get("reason_code")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("<unknown>");
+                let count = row.get("count").and_then(|v| v.as_u64()).unwrap_or(0);
+                lines.push(format!("  {reason_code}: {count}"));
+            }
+        }
+    }
+    if let Some(rows) = payload.get("failing_summaries").and_then(|v| v.as_array()) {
+        if !rows.is_empty() {
+            lines.push("failing summaries:".to_string());
+            for row in rows.iter().take(top) {
+                let path = row.get("path").and_then(|v| v.as_str()).unwrap_or("<unknown>");
+                let lane = row.get("lane").and_then(|v| v.as_str()).unwrap_or("<unknown>");
+                let failures = row.get("failures").and_then(|v| v.as_u64()).unwrap_or(0);
+                let items_total = row.get("items_total").and_then(|v| v.as_u64()).unwrap_or(0);
+                lines.push(format!(
+                    "  {path} | lane={lane} failures={failures} items={items_total}"
+                ));
+            }
+        }
+    }
+    lines.join("
+")
+}
+
+fn push_dashboard_counter_lines(
+    lines: &mut Vec<String>,
+    payload: &serde_json::Value,
+    pointer: &str,
+    title: &str,
+) {
+    let Some(obj) = payload.pointer(pointer).and_then(|v| v.as_object()) else {
+        return;
+    };
+    if obj.is_empty() {
+        return;
+    }
+    lines.push(format!("{title}:"));
+    let mut keys: Vec<&str> = obj.keys().map(String::as_str).collect();
+    keys.sort_unstable();
+    for key in keys {
+        let count = obj.get(key).and_then(|v| v.as_u64()).unwrap_or(0);
+        lines.push(format!("  {key}: {count}"));
+    }
+}
+
+fn resolve_repo_or_abs_path(repo_root: &Path, raw: &str) -> PathBuf {
+    if is_abs_path(raw) {
+        PathBuf::from(raw)
+    } else {
+        repo_root.join(raw)
+    }
+}
+
 fn is_abs_path(s: &str) -> bool {
     if s.starts_with('/') || s.starts_with('\\') {
         return true;
@@ -3322,5 +3603,54 @@ fn env_transport_kind(key: &str) -> Option<DiagTransportKind> {
         "ws" | "websocket" => Some(DiagTransportKind::WebSocket),
         "fs" | "filesystem" => Some(DiagTransportKind::FileSystem),
         _ => None,
+    }
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn resolve_repo_or_abs_path_resolves_relative_input() {
+        let resolved = resolve_repo_or_abs_path(Path::new("F:/repo"), "target/fret-diag/campaigns/ui-gallery-pr");
+        assert_eq!(
+            resolved,
+            PathBuf::from("F:/repo").join("target/fret-diag/campaigns/ui-gallery-pr")
+        );
+    }
+
+    #[test]
+    fn build_regression_dashboard_human_includes_totals_and_reason_codes() {
+        let payload = serde_json::json!({
+            "kind": "diag_regression_index",
+            "out_dir": "target/fret-diag/campaigns/ui-gallery-pr",
+            "summaries": [
+                { "items_total": 2 },
+                { "items_total": 4 }
+            ],
+            "counters": {
+                "by_status": { "passed": 4, "failed_deterministic": 2 },
+                "by_lane": { "smoke": 1 },
+                "by_tool": { "suite": 1 }
+            },
+            "top_reason_codes": [
+                { "reason_code": "pixel_diff", "count": 2 }
+            ],
+            "failing_summaries": [
+                { "path": "runs/a/regression.summary.json", "lane": "smoke", "failures": 2, "items_total": 4 }
+            ]
+        });
+
+        let human = build_regression_dashboard_human(
+            Path::new("F:/repo/target/fret-diag/campaigns/ui-gallery-pr/regression.index.json"),
+            &payload,
+            5,
+        );
+
+        assert!(human.contains("summaries_total: 2"));
+        assert!(human.contains("items_total: 6"));
+        assert!(human.contains("top reason codes:"));
+        assert!(human.contains("pixel_diff: 2"));
     }
 }

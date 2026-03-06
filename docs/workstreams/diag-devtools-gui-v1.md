@@ -40,6 +40,15 @@ The missing piece for “everyday use” is a **DevTools GUI** that:
 - makes artifacts navigable (latest bundle, pack/share, open in viewer),
 - supports **web runner** from day 1 (browser targets cannot rely on filesystem triggers).
 
+## Current status snapshot
+
+- `apps/fret-devtools` already has a first read-only `Regression` details tab.
+- The tab reuses the existing artifacts-root contract and reads:
+  - `regression.summary.json`,
+  - `regression.index.json`.
+- It does not invent a new campaign model; it is only a thin GUI consumer over the same aggregate
+  artifacts already used by CLI and MCP.
+
 ## Goals (v1)
 
 1. **Real-time inspect workflow**
