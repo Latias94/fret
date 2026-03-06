@@ -5,6 +5,7 @@ use crate::ui::snippets::scroll_area as snippets;
 
 pub(super) fn preview_scroll_area(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     let demo = snippets::demo::render(cx);
+    let usage = snippets::usage::render(cx);
     let drag_baseline = snippets::drag_baseline::render(cx);
     let expand_at_bottom = snippets::expand_at_bottom::render(cx);
     let horizontal = snippets::horizontal::render(cx);
@@ -14,6 +15,8 @@ pub(super) fn preview_scroll_area(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
     let notes = doc_layout::notes(
         cx,
         [
+            "API reference: `ecosystem/fret-ui-shadcn/src/scroll_area.rs` (ScrollArea, ScrollAreaRoot, ScrollAreaViewport, ScrollAreaScrollbar, ScrollAreaCorner).",
+            "ScrollArea already exposes both a compact builder and a Radix-shaped composable surface, so the main parity gap here is usage clarity rather than missing authoring APIs.",
             "ScrollArea is for custom scrollbars + consistent styling; use native scrolling when you don't need custom chrome.",
             "Keep scroll region sizes explicit in docs to avoid layout drift.",
             "Horizontal rails are easiest to reason about when the child has a fixed width.",
@@ -22,11 +25,14 @@ pub(super) fn preview_scroll_area(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
 
     let body = doc_layout::render_doc_page(
         cx,
-        Some("Preview follows shadcn ScrollArea demo: Vertical + Horizontal."),
+        Some("Preview follows shadcn ScrollArea docs flow: Demo -> Usage -> Horizontal. Fret-only diagnostics follow after the upstream-shaped examples."),
         vec![
             DocSection::new("Demo", demo)
                 .description("Vertical scroll region with tags and separators.")
                 .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
+            DocSection::new("Usage", usage)
+                .description("Copyable minimal usage for `ScrollArea` with explicit viewport size.")
+                .code_rust_from_file_region(snippets::usage::SOURCE, "example"),
             DocSection::new("Scrollbar drag baseline", drag_baseline)
                 .description(
                     "Diagnostics harness (Fret-only): drag the thumb, then arm content growth. The thumb should not jump when extents change mid-drag.",
