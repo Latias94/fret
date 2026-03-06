@@ -220,7 +220,7 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
             z0
         };
 
-        // Invert `fret_node::ui::viewport_helper::pan_for_center`:
+        // Invert the node-graph viewport centering math used by the advanced viewport helper:
         // pan.x = w / (2*z) - center.x  =>  center.x = w / (2*z) - pan.x
         let center = CanvasPoint {
             x: w / (2.0 * z0) - pan.x,

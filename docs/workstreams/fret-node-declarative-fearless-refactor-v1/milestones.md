@@ -177,11 +177,11 @@ points rather than direct graph mutation.
     controller-owned transaction submission, `NodeGraphBlackboardOverlay::new(...).with_controller(...)`
     now gives retained symbol actions the same controller-first path, and `compat_retained` now
     takes a controller binding directly instead of exposing public queue transport props.
-  - `NodeGraphViewportHelper` now also has a controller-first constructor
-    (`NodeGraphViewportHelper::from_controller(...)`) so app-facing helper composition can share the
-    same store fallback / queued transport split as the controller, while
-    `NodeGraphViewportHelper::new(view_state, view_queue)` remains the explicit advanced transport
-    seam for retained-only integrations.
+  - `NodeGraphViewportHelper` is now bounded to the explicit advanced transport seam only:
+    `NodeGraphViewportHelper::new(view_state, view_queue)` remains available for retained-only
+    integrations, while controller-first app-facing composition now calls
+    `NodeGraphController::{set_viewport*, set_center_in_bounds*, fit_view_nodes*, fit_view_nodes_in_bounds*}`
+    directly without a second wrapper surface.
   - Raw queue / viewport transport exports now live under the explicit `fret_node::ui::advanced::*`
     namespace, and the old root `fret_node::ui::*` queue/helper aliases are removed from the
     public surface.
@@ -341,6 +341,7 @@ Land in this order unless a blocking bug forces a smaller detour:
 4. `M3` controller + transaction-safe declarative commits
 5. `M4` declarative interaction/portal closure
 6. `M5` retained compatibility convergence
+
 
 
 

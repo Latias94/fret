@@ -4,10 +4,10 @@ use crate::core::CanvasPoint;
 use crate::io::NodeGraphViewState;
 use crate::runtime::store::NodeGraphStore;
 use crate::ui::NodeGraphController;
+use crate::ui::advanced::NodeGraphViewportHelper;
 use crate::ui::view_queue::{
     NodeGraphSetViewportOptions, NodeGraphViewQueue, NodeGraphViewRequest,
 };
-use crate::ui::viewport_helper::NodeGraphViewportHelper;
 
 use super::{TestUiHostImpl, insert_view, make_test_graph_two_nodes};
 
@@ -90,7 +90,7 @@ fn viewport_helper_set_center_honors_explicit_zoom_override() {
 }
 
 #[test]
-fn viewport_helper_from_controller_falls_back_to_store_without_queue() {
+fn controller_set_center_in_bounds_falls_back_to_store_without_queue() {
     let bounds = Rect::new(
         Point::new(Px(0.0), Px(0.0)),
         Size::new(Px(800.0), Px(600.0)),
@@ -103,9 +103,9 @@ fn viewport_helper_from_controller_falls_back_to_store_without_queue() {
     let store = host
         .models
         .insert(NodeGraphStore::new(graph_value, store_view));
-    let helper = NodeGraphViewportHelper::from_controller(NodeGraphController::new(store.clone()));
+    let controller = NodeGraphController::new(store.clone());
 
-    helper.set_center_in_bounds_with_options(
+    let applied = controller.set_center_in_bounds_with_options(
         &mut host,
         bounds,
         CanvasPoint { x: 10.0, y: 20.0 },
@@ -116,6 +116,7 @@ fn viewport_helper_from_controller_falls_back_to_store_without_queue() {
         },
     );
 
+    assert!(applied);
     let (pan, zoom) = store
         .read_ref(&host, |store| {
             let view = store.view_state();
@@ -129,7 +130,7 @@ fn viewport_helper_from_controller_falls_back_to_store_without_queue() {
 }
 
 #[test]
-fn viewport_helper_from_controller_preserves_queue_transport_when_present() {
+fn controller_set_viewport_preserves_queue_transport_when_present() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, _node_a, _node_b) = make_test_graph_two_nodes();
     let store = host.models.insert(NodeGraphStore::new(
@@ -137,11 +138,9 @@ fn viewport_helper_from_controller_preserves_queue_transport_when_present() {
         NodeGraphViewState::default(),
     ));
     let queue = host.models.insert(NodeGraphViewQueue::default());
-    let helper = NodeGraphViewportHelper::from_controller(
-        NodeGraphController::new(store.clone()).with_view_queue(queue.clone()),
-    );
+    let controller = NodeGraphController::new(store.clone()).with_view_queue(queue.clone());
 
-    helper.set_viewport_with_options(
+    let applied = controller.set_viewport_with_options(
         &mut host,
         CanvasPoint { x: 10.0, y: 20.0 },
         1.5,
@@ -151,6 +150,7 @@ fn viewport_helper_from_controller_preserves_queue_transport_when_present() {
         },
     );
 
+    assert!(applied);
     let pending = queue
         .read_ref(&host, |q| q.pending.clone())
         .ok()

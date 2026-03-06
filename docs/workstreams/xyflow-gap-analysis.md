@@ -63,10 +63,10 @@ Fret equivalents:
 
 - `ecosystem/fret-canvas/src/view/pan_zoom.rs`: `PanZoom2D` model (pan + zoom).
 - `ecosystem/fret-canvas/src/view/constraints.rs`: `fit_view_to_canvas_rect(...)`.
-- `ecosystem/fret-node/src/ui/viewport_helper.rs`: `NodeGraphViewportHelper` (set viewport, fit view,
-  set center), which is intentionally close to XYFlow’s `useReactFlow()` helper semantics.
-
-### 2) Background patterns (lines/dots/cross)
+- `ecosystem/fret-node/src/ui/controller.rs`: `NodeGraphController` (set viewport, fit view,
+  set center) is now the primary XYFlow-style app-facing surface.
+- `ecosystem/fret-node/src/ui/advanced.rs`: `NodeGraphViewportHelper` remains available only for
+  advanced queue-driven retained integrations that explicitly own raw transport models.
 
 XYFlow:
 
@@ -102,10 +102,10 @@ Fret already has a much richer surface than XYFlow:
 
 ## What is still missing / mismatched (gap list)
 
-This list is ordered by “what we would need to build an XYFlow-like *component* experience” (not
+This list is ordered by “what we would need to build an XYFlow-like *component* experience�?(not
 by what the retained `fret-node` widget already has).
 
-### Gap A — Declarative "world layer" for nodes as element subtrees (partially closed)
+### Gap A �?Declarative "world layer" for nodes as element subtrees (partially closed)
 
 XYFlow’s core affordance is: nodes are DOM elements, edges are SVG, both live in a transformed
 world that pans/zooms together.
@@ -149,18 +149,18 @@ Recommendation:
   `NodeGraphController` / `NodeGraphStore`; use `node_graph_surface_compat_retained` only as a
   temporary compatibility surface when the paint-only path is not yet sufficient.
 
-### Gap B — ReactFlow-like input filter knobs (`noWheel` / `noPan` / `.nokey`)
+### Gap B �?ReactFlow-like input filter knobs (`noWheel` / `noPan` / `.nokey`)
 
 XYFlow includes fine-grained input filtering:
 
 - Ignore wheel or pan when the event target is inside a `noWheelClassName` / `noPanClassName` subtree.
-- Allow marquee selection “above” nodes by using pointer events capture, unless the down event is
+- Allow marquee selection “above�?nodes by using pointer events capture, unless the down event is
   within a `.nokey` subtree (background-only selection-on-drag).
 
 In Fret:
 
-- Overlay elements can naturally “eat” pointer events by being above the canvas, but there is no
-  standard recipe for “canvas is interactive unless event occurs inside an exempt subtree”.
+- Overlay elements can naturally “eat�?pointer events by being above the canvas, but there is no
+  standard recipe for “canvas is interactive unless event occurs inside an exempt subtree�?
 
 Recommendation:
 
@@ -171,12 +171,12 @@ Recommendation:
   - For **world-layer nodes as element subtrees**, prefer:
     - `ecosystem/fret-canvas/src/ui/world_layer.rs` (`canvas_world_surface_panel_with_marquee_selection`)
     - Rationale: marquee chrome must render above node subtrees (canvas-paint marquee would sit behind).
-  - For XYFlow-style “background-only” selection-on-drag, use:
+  - For XYFlow-style “background-only�?selection-on-drag, use:
     - `ecosystem/fret-canvas/src/ui/pan_zoom.rs`: `CanvasMarqueeSelectionProps::start_filter`
     - A practical implementation is a bounds-store-based filter using `CanvasWorldBoundsStore`
       (see the UI Gallery spike + diag gate).
 
-### Gap F — World-layer node bounds → viewport helpers (fit view) (partially closed)
+### Gap F �?World-layer node bounds �?viewport helpers (fit view) (partially closed)
 
 XYFlow’s `fitView` works because the system has access to measured DOM bounds for nodes.
 
@@ -215,9 +215,9 @@ Workstream anchor:
 
 - `docs/workstreams/canvas-world-layer-v1.md` (M2)
 
-### Gap C — Dashed strokes for paths (edge temporary)
+### Gap C �?Dashed strokes for paths (edge temporary)
 
-AI Elements’ `edge.tsx` temporary edge uses `strokeDasharray: "5, 5"`.
+AI Elements�?`edge.tsx` temporary edge uses `strokeDasharray: "5, 5"`.
 
 In Fret today:
 
@@ -239,7 +239,7 @@ Notes:
 - If/when the renderer grows native dash support, this should be migrated down to avoid per-segment
   path overhead and to better match corner joins/caps.
 
-### Gap D — Edge markers (arrowheads) and richer routing primitives (component layer)
+### Gap D �?Edge markers (arrowheads) and richer routing primitives (component layer)
 
 XYFlow supports marker end caps and multiple edge types (bezier, step, straight) and makes it easy
 to supply a `markerEnd`.
@@ -247,17 +247,17 @@ to supply a `markerEnd`.
 In Fret today:
 
 - `WorkflowEdge*` and `WorkflowConnection` are intentionally minimal canvas renderers.
-- `fret-node` has much more advanced routing math, but it is not packaged as a general “edge kit”.
+- `fret-node` has much more advanced routing math, but it is not packaged as a general “edge kit�?
 - A minimal arrowhead primitive exists and is used for AI Elements parity:
   - `ecosystem/fret-canvas/src/wires.rs` (`arrowhead_triangle`)
   - `ecosystem/fret-ui-ai/src/elements/workflow/edge.rs` (`WorkflowEdgeAnimated`)
 
 Recommendation:
 
-- Extract a small “edge rendering kit” out of `fret-node` (math + marker helpers) into `fret-canvas`
+- Extract a small “edge rendering kit�?out of `fret-node` (math + marker helpers) into `fret-canvas`
   (or a sibling) so both `fret-node` and `fret-ui-ai` workflow wrappers can share it.
 
-### Gap E — A public "workflow controller" surface for `WorkflowCanvas`
+### Gap E �?A public "workflow controller" surface for `WorkflowCanvas`
 
 XYFlow exposes helpers (`useReactFlow`) for `zoomIn/zoomOut/fitView` that pair naturally with the
 Controls UI.
@@ -285,4 +285,5 @@ Pick one of two paths:
 2) **Custom lightweight workflow surface**
    - Use `WorkflowCanvas` + `fret-canvas/ui` tool router for pan/zoom and tools.
    - Render nodes/edges in the canvas paint pass.
-   - Avoid “DOM-like nodes as element subtrees” until a dedicated world-layer substrate exists.
+   - Avoid “DOM-like nodes as element subtrees�?until a dedicated world-layer substrate exists.
+

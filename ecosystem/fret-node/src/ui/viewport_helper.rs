@@ -1,13 +1,9 @@
-//! Viewport helper API (UI-only).
+//! Advanced viewport helper API (UI-only).
 //!
-//! XyFlow exposes a "viewport helper" surface via hooks (`useReactFlow`) that lets apps drive the
-//! viewport without directly referencing a specific widget instance. In Fret this is expressed as
-//! a small wrapper around viewport transport.
-//!
-//! Prefer `NodeGraphViewportHelper::from_controller` for app-facing composition so viewport updates
-//! follow the same controller/store fallback path used elsewhere in the node-graph ecosystem.
-//! `NodeGraphViewportHelper::new(view_state, view_queue)` remains available for retained-only or
-//! transport-first integrations that explicitly own the raw queue + persisted view-state models.
+//! This helper is intentionally scoped to retained-only or transport-first integrations that
+//! explicitly own raw `NodeGraphViewState` + `NodeGraphViewQueue` models.
+//! App-facing composition should prefer `NodeGraphController` from `crate::ui`, which owns the
+//! controller-first viewport API directly.
 
 use fret_core::Rect;
 use fret_runtime::Model;
@@ -16,65 +12,37 @@ use fret_ui::UiHost;
 use crate::core::{CanvasPoint, NodeId};
 use crate::io::NodeGraphViewState;
 
-use super::controller::NodeGraphController;
 use super::view_queue::{NodeGraphFitViewOptions, NodeGraphSetViewportOptions, NodeGraphViewQueue};
 
 #[derive(Debug, Clone)]
 pub struct NodeGraphViewportHelper {
-    source: NodeGraphViewportHelperSource,
-}
-
-#[derive(Debug, Clone)]
-enum NodeGraphViewportHelperSource {
-    QueueModels {
-        view_state: Model<NodeGraphViewState>,
-        view_queue: Model<NodeGraphViewQueue>,
-    },
-    Controller(NodeGraphController),
+    view_state: Model<NodeGraphViewState>,
+    view_queue: Model<NodeGraphViewQueue>,
 }
 
 impl NodeGraphViewportHelper {
-    /// Preferred controller-first constructor for app-facing integrations.
-    pub fn from_controller(controller: NodeGraphController) -> Self {
-        Self {
-            source: NodeGraphViewportHelperSource::Controller(controller),
-        }
-    }
-
     /// Advanced transport-first constructor for retained-only integrations.
     pub fn new(
         view_state: Model<NodeGraphViewState>,
         view_queue: Model<NodeGraphViewQueue>,
     ) -> Self {
         Self {
-            source: NodeGraphViewportHelperSource::QueueModels {
-                view_state,
-                view_queue,
-            },
+            view_state,
+            view_queue,
         }
     }
 
     pub fn viewport<H: UiHost>(&self, host: &H) -> (CanvasPoint, f32) {
-        match &self.source {
-            NodeGraphViewportHelperSource::QueueModels { view_state, .. } => view_state
-                .read_ref(host, |s| (s.pan, s.zoom))
-                .ok()
-                .unwrap_or((CanvasPoint::default(), 1.0)),
-            NodeGraphViewportHelperSource::Controller(controller) => controller.viewport(host),
-        }
+        self.view_state
+            .read_ref(host, |state| (state.pan, state.zoom))
+            .ok()
+            .unwrap_or((CanvasPoint::default(), 1.0))
     }
 
     pub fn set_viewport<H: UiHost>(&self, host: &mut H, pan: CanvasPoint, zoom: f32) {
-        match &self.source {
-            NodeGraphViewportHelperSource::QueueModels { view_queue, .. } => {
-                let _ = view_queue.update(host, |q, _cx| {
-                    q.push_set_viewport(pan, zoom);
-                });
-            }
-            NodeGraphViewportHelperSource::Controller(controller) => {
-                let _ = controller.set_viewport(host, pan, zoom);
-            }
-        }
+        let _ = self.view_queue.update(host, |queue, _cx| {
+            queue.push_set_viewport(pan, zoom);
+        });
     }
 
     pub fn set_viewport_with_options<H: UiHost>(
@@ -84,29 +52,15 @@ impl NodeGraphViewportHelper {
         zoom: f32,
         options: NodeGraphSetViewportOptions,
     ) {
-        match &self.source {
-            NodeGraphViewportHelperSource::QueueModels { view_queue, .. } => {
-                let _ = view_queue.update(host, |q, _cx| {
-                    q.push_set_viewport_with_options(pan, zoom, options);
-                });
-            }
-            NodeGraphViewportHelperSource::Controller(controller) => {
-                let _ = controller.set_viewport_with_options(host, pan, zoom, options);
-            }
-        }
+        let _ = self.view_queue.update(host, |queue, _cx| {
+            queue.push_set_viewport_with_options(pan, zoom, options);
+        });
     }
 
     pub fn fit_view_nodes<H: UiHost>(&self, host: &mut H, nodes: Vec<NodeId>) {
-        match &self.source {
-            NodeGraphViewportHelperSource::QueueModels { view_queue, .. } => {
-                let _ = view_queue.update(host, |q, _cx| {
-                    q.push_frame_nodes(nodes);
-                });
-            }
-            NodeGraphViewportHelperSource::Controller(controller) => {
-                let _ = controller.fit_view_nodes(host, nodes);
-            }
-        }
+        let _ = self.view_queue.update(host, |queue, _cx| {
+            queue.push_frame_nodes(nodes);
+        });
     }
 
     pub fn fit_view_nodes_with_options<H: UiHost>(
@@ -115,16 +69,9 @@ impl NodeGraphViewportHelper {
         nodes: Vec<NodeId>,
         options: NodeGraphFitViewOptions,
     ) {
-        match &self.source {
-            NodeGraphViewportHelperSource::QueueModels { view_queue, .. } => {
-                let _ = view_queue.update(host, |q, _cx| {
-                    q.push_frame_nodes_with_options(nodes, options);
-                });
-            }
-            NodeGraphViewportHelperSource::Controller(controller) => {
-                let _ = controller.fit_view_nodes_with_options(host, nodes, options);
-            }
-        }
+        let _ = self.view_queue.update(host, |queue, _cx| {
+            queue.push_frame_nodes_with_options(nodes, options);
+        });
     }
 
     pub fn set_center_in_bounds<H: UiHost>(&self, host: &mut H, bounds: Rect, center: CanvasPoint) {

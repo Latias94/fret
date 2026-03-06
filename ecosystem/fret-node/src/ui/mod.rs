@@ -24,7 +24,7 @@ pub mod registry;
 pub mod skin;
 pub mod style;
 pub mod view_queue;
-pub mod viewport_helper;
+mod viewport_helper;
 
 #[cfg(feature = "compat-retained-canvas")]
 pub mod a11y;

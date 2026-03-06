@@ -245,20 +245,20 @@ compatibility transport fallback.
 
 Queue-first APIs such as `NodeGraphEditQueue`, `NodeGraphViewQueue`, and
 `NodeGraphViewportHelper` should now be treated as advanced transport seams rather than the default
-app-facing integration surface. In particular, `NodeGraphViewportHelper::fit_view_nodes*` still
-relies on queue/canvas-bounds semantics, so collapsing it behind a pure controller-only API needs a
-deliberate follow-up design rather than an incidental rename.
+app-facing integration surface. `NodeGraphViewportHelper` is now bounded to the advanced
+queue-model seam only, so app-facing composition should call
+`NodeGraphController::{set_viewport*, set_center_in_bounds*, fit_view_nodes*,`
+`fit_view_nodes_in_bounds*}` directly.
 
-In the landed shape, `NodeGraphViewportHelper::from_controller(...)` is the preferred helper
-entrypoint for app-facing composition, while `NodeGraphViewportHelper::new(view_state, view_queue)`
-remains the explicit transport-first constructor for retained-only integrations that still own the
-raw queue/models directly.
+In the landed shape, `NodeGraphViewportHelper::new(view_state, view_queue)` remains the explicit
+transport-first constructor for retained-only integrations that still own the raw queue/models
+directly, while controller-first integrations no longer wrap the controller in a second helper
+surface.
 `fret_node::ui::advanced::*` is now the explicit namespace for those retained transport seams, and
 root `fret_node::ui::*` no longer re-exports the raw queue/helper surfaces. Retained-backed samples
 and crate-internal retained/test callers now use `advanced::*` or explicit module paths directly.
 Because this repo does not need a public compatibility window, the old root queue/helper aliases are
 removed outright instead of going through a deprecation cycle.
-
 Current controller-facing XyFlow mapping (review helper, not a final contract):
 
 - viewport read:
@@ -493,6 +493,8 @@ Canonical gate families to keep alive:
 - `cargo run -p fretboard -- diag suite fret-examples-node-graph-paint-only --dir target/fret-diag-node-graph --launch -- cargo run -p fret-demo --bin node_graph_demo --features node-graph-demos`
 
 The TODO tracker defines the new gate additions required for transaction-safe declarative parity.
+
+
 
 
 

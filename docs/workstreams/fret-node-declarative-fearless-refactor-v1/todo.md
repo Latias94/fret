@@ -157,10 +157,6 @@ land in code review; move design discussion back to `README.md` if a TODO turns 
     ownership.
 
 - **Most likely next shrink targets**
-  - `NodeGraphViewportHelper` (`ecosystem/fret-node/src/ui/viewport_helper.rs`, surfaced via
-    `ecosystem/fret-node/src/ui/advanced.rs`): still duplicates controller viewport helpers and
-    teaches queue/canvas-bounds semantics; strongest candidate to collapse behind a controller-first
-    naming story once the remaining viewport edge cases are covered.
   - Raw queue / viewport transport still exported from `ecosystem/fret-node/src/ui/advanced.rs`
     (`NodeGraphEditQueue`, `NodeGraphViewQueue`, `NodeGraphViewRequest`, viewport request option types):
     now explicit and bounded, but still a likely future shrink target once controller-first coverage is complete.
@@ -169,8 +165,8 @@ land in code review; move design discussion back to `README.md` if a TODO turns 
     binding rather than the default integration recipe.
 
 - **Landable follow-ups from this audit**
-  - [x] Add a controller-first constructor to `NodeGraphViewportHelper` without deleting the
-        existing queue-model seam.
+  - [x] Demote `NodeGraphViewportHelper` to `fret_node::ui::advanced::*` only and delete the
+        controller-first constructor.
   - [x] Move raw queue / viewport transport into the explicit `fret_node::ui::advanced::*`
         namespace.
   - [x] Remove root `fret_node::ui::*` queue/helper re-exports from the public surface.
@@ -180,6 +176,10 @@ land in code review; move design discussion back to `README.md` if a TODO turns 
         to `fret_node::ui::advanced::*` (`node_graph_domain_demo`, workflow gallery snippet).
   - [x] Clear in-tree uses of root queue/helper aliases (apps, gallery snippet, crate-internal retained/tests).
   - [x] Skip the external compatibility/deprecation phase and remove the old root aliases directly.
+
+
+
+
 
 ## M3 - Transaction-safe declarative commits
 
@@ -274,6 +274,9 @@ land in code review; move design discussion back to `README.md` if a TODO turns 
 - [ ] Whether controlled sync should expose diff-first helpers by default.
 - [ ] Which retained-only behaviors still need a deliberate temporary home while declarative parity
       is being built.
+
+
+
 
 
 
