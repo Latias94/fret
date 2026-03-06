@@ -1273,7 +1273,10 @@ impl WebPreviewConsole {
                     });
 
                     let msg = cx.text_props(TextProps {
-                        layout: LayoutStyle::default(),
+                        layout: decl_style::layout_style(
+                            &theme,
+                            LayoutRefinement::default().flex_grow(1.0).min_w_0(),
+                        ),
                         text: log.message.clone(),
                         style: Some(
                             typography::TypographyPreset::control_monospace(
@@ -1351,5 +1354,64 @@ impl WebPreviewConsole {
             .into_element(cx, move |_cx, _is_open| header, move |_cx| content);
 
         root
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_app::App;
+    use fret_core::{AppWindowId, Point, Rect, Size};
+    use fret_ui::element::{ElementKind, Length};
+
+    fn bounds() -> Rect {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(520.0), Px(320.0)),
+        )
+    }
+
+    fn find_text_by_content<'a>(el: &'a AnyElement, text: &str) -> Option<&'a TextProps> {
+        match &el.kind {
+            ElementKind::Text(props) if props.text.as_ref() == text => Some(props),
+            _ => el
+                .children
+                .iter()
+                .find_map(|child| find_text_by_content(child, text)),
+        }
+    }
+
+    #[test]
+    fn web_preview_console_messages_can_shrink_within_log_rows() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let message = "A very long console log message that should wrap instead of overflowing beside the timestamp";
+
+        let el =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "web-preview", |cx| {
+                WebPreview::new().into_element_with_children(cx, |cx, controller| {
+                    let _ = cx
+                        .app
+                        .models_mut()
+                        .update(&controller.console_open, |open| *open = true);
+                    vec![
+                        WebPreviewConsole::new()
+                            .logs(Arc::from([WebPreviewConsoleLog::new(
+                                WebPreviewConsoleLogLevel::Log,
+                                message,
+                            )
+                            .timestamp("12:34:56")]))
+                            .into_element(cx),
+                    ]
+                })
+            });
+
+        let msg = find_text_by_content(&el, message).expect("web preview console message text");
+        assert_eq!(msg.wrap, TextWrap::Word);
+        assert_eq!(msg.layout.flex.grow, 1.0);
+        assert_eq!(msg.layout.flex.shrink, 1.0);
+        assert_eq!(msg.layout.flex.basis, Length::Auto);
+        assert_eq!(msg.layout.size.min_width, Some(Length::Px(Px(0.0))));
     }
 }

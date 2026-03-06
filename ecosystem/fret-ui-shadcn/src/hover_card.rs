@@ -1389,6 +1389,35 @@ mod tests {
     }
 
     #[test]
+    fn hover_card_content_defaults_to_fill_width_for_wrapped_content() {
+        use fret_ui::elements::GlobalElementId;
+
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(200.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "hover-card-width", |cx| {
+            let content = HoverCardContent::new(vec![AnyElement::new(
+                GlobalElementId(1),
+                ElementKind::Text(fret_ui::element::TextProps::new("content")),
+                Vec::new(),
+            )])
+            .into_element(cx);
+
+            let ElementKind::Container(props) = &content.kind else {
+                panic!("expected HoverCardContent to build a Container element");
+            };
+
+            assert_eq!(props.layout.size.width, Length::Fill);
+            assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
+            assert_eq!(props.layout.size.max_width, Some(Length::Px(Px(256.0))));
+        });
+    }
+
+    #[test]
     fn hover_card_content_shrinks_when_container_is_narrower_than_max_width() {
         let window = AppWindowId::default();
         let mut app = App::new();

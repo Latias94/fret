@@ -50,6 +50,164 @@ fn text_xs_style(theme: &Theme, weight: FontWeight, slant: TextSlant) -> TextSty
     style
 }
 
+fn inline_citation_source_body<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    theme: &Theme,
+    source: SourceItem,
+    on_open_url: Option<fret_markdown::OnLinkActivate>,
+) -> AnyElement {
+    let title_text = cx.text_props(TextProps {
+        layout: decl_style::layout_style(theme, LayoutRefinement::default().w_full().min_w_0()),
+        text: source.title.clone(),
+        style: Some(text_sm_style(theme, FontWeight::MEDIUM)),
+        color: Some(theme.color_token("foreground")),
+        wrap: TextWrap::None,
+        overflow: TextOverflow::Ellipsis,
+        align: TextAlign::Start,
+        ink_overflow: Default::default(),
+    });
+
+    let url_text = match (source.url.clone(), on_open_url) {
+        (Some(url), Some(handler)) => {
+            let link = fret_markdown::LinkInfo {
+                href: url.clone(),
+                text: url.clone(),
+            };
+            let on_activate: OnActivate = Arc::new(move |host, cx, reason| {
+                handler(host, cx, reason, link.clone());
+            });
+
+            let url_text = cx.text_props(TextProps {
+                layout: decl_style::layout_style(
+                    theme,
+                    LayoutRefinement::default().w_full().min_w_0(),
+                ),
+                text: url.clone(),
+                style: Some(text_xs_style(theme, FontWeight::NORMAL, TextSlant::Normal)),
+                color: Some(theme.color_token("muted-foreground")),
+                wrap: TextWrap::Grapheme,
+                overflow: TextOverflow::Ellipsis,
+                align: TextAlign::Start,
+                ink_overflow: Default::default(),
+            });
+
+            Some(cx.pressable(
+                PressableProps {
+                    layout: decl_style::layout_style(
+                        theme,
+                        LayoutRefinement::default().w_full().min_w_0(),
+                    ),
+                    key_activation: fret_ui::element::PressableKeyActivation::EnterOnly,
+                    a11y: PressableA11y {
+                        role: Some(SemanticsRole::Link),
+                        label: Some(Arc::<str>::from("Open source URL")),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                move |cx, _state| {
+                    cx.pressable_on_activate(on_activate.clone());
+                    [url_text]
+                },
+            ))
+        }
+        (Some(url), None) => Some(cx.text_props(TextProps {
+            layout: decl_style::layout_style(theme, LayoutRefinement::default().w_full().min_w_0()),
+            text: url,
+            style: Some(text_xs_style(theme, FontWeight::NORMAL, TextSlant::Normal)),
+            color: Some(theme.color_token("muted-foreground")),
+            wrap: TextWrap::Grapheme,
+            overflow: TextOverflow::Ellipsis,
+            align: TextAlign::Start,
+            ink_overflow: Default::default(),
+        })),
+        _ => None,
+    };
+
+    let quote = source.excerpt.clone().map(|excerpt| {
+        let mut style = text_sm_style(theme, FontWeight::NORMAL);
+        style.slant = TextSlant::Italic;
+
+        let quote_text = cx.text_props(TextProps {
+            layout: decl_style::layout_style(theme, LayoutRefinement::default().w_full().min_w_0()),
+            text: excerpt,
+            style: Some(style),
+            color: Some(theme.color_token("muted-foreground")),
+            wrap: TextWrap::Word,
+            overflow: TextOverflow::Clip,
+            align: TextAlign::Start,
+            ink_overflow: Default::default(),
+        });
+
+        cx.container(
+            fret_ui::element::ContainerProps {
+                layout: decl_style::layout_style(
+                    theme,
+                    LayoutRefinement::default().w_full().min_w_0(),
+                ),
+                padding: fret_core::Edges {
+                    top: fret_core::Px(0.0),
+                    right: fret_core::Px(0.0),
+                    bottom: fret_core::Px(0.0),
+                    left: fret_core::Px(12.0),
+                }
+                .into(),
+                background: None,
+                background_paint: None,
+                shadow: None,
+                border: fret_core::Edges {
+                    top: fret_core::Px(0.0),
+                    right: fret_core::Px(0.0),
+                    bottom: fret_core::Px(0.0),
+                    left: fret_core::Px(2.0),
+                },
+                border_color: Some(theme.color_token("muted")),
+                border_paint: None,
+                border_dash: None,
+                focus_ring: None,
+                focus_ring_always_paint: false,
+                focus_border_color: None,
+                focus_within: false,
+                corner_radii: fret_core::Corners::all(fret_core::Px(0.0)),
+                snap_to_device_pixels: false,
+            },
+            move |_cx| vec![quote_text],
+        )
+    });
+
+    let source_block = ui::v_stack(move |_cx| {
+        let mut out = Vec::new();
+        out.push(title_text);
+        if let Some(url_text) = url_text {
+            out.push(url_text);
+        }
+        out
+    })
+    .layout(LayoutRefinement::default().w_full().min_w_0())
+    .gap(Space::N1)
+    .into_element(cx);
+
+    let body_inner = ui::v_stack(move |_cx| {
+        let mut out = vec![source_block];
+        if let Some(quote) = quote {
+            out.push(quote);
+        }
+        out
+    })
+    .layout(LayoutRefinement::default().w_full().min_w_0())
+    .gap(Space::N2)
+    .into_element(cx);
+
+    cx.container(
+        decl_style::container_props(
+            theme,
+            ChromeRefinement::default().p(Space::N4).pl(Space::N8),
+            LayoutRefinement::default().w_full().min_w_0(),
+        ),
+        move |_cx| vec![body_inner],
+    )
+}
+
 #[derive(Clone)]
 /// A small inline citation chip.
 ///
@@ -456,7 +614,7 @@ impl InlineCitation {
                 );
 
                 ui::h_row(move |_cx| vec![index_inner])
-                    .layout(LayoutRefinement::default().flex_grow(1.0))
+                    .layout(LayoutRefinement::default().flex_grow(1.0).min_w_0())
                     .justify(Justify::End)
                     .items(Items::Center)
                     .into_element(cx)
@@ -464,7 +622,7 @@ impl InlineCitation {
         };
 
         let header_row = ui::h_row(move |_cx| vec![prev_btn, next_btn, index_label])
-            .layout(LayoutRefinement::default().w_full())
+            .layout(LayoutRefinement::default().w_full().min_w_0())
             .gap(Space::N2)
             .items(Items::Center)
             .into_element(cx);
@@ -487,150 +645,13 @@ impl InlineCitation {
 
         let source = resolved_sources.get(index_now).cloned();
         let body = if let Some(source) = source {
-            let title_text = cx.text_props(TextProps {
-                layout: LayoutStyle::default(),
-                text: source.title.clone(),
-                style: Some(text_sm_style(&theme, FontWeight::MEDIUM)),
-                color: Some(theme.color_token("foreground")),
-                wrap: TextWrap::None,
-                overflow: TextOverflow::Ellipsis,
-                align: TextAlign::Start,
-                ink_overflow: Default::default(),
-            });
-
-            let url_text = match (source.url.clone(), self.on_open_url.clone()) {
-                (Some(url), Some(handler)) => {
-                    let link = fret_markdown::LinkInfo {
-                        href: url.clone(),
-                        text: url.clone(),
-                    };
-                    let on_activate: OnActivate = Arc::new(move |host, cx, reason| {
-                        handler(host, cx, reason, link.clone());
-                    });
-
-                    let url_text = cx.text_props(TextProps {
-                        layout: LayoutStyle::default(),
-                        text: url.clone(),
-                        style: Some(text_xs_style(&theme, FontWeight::NORMAL, TextSlant::Normal)),
-                        color: Some(theme.color_token("muted-foreground")),
-                        wrap: TextWrap::Grapheme,
-                        overflow: TextOverflow::Ellipsis,
-                        align: TextAlign::Start,
-                        ink_overflow: Default::default(),
-                    });
-
-                    Some(cx.pressable(
-                        PressableProps {
-                            key_activation: fret_ui::element::PressableKeyActivation::EnterOnly,
-                            a11y: PressableA11y {
-                                role: Some(SemanticsRole::Link),
-                                label: Some(Arc::<str>::from("Open source URL")),
-                                ..Default::default()
-                            },
-                            ..Default::default()
-                        },
-                        move |cx, _state| {
-                            cx.pressable_on_activate(on_activate.clone());
-                            [url_text]
-                        },
-                    ))
-                }
-                (Some(url), None) => Some(cx.text_props(TextProps {
-                    layout: LayoutStyle::default(),
-                    text: url,
-                    style: Some(text_xs_style(&theme, FontWeight::NORMAL, TextSlant::Normal)),
-                    color: Some(theme.color_token("muted-foreground")),
-                    wrap: TextWrap::Grapheme,
-                    overflow: TextOverflow::Ellipsis,
-                    align: TextAlign::Start,
-                    ink_overflow: Default::default(),
-                })),
-                _ => None,
-            };
-
-            let quote = source.excerpt.clone().map(|excerpt| {
-                let mut style = text_sm_style(&theme, FontWeight::NORMAL);
-                style.slant = TextSlant::Italic;
-
-                let quote_text = cx.text_props(TextProps {
-                    layout: LayoutStyle::default(),
-                    text: excerpt,
-                    style: Some(style),
-                    color: Some(theme.color_token("muted-foreground")),
-                    wrap: TextWrap::Word,
-                    overflow: TextOverflow::Clip,
-                    align: TextAlign::Start,
-                    ink_overflow: Default::default(),
-                });
-
-                cx.container(
-                    fret_ui::element::ContainerProps {
-                        layout: LayoutStyle::default(),
-                        padding: fret_core::Edges {
-                            top: fret_core::Px(0.0),
-                            right: fret_core::Px(0.0),
-                            bottom: fret_core::Px(0.0),
-                            left: fret_core::Px(12.0),
-                        }
-                        .into(),
-                        background: None,
-                        background_paint: None,
-                        shadow: None,
-                        border: fret_core::Edges {
-                            top: fret_core::Px(0.0),
-                            right: fret_core::Px(0.0),
-                            bottom: fret_core::Px(0.0),
-                            left: fret_core::Px(2.0),
-                        },
-                        border_color: Some(theme.color_token("muted")),
-                        border_paint: None,
-                        border_dash: None,
-                        focus_ring: None,
-                        focus_ring_always_paint: false,
-                        focus_border_color: None,
-                        focus_within: false,
-                        corner_radii: fret_core::Corners::all(fret_core::Px(0.0)),
-                        snap_to_device_pixels: false,
-                    },
-                    move |_cx| vec![quote_text],
-                )
-            });
-
-            let source_block = ui::v_stack(move |_cx| {
-                let mut out = Vec::new();
-                out.push(title_text);
-                if let Some(url_text) = url_text {
-                    out.push(url_text);
-                }
-                out
-            })
-            .gap(Space::N1)
-            .into_element(cx);
-
-            let body_inner = ui::v_stack(move |_cx| {
-                let mut out = vec![source_block];
-                if let Some(quote) = quote {
-                    out.push(quote);
-                }
-                out
-            })
-            .gap(Space::N2)
-            .into_element(cx);
-
-            cx.container(
-                decl_style::container_props(
-                    &theme,
-                    ChromeRefinement::default().p(Space::N4).pl(Space::N8),
-                    LayoutRefinement::default().w_full(),
-                ),
-                move |_cx| vec![body_inner],
-            )
+            inline_citation_source_body(cx, &theme, source, self.on_open_url.clone())
         } else {
             cx.text(self.label)
         };
 
         let content = ui::v_stack(move |_cx| vec![header, body])
-            .layout(LayoutRefinement::default().w_full())
+            .layout(LayoutRefinement::default().w_full().min_w_0())
             .gap(Space::N0)
             .into_element(cx);
 
@@ -663,5 +684,109 @@ impl InlineCitation {
             .gap(Space::N1)
             .items(Items::Center)
             .into_element(cx)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_app::App;
+    use fret_core::{AppWindowId, Point, Rect, Size};
+    use fret_ui::element::{ElementKind, Length, PressableProps};
+
+    fn bounds() -> Rect {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(420.0), Px(280.0)),
+        )
+    }
+
+    fn find_text_by_content<'a>(el: &'a AnyElement, text: &str) -> Option<&'a TextProps> {
+        match &el.kind {
+            ElementKind::Text(props) if props.text.as_ref() == text => Some(props),
+            _ => el
+                .children
+                .iter()
+                .find_map(|child| find_text_by_content(child, text)),
+        }
+    }
+
+    fn find_pressable_by_label<'a>(el: &'a AnyElement, label: &str) -> Option<&'a PressableProps> {
+        match &el.kind {
+            ElementKind::Pressable(props) if props.a11y.label.as_deref() == Some(label) => {
+                Some(props)
+            }
+            _ => el
+                .children
+                .iter()
+                .find_map(|child| find_pressable_by_label(child, label)),
+        }
+    }
+
+    #[test]
+    fn inline_citation_title_and_url_can_truncate_within_card_width() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let title =
+            "A very long source title that should truncate instead of overflowing the hover card";
+        let url = "https://example.com/a/very/long/url/that/should/truncate/inside/the/hover/card";
+        let on_open_url: fret_markdown::OnLinkActivate = Arc::new(|_, _, _, _| {});
+
+        let el = fret_ui::elements::with_element_cx(&mut app, window, bounds(), "citation", |cx| {
+            let theme = Theme::global(&*cx.app).clone();
+            inline_citation_source_body(
+                cx,
+                &theme,
+                SourceItem::new("source-1", title).url(url),
+                Some(on_open_url.clone()),
+            )
+        });
+
+        let title_text = find_text_by_content(&el, title).expect("inline citation title text");
+        assert_eq!(title_text.wrap, TextWrap::None);
+        assert_eq!(title_text.overflow, TextOverflow::Ellipsis);
+        assert_eq!(title_text.layout.size.width, Length::Fill);
+        assert_eq!(title_text.layout.size.min_width, Some(Length::Px(Px(0.0))));
+
+        let url_text = find_text_by_content(&el, url).expect("inline citation url text");
+        assert_eq!(url_text.wrap, TextWrap::Grapheme);
+        assert_eq!(url_text.overflow, TextOverflow::Ellipsis);
+        assert_eq!(url_text.layout.size.width, Length::Fill);
+        assert_eq!(url_text.layout.size.min_width, Some(Length::Px(Px(0.0))));
+
+        let link =
+            find_pressable_by_label(&el, "Open source URL").expect("inline citation url pressable");
+        assert_eq!(link.layout.size.width, Length::Fill);
+        assert_eq!(link.layout.size.min_width, Some(Length::Px(Px(0.0))));
+    }
+
+    #[test]
+    fn inline_citation_quote_can_wrap_within_card_width() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let excerpt = "A very long quoted excerpt that should wrap inside the hover card instead of overflowing in one line.";
+
+        let el = fret_ui::elements::with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "citation-quote",
+            |cx| {
+                let theme = Theme::global(&*cx.app).clone();
+                inline_citation_source_body(
+                    cx,
+                    &theme,
+                    SourceItem::new("source-1", "Alpha source").excerpt(excerpt),
+                    None,
+                )
+            },
+        );
+
+        let quote = find_text_by_content(&el, excerpt).expect("inline citation quote text");
+        assert_eq!(quote.wrap, TextWrap::Word);
+        assert_eq!(quote.overflow, TextOverflow::Clip);
+        assert_eq!(quote.layout.size.width, Length::Fill);
+        assert_eq!(quote.layout.size.min_width, Some(Length::Px(Px(0.0))));
     }
 }

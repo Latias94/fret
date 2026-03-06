@@ -720,7 +720,12 @@ impl RadioGroup {
 
                                         let label = a11y_label.clone();
                                         let label_props = TextProps {
-                                            layout: LayoutStyle::default(),
+                                            layout: decl_style::layout_style(
+                                                &theme,
+                                                LayoutRefinement::default()
+                                                    .flex_grow(1.0)
+                                                    .min_w_0(),
+                                            ),
                                             text: label,
                                             style: Some(text_style.clone()),
                                             color: Some(fg),
@@ -1914,6 +1919,62 @@ mod tests {
         }
 
         None
+    }
+
+    fn find_text_by_content<'a>(el: &'a AnyElement, text: &str) -> Option<&'a TextProps> {
+        match &el.kind {
+            ElementKind::Text(props) if props.text.as_ref() == text => return Some(props),
+            _ => {}
+        }
+
+        for child in &el.children {
+            if let Some(found) = find_text_by_content(child, text) {
+                return Some(found);
+            }
+        }
+
+        None
+    }
+
+    #[test]
+    fn radio_group_word_wrapped_label_can_shrink_within_row() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        crate::shadcn_themes::apply_shadcn_new_york(
+            &mut app,
+            crate::shadcn_themes::ShadcnBaseColor::Neutral,
+            crate::shadcn_themes::ShadcnColorScheme::Light,
+        );
+
+        let model = app.models_mut().insert(Some(Arc::from("alpha")));
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(240.0), Px(160.0)),
+        );
+
+        let el = fret_ui::elements::with_element_cx(&mut app, window, bounds, "radio-wrap", |cx| {
+            RadioGroup::new(model.clone())
+                .a11y_label("Options")
+                .refine_layout(LayoutRefinement::default().w_full().max_w(Px(160.0)))
+                .item(RadioGroupItem::new(
+                    "alpha",
+                    "A very long radio label that should wrap instead of overflowing the row",
+                ))
+                .into_element(cx)
+        });
+
+        let label = find_text_by_content(
+            &el,
+            "A very long radio label that should wrap instead of overflowing the row",
+        )
+        .expect("radio group label text");
+
+        assert_eq!(label.wrap, TextWrap::Word);
+        assert_eq!(label.layout.flex.grow, 1.0);
+        assert_eq!(label.layout.flex.shrink, 1.0);
+        assert_eq!(label.layout.flex.basis, Length::Auto);
+        assert_eq!(label.layout.size.min_width, Some(Length::Px(Px(0.0))));
     }
 
     #[test]

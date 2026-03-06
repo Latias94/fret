@@ -218,7 +218,10 @@ impl SourcesBlock {
                     decl_icon::icon_with(cx, ids::ui::BOOK, Some(Px(16.0)), Some(row_icon_color));
 
                 let title_text = cx.text_props(TextProps {
-                    layout: LayoutStyle::default(),
+                    layout: decl_style::layout_style(
+                        &list_theme,
+                        LayoutRefinement::default().flex_grow(1.0).min_w_0(),
+                    ),
                     text: item.title.clone(),
                     style: Some(text_xs_style(&list_theme, FontWeight::MEDIUM)),
                     color: Some(row_title_color),
@@ -229,6 +232,7 @@ impl SourcesBlock {
                 });
 
                 let title_row = ui::h_row(move |_cx| vec![icon, title_text])
+                    .layout(LayoutRefinement::default().flex_grow(1.0).min_w_0())
                     .gap(Space::N2)
                     .items(Items::Center)
                     .into_element(cx);
@@ -250,6 +254,10 @@ impl SourcesBlock {
 
                         cx.pressable(
                             PressableProps {
+                                layout: decl_style::layout_style(
+                                    &list_theme,
+                                    LayoutRefinement::default().flex_grow(1.0).min_w_0(),
+                                ),
                                 key_activation: PressableKeyActivation::EnterOnly,
                                 a11y: PressableA11y {
                                     role: Some(SemanticsRole::Link),
@@ -294,7 +302,7 @@ impl SourcesBlock {
                     }
                     row
                 })
-                .layout(LayoutRefinement::default())
+                .layout(LayoutRefinement::default().w_full().min_w_0())
                 .gap(Space::N2)
                 .justify(Justify::Between)
                 .items(Items::Center)
@@ -321,7 +329,7 @@ impl SourcesBlock {
                     }
                     body
                 })
-                .layout(LayoutRefinement::default().w_full())
+                .layout(LayoutRefinement::default().w_full().min_w_0())
                 .gap(Space::N1)
                 .into_element(cx);
 
@@ -371,7 +379,10 @@ impl SourcesBlock {
                     title.clone()
                 };
                 let label = cx.text_props(TextProps {
-                    layout: LayoutStyle::default(),
+                    layout: decl_style::layout_style(
+                        &trigger_theme,
+                        LayoutRefinement::default().flex_grow(1.0).min_w_0(),
+                    ),
                     text: label_text,
                     style: Some(text_xs_style(&trigger_theme, FontWeight::MEDIUM)),
                     color: Some(title_color),
@@ -392,8 +403,9 @@ impl SourcesBlock {
                     Some(trigger_icon_color.clone()),
                 );
                 let row = ui::h_row(move |_cx| vec![label, chevron])
-                    .layout(LayoutRefinement::default())
+                    .layout(LayoutRefinement::default().w_full().min_w_0())
                     .gap(Space::N2)
+                    .justify(Justify::Between)
                     .items(Items::Center)
                     .into_element(cx);
 
@@ -461,5 +473,106 @@ impl SourcesBlock {
             },
             move |_cx| vec![root],
         )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_app::App;
+    use fret_core::{AppWindowId, Point, Rect, Size};
+    use fret_ui::element::{ElementKind, Length, PressableProps};
+
+    fn bounds() -> Rect {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(420.0), Px(260.0)),
+        )
+    }
+
+    fn find_text_by_content<'a>(el: &'a AnyElement, text: &str) -> Option<&'a TextProps> {
+        match &el.kind {
+            ElementKind::Text(props) if props.text.as_ref() == text => Some(props),
+            _ => el
+                .children
+                .iter()
+                .find_map(|child| find_text_by_content(child, text)),
+        }
+    }
+
+    fn find_pressable_by_label<'a>(el: &'a AnyElement, label: &str) -> Option<&'a PressableProps> {
+        match &el.kind {
+            ElementKind::Pressable(props) if props.a11y.label.as_deref() == Some(label) => {
+                Some(props)
+            }
+            _ => el
+                .children
+                .iter()
+                .find_map(|child| find_pressable_by_label(child, label)),
+        }
+    }
+
+    #[test]
+    fn sources_block_item_title_can_shrink_within_row() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let title =
+            "A very long cited source title that should truncate instead of overflowing the row";
+        let on_open_url: fret_markdown::OnLinkActivate = Arc::new(|_, _, _, _| {});
+
+        let el = fret_ui::elements::with_element_cx(&mut app, window, bounds(), "sources", |cx| {
+            SourcesBlock::new([SourceItem::new("source-1", title)
+                .url("https://example.com/source-1")
+                .excerpt("Supporting excerpt text that can wrap under the title row.")])
+            .default_open(true)
+            .highlighted_source_id("source-1")
+            .on_open_url(on_open_url.clone())
+            .into_element(cx)
+        });
+
+        let title_text = find_text_by_content(&el, title).expect("sources block title text");
+        assert_eq!(title_text.wrap, TextWrap::None);
+        assert_eq!(title_text.overflow, TextOverflow::Ellipsis);
+        assert_eq!(title_text.layout.flex.grow, 1.0);
+        assert_eq!(title_text.layout.flex.shrink, 1.0);
+        assert_eq!(title_text.layout.flex.basis, Length::Auto);
+        assert_eq!(title_text.layout.size.min_width, Some(Length::Px(Px(0.0))));
+
+        let pressable =
+            find_pressable_by_label(&el, title).expect("sources block title link pressable");
+        assert_eq!(pressable.layout.flex.grow, 1.0);
+        assert_eq!(pressable.layout.flex.shrink, 1.0);
+        assert_eq!(pressable.layout.flex.basis, Length::Auto);
+        assert_eq!(pressable.layout.size.min_width, Some(Length::Px(Px(0.0))));
+    }
+
+    #[test]
+    fn sources_block_trigger_label_can_shrink_within_row() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let title =
+            "Used {count} sources with a very long trigger title that should truncate cleanly";
+        let resolved = "Used 1 sources with a very long trigger title that should truncate cleanly";
+
+        let el = fret_ui::elements::with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "sources-trigger",
+            |cx| {
+                SourcesBlock::new([SourceItem::new("source-1", "Alpha")])
+                    .title(title)
+                    .into_element(cx)
+            },
+        );
+
+        let label = find_text_by_content(&el, resolved).expect("sources block trigger label");
+        assert_eq!(label.wrap, TextWrap::None);
+        assert_eq!(label.overflow, TextOverflow::Clip);
+        assert_eq!(label.layout.flex.grow, 1.0);
+        assert_eq!(label.layout.flex.shrink, 1.0);
+        assert_eq!(label.layout.flex.basis, Length::Auto);
+        assert_eq!(label.layout.size.min_width, Some(Length::Px(Px(0.0))));
     }
 }

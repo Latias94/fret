@@ -94,6 +94,34 @@ For a closure-oriented, module-by-module index (contracts → code → tests →
   - Tailwind CSS: `repo-ref/tailwindcss` (semantic target)
   - Taffy: layout engine backend (implementation detail)
 
+### Inherited foreground / `currentColor`-style paint cascade
+
+- **Module(s):**
+  - `crates/fret-ui/src/element.rs`
+  - `crates/fret-ui/src/declarative/frame.rs`
+  - `crates/fret-ui/src/declarative/mount.rs`
+  - `crates/fret-ui/src/declarative/paint_helpers.rs`
+  - `crates/fret-ui/src/declarative/host_widget/paint.rs`
+- **ADR(s):** `docs/adr/0066-fret-ui-runtime-contract-surface.md`
+- **Reference(s):**
+  - GPUI/Zed style-context traversal outcomes for inherited text/foreground styling
+  - shadcn/ui `currentColor` expectations for icon/text composition
+- **Contract notes:**
+  - `AnyElement::inherit_foreground(...)` stamps inherited foreground on an existing subtree root
+    without adding a layout node.
+  - Mount/paint traversal carries that foreground as scoped paint state rather than by inserting a
+    wrapper-shaped element.
+  - Explicit element colors remain authoritative; inherited foreground is a fallback for opt-in
+    consumers such as text/icons/spinners.
+  - Ecosystem authoring helpers may still expose transitional lowering APIs, but those helpers must
+    preserve the original root's layout ownership (`fill`, `shrink`, sibling flow, and width
+    constraints).
+  - Evidence anchors:
+    - Runtime carrier + traversal: `crates/fret-ui/src/element.rs`, `crates/fret-ui/src/declarative/{frame.rs,mount.rs,paint_helpers.rs}`
+    - Paint application: `crates/fret-ui/src/declarative/host_widget/paint.rs`
+    - Transitional ecosystem helper: `ecosystem/fret-ui-kit/src/declarative/current_color.rs`
+    - Regression gates: `ecosystem/fret-ui-shadcn/src/{dropdown_menu.rs,select.rs,tabs.rs,input_group.rs,alert.rs,context_menu.rs,menubar.rs}` and `ecosystem/fret-ui-ai/src/elements/{message.rs,task.rs}`
+
 ### Scheduling (redraw, RAF, continuous frames lease)
 
 - **Module(s):**
