@@ -1,12 +1,8 @@
-#[cfg(not(target_arch = "wasm32"))]
-use anyhow::Context as _;
 use fret_app::{App, CommandId, Effect, Model, WindowRequest};
-#[cfg(not(target_arch = "wasm32"))]
-use fret_bootstrap::BootstrapBuilder;
 use fret_core::{AppWindowId, Event, FontId, Px, Rect, TextStyle, TextWrap, UiServices};
 use fret_launch::{
-    WindowCreateSpec, WinitAppDriver, WinitCommandContext, WinitEventContext, WinitRenderContext,
-    WinitRunnerConfig,
+    FnDriver, WindowCreateSpec, WinitCommandContext, WinitEventContext, WinitHotReloadContext,
+    WinitRenderContext, WinitRunnerConfig,
 };
 use fret_runtime::{FontCatalogCache, PlatformCapabilities};
 use fret_ui::declarative;
@@ -64,7 +60,7 @@ const EMOJI_CASES: &[EmojiCase] = &[
     },
 ];
 
-struct EmojiConformanceWindowState {
+pub struct EmojiConformanceWindowState {
     ui: UiTree<App>,
     root: Option<fret_core::NodeId>,
     emoji_font_override: Model<Option<Arc<str>>>,
@@ -72,7 +68,7 @@ struct EmojiConformanceWindowState {
 }
 
 #[derive(Default)]
-struct EmojiConformanceDriver;
+pub struct EmojiConformanceDriver;
 
 impl EmojiConformanceDriver {
     fn render(
@@ -293,109 +289,126 @@ impl EmojiConformanceDriver {
     }
 }
 
-impl WinitAppDriver for EmojiConformanceDriver {
-    type WindowState = EmojiConformanceWindowState;
+fn create_window_state(
+    _driver: &mut EmojiConformanceDriver,
+    app: &mut App,
+    window: AppWindowId,
+) -> EmojiConformanceWindowState {
+    let emoji_font_override = app.models_mut().insert(None::<Arc<str>>);
+    let emoji_font_override_open = app.models_mut().insert(false);
 
-    fn create_window_state(&mut self, app: &mut App, window: AppWindowId) -> Self::WindowState {
-        let emoji_font_override = app.models_mut().insert(None::<Arc<str>>);
-        let emoji_font_override_open = app.models_mut().insert(false);
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
 
-        let mut ui: UiTree<App> = UiTree::new();
-        ui.set_window(window);
+    EmojiConformanceWindowState {
+        ui,
+        root: None,
+        emoji_font_override,
+        emoji_font_override_open,
+    }
+}
 
-        EmojiConformanceWindowState {
-            ui,
-            root: None,
-            emoji_font_override,
-            emoji_font_override_open,
+fn hot_reload_window(
+    _driver: &mut EmojiConformanceDriver,
+    context: WinitHotReloadContext<'_, EmojiConformanceWindowState>,
+) {
+    let WinitHotReloadContext {
+        app, window, state, ..
+    } = context;
+
+    crate::hotpatch::reset_ui_tree(app, window, &mut state.ui);
+    state.root = None;
+}
+
+fn handle_command(
+    _driver: &mut EmojiConformanceDriver,
+    context: WinitCommandContext<'_, EmojiConformanceWindowState>,
+    command: CommandId,
+) {
+    let WinitCommandContext { app, state, .. } = context;
+
+    if command.as_str() == CMD_EMOJI_FONT_RESET {
+        let _ = app
+            .models_mut()
+            .update(&state.emoji_font_override, |v| *v = None);
+    }
+}
+
+fn handle_event(
+    _driver: &mut EmojiConformanceDriver,
+    context: WinitEventContext<'_, EmojiConformanceWindowState>,
+    event: &Event,
+) {
+    let WinitEventContext {
+        app,
+        services,
+        window,
+        state,
+    } = context;
+
+    match event {
+        Event::WindowCloseRequested
+        | Event::KeyDown {
+            key: fret_core::KeyCode::Escape,
+            ..
+        } => {
+            app.push_effect(Effect::Window(WindowRequest::Close(window)));
+            return;
         }
+        _ => {}
     }
 
-    fn hot_reload_window(
-        &mut self,
-        app: &mut App,
-        _services: &mut dyn UiServices,
-        window: AppWindowId,
-        state: &mut Self::WindowState,
-    ) {
-        crate::hotpatch::reset_ui_tree(app, window, &mut state.ui);
-        state.root = None;
-    }
+    state.ui.dispatch_event(app, services, event);
+}
 
-    fn handle_command(
-        &mut self,
-        context: WinitCommandContext<'_, Self::WindowState>,
-        command: CommandId,
-    ) {
-        let WinitCommandContext { app, state, .. } = context;
+fn render(
+    _driver: &mut EmojiConformanceDriver,
+    context: WinitRenderContext<'_, EmojiConformanceWindowState>,
+) {
+    let WinitRenderContext {
+        app,
+        services,
+        window,
+        state,
+        bounds,
+        scale_factor,
+        scene,
+    } = context;
 
-        if command.as_str() == CMD_EMOJI_FONT_RESET {
-            let _ = app
-                .models_mut()
-                .update(&state.emoji_font_override, |v| *v = None);
-        }
-    }
+    EmojiConformanceDriver::render(app, services, window, state, bounds);
 
-    fn handle_event(&mut self, context: WinitEventContext<'_, Self::WindowState>, event: &Event) {
-        let WinitEventContext {
-            app,
-            services,
-            window,
-            state,
-        } = context;
+    state.ui.request_semantics_snapshot();
+    state.ui.ingest_paint_cache_source(scene);
+    scene.clear();
+    let mut frame =
+        fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
+    frame.layout_all();
+    frame.paint_all(scene);
+}
 
-        match event {
-            Event::WindowCloseRequested
-            | Event::KeyDown {
-                key: fret_core::KeyCode::Escape,
-                ..
-            } => {
-                app.push_effect(Effect::Window(WindowRequest::Close(window)));
-                return;
-            }
-            _ => {}
-        }
+fn window_create_spec(
+    _driver: &mut EmojiConformanceDriver,
+    _app: &mut App,
+    _request: &fret_app::CreateWindowRequest,
+) -> Option<WindowCreateSpec> {
+    None
+}
 
-        state.ui.dispatch_event(app, services, event);
-    }
+fn window_created(
+    _driver: &mut EmojiConformanceDriver,
+    _app: &mut App,
+    _request: &fret_app::CreateWindowRequest,
+    _new_window: AppWindowId,
+) {
+}
 
-    fn render(&mut self, context: WinitRenderContext<'_, Self::WindowState>) {
-        let WinitRenderContext {
-            app,
-            services,
-            window,
-            state,
-            bounds,
-            scale_factor,
-            scene,
-        } = context;
-
-        EmojiConformanceDriver::render(app, services, window, state, bounds);
-
-        state.ui.request_semantics_snapshot();
-        state.ui.ingest_paint_cache_source(scene);
-        scene.clear();
-        let mut frame =
-            fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
-        frame.layout_all();
-        frame.paint_all(scene);
-    }
-
-    fn window_create_spec(
-        &mut self,
-        _app: &mut App,
-        _request: &fret_app::CreateWindowRequest,
-    ) -> Option<WindowCreateSpec> {
-        None
-    }
-
-    fn window_created(
-        &mut self,
-        _app: &mut App,
-        _request: &fret_app::CreateWindowRequest,
-        _new_window: AppWindowId,
-    ) {
-    }
+fn configure_fn_driver_hooks(
+    hooks: &mut fret_launch::FnDriverHooks<EmojiConformanceDriver, EmojiConformanceWindowState>,
+) {
+    hooks.hot_reload_window = Some(hot_reload_window);
+    hooks.handle_command = Some(handle_command);
+    hooks.window_create_spec = Some(window_create_spec);
+    hooks.window_created = Some(window_created);
 }
 
 pub fn build_app() -> App {
@@ -417,8 +430,14 @@ pub fn build_runner_config() -> WinitRunnerConfig {
     }
 }
 
-pub fn build_driver() -> impl WinitAppDriver {
-    EmojiConformanceDriver::default()
+pub fn build_fn_driver() -> FnDriver<EmojiConformanceDriver, EmojiConformanceWindowState> {
+    FnDriver::new(
+        EmojiConformanceDriver::default(),
+        create_window_state,
+        handle_event,
+        render,
+    )
+    .with_hooks(configure_fn_driver_hooks)
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -435,15 +454,16 @@ pub fn run() -> anyhow::Result<()> {
     let app = build_app();
     let config = build_runner_config();
 
-    BootstrapBuilder::new(app, EmojiConformanceDriver)
-        .configure(move |c| {
-            *c = config;
-        })
-        .with_default_config_files()
-        .context("load layered config files (settings/keymap)")?
-        .with_lucide_icons()
-        .run()
-        .map_err(anyhow::Error::from)
+    crate::run_native_with_fn_driver_with_hooks(
+        config,
+        app,
+        EmojiConformanceDriver::default(),
+        create_window_state,
+        handle_event,
+        render,
+        configure_fn_driver_hooks,
+    )
+    .map_err(anyhow::Error::from)
 }
 
 #[cfg(target_arch = "wasm32")]

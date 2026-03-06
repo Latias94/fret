@@ -1,12 +1,8 @@
-#[cfg(not(target_arch = "wasm32"))]
-use anyhow::Context as _;
 use fret_app::{App, Effect, WindowRequest};
-#[cfg(not(target_arch = "wasm32"))]
-use fret_bootstrap::BootstrapBuilder;
 use fret_core::{AppWindowId, Event, FontId, Px, Rect, TextStyle, TextWrap, UiServices};
 use fret_launch::{
-    WindowCreateSpec, WinitAppDriver, WinitCommandContext, WinitEventContext, WinitRenderContext,
-    WinitRunnerConfig,
+    FnDriver, WindowCreateSpec, WinitCommandContext, WinitEventContext, WinitHotReloadContext,
+    WinitRenderContext, WinitRunnerConfig,
 };
 use fret_runtime::{FontCatalogCache, PlatformCapabilities};
 use fret_ui::UiTree;
@@ -43,13 +39,13 @@ const CJK_CASES: &[CjkCase] = &[
 const FALLBACK_SMOKE: &str =
     "Default font fallback: Text + 中文 + 日本語 + 한국어 + 😀 ✈️ 1️⃣ 🇺🇸 👨‍👩‍👧‍👦";
 
-struct CjkConformanceWindowState {
+pub struct CjkConformanceWindowState {
     ui: UiTree<App>,
     root: Option<fret_core::NodeId>,
 }
 
 #[derive(Default)]
-struct CjkConformanceDriver;
+pub struct CjkConformanceDriver;
 
 impl CjkConformanceDriver {
     fn render(
@@ -233,94 +229,111 @@ impl CjkConformanceDriver {
     }
 }
 
-impl WinitAppDriver for CjkConformanceDriver {
-    type WindowState = CjkConformanceWindowState;
+fn create_window_state(
+    _driver: &mut CjkConformanceDriver,
+    _app: &mut App,
+    window: AppWindowId,
+) -> CjkConformanceWindowState {
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
 
-    fn create_window_state(&mut self, _app: &mut App, window: AppWindowId) -> Self::WindowState {
-        let mut ui: UiTree<App> = UiTree::new();
-        ui.set_window(window);
+    CjkConformanceWindowState { ui, root: None }
+}
 
-        CjkConformanceWindowState { ui, root: None }
-    }
+fn hot_reload_window(
+    _driver: &mut CjkConformanceDriver,
+    context: WinitHotReloadContext<'_, CjkConformanceWindowState>,
+) {
+    let WinitHotReloadContext {
+        app, window, state, ..
+    } = context;
 
-    fn hot_reload_window(
-        &mut self,
-        app: &mut App,
-        _services: &mut dyn UiServices,
-        window: AppWindowId,
-        state: &mut Self::WindowState,
-    ) {
-        crate::hotpatch::reset_ui_tree(app, window, &mut state.ui);
-        state.root = None;
-    }
+    crate::hotpatch::reset_ui_tree(app, window, &mut state.ui);
+    state.root = None;
+}
 
-    fn handle_command(
-        &mut self,
-        _context: WinitCommandContext<'_, Self::WindowState>,
-        _command: fret_app::CommandId,
-    ) {
-    }
+fn handle_command(
+    _driver: &mut CjkConformanceDriver,
+    _context: WinitCommandContext<'_, CjkConformanceWindowState>,
+    _command: fret_app::CommandId,
+) {
+}
 
-    fn handle_event(&mut self, context: WinitEventContext<'_, Self::WindowState>, event: &Event) {
-        let WinitEventContext {
-            app,
-            services,
-            window,
-            state,
-        } = context;
+fn handle_event(
+    _driver: &mut CjkConformanceDriver,
+    context: WinitEventContext<'_, CjkConformanceWindowState>,
+    event: &Event,
+) {
+    let WinitEventContext {
+        app,
+        services,
+        window,
+        state,
+    } = context;
 
-        match event {
-            Event::WindowCloseRequested
-            | Event::KeyDown {
-                key: fret_core::KeyCode::Escape,
-                ..
-            } => {
-                app.push_effect(Effect::Window(WindowRequest::Close(window)));
-                return;
-            }
-            _ => {}
+    match event {
+        Event::WindowCloseRequested
+        | Event::KeyDown {
+            key: fret_core::KeyCode::Escape,
+            ..
+        } => {
+            app.push_effect(Effect::Window(WindowRequest::Close(window)));
+            return;
         }
-
-        state.ui.dispatch_event(app, services, event);
+        _ => {}
     }
 
-    fn render(&mut self, context: WinitRenderContext<'_, Self::WindowState>) {
-        let WinitRenderContext {
-            app,
-            services,
-            window,
-            state,
-            bounds,
-            scale_factor,
-            scene,
-        } = context;
+    state.ui.dispatch_event(app, services, event);
+}
 
-        CjkConformanceDriver::render(app, services, window, state, bounds);
+fn render(
+    _driver: &mut CjkConformanceDriver,
+    context: WinitRenderContext<'_, CjkConformanceWindowState>,
+) {
+    let WinitRenderContext {
+        app,
+        services,
+        window,
+        state,
+        bounds,
+        scale_factor,
+        scene,
+    } = context;
 
-        state.ui.request_semantics_snapshot();
-        state.ui.ingest_paint_cache_source(scene);
-        scene.clear();
-        let mut frame =
-            fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
-        frame.layout_all();
-        frame.paint_all(scene);
-    }
+    CjkConformanceDriver::render(app, services, window, state, bounds);
 
-    fn window_create_spec(
-        &mut self,
-        _app: &mut App,
-        _request: &fret_app::CreateWindowRequest,
-    ) -> Option<WindowCreateSpec> {
-        None
-    }
+    state.ui.request_semantics_snapshot();
+    state.ui.ingest_paint_cache_source(scene);
+    scene.clear();
+    let mut frame =
+        fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
+    frame.layout_all();
+    frame.paint_all(scene);
+}
 
-    fn window_created(
-        &mut self,
-        _app: &mut App,
-        _request: &fret_app::CreateWindowRequest,
-        _new_window: AppWindowId,
-    ) {
-    }
+fn window_create_spec(
+    _driver: &mut CjkConformanceDriver,
+    _app: &mut App,
+    _request: &fret_app::CreateWindowRequest,
+) -> Option<WindowCreateSpec> {
+    None
+}
+
+fn window_created(
+    _driver: &mut CjkConformanceDriver,
+    _app: &mut App,
+    _request: &fret_app::CreateWindowRequest,
+    _new_window: AppWindowId,
+) {
+}
+
+fn configure_fn_driver_hooks(
+    hooks: &mut fret_launch::FnDriverHooks<CjkConformanceDriver, CjkConformanceWindowState>,
+) {
+    hooks.hot_reload_window = Some(hot_reload_window);
+    hooks.handle_command = Some(handle_command);
+    hooks.window_create_spec = Some(window_create_spec);
+    hooks.window_created = Some(window_created);
 }
 
 pub fn build_app() -> App {
@@ -342,8 +355,14 @@ pub fn build_runner_config() -> WinitRunnerConfig {
     }
 }
 
-pub fn build_driver() -> impl WinitAppDriver {
-    CjkConformanceDriver::default()
+pub fn build_fn_driver() -> FnDriver<CjkConformanceDriver, CjkConformanceWindowState> {
+    FnDriver::new(
+        CjkConformanceDriver::default(),
+        create_window_state,
+        handle_event,
+        render,
+    )
+    .with_hooks(configure_fn_driver_hooks)
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -360,15 +379,16 @@ pub fn run() -> anyhow::Result<()> {
     let app = build_app();
     let config = build_runner_config();
 
-    BootstrapBuilder::new(app, CjkConformanceDriver)
-        .configure(move |c| {
-            *c = config;
-        })
-        .with_default_config_files()
-        .context("load layered config files (settings/keymap)")?
-        .with_lucide_icons()
-        .run()
-        .map_err(anyhow::Error::from)
+    crate::run_native_with_fn_driver_with_hooks(
+        config,
+        app,
+        CjkConformanceDriver::default(),
+        create_window_state,
+        handle_event,
+        render,
+        configure_fn_driver_hooks,
+    )
+    .map_err(anyhow::Error::from)
 }
 
 #[cfg(target_arch = "wasm32")]

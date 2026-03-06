@@ -235,14 +235,14 @@ pub fn start() -> Result<(), JsValue> {
             let app = fret_examples::emoji_conformance_demo::build_app();
             let mut config = fret_examples::emoji_conformance_demo::build_runner_config();
             config.main_window_title = "fret-demo emoji_conformance_demo (web)".to_string();
-            let driver = fret_examples::emoji_conformance_demo::build_driver();
+            let driver = fret_examples::emoji_conformance_demo::build_fn_driver();
             fret_launch::run_app_with_handle(config, app, driver)
         }
         Demo::CjkConformanceDemo => {
             let app = fret_examples::cjk_conformance_demo::build_app();
             let mut config = fret_examples::cjk_conformance_demo::build_runner_config();
             config.main_window_title = "fret-demo cjk_conformance_demo (web)".to_string();
-            let driver = fret_examples::cjk_conformance_demo::build_driver();
+            let driver = fret_examples::cjk_conformance_demo::build_fn_driver();
             fret_launch::run_app_with_handle(config, app, driver)
         }
         Demo::ChartDemo => {
