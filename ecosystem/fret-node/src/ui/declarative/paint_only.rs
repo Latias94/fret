@@ -172,13 +172,58 @@ struct MarqueeDragState {
     preview_selected_nodes: Arc<[crate::core::NodeId]>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum NodeDragPhase {
+    Armed,
+    Active,
+    Canceled,
+}
+
 #[derive(Debug, Clone)]
 struct NodeDragState {
     start_screen: Point,
     current_screen: Point,
-    active: bool,
-    canceled: bool,
+    phase: NodeDragPhase,
     nodes_sorted: Arc<[crate::core::NodeId]>,
+}
+
+impl NodeDragState {
+    fn is_armed(&self) -> bool {
+        matches!(self.phase, NodeDragPhase::Armed)
+    }
+
+    fn is_active(&self) -> bool {
+        matches!(self.phase, NodeDragPhase::Active)
+    }
+
+    fn is_canceled(&self) -> bool {
+        matches!(self.phase, NodeDragPhase::Canceled)
+    }
+
+    fn is_live(&self) -> bool {
+        !self.is_canceled()
+    }
+
+    fn activate(&mut self, current_screen: Point) -> bool {
+        if !self.is_armed() {
+            return false;
+        }
+        self.phase = NodeDragPhase::Active;
+        self.current_screen = current_screen;
+        true
+    }
+
+    fn cancel(&mut self) {
+        self.phase = NodeDragPhase::Canceled;
+    }
+
+    fn update_active_position(&mut self, current_screen: Point) -> bool {
+        if !self.is_active() || self.current_screen == current_screen {
+            return false;
+        }
+        self.current_screen = current_screen;
+        true
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -726,11 +771,31 @@ fn marquee_rect_screen(m: &MarqueeDragState) -> Rect {
     rect_from_points(m.start_screen, m.current_screen)
 }
 
+fn pointer_crossed_threshold(start_screen: Point, current_screen: Point, threshold: f32) -> bool {
+    let threshold = threshold.max(0.0);
+    let dx = current_screen.x.0 - start_screen.x.0;
+    let dy = current_screen.y.0 - start_screen.y.0;
+    let dist2 = dx * dx + dy * dy;
+    let threshold2 = threshold * threshold;
+    dist2 >= threshold2
+}
+
 fn node_drag_delta_canvas(view: PanZoom2D, drag: &NodeDragState) -> (f32, f32) {
     let zoom = PanZoom2D::sanitize_zoom(view.zoom, 1.0).max(1.0e-6);
     let dx = (drag.current_screen.x.0 - drag.start_screen.x.0) / zoom;
     let dy = (drag.current_screen.y.0 - drag.start_screen.y.0) / zoom;
     (dx, dy)
+}
+
+fn node_drag_commit_delta(view: PanZoom2D, drag: &NodeDragState) -> Option<(f32, f32)> {
+    let (dx, dy) = node_drag_delta_canvas(view, drag);
+    if !drag.is_active() || !dx.is_finite() || !dy.is_finite() {
+        return None;
+    }
+    if dx.abs() <= 1.0e-9 && dy.abs() <= 1.0e-9 {
+        return None;
+    }
+    Some((dx, dy))
 }
 
 fn node_drag_contains(drag: &NodeDragState, id: crate::core::NodeId) -> bool {
@@ -1343,7 +1408,7 @@ fn paint_edges_cached(
     let base_stroke_width = (style_tokens.geometry.wire_width / zoom).max(0.0);
 
     p.with_transform(transform, |p| {
-        let drag_active = node_drag.is_some_and(|d| d.active && !d.canceled);
+        let drag_active = node_drag.is_some_and(NodeDragState::is_active);
         let (ddx, ddy) = node_drag
             .filter(|_| drag_active)
             .map(|d| node_drag_delta_canvas(view, d))
@@ -1562,7 +1627,7 @@ fn paint_nodes_cached(
     let corner_radii = fret_core::Corners::all(Px(corner_r));
 
     p.with_transform(transform, |p| {
-        let drag_active = node_drag.is_some_and(|d| d.active && !d.canceled);
+        let drag_active = node_drag.is_some_and(NodeDragState::is_active);
         let (ddx, ddy) = node_drag
             .filter(|_| drag_active)
             .map(|d| node_drag_delta_canvas(view, d))
@@ -1734,10 +1799,12 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
     let node_drag_value = cx
         .get_model_cloned(&node_drag, Invalidation::Layout)
         .unwrap_or(None);
-    let node_drag_armed = node_drag_value.as_ref().is_some_and(|d| !d.canceled);
+    let node_drag_armed = node_drag_value
+        .as_ref()
+        .is_some_and(NodeDragState::is_armed);
     let node_dragging = node_drag_value
         .as_ref()
-        .is_some_and(|d| d.active && !d.canceled);
+        .is_some_and(NodeDragState::is_active);
     let pending_selection_value = cx
         .get_model_cloned(&pending_selection, Invalidation::Layout)
         .unwrap_or(None);
@@ -2048,7 +2115,7 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
 
             let drag_active = node_drag_value
                 .as_ref()
-                .is_some_and(|d| d.active && !d.canceled);
+                .is_some_and(NodeDragState::is_active);
             let geom = derived_cache_value.geom.as_deref();
 
             for d in draws.iter() {
@@ -2162,7 +2229,9 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
                         let marquee_active = marquee.is_some();
                         let node_drag_active = host
                             .models_mut()
-                            .read(&node_drag_escape, |st| st.is_some())
+                            .read(&node_drag_escape, |st| {
+                                st.as_ref().is_some_and(NodeDragState::is_live)
+                            })
                             .ok()
                             .unwrap_or(false);
 
@@ -2177,8 +2246,7 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
                             .update(&pending_selection_escape, |st| *st = None);
                         let _ = host.models_mut().update(&node_drag_escape, |st| {
                             if let Some(st) = st.as_mut() {
-                                st.canceled = true;
-                                st.active = false;
+                                st.cancel();
                             }
                         });
                         host.request_redraw(action_cx.window);
@@ -2560,8 +2628,7 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
                                         *st = Some(NodeDragState {
                                             start_screen: down.position,
                                             current_screen: down.position,
-                                            active: false,
-                                            canceled: false,
+                                            phase: NodeDragPhase::Armed,
                                             nodes_sorted: preview_nodes,
                                         });
                                     });
@@ -2666,7 +2733,7 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
                                 return false;
                             }
 
-                            if node_drag.canceled {
+                            if node_drag.is_canceled() {
                                 let _ = host.models_mut().update(&hovered_for_hover, |h| *h = None);
                                 return false;
                             }
@@ -2676,13 +2743,12 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
                                 .read(&view_pan, |s| s.interaction.clone())
                                 .ok()
                                 .unwrap_or_default();
-                            let threshold = interaction.node_drag_threshold.max(0.0);
-                            let dx = mv.position.x.0 - node_drag.start_screen.x.0;
-                            let dy = mv.position.y.0 - node_drag.start_screen.y.0;
-                            let dist2 = dx * dx + dy * dy;
-                            let threshold2 = threshold * threshold;
-                            let should_activate = dist2 >= threshold2;
-                            if should_activate && !node_drag.active {
+                            let should_activate = pointer_crossed_threshold(
+                                node_drag.start_screen,
+                                mv.position,
+                                interaction.node_drag_threshold,
+                            );
+                            if should_activate && node_drag.is_armed() {
                                 host.capture_pointer();
                                 let pending_selection = host
                                     .models_mut()
@@ -2706,16 +2772,11 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
                             let mut needs_redraw = false;
                             let _ = host.models_mut().update(&node_drag_move, |st| {
                                 if let Some(st) = st.as_mut() {
-                                    if should_activate && !st.active {
-                                        st.active = true;
-                                        st.current_screen = mv.position;
+                                    if should_activate && st.activate(mv.position) {
                                         needs_redraw = true;
                                     }
-                                    if st.active {
-                                        if st.current_screen != mv.position {
-                                            st.current_screen = mv.position;
-                                            needs_redraw = true;
-                                        }
+                                    if st.update_active_position(mv.position) {
+                                        needs_redraw = true;
                                     }
                                 }
                             });
@@ -2749,12 +2810,11 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
                                 return true;
                             }
 
-                            let threshold = interaction.node_click_distance.max(0.0);
-                            let dx = mv.position.x.0 - marquee.start_screen.x.0;
-                            let dy = mv.position.y.0 - marquee.start_screen.y.0;
-                            let dist2 = dx * dx + dy * dy;
-                            let threshold2 = threshold * threshold;
-                            let should_activate = dist2 >= threshold2;
+                            let should_activate = pointer_crossed_threshold(
+                                marquee.start_screen,
+                                mv.position,
+                                interaction.node_click_distance,
+                            );
                             let active_now = marquee.active || should_activate;
 
                             let _ = host.models_mut().update(&marquee_move, |st| {
@@ -2938,11 +2998,7 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
                                 .read(&view_commit, |s| view_from_state(s))
                                 .ok()
                                 .unwrap_or_default();
-                            let (dx, dy) = node_drag_delta_canvas(view, &node_drag);
-                            let commit = node_drag.active
-                                && !node_drag.canceled
-                                && dx.is_finite()
-                                && dy.is_finite();
+                            let drag_commit_delta = node_drag_commit_delta(view, &node_drag);
 
                             if let Some(pending_selection) = pending_selection.as_ref() {
                                 let _ = commit_pending_selection_action_host(
@@ -2957,7 +3013,7 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
                                 .models_mut()
                                 .update(&pending_selection_end, |st| *st = None);
 
-                            if commit && (dx.abs() > 1.0e-9 || dy.abs() > 1.0e-9) {
+                            if let Some((dx, dy)) = drag_commit_delta {
                                 let tx = host
                                     .models_mut()
                                     .read(&graph_commit, |graph| {
@@ -3266,7 +3322,7 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
 
                         let drag_active = node_drag_value
                             .as_ref()
-                            .is_some_and(|d| d.active && !d.canceled);
+                            .is_some_and(NodeDragState::is_active);
                         let (ddx, ddy) = node_drag_value
                             .as_ref()
                             .filter(|_| drag_active)
@@ -3277,7 +3333,7 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
                         let selected = selected_nodes.clone();
                         let dragged_nodes = node_drag_value
                             .as_ref()
-                            .filter(|d| d.active && !d.canceled)
+                            .filter(|d| d.is_active())
                             .map(|d| d.nodes_sorted.clone());
 
                         let portal_bounds_store = portal_bounds_store.clone();
@@ -3546,7 +3602,7 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
                         let mut rect = draw.rect;
                         let drag_active = node_drag_value
                             .as_ref()
-                            .is_some_and(|d| d.active && !d.canceled);
+                            .is_some_and(NodeDragState::is_active);
                         if drag_active
                             && node_drag_value
                                 .as_ref()
@@ -3916,16 +3972,18 @@ mod tests {
     use std::any::Any;
     use std::sync::Arc;
 
+    use fret_canvas::view::PanZoom2D;
     use fret_core::{AppWindowId, Point, Px, Rect};
     use fret_runtime::{ClipboardToken, Effect, ModelStore, ShareSheetToken, TimerToken};
     use fret_ui::action::UiActionHost;
 
     use super::{
-        MarqueeDragState, PendingSelectionState, build_click_selection_preview_nodes,
-        build_diag_normalize_visible_node_transaction, build_diag_nudge_visible_node_transaction,
-        build_marquee_preview_selected_nodes, build_node_drag_transaction,
-        commit_graph_transaction, commit_marquee_selection_action_host,
-        commit_pending_selection_action_host,
+        MarqueeDragState, NodeDragPhase, NodeDragState, PendingSelectionState,
+        build_click_selection_preview_nodes, build_diag_normalize_visible_node_transaction,
+        build_diag_nudge_visible_node_transaction, build_marquee_preview_selected_nodes,
+        build_node_drag_transaction, commit_graph_transaction,
+        commit_marquee_selection_action_host, commit_pending_selection_action_host,
+        node_drag_commit_delta, pointer_crossed_threshold,
     };
     use crate::core::{
         CanvasPoint, CanvasSize, EdgeId, Graph, GraphId, GroupId, Node, NodeId, NodeKindKey,
@@ -4310,6 +4368,57 @@ mod tests {
         assert!(selection.0.is_empty());
         assert!(selection.1.is_empty());
         assert!(selection.2.is_empty());
+    }
+
+    fn test_node_drag_state(phase: NodeDragPhase, current_screen: Point) -> NodeDragState {
+        NodeDragState {
+            start_screen: Point::new(Px(0.0), Px(0.0)),
+            current_screen,
+            phase,
+            nodes_sorted: Arc::from([NodeId::from_u128(9800)]),
+        }
+    }
+
+    #[test]
+    fn node_drag_phase_activation_crosses_threshold() {
+        let mut drag = test_node_drag_state(NodeDragPhase::Armed, Point::new(Px(0.0), Px(0.0)));
+        let next = Point::new(Px(6.0), Px(8.0));
+
+        assert!(pointer_crossed_threshold(drag.start_screen, next, 10.0));
+        assert!(drag.activate(next));
+        assert!(drag.is_active());
+        assert_eq!(drag.current_screen, next);
+    }
+
+    #[test]
+    fn canceled_node_drag_does_not_produce_commit_delta() {
+        let view = PanZoom2D::default();
+        let mut drag = test_node_drag_state(NodeDragPhase::Armed, Point::new(Px(12.0), Px(0.0)));
+
+        assert!(drag.activate(Point::new(Px(12.0), Px(0.0))));
+        drag.cancel();
+
+        assert!(drag.is_canceled());
+        assert_eq!(node_drag_commit_delta(view, &drag), None);
+    }
+
+    #[test]
+    fn active_node_drag_with_non_zero_delta_produces_commit_delta() {
+        let view = PanZoom2D {
+            pan: Point::new(Px(0.0), Px(0.0)),
+            zoom: 2.0,
+        };
+        let drag = test_node_drag_state(NodeDragPhase::Active, Point::new(Px(8.0), Px(-6.0)));
+
+        assert_eq!(node_drag_commit_delta(view, &drag), Some((4.0, -3.0)));
+    }
+
+    #[test]
+    fn armed_node_drag_release_keeps_drag_commit_local() {
+        let view = PanZoom2D::default();
+        let drag = test_node_drag_state(NodeDragPhase::Armed, Point::new(Px(14.0), Px(0.0)));
+
+        assert_eq!(node_drag_commit_delta(view, &drag), None);
     }
 
     #[test]

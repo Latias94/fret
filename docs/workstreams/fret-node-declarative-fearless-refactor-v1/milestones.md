@@ -206,6 +206,9 @@ points rather than direct graph mutation.
   - Declarative hit-node click selection and empty-space clear no longer write store selection on
     pointer-down: they stay in local transient state until pointer-up, while node-drag threshold
     crossing commits the pending selection before the drag transaction path takes over.
+  - Declarative node drag now uses explicit `Armed` / `Active` / `Canceled` phases, so threshold
+    activation, selection-only release, and cancel-drop behavior no longer depend on paired boolean
+    flags.
   - Diagnostics-only `Digit3/4/5` graph tweaks now build transactions from `graph_diff` and commit
     through the same controller/store transaction path instead of mutating `Graph` in place.
   - `apps/fret-examples/src/node_graph_demo.rs` now passes a controller into the declarative

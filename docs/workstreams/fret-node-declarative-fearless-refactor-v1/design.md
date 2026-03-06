@@ -153,6 +153,8 @@ First landing in this worktree:
 - pointer-up commits the previewed selection through the same controller/store-backed selection seam,
 - node-drag threshold crossing commits any pending hit selection before the drag transaction path
   takes over,
+- node drag local state now uses explicit `Armed` / `Active` / `Canceled` phases so threshold
+  activation, selection-only release, and cancel-drop semantics stay reviewable,
 - escape/pointer-cancel now drop transient marquee/click-selection state instead of issuing
   selection restore writes.
 
