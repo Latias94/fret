@@ -115,12 +115,13 @@ Tracking doc: `docs/workstreams/diag-fearless-refactor-v2/README.md`
   - [x] `apps/fret-devtools-mcp` now exposes `regression.summary.json`,
   - [x] `apps/fret-devtools-mcp` now exposes `regression.index.json`,
   - [x] resources reuse the existing artifacts-root contract instead of defining a new store.
-- [ ] Add one end-to-end “dogfood” workflow that proves alignment:
-  - [ ] pick selector,
-  - [ ] patch or choose script,
-  - [ ] run,
-  - [ ] inspect artifacts,
-  - [ ] pack/share.
+- [x] Add one end-to-end “dogfood” workflow that proves alignment:
+  - [x] pick selector,
+  - [x] patch or choose script,
+  - [x] run,
+  - [x] inspect artifacts,
+  - [x] pack/share.
+  - [x] Documented in `docs/workstreams/diag-fearless-refactor-v2/DEVTOOLS_GUI_DOGFOOD_WORKFLOW.md`.
 
 ## M5 — Documentation consolidation
 

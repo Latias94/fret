@@ -24,6 +24,7 @@ Related foundations:
 - In-app diagnostics service: `ecosystem/fret-bootstrap/src/ui_diagnostics.rs`
 - Offline viewer: `tools/fret-bundle-viewer`
 - UI prototype (rough): `docs/devtool.html`
+- v2 dogfood workflow: `docs/workstreams/diag-fearless-refactor-v2/DEVTOOLS_GUI_DOGFOOD_WORKFLOW.md`
 
 ## Problem statement
 
@@ -50,6 +51,8 @@ The missing piece for “everyday use” is a **DevTools GUI** that:
   against the current artifacts root and refreshes the panel when the job completes.
 - It does not invent a new campaign model; it is only a thin GUI consumer over the same aggregate
   artifacts already used by CLI and MCP.
+- The current end-to-end dogfood path is documented in
+  `docs/workstreams/diag-fearless-refactor-v2/DEVTOOLS_GUI_DOGFOOD_WORKFLOW.md`.
 
 ## Goals (v1)
 
