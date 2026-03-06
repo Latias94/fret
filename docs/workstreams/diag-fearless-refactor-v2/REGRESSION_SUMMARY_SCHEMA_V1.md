@@ -148,6 +148,48 @@ Purpose:
 
 - give top-level navigation without embedding large payloads.
 
+### 3.6 Optional companion index artifact
+
+Recommended companion file for aggregate consumers:
+
+- `regression.index.json`
+
+Intent:
+
+- keep `regression.summary.json` as the canonical per-run/per-campaign summary,
+- allow GUI, CI, MCP, and local maintainer dashboards to open one lighter-weight index for
+  counts and ranked lists,
+- avoid forcing every consumer to recompute the same counters from all items repeatedly.
+
+Recommended top-level fields for the index artifact:
+
+- `schema_version`
+- `kind = "diag_regression_index"`
+- `generated_unix_ms`
+- `out_dir`
+- `counters`
+- `top_reason_codes`
+- `failing_summaries`
+- `summaries`
+
+Recommended `counters` fields:
+
+- `by_lane`
+- `by_status`
+- `by_tool`
+- `by_reason_code`
+
+Recommended ranked helper fields:
+
+- `top_reason_codes`: top N `{ reason_code, count }` rows for first-open diagnosis,
+- `failing_summaries`: top N summary rows ordered by failure count.
+
+Rules:
+
+- the index artifact is additive and consumer-oriented,
+- consumers must treat it as a convenience cache over the underlying summaries,
+- if the index and underlying summaries disagree, the summaries remain the source of truth.
+
 ## 4) Per-item result shape
 
 Recommended `items[]` shape:
@@ -159,6 +201,7 @@ Recommended `items[]` shape:
   "name": "...",
   "status": "passed|failed_deterministic|failed_flaky|failed_tooling|failed_timeout|skipped_policy|quarantined",
   "reason_code": "...",
+  "source_reason_code": "...",
   "lane": "smoke|correctness|matrix|perf|nightly",
   "owner": "...",
   "feature_tags": ["..."],
@@ -431,7 +474,44 @@ Recommended rules:
 }
 ```
 
-## 11) Definition of done for this note
+## 11) Suggested aggregate index example
+
+```json
+{
+  "schema_version": 1,
+  "kind": "diag_regression_index",
+  "generated_unix_ms": 1772760001234,
+  "out_dir": "target/fret-diag-campaign/20260306-001",
+  "counters": {
+    "by_lane": { "correctness": 24, "perf": 8 },
+    "by_status": { "passed": 28, "failed_deterministic": 4 },
+    "by_tool": {
+      "fretboard diag suite": 24,
+      "fretboard diag perf": 8
+    },
+    "by_reason_code": {
+      "assert.focus_restore.mismatch": 2,
+      "diag.perf.threshold_failed": 2
+    }
+  },
+  "top_reason_codes": [
+    { "reason_code": "assert.focus_restore.mismatch", "count": 2 },
+    { "reason_code": "diag.perf.threshold_failed", "count": 2 }
+  ],
+  "failing_summaries": [
+    {
+      "path": "target/fret-diag-campaign/20260306-001/perf/regression.summary.json",
+      "campaign_name": "perf",
+      "lane": "perf",
+      "tool": "fretboard diag perf",
+      "failures": 2,
+      "items_total": 8
+    }
+  ]
+}
+```
+
+## 12) Definition of done for this note
 
 This schema note is successful when:
 

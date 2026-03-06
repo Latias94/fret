@@ -157,6 +157,8 @@ Current status:
 - `diag matrix` also writes `matrix.summary.json` as a stable compare-oriented sidecar.
 - `diag summarize` now provides a first consumer-side aggregation/index surface over many
   `regression.summary.json` artifacts.
+- the aggregate index already exposes dashboard-oriented helpers such as counters, top reason
+  codes, and failing summary rankings.
 - Remaining work is now mostly about contract hardening, richer campaign selection, and
   campaign-level orchestration beyond simple aggregation.
 

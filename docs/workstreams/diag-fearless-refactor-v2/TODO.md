@@ -110,6 +110,10 @@ Tracking doc: `docs/workstreams/diag-fearless-refactor-v2/README.md`
 - [ ] Add a concise navigation note that tells contributors where to start for diag work.
 - [ ] Cross-link existing v1/v1-architecture docs to this v2 umbrella where appropriate.
 - [ ] Record migration intent for large existing diag docs rather than duplicating content forever.
+- [x] Document the first aggregate dashboard/index fields for consumers:
+  - [x] counters by lane/status/tool/reason,
+  - [x] top reason codes,
+  - [x] failing summaries ranking.
 - [ ] Add a short maintainer checklist for new diagnostics features:
   - [ ] which layer changes,
   - [ ] what gate must be added,
