@@ -233,6 +233,28 @@ A first minimal slice is now landed in `ecosystem/fret-node/src/ui/controller.rs
 This is intentionally not the final shape yet. `edit_queue`, richer viewport commands, callback
 layering, and the long-term public naming/ownership story are still open.
 
+Current controller-facing XyFlow mapping (review helper, not a final contract):
+
+- viewport read:
+  - XyFlow mental model: `useReactFlow().getViewport()`
+  - current Fret surface: `NodeGraphController::viewport`
+- viewport set/reset:
+  - XyFlow mental model: `setViewport`, `setCenter`
+  - current Fret surface: `NodeGraphController::set_viewport*`, `set_center_in_bounds*`
+- fit view:
+  - XyFlow mental model: `fitView`, `fitBounds`
+  - current Fret surface: `NodeGraphController::fit_view_nodes*`, `fit_view_nodes_in_bounds*`
+- node / handle connections:
+  - XyFlow mental model: `getNodeConnections`, `getHandleConnections`
+  - current Fret surface: `NodeGraphController::node_connections`, `port_connections`
+- graph replacement / transaction-safe updates:
+  - XyFlow mental model: imperative instance/store writes
+  - current Fret surface: `replace_graph`, `dispatch_transaction*`, `dispatch_transaction_and_sync_models*`
+- still open:
+  - `updateNode` / `updateEdge`-style ergonomic helpers,
+  - final `Controller` vs `Instance` naming,
+  - whether raw queues survive as public transport or become mostly internal wiring.
+
 ### P5. The workstream itself must stay reviewable
 
 The previous workstream captured a lot of useful implementation evidence, but parts of it became
