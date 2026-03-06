@@ -21,7 +21,7 @@ teaching surfaces, and gates line up.
 - **M4**: In progress (cookbook/examples + ui-gallery continue migrating to the same authoring surface).
 - **M5**: Planned (editor-grade proof points: docking/workspace integration).
 - **M6**: Met (MVU long-term stance is decided; in-tree MVU is removed and only archival migration notes remain).
-- **M7–M9**: Proposed (payload actions v2, MVU deprecation, MVU hard delete).
+- **M7-M9**: Met (payload actions v2 landed; MVU hard delete and reintroduction gates are in place).
 
 Evidence anchors (verified in-tree as of 2026-03-06):
 
@@ -166,7 +166,7 @@ Exit criteria:
   buildable while migrating.
 - If removal is adopted: MVU is hard-deleted in-tree under M9.
 
-### M9 — Hard delete legacy MVU (in-tree)
+### M9 - Hard delete legacy MVU (in-tree) - Met
 
 Exit criteria:
 
@@ -178,6 +178,6 @@ Exit criteria:
 - Docs/templates do not mention MVU as an available authoring path.
 - A small gate prevents MVU APIs from being reintroduced (grep-based check is sufficient).
 
-Current blockers (as of 2026-03-05):
+Closure note (as of 2026-03-06):
 
-- None.
+- Exit criteria are met; MVU survives only as historical/external migration context in docs.

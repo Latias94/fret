@@ -56,13 +56,13 @@ Removal-track note:
   - `apps/fret-cookbook/examples/virtual_list_basics.rs`
   - `apps/fret-cookbook/examples/icons_and_assets_basics.rs`
 
-## Remaining legacy MVU usage (as of 2026-03-05)
+## Historical closure snapshot (as of 2026-03-06)
 
-### 1) Cookbook examples (still MVU)
+### 1) Cookbook examples
 
 These examples implement `MvuProgram` and/or use `MessageRouter`:
 
-- None (as of 2026-03-05). All cookbook examples now use the view runtime + typed actions.
+- None (as of 2026-03-06). All cookbook examples now use the view runtime + typed actions.
 
 Recommendation:
 

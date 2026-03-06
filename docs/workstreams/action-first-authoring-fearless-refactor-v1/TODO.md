@@ -352,10 +352,9 @@ This phase is intentionally last.
     - `tools/gate_no_mvu_in_cookbook.py`
 
 ### Next cleanup steps (post-v1)
-- [x] AFA-clean-063 Decide MVU?s long-term status (supported alternative vs legacy-only).
+- [x] AFA-clean-063 Decide MVU's long-term status (supported alternative vs legacy-only).
   - Decision:
     - Adopted: MVU is not a supported alternative golden path; it has been removed in-tree and only historical/external migration notes remain.
-    - Proposed: MVU is not a supported alternative golden path; plan to delete it in-tree (M9).
   - Historical note:
     - During v1, the lack of structured payload actions (and view-cache parity risk) was a practical
       reason to keep MVU during the deprecation window. Payload actions v2 (ADR 0312) landed later.

@@ -70,8 +70,7 @@ These should remain disallowed in golden-path code:
 - ad-hoc routing tables built from string patterns
 
 Repo already has checks for these patterns; keep them and update them to the new golden path.
-
-### 3.2 MVU typed command routers (`MessageRouter`, `KeyedMessageRouter`) — planned removal
+### 3.2 MVU typed command routers (`MessageRouter`, `KeyedMessageRouter`) - removed in-tree
 
 These legacy routers existed as a first-party ecosystem surface during the v1 transition.
 
