@@ -127,7 +127,7 @@ Status legend:
 | `attachments` | Prototype | `fret-ui-ai` | `Attachments` + `Attachment*` surfaces exist; UI Gallery demo + diag gate exist. File pick/open effects remain app-owned. |
 | `chain-of-thought` | Prototype | `fret-ui-ai` | Ported as a “step list disclosure” surface (`ChainOfThought*`) with a UI Gallery demo + diag gate: `tools/diag-scripts/ui-gallery-ai-chain-of-thought-demo-toggle.json`. |
 | `checkpoint` | Prototype | `fret-ui-ai` | Ported as `Checkpoint*` surfaces + UI Gallery demo + diag gate (`tools/diag-scripts/ui-gallery-ai-checkpoint-demo-tooltip.json`). |
-| `confirmation` | Prototype | `fret-ui-ai` | Ported as `Confirmation*` surfaces + UI Gallery demo + diag gate (`tools/diag-scripts/ui-gallery-ai-confirmation-demo-approve.json`). |
+| `confirmation` | Prototype | `fret-ui-ai` | Ported as `Confirmation*` surfaces with root-owned slot/context rendering, docs-aligned UI Gallery examples, and a diag gate (`tools/diag-scripts/ui-gallery-ai-confirmation-demo-approve.json`). |
 | `context` | Prototype | `fret-ui-ai` | Ported as a hovercard disclosure (`Context`) with a percent trigger and a progress+usage breakdown content; app owns the data model. |
 | `plan` | Prototype | `fret-ui-ai` | Ported as `Plan*` surfaces + UI Gallery demo + diag gate (`tools/diag-scripts/ui-gallery-ai-plan-demo-toggle.json`). |
 | `shimmer` | Prototype | `fret-ui-ai` | Animated text shimmer surface (`Shimmer`) + UI Gallery demo + diag gate exist. |
@@ -268,6 +268,7 @@ Existing gates (UI Gallery `ai_checkpoint_demo`):
 Existing gates (UI Gallery `ai_confirmation_demo`):
 
 - `tools/diag-scripts/ui-gallery-ai-confirmation-demo-approve.json`
+- `tools/diag-scripts/ui-gallery-ai-confirmation-docs-screenshots-zinc-dark.json`
 
 Existing gates (UI Gallery `ai_environment_variables_demo`):
 
