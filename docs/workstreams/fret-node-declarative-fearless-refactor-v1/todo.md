@@ -172,11 +172,13 @@ land in code review; move design discussion back to `README.md` if a TODO turns 
   - [x] Add a controller-first constructor to `NodeGraphViewportHelper` without deleting the
         existing queue-model seam.
   - [ ] Decide whether `NodeGraphViewportHelper` should stay re-exported from `fret_node::ui` or
-        move under an explicitly advanced/compat namespace after controller-first callers converge.
-  - [ ] Decide whether queue types stay re-exported from `fret_node::ui` or move behind a more explicit
-        advanced/compat surface.
+        move fully under `fret_node::ui::advanced` after controller-first callers converge.
+  - [x] Add an explicit `fret_node::ui::advanced::*` namespace for raw queue / viewport transport
+        seams while keeping root `fret_node::ui::*` re-exports as compatibility aliases.
   - [x] Add one short README/workstream note that queue APIs are advanced retained transport seams, not
         the default app-facing integration surface.
+  - [ ] Migrate retained-only examples / docs that still import queue types from root `fret_node::ui::*`
+        to `fret_node::ui::advanced::*`, then reassess whether root aliases should be deprecated.
 
 ## M3 - Transaction-safe declarative commits
 

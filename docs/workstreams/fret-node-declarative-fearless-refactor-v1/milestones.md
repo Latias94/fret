@@ -182,6 +182,9 @@ points rather than direct graph mutation.
     same store fallback / queued transport split as the controller, while
     `NodeGraphViewportHelper::new(view_state, view_queue)` remains the explicit advanced transport
     seam for retained-only integrations.
+  - Raw queue / viewport transport exports now also have an explicit `fret_node::ui::advanced::*`
+    namespace, with root `fret_node::ui::*` queue/helper exports kept only as compatibility aliases
+    during the migration window.
   - Declarative keyboard zoom / wheel zoom / pinch zoom / drag-pan updates now start converging on
     controller/store-backed view-state replacement instead of only mutating the external
     `NodeGraphViewState` model.

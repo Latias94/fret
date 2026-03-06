@@ -253,6 +253,9 @@ As a transitional landing step, `NodeGraphViewportHelper::from_controller(...)` 
 preferred helper entrypoint for app-facing composition, while
 `NodeGraphViewportHelper::new(view_state, view_queue)` remains the explicit transport-first
 constructor for retained-only integrations that still own the raw queue/models directly.
+`fret_node::ui::advanced::*` is now the explicit namespace for those retained transport seams,
+while root `fret_node::ui::*` queue/helper exports remain temporary compatibility aliases during
+migration.
 
 Current controller-facing XyFlow mapping (review helper, not a final contract):
 
