@@ -17,7 +17,7 @@ use fret_ui::action::{OnActivate, UiActionHostExt as _};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, Length, MainAlign, Overflow,
     PointerRegionProps, PressableA11y, PressableProps, RovingFlexProps, SemanticsProps,
-    SpacerProps, SvgIconProps, TextProps,
+    SvgIconProps, TextProps,
 };
 use fret_ui::elements::ElementContext;
 use fret_ui::{Invalidation, Theme, UiHost};
@@ -534,12 +534,30 @@ fn navigation_drawer_item<H: UiHost>(
                     props.overflow = TextOverflow::Clip;
                     cx.text_props(props)
                 });
-                let mut spacer = SpacerProps::default();
-                spacer.layout.flex.grow = 1.0;
-                let spacer = cx.spacer(spacer);
+
+                let left_slot = cx.flex(
+                    FlexProps {
+                        layout: {
+                            let mut layout = fret_ui::element::LayoutStyle::default();
+                            layout.size.width = Length::Fill;
+                            layout.size.min_width = Some(Length::Px(Px(0.0)));
+                            layout.flex.grow = 1.0;
+                            layout.flex.basis = Length::Px(Px(0.0));
+                            layout.overflow = Overflow::Clip;
+                            layout
+                        },
+                        direction: Axis::Horizontal,
+                        gap: Px(12.0).into(),
+                        justify: MainAlign::Start,
+                        align: CrossAlign::Center,
+                        wrap: false,
+                        ..Default::default()
+                    },
+                    move |_cx| vec![icon_el, label_el],
+                );
 
                 let content_children = {
-                    let mut children: Vec<AnyElement> = vec![icon_el, label_el, spacer];
+                    let mut children: Vec<AnyElement> = vec![left_slot];
                     if let Some(badge_el) = badge_el {
                         children.push(badge_el);
                     }
@@ -552,6 +570,7 @@ fn navigation_drawer_item<H: UiHost>(
                             let mut layout = fret_ui::element::LayoutStyle::default();
                             layout.size.width = Length::Fill;
                             layout.size.height = Length::Fill;
+                            layout.overflow = Overflow::Clip;
                             layout
                         },
                         direction: Axis::Horizontal,
@@ -626,9 +645,74 @@ fn drawer_label<H: UiHost>(
     let mut props = TextProps::new(text.clone());
     props.style = Some(style);
     props.color = Some(color);
+    props.layout.size.width = Length::Fill;
+    props.layout.size.min_width = Some(Length::Px(Px(0.0)));
+    props.layout.flex.grow = 1.0;
+    props.layout.flex.basis = Length::Px(Px(0.0));
     props.wrap = TextWrap::None;
     props.overflow = TextOverflow::Clip;
     cx.text_props(props)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use fret_app::App;
+    use fret_core::{Point, Rect, Size};
+    use fret_icons::ids;
+    use fret_ui::element::{ElementKind, TextProps};
+
+    fn bounds() -> Rect {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(360.0), Px(640.0)),
+        )
+    }
+
+    fn find_text_by_content<'a>(el: &'a AnyElement, text: &str) -> Option<&'a TextProps> {
+        match &el.kind {
+            ElementKind::Text(props) if props.text.as_ref() == text => Some(props),
+            _ => el
+                .children
+                .iter()
+                .find_map(|child| find_text_by_content(child, text)),
+        }
+    }
+
+    #[test]
+    fn navigation_drawer_labels_can_shrink_beside_badges() {
+        let window = fret_core::AppWindowId::default();
+        let mut app = App::new();
+        let selected = Arc::<str>::from("inbox");
+        let label = Arc::<str>::from(
+            "A very long navigation drawer label that should shrink beside the badge",
+        );
+        let model = app.models_mut().insert(selected.clone());
+
+        let el = fret_ui::elements::with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "m3-navigation-drawer",
+            |cx| {
+                NavigationDrawer::new(model.clone())
+                    .items(vec![
+                        NavigationDrawerItem::new(selected.clone(), label.clone(), ids::ui::SEARCH)
+                            .badge_label("99+"),
+                    ])
+                    .into_element(cx)
+            },
+        );
+
+        let label =
+            find_text_by_content(&el, label.as_ref()).expect("navigation drawer label text");
+        assert_eq!(label.wrap, TextWrap::None);
+        assert_eq!(label.overflow, TextOverflow::Clip);
+        assert_eq!(label.layout.size.width, Length::Fill);
+        assert_eq!(label.layout.size.min_width, Some(Length::Px(Px(0.0))));
+        assert_eq!(label.layout.flex.grow, 1.0);
+        assert_eq!(label.layout.flex.basis, Length::Px(Px(0.0)));
+    }
 }
 
 fn drawer_icon<H: UiHost>(

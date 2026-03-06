@@ -47,6 +47,12 @@ Current snapshot (2026-03-06):
 - `fret-ui-material3/select` trigger values are now covered too: selected text keeps ellipsis
   semantics within the leading-icon + chevron row because the value text and left content slot now
   explicitly fill available width and opt into `min-w-0`.
+- `fret-ui-material3/list` item labels are now covered too: one-line labels keep stable clip
+  semantics between leading/trailing icon slots because the label text now explicitly fills the
+  available row width and opts into `min-w-0`.
+- `fret-ui-material3/navigation_drawer` labels are now covered too: labels shrink beside optional
+  badges because the left content slot and label text both explicitly fill available width and opt
+  into `min-w-0`.
 
 ---
 
