@@ -6,7 +6,7 @@ use fret_core::{AppWindowId, Event};
 #[cfg(not(target_arch = "wasm32"))]
 use fret_launch::run_app;
 use fret_launch::{
-    WindowCreateSpec, WinitAppDriver, WinitEventContext, WinitRenderContext, WinitRunnerConfig,
+    FnDriver, WindowCreateSpec, WinitEventContext, WinitRenderContext, WinitRunnerConfig,
     WinitWindowContext,
 };
 use fret_runtime::PlatformCapabilities;
@@ -29,7 +29,7 @@ use fret_chart::{
 };
 use fret_runtime::Model;
 
-struct ChartMultiAxisDemoWindowState {
+pub struct ChartMultiAxisDemoWindowState {
     ui: UiTree<App>,
     root: Option<fret_core::NodeId>,
     top_node: Option<fret_core::NodeId>,
@@ -50,7 +50,7 @@ struct ChartMultiAxisDemoWindowState {
 }
 
 #[derive(Default)]
-struct ChartMultiAxisDemoDriver;
+pub struct ChartMultiAxisDemoDriver;
 
 impl ChartMultiAxisDemoDriver {
     fn build_ui(app: &mut App, window: AppWindowId) -> ChartMultiAxisDemoWindowState {
@@ -604,294 +604,306 @@ impl ChartMultiAxisDemoDriver {
     }
 }
 
-impl WinitAppDriver for ChartMultiAxisDemoDriver {
-    type WindowState = ChartMultiAxisDemoWindowState;
+fn create_window_state(
+    _driver: &mut ChartMultiAxisDemoDriver,
+    app: &mut App,
+    window: AppWindowId,
+) -> ChartMultiAxisDemoWindowState {
+    let state = ChartMultiAxisDemoDriver::build_ui(app, window);
+    app.request_redraw(window);
+    state
+}
 
-    fn create_window_state(&mut self, app: &mut App, window: AppWindowId) -> Self::WindowState {
-        let state = Self::build_ui(app, window);
-        app.request_redraw(window);
-        state
+fn handle_model_changes(
+    _driver: &mut ChartMultiAxisDemoDriver,
+    context: WinitWindowContext<'_, ChartMultiAxisDemoWindowState>,
+    changed: &[fret_app::ModelId],
+) {
+    context
+        .app
+        .with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
+            svc.record_model_changes(context.window, changed);
+        });
+    context
+        .state
+        .ui
+        .propagate_model_changes(context.app, changed);
+
+    ChartMultiAxisDemoDriver::tick_linking(context.app, context.window, context.state);
+}
+
+fn handle_global_changes(
+    _driver: &mut ChartMultiAxisDemoDriver,
+    context: WinitWindowContext<'_, ChartMultiAxisDemoWindowState>,
+    changed: &[std::any::TypeId],
+) {
+    context
+        .app
+        .with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
+            svc.record_global_changes(app, context.window, changed);
+        });
+    context
+        .state
+        .ui
+        .propagate_global_changes(context.app, changed);
+}
+
+fn handle_event(
+    _driver: &mut ChartMultiAxisDemoDriver,
+    context: WinitEventContext<'_, ChartMultiAxisDemoWindowState>,
+    event: &Event,
+) {
+    let WinitEventContext {
+        app,
+        services,
+        window,
+        state,
+        ..
+    } = context;
+
+    if fret_bootstrap::maybe_consume_event(app, window, event) {
+        return;
     }
 
-    fn handle_model_changes(
-        &mut self,
-        context: WinitWindowContext<'_, Self::WindowState>,
-        changed: &[fret_app::ModelId],
-    ) {
-        context
-            .app
-            .with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
-                svc.record_model_changes(context.window, changed);
-            });
-        context
-            .state
-            .ui
-            .propagate_model_changes(context.app, changed);
-
-        Self::tick_linking(context.app, context.window, context.state);
-    }
-
-    fn handle_global_changes(
-        &mut self,
-        context: WinitWindowContext<'_, Self::WindowState>,
-        changed: &[std::any::TypeId],
-    ) {
-        context
-            .app
-            .with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
-                svc.record_global_changes(app, context.window, changed);
-            });
-        context
-            .state
-            .ui
-            .propagate_global_changes(context.app, changed);
-    }
-
-    fn handle_event(&mut self, context: WinitEventContext<'_, Self::WindowState>, event: &Event) {
-        let WinitEventContext {
-            app,
-            services,
-            window,
-            state,
+    match event {
+        Event::WindowCloseRequested
+        | Event::KeyDown {
+            key: fret_core::KeyCode::Escape,
             ..
-        } = context;
-
-        if fret_bootstrap::maybe_consume_event(app, window, event) {
+        } => {
+            app.push_effect(Effect::Window(WindowRequest::Close(window)));
             return;
         }
-
-        match event {
-            Event::WindowCloseRequested
-            | Event::KeyDown {
-                key: fret_core::KeyCode::Escape,
-                ..
-            } => {
-                app.push_effect(Effect::Window(WindowRequest::Close(window)));
-                return;
-            }
-            _ => {
-                state.ui.dispatch_event(app, services, event);
-            }
-        }
-
-        if let Some(linked) = state.linked.as_mut() {
-            if linked.tick(app) {
-                app.request_redraw(window);
-            }
+        _ => {
+            state.ui.dispatch_event(app, services, event);
         }
     }
 
-    fn render(&mut self, context: WinitRenderContext<'_, Self::WindowState>) {
-        let WinitRenderContext {
+    if let Some(linked) = state.linked.as_mut() {
+        if linked.tick(app) {
+            app.request_redraw(window);
+        }
+    }
+}
+
+fn render(
+    _driver: &mut ChartMultiAxisDemoDriver,
+    context: WinitRenderContext<'_, ChartMultiAxisDemoWindowState>,
+) {
+    let WinitRenderContext {
+        app,
+        services,
+        window,
+        state,
+        bounds,
+        scale_factor,
+        scene,
+    } = context;
+
+    let diag_enabled =
+        app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| svc.is_enabled());
+    if diag_enabled {
+        state.ui.set_view_cache_enabled(false);
+        state.ui.set_paint_cache_enabled(false);
+    }
+
+    if state.root.is_none() {
+        let shared_brush = state.shared_brush.clone();
+        let shared_axis_pointer = state.shared_axis_pointer.clone();
+        let shared_domain_windows = state.shared_domain_windows.clone();
+
+        let (top_canvas, top_router, top_engine) = ChartMultiAxisDemoDriver::build_canvas(
+            delinea::ids::ChartId::new(1),
+            shared_brush.clone(),
+            shared_axis_pointer.clone(),
+            shared_domain_windows.clone(),
+            state.top_output.clone(),
+        );
+        let (bottom_canvas, bottom_router, bottom_engine) = ChartMultiAxisDemoDriver::build_canvas(
+            delinea::ids::ChartId::new(2),
+            shared_brush,
+            shared_axis_pointer,
+            shared_domain_windows,
+            state.bottom_output.clone(),
+        );
+
+        state.top_engine = Some(top_engine);
+        state.bottom_engine = Some(bottom_engine);
+
+        if state.linked.is_none() {
+            let policy = ChartLinkPolicy {
+                brush: true,
+                axis_pointer: true,
+                domain_windows: true,
+            };
+            let mut linked = LinkedChartGroup::new(
+                policy,
+                state.shared_brush.clone(),
+                state.shared_axis_pointer.clone(),
+                state.shared_domain_windows.clone(),
+            );
+            linked
+                .push(LinkedChartMember {
+                    router: top_router,
+                    output: state.top_output.clone(),
+                })
+                .push(LinkedChartMember {
+                    router: bottom_router,
+                    output: state.bottom_output.clone(),
+                });
+            state.linked = Some(linked);
+        }
+
+        let top_node = ChartCanvas::create_node(&mut state.ui, top_canvas);
+        let bottom_node = ChartCanvas::create_node(&mut state.ui, bottom_canvas);
+        let root = FixedSplit::create_node_with_children(
+            &mut state.ui,
+            FixedSplit::vertical(0.5),
+            top_node,
+            bottom_node,
+        );
+
+        state.ui.set_root(root);
+        state.ui.set_focus(Some(top_node));
+        state.root = Some(root);
+        state.top_node = Some(top_node);
+        state.bottom_node = Some(bottom_node);
+    }
+
+    ChartMultiAxisDemoDriver::tick_linking(app, window, state);
+    ChartMultiAxisDemoDriver::maybe_apply_diag_auto_zoom_top(app, window, state);
+
+    state.ui.request_semantics_snapshot();
+    state.ui.ingest_paint_cache_source(scene);
+
+    let inspection_active = app
+        .with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
+            svc.wants_inspection_active(window)
+        });
+    state.ui.set_inspection_active(inspection_active);
+
+    scene.clear();
+
+    {
+        let mut frame =
+            fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
+        frame.layout_all();
+    }
+
+    let semantics_snapshot = state.ui.semantics_snapshot_arc();
+    let drive = app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
+        svc.drive_script_for_window(
             app,
-            services,
             window,
-            state,
             bounds,
             scale_factor,
-            scene,
-        } = context;
+            Some(&mut state.ui),
+            semantics_snapshot.as_deref(),
+        )
+    });
 
-        let diag_enabled = app
-            .with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| svc.is_enabled());
-        if diag_enabled {
-            // Diag harnesses rely on deterministic visual diffs. Disable view/paint caching so
-            // externally-driven engine state changes always re-render and publish fresh outputs.
-            state.ui.set_view_cache_enabled(false);
-            state.ui.set_paint_cache_enabled(false);
-        }
+    for effect in drive.effects {
+        app.push_effect(effect);
+    }
 
-        if state.root.is_none() {
-            let shared_brush = state.shared_brush.clone();
-            let shared_axis_pointer = state.shared_axis_pointer.clone();
-            let shared_domain_windows = state.shared_domain_windows.clone();
+    if drive.request_redraw {
+        app.request_redraw(window);
+        app.push_effect(Effect::RequestAnimationFrame(window));
+    }
 
-            let (top_canvas, top_router, top_engine) = Self::build_canvas(
-                delinea::ids::ChartId::new(1),
-                shared_brush.clone(),
-                shared_axis_pointer.clone(),
-                shared_domain_windows.clone(),
-                state.top_output.clone(),
-            );
-            let (bottom_canvas, bottom_router, bottom_engine) = Self::build_canvas(
-                delinea::ids::ChartId::new(2),
-                shared_brush,
-                shared_axis_pointer,
-                shared_domain_windows,
-                state.bottom_output.clone(),
-            );
+    let mut injected_any = false;
+    for event in drive.events {
+        injected_any = true;
+        state.ui.dispatch_event(app, services, &event);
+    }
 
-            state.top_engine = Some(top_engine);
-            state.bottom_engine = Some(bottom_engine);
-
-            if state.linked.is_none() {
-                let policy = ChartLinkPolicy {
-                    brush: true,
-                    axis_pointer: true,
-                    domain_windows: true,
-                };
-                let mut linked = LinkedChartGroup::new(
-                    policy,
-                    state.shared_brush.clone(),
-                    state.shared_axis_pointer.clone(),
-                    state.shared_domain_windows.clone(),
-                );
-                linked
-                    .push(LinkedChartMember {
-                        router: top_router,
-                        output: state.top_output.clone(),
-                    })
-                    .push(LinkedChartMember {
-                        router: bottom_router,
-                        output: state.bottom_output.clone(),
-                    });
-                state.linked = Some(linked);
+    if injected_any {
+        let mut deferred_effects: Vec<Effect> = Vec::new();
+        loop {
+            let effects = app.flush_effects();
+            if effects.is_empty() {
+                break;
             }
 
-            let top_node = ChartCanvas::create_node(&mut state.ui, top_canvas);
-            let bottom_node = ChartCanvas::create_node(&mut state.ui, bottom_canvas);
-            let root = FixedSplit::create_node_with_children(
-                &mut state.ui,
-                FixedSplit::vertical(0.5),
-                top_node,
-                bottom_node,
-            );
+            let mut applied_any_command = false;
+            for effect in effects {
+                match effect {
+                    Effect::Command { window: w, command } => {
+                        if w.is_none() || w == Some(window) {
+                            let _ = state.ui.dispatch_command(app, services, &command);
+                            applied_any_command = true;
+                        } else {
+                            deferred_effects.push(Effect::Command { window: w, command });
+                        }
+                    }
+                    other => deferred_effects.push(other),
+                }
+            }
 
-            state.ui.set_root(root);
-            state.ui.set_focus(Some(top_node));
-            state.root = Some(root);
-            state.top_node = Some(top_node);
-            state.bottom_node = Some(bottom_node);
+            if !applied_any_command {
+                break;
+            }
         }
 
-        // Tick linking before layout/paint so any outputs from the previous frame are
-        // propagated into shared models before the canvases try to apply them.
-        Self::tick_linking(app, window, state);
-        Self::maybe_apply_diag_auto_zoom_top(app, window, state);
-
-        state.ui.request_semantics_snapshot();
-        state.ui.ingest_paint_cache_source(scene);
-
-        let inspection_active = app
-            .with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
-                svc.wants_inspection_active(window)
-            });
-        state.ui.set_inspection_active(inspection_active);
-
-        scene.clear();
-
-        {
-            let mut frame =
-                fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
-            frame.layout_all();
-        }
-
-        let semantics_snapshot = state.ui.semantics_snapshot_arc();
-        let drive = app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
-            svc.drive_script_for_window(
-                app,
-                window,
-                bounds,
-                scale_factor,
-                Some(&mut state.ui),
-                semantics_snapshot.as_deref(),
-            )
-        });
-
-        for effect in drive.effects {
+        for effect in deferred_effects {
             app.push_effect(effect);
         }
 
-        if drive.request_redraw {
-            app.request_redraw(window);
-            app.push_effect(Effect::RequestAnimationFrame(window));
-        }
-
-        let mut injected_any = false;
-        for event in drive.events {
-            injected_any = true;
-            state.ui.dispatch_event(app, services, &event);
-        }
-
-        if injected_any {
-            let mut deferred_effects: Vec<Effect> = Vec::new();
-            loop {
-                let effects = app.flush_effects();
-                if effects.is_empty() {
-                    break;
-                }
-
-                let mut applied_any_command = false;
-                for effect in effects {
-                    match effect {
-                        Effect::Command { window: w, command } => {
-                            if w.is_none() || w == Some(window) {
-                                let _ = state.ui.dispatch_command(app, services, &command);
-                                applied_any_command = true;
-                            } else {
-                                deferred_effects.push(Effect::Command { window: w, command });
-                            }
-                        }
-                        other => deferred_effects.push(other),
-                    }
-                }
-
-                if !applied_any_command {
-                    break;
-                }
-            }
-
-            for effect in deferred_effects {
-                app.push_effect(effect);
-            }
-
-            state.ui.request_semantics_snapshot();
-            let mut frame =
-                fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
-            frame.layout_all();
-        }
-
+        state.ui.request_semantics_snapshot();
         let mut frame =
             fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
-        frame.paint_all(scene);
-
-        Self::maybe_log_link_events_for_diag(app, window, state);
-
-        app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
-            let element_runtime = app.global::<fret_ui::elements::ElementRuntime>();
-            svc.record_snapshot(
-                app,
-                window,
-                bounds,
-                scale_factor,
-                &mut state.ui,
-                element_runtime,
-                scene,
-            );
-            let _ = svc.maybe_dump_if_triggered();
-            if svc.poll_exit_trigger() {
-                app.push_effect(Effect::QuitApp);
-            } else if svc.is_enabled() {
-                app.push_effect(Effect::RequestAnimationFrame(window));
-            }
-        });
+        frame.layout_all();
     }
 
-    fn window_create_spec(
-        &mut self,
-        _app: &mut App,
-        _request: &fret_app::CreateWindowRequest,
-    ) -> Option<WindowCreateSpec> {
-        None
-    }
+    let mut frame =
+        fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
+    frame.paint_all(scene);
 
-    fn window_created(
-        &mut self,
-        _app: &mut App,
-        _request: &fret_app::CreateWindowRequest,
-        _new_window: AppWindowId,
-    ) {
-    }
+    ChartMultiAxisDemoDriver::maybe_log_link_events_for_diag(app, window, state);
+
+    app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
+        let element_runtime = app.global::<fret_ui::elements::ElementRuntime>();
+        svc.record_snapshot(
+            app,
+            window,
+            bounds,
+            scale_factor,
+            &mut state.ui,
+            element_runtime,
+            scene,
+        );
+        let _ = svc.maybe_dump_if_triggered();
+        if svc.poll_exit_trigger() {
+            app.push_effect(Effect::QuitApp);
+        } else if svc.is_enabled() {
+            app.push_effect(Effect::RequestAnimationFrame(window));
+        }
+    });
+}
+
+fn window_create_spec(
+    _driver: &mut ChartMultiAxisDemoDriver,
+    _app: &mut App,
+    _request: &fret_app::CreateWindowRequest,
+) -> Option<WindowCreateSpec> {
+    None
+}
+
+fn window_created(
+    _driver: &mut ChartMultiAxisDemoDriver,
+    _app: &mut App,
+    _request: &fret_app::CreateWindowRequest,
+    _new_window: AppWindowId,
+) {
+}
+
+fn configure_fn_driver_hooks(
+    hooks: &mut fret_launch::FnDriverHooks<ChartMultiAxisDemoDriver, ChartMultiAxisDemoWindowState>,
+) {
+    hooks.handle_model_changes = Some(handle_model_changes);
+    hooks.handle_global_changes = Some(handle_global_changes);
+    hooks.window_create_spec = Some(window_create_spec);
+    hooks.window_created = Some(window_created);
 }
 
 pub fn build_app() -> App {
@@ -909,15 +921,21 @@ pub fn build_runner_config() -> WinitRunnerConfig {
     }
 }
 
-pub fn build_driver() -> impl WinitAppDriver {
-    ChartMultiAxisDemoDriver::default()
+pub fn build_fn_driver() -> FnDriver<ChartMultiAxisDemoDriver, ChartMultiAxisDemoWindowState> {
+    FnDriver::new(
+        ChartMultiAxisDemoDriver::default(),
+        create_window_state,
+        handle_event,
+        render,
+    )
+    .with_hooks(configure_fn_driver_hooks)
 }
 
 #[cfg(not(target_arch = "wasm32"))]
 pub fn run() -> anyhow::Result<()> {
     let app = build_app();
     let config = build_runner_config();
-    let driver = build_driver();
+    let driver = build_fn_driver();
 
     run_app(config, app, driver)
         .context("run chart_multi_axis_demo app")

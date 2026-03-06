@@ -187,14 +187,14 @@ pub fn start() -> Result<(), JsValue> {
             let app = fret_examples::custom_effect_v2_web_demo::build_app();
             let mut config = fret_examples::custom_effect_v2_web_demo::build_runner_config();
             config.main_window_title = "fret-demo custom_effect_v2_web_demo (web)".to_string();
-            let driver = fret_examples::custom_effect_v2_web_demo::build_driver();
+            let driver = fret_examples::custom_effect_v2_web_demo::build_fn_driver();
             fret_launch::run_app_with_handle(config, app, driver)
         }
         Demo::CustomEffectV2LutWebDemo => {
             let app = fret_examples::custom_effect_v2_lut_web_demo::build_app();
             let mut config = fret_examples::custom_effect_v2_lut_web_demo::build_runner_config();
             config.main_window_title = "fret-demo custom_effect_v2_lut_web_demo (web)".to_string();
-            let driver = fret_examples::custom_effect_v2_lut_web_demo::build_driver();
+            let driver = fret_examples::custom_effect_v2_lut_web_demo::build_fn_driver();
             fret_launch::run_app_with_handle(config, app, driver)
         }
         Demo::CustomEffectV2IdentityWebDemo => {
@@ -256,7 +256,7 @@ pub fn start() -> Result<(), JsValue> {
             let app = fret_examples::chart_multi_axis_demo::build_app();
             let mut config = fret_examples::chart_multi_axis_demo::build_runner_config();
             config.main_window_title = "fret-demo chart_multi_axis_demo (web)".to_string();
-            let driver = fret_examples::chart_multi_axis_demo::build_driver();
+            let driver = fret_examples::chart_multi_axis_demo::build_fn_driver();
             fret_launch::run_app_with_handle(config, app, driver)
         }
         Demo::HorizontalBarsDemo => {
