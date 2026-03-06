@@ -62,6 +62,16 @@ Use subtree overrides for policy that should vary by scope:
 - component policy (e.g. focus-visible rules, slot defaults),
 - per-panel configuration for complex editors.
 
+Important boundary:
+
+- subtree-scoped providers are best for inherited policy/context,
+- they should not be confused with layout fragments or author-facing wrapper boxes unless the
+  contract explicitly says they are real elements.
+
+Related workstream:
+
+- `docs/workstreams/foreground-style-context-fearless-refactor-v1/DESIGN.md`
+
 Fret does not require a dedicated “context object graph” runtime. Instead, it exposes an
 inherited-state search on the element scope stack:
 
