@@ -28,11 +28,12 @@ Evidence anchors (verified in-tree as of 2026-03-06):
 - `ecosystem/fret/src/view.rs` (`ViewCx::on_action_notify_*` helpers)
 - `ecosystem/fret-ui-kit/src/activate.rs` (`on_activate_*` helpers for low-noise `OnActivate` authoring)
 - `apps/fretboard/src/scaffold/templates.rs` (scaffold templates prefer View + typed actions)
-- `apps/fret-cookbook/examples/async_inbox_basics.rs` (prefers `on_action_notify*` helpers; no manual `request_redraw + notify`)
+- `apps/fret-cookbook/examples/async_inbox_basics.rs` (`Cancel` uses the default path; `Start` remains advanced for host-side dispatcher/inbox scheduling)
 - `apps/fret-cookbook/examples/canvas_pan_zoom_basics.rs` (prefers `on_action_notify*` helpers)
 - `apps/fret-cookbook/examples/form_basics.rs` (prefers `on_action_notify_models`)
-- `apps/fret-cookbook/examples/router_basics.rs` (prefers `on_action_notify` wrappers for history navigation)
-- `apps/fret-cookbook/examples/undo_basics.rs` (prefers `on_action_notify` wrappers; keeps RAF effect where needed)
+- `apps/fret-cookbook/examples/toast_basics.rs` (intentional advanced reference case for imperative Sonner host integration)
+- `apps/fret-cookbook/examples/router_basics.rs` (`ClearIntents` uses the default path; back/forward remain advanced for router availability sync)
+- `apps/fret-cookbook/examples/undo_basics.rs` (`Inc`/`Dec`/`Reset` use the default path; `Undo`/`Redo` keep the host-side RAF effect)
 - `apps/fret-cookbook/examples/virtual_list_basics.rs` (prefers `on_action_notify_models` for scroll actions)
 - `apps/fret-cookbook/examples/query_basics.rs` (prefers action helpers)
 - `apps/fret-cookbook/examples/markdown_and_code_basics.rs` (prefers action helpers)
@@ -50,7 +51,7 @@ Hardening follow-up (open):
 - Embedded viewport interop has a view-runtime demo proving `record_engine_frame` composition (see TODO `AFA-adopt-044`).
 - Authoring ergonomics: semantics/test IDs/key contexts can be attached before `into_element(cx)`, and `fret-ui-kit::ui::*` constructors are cx-less; cookbook + templates demonstrate the patterns (see TODO “Reduce authoring noise”).
 - Teaching-surface convergence: cookbook/examples are gated to avoid legacy `stack::*` layout helpers and teach one layout authoring surface (`fret-ui-kit::ui::*`); ui-gallery migration is in progress (see TODO “Reduce authoring noise” and gates `tools/gate_no_stack_in_cookbook.py`, `tools/gate_no_stack_in_examples.py`).
-- Helper-surface convergence: README/docs/templates now frame `on_action_notify_models`, `on_action_notify_transient`, and local `on_activate*` as the default mental model; advanced aliases remain available but should stay out of first-contact material unless repeated demo evidence promotes them. The remaining advanced `on_action_notify` teaching cases are locked by `tools/gate_only_allowed_on_action_notify_in_teaching_surfaces.py`.
+- Helper-surface convergence: README/docs/templates now frame `on_action_notify_models`, `on_action_notify_transient`, and local `on_activate*` as the default mental model; advanced aliases remain available but should stay out of first-contact material unless repeated demo evidence promotes them. The remaining advanced `on_action_notify` teaching cases are cookbook-only host-side categories locked by `tools/gate_only_allowed_on_action_notify_in_teaching_surfaces.py`.
 
 ---
 

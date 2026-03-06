@@ -76,10 +76,10 @@ Teaching-surface ergonomics gates:
   teaching pages/snippets against regressing to bare `cx.on_action` handlers; prefers
   `ViewCx::on_action_notify*` helpers).
 - `tools/gate_only_allowed_on_action_notify_in_teaching_surfaces.py` (locks the remaining
-  intentional advanced `cx.on_action_notify::<...>` teaching-surface exceptions to a small
-  cookbook allowlist, while also keeping `fret-examples` and ui-gallery pages/snippets at zero
-  advanced `on_action_notify` occurrences: toast host APIs, router back/forward, async inbox
-  start, and undo/redo).
+  intentional advanced `cx.on_action_notify::<...>` teaching-surface exceptions to a small,
+  reasoned cookbook allowlist, while also keeping `fret-examples` and ui-gallery pages/snippets
+  at zero advanced `on_action_notify` occurrences: imperative Sonner host integration, router
+  availability sync, dispatcher/inbox scheduling, and undo/redo RAF effects).
 - `tools/pre_release.ps1` runs the teaching-surface gates as part of the pre-release policy suite.
 
 Examples adoption (authoring-noise reduction):
@@ -101,6 +101,7 @@ Examples adoption (authoring-noise reduction):
 - `apps/fret-cookbook/examples/icons_and_assets_basics.rs` (reload bump action now uses the default `on_action_notify_models` transaction path)
 - `apps/fret-cookbook/examples/assets_reload_epoch_basics.rs` (reload bump action now uses the default `on_action_notify_models` transaction path)
 - `apps/fret-cookbook/examples/commands_keymap_basics.rs` (command toggle handler now uses the default `on_action_notify_models` transaction path while availability stays explicit)
+- `apps/fret-cookbook/examples/toast_basics.rs` (intentional advanced reference case: imperative Sonner host integration still needs `UiActionHost` + window)
 - `apps/fret-cookbook/examples/router_basics.rs` (`ClearIntents` now uses the default `on_action_notify_models` transaction path; back/forward remain advanced because they also sync router command availability)
 - `apps/fret-cookbook/examples/async_inbox_basics.rs` (`Cancel` now uses the default `on_action_notify_models` transaction path; `Start` remains advanced because it spawns dispatcher/inbox work)
 - `apps/fret-cookbook/examples/undo_basics.rs` (`Inc`/`Dec`/`Reset` now use the default `on_action_notify_models` transaction path; `Undo`/`Redo` remain advanced because they combine history traversal with RAF scheduling)
