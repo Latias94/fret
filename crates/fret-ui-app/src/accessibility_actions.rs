@@ -359,6 +359,9 @@ mod tests {
     fn invoke_key_for_toggle_like_roles_uses_space() {
         assert_eq!(invoke_key_for_role(SemanticsRole::Checkbox), KeyCode::Space);
         assert_eq!(invoke_key_for_role(SemanticsRole::Switch), KeyCode::Space);
-        assert_eq!(invoke_key_for_role(SemanticsRole::MenuItemCheckbox), KeyCode::Space);
+        assert_eq!(
+            invoke_key_for_role(SemanticsRole::MenuItemCheckbox),
+            KeyCode::Space
+        );
     }
 }
