@@ -68,12 +68,14 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         cx,
         move |cx| {
             ui::h_flex(|cx| {
-                vec![shadcn::Button::new("Open Dialog")
-                    .variant(shadcn::ButtonVariant::Outline)
-                    .refine_layout(LayoutRefinement::default().flex_1())
-                    .test_id("ui-gallery-dialog-demo-trigger")
-                    .toggle_model(trigger_open.clone())
-                    .into_element(cx)]
+                vec![
+                    shadcn::Button::new("Open Dialog")
+                        .variant(shadcn::ButtonVariant::Outline)
+                        .refine_layout(LayoutRefinement::default().flex_1())
+                        .test_id("ui-gallery-dialog-demo-trigger")
+                        .toggle_model(trigger_open.clone())
+                        .into_element(cx),
+                ]
             })
             .gap(Space::N2)
             .items_center()
