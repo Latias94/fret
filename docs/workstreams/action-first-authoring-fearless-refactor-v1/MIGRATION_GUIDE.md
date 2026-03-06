@@ -7,9 +7,9 @@ in small, reviewable slices.
 
 Note:
 
-- MVU is still treated as a compatibility surface during the refactor, but it is not the recommended
-  authoring path for new code. The `MVU -> View runtime` section is retained as a mapping guide for
-  migrating older external codebases and for the planned M8/M9 deprecation/removal path.
+- In-tree MVU has already been removed. The `MVU -> View runtime` section is retained only as a
+  mapping guide for migrating older external codebases and as historical context for the completed
+  M9 hard-delete path.
 
 ---
 
@@ -265,26 +265,28 @@ If you previously relied on MVU routers for per-item/payloaded routing, prefer p
 - See: `docs/adr/0312-payload-actions-v2.md`
 - Example: `apps/fret-cookbook/examples/payload_actions_basics.rs`
 
-## 3.2) MVU deprecation / removal plan (M8/M9)
+## 3.2) MVU removal status (M9 landed)
 
-MVU authoring still exists in-tree today as a compatibility surface, but it is not the recommended
-golden path for new code.
+MVU authoring is no longer available in-tree.
 
 Policy:
 
-- Do not add new MVU demos or expand MVU API surface.
-- Prefer migrating MVU demos to View runtime + typed actions as part of the adoption milestones.
-- Use this guide as the mapping reference when migrating an external MVU-based codebase.
+- Do not reintroduce MVU code paths into the repo.
+- Use this guide as the mapping reference only when migrating an external MVU-based codebase.
+- Prefer payload actions v2 plus the view runtime for any remaining per-item or payloaded dispatch needs.
 
-Planned sequence (subject to the workstream exit gates):
+Completed in-tree state:
 
-- **M8**: MVU deprecation window (warn + migrate).
-- **M9**: hard delete legacy MVU in-tree (remove modules, templates/docs cleanup, add a regression gate).
+- `ecosystem/fret` no longer exposes MVU modules or legacy re-exports.
+- `apps/fret-examples`, `apps/fret-demo`, and scaffold templates no longer carry MVU demo routing.
+- Guardrails prevent MVU from drifting back into code surfaces.
 
 Evidence anchors:
 
-- `ecosystem/fret/src/mvu.rs` (current MVU compat)
-- `docs/workstreams/action-first-authoring-fearless-refactor-v1/TODO.md` (planned M9 checklist)
+- `docs/workstreams/action-first-authoring-fearless-refactor-v1/LEGACY_MVU_INVENTORY.md`
+- `tools/gate_no_mvu_in_tree.py`
+- `tools/gate_no_mvu_in_cookbook.py`
+- `docs/workstreams/action-first-authoring-fearless-refactor-v1/TODO.md` (M9 closure checklist)
 
 ---
 

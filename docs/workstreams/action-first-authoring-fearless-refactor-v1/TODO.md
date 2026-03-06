@@ -317,14 +317,14 @@ ID format:
 
 This phase is intentionally last.
 
-- [ ] AFA-clean-060 Remove legacy MVU routing glue once it is no longer recommended in templates/docs.
-  - Note: MVU hard delete is planned for M9; until then only migration guidance for external
-    codebases should remain.
+- [x] AFA-clean-060 Remove legacy MVU routing glue once it is no longer recommended in templates/docs.
+  - Status (as of 2026-03-06): completed in-tree; only historical/external migration guidance remains.
   - Evidence:
-    - `docs/workstreams/action-first-authoring-fearless-refactor-v1/MVU_POLICY.md` (archived)
-    - `tools/gate_no_mvu_in_tree.py` (or `tools/gate_no_mvu_in_tree.ps1`)
-    - `tools/gate_no_mvu_in_cookbook.py` (or `tools/gate_no_mvu_in_cookbook.ps1`)
-- [ ] AFA-clean-061 Update docs and templates:
+    - `docs/workstreams/action-first-authoring-fearless-refactor-v1/MVU_POLICY.md`
+    - `docs/workstreams/action-first-authoring-fearless-refactor-v1/LEGACY_MVU_INVENTORY.md`
+    - `tools/gate_no_mvu_in_tree.py`
+    - `tools/gate_no_mvu_in_cookbook.py`
+- [x] AFA-clean-061 Update docs and templates:
   - `docs/README.md` state management section shows actions + view runtime as the golden path.
   - `fretboard` templates generate action-first demos by default.
   - Status (as of 2026-03-06): `README.md`, `docs/README.md`, `docs/first-hour.md`, `docs/examples/README.md`, `docs/examples/todo-app-golden-path.md`, `docs/fearless-refactoring.md`, `docs/crate-usage-guide.md`, `docs/ui-ergonomics-and-interop.md`, the migration guide, scaffold templates, and the ui-gallery command teaching page align on the narrowed default entrypoints; keep future narrative pages in sync as examples migrate.
@@ -340,36 +340,35 @@ This phase is intentionally last.
     - `docs/workstreams/action-first-authoring-fearless-refactor-v1/MIGRATION_GUIDE.md`
     - `apps/fretboard/src/scaffold/templates.rs` (`todo_template_main_rs`, `simple_todo_template_main_rs`, `hello_template_main_rs`)
     - `apps/fret-ui-gallery/src/ui/pages/command.rs`
-- [ ] AFA-clean-062 Delete or quarantine redundant APIs/modules once adoption is complete.
-  - Rule: do not delete until all in-tree demos + ecosystem crates have migrated or have explicit “legacy” labeling.
+- [x] AFA-clean-062 Delete or quarantine redundant APIs/modules once adoption is complete.
+  - Rule: do not delete until all in-tree demos + ecosystem crates have migrated or have explicit ?legacy? labeling.
   - Migration inventory:
     - `docs/workstreams/action-first-authoring-fearless-refactor-v1/LEGACY_MVU_INVENTORY.md`
-  - Status (as of 2026-03-06): pending (MVU still exists in-tree; removal planned for M9).
+  - Status (as of 2026-03-06): completed in-tree; `ecosystem/fret` MVU modules/feature gate are gone, legacy MVU demo copies are absent, and templates no longer scaffold MVU.
   - Evidence:
-    - `docs/workstreams/action-first-authoring-fearless-refactor-v1/MILESTONES.md` (M9)
-    - `tools/gate_no_mvu_in_tree.py` (or `tools/gate_no_mvu_in_tree.ps1`)
-    - `tools/gate_no_mvu_in_cookbook.py` (or `tools/gate_no_mvu_in_cookbook.ps1`)
+    - `docs/workstreams/action-first-authoring-fearless-refactor-v1/LEGACY_MVU_INVENTORY.md`
+    - `ecosystem/fret/src/lib.rs`
+    - `tools/gate_no_mvu_in_tree.py`
+    - `tools/gate_no_mvu_in_cookbook.py`
 
 ### Next cleanup steps (post-v1)
-
-- [ ] AFA-clean-063 Decide MVU’s long-term status (supported alternative vs legacy-only).
+- [x] AFA-clean-063 Decide MVU?s long-term status (supported alternative vs legacy-only).
   - Decision:
+    - Adopted: MVU is not a supported alternative golden path; it has been removed in-tree and only historical/external migration notes remain.
     - Proposed: MVU is not a supported alternative golden path; plan to delete it in-tree (M9).
   - Historical note:
     - During v1, the lack of structured payload actions (and view-cache parity risk) was a practical
       reason to keep MVU during the deprecation window. Payload actions v2 (ADR 0312) landed later.
   - Evidence:
-    - Policy: `docs/workstreams/action-first-authoring-fearless-refactor-v1/MVU_POLICY.md` (archived)
+    - Policy: `docs/workstreams/action-first-authoring-fearless-refactor-v1/MVU_POLICY.md`
     - Milestone: `docs/workstreams/action-first-authoring-fearless-refactor-v1/MILESTONES.md` (M9)
-    - Gate: `tools/gate_no_mvu_in_tree.py` (or `tools/gate_no_mvu_in_tree.ps1`)
+    - Gate: `tools/gate_no_mvu_in_tree.py`
 
-- [ ] AFA-clean-064 Add compile-time deprecation warnings for legacy MVU surfaces (if feasible).
-  - Status: pending (applies during the M8 deprecation window).
+- [x] AFA-clean-064 Add compile-time deprecation warnings for legacy MVU surfaces (if feasible).
+  - Status: not needed; the repo reached the M9 hard delete before a separate warning window was implemented in-tree.
 
-- [ ] AFA-clean-065 Consider feature-gating MVU behind an explicit legacy feature.
-  - Goal: keep `fret::prelude::*` boring, and make MVU opt-in in downstream apps.
-  - Non-goal: break existing users without a deprecation window.
-  - Status: pending (applies if MVU must remain in-tree through M8).
+- [x] AFA-clean-065 Consider feature-gating MVU behind an explicit legacy feature.
+  - Status: not needed; the repo removed MVU in-tree instead of preserving it behind a legacy feature.
 
 ---
 
@@ -502,39 +501,37 @@ practical steps:
 
 ---
 
-## H. Hard delete legacy MVU (planned M9)
+## H. Hard delete legacy MVU (M9 closure)
 
-Planned: this checklist becomes active once the repo teaching surfaces (templates + cookbook +
-examples) have fully converged on View runtime + typed actions and the compatibility window (M8) has
-ended. Until then, keep MVU usage quarantined and avoid expanding its surface.
+Completed: the repo teaching surfaces (templates + cookbook + examples) have converged on View
+runtime + typed actions, and in-tree MVU has been removed. Historical MVU discussion remains only
+for external migration guidance and archival context.
 
 Exit target:
 
 - no remaining MVU usage in-tree,
 - no MVU-related feature gates or demo-level opt-ins,
 - no `fret::legacy::*` module,
-- no MVU references in templates/docs.
+- no MVU references in default templates/docs as an available authoring path.
 
 Tasks:
 
-- [ ] AFA-m9-001 Migrate remaining non-action-first demos in `apps/fret-examples` to View+actions.
-- [ ] AFA-m9-002 Delete legacy MVU demo copies once the migrated versions exist (remove `*_legacy.rs` files):
-  - `apps/fret-examples/src/todo_demo_legacy.rs`
-  - `apps/fret-examples/src/query_demo_legacy.rs`
-  - `apps/fret-examples/src/query_async_tokio_demo_legacy.rs`
-  - `apps/fret-examples/src/hello_counter_demo_legacy.rs`
-  - `apps/fret-examples/src/async_playground_demo_legacy.rs`
-  - `apps/fret-examples/src/embedded_viewport_demo_legacy.rs`
-  - `apps/fret-examples/src/drop_shadow_demo_legacy.rs`
-  - `apps/fret-examples/src/postprocess_theme_demo_legacy.rs`
-- [ ] AFA-m9-003 Remove the demo-level MVU opt-in and any routing/printing branches in `apps/fret-demo`.
-- [ ] AFA-m9-004 Remove the `ecosystem/fret` MVU feature gate and delete MVU modules:
-  - `ecosystem/fret/src/mvu.rs`
-  - `ecosystem/fret/src/mvu_router.rs`
-  - `ecosystem/fret/src/legacy.rs`
-- [ ] AFA-m9-005 Remove any legacy MVU scaffolding sources from `apps/fretboard/src/scaffold/templates.rs`.
-- [ ] AFA-m9-006 Update docs to remove MVU guidance:
-  - `docs/workstreams/action-first-authoring-fearless-refactor-v1/MVU_POLICY.md`
-  - `docs/workstreams/action-first-authoring-fearless-refactor-v1/MIGRATION_GUIDE.md`
-  - `docs/workstreams/action-first-authoring-fearless-refactor-v1/CLEANUP_PLAN.md`
-- [ ] AFA-m9-007 Add a lightweight gate that fails if MVU identifiers reappear (file list + `git grep` is enough).
+- [x] AFA-m9-001 Migrate remaining non-action-first demos in `apps/fret-examples` to View+actions.
+  - Status: completed; `apps/fret-examples` now stays on the view runtime + typed actions surface.
+- [x] AFA-m9-002 Delete legacy MVU demo copies once the migrated versions exist (remove `*_legacy.rs` files).
+  - Status: completed; the former MVU legacy demo copies are absent from `apps/fret-examples/src`.
+- [x] AFA-m9-003 Remove the demo-level MVU opt-in and any routing/printing branches in `apps/fret-demo`.
+  - Status: completed; the remaining `node-graph-demos-legacy` feature is unrelated to MVU and stays out of scope for this checklist.
+- [x] AFA-m9-004 Remove the `ecosystem/fret` MVU feature gate and delete MVU modules.
+  - Status: completed; `ecosystem/fret/src/mvu.rs`, `ecosystem/fret/src/mvu_router.rs`, and `ecosystem/fret/src/legacy.rs` are absent.
+- [x] AFA-m9-005 Remove any legacy MVU scaffolding sources from `apps/fretboard/src/scaffold/templates.rs`.
+  - Status: completed; only regression assertions remain to keep the golden path honest.
+- [x] AFA-m9-006 Update docs to remove MVU as an in-tree authoring path while keeping historical migration notes.
+  - Evidence:
+    - `docs/workstreams/action-first-authoring-fearless-refactor-v1/MVU_POLICY.md`
+    - `docs/workstreams/action-first-authoring-fearless-refactor-v1/MIGRATION_GUIDE.md`
+    - `docs/workstreams/action-first-authoring-fearless-refactor-v1/CLEANUP_PLAN.md`
+- [x] AFA-m9-007 Add a lightweight gate that fails if MVU identifiers reappear (file list + `git grep` is enough).
+  - Evidence:
+    - `tools/gate_no_mvu_in_tree.py`
+    - `tools/gate_no_mvu_in_cookbook.py`

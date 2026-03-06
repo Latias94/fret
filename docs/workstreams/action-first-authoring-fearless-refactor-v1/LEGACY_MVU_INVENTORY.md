@@ -1,6 +1,6 @@
 # Legacy MVU Inventory (Action-First Authoring v1)
 
-Last updated: 2026-03-05
+Last updated: 2026-03-06
 
 This document tracks remaining in-tree usage of legacy MVU/message-routing helpers after the
 action-first + view runtime v1 adoption.
@@ -16,8 +16,8 @@ Note:
 - MVU surfaces were removed from `ecosystem/fret` (feature gate + `mvu` / `mvu_router` / `legacy`
   modules) as part of M9.
 - In-tree demos no longer carry a separate demo-level opt-in feature.
-- Any remaining MVU references are expected to be limited to internal scaffolding sources and docs
-  until M9 completes.
+- Any remaining MVU references should now be limited to historical documentation only; code
+  surfaces are guarded by `tools/gate_no_mvu_in_tree.py` and `tools/gate_no_mvu_in_cookbook.py`.
 
 ## Why this inventory exists
 

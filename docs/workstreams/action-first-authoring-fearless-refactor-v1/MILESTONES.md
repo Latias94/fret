@@ -20,7 +20,7 @@ teaching surfaces, and gates line up.
 - **M3**: Planned (multi-frontend convergence: declarative + imui + GenUI).
 - **M4**: In progress (cookbook/examples + ui-gallery continue migrating to the same authoring surface).
 - **M5**: Planned (editor-grade proof points: docking/workspace integration).
-- **M6**: Planned (MVU deprecation window, then hard delete once adoption gates are met).
+- **M6**: Met (MVU long-term stance is decided; in-tree MVU is removed and only archival migration notes remain).
 - **M7–M9**: Proposed (payload actions v2, MVU deprecation, MVU hard delete).
 
 Evidence anchors (verified in-tree as of 2026-03-06):
@@ -48,6 +48,7 @@ Evidence anchors (verified in-tree as of 2026-03-06):
 - `tools/gate_no_models_mut_in_action_handlers.py` (teaching-surface regression gate)
 - `tools/gate_only_allowed_on_action_notify_in_teaching_surfaces.py` (locks the approved advanced `on_action_notify` teaching-surface exceptions and keeps `fret-examples` plus ui-gallery pages/snippets on the zero-exception path)
 - `tools/gate_no_single_model_action_helpers_in_default_teaching_surfaces.py` (keeps `fret-examples` and ui-gallery teaching pages/snippets on the default helper surface without single-model aliases; scaffold templates keep equivalent unit-test assertions)
+- `tools/gate_no_mvu_in_tree.py` / `tools/gate_no_mvu_in_cookbook.py` (prevent MVU surfaces from reappearing in code after the M9 hard delete)
 
 Hardening follow-up (open):
 

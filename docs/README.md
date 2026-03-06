@@ -110,7 +110,7 @@ so the default authoring story lives in ecosystem crates.
   - View runtime + hooks + typed unit actions (golden path): `ecosystem/fret` (`View`, `ViewCx`, `fret::actions!`)
   - Derived state (selectors/computed): `ecosystem/fret-selector`
   - Async resources (loading/error/cache/invalidation): `ecosystem/fret-query`
-  - Legacy/dynamic routing (per-item payloads): `fret::mvu::MessageRouter<M>` (compat; avoid in new templates)
+  - Per-item/payload dispatch (advanced): `fret::payload_actions!` + `ViewCx::on_payload_action` (use when unit actions are not enough).
 - Default entrypoints (recommended mental model):
   - `cx.on_action_notify_models::<A>(|models| ...)` - default for most typed UI actions.
   - `cx.on_action_notify_transient::<A>(...)` - default when the real work must happen with `&mut App` in `render()`.
