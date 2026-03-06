@@ -347,7 +347,7 @@ pub fn start() -> Result<(), JsValue> {
             let app = fret_examples::shaded_demo::build_app();
             let mut config = fret_examples::shaded_demo::build_runner_config();
             config.main_window_title = "fret-demo shaded_demo (web)".to_string();
-            let driver = fret_examples::shaded_demo::build_driver();
+            let driver = fret_examples::shaded_demo::build_fn_driver();
             fret_launch::run_app_with_handle(config, app, driver)
         }
         Demo::StairsDemo => {
@@ -389,7 +389,7 @@ pub fn start() -> Result<(), JsValue> {
             let app = fret_examples::drag_demo::build_app();
             let mut config = fret_examples::drag_demo::build_runner_config();
             config.main_window_title = "fret-demo drag_demo (web)".to_string();
-            let driver = fret_examples::drag_demo::build_driver();
+            let driver = fret_examples::drag_demo::build_fn_driver();
             fret_launch::run_app_with_handle(config, app, driver)
         }
     }

@@ -3,7 +3,8 @@ use anyhow::Context as _;
 use fret_app::{App, Effect, WindowRequest};
 use fret_core::{AppWindowId, Event};
 use fret_launch::{
-    WindowCreateSpec, WinitAppDriver, WinitEventContext, WinitRenderContext, WinitRunnerConfig,
+    FnDriver, WindowCreateSpec, WinitEventContext, WinitHotReloadContext, WinitRenderContext,
+    WinitRunnerConfig,
 };
 use fret_plot::cartesian::DataPoint;
 use fret_plot::plot::axis::{AxisLabelFormat, TimeAxisFormat, TimeAxisPresentation};
@@ -14,7 +15,7 @@ use fret_plot::series::Series;
 use fret_runtime::PlatformCapabilities;
 use fret_ui::UiTree;
 
-struct ShadedDemoWindowState {
+pub struct ShadedDemoWindowState {
     ui: UiTree<App>,
     root: Option<fret_core::NodeId>,
     plot: fret_runtime::Model<ShadedPlotModel>,
@@ -24,7 +25,7 @@ struct ShadedDemoWindowState {
 }
 
 #[derive(Default)]
-struct ShadedDemoDriver;
+pub struct ShadedDemoDriver;
 
 impl ShadedDemoDriver {
     fn build_ui(app: &mut App, window: AppWindowId) -> ShadedDemoWindowState {
@@ -79,121 +80,134 @@ impl ShadedDemoDriver {
     }
 }
 
-impl WinitAppDriver for ShadedDemoDriver {
-    type WindowState = ShadedDemoWindowState;
+fn create_window_state(
+    _driver: &mut ShadedDemoDriver,
+    app: &mut App,
+    window: AppWindowId,
+) -> ShadedDemoWindowState {
+    ShadedDemoDriver::build_ui(app, window)
+}
 
-    fn create_window_state(&mut self, app: &mut App, window: AppWindowId) -> Self::WindowState {
-        Self::build_ui(app, window)
-    }
+fn hot_reload_window(
+    _driver: &mut ShadedDemoDriver,
+    context: WinitHotReloadContext<'_, ShadedDemoWindowState>,
+) {
+    let WinitHotReloadContext {
+        app, window, state, ..
+    } = context;
 
-    fn hot_reload_window(
-        &mut self,
-        app: &mut App,
-        _services: &mut dyn fret_core::UiServices,
-        window: AppWindowId,
-        state: &mut Self::WindowState,
-    ) {
-        crate::hotpatch::reset_ui_tree(app, window, &mut state.ui);
-        state.root = None;
-    }
+    crate::hotpatch::reset_ui_tree(app, window, &mut state.ui);
+    state.root = None;
+}
 
-    fn handle_event(&mut self, context: WinitEventContext<'_, Self::WindowState>, event: &Event) {
-        let WinitEventContext {
-            app,
-            services,
-            window,
-            state,
+fn handle_event(
+    _driver: &mut ShadedDemoDriver,
+    context: WinitEventContext<'_, ShadedDemoWindowState>,
+    event: &Event,
+) {
+    let WinitEventContext {
+        app,
+        services,
+        window,
+        state,
+        ..
+    } = context;
+
+    match event {
+        Event::WindowCloseRequested
+        | Event::KeyDown {
+            key: fret_core::KeyCode::Escape,
             ..
-        } = context;
-
-        match event {
-            Event::WindowCloseRequested
-            | Event::KeyDown {
-                key: fret_core::KeyCode::Escape,
-                ..
-            } => {
-                app.push_effect(Effect::Window(WindowRequest::Close(window)));
-                return;
-            }
-            _ => {
-                state.ui.dispatch_event(app, services, event);
-                if matches!(
-                    event,
-                    Event::Pointer(fret_core::PointerEvent::Up { .. }) | Event::KeyDown { .. }
-                ) {
-                    let output = state
-                        .plot_output
-                        .read(app, |_app, o| *o)
-                        .unwrap_or_default();
-                    if output.revision != state.last_logged_output_revision {
-                        state.last_logged_output_revision = output.revision;
-                        if let Some(query) = output.snapshot.query {
-                            tracing::info!(
-                                "query: x=[{:.3}, {:.3}], y=[{:.3}, {:.3}]",
-                                query.x_min,
-                                query.x_max,
-                                query.y_min,
-                                query.y_max
-                            );
-                        }
+        } => {
+            app.push_effect(Effect::Window(WindowRequest::Close(window)));
+            return;
+        }
+        _ => {
+            state.ui.dispatch_event(app, services, event);
+            if matches!(
+                event,
+                Event::Pointer(fret_core::PointerEvent::Up { .. }) | Event::KeyDown { .. }
+            ) {
+                let output = state
+                    .plot_output
+                    .read(app, |_app, o| *o)
+                    .unwrap_or_default();
+                if output.revision != state.last_logged_output_revision {
+                    state.last_logged_output_revision = output.revision;
+                    if let Some(query) = output.snapshot.query {
+                        tracing::info!(
+                            "query: x=[{:.3}, {:.3}], y=[{:.3}, {:.3}]",
+                            query.x_min,
+                            query.x_max,
+                            query.y_min,
+                            query.y_max
+                        );
                     }
                 }
             }
         }
     }
+}
 
-    fn render(&mut self, context: WinitRenderContext<'_, Self::WindowState>) {
-        let WinitRenderContext {
-            app,
-            services,
-            window,
-            state,
-            bounds,
-            scale_factor,
-            scene,
-        } = context;
+fn render(_driver: &mut ShadedDemoDriver, context: WinitRenderContext<'_, ShadedDemoWindowState>) {
+    let WinitRenderContext {
+        app,
+        services,
+        window,
+        state,
+        bounds,
+        scale_factor,
+        scene,
+    } = context;
 
-        let root = state.root.get_or_insert_with(|| {
-            let style = LinePlotStyle::default();
-            let canvas = ShadedPlotCanvas::new(state.plot.clone())
-                .style(style)
-                .x_axis_format(AxisLabelFormat::TimeSeconds(TimeAxisFormat {
-                    base_seconds: 1_700_000_000.0,
-                    presentation: TimeAxisPresentation::UnixUtc,
-                }))
-                .state(state.plot_state.clone())
-                .output(state.plot_output.clone());
-            let node = ShadedPlotCanvas::create_node(&mut state.ui, canvas);
-            state.ui.set_root(node);
-            node
-        });
+    let root = state.root.get_or_insert_with(|| {
+        let style = LinePlotStyle::default();
+        let canvas = ShadedPlotCanvas::new(state.plot.clone())
+            .style(style)
+            .x_axis_format(AxisLabelFormat::TimeSeconds(TimeAxisFormat {
+                base_seconds: 1_700_000_000.0,
+                presentation: TimeAxisPresentation::UnixUtc,
+            }))
+            .state(state.plot_state.clone())
+            .output(state.plot_output.clone());
+        let node = ShadedPlotCanvas::create_node(&mut state.ui, canvas);
+        state.ui.set_root(node);
+        node
+    });
 
-        state.ui.set_root(*root);
-        state.ui.request_semantics_snapshot();
-        state.ui.ingest_paint_cache_source(scene);
+    state.ui.set_root(*root);
+    state.ui.request_semantics_snapshot();
+    state.ui.ingest_paint_cache_source(scene);
 
-        scene.clear();
-        let mut frame =
-            fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
-        frame.layout_all();
-        frame.paint_all(scene);
-    }
+    scene.clear();
+    let mut frame =
+        fret_ui::UiFrameCx::new(&mut state.ui, app, services, window, bounds, scale_factor);
+    frame.layout_all();
+    frame.paint_all(scene);
+}
 
-    fn window_create_spec(
-        &mut self,
-        _app: &mut App,
-        _request: &fret_app::CreateWindowRequest,
-    ) -> Option<WindowCreateSpec> {
-        None
-    }
+fn window_create_spec(
+    _driver: &mut ShadedDemoDriver,
+    _app: &mut App,
+    _request: &fret_app::CreateWindowRequest,
+) -> Option<WindowCreateSpec> {
+    None
+}
 
-    fn window_created(
-        &mut self,
-        _app: &mut App,
-        _request: &fret_app::CreateWindowRequest,
-        _new_window: AppWindowId,
-    ) {
-    }
+fn window_created(
+    _driver: &mut ShadedDemoDriver,
+    _app: &mut App,
+    _request: &fret_app::CreateWindowRequest,
+    _new_window: AppWindowId,
+) {
+}
+
+fn configure_fn_driver_hooks(
+    hooks: &mut fret_launch::FnDriverHooks<ShadedDemoDriver, ShadedDemoWindowState>,
+) {
+    hooks.hot_reload_window = Some(hot_reload_window);
+    hooks.window_create_spec = Some(window_create_spec);
+    hooks.window_created = Some(window_created);
 }
 
 pub fn build_app() -> App {
@@ -212,8 +226,14 @@ pub fn build_runner_config() -> WinitRunnerConfig {
     }
 }
 
-pub fn build_driver() -> impl WinitAppDriver {
-    ShadedDemoDriver::default()
+pub fn build_fn_driver() -> FnDriver<ShadedDemoDriver, ShadedDemoWindowState> {
+    FnDriver::new(
+        ShadedDemoDriver::default(),
+        create_window_state,
+        handle_event,
+        render,
+    )
+    .with_hooks(configure_fn_driver_hooks)
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -229,9 +249,17 @@ pub fn run() -> anyhow::Result<()> {
 
     let app = build_app();
     let config = build_runner_config();
-    let driver = build_driver();
 
-    crate::run_native_with_compat_driver(config, app, driver).context("run shaded_demo app")
+    crate::run_native_with_fn_driver_with_hooks(
+        config,
+        app,
+        ShadedDemoDriver::default(),
+        create_window_state,
+        handle_event,
+        render,
+        configure_fn_driver_hooks,
+    )
+    .context("run shaded_demo app")
 }
 
 #[cfg(target_arch = "wasm32")]
