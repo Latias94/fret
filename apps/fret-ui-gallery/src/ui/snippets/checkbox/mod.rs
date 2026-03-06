@@ -7,4 +7,5 @@ pub mod group;
 pub mod invalid_state;
 pub mod rtl;
 pub mod table;
+pub mod usage;
 pub mod with_title;

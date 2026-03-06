@@ -5,6 +5,7 @@ use crate::ui::snippets::checkbox as snippets;
 
 pub(super) fn preview_checkbox(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     let demo = snippets::demo::render(cx);
+    let usage = snippets::usage::render(cx);
     let checked_state = snippets::checked_state::render(cx);
     let invalid_state = snippets::invalid_state::render(cx);
     let basic = snippets::basic::render(cx);
@@ -19,6 +20,7 @@ pub(super) fn preview_checkbox(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
         cx,
         [
             "API reference: `ecosystem/fret-ui-shadcn/src/checkbox.rs` (Checkbox).",
+            "Checkbox is a leaf control, so the main parity gap here is documentation clarity rather than missing composition APIs.",
             "Use Field composition (FieldLabel/FieldDescription) to keep label, helper text, and toggle target aligned.",
             "For indeterminate behavior, prefer `Checkbox::new_optional(Model<Option<bool>>)`, where `None` maps to mixed state.",
             "Table selection patterns should keep row-level and header-level states explicit; avoid hidden coupling in demos.",
@@ -30,12 +32,16 @@ pub(super) fn preview_checkbox(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview follows shadcn Checkbox docs flow: Demo -> Checked State -> Invalid State -> Basic -> Description -> Disabled -> With Title -> Group -> Table -> RTL.",
+            "Preview follows shadcn Checkbox docs flow: Demo -> Usage -> Checked State -> Invalid State -> Basic -> Description -> Disabled -> With Title -> Group -> Table -> RTL.",
         ),
         vec![
             DocSection::new("Demo", demo)
                 .description("Single checkbox with a label.")
                 .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
+            DocSection::new("Usage", usage)
+                .title_test_id("ui-gallery-section-usage-title")
+                .description("Copyable minimal usage for Checkbox.")
+                .code_rust_from_file_region(snippets::usage::SOURCE, "example"),
             DocSection::new("Checked State", checked_state)
                 .description("Controlled checked model and optional/indeterminate model.")
                 .code_rust_from_file_region(snippets::checked_state::SOURCE, "example"),
