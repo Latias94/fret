@@ -84,20 +84,22 @@
     {
       "type": "wait_until",
       "predicate": {
-        "kind": "bounds_non_overlapping",
-        "a": { "kind": "test_id", "id": "ui-gallery-alert-action-title" },
-        "b": { "kind": "test_id", "id": "ui-gallery-alert-action-enable" },
-        "eps_px": 0.5
+        "kind": "bounds_min_size",
+        "target": { "kind": "test_id", "id": "ui-gallery-alert-action" },
+        "min_w_px": 500.0,
+        "min_h_px": 80.0,
+        "eps_px": 1.0
       },
       "timeout_frames": 240
     },
     {
       "type": "wait_until",
       "predicate": {
-        "kind": "bounds_non_overlapping",
-        "a": { "kind": "test_id", "id": "ui-gallery-alert-action-description" },
-        "b": { "kind": "test_id", "id": "ui-gallery-alert-action-enable" },
-        "eps_px": 0.5
+        "kind": "bounds_max_size",
+        "target": { "kind": "test_id", "id": "ui-gallery-alert-action-enable" },
+        "max_w_px": 72.0,
+        "max_h_px": 28.0,
+        "eps_px": 1.0
       },
       "timeout_frames": 240
     },

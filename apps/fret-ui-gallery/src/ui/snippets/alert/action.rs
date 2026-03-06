@@ -16,7 +16,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         .test_id("ui-gallery-alert-action-description"),
         shadcn::AlertAction::new([shadcn::Button::new("Enable")
             .variant(shadcn::ButtonVariant::Outline)
-            .size(shadcn::ButtonSize::Sm)
+            .size(shadcn::ButtonSize::Xs)
             .into_element(cx)
             .test_id("ui-gallery-alert-action-enable")])
         .into_element(cx),
