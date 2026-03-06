@@ -1023,6 +1023,10 @@ fn select_trigger_element<H: UiHost>(
                     props.style =
                         style.map(|style| typography::with_intent(style, TextIntent::Control));
                     props.color = Some(display_color);
+                    props.layout.size.width = Length::Fill;
+                    props.layout.size.min_width = Some(Length::Px(Px(0.0)));
+                    props.layout.flex.grow = 1.0;
+                    props.layout.flex.basis = Length::Px(Px(0.0));
                     props.wrap = TextWrap::None;
                     props.overflow = TextOverflow::Ellipsis;
                     cx.text_props(props)
@@ -1105,7 +1109,9 @@ fn select_trigger_element<H: UiHost>(
                             layout: {
                                 let mut l = fret_ui::element::LayoutStyle::default();
                                 l.size.width = Length::Fill;
+                                l.size.min_width = Some(Length::Px(Px(0.0)));
                                 l.flex.grow = 1.0;
+                                l.flex.basis = Length::Px(Px(0.0));
                                 l.overflow = Overflow::Clip;
                                 l
                             },
@@ -1114,6 +1120,7 @@ fn select_trigger_element<H: UiHost>(
                         move |cx| {
                             let mut left = FlexProps::default();
                             left.layout.size.width = Length::Fill;
+                            left.layout.size.min_width = Some(Length::Px(Px(0.0)));
                             left.layout.overflow = Overflow::Clip;
                             left.direction = Axis::Horizontal;
                             left.justify = MainAlign::Start;
@@ -1541,6 +1548,26 @@ fn estimate_select_menu_content_width<H: UiHost>(
 #[cfg(test)]
 mod item_text_tests {
     use super::*;
+    use fret_app::App;
+    use fret_core::{Point, Px, Size};
+    use fret_ui::element::{ElementKind, Length, TextProps};
+
+    fn bounds() -> Rect {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(200.0)),
+        )
+    }
+
+    fn find_text_by_content<'a>(el: &'a AnyElement, text: &str) -> Option<&'a TextProps> {
+        match &el.kind {
+            ElementKind::Text(props) if props.text.as_ref() == text => Some(props),
+            _ => el
+                .children
+                .iter()
+                .find_map(|child| find_text_by_content(child, text)),
+        }
+    }
 
     #[test]
     fn select_item_display_text_prefers_display_text_then_typeahead_then_label() {
@@ -1613,6 +1640,35 @@ mod item_text_tests {
             super::resolve_select_menu_width(select_width, estimate, floor).0,
             480.0
         );
+    }
+
+    #[test]
+    fn select_trigger_value_can_truncate_within_trigger_row() {
+        let window = fret_core::AppWindowId::default();
+        let mut app = App::new();
+        let selected_value = Arc::<str>::from("selected");
+        let selected_label = Arc::<str>::from(
+            "A very long select value that should truncate inside the trigger row",
+        );
+        let model = app.models_mut().insert(Some(selected_value.clone()));
+
+        let el =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "m3-select", |cx| {
+                Select::new(model.clone())
+                    .items(vec![SelectItem::new(
+                        selected_value.clone(),
+                        selected_label.clone(),
+                    )])
+                    .leading_icon(ids::ui::SEARCH)
+                    .into_element(cx)
+            });
+
+        let value =
+            find_text_by_content(&el, selected_label.as_ref()).expect("select trigger value text");
+        assert_eq!(value.wrap, TextWrap::None);
+        assert_eq!(value.overflow, TextOverflow::Ellipsis);
+        assert_eq!(value.layout.size.width, Length::Fill);
+        assert_eq!(value.layout.size.min_width, Some(Length::Px(Px(0.0))));
     }
 }
 

@@ -44,6 +44,9 @@ Current snapshot (2026-03-06):
 - `fret-ui-material3/top_app_bar` is now covered too: single-row and two-row titles keep
   ellipsis semantics within their horizontal slots because the title text and its flex wrappers
   now explicitly fill available width and opt into `min-w-0`.
+- `fret-ui-material3/select` trigger values are now covered too: selected text keeps ellipsis
+  semantics within the leading-icon + chevron row because the value text and left content slot now
+  explicitly fill available width and opt into `min-w-0`.
 
 ---
 
