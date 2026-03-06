@@ -32,8 +32,13 @@ pub struct SpeechInput {
     processing: Option<Model<bool>>,
     default_processing: bool,
     disabled: bool,
+    focusable: bool,
     variant: ButtonVariant,
     size: ButtonSize,
+    a11y_label: Option<Arc<str>>,
+    style: ButtonStyle,
+    chrome: ChromeRefinement,
+    layout: LayoutRefinement,
     on_listening_change: Option<OnSpeechInputListeningChange>,
     test_id: Option<Arc<str>>,
 }
@@ -46,8 +51,10 @@ impl std::fmt::Debug for SpeechInput {
             .field("processing", &self.processing.as_ref().map(|m| m.id()))
             .field("default_processing", &self.default_processing)
             .field("disabled", &self.disabled)
+            .field("focusable", &self.focusable)
             .field("variant", &self.variant)
             .field("size", &self.size)
+            .field("has_a11y_label", &self.a11y_label.is_some())
             .field(
                 "has_on_listening_change",
                 &self.on_listening_change.is_some(),
@@ -65,8 +72,13 @@ impl SpeechInput {
             processing: None,
             default_processing: false,
             disabled: false,
+            focusable: true,
             variant: ButtonVariant::Default,
             size: ButtonSize::Icon,
+            a11y_label: None,
+            style: ButtonStyle::default(),
+            chrome: ChromeRefinement::default(),
+            layout: LayoutRefinement::default(),
             on_listening_change: None,
             test_id: None,
         }
@@ -101,6 +113,11 @@ impl SpeechInput {
         self
     }
 
+    pub fn focusable(mut self, focusable: bool) -> Self {
+        self.focusable = focusable;
+        self
+    }
+
     /// Button chrome variant for the idle/listening surface.
     pub fn variant(mut self, variant: ButtonVariant) -> Self {
         self.variant = variant;
@@ -110,6 +127,30 @@ impl SpeechInput {
     /// Button size for the record control.
     pub fn size(mut self, size: ButtonSize) -> Self {
         self.size = size;
+        self
+    }
+
+    /// Overrides the semantic label announced for the icon button.
+    pub fn a11y_label(mut self, label: impl Into<Arc<str>>) -> Self {
+        self.a11y_label = Some(label.into());
+        self
+    }
+
+    /// Extra stateful button style overrides. User-provided slots win over SpeechInput defaults.
+    pub fn style(mut self, style: ButtonStyle) -> Self {
+        self.style = self.style.merged(style);
+        self
+    }
+
+    /// Extra chrome refinements applied on top of the rounded speech-input baseline.
+    pub fn refine_style(mut self, chrome: ChromeRefinement) -> Self {
+        self.chrome = self.chrome.merge(chrome);
+        self
+    }
+
+    /// Layout refinements forwarded to the inner button surface.
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
         self
     }
 
@@ -148,6 +189,7 @@ impl SpeechInput {
             let on_listening_change = self.on_listening_change.clone();
             let variant = self.variant;
             let size = self.size;
+            let focusable = self.focusable;
             let pulse_period = Duration::from_secs(2);
             let pulse_progress = drive_loop_progress(cx, listening_now, pulse_period);
             let theme = Theme::global(&*cx.app).snapshot();
@@ -202,11 +244,21 @@ impl SpeechInput {
                 } else {
                     variant
                 })
-                .style(button_style_for_state(&theme, listening_now))
-                .refine_style(ChromeRefinement::default().rounded(Radius::Full))
+                .style(button_style_for_state(&theme, listening_now).merged(self.style.clone()))
+                .refine_style(
+                    ChromeRefinement::default()
+                        .rounded(Radius::Full)
+                        .merge(self.chrome.clone()),
+                )
+                .refine_layout(self.layout.clone())
                 .children([icon])
                 .disabled(disabled)
+                .focusable(focusable)
                 .on_activate(on_activate);
+
+            if let Some(a11y_label) = self.a11y_label.clone() {
+                btn = btn.a11y_label(a11y_label);
+            }
 
             if let Some(test_id) = self.test_id.clone() {
                 btn = btn.test_id(test_id);

@@ -1042,7 +1042,7 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
             PageSpec::new(
                 PAGE_AI_TRANSCRIPTION_DEMO,
                 "AI Transcription (Demo)",
-                "AI Elements Transcription / Segment Seek Demo",
+                "AI Elements Transcription / Interactive Transcript Demo",
                 "fret-ui-ai (transcription)",
                 CMD_NAV_AI_TRANSCRIPTION_DEMO,
                 &["ai", "transcription", "segments", "seek", "voice", "demo"],
@@ -1050,7 +1050,7 @@ pub(crate) static PAGE_GROUPS: &[PageGroupSpec] = &[
             PageSpec::new(
                 PAGE_AI_SPEECH_INPUT_DEMO,
                 "AI Speech Input (Demo)",
-                "AI Elements SpeechInput / Record Button Chrome Demo",
+                "AI Elements SpeechInput / Docs-Aligned Voice Input Demo",
                 "fret-ui-ai (speech input)",
                 CMD_NAV_AI_SPEECH_INPUT_DEMO,
                 &["ai", "speech", "voice", "input", "record", "demo"],

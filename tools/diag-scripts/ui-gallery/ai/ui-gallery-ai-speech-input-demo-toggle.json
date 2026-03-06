@@ -69,7 +69,7 @@
       "timeout_frames": 240
     },
 
-    { "type": "capture_screenshot", "label": "ui-gallery-ai-speech-input-demo-zinc-dark" },
+    { "type": "capture_screenshot", "label": "ui-gallery-ai-speech-input-demo-default-theme" },
 
     { "type": "capture_bundle", "label": "ui-gallery-ai-speech-input-demo-toggle" }
   ]
