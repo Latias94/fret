@@ -192,8 +192,9 @@ points rather than direct graph mutation.
   - `apps/fret-examples/src/node_graph_domain_demo.rs` now acts as the retained-backed best-practice
     sample for controller-first canvas / overlay / portal composition.
   - `apps/fret-examples/src/node_graph_legacy_demo.rs` now also routes retained canvas / rename
-    overlay / blackboard / portal / minimap glue through the controller-first path, so the legacy
-    demo no longer teaches raw edit queue mutation first for those core surfaces.
+    overlay / blackboard / portal / minimap glue through the controller-first path and no longer
+    keeps a demo-owned `NodeGraphEditQueue`, so the legacy demo stops teaching raw edit queue
+    mutation or queue ownership for those core surfaces.
   - Feature-gated retained coverage now also includes a blackboard controller-first gate proving
     symbol creation prefers controller/store commit over raw queue transport.
 - Remaining M3 scope is still substantial: we still need a broader controller surface, more

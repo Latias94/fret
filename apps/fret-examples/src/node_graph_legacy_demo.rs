@@ -62,13 +62,12 @@ use fret_node::ui::{
     NodeGraphA11yFocusedEdge, NodeGraphA11yFocusedNode, NodeGraphA11yFocusedPort,
     NodeGraphBlackboardOverlay, NodeGraphCanvas, NodeGraphController, NodeGraphControlsOverlay,
     NodeGraphDiagAnchor, NodeGraphDiagConnectingFlag, NodeGraphEdgeToolbar, NodeGraphEdgeTypes,
-    NodeGraphEditQueue, NodeGraphEditor, NodeGraphInternalsStore, NodeGraphMiniMapOverlay,
-    NodeGraphNodeToolbar, NodeGraphNodeTypes, NodeGraphOverlayHost, NodeGraphOverlayState,
-    NodeGraphPaintOverridesMap, NodeGraphPanel, NodeGraphPanelPosition, NodeGraphPortalHost,
-    NodeGraphPortalNodeLayout, NodeGraphPresetFamily, NodeGraphPresetSkinV1, NodeGraphToolbarAlign,
-    NodeGraphToolbarPosition, PortalNumberEditHandler, PortalNumberEditSpec,
-    PortalNumberEditSubmit, PortalNumberEditor, RegistryNodeGraphPresenter,
-    register_node_graph_commands,
+    NodeGraphEditor, NodeGraphInternalsStore, NodeGraphMiniMapOverlay, NodeGraphNodeToolbar,
+    NodeGraphNodeTypes, NodeGraphOverlayHost, NodeGraphOverlayState, NodeGraphPaintOverridesMap,
+    NodeGraphPanel, NodeGraphPanelPosition, NodeGraphPortalHost, NodeGraphPortalNodeLayout,
+    NodeGraphPresetFamily, NodeGraphPresetSkinV1, NodeGraphToolbarAlign, NodeGraphToolbarPosition,
+    PortalNumberEditHandler, PortalNumberEditSpec, PortalNumberEditSubmit, PortalNumberEditor,
+    RegistryNodeGraphPresenter, register_node_graph_commands,
 };
 
 #[derive(Clone)]
@@ -77,7 +76,6 @@ struct NodeGraphDemoModels {
     controller: NodeGraphController,
     graph: fret_runtime::Model<Graph>,
     view: fret_runtime::Model<NodeGraphViewState>,
-    edits: fret_runtime::Model<NodeGraphEditQueue>,
     overlays: fret_runtime::Model<NodeGraphOverlayState>,
     group_rename_text: fret_runtime::Model<String>,
 }
@@ -2467,9 +2465,6 @@ impl WinitAppDriver for NodeGraphDemoDriver {
             });
 
             let _ = models
-                .edits
-                .update(app, |q, _cx| *q = NodeGraphEditQueue::default());
-            let _ = models
                 .overlays
                 .update(app, |o, _cx| *o = NodeGraphOverlayState::default());
 
@@ -2521,7 +2516,6 @@ impl WinitAppDriver for NodeGraphDemoDriver {
                 .render_root("node-graph-demo-declarative", move |cx| {
                     cx.observe_model(&models.graph, Invalidation::Layout);
                     cx.observe_model(&models.view, Invalidation::Paint);
-                    cx.observe_model(&models.edits, Invalidation::Paint);
                     cx.observe_model(&models.overlays, Invalidation::Paint);
 
                     let surface = match mode {
@@ -2533,7 +2527,6 @@ impl WinitAppDriver for NodeGraphDemoDriver {
                                     models.view.clone(),
                                 );
                             surface_props.store = Some(models.store.clone());
-                            surface_props.edit_queue = Some(models.edits.clone());
                             surface_props.overlays = Some(models.overlays.clone());
                             surface_props.internals = internals;
                             surface_props.test_id =
@@ -2736,8 +2729,7 @@ pub fn run() -> anyhow::Result<()> {
     let graph = app.models_mut().insert(store_value.graph().clone());
     let view = app.models_mut().insert(store_value.view_state().clone());
     let store = app.models_mut().insert(store_value);
-    let edits = app.models_mut().insert(NodeGraphEditQueue::default());
-    let controller = NodeGraphController::new(store.clone()).with_edit_queue(edits.clone());
+    let controller = NodeGraphController::new(store.clone());
     let overlays = app.models_mut().insert(NodeGraphOverlayState::default());
     let group_rename_text = app.models_mut().insert(String::new());
     app.set_global(NodeGraphDemoModels {
@@ -2745,7 +2737,6 @@ pub fn run() -> anyhow::Result<()> {
         controller,
         graph,
         view,
-        edits,
         overlays,
         group_rename_text,
     });

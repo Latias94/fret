@@ -124,8 +124,9 @@ land in code review; move design discussion back to `README.md` if a TODO turns 
       retained symbol actions can prefer controller/store commits without hiding the fallback
       transport seam.
     - `apps/fret-examples/src/node_graph_legacy_demo.rs` now uses the same controller-first canvas /
-      overlay / blackboard / portal / minimap wiring, leaving raw `edit_queue` mainly for
-      transport-only or compatibility seams that still need explicit queue ownership.
+      overlay / blackboard / portal / minimap wiring and no longer keeps a demo-owned
+      `NodeGraphEditQueue`; remaining queue ownership is limited to generic compatibility transport
+      seams that still need explicit queue binding.
 - [x] Land the first XyFlow-style connection-query mapping on the controller surface:
   - `NodeGraphController::node_connections`
   - `NodeGraphController::port_connections` (XyFlow `getHandleConnections` analogue)
