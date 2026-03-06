@@ -153,7 +153,7 @@ of mirroring the full `fret_launch::*` surface.
 Included surface (high level):
 
 - `FnDriver` / `FnDriverHooks`
-- `WinitAppDriver` plus the core runner contexts
+- core runner contexts without compatibility-only `WinitAppDriver`
 - `WinitRunnerConfig`, `WgpuInit`, and window-spec types
 - top-level app entry wiring (`WinitAppBuilder`, `run_app*`, wasm handle entrypoints)
 
@@ -170,6 +170,7 @@ Evidence:
 Interpretation:
 
 - manual assembly keeps a compact umbrella path,
+- compatibility-only trait usage now requires an explicit `fret-launch` dependency,
 - specialized integrations still have a direct escape hatch,
 - the previous full-mirror hazard is now closed in this worktree.
 
@@ -239,8 +240,8 @@ Evidence:
 ## Recommended next steps
 
 1. **Keep `fret-framework::launch` curated**
-   - Outcome: future additions require explicit facade-level justification; specialized helpers stay on `fret-launch`.
-   - Gate: `cargo nextest run -p fret-framework --no-tests pass`, `python tools/check_layering.py`
+   - Outcome: future additions require explicit facade-level justification; specialized helpers and compatibility-only traits stay on direct `fret-launch` dependencies.
+   - Gate: `cargo check -p fret-framework --all-features`, `python tools/check_layering.py`, `python tools/gate_fret_framework_launch_surface.py`
 
 2. **Lean into helper-layer config curation**
    - Outcome: keep `WinitRunnerConfig` stable, but expose more app-facing config helpers through

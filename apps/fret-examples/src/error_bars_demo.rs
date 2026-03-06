@@ -213,7 +213,7 @@ pub fn build_runner_config() -> WinitRunnerConfig {
     }
 }
 
-pub fn build_driver() -> impl WinitAppDriver {
+pub fn build_fn_driver() -> impl WinitAppDriver {
     FnDriver::new(
         ErrorBarsDemoDriver::default(),
         create_window_state,
@@ -238,7 +238,7 @@ pub fn run() -> anyhow::Result<()> {
 
     let app = build_app();
     let config = build_runner_config();
-    let driver = build_driver();
+    let driver = build_fn_driver();
 
     crate::run_native_with_compat_driver(config, app, driver).context("run error_bars_demo app")
 }

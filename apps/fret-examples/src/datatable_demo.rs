@@ -471,7 +471,7 @@ fn window_create_spec(
     <DataTableDemoDriver as WinitAppDriver>::window_create_spec(driver, app, request)
 }
 
-pub fn build_driver() -> impl WinitAppDriver {
+pub fn build_fn_driver() -> impl WinitAppDriver {
     FnDriver::new(
         DataTableDemoDriver::default(),
         create_window_state,
@@ -506,7 +506,7 @@ pub fn run() -> anyhow::Result<()> {
         ..Default::default()
     };
 
-    let driver = build_driver();
+    let driver = build_fn_driver();
 
     crate::run_native_with_compat_driver(config, app, driver).context("run datatable_demo app")
 }

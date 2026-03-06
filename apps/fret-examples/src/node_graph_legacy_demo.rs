@@ -2741,7 +2741,7 @@ fn build_driver_with_state(driver_state: NodeGraphDemoDriver) -> impl WinitAppDr
     })
 }
 
-pub fn build_driver() -> impl WinitAppDriver {
+pub fn build_fn_driver() -> impl WinitAppDriver {
     build_driver_with_state(NodeGraphDemoDriver::new_from_env())
 }
 

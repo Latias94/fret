@@ -44,6 +44,7 @@ This workstream is staged to keep the launch stack landable while tightening pub
 - Any remaining `WinitAppDriver`-only requirements are either:
   - moved into `FnDriverHooks`, or
   - explicitly justified as compatibility surface.
+- `fret-framework::launch` stops re-exporting compatibility-only `WinitAppDriver`.
 
 **Evidence anchors**
 
@@ -58,6 +59,8 @@ This workstream is staged to keep the launch stack landable while tightening pub
 - `cargo nextest run -p fret-launch`
 - Any touched docs/examples build or type-check if compile-checked in the relevant crate.
 - Representative advanced examples prefer `FnDriver` over bespoke `WinitAppDriver` impls unless a hook gap remains.
+- `python tools/gate_fret_framework_launch_surface.py`
+- `python tools/gate_fn_driver_example_naming.py`
 
 ## M3 鈥?Config curation without capability loss
 
@@ -93,12 +96,16 @@ This workstream is staged to keep the launch stack landable while tightening pub
 - `crates/fret-framework/src/lib.rs`
 - `crates/fret-launch/README.md`
 - `tools/gate_fret_builder_only_surface.py`
+- `tools/gate_fret_framework_launch_surface.py`
+- `tools/gate_fn_driver_example_naming.py`
 
 **Gates**
 
 - `cargo nextest run -p fret -p fret-launch -p fret-framework`
 - `python tools/check_layering.py`
 - `python tools/gate_fret_builder_only_surface.py`
+- `python tools/gate_fret_framework_launch_surface.py`
+- `python tools/gate_fn_driver_example_naming.py`
 
 ## M5 鈥?Optional follow-up: web/high-level symmetry
 

@@ -225,7 +225,7 @@ pub fn build_runner_config() -> WinitRunnerConfig {
     }
 }
 
-pub fn build_driver() -> impl WinitAppDriver {
+pub fn build_fn_driver() -> impl WinitAppDriver {
     FnDriver::new(Plot3dDemoDriver, create_window_state, handle_event, render).with_hooks(|hooks| {
         hooks.hot_reload_window = Some(hot_reload_window);
         hooks.record_engine_frame = Some(record_engine_frame);
@@ -244,7 +244,7 @@ pub fn run() -> anyhow::Result<()> {
 
     let app = build_app();
     let config = build_runner_config();
-    let driver = build_driver();
+    let driver = build_fn_driver();
 
     crate::run_native_with_compat_driver(config, app, driver).context("run plot3d_demo app")
 }

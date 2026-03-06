@@ -30,6 +30,7 @@ Companion docs:
 - [x] Write down a deprecation/migration posture for `WinitAppDriver` if we choose a single-path model.
 - [x] Decide which host-integration helper types are currently contract-worthy enough to keep at crate root.
 - [x] Decide whether `crates/fret-framework::launch` should remain a full mirror of `fret_launch::*`.
+- [x] Keep compatibility-only `WinitAppDriver` off `crates/fret-framework::launch`; callers that still need it depend on `fret-launch` directly.
 
 ## Config curation
 
@@ -62,11 +63,12 @@ Companion docs:
   - [x] `fret` for app authors
   - [x] `fret-framework` for manual assembly
   - [x] `fret-launch` for advanced integration
-- [x] Migrate representative launch examples from direct `WinitAppDriver` impls to `FnDriver` implementation paths while keeping public `build_driver()` helpers opaque (`chart_demo`, `bars_demo`, `error_bars_demo`, `area_demo`, `candlestick_demo`, `grouped_bars_demo`, `stacked_bars_demo`, `horizontal_bars_demo`, `histogram_demo`, `plot_demo`, `plot_image_demo`, `heatmap_demo`, `histogram2d_demo`, `inf_lines_demo`, `linked_cursor_demo`, `category_line_demo`, `stairs_demo`, `stems_demo`, `tags_demo`, `plot3d_demo`, `date_picker_demo`, `datatable_demo`, `form_demo`, `simple_todo_demo`, `plot_stress_demo`, `canvas_datagrid_stress_demo`, `sonner_demo`, `table_demo`, `table_stress_demo`, `virtual_list_stress_demo`, `ime_smoke_demo`, `docking_demo`, `container_queries_docking_demo`, `workspace_shell_demo`, `docking_arbitration_demo`, `node_graph_legacy_demo`).
+- [x] Migrate representative launch examples from direct `WinitAppDriver` impls to `FnDriver` implementation paths, and rename `FnDriver`-backed helper entrypoints to `build_fn_driver()` where that naming makes the advanced posture explicit (`chart_demo`, `bars_demo`, `error_bars_demo`, `area_demo`, `candlestick_demo`, `grouped_bars_demo`, `stacked_bars_demo`, `horizontal_bars_demo`, `histogram_demo`, `plot_demo`, `plot_image_demo`, `heatmap_demo`, `histogram2d_demo`, `inf_lines_demo`, `linked_cursor_demo`, `category_line_demo`, `stairs_demo`, `stems_demo`, `tags_demo`, `plot3d_demo`, `date_picker_demo`, `datatable_demo`, `form_demo`, `simple_todo_demo`, `plot_stress_demo`, `canvas_datagrid_stress_demo`, `sonner_demo`, `table_demo`, `table_stress_demo`, `virtual_list_stress_demo`, `ime_smoke_demo`, `docking_demo`, `container_queries_docking_demo`, `workspace_shell_demo`, `docking_arbitration_demo`, `node_graph_legacy_demo`).
 - [x] Add one minimal advanced example that shows the supported launch escape hatch without exposing unnecessary internals.
 - [x] Cross-link this workstream from any relevant builder/onboarding docs if the final surface changes.
 - [x] Add a focused guardrail so `fret` crate-root helper regressions and README drift are caught early.
 - [x] Add a focused guardrail so `fret-launch` crate-root exports stay curated and specialized helpers remain namespaced.
+- [x] Add a focused guardrail so `fret-framework::launch` stays a curated manual-assembly facade and does not re-export compatibility-only launch traits.
 
 ## Validation gates
 
@@ -76,6 +78,8 @@ Companion docs:
 - [x] `python tools/check_layering.py`
 - [x] `python tools/gate_fret_builder_only_surface.py`
 - [x] `python tools/gate_fret_launch_surface_contract.py`
+- [x] `python tools/gate_fret_framework_launch_surface.py`
+- [x] `python tools/gate_fn_driver_example_naming.py`
 
 ## Rollout notes
 

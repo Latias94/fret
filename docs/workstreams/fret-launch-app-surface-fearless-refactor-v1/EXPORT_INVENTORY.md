@@ -25,7 +25,7 @@ Goals:
    - `WinitAppDriver`
    - dev-state exports
    - `ViewportRenderTarget`
-3. In this worktree, `crates/fret-framework::launch` re-exports a curated subset of the core launch contract instead of mirroring the full `fret_launch::*` root surface.
+3. In this worktree, `crates/fret-framework::launch` re-exports a curated subset of the core launch contract instead of mirroring the full `fret_launch::*` root surface, and it no longer carries compatibility-only `WinitAppDriver`.
 4. In-tree `apps/` callers no longer need `fret_launch::runner::*`; core launch entry points stay at crate root while specialized interop/media helpers now live under dedicated public submodules.
 5. In this worktree, `pub mod runner` has been removed from the public root surface; launch consumers now go through curated crate-root exports plus explicit specialized modules.
 
@@ -94,14 +94,15 @@ Implication:
 Current posture:
 
 - `crates/fret-framework/src/lib.rs` exposes a curated `launch` module behind `feature = "launch"`.
-- The facade includes driver/core-context/config/app-entry types such as `FnDriver`, `WinitAppDriver`, `WinitRunnerConfig`, `WindowCreateSpec`, `WgpuInit`, and top-level `run_app*` / `WinitAppBuilder` entry wiring.
+- The facade includes driver/core-context/config/app-entry types such as `FnDriver`, `WinitRunnerConfig`, `WindowCreateSpec`, `WgpuInit`, and top-level `run_app*` / `WinitAppBuilder` entry wiring.
+- Compatibility-only `WinitAppDriver` stays available from `fret-launch` directly instead of riding the compact framework facade.
 - Specialized media / interop / imported-viewport helpers remain available from explicit `fret-launch` submodules rather than the compact framework facade.
 
 Implication:
 
 - accidental root-export growth in `fret-launch` no longer automatically becomes part of the manual-assembly facade,
 - `fret-framework` can stay a compact umbrella for common advanced assembly,
-- callers that need specialized launch integration can still opt into explicit `fret-launch` submodules directly.
+- callers that need specialized launch integration or compatibility-only traits can opt into direct `fret-launch` dependencies explicitly.
 
 ## Immediate conclusions
 
@@ -116,7 +117,7 @@ Implication:
 ### What is not yet safe to do
 
 1. Remove more implementation-shaped root exports once in-tree callers are proven absent.
-2. Remove `WinitAppDriver` from the public surface.
+2. Remove `WinitAppDriver` from the direct `fret-launch` public surface.
 3. Treat `WinitRunnerConfig` as if its current shape were already the final public config story.
 
 ## Recommended next cuts

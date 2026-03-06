@@ -88,6 +88,20 @@ Invoke-Checked `
   )
 
 Invoke-Checked `
+  "Fret framework launch facade policy (curated manual-assembly exports)" `
+  "python" `
+  @(
+    (Join-Path $repoRoot "tools/gate_fret_framework_launch_surface.py")
+  )
+
+Invoke-Checked `
+  "FnDriver example naming policy" `
+  "python" `
+  @(
+    (Join-Path $repoRoot "tools/gate_fn_driver_example_naming.py")
+  )
+
+Invoke-Checked `
   "Teaching surfaces policy (no verbose models_mut action handlers)" `
   "python" `
   @(

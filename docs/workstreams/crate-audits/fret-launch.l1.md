@@ -34,8 +34,9 @@ The crate-root surface is materially healthier than the earlier L0 audit:
   contexts, `WgpuInit`),
 - specialized integrations live under explicit modules (`imported_viewport_target`,
   `native_external_import`, `media`, `shared_allocation`),
-- `WinitAppDriver` remains public, but explicitly as a compatibility surface rather than the
-  recommended advanced model.
+- `WinitAppDriver` remains public on `fret-launch`, but explicitly as a compatibility surface rather
+  than the recommended advanced model; it no longer rides the curated `fret-framework::launch`
+  facade.
 
 This is already a usable long-term split. The remaining issue is **curation debt**, not a missing
 escape hatch.
@@ -126,10 +127,8 @@ Evidence anchors:
   `impl WinitAppDriver` as the visible type boundary.
 - Why this matters: this is not a capability gap, but it weakens the de-emphasis story and makes a
   future hard contraction more expensive.
-- Existing gates: launch/example coverage in the current launch surface workstream.
-- Missing gate to add: a small audit/gate for representative examples that ensures new advanced
-  examples prefer naming `FnDriver` (or a crate-local alias) instead of surfacing the compatibility
-  trait by default.
+- Existing gates: launch/example coverage in the current launch surface workstream plus `tools/gate_fn_driver_example_naming.py` for representative `FnDriver`-backed helpers.
+- Missing gate to add: a follow-up check for cases that can expose concrete `FnDriver<...>` return types instead of `impl WinitAppDriver` without hurting local ergonomics.
 
 Evidence anchors:
 
@@ -204,21 +203,26 @@ Evidence anchors:
    - Outcome: export creep becomes reviewable and classification-driven.
    - Gate: a small Python/PowerShell guardrail plus the existing export inventory docs.
 
-2. Make the advanced example story name `FnDriver` more directly
+2. Keep `fret-framework::launch` free of compatibility-only launch traits
+   - Outcome: manual assembly stays curated; callers that truly need `WinitAppDriver` depend on
+     `fret-launch` directly instead of inheriting compat posture by accident.
+   - Gate: `python tools/gate_fret_framework_launch_surface.py`, `cargo check -p fret-framework --all-features`.
+
+3. Make the advanced example story name `FnDriver` more directly
    - Outcome: compatibility trait remains public, but stops feeling like the recommended mental model.
    - Gate: `cargo nextest run -p fret-examples`.
 
-3. Continue helper-layer config curation instead of reshaping `WinitRunnerConfig` directly
+4. Continue helper-layer config curation instead of reshaping `WinitRunnerConfig` directly
    - Outcome: keep power where it is, but move more app-facing convenience up to `fret` / `fret-bootstrap`.
    - Gate: `cargo nextest run -p fret -p fret-bootstrap`.
 
-4. Decide whether native handle parity is actually needed before adding more launch API
+5. Decide whether native handle parity is actually needed before adding more launch API
    - Outcome: avoid speculative surface growth while keeping one real future gap visible.
    - Gate: decision note + a concrete embedding use case.
 
 ## 9) Open questions / decisions needed
 
-- What exact criteria would let `WinitAppDriver` leave `fret-framework::launch` in a future cycle?
+- What exact criteria would let the direct `fret-launch` `WinitAppDriver` surface shrink further in a future cycle?
 - Do we want a native equivalent of `WebRunnerHandle`, or is `WinitAppBuilder` + host-owned event
   loop enough for the intended embedding stories?
 - Should representative examples keep returning `impl WinitAppDriver`, or should we standardize on
@@ -232,4 +236,3 @@ Evidence anchors:
   and editor-grade apps both have enough room.
 - **What still needs fearless closure?** Naming, docs/example posture, config curation, and an
   explicit guardrail against root-surface drift.
-

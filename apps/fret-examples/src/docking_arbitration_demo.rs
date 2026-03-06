@@ -3409,13 +3409,13 @@ fn before_close_window(
     <DockingArbitrationDriver as WinitAppDriver>::before_close_window(driver, app, window)
 }
 
-fn accessibility_snapshot(
+fn semantics_snapshot(
     driver: &mut DockingArbitrationDriver,
     app: &mut App,
     window: AppWindowId,
     state: &mut DockingArbitrationWindowState,
 ) -> Option<Arc<fret_core::SemanticsSnapshot>> {
-    <DockingArbitrationDriver as WinitAppDriver>::accessibility_snapshot(driver, app, window, state)
+    <DockingArbitrationDriver as WinitAppDriver>::semantics_snapshot(driver, app, window, state)
 }
 
 fn accessibility_focus(
@@ -3500,7 +3500,7 @@ fn accessibility_replace_selected_text(
     )
 }
 
-fn build_driver(
+fn build_fn_driver(
     pending_layout: Option<fret_core::DockLayout>,
     viewport_tools: Arc<Mutex<DemoViewportToolState>>,
     layout_preset: DockingArbitrationLayoutPreset,
@@ -3525,7 +3525,7 @@ fn build_driver(
             hooks.window_create_spec = Some(window_create_spec);
             hooks.window_created = Some(window_created);
             hooks.before_close_window = Some(before_close_window);
-            hooks.accessibility_snapshot = Some(accessibility_snapshot);
+            hooks.semantics_snapshot = Some(semantics_snapshot);
             hooks.accessibility_focus = Some(accessibility_focus);
             hooks.accessibility_invoke = Some(accessibility_invoke);
             hooks.accessibility_set_value_text = Some(accessibility_set_value_text);
@@ -3688,7 +3688,7 @@ pub fn run() -> anyhow::Result<()> {
         None
     };
 
-    let driver = build_driver(
+    let driver = build_fn_driver(
         pending_layout,
         viewport_tools,
         layout_preset,

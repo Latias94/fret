@@ -528,7 +528,7 @@ fn build_driver_with_options(
     })
 }
 
-pub fn build_driver() -> impl WinitAppDriver {
+pub fn build_fn_driver() -> impl WinitAppDriver {
     build_driver_with_options(DEFAULT_POINTS, DEFAULT_SERIES, None)
 }
 

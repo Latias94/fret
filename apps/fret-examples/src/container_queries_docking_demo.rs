@@ -781,13 +781,13 @@ fn before_close_window(
     <ContainerQueriesDockingDemoDriver as WinitAppDriver>::before_close_window(driver, app, window)
 }
 
-fn accessibility_snapshot(
+fn semantics_snapshot(
     driver: &mut ContainerQueriesDockingDemoDriver,
     app: &mut App,
     window: AppWindowId,
     state: &mut ContainerQueriesDockingDemoWindowState,
 ) -> Option<Arc<fret_core::SemanticsSnapshot>> {
-    <ContainerQueriesDockingDemoDriver as WinitAppDriver>::accessibility_snapshot(
+    <ContainerQueriesDockingDemoDriver as WinitAppDriver>::semantics_snapshot(
         driver, app, window, state,
     )
 }
@@ -874,7 +874,7 @@ fn accessibility_replace_selected_text(
     )
 }
 
-pub fn build_driver() -> impl WinitAppDriver {
+pub fn build_fn_driver() -> impl WinitAppDriver {
     FnDriver::new(
         ContainerQueriesDockingDemoDriver::default(),
         create_window_state,
@@ -891,7 +891,7 @@ pub fn build_driver() -> impl WinitAppDriver {
         hooks.window_create_spec = Some(window_create_spec);
         hooks.window_created = Some(window_created);
         hooks.before_close_window = Some(before_close_window);
-        hooks.accessibility_snapshot = Some(accessibility_snapshot);
+        hooks.semantics_snapshot = Some(semantics_snapshot);
         hooks.accessibility_focus = Some(accessibility_focus);
         hooks.accessibility_invoke = Some(accessibility_invoke);
         hooks.accessibility_set_value_text = Some(accessibility_set_value_text);
@@ -925,7 +925,7 @@ pub fn run() -> anyhow::Result<()> {
         ..Default::default()
     };
 
-    let driver = build_driver();
+    let driver = build_fn_driver();
     fret::run_native_with_compat_driver(config, app, driver)
         .context("run container_queries_docking_demo app")
 }

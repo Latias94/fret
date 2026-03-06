@@ -75,13 +75,14 @@ pub mod launch {
     //! This module intentionally exposes the core launch/builder/driver contract used by advanced
     //! assembly code while avoiding a full mirror of `fret_launch::*`.
     //!
-    //! Prefer depending on `fret-launch` directly when you need specialized interop/media helpers
-    //! or when runner-facing naming itself is part of your public API.
+    //! Prefer depending on `fret-launch` directly when you need specialized interop/media helpers,
+    //! compatibility-only runner traits such as `WinitAppDriver`, or when runner-facing naming
+    //! itself is part of your public API.
     pub use fret_launch::{
         EngineFrameKeepalive, EngineFrameUpdate, FnDriver, FnDriverHooks, RunnerError, WgpuInit,
         WindowCreateSpec, WindowLogicalSize, WindowPhysicalPosition, WindowPosition,
-        WinitAppDriver, WinitCommandContext, WinitEventContext, WinitGlobalContext,
-        WinitHotReloadContext, WinitRenderContext, WinitRunnerConfig, WinitWindowContext,
+        WinitCommandContext, WinitEventContext, WinitGlobalContext, WinitHotReloadContext,
+        WinitRenderContext, WinitRunnerConfig, WinitWindowContext,
     };
 
     #[cfg(not(target_arch = "wasm32"))]
