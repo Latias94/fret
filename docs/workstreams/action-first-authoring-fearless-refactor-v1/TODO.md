@@ -327,12 +327,15 @@ This phase is intentionally last.
 - [ ] AFA-clean-061 Update docs and templates:
   - `docs/README.md` state management section shows actions + view runtime as the golden path.
   - `fretboard` templates generate action-first demos by default.
-  - Status (as of 2026-03-06): `README.md`, `docs/README.md`, the migration guide, and scaffold templates align on the narrowed default entrypoints; keep cookbook/ui-gallery narrative pages in sync as examples migrate.
+  - Status (as of 2026-03-06): `README.md`, `docs/README.md`, `docs/first-hour.md`, `docs/examples/README.md`, the migration guide, scaffold templates, and the ui-gallery command teaching page align on the narrowed default entrypoints; keep future narrative pages in sync as examples migrate.
   - Evidence:
     - `README.md`
     - `docs/README.md`
+    - `docs/first-hour.md`
+    - `docs/examples/README.md`
     - `docs/workstreams/action-first-authoring-fearless-refactor-v1/MIGRATION_GUIDE.md`
     - `apps/fretboard/src/scaffold/templates.rs` (`todo_template_main_rs`, `simple_todo_template_main_rs`, `hello_template_main_rs`)
+    - `apps/fret-ui-gallery/src/ui/pages/command.rs`
 - [ ] AFA-clean-062 Delete or quarantine redundant APIs/modules once adoption is complete.
   - Rule: do not delete until all in-tree demos + ecosystem crates have migrated or have explicit “legacy” labeling.
   - Migration inventory:

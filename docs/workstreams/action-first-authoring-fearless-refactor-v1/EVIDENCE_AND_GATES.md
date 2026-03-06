@@ -46,10 +46,10 @@ Fretboard scaffolding templates (teaching surface):
 
 - `apps/fretboard/src/scaffold/templates.rs` (`hello_template_main_rs`, `todo_template_main_rs`, `simple_todo_template_main_rs`)
   - Unit tests gate that templates use `ui::children![cx; ...]` and keep explicit `.into_element(cx)` calls low.
-- `README.md`, `docs/README.md`, `docs/workstreams/action-first-authoring-fearless-refactor-v1/MIGRATION_GUIDE.md`
-  - All three align on the same default entrypoints: `on_action_notify_models`,
+- `README.md`, `docs/README.md`, `docs/first-hour.md`, `docs/examples/README.md`, `apps/fret-ui-gallery/src/ui/pages/command.rs`, `docs/workstreams/action-first-authoring-fearless-refactor-v1/MIGRATION_GUIDE.md`
+  - These first-contact surfaces now align on the same default entrypoints: `on_action_notify_models`,
     `on_action_notify_transient`, and local `on_activate*`; advanced helpers are documented as
-    optional/reference aliases.
+    cookbook/reference-only host-side categories.
 
 Editor-grade adoption (workspace shell demo):
 
