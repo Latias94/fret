@@ -1,4 +1,4 @@
-pub const SOURCE: &str = include_str!("parts.rs");
+pub const SOURCE: &str = include_str!("usage.rs");
 
 // region: example
 use fret_ui_shadcn::{self as shadcn, prelude::*};
@@ -8,46 +8,51 @@ struct Models {
     open: Option<Model<bool>>,
 }
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let open = cx.with_state(Models::default, |st| st.open.clone());
-    let open = match open {
+fn open_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<bool> {
+    let state = cx.with_state(Models::default, |st| st.clone());
+    match state.open {
         Some(model) => model,
         None => {
             let model = cx.app.models_mut().insert(false);
             cx.with_state(Models::default, |st| st.open = Some(model.clone()));
             model
         }
-    };
+    }
+}
+
+pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+    let open = open_model(cx);
 
     let trigger = shadcn::SheetTrigger::new(
-        shadcn::Button::new("Open (Parts)")
+        shadcn::Button::new("Open")
             .variant(shadcn::ButtonVariant::Outline)
-            .test_id("ui-gallery-sheet-parts-trigger")
             .into_element(cx),
     );
 
     let content = shadcn::SheetContent::new([
         shadcn::SheetHeader::new([
-            shadcn::SheetTitle::new("Parts sheet").into_element(cx),
-            shadcn::SheetDescription::new("Part surface adapter for shadcn-style authoring.")
-                .into_element(cx),
+            shadcn::SheetTitle::new("Edit profile").into_element(cx),
+            shadcn::SheetDescription::new(
+                "Make changes to your profile here. Click save when you're done.",
+            )
+            .into_element(cx),
         ])
         .into_element(cx),
-        shadcn::SheetFooter::new([shadcn::SheetClose::from_scope()
-            .test_id("ui-gallery-sheet-parts-close")
-            .into_element(cx)])
+        shadcn::SheetFooter::new([
+            shadcn::Button::new("Save changes").into_element(cx),
+            shadcn::SheetClose::from_scope().into_element(cx),
+        ])
         .into_element(cx),
     ])
-    .into_element(cx)
-    .test_id("ui-gallery-sheet-parts-overlay-content");
+    .into_element(cx);
 
     shadcn::Sheet::new(open)
+        .side(shadcn::SheetSide::Right)
         .compose()
         .trigger(trigger)
         .portal(shadcn::SheetPortal::new())
         .overlay(shadcn::SheetOverlay::new())
         .content(content)
         .into_element(cx)
-        .test_id("ui-gallery-sheet-parts-overlay")
 }
 // endregion: example

@@ -17,7 +17,7 @@ use fret_ui_kit::declarative::{
 use fret_ui_kit::primitives::dialog as radix_dialog;
 use fret_ui_kit::primitives::portal_inherited;
 use fret_ui_kit::{
-    ui, ChromeRefinement, ColorRef, LayoutRefinement, OverlayController, OverlayPresence, Space,
+    ChromeRefinement, ColorRef, LayoutRefinement, OverlayController, OverlayPresence, Space, ui,
 };
 
 use crate::layout as shadcn_layout;
@@ -411,6 +411,14 @@ impl Sheet {
     ) -> Self {
         self.on_open_change_complete = on_open_change_complete;
         self
+    }
+
+    /// Returns a recipe-level composition builder for shadcn-style part assembly.
+    ///
+    /// This bridges Fret's closure-root authoring model with the nested part mental model used by
+    /// shadcn/Radix while keeping the underlying mechanism surface unchanged.
+    pub fn compose(self) -> SheetComposition {
+        SheetComposition::new(self)
     }
 
     #[track_caller]
@@ -844,6 +852,75 @@ impl Sheet {
     }
 }
 
+/// Recipe-level builder for composing a sheet from shadcn-style parts.
+pub struct SheetComposition {
+    sheet: Sheet,
+    trigger: Option<SheetTrigger>,
+    portal: SheetPortal,
+    overlay: SheetOverlay,
+    content: Option<AnyElement>,
+}
+
+impl std::fmt::Debug for SheetComposition {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("SheetComposition")
+            .field("sheet", &self.sheet)
+            .field("trigger", &self.trigger.is_some())
+            .field("portal", &self.portal)
+            .field("overlay", &self.overlay)
+            .field("content", &self.content.is_some())
+            .finish()
+    }
+}
+
+impl SheetComposition {
+    pub fn new(sheet: Sheet) -> Self {
+        Self {
+            sheet,
+            trigger: None,
+            portal: SheetPortal::new(),
+            overlay: SheetOverlay::new(),
+            content: None,
+        }
+    }
+
+    pub fn trigger(mut self, trigger: SheetTrigger) -> Self {
+        self.trigger = Some(trigger);
+        self
+    }
+
+    pub fn portal(mut self, portal: SheetPortal) -> Self {
+        self.portal = portal;
+        self
+    }
+
+    pub fn overlay(mut self, overlay: SheetOverlay) -> Self {
+        self.overlay = overlay;
+        self
+    }
+
+    pub fn content(mut self, content: AnyElement) -> Self {
+        self.content = Some(content);
+        self
+    }
+
+    #[track_caller]
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let trigger = self
+            .trigger
+            .expect("Sheet::compose().trigger(...) must be provided before into_element()");
+        let content = self
+            .content
+            .expect("Sheet::compose().content(...) must be provided before into_element()");
+
+        let portal = self.portal;
+        let overlay = self.overlay;
+
+        self.sheet
+            .into_element_parts(cx, move |_cx| trigger, portal, overlay, move |_cx| content)
+    }
+}
+
 /// shadcn/ui `SheetClose` (v4).
 ///
 /// Upstream `SheetClose` is a thin wrapper around the underlying primitive's `Close` component.
@@ -1190,17 +1267,17 @@ mod tests {
     use super::*;
     use std::cell::Cell;
     use std::rc::Rc;
-    use std::sync::atomic::{AtomicUsize, Ordering};
     use std::sync::Arc;
     use std::sync::Mutex;
+    use std::sync::atomic::{AtomicUsize, Ordering};
 
     use fret_app::App;
     use fret_core::{AppWindowId, Edges, PathCommand, Point, Rect, Size, SvgId, SvgService};
     use fret_core::{PathConstraints, PathId, PathMetrics, PathService, PathStyle};
     use fret_core::{Px, TextBlobId, TextConstraints, TextMetrics, TextService};
+    use fret_ui::UiTree;
     use fret_ui::action::DismissReason;
     use fret_ui::element::{ContainerProps, ElementKind, PressableProps};
-    use fret_ui::UiTree;
     use fret_ui_kit::declarative::action_hooks::ActionHooksExt;
 
     #[test]
