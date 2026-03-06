@@ -13,8 +13,8 @@ use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::alert_dialog as radix_alert_dialog;
 use fret_ui_kit::primitives::portal_inherited;
 use fret_ui_kit::{
-    ui, ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayController,
-    OverlayPresence, Radius, Space,
+    ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, OverlayController, OverlayPresence,
+    Radius, Space, ui,
 };
 
 use crate::layout as shadcn_layout;
@@ -1239,18 +1239,18 @@ mod tests {
     use super::*;
     use std::cell::Cell;
     use std::rc::Rc;
-    use std::sync::atomic::{AtomicUsize, Ordering};
     use std::sync::Arc;
     use std::sync::Mutex;
+    use std::sync::atomic::{AtomicUsize, Ordering};
 
     use fret_app::App;
     use fret_core::{AppWindowId, PathCommand, Point, Rect, Size, SvgId, SvgService};
     use fret_core::{PathConstraints, PathId, PathMetrics, PathService, PathStyle};
     use fret_core::{Px, TextBlobId, TextConstraints, TextMetrics, TextService};
     use fret_runtime::FrameId;
+    use fret_ui::UiTree;
     use fret_ui::element::PressableProps;
     use fret_ui::elements::bounds_for_element;
-    use fret_ui::UiTree;
     use fret_ui_kit::declarative::action_hooks::ActionHooksExt;
 
     #[test]
@@ -1473,21 +1473,23 @@ mod tests {
             |cx| {
                 let trigger = AlertDialogTrigger::new(crate::Button::new("Open").into_element(cx));
 
-                vec![AlertDialog::new(open.clone())
-                    .compose()
-                    .trigger(trigger)
-                    .portal(AlertDialogPortal::new())
-                    .overlay(AlertDialogOverlay::new())
-                    .content_with(|cx| {
-                        let footer = AlertDialogFooter::new(vec![
-                            AlertDialogCancel::from_scope("Cancel").into_element(cx),
-                            AlertDialogAction::from_scope("Continue").into_element(cx),
-                        ])
-                        .into_element(cx);
+                vec![
+                    AlertDialog::new(open.clone())
+                        .compose()
+                        .trigger(trigger)
+                        .portal(AlertDialogPortal::new())
+                        .overlay(AlertDialogOverlay::new())
+                        .content_with(|cx| {
+                            let footer = AlertDialogFooter::new(vec![
+                                AlertDialogCancel::from_scope("Cancel").into_element(cx),
+                                AlertDialogAction::from_scope("Continue").into_element(cx),
+                            ])
+                            .into_element(cx);
 
-                        AlertDialogContent::new(vec![footer]).into_element(cx)
-                    })
-                    .into_element(cx)]
+                            AlertDialogContent::new(vec![footer]).into_element(cx)
+                        })
+                        .into_element(cx),
+                ]
             },
         );
         ui.set_root(root);

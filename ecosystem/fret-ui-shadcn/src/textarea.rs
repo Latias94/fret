@@ -7,15 +7,15 @@ use fret_ui::element::{
     TextAreaProps,
 };
 use fret_ui::elements::GlobalElementId;
-use fret_ui::{action, ElementContext, TextAreaStyle, Theme, UiHost};
+use fret_ui::{ElementContext, TextAreaStyle, Theme, UiHost, action};
 use fret_ui_kit::declarative::motion::{
     drive_tween_color_for_element, drive_tween_f32_for_element,
 };
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::control_registry::{
-    control_registry_model, ControlAction, ControlEntry, ControlId,
+    ControlAction, ControlEntry, ControlId, control_registry_model,
 };
-use fret_ui_kit::recipes::input::{resolve_input_chrome, InputTokenKeys};
+use fret_ui_kit::recipes::input::{InputTokenKeys, resolve_input_chrome};
 use fret_ui_kit::typography;
 use fret_ui_kit::{ChromeRefinement, LayoutRefinement, Size as ComponentSize, Space};
 
@@ -711,7 +711,7 @@ mod tests {
     use fret_runtime::FrameId;
     use fret_ui::element::{ElementKind, Length};
     use fret_ui::elements;
-    use fret_ui::{focus_visible, UiTree};
+    use fret_ui::{UiTree, focus_visible};
     use fret_ui_kit::declarative::transition::ticks_60hz_for_duration;
 
     #[derive(Default)]
