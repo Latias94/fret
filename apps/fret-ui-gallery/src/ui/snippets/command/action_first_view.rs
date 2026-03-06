@@ -35,19 +35,17 @@ impl View for ActionFirstViewRuntimeDemo {
         let count_value = cx.watch_model(&count).layout().copied_or(0);
         let last_action_value = cx.watch_model(&last_action).layout().cloned_or_default();
 
-        cx.on_action::<act::Ping>({
+        cx.on_action_notify_models::<act::Ping>({
             let count = count.clone();
             let last_action = last_action.clone();
-            move |host, acx| {
-                let _ = host
-                    .models_mut()
-                    .update(&count, |v| *v = v.saturating_add(1));
-                let _ = host.models_mut().update(&last_action, |v| {
-                    *v = Arc::from("Ping (view runtime)");
-                });
-                host.request_redraw(acx.window);
-                host.notify(acx);
-                true
+            move |models| {
+                let count_updated = models.update(&count, |v| *v = v.saturating_add(1)).is_ok();
+                let last_action_updated = models
+                    .update(&last_action, |v| {
+                        *v = Arc::from("Ping (view runtime)");
+                    })
+                    .is_ok();
+                count_updated && last_action_updated
             }
         });
 

@@ -132,9 +132,10 @@ Migration steps:
    - view-local state slots for simple demos.
 2) Replace:
    - `msg.cmd(Msg::X)` with `act::X` action references.
-3) Replace `update(...)` with `cx.on_action(...)` handlers.
-   - Tip: for most state-mutating handlers, prefer `cx.on_action_notify::<A>(...)` to request a
-     redraw + notify automatically when `handled=true`.
+3) Replace `update(...)` with `cx.on_action...` handlers.
+   - Tip: for most state-mutating handlers, start with `cx.on_action_notify_models::<A>(|models| ...)`.
+   - Use `cx.on_action_notify::<A>(...)` only for advanced host-only cases where the built-in
+     model/transient shorthands do not fit.
 4) Replace manual “force refresh” hacks with:
    - `cx.notify()` and/or
    - selector/query hooks that carry proper dependency observation.
@@ -159,6 +160,15 @@ entrypoints and treat the rest as convenience aliases:
 Everything else (`on_action_notify_model_update`, `on_action_notify_model_set`,
 `on_action_notify_toggle_bool`, `on_activate_request_redraw`, ...) should be treated as optional
 shorthand, not as the first thing new users need to memorize.
+
+### Helper visibility policy (docs/templates)
+
+- Default onboarding material should teach only the three entrypoints above.
+- Keep raw `on_action` / `on_action_notify`, the single-model aliases, payload hooks, and
+  redraw-oriented `on_activate_request_redraw*` helpers in advanced/reference material unless the
+  example truly needs them.
+- A helper should graduate into first-contact docs/templates only after it solves repeated noise
+  across multiple real demos/templates, not a single local call site.
 
 - For common “update a single model” handlers (counters, toggles, flags), prefer `ViewCx` helpers:
 

@@ -16,7 +16,7 @@ teaching surfaces, and gates line up.
 
 - **M0**: Met (workstream docs + ADRs exist; indices are updated).
 - **M1**: In progress (typed unit actions exist; continue converging keymap/palette/menu/pointer triggers on the same dispatch pipeline).
-- **M2**: In progress (View runtime v1 exists; `ViewCx` action helpers landed; adoption in templates + cookbook/examples is ongoing).
+- **M2**: In progress (View runtime v1 exists; `ViewCx` action helpers landed; default onboarding has narrowed to three entrypoints; adoption in templates + cookbook/examples is ongoing).
 - **M3**: Planned (multi-frontend convergence: declarative + imui + GenUI).
 - **M4**: In progress (cookbook/examples + ui-gallery continue migrating to the same authoring surface).
 - **M5**: Planned (editor-grade proof points: docking/workspace integration).
@@ -46,6 +46,7 @@ Hardening follow-up (open):
 - Embedded viewport interop has a view-runtime demo proving `record_engine_frame` composition (see TODO `AFA-adopt-044`).
 - Authoring ergonomics: semantics/test IDs/key contexts can be attached before `into_element(cx)`, and `fret-ui-kit::ui::*` constructors are cx-less; cookbook + templates demonstrate the patterns (see TODO “Reduce authoring noise”).
 - Teaching-surface convergence: cookbook/examples are gated to avoid legacy `stack::*` layout helpers and teach one layout authoring surface (`fret-ui-kit::ui::*`); ui-gallery migration is in progress (see TODO “Reduce authoring noise” and gates `tools/gate_no_stack_in_cookbook.py`, `tools/gate_no_stack_in_examples.py`).
+- Helper-surface convergence: README/docs/templates now frame `on_action_notify_models`, `on_action_notify_transient`, and local `on_activate*` as the default mental model; advanced aliases remain available but should stay out of first-contact material unless repeated demo evidence promotes them.
 
 ---
 

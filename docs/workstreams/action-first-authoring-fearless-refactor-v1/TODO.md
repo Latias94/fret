@@ -1,7 +1,7 @@
 ﻿# Action-First Authoring + View Runtime (Fearless Refactor v1) — TODO
 
 Status: Landed (v1), hardening follow-ups in progress
-Last updated: 2026-03-05
+Last updated: 2026-03-06
 
 Related:
 
@@ -324,9 +324,11 @@ This phase is intentionally last.
 - [ ] AFA-clean-061 Update docs and templates:
   - `docs/README.md` state management section shows actions + view runtime as the golden path.
   - `fretboard` templates generate action-first demos by default.
-  - Status (as of 2026-03-06): templates are updated; docs alignment is in progress.
+  - Status (as of 2026-03-06): `README.md`, `docs/README.md`, the migration guide, and scaffold templates align on the narrowed default entrypoints; keep cookbook/ui-gallery narrative pages in sync as examples migrate.
   - Evidence:
+    - `README.md`
     - `docs/README.md`
+    - `docs/workstreams/action-first-authoring-fearless-refactor-v1/MIGRATION_GUIDE.md`
     - `apps/fretboard/src/scaffold/templates.rs` (`todo_template_main_rs`, `simple_todo_template_main_rs`, `hello_template_main_rs`)
 - [ ] AFA-clean-062 Delete or quarantine redundant APIs/modules once adoption is complete.
   - Rule: do not delete until all in-tree demos + ecosystem crates have migrated or have explicit “legacy” labeling.
@@ -389,6 +391,7 @@ practical steps:
       - Done: `apps/fret-cookbook`, `apps/fret-examples`
       - In progress: `apps/fret-ui-gallery` (large surface; migrate in batches)
         - Started: `apps/fret-ui-gallery/src/ui/doc_layout.rs`, `apps/fret-ui-gallery/src/ui/content.rs`
+        - Default-helper alignment landed for the command docs surface: `apps/fret-ui-gallery/src/ui/snippets/command/action_first_view.rs`, `apps/fret-ui-gallery/src/ui/pages/command.rs`
         - Gate (shell-only): `tools/gate_no_stack_in_ui_gallery_shell.py` (or `tools/gate_no_stack_in_ui_gallery_shell.ps1`)
       - As needed: shadcn/genui crates (only when they block teaching-surface convergence)
   - Done: hard delete legacy stack helpers once internal implementations are migrated.
@@ -433,6 +436,10 @@ practical steps:
     - keep `on_action*` / `on_activate*` as the current closure story (do not add more tiny helpers yet),
     - prefer template/doc guidance first for transient/App-effect patterns,
     - re-evaluate only after one more round of template/demo authoring feedback.
+- Helper visibility policy snapshot (as of 2026-03-06):
+  - Default teaching surface: `cx.on_action_notify_models::<A>(|models| ...)`, `cx.on_action_notify_transient::<A>(...)`, and local `on_activate(...)` / `on_activate_notify(...)` only.
+  - Advanced/reference surface: raw `cx.on_action(...)` / `cx.on_action_notify(...)`, single-model aliases (`on_action_notify_model_update`, `on_action_notify_model_set`, `on_action_notify_toggle_bool`), payload hooks, and redraw-oriented `on_activate_request_redraw*` helpers.
+  - Promotion rule: do not promote additional helpers into README/templates/first-hour docs unless at least two real demos/templates need the same shape and the generic defaults are clearly noisier.
 - Payload actions (v2+), behind strict determinism + validation rules.
   - See: `docs/adr/0312-payload-actions-v2.md`
 
