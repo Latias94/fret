@@ -160,14 +160,9 @@ impl View for TodoView {
         let draft = cx.use_state::<String>();
         let enabled = !cx.watch_model(&draft).layout().cloned_or_default().trim().is_empty();
 
-        cx.on_action::<act::Add>({
+        cx.on_action_notify_models::<act::Add>({
             let draft = draft.clone();
-            move |host, acx| {
-                let _ = host.models_mut().update(&draft, String::clear);
-                host.request_redraw(acx.window);
-                host.notify(acx);
-                true
-            }
+            move |models| models.update(&draft, String::clear).is_ok()
         });
 
         let input = shadcn::Input::new(draft.clone())

@@ -28,7 +28,7 @@ Evidence anchors (verified in-tree as of 2026-03-06):
 - `ecosystem/fret/src/view.rs` (`ViewCx::on_action_notify_*` helpers)
 - `ecosystem/fret-ui-kit/src/activate.rs` (`on_activate_*` helpers for low-noise `OnActivate` authoring)
 - `apps/fretboard/src/scaffold/templates.rs` (scaffold templates prefer View + typed actions)
-- `docs/first-hour.md` / `docs/examples/README.md` (first-contact docs now teach the same three entrypoints and defer raw `on_action_notify` to cookbook/reference host-side cases)
+- `docs/first-hour.md` / `docs/examples/README.md` / `docs/examples/todo-app-golden-path.md` / `docs/fearless-refactoring.md` (first-contact and golden-path docs now teach the same three entrypoints and defer raw `on_action_notify` to cookbook/reference host-side cases)
 - `apps/fret-ui-gallery/src/ui/pages/command.rs` (gallery teaching page now calls out the same default path and keeps advanced host-side cases out of the gallery narrative)
 - `apps/fret-cookbook/examples/async_inbox_basics.rs` (`Cancel` uses the default path; `Start` remains advanced for host-side dispatcher/inbox scheduling)
 - `apps/fret-cookbook/examples/canvas_pan_zoom_basics.rs` (prefers `on_action_notify*` helpers)
