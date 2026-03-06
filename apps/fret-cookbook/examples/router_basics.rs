@@ -176,14 +176,13 @@ impl View for RouterBasicsView {
         cx.on_action_notify::<act::RouterForward>(navigate_history_action(
             NavigationAction::Forward,
         ));
-        cx.on_action_notify::<act::ClearIntents>({
+        cx.on_action_notify_models::<act::ClearIntents>({
             let intents = intents_weak_for_clear;
-            move |host, _acx| {
+            move |models| {
                 let Some(intents) = intents.upgrade() else {
                     return true;
                 };
-                let _ = host.models_mut().update(&intents, |v| v.clear());
-                true
+                models.update(&intents, |v| v.clear()).is_ok()
             }
         });
 

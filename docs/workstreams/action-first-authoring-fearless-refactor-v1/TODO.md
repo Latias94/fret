@@ -235,6 +235,7 @@ ID format:
       - `apps/fret-cookbook/examples/icons_and_assets_basics.rs`
       - `apps/fret-cookbook/examples/assets_reload_epoch_basics.rs`
       - `apps/fret-cookbook/examples/commands_keymap_basics.rs`
+      - `apps/fret-cookbook/examples/router_basics.rs`
       - `apps/fret-cookbook/examples/effects_layer_basics.rs`
       - `apps/fret-cookbook/examples/markdown_and_code_basics.rs`
       - `apps/fret-cookbook/examples/canvas_pan_zoom_basics.rs`
@@ -443,6 +444,7 @@ practical steps:
   - Default teaching surface: `cx.on_action_notify_models::<A>(|models| ...)`, `cx.on_action_notify_transient::<A>(...)`, and local `on_activate(...)` / `on_activate_notify(...)` only.
   - Advanced/reference surface: raw `cx.on_action(...)` / `cx.on_action_notify(...)`, single-model aliases (`on_action_notify_model_update`, `on_action_notify_model_set`, `on_action_notify_toggle_bool`), payload hooks, and redraw-oriented `on_activate_request_redraw*` helpers.
   - Promotion rule: do not promote additional helpers into README/templates/first-hour docs unless at least two real demos/templates need the same shape and the generic defaults are clearly noisier.
+  - Remaining intentional advanced cookbook cases: `toast_basics` (toast host APIs), `router_basics` back/forward (router availability sync), `async_inbox_basics::Start` (dispatcher/inbox spawning), and `undo_basics::Undo`/`Redo` (history traversal + RAF effect).
 - Payload actions (v2+), behind strict determinism + validation rules.
   - See: `docs/adr/0312-payload-actions-v2.md`
 

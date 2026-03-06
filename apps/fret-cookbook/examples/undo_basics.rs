@@ -126,24 +126,20 @@ fn install_commands(app: &mut App) {
 }
 
 fn record_value_tx(
-    host: &mut dyn fret_ui::action::UiFocusActionHost,
+    models: &mut fret_runtime::ModelStore,
     value: &Model<i32>,
     history: &Model<UndoHistory<ValueTx<i32>>>,
     label: &'static str,
     coalesce_key: Option<&'static str>,
     after: i32,
 ) {
-    let before = host
-        .models_mut()
-        .read(value, |v| *v)
-        .ok()
-        .unwrap_or_default();
+    let before = models.read(value, |v| *v).ok().unwrap_or_default();
     if before == after {
         return;
     }
 
-    let _ = host.models_mut().update(value, |v| *v = after);
-    let _ = host.models_mut().update(history, |h| {
+    let _ = models.update(value, |v| *v = after);
+    let _ = models.update(history, |h| {
         let record = UndoRecord::new(ValueTx::new(before, after)).label(label);
         if let Some(k) = coalesce_key {
             let mut record = record.coalesce_key(k);
@@ -362,23 +358,18 @@ impl View for UndoBasicsView {
                 .max_w(Px(760.0))
                 .into_element(cx);
 
-        cx.on_action_notify::<act::Inc>({
+        cx.on_action_notify_models::<act::Inc>({
             let value = self.value.clone();
             let history = self.history.clone();
             let coalesce = self.coalesce.clone();
-            move |host, _acx| {
-                let coalesce = host
-                    .models_mut()
-                    .read(&coalesce, |v| *v)
-                    .ok()
-                    .unwrap_or(false);
-                let after = host
-                    .models_mut()
+            move |models| {
+                let coalesce = models.read(&coalesce, |v| *v).ok().unwrap_or(false);
+                let after = models
                     .read(&value, |v| v.saturating_add(1))
                     .ok()
                     .unwrap_or(1);
                 record_value_tx(
-                    host,
+                    models,
                     &value,
                     &history,
                     "Increment",
@@ -389,23 +380,18 @@ impl View for UndoBasicsView {
             }
         });
 
-        cx.on_action_notify::<act::Dec>({
+        cx.on_action_notify_models::<act::Dec>({
             let value = self.value.clone();
             let history = self.history.clone();
             let coalesce = self.coalesce.clone();
-            move |host, _acx| {
-                let coalesce = host
-                    .models_mut()
-                    .read(&coalesce, |v| *v)
-                    .ok()
-                    .unwrap_or(false);
-                let after = host
-                    .models_mut()
+            move |models| {
+                let coalesce = models.read(&coalesce, |v| *v).ok().unwrap_or(false);
+                let after = models
                     .read(&value, |v| v.saturating_sub(1))
                     .ok()
                     .unwrap_or(-1);
                 record_value_tx(
-                    host,
+                    models,
                     &value,
                     &history,
                     "Decrement",
@@ -416,11 +402,11 @@ impl View for UndoBasicsView {
             }
         });
 
-        cx.on_action_notify::<act::Reset>({
+        cx.on_action_notify_models::<act::Reset>({
             let value = self.value.clone();
             let history = self.history.clone();
-            move |host, _acx| {
-                record_value_tx(host, &value, &history, "Reset", None, 0);
+            move |models| {
+                record_value_tx(models, &value, &history, "Reset", None, 0);
                 true
             }
         });
