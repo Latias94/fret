@@ -2133,6 +2133,23 @@ fn regression_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElement 
                     .into_element(cx),
             );
         }
+        if let Some(first_bundle_dir) = selected_bundle_dirs.first().map(|v| v.to_string()) {
+            let on_copy_first: fret_ui::action::OnActivate = Arc::new(
+                move |host, action_cx, _reason| {
+                    host.push_effect(Effect::ClipboardSetText {
+                        text: first_bundle_dir.clone(),
+                    });
+                    host.request_redraw(action_cx.window);
+                },
+            );
+            out.push(
+                shadcn::Button::new("Copy first bundle dir")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .size(shadcn::ButtonSize::Sm)
+                    .on_activate(on_copy_first)
+                    .into_element(cx),
+            );
+        }
         if !selected_bundle_dirs_text.trim().is_empty() {
             let bundle_dirs = selected_bundle_dirs_text.clone();
             let on_copy: fret_ui::action::OnActivate = Arc::new(move |host, action_cx, _reason| {
