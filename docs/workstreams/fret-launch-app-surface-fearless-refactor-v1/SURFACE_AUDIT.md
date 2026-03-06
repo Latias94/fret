@@ -243,6 +243,11 @@ Additional evidence:
 - `apps/fret-examples/src/form_demo.rs`
 - `apps/fret-examples/src/ime_smoke_demo.rs`
 - `apps/fret-examples/src/sonner_demo.rs`
+- `apps/fret-examples/src/plot_stress_demo.rs`
+- `apps/fret-examples/src/table_demo.rs`
+- `apps/fret-examples/src/table_stress_demo.rs`
+- `apps/fret-examples/src/virtual_list_stress_demo.rs`
+- `apps/fret-examples/src/workspace_shell_demo.rs`
 - `apps/fret-demo-web/src/wasm.rs`
 - `tools/gate_winit_driver_example_hook_coverage.py`
 
@@ -256,6 +261,7 @@ Interpretation update:
   demonstrated `FnDriver` capability gap.
 - the low-risk batch (`first_frame_smoke_demo`, `effects_demo`, `external_texture_imports_web_demo`) further reduces the remaining direct `WinitAppDriver` inventory to 18 at this checkpoint, without requiring any new `FnDriver` hook surface.
 - the current single-window UI batch (`datatable_demo`, `date_picker_demo`, `form_demo`, `ime_smoke_demo`, `sonner_demo`) reduces that inventory again to 13, reinforcing that the remaining blockers are composition complexity and migration effort, not launch-hook insufficiency.
+- the latest medium-complexity desktop batch (`plot_stress_demo`, `table_demo`, `table_stress_demo`, `virtual_list_stress_demo`, `workspace_shell_demo`) reduces that inventory again to 8, leaving only the heaviest docking/gallery/gizmo/node-graph examples on direct `WinitAppDriver` posture.
 
 ### H3) Specialized launch modules still need classification discipline
 

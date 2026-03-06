@@ -203,6 +203,11 @@ Evidence anchors:
   `form_demo`, `ime_smoke_demo`, `sonner_demo`): local hot-reload/command/model/global-change
   wiring migrates cleanly to free `FnDriver` hooks, so the remaining direct impl inventory is no
   longer a meaningful argument for keeping compat posture as the default story.
+- The same now holds for the medium-complexity desktop batch (`plot_stress_demo`, `table_demo`,
+  `table_stress_demo`, `virtual_list_stress_demo`, `workspace_shell_demo`): stress/perf harnesses
+  and workspace-shell command orchestration also migrate to pure free hooks, so the remaining
+  direct impl inventory is down to eight and concentrated in genuinely heavier docking/gallery/
+  gizmo/node-graph examples rather than a missing launch primitive.
 
 Evidence anchors:
 
@@ -219,6 +224,11 @@ Evidence anchors:
 - `apps/fret-examples/src/form_demo.rs`
 - `apps/fret-examples/src/ime_smoke_demo.rs`
 - `apps/fret-examples/src/sonner_demo.rs`
+- `apps/fret-examples/src/plot_stress_demo.rs`
+- `apps/fret-examples/src/table_demo.rs`
+- `apps/fret-examples/src/table_stress_demo.rs`
+- `apps/fret-examples/src/virtual_list_stress_demo.rs`
+- `apps/fret-examples/src/workspace_shell_demo.rs`
 - `docs/workstreams/fret-launch-app-surface-fearless-refactor-v1/SURFACE_AUDIT.md`
 
 ## 8) Recommended refactor steps (small, gated)
