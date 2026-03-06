@@ -4694,7 +4694,22 @@ mod tests {
     use fret_core::{SvgId, SvgService, TextBlobId, TextConstraints, TextMetrics, TextService};
     use fret_runtime::{Effect, FrameId, TimerToken};
     use fret_ui::element::{ElementKind, SpacingLength};
+    use fret_ui::elements::GlobalElementId;
     use fret_ui::tree::UiTree;
+
+    fn contains_foreground_scope(el: &AnyElement) -> bool {
+        matches!(el.kind, ElementKind::ForegroundScope(_))
+            || el.children.iter().any(contains_foreground_scope)
+    }
+
+    fn find_first_inherited_foreground_node(el: &AnyElement) -> Option<&AnyElement> {
+        if el.inherited_foreground.is_some() {
+            return Some(el);
+        }
+        el.children
+            .iter()
+            .find_map(find_first_inherited_foreground_node)
+    }
 
     #[test]
     fn select_align_default_is_center() {
@@ -4774,6 +4789,64 @@ mod tests {
         let flex = find_first_flex(chrome_el).expect("select trigger chrome flex");
         let expected_gap = MetricRef::space(Space::N2).resolve(&theme);
         assert_eq!(flex.gap, SpacingLength::Px(expected_gap));
+    }
+
+    #[test]
+    fn select_scroll_buttons_attach_foreground_to_icon_without_wrapper() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        crate::shadcn_themes::apply_shadcn_new_york(
+            &mut app,
+            crate::shadcn_themes::ShadcnBaseColor::Slate,
+            crate::shadcn_themes::ShadcnColorScheme::Light,
+        );
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(160.0)),
+        );
+        let viewport_id_out = Cell::new(None::<GlobalElementId>);
+        let active_element_id_out = Cell::new(None::<GlobalElementId>);
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let theme = Theme::global(&*cx.app).snapshot();
+            let expected_fg = theme.color_token("popover.foreground");
+            let scroll_handle = fret_ui::scroll::ScrollHandle::default();
+            scroll_handle.set_viewport_size(Size::new(Px(10.0), Px(10.0)));
+            scroll_handle.set_content_size(Size::new(Px(10.0), Px(100.0)));
+
+            let el = select_scroll_with_buttons(
+                cx,
+                theme,
+                Px(24.0),
+                true,
+                true,
+                fret_icons::IconId::new_static("lucide.chevron-up"),
+                fret_icons::IconId::new_static("lucide.chevron-down"),
+                scroll_handle,
+                None,
+                || {},
+                &viewport_id_out,
+                &active_element_id_out,
+                || false,
+                || false,
+                || {},
+                |_visible| {},
+                || false,
+                || {},
+                |_host, _cx| {},
+                |_cx, _viewport_id_out| Vec::<AnyElement>::new(),
+            );
+
+            let inherited = find_first_inherited_foreground_node(&el)
+                .expect("expected select scroll button subtree to carry inherited foreground");
+            assert!(matches!(inherited.kind, ElementKind::SvgIcon(_)));
+            assert_eq!(inherited.inherited_foreground, Some(expected_fg));
+            assert!(
+                !contains_foreground_scope(&el),
+                "expected select scroll buttons to attach inherited foreground without inserting a ForegroundScope"
+            );
+        });
     }
 
     #[test]
