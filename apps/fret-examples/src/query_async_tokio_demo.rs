@@ -237,7 +237,9 @@ impl View for QueryAsyncTokioDemoView {
                 .into_element(cx),
             );
         })
-        .refine_layout(LayoutRefinement::default().w_full().max_w(Px(520.0)))
+        .ui()
+        .w_full()
+        .max_w(Px(520.0))
         .into_element(cx);
 
         ui::v_flex_build(|_cx, out| {

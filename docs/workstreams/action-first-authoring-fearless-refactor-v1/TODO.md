@@ -386,7 +386,7 @@ practical steps:
   `into_element(cx)` in medium demos.
   - Goal: measure whether a builder-only path materially improves density without helper sprawl.
   - Evidence target: compare `hello_counter_demo` or `query_demo` against the current default path.
-  - Update (as of 2026-03-06): `fret-ui-kit::ui::UiElementSinkExt` plus `ui::*_build` sinks now power builder-first `query_demo` and `query_async_tokio_demo` variants that remove `ui::children!` from their main layout sections (`status_row`, `buttons`, `detail_body`, and the page root). `ecosystem/fret-ui-shadcn/src/card.rs` now also exposes `Card::build(...)`, `CardHeader::build(...)`, and `CardContent::build(...)`, so the demos late-land both the card root and its sections. Remaining gap: other section-hosting composite wrappers still collect `AnyElement` eagerly, so builder-first rollout remains partial outside the current card path.
+  - Update (as of 2026-03-06): `fret-ui-kit::ui::UiElementSinkExt` plus `ui::*_build` sinks now power builder-first `query_demo` and `query_async_tokio_demo` variants that remove `ui::children!` from their main layout sections (`status_row`, `buttons`, `detail_body`, and the page root). `ecosystem/fret-ui-shadcn/src/card.rs` now also exposes `Card::build(...)`, `CardHeader::build(...)`, and `CardContent::build(...)`, and that card-builder path now also covers the `fretboard` todo/simple-todo templates plus `commands_keymap_basics`, `form_basics`, and `async_inbox_basics` through the generic `.ui()` patch path. Remaining gap: other section-hosting composite wrappers still collect `AnyElement` eagerly, and heterogeneous child pipelines like `ui::children!` / `push_ui()` still require explicit `.into_element(cx)` at those boundaries.
 - [ ] AFA-postv1-003 Investigate widget-local action sugar (`listener` / `dispatch` / `shortcut`)
   without expanding the default helper surface prematurely.
   - Goal: keep action-first semantics while lowering local event-wiring noise.
@@ -463,9 +463,9 @@ practical steps:
     - `apps/fret-examples/src/custom_effect_v2_web_demo.rs` (uses `on_activate_request_redraw`)
 - Demo authoring review snapshot (as of 2026-03-06):
   - Simple demo status: `hello_template_main_rs` is close to the intended golden path (typed actions + `ui::children!` + one model-update helper).
-  - Medium demo status: `hello_counter_demo`, `query_demo`, and `query_async_tokio_demo` now use the `LocalState<T>` prototype for view-local state; both query demos also carry the first builder-first composition experiments. The remaining recurring noise classes are:
+  - Medium demo status: `hello_counter_demo`, `query_demo`, and `query_async_tokio_demo` now use the `LocalState<T>` prototype for view-local state; the query demos, scaffold todo templates, and cookbook `commands_keymap_basics` / `form_basics` / `async_inbox_basics` also carry the current card-focused builder-first experiment. The remaining recurring noise classes are:
     1. tracked-state read boilerplate (`watch_local(...).layout()/paint().copied_or/cloned_or_default()` and `watch_model(...).layout()/paint().copied_or/cloned_or_default()`),
-    2. eager `AnyElement` landing at composite boundaries outside the current card prototype (other section-hosting wrappers still collect eagerly),
+    2. heterogeneous composite boundaries still require eager `AnyElement` landing (`ui::children!`, `push_ui()`, and other section-hosting wrappers), even though the current card-builder path now round-trips through the generic `.ui()` patch surface,
     3. explicit transient scheduling for App-only effects (`take_transient_on_action_root` + `with_query_client`).
   - Recommended next phase:
     - keep `on_action*` / `on_activate*` as the current closure story (do not add more tiny helpers yet),
@@ -480,7 +480,7 @@ practical steps:
   - Remaining pressure points:
     1. `use_state` still returns `Model<T>` instead of a plain-Rust local-state authoring story.
     2. Default demos still rely on `watch_model(...)` / `models.update(...)` for common state reads/writes.
-    3. the query demos now demonstrate builder-first paths via `ui::*_build` plus late-landing `Card::build(...)` / `CardHeader::build(...)` / `CardContent::build(...)`, but `ui::children!` remains the dominant composition style elsewhere and other composite `into_element(cx)` boundaries are still visible in medium demos.
+    3. the query demos, scaffold templates, and a first cookbook slice now demonstrate builder-first card paths via `ui::*_build` plus late-landing `Card::build(...)` / `CardHeader::build(...)` / `CardContent::build(...)` on the generic `.ui()` patch path, but `ui::children!` remains the dominant composition style elsewhere and other composite `into_element(cx)` boundaries are still visible in medium demos.
     4. Widget-local `listener` / `dispatch` / `shortcut` sugar is not the default event story yet.
   - Recommendation:
     - close v1 as successful on architecture + migration + default teaching surface,

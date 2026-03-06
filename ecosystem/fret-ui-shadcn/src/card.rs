@@ -5,7 +5,10 @@ use fret_core::{Px, TextWrap};
 use fret_ui::element::{AnyElement, ElementKind};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Space, ui};
+use fret_ui_kit::{
+    ChromeRefinement, ColorRef, LayoutRefinement, Space, UiHostBoundIntoElement, UiPatch,
+    UiPatchTarget, UiSupportsChrome, UiSupportsLayout, ui,
+};
 
 use crate::layout as shadcn_layout;
 use crate::surface_slot::{ShadcnSurfaceSlot, with_surface_slot_provider};
@@ -263,6 +266,35 @@ where
     }
 }
 
+impl<H: UiHost, B> UiPatchTarget for CardBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    fn apply_ui_patch(self, patch: UiPatch) -> Self {
+        self.refine_style(patch.chrome).refine_layout(patch.layout)
+    }
+}
+
+impl<H: UiHost, B> UiSupportsChrome for CardBuild<H, B> where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>)
+{
+}
+
+impl<H: UiHost, B> UiSupportsLayout for CardBuild<H, B> where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>)
+{
+}
+
+impl<H: UiHost, B> UiHostBoundIntoElement<H> for CardBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        CardBuild::into_element(self, cx)
+    }
+}
+
 pub fn card_content<H: UiHost, I>(
     cx: &mut ElementContext<'_, H>,
     f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
@@ -491,6 +523,35 @@ where
     }
 }
 
+impl<H: UiHost, B> UiPatchTarget for CardHeaderBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    fn apply_ui_patch(self, patch: UiPatch) -> Self {
+        self.refine_style(patch.chrome).refine_layout(patch.layout)
+    }
+}
+
+impl<H: UiHost, B> UiSupportsChrome for CardHeaderBuild<H, B> where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>)
+{
+}
+
+impl<H: UiHost, B> UiSupportsLayout for CardHeaderBuild<H, B> where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>)
+{
+}
+
+impl<H: UiHost, B> UiHostBoundIntoElement<H> for CardHeaderBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        CardHeaderBuild::into_element(self, cx)
+    }
+}
+
 #[derive(Debug)]
 pub struct CardAction {
     children: Vec<AnyElement>,
@@ -557,7 +618,7 @@ mod tests {
         ColumnProps, ContainerProps, CrossAlign, Length, Overflow, SemanticsProps,
     };
     use fret_ui::elements::GlobalElementId;
-    use fret_ui_kit::MetricRef;
+    use fret_ui_kit::{MetricRef, UiBuilderHostBoundIntoElementExt as _, UiExt as _};
 
     #[test]
     fn card_action_marker_matches_semantics_decoration_test_id() {
@@ -918,6 +979,73 @@ mod tests {
             assert_eq!(built_padding.right, eager_padding.right);
             assert_eq!(built_padding.bottom, eager_padding.bottom);
             assert_eq!(built_padding.left, eager_padding.left);
+        });
+    }
+
+    #[test]
+    fn card_build_ui_builder_path_applies_layout_patches() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(300.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let theme = Theme::global(&*cx.app);
+            let background = theme.color_token("background");
+            let border = theme.color_token("border");
+
+            let card = Card::build(|_cx, _out| {})
+                .ui()
+                .bg(ColorRef::Color(background))
+                .border_1()
+                .border_color(ColorRef::Color(border))
+                .max_w(Px(320.0))
+                .into_element(cx);
+            let header = CardHeader::build(|_cx, _out| {})
+                .ui()
+                .max_w(Px(240.0))
+                .into_element(cx);
+            let content = CardContent::build(|_cx, _out| {})
+                .ui()
+                .max_w(Px(200.0))
+                .into_element(cx);
+
+            let card_surface = card
+                .children
+                .first()
+                .unwrap_or_else(|| panic!("expected built Card foreground scope child"));
+
+            let ElementKind::Container(ContainerProps {
+                layout: card_layout,
+                background: card_background,
+                border_color: card_border_color,
+                ..
+            }) = &card_surface.kind
+            else {
+                panic!("expected ui()-patched Card surface to be a container element");
+            };
+            let ElementKind::Container(ContainerProps {
+                layout: header_layout,
+                ..
+            }) = &header.kind
+            else {
+                panic!("expected ui()-patched CardHeader to be a container element");
+            };
+            let ElementKind::Container(ContainerProps {
+                layout: content_layout,
+                ..
+            }) = &content.kind
+            else {
+                panic!("expected ui()-patched CardContent to be a container element");
+            };
+
+            assert_eq!(*card_background, Some(background));
+            assert_eq!(*card_border_color, Some(border));
+            assert_eq!(card_layout.size.max_width, Some(Length::Px(Px(320.0))));
+            assert_eq!(header_layout.size.max_width, Some(Length::Px(Px(240.0))));
+            assert_eq!(content_layout.size.max_width, Some(Length::Px(Px(200.0))));
         });
     }
 
@@ -1326,6 +1454,35 @@ where
             content = content.size(size);
         }
         content.into_element(cx)
+    }
+}
+
+impl<H: UiHost, B> UiPatchTarget for CardContentBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    fn apply_ui_patch(self, patch: UiPatch) -> Self {
+        self.refine_style(patch.chrome).refine_layout(patch.layout)
+    }
+}
+
+impl<H: UiHost, B> UiSupportsChrome for CardContentBuild<H, B> where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>)
+{
+}
+
+impl<H: UiHost, B> UiSupportsLayout for CardContentBuild<H, B> where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>)
+{
+}
+
+impl<H: UiHost, B> UiHostBoundIntoElement<H> for CardContentBuild<H, B>
+where
+    B: FnOnce(&mut ElementContext<'_, H>, &mut Vec<AnyElement>),
+{
+    #[track_caller]
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        CardContentBuild::into_element(self, cx)
     }
 }
 

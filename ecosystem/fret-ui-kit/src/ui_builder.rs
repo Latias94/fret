@@ -66,6 +66,17 @@ pub trait UiIntoElement: Sized {
     fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement;
 }
 
+/// A host-bound variant of `UiIntoElement` for authoring values that store a host-typed build
+/// closure internally.
+///
+/// This keeps host-specific `*_build(...)` values on the same fluent `.ui()` patch path as normal
+/// `UiIntoElement` values, without forcing the public authoring surface to fall back to
+/// `refine_style(...)` / `refine_layout(...)` only.
+pub trait UiHostBoundIntoElement<H: UiHost>: Sized {
+    #[track_caller]
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement;
+}
+
 impl UiIntoElement for AnyElement {
     #[track_caller]
     fn into_element<H: UiHost>(self, _cx: &mut ElementContext<'_, H>) -> AnyElement {
@@ -1266,30 +1277,57 @@ impl<H, B> UiBuilder<crate::ui::ScrollAreaBoxBuild<H, B>> {
     }
 }
 
+fn finalize_ui_builder_element<H: UiHost, T: UiPatchTarget>(
+    builder: UiBuilder<T>,
+    cx: &mut ElementContext<'_, H>,
+    render: impl FnOnce(T, &mut ElementContext<'_, H>) -> AnyElement,
+) -> AnyElement {
+    let UiBuilder {
+        inner,
+        patch,
+        semantics,
+        key_context,
+    } = builder;
+    let builder = UiBuilder {
+        inner,
+        patch,
+        semantics: None,
+        key_context: None,
+    };
+    let el = render(builder.build(), cx);
+    let el = match semantics {
+        Some(decoration) => el.attach_semantics(decoration),
+        None => el,
+    };
+    match key_context {
+        Some(key_context) => el.key_context(key_context),
+        None => el,
+    }
+}
+
 impl<T: UiPatchTarget + UiIntoElement> UiBuilder<T> {
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let UiBuilder {
-            inner,
-            patch,
-            semantics,
-            key_context,
-        } = self;
-        let builder = UiBuilder {
-            inner,
-            patch,
-            semantics: None,
-            key_context: None,
-        };
-        let el = builder.build().into_element(cx);
-        let el = match semantics {
-            Some(decoration) => el.attach_semantics(decoration),
-            None => el,
-        };
-        match key_context {
-            Some(key_context) => el.key_context(key_context),
-            None => el,
-        }
+        finalize_ui_builder_element(self, cx, |built, cx| built.into_element(cx))
+    }
+}
+
+/// Extension trait bridging host-bound `UiBuilder<T>` values back into the same `.into_element(cx)`
+/// call shape used by regular `UiIntoElement` builders.
+pub trait UiBuilderHostBoundIntoElementExt<H: UiHost>: Sized {
+    #[track_caller]
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement;
+}
+
+impl<H: UiHost, T> UiBuilderHostBoundIntoElementExt<H> for UiBuilder<T>
+where
+    T: UiPatchTarget + UiHostBoundIntoElement<H>,
+{
+    #[track_caller]
+    fn into_element(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        finalize_ui_builder_element(self, cx, |built, cx| {
+            UiHostBoundIntoElement::into_element(built, cx)
+        })
     }
 }
 

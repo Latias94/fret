@@ -228,7 +228,8 @@ pub use style::{
 };
 pub use styled::{RefineStyle, Stylable, Styled, StyledExt};
 pub use ui_builder::{
-    UiBuilder, UiExt, UiIntoElement, UiPatch, UiPatchTarget, UiSupportsChrome, UiSupportsLayout,
+    UiBuilder, UiBuilderHostBoundIntoElementExt, UiExt, UiHostBoundIntoElement, UiIntoElement,
+    UiPatch, UiPatchTarget, UiSupportsChrome, UiSupportsLayout,
 };
 
 pub use overlay_controller::{
@@ -257,6 +258,7 @@ pub use window_overlays::{
 ///
 /// Recommended: `use fret_ui_kit::prelude::*;`
 pub mod prelude {
+    pub use crate::UiBuilderHostBoundIntoElementExt as _;
     pub use crate::command::ElementCommandGatingExt as _;
     pub use crate::declarative::prelude::*;
     pub use crate::declarative::style;
@@ -283,8 +285,8 @@ pub mod prelude {
         ChromeRefinement, ColorFallback, ColorRef, Corners4, Edges4, ImageMetadata,
         ImageMetadataStore, ImageSamplingExt, LayoutRefinement, MarginEdge, MetricRef,
         OverrideSlot, Radius, ShadowPreset, SignedMetricRef, Size, Space, StyledExt, UiExt,
-        UiIntoElement, WidgetState, WidgetStateProperty, WidgetStates, merge_override_slot,
-        merge_slot, resolve_override_slot, resolve_override_slot_opt,
+        UiHostBoundIntoElement, UiIntoElement, WidgetState, WidgetStateProperty, WidgetStates,
+        merge_override_slot, merge_slot, resolve_override_slot, resolve_override_slot_opt,
         resolve_override_slot_opt_with, resolve_override_slot_with, resolve_slot,
     };
     pub use crate::{OverlayArbitrationSnapshot, OverlayController, OverlayKind, OverlayPresence};
