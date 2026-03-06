@@ -407,7 +407,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             WindowRuntime {
                 window,
                 accessibility,
-                last_accessibility_snapshot: None,
+                last_semantics_snapshot: None,
                 surface,
                 scene: Scene::default(),
                 platform: fret_runner_winit::WinitPlatform {
@@ -576,6 +576,8 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 }
             }
         }
+
+        self.webviews.close_window(&mut self.app, window);
 
         let Some(state) = self.windows.remove(window) else {
             return false;

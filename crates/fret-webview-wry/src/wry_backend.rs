@@ -12,7 +12,7 @@ use wry::{
     dpi::{self, LogicalPosition, LogicalSize},
 };
 
-use fret_core::{Px, Rect as CoreRect};
+use fret_core::Rect as CoreRect;
 
 /// Builds a `wry::WebView` as a native child of a window.
 ///
@@ -93,10 +93,6 @@ impl WryWebView {
         self.inner.set_bounds(wry_rect_from_core(bounds))
     }
 
-    pub fn focus_parent(&self) -> Result<(), wry::Error> {
-        self.inner.focus_parent()
-    }
-
     pub fn load_url(&self, url: &str) -> Result<(), wry::Error> {
         self.inner.load_url(url)
     }
@@ -111,15 +107,5 @@ impl WryWebView {
 
     pub fn reload(&self) -> Result<(), wry::Error> {
         self.inner.evaluate_script("location.reload();").map(|_| ())
-    }
-
-    pub fn device_pixel_ratio_hint(_scale_factor: f32) -> Px {
-        // Placeholder: Fret expresses layout in logical pixels (ADR 0017). The backend integration
-        // should translate to physical pixels if/when the embedding API requires it.
-        Px(1.0)
-    }
-
-    pub fn raw(&self) -> &wry::WebView {
-        &self.inner
     }
 }

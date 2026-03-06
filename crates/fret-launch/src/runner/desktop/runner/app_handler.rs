@@ -1798,7 +1798,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
 
                     if let Some(a11y) = state.accessibility.as_mut()
                         && a11y.is_active()
-                        && let Some(snapshot) = self.driver.accessibility_snapshot(
+                        && let Some(snapshot) = self.driver.semantics_snapshot(
                             &mut self.app,
                             app_window,
                             &mut state.user,
@@ -1809,9 +1809,9 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                             state.window.scale_factor(),
                         );
                         a11y.update_if_active(|| update);
-                        state.last_accessibility_snapshot = Some(snapshot);
+                        state.last_semantics_snapshot = Some(snapshot);
                     } else {
-                        state.last_accessibility_snapshot = None;
+                        state.last_semantics_snapshot = None;
                     }
 
                     let record_started = hitch_config.map(|_| Instant::now());
@@ -1838,6 +1838,34 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                     if let Some(started) = record_started {
                         hitch_record_ms = Some(started.elapsed().as_millis() as u64);
                     }
+
+                    #[cfg(feature = "webview-wry")]
+                    let webview_snapshot =
+                        if self.app.global::<fret_webview::WebViewHost>().is_some()
+                            && fret_webview::webview_has_surfaces_for_window(&self.app, app_window)
+                        {
+                            state.last_semantics_snapshot.clone().or_else(|| {
+                                self.driver.semantics_snapshot(
+                                    &mut self.app,
+                                    app_window,
+                                    &mut state.user,
+                                )
+                            })
+                        } else {
+                            None
+                        };
+                    #[cfg(not(feature = "webview-wry"))]
+                    let webview_snapshot: Option<
+                        std::sync::Arc<fret_core::SemanticsSnapshot>,
+                    > = None;
+
+                    self.webviews.sync_window(
+                        &mut self.app,
+                        self.frame_id,
+                        app_window,
+                        state.window.as_ref(),
+                        webview_snapshot.as_ref(),
+                    );
 
                     for update in target_updates {
                         match update {
@@ -2673,9 +2701,9 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                     continue;
                 }
 
-                let snapshot = state.last_accessibility_snapshot.clone().or_else(|| {
+                let snapshot = state.last_semantics_snapshot.clone().or_else(|| {
                     self.driver
-                        .accessibility_snapshot(&mut self.app, app_window, &mut state.user)
+                        .semantics_snapshot(&mut self.app, app_window, &mut state.user)
                 });
                 if let Some(snapshot) = snapshot {
                     if let Some((target, data)) =

@@ -16,7 +16,9 @@ use winit::raw_window_handle::{HasWindowHandle as _, RawWindowHandle};
 pub(super) struct WindowRuntime<S> {
     pub(super) window: Arc<dyn Window>,
     pub(super) accessibility: Option<fret_runner_winit::accessibility::WinitAccessibility>,
-    pub(super) last_accessibility_snapshot: Option<std::sync::Arc<fret_core::SemanticsSnapshot>>,
+    /// Cached semantics snapshot for the window, typically produced by the accessibility pass and
+    /// reused by later platform hooks or accessibility actions in the same runner flow.
+    pub(super) last_semantics_snapshot: Option<std::sync::Arc<fret_core::SemanticsSnapshot>>,
     pub(super) surface: Option<SurfaceState<'static>>,
     pub(super) scene: Scene,
     pub(super) platform: fret_runner_winit::WinitPlatform,

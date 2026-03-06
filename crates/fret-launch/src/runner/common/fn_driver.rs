@@ -89,7 +89,7 @@ pub struct FnDriverHooks<D, S> {
     pub window_create_spec: Option<FnDriverWindowCreateSpecHook<D>>,
     pub window_created: Option<FnDriverWindowCreatedHook<D>>,
     pub before_close_window: Option<FnDriverBeforeCloseWindowHook<D>>,
-    pub accessibility_snapshot: Option<FnDriverAccessibilitySnapshotHook<D, S>>,
+    pub semantics_snapshot: Option<FnDriverSemanticsSnapshotHook<D, S>>,
     pub accessibility_focus: Option<FnDriverAccessibilityFocusHook<D, S>>,
     pub accessibility_invoke: Option<FnDriverAccessibilityInvokeHook<D, S>>,
     pub accessibility_set_value_text: Option<FnDriverAccessibilitySetValueTextHook<D, S>>,
@@ -142,7 +142,7 @@ pub type FnDriverWindowCreateSpecHook<D> =
 pub type FnDriverWindowCreatedHook<D> =
     fn(&mut D, &mut App, &fret_app::CreateWindowRequest, fret_core::AppWindowId);
 pub type FnDriverBeforeCloseWindowHook<D> = fn(&mut D, &mut App, fret_core::AppWindowId) -> bool;
-pub type FnDriverAccessibilitySnapshotHook<D, S> = fn(
+pub type FnDriverSemanticsSnapshotHook<D, S> = fn(
     &mut D,
     &mut App,
     fret_core::AppWindowId,
@@ -214,7 +214,7 @@ impl<D, S> Default for FnDriverHooks<D, S> {
             window_create_spec: None,
             window_created: None,
             before_close_window: None,
-            accessibility_snapshot: None,
+            semantics_snapshot: None,
             accessibility_focus: None,
             accessibility_invoke: None,
             accessibility_set_value_text: None,
@@ -565,13 +565,13 @@ impl<D, S> WinitAppDriver for FnDriver<D, S> {
         true
     }
 
-    fn accessibility_snapshot(
+    fn semantics_snapshot(
         &mut self,
         app: &mut App,
         window: fret_core::AppWindowId,
         state: &mut Self::WindowState,
     ) -> Option<Arc<fret_core::SemanticsSnapshot>> {
-        if let Some(f) = self.hooks.accessibility_snapshot {
+        if let Some(f) = self.hooks.semantics_snapshot {
             #[cfg(all(feature = "hotpatch-subsecond", not(target_arch = "wasm32")))]
             {
                 let mut hot = subsecond::HotFn::current(f);
