@@ -6,8 +6,9 @@
 use std::sync::Arc;
 
 use fret_runtime::Model;
-use fret_ui::action::OnActivate;
 use fret_ui::{ElementContext, UiHost};
+
+use crate::on_activate;
 
 /// Returns whether `value` is the currently selected radio group value.
 pub fn is_selected(selected: Option<&Arc<str>>, value: &Arc<str>) -> bool {
@@ -23,7 +24,7 @@ pub fn wire_select_on_activate<H: UiHost>(
     group_value: Model<Option<Arc<str>>>,
     value: Arc<str>,
 ) {
-    let handler: OnActivate = Arc::new(move |host, _acx, _reason| {
+    let handler = on_activate(move |host, _acx, _reason| {
         let next = Some(value.clone());
         let _ = host.models_mut().update(&group_value, |v| *v = next);
     });

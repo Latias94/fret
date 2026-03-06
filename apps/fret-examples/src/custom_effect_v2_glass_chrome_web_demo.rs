@@ -31,6 +31,7 @@ use fret_ui::element::{
 use fret_ui::{ElementContext, Invalidation, Theme, UiTree};
 use fret_ui_kit::custom_effects::CustomEffectProgramV2;
 use fret_ui_kit::declarative::ModelWatchExt as _;
+use fret_ui_kit::on_activate_request_redraw;
 use fret_ui_kit::{Space, UiExt};
 use fret_ui_shadcn as shadcn;
 
@@ -624,7 +625,7 @@ impl CustomEffectV2GlassChromeWebDriver {
         .into_element(cx);
 
         let reset_controls = controls.clone();
-        let reset: fret_ui::action::OnActivate = Arc::new(move |host, acx, _reason| {
+        let reset = on_activate_request_redraw(move |host| {
             let models = host.models_mut();
             let _ = models.update(&reset_controls.enabled, |v| *v = true);
             let _ = models.update(&reset_controls.mode, |v| *v = Some(Arc::from("backdrop")));
@@ -635,7 +636,6 @@ impl CustomEffectV2GlassChromeWebDriver {
             let _ = models.update(&reset_controls.shininess, |v| *v = vec![36.0]);
             let _ = models.update(&reset_controls.mix01, |v| *v = vec![1.0]);
             let _ = models.update(&reset_controls.debug_input, |v| *v = false);
-            host.request_redraw(acx.window);
         });
 
         let content = shadcn::CardContent::new([ui::v_flex(move |cx| {

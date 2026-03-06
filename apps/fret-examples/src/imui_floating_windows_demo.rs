@@ -3,6 +3,7 @@ use std::sync::Arc;
 use fret::prelude::*;
 use fret_core::{Point, Px, Rect, SemanticsRole, Size};
 use fret_imui::prelude::UiWriter;
+use fret_ui_kit::on_activate_notify;
 
 struct ImUiFloatingWindowsState {
     open_a: Model<bool>,
@@ -114,14 +115,10 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut ImUiFloatingWindowsState) -> 
                                     props
                                 },
                                 move |cx, _state| {
-                                    cx.pressable_on_activate(Arc::new(
-                                        move |host, acx, _reason| {
-                                            let _ = host
-                                                .models_mut()
-                                                .update(&clicked_model, |v| *v = true);
-                                            host.notify(acx);
-                                        },
-                                    ));
+                                    cx.pressable_on_activate(on_activate_notify(move |host| {
+                                        let _ =
+                                            host.models_mut().update(&clicked_model, |v| *v = true);
+                                    }));
                                     vec![cx.text("Overlap target (A)")]
                                 },
                             );

@@ -3642,7 +3642,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                     if enabled {
                         let close_popup = close_popup.clone();
                         let action_for_activate = action.clone();
-                        cx.pressable_on_activate(Arc::new(move |host, acx, reason| {
+                        cx.pressable_on_activate(crate::on_activate(move |host, acx, reason| {
                             if let Some(open) = close_popup.as_ref() {
                                 let _ = host.update_model(open, |v| *v = false);
                             }
@@ -3842,7 +3842,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                 let long_press_signal_model_for_up = long_press_signal_model.clone();
 
                 let action_for_activate = action.clone();
-                cx.pressable_on_activate(Arc::new(move |host, acx, reason| {
+                cx.pressable_on_activate(crate::on_activate(move |host, acx, reason| {
                     host.record_transient_event(acx, KEY_CLICKED);
                     if let Some(action) = action_for_activate.clone() {
                         host.record_pending_command_dispatch_source(acx, &action, reason);
@@ -4111,7 +4111,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                 let long_press_signal_model_for_up = long_press_signal_model.clone();
 
                 let model = model.clone();
-                cx.pressable_on_activate(Arc::new(move |host, acx, _reason| {
+                cx.pressable_on_activate(crate::on_activate(move |host, acx, _reason| {
                     let _ = host.update_model(&model, |v: &mut bool| *v = !*v);
                     host.record_transient_event(acx, KEY_CHANGED);
                     host.notify(acx);
@@ -4417,7 +4417,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                 }));
 
                 let model_for_activate = model.clone();
-                cx.pressable_on_activate(Arc::new(move |host, acx, _reason| {
+                cx.pressable_on_activate(crate::on_activate(move |host, acx, _reason| {
                     let _ = host.update_model(&model_for_activate, |v: &mut bool| *v = !*v);
                     host.record_transient_event(acx, KEY_CLICKED);
                     host.record_transient_event(acx, KEY_CHANGED);
@@ -5902,12 +5902,11 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                                 props.layout.size.width = Length::Px(Px(20.0));
                                 props.layout.size.height = Length::Px(Px(20.0));
                                 cx.pressable(props, move |cx, _state| {
-                                    cx.pressable_on_activate(Arc::new(
-                                        move |host, acx, _reason| {
+                                    cx.pressable_on_activate(crate::on_activate_notify(
+                                        move |host| {
                                             let _ = host.update_model(&open, |v: &mut bool| {
                                                 *v = false;
                                             });
-                                            host.notify(acx);
                                         },
                                     ));
                                     vec![cx.text("\u{00D7}")]

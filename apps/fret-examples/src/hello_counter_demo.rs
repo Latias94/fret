@@ -59,6 +59,15 @@ fn parse_step(step_text: &str) -> (i64, bool) {
     (step, true)
 }
 
+fn read_effective_step(models: &fret_runtime::ModelStore, step: &Model<String>) -> i64 {
+    let step_text = models
+        .read(step, Clone::clone)
+        .ok()
+        .unwrap_or_else(|| "1".to_string());
+    let (step, _) = parse_step(&step_text);
+    step
+}
+
 impl View for HelloCounterView {
     fn init(app: &mut App, _window: AppWindowId) -> Self {
         Self {
@@ -78,6 +87,40 @@ impl View for HelloCounterView {
             .layout()
             .cloned_or_else(String::new);
         let (effective_step, step_valid) = parse_step(&step_text);
+
+        cx.on_action_notify_models::<act::Inc>({
+            let count = self.st.count.clone();
+            let step = self.st.step.clone();
+            move |models| {
+                let step = read_effective_step(models, &step);
+                let _ = models.update(&count, |v| *v = v.saturating_add(step));
+                true
+            }
+        });
+
+        cx.on_action_notify_models::<act::Dec>({
+            let count = self.st.count.clone();
+            let step = self.st.step.clone();
+            move |models| {
+                let step = read_effective_step(models, &step);
+                let _ = models.update(&count, |v| *v = v.saturating_sub(step));
+                true
+            }
+        });
+
+        cx.on_action_notify_model_set::<act::Reset, i64>(self.st.count.clone(), 0);
+        cx.on_action_notify_model_set::<act::SetStep1, String>(
+            self.st.step.clone(),
+            "1".to_string(),
+        );
+        cx.on_action_notify_model_set::<act::SetStep5, String>(
+            self.st.step.clone(),
+            "5".to_string(),
+        );
+        cx.on_action_notify_model_set::<act::SetStep10, String>(
+            self.st.step.clone(),
+            "10".to_string(),
+        );
 
         let count_color = if count > 0 {
             theme.color_token("primary")
@@ -185,25 +228,22 @@ impl View for HelloCounterView {
             .role(SemanticsRole::TextField)
             .test_id(TEST_ID_STEP_INPUT);
 
-        let presets = ui::h_flex(|cx| {
+        let presets = ui::h_flex(|_cx| {
             [
                 shadcn::Button::new("1")
                     .variant(shadcn::ButtonVariant::Secondary)
                     .size(shadcn::ButtonSize::Sm)
                     .action(act::SetStep1)
-                    .into_element(cx)
                     .test_id(TEST_ID_STEP_1),
                 shadcn::Button::new("5")
                     .variant(shadcn::ButtonVariant::Secondary)
                     .size(shadcn::ButtonSize::Sm)
                     .action(act::SetStep5)
-                    .into_element(cx)
                     .test_id(TEST_ID_STEP_5),
                 shadcn::Button::new("10")
                     .variant(shadcn::ButtonVariant::Secondary)
                     .size(shadcn::ButtonSize::Sm)
                     .action(act::SetStep10)
-                    .into_element(cx)
                     .test_id(TEST_ID_STEP_10),
             ]
         })
@@ -278,48 +318,6 @@ impl View for HelloCounterView {
             .w_full()
             .max_w(Px(480.0))
             .into_element(cx);
-
-        cx.on_action_notify_models::<act::Inc>({
-            let count = self.st.count.clone();
-            let step = self.st.step.clone();
-            move |models| {
-                let step_text = models
-                    .read(&step, Clone::clone)
-                    .ok()
-                    .unwrap_or_else(|| "1".to_string());
-                let (step, _) = parse_step(&step_text);
-                let _ = models.update(&count, |v| *v = v.saturating_add(step));
-                true
-            }
-        });
-
-        cx.on_action_notify_models::<act::Dec>({
-            let count = self.st.count.clone();
-            let step = self.st.step.clone();
-            move |models| {
-                let step_text = models
-                    .read(&step, Clone::clone)
-                    .ok()
-                    .unwrap_or_else(|| "1".to_string());
-                let (step, _) = parse_step(&step_text);
-                let _ = models.update(&count, |v| *v = v.saturating_sub(step));
-                true
-            }
-        });
-
-        cx.on_action_notify_model_set::<act::Reset, i64>(self.st.count.clone(), 0);
-        cx.on_action_notify_model_set::<act::SetStep1, String>(
-            self.st.step.clone(),
-            "1".to_string(),
-        );
-        cx.on_action_notify_model_set::<act::SetStep5, String>(
-            self.st.step.clone(),
-            "5".to_string(),
-        );
-        cx.on_action_notify_model_set::<act::SetStep10, String>(
-            self.st.step.clone(),
-            "10".to_string(),
-        );
 
         ui::container(|cx| {
             [ui::v_flex(|_cx| [card])
