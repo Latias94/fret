@@ -5,6 +5,7 @@ use crate::ui::snippets::label as snippets;
 
 pub(super) fn preview_label(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     let demo = snippets::demo::render(cx);
+    let usage = snippets::usage::render(cx);
     let label_in_field = snippets::label_in_field::render(cx);
     let rtl = snippets::rtl::render(cx);
 
@@ -14,16 +15,20 @@ pub(super) fn preview_label(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
             "API reference: `ecosystem/fret-ui-shadcn/src/label.rs` (Label) and `ecosystem/fret-ui-shadcn/src/field.rs` (FieldLabel).",
             "Label is a lightweight text primitive; form semantics and helper/error text live in `Field`.",
             "Use `Label::for_control(ControlId)` + `Input::control_id(ControlId)` to model `htmlFor`/`id` association (click-to-focus + labelled-by semantics).",
+            "The main parity gap here is usage clarity rather than missing mechanism or composition APIs.",
         ],
     );
 
     let body = doc_layout::render_doc_page(
         cx,
-        Some("Preview follows shadcn Label docs order: Demo, Label in Field, RTL."),
+        Some("Preview follows shadcn Label docs order: Demo -> Usage -> Label in Field -> RTL."),
         vec![
             DocSection::new("Demo", demo)
                 .description("Basic label above an input.")
                 .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
+            DocSection::new("Usage", usage)
+                .description("Copyable minimal usage for `Label` + control association.")
+                .code_rust_from_file_region(snippets::usage::SOURCE, "example"),
             DocSection::new("Label in Field", label_in_field)
                 .description("Prefer Field + FieldLabel for form layouts.")
                 .code_rust_from_file_region(snippets::label_in_field::SOURCE, "example"),
