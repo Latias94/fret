@@ -783,6 +783,6 @@ pub fn run() -> anyhow::Result<()> {
         ..Default::default()
     };
 
-    crate::run_native_demo(config, app, TableStressDriver::default())
+    crate::run_native_with_compat_driver(config, app, TableStressDriver::default())
         .context("run table_stress_demo app")
 }

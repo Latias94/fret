@@ -89,6 +89,12 @@ cargo run -p fretboard -- dev web --demo ui_gallery
 
 This runs `apps/fret-demo-web` via `trunk serve`.
 
+## Choosing a native entry path
+
+- App authors: `fret::App::new(...).window(...).ui(...)?`
+- Advanced integration with `fret` defaults: `fret::run_native_with_fn_driver(...)`
+- Compatibility-only low-level driver path: `fret::run_native_with_compat_driver(...)`
+
 ## When to drop down to `fret-framework` + `fret-bootstrap`
 
 `fret` is designed to keep the “first app” and “small app” story simple. Prefer dropping down
@@ -104,7 +110,8 @@ Mapping (rough):
 - `fret::app_with_hooks(...)` → `fret_bootstrap::ui_app_with_hooks(...)`
 - `fret::UiAppBuilder` → `fret_bootstrap::UiAppBootstrapBuilder`
 - `fret::UiAppDriver` → `fret_bootstrap::ui_app_driver::UiAppDriver`
-- `fret::run_native_demo_fn(...)` → `fret_bootstrap::BootstrapBuilder::new_fn(...)`
+- `fret::run_native_with_fn_driver(...)` → `fret_bootstrap::BootstrapBuilder::new_fn(...)`
+- `fret::run_native_with_compat_driver(...)` → `fret_bootstrap::BootstrapBuilder::new(...)`
 
 The recommended manual-assembly entry point remains `fret-bootstrap`, keeping the underlying driver
 hotpatch-friendly (function-pointer `FnDriver` surface, per ADR 0105 / 0110).

@@ -1297,5 +1297,5 @@ pub fn run() -> anyhow::Result<()> {
     };
 
     let driver = WorkspaceShellDemoDriver::default();
-    fret::run_native_demo(config, app, driver).context("run workspace_shell_demo app")
+    fret::run_native_with_compat_driver(config, app, driver).context("run workspace_shell_demo app")
 }

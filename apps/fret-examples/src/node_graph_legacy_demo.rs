@@ -2791,7 +2791,7 @@ pub fn run() -> anyhow::Result<()> {
             "node_graph_demo: declarative root enabled (FRET_NODE_GRAPH_DECLARATIVE)"
         );
     }
-    fret::run_native_demo(config, app, driver).map_err(anyhow::Error::from)
+    fret::run_native_with_compat_driver(config, app, driver).map_err(anyhow::Error::from)
 }
 
 fn kb(platform: PlatformFilter, key: KeyCode, mods: Modifiers) -> DefaultKeybinding {

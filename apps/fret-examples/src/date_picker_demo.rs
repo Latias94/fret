@@ -465,6 +465,6 @@ pub fn run() -> anyhow::Result<()> {
         ..Default::default()
     };
 
-    crate::run_native_demo(config, app, DatePickerDemoDriver::default())
+    crate::run_native_with_compat_driver(config, app, DatePickerDemoDriver::default())
         .context("run date_picker_demo app")
 }

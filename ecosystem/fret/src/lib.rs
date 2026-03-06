@@ -5,6 +5,14 @@
 //! - it enables a practical desktop-first default stack,
 //! - it remains optional: advanced users can depend on `fret-framework` + `fret-bootstrap` directly.
 //!
+//! ## Choosing a native entry path
+//!
+//! - `fret::App::new(...).window(...).ui(...)?` is the recommended app-author path.
+//! - `fret::run_native_with_fn_driver(...)` is the recommended advanced escape hatch when you need
+//!   runner-level customization but still want the `fret` defaults/bootstrap story.
+//! - `fret::run_native_with_compat_driver(...)` is a compatibility path for existing low-level
+//!   integrations that still implement `fret_launch::WinitAppDriver` directly.
+//!
 //! ## Getting started (desktop)
 //!
 //! ```no_run
@@ -591,13 +599,14 @@ pub(crate) fn ui_bootstrap_builder_with_hooks<S: 'static>(
     builder
 }
 
-/// Run a native desktop demo using the `winit + wgpu` stack.
+/// Run a native desktop app using the compatibility driver path.
 ///
-/// This is a small convenience wrapper for legacy examples that still implement
-/// `fret_launch::WinitAppDriver` directly, keeping "how to boot the app" consistent with the
-/// `fret` golden path while new advanced code moves toward `fret_launch::FnDriver`.
+/// Prefer `fret::App` / `UiAppBuilder` for general applications and
+/// `run_native_with_fn_driver(...)` for new advanced integrations. This helper exists for
+/// low-level integrations that still implement `fret_launch::WinitAppDriver` directly while
+/// wanting the higher-level defaults/bootstrap story from `fret`.
 #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
-pub fn run_native_demo<D: fret_launch::WinitAppDriver + 'static>(
+pub fn run_native_with_compat_driver<D: fret_launch::WinitAppDriver + 'static>(
     config: fret_launch::WinitRunnerConfig,
     app: KernelApp,
     driver: D,
@@ -612,12 +621,12 @@ pub fn run_native_demo<D: fret_launch::WinitAppDriver + 'static>(
     Ok(())
 }
 
-/// Run a native desktop demo using the `fret-bootstrap` advanced `FnDriver` escape hatch.
+/// Run a native desktop app using the advanced `FnDriver` escape hatch.
 ///
-/// Prefer this over manually constructing `fret_launch::FnDriver` when the app still wants the
-/// higher-level bootstrap/defaults story from `fret`.
+/// This is the recommended low-level path when the app wants the `fret` bootstrap/defaults story
+/// but needs runner-level customization without teaching `WinitAppDriver` as the primary model.
 #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
-pub fn run_native_demo_fn<D: 'static, S: 'static>(
+pub fn run_native_with_fn_driver<D: 'static, S: 'static>(
     config: fret_launch::WinitRunnerConfig,
     app: KernelApp,
     driver_state: D,

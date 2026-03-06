@@ -90,7 +90,7 @@ impl WinitAppDriver for FirstFrameSmokeDriver {
 }
 
 pub fn run() -> anyhow::Result<()> {
-    fret::run_native_demo(
+    fret::run_native_with_compat_driver(
         WinitRunnerConfig {
             main_window_title: "first_frame_smoke_demo".to_string(),
             main_window_size: fret_launch::WindowLogicalSize::new(520.0, 200.0),

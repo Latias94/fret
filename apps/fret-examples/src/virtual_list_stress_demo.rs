@@ -492,6 +492,6 @@ pub fn run() -> anyhow::Result<()> {
         ..Default::default()
     };
 
-    crate::run_native_demo(config, app, VirtualListStressDriver::default())
+    crate::run_native_with_compat_driver(config, app, VirtualListStressDriver::default())
         .context("run virtual_list_stress_demo app")
 }

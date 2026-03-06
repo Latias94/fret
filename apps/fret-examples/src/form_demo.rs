@@ -423,5 +423,6 @@ pub fn run() -> anyhow::Result<()> {
         ..Default::default()
     };
 
-    fret::run_native_demo(config, app, FormDemoDriver::default()).context("run form_demo app")
+    fret::run_native_with_compat_driver(config, app, FormDemoDriver::default())
+        .context("run form_demo app")
 }

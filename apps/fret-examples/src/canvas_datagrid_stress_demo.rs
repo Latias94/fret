@@ -497,6 +497,6 @@ pub fn run() -> anyhow::Result<()> {
         ..Default::default()
     };
 
-    crate::run_native_demo(config, app, CanvasDataGridStressDriver::default())
+    crate::run_native_with_compat_driver(config, app, CanvasDataGridStressDriver::default())
         .context("run canvas_datagrid_stress_demo app")
 }

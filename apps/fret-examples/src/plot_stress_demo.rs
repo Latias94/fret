@@ -483,7 +483,7 @@ pub fn run() -> anyhow::Result<()> {
         max_frames,
     };
 
-    crate::run_native_demo(config, app, driver).context("run plot_stress_demo app")
+    crate::run_native_with_compat_driver(config, app, driver).context("run plot_stress_demo app")
 }
 
 #[cfg(target_arch = "wasm32")]

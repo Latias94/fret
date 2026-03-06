@@ -753,7 +753,8 @@ pub fn run() -> anyhow::Result<()> {
         ..Default::default()
     };
 
-    crate::run_native_demo(config, app, TableDemoDriver::default()).context("run table_demo app")
+    crate::run_native_with_compat_driver(config, app, TableDemoDriver::default())
+        .context("run table_demo app")
 }
 
 fn clear_grouping(st: &mut TableState) {

@@ -3469,7 +3469,8 @@ pub fn run() -> anyhow::Result<()> {
         layout_preset,
         persist_layout_on_exit,
     );
-    fret::run_native_demo(config, app, driver).context("run docking_arbitration_demo app")
+    fret::run_native_with_compat_driver(config, app, driver)
+        .context("run docking_arbitration_demo app")
 }
 
 fn diag_enabled_env() -> bool {

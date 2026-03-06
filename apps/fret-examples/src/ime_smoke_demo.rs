@@ -312,5 +312,5 @@ pub fn run() -> anyhow::Result<()> {
     };
 
     let driver = ImeSmokeDriver::default();
-    crate::run_native_demo(config, app, driver).context("run ime_smoke_demo app")
+    crate::run_native_with_compat_driver(config, app, driver).context("run ime_smoke_demo app")
 }

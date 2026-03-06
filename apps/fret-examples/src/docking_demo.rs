@@ -808,5 +808,5 @@ pub fn run() -> anyhow::Result<()> {
     };
 
     let driver = DockingDemoDriver::default();
-    fret::run_native_demo(config, app, driver).context("run docking_demo app")
+    fret::run_native_with_compat_driver(config, app, driver).context("run docking_demo app")
 }

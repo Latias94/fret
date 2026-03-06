@@ -5,12 +5,12 @@ pub(crate) mod effect_authoring;
 pub(crate) mod hotpatch;
 
 #[cfg(not(target_arch = "wasm32"))]
-pub(crate) fn run_native_demo<D: fret_launch::WinitAppDriver + 'static>(
+pub(crate) fn run_native_with_compat_driver<D: fret_launch::WinitAppDriver + 'static>(
     config: fret_launch::WinitRunnerConfig,
     app: fret_app::App,
     driver: D,
 ) -> anyhow::Result<()> {
-    fret::run_native_demo(config, app, driver).map_err(anyhow::Error::from)
+    fret::run_native_with_compat_driver(config, app, driver).map_err(anyhow::Error::from)
 }
 
 #[cfg(not(target_arch = "wasm32"))]

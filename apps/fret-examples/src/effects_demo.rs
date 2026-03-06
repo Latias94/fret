@@ -768,7 +768,7 @@ impl WinitAppDriver for EffectsDemoDriver {
 }
 
 pub fn run() -> anyhow::Result<()> {
-    crate::run_native_demo(
+    crate::run_native_with_compat_driver(
         WinitRunnerConfig {
             main_window_title: "effects_demo".to_string(),
             main_window_size: fret_launch::WindowLogicalSize::new(1100.0, 520.0),

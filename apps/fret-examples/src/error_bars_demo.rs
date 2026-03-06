@@ -240,7 +240,7 @@ pub fn run() -> anyhow::Result<()> {
     let config = build_runner_config();
     let driver = build_driver();
 
-    crate::run_native_demo(config, app, driver).context("run error_bars_demo app")
+    crate::run_native_with_compat_driver(config, app, driver).context("run error_bars_demo app")
 }
 
 #[cfg(target_arch = "wasm32")]

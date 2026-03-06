@@ -425,6 +425,6 @@ pub fn run() -> anyhow::Result<()> {
         ..Default::default()
     };
 
-    crate::run_native_demo(config, app, DataTableDemoDriver::default())
+    crate::run_native_with_compat_driver(config, app, DataTableDemoDriver::default())
         .context("run datatable_demo app")
 }
