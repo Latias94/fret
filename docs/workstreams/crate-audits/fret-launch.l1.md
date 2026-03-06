@@ -232,7 +232,11 @@ Evidence anchors:
   command routing, global-change redraw arbitration, viewport input routing, engine-frame
   recording, and retained HUD rendering all fit the existing free-hook surface, reducing the
   remaining direct impl inventory again to one.
-- The current remaining direct example impl inventory is now limited to `components_gallery`.
+- `components_gallery` closes the accessibility / semantics / diagnostics-heavy gallery harness too:
+  init/gpu-ready hooks, hot-reload reset, model/global propagation, command/event routing,
+  semantics snapshots, and accessibility action plumbing all fit the existing free-hook surface,
+  reducing the remaining direct impl inventory again to zero.
+- The current remaining direct example impl inventory is now zero.
 
 Evidence anchors:
 
@@ -261,6 +265,7 @@ Evidence anchors:
 - `apps/fret-examples/src/node_graph_legacy_demo.rs`
 - `apps/fret-examples/src/node_graph_domain_demo.rs`
 - `apps/fret-examples/src/gizmo3d_demo.rs`
+- `apps/fret-examples/src/components_gallery.rs`
 - `ecosystem/fret/src/lib.rs`
 - `docs/workstreams/fret-launch-app-surface-fearless-refactor-v1/SURFACE_AUDIT.md`
 

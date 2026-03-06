@@ -70,7 +70,8 @@ This workstream is staged to keep the launch stack landable while tightening pub
 - `node_graph_legacy_demo` now follows the same pure free-hook `FnDriver` posture on the retained node-graph reference path too, reducing the remaining direct `WinitAppDriver` example inventory to three without expanding launch surface area.
 - `node_graph_domain_demo` now follows the same pure free-hook `FnDriver` posture on the domain/runtime-oriented node-graph path too, reducing the remaining direct `WinitAppDriver` example inventory to two without expanding launch surface area.
 - `gizmo3d_demo` now follows the same pure free-hook `FnDriver` posture on the viewport-tool / engine-frame / 3D overlay path too, reducing the remaining direct `WinitAppDriver` example inventory to one without expanding launch surface area.
-- Any remaining direct `WinitAppDriver` examples are verified to stay within current `FnDriver` hook coverage until they migrate.
+- `components_gallery` now follows the same pure free-hook `FnDriver` posture on the accessibility / semantics / diagnostics-heavy gallery path too, reducing the remaining direct `WinitAppDriver` example inventory to zero without expanding launch surface area.
+- The examples-side direct `WinitAppDriver` inventory is now zero; any future direct impl should be treated as an explicit, reviewed regression from the preferred `FnDriver` posture.
 - `python tools/gate_fret_launch_root_surface_snapshot.py`
 - `python tools/gate_fret_framework_launch_surface.py`
 - `python tools/gate_fn_driver_example_naming.py`
