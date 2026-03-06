@@ -2,6 +2,7 @@ use std::cell::Cell;
 use std::sync::Arc;
 use std::time::Duration;
 
+use crate::test_id::test_id_slug;
 use fret_core::window::ColorScheme;
 use fret_core::{Color, Corners, DrawOrder, Edges, FontId, FontWeight, Px, TextStyle};
 use fret_icons::IconId;
@@ -2192,7 +2193,14 @@ impl Tabs {
                                     let trigger_children = item.trigger.take();
                                     let trigger_leading_icon = item.trigger_leading_icon.clone();
                                     let trigger_trailing_icon = item.trigger_trailing_icon.clone();
-                                    let trigger_test_id = item.trigger_test_id.clone();
+                                    let trigger_test_id = item.trigger_test_id.clone().or_else(|| {
+                                        root_test_id_for_children.as_ref().map(|id| {
+                                            Arc::<str>::from(format!(
+                                                "{id}-trigger-{}",
+                                                test_id_slug(item.value.as_ref())
+                                            ))
+                                        })
+                                    });
                                     let model = model.clone();
                                     let text_style = text_style.clone();
 
@@ -3261,6 +3269,52 @@ mod tests {
             wdiff <= 0.51,
             "expected vertical line variant triggers to share width: w0={w0:.3}, w1={w1:.3}, diff={wdiff:.3}"
         );
+    }
+    #[test]
+    fn tabs_root_test_id_derives_trigger_test_ids() {
+        fn find_pressable_with_test_id<'a>(
+            el: &'a AnyElement,
+            test_id: &str,
+        ) -> Option<&'a PressableProps> {
+            match &el.kind {
+                fret_ui::element::ElementKind::Pressable(props) => {
+                    if props.a11y.test_id.as_deref() == Some(test_id) {
+                        return Some(props);
+                    }
+                }
+                _ => {}
+            }
+            el.children
+                .iter()
+                .find_map(|child| find_pressable_with_test_id(child, test_id))
+        }
+
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(320.0), Px(200.0)),
+        );
+        let model = app.models_mut().insert(Some(Arc::<str>::from("alpha")));
+
+        let el = fret_ui::elements::with_element_cx(
+            &mut app,
+            window,
+            bounds,
+            "tabs-derived-trigger-id",
+            |cx| {
+                Tabs::new(model)
+                    .test_id("tabs-demo")
+                    .items([
+                        TabsItem::new("alpha", "Alpha", Vec::<AnyElement>::new()),
+                        TabsItem::new("beta", "Beta", Vec::<AnyElement>::new()),
+                    ])
+                    .into_element(cx)
+            },
+        );
+
+        assert!(find_pressable_with_test_id(&el, "tabs-demo-trigger-alpha").is_some());
+        assert!(find_pressable_with_test_id(&el, "tabs-demo-trigger-beta").is_some());
     }
 
     #[test]

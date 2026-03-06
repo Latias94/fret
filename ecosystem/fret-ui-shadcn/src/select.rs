@@ -4871,6 +4871,7 @@ mod tests {
                 true,
                 fret_icons::IconId::new_static("lucide.chevron-up"),
                 fret_icons::IconId::new_static("lucide.chevron-down"),
+                None,
                 scroll_handle,
                 None,
                 || {},
